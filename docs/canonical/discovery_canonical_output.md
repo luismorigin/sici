@@ -630,3 +630,4 @@ Este contrato define la interfaz de salida del Módulo 1 (Discovery).
 ---
 
 **Próxima revisión:** Solo por cambios arquitectónicos mayores
+
