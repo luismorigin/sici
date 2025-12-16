@@ -5,6 +5,7 @@
 > **Sistema:** SICI – Sistema Inteligente de Captura Inmobiliaria  
 > **Rol del módulo:** Punto de entrada y control de existencia del universo de propiedades  
 > **Estado:** 🟡 En consolidación (Flujo A en WORKING STATE)  
+> **Versión:** 2.0.0  
 > **Última actualización:** Diciembre 2025
 
 ---
@@ -32,7 +33,8 @@ Su responsabilidad es mantener sincronizada la base de datos con la **realidad d
 1. **¿Qué propiedades existen hoy en los portales?**
 2. **¿Qué propiedades dejaron de existir?**
 
-> ⚠️ Este módulo **NO extrae datos detallados**, **NO normaliza información**, **NO detecta cambios de precio** y **NO realiza matching**.
+**Cambio conceptual v2.0:**
+> Discovery NO es un extractor stateless. Es un **proceso de detección de cambios de existencia**: Snapshot + Comparación + Decisión.
 
 ---
 
@@ -43,21 +45,31 @@ Su responsabilidad es mantener sincronizada la base de datos con la **realidad d
 | Función | Flujo responsable |
 |---------|-------------------|
 | Descubrir URLs nuevas en portales | Flujo A |
+| Extraer **datos observados** básicos (precio, área, GPS) | Flujo A |
 | Detectar URLs que desaparecen de portales | Flujo A |
-| Marcar sospecha de inactividad | Flujo A |
+| Marcar sospecha de inactividad (`inactivo_pending`) | Flujo A |
 | Verificar existencia real vía HTTP | Flujo C |
-| Confirmar inactividad definitiva | Flujo C |
+| Confirmar inactividad definitiva (`inactivo_confirmed`) | Flujo C |
 | Rescatar falsos positivos | Flujo C |
 
 ### 2.2 Lo que explícitamente NO hace
 
 | Función | Módulo correspondiente |
 |---------|------------------------|
-| Extracción de precio / área / dormitorios | Módulo 2 – Enrichment |
+| Validar/confirmar precio / área / dormitorios | Módulo 2 – Enrichment |
 | Normalización (parqueos, amenities) | Módulo 2 – Enrichment |
 | Tipo de cambio dinámico | Módulo TC Dinámico |
 | Matching propiedad ↔ proyecto | Subsistema Matching |
-| Detección de cambios en propiedades activas | ❌ Fuera de alcance |
+
+### 2.3 Nota sobre datos observados
+
+Aunque arquitectónicamente precio, área y dormitorios pertenecen a Enrichment, Discovery los extrae como **datos observados** porque:
+
+- ✅ Sirven para detectar cambios (precio varió → re-scrapear)
+- ✅ Apoyan decisiones de existencia
+- ❌ NO son "verdad final"
+- ❌ NO rompen candados
+- ❌ NO reemplazan enrichment
 
 ---
 
@@ -67,8 +79,9 @@ Su responsabilidad es mantener sincronizada la base de datos con la **realidad d
 ┌────────────────────────────────────────────────┐
 │ FLUJO A – EL CAZADOR (Discovery)               │
 │ • Descubre URLs nuevas                         │
+│ • Extrae datos observados básicos              │
 │ • Detecta ausencias en portales                │
-│ • Marca inactivo_por_confirmar                 │
+│ • Marca inactivo_pending                       │
 │ • Estado: 🟡 WORKING STATE                     │
 └──────────────────────┬─────────────────────────┘
                        │
@@ -76,7 +89,7 @@ Su responsabilidad es mantener sincronizada la base de datos con la **realidad d
 ┌────────────────────────────────────────────────┐
 │ FLUJO C – EL VERIFICADOR                       │
 │ • HTTP HEAD a URLs sospechosas                 │
-│ • Confirma inactivo (404)                      │
+│ • Confirma inactivo (404) → inactivo_confirmed │
 │ • Rescata falsos positivos (200/3XX)           │
 │ • Estado: 🟢 ESTABLE                           │
 └────────────────────────────────────────────────┘
@@ -92,9 +105,7 @@ Su responsabilidad es mantener sincronizada la base de datos con la **realidad d
 |----------|-------|
 | Estado | 🟡 **WORKING STATE** (en desarrollo activo) |
 | Schedule objetivo | 1:00 AM diario |
-| Rol | Descubrimiento + detección de ausencia |
-
-> ⚠️ El Flujo A **NO está finalizado**. Debe tratarse como trabajo en progreso.
+| Rol | Descubrimiento + extracción datos observados + detección de ausencia |
 
 ### 4.2 Decisión arquitectónica CLAVE
 
@@ -104,21 +115,21 @@ Usa **dos estrategias distintas por portal**:
 
 | Portal | Estrategia | Razón |
 |--------|------------|-------|
-| **Remax** | API + HTTP (estructurado) | El portal expone API interna |
-| **Century21** | Scraping por cuadrícula / paginación HTML | No hay API disponible |
-
-> 👉 Esta decisión **es intencional y definitiva**.
+| **Remax** | API REST paginada | El portal expone API interna |
+| **Century21** | Grid geográfico (bounding boxes) | No hay paginación tradicional |
 
 ### 4.3 Responsabilidades
 
 - Construir URLs de búsqueda por portal
-- Iterar páginas de resultados
+- Iterar páginas/cuadrantes de resultados
 - Extraer URLs de propiedades individuales
+- Extraer **datos observados** (precio, área, GPS, etc.)
+- Persistir **snapshot RAW completo** en `datos_json_discovery`
 - Filtrar por zona (Equipetrol), tipo (departamentos), operación (venta)
-- Comparar contra base de datos existente
+- Comparar snapshot actual vs base de datos existente
 - Ejecutar transiciones de estado:
-  - INSERT nuevas → `status = 'pendiente'`
-  - Ausentes → `status = 'inactivo_por_confirmar'`
+  - INSERT nuevas → `status = 'nueva'`
+  - Ausentes → `status = 'inactivo_pending'`
 
 ### 4.4 Filosofía
 
@@ -126,11 +137,11 @@ Usa **dos estrategias distintas por portal**:
 
 Una propiedad puede no aparecer en un scrape por:
 - Error temporal del portal
-- Paginación incompleta
+- Paginación/grid incompleto
 - Rate limiting
-- Cambios en estructura HTML
+- Cambios en estructura HTML/JSON
 
-Por eso el Flujo A **NUNCA marca `inactivo` directamente**. Solo marca `inactivo_por_confirmar` para que Flujo C verifique.
+Por eso el Flujo A **NUNCA marca `inactivo_confirmed` directamente**. Solo marca `inactivo_pending` para que Flujo C verifique.
 
 ---
 
@@ -140,22 +151,31 @@ Por eso el Flujo A **NUNCA marca `inactivo` directamente**. Solo marca `inactivo
 
 | Atributo | Valor |
 |----------|-------|
-| Estado | 🟢 **ESTABLE** (listo para activar) |
+| Estado | 🟢 **ESTABLE** – NO ACTIVADO (scheduler deshabilitado) |
 | Schedule | 6:00 AM diario |
 | Capacidad | Hasta 150 URLs por ejecución |
 
 ### 5.2 Rol
 
-Tomar propiedades con `status = 'inactivo_por_confirmar'` y verificar su existencia real mediante HTTP HEAD request.
+Tomar propiedades con `status = 'inactivo_pending'` y verificar su existencia real mediante HTTP HEAD request.
 
 ### 5.3 Lógica de decisión
 
 | HTTP Status | Acción | Nuevo status |
 |-------------|--------|--------------|
-| 404 | Confirmar eliminación | `inactivo` |
+| 404 | Confirmar eliminación | `inactivo_confirmed` |
 | 200 / 301 / 302 | Rescatar (falso positivo) | `completado` |
 
-### 5.4 Filosofía
+### 5.4 Relevancia por fuente
+
+| Portal | Efectividad Flujo C |
+|--------|---------------------|
+| **Remax** | ✅ Alta - HTTP 404 confiable |
+| **Century21** | ⚠️ Limitada - HTTP 200 aún con "Aviso terminado" |
+
+Para Century21, Discovery puede usar señales HTML ("Aviso terminado") y fechas de modificación como **datos observados**, pero NO como confirmación final.
+
+### 5.5 Filosofía
 
 > **"Inocente hasta que se pruebe culpable"**
 
@@ -163,7 +183,7 @@ Tomar propiedades con `status = 'inactivo_por_confirmar'` y verificar su existen
 - Si el rescate fue incorrecto, Flujo A lo detectará en el siguiente ciclo
 - Mejor rescatar una propiedad activa que perder una propiedad real
 
-### 5.5 Métricas esperadas
+### 5.6 Métricas esperadas
 
 | Métrica | Valor típico |
 |---------|--------------|
@@ -171,20 +191,31 @@ Tomar propiedades con `status = 'inactivo_por_confirmar'` y verificar su existen
 | Tasa de confirmación (inactivos reales) | 60-70% |
 | Tasa de falsos positivos (rescatados) | 30-40% |
 
+> ℹ️ Valores orientativos basados en observaciones iniciales, no SLA.
+
 ---
 
 ## 6. Estados de Propiedad (Capa Existencia)
 
-Este módulo gestiona **únicamente** los siguientes estados:
+Este módulo gestiona los siguientes estados:
 
 | Estado | Significado | Asignado por |
 |--------|-------------|--------------|
-| `pendiente` | URL nueva descubierta, esperando ser consumida por módulos downstream | Flujo A (INSERT) |
-| `inactivo_por_confirmar` | Ausente en scrape, pendiente verificación HTTP | Flujo A (UPDATE) |
-| `inactivo` | Confirmado eliminado del portal (HTTP 404) | Flujo C (UPDATE) |
-| `completado` | **Existencia verificada en portal** (HTTP 200/3XX). NO implica que pasó por Enrichment ni por ningún pipeline downstream. | Flujo C (rescate) |
+| `nueva` | URL detectada por primera vez, esperando enrichment | Flujo A (INSERT) |
+| `inactivo_pending` | Ausente en snapshot, pendiente verificación HTTP | Flujo A (UPDATE) |
+| `inactivo_confirmed` | Confirmado eliminado del portal (HTTP 404) | Flujo C (UPDATE) |
+| `completado` | Rescatado por Flujo C (HTTP 200/3XX) o procesado por Merge | Flujo C / Merge |
 
-> ⚠️ **SEMÁNTICA CRÍTICA:** El estado `completado` en este módulo significa **exclusivamente** que la URL existe en el portal. No tiene relación con el estado de procesamiento de datos en Módulo 2.
+### Pipeline completo de estados
+
+```
+Discovery CREA     → nueva
+Enrichment         → nueva → actualizado
+Merge              → actualizado → completado
+Discovery MARCA    → inactivo_pending (ausencias)
+Flujo C CONFIRMA   → inactivo_pending → inactivo_confirmed
+Flujo C RESCATA    → inactivo_pending → completado
+```
 
 ### Diagrama de transiciones
 
@@ -192,36 +223,35 @@ Este módulo gestiona **únicamente** los siguientes estados:
 [URL Nueva]
      │
      ↓ Flujo A INSERT
-┌───────────┐
-│ pendiente │
-└─────┬─────┘
-      │
-      │ ┌─────────────────────────────────────────────────────┐
-      │ │ FUERA DE MÓDULO 1: Aquí intervienen otros módulos   │
-      │ │ (Enrichment, Matching, etc.) pero sus estados       │
-      │ │ pertenecen a otra capa. Este módulo NO los gestiona.│
-      │ └─────────────────────────────────────────────────────┘
-      │
-      ↓
+┌─────────┐
+│  nueva  │
+└────┬────┘
+     │
+     │ ┌───────────────────────────────────────────────────┐
+     │ │ MÓDULO 2: Enrichment → actualizado → Merge        │
+     │ │ (Sus estados pertenecen a otra capa)              │
+     │ └───────────────────────────────────────────────────┘
+     │
+     ↓
 ┌─────────────┐
 │ completado  │ ←─── Flujo C rescata ←──┐
-│ (existe)    │                         │
+│             │      (HTTP 200/3XX)     │
 └─────┬───────┘                         │
       │                                 │
       │ Flujo A detecta ausencia        │
       ↓                                 │
-┌─────────────────────────┐             │
-│ inactivo_por_confirmar  │ ────────────┘
-└───────────┬─────────────┘    (HTTP 200/301/302)
-            │
-            │ Flujo C confirma (HTTP 404)
-            ↓
-┌───────────┐
-│ inactivo  │
-└───────────┘
+┌──────────────────┐                    │
+│ inactivo_pending │ ───────────────────┘
+└────────┬─────────┘
+         │
+         │ Flujo C confirma (HTTP 404)
+         ↓
+┌────────────────────┐
+│ inactivo_confirmed │
+└────────────────────┘
 ```
 
-> 📌 **Nota:** La transición de `pendiente` a `completado` puede ocurrir por dos vías: (1) procesamiento exitoso en módulos downstream que eventualmente marcan existencia confirmada, o (2) rescate directo por Flujo C. En ambos casos, `completado` solo certifica **existencia en portal**, nada más.
+> 📌 **Nota semántica:** Una propiedad que **nunca apareció** en Discovery no existe en BD (sin estado). Los estados de inactividad (`inactivo_pending`, `inactivo_confirmed`) solo aplican a propiedades que existieron previamente.
 
 ---
 
@@ -230,18 +260,19 @@ Este módulo gestiona **únicamente** los siguientes estados:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ 1:00 AM   FLUJO A – Descubrimiento                          │
-│           • Scrape páginas de búsqueda (Remax API + C21 HTML)│
-│           • INSERT URLs nuevas → status = 'pendiente'       │
-│           • URLs ausentes → status = 'inactivo_por_confirmar'│
+│           • Snapshot de portales (Remax API + C21 Grid)     │
+│           • Comparación contra BD existente                 │
+│           • INSERT URLs nuevas → status = 'nueva'           │
+│           • URLs ausentes → status = 'inactivo_pending'     │
 └─────────────────────────┬───────────────────────────────────┘
                           │
                           ↓ (5 horas después)
 ┌─────────────────────────────────────────────────────────────┐
 │ 6:00 AM   FLUJO C – Verificación                            │
-│           • SELECT WHERE status = 'inactivo_por_confirmar'  │
+│           • SELECT WHERE status = 'inactivo_pending'        │
 │           • HTTP HEAD a cada URL                            │
-│           • 404 → status = 'inactivo' (confirmado)          │
-│           • 200 → status = 'completado' (existencia verificada)│
+│           • 404 → status = 'inactivo_confirmed'             │
+│           • 200 → status = 'completado' (rescatado)         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -254,24 +285,26 @@ Este módulo gestiona **únicamente** los siguientes estados:
 │ MÓDULO 1 – DISCOVERY & EXISTENCIA       │  ← Este módulo
 │ (Flujo A + Flujo C)                     │
 │ Output: URLs con status de existencia   │
+│         + datos observados básicos      │
 └────────────────────┬────────────────────┘
                      │
-                     │ URLs con status = 'pendiente'
+                     │ URLs con status = 'nueva'
                      ↓
 ┌─────────────────────────────────────────┐
 │ MÓDULO 2 – ENRICHMENT                   │
-│ (Sistema de estados DIFERENTE)          │
-│ ⚠️ Sus estados NO son gestionados aquí  │
+│ (Valida y profundiza datos observados)  │
+│ Output: status = 'actualizado'          │
 └────────────────────┬────────────────────┘
                      │
                      ↓
 ┌─────────────────────────────────────────┐
-│ SUBSISTEMA MATCHING                     │
+│ MERGE                                   │
+│ Output: status = 'completado'           │
 └────────────────────┬────────────────────┘
                      │
                      ↓
 ┌─────────────────────────────────────────┐
-│ MÓDULOS ANALÍTICOS / TC DINÁMICO        │
+│ SUBSISTEMA MATCHING / TC DINÁMICO       │
 └─────────────────────────────────────────┘
 ```
 
@@ -286,12 +319,14 @@ Este módulo gestiona **únicamente** los siguientes estados:
 
 | Decisión | Estado | Razón |
 |----------|--------|-------|
-| Remax usa API + HTTP | ✅ Definitiva | Portal expone API estructurada |
-| Century21 usa scraping cuadrícula | ✅ Definitiva | No hay API disponible |
-| Flujo A nunca marca `inactivo` directo | ✅ Definitiva | Evitar falsos positivos |
+| Remax usa API REST paginada | ✅ Definitiva | Portal expone API estructurada |
+| Century21 usa grid geográfico | ✅ Definitiva | No hay paginación tradicional |
+| Discovery extrae datos observados | ✅ Definitiva | Detectar cambios, apoyo a existencia |
+| Snapshot RAW obligatorio | ✅ Definitiva | Evidencia histórica, auditoría |
+| Flujo A nunca marca `inactivo_confirmed` | ✅ Definitiva | Evitar falsos positivos |
 | Flujo C usa HTTP HEAD (no GET) | ✅ Definitiva | Eficiencia, solo necesitamos status |
 | Flujo D eliminado | ❌ Descartado | Complejidad sin beneficio MVP |
-| `completado` = existencia verificada | ✅ Definitiva | Semántica limpia, sin cruce de capas |
+| Unicidad por `(url, fuente)` | ✅ Definitiva | URL es identificador real |
 
 ---
 
@@ -304,7 +339,8 @@ Si estás leyendo esto como IA:
 | ❌ NO asumas que Flujo A está finalizado | Tratarlo como WORKING STATE |
 | ❌ NO reintroduzcas Flujo D | Está descartado permanentemente |
 | ❌ NO mezcles estados de Módulo 1 con Módulo 2 | Son sistemas diferentes |
-| ❌ NO interpretes `completado` como "procesado" | Significa solo "existe en portal" |
+| ❌ NO trates datos observados como "verdad final" | Son auxiliares, no enrichment |
+| ❌ NO uses términos antiguos | `pendiente`→`nueva`, `inactivo_por_confirmar`→`inactivo_pending` |
 | ✅ Respeta separación de responsabilidades | Existencia ≠ Enrichment |
 | ✅ Usa este README como referencia principal | Es la fuente de verdad |
 | ✅ Pregunta si algo es ambiguo | Antes de asumir |
@@ -318,7 +354,7 @@ Si estás leyendo esto como IA:
 | Flujo A | 🟡 WORKING STATE | Estrategia definida, implementación en progreso |
 | Flujo C | 🟢 ESTABLE | Listo para activar |
 | Flujo D | ❌ ELIMINADO | No reintroducir |
-| Documentación | 🟢 Canónica | Este README es fuente de verdad |
+| Documentación | 🟢 Canónica v2.0 | Este README es fuente de verdad |
 
 ---
 
@@ -326,4 +362,4 @@ Si estás leyendo esto como IA:
 
 *SICI – Sistema Inteligente de Captura Inmobiliaria*  
 *Módulo 1 – Discovery & Existencia*  
-*Diciembre 2025*
+*Versión 2.0.0 – Diciembre 2025*

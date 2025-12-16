@@ -1,28 +1,55 @@
-# Módulo 1 - Arquitectura Dual v2.0
+# Módulo 1 - Arquitectura Dual
 
-**Estado:** ✅ COMPLETADO Y CONGELADO  
-**Fecha:** Diciembre 13, 2025  
-**Versión:** 1.0.0
+**Estado:** ✅ DOCUEMENTO COMPLETADO Y CONGELADO  
+**Fecha:** Diciembre 2025  
+**Versión:** 1.1.0
 
 ---
 
 ## Resumen Ejecutivo
 
-Sistema de captura de propiedades inmobiliarias con arquitectura de dos fases (Discovery + Enrichment) que se fusionan en Merge.
+Sistema de captura de propiedades inmobiliarias con arquitectura de dos fases (Discovery + Enrichment) que se fusionan en Merge, más verificación de existencia (Flujo C).
+
+**Concepto clave:** Discovery es un **detector de cambios de existencia** (Snapshot + Comparación + Decisión), no un extractor stateless.
 
 ---
 
-## Pipeline
+## Pipeline Principal
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │  DISCOVERY  │ → │ ENRICHMENT  │ → │    MERGE    │
 │   Flujo A   │    │   Flujo B   │    │  Automático │
-│   (API)     │    │   (HTML)    │    │             │
 └─────────────┘    └─────────────┘    └─────────────┘
       ↓                  ↓                  ↓
     nueva           actualizado        completado
 ```
+
+## Pipeline de Existencia (Flujo C)
+
+```
+┌─────────────┐         ┌─────────────┐
+│  DISCOVERY  │ ──────→ │  FLUJO C    │
+│  (ausencia) │         │ Verificador │
+└─────────────┘         └─────────────┘
+      ↓                       ↓
+inactivo_pending    ┌─────────┴─────────┐
+                    ↓                   ↓
+            inactivo_confirmed    completado
+                (HTTP 404)       (rescatado)
+```
+
+---
+
+## Estados del Sistema
+
+| Estado | Significado | Asignado por |
+|--------|-------------|--------------|
+| `nueva` | Propiedad detectada por primera vez | Discovery (Flujo A) |
+| `actualizado` | Enriquecida con datos HTML | Enrichment (Flujo B) |
+| `completado` | Merge exitoso o rescatada | Merge / Flujo C |
+| `inactivo_pending` | Ausente en snapshot, pendiente verificación | Discovery (Flujo A) |
+| `inactivo_confirmed` | Confirmado eliminado (HTTP 404) | Flujo C |
 
 ---
 
@@ -78,6 +105,9 @@ En merge, los datos de HTML (más detallados) tienen prioridad sobre API.
 ### 3. TC Dinámico
 Propiedades en BOB se recalculan automáticamente cuando cambia el tipo de cambio.
 
+### 4. Ausencia ≠ Inactividad
+Discovery marca `inactivo_pending` (sospecha). Flujo C confirma con HTTP 404.
+
 ---
 
 ## Configuración Validada
@@ -120,9 +150,10 @@ Propiedades en BOB se recalculan automáticamente cuando cambia el tipo de cambi
 SICI Módulo 1 - Property Matching
 - Tabla: propiedades_v2 (54 cols)
 - Pipeline: Discovery → Enrichment → Merge
+- Existencia: Discovery → Flujo C (inactivo_pending → inactivo_confirmed)
 - TC: oficial=6.96, paralelo=10.50
 - Regla: "Manual wins over automatic"
-- Status: 🔒 CONGELADO (Dic 13, 2025)
+- Status: 🔒 CONGELADO (Dic 2025)
 ```
 
 ---
