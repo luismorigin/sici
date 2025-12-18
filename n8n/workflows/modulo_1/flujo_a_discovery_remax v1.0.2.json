@@ -1,5 +1,5 @@
 {
-  "name": "Flujo A - Discovery Remax v1.0.0",
+  "name": "flujo_a_discovery_remax v1.0.2",
   "nodes": [
     {
       "parameters": {
@@ -12,88 +12,106 @@
           ]
         }
       },
-      "id": "trigger-schedule",
+      "id": "77267ca2-7aa3-4894-9024-515b42186f75",
       "name": "Trigger 1:00 AM",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 0],
+      "position": [
+        -1488,
+        288
+      ],
       "notes": "Ejecución diaria a las 1:00 AM"
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
         "jsCode": "// === GENERADOR DE URLs REMAX ===\n// Genera URLs para todas las páginas de la API\n\nconst TOTAL_PAGES = 8; // Equipetrol - validado dic 2025\nconst BASE_URL = 'https://remax.bo/api/search/departamento/santa-cruz-de-la-sierra/equipetrolnoroeste';\n\nconst urls = [];\n\nfor (let page = 1; page <= TOTAL_PAGES; page++) {\n  urls.push({\n    json: {\n      page_url: `${BASE_URL}?page=${page}`,\n      page_number: page,\n      fuente: 'remax'\n    }\n  });\n}\n\nreturn urls;"
       },
-      "id": "generar-urls",
+      "id": "dc10e23e-f768-434d-b277-abeb294afa13",
       "name": "Generar URLs Remax",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 0],
+      "position": [
+        -1264,
+        288
+      ],
       "notes": "8 páginas fijas - validar mensualmente"
     },
     {
       "parameters": {
-        "batchSize": 1,
         "options": {}
       },
-      "id": "split-batches",
+      "id": "b7300b9f-75a9-4e0c-977b-30f905fbbf12",
       "name": "Split In Batches",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [440, 0]
+      "position": [
+        -1040,
+        288
+      ]
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "={{ $json.page_url }}",
         "options": {
           "timeout": 30000
         }
       },
-      "id": "http-request",
+      "id": "4569e2a8-14c4-435d-8edd-84b6dc682973",
       "name": "HTTP Request API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [660, 0],
+      "position": [
+        -816,
+        432
+      ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 2000
     },
     {
       "parameters": {
-        "amount": 2,
-        "unit": "seconds"
+        "amount": 2
       },
-      "id": "wait-rate-limit",
+      "id": "239b8cc2-23f8-4240-a9f6-0b779e32fc26",
       "name": "Wait 2s",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [880, 0],
+      "position": [
+        -608,
+        432
+      ],
+      "webhookId": "d58725aa-cd8f-4a2a-9179-3c964047a0c8",
       "notes": "Rate limit: 2s entre requests"
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// === EXTRAER PROPIEDADES DEL RESPONSE ===\n// Mapeo mínimo + snapshot RAW completo\n\nconst response = $input.first().json;\nconst propiedades = response.data || [];\n\nreturn propiedades.map(prop => ({\n  json: {\n    // === IDENTIFICACIÓN ===\n    url: `https://remax.bo/propiedad/${prop.id}`,\n    fuente: 'remax',\n    codigo_propiedad: prop.MLSID,\n    \n    // === GPS ===\n    latitud: parseFloat(prop.location?.latitude) || null,\n    longitud: parseFloat(prop.location?.longitude) || null,\n    \n    // === DATOS OBSERVADOS (sin normalización) ===\n    precio_amount: prop.price?.amount || null,\n    moneda_original: prop.price?.currency_id === 1 ? 'BOB' : 'USD',\n    area_total_m2: prop.listing_information?.construction_area_m || null,\n    dormitorios: prop.listing_information?.number_bedrooms || null,\n    banos: prop.listing_information?.number_bathrooms || null,\n    tipo_propiedad_original: prop.listing_information?.subtype_property?.name || null,\n    fecha_publicacion: prop.date_of_listing || null,\n    \n    // === SNAPSHOT RAW COMPLETO ===\n    datos_json_discovery: prop,\n    \n    // === METADATA ===\n    metodo_discovery: 'api_rest'\n  }\n}));"
+        "jsCode": "// === EXTRAER PROPIEDADES DEL RESPONSE ===\n// Mapeo completo + snapshot RAW\n// v1.0.2: AGREGADO estacionamientos\n\nconst response = $input.first().json;\nconst propiedades = response.data || [];\n\nreturn propiedades.map(prop => ({\n  json: {\n    // === IDENTIFICACIÓN ===\n    url: `https://remax.bo/propiedad/${prop.id}`,\n    fuente: 'remax',\n    codigo_propiedad: prop.MLSID,\n    \n    // === GPS ===\n    latitud: parseFloat(prop.location?.latitude) || null,\n    longitud: parseFloat(prop.location?.longitude) || null,\n    \n    // === DATOS OBSERVADOS (sin normalización) ===\n    precio_usd: prop.price?.price_in_dollars || null,\n    precio_amount: prop.price?.amount || null,\n    moneda_original: prop.price?.currency_id === 1 ? 'BOB' : 'USD',\n    area_total_m2: prop.listing_information?.construction_area_m || null,\n    dormitorios: prop.listing_information?.number_bedrooms || null,\n    banos: prop.listing_information?.number_bathrooms || null,\n    estacionamientos: prop.listing_information?.number_parking || null,  // ✅ v1.0.2\n    tipo_propiedad_original: prop.listing_information?.subtype_property?.name || null,\n    fecha_publicacion: prop.date_of_listing || null,\n    \n    // === SNAPSHOT RAW COMPLETO ===\n    datos_json_discovery: prop,\n    \n    // === METADATA ===\n    metodo_discovery: 'api_rest'\n  }\n}));"
       },
-      "id": "extraer-propiedades",
+      "id": "3934b3d5-d1d1-4fdb-aab3-98563e2ad636",
       "name": "Extraer Propiedades",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, 0],
-      "notes": "Sin filtrado - payload RAW completo"
+      "position": [
+        -384,
+        432
+      ],
+      "notes": "v1.0.2: Agregado estacionamientos"
     },
     {
       "parameters": {
         "aggregate": "aggregateAllItemData",
         "destinationFieldName": "propiedades",
-        "include": "allFieldsExceptDefault"
+        "include": "allFieldsExceptDefault",
+        "options": {}
       },
-      "id": "aggregate-snapshot",
+      "id": "3ec76abb-9e53-45c0-86c3-25296c7893e7",
       "name": "Aggregate Snapshot",
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
-      "position": [1320, 0],
+      "position": [
+        -160,
+        288
+      ],
       "notes": "Fin de fase SNAPSHOT"
     },
     {
@@ -102,54 +120,63 @@
         "query": "SELECT id, url, status FROM propiedades_v2 WHERE fuente = 'remax' AND status NOT IN ('inactivo_confirmed')",
         "options": {}
       },
-      "id": "query-bd-activas",
+      "id": "27e512f9-7b2c-4ff4-a0d6-216b131b1150",
       "name": "Obtener URLs Activas BD",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1540, 0],
+      "position": [
+        64,
+        288
+      ],
       "credentials": {
         "postgres": {
-          "id": "POSTGRES_CREDENTIAL_ID",
-          "name": "Supabase SICI"
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
         }
       },
       "notes": "Solo id, url, status - Comparación clasifica existencia"
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// === PREPARAR COMPARACIÓN ===\n// Clasifica: nuevas, existentes, ausentes\n\nconst snapshot = $('Aggregate Snapshot').first().json.propiedades;\nconst propiedadesBD = $('Obtener URLs Activas BD').all().map(item => item.json);\n\n// === DEDUPLICACIÓN INTRA-SNAPSHOT ===\n// Se conserva el ÚLTIMO visto (estado más reciente del mercado)\nconst snapshotDedup = new Map();\nfor (const prop of snapshot) {\n  snapshotDedup.set(prop.url, prop); // último sobrescribe anteriores\n}\n\nconst urlsSnapshot = new Set(snapshotDedup.keys());\nconst urlsBD = new Map(propiedadesBD.map(p => [p.url, { id: p.id, status: p.status }]));\n\n// === CLASIFICACIÓN ===\nconst nuevas = [];\nconst existentes = [];\nconst ausentes = [];\n\n// Propiedades en snapshot\nfor (const [url, prop] of snapshotDedup) {\n  if (!urlsBD.has(url)) {\n    nuevas.push(prop);\n  } else {\n    existentes.push({\n      ...prop,\n      _id_bd: urlsBD.get(url).id,\n      _status_bd: urlsBD.get(url).status\n    });\n  }\n}\n\n// Propiedades ausentes (en BD pero no en snapshot)\nfor (const [url, info] of urlsBD) {\n  if (!urlsSnapshot.has(url)) {\n    if (!['inactivo_pending', 'inactivo_confirmed'].includes(info.status)) {\n      ausentes.push({\n        id: info.id,\n        url: url,\n        status_actual: info.status\n      });\n    }\n  }\n}\n\nreturn [{\n  json: {\n    nuevas: nuevas,\n    existentes: existentes,\n    ausentes: ausentes,\n    stats: {\n      total_snapshot: snapshotDedup.size,\n      total_bd: urlsBD.size,\n      nuevas: nuevas.length,\n      existentes: existentes.length,\n      ausentes: ausentes.length\n    }\n  }\n}];"
+        "jsCode": "// === PREPARAR COMPARACIÓN ===\n// Clasifica: nuevas, existentes, ausentes\n\nconst snapshot = $('Aggregate Snapshot').first().json.propiedades;\nconst propiedadesBD = $('Obtener URLs Activas BD').all().map(item => item.json);\n\n// === DEDUPLICACIÓN INTRA-SNAPSHOT ===\nconst snapshotDedup = new Map();\nfor (const prop of snapshot) {\n  snapshotDedup.set(prop.url, prop);\n}\n\nconst urlsSnapshot = new Set(snapshotDedup.keys());\nconst urlsBD = new Map(propiedadesBD.map(p => [p.url, { id: p.id, status: p.status }]));\n\n// === CLASIFICACIÓN ===\nconst nuevas = [];\nconst existentes = [];\nconst ausentes = [];\n\nfor (const [url, prop] of snapshotDedup) {\n  if (!urlsBD.has(url)) {\n    nuevas.push(prop);\n  } else {\n    existentes.push({\n      ...prop,\n      _id_bd: urlsBD.get(url).id,\n      _status_bd: urlsBD.get(url).status\n    });\n  }\n}\n\nfor (const [url, info] of urlsBD) {\n  if (!urlsSnapshot.has(url)) {\n    if (!['inactivo_pending', 'inactivo_confirmed'].includes(info.status)) {\n      ausentes.push({\n        id: info.id,\n        url: url,\n        status_actual: info.status\n      });\n    }\n  }\n}\n\nreturn [{\n  json: {\n    nuevas: nuevas,\n    existentes: existentes,\n    ausentes: ausentes,\n    stats: {\n      total_snapshot: snapshotDedup.size,\n      total_bd: urlsBD.size,\n      nuevas: nuevas.length,\n      existentes: existentes.length,\n      ausentes: ausentes.length\n    }\n  }\n}];"
       },
-      "id": "preparar-comparacion",
+      "id": "c2538d61-7610-4532-b4cd-45f114c75cfd",
       "name": "Preparar Comparación",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1760, 0],
+      "position": [
+        288,
+        288
+      ],
       "notes": "Deduplicación + Clasificación"
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
         "jsCode": "// === LOG STATS ===\nconst stats = $input.first().json.stats;\n\nconsole.log(`\n=== COMPARACIÓN DISCOVERY REMAX ===\nSnapshot (deduplicado): ${stats.total_snapshot}\nBD activas: ${stats.total_bd}\n---\nNuevas: ${stats.nuevas}\nExistentes: ${stats.existentes}\nAusentes: ${stats.ausentes}\n===================================\n`);\n\nreturn $input.all();"
       },
-      "id": "log-stats",
+      "id": "ada63d14-520c-4f4e-8109-35b0b56520f5",
       "name": "Log Stats",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1980, 0],
+      "position": [
+        512,
+        288
+      ],
       "notes": "Fin de fase COMPARACIÓN"
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// === UNIFICAR PROPIEDADES PARA DISCOVERY ===\n// Combina nuevas + existentes en un solo array\n// registrar_discovery() decide internamente si es INSERT o UPDATE\n\nconst data = $input.first().json;\nconst nuevas = data.nuevas || [];\nconst existentes = data.existentes || [];\n\n// Unificar: todas pasan por registrar_discovery()\nconst todas = [...nuevas, ...existentes];\n\nif (todas.length === 0) {\n  return [{ json: { skip: true, message: 'No hay propiedades para procesar' } }];\n}\n\nreturn todas.map(prop => ({\n  json: {\n    p_url: prop.url,\n    p_fuente: prop.fuente,\n    p_codigo_propiedad: prop.codigo_propiedad,\n    p_tipo_operacion: null,\n    p_tipo_propiedad_original: prop.tipo_propiedad_original,\n    p_precio_usd_original: prop.precio_amount,\n    p_moneda_original: prop.moneda_original,\n    p_area_total_m2: prop.area_total_m2,\n    p_dormitorios: prop.dormitorios,\n    p_banos: prop.banos,\n    p_latitud: prop.latitud,\n    p_longitud: prop.longitud,\n    p_fecha_publicacion: prop.fecha_publicacion,\n    p_metodo_discovery: prop.metodo_discovery,\n    p_datos_json_discovery: JSON.stringify(prop.datos_json_discovery)\n  }\n}));"
+        "jsCode": "// === UNIFICAR PROPIEDADES PARA DISCOVERY ===\n// v1.0.2: Incluye estacionamientos\n\nconst data = $input.first().json;\nconst nuevas = data.nuevas || [];\nconst existentes = data.existentes || [];\n\nconst todas = [...nuevas, ...existentes];\n\nif (todas.length === 0) {\n  return [{ json: { skip: true, message: 'No hay propiedades para procesar' } }];\n}\n\nreturn todas.map(prop => ({\n  json: {\n    p_url: prop.url,\n    p_fuente: prop.fuente,\n    p_codigo_propiedad: prop.codigo_propiedad,\n    p_tipo_operacion: null,\n    p_tipo_propiedad_original: prop.tipo_propiedad_original,\n    p_precio_usd: prop.precio_usd,\n    p_precio_usd_original: prop.precio_amount,\n    p_moneda_original: prop.moneda_original,\n    p_area_total_m2: prop.area_total_m2,\n    p_dormitorios: prop.dormitorios,\n    p_banos: prop.banos,\n    p_estacionamientos: prop.estacionamientos,  // ✅ v1.0.2\n    p_latitud: prop.latitud,\n    p_longitud: prop.longitud,\n    p_fecha_publicacion: prop.fecha_publicacion,\n    p_metodo_discovery: prop.metodo_discovery,\n    p_datos_json_discovery: JSON.stringify(prop.datos_json_discovery)\n  }\n}));"
       },
-      "id": "procesar-propiedades",
+      "id": "3e7435b9-e055-4d48-98e1-169f19930b97",
       "name": "Procesar Propiedades",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2200, -100],
-      "notes": "Unifica nuevas + existentes → registrar_discovery()"
+      "position": [
+        720,
+        176
+      ],
+      "notes": "v1.0.2: Incluye estacionamientos"
     },
     {
       "parameters": {
@@ -174,43 +201,51 @@
         },
         "options": {}
       },
-      "id": "if-propiedades",
+      "id": "5162637f-ed2f-4088-9b04-4efde89a7a4f",
       "name": "IF Propiedades",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2420, -100]
+      "position": [
+        944,
+        176
+      ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT * FROM registrar_discovery(\n  p_url := $1,\n  p_fuente := $2,\n  p_codigo_propiedad := $3,\n  p_tipo_operacion := $4,\n  p_tipo_propiedad_original := $5,\n  p_precio_usd_original := $6,\n  p_moneda_original := $7,\n  p_area_total_m2 := $8,\n  p_dormitorios := $9,\n  p_banos := $10,\n  p_latitud := $11,\n  p_longitud := $12,\n  p_fecha_publicacion := $13,\n  p_metodo_discovery := $14,\n  p_datos_json_discovery := $15::jsonb\n)",
+        "query": "SELECT * FROM registrar_discovery(\n  p_url := $1,\n  p_fuente := $2,\n  p_codigo_propiedad := $3,\n  p_tipo_operacion := $4,\n  p_tipo_propiedad_original := $5,\n  p_precio_usd := $6,\n  p_precio_usd_original := $7,\n  p_moneda_original := $8,\n  p_area_total_m2 := $9,\n  p_dormitorios := $10,\n  p_banos := $11,\n  p_estacionamientos := $12,\n  p_latitud := $13,\n  p_longitud := $14,\n  p_fecha_publicacion := $15,\n  p_metodo_discovery := $16,\n  p_datos_json_discovery := $17::jsonb\n)",
         "options": {
-          "queryReplacement": "={{ [$json.p_url, $json.p_fuente, $json.p_codigo_propiedad, $json.p_tipo_operacion, $json.p_tipo_propiedad_original, $json.p_precio_usd_original, $json.p_moneda_original, $json.p_area_total_m2, $json.p_dormitorios, $json.p_banos, $json.p_latitud, $json.p_longitud, $json.p_fecha_publicacion, $json.p_metodo_discovery, $json.p_datos_json_discovery] }}"
+          "queryReplacement": "={{ [$json.p_url, $json.p_fuente, $json.p_codigo_propiedad, $json.p_tipo_operacion, $json.p_tipo_propiedad_original, $json.p_precio_usd, $json.p_precio_usd_original, $json.p_moneda_original, $json.p_area_total_m2, $json.p_dormitorios, $json.p_banos, $json.p_estacionamientos, $json.p_latitud, $json.p_longitud, $json.p_fecha_publicacion, $json.p_metodo_discovery, $json.p_datos_json_discovery] }}"
         }
       },
-      "id": "registrar-discovery",
+      "id": "b539b0aa-e33a-4877-a189-9a58fa5ce26c",
       "name": "Registrar Discovery",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [2640, -100],
+      "position": [
+        1168,
+        176
+      ],
       "credentials": {
         "postgres": {
-          "id": "POSTGRES_CREDENTIAL_ID",
-          "name": "Supabase SICI"
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
         }
       },
-      "notes": "registrar_discovery() decide INSERT/UPDATE internamente"
+      "notes": "v1.0.2: 17 parámetros completos"
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// === PROCESAR AUSENTES ===\n// Prepara UPDATE directo a inactivo_pending\n\nconst ausentes = $input.first().json.ausentes;\n\nif (ausentes.length === 0) {\n  return [{ json: { skip: true, message: 'No hay propiedades ausentes' } }];\n}\n\nreturn ausentes.map(prop => ({\n  json: {\n    id: prop.id,\n    url: prop.url,\n    status_actual: prop.status_actual\n  }\n}));"
+        "jsCode": "// === PROCESAR AUSENTES ===\n\nconst ausentes = $input.first().json.ausentes;\n\nif (ausentes.length === 0) {\n  return [{ json: { skip: true, message: 'No hay propiedades ausentes' } }];\n}\n\nreturn ausentes.map(prop => ({\n  json: {\n    id: prop.id,\n    url: prop.url,\n    status_actual: prop.status_actual\n  }\n}));"
       },
-      "id": "procesar-ausentes",
+      "id": "b5f8cef4-a19c-440c-b466-3d4add21e0f9",
       "name": "Procesar Ausentes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2200, 200],
+      "position": [
+        720,
+        480
+      ],
       "notes": "UPDATE directo desde orquestación"
     },
     {
@@ -236,11 +271,14 @@
         },
         "options": {}
       },
-      "id": "if-ausentes",
+      "id": "640cbd82-4239-4694-a274-9de6e953004a",
       "name": "IF Ausentes",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2420, 200]
+      "position": [
+        944,
+        480
+      ]
     },
     {
       "parameters": {
@@ -250,32 +288,38 @@
           "queryReplacement": "={{ [$json.id] }}"
         }
       },
-      "id": "marcar-ausentes",
+      "id": "a5978bb7-aef3-48cd-a784-286b80bda95c",
       "name": "Marcar Ausentes",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [2640, 200],
+      "position": [
+        1168,
+        480
+      ],
       "credentials": {
         "postgres": {
-          "id": "POSTGRES_CREDENTIAL_ID",
-          "name": "Supabase SICI"
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
         }
       },
-      "notes": "UPDATE → inactivo_pending (orquestación)"
+      "notes": "UPDATE → inactivo_pending"
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// === RESUMEN FINAL ===\nconst stats = $('Log Stats').first().json.stats;\n\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  fuente: 'remax',\n  workflow: 'Flujo A - Discovery',\n  version: '1.0.0',\n  resultados: {\n    snapshot_total: stats.total_snapshot,\n    bd_activas: stats.total_bd,\n    nuevas_insertadas: stats.nuevas,\n    existentes_actualizadas: stats.existentes,\n    ausentes_marcadas: stats.ausentes\n  },\n  status: 'completado'\n};\n\nconsole.log('=== FLUJO A DISCOVERY REMAX COMPLETADO ===');\nconsole.log(JSON.stringify(resumen, null, 2));\n\nreturn [{ json: resumen }];"
+        "jsCode": "// === RESUMEN FINAL ===\nconst stats = $('Log Stats').first().json.stats;\n\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  fuente: 'remax',\n  workflow: 'Flujo A - Discovery',\n  version: '1.0.2',\n  resultados: {\n    snapshot_total: stats.total_snapshot,\n    bd_activas: stats.total_bd,\n    nuevas_insertadas: stats.nuevas,\n    existentes_actualizadas: stats.existentes,\n    ausentes_marcadas: stats.ausentes\n  },\n  status: 'completado'\n};\n\nconsole.log('=== FLUJO A DISCOVERY REMAX COMPLETADO ===');\nconsole.log(JSON.stringify(resumen, null, 2));\n\nreturn [{ json: resumen }];"
       },
-      "id": "resumen-final",
+      "id": "ca8893ae-4f2e-40fe-a1df-2f01a06f101d",
       "name": "Resumen Final",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2860, 0],
-      "notes": "Log final y resumen de ejecución"
+      "position": [
+        1392,
+        288
+      ],
+      "notes": "Log final y resumen"
     }
   ],
+  "pinData": {},
   "connections": {
     "Trigger 1:00 AM": {
       "main": [
@@ -303,14 +347,14 @@
       "main": [
         [
           {
-            "node": "HTTP Request API",
+            "node": "Aggregate Snapshot",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Aggregate Snapshot",
+            "node": "HTTP Request API",
             "type": "main",
             "index": 0
           }
@@ -466,34 +510,33 @@
       ]
     }
   },
+  "active": false,
   "settings": {
-    "executionOrder": "v1",
-    "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner",
-    "errorWorkflow": ""
+    "executionOrder": "v1"
   },
-  "staticData": null,
+  "versionId": "eb45e553-a7c1-457f-9515-7aa7a3011b34",
   "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "sici-discovery"
+    "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
   },
-  "pinData": {},
-  "versionId": "1.0.0",
+  "id": "PqBHMpim3bc9ytfR",
   "tags": [
     {
-      "name": "discovery",
-      "createdAt": "2025-12-16",
-      "updatedAt": "2025-12-16"
+      "updatedAt": "2025-12-16T20:48:24.167Z",
+      "createdAt": "2025-12-16T20:48:24.167Z",
+      "id": "eAk79pUvDmxJn6Ou",
+      "name": "remax"
     },
     {
-      "name": "remax",
-      "createdAt": "2025-12-16",
-      "updatedAt": "2025-12-16"
+      "updatedAt": "2025-12-16T20:48:24.176Z",
+      "createdAt": "2025-12-16T20:48:24.176Z",
+      "id": "ySGGvM6jytEV55AQ",
+      "name": "discovery"
     },
     {
-      "name": "flujo-a",
-      "createdAt": "2025-12-16",
-      "updatedAt": "2025-12-16"
+      "updatedAt": "2025-12-16T20:48:24.188Z",
+      "createdAt": "2025-12-16T20:48:24.188Z",
+      "id": "KO74kUVyAuzu3wWq",
+      "name": "flujo-a"
     }
   ]
 }

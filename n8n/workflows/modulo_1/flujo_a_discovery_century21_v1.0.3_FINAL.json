@@ -1,0 +1,572 @@
+{
+  "name": "flujo_a_discovery_century21_v1.0.3_FINAL",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 1 * * *"
+            }
+          ]
+        }
+      },
+      "id": "89ca05f4-a5d3-4b4b-a22c-b2926ab8cf6d",
+      "name": "Trigger 1:00 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -752,
+        448
+      ],
+      "notes": "Ejecución diaria a las 1:00 AM"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === GENERADOR DE CUADRANTES CENTURY21 ===\n// Grid geográfico para Equipetrol\n\nconst LAT_SUR = -17.775;\nconst LAT_NORTE = -17.750;\nconst LON_OESTE = -63.205;\nconst LON_ESTE = -63.185;\nconst STEP = 0.010;\n\nconst cookieId = 'sici_' + Math.random().toString(36).substring(2, 15);\nconst cookie = `PHPSESSID=${cookieId}`;\n\nconst cuadrantes = [];\nlet gridId = 1;\n\nfor (let lat = LAT_SUR; lat < LAT_NORTE; lat += STEP) {\n  for (let lon = LON_OESTE; lon < LON_ESTE; lon += STEP) {\n    const south = lat;\n    const west = lon;\n    const north = lat + STEP;\n    const east = lon + STEP;\n    \n    const coordString = `coordenadas_${north.toFixed(6)},${east.toFixed(6)},${south.toFixed(6)},${west.toFixed(6)}`;\n    \n    cuadrantes.push({\n      json: {\n        grid_id: gridId++,\n        path_coordenadas: coordString,\n        cookie: cookie,\n        fuente: 'century21'\n      }\n    });\n  }\n}\n\nreturn cuadrantes;"
+      },
+      "id": "30f72ba8-bd64-4d90-bd83-8b362cab6e0c",
+      "name": "Generar Cuadrantes Grid",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        448
+      ],
+      "notes": "~6 cuadrantes para Equipetrol (STEP=0.010)"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2f351ae4-2241-4132-aafb-fefaba10db07",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -304,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://c21.com.bo/v/resultados/tipo_departamento-o-penthouse/operacion_venta/layout_mapa/{{ $json.path_coordenadas }},15?json=true",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "accept-language",
+              "value": "es-US,es-419;q=0.9,es;q=0.8,en;q=0.7"
+            },
+            {
+              "name": "sec-fetch-dest",
+              "value": "empty"
+            },
+            {
+              "name": "sec-fetch-mode",
+              "value": "cors"
+            },
+            {
+              "name": "sec-fetch-site",
+              "value": "same-origin"
+            },
+            {
+              "name": "cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "89050497-c889-4000-9d30-7849f36367e5",
+      "name": "HTTP Request Grid",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -80,
+        624
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "notes": "Headers críticos según research"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "dca3e011-dab9-4257-951c-bfba6d9ad0c3",
+      "name": "Wait 2s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        144,
+        624
+      ],
+      "webhookId": "69861d6e-6142-42bc-ab00-615cd9d78ea8",
+      "notes": "Rate limit: 2s entre requests"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === EXTRAER PROPIEDADES DEL RESPONSE ===\n// Parsing defensivo + mapeo completo\n// v1.0.3: AGREGADO fecha_publicacion y estacionamientos\n\nconst response = $input.first().json;\n\n// Parsing defensivo según research\nlet propiedades = [];\nif (Array.isArray(response)) {\n  propiedades = response;\n} else if (response.results) {\n  propiedades = response.results;\n} else if (response.datas && response.datas.results) {\n  propiedades = response.datas.results;\n}\n\nif (!propiedades || propiedades.length === 0) {\n  return [];\n}\n\nreturn propiedades.map(prop => {\n  const moneda = prop.moneda || 'USD';\n  const precioOriginal = prop.precio || null;\n  \n  let precioUsd = null;\n  if (precioOriginal !== null && moneda === 'USD') {\n    precioUsd = precioOriginal;\n  }\n  \n  return {\n    json: {\n      // === IDENTIFICACIÓN ===\n      url: `https://c21.com.bo${prop.urlCorrectaPropiedad || '/propiedad/' + prop.id}`,\n      fuente: 'century21',\n      codigo_propiedad: String(prop.id),\n      \n      // === GPS ===\n      latitud: parseFloat(prop.lat) || null,\n      longitud: parseFloat(prop.lon) || null,\n      \n      // === DATOS OBSERVADOS (sin normalización) ===\n      precio_usd: precioUsd,\n      precio_amount: precioOriginal,\n      moneda_original: moneda,\n      area_total_m2: prop.m2C || null,\n      dormitorios: prop.recamaras || null,\n      banos: prop.banos || null,\n      estacionamientos: prop.estacionamientos || null,    // ✅ v1.0.3\n      tipo_propiedad_original: prop.tipoPropiedad || null,\n      fecha_publicacion: prop.fechaAlta || null,          // ✅ v1.0.3\n      \n      // === SNAPSHOT RAW COMPLETO ===\n      datos_json_discovery: prop,\n      \n      // === METADATA ===\n      metodo_discovery: 'map_grid'\n    }\n  };\n});"
+      },
+      "id": "cb34d893-2f6e-42c8-bb90-3f43ed83fc13",
+      "name": "Extraer Propiedades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        624
+      ],
+      "notes": "v1.0.3: fecha_publicacion + estacionamientos"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "propiedades",
+        "include": "allFieldsExceptDefault",
+        "options": {}
+      },
+      "id": "73b2f373-522c-4f11-b82b-42752b0c547e",
+      "name": "Aggregate Snapshot",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        576,
+        448
+      ],
+      "notes": "Fin de fase SNAPSHOT"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, url, status FROM propiedades_v2 WHERE fuente = 'century21' AND status NOT IN ('inactivo_confirmed')",
+        "options": {}
+      },
+      "id": "fcac8a31-58a0-4008-a305-c4c974bfafc5",
+      "name": "Obtener URLs Activas BD",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        800,
+        448
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "Solo id, url, status"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PREPARAR COMPARACIÓN ===\n\nconst snapshot = $('Aggregate Snapshot').first().json.propiedades || [];\nconst propiedadesBD = $('Obtener URLs Activas BD').all().map(item => item.json);\n\nconst snapshotDedup = new Map();\nfor (const prop of snapshot) {\n  snapshotDedup.set(prop.url, prop);\n}\n\nconst urlsSnapshot = new Set(snapshotDedup.keys());\nconst urlsBD = new Map(propiedadesBD.map(p => [p.url, { id: p.id, status: p.status }]));\n\nconst nuevas = [];\nconst existentes = [];\nconst ausentes = [];\n\nfor (const [url, prop] of snapshotDedup) {\n  if (!urlsBD.has(url)) {\n    nuevas.push(prop);\n  } else {\n    existentes.push({\n      ...prop,\n      _id_bd: urlsBD.get(url).id,\n      _status_bd: urlsBD.get(url).status\n    });\n  }\n}\n\nfor (const [url, info] of urlsBD) {\n  if (!urlsSnapshot.has(url)) {\n    if (!['inactivo_pending', 'inactivo_confirmed'].includes(info.status)) {\n      ausentes.push({\n        id: info.id,\n        url: url,\n        status_actual: info.status\n      });\n    }\n  }\n}\n\nreturn [{\n  json: {\n    nuevas: nuevas,\n    existentes: existentes,\n    ausentes: ausentes,\n    stats: {\n      total_snapshot: snapshotDedup.size,\n      total_bd: urlsBD.size,\n      nuevas: nuevas.length,\n      existentes: existentes.length,\n      ausentes: ausentes.length\n    }\n  }\n}];"
+      },
+      "id": "e08e7afb-56e1-41ab-964d-3b6da80715b2",
+      "name": "Preparar Comparación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        448
+      ],
+      "notes": "Deduplicación + Clasificación"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === LOG STATS ===\nconst stats = $input.first().json.stats;\n\nconsole.log(`\n=== COMPARACIÓN DISCOVERY CENTURY21 ===\nSnapshot (deduplicado): ${stats.total_snapshot}\nBD activas: ${stats.total_bd}\n---\nNuevas: ${stats.nuevas}\nExistentes: ${stats.existentes}\nAusentes: ${stats.ausentes}\n=======================================\n`);\n\nreturn $input.all();"
+      },
+      "id": "36a2bbba-dea4-453f-bb53-a125b5425d57",
+      "name": "Log Stats",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        448
+      ],
+      "notes": "Fin de fase COMPARACIÓN"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === UNIFICAR PROPIEDADES PARA DISCOVERY ===\n// v1.0.3: Incluye todos los campos\n\nconst data = $input.first().json;\nconst nuevas = data.nuevas || [];\nconst existentes = data.existentes || [];\n\nconst todas = [...nuevas, ...existentes];\n\nif (todas.length === 0) {\n  return [{ json: { skip: true, message: 'No hay propiedades para procesar' } }];\n}\n\nreturn todas.map(prop => ({\n  json: {\n    p_url: prop.url,\n    p_fuente: prop.fuente,\n    p_codigo_propiedad: prop.codigo_propiedad,\n    p_tipo_operacion: null,\n    p_tipo_propiedad_original: prop.tipo_propiedad_original,\n    p_precio_usd: prop.precio_usd,\n    p_precio_usd_original: prop.precio_amount,\n    p_moneda_original: prop.moneda_original,\n    p_area_total_m2: prop.area_total_m2,\n    p_dormitorios: prop.dormitorios,\n    p_banos: prop.banos,\n    p_estacionamientos: prop.estacionamientos,\n    p_latitud: prop.latitud,\n    p_longitud: prop.longitud,\n    p_fecha_publicacion: prop.fecha_publicacion,\n    p_metodo_discovery: prop.metodo_discovery,\n    p_datos_json_discovery: JSON.stringify(prop.datos_json_discovery)\n  }\n}));"
+      },
+      "id": "f27667a6-8e3b-4ac4-8283-b9afbe4eddfd",
+      "name": "Procesar Propiedades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        336
+      ],
+      "notes": "v1.0.3: Todos los campos mapeados"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "64e20832-2551-454c-8ac7-3c4b0f1a5f43",
+      "name": "IF Propiedades",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM registrar_discovery(\n  p_url := $1,\n  p_fuente := $2,\n  p_codigo_propiedad := $3,\n  p_tipo_operacion := $4,\n  p_tipo_propiedad_original := $5,\n  p_precio_usd := $6,\n  p_precio_usd_original := $7,\n  p_moneda_original := $8,\n  p_area_total_m2 := $9,\n  p_dormitorios := $10,\n  p_banos := $11,\n  p_estacionamientos := $12,\n  p_latitud := $13,\n  p_longitud := $14,\n  p_fecha_publicacion := $15,\n  p_metodo_discovery := $16,\n  p_datos_json_discovery := $17::jsonb\n)",
+        "options": {
+          "queryReplacement": "={{ [$json.p_url, $json.p_fuente, $json.p_codigo_propiedad, $json.p_tipo_operacion, $json.p_tipo_propiedad_original, $json.p_precio_usd, $json.p_precio_usd_original, $json.p_moneda_original, $json.p_area_total_m2, $json.p_dormitorios, $json.p_banos, $json.p_estacionamientos, $json.p_latitud, $json.p_longitud, $json.p_fecha_publicacion, $json.p_metodo_discovery, $json.p_datos_json_discovery] }}"
+        }
+      },
+      "id": "2f316fb3-9f54-4509-b1b1-f0521b24067a",
+      "name": "Registrar Discovery",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1904,
+        336
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "v1.0.3: 17 parámetros completos"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PROCESAR AUSENTES ===\n\nconst ausentes = $input.first().json.ausentes;\n\nif (ausentes.length === 0) {\n  return [{ json: { skip: true, message: 'No hay propiedades ausentes' } }];\n}\n\nreturn ausentes.map(prop => ({\n  json: {\n    id: prop.id,\n    url: prop.url,\n    status_actual: prop.status_actual\n  }\n}));"
+      },
+      "id": "a69137c4-efb6-4a6b-a860-b1e2fd8ca343",
+      "name": "Procesar Ausentes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        640
+      ],
+      "notes": "UPDATE directo"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2c6fc6bc-9a33-4d8e-b221-89feb9797f4c",
+      "name": "IF Ausentes",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE propiedades_v2 SET status = 'inactivo_pending', fecha_discovery = NOW() WHERE id = $1 AND status NOT IN ('inactivo_pending', 'inactivo_confirmed')",
+        "options": {
+          "queryReplacement": "={{ [$json.id] }}"
+        }
+      },
+      "id": "5af77340-a41a-459d-883e-667698490adc",
+      "name": "Marcar Ausentes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1904,
+        640
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "UPDATE → inactivo_pending"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === RESUMEN FINAL ===\nconst stats = $('Log Stats').first().json.stats;\n\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  fuente: 'century21',\n  workflow: 'Flujo A - Discovery',\n  version: '1.0.3',\n  resultados: {\n    snapshot_total: stats.total_snapshot,\n    bd_activas: stats.total_bd,\n    nuevas_insertadas: stats.nuevas,\n    existentes_actualizadas: stats.existentes,\n    ausentes_marcadas: stats.ausentes\n  },\n  status: 'completado'\n};\n\nconsole.log('=== FLUJO A DISCOVERY CENTURY21 COMPLETADO ===');\nconsole.log(JSON.stringify(resumen, null, 2));\n\nreturn [{ json: resumen }];"
+      },
+      "id": "545f6d55-a5fb-443a-8ef9-5c2de56fff8d",
+      "name": "Resumen Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2128,
+        448
+      ],
+      "notes": "Log final"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger 1:00 AM": {
+      "main": [
+        [
+          {
+            "node": "Generar Cuadrantes Grid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Cuadrantes Grid": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request Grid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request Grid": {
+      "main": [
+        [
+          {
+            "node": "Wait 2s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2s": {
+      "main": [
+        [
+          {
+            "node": "Extraer Propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Propiedades": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Obtener URLs Activas BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener URLs Activas BD": {
+      "main": [
+        [
+          {
+            "node": "Preparar Comparación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Comparación": {
+      "main": [
+        [
+          {
+            "node": "Log Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Stats": {
+      "main": [
+        [
+          {
+            "node": "Procesar Propiedades",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Procesar Ausentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Propiedades": {
+      "main": [
+        [
+          {
+            "node": "IF Propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Propiedades": {
+      "main": [
+        [
+          {
+            "node": "Registrar Discovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Discovery": {
+      "main": [
+        [
+          {
+            "node": "Resumen Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Ausentes": {
+      "main": [
+        [
+          {
+            "node": "IF Ausentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Ausentes": {
+      "main": [
+        [
+          {
+            "node": "Marcar Ausentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar Ausentes": {
+      "main": [
+        [
+          {
+            "node": "Resumen Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "656490e6-518e-42dd-8db6-80187bb78159",
+  "meta": {
+    "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
+  },
+  "id": "iDGgkRD2yJMwKn2W",
+  "tags": [
+    {
+      "updatedAt": "2025-12-16T20:48:24.188Z",
+      "createdAt": "2025-12-16T20:48:24.188Z",
+      "id": "KO74kUVyAuzu3wWq",
+      "name": "flujo-a"
+    },
+    {
+      "updatedAt": "2025-12-16T20:48:24.176Z",
+      "createdAt": "2025-12-16T20:48:24.176Z",
+      "id": "ySGGvM6jytEV55AQ",
+      "name": "discovery"
+    },
+    {
+      "updatedAt": "2025-12-17T18:46:15.723Z",
+      "createdAt": "2025-12-17T18:46:15.723Z",
+      "id": "l8vGnbf5u3Ph81kX",
+      "name": "century21"
+    }
+  ]
+}

@@ -1,177 +1,68 @@
 # n8n Workflows — SICI Discovery
 
-**Sistema:** SICI — Sistema Inteligente de Captura Inmobiliaria
-**Módulo:** Módulo 1 — Discovery & Existencia
-**Versión:** 1.0.0
+**Sistema:** SICI — Sistema Inteligente de Captura Inmobiliaria  
+**Módulo:** Módulo 1 — Discovery & Existencia  
+**Versión:** 1.0.3  
 **Fecha:** Diciembre 2025
 
 ---
 
-## Workflows disponibles
+## 📁 Workflows Disponibles
 
-| Archivo | Descripción | Estado |
-|---------|-------------|--------|
-| `flujo_a_discovery_remax_v1.json` | Flujo A completo para Remax | 🟢 Estable |
-| `flujo_a_discovery_century21_v1.json` | Flujo A completo para Century21 | 🟡 Testing |
+| Archivo | Descripción | Versión | Estado |
+|---------|-------------|---------|--------|
+| `flujo_a_discovery_century21_v1.0.3_FINAL.json` | Flujo A completo para Century21 | v1.0.3 | ✅ Producción |
+| `flujo_c_verificador_v1.json` | Verificador de propiedades inactivas | v1.0.0 | 🟡 Testing |
+| `flujo_a_discovery_century21_v1_OLD.json` | Versión obsoleta | v1.0.0 | 📦 Deprecated |
+| `flujo_a_discovery_remax_v1_OLD.json` | Versión obsoleta | v1.0.0 | 📦 Deprecated |
 
----
-
-## Flujo A — Discovery Remax v1.0.0
-
-### Arquitectura
-
-```
-[Trigger 1:00 AM]
-       │
-═══════╪═══ SNAPSHOT ═══════════════════════════════════════
-       │
-       ▼
-[Generar URLs] → [Split] → [HTTP Request] → [Wait 2s] → [Extraer Props]
-                    │                                         │
-                    └─────────────────────────────────────────┘
-                                      │
-                                      ▼
-                               [Aggregate]
-       │
-═══════╪═══ COMPARACIÓN ════════════════════════════════════
-       │
-       ▼
-[Query BD Activas] → [Preparar Comparación] → [Log Stats]
-       │
-═══════╪═══ DECISIÓN ═══════════════════════════════════════
-       │
-       ├──→ [Nuevas] ────→ registrar_discovery() → INSERT
-       ├──→ [Existentes] → registrar_discovery() → UPDATE
-       └──→ [Ausentes] ──→ UPDATE directo → inactivo_pending
-                                      │
-                                      ▼
-                              [Resumen Final]
-```
-
-### Prerequisitos
-
-1. **Credencial Postgres** configurada en n8n
-   - ID: `POSTGRES_CREDENTIAL_ID` (reemplazar en JSON)
-   - Nombre sugerido: `Supabase SICI`
-
-2. **Función SQL desplegada**
-   - `registrar_discovery()` v2.0.0 en Supabase
-
-3. **Tabla existente**
-   - `propiedades_v2` con estructura canónica
-
-### Importar en n8n
-
-1. Abrir n8n → Settings → Import from File
-2. Seleccionar `flujo_a_discovery_remax_v1.json`
-3. Configurar credencial Postgres (reemplazar `POSTGRES_CREDENTIAL_ID`)
-4. Guardar y activar
+**Nota:** Los archivos `_OLD` se mantienen como backup temporal y serán eliminados en futuras versiones.
 
 ---
 
-## Testing
+## 🔄 Flujo A — Discovery Century21 v1.0.3 FINAL
 
-### Test 1: Primera ejecución (BD vacía)
+### ✅ Estado Actual
 
-**Objetivo:** Verificar INSERT de propiedades nuevas
+- **Versión:** v1.0.3 FINAL
+- **Última actualización:** 18 Diciembre 2025
+- **Estado:** ✅ Producción
+- **Cobertura campos:** 100% de campos disponibles extraídos
 
-```sql
--- Antes
-SELECT COUNT(*) FROM propiedades_v2 WHERE fuente = 'remax';
--- Esperado: 0
-```
+### 📊 Campos Extraídos
 
-1. Ejecutar workflow manualmente
-2. Verificar logs: `Nuevas: ~150`, `Existentes: 0`, `Ausentes: 0`
+| Campo | Fuente JSON | Cobertura | Notas |
+|-------|-------------|-----------|-------|
+| `url` | `urlCorrectaPropiedad` | 100% | |
+| `codigo_propiedad` | `id` | 100% | |
+| `latitud` | `lat` | 100% | |
+| `longitud` | `lon` | 100% | |
+| `precio_usd` | calculado | ~15% | Solo cuando moneda=USD |
+| `precio_usd_original` | `precio` | 100% | |
+| `moneda_original` | `moneda` | 100% | |
+| `area_total_m2` | `m2C` | 99% | ✅ v1.0.2: Corregido |
+| `dormitorios` | `recamaras` | 66% | ✅ v1.0.2: Corregido |
+| `banos` | `banos` | 68% | C21 a veces null |
+| `estacionamientos` | `estacionamientos` | 13% | ✅ v1.0.3: Agregado |
+| `tipo_propiedad_original` | `tipoPropiedad` | 99% | |
+| `fecha_publicacion` | `fechaAlta` | 99% | ✅ v1.0.3: Agregado |
 
-```sql
--- Después
-SELECT COUNT(*) FROM propiedades_v2 WHERE fuente = 'remax' AND status = 'nueva';
--- Esperado: ~150
-```
+### 📝 Changelog
 
-### Test 2: Segunda ejecución (sin cambios)
+**v1.0.3 (18 Dic 2025) - FINAL:**
+- ✅ Agregado: `fecha_publicacion` (usa `fechaAlta`)
+- ✅ Agregado: `estacionamientos`
+- ✅ Query SQL con 17 parámetros completos
 
-**Objetivo:** Verificar UPDATE sin cambio de estado
+**v1.0.2 (18 Dic 2025):**
+- ✅ Corregido: `area_total_m2` ahora usa `m2C` (NO `superficie`)
+- ✅ Corregido: `dormitorios` ahora usa `recamaras` (NO `dormitorios`)
+- ✅ Agregado: Cálculo de `precio_usd` cuando moneda=USD
 
-1. Ejecutar workflow nuevamente
-2. Verificar logs: `Nuevas: 0`, `Existentes: ~150`, `Ausentes: 0`
+**v1.0.0 (16 Dic 2025):**
+- Versión inicial
 
-```sql
--- Verificar que status se preservó
-SELECT COUNT(*) FROM propiedades_v2 WHERE fuente = 'remax' AND status = 'nueva';
--- Esperado: ~150 (sin cambios)
-```
-
-### Test 3: Simular ausencia
-
-**Objetivo:** Verificar marcado de `inactivo_pending`
-
-```sql
--- Simular propiedad que ya no existe en el portal
-INSERT INTO propiedades_v2 (url, fuente, status, fecha_discovery)
-VALUES ('https://remax.bo/propiedad/99999', 'remax', 'nueva', NOW());
-```
-
-1. Ejecutar workflow
-2. Verificar logs: `Ausentes: 1`
-
-```sql
--- Verificar estado
-SELECT status FROM propiedades_v2 WHERE url = 'https://remax.bo/propiedad/99999';
--- Esperado: inactivo_pending
-```
-
-### Test 4: Simular reaparición
-
-**Objetivo:** Verificar que propiedad ausente se rescata
-
-```sql
--- Propiedad con id real que existe en el portal pero estaba marcada ausente
-UPDATE propiedades_v2
-SET status = 'inactivo_pending'
-WHERE url = 'https://remax.bo/propiedad/51591';  -- usar ID real
-```
-
-1. Ejecutar workflow
-2. Verificar que aparece en `existentes`
-
-```sql
--- Verificar rescate (status debería volver a nueva o preservar anterior)
-SELECT status FROM propiedades_v2 WHERE url = 'https://remax.bo/propiedad/51591';
-```
-
----
-
-## Configuración
-
-### Variables a ajustar
-
-| Variable | Ubicación | Valor actual | Descripción |
-|----------|-----------|--------------|-------------|
-| `TOTAL_PAGES` | Nodo "Generar URLs Remax" | 8 | Páginas de API Remax |
-| `POSTGRES_CREDENTIAL_ID` | Nodos Postgres | (configurar) | ID credencial n8n |
-
-### Schedule
-
-- **Trigger:** Cron `0 1 * * *` (1:00 AM diario)
-- **Duración estimada:** 20-30 segundos
-
----
-
-## Versionado
-
-| Versión | Fecha | Cambios |
-|---------|-------|---------|
-| 1.0.0 | 2025-12-16 | Versión inicial — Snapshot, Comparación, Decisión |
-
----
-
----
-
-## Flujo A — Discovery Century21 v1.0.0
-
-### Arquitectura
+### 🏗️ Arquitectura
 
 ```
 [Trigger 1:00 AM]
@@ -202,18 +93,7 @@ SELECT status FROM propiedades_v2 WHERE url = 'https://remax.bo/propiedad/51591'
                               [Resumen Final]
 ```
 
-### Diferencias con Remax
-
-| Aspecto | Remax | Century21 |
-|---------|-------|-----------|
-| Método snapshot | API paginada (8 páginas) | Grid geográfico (~6 cuadrantes) |
-| Headers HTTP | Básicos | Completos (CORS, cookie) |
-| Cookie | No requerida | Auto-emitida (PHPSESSID) |
-| Duplicados | 0% | 5-10% (por overlap) |
-| Parsing | Directo | Defensivo (3 estructuras) |
-| Tiempo | ~20s | ~12s |
-
-### Configuración Grid
+### ⚙️ Configuración Grid
 
 ```javascript
 LAT_SUR = -17.775
@@ -223,11 +103,205 @@ LON_ESTE = -63.185
 STEP = 0.010  // ~1.1km por cuadrante
 ```
 
+**Resultado:** ~6 cuadrantes que cubren completamente Equipetrol
+
+### 📋 Prerequisitos
+
+1. **Credencial Postgres** configurada en n8n
+   - Nombre sugerido: `Supabase SICI`
+   - Configurar en 3 nodos:
+     - "Registrar Discovery"
+     - "Obtener URLs Activas BD"
+     - "Marcar Ausentes"
+
+2. **Función SQL desplegada**
+   - `registrar_discovery()` v2.0.0 en Supabase
+
+3. **Tabla existente**
+   - `propiedades_v2` con estructura canónica
+
+### 📥 Importar en n8n
+
+1. Abrir n8n → Settings → Import from File
+2. Seleccionar `flujo_a_discovery_century21_v1.0.3_FINAL.json`
+3. Configurar credencial Postgres en los 3 nodos
+4. Guardar y activar
+
 ---
 
-## Próximos pasos
+## 🧪 Testing
 
-1. [x] Testing Remax completo
-2. [ ] Testing Century21
-3. [ ] Ajustar credenciales reales
-4. [ ] Activar schedules
+### ✅ Test 1: Verificar campos extraídos
+
+```sql
+SELECT 
+    COUNT(*) as total,
+    COUNT(area_total_m2) as con_area,
+    COUNT(dormitorios) as con_dormitorios,
+    COUNT(banos) as con_banos,
+    COUNT(estacionamientos) as con_estacionamientos,
+    COUNT(fecha_publicacion) as con_fecha_pub,
+    ROUND(COUNT(area_total_m2)::NUMERIC / COUNT(*) * 100, 2) as porcentaje_area
+FROM propiedades_v2
+WHERE fuente = 'century21'
+  AND fecha_discovery >= NOW() - INTERVAL '1 hour';
+```
+
+**Resultado esperado:**
+```
+total: ~273
+con_area: ~273 (100%)
+con_dormitorios: ~180 (66%)
+con_estacionamientos: ~35 (13%)
+con_fecha_pub: ~273 (99%)
+```
+
+### ✅ Test 2: Verificar precio_usd
+
+```sql
+SELECT 
+    COUNT(*) as total,
+    COUNT(CASE WHEN moneda_original = 'USD' THEN 1 END) as con_usd,
+    COUNT(CASE WHEN moneda_original = 'BOB' THEN 1 END) as con_bob,
+    COUNT(precio_usd) as con_precio_usd_poblado
+FROM propiedades_v2
+WHERE fuente = 'century21'
+  AND fecha_discovery >= NOW() - INTERVAL '1 hour';
+```
+
+**Resultado esperado:**
+```
+total: ~273
+con_usd: ~40 (15%)
+con_bob: ~233 (85%)
+con_precio_usd_poblado: ~40 (15%)
+```
+
+**Nota:** `precio_usd` solo se puebla cuando `moneda_original = 'USD'`. Esto es correcto.
+
+### ✅ Test 3: Verificar snapshot completo
+
+```sql
+-- Ver ejemplo de propiedad con todos los campos
+SELECT 
+    id,
+    codigo_propiedad,
+    precio_usd,
+    precio_usd_original,
+    moneda_original,
+    area_total_m2,
+    dormitorios,
+    banos,
+    estacionamientos,
+    fecha_publicacion,
+    tipo_propiedad_original,
+    datos_json_discovery->>'m2C' as m2c_json,
+    datos_json_discovery->>'recamaras' as recamaras_json,
+    datos_json_discovery->>'fechaAlta' as fecha_alta_json
+FROM propiedades_v2
+WHERE fuente = 'century21'
+  AND fecha_discovery >= NOW() - INTERVAL '1 hour'
+ORDER BY id DESC
+LIMIT 3;
+```
+
+---
+
+## 📊 Comparación con Remax
+
+| Aspecto | Remax | Century21 |
+|---------|-------|-----------|
+| **Método snapshot** | API paginada (8 páginas) | Grid geográfico (~6 cuadrantes) |
+| **Headers HTTP** | Básicos | Completos (CORS, cookie) |
+| **Cookie** | No requerida | Auto-emitida (PHPSESSID) |
+| **Duplicados** | 0% | 5-10% (por overlap de grid) |
+| **Parsing** | Directo | Defensivo (3 estructuras) |
+| **Tiempo ejecución** | ~20s | ~15s |
+| **Cobertura precio_usd** | 99% | 15% (resto BOB) |
+| **Cobertura área** | 99% | 99% |
+| **Cobertura dormitorios** | 83% | 66% |
+
+---
+
+## 📚 Documentación Relacionada
+
+- **Función SQL:** `sql/functions/registrar_discovery.sql` v2.0.0
+- **Arquitectura:** `docs/MODULO_1_FLUJO_A_IMPLEMENTACION.md`
+- **JSON Reference:** `docs/JSON_DISCOVERY_REFERENCE.md`
+- **Workflows finales:** `FLUJO_A_WORKFLOWS_FINALES.md`
+
+---
+
+## ⚠️ Notas Importantes
+
+### 1. Campos con baja cobertura (esperado)
+
+- **dormitorios (66%):** Century21 no siempre proporciona `recamaras` en JSON de mapa
+- **banos (68%):** Century21 a veces tiene este campo como null
+- **estacionamientos (13%):** Muy raro en ambos portales
+
+**Esto NO es un error del workflow, es limitación de la fuente.**
+
+### 2. precio_usd = 0 cuando todas son BOB
+
+Si el snapshot del día tiene 0 propiedades USD:
+```
+con_precio_usd: 0
+```
+
+Esto es **correcto**. Century21 tiene principalmente propiedades en BOB.
+
+### 3. Parsing defensivo implementado
+
+El workflow maneja 3 estructuras diferentes de respuesta:
+- Array directo: `[{...}]`
+- Con results: `{results: [{...}]}`
+- Con datas: `{datas: {results: [{...}]}}`
+
+---
+
+## 🔧 Mantenimiento
+
+### Actualizar número de cuadrantes
+
+Si Equipetrol crece y necesitas más cobertura:
+
+```javascript
+// En nodo "Generar Cuadrantes Grid"
+const LAT_SUR = -17.775;    // Ajustar coordenadas
+const LAT_NORTE = -17.750;
+const LON_OESTE = -63.205;
+const LON_ESTE = -63.185;
+const STEP = 0.010;         // Reducir STEP = más cuadrantes
+```
+
+### Monitorear rate limits
+
+Si Century21 bloquea requests:
+- Aumentar `Wait 2s` a 3-4 segundos
+- Verificar headers HTTP
+- Regenerar cookie en cada ejecución
+
+---
+
+## 🚀 Deploy
+
+### Configuración Schedule
+
+- **Trigger:** Cron `0 1 * * *` (1:00 AM diario)
+- **Duración estimada:** 15-20 segundos
+- **Prioridad:** Alta (ejecutar antes que Flujo B)
+
+### Activación
+
+1. Importar workflow
+2. Configurar credenciales (3 nodos)
+3. Ejecutar test manual
+4. Verificar logs sin errores
+5. Activar schedule
+
+---
+
+**Versión documento:** 1.0.3  
+**Última actualización:** 18 Diciembre 2025  
+**Mantenedor:** Equipo SICI
