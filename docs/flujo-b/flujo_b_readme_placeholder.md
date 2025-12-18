@@ -1,10 +1,7 @@
-# Flujo B
+# Flujo B - Processing/Enrichment
 
-Este flujo está reservado para futuras etapas de enrichment / procesamiento
-posterior a Discovery.
+Ver documentación completa:
 
-Actualmente **no existe implementación activa** de Flujo B en producción.
-
-La lógica vigente se describe en Discovery (Flujo A) y Enrichment.
-
-Este directorio se mantiene como placeholder arquitectónico.
+- **Contrato arquitectónico:** `/docs/canonical/flujo_b_corepp_canonical.md`
+- **Heurísticas Century21:** `/docs/extractores/heuristics/extractor_heuristics_parte1_century21.md`
+- **Heurísticas Remax:** `/docs/extractores/heuristics/extractor_heuristics_parte2_remax.md`
