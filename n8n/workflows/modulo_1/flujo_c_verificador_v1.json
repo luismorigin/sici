@@ -1,0 +1,398 @@
+{
+  "name": "Flujo C - Verificador de Ausencias v1.0.0",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "trigger-6am",
+      "name": "Trigger 6:00 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, url, fuente, codigo_propiedad, status\nFROM propiedades_v2\nWHERE status = 'inactivo_pending'\n  AND fuente = 'remax'\nLIMIT 150;",
+        "options": {}
+      },
+      "id": "query-pending",
+      "name": "Query inactivo_pending (Remax)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [460, 300],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase SICI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-results",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "exists",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-results",
+      "name": "Hay propiedades?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log cuando no hay propiedades pendientes\nconst timestamp = new Date().toISOString();\n\nreturn [{\n  json: {\n    status: 'completed',\n    message: 'No hay propiedades Remax en inactivo_pending',\n    verificadas: 0,\n    confirmadas_404: 0,\n    rescatadas_200: 0,\n    errores: 0,\n    timestamp: timestamp\n  }\n}];"
+      },
+      "id": "no-pending",
+      "name": "Sin pendientes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 440]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "split-items",
+      "name": "Split propiedades",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [900, 160]
+    },
+    {
+      "parameters": {
+        "method": "HEAD",
+        "url": "={{ $json.url }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "maxRedirects": 3
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "http-head",
+      "name": "HTTP HEAD",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 160]
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "id": "wait-1s",
+      "name": "Wait 1s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1340, 160]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar respuesta HTTP\nconst item = $input.first();\nconst originalData = item.json;\n\n// Determinar el status code\nlet statusCode = 0;\nlet isError = false;\n\nif (originalData.statusCode) {\n  statusCode = originalData.statusCode;\n} else if (originalData.error) {\n  isError = true;\n  // Timeout o error de red\n  statusCode = 0;\n}\n\n// Lógica de decisión según canonical:\n// - 404 → inactivo_confirmed\n// - 200/301/302 → NO actuar (puede ser temporal)\n// - timeout/error → NO actuar\n\nlet action = 'skip';\nlet newStatus = null;\nlet reason = '';\n\nif (statusCode === 404) {\n  action = 'confirm';\n  newStatus = 'inactivo_confirmed';\n  reason = 'HTTP 404 - Propiedad eliminada confirmada';\n} else if (statusCode >= 200 && statusCode < 400) {\n  action = 'skip';\n  reason = `HTTP ${statusCode} - Propiedad aún existe, mantener pending`;\n} else if (isError) {\n  action = 'skip';\n  reason = 'Error de red/timeout - Reintentar en próxima corrida';\n} else {\n  action = 'skip';\n  reason = `HTTP ${statusCode} - Status inesperado, no actuar`;\n}\n\nreturn [{\n  json: {\n    id: originalData.id || $('Split propiedades').first().json.id,\n    url: originalData.url || $('Split propiedades').first().json.url,\n    fuente: originalData.fuente || $('Split propiedades').first().json.fuente,\n    codigo_propiedad: originalData.codigo_propiedad || $('Split propiedades').first().json.codigo_propiedad,\n    statusCode: statusCode,\n    action: action,\n    newStatus: newStatus,\n    reason: reason,\n    isError: isError\n  }\n}];"
+      },
+      "id": "process-response",
+      "name": "Procesar respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 160]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-confirm",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "confirm",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "should-confirm",
+      "name": "Confirmar baja?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1780, 160]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE propiedades_v2\nSET \n  status = 'inactivo_confirmed',\n  es_activa = FALSE,\n  fecha_actualizacion = NOW()\nWHERE id = {{ $json.id }}\n  AND status = 'inactivo_pending'\nRETURNING id, url, status;",
+        "options": {}
+      },
+      "id": "update-confirmed",
+      "name": "UPDATE inactivo_confirmed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [2000, 60],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase SICI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Agregar a log de skipped\nconst item = $input.first();\n\nreturn [{\n  json: {\n    ...item.json,\n    logged: true,\n    logType: 'skipped'\n  }\n}];"
+      },
+      "id": "log-skipped",
+      "name": "Log skipped",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 260]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "results",
+        "options": {}
+      },
+      "id": "aggregate-results",
+      "name": "Agregar resultados",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [2220, 160]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generar resumen final\nconst results = $input.first().json.results || [];\n\nlet confirmadas = 0;\nlet skipped = 0;\nlet errores = 0;\n\nfor (const r of results) {\n  if (r.action === 'confirm' && r.newStatus === 'inactivo_confirmed') {\n    confirmadas++;\n  } else if (r.action === 'skip') {\n    if (r.isError) {\n      errores++;\n    } else {\n      skipped++;\n    }\n  }\n}\n\nconst timestamp = new Date().toISOString();\n\nreturn [{\n  json: {\n    status: 'completed',\n    flujo: 'Flujo C - Verificador v1.0.0',\n    fuente: 'remax',\n    verificadas: results.length,\n    confirmadas_404: confirmadas,\n    mantenidas_pending: skipped,\n    errores_red: errores,\n    porcentaje_confirmadas: results.length > 0 \n      ? Math.round((confirmadas / results.length) * 100) \n      : 0,\n    timestamp: timestamp,\n    detalle: results.map(r => ({\n      id: r.id,\n      url: r.url,\n      statusCode: r.statusCode,\n      action: r.action,\n      reason: r.reason\n    }))\n  }\n}];"
+      },
+      "id": "summary",
+      "name": "Generar resumen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 160]
+    },
+    {
+      "parameters": {},
+      "id": "merge-outputs",
+      "name": "Merge outputs",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [2660, 300]
+    }
+  ],
+  "connections": {
+    "Trigger 6:00 AM": {
+      "main": [
+        [
+          {
+            "node": "Query inactivo_pending (Remax)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query inactivo_pending (Remax)": {
+      "main": [
+        [
+          {
+            "node": "Hay propiedades?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hay propiedades?": {
+      "main": [
+        [
+          {
+            "node": "Split propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sin pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sin pendientes": {
+      "main": [
+        [
+          {
+            "node": "Merge outputs",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Split propiedades": {
+      "main": [
+        [],
+        [
+          {
+            "node": "HTTP HEAD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP HEAD": {
+      "main": [
+        [
+          {
+            "node": "Wait 1s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1s": {
+      "main": [
+        [
+          {
+            "node": "Procesar respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar respuesta": {
+      "main": [
+        [
+          {
+            "node": "Confirmar baja?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar baja?": {
+      "main": [
+        [
+          {
+            "node": "UPDATE inactivo_confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UPDATE inactivo_confirmed": {
+      "main": [
+        [
+          {
+            "node": "Agregar resultados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log skipped": {
+      "main": [
+        [
+          {
+            "node": "Agregar resultados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agregar resultados": {
+      "main": [
+        [
+          {
+            "node": "Generar resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar resumen": {
+      "main": [
+        [
+          {
+            "node": "Merge outputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0.1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "sici-flujo-c"
+  },
+  "tags": [
+    {
+      "name": "SICI",
+      "id": "sici"
+    },
+    {
+      "name": "Modulo1",
+      "id": "modulo1"
+    },
+    {
+      "name": "FlujoC",
+      "id": "flujoc"
+    }
+  ]
+}
