@@ -54,10 +54,11 @@ Resultados:
 ```
 
 **Tasa de éxito:**
-- Discovery captura: ~144 propiedades/día
+- Discovery Century21: ~273 propiedades (grid geográfico)
+- Discovery Remax: ~160 propiedades (API REST paginado)
 - Matching Century21: ~95%
 - Matching Remax: ~60%
-- Verificación: 100% automatizada
+- Verificación: 100% automatizada (solo Remax)
 
 ---
 
@@ -220,17 +221,24 @@ ORDER BY fecha DESC, fuente;
 
 ---
 
-## 🐛 ISSUES CONOCIDOS
+## ✅ ISSUES RESUELTOS
 
-### **Remax - Paginación limitada:**
-- ⚠️ Solo captura ~144 propiedades (limitación JavaScript)
-- **Workaround:** Captura suficiente para Equipetrol
-- **Solución futura:** Puppeteer para scroll infinito
+### **Remax - Paginación:**
+- ✅ **RESUELTO:** Captura ~160 propiedades correctamente
+- Workflow v1.0.2 implementa paginación funcional
+- Cobertura completa para Equipetrol
+
+### **Century21 - Captura:**
+- ✅ **FUNCIONANDO:** Captura ~273 propiedades
+- Workflow v1.0.3 con todos los campos
+- Grid geográfico cubre área objetivo
+
+## ⚠️ LIMITACIONES CONOCIDAS
 
 ### **Century21 - HTTP HEAD no confiable:**
 - ⚠️ HTTP 200 aún con "Aviso terminado"
 - **Solución actual:** NO usar Flujo C para C21
-- **Solución futura:** Parsear HTML buscando texto
+- **Alternativa:** Confiar en ausencia persistente de Discovery
 
 ---
 

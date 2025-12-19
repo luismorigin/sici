@@ -1,8 +1,8 @@
 # FLUJO B "CORE++" - DOCUMENTO CANÓNICO
 
-**Versión:** 2.1.1  
+**Versión:** 3.0.0  
 **Fecha:** Diciembre 2024  
-**Estado:** DEFINITIVO - CIERRE MÓDULO 1  
+**Estado:** DEFINITIVO - ARQUITECTURA POST-MERGE SCORING  
 **Archivo:** `docs/canonical/flujo_b_corepp_canonical.md`
 
 ---
@@ -23,7 +23,7 @@ Esta distinción es crítica para entender límites de responsabilidad.
 
 ## 1. RESPONSABILIDAD ÚNICA
 
-**Transformar HTML raw de propiedades activas en datos estructurados, normalizados y validados, listos para matching técnico y consumo por módulos posteriores.**
+**Transformar HTML raw de propiedades activas en datos estructurados y normalizados, listos para consolidación (Merge) y posterior validación.**
 
 ### Pipeline completo
 
@@ -33,21 +33,23 @@ HTML raw (Discovery)
 [COMPONENTE 1: EXTRACTOR]
   Parsea HTML → 80 campos estructurados
   ↓
-[COMPONENTE 2: SCORER]
-  Calcula completitud de datos
-  ↓
-[COMPONENTE 3: VERIFICADOR]
-  Valida coherencia técnica
-  ↓
 Datos estructurados en BD (status: actualizado)
+  ↓
+[MERGE] ← Responsabilidad de Merge
+  Consolida Discovery + Enrichment
+  ↓
+[SCORER + VERIFICADOR] ← Post-Merge
+  Calcula scores sobre datos consolidados
+  ↓
+Datos completos y validados (status: completado)
 ```
 
 ### Límite de responsabilidad
 
 - **Inicia:** Recibe HTML raw + metadatos desde Discovery (status: nueva)
-- **Termina:** Entrega registro estructurado, validado y scorado (status: actualizado)
-- **Prepara datos para:** Matching técnico (Merge), Enriquecimiento de mercado (Módulo 2), Análisis (Módulo 3)
-- **NO incluye:** Clustering, enriquecimiento externo (Google Places, IA), análisis comparativo de mercado, inferencia de datos faltantes
+- **Termina:** Entrega registro estructurado y normalizado (status: actualizado)
+- **Prepara datos para:** Merge (consolidación Discovery + Enrichment), luego Scoring/Validación
+- **NO incluye:** Scoring, Validación (responsabilidad de Merge), Clustering, enriquecimiento externo (Google Places, IA), análisis comparativo de mercado
 
 **Principio arquitectónico:**
 > Flujo B extrae lo que está explícito. Módulo 2 enriquece con lo que falta.
@@ -56,37 +58,34 @@ Datos estructurados en BD (status: actualizado)
 
 ## 2. VISIÓN GENERAL DEL FLUJO
 
-### 2.1 Tres Componentes Integrados
+### 2.1 Componente Único: Extractor
 
 | Componente | Responsabilidad | Input | Output | Versión Actual |
 |------------|----------------|-------|--------|----------------|
 | **Extractor** | Parsear HTML → datos | HTML raw | JSON 80 campos | C21: v16.3, Remax: v1.6 |
-| **Scorer** | Calcular completitud | JSON extractor | score_calidad_dato | v7.7 |
-| **Verificador** | Validar coherencia | JSON + score | score_fiduciario, flags | v1.3 |
 
 **Naturaleza del proceso:** Processing estructurado, NO enrichment de mercado.
 
-### 2.2 Ejecución Secuencial
+**Scoring y Validación:** Movidos a fase post-Merge (v3.0). Los scores se calculan sobre datos consolidados (Discovery + Enrichment), no sobre datos parciales.
+
+### 2.2 Ejecución Simplificada (v3.0)
 
 ```javascript
-// Workflow n8n "Flujo B"
+// Workflow n8n "Flujo B v3.0"
 for (propiedad of propiedades_nuevas) {
-  // 1. Extraer (parsing estructurado)
+  // 1. Extraer (parsing estructurado de 80+ campos)
   const datos = extractor.procesar(propiedad.html);
   
-  // 2. Scorear (completitud de datos)
-  const score = scorer.calcular(datos);
-  
-  // 3. Verificar (coherencia técnica)
-  const validacion = verificador.validar(datos, score);
-  
-  // 4. Persistir (REEMPLAZO completo del JSONB)
+  // 2. Persistir (REEMPLAZO completo del JSONB)
   await registrar_enrichment({
     id_propiedad: propiedad.id,
-    datos_json_enrichment: { ...datos, ...score, ...validacion },
+    datos_json_enrichment: datos,
     columnas_core: extraer_columnas_core(datos),  // 20 campos explícitos
     scraper_version: 'v16.3'
   });
+  
+  // Status: nueva → actualizado
+  // Scoring/Validación: post-Merge
 }
 ```
 
@@ -96,6 +95,7 @@ for (propiedad of propiedades_nuevas) {
 - ✅ Sin estado entre propiedades
 - ✅ Idempotente y determinístico
 - ✅ Output completo de 80+ campos
+- ✅ **NUEVO v3.0:** Sin scoring/validación (movido a post-Merge)
 
 ---
 
@@ -445,7 +445,45 @@ function normalizarPrecio(precioRaw, descripcion, metadata) {
 
 ---
 
-## 4. COMPONENTE 2: SCORER
+## 4. SCORING Y VALIDACIÓN (MOVIDOS A POST-MERGE)
+
+**CAMBIO ARQUITECTÓNICO v3.0:**
+
+Los componentes de Scoring y Verificación **fueron movidos a la fase post-Merge**.
+
+**Razón:**
+- Los scores deben calcularse sobre datos **consolidados** (Discovery + Enrichment merged)
+- No tiene sentido scorear datos parciales (solo enrichment)
+- El Verificador debe validar coherencia de datos **finales**, no parciales
+
+**Nueva ubicación:**
+- Ver: `docs/canonical/merge_canonical.md`
+- Fase: Post-consolidación
+- Input: `datos_json` (Discovery + Enrichment merged)
+- Output: `score_calidad_dato`, `score_fiduciario`, `flags_semanticos`
+
+---
+
+## 4. SCORING Y VALIDACIÓN (MOVIDOS A POST-MERGE)
+
+**CAMBIO ARQUITECTÓNICO v3.0:**
+
+Los componentes de Scoring y Verificación **fueron movidos a la fase post-Merge**.
+
+**Razón:**
+- Los scores deben calcularse sobre datos **consolidados** (Discovery + Enrichment merged)
+- No tiene sentido scorear datos parciales (solo enrichment)
+- El Verificador debe validar coherencia de datos **finales**, no parciales
+
+**Nueva ubicación:**
+- Ver: `docs/canonical/merge_canonical.md`
+- Fase: Post-consolidación
+- Input: `datos_json` (Discovery + Enrichment merged)
+- Output: `score_calidad_dato`, `score_fiduciario`, `flags_semanticos`
+
+---
+
+## 4. COMPONENTE 2: SCORER (REFERENCIA HISTÓRICA) (REFERENCIA HISTÓRICA)
 
 ### 4.1 Responsabilidad
 
@@ -628,7 +666,9 @@ function calcularScoreCalidadDato(datos) {
 
 ---
 
-## 5. COMPONENTE 3: VERIFICADOR
+## 5. COMPONENTE 3: VERIFICADOR (REFERENCIA HISTÓRICA)
+
+**NOTA v3.0:** El Verificador fue movido a post-Merge. Ver sección 4 arriba.
 
 ### 5.1 Responsabilidad
 
@@ -898,48 +938,44 @@ const es_para_matching_verificado = (
 
 ---
 
-## 6. INTEGRACIÓN: EXTRACTOR + SCORER + VERIFICADOR
+## 6. FLUJO B SIMPLIFICADO (v3.0)
 
-### 6.1 Pipeline Completo
+### 6.1 Pipeline Actualizado
 
 ```javascript
 async function procesarPropiedad(propiedad) {
-  // FASE 1: EXTRAER
+  // FASE 1: EXTRAER (80+ campos)
   const datosExtraidos = await extractor.procesar({
     html: propiedad.html,
     url: propiedad.url,
     fuente: propiedad.fuente
   });
   
-  // FASE 2: SCOREAR
-  const scoring = scorer.calcular(datosExtraidos);
+  // FASE 2: PERSISTIR
+  await registrar_enrichment({
+    id_propiedad: propiedad.id,
+    datos_json_enrichment: datosExtraidos,
+    scraper_version: 'v16.3'
+  });
   
-  // FASE 3: VERIFICAR
-  const verificacion = verificador.validar(
-    datosExtraidos,
-    scoring.score_calidad_dato
-  );
+  // Status: nueva → actualizado
+  // SCORING Y VALIDACIÓN ocurren en post-Merge
   
-  // FASE 4: INTEGRAR OUTPUT
-  const outputFinal = {
-    ...datosExtraidos,
-    ...scoring,
-    ...verificacion,
-    
-    // Metadata de integración
-    core_version: '2.1',
-    timestamp_procesamiento: new Date().toISOString()
+  return {
+    success: true,
+    property_id: propiedad.id,
+    status: 'actualizado',
+    campos_extraidos: Object.keys(datosExtraidos).length,
+    listo_para_merge: true
   };
-  
-  return outputFinal;
 }
 ```
 
-### 6.2 Ejemplo de Output Final Integrado
+### 6.2 Ejemplo de Output Flujo B v3.0 (sin scores)
 
 ```json
 {
-  // ========== EXTRACTOR OUTPUT ==========
+  // ========== EXTRACTOR OUTPUT (80+ campos) ==========
   
   // Financiero
   "precio_usd": 120000,
@@ -947,6 +983,8 @@ async function procesarPropiedad(propiedad) {
   "precio_fue_normalizado": false,
   "tipo_cambio_usado": 6.96,
   "precio_m2": 1403.51,
+  "precio_min_usd": null,
+  "precio_max_usd": null,
   
   // Físico
   "area_total_m2": 85.5,
@@ -959,47 +997,34 @@ async function procesarPropiedad(propiedad) {
   "longitud": -63.192345,
   "zona": "Equipetrol Norte",
   
-  // Edificio
+  // Edificio (fuzzy pre-match)
+  "nombre_edificio_extraido": "HH Once Equipetrol Norte",
   "nombre_edificio_limpio": "HH Once",
   "id_proyecto_master_sugerido": 42,
   "metodo_match": "fuzzy_extractor",
   "confianza_sugerencia": 0.85,
   
   // Amenities (30+ campos)
-  "amenities": { ... },
+  "amenities": {
+    "gimnasio": true,
+    "piscina": false,
+    "seguridad_24h": true,
+    // ... 27+ más
+  },
+  
+  // Agente
+  "agente_nombre": "María López",
+  "agente_telefono": "+591 70123456",
   
   // Trazabilidad
   "extractor_version": "v16.3",
+  "core_version": "3.0",
   "fuente": "century21",
-  
-  // ========== SCORER OUTPUT ==========
-  
-  "score_calidad_dato": 95,
-  "score_core": 70,
-  "score_opcionales": 25,
-  "es_para_matching": true,
-  "detalle_score": { ... },
-  
-  // ========== VERIFICADOR OUTPUT ==========
-  
-  "score_fiduciario": 92,
-  "penalizacion_total": 3,
-  "es_para_matching_verificado": true,
-  "flags_semanticos": [
-    {
-      "tipo": "warning",
-      "campo": "area_total_m2",
-      "valor": 85.5,
-      "razon": "Área ligeramente por debajo del promedio"
-    }
-  ],
-  
-  // ========== METADATA DE INTEGRACIÓN ==========
-  
-  "core_version": "2.1",
-  "timestamp_procesamiento": "2024-12-01T10:30:45Z"
+  "timestamp": "2024-12-01T10:30:00Z"
 }
 ```
+
+**NOTA v3.0:** Los campos `score_calidad_dato`, `score_fiduciario`, `flags_semanticos`, etc. **NO están presentes** en el output de Flujo B. Estos se calculan en fase post-Merge sobre datos consolidados.
 
 ---
 
@@ -1651,9 +1676,9 @@ FLUJO B → MÓDULO 2 (Enrichment de Mercado):
 
 ## 10. VALIDACIÓN DE IMPLEMENTACIÓN
 
-### 10.1 Checklist de Cumplimiento
+### 10.1 Checklist de Cumplimiento (v3.0)
 
-Una implementación válida de Flujo B "Core++" debe:
+Una implementación válida de Flujo B "Core++" v3.0 debe:
 
 ```
 EXTRACTOR:
@@ -1668,50 +1693,41 @@ EXTRACTOR:
 ✅ NO llama APIs externas
 ✅ NO hace clustering
 ✅ NO hace enrichment de mercado
-✅ Entrega 80 campos según schema
+✅ Entrega 80+ campos según schema
 
-SCORER:
-✅ Calcula score_calidad_dato (0-100)
-✅ Métrica de completitud, NO calidad de mercado
-✅ Ajusta penalizaciones para multitipologías
-✅ Genera detalle_score legible
-✅ Determina es_para_matching
-
-VERIFICADOR:
-✅ Valida coherencia técnica con rangos pre-establecidos
-✅ NO hace análisis dinámico de mercado
-✅ Genera flags_semanticos con niveles
-✅ Calcula score_fiduciario
-✅ Determina es_para_matching_verificado
-✅ Skip validaciones no aplicables (ej: precio/m² en multitipologías)
+PROCESAMIENTO v3.0:
+✅ NO calcula scores (responsabilidad post-Merge)
+✅ NO valida coherencia (responsabilidad post-Merge)
+✅ Solo extrae y normaliza datos estructurados
+✅ Entrega datos listos para Merge
 
 INTEGRACIÓN:
-✅ Documenta core_version
+✅ Documenta core_version = "3.0"
 ✅ Es idempotente (misma URL → mismo output)
 ✅ Es determinístico (sin APIs externas)
-✅ 3 componentes corren secuencialmente
+✅ Workflow simplificado: Extract → Persist
 ✅ Output completo guardado en BD
 
 PERSISTENCIA:
 ✅ Usa arquitectura dual (columnas + JSONB)
 ✅ 20 campos core en columnas explícitas
-✅ 80 campos completos en datos_json_enrichment
+✅ 80+ campos completos en datos_json_enrichment
 ✅ Respeta candados (campos_bloqueados)
 ✅ Status SIEMPRE es 'actualizado' al finalizar
 ✅ Reemplaza JSONB completamente en cada run
 ✅ Guarda scraper_version y fecha_enrichment
 ```
 
-### 10.2 Testing Básico
+### 10.2 Testing Básico (v3.0)
 
 ```javascript
 // Test 1: Propiedad individual completa
 input: { precio: 120000, area: 85, dorms: 2 }
 expected: {
-  score_calidad_dato: 95,
-  score_fiduciario: 92,
-  es_para_matching_verificado: true,
-  status: 'actualizado'
+  datos_json_enrichment: { precio_usd: 120000, area_total_m2: 85, dormitorios: 2, ... },
+  status: 'actualizado',
+  scraper_version: 'v16.3',
+  // NO incluye scores (calculados post-Merge)
 }
 
 // Test 2: Multitipología
@@ -1791,9 +1807,9 @@ expected: {
 
 **es_rango_falso:** Detectó rango numérico pero es precio de parqueo, no tipologías.
 
-**Score Calidad Dato:** Métrica de completitud de datos (0-100), NO calidad de mercado.
+**Score Calidad Dato:** Métrica de completitud de datos (0-100), NO calidad de mercado. **v3.0:** Calculado en fase post-Merge, no en Flujo B.
 
-**Score Fiduciario:** Score final (0-100) que combina completitud + validación técnica contra rangos pre-establecidos.
+**Score Fiduciario:** Score final (0-100) que combina completitud + validación técnica contra rangos pre-establecidos. **v3.0:** Calculado en fase post-Merge, no en Flujo B.
 
 **Flag Semántico:** Señal de advertencia sobre inconsistencia técnica o dato fuera de rangos conocidos.
 
@@ -1810,7 +1826,8 @@ expected: {
 ## CONTROL DE VERSIONES
 
 | Versión | Fecha | Cambios |
-|---------|-------|---------|
+|---------|-------|---------|  
+| 3.0.0 | Dic 2024 | **BREAKING:** Scorer y Verificador movidos a post-Merge. Flujo B ahora solo hace Extracción. Scores se calculan sobre datos consolidados (Discovery + Enrichment), no sobre datos parciales. |
 | 1.0 | Dic 2024 | Definición inicial (solo extractor) |
 | 2.0 | Dic 2024 | Documento integrado: Extractor + Scorer + Verificador |
 | 2.1 | Dic 2024 | Agregada Sección 7: Persistencia y Estructura de Datos |
