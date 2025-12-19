@@ -1,7 +1,7 @@
-# CONTRATO MÍNIMO - FLUJO C: EL VERIFICADOR DE AUSENCIAS
+# CONTRATO CANONICAL - FLUJO C: EL VERIFICADOR DE AUSENCIAS
 
 ## RESPONSABILIDAD ÚNICA
-**Confirmar técnicamente ausencias marcadas por Discovery, SOLO en fuentes con señal HTTP confiable.**
+**Confirmar técnicamente (vía HTTP) y auto-confirmar por tiempo las ausencias marcadas por Discovery, SOLO en fuentes con señal HTTP confiable. Adicionalmente, reactivar propiedades que reaparecen.**
 
 ---
 
@@ -9,14 +9,15 @@
 
 ### ✅ LO QUE ES:
 - **Confirmador técnico post-facto** de bajas ya detectadas por Discovery
+- **Auto-confirmador por tiempo** después de N días en pending (configurable)
+- **Reactivador automático** cuando propiedades reaparecen (HTTP 200)
 - **Limpiador de falsos positivos** donde la señal HTTP sea confiable
-- **Opcional y selectivo** - NO afecta análisis de mercado
+- **Selectivo por fuente** - Solo actúa en fuentes confiables (Remax)
 
 ### ❌ LO QUE NO ES:
-- NO es decisor de bajas (eso ya lo hizo Discovery)
-- NO es cronómetro (no aplica períodos de gracia)
+- NO es decisor inicial de bajas (eso ya lo hizo Discovery)
 - NO es requisito para estudios de mercado (usan `primera_ausencia_at`)
-- NO es universal (solo actúa en fuentes confiables)
+- NO confirma Century21 (señal HTTP no confiable)
 
 ---
 
@@ -25,7 +26,9 @@
 ### FUENTE CONFIABLE (Remax):
 ```
 ✓ HTTP 404 → ausencia confirmada
+✓ HTTP 200 → propiedad existe (reactivar)
 ✓ Flujo C puede confirmar: inactivo_pending → inactivo_confirmed
+✓ Flujo C puede reactivar: inactivo_pending → nueva
 ✓ Razón: señal técnica inequívoca
 ```
 
@@ -45,67 +48,108 @@
 
 ### Estados involucrados:
 - **`inactivo_pending`** → Discovery marcó ausencia (input de Flujo C)
-- **`inactivo_confirmed`** → Flujo C confirmó técnicamente (solo Remax)
+- **`inactivo_confirmed`** → Flujo C confirmó técnicamente o por tiempo
+- **`nueva`** → Flujo C reactivó la propiedad (reaparición)
 
 ### Campos requeridos:
 ```
 primera_ausencia_at: timestamp    // Poblado por Discovery (día de baja oficial)
 fuente: text                      // "remax" | "century21"
-status: text                      // "activo" | "inactivo_pending" | "inactivo_confirmed"
+status: estado_propiedad          // enum PostgreSQL
+es_activa: boolean                // Flag de actividad
 ```
 
-### Transiciones permitidas:
+### Transiciones permitidas por Flujo C:
+
+**Remax (fuente confiable):**
 ```
-Remax:
 inactivo_pending → inactivo_confirmed  (si HTTP 404)
-inactivo_pending → activo              (si vuelve a aparecer, vía Discovery)
+inactivo_pending → inactivo_confirmed  (si >= MAX_DIAS_PENDING días)
+inactivo_pending → nueva               (si HTTP 200 - reactivación)
+inactivo_pending → inactivo_pending    (si HTTP 302/error - skip)
+```
 
-Century21:
+**Century21 (fuente NO confiable):**
+```
 inactivo_pending → inactivo_pending    (Flujo C NO actúa)
-inactivo_pending → activo              (si vuelve a aparecer, vía Discovery)
+// Solo Discovery puede reactivar vía snapshot
 ```
 
 ---
 
 ## PROCESO DE VERIFICACIÓN
 
-### Input:
-```sql
-SELECT * FROM propiedades 
-WHERE status = 'inactivo_pending'
-AND fuente = 'remax'  -- Solo fuentes confiables
+### Parámetro configurable:
+```javascript
+const MAX_DIAS_PENDING = 7;  // Días antes de auto-confirmar
 ```
 
-### Verificación por propiedad:
+### Input:
+```sql
+SELECT 
+    id,
+    url,
+    fuente,
+    status,
+    primera_ausencia_at,
+    EXTRACT(DAY FROM NOW() - primera_ausencia_at)::INTEGER as dias_desde_ausencia
+FROM propiedades_v2
+WHERE status = 'inactivo_pending'::estado_propiedad
+  AND fuente = 'remax'  -- Solo fuentes confiables
+ORDER BY primera_ausencia_at ASC;
 ```
-1. Intenta HTTP GET de URL original
-2. Si HTTP 404:
+
+### Lógica de decisión (en orden de prioridad):
+```
+1. Si primera_ausencia_at es NULL:
+   └─ SKIP con error (datos inconsistentes)
+
+2. Si dias_desde_ausencia >= MAX_DIAS_PENDING:
+   └─ CONFIRM (auto-confirmación por tiempo)
    └─ status = 'inactivo_confirmed'
-3. Si HTTP 200:
-   └─ NO actuar (puede ser error temporal)
-4. Si timeout/error red:
-   └─ NO actuar (intentar en próxima corrida)
+
+3. Si HTTP 404:
+   └─ CONFIRM (confirmación técnica inmediata)
+   └─ status = 'inactivo_confirmed'
+
+4. Si HTTP 200:
+   └─ REACTIVATE (propiedad existe)
+   └─ status = 'nueva'
+   └─ primera_ausencia_at = NULL  // CRÍTICO: limpiar
+   └─ es_activa = TRUE
+
+5. Si HTTP 302/301:
+   └─ SKIP (redirect ambiguo, esperar)
+
+6. Si error red/timeout:
+   └─ SKIP (reintentar en próxima corrida)
 ```
 
 ### Output:
-- Propiedades Remax confirmadas como baja definitiva
-- Log simple: cuántas confirmadas, cuántas sin cambio
+- Propiedades confirmadas como baja definitiva
+- Propiedades reactivadas (reaparecieron)
+- Propiedades sin cambio (esperando)
+- Métricas: total procesadas, confirmadas, reactivadas, skipped
 
 ---
 
 ## GARANTÍAS Y LÍMITES
 
 ### ✅ LO QUE GARANTIZA:
-- **Confirmación técnica** solo cuando señal HTTP es inequívoca
-- **No falsos positivos** en confirmaciones (HTTP 404 es definitivo)
-- **Respeto a fuentes no confiables** (no actúa sobre Century21)
+- **Confirmación técnica** solo cuando señal HTTP es inequívoca (404)
+- **Auto-confirmación** después de MAX_DIAS_PENDING días (por defecto 7)
+- **Reactivación automática** cuando propiedad reaparece (HTTP 200)
+- **Limpieza de primera_ausencia_at** en reactivaciones (crítico)
+- **No falsos positivos** en confirmaciones
+- **Respeto a fuentes no confiables** (Century21 excluido)
 - **Idempotencia** (puede correr múltiples veces sin riesgo)
+- **100% automático** (sin intervención manual)
 
 ### ❌ LO QUE NO GARANTIZA:
-- NO decide timing de bajas (eso es responsabilidad de Discovery)
-- NO confirma Century21 (queda en pending indefinidamente)
-- NO afecta estudios de mercado (usan `primera_ausencia_at`, no `status`)
-- NO aplica período de gracia (Discovery ya decidió ausencia)
+- NO decide ausencias iniciales (eso es responsabilidad de Discovery)
+- NO confirma Century21 (señal HTTP no confiable)
+- NO afecta estudios de mercado (usan `primera_ausencia_at`)
+- NO procesa propiedades sin primera_ausencia_at (error de datos)
 
 ---
 
@@ -114,10 +158,16 @@ AND fuente = 'remax'  -- Solo fuentes confiables
 ### Con FLUJO A (Discovery):
 **RECIBE:**
 - Propiedades en `inactivo_pending` con `primera_ausencia_at` poblado
-- Discovery ya decidió que están ausentes
+- Discovery ya decidió que están ausentes en snapshot
 
-**NO INTERFIERE:**
-- Si Discovery vuelve a encontrarlas, las marca `activo` (Flujo C no opina)
+**DEVUELVE:**
+- Propiedades confirmadas como `inactivo_confirmed`
+- Propiedades reactivadas como `nueva` (con primera_ausencia_at limpia)
+
+**COLABORA:**
+- Flujo C reactiva (HTTP 200) propiedades que Discovery marcó ausentes
+- Discovery puede re-marcar ausentes si vuelven a desaparecer
+- Ambos respetan estados avanzados del otro
 
 ### Con MATCHING:
 **GARANTIZA:**
@@ -136,8 +186,15 @@ AND fuente = 'remax'  -- Solo fuentes confiables
 
 ### Propiedad vuelve a aparecer:
 ```
-Discovery la encuentra de nuevo → marca como activo
-Flujo C NO participa en esta decisión
+OPCIÓN A: Flujo C la detecta primero (HTTP 200)
+  └─ Flujo C: inactivo_pending → nueva
+  └─ Limpia primera_ausencia_at
+  └─ Discovery en próximo snapshot: mantiene activa
+
+OPCIÓN B: Discovery la detecta primero (en snapshot)
+  └─ Discovery: inactivo_pending → nueva
+  └─ Limpia primera_ausencia_at
+  └─ Flujo C: no la procesa (ya no está pending)
 ```
 
 ### Century21 con ausencias:
@@ -155,40 +212,78 @@ Flujo C NO intervino → no hay daño
 
 ---
 
-## MÉTRICAS MÍNIMAS
+## MÉTRICAS
 
+### Obligatorias:
 ```
-- Total Remax verificadas
-- % confirmadas como HTTP 404
-- % aún sin confirmar (HTTP 200 o errores)
+- Total procesadas
+- Confirmadas inactivas (HTTP 404 + auto-confirmación)
+- Reactivadas (HTTP 200)
+- Mantenidas pending (HTTP 302/errores)
+- Porcentaje confirmadas
 ```
 
-**NO es necesario medir:**
-- Tiempo en pending (irrelevante)
+### Opcionales para debugging:
+```
+- Confirmadas por HTTP 404 vs por tiempo
+- Días promedio hasta auto-confirmación
+- Tasa de reactivación
+```
+
+### NO medir:
+- Century21 (excluido del flujo)
 - Tasa de falsos positivos (Discovery ya filtró)
-- Century21 (no aplica)
 
 ---
 
-## IMPLEMENTACIÓN FUTURA
+## IMPLEMENTACIÓN
 
-Cuando sea necesario:
-1. Query simple de Remax en `inactivo_pending`
-2. Loop: HTTP GET + check status code
-3. Update a `inactivo_confirmed` si 404
-4. Log de métricas básicas
+**Estado:** ✅ PRODUCCIÓN desde 18 Diciembre 2025
 
-**Complejidad estimada:** 2-3 horas  
-**Prioridad:** Baja (no afecta análisis de mercado)
+### Workflow n8n:
+- **Archivo:** `n8n/workflows/modulo_1/flujo_c_verificador_v1.1.0_FINAL.json`
+- **Schedule:** Diario 6:00 AM (cron: `0 6 * * *`)
+- **Nodos clave:**
+  - Query pending con dias_desde_ausencia
+  - HTTP HEAD (método optimizado)
+  - Procesar respuesta (lógica de decisión v2.2.0)
+  - UPDATE confirmar
+  - UPDATE reactivar (con limpieza de primera_ausencia_at)
+  - Generar resumen (v2.0.0)
+
+### Configuración:
+```javascript
+MAX_DIAS_PENDING = 7  // Configurable en nodo "Procesar respuesta"
+```
+
+### Testing:
+- ✅ Auto-confirmación >= 7 días: 17 propiedades
+- ✅ Reactivación HTTP 200: 2 propiedades
+- ✅ Loop completo: 17/17 procesadas
+- ✅ Resumen con métricas correctas
 
 ---
 
 ## VERSIÓN
-- **Documento**: Contrato Flujo C v2.0 (Simplificado)
-- **Fecha**: Diciembre 2024
-- **Estado**: LISTO PARA APROBACIÓN
-- **Cambios vs v1.0**: 
-  - Eliminado período de gracia (Discovery ya decide)
-  - Agregada confiabilidad por fuente
-  - Aclarado que NO afecta estudios de mercado
-  - Simplificado a confirmador técnico puro
+- **Documento**: Contrato Flujo C v3.0 (Producción)
+- **Fecha**: 18 Diciembre 2025
+- **Estado**: ✅ IMPLEMENTADO Y PROBADO
+
+### Changelog:
+
+**v3.0 - 18 Diciembre 2025:**
+- ✅ Agregada auto-confirmación por tiempo (>= MAX_DIAS_PENDING días)
+- ✅ Agregada reactivación automática (HTTP 200)
+- ✅ Nueva transición: inactivo_pending → nueva
+- ✅ Limpieza de primera_ausencia_at en reactivaciones
+- ✅ Parámetro configurable MAX_DIAS_PENDING (default: 7)
+- ✅ Métricas ampliadas (confirmadas + reactivadas)
+- ✅ Implementación completa en producción
+
+**v2.0 - Diciembre 2024:**
+- Eliminado período de gracia
+- Agregada confiabilidad por fuente
+- Simplificado a confirmador técnico
+
+**v1.0 - Inicial:**
+- Concepto básico de verificación HTTP

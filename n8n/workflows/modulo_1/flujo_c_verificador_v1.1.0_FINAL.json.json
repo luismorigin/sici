@@ -1,0 +1,545 @@
+{
+  "name": "Flujo C - Verificador de Ausencias v1.0.0",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "f0313f9f-30cd-4ad2-8bc0-37f6ded01693",
+      "name": "Trigger 6:00 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1776,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    id,\n    url,\n    fuente,\n    codigo_propiedad,\n    status,\n    primera_ausencia_at,\n    EXTRACT(DAY FROM NOW() - primera_ausencia_at)::INTEGER as dias_desde_ausencia\nFROM propiedades_v2\nWHERE status = 'inactivo_pending'::estado_propiedad\n  AND fuente = 'remax'  -- ✅ SOLO REMAX (C21 no confiable)\nORDER BY primera_ausencia_at ASC\nLIMIT 100;",
+        "options": {}
+      },
+      "id": "385545db-6f02-4069-bc42-cec17c6c5fc4",
+      "name": "Query inactivo_pending (Remax)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -1552,
+        496
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-results",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "exists",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "dc403a5c-06bd-4493-a309-32a41274a6a5",
+      "name": "Hay propiedades?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1328,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log cuando no hay propiedades pendientes\nconst timestamp = new Date().toISOString();\n\nreturn [{\n  json: {\n    status: 'completed',\n    message: 'No hay propiedades Remax en inactivo_pending',\n    verificadas: 0,\n    confirmadas_404: 0,\n    rescatadas_200: 0,\n    errores: 0,\n    timestamp: timestamp\n  }\n}];"
+      },
+      "id": "b6d0ae86-989e-412d-867f-cba063854ccb",
+      "name": "Sin pendientes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        664
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "d24edf7a-feeb-4ca7-b278-947c2b0942bf",
+      "name": "Split propiedades",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1104,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "HEAD",
+        "url": "={{ $json.url }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "maxRedirects": 3
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "f418a89e-761b-4915-9fa1-419b87c27330",
+      "name": "HTTP HEAD",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -880,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "id": "8f934d4b-3999-437f-b143-6aa4efd3d77d",
+      "name": "Wait 1s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -656,
+        -80
+      ],
+      "webhookId": "bcd50049-f20c-4eb5-9720-bcc5b3540533"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================================\n// NODO: respuesta\n// Versión: 2.2.0 - Con auto-confirmación por tiempo\n// Fecha: 18 Diciembre 2025\n// ============================================================================\n\n// Procesar respuesta HTTP\nconst item = $input.first();\nconst originalData = item.json;\n\n// Obtener datos de la propiedad desde Split\nconst propiedadData = $('Split propiedades').first().json;\nconst diasDesdeAusencia = propiedadData.dias_desde_ausencia || 0;\nconst primeraAusenciaAt = propiedadData.primera_ausencia_at;\n\n// Configuración\nconst MAX_DIAS_PENDING = 7;  // ✅ Días antes de auto-confirmar\n\n// Determinar el status code\nlet statusCode = 0;\nlet isError = false;\n\nif (originalData.statusCode) {\n  statusCode = originalData.statusCode;\n} else if (originalData.error) {\n  isError = true;\n  statusCode = 0;\n}\n\n// ============================================================================\n// LÓGICA DE DECISIÓN CON AUTO-CONFIRMACIÓN\n// ============================================================================\n\nlet action = 'skip';\nlet newStatus = null;\nlet reason = '';\n\n// VALIDACIÓN: primera_ausencia_at debe existir\nif (!primeraAusenciaAt) {\n  action = 'skip';\n  reason = 'ERROR: primera_ausencia_at es NULL - datos inconsistentes';\n}\n\n// REGLA 1: Auto-confirmación por tiempo (>= 7 días ausente)\nelse if (diasDesdeAusencia >= MAX_DIAS_PENDING) {\n  action = 'confirm';\n  newStatus = 'inactivo_confirmed';\n  reason = `Auto-confirmado: ${diasDesdeAusencia} días ausente (límite: ${MAX_DIAS_PENDING})`;\n}\n\n// REGLA 2: HTTP 404 → Confirmar inmediatamente\nelse if (statusCode === 404) {\n  action = 'confirm';\n  newStatus = 'inactivo_confirmed';\n  reason = `HTTP 404 - Eliminación confirmada (ausente ${diasDesdeAusencia} días)`;\n}\n\n// REGLA 3: HTTP 200 → Reactivar (propiedad existe)\nelse if (statusCode === 200) {\n  action = 'reactivate';\n  newStatus = 'nueva';\n  reason = `HTTP 200 - Propiedad reapareció después de ${diasDesdeAusencia} días`;\n}\n\n// REGLA 4: HTTP 302/301 → Mantener pending (se confirmará por tiempo)\nelse if (statusCode === 301 || statusCode === 302) {\n  action = 'skip';\n  reason = `HTTP ${statusCode} redirect - Esperar (día ${diasDesdeAusencia}/${MAX_DIAS_PENDING})`;\n}\n\n// REGLA 5: Otros status ambiguos\nelse if (statusCode >= 200 && statusCode < 500) {\n  action = 'skip';\n  reason = `HTTP ${statusCode} - Esperar (día ${diasDesdeAusencia}/${MAX_DIAS_PENDING})`;\n}\n\n// REGLA 6: Error de red/timeout\nelse if (isError) {\n  action = 'skip';\n  reason = `Error de red/timeout - Reintentar (día ${diasDesdeAusencia}/${MAX_DIAS_PENDING})`;\n}\n\n// REGLA 7: Otros casos\nelse {\n  action = 'skip';\n  reason = `HTTP ${statusCode} - Status inesperado (día ${diasDesdeAusencia}/${MAX_DIAS_PENDING})`;\n}\n\n// ============================================================================\n// RETORNAR RESULTADO\n// ============================================================================\n\nreturn [{\n  json: {\n    // IDs de la propiedad\n    id: propiedadData.id,\n    url: propiedadData.url,\n    fuente: propiedadData.fuente,\n    codigo_propiedad: propiedadData.codigo_propiedad,\n    \n    // Fechas importantes\n    primera_ausencia_at: primeraAusenciaAt,\n    \n    // Status HTTP\n    statusCode: statusCode,\n    isError: isError,\n    \n    // Decisión\n    action: action,\n    newStatus: newStatus,\n    reason: reason,\n    \n    // Metadata para debugging y tracking\n    diasDesdeAusencia: diasDesdeAusencia,\n    maxDiasPending: MAX_DIAS_PENDING,\n    autoConfirmado: diasDesdeAusencia >= MAX_DIAS_PENDING,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "90833967-e280-417e-b1b9-69095a828b31",
+      "name": "Procesar respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-confirm",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "confirm",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4fbe3eeb-d5a5-4367-a499-880c0207d5fa",
+      "name": "Confirmar baja?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -208,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE propiedades_v2\nSET \n  status = 'inactivo_confirmed',\n  es_activa = FALSE,\n  fecha_actualizacion = NOW()\nWHERE id = {{ $json.id }}\n  AND status = 'inactivo_pending'\nRETURNING id, url, status;",
+        "options": {}
+      },
+      "id": "28242ea5-d3a1-4444-85ae-6ad53cfcc88a",
+      "name": "UPDATE inactivo_confirmed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        16,
+        -56
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Agregar a log de skipped\nconst item = $input.first();\n\nreturn [{\n  json: {\n    ...item.json,\n    logged: true,\n    logType: 'skipped'\n  }\n}];"
+      },
+      "id": "2bf277b7-a686-4be9-8d0e-471c40063cc6",
+      "name": "Log skipped",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        424
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "results",
+        "options": {}
+      },
+      "id": "d922b4da-6962-48b0-b48e-a5a7845e5099",
+      "name": "Agregar resultados",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        136
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================================\n// NODO: Generar resumen\n// Versión: 2.0.0 - Adaptado para trabajar con UPDATEs RETURNING\n// ============================================================================\n\nconst results = $input.first().json.results || [];\n\n// Contar basándose en el status devuelto por los UPDATEs\nlet confirmadas = 0;\nlet reactivadas = 0;\n\nfor (const r of results) {\n  if (r.status === 'inactivo_confirmed') {\n    confirmadas++;\n  } else if (r.status === 'nueva') {\n    reactivadas++;\n  }\n}\n\nconst timestamp = new Date().toISOString();\nconst total = results.length;\n\nreturn [{\n  json: {\n    status: 'completed',\n    flujo: 'Flujo C - Verificador v1.0.0',\n    fuente: 'remax',\n    timestamp: timestamp,\n    \n    // Resumen de acciones\n    total_procesadas: total,\n    confirmadas_inactivas: confirmadas,\n    reactivadas: reactivadas,\n    porcentaje_confirmadas: total > 0 \n      ? Math.round((confirmadas / total) * 100) \n      : 0,\n    \n    // Detalle de propiedades procesadas\n    propiedades: results.map(r => ({\n      id: r.id,\n      url: r.url,\n      nuevo_status: r.status,\n      accion: r.status === 'inactivo_confirmed' \n        ? 'Confirmada inactiva' \n        : r.status === 'nueva' \n          ? 'Reactivada' \n          : 'Mantenida'\n    }))\n  }\n}];"
+      },
+      "id": "26b04ae3-ef59-4cd6-8ae9-c8b9703d0054",
+      "name": "Generar resumen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        144
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "a979e405-b35a-4597-b420-8b7c94f4f329",
+      "name": "Merge outputs",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -432,
+        136
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fd92442e-b64b-4863-9689-044c8e315ed1",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "reactivate",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        16,
+        136
+      ],
+      "id": "f1eb663f-e944-4512-b1b1-7c2cca440a91",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE propiedades_v2\nSET \n  status = 'nueva'::estado_propiedad,\n  primera_ausencia_at = NULL,\n  es_activa = TRUE,\n  fecha_discovery = NOW(),\n  fecha_actualizacion = NOW()\nWHERE id = {{ $json.id }}\n  AND status = 'inactivo_pending'::estado_propiedad\nRETURNING id, url, status, primera_ausencia_at;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        232
+      ],
+      "id": "e80b99b0-5818-4a06-83c6-ce5bdf056bfe",
+      "name": "UPDATE Reactivar Propiedad",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger 6:00 AM": {
+      "main": [
+        [
+          {
+            "node": "Query inactivo_pending (Remax)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query inactivo_pending (Remax)": {
+      "main": [
+        [
+          {
+            "node": "Hay propiedades?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hay propiedades?": {
+      "main": [
+        [
+          {
+            "node": "Split propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sin pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sin pendientes": {
+      "main": [
+        [
+          {
+            "node": "Merge outputs",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Split propiedades": {
+      "main": [
+        [
+          {
+            "node": "Agregar resultados",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP HEAD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP HEAD": {
+      "main": [
+        [
+          {
+            "node": "Wait 1s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1s": {
+      "main": [
+        [
+          {
+            "node": "Procesar respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar respuesta": {
+      "main": [
+        [
+          {
+            "node": "Confirmar baja?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar baja?": {
+      "main": [
+        [
+          {
+            "node": "UPDATE inactivo_confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UPDATE inactivo_confirmed": {
+      "main": [
+        [
+          {
+            "node": "Split propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log skipped": {
+      "main": [
+        [
+          {
+            "node": "Split propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agregar resultados": {
+      "main": [
+        [
+          {
+            "node": "Generar resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar resumen": {
+      "main": [
+        [
+          {
+            "node": "Merge outputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "UPDATE Reactivar Propiedad",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UPDATE Reactivar Propiedad": {
+      "main": [
+        [
+          {
+            "node": "Split propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "47422f1b-26ac-4dce-8e6b-2e2ca55c9117",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
+  },
+  "id": "PUKkUhh2NwNDEmTb",
+  "tags": [
+    {
+      "name": "SICI",
+      "id": "obZptuoaE3ynlZQO",
+      "updatedAt": "2025-12-18T13:23:45.918Z",
+      "createdAt": "2025-12-18T13:23:45.918Z"
+    },
+    {
+      "name": "Modulo1",
+      "id": "rQ5lGbtTrI7S7Dom",
+      "updatedAt": "2025-12-18T13:23:45.932Z",
+      "createdAt": "2025-12-18T13:23:45.932Z"
+    },
+    {
+      "name": "FlujoC",
+      "id": "gKJ01rv40PeKhQrO",
+      "updatedAt": "2025-12-18T13:23:45.944Z",
+      "createdAt": "2025-12-18T13:23:45.944Z"
+    }
+  ]
+}
