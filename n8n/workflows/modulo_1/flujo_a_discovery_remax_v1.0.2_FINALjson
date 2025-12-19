@@ -1,5 +1,5 @@
 {
-  "name": "flujo_a_discovery_remax v1.0.2",
+  "name": "flujo_a_discovery_remax v1.0.2_FINAL",
   "nodes": [
     {
       "parameters": {
@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "77267ca2-7aa3-4894-9024-515b42186f75",
+      "id": "bfd57cfc-f2f3-4867-bf89-b6260761421a",
       "name": "Trigger 1:00 AM",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -26,7 +26,7 @@
       "parameters": {
         "jsCode": "// === GENERADOR DE URLs REMAX ===\n// Genera URLs para todas las páginas de la API\n\nconst TOTAL_PAGES = 8; // Equipetrol - validado dic 2025\nconst BASE_URL = 'https://remax.bo/api/search/departamento/santa-cruz-de-la-sierra/equipetrolnoroeste';\n\nconst urls = [];\n\nfor (let page = 1; page <= TOTAL_PAGES; page++) {\n  urls.push({\n    json: {\n      page_url: `${BASE_URL}?page=${page}`,\n      page_number: page,\n      fuente: 'remax'\n    }\n  });\n}\n\nreturn urls;"
       },
-      "id": "dc10e23e-f768-434d-b277-abeb294afa13",
+      "id": "495c9541-c560-4236-91a3-d98e7ae32715",
       "name": "Generar URLs Remax",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -40,7 +40,7 @@
       "parameters": {
         "options": {}
       },
-      "id": "b7300b9f-75a9-4e0c-977b-30f905fbbf12",
+      "id": "ec23d7cc-d264-4d9c-a73c-cd20207e67cb",
       "name": "Split In Batches",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
@@ -56,7 +56,7 @@
           "timeout": 30000
         }
       },
-      "id": "4569e2a8-14c4-435d-8edd-84b6dc682973",
+      "id": "1cf986b9-7902-412f-973a-bf4975f1ec49",
       "name": "HTTP Request API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -72,7 +72,7 @@
       "parameters": {
         "amount": 2
       },
-      "id": "239b8cc2-23f8-4240-a9f6-0b779e32fc26",
+      "id": "a167cc04-9da9-4f2e-83b5-40c32843b355",
       "name": "Wait 2s",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -80,22 +80,8 @@
         -608,
         432
       ],
-      "webhookId": "d58725aa-cd8f-4a2a-9179-3c964047a0c8",
+      "webhookId": "407e463c-be79-4c55-9f7c-3439e6c4d726",
       "notes": "Rate limit: 2s entre requests"
-    },
-    {
-      "parameters": {
-        "jsCode": "// === EXTRAER PROPIEDADES DEL RESPONSE ===\n// Mapeo completo + snapshot RAW\n// v1.0.2: AGREGADO estacionamientos\n\nconst response = $input.first().json;\nconst propiedades = response.data || [];\n\nreturn propiedades.map(prop => ({\n  json: {\n    // === IDENTIFICACIÓN ===\n    url: `https://remax.bo/propiedad/${prop.id}`,\n    fuente: 'remax',\n    codigo_propiedad: prop.MLSID,\n    \n    // === GPS ===\n    latitud: parseFloat(prop.location?.latitude) || null,\n    longitud: parseFloat(prop.location?.longitude) || null,\n    \n    // === DATOS OBSERVADOS (sin normalización) ===\n    precio_usd: prop.price?.price_in_dollars || null,\n    precio_amount: prop.price?.amount || null,\n    moneda_original: prop.price?.currency_id === 1 ? 'BOB' : 'USD',\n    area_total_m2: prop.listing_information?.construction_area_m || null,\n    dormitorios: prop.listing_information?.number_bedrooms || null,\n    banos: prop.listing_information?.number_bathrooms || null,\n    estacionamientos: prop.listing_information?.number_parking || null,  // ✅ v1.0.2\n    tipo_propiedad_original: prop.listing_information?.subtype_property?.name || null,\n    fecha_publicacion: prop.date_of_listing || null,\n    \n    // === SNAPSHOT RAW COMPLETO ===\n    datos_json_discovery: prop,\n    \n    // === METADATA ===\n    metodo_discovery: 'api_rest'\n  }\n}));"
-      },
-      "id": "3934b3d5-d1d1-4fdb-aab3-98563e2ad636",
-      "name": "Extraer Propiedades",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -384,
-        432
-      ],
-      "notes": "v1.0.2: Agregado estacionamientos"
     },
     {
       "parameters": {
@@ -104,7 +90,7 @@
         "include": "allFieldsExceptDefault",
         "options": {}
       },
-      "id": "3ec76abb-9e53-45c0-86c3-25296c7893e7",
+      "id": "d8a09428-c51e-4077-913f-23e30f50aba7",
       "name": "Aggregate Snapshot",
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
@@ -120,7 +106,7 @@
         "query": "SELECT id, url, status FROM propiedades_v2 WHERE fuente = 'remax' AND status NOT IN ('inactivo_confirmed')",
         "options": {}
       },
-      "id": "27e512f9-7b2c-4ff4-a0d6-216b131b1150",
+      "id": "ce6e3db6-5a70-4262-af5d-d6001790bce7",
       "name": "Obtener URLs Activas BD",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
@@ -128,6 +114,7 @@
         64,
         288
       ],
+      "alwaysOutputData": true,
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -140,7 +127,7 @@
       "parameters": {
         "jsCode": "// === PREPARAR COMPARACIÓN ===\n// Clasifica: nuevas, existentes, ausentes\n\nconst snapshot = $('Aggregate Snapshot').first().json.propiedades;\nconst propiedadesBD = $('Obtener URLs Activas BD').all().map(item => item.json);\n\n// === DEDUPLICACIÓN INTRA-SNAPSHOT ===\nconst snapshotDedup = new Map();\nfor (const prop of snapshot) {\n  snapshotDedup.set(prop.url, prop);\n}\n\nconst urlsSnapshot = new Set(snapshotDedup.keys());\nconst urlsBD = new Map(propiedadesBD.map(p => [p.url, { id: p.id, status: p.status }]));\n\n// === CLASIFICACIÓN ===\nconst nuevas = [];\nconst existentes = [];\nconst ausentes = [];\n\nfor (const [url, prop] of snapshotDedup) {\n  if (!urlsBD.has(url)) {\n    nuevas.push(prop);\n  } else {\n    existentes.push({\n      ...prop,\n      _id_bd: urlsBD.get(url).id,\n      _status_bd: urlsBD.get(url).status\n    });\n  }\n}\n\nfor (const [url, info] of urlsBD) {\n  if (!urlsSnapshot.has(url)) {\n    if (!['inactivo_pending', 'inactivo_confirmed'].includes(info.status)) {\n      ausentes.push({\n        id: info.id,\n        url: url,\n        status_actual: info.status\n      });\n    }\n  }\n}\n\nreturn [{\n  json: {\n    nuevas: nuevas,\n    existentes: existentes,\n    ausentes: ausentes,\n    stats: {\n      total_snapshot: snapshotDedup.size,\n      total_bd: urlsBD.size,\n      nuevas: nuevas.length,\n      existentes: existentes.length,\n      ausentes: ausentes.length\n    }\n  }\n}];"
       },
-      "id": "c2538d61-7610-4532-b4cd-45f114c75cfd",
+      "id": "02018bdf-4d39-4b21-b65c-70e438427170",
       "name": "Preparar Comparación",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -154,7 +141,7 @@
       "parameters": {
         "jsCode": "// === LOG STATS ===\nconst stats = $input.first().json.stats;\n\nconsole.log(`\n=== COMPARACIÓN DISCOVERY REMAX ===\nSnapshot (deduplicado): ${stats.total_snapshot}\nBD activas: ${stats.total_bd}\n---\nNuevas: ${stats.nuevas}\nExistentes: ${stats.existentes}\nAusentes: ${stats.ausentes}\n===================================\n`);\n\nreturn $input.all();"
       },
-      "id": "ada63d14-520c-4f4e-8109-35b0b56520f5",
+      "id": "ccb7b68d-fd87-485a-be16-a2742e0ca7f7",
       "name": "Log Stats",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -166,9 +153,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// === UNIFICAR PROPIEDADES PARA DISCOVERY ===\n// v1.0.2: Incluye estacionamientos\n\nconst data = $input.first().json;\nconst nuevas = data.nuevas || [];\nconst existentes = data.existentes || [];\n\nconst todas = [...nuevas, ...existentes];\n\nif (todas.length === 0) {\n  return [{ json: { skip: true, message: 'No hay propiedades para procesar' } }];\n}\n\nreturn todas.map(prop => ({\n  json: {\n    p_url: prop.url,\n    p_fuente: prop.fuente,\n    p_codigo_propiedad: prop.codigo_propiedad,\n    p_tipo_operacion: null,\n    p_tipo_propiedad_original: prop.tipo_propiedad_original,\n    p_precio_usd: prop.precio_usd,\n    p_precio_usd_original: prop.precio_amount,\n    p_moneda_original: prop.moneda_original,\n    p_area_total_m2: prop.area_total_m2,\n    p_dormitorios: prop.dormitorios,\n    p_banos: prop.banos,\n    p_estacionamientos: prop.estacionamientos,  // ✅ v1.0.2\n    p_latitud: prop.latitud,\n    p_longitud: prop.longitud,\n    p_fecha_publicacion: prop.fecha_publicacion,\n    p_metodo_discovery: prop.metodo_discovery,\n    p_datos_json_discovery: JSON.stringify(prop.datos_json_discovery)\n  }\n}));"
+        "jsCode": "// === UNIFICAR PROPIEDADES PARA DISCOVERY ===\n// v1.0.4: Normaliza tipo_operacion (quitar acentos)\nconst data = $input.first().json;\nconst nuevas = data.nuevas || [];\nconst existentes = data.existentes || [];\nconst todas = [...nuevas, ...existentes];\n\nif (todas.length === 0) {\n  return [{ json: { skip: true, message: 'No hay propiedades para procesar' } }];\n}\n\n// ✅ FUNCIÓN PARA QUITAR ACENTOS\nfunction quitarAcentos(texto) {\n  if (!texto) return null;\n  return texto\n    .toLowerCase()\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\");\n}\n\nreturn todas.map(prop => ({\n  json: {\n    p_url: prop.url,\n    p_fuente: prop.fuente,\n    p_codigo_propiedad: prop.codigo_propiedad,\n    p_tipo_operacion: quitarAcentos(prop.tipo_operacion),  // ✅ NORMALIZADO\n    p_tipo_propiedad_original: prop.tipo_propiedad_original,\n    p_precio_usd: prop.precio_usd,\n    p_precio_usd_original: prop.precio_amount,\n    p_moneda_original: prop.moneda_original,\n    p_area_total_m2: prop.area_total_m2,\n    p_dormitorios: prop.dormitorios,\n    p_banos: prop.banos,\n    p_estacionamientos: prop.estacionamientos,\n    p_latitud: prop.latitud,\n    p_longitud: prop.longitud,\n    p_fecha_publicacion: prop.fecha_publicacion,\n    p_metodo_discovery: prop.metodo_discovery,\n    p_datos_json_discovery: JSON.stringify(prop.datos_json_discovery)\n  }\n}));"
       },
-      "id": "3e7435b9-e055-4d48-98e1-169f19930b97",
+      "id": "e78f18c0-c786-49f8-a973-25b39e54553e",
       "name": "Procesar Propiedades",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -201,7 +188,7 @@
         },
         "options": {}
       },
-      "id": "5162637f-ed2f-4088-9b04-4efde89a7a4f",
+      "id": "fe807d40-670a-4baf-b4ed-d0e91f58aa79",
       "name": "IF Propiedades",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
@@ -218,7 +205,7 @@
           "queryReplacement": "={{ [$json.p_url, $json.p_fuente, $json.p_codigo_propiedad, $json.p_tipo_operacion, $json.p_tipo_propiedad_original, $json.p_precio_usd, $json.p_precio_usd_original, $json.p_moneda_original, $json.p_area_total_m2, $json.p_dormitorios, $json.p_banos, $json.p_estacionamientos, $json.p_latitud, $json.p_longitud, $json.p_fecha_publicacion, $json.p_metodo_discovery, $json.p_datos_json_discovery] }}"
         }
       },
-      "id": "b539b0aa-e33a-4877-a189-9a58fa5ce26c",
+      "id": "75c7c00a-9db0-49c7-8a2b-7cde28a94da3",
       "name": "Registrar Discovery",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
@@ -238,7 +225,7 @@
       "parameters": {
         "jsCode": "// === PROCESAR AUSENTES ===\n\nconst ausentes = $input.first().json.ausentes;\n\nif (ausentes.length === 0) {\n  return [{ json: { skip: true, message: 'No hay propiedades ausentes' } }];\n}\n\nreturn ausentes.map(prop => ({\n  json: {\n    id: prop.id,\n    url: prop.url,\n    status_actual: prop.status_actual\n  }\n}));"
       },
-      "id": "b5f8cef4-a19c-440c-b466-3d4add21e0f9",
+      "id": "de3e54db-3eac-4ca2-ad2f-3224a3643d4f",
       "name": "Procesar Ausentes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -271,7 +258,7 @@
         },
         "options": {}
       },
-      "id": "640cbd82-4239-4694-a274-9de6e953004a",
+      "id": "743cf63f-fc3d-422e-a194-45a39c5ff720",
       "name": "IF Ausentes",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
@@ -288,7 +275,7 @@
           "queryReplacement": "={{ [$json.id] }}"
         }
       },
-      "id": "a5978bb7-aef3-48cd-a784-286b80bda95c",
+      "id": "68e38053-8918-4a99-ad69-ee7eee2be233",
       "name": "Marcar Ausentes",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
@@ -308,7 +295,7 @@
       "parameters": {
         "jsCode": "// === RESUMEN FINAL ===\nconst stats = $('Log Stats').first().json.stats;\n\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  fuente: 'remax',\n  workflow: 'Flujo A - Discovery',\n  version: '1.0.2',\n  resultados: {\n    snapshot_total: stats.total_snapshot,\n    bd_activas: stats.total_bd,\n    nuevas_insertadas: stats.nuevas,\n    existentes_actualizadas: stats.existentes,\n    ausentes_marcadas: stats.ausentes\n  },\n  status: 'completado'\n};\n\nconsole.log('=== FLUJO A DISCOVERY REMAX COMPLETADO ===');\nconsole.log(JSON.stringify(resumen, null, 2));\n\nreturn [{ json: resumen }];"
       },
-      "id": "ca8893ae-4f2e-40fe-a1df-2f01a06f101d",
+      "id": "81d2b435-34ae-408d-8b4d-9ce5c9aa8e78",
       "name": "Resumen Final",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -317,6 +304,20 @@
         288
       ],
       "notes": "Log final y resumen"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === EXTRAER PROPIEDADES REMAX ===\n// v1.6: Corrige URL (slug) + Agrega tipo_operacion\nconst response = $input.first().json;\nconst propiedades = response.data || [];\n\nreturn propiedades.map(prop => ({\n  json: {\n    // === IDENTIFICACIÓN ===\n    url: `https://remax.bo/propiedad/${prop.slug}`,  // ✅ SLUG, no ID\n    fuente: 'remax',\n    codigo_propiedad: prop.MLSID,\n    tipo_operacion: prop.transaction_type?.name?.toLowerCase() || null,  // ✅ NUEVO\n    \n    // === GPS ===\n    latitud: parseFloat(prop.location?.latitude) || null,\n    longitud: parseFloat(prop.location?.longitude) || null,\n    \n    // === DATOS OBSERVADOS ===\n    precio_usd: prop.price?.price_in_dollars || null,\n    precio_amount: prop.price?.amount || null,\n    moneda_original: prop.price?.currency_id === 1 ? 'BOB' : 'USD',\n    area_total_m2: prop.listing_information?.construction_area_m || null,\n    dormitorios: prop.listing_information?.number_bedrooms || null,\n    banos: prop.listing_information?.number_bathrooms || null,\n    estacionamientos: prop.listing_information?.number_parking || null,\n    tipo_propiedad_original: prop.listing_information?.subtype_property?.name || null,\n    fecha_publicacion: prop.date_of_listing || null,\n    \n    // === SNAPSHOT RAW ===\n    datos_json_discovery: prop,\n    metodo_discovery: 'api_rest'\n  }\n}));"
+      },
+      "id": "67ef85d4-aab8-4671-9d16-00307d6f30ba",
+      "name": "Extraer Propiedades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        432
+      ],
+      "notes": "v1.0.2: Agregado estacionamientos"
     }
   ],
   "pinData": {},
@@ -377,17 +378,6 @@
         [
           {
             "node": "Extraer Propiedades",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extraer Propiedades": {
-      "main": [
-        [
-          {
-            "node": "Split In Batches",
             "type": "main",
             "index": 0
           }
@@ -508,17 +498,32 @@
           }
         ]
       ]
+    },
+    "Extraer Propiedades": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "America/La_Paz",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
-  "versionId": "eb45e553-a7c1-457f-9515-7aa7a3011b34",
+  "versionId": "60838172-dabe-463b-96e0-5ae49951212b",
   "meta": {
     "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
   },
-  "id": "PqBHMpim3bc9ytfR",
+  "id": "Ug81Zh77u69VJkcK",
   "tags": [
     {
       "updatedAt": "2025-12-16T20:48:24.167Z",
