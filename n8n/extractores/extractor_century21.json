@@ -1,0 +1,2432 @@
+// =====================================================
+// Extractor Century21 - Schema Canonical v3.1
+// Versión: v16.5
+// Fecha: 2025-12-22
+// =====================================================
+// CHANGELOG v16.5:
+// - Add: extraccion_exitosa flag (boolean)
+// - Change: modalidad → tipo_operacion
+// - Homologación con Schema Canonical v3.1
+// - Spread operator en return final
+// =====================================================
+
+const itemEntrada = $input.item.json;
+const idOriginal = itemEntrada.id || itemEntrada.id_propiedad || null;
+const html = itemEntrada.html || 
+             (itemEntrada.data && itemEntrada.data.rawHtml) || 
+             "";
+
+// ============================================================================
+// CARGAR PROYECTOS MASTER PARA FUZZY MATCHING
+// ============================================================================
+// ✅ NUEVO (v16.4) - Datos vienen en itemEntrada
+const proyectosMaster = itemEntrada.proyectos_master || [];
+const configGlobal = itemEntrada.config_global || {};
+const TC_OFICIAL = configGlobal.TIPO_CAMBIO_USD_BS_OFICIAL || 6.96;
+const TC_PARALELO = configGlobal.TIPO_CAMBIO_USD_BS_PARALELO || 7.25;
+
+// ============================================================================
+// BLACKLIST Y FUNCIONES FUZZY
+// ============================================================================
+// ----------------------------------------------------------------------------
+// BLACKLIST CRÍTICA - Términos que invalidan nombres
+// ----------------------------------------------------------------------------
+const BLACKLIST_CRITICA = [
+  // Marketing
+  'en venta', 'en preventa', 'en pre venta', 'pre venta', 'preventa',
+  'tu mejor inversion', 'tu mejor inversión', 'invierte en', 'invertí en', 
+  'invierte inteligente', 'inversión inteligente',
+  'en venta', 'venta de', 'venta',  // Ya estaba "en venta", reforzar
+  'century 21', 'century', 'c21',
+  'cuenta con', 'con piscina',
+  'exclusivo', 'exclusiva', 'domotica', 'con domotica',
+  
+  // Características
+  'areas sociales', 'áreas sociales', 'cuenta con', 'contara con', 'contará con',
+  'areas comunes', 'áreas comunes', 'piscina', 'gym', 'sauna', 'salon de',
+  
+  // Metadata
+  'century 21', 'century21', 'remax', 'inmobiliaria', 're/max',
+  
+  // Temporales
+  'entrega inmediata', 'entrega junio', 'entrega', 'entrega 2026', 
+  'entrega 2025', 'disponible en',
+  
+  // Tipos de propiedad
+  'departamentos', 'monoambientes', 'monoambiente', 'anticretico', 'anticrético',
+  'departamento en', 'casa en', 'local en',
+  
+  // Frases completas comunes
+  'más exclusiva de', 'único en su', 'excelente ubicación', 'precio referencial'
+];
+
+// ----------------------------------------------------------------------------
+// ZONAS GEOGRÁFICAS - Para limpiar de nombres
+// ----------------------------------------------------------------------------
+const ZONAS_GEOGRAFICAS = [
+  'equipetrol norte', 'equipetrol sur', 'equipetrol',
+  'sirari', 'urubo', 'las palmas', 'centro',
+  'plaza italia', 'barrio', 'zona norte', 'zona sur',
+  'santa cruz', 'bolivia'
+];
+
+// ----------------------------------------------------------------------------
+// FUNCIÓN: Limpiar zonas geográficas del nombre
+// ----------------------------------------------------------------------------
+function limpiarZonasGeograficas(nombre) {
+  if (!nombre || typeof nombre !== 'string') return nombre;
+  
+  let limpio = nombre;
+  
+  // Limpiar cada zona geográfica (al final del nombre)
+  ZONAS_GEOGRAFICAS.forEach(zona => {
+    // Patrón: zona al final, con o sin separadores
+    const regex = new RegExp(`\\s*[-,]?\\s*${zona}\\s*$`, 'gi');
+    limpio = limpio.replace(regex, '');
+  });
+  
+  return limpio.trim();
+}
+
+// ----------------------------------------------------------------------------
+// FUNCIÓN: Calcular similitud fuzzy (word intersection)
+// ----------------------------------------------------------------------------
+function calcularSimilitudFuzzy(nombre1, nombre2) {
+  if (!nombre1 || !nombre2) return 0;
+  
+  // Convertir a lowercase y dividir en palabras
+  const words1 = nombre1.toLowerCase()
+    .split(/\s+/)
+    .filter(w => w.length > 2); // Solo palabras de 3+ caracteres
+  
+  const words2 = nombre2.toLowerCase()
+    .split(/\s+/)
+    .filter(w => w.length > 2);
+  
+  if (words1.length === 0 || words2.length === 0) return 0;
+  
+  // Calcular intersección
+  const intersection = words1.filter(w => words2.includes(w)).length;
+  
+  // Calcular unión
+  const union = new Set([...words1, ...words2]).size;
+  
+  // Jaccard similarity
+  return intersection / union;
+}
+
+// ----------------------------------------------------------------------------
+// FUNCIÓN: Buscar match fuzzy en proyectos master
+// ----------------------------------------------------------------------------
+function buscarMatchFuzzy(nombreExtraido) {
+  if (!nombreExtraido || nombreExtraido.length < 3) return null;
+  
+  let mejorMatch = null;
+  let mejorScore = 0;
+  
+  // Iterar sobre todos los proyectos master
+  for (const proyecto of proyectosMaster) {
+    const score = calcularSimilitudFuzzy(nombreExtraido, proyecto.nombre);
+    
+    // Umbral mínimo: 60% de similitud
+    if (score > mejorScore && score >= 0.6) {
+      mejorScore = score;
+      mejorMatch = proyecto;
+    }
+  }
+  
+  if (!mejorMatch) return null;
+  
+  return {
+    proyecto: mejorMatch,
+    score: Math.round(mejorScore * 100) // Convertir a porcentaje
+  };
+}
+
+// ============================================================================
+// CONFIGURACIÓN
+// ============================================================================
+const CONFIG = {
+  VERSION: "16.4",
+  CORE_VERSION: "3.0",
+  TIPO_CAMBIO_USD_BS_OFICIAL: TC_OFICIAL,
+  TIPO_CAMBIO_USD_BS_PARALELO: TC_PARALELO,
+  MEDIA_ZONA_USD_M2: {
+    "Equipetrol": 2461,
+    "Equipetrol Norte": 2461,
+    "Los Cusis": 1200,
+    "Urubo": 1500,
+    "Las Palmas": 1700,
+    "Centro": 1000,
+    "Norte": 900,
+    "Sur": 800,
+    "default": 1200
+  }
+};
+// ============================================================================
+// ============================================================================
+// 🧰 FUNCIONES DE APOYO
+// ============================================================================
+// ============================================================================
+// 🔎 buscarPatron v24.19 (FUNCIÓN DE APOYO QUE FALTABA)
+// ============================================================================
+function buscarPatron(texto, regex) {
+    if (!texto || typeof texto !== 'string') return null;
+
+    // Asegurarse de que el regex sea global si no lo es
+    let flags = regex.flags;
+    if (flags.indexOf('g') === -1) {
+         flags += 'g';
+    }
+
+    const re = new RegExp(regex.source, flags);
+    const matches = [];
+    let match;
+
+    while ((match = re.exec(texto)) !== null) {
+        matches.push(match);
+    }
+
+    if (matches.length === 0) return null;
+
+    // Devolver el primer match (comportamiento de .match())
+    return matches[0];
+}
+
+// ============================================================================
+// ⚙️ getMeta (Función de Apoyo)
+// ============================================================================
+function getMeta(content, name) {
+  const match = content.match(new RegExp(`<meta[^>]+name=["']${name}["'][^>]+content=["']([^"']+)["']`, "i"));
+  return match ? match[1].trim() : null;
+}
+
+
+// ============================================================================
+// 💱 detectarTipoCambio v24.32 (MEJORADO - Detección ultra flexible)
+// ============================================================================
+function detectarTipoCambio(descripcion = "") {
+    if (!descripcion || typeof descripcion !== 'string') return "no_especificado";
+    
+    const desc = descripcion.toLowerCase();
+    
+    // Detectar TC Paralelo EXPLÍCITO
+    const testParaleloExplicito = /\b(?:tc\s*paralelo|cambio\s+paralelo|dólar\s+blue|tc\s+blue)\b/i;
+    if (testParaleloExplicito.test(desc)) return "paralelo";
+    
+    const testPagoDolares = /\bpago\s+en\s+dólares/i;
+    if (testPagoDolares.test(desc)) return "paralelo";
+    
+    // 🆕 v15.1: Detectar "TC del día" o "cambio del día" SIN número (es paralelo)
+    const testTCDelDia = /\b(?:a\s+)?(?:tc|tipo\s+de\s+cambio|cambio)\s+del\s+día\b(?!\s*[67])/i;
+    if (testTCDelDia.test(desc)) return "paralelo";
+    
+    // Patrón flexible para "PRECIO ... DOLARES"
+    const testPrecioDolares = /(?:precio|desde)[\s\S]{0,100}\$[\s]*us[\.\s]*[\d\.,\-]+[\s]+dólares/i;                                                                         
+    if (testPrecioDolares.test(desc)) return "paralelo";
+    
+    // Detectar TC Oficial (con número explícito 6 o 7)
+    const testOficial = /tipo\s+de\s+cambio\s+oficial|tipo\s+de\s+cambio\s*:?\s*[67]|tc\.?\s*oficial|\btc\.?\s*[67]\b|(?:cambio|tc)\s+(?:del\s+)?día\s*[67]/i;
+    if (testOficial.test(desc)) return "oficial";
+    
+    return "no_especificado";
+}
+
+// ============================================================================
+// 🧹 limpiarContextoNoRelacionado v14.8 (FIX PARQUEO DEFINITIVO)
+// ============================================================================
+// CORRECCIÓN: Elimina líneas duplicadas y usa la RegEx
+// que detecta moneda ANTES (ej. $us 13.000) o DESPUÉS (ej. 13.000 $us).
+// ============================================================================
+function limpiarContextoNoRelacionado(descripcion) {
+    if (!descripcion || typeof descripcion !== 'string') return "";
+
+    // Reemplaza saltos de línea para que los regex funcionen mejor
+    descripcion = descripcion.replace(/[\r\n]+/g, ' ').trim(); 
+
+    return descripcion
+        // ✅ VERSIÓN NUEVA Y ÚNICA:
+        .replace(/parqueo\s+(?:opcional\s+)?(?:a\s+parte|aparte\s+)?(?:en|por|:)\s*(?:\$?\s?(?:us\.?|usd)?\s?[\d.,]+|[\d.,]+\s?(?:\$|us\.?|usd))/gi, '[PARQUEO_REMOVIDO]')
+        .replace(/estacionamiento\s+(?:opcional\s+)?(?:a\s+parte|aparte\s+)?(?:en|por|:)\s*(?:\$?\s?(?:us\.?|usd)?\s?[\d.,]+|[\d.,]+\s?(?:\$|us\.?|usd))/gi, '[ESTACIONAMIENTO_REMOVIDO]')
+        .replace(/parking\s+(?:opcional\s+)?(?:a\s+parte\s+)?(?:en|por|:)\s*(?:\$?\s?(?:us\.?|usd)?\s?[\d.,]+|[\d.,]+\s?(?:\$|us\.?|usd))/gi, '[PARKING_REMOVIDO]')
+        .replace(/baulera\s+(?:opcional\s+)?(?:a\s+parte\s+)?(?:en|por|:)\s*(?:\$?\s?(?:us\.?|usd)?\s?[\d.,]+|[\d.,]+\s?(?:\$|us\.*|usd))/gi, '[BAULERA_REMOVIDO]')
+
+        // LÍNEAS ANTIGUAS ELIMINADAS (eran redundantes)
+
+        // ✅ Mantenemos las otras limpiezas
+        .replace(/precio\s+m[²2]\s*:?\s*\$?\s?(?:us\.?|usd)?\s?[\d.,]+\s*[\/]?\s*m[²2]/gi, '[PRECIO_M2_REMOVIDO]')
+        .replace(/\$?\s?(?:us\.?|usd)?\s?[\d.,]+\s*[\/]\s*m[²2]/gi, '[PRECIO_M2_REMOVIDO]');
+}
+
+// ============================================================================
+// 🆕 normalizarPrecioUSD v24.19 (CORREGIDO)
+// ============================================================================
+function normalizarPrecioUSD(precio_original, descripcion = "") {
+    if (!precio_original || isNaN(precio_original) || precio_original === null || precio_original === undefined) {
+        return { precio: null, normalizado: false, precio_original: null };
+    }
+
+    const descLower = (typeof descripcion === 'string' && descripcion) ? descripcion.toLowerCase() : "";
+    const tipoCambio = detectarTipoCambio(descLower);
+
+    // --- LÓGICA CORREGIDA ---
+    // CASO 1: El precio está explícitamente en Bs. (ej. "Precio Bs. 780.000")
+    if (precio_original > 350000 && /precio\s*bs/i.test(descLower)) {
+         const precioNormalizado = precio_original / CONFIG.TIPO_CAMBIO_USD_BS_OFICIAL;
+         return { precio: Math.round(precioNormalizado), normalizado: true, precio_original: precio_original };
+    }
+
+    // CASO 2: El precio está en USD, pero se menciona "TC Paralelo" (ej. 50.000 al TC Paralelo)
+    if (tipoCambio === 'paralelo') {
+        // No normalizamos si el precio es > 350k (ya lo habría hecho el CASO 1 si tuviera "Bs")
+        // Si es 50.000, es USD (al blue). Si es 780.000, es Bs (pero sin "Bs." explícito),
+        // así que lo tratamos como USD (al blue) también, lo cual es más seguro.
+
+        // Lógica de v24.19: Asumimos que el precio_original está en USD (calculado al blue)
+        const precioEnBs = precio_original * CONFIG.TIPO_CAMBIO_USD_BS_PARALELO;
+        const precioNormalizado = precioEnBs / CONFIG.TIPO_CAMBIO_USD_BS_OFICIAL;
+        return { precio: Math.round(precioNormalizado), normalizado: true, precio_original: precio_original };
+    }
+
+    // CASO 3: TC Oficial o no especificado. El precio está en USD.
+    return { precio: precio_original, normalizado: false, precio_original: precio_original };
+}
+
+// ============================================================================
+// 🆕 parsePrecioMeta v15.1 – FIX EUROPEO DEFINITIVO + BUG DEL DOBLE RETURN CORREGIDO
+// ============================================================================
+function parsePrecioMeta(metaPrecio) {
+    if (!metaPrecio) return null;
+
+    let raw = metaPrecio.toString().trim();
+
+    // ====================================================================
+    // FIX EUROPEO/BOLIVIANO: 59.448,75 (coma dec) O 59.448.75 (punto dec) → CORREGIDO
+    // ====================================================================
+    const cleanedForRegex = raw.replace(/[^\d.,]/g, "");
+
+    // Formato 1: Europeo/Boliviano coma decimal (59.448,75)
+    if (/^\d{1,3}(\.\d{3})*,\d{1,3}$/.test(cleanedForRegex)) {
+        const fixed = cleanedForRegex.replace(/\./g, '').replace(',', '.');
+        const num = parseFloat(fixed);
+        if (!isNaN(num) && num > 0) return Math.round(num);
+    }
+
+    // Formato 2: Boliviano punto decimal (59.448.75)
+    if (/^\d{1,3}(\.\d{3})+\.\d{1,2}$/.test(cleanedForRegex)) {
+        // Detectar si el último punto es decimal (2 dígitos después)
+        const partes = cleanedForRegex.split('.');
+        if (partes[partes.length - 1].length <= 2) {
+            // Es formato con decimales: 59.448.75 → 59448.75
+            const fixed = partes.slice(0, -1).join('') + '.' + partes[partes.length - 1];
+            const num = parseFloat(fixed);
+            if (!isNaN(num) && num > 0) return Math.round(num);
+        }
+    }
+
+    // ====================================================================
+    // TU CÓDIGO ORIGINAL v14.7 – QUEDA 100% INTACTO DESDE ACÁ
+    // ====================================================================
+    raw = raw.replace(/[^\d.,]/g, "");
+
+    if (/mil/i.test(metaPrecio)) {
+        const num = parseFloat(raw.replace(/[,\\.]/g, ""));
+        return isNaN(num) ? null : num * 1000;
+    }
+
+    if (raw.includes(".") && raw.includes(",")) {
+        raw = raw.indexOf(".") < raw.indexOf(",")
+            ? raw.replace(/\./g, "").replace(",", ".")
+            : raw.replace(/,/g, "");
+    } else if (raw.includes(",")) {
+        const partes = raw.split(",");
+        const decimales = partes[partes.length - 1];
+        if (decimales.length >= 3 && !partes[2]) {
+            raw = raw.replace(/,/g, "");
+        } else {
+            raw = raw.replace(",", ".");
+        }
+    } else if (raw.includes(".")) {
+        const partes = raw.split(".");
+        const decimales = partes[partes.length - 1];
+        if (partes.length > 2 || (partes.length === 2 && decimales.length === 3)) {
+            raw = raw.replace(/\./g, "");
+        }
+    }
+
+    const num = parseFloat(raw);
+    if (isNaN(num)) return null;
+
+    // Anti-ridículo (tu lógica original – se queda)
+    if (num > 10000000) {
+        const digitos = Math.floor(Math.log10(num)) + 1;
+        if (digitos > 8) {
+            return num / Math.pow(10, digitos - 6);
+        }
+    }
+
+    return Math.round(num);
+}
+
+// ============================================================================
+// 💰 extraerPrecioHTML v13.0 (BUSCA EL PRECIO VISIBLE EN EL HTML)
+// ============================================================================
+function extraerPrecioHTML(html) {
+    // Usamos buscarPatron (que debe estar definida en el script)
+    const patterns = [
+        // 1. Busca el precio dentro de cualquier etiqueta de título H1-H6 que contenga "USD"
+        // ✅ CORRECCIÓN P3: Patrón flexibilizado para capturar cualquier formato numérico (ej. 171.614 y 93.000)
+        /<h[1-6][^>]*>[\s\S]*?([\d.,]+)\s*USD/i,
+        // 2. Busca el precio dentro de un <span> que contenga "USD"
+        // ✅ CORRECCIÓN P3: Patrón flexibilizado
+        /<span[^>]*>[\s\S]*?([\d.,]+)\s*USD/i,
+        // 3. Busca el precio dentro de un <div> con una clase que sugiere precio
+        /<div[^>]*price[^>]*>[\s\S]*?([\d.,]+)/i
+    ];
+
+    for (const pattern of patterns) {
+        const match = buscarPatron(html, pattern); // Asume que buscarPatron(texto, regex) está definido.
+        
+        if (match && match[1]) { 
+            // ✅ CORRECCIÓN P3: Usar el parser de precios robusto (parsePrecioMeta)
+            // const precio = parseFloat(match[1].replace(/[.,]/g, '')); // <-- Lógica anterior
+            const precio = parsePrecioMeta(match[1]); // ✅ USA EL PARSER CORRECTO
+            
+            // Validación básica de rango para evitar números de teléfono o códigos
+            if (precio > 1000 && precio < 10000000) { 
+                return precio;
+            }
+        }
+    }
+    return null;
+}
+// ============================================================================
+// 💵 detectarMonedaOriginal v1.0 (PARA HOMOLOGACIÓN SCHEMA)
+// ============================================================================
+function detectarMonedaOriginal(normalizacionPrincipal) {
+    return normalizacionPrincipal.normalizado ? "BOB" : "USD";
+}
+
+// ============================================================================
+// 💰 extraerPrecio v14.5 (MEJORADO - Detecta "desde X" en multiproyectos)
+// ============================================================================
+function extraerPrecio(html, descripcion = "", esMultiproyecto = false) {
+    const descripcionSegura = typeof descripcion === 'string' ? descripcion : "";
+    const descripcionLimpia = limpiarContextoNoRelacionado(descripcionSegura);
+
+    const precioHTMLVisible = extraerPrecioHTML(html);
+    const precioMetaNum = parsePrecioMeta(getMeta(html, "precio"));
+
+    let precioExplicitoDesc = null;
+    const patronesDesc = [
+        /(?:precio|desde)\s*:?\s*\$\s?([\d.,]+)(?:\s+a\s+tc)/i, // ← NUEVO: "Precio desde: $59.448.75 a TC"
+        /(?:precio|desde)\s*:?\s*\$?\s?(?:us\.?|usd)\s?([\d.,]+)(?!\s*\/\s*m|\s*por\s*m)/i,
+        /(\d[\d.,]+)\s*\$?\s?(?:us\.?|usd)(?!\s*\/\s*m|\s*por\s*m)/i,
+        /\$?\s?(?:us\.?|usd)\s?([\d.,]+)(?!\s*\/\s*m|\s*por\s*m)/i,
+        /(?:precio|desde)\s*:?\s*bs\.?\s?([\d.,]+)/i
+    ];
+
+    for (let i = 0; i < patronesDesc.length; i++) {
+        const resultado = buscarPatron(descripcionLimpia, patronesDesc[i]);
+        if (resultado && resultado[1]) {
+            console.log(`🔍 Patrón ${i} capturó:`, resultado[1]);
+            precioExplicitoDesc = parsePrecioMeta(resultado[1]);
+            console.log(`💰 parsePrecioMeta devolvió:`, precioExplicitoDesc);
+            if (precioExplicitoDesc) break;
+        }
+    }
+
+    const patronRango = /\$?\s?(?:us\.?|usd)?\s?(\\d+[.,]?\\d*)\\s*(?:-|a|hasta)\\s*\$?\s?(?:us\.?|usd)?\s?(\\d+[.,]?\\d*)/i;
+    const rangoResult = buscarPatron(descripcionLimpia, patronRango);
+    let rango_precio_usd_bruto = rangoResult ? 
+        [parsePrecioMeta(rangoResult[1]), parsePrecioMeta(rangoResult[2])] : null;
+
+    // 🆕 MEJORADO: Detectar múltiples precios en multiproyectos
+    if (!rango_precio_usd_bruto && esMultiproyecto) {
+        // Patrón 1: "1D desde X y 2D desde Y"
+        const patronMultiplesDesde = /(\d+)D?\s+desde\s*:?\s*\$?\s?(?:us\.?|usd)?\s?([\\d.,]+).*?(\d+)D?\s+desde\s*:?\s*\$?\s?(?:us\.?|usd)?\s?([\\d.,]+)/i;
+        const multiplesResult = buscarPatron(descripcionLimpia, patronMultiplesDesde);
+        
+        if (multiplesResult && multiplesResult[2] && multiplesResult[4]) {
+            const precio1 = parsePrecioMeta(multiplesResult[2]);
+            const precio2 = parsePrecioMeta(multiplesResult[4]);
+            if (precio1 && precio2) {
+                rango_precio_usd_bruto = [Math.min(precio1, precio2), Math.max(precio1, precio2)];
+            }
+        }
+        
+        // Patrón 2: Solo un "desde X" (fallback)
+        if (!rango_precio_usd_bruto) {
+            const patronDesde = /(?:desde|precio\s+desde|a\s+partir\s+de)\s*:?\s*\$?\s?(?:us\.?|usd)?\s?([\\d.,]+)/i;
+            const desdeResult = buscarPatron(descripcionLimpia, patronDesde);
+            
+            if (desdeResult && desdeResult[1]) {
+                const precioMin = parsePrecioMeta(desdeResult[1]);
+                if (precioMin) {
+                    rango_precio_usd_bruto = [precioMin, null];
+                }
+            }
+        }
+    }
+
+    let precio_bruto;
+    let fuente_precio = "no_detectado";
+    const mencionaTCParalelo = detectarTipoCambio(descripcionSegura) === 'paralelo';
+
+    if (precioExplicitoDesc && /precio\s*bs/i.test(descripcionLimpia)) {
+        precio_bruto = precioExplicitoDesc;
+        fuente_precio = "descripcion_bs_explicito";
+    }
+    else if (mencionaTCParalelo && precioExplicitoDesc) {
+        precio_bruto = precioExplicitoDesc;
+        fuente_precio = "descripcion_tc_explicito";
+    }
+    else if (esMultiproyecto) {
+    if (rango_precio_usd_bruto) {
+        // 🆕 v14.9: Si solo hay precio_min (desde X), usar ese valor
+        if (rango_precio_usd_bruto[1] === null) {
+            precio_bruto = rango_precio_usd_bruto[0];
+            fuente_precio = "descripcion_desde";
+        } else {
+            precio_bruto = (rango_precio_usd_bruto[0] + rango_precio_usd_bruto[1]) / 2;
+            fuente_precio = "descripcion_rango";
+        }
+    } else if (precioExplicitoDesc) {
+            precio_bruto = precioExplicitoDesc;
+            fuente_precio = "descripcion_multiproyecto";
+        } else if (precioMetaNum) {
+            precio_bruto = precioMetaNum;
+            fuente_precio = "meta_tag_fallback";
+        } else if (precioHTMLVisible) {
+            precio_bruto = precioHTMLVisible;
+            fuente_precio = "html_visible_fallback";
+        }
+    } else {
+        if (precioMetaNum) {
+            precio_bruto = precioMetaNum;
+            fuente_precio = "meta_tag";
+        } else if (precioHTMLVisible) {
+            precio_bruto = precioHTMLVisible;
+            fuente_precio = "html_visible";
+        } else if (precioExplicitoDesc) {
+            precio_bruto = precioExplicitoDesc;
+            fuente_precio = "descripcion_fallback";
+        }
+    }
+
+    const normalizacionPrincipal = normalizarPrecioUSD(precio_bruto, descripcionSegura);
+    const normalizacionDesc = precioExplicitoDesc ? 
+        normalizarPrecioUSD(precioExplicitoDesc, descripcionSegura) : { precio: null };
+
+    let conflicto_precio = false;
+    if (normalizacionPrincipal.precio && normalizacionDesc.precio && 
+        fuente_precio !== "descripcion_fallback" && 
+        fuente_precio !== "descripcion_tc_explicito") {
+
+        const diff = Math.abs(normalizacionPrincipal.precio - normalizacionDesc.precio) / 
+                    normalizacionPrincipal.precio;
+        if (diff > 0.02) { 
+            conflicto_precio = true;
+        }
+    }
+
+    const rango_normalizado = rango_precio_usd_bruto ? [
+    normalizarPrecioUSD(rango_precio_usd_bruto[0], descripcionSegura).precio,
+    rango_precio_usd_bruto[1] ? normalizarPrecioUSD(rango_precio_usd_bruto[1], descripcionSegura).precio : null
+    ] : null;
+
+    // 🆕 v15.0: Lógica de rangos falsos CORREGIDA
+    let precio_min_final = null;
+    let precio_max_final = null;
+    let es_rango_falso = false;
+
+    if (esMultiproyecto && normalizacionPrincipal.precio) {
+        // CASO 1: Rango completo (min y max detectados)
+        if (rango_normalizado && rango_normalizado[1] !== null) {
+            precio_min_final = rango_normalizado[0];
+            precio_max_final = rango_normalizado[1];
+            es_rango_falso = false;
+        }
+        // CASO 2: Solo "desde X" (sin máximo) → Rango falso
+        else if (rango_normalizado && rango_normalizado[1] === null) {
+            precio_min_final = rango_normalizado[0];
+            precio_max_final = rango_normalizado[0];  // ✅ MISMO VALOR
+            es_rango_falso = true;                    // ✅ TRUE
+        }
+        // CASO 3: Sin rango detectado en absoluto → Rango falso
+        else {
+            precio_min_final = normalizacionPrincipal.precio;
+            precio_max_final = normalizacionPrincipal.precio;
+            es_rango_falso = true;
+        }
+    } else {
+        // Propiedad individual: rangos en null
+        precio_min_final = rango_normalizado ? rango_normalizado[0] : null;
+        precio_max_final = rango_normalizado ? rango_normalizado[1] : null;
+        es_rango_falso = false;
+    }
+
+    // 🆕 v16.5: Detectar moneda original
+    const moneda_original = detectarMonedaOriginal(normalizacionPrincipal);
+    const es_rango_falso_positivo = (precio_min_final && precio_max_final && 
+                                      precio_min_final === precio_max_final && 
+                                      !esMultiproyecto);
+    return {
+        precio_usd: normalizacionPrincipal.precio,
+        precio_usd_original: normalizacionPrincipal.precio_original,
+        precio_fue_normalizado: normalizacionPrincipal.normalizado,
+        precio_min_usd: precio_min_final,      
+        precio_max_usd: precio_max_final,
+        es_rango_falso: es_rango_falso,
+        es_rango_falso_positivo: es_rango_falso_positivo,
+        moneda_original: moneda_original,  // 🆕 NUEVO
+        fuente_precio: fuente_precio,
+        conflicto_precio: conflicto_precio
+    };
+}
+// ============================================================================
+// 📝 extraerDescripcionCompleta 
+// ============================================================================
+function extraerDescripcionCompleta(html) {
+  if (!html) return "";
+  let match = html.match(/<p[^>]*style=["'][^"']white-space:\spre-wrap[^"']*["'][^>]*>([\s\S]*?)<\/p>/i);
+  if (match && match[1].trim()) return match[1].trim();
+  match = html.match(/<p[^>]*white-space:\s*pre-wrap[^>]*>([\s\S]*?)<\/p>/i);
+  if (match && match[1].trim()) return match[1].trim();
+  return getMeta(html, "og:description") || getMeta(html, "description") || "";
+}
+// ============================================================================
+// 📅 extraerFecha v24.19 (¡NUEVA FUNCIÓN!)
+// ============================================================================
+function extraerFecha(html) {
+    // Método 1: Meta tag "dateModified"
+    const dateModified = getMeta(html, "dateModified");
+    if (dateModified) {
+        return { fecha: dateModified, fuente: "meta_dateModified" };
+    }
+
+    // Método 2: Meta tag "lastmod"
+    const lastMod = getMeta(html, "lastmod");
+    if (lastMod) {
+        return { fecha: lastMod, fuente: "meta_lastmod" };
+    }
+
+    // Método 3: JSON-LD "datePublished"
+    const patron = /"datePublished"\s*:\s*"([^"]+)"/i;
+    const resultado = buscarPatron(html, patron); // Usa buscarPatron
+    if (resultado && resultado[1]) {
+        return { fecha: resultado[1], fuente: "json_ld_published" };
+    }
+
+    // Si no se encuentra nada
+    return { fecha: null, fuente: "no_detectado" };
+}
+// ============================================================================
+// 🏢 extraerNombreEdificio v4.0 - CON FUZZY MATCHING
+// ============================================================================
+// CAMBIOS v4.0:
+// - Integra blacklist crítica de SNIPPET 2
+// - Función validarYLimpiarNombre() mejorada (SNIPPET 3)
+// - Fuzzy matching contra proyectos_master (SNIPPET 4)
+// - Normalización de tildes y mayúsculas
+// - Limpieza de zonas geográficas
+// ============================================================================
+function extraerNombreEdificio(descripcion = "", url = "", ubicacion = "") {
+  try {
+    // Validar tipos
+    if (typeof descripcion !== 'string') descripcion = "";
+    if (typeof url !== 'string') url = "";
+    if (typeof ubicacion !== 'string') ubicacion = "";
+    
+    const descLower = descripcion.toLowerCase();
+    
+    // ========================================================================
+    // FUNCIÓN AUXILIAR: validarYLimpiarNombre() - MEJORADA
+    // ========================================================================
+    function validarYLimpiarNombre(nombrePotencial, fuente = "") {
+      if (!nombrePotencial || typeof nombrePotencial !== 'string') return null;
+      
+      let nombreLimpio = nombrePotencial.trim();
+      
+      nombreLimpio = nombreLimpio.replace(/^En\s+/i, '');
+      nombreLimpio = nombreLimpio.replace(/^En\s+el\s+/i, '');
+      nombreLimpio = nombreLimpio.replace(/^En\s+la\s+/i, '');
+      
+      // 1. BLACKLIST CRÍTICA - Rechazar si contiene estos términos
+      const lower = nombreLimpio.toLowerCase();
+      if (BLACKLIST_CRITICA.some(term => lower.includes(term.toLowerCase()))) {  // ← CAMBIO AQUÍ
+        return null;
+      }
+      
+      // 2. Limpiar zonas geográficas
+      nombreLimpio = limpiarZonasGeograficas(nombreLimpio);
+      
+      // 3. Limpiar sufijos de dirección
+      nombreLimpio = nombreLimpio.replace(/,\s*(?:Av\.?|Avenida|Calle|N°|No\.|\d{1,3}(?:vo|to|er)?\s+Anillo|entre|piso|dpto|zona|barrio|lado|equipetrol).*$/i, '').trim();
+      nombreLimpio = nombreLimpio.replace(/\s+(?:Dpto|Piso|Oficina|Torre)\s+[A-Z0-9\-]+.*$/i, '').trim();
+      
+      // 4. Limpiar puntuación final
+      nombreLimpio = nombreLimpio.replace(/[.,!¿?]+$/, '').trim();
+      
+      // 5. Validación de longitud
+      if (nombreLimpio.length < 3 || nombreLimpio.length > 60) return null;
+      
+      // 6. Rechazar si empieza con palabra inválida
+      const palabrasInvalidas = ['departamento', 'monoambiente', 'venta', 'alquiler', 'preventa'];
+      const palabras = nombreLimpio.split(' ');
+      const primeraPalabra = palabras[0].toLowerCase();
+      if (palabras.length > 2 && palabrasInvalidas.indexOf(primeraPalabra) !== -1) {
+        return null;
+      }
+      
+      // 7. Normalizar mayúsculas (si no es todo mayúsculas, capitalizar)
+      if (nombreLimpio !== nombreLimpio.toUpperCase()) {
+        nombreLimpio = nombreLimpio.replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+      }
+      
+      // 8. Rechazar si es solo un término genérico
+      if (/^(Edif|Edificio|Torre|Condominio|Residencial|Proyecto|Urbanizacion|Urbanización)$/i.test(nombreLimpio)) {
+        return null;
+      }
+      
+      // 9. Rechazar si es solo números
+      if (/^\d+$/.test(nombreLimpio)) return null;
+      
+      // 10. Limpiar guiones iniciales
+      nombreLimpio = nombreLimpio.replace(/^[-\s]+/, '');
+      
+      return nombreLimpio;
+    }
+    
+    // ========================================================================
+    // PRIORIDAD 1: Slug de URL (Century21)
+    // ========================================================================
+    let nombrePotencial = null;
+    let fuente_nombre = "no_detectado";
+    let nivel_confianza = 0;
+
+    if (url) {
+      // 🆕 FIX B: BUSCAR PATRÓN "edificio-X" / "condominio-X" PRIMERO
+      const patronEdificio = url.match(/(?:edificio|condominio|cond|torre)-([a-z0-9-]+)/i);
+      if (patronEdificio && patronEdificio[1]) {
+        const nombreEdificio = patronEdificio[1]
+          .replace(/-/g, ' ')
+          .replace(/\b\w/g, l => l.toUpperCase());
+        
+        nombrePotencial = validarYLimpiarNombre(nombreEdificio, "url_slug_edificio");
+        if (nombrePotencial) {
+          fuente_nombre = "url_slug_edificio";
+          nivel_confianza = 0.95;  // Alta confianza (patrón explícito)
+        }
+      }
+      // FIN FIX B
+      
+      // Si no encontró patrón edificio-X, continuar con lógica original
+      if (!nombrePotencial) {
+        const slugMatch = url.match(/\/([^\/]+)-\d+$/);
+        if (slugMatch && slugMatch[1]) {
+          const slug = slugMatch[1]
+            .replace(/-/g, ' ')
+            .replace(/\b\w/g, l => l.toUpperCase());
+          
+          // FIX 2: BUSCAR PALABRAS EN MAYÚSCULAS PRIMERO
+          const palabrasMayusculas = slug.match(/\b[A-Z]{3,}(?:\s+[A-Z]{3,})*\b/);
+          if (palabrasMayusculas) {
+            nombrePotencial = validarYLimpiarNombre(palabrasMayusculas[0], "url_slug");
+            if (nombrePotencial) {
+              fuente_nombre = "url_slug_mayusculas";
+              nivel_confianza = 0.90;
+            }
+          }
+          
+          // Si no encontró mayúsculas, intentar con slug completo
+          if (!nombrePotencial) {
+            nombrePotencial = validarYLimpiarNombre(slug, "url_slug");
+            if (nombrePotencial) {
+              fuente_nombre = "url_slug";
+              nivel_confianza = 0.90;
+            }
+          }
+        }
+      }
+    }
+    
+    // ========================================================================
+    // PRIORIDAD 2: Campo ubicación
+    // ========================================================================
+    if (!nombrePotencial && ubicacion) {
+      const patterns = [
+        /(?:Edificio|Edif\.|Torre|Condominio|Residencial|Proyecto)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){0,3})/i,
+        /([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){1,3})\s*,/
+      ];
+      
+      for (const pattern of patterns) {
+        const match = ubicacion.match(pattern);
+        if (match && match[1]) {
+          nombrePotencial = validarYLimpiarNombre(match[1], "ubicacion");
+          if (nombrePotencial) {
+            fuente_nombre = "ubicacion";
+            nivel_confianza = 0.85;
+            break;
+          }
+        }
+      }
+    }
+    
+    // ========================================================================
+    // PRIORIDAD 3: Descripción - Palabras clave
+    // ========================================================================
+    if (!nombrePotencial && descripcion) {
+      const keywordPatterns = [
+        /(?:Edificio|Edif\.|Torre|Condominio|Residencial|Proyecto)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){0,3})/i,
+        /\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){1,3})\s+(?:Equipetrol|Sirari|Urubo)/i
+      ];
+      
+      for (const pattern of keywordPatterns) {
+        const match = descripcion.match(pattern);
+        if (match && match[1]) {
+          nombrePotencial = validarYLimpiarNombre(match[1], "descripcion_keyword");
+          if (nombrePotencial) {
+            fuente_nombre = "descripcion_keyword";
+            nivel_confianza = 0.70;
+            break;
+          }
+        }
+      }
+    }
+    
+    // ========================================================================
+    // PRIORIDAD 4: Descripción - Texto en mayúsculas
+    // ========================================================================
+    if (!nombrePotencial && descripcion) {
+      const lines = descripcion.split('\n');
+      for (const line of lines) {
+        const words = line.trim().split(/\s+/);
+        if (words.length >= 2 && words.length <= 5) {
+          const allCaps = words.every(w => w === w.toUpperCase() && /^[A-ZÁÉÍÓÚÑ]/.test(w));
+          if (allCaps) {
+            const candidate = words.join(' ');
+            nombrePotencial = validarYLimpiarNombre(candidate, "descripcion_mayusculas");
+            if (nombrePotencial) {
+              fuente_nombre = "descripcion_mayusculas";
+              nivel_confianza = 0.60;
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    // ========================================================================
+    // FUZZY MATCHING FINAL - SNIPPET 4 INTEGRADO (CORREGIDO)
+    // ========================================================================
+    if (nombrePotencial) {
+      const matchFuzzy = buscarMatchFuzzy(nombrePotencial);
+      
+      if (matchFuzzy && matchFuzzy.score >= 65) {
+        // Match fuzzy exitoso - usar nombre del proyecto master
+        return {
+          nombre_edificio: matchFuzzy.proyecto.nombre,
+          fuente_nombre_edificio: fuente_nombre + '_fuzzy_matched',
+          nombre_edificio_nivel_confianza: matchFuzzy.score / 100,
+          id_proyecto_master_sugerido: matchFuzzy.proyecto.id,
+          metodo_match: 'fuzzy_extractor'
+        };
+      }
+      
+      // No hay match fuzzy - devolver nombre extraído con confianza ajustada
+      let confianzaAjustada = nivel_confianza;
+      
+      // Reducir confianza si el nombre es muy corto
+      if (nombrePotencial.length < 4) confianzaAjustada *= 0.5;
+      
+      // Reducir confianza si contiene números
+      if (/\d/.test(nombrePotencial)) confianzaAjustada *= 0.9;
+      
+      return {
+        nombre_edificio: nombrePotencial,
+        fuente_nombre_edificio: fuente_nombre,
+        nombre_edificio_nivel_confianza: confianzaAjustada
+      };
+    }
+    
+    // ========================================================================
+    // NO SE DETECTÓ NOMBRE
+    // ========================================================================
+    return { 
+      nombre_edificio: null, 
+      fuente_nombre_edificio: "no_detectado", 
+      nombre_edificio_nivel_confianza: 0 
+    };
+    
+  } catch (error) {
+    console.error("❌ Error en extraerNombreEdificio:", error ? error.message : "Error desconocido");
+    return { 
+      nombre_edificio: null, 
+      fuente_nombre_edificio: "error", 
+      nombre_edificio_nivel_confianza: 0 
+    };
+  }
+}
+
+
+// ============================================================================
+// 🗺️ extraerGPS (CORREGIDO - Acepta lat=0 o lon=0)
+// ============================================================================
+function extraerGPS(html) {
+    let lat = null;
+    let lon = null;
+    
+    // Extracción de latitud (sin cambios)
+    let matchLat = buscarPatron(html, /"latitud":"(-?\d+\.\d+)"/i);
+    if (!matchLat) {
+        matchLat = buscarPatron(html, /"latitude":"(-?\d+\.\d+)"/i);
+    }
+    if (matchLat && matchLat[1]) {
+        lat = parseFloat(matchLat[1]);
+    }
+    
+    // Extracción de longitud (sin cambios)
+    let matchLon = buscarPatron(html, /"longitud":"(-?\d+\.\d+)"/i);
+    if (!matchLon) {
+        matchLon = buscarPatron(html, /"longitude":"(-?\d+\.\d+)"/i);
+    }
+    if (matchLon && matchLon[1]) {
+        lon = parseFloat(matchLon[1]);
+    }
+
+    let coordenadas_gps = null;
+    let zona_validada = "no_detectada";
+    let metodo_gps = "no_detectado";
+
+    // 🚩 INICIO CORRECCIÓN 🚩
+    // La nueva condición verifica que sean números válidos,
+    // sin el filtro estricto de !== 0.
+    if (!isNaN(lat) && !isNaN(lon) && lat !== null && lon !== null) { 
+        
+        // 1. Guardar la coordenada SIEMPRE (incluso si es 0,0)
+        coordenadas_gps = { latitud: lat, longitud: lon };
+        metodo_gps = "structured_data";
+
+        // 2. Manejar el caso (0,0) explícitamente para la ZONA.
+        // La coordenada se guarda, pero la zona no se valida.
+        if (lat === 0 && lon === 0) {
+            zona_validada = "no_detectada"; 
+        } 
+        // 3. Si las coordenadas NO son (0,0), procedemos a validar la zona.
+        else {
+            // ✅ RANGOS AMPLIADOS (Tu lógica de zona validada original se mantiene intacta)
+            if (lat >= -17.79 && lat <= -17.75 && lon >= -63.21 && lon <= -63.16) {
+                zona_validada = "Equipetrol";
+            } else if (lat >= -17.78 && lat <= -17.74 && lon >= -63.21 && lon <= -63.18) {
+                zona_validada = "Equipetrol Norte";
+            } else if (lat >= -17.81 && lat <= -17.77 && lon >= -63.21 && lon <= -63.17) {
+                zona_validada = "Los Cusis/Beni";
+            } else if (lat >= -17.77 && lat <= -17.73 && lon >= -63.15 && lon <= -63.09) {
+                zona_validada = "Urubo";
+            } else if (lat >= -17.78 && lat <= -17.74 && lon >= -63.18 && lon <= -63.14) {
+                zona_validada = "Las Palmas";
+            } else if (lat >= -17.79 && lat <= -17.75 && lon >= -63.21 && lon <= -63.17) {
+                zona_validada = "Centro";
+            }
+            // Si es una coordenada válida pero fuera de estas zonas (ej. "Fuera de SCZ"),
+            // 'zona_validada' se quedará correctamente como "no_detectada".
+        }
+    }
+    // 🚩 FIN CORRECCIÓN 🚩
+
+    // Si lat o lon son NULL (no se encontraron), la función devuelve 
+    // coordenadas_gps: null, como debe ser.
+    // 🆕 v15.2: Fallback a meta tags si no hay GPS (SIN CHEERIO)
+    if (zona_validada === "no_detectada") {
+        // Extraer meta tag municipio con regex
+        const metaMunicipioMatch = html.match(/<meta\s+name=["']municipio["']\s+content=["']([^"']+)["']/i);
+        let zonaMeta = metaMunicipioMatch ? metaMunicipioMatch[1] : null;
+        
+        // Fallback: meta tag direccion
+        if (!zonaMeta) {
+            const metaDireccionMatch = html.match(/<meta\s+name=["']direccion["']\s+content=["']([^"']+)["']/i);
+            zonaMeta = metaDireccionMatch ? metaDireccionMatch[1] : null;
+        }
+        
+        if (zonaMeta) {
+            zonaMeta = zonaMeta.toLowerCase();
+            
+            // Detectar zona desde meta tags
+            if (/equipetrol\s+norte/i.test(zonaMeta)) {
+                zona_validada = "Equipetrol Norte";
+                metodo_gps = "inferido_meta_tag";
+            } else if (/equipetrol/i.test(zonaMeta)) {
+                zona_validada = "Equipetrol";
+                metodo_gps = "inferido_meta_tag";
+            } else if (/los\s+cusis|beni/i.test(zonaMeta)) {
+                zona_validada = "Los Cusis/Beni";
+                metodo_gps = "inferido_meta_tag";
+            } else if (/urubo/i.test(zonaMeta)) {
+                zona_validada = "Urubo";
+                metodo_gps = "inferido_meta_tag";
+            } else if (/las\s+palmas/i.test(zonaMeta)) {
+                zona_validada = "Las Palmas";
+                metodo_gps = "inferido_meta_tag";
+            } else if (/centro/i.test(zonaMeta)) {
+                zona_validada = "Centro";
+                metodo_gps = "inferido_meta_tag";
+            }
+        }
+    }
+  // ✅ RETURN FINAL (FALTABA ESTO)
+    return { latitud: lat, longitud: lon, coordenadas_gps, zona_validada_gps: zona_validada, metodo_gps };
+}
+// ============================================================================
+// 🧑‍💼 extraerAgente
+// ============================================================================
+function extraerAgente(html) {
+  let agente_nombre = null;
+  let agente_telefono = null;
+
+  const nombreMatch = html.match(/<img[^>]+alt=["']asesor[^"']*["'][^>]*>\s*<h6[^>]*card-subtitle[^>]*>(.*?)<\/h6>/i);
+  
+  if (nombreMatch) {
+    agente_nombre = nombreMatch[1].trim();
+  } else {
+    const h6Match = html.match(/<h6[^>]*card-subtitle[^>]*>(?!<span>)(.*?)<\/h6>/i);
+    if (h6Match && !/<span>/i.test(h6Match[1])) {
+      const nombre = h6Match[1].trim();
+      if (!/equipetrol|santa cruz|bolivia|zona|calle|av\.|avenida/i.test(nombre)) {
+        agente_nombre = nombre;
+      }
+    }
+  }
+
+  const telMatch = html.match(/(?:href=["']tel:)(\+?\d{11,15})/i);
+  if (telMatch) {
+    agente_telefono = telMatch[1].startsWith('+') ? telMatch[1] : `+${telMatch[1]}`;
+  }
+
+  const url_whatsapp = agente_telefono 
+    ? `https://wa.me/${agente_telefono.replace('+', '')}` 
+    : null;
+
+  return {
+    agente_nombre,
+    agente_telefono,
+    url_whatsapp
+  };
+}
+
+// ============================================================================
+// 🏢 extraerOficina 
+// ============================================================================
+function extraerOficina(html) {
+  const oficina_nombre = getMeta(html, "oficina") || getMeta(html, "author") || null;
+  let oficina_telefono = null;
+  let oficina_direccion = null;
+
+  const jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/gi);
+
+  if (jsonLdMatch) {
+    for (const script of jsonLdMatch) {
+      try {
+        const data = JSON.parse(script.replace(/<\/?script[^>]*>/gi, ''));
+        
+        if (data['@type'] === 'Organization' || data['@type'] === 'RealEstateAgent') {
+          oficina_telefono = data.telephone || null;
+          
+          if (data.address && data.address.streetAddress) {
+            oficina_direccion = data.address.streetAddress;
+          }
+        }
+      } catch (e) {
+        // Ignorar errores de parsing
+      }
+    }
+  }
+
+  return {
+    oficina_nombre,
+    oficina_telefono,
+    oficina_direccion
+  };
+}
+
+// ============================================================================
+// 🖼️ extraerFotos 
+// ============================================================================
+function extraerFotos(html) {
+  const fotos = [];
+
+  const jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/gi);
+
+  if (jsonLdMatch) {
+    for (const script of jsonLdMatch) {
+      try {
+        const data = JSON.parse(script.replace(/<\/?script[^>]*>/gi, ''));
+        
+        if (data['@type'] === 'RealEstateListing' && data.image) {
+          if (Array.isArray(data.image)) {
+            fotos.push(...data.image);
+          } else {
+            fotos.push(data.image);
+          }
+          break;
+        }
+      } catch (e) {
+        // Ignorar errores
+      }
+    }
+  }
+
+  if (fotos.length === 0) {
+    const ogImageMatch = html.match(/<meta property="og:image(?::secure_url)?" content="([^"]+)"/i);
+    if (ogImageMatch) {
+      fotos.push(ogImageMatch[1]);
+    }
+  }
+
+  if (fotos.length === 0) {
+    const imgMatches = html.matchAll(/<img[^>]+src=["'](\/\/cdn\.21online\.lat\/[^"']+)["'][^>]*alt=["'][^"']*(?:Foto|Departamento|Casa|Propiedad)[^"']*["']/gi);
+    for (const match of imgMatches) {
+      fotos.push(match[1]);
+    }
+  }
+
+  const fotosPropiedad = fotos.filter(url => {
+    const esUsuario = /\/usuarios\/\d+/.test(url);
+    const esLogo = /\/logos?\//.test(url);
+    const esIcono = /\/(favicon|icon|badge)\./.test(url);
+    
+    return !esUsuario && !esLogo && !esIcono;
+  });
+
+  const fotosUnicas = [...new Set(fotosPropiedad)]
+    .map(url => url.replace(/^http:/, 'https:'))
+    .filter(url => url && url.startsWith('https://'));
+
+  return {
+    fotos_urls: fotosUnicas,
+    cantidad_fotos: fotosUnicas.length,
+    tiene_fotos: fotosUnicas.length > 0
+  };
+}
+//============================================================================
+// 🏘️ detectarMultiproyecto v2.1 (MEJORADO - v14.2)
+// ============================================================================
+// CHANGELOG v2.1:
+// - ✅ Agregado: Detección de "desde X" sin "hasta Y"
+// - ✅ Agregado: Detección de "precio desde"
+// - ✅ Agregado: Detección de "a partir de X m²"
+// - ✅ Agregado: Plural "departamentos/casas" + singular "1 dormitorio"
+// - ✅ Mejorado: Detección de "disponibles" o "disponibilidad"
+// ============================================================================
+function detectarMultiproyecto(descripcion = "") {
+  if (typeof descripcion !== 'string') return false;
+  const desc = descripcion.toLowerCase();
+  
+  const tiene_multiples_dormitorios = /\d+\s*(?:,|y|o)\s*\d+\s+dormitorios?/i.test(desc);
+  const tiene_varias_tipologias = /varias\s+(tipolog[ií]as?|opciones)/i.test(desc);
+  const tiene_diferentes_modelos = /diferentes\s+(tipolog[ií]as?|modelos|plantas)/i.test(desc);
+  const tiene_rango_areas = /de\s+\d+\s*m[²2]\s+hasta\s+\d+\s*m[²2]/i.test(desc);
+  const tiene_desde_area = /(?:desde|a\s+partir\s+de|superficie\s+desde)\s+\d+\s*m[²2]/i.test(desc);
+  const tiene_precio_desde = /(?:precio\s+desde|desde\s+\$?\s?(?:us\.?|usd)|a\s+partir\s+de\s+\$?\s?(?:us\.?|usd))\s?[\d.,]+/i.test(desc);
+  
+  const es_plural = /(?:departamentos|casas|monoambientes|unidades)\b/i.test(desc);
+  const tiene_indicador_multiple = /(?:desde|disponibles?|disponibilidad|varias?\s+unidades)/i.test(desc);
+  const plural_con_indicador = es_plural && tiene_indicador_multiple;
+  
+  const tiene_disponibilidad_tipos = /disponibilidad\s*:?\s*(?:monoambientes?|departamentos?|casas?)/i.test(desc);
+  
+  return tiene_multiples_dormitorios || 
+         tiene_varias_tipologias || 
+         tiene_diferentes_modelos ||
+         tiene_rango_areas ||
+         tiene_desde_area ||
+         tiene_precio_desde ||
+         plural_con_indicador ||
+         tiene_disponibilidad_tipos;
+}
+
+// ============================================================================
+// 📏 extraerArea v14.5 (CIRUGÍA DE PRECISIÓN)
+// ============================================================================
+// CORRECCIONES:
+// 1. Añadida Prioridad #1: getMeta(html, "MC") - La fuente más confiable.
+// 2. Corregida la RegEx "patronTabla" para usar [\s\S]*? (captura <br>).
+// 3. Reordenada la jerarquía de prioridad para ser más segura.
+// ============================================================================
+function extraerArea(html, descripcion = "") {
+    
+    // ========================================================================
+    // PRIORIDAD 1: Meta tag "MC" (Metros Construidos) - VISTO EN ID 1049
+    // ========================================================================
+    const metaAreaMC = getMeta(html, "MC");
+    if (metaAreaMC && metaAreaMC !== "null") {
+        const metaLimpio = String(metaAreaMC).replace(',', '.');
+        const metaArea = parseFloat(metaLimpio) || 0;
+        
+        if (metaArea >= 20 && metaArea < 5000) { // Rango ampliado para Penthouses
+            return {
+                area_total_m2: metaArea,
+                fuente_area: "meta_MC",
+                nivel_confianza: 0.95
+            };
+        }
+    }
+
+    // ========================================================================
+    // PRIORIDAD 2: Meta tag "area" (Lógica antigua)
+    // ========================================================================
+    const metaAreaRaw = getMeta(html, "area");
+    if (metaAreaRaw && metaAreaRaw !== "null") {
+        const metaLimpio = String(metaAreaRaw).replace(',', '.');
+        const metaArea = parseFloat(metaLimpio) || 0;
+        
+        if (metaArea >= 20 && metaArea < 5000) {
+            return {
+                area_total_m2: metaArea,
+                fuente_area: "meta_area",
+                nivel_confianza: 0.90
+            };
+        }
+    }
+
+    // ========================================================================
+    // PRIORIDAD 3: Tabla HTML Visible (Lógica v14.4 CORREGIDA)
+    // ========================================================================
+    // RegEx corregida: [\s\S]*? captura CUALQUIER carácter (incluyendo <br>)
+    // entre la palabra clave y el número.
+    const patronTablaVisible = /(?:Construcción|Superficie)[\s\S]*?([\d,\.]+)\s*m[²2]/i;
+    const resultTablaVisible = html.match(patronTablaVisible);
+
+    if (resultTablaVisible && resultTablaVisible[1]) {
+        const areaTabla = parseFloat(resultTablaVisible[1].replace(',', '.'));
+        if (areaTabla >= 20 && areaTabla < 5000) {
+            return {
+                area_total_m2: areaTabla,
+                fuente_area: "html_tabla_visible",
+                nivel_confianza: 0.85 
+            };
+        }
+    }
+    
+    // ========================================================================
+    // PRIORIDAD 4: Descripción (Último recurso)
+    // ========================================================================
+    if (typeof descripcion === 'string') {
+        const patronSimple = /(\d+(?:[,\.]\d+)?)\s*m[²2t]/i;
+        const resultado = descripcion.match(patronSimple);
+        
+        if (resultado && resultado[1]) {
+            const area = parseFloat(resultado[1].replace(',', '.'));
+            
+            if (area >= 20 && area < 5000) {
+                return {
+                    area_total_m2: area,
+                    fuente_area: "descripcion",
+                    nivel_confianza: 0.60
+                };
+            }
+        }
+    }
+    
+    // ========================================================================
+    // Sin área válida
+    // ========================================================================
+    return {
+        area_total_m2: null,
+        fuente_area: "no_detectado",
+        nivel_confianza: 0
+    };
+}
+
+
+// ============================================================================
+// 🛏️ extraerEstructura v14.8 (MEJORADO - Detecta todas las variantes de multiproyectos)
+// ============================================================================
+function extraerEstructura(html, descripcion, esMultiproyecto) {
+    if (typeof descripcion !== 'string') descripcion = "";
+
+    const dormMetaRaw = getMeta(html, "recamaras");
+    const dormMeta = (dormMetaRaw && dormMetaRaw !== "null") ? parseInt(dormMetaRaw) || 0 : 0;
+
+    let dormTabla = 0;
+    const patronDormTabla = /Dormitorios?\s*([\d,\.]+)/i; 
+    const matchDormTabla = html.match(patronDormTabla);
+    if (matchDormTabla && matchDormTabla[1]) {
+        dormTabla = parseInt(matchDormTabla[1].replace(/[.,]/g, '')) || 0;
+    }
+
+    let matchesDorm = [];
+
+    // ========================================================================
+    // PATRÓN 1: "1, 2 dormitorios" o "1, 2 y 3 dormitorios" (CON COMA)
+    // ========================================================================
+    const patronLista = /(\d+)\s*[,y]\s*(\d+)(?:\s*[y,]\s*(\d+))?\s*dormitorios?/i;
+    const resultLista = buscarPatron(descripcion, patronLista);
+    if (resultLista) {
+        matchesDorm.push(parseInt(resultLista[1]));
+        matchesDorm.push(parseInt(resultLista[2]));
+        if (resultLista[3]) {
+            matchesDorm.push(parseInt(resultLista[3]));
+        }
+    }
+
+    // ========================================================================
+    // PATRÓN 2: "1 y 2 dormitorios" (SIN COMA) - NUEVO v14.6
+    // ========================================================================
+    if (matchesDorm.length === 0) {
+        const patronYSinComa = /(\d+)\s+y\s+(\d+)\s+dormitorios?/i;
+        const resultYSinComa = buscarPatron(descripcion, patronYSinComa);
+        if (resultYSinComa) {
+            matchesDorm.push(parseInt(resultYSinComa[1]));
+            matchesDorm.push(parseInt(resultYSinComa[2]));
+        }
+    }
+
+    // ========================================================================
+    // PATRÓN 3: "de un y dos dormitorios" (PALABRAS) - NUEVO v14.6
+    // ========================================================================
+    if (matchesDorm.length === 0) {
+        const palabrasNumeros = {
+            'un': 1, 'uno': 1, 'una': 1,
+            'dos': 2,
+            'tres': 3,
+            'cuatro': 4
+        };
+        
+        const patronPalabras = /(?:de\s+)?(un|uno|una|dos|tres|cuatro)\s+y\s+(un|uno|una|dos|tres|cuatro)\s+dormitorios?/i;
+        const resultPalabras = buscarPatron(descripcion, patronPalabras);
+        
+        if (resultPalabras && resultPalabras[1] && resultPalabras[2]) {
+            const num1 = palabrasNumeros[resultPalabras[1].toLowerCase()];
+            const num2 = palabrasNumeros[resultPalabras[2].toLowerCase()];
+            if (num1) matchesDorm.push(num1);
+            if (num2) matchesDorm.push(num2);
+        }
+    }
+
+    // ========================================================================
+    // PATRÓN 4: 1D / 2D / 3D (MUY COMÚN EN CENTURY21 BOLIVIA) - NUEVO v14.8
+    // ========================================================================
+    if (matchesDorm.length <= 1) {
+        const patronD = /(\d)D\b/gi;
+        let m;
+        while ((m = patronD.exec(descripcion)) !== null) {
+            const num = parseInt(m[1]);
+            if (num >= 1 && num <= 4) matchesDorm.push(num);
+        }
+    }
+
+    // ========================================================================
+    // PATRÓN 5: "de 1 a 3 dormitorios", "1 al 3 dormitorios" - NUEVO v14.8
+    // ========================================================================
+    if (matchesDorm.length <= 1) {
+        const patronRango = /(?:de|con)\s+(\d)\s*(?:a|-|al|hasta)\s+(\d)\s+dormitorios?/i;
+        const matchRango = descripcion.match(patronRango);
+        if (matchRango) {
+            const desde = parseInt(matchRango[1]);
+            const hasta = parseInt(matchRango[2]);
+            for (let i = desde; i <= hasta; i++) {
+                if (i >= 1 && i <= 4) matchesDorm.push(i);
+            }
+        }
+    }
+
+    // ========================================================================
+    // PATRÓN 6: Buscar "N dormitorio" individualmente (FALLBACK)
+    // ========================================================================
+    if (matchesDorm.length === 0) {
+        const patronDorm = /(\d+)\s+dormitorio/gi;
+        const regex = new RegExp(patronDorm.source, patronDorm.flags);
+        let resultado;
+
+        while ((resultado = regex.exec(descripcion)) !== null) {
+            matchesDorm.push(parseInt(resultado[1]));
+        }
+    }
+
+    // ========================================================================
+    // DETECCIÓN DE MONOAMBIENTES EN MULTIPROYECTOS (v14.5 + mejorado)
+    // ========================================================================
+    if (esMultiproyecto) {
+        const testMonoambieteMulti = /monoambientes|mono[\s-]?ambientes/i;
+        if (testMonoambieteMulti.test(descripcion)) {
+            matchesDorm.push(0);
+        }
+    }
+
+    const dormDesc = matchesDorm.length ? Math.max.apply(null, matchesDorm) : 0;
+    let dormitorios;
+    let fuente_confianza_dormitorios;
+    let dormitorios_opciones = null;
+    let dormitorios_categoria = null;
+
+    // ========================================================================
+    // LÓGICA DE ASIGNACIÓN (Multiproyecto vs Unidad Individual)
+    // ========================================================================
+    if (esMultiproyecto && matchesDorm.length >= 1) {
+        // Crear array de únicos
+        const unicos = [];
+        for (let i = 0; i < matchesDorm.length; i++) {
+            if (unicos.indexOf(matchesDorm[i]) === -1) {
+                unicos.push(matchesDorm[i]);
+            }
+        }
+        dormitorios_opciones = unicos.sort(function(a, b) { return a - b; });
+        dormitorios = null;  // En multiproyecto no se asigna número fijo
+        dormitorios_categoria = dormitorios_opciones.join(", ") + " dormitorios";
+        fuente_confianza_dormitorios = "descripcion_multiproyecto";
+    } else {
+        // Unidad individual (NO multiproyecto)
+        dormitorios = dormMeta || dormTabla || dormDesc;
+        fuente_confianza_dormitorios = dormMeta ? "meta" :
+                                        dormTabla ? "html_tabla" :
+                                        dormDesc ? "descripcion" : "no_definido";
+    }
+
+    const nivelDescripcion = descripcion.length > 300 ? "detallada" : 
+                            descripcion.length > 150 ? "media" : "corta";
+
+    // ========================================================================
+    // DETECCIÓN DE MONOAMBIENTE (Unidad individual)
+    // ========================================================================
+    const testMonoambiente = /monoambiente|mono[\\s-]?ambiente|estudio|studio|loft\\s*tipo\\s*mono/i;
+    let es_monoambiente = testMonoambiente.test(descripcion);
+
+    if (es_monoambiente && dormitorios > 1) {
+        es_monoambiente = false;
+    }
+
+    // 🆕 FIX: Si es multiproyecto con múltiples tipologías, NO puede ser monoambiente
+    if (es_monoambiente && esMultiproyecto && dormitorios_opciones && dormitorios_opciones.length > 1) {
+        es_monoambiente = false;
+    }
+
+    if (es_monoambiente) {
+        dormitorios = 0;
+        if (fuente_confianza_dormitorios === 'no_definido' || dormitorios > 0) {
+            fuente_confianza_dormitorios = "descripcion_monoambiente";
+        }
+    }
+
+    return {
+        dormitorios: dormitorios,
+        dormitorios_opciones: dormitorios_opciones,
+        dormitorios_categoria: dormitorios_categoria,
+        fuente_confianza_dormitorios: fuente_confianza_dormitorios,
+        es_monoambiente: es_monoambiente,
+        nivelDescripcion: nivelDescripcion
+    };
+}
+
+  
+// ============================================================================
+// 🚿 extraerBanos v24.21 (Fix "N dormitorios en suite")
+// ============================================================================
+function extraerBanos(html, descripcion = "") {
+    if (typeof descripcion !== 'string') descripcion = "";
+    
+    const metaBanosRaw = getMeta(html, "banio");
+    const metaBanos = (metaBanosRaw && metaBanosRaw !== "null") ? parseInt(metaBanosRaw) || 0 : 0;
+    
+    // ✅ INICIO CORRECCIÓN P3 (Leer tabla HTML)
+    let banosTabla = 0;
+    // Busca "Baños 1" en la tabla de íconos
+    const patronBanosTabla = /Baños?\s*([\d,\.]+)/i;
+    const matchBanosTabla = html.match(patronBanosTabla);
+    if (matchBanosTabla && matchBanosTabla[1]) {
+        banosTabla = parseInt(matchBanosTabla[1]) || 0;
+    }
+    // ✅ FIN CORRECCIÓN P3
+
+    const matches = [];
+    const patronBano = /(\d+)\s+ba[ñn]/gi;
+    const regex = new RegExp(patronBano.source, patronBano.flags);
+    let resultado;
+    while ((resultado = regex.exec(descripcion)) !== null) {
+        matches.push(parseInt(resultado[1]));
+    }
+    
+    const detectadoTexto = matches.length ? Math.max.apply(null, matches) : 0;
+    // ✅ CORRECCIÓN P3: Añadir banosTabla a la prioridad
+    // ANTES: const total = Math.max(metaBanos, detectadoTexto);
+    const total = Math.max(metaBanos, banosTabla, detectadoTexto);
+    
+    const testSocial = /ba[ñn]o\s+(de\s+visitas|social|medio)/i;
+    const tieneSocial = testSocial.test(descripcion);
+    
+    // ✅ CORRECCIÓN P3: Simplificar y corregir la lógica de la fuente
+    // ANTES: const fuente_confianza_banos = metaBanos > 0 && detectadoTexto > 0 ? "meta_y_descripcion" : ...
+    let fuente_confianza_banos = "no_definido";
+    if (total > 0) {
+        fuente_confianza_banos = (total === metaBanos) ? "meta" :
+                                 (total === banosTabla) ? "html_tabla" :
+                                 (total === detectadoTexto) ? "descripcion" : "fuente_mixta";
+    }
+
+    // ANTES: const conflicto_banos = metaBanos > 0 && detectadoTexto > 0 && ...
+    // AHORA:
+    const fuentesDetectadas = [metaBanos, banosTabla, detectadoTexto].filter(v => v > 0);
+    let conflicto_banos = false;
+    if (fuentesDetectadas.length > 1) {
+        const min = Math.min(...fuentesDetectadas);
+        const max = Math.max(...fuentesDetectadas);
+        if (max - min > 1) { // Conflicto si la diferencia es más de 1
+            conflicto_banos = true;
+        }
+    }
+    
+    // ========================================================================
+    // 🆕 FIX: DETECCIÓN MEJORADA DE "N DORMITORIOS EN SUITE"
+    // ========================================================================
+    let banosContexto = 0;
+    
+    // 🆕 NUEVO: Capturar el NÚMERO de dormitorios en suite
+    const patronEnSuite = /(\d+)\s+dormitorios?\s+en\s+suite/i;
+    const matchEnSuite = descripcion.match(patronEnSuite);
+    
+    if (matchEnSuite && matchEnSuite[1]) {
+        // Si dice "3 dormitorios en suite", son 3 baños
+        banosContexto = parseInt(matchEnSuite[1]);
+    } 
+    // Fallback: Si solo dice "en suite" sin número, contar como +1
+    else {
+        const tieneEnSuite = /\b(?:en\s+suite|ensuite|dormitorio.*en\s+suite|suite.*ba[ñn]o)\b/i.test(descripcion);
+        const mencionaEdificio = /\b(?:edificio|condominio|torre)\s+.*\b(?:en\s+suite|suite)\b/i.test(descripcion);
+        
+        if (tieneEnSuite && !mencionaEdificio) {
+            banosContexto += 1;
+        }
+    }
+    
+    // Contar "baño de visitas" o "baño social"
+    const tieneBanoVisitas = /\b(?:ba[ñn]o\s+(?:de\s+)?(?:visitas?|social))\b/i.test(descripcion);
+    const esAreaComun = /\b(?:edificio|áreas?\s+comunes?|condominio|zonas?\s+comunes?)\s+.*\bba[ñn]o/i.test(descripcion);
+    
+    if (tieneBanoVisitas && !esAreaComun) {
+        banosContexto += 1;
+    }
+    
+    let totalFinal = total;
+    let fuenteFinal = fuente_confianza_banos;
+    
+    if (banosContexto > total && banosContexto <= 4) {
+        totalFinal = banosContexto;
+        fuenteFinal = "descripcion_contexto";
+    }
+    
+    // ========================================================================
+    // 🆕 Si es MONOAMBIENTE y no hay info explícita, inferir 1 baño
+    // ========================================================================
+    const es_monoambiente = /monoambiente|mono[\s-]?ambiente|estudio|studio|loft\s*tipo\s*mono/i.test(descripcion);
+    
+    if (totalFinal === 0 && fuenteFinal === 'no_definido') {
+        if (es_monoambiente) {
+            return { 
+                total: 1, 
+                tieneSocial: tieneSocial, 
+                fuente_confianza_banos: "inferido_monoambiente",
+                conflicto_banos: false 
+            };
+        } else {
+            return { 
+                total: 1, 
+                tieneSocial: tieneSocial, 
+                fuente_confianza_banos: "por_defecto",
+                conflicto_banos: conflicto_banos 
+            };
+        }
+    }
+    
+    // ✅ ÚNICO RETURN FINAL (se eliminó la duplicación)
+    return { 
+        total: totalFinal,
+        tieneSocial: tieneSocial, 
+        fuente_confianza_banos: fuenteFinal,
+        conflicto_banos: conflicto_banos 
+    };
+}
+
+
+// ============================================================================
+//Exraer modalidad (ventas/alquiler/anticretico)
+// ============================================================================
+function extraerModalidad(html, descripcion = "") {
+  const metaModalidad = getMeta(html, "tipoOperacion");
+  if (metaModalidad) {
+    const m = metaModalidad.toLowerCase();
+    if (/venta/.test(m)) return "venta";
+    if (/renta|alquiler/.test(m)) return "alquiler";
+    if (/anticr[eé]tico/.test(m)) return "anticretico";
+  }
+  const desc = descripcion.toLowerCase();
+  if (/venta|en\s+venta|for\s+sale/.test(desc)) return "venta";
+  if (/alquiler|renta|arriendo|rental|for\s+rent/.test(desc)) return "alquiler";
+  if (/anticr[eé]tico/.test(desc)) return "anticretico";
+  return "no_especificado";
+}
+
+// ============================================================================
+// 💱 convertirPrecioABolivianos v16.2 (CON TC PARALELO)
+// ============================================================================
+function convertirPrecioABolivianos(precio_usd, precio_fue_normalizado, tipo_cambio_detectado) {
+  if (!precio_usd) return { 
+    precio_bs: null, 
+    tipo_cambio_usado: null,
+    tipo_cambio_paralelo_usado: null 
+  };
+
+  const tc_oficial = CONFIG.TIPO_CAMBIO_USD_BS_OFICIAL;
+  
+  // 🆕 Guardar TC paralelo si se usó en la normalización
+  const tc_paralelo = (tipo_cambio_detectado === 'paralelo' && precio_fue_normalizado) 
+    ? CONFIG.TIPO_CAMBIO_USD_BS_PARALELO 
+    : null;
+
+  return {
+    precio_bs: Math.round(precio_usd * tc_oficial),
+    tipo_cambio_usado: tc_oficial,
+    tipo_cambio_paralelo_usado: tc_paralelo  // 🆕 NUEVO
+  };
+}
+
+// ============================================================================
+// VALIDACION DE CONFLICTOS
+// ============================================================================
+function validarConflictos(data, esMultiproyecto) {
+    const conflictos = [];
+
+    // ========================================================================
+    // 🆕 VALIDACIÓN DE MONOAMBIENTES (Mejorada)
+    // ========================================================================
+    if (data.es_monoambiente) {
+        // Conflicto: Monoambiente con dormitorios
+        if (data.dormitorios > 0) {
+            conflictos.push({
+                tipo: "monoambiente_con_dormitorios",
+                descripcion: "Marcado como monoambiente pero indica dormitorios",
+                severidad: "media"
+            });
+        }
+        
+        // Conflicto informativo: Monoambiente con múltiples baños (poco común)
+        if (data.banos > 1) {
+            conflictos.push({
+                tipo: "monoambiente_banos_inusual",
+                descripcion: "Monoambiente con cantidad de baños inusual",
+                severidad: "baja"
+            });
+        }
+    }
+
+    // ========================================================================
+    // ✅ FIX: Cambiar data.tipo_propiedad por data.es_monoambiente
+    // ========================================================================
+    if (!esMultiproyecto) {
+        if (data.es_monoambiente && data.dormitorios > 0) {  // ← CORREGIDO
+            conflictos.push({
+                tipo: "tipo_vs_dormitorios",
+                descripcion: "Monoambiente con dormitorios detectados",
+                severidad: "media"
+            });
+        }
+    }
+
+    // ========================================================================
+    // Conflicto de precio (severidad ALTA)
+    // ========================================================================
+    if (data.precio_conflicto) {
+        conflictos.push({
+            tipo: "precio_meta_vs_descripcion",
+            descripcion: "Diferencia >15% entre precio meta y descripción",
+            severidad: "alta"
+        });
+    }
+
+    // ========================================================================
+    // Conflicto de baños (solo si NO es monoambiente)
+    // ========================================================================
+    if (data.conflicto_banos && !data.es_monoambiente) {
+        conflictos.push({
+            tipo: "banos_meta_vs_descripcion",
+            descripcion: "Diferencia >1 baño entre meta y descripción",
+            severidad: "baja"
+        });
+    }
+
+    return conflictos;
+}
+
+// ============================================================================
+// 🆕 VALIDACIÓN DE CONFLICTOS DE NOMBRE DE EDIFICIO
+// ============================================================================
+function validarConflictoNombreEdificio(data) {
+  const conflictos = [];
+
+  const nombre = (data.nombre_edificio || "").trim();
+  const confianza = data.nombre_edificio_nivel_confianza ?? 0;
+
+  // 1️⃣ Si no hay nombre o es muy corto
+  if (!nombre || nombre.length < 3) {
+    conflictos.push({
+      tipo: "nombre_edificio_faltante",
+      descripcion: "No se detectó un nombre válido de edificio.",
+      severidad: "media"
+    });
+  }
+
+  // 2️⃣ Si el nombre es genérico
+  if (/^(edificio|condominio|torre|residencial)$/i.test(nombre)) {
+    conflictos.push({
+      tipo: "nombre_edificio_generico",
+      descripcion: `Nombre genérico detectado ('${nombre}')`,
+      severidad: "baja"
+    });
+  }
+
+  // 3️⃣ Si la confianza del nombre es baja
+  if (confianza < 0.7) {
+    conflictos.push({
+      tipo: "nombre_edificio_baja_confianza",
+      descripcion: `Nivel de confianza bajo (${confianza.toFixed(2)})`,
+      severidad: confianza < 0.5 ? "media" : "baja"
+    });
+  }
+
+  return conflictos;
+}
+
+
+// ============================================================================
+// 📊 calcularNivelConfianza v1.5 (con impacto de confianza por nombre edificio)
+// ============================================================================
+function calcularNivelConfianza(data, conflictos, esMultiproyecto = false) {
+  let confianza = 1.0;
+
+  // Penalizaciones base por conflictos
+  if (conflictos.some(c => c.severidad === "alta")) confianza -= 0.25;
+  if (conflictos.some(c => c.severidad === "media")) confianza -= 0.15;
+  if (conflictos.filter(c => c.severidad === "baja").length > 0) confianza -= 0.05;
+
+  // Penalizaciones estructurales
+  if (!data.precio_usd) confianza -= 0.30;
+  if (data.fuente_precio === "meta_fallback" && esMultiproyecto) confianza -= 0.20;
+  if (data.fuente_precio === "no_detectado") confianza -= 0.20;
+  if (!data.coordenadas_gps) confianza -= 0.10;
+
+  // Bonificaciones
+  if (data.fuente_precio === "descripcion_explicito_corregido" || data.precio_fue_normalizado)
+    confianza += 0.10;
+  if (data.coordenadas_gps && data.metodo_gps === "structured_data")
+    confianza += 0.05;
+  if (data.fuente_confianza_banos === "meta_y_descripcion")
+    confianza += 0.05;
+  if (data.nivel_descripcion === "detallada")
+    confianza += 0.05;
+
+  // --------------------------------------------------------------------------
+  // 🆕 Ajuste por nivel de confianza del nombre del edificio
+  // --------------------------------------------------------------------------
+  if (typeof data.nombre_edificio_nivel_confianza === "number") {
+    const conf = data.nombre_edificio_nivel_confianza;
+
+    if (conf >= 0.9) confianza += 0.03;         // excelente detección
+    else if (conf >= 0.7) confianza += 0.00;     // neutro, no afecta
+    else if (conf >= 0.5) confianza -= 0.10;     // dudoso
+    else confianza -= 0.20;                      // falló claramente
+  } else {
+    // Si no existe nivel de confianza, penalización leve
+    confianza -= 0.10;
+  }
+
+  // Clampeo entre 0 y 1
+  return Math.max(0, Math.min(1, confianza));
+}
+
+// ============================================================================
+// 💲 estimarPrecioPorM2 v1.0 (Comparación Zonal)
+// ============================================================================
+function estimarPrecioPorM2(precio_usd, area_m2, zona = "default") {
+  if (!precio_usd || !area_m2 || area_m2 === 0) {
+    return { precio_m2: null, comparacion_media_zona: "sin_dato" };
+  }
+
+  const precio_m2 = precio_usd / area_m2;
+  const media_zona = CONFIG.MEDIA_ZONA_USD_M2[zona] || CONFIG.MEDIA_ZONA_USD_M2["default"];
+
+  let comparacion;
+  if (precio_m2 > 1.4 * media_zona) comparacion = "muy_por_encima";
+  else if (precio_m2 > 1.15 * media_zona) comparacion = "por_encima";
+  else if (precio_m2 < 0.7 * media_zona) comparacion = "muy_por_debajo";
+  else if (precio_m2 < 0.85 * media_zona) comparacion = "por_debajo";
+  else comparacion = "normal";
+
+  return { precio_m2, comparacion_media_zona: comparacion };
+}
+
+// ============================================================================
+// 🆕 Función Auxiliar: extraerCaracteristicasEstructuradas (JSON-LD)
+// Prioridad: 🥇 MÁXIMA (Fuente estructurada)
+// ============================================================================
+function extraerCaracteristicasEstructuradas(html) {
+    const listaCompleta = [];
+    const jsonLdMatch = html.match(/("amenityFeature":\[[\s\S]*?\])/i);
+
+    if (jsonLdMatch) {
+        try {
+            // Buscamos el JSON-LD del Apartment Schema
+            const fullScriptMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/gi);
+            let apartmentData = null;
+
+            for (const script of fullScriptMatch) {
+                // Previene errores si el script no es parseable o es otro schema
+                if (script.includes('"@type":"Apartment"')) {
+                    const data = JSON.parse(script.replace(/<\/?script[^>]*>/gi, ''));
+                    if (Array.isArray(data.amenityFeature)) {
+                        apartmentData = data;
+                        break;
+                    }
+                }
+            }
+            
+            if (apartmentData) {
+                for (const feature of apartmentData.amenityFeature) {
+                    const nombre = feature.name.trim();
+                    // Solo si el valor es "Sí" y no es un campo de metadatos general (Tipo, Precio, etc.)
+                    if (nombre && String(feature.value).toLowerCase() === 'sí') {
+                        if (!['Tipo', 'Precio de Venta', 'Terreno', 'Construcción', 'Dormitorios', 'Baños', 'Año de Construcción', 'Ambientes', 'Tipo Vista', 'Estilo de Vida', 'Construcción nueva', 'Baño Privado'].some(n => nombre.includes(n))) {
+                             // --- NORMALIZACIÓN DE NOMBRES ---
+                            if (nombre === 'Pileta' || nombre === 'Piscina Privada') {
+                                listaCompleta.push('Piscina');
+                            } else if (nombre === 'Elevador') {
+                                listaCompleta.push('Ascensor');
+                            } else if (nombre === 'Servicio de Seguridad') {
+                                listaCompleta.push('Seguridad 24/7');
+                            } else if (nombre === 'Acepta Mascotas') {
+                                listaCompleta.push('Pet Friendly');
+                            } else if (nombre === 'Casa Club') {
+                                listaCompleta.push('Salón de Eventos');
+                            } else {
+                                listaCompleta.push(nombre); // Por defecto, usa el nombre del JSON-LD
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("❌ Error en extraerCaracteristicasEstructuradas (JSON-LD):", e ? e.message : "Error desconocido");
+        }
+    }
+    return [...new Set(listaCompleta)];
+}
+
+
+// ============================================================================
+// 🧩 extraerAmenities v25.2 (con confianza + "por confirmar" sin romper flujo)
+// ============================================================================
+function extraerAmenities(html, descripcion = "") {
+    const listaJSON = extraerCaracteristicasEstructuradas(html);
+    const amenitiesSet = new Set();
+    const desc = descripcion.toLowerCase();
+
+    const AMENITIES_COMUNES = [
+        "Piscina", "Churrasquera", "Salón de Eventos", "Co-working", 
+        "Área Social", "Seguridad 24/7", "Sauna/Jacuzzi", "Ascensor", 
+        "Parque Infantil", "Terraza/Balcón", "Jardín", "Lavadero", 
+        "Estacionamiento para Visitas", "Recepción", "Pet Friendly", "Gimnasio"
+    ];
+
+    const estadoAmenities = {};
+
+    function registrar(amenity, valor, fuente, confianza) {
+        estadoAmenities[amenity] = { valor, fuente, confianza };
+    }
+
+    // 1️⃣ Desde JSON-LD (prioridad alta)
+    if (listaJSON.length > 0) {
+        listaJSON.forEach(item => {
+            if (AMENITIES_COMUNES.includes(item)) {
+                amenitiesSet.add(item);
+                registrar(item, true, "jsonld", "alta");
+            }
+        });
+    }
+
+    // 2️⃣ Desde descripción
+    const detecciones = [
+        { re: /piscina|alberca|pool|swimming/, nombre: "Piscina" },
+        { re: /gimnasio|gym|fitness/, nombre: "Gimnasio" },
+        { re: /churrasquera|bbq|barbecue|grill/, nombre: "Churrasquera" },
+        { re: /sal[oó]n\s+de\s+eventos|uso\s+m[úu]ltiple|eventos/, nombre: "Salón de Eventos" },
+        { re: /cowork|co-?working/, nombre: "Co-working" },
+        { re: /área\s+social|social\s+area/, nombre: "Área Social" },
+        { re: /seguridad|guardia|acceso\s+controlado|24\/7|24\s+hrs/, nombre: "Seguridad 24/7" },
+        { re: /sauna|jacuzzi|spa|hot\s*tub/, nombre: "Sauna/Jacuzzi" },
+        { re: /ascensor|elevador|elevator/, nombre: "Ascensor" },
+        { re: /parque\s+infantil|kids|children|playground/, nombre: "Parque Infantil" },
+        { re: /terraza|balc[oó]n|rooftop/, nombre: "Terraza/Balcón" },
+        { re: /jard[ií]n|garden/, nombre: "Jardín" },
+        { re: /laundry\s+room|lavadero/, nombre: "Lavadero" },
+        { re: /parqueo|estacionamiento|parking/, nombre: "Estacionamiento para Visitas" },
+        { re: /recepci[oó]n|front\s+desk|lobby/, nombre: "Recepción" },
+        { re: /pet\s+friendly|acepta\s+mascotas/, nombre: "Pet Friendly" }
+    ];
+
+    for (const { re, nombre } of detecciones) {
+        if (re.test(desc)) {
+            if (!amenitiesSet.has(nombre)) registrar(nombre, true, "descripcion", "media");
+            amenitiesSet.add(nombre);
+        }
+    }
+
+    // 🏢 NUEVO: Inferencia de Seguridad 24/7 para departamentos/edificios
+    const esDepartamento = /departamento|edificio|torre|condominio|residencial/i.test(desc);
+    if (esDepartamento && !amenitiesSet.has("Seguridad 24/7")) {
+        amenitiesSet.add("Seguridad 24/7");
+        registrar("Seguridad 24/7", true, "inferido_departamento", "media");
+    }
+
+    // 3️⃣ Completar con "por confirmar" para las no detectadas
+    for (const nombre of AMENITIES_COMUNES) {
+        if (!estadoAmenities[nombre]) {
+            registrar(nombre, "por_confirmar", "no_detectado", "baja");
+        }
+    }
+
+    // 4️⃣ Retorno final
+    return {
+        amenities: Array.from(amenitiesSet),
+        estado_amenities: estadoAmenities
+    };
+}
+
+// ============================================================================
+// 🔧 extraerEquipamiento v16.4 - OPTIMIZADO PARA CENTURY21
+// ============================================================================
+function extraerEquipamiento(html, descripcion = "") {
+    const equipamiento = [];
+    const desc = typeof descripcion === 'string' ? descripcion.toLowerCase() : "";
+    
+    // ========================================================================
+    // 🔧 DETECCIÓN INTELIGENTE DE AMOBLADO (de Remax v1.7.2)
+    // ========================================================================
+    // Criterio 1: Menciona "amoblado" explícitamente
+    const mencionaAmobladoExplicito = /(?:totalmente\s+)?amoblado|precio\s+amoblado|furnished|viene\s+amoblado/i.test(desc);
+    
+    // Criterio 2: NO es contexto de áreas comunes
+    const esSoloAreaComun = /(?:áreas?|zonas?)\s+(?:comunes?|sociales?).*amoblad/i.test(desc);
+    
+    // Criterio 3: Lista muebles completos (al menos 4 de estos)
+    const muebles = {
+        cama: /\bcama\b|sommier|colchón/i.test(desc),
+        ropero: /\bropero|closet|armario|vestidor\s+amoblado/i.test(desc),
+        mesa: /\bmesa\b|comedor|escritorio|mesón/i.test(desc),
+        sillas: /\bsillas?|sillones?|sofá|sala\s+de\s+estar/i.test(desc),
+        cocina_equipada: /cocina\s+(?:totalmente\s+)?equipada|menaje\s+completo|heladera|refrigeradora|microondas/i.test(desc)
+    };
+    
+    const cantidadMuebles = Object.values(muebles).filter(Boolean).length;
+    
+    // DECISIÓN FINAL AMOBLADO
+    if (mencionaAmobladoExplicito && !esSoloAreaComun) {
+        if (!equipamiento.includes("Amoblado")) {
+            equipamiento.push("Amoblado");
+        }
+    } else if (cantidadMuebles >= 4 && muebles.cama && muebles.cocina_equipada) {
+        // Si tiene 4+ muebles incluyendo cama y cocina → está amoblado
+        if (!equipamiento.includes("Amoblado")) {
+            equipamiento.push("Amoblado");
+        }
+    }
+
+    // ========================================================================
+    // 🔧 RESTO DEL EQUIPAMIENTO - REGEX OPTIMIZADOS PARA CENTURY21
+    // ========================================================================
+    
+    // Cocina Equipada (FLEXIBLE - detecta "Cocina Integrada tipo americana")
+    if ((/cocina.*(americana|equipada|integrada)/i.test(desc) || /\bequipada\b/i.test(desc)) && !equipamiento.includes("Cocina Equipada")) {
+        equipamiento.push("Cocina Equipada");
+    }
+    
+    // Aire Acondicionado
+    if (/aire\s+acondicionado|split|ac/i.test(desc) && !equipamiento.includes("Aire Acondicionado")) {
+        equipamiento.push("Aire Acondicionado");
+    }
+    
+    // Lavandería (AGREGADO "área de servicio")
+    if (/lavander[ií]a|área\s+de\s+(lavado|servicio)|laundry\s+room/i.test(desc) && !equipamiento.includes("Lavandería")) {
+        equipamiento.push("Lavandería");
+    }
+    
+    // Roperos Empotrados (AGREGADO "vestidor")
+    if (/roperos?\s+empotrados?|cl[oó]set|walk-in|vestidor/i.test(desc) && !equipamiento.includes("Roperos Empotrados")) {
+        equipamiento.push("Roperos Empotrados");
+    }
+    
+    // Baño con Box
+    if (/box\s+de\s+baño|mampara|shower\s+enclosure/i.test(desc) && !equipamiento.includes("Baño con Box")) {
+        equipamiento.push("Baño con Box");
+    }
+    
+    // Campana Extractora (ya cubre "extractor de grasa")
+    if (/extractor|hood|campana/i.test(desc) && !equipamiento.includes("Campana Extractora")) {
+        equipamiento.push("Campana Extractora");
+    }
+    
+    // Microondas
+    if (/microondas|microwave/i.test(desc) && !equipamiento.includes("Microondas")) {
+        equipamiento.push("Microondas");
+    }
+    
+    // Secadora
+    if (/secadora|dryer/i.test(desc) && !equipamiento.includes("Secadora")) {
+        equipamiento.push("Secadora");
+    }
+    
+    // Lavadora
+    if (/lavadora|washer/i.test(desc) && !equipamiento.includes("Lavadora")) {
+        equipamiento.push("Lavadora");
+    }
+    
+    // Horno
+    if (/horno|oven/i.test(desc) && !equipamiento.includes("Horno")) {
+        equipamiento.push("Horno");
+    }
+    
+    // Calefón
+    if (/calef[óo]n|calentador/i.test(desc) && !equipamiento.includes("Calefón")) {
+        equipamiento.push("Calefón");
+    }
+
+    return [...new Set(equipamiento)];
+} 
+
+// ============================================================================
+// ✅ NUEVO v16.4: extraerEstacionamiento
+// ============================================================================
+function extraerEstacionamiento(descripcion) {
+  if (!descripcion) return 'sin_confirmar';
+  
+  const desc = descripcion.toLowerCase();
+  
+  // Evitar "parqueo para visitas" (es amenity)
+  if (/parqueo\s+(?:para\s+)?visitas|estacionamiento\s+(?:para\s+)?visitas/i.test(desc)) {
+    return 'sin_confirmar';
+  }
+  
+  // "incluido"
+  if (/parqueo\s+incluido|estacionamiento\s+incluido|incluye\s+parqueo|incluye\s+estacionamiento/i.test(desc)) {
+    return 'incluido';
+  }
+  
+  // "no_incluido"
+  if (/sin\s+parqueo|sin\s+estacionamiento|no\s+incluye\s+parqueo|no\s+incluye\s+estacionamiento/i.test(desc)) {
+    return 'no_incluido';
+  }
+  
+  return 'sin_confirmar';
+}
+// ============================================================================
+// 🏗️ extraerEstadoConstruccionYEntrega v1.2 (CORREGIDA)
+// ============================================================================
+function extraerEstadoConstruccionYEntrega(descripcion = "", esMultiproyecto = false) {
+  if (!descripcion) return {
+    estado_construccion: "no_definido",
+    fecha_entrega_estimada: null,
+    porcentaje_avance_construccion: null
+  };
+
+  const desc = descripcion.toLowerCase();
+  let estado = "no_definido";
+  let fechaEntrega = null;
+  let porcentaje_avance = null;
+
+  if (/pre[\s-]?venta|preventa|en\s+prevent[ae]/i.test(desc)) {
+    estado = "preventa";
+  } else if (/en\s+construcci[oó]n|obra\s+gruesa/i.test(desc)) {
+    estado = "en_construccion";
+    const avanceMatch = desc.match(/avance[:\s]+(\d+)\s*%/i);
+    if (avanceMatch && avanceMatch[1]) porcentaje_avance = parseInt(avanceMatch[1]);
+  } else if (/entrega\s+inmediata|listo\s+para\s+habitar|disponible\s+ya/i.test(desc)) {
+    estado = "entrega_inmediata";
+  } else if (/usado|de\s+ocas[ií][oó]n|segunda\s+mano/i.test(desc)) {
+    estado = "usado";
+  } else if (/a\s+estrenar|nuevo|brand\s+new/i.test(desc)) {
+    estado = "nuevo_a_estrenar";
+  }
+
+  let matchFecha = desc.match(/entrega:?\s+(?:en\s+|para\s+)?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\s+(?:del?\s+)?(\d{4})/i);
+  if (matchFecha && matchFecha[1] && matchFecha[2]) {
+    const meses = { enero: "01", febrero: "02", marzo: "03", abril: "04", mayo: "05", junio: "06", julio: "07", agosto: "08", septiembre: "09", octubre: "10", noviembre: "11", diciembre: "12" };
+    const mes = meses[matchFecha[1].toLowerCase()];
+    const anio = matchFecha[2];
+    fechaEntrega = `${anio}-${mes}-15`;
+  }
+  if (!fechaEntrega) {
+    matchFecha = desc.match(/entrega\s+(?:en\s+)?(\d{1,2})[\/\-](\d{4})/i);
+    if (matchFecha && matchFecha[1] && matchFecha[2]) {
+      const mes = matchFecha[1].padStart(2, '0');
+      const anio = matchFecha[2];
+      fechaEntrega = `${anio}-${mes}-15`;
+    }
+  }
+  if (!fechaEntrega) {
+    matchFecha = desc.match(/entrega\s+(?:en\s+)?(\d{4})/i);
+    if (matchFecha && matchFecha[1]) {
+      const anio = matchFecha[1];
+      fechaEntrega = `${anio}-12-31`;
+    }
+  }
+  if (!fechaEntrega) {
+    matchFecha = desc.match(/entrega\s+(?:q|trimestre\s+)([1-4])\s+(?:de\s+)?(\d{4})/i);
+    if (matchFecha && matchFecha[1] && matchFecha[2]) {
+      const quarter = parseInt(matchFecha[1]);
+      const anio = matchFecha[2];
+      const mesQ = { 1: "03", 2: "06", 3: "09", 4: "12" };
+      const diaQ = { 1: "31", 2: "30", 3: "30", 4: "31" };
+      fechaEntrega = `${anio}-${mesQ[quarter]}-${diaQ[quarter]}`;
+    }
+  }
+
+  if (estado === "no_definido" && fechaEntrega) {
+      try {
+          const hoy = new Date();
+          hoy.setHours(0, 0, 0, 0);
+          const fechaEntregaDate = new Date(fechaEntrega);
+           if (!isNaN(fechaEntregaDate.getTime())) {
+                fechaEntregaDate.setUTCHours(0, 0, 0, 0);
+                if (fechaEntregaDate >= hoy) {
+                    estado = "preventa";
+                }
+           }
+      } catch(e) {
+          console.error("Error al parsear/comparar fecha:", fechaEntrega, e.message);
+      }
+  }
+
+  // ✅ CORRECCIÓN v14.7: Eliminar condición !esMultiproyecto
+  if (estado === "no_definido" && !fechaEntrega) {
+    estado = "sin_informacion";
+  }
+
+  if (esMultiproyecto && estado === "usado") {
+    estado = "preventa";
+  }
+  
+  if (estado === "entrega_inmediata") {
+    const hoyISO = new Date().toISOString().split('T')[0];
+    if (!fechaEntrega || (fechaEntrega && new Date(fechaEntrega) > new Date())) {
+      fechaEntrega = hoyISO;
+    }
+  }
+
+  if (!fechaEntrega) fechaEntrega = null;
+  if (porcentaje_avance === null || isNaN(porcentaje_avance)) porcentaje_avance = null;
+
+  return {
+    estado_construccion: estado,
+    fecha_entrega_estimada: fechaEntrega,
+    porcentaje_avance_construccion: porcentaje_avance
+  };
+}
+
+// ============================================================================
+// 🏷️ extraerTipoInmuebleC21 v3.1 - VALIDADO
+// ============================================================================
+function extraerTipoInmuebleC21(html) {
+  // Prioridad 1: Meta tag tipoInmueble (más confiable)
+  const metaMatch = html.match(/<meta\s+name="tipoInmueble"\s+content="([^"]+)"/i);
+  if (metaMatch && metaMatch[1]) {
+    return metaMatch[1].trim();
+  }
+  // Prioridad 2: Breadcrumbs (primer item)
+  const breadcrumbMatch = html.match(/<li\s+class="breadcrumb-item"[^>]*>\s*<a[^>]*>([^<]+)<\/a>/i);
+  if (breadcrumbMatch && breadcrumbMatch[1]) {
+    const tipo = breadcrumbMatch[1].trim();
+    const tiposValidos = ['casa', 'departamento', 'terreno', 'oficina', 'local', 'quinta', 'duplex', 'loft', 'galpón', 'depósito', 'penthouse'];
+    if (tiposValidos.some(t => tipo.toLowerCase().includes(t))) {
+      return tipo;
+    }
+  }
+  // Prioridad 3: H1 Title (mejorado para capturar Venta/Alquiler/Renta)
+  const h1Match = html.match(/<h1[^>]*>(?:Venta|Alquiler|Renta)\s+de\s+(Casa|Departamento|Terreno|Oficina|Local|Quinta|Duplex|Loft|Galp[oó]n|Dep[oó]sito|Penthouse|Local\s+Comercial)/i);
+  if (h1Match && h1Match[1]) {
+    return h1Match[1].trim();
+  }
+  // Prioridad 4: Fallback - buscar palabras clave en todo el HTML
+  const palabrasClave = ['Departamento', 'Casa', 'Terreno', 'Oficina', 'Local Comercial', 'Quinta', 'Duplex', 'Loft', 'Galpón', 'Penthouse'];
+  for (const palabra of palabrasClave) {
+    const regex = new RegExp(`\\b${palabra.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'i');
+    if (regex.test(html)) {
+      return palabra;
+    }
+  }
+  return 'No especificado';
+}
+
+// ============================================================================
+// 🧠 MAPEADOR PRINCIPAL
+// ============================================================================
+function mapearCentury(html) {
+  try {
+    const avisoTerminado = /aviso\s+terminado|propiedad\s+vendida|no\s+disponible|alquilado/i.test(html);
+    if (avisoTerminado) {
+      return { es_inactiva: true, razon: "Aviso terminado o no disponible" };
+    }
+
+    const descripcion = extraerDescripcionCompleta(html);
+    const tipoPropiedad = extraerTipoInmuebleC21(html); // Llama a la nueva función v3.1
+    const es_multiproyecto = detectarMultiproyecto(descripcion);
+    const codigo = getMeta(html, "clave") || null;
+    const url = itemEntrada.url || null;
+    // ==================================================
+    const fechaData = extraerFecha(html);
+    const lastModMeta = getMeta(html, "lastmod");
+    const fecha_de_ultima_modificacion = lastModMeta ? 
+      new Date(lastModMeta.replace('.000000', 'Z').replace(' ', 'T')).toISOString() : 
+      null;
+    const updatedAt = fecha_de_ultima_modificacion;
+    const modalidad = extraerModalidad(html, descripcion);
+    const gpsData = extraerGPS(html);
+    const agenteData = extraerAgente(html);
+    const oficinaData = extraerOficina(html);
+    const fotosData = extraerFotos(html);
+    const areasData = extraerArea(html, descripcion);
+    const estructuraData = extraerEstructura(html, descripcion, es_multiproyecto);
+    const banosData = extraerBanos(html, descripcion);
+      const { amenities, estado_amenities } = extraerAmenities(html, descripcion);
+      const equipamiento = extraerEquipamiento(html, descripcion);
+      const estacionamiento = extraerEstacionamiento(descripcion); // ✅ NUEVO v16.4
+      const precioData = extraerPrecio(html, descripcion, es_multiproyecto);
+      const edificioData = extraerNombreEdificio(descripcion, url, getMeta(html, "direccion") || getMeta(html, "ubicacion") || "");
+      const tipo_cambio_detectado = detectarTipoCambio(descripcion);
+      const conversionBs = convertirPrecioABolivianos(
+      precioData.precio_usd, 
+      precioData.precio_fue_normalizado,
+      tipo_cambio_detectado
+      );
+    const estadoData = extraerEstadoConstruccionYEntrega(descripcion, es_multiproyecto);
+    const precioZonalData = estimarPrecioPorM2(precioData.precio_usd, areasData.area_total_m2, gpsData.zona_validada_gps || "default");
+
+    const data = {
+      es_inactiva: false,  // ← AGREGAR AQUÍ (PRIMERA LÍNEA)
+      id_original: idOriginal,
+      codigo_propiedad: codigo,
+      url_propiedad: url,
+      tipo_propiedad_original: tipoPropiedad,
+      // ========== AGREGAR ESTAS 2 LÍNEAS AQUÍ ==========
+      updatedAt: updatedAt,
+      // ==================================================
+      agente_nombre: agenteData.agente_nombre,
+      agente_telefono: agenteData.agente_telefono,
+      url_whatsapp: agenteData.url_whatsapp,
+      oficina_nombre: oficinaData.oficina_nombre,
+      oficina_telefono: oficinaData.oficina_telefono,
+      oficina_direccion: oficinaData.oficina_direccion,
+      fotos_urls: fotosData.fotos_urls,
+      cantidad_fotos: fotosData.cantidad_fotos,
+      descripcion: descripcion,
+      es_multiproyecto,
+      tipo_operacion: modalidad,
+      estado_construccion: estadoData.estado_construccion,
+      fecha_entrega_estimada: estadoData.fecha_entrega_estimada,
+      porcentaje_avance_construccion: estadoData.porcentaje_avance_construccion,
+      precio_usd: precioData.precio_usd,
+      precio_usd_original: precioData.precio_usd_original,
+      precio_fue_normalizado: precioData.precio_fue_normalizado,
+      // 🆕 NUEVOS CAMPOS v16.2
+      tipo_cambio_paralelo_usado: conversionBs.tipo_cambio_paralelo_usado,
+      precio_usd_actualizado: precioData.precio_usd,
+      requiere_actualizacion_precio: precioData.precio_fue_normalizado || 
+                                (precioData.moneda_original === "BOB"),
+      precio_min_usd: precioData.precio_min_usd,              // 🆕 AGREGAR
+      precio_max_usd: precioData.precio_max_usd,              // 🆕 AGREGAR
+      es_rango_falso: precioData.es_rango_falso || false,     // 🆕 AGREGAR
+      es_rango_falso_positivo: precioData.es_rango_falso_positivo,
+      moneda_original: precioData.moneda_original,
+      precio_bs: conversionBs.precio_bs,
+      tipo_cambio_usado: conversionBs.tipo_cambio_usado,
+      tipo_cambio_detectado: tipo_cambio_detectado,
+      fuente_precio: precioData.fuente_precio,
+      precio_conflicto: precioData.conflicto_precio,
+      precio_m2: precioZonalData.precio_m2,
+      comparacion_media_zona: precioZonalData.comparacion_media_zona,
+      precio_sospechoso: precioZonalData.comparacion_media_zona === "muy_por_encima" || precioZonalData.comparacion_media_zona === "muy_por_debajo",
+      area_total_m2: areasData.area_total_m2,
+      fuente_confianza_area: areasData.fuente_area,  // ← NUEVO (viene de areasData)
+      dormitorios: estructuraData.dormitorios,
+      dormitorios_opciones: estructuraData.dormitorios_opciones,
+      dormitorios_categoria: estructuraData.dormitorios_categoria,
+      fuente_confianza_dormitorios: estructuraData.fuente_confianza_dormitorios,
+      es_monoambiente: estructuraData.es_monoambiente,
+      banos: banosData.total,
+      fuente_confianza_banos: banosData.fuente_confianza_banos,
+      conflicto_banos: banosData.conflicto_banos,
+      amenities,
+      estado_amenities, 
+      equipamiento,
+      piscina: amenities.includes("Piscina"),
+      seguridad: amenities.includes("Seguridad 24/7"),
+      amoblado: equipamiento.includes("Amoblado"),
+      estacionamientos: estacionamiento, // ✅ NUEVO v16.4
+      nombre_edificio: edificioData.nombre_edificio,
+      fuente_nombre_edificio: edificioData.fuente_nombre_edificio,  // ← CAMBIAR
+      nombre_edificio_nivel_confianza: edificioData.nombre_edificio_nivel_confianza,  // ← CAMBIAR
+      id_proyecto_master_sugerido: edificioData.id_proyecto_master_sugerido,
+      metodo_match: edificioData.metodo_match,
+      coordenadas_gps: gpsData.coordenadas_gps,
+      latitud: gpsData.latitud,     // ← AGREGAR
+      longitud: gpsData.longitud,   // ← AGREGAR
+      zona_validada_gps: gpsData.zona_validada_gps,
+      metodo_gps: gpsData.metodo_gps,
+      nivel_descripcion: estructuraData.nivelDescripcion,
+      fecha_publicacion: fechaData.fecha,
+      fuente_fecha_publicacion: fechaData.fuente,
+      fecha_de_ultima_modificacion: fecha_de_ultima_modificacion,
+      fecha_scraping: new Date().toISOString(),
+      scraper_version: "v16.5"  
+    };
+
+    const conflictos = [
+  ...validarConflictos(data, es_multiproyecto),
+  ...validarConflictoNombreEdificio(data)
+];
+    const nivel_confianza_general = calcularNivelConfianza(data, conflictos, es_multiproyecto);
+    data.conflictos = conflictos;
+    data.nivel_confianza_general = nivel_confianza_general;
+    data.requiere_revision_humana = conflictos.some((c) => c.severidad === "alta") || nivel_confianza_general < 0.6;
+    data.extraccion_exitosa = true; 
+
+    return data;
+  } catch (error) {
+    return { 
+      es_inactiva: false,  // ← AGREGAR
+      error: true, 
+      mensaje: `Error en extractor C21: ${error.message}`, 
+      etapa: "mapeo" 
+    };
+  }
+}
+
+// ============================================================================
+// 🚀 EJECUCIÓN PRINCIPAL (CORREGIDA v15.7 - SOLO SÁNDWICH / CERO FALSOS POSITIVOS)
+// ============================================================================
+try {
+  // --------------------------------------------------------------------------
+  // 🛡️ DETECCIÓN DE GHOST LISTINGS v15.8 (FIX DEFINITIVO)
+  // --------------------------------------------------------------------------
+  const marcadorInicio = 'id="detallePropiedad"'; 
+  const marcadorFin = '<footer';
+    
+  const inicioCuerpo = html.indexOf(marcadorInicio);
+  const finCuerpo = html.indexOf(marcadorFin);
+  
+  let esInactiva = false;
+  let razonInactividad = null;
+  
+  if (inicioCuerpo !== -1 && finCuerpo !== -1) {
+      const contenidoCentral = html.substring(inicioCuerpo, finCuerpo);
+      
+      // MÉTODO 1: Buscar el div vacío explícitamente
+      const divVacio = /<div\s+id=["']detallePropiedad["']\s*><\/div>/i.test(contenidoCentral);
+      
+      if (divVacio) {
+          esInactiva = true;
+          razonInactividad = "Ghost Listing (div detallePropiedad vacío)";
+          console.log(`👻 Ghost Listing detectado (ID ${idOriginal}) - Div vacío`);
+      } else {
+          // MÉTODO 2: Verificar que haya contenido estructurado real
+          const tieneCarousel = /<div[^>]*carousel/i.test(contenidoCentral);
+          const tieneDescripcion = /<div[^>]*descripcion/i.test(contenidoCentral);
+          const tieneFicha = /<div[^>]*ficha/i.test(contenidoCentral);
+          
+          // MÉTODO 3: Limpiar HTML SIN colapsar espacios completamente
+          const textoLimpio = contenidoCentral
+              .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Quitar scripts
+              .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')   // Quitar styles
+              .replace(/<[^>]*>/g, ' ')           // Tags → espacios
+              .replace(/\s+/g, ' ')               // Múltiples espacios → 1 espacio
+              .trim();
+          
+          const caracteresReales = textoLimpio.length;
+          
+          // DECISIÓN FINAL
+          if (caracteresReales < 100 && !tieneCarousel && !tieneDescripcion) {
+              esInactiva = true;
+              razonInactividad = `Ghost Listing (Contenido insuficiente: ${caracteresReales} chars)`;
+              console.log(`👻 Ghost Listing detectado (ID ${idOriginal}) - ${caracteresReales} chars`);
+          } else {
+              console.log(`✅ Propiedad Activa (ID ${idOriginal}). Contenido: ${caracteresReales} chars, Carousel: ${tieneCarousel}, Desc: ${tieneDescripcion}`);
+          }
+      }
+  } else {
+      if (html.length > 0) {
+           esInactiva = true;
+           razonInactividad = "Estructura inválida (Falta contenedor detallePropiedad)";
+      }
+  }
+
+  // --------------------------------------------------------------------------
+  // 🛑 SALIDA TEMPRANA SI ES INACTIVA
+  // --------------------------------------------------------------------------
+  if (esInactiva) {
+    return {
+      json: {
+        id_propiedad: idOriginal,
+        datos_json: { 
+          es_inactiva: true, 
+          razon: razonInactividad 
+        }
+      }
+    };
+  }
+
+  // ==========================================================================
+  // SI ES ACTIVA, EJECUTAMOS EL MAPEO NORMAL
+  // ==========================================================================
+  
+  const datos = mapearCentury(html);
+
+  // Comprobación terciaria
+  if (datos.es_inactiva) {
+    return {
+      json: {
+        id_propiedad: idOriginal,
+        datos_json: { 
+          es_inactiva: true, 
+          razon: datos.razon 
+        }
+      }
+    };
+  }
+
+  if (datos.error) {
+    console.error("❌ Error en mapeo:", datos.mensaje);
+    throw new Error(datos.mensaje);
+  }
+
+  // Logs de éxito
+  console.log(`✅ Extracción exitosa (ID: ${idOriginal})`);
+  console.log(`   - Precio: ${datos.precio_usd}`);
+  datos.extraccion_exitosa = true;
+  
+  return {
+  json: {
+    _internal_id: idOriginal,
+    ...datos
+  }
+};
+
+} catch (e) {
+  console.error("❌ ERROR CRÍTICO EN EJECUCIÓN:", e.message);
+  return {
+    json: {
+      id_propiedad: idOriginal,
+      datos_json: { 
+        es_inactiva: false,
+        error: true, 
+        mensaje: e.message, 
+        etapa: "Ejecución Principal"
+      }
+    }
+  };
+}
