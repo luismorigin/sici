@@ -2,7 +2,7 @@
 
 **Sistema:** SICI - Flujo B Core++  
 **Documento:** Heurísticas de Extracción - Implementación Viva  
-**Parte:** 1 de 2 (Century21 v16.3 + Lógica Compartida)  
+**Parte:** 1 de 2 (Century21 v16.5 + Lógica Compartida)  
 **Última actualización:** Diciembre 2024  
 **Ver también:** `extractor_heuristics_parte2_remax.md`
 
@@ -48,6 +48,8 @@ Este documento **NO es arquitectura**. Es un registro de **cómo funcionan los e
 | **Fragilidad ante cambios** | Alta (HTML) | Baja (JSON) | Tradeoff |
 | **Metadata rica** | ✅ og:tags | ⚠️ Limitada | C21 mejor |
 | **Score promedio** | 0.87 | 0.83 | C21 4pts mejor |
+
+**Versiones actuales:** Century21 v16.5, Remax v1.9
 
 **Conclusión:**
 - **Century21:** Superior para matching automático, más frágil técnicamente
@@ -323,7 +325,7 @@ function detectarMultitipologias(titulo, descripcion) {
 
 ---
 
-## 🏢 CENTURY21 v16.3: HEURÍSTICAS ESPECÍFICAS
+## 🏢 CENTURY21 v16.5: HEURÍSTICAS ESPECÍFICAS
 
 ### Sistema de 4 Prioridades para Nombre de Edificio
 
@@ -533,14 +535,14 @@ function limpiarZonasGeograficas(nombre) {
 
 ## 🎯 RESUMEN EJECUTIVO
 
-### Century21 v16.3 - Fortalezas
+### Century21 v16.5 - Fortalezas
 
 1. ✅ **URL slug semántico** - 40% más nombres detectados vs Remax
 2. ✅ **4 prioridades** de extracción
 3. ✅ **Metadata rica** (og:tags, ubicación)
 4. ✅ **95% con nombre** detectado
 
-### Century21 v16.3 - Debilidades
+### Century21 v16.5 - Debilidades
 
 1. ⚠️ **Parsing HTML frágil** - Cambios en HTML rompen extractor
 2. ⚠️ **~2,100 líneas** - Más complejo que Remax

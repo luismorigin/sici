@@ -2,7 +2,7 @@
 
 **Sistema:** SICI - Flujo B Core++  
 **Documento:** Heurísticas de Extracción - Implementación Viva  
-**Parte:** 2 de 2 (Remax v1.6 + Comparaciones + Casos Borde)  
+**Parte:** 2 de 2 (Remax v1.9 + Comparaciones + Casos Borde)  
 **Última actualización:** Diciembre 2024  
 **Ver también:** `extractor_heuristics_parte1_century21.md`
 
@@ -25,7 +25,7 @@
 
 ---
 
-## 🏢 REMAX v1.6: ARQUITECTURA Y DESAFÍOS
+## 🏢 REMAX v1.9: ARQUITECTURA Y DESAFÍOS
 
 ### El problema crítico de Remax
 
@@ -272,7 +272,7 @@ if (match) {
 
 ---
 
-## 🎨 HEURÍSTICAS ESPECÍFICAS REMAX
+## 🎨 HEURÍSTICAS ESPECÍFICAS REMAX v1.9
 
 ### Extracción de área (Remax)
 
@@ -675,8 +675,8 @@ GROUP BY fuente;
 
 **Ejemplo: Mejora fuzzy normalización Unicode**
 - Actualizar `calcularSimilitudFuzzy()`
-- C21 v16.3 → v16.4
-- Remax v1.6 → v1.7
+- C21 v16.4 → v16.5
+- Remax v1.8 → v1.9
 - Deploy ambos mismo día
 
 ---

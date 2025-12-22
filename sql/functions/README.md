@@ -1,7 +1,7 @@
 # Funciones SQL - Módulo 1
 
-**Estado:** 🔒 CONGELADO  
-**Fecha:** Diciembre 13, 2025
+**Estado:** ✅ Actualizado  
+**Fecha:** Diciembre 22, 2025
 
 ---
 
@@ -19,11 +19,11 @@ Discovery → Enrichment → Merge
 
 | Carpeta | Función | Versión | Status Salida |
 |---------|---------|---------|---------------|
-| `discovery/` | `registrar_discovery()` | v2.0.0 | `nueva` |
-| `enrichment/` | `registrar_enrichment()` | v1.3.0 | `actualizado` |
+| `discovery/` | `registrar_discovery()` | v2.0.0 🔒 | `nueva` |
+| `enrichment/` | `registrar_enrichment()` | **v1.4.1** | `actualizado` |
 | `merge/` | `merge_discovery_enrichment()` | v1.2.0 | `completado` |
 | `merge/` | Funciones auxiliares | v1.2.0 | - |
-| `tc_dinamico/` | 6 funciones + trigger | v1.1.1 | - |
+| `tc_dinamico/` | 6 funciones + trigger | v1.1.1 🔒 | - |
 
 ---
 
@@ -52,4 +52,4 @@ Discovery → Enrichment → Merge
 
 ---
 
-⚠️ **NO MODIFICAR** - Módulo 1 Congelado
+**Última actualización:** Diciembre 22, 2025

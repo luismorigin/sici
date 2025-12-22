@@ -1,6 +1,6 @@
 # Enrichment - registrar_enrichment()
 
-**Versión:** 1.3.0 🔒  
+**Versión:** 1.4.1 ✅  
 **Archivo:** `registrar_enrichment.sql`
 
 ---
@@ -20,7 +20,7 @@ RETURNS JSONB
 ```
 
 **Input requerido en p_data:**
-- `property_id` o `url` (identificador)
+- `id` (preferido), `property_id` o `url` (identificador)
 
 ---
 
@@ -28,11 +28,28 @@ RETURNS JSONB
 
 - Precio y moneda original
 - Tipo de cambio usado/detectado
-- Área, dormitorios, baños, estacionamientos
+- Área, dormitorios, baños
+- Estacionamientos (con validación regex `^[0-9]+$`)
 - GPS (lat/lon)
+- tipo_operacion (venta/alquiler/anticretico)
+- estado_construccion (con mapeo automático)
 - Multiproyecto (si aplica)
 - Match sugerido (`id_proyecto_master_sugerido`)
 - Scores de calidad
+
+---
+
+## Cambios v1.4.1 (Diciembre 2025)
+
+1. **Fix estacionamientos:** Validación regex `^[0-9]+$` antes de cast INTEGER
+   - Ignora strings como "sin_confirmar"
+   
+2. **Fix estado_construccion:** Mapeo automático `"sin_informacion"` → `"no_especificado"`
+
+3. **Campo tipo_operacion:** Acepta campo `tipo_operacion` (antes `modalidad`)
+   - Cast a `tipo_operacion_enum`
+
+4. **Compatible con spread operator** de extractores v16.5/v1.9
 
 ---
 
@@ -68,7 +85,8 @@ RETURNS JSONB
 - Tabla: `propiedades_v2`
 - Tabla: `config_global` (para TCs)
 - Requiere: propiedad existente (Discovery primero)
+- Extractores: Century21 v16.5, Remax v1.9
 
 ---
 
-⚠️ **NO MODIFICAR** - Módulo 1 Congelado
+**Última actualización:** Diciembre 22, 2025

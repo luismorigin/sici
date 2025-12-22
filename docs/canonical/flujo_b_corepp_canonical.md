@@ -62,7 +62,7 @@ Datos completos y validados (status: completado)
 
 | Componente | Responsabilidad | Input | Output | Versión Actual |
 |------------|----------------|-------|--------|----------------|
-| **Extractor** | Parsear HTML → datos | HTML raw | JSON 80 campos | C21: v16.3, Remax: v1.6 |
+| **Extractor** | Parsear HTML → datos | HTML raw | JSON 80 campos | C21: v16.5, Remax: v1.9 |
 
 **Naturaleza del proceso:** Processing estructurado, NO enrichment de mercado.
 
@@ -81,7 +81,7 @@ for (propiedad of propiedades_nuevas) {
     id_propiedad: propiedad.id,
     datos_json_enrichment: datos,
     columnas_core: extraer_columnas_core(datos),  // 20 campos explícitos
-    scraper_version: 'v16.3'
+    scraper_version: 'v16.5'
   });
   
   // Status: nueva → actualizado
@@ -177,13 +177,13 @@ for (propiedad of propiedades_nuevas) {
 **Dos extractores independientes:**
 
 ```
-Century21 Extractor v16.3
+Century21 Extractor v16.5
 ├─ Parseo HTML específico de Century21
 ├─ 4 niveles de extracción de nombre
 ├─ Metadata rica (og:tags)
 └─ ~2,100 líneas
 
-Remax Extractor v1.6
+Remax Extractor v1.9
 ├─ Parseo JSON embebido de Remax
 ├─ 3 niveles de extracción de nombre
 ├─ JSON más robusto que HTML
@@ -436,7 +436,7 @@ function normalizarPrecio(precioRaw, descripcion, metadata) {
   "fuente_precio": "grid_visible",
   "fuente_area": "html_specs",
   "tiene_conflictos": false,
-  "extractor_version": "v16.3",
+  "extractor_version": "v16.5",
   "core_version": "2.1",
   "timestamp": "2024-12-01T10:30:00Z",
   "fuente": "century21"

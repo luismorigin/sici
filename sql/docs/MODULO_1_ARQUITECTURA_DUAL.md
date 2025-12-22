@@ -77,7 +77,7 @@ inactivo_pending    ┌─────────┴─────────
 | Función | Versión | Status Salida |
 |---------|---------|---------------|
 | `registrar_discovery()` | v2.0.0 | `nueva` |
-| `registrar_enrichment()` | v1.3.0 | `actualizado` |
+| `registrar_enrichment()` | **v1.4.1** | `actualizado` |
 | `merge_discovery_enrichment()` | v1.2.0 | `completado` |
 
 ### TC Dinámico (6 + 1 trigger)
@@ -133,8 +133,8 @@ Discovery marca `inactivo_pending` (sospecha). Flujo C confirma con HTTP 404.
 
 | Archivo | Versión | Ubicación |
 |---------|---------|-----------|
-| `registrar_discovery.sql` | v2.0.0 | `functions/discovery/` |
-| `registrar_enrichment.sql` | v1.3.0 | `functions/enrichment/` |
+| `registrar_discovery.sql` | v2.0.0 🔒 | `functions/discovery/` |
+| `registrar_enrichment.sql` | **v1.4.1** | `functions/enrichment/` |
 | `merge_discovery_enrichment.sql` | v1.2.0 | `functions/merge/` |
 | `funciones_auxiliares_merge.sql` | v1.2.0 | `functions/merge/` |
 | `modulo_tipo_cambio_dinamico.sql` | v1.1.1 | `functions/tc_dinamico/` |
