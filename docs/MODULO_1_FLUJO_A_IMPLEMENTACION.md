@@ -10,7 +10,7 @@
 
 **Workflows en producción:**
 - ✅ **Century21 v1.0.3 FINAL** - Extrae 100% de campos disponibles
-- 📦 Remax v1.0.2 FINAL - Pendiente importar a producción
+- ✅ **Remax v1.0.2 FINAL** - ~160 propiedades, paginación funcionando
 
 **Archivos:**
 - `n8n/workflows/modulo_1/flujo_a_discovery_century21_v1.0.3_FINAL.json`

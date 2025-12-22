@@ -12,11 +12,10 @@
 | Archivo | Descripción | Versión | Estado |
 |---------|-------------|---------|--------|
 | `flujo_a_discovery_century21_v1.0.3_FINAL.json` | Flujo A completo para Century21 | v1.0.3 | ✅ Producción |
-| `flujo_c_verificador_v1.json` | Verificador de propiedades inactivas | v1.0.0 | 🟡 Testing |
-| `flujo_a_discovery_century21_v1_OLD.json` | Versión obsoleta | v1.0.0 | 📦 Deprecated |
-| `flujo_a_discovery_remax_v1_OLD.json` | Versión obsoleta | v1.0.0 | 📦 Deprecated |
+| `flujo_a_discovery_remax_v1.0.2_FINALjson` | Flujo A completo para Remax | v1.0.2 | ✅ Producción |
+| `flujo_c_verificador_v1.1.0_FINAL.json.json` | Verificador de propiedades inactivas | v1.1.0 | ✅ Producción |
 
-**Nota:** Los archivos `_OLD` se mantienen como backup temporal y serán eliminados en futuras versiones.
+**Nota:** Ambos workflows de Discovery ejecutan diariamente a las 1:00 AM, capturando ~273 propiedades (Century21) y ~160 propiedades (Remax).
 
 ---
 
