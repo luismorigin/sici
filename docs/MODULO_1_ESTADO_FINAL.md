@@ -199,25 +199,26 @@ ORDER BY fecha DESC, fuente;
 
 ---
 
-## 🚀 PRÓXIMOS MÓDULOS
+## 🚀 ESTADO MÓDULOS
 
-### **Módulo 2 - Enrichment (Pendiente):**
-- [ ] Flujo B: Validación profunda
+### **Módulo 1.5 - Merge v2.0.0:** ✅ COMPLETADO (23 Dic 2025)
+- [x] Unificación Discovery + Enrichment
+- [x] Helper paths por portal (get_discovery_value)
+- [x] Regla: Discovery > Enrichment para físicos
+- [x] Scoring post-merge integrado
+- [x] Fallback precio si discrepancia >10%
+- [x] Tests validados: C21 score 100, Remax score 95
+
+### **Módulo 2 - Enrichment Inteligente (Pendiente):**
 - [ ] GPS validación con polígonos
-- [ ] Tipo de cambio dinámico
-- [ ] Corrección de datos observados
-- [ ] Transición: nueva → actualizado
+- [ ] Tipo de cambio dinámico vía Binance API
+- [ ] Normalización estacionamientos
+- [ ] Expansión a alquileres
 
-### **Módulo 3 - Merge (Pendiente):**
-- [ ] Unificación Discovery + Enrichment
-- [ ] Resolución de conflictos
-- [ ] Transición: actualizado → completado
-
-### **Módulo 4 - Matching (Pendiente):**
+### **Módulo 3 - Matching (Pendiente):**
 - [ ] Fuzzy matching con proyectos
 - [ ] Validación GPS con polígonos
 - [ ] Asignación de project_id
-- [ ] Transición: completado → matched
 
 ---
 

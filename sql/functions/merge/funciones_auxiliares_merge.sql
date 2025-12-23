@@ -3,14 +3,18 @@
 -- Módulo 1: Property Matching - Arquitectura Dual v2.0
 -- =====================================================================================
 -- Archivo: funciones_auxiliares_merge.sql
--- Propósito: Funciones helper para el proceso de merge
--- Versión: 1.2.0 (Contrato semántico: filtrar por status = 'actualizado')
--- Fecha: 2024-12-13
+-- Propósito: Funciones de utilidad para el proceso de merge
+-- Versión: 2.0.0 (Compatible con merge_discovery_enrichment v2.0.0)
+-- Fecha: 2025-12-23
 -- =====================================================================================
 
 -- =====================================================================================
 -- FUNCIÓN 1: obtener_propiedades_pendientes_merge
 -- =====================================================================================
+-- Lista propiedades que están listas para merge
+-- Criterios: status IN ('nueva', 'actualizado'), con discovery, activa
+-- =====================================================================================
+
 DROP FUNCTION IF EXISTS obtener_propiedades_pendientes_merge(INTEGER);
 
 CREATE OR REPLACE FUNCTION obtener_propiedades_pendientes_merge(
@@ -25,7 +29,8 @@ RETURNS TABLE (
     tiene_discovery BOOLEAN,
     tiene_enrichment BOOLEAN,
     fecha_discovery TIMESTAMP,
-    fecha_enrichment TIMESTAMP
+    fecha_enrichment TIMESTAMP,
+    fecha_ultimo_merge TIMESTAMP
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -41,23 +46,34 @@ BEGIN
         (p.datos_json_discovery IS NOT NULL),
         (p.datos_json_enrichment IS NOT NULL),
         p.fecha_discovery,
-        p.fecha_enrichment
+        p.fecha_enrichment,
+        p.fecha_merge
     FROM propiedades_v2 p
-    WHERE p.status::TEXT = 'actualizado'
-      AND p.datos_json_discovery IS NOT NULL
-      AND p.datos_json_enrichment IS NOT NULL
-      AND p.es_activa = TRUE
-    ORDER BY p.fecha_enrichment DESC NULLS LAST
+    WHERE p.status::TEXT IN ('nueva', 'actualizado')  -- Status válidos para merge
+      AND p.datos_json_discovery IS NOT NULL          -- Debe tener discovery
+      AND p.es_activa = TRUE                          -- Solo activas
+    ORDER BY 
+        -- Priorizar: con enrichment primero, luego por fecha
+        CASE WHEN p.datos_json_enrichment IS NOT NULL THEN 0 ELSE 1 END,
+        p.fecha_enrichment DESC NULLS LAST,
+        p.fecha_discovery DESC NULLS LAST
     LIMIT p_limite;
 END;
 $$;
 
 COMMENT ON FUNCTION obtener_propiedades_pendientes_merge(INTEGER) IS 
-'Lista propiedades con status=actualizado listas para merge.';
+'v2.0.0: Lista propiedades listas para merge.
+Criterios: status IN (nueva, actualizado), con discovery, activa.
+Prioriza propiedades con enrichment completo.';
+
 
 -- =====================================================================================
 -- FUNCIÓN 2: ejecutar_merge_batch
 -- =====================================================================================
+-- Ejecuta merge en lote para propiedades pendientes
+-- Retorna resumen de la operación
+-- =====================================================================================
+
 DROP FUNCTION IF EXISTS ejecutar_merge_batch(INTEGER);
 
 CREATE OR REPLACE FUNCTION ejecutar_merge_batch(
@@ -69,69 +85,336 @@ SECURITY DEFINER
 AS $$
 DECLARE
     v_prop RECORD;
-    v_resultado JSONB;
-    v_exitosos INTEGER := 0;
-    v_fallidos INTEGER := 0;
-    v_resultados JSONB := '[]'::JSONB;
-    v_inicio TIMESTAMP := NOW();
+    v_result JSONB;
+    v_total_procesadas INTEGER := 0;
+    v_exitosas INTEGER := 0;
+    v_fallidas INTEGER := 0;
+    v_errores JSONB := '[]'::JSONB;
+    v_start_time TIMESTAMP := NOW();
 BEGIN
+    -- Procesar propiedades pendientes
     FOR v_prop IN 
-        SELECT p.id, p.codigo_propiedad 
-        FROM propiedades_v2 p
-        WHERE p.status::TEXT = 'actualizado'
-          AND p.datos_json_discovery IS NOT NULL
-          AND p.datos_json_enrichment IS NOT NULL
-          AND p.es_activa = TRUE
-        ORDER BY p.fecha_enrichment DESC NULLS LAST
-        LIMIT p_limite
+        SELECT id, codigo_propiedad 
+        FROM obtener_propiedades_pendientes_merge(p_limite)
     LOOP
-        v_resultado := merge_discovery_enrichment(v_prop.id);
+        v_total_procesadas := v_total_procesadas + 1;
         
-        IF (v_resultado->>'success')::BOOLEAN THEN
-            v_exitosos := v_exitosos + 1;
+        -- Ejecutar merge
+        v_result := merge_discovery_enrichment(v_prop.id);
+        
+        IF (v_result->>'success')::BOOLEAN THEN
+            v_exitosas := v_exitosas + 1;
         ELSE
-            v_fallidos := v_fallidos + 1;
+            v_fallidas := v_fallidas + 1;
+            v_errores := v_errores || jsonb_build_array(jsonb_build_object(
+                'id', v_prop.id,
+                'codigo_propiedad', v_prop.codigo_propiedad,
+                'error', v_result->>'error'
+            ));
         END IF;
-        
-        v_resultados := v_resultados || jsonb_build_object(
-            'property_id', v_prop.codigo_propiedad,
-            'success', (v_resultado->>'success')::BOOLEAN,
-            'status', v_resultado->>'status_nuevo'
-        );
     END LOOP;
     
     RETURN jsonb_build_object(
         'success', true,
-        'operation', 'merge_batch',
-        'procesados', v_exitosos + v_fallidos,
-        'exitosos', v_exitosos,
-        'fallidos', v_fallidos,
-        'duracion_ms', EXTRACT(MILLISECONDS FROM (NOW() - v_inicio)),
-        'resultados', v_resultados,
+        'operation', 'batch_merge',
+        'version', '2.0.0',
+        'total_procesadas', v_total_procesadas,
+        'exitosas', v_exitosas,
+        'fallidas', v_fallidas,
+        'errores', v_errores,
+        'duracion_segundos', EXTRACT(EPOCH FROM (NOW() - v_start_time)),
+        'timestamp', NOW()
+    );
+
+EXCEPTION WHEN OTHERS THEN
+    RETURN jsonb_build_object(
+        'success', false,
+        'error', SQLERRM,
+        'total_procesadas', v_total_procesadas,
+        'exitosas', v_exitosas,
+        'fallidas', v_fallidas,
         'timestamp', NOW()
     );
 END;
 $$;
 
 COMMENT ON FUNCTION ejecutar_merge_batch(INTEGER) IS 
-'Ejecuta merge en lote para propiedades con status=actualizado.';
+'v2.0.0: Ejecuta merge en lote. Máximo 50 propiedades por defecto.
+Retorna resumen con contadores y lista de errores si los hay.';
+
 
 -- =====================================================================================
--- FUNCIÓN 3: obtener_discrepancias
+-- FUNCIÓN 3: estadisticas_merge
 -- =====================================================================================
-DROP FUNCTION IF EXISTS obtener_discrepancias(TEXT);
+-- Dashboard de métricas del proceso de merge
+-- =====================================================================================
+
+DROP FUNCTION IF EXISTS estadisticas_merge();
+
+CREATE OR REPLACE FUNCTION estadisticas_merge()
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_stats JSONB;
+BEGIN
+    SELECT jsonb_build_object(
+        -- Contadores por status
+        'por_status', (
+            SELECT jsonb_object_agg(status::TEXT, cnt)
+            FROM (
+                SELECT status, COUNT(*) as cnt
+                FROM propiedades_v2
+                WHERE es_activa = TRUE
+                GROUP BY status
+            ) s
+        ),
+        
+        -- Pendientes de merge
+        'pendientes_merge', (
+            SELECT COUNT(*)
+            FROM propiedades_v2
+            WHERE status::TEXT IN ('nueva', 'actualizado')
+              AND datos_json_discovery IS NOT NULL
+              AND es_activa = TRUE
+        ),
+        
+        -- Con merge completado
+        'completados', (
+            SELECT COUNT(*)
+            FROM propiedades_v2
+            WHERE status::TEXT = 'completado'
+              AND es_activa = TRUE
+        ),
+        
+        -- Por fuente
+        'por_fuente', (
+            SELECT jsonb_object_agg(fuente, cnt)
+            FROM (
+                SELECT fuente, COUNT(*) as cnt
+                FROM propiedades_v2
+                WHERE es_activa = TRUE
+                GROUP BY fuente
+            ) f
+        ),
+        
+        -- Scores promedio
+        'scores_promedio', (
+            SELECT jsonb_build_object(
+                'calidad_dato', ROUND(AVG(score_calidad_dato), 1),
+                'fiduciario', ROUND(AVG(score_fiduciario), 1)
+            )
+            FROM propiedades_v2
+            WHERE status::TEXT = 'completado'
+              AND score_calidad_dato IS NOT NULL
+              AND es_activa = TRUE
+        ),
+        
+        -- Con discrepancias
+        'con_discrepancias', (
+            SELECT COUNT(*)
+            FROM propiedades_v2
+            WHERE discrepancias_detectadas IS NOT NULL
+              AND discrepancias_detectadas != '{}'::JSONB
+              AND es_activa = TRUE
+        ),
+        
+        -- Aptos para matching
+        'aptos_matching', (
+            SELECT COUNT(*)
+            FROM propiedades_v2
+            WHERE es_para_matching = TRUE
+              AND es_activa = TRUE
+        ),
+        
+        -- Último merge
+        'ultimo_merge', (
+            SELECT MAX(fecha_merge)
+            FROM propiedades_v2
+        ),
+        
+        -- Timestamp consulta
+        'timestamp', NOW()
+    ) INTO v_stats;
+    
+    RETURN v_stats;
+END;
+$$;
+
+COMMENT ON FUNCTION estadisticas_merge() IS 
+'v2.0.0: Dashboard de métricas del proceso de merge.
+Incluye contadores por status, fuente, scores y discrepancias.';
+
+
+-- =====================================================================================
+-- FUNCIÓN 4: obtener_discrepancias
+-- =====================================================================================
+-- Consulta propiedades con discrepancias significativas
+-- =====================================================================================
+
+DROP FUNCTION IF EXISTS obtener_discrepancias(TEXT, INTEGER);
 
 CREATE OR REPLACE FUNCTION obtener_discrepancias(
-    p_filtro_campo TEXT DEFAULT NULL
+    p_nivel TEXT DEFAULT 'all',  -- 'warning', 'error', 'all'
+    p_limite INTEGER DEFAULT 50
+)
+RETURNS TABLE (
+    id INTEGER,
+    codigo_propiedad VARCHAR,
+    fuente VARCHAR,
+    discrepancia_precio JSONB,
+    discrepancia_area JSONB,
+    discrepancia_dormitorios JSONB,
+    discrepancia_banos JSONB,
+    discrepancia_gps JSONB,
+    fecha_merge TIMESTAMP
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        p.id,
+        p.codigo_propiedad,
+        p.fuente,
+        p.discrepancias_detectadas->'precio',
+        p.discrepancias_detectadas->'area',
+        p.discrepancias_detectadas->'dormitorios',
+        p.discrepancias_detectadas->'banos',
+        p.discrepancias_detectadas->'gps',
+        p.fecha_merge
+    FROM propiedades_v2 p
+    WHERE p.discrepancias_detectadas IS NOT NULL
+      AND p.discrepancias_detectadas != '{}'::JSONB
+      AND p.es_activa = TRUE
+      AND (
+          p_nivel = 'all'
+          OR (p_nivel = 'warning' AND (
+              p.discrepancias_detectadas->'precio'->>'flag' = 'warning' OR
+              p.discrepancias_detectadas->'area'->>'flag' = 'warning' OR
+              p.discrepancias_detectadas->'dormitorios'->>'flag' = 'warning' OR
+              p.discrepancias_detectadas->'banos'->>'flag' = 'warning'
+          ))
+          OR (p_nivel = 'error' AND (
+              p.discrepancias_detectadas->'precio'->>'flag' = 'error' OR
+              p.discrepancias_detectadas->'area'->>'flag' = 'error'
+          ))
+      )
+    ORDER BY p.fecha_merge DESC NULLS LAST
+    LIMIT p_limite;
+END;
+$$;
+
+COMMENT ON FUNCTION obtener_discrepancias(TEXT, INTEGER) IS 
+'v2.0.0: Lista propiedades con discrepancias.
+Niveles: all, warning, error. Útil para auditoría de calidad.';
+
+
+-- =====================================================================================
+-- FUNCIÓN 5: resetear_merge
+-- =====================================================================================
+-- Permite re-ejecutar merge en una propiedad específica
+-- Cambia status a 'actualizado' para que pueda ser procesada de nuevo
+-- =====================================================================================
+
+DROP FUNCTION IF EXISTS resetear_merge(TEXT);
+
+CREATE OR REPLACE FUNCTION resetear_merge(p_identificador TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_prop RECORD;
+    v_status_anterior TEXT;
+BEGIN
+    -- Buscar propiedad
+    BEGIN
+        SELECT * INTO v_prop FROM propiedades_v2 WHERE id = p_identificador::INTEGER;
+    EXCEPTION WHEN OTHERS THEN
+        SELECT * INTO v_prop FROM propiedades_v2 WHERE codigo_propiedad = p_identificador;
+    END;
+    
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Propiedad no encontrada',
+            'timestamp', NOW()
+        );
+    END IF;
+    
+    v_status_anterior := v_prop.status::TEXT;
+    
+    -- Solo resetear si ya fue mergeada
+    IF v_prop.status::TEXT != 'completado' THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Propiedad no está en status completado',
+            'status_actual', v_prop.status::TEXT,
+            'timestamp', NOW()
+        );
+    END IF;
+    
+    -- Resetear a estado pre-merge
+    UPDATE propiedades_v2 SET
+        status = 'actualizado'::estado_propiedad,
+        datos_json = NULL,
+        fecha_merge = NULL,
+        discrepancias_detectadas = NULL,
+        cambios_merge = NULL,
+        score_calidad_dato = NULL,
+        score_fiduciario = NULL,
+        flags_semanticos = NULL,
+        fecha_actualizacion = NOW()
+    WHERE id = v_prop.id;
+    
+    RETURN jsonb_build_object(
+        'success', true,
+        'operation', 'reset_merge',
+        'property_id', v_prop.codigo_propiedad,
+        'status_anterior', v_status_anterior,
+        'status_nuevo', 'actualizado',
+        'mensaje', 'Propiedad lista para re-merge',
+        'timestamp', NOW()
+    );
+
+EXCEPTION WHEN OTHERS THEN
+    RETURN jsonb_build_object(
+        'success', false,
+        'error', SQLERRM,
+        'timestamp', NOW()
+    );
+END;
+$$;
+
+COMMENT ON FUNCTION resetear_merge(TEXT) IS 
+'v2.0.0: Resetea una propiedad para permitir re-merge.
+Solo funciona en propiedades con status=completado.
+Limpia datos_json, scores y discrepancias.';
+
+
+-- =====================================================================================
+-- FUNCIÓN 6: propiedades_requieren_revision
+-- =====================================================================================
+-- Lista propiedades que requieren revisión humana
+-- =====================================================================================
+
+DROP FUNCTION IF EXISTS propiedades_requieren_revision(INTEGER);
+
+CREATE OR REPLACE FUNCTION propiedades_requieren_revision(
+    p_limite INTEGER DEFAULT 50
 )
 RETURNS TABLE (
     id INTEGER,
     codigo_propiedad VARCHAR,
     url VARCHAR,
     fuente VARCHAR,
-    campo TEXT,
-    valor_discovery TEXT,
-    valor_enrichment TEXT,
+    score_calidad_dato INTEGER,
+    score_fiduciario INTEGER,
+    motivo_revision TEXT,
+    flags_semanticos JSONB,
     fecha_merge TIMESTAMP
 )
 LANGUAGE plpgsql
@@ -144,172 +427,59 @@ BEGIN
         p.codigo_propiedad,
         p.url,
         p.fuente,
-        (d.elem->>'campo')::TEXT,
-        (d.elem->>'discovery')::TEXT,
-        (d.elem->>'enrichment')::TEXT,
+        p.score_calidad_dato,
+        p.score_fiduciario,
+        CASE 
+            WHEN p.score_fiduciario < 50 THEN 'score_fiduciario_muy_bajo'
+            WHEN p.datos_json->'calidad'->>'requiere_revision_humana' = 'true' THEN 'flag_revision'
+            WHEN p.discrepancias_detectadas->'precio'->>'flag' = 'error' THEN 'discrepancia_precio_grave'
+            WHEN p.datos_json->'financiero'->>'fuente_precio' = 'enrichment_fallback' THEN 'precio_fallback_usado'
+            ELSE 'otro'
+        END,
+        p.flags_semanticos,
         p.fecha_merge
-    FROM propiedades_v2 p,
-         LATERAL jsonb_array_elements(p.discrepancias_detectadas) AS d(elem)
-    WHERE p.discrepancias_detectadas IS NOT NULL
-      AND jsonb_array_length(p.discrepancias_detectadas) > 0
-      AND (p_filtro_campo IS NULL OR d.elem->>'campo' = p_filtro_campo)
-    ORDER BY p.fecha_merge DESC;
+    FROM propiedades_v2 p
+    WHERE p.status::TEXT = 'completado'
+      AND p.es_activa = TRUE
+      AND (
+          p.score_fiduciario < 50
+          OR p.datos_json->'calidad'->>'requiere_revision_humana' = 'true'
+          OR p.discrepancias_detectadas->'precio'->>'flag' = 'error'
+          OR p.datos_json->'financiero'->>'fuente_precio' = 'enrichment_fallback'
+      )
+    ORDER BY p.score_fiduciario ASC NULLS FIRST
+    LIMIT p_limite;
 END;
 $$;
 
-COMMENT ON FUNCTION obtener_discrepancias(TEXT) IS 
-'Consulta discrepancias detectadas durante merge.';
+COMMENT ON FUNCTION propiedades_requieren_revision(INTEGER) IS 
+'v2.0.0: Lista propiedades que requieren revisión humana.
+Criterios: score bajo, fallback precio, discrepancias graves.';
 
--- =====================================================================================
--- FUNCIÓN 4: resetear_merge
--- =====================================================================================
-DROP FUNCTION IF EXISTS resetear_merge(TEXT);
-
-CREATE OR REPLACE FUNCTION resetear_merge(p_identificador TEXT)
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-    v_prop RECORD;
-    v_nuevo_status estado_propiedad;
-BEGIN
-    -- Buscar propiedad
-    BEGIN
-        SELECT * INTO v_prop FROM propiedades_v2 WHERE id = p_identificador::INTEGER;
-    EXCEPTION WHEN OTHERS THEN
-        SELECT * INTO v_prop FROM propiedades_v2 WHERE codigo_propiedad = p_identificador;
-        IF NOT FOUND THEN
-            SELECT * INTO v_prop FROM propiedades_v2 WHERE url = p_identificador;
-        END IF;
-    END;
-
-    IF NOT FOUND THEN
-        RETURN jsonb_build_object(
-            'success', false,
-            'error', 'Propiedad no encontrada',
-            'identificador', p_identificador
-        );
-    END IF;
-
-    -- Determinar nuevo status según CONTRATO:
-    -- Si tiene enrichment → actualizado (listo para merge)
-    -- Si solo tiene discovery → nueva
-    IF v_prop.datos_json_enrichment IS NOT NULL THEN
-        v_nuevo_status := 'actualizado'::estado_propiedad;
-    ELSE
-        v_nuevo_status := 'nueva'::estado_propiedad;
-    END IF;
-
-    UPDATE propiedades_v2 SET
-        datos_json = NULL,
-        fecha_merge = NULL,
-        discrepancias_detectadas = NULL,
-        campos_conflicto = '[]'::JSONB,
-        cambios_merge = NULL,
-        status = v_nuevo_status,
-        fecha_actualizacion = NOW()
-    WHERE id = v_prop.id;
-
-    RETURN jsonb_build_object(
-        'success', true,
-        'operation', 'resetear_merge',
-        'property_id', v_prop.codigo_propiedad,
-        'internal_id', v_prop.id,
-        'status_nuevo', v_nuevo_status::TEXT,
-        'mensaje', 'Merge reseteado. Puede ejecutar merge_discovery_enrichment() nuevamente.',
-        'timestamp', NOW()
-    );
-END;
-$$;
-
-COMMENT ON FUNCTION resetear_merge(TEXT) IS 
-'Resetea merge para re-ejecución. Si tiene enrichment → actualizado, si no → nueva.';
-
--- =====================================================================================
--- FUNCIÓN 5: estadisticas_merge
--- =====================================================================================
-DROP FUNCTION IF EXISTS estadisticas_merge();
-
-CREATE OR REPLACE FUNCTION estadisticas_merge()
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-    v_result JSONB;
-BEGIN
-    SELECT jsonb_build_object(
-        'total_propiedades', COUNT(*),
-        'por_status', jsonb_build_object(
-            'nueva', COUNT(*) FILTER (WHERE status::TEXT = 'nueva'),
-            'pendiente_enriquecimiento', COUNT(*) FILTER (WHERE status::TEXT = 'pendiente_enriquecimiento'),
-            'actualizado', COUNT(*) FILTER (WHERE status::TEXT = 'actualizado'),
-            'completado', COUNT(*) FILTER (WHERE status::TEXT = 'completado'),
-            'inactivo_pending', COUNT(*) FILTER (WHERE status::TEXT = 'inactivo_pending'),
-            'inactivo_confirmed', COUNT(*) FILTER (WHERE status::TEXT = 'inactivo_confirmed')
-        ),
-        'cobertura', jsonb_build_object(
-            'con_discovery', COUNT(*) FILTER (WHERE datos_json_discovery IS NOT NULL),
-            'con_enrichment', COUNT(*) FILTER (WHERE datos_json_enrichment IS NOT NULL),
-            'con_merge', COUNT(*) FILTER (WHERE datos_json IS NOT NULL)
-        ),
-        'pendientes_merge', COUNT(*) FILTER (
-            WHERE status::TEXT = 'actualizado'
-            AND datos_json_discovery IS NOT NULL
-            AND datos_json_enrichment IS NOT NULL
-            AND es_activa = TRUE
-        ),
-        'por_fuente', jsonb_build_object(
-            'century21', COUNT(*) FILTER (WHERE fuente = 'century21'),
-            'remax', COUNT(*) FILTER (WHERE fuente = 'remax')
-        ),
-        'timestamp', NOW()
-    ) INTO v_result
-    FROM propiedades_v2;
-    
-    RETURN v_result;
-END;
-$$;
-
-COMMENT ON FUNCTION estadisticas_merge() IS 
-'Dashboard de métricas del proceso de merge.';
 
 -- =====================================================================================
 -- GRANTS
 -- =====================================================================================
+
 GRANT EXECUTE ON FUNCTION obtener_propiedades_pendientes_merge(INTEGER) TO authenticated;
 GRANT EXECUTE ON FUNCTION obtener_propiedades_pendientes_merge(INTEGER) TO service_role;
+
 GRANT EXECUTE ON FUNCTION ejecutar_merge_batch(INTEGER) TO authenticated;
 GRANT EXECUTE ON FUNCTION ejecutar_merge_batch(INTEGER) TO service_role;
-GRANT EXECUTE ON FUNCTION obtener_discrepancias(TEXT) TO authenticated;
-GRANT EXECUTE ON FUNCTION obtener_discrepancias(TEXT) TO service_role;
-GRANT EXECUTE ON FUNCTION resetear_merge(TEXT) TO authenticated;
-GRANT EXECUTE ON FUNCTION resetear_merge(TEXT) TO service_role;
+
 GRANT EXECUTE ON FUNCTION estadisticas_merge() TO authenticated;
 GRANT EXECUTE ON FUNCTION estadisticas_merge() TO service_role;
 
+GRANT EXECUTE ON FUNCTION obtener_discrepancias(TEXT, INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION obtener_discrepancias(TEXT, INTEGER) TO service_role;
+
+GRANT EXECUTE ON FUNCTION resetear_merge(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION resetear_merge(TEXT) TO service_role;
+
+GRANT EXECUTE ON FUNCTION propiedades_requieren_revision(INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION propiedades_requieren_revision(INTEGER) TO service_role;
+
+
 -- =====================================================================================
--- VERIFICACIÓN
+-- FIN DEL ARCHIVO
 -- =====================================================================================
-DO $$
-DECLARE
-    v_count INTEGER;
-BEGIN
-    SELECT COUNT(*) INTO v_count 
-    FROM pg_proc 
-    WHERE proname IN (
-        'obtener_propiedades_pendientes_merge',
-        'ejecutar_merge_batch',
-        'obtener_discrepancias',
-        'resetear_merge',
-        'estadisticas_merge'
-    );
-    
-    IF v_count = 5 THEN
-        RAISE NOTICE '✅ 5 funciones auxiliares de merge v1.2.0 creadas';
-        RAISE NOTICE '   CONTRATO: Filtran por status = actualizado';
-    ELSE
-        RAISE EXCEPTION '❌ Error: Solo se crearon % de 5 funciones', v_count;
-    END IF;
-END $$;

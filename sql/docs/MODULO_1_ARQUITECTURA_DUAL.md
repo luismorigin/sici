@@ -1,8 +1,8 @@
 # Módulo 1 - Arquitectura Dual
 
-**Estado:** ✅ DOCUEMENTO COMPLETADO Y CONGELADO  
-**Fecha:** Diciembre 2025  
-**Versión:** 1.1.0
+**Estado:** ✅ COMPLETADO  
+**Fecha:** 23 Diciembre 2025  
+**Versión:** 2.0.0
 
 ---
 
@@ -18,8 +18,8 @@ Sistema de captura de propiedades inmobiliarias con arquitectura de dos fases (D
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  DISCOVERY  │ → │ ENRICHMENT  │ → │    MERGE    │
-│   Flujo A   │    │   Flujo B   │    │  Automático │
+│  DISCOVERY  │ → │ ENRICHMENT  │ → │  MERGE v2.0 │
+│   Flujo A   │    │   Flujo B   │    │  + Scoring  │
 └─────────────┘    └─────────────┘    └─────────────┘
       ↓                  ↓                  ↓
     nueva           actualizado        completado
@@ -47,7 +47,7 @@ inactivo_pending    ┌─────────┴─────────
 |--------|-------------|--------------|
 | `nueva` | Propiedad detectada por primera vez | Discovery (Flujo A) |
 | `actualizado` | Enriquecida con datos HTML | Enrichment (Flujo B) |
-| `completado` | Merge exitoso o rescatada | Merge / Flujo C |
+| `completado` | Merge exitoso o rescatada | Merge v2.0 / Flujo C |
 | `inactivo_pending` | Ausente en snapshot, pendiente verificación | Discovery (Flujo A) |
 | `inactivo_confirmed` | Confirmado eliminado (HTTP 404) | Flujo C |
 
@@ -55,7 +55,7 @@ inactivo_pending    ┌─────────┴─────────
 
 ## Tabla Principal
 
-**`propiedades_v2`** - 54 columnas
+**`propiedades_v2`** - 55+ columnas
 
 | Grupo | Columnas | Descripción |
 |-------|----------|-------------|
@@ -66,31 +66,38 @@ inactivo_pending    ┌─────────┴─────────
 | Matching | 4 | id_proyecto_master, sugerencias |
 | Estado | 7 | status, es_activa, scores |
 | Arquitectura Dual | 8 | JSONs, fechas, candados |
+| **Merge v2.0** | 3 | flags_semanticos, discrepancias_detectadas, cambios_merge |
 | Timestamps | 5 | creación, actualización |
 
 ---
 
-## Funciones SQL (10 total)
+## Funciones SQL
 
-### Pipeline Principal (3)
+### Pipeline Principal
 
 | Función | Versión | Status Salida |
 |---------|---------|---------------|
 | `registrar_discovery()` | v2.0.0 | `nueva` |
-| `registrar_enrichment()` | **v1.4.1** | `actualizado` |
-| `merge_discovery_enrichment()` | v1.2.0 | `completado` |
+| `registrar_enrichment()` | v1.4.1 | `actualizado` |
+| **`merge_discovery_enrichment()`** | **v2.0.0** | `completado` |
 
-### TC Dinámico (6 + 1 trigger)
+### Helpers Merge v2.0.0 (NUEVO)
+
+| Función | Propósito |
+|---------|-----------|
+| `get_discovery_value()` | Normaliza paths Remax vs C21 |
+| `get_discovery_value_numeric()` | Wrapper con casteo NUMERIC |
+| `get_discovery_value_integer()` | Wrapper con casteo INTEGER |
+| `calcular_discrepancia_porcentual()` | Thresholds precio/área |
+| `calcular_discrepancia_exacta()` | Match dorms/baños |
+
+### TC Dinámico
 
 | Función | Versión |
 |---------|---------|
 | `actualizar_tipo_cambio()` | v1.1.0 |
 | `recalcular_precio_propiedad()` | v1.1.1 |
 | `recalcular_precios_batch_nocturno()` | v1.1.0 |
-| `ver_historial_tc()` | v1.1.0 |
-| `obtener_propiedades_tc_pendiente()` | v1.1.0 |
-| `obtener_tc_actuales()` | v1.1.0 |
-| `trigger_tc_actualizado` | v1.1.0 |
 
 ---
 
@@ -99,14 +106,50 @@ inactivo_pending    ┌─────────┴─────────
 ### 1. Manual > Automatic
 Los `campos_bloqueados` SIEMPRE se respetan. Ningún proceso automático puede sobrescribir correcciones manuales.
 
-### 2. Enrichment > Discovery
-En merge, los datos de HTML (más detallados) tienen prioridad sobre API.
+### 2. Discovery > Enrichment (Campos Físicos) ⚠️ ACTUALIZADO v2.0.0
+Para área, dormitorios, baños, estacionamientos y GPS: **Discovery tiene prioridad** (API estructurada más confiable que HTML parsing).
 
-### 3. TC Dinámico
+### 3. Enrichment > Discovery (Resto)
+Para precio normalizado, amenities, agente, descripción: Enrichment tiene prioridad (HTML más detallado).
+
+### 4. TC Dinámico
 Propiedades en BOB se recalculan automáticamente cuando cambia el tipo de cambio.
 
-### 4. Ausencia ≠ Inactividad
+### 5. Ausencia ≠ Inactividad
 Discovery marca `inactivo_pending` (sospecha). Flujo C confirma con HTTP 404.
+
+---
+
+## Reglas Merge v2.0.0
+
+### Prioridad por Campo
+
+| Campo | Prioridad | Razón |
+|-------|-----------|-------|
+| Candados | SIEMPRE | Manual wins |
+| área, dorms, baños, estac | Discovery > Enrichment | API estructurada |
+| GPS (lat, lon) | Discovery > Enrichment | Coordenadas API |
+| Precio | Condicional | Ver regla especial |
+| Resto | Enrichment > Discovery | HTML detallado |
+
+### Regla Precio
+
+```
+1. Candado → valor bloqueado
+2. Enrichment normalizó (BOB→USD) → enrichment
+3. Discovery USD puro:
+   - Discrepancia ≤10% → discovery
+   - Discrepancia >10% → enrichment (fallback seguro)
+4. Default → enrichment
+```
+
+### Thresholds Discrepancias
+
+| Rango | Flag | Acción |
+|-------|------|--------|
+| < 2% | null | OK |
+| 2-10% | warning | Registrar, usar valor normal |
+| > 10% | error | Fallback a enrichment (solo precio) |
 
 ---
 
@@ -119,26 +162,17 @@ Discovery marca `inactivo_pending` (sospecha). Flujo C confirma con HTTP 404.
 
 ---
 
-## Casos de Test
-
-| ID | Tipo | depende_de_tc | Propósito |
-|----|------|---------------|-----------|
-| TEST-001 | USD puro | FALSE | Control negativo TC |
-| TEST-002 | BOB paralelo | TRUE | Candidata recálculo |
-| TEST-003 | USD multi | FALSE | Multiproyecto |
-
----
-
-## Archivos Congelados
+## Archivos del Módulo
 
 | Archivo | Versión | Ubicación |
 |---------|---------|-----------|
 | `registrar_discovery.sql` | v2.0.0 🔒 | `functions/discovery/` |
-| `registrar_enrichment.sql` | **v1.4.1** | `functions/enrichment/` |
-| `merge_discovery_enrichment.sql` | v1.2.0 | `functions/merge/` |
-| `funciones_auxiliares_merge.sql` | v1.2.0 | `functions/merge/` |
+| `registrar_enrichment.sql` | v1.4.1 | `functions/enrichment/` |
+| **`merge_discovery_enrichment.sql`** | **v2.0.0** | `functions/merge/` |
+| **`funciones_helper_merge.sql`** | **v2.0.0** | `functions/merge/` |
+| `funciones_auxiliares_merge.sql` | v2.0.0 | `functions/merge/` |
 | `modulo_tipo_cambio_dinamico.sql` | v1.1.1 | `functions/tc_dinamico/` |
-| `seed_data.sql` | v1.3.0 | `seed/` |
+| `migracion_merge_v2.0.0.sql` | - | `migrations/` |
 
 ---
 
@@ -148,12 +182,13 @@ Discovery marca `inactivo_pending` (sospecha). Flujo C confirma con HTTP 404.
 
 ```
 SICI Módulo 1 - Property Matching
-- Tabla: propiedades_v2 (54 cols)
-- Pipeline: Discovery → Enrichment → Merge
-- Existencia: Discovery → Flujo C (inactivo_pending → inactivo_confirmed)
+- Tabla: propiedades_v2 (55+ cols)
+- Pipeline: Discovery → Enrichment → Merge v2.0
+- Merge v2.0: Discovery>Enrichment para físicos, scoring integrado
+- Helper: get_discovery_value() para paths Remax vs C21
 - TC: oficial=6.96, paralelo=10.50
 - Regla: "Manual wins over automatic"
-- Status: 🔒 CONGELADO (Dic 2025)
+- Status: ✅ COMPLETADO (23 Dic 2025)
 ```
 
 ---
@@ -167,4 +202,4 @@ SICI Módulo 1 - Property Matching
 
 ---
 
-⚠️ **DOCUMENTO DE REFERENCIA** - NO MODIFICAR LÓGICA DEL MÓDULO 1
+**Última actualización:** 23 Diciembre 2025

@@ -1,0 +1,146 @@
+# Schema: propiedades_v2
+
+**Última actualización:** 23 Diciembre 2025  
+**Columnas:** 55+
+
+---
+
+## Grupos de Columnas
+
+### Identificación (9 cols)
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | SERIAL | PK autoincremental |
+| `url` | VARCHAR | URL única de la propiedad |
+| `fuente` | VARCHAR | 'century21' \| 'remax' |
+| `codigo_propiedad` | VARCHAR | ID del portal |
+| `tipo_operacion` | VARCHAR | 'venta' \| 'alquiler' |
+| `tipo_propiedad_original` | VARCHAR | Tipo según portal |
+| `estado_construccion` | VARCHAR | 'entrega_inmediata' \| 'en_construccion' |
+| `scraper_version` | VARCHAR | Versión del extractor |
+| `metodo_discovery` | VARCHAR | 'api_rest' \| 'grid_geografico' |
+
+### Financiero (10 cols)
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `precio_usd` | NUMERIC(12,2) | Precio final en USD |
+| `precio_min_usd` | NUMERIC(12,2) | Mínimo (multiproyecto) |
+| `precio_max_usd` | NUMERIC(12,2) | Máximo (multiproyecto) |
+| `moneda_original` | VARCHAR | 'USD' \| 'BOB' |
+| `tipo_cambio_usado` | NUMERIC(10,4) | TC aplicado |
+| `tipo_cambio_detectado` | VARCHAR | 'oficial' \| 'paralelo' \| 'no_especificado' |
+| `tipo_cambio_paralelo_usado` | NUMERIC(10,4) | TC paralelo si aplica |
+| `precio_usd_actualizado` | NUMERIC(12,2) | Último precio recalculado |
+| `requiere_actualizacion_precio` | BOOLEAN | Flag para recálculo TC |
+| `depende_de_tc` | BOOLEAN | Si precio depende de TC |
+
+### Físico (6 cols)
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `area_total_m2` | NUMERIC(10,2) | Metros cuadrados |
+| `dormitorios` | INTEGER | Cantidad dormitorios |
+| `banos` | NUMERIC(3,1) | Cantidad baños |
+| `estacionamientos` | INTEGER | Cantidad parking |
+| `latitud` | NUMERIC(10,8) | GPS latitud |
+| `longitud` | NUMERIC(11,8) | GPS longitud |
+
+### Multiproyecto (5 cols)
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `es_multiproyecto` | BOOLEAN | Flag multiproyecto |
+| `dormitorios_opciones` | VARCHAR | Ej: "1-3" |
+| `area_min_m2` | NUMERIC(10,2) | Área mínima |
+| `area_max_m2` | NUMERIC(10,2) | Área máxima |
+| `tipologias_detectadas` | JSONB | Array de tipologías |
+
+### Matching (4 cols)
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id_proyecto_master` | INTEGER | FK a proyectos_master (confirmado) |
+| `id_proyecto_master_sugerido` | INTEGER | Sugerencia automática |
+| `metodo_match` | VARCHAR | 'fuzzy' \| 'gps' \| 'manual' |
+| `confianza_match` | NUMERIC(3,2) | 0.00-1.00 |
+
+### Estado (7 cols)
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `status` | estado_propiedad | ENUM: nueva, actualizado, completado, inactivo_pending, inactivo_confirmed |
+| `es_activa` | BOOLEAN | Flag activa |
+| `es_para_matching` | BOOLEAN | Apta para matching |
+| `score_calidad_dato` | INTEGER | 0-100 completitud |
+| `score_fiduciario` | INTEGER | 0-100 coherencia |
+| `primera_ausencia_at` | TIMESTAMP | Primera vez ausente en discovery |
+| `motivo_inactividad` | VARCHAR | Razón de inactivación |
+
+### Arquitectura Dual (8 cols)
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `datos_json_discovery` | JSONB | RAW snapshot API (inmutable) |
+| `datos_json_enrichment` | JSONB | RAW extracción HTML (inmutable) |
+| `datos_json` | JSONB | **Merge consolidado v2.0.0** |
+| `fecha_discovery` | TIMESTAMP | Último discovery |
+| `fecha_enrichment` | TIMESTAMP | Último enrichment |
+| `fecha_merge` | TIMESTAMP | Último merge |
+| `campos_bloqueados` | JSONB | Candados manuales |
+| `cambios_merge` | JSONB | Log de merge |
+
+### Merge v2.0.0 (3 cols) ⚠️ NUEVAS
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `flags_semanticos` | JSONB | Array de warnings/errors del scoring |
+| `discrepancias_detectadas` | JSONB | Diferencias discovery vs enrichment |
+| `cambios_merge` | JSONB | Tracking de fuentes usadas |
+
+### Timestamps (5 cols)
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `fecha_creacion` | TIMESTAMP | Creación registro |
+| `fecha_actualizacion` | TIMESTAMP | Última modificación |
+| `fecha_publicacion` | DATE | Fecha publicación portal |
+| `fecha_scraping` | TIMESTAMP | Último scrape HTML |
+| `updated_at` | TIMESTAMP | Trigger automático |
+
+---
+
+## Enum: estado_propiedad
+
+```sql
+CREATE TYPE estado_propiedad AS ENUM (
+    'nueva',
+    'pendiente_enriquecimiento',
+    'actualizado',
+    'completado',
+    'inactivo_pending',
+    'inactivo_confirmed'
+);
+```
+
+---
+
+## Índices Recomendados
+
+```sql
+CREATE INDEX idx_propiedades_status ON propiedades_v2(status);
+CREATE INDEX idx_propiedades_fuente ON propiedades_v2(fuente);
+CREATE INDEX idx_propiedades_codigo ON propiedades_v2(codigo_propiedad);
+CREATE UNIQUE INDEX idx_propiedades_url_fuente ON propiedades_v2(url, fuente);
+CREATE INDEX idx_propiedades_proyecto ON propiedades_v2(id_proyecto_master);
+CREATE INDEX idx_propiedades_matching ON propiedades_v2(es_para_matching) WHERE es_para_matching = TRUE;
+```
+
+---
+
+## Migración v2.0.0
+
+```sql
+-- Columnas agregadas para Merge v2.0.0
+ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS flags_semanticos JSONB DEFAULT '[]'::JSONB;
+ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS discrepancias_detectadas JSONB;
+ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS cambios_merge JSONB;
+```
+
+Ver: `sql/migrations/migracion_merge_v2.0.0.sql`
+
+---
+
+**Última actualización:** 23 Diciembre 2025

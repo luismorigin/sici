@@ -1,461 +1,316 @@
 # MERGE - DOCUMENTO CANÓNICO
 
 **Versión:** 2.0.0  
-**Fecha:** Diciembre 2024  
-**Estado:** DEFINITIVO - SCORING POST-MERGE  
+**Fecha:** 23 Diciembre 2025  
+**Estado:** ✅ IMPLEMENTADO Y VALIDADO  
 **Archivo:** `docs/canonical/merge_canonical.md`
 
 ---
 
-## 0. CAMBIO ARQUITECTÓNICO v2.0
+## 0. CAMBIO ARQUITECTÓNICO v2.0.0
 
-**BREAKING CHANGE:** Scoring y Verificación movidos de Flujo B a fase post-Merge.
+### Breaking Changes
 
-**Razón del cambio:**
-- Los scores deben calcularse sobre datos **consolidados** (Discovery + Enrichment)
-- Scorear datos parciales (solo enrichment) no refleja calidad real
-- El Verificador debe validar coherencia de datos **finales**, no intermedios
+1. **Inversión de prioridad para campos físicos:**
+   - Antes: Enrichment > Discovery
+   - **Ahora: Discovery > Enrichment** para área, dorms, baños, estacionamientos, GPS
 
-**Nueva arquitectura:**
+2. **Helper obligatorio:** `get_discovery_value()` para normalizar paths Remax vs C21
+
+3. **Scoring post-merge integrado** con `flags_semanticos`
+
+4. **Regla precio con fallback:** Si discrepancia >10%, usar Enrichment
+
+### Nueva Arquitectura
+
 ```
-Discovery → Enrichment (Extract) → Merge (Consolidate + Score + Verify) → Completado
+Discovery → Enrichment (Extract) → Merge (Consolidate + Score) → Completado
 ```
 
 ---
 
 ## 1. RESPONSABILIDAD ÚNICA
 
-**Consolidar datos de Discovery + Enrichment aplicando reglas de prioridad, luego calcular scores de calidad y validar coherencia técnica sobre los datos finales consolidados.**
+Consolidar datos de Discovery + Enrichment aplicando reglas de prioridad, calcular scores de calidad y validar coherencia técnica.
 
-### Pipeline completo
+### Pipeline
 
 ```
-Propiedad status='actualizado'
+Propiedad status='nueva' o 'actualizado'
   ↓
-[FASE 1: CONSOLIDACIÓN]
-  Aplica reglas de prioridad
-  Resuelve discrepancias
+[FASE 1: EXTRACCIÓN] Helper normaliza paths por portal
   ↓
-datos_json (Discovery + Enrichment merged)
+[FASE 2: RESOLUCIÓN] Aplica reglas de prioridad
   ↓
-[FASE 2: SCORING]
-  Calcula completitud de datos
+[FASE 3: DISCREPANCIAS] Calcula diferencias con thresholds
   ↓
-score_calidad_dato (0-100)
+[FASE 4: SCORING] Calcula scores sobre datos consolidados
   ↓
-[FASE 3: VERIFICACIÓN]
-  Valida coherencia técnica
-  ↓
-score_fiduciario (0-100) + flags_semanticos
-  ↓
-Propiedad status='completado' + scores finales
+[FASE 5: PERSISTENCIA] UPDATE con status='completado'
 ```
 
 ---
 
-## 2. REGLAS DE PRIORIDAD PARA CONSOLIDACIÓN
+## 2. REGLAS DE PRIORIDAD v2.0.0
 
-### Jerarquía de fuentes
+### Jerarquía
 
 ```
 1. Candados manuales (campos_bloqueados) → SIEMPRE respetados
-2. Enrichment > Discovery → Datos HTML priorizados
-3. Excepción GPS: Discovery > Enrichment → Coordenadas de API más confiables
+2. Discovery > Enrichment → Para campos físicos y GPS
+3. Enrichment > Discovery → Para precio normalizado y resto
 ```
 
-### Casos especiales
+### Matriz de Prioridad
 
-| Campo | Regla | Razón |
-|-------|-------|-------|
-| `latitud`, `longitud` | Discovery > Enrichment | GPS de API más preciso que HTML parsing |
-| `precio_usd` | Enrichment > Discovery | HTML tiene detalles completos |
-| `area_total_m2` | Enrichment > Discovery | HTML más confiable |
-| `id_proyecto_master` | Manual > Sugerencia | Decisión humana prioritaria |
+| Campo | Prioridad | Razón |
+|-------|-----------|-------|
+| `area_total_m2` | **Discovery > Enrichment** | API estructurada más confiable |
+| `dormitorios` | **Discovery > Enrichment** | API estructurada más confiable |
+| `banos` | **Discovery > Enrichment** | API estructurada más confiable |
+| `estacionamientos` | **Discovery > Enrichment** | API estructurada más confiable |
+| `latitud`, `longitud` | **Discovery > Enrichment** | GPS de API más preciso |
+| `precio_usd` | **Condicional** | Ver regla especial |
+| Resto (amenities, agente, etc.) | Enrichment > Discovery | HTML más detallado |
 
 ---
 
-## 3. FASE 1: CONSOLIDACIÓN
-
-### 3.1 Lógica de merge
+## 3. REGLA PRECIO (Especial)
 
 ```javascript
-function consolidar(discovery, enrichment, candados) {
-  const datosConsolidados = {};
+function determinarPrecioFinal(discovery, enrichment, candados, fuente) {
+  // 1. Candado siempre gana
+  if (candados.precio_usd) return { valor: actual, fuente: 'blocked' };
   
-  for (const campo in CAMPOS_MERGE) {
-    // 1. Si está bloqueado manualmente → preservar
-    if (candados[campo]) {
-      datosConsolidados[campo] = valorActual(campo);
-      continue;
-    }
-    
-    // 2. Excepción GPS: Discovery > Enrichment
-    if (['latitud', 'longitud'].includes(campo)) {
-      datosConsolidados[campo] = discovery[campo] || enrichment[campo];
-      continue;
-    }
-    
-    // 3. Regla general: Enrichment > Discovery
-    datosConsolidados[campo] = enrichment[campo] || discovery[campo];
+  // 2. Si enrichment normalizó (BOB→USD), usar enrichment
+  if (enrichment.precio_fue_normalizado || 
+      enrichment.tipo_cambio_detectado !== 'no_especificado') {
+    return { valor: enrichment.precio_usd, fuente: 'enrichment' };
   }
   
-  return datosConsolidados;
+  // 3. Si discovery tiene USD puro
+  const discoveryPrecioUSD = getDiscoveryPrecioUSD(discovery, fuente);
+  if (discoveryPrecioUSD) {
+    const diff = Math.abs(discoveryPrecioUSD - enrichment.precio_usd) / discoveryPrecioUSD;
+    
+    // Discrepancia > 10% → fallback a enrichment
+    if (diff > 0.10) {
+      return { valor: enrichment.precio_usd, fuente: 'enrichment_fallback' };
+    }
+    
+    return { valor: discoveryPrecioUSD, fuente: 'discovery' };
+  }
+  
+  // 4. Default: enrichment
+  return { valor: enrichment.precio_usd, fuente: 'enrichment' };
 }
 ```
 
-### 3.2 Detección de discrepancias
+### Thresholds Discrepancias
 
-```javascript
-function detectarDiscrepancias(discovery, enrichment) {
-  const discrepancias = [];
-  
-  for (const campo of CAMPOS_CRITICOS) {
-    const valDiscovery = discovery[campo];
-    const valEnrichment = enrichment[campo];
-    
-    if (valDiscovery && valEnrichment && valDiscovery !== valEnrichment) {
-      discrepancias.push({
-        campo: campo,
-        discovery: valDiscovery,
-        enrichment: valEnrichment,
-        resolucion: 'enrichment',  // Por regla de prioridad
-        diferencia: calcularDiferencia(valDiscovery, valEnrichment)
-      });
-    }
-  }
-  
-  return discrepancias;
-}
+| Rango | Flag | Acción |
+|-------|------|--------|
+| < 2% | null | OK, usar valor normal |
+| 2-10% | warning | Registrar, usar valor normal |
+| > 10% | error | **Fallback a enrichment** (solo precio) |
+
+---
+
+## 4. HELPER OBLIGATORIO
+
+### get_discovery_value()
+
+Normaliza paths diferentes entre Remax y Century21:
+
+| Campo | REMAX Path | C21 Path |
+|-------|------------|----------|
+| area_total_m2 | `listing_information.construction_area_m` | `m2C` |
+| dormitorios | `listing_information.number_bedrooms` | `recamaras` |
+| banos | `listing_information.number_bathrooms` | `banos` |
+| latitud | `location.latitude` (STRING→NUMERIC) | `lat` |
+| longitud | `location.longitude` (STRING→NUMERIC) | `lon` |
+| precio_usd | `price.price_in_dollars` | Solo si `moneda=USD` |
+
+### Wrappers
+
+```sql
+get_discovery_value(campo, discovery, fuente) → TEXT
+get_discovery_value_numeric(campo, discovery, fuente) → NUMERIC
+get_discovery_value_integer(campo, discovery, fuente) → INTEGER
 ```
 
 ---
 
-## 4. FASE 2: SCORING (POST-CONSOLIDACIÓN)
+## 5. SCORING POST-MERGE
 
-**NUEVO en v2.0:** Los scores ahora se calculan sobre `datos_json` (consolidado), NO sobre `datos_json_enrichment` (parcial).
-
-### 4.1 Campos Core (Requeridos)
+### Score Calidad Dato (0-100)
 
 ```javascript
-const CAMPOS_CORE = [
-  'precio_usd',
-  'area_total_m2',
-  'dormitorios',
-  'banos',
-  'tipo_operacion',
-  'estado_construccion',
-  'latitud',
-  'longitud',
-  'fuente',
-  'url'
+// Campos core: 70 pts (7 campos × 10 pts)
+const camposCore = [
+  'precio_usd', 'area_total_m2', 'dormitorios', 'banos',
+  'latitud+longitud', 'tipo_operacion', 'estado_construccion'
+];
+
+// Campos opcionales: 30 pts
+const camposOpcionales = [
+  'estacionamientos', 'nombre_edificio', 'amenities',
+  'descripcion', 'agente_nombre', 'cantidad_fotos'
 ];
 ```
 
-### 4.2 Cálculo de score
+### Score Fiduciario
 
 ```javascript
-function calcularScoreCalidadDato(datosConsolidados) {
-  let scoreCore = 0;
+scoreFiduciario = scoreCalidadDato - penalizaciones;
+
+// Penalizaciones:
+// - precio_m2 < 500: -15 pts (error)
+// - precio_m2 > 5000: -10 pts (warning)
+// - area < 30m² con múltiples dorms: -5 pts
+// - baños > dorms + 2: -5 pts
+```
+
+---
+
+## 6. ESTRUCTURA datos_json FINAL
+
+```javascript
+{
+  "version_merge": "2.0.0",
+  "timestamp_merge": "2025-12-23T...",
+  "fuente": "century21|remax",
+
+  "financiero": {
+    "precio_usd": 97700,
+    "precio_m2": 2714,
+    "moneda_original": "BOB",
+    "tipo_cambio_usado": 6.96,
+    "fuente_precio": "discovery|enrichment|enrichment_fallback|blocked",
+    "precio_fue_normalizado": false
+  },
+
+  "fisico": {
+    "area_total_m2": 36,
+    "fuente_area": "discovery",
+    "dormitorios": 1,
+    "fuente_dormitorios": "discovery",
+    "banos": 1,
+    "fuente_banos": "discovery",
+    "es_multiproyecto": false
+  },
+
+  "ubicacion": {
+    "latitud": -17.7718816,
+    "longitud": -63.1993099,
+    "fuente_gps": "discovery"
+  },
+
+  "proyecto": { ... },
+  "amenities": { ... },
+  "agente": { ... },
+  "contenido": { ... },
   
-  // Validar campos core (70 puntos máx)
-  for (const campo of CAMPOS_CORE) {
-    if (validarCampo(campo, datosConsolidados[campo])) {
-      scoreCore += 7;  // 10 campos × 7pts = 70pts
-    }
+  "calidad": {
+    "score_calidad_dato": 92,
+    "score_fiduciario": 89,
+    "flags_semanticos": [],
+    "requiere_revision_humana": false,
+    "es_para_matching_verificado": true
+  },
+
+  "discovery_metadata": {
+    "status_portal": "enPromocion",
+    "id_original": "92963"
+  },
+
+  "discrepancias": {
+    "precio": { "discovery": 97701, "enrichment": 97700, "diff_pct": 0.001, "flag": null },
+    "area": { "discovery": 36, "enrichment": 36, "diff_pct": 0, "flag": null }
+  },
+
+  "trazabilidad": {
+    "merge_version": "2.0.0",
+    "fecha_merge": "2025-12-23T..."
   }
-  
-  // Validar campos opcionales (30 puntos máx)
-  const scoreOpcionales = calcularScoreOpcionales(datosConsolidados);
-  
-  const scoreFinal = scoreCore + scoreOpcionales;
-  
-  return {
-    score_calidad_dato: Math.round(scoreFinal),
-    score_core: scoreCore,
-    score_opcionales: scoreOpcionales,
-    es_para_matching: (scoreCore === 70)
-  };
 }
 ```
 
 ---
 
-## 5. FASE 3: VERIFICACIÓN (POST-CONSOLIDACIÓN)
-
-**NUEVO en v2.0:** Verificación sobre datos consolidados, no sobre datos parciales.
-
-### 5.1 Validaciones de coherencia
-
-```javascript
-function verificarCoherencia(datosConsolidados, scoreCalidadDato) {
-  const flags = [];
-  
-  // 1. Precio/m² razonable
-  const precioM2 = datosConsolidados.precio_usd / datosConsolidados.area_total_m2;
-  if (precioM2 < 500 || precioM2 > 5000) {
-    flags.push({
-      tipo: precioM2 < 500 ? 'error' : 'warning',
-      campo: 'precio_m2',
-      valor: precioM2,
-      razon: precioM2 < 500 ? 'Precio/m² muy bajo' : 'Precio/m² muy alto'
-    });
-  }
-  
-  // 2. Área vs Dormitorios
-  if (datosConsolidados.area_total_m2 < 30 && datosConsolidados.dormitorios > 1) {
-    flags.push({
-      tipo: 'warning',
-      campo: 'area_vs_dormitorios',
-      razon: 'Área pequeña para múltiples dormitorios'
-    });
-  }
-  
-  // 3. Baños vs Dormitorios
-  if (datosConsolidados.banos > datosConsolidados.dormitorios + 2) {
-    flags.push({
-      tipo: 'warning',
-      campo: 'banos_vs_dormitorios',
-      razon: 'Más baños de lo típico'
-    });
-  }
-  
-  return flags;
-}
-```
-
-### 5.2 Score fiduciario
-
-```javascript
-function calcularScoreFiduciario(scoreCalidadDato, flags) {
-  let penalizacion = 0;
-  
-  for (const flag of flags) {
-    if (flag.tipo === 'warning') penalizacion += 5;
-    if (flag.tipo === 'error') penalizacion += 15;
-  }
-  
-  const scoreFiduciario = Math.max(0, scoreCalidadDato - penalizacion);
-  
-  return {
-    score_fiduciario: scoreFiduciario,
-    penalizacion_total: penalizacion,
-    es_para_matching_verificado: (scoreFiduciario >= 80 && errores === 0)
-  };
-}
-```
-
----
-
-## 6. FUNCIÓN SQL: merge_discovery_enrichment()
-
-### 6.1 Firma v2.0
+## 7. FUNCIÓN SQL
 
 ```sql
-CREATE OR REPLACE FUNCTION merge_discovery_enrichment(
-    p_identificador TEXT
-) RETURNS JSONB
+merge_discovery_enrichment(p_identificador TEXT) RETURNS JSONB
 ```
 
-**Acepta:** `id`, `codigo_propiedad`, o `url`
+### Búsqueda (orden)
+1. `codigo_propiedad` (más común)
+2. `id` (numérico)
+3. `url` (fallback)
 
-### 6.2 Pipeline completo
+### Status Entrada Válidos
+- `nueva`
+- `actualizado`
 
-```sql
-BEGIN
-    -- 1. Obtener datos discovery y enrichment
-    SELECT datos_json_discovery, datos_json_enrichment, campos_bloqueados
-    INTO v_discovery, v_enrichment, v_candados
-    FROM propiedades_v2 WHERE [identificador];
-    
-    -- 2. Consolidar aplicando reglas de prioridad
-    v_datos_consolidados := consolidar(v_discovery, v_enrichment, v_candados);
-    
-    -- 3. Detectar discrepancias
-    v_discrepancias := detectar_discrepancias(v_discovery, v_enrichment);
-    
-    -- 4. NUEVO v2.0: Calcular scores sobre datos consolidados
-    v_scoring := calcular_score_calidad_dato(v_datos_consolidados);
-    v_verificacion := verificar_coherencia(v_datos_consolidados, v_scoring);
-    
-    -- 5. Persistir datos consolidados + scores
-    UPDATE propiedades_v2 SET
-        datos_json = v_datos_consolidados,
-        score_calidad_dato = v_scoring.score_calidad_dato,
-        score_fiduciario = v_verificacion.score_fiduciario,
-        flags_semanticos = v_verificacion.flags,
-        discrepancias_detectadas = v_discrepancias,
-        status = 'completado',
-        fecha_merge = NOW()
-    WHERE [identificador];
-    
-    RETURN resultado;
-END;
-```
+### Status Salida
+- **SIEMPRE `completado`**
 
 ---
 
-## 7. CONTRATOS CON OTROS MÓDULOS
+## 8. VALIDACIÓN IMPLEMENTACIÓN
 
-### Con Discovery (Flujo A):
-- **Recibe:** `datos_json_discovery` (snapshot API/Grid)
-- **Usa:** GPS, algunos metadatos
-
-### Con Enrichment (Flujo B v3.0):
-- **Recibe:** `datos_json_enrichment` (80+ campos estructurados)
-- **Usa:** Mayoría de datos (priorizados sobre discovery)
-
-### Con Módulo 2 (Enrichment de Mercado - Futuro):
-- **Entrega:** Datos consolidados + scores finales
-- **Estado:** `completado` con validación completa
-
----
-
-## 8. INVARIANTES
-
-### 8.1 Garantías
-
-- ✅ Candados SIEMPRE respetados
-- ✅ Status SIEMPRE es `completado` al finalizar
-- ✅ Scores calculados sobre datos consolidados, NO parciales
-- ✅ `datos_json` contiene consolidación final
-- ✅ `datos_json_discovery` y `datos_json_enrichment` preservados (auditabilidad)
-
-### 8.2 Límites
-
-- ❌ NO modifica `datos_json_discovery` (inmutable)
-- ❌ NO modifica `datos_json_enrichment` (inmutable)
-- ❌ NO toma decisiones de matching (solo sugiere)
-- ❌ NO llama APIs externas
-
----
-
-## 9. EJEMPLO COMPLETO
-
-### Input:
-
-```javascript
-// Discovery (Flujo A)
-datos_json_discovery: {
-  precio_usd: 120000,
-  latitud: -17.7654321,  // ← Más preciso (API)
-  area_total_m2: null
-}
-
-// Enrichment (Flujo B)
-datos_json_enrichment: {
-  precio_usd: 120000,
-  latitud: -17.765,  // ← Menos preciso (HTML)
-  area_total_m2: 85.5,
-  dormitorios: 2,
-  banos: 2,
-  // ... 75+ campos más
-}
-```
-
-### Proceso:
-
-```javascript
-// FASE 1: Consolidar
-datos_consolidados = {
-  precio_usd: 120000,  // enrichment (regla general)
-  latitud: -17.7654321,  // discovery (excepción GPS)
-  area_total_m2: 85.5,  // enrichment
-  dormitorios: 2,
-  banos: 2,
-  // ... todos los campos
-}
-
-// FASE 2: Scorear
-scoring = {
-  score_calidad_dato: 95,
-  score_core: 70,
-  score_opcionales: 25,
-  es_para_matching: true
-}
-
-// FASE 3: Verificar
-verificacion = {
-  score_fiduciario: 92,
-  penalizacion_total: 3,
-  flags_semanticos: [
-    {
-      tipo: 'info',
-      campo: 'precio_m2',
-      valor: 1403.51,
-      razon: 'Precio/m² dentro del rango normal'
-    }
-  ]
-}
-```
-
-### Output:
-
-```javascript
-UPDATE propiedades_v2 SET
-  datos_json = datos_consolidados,  // ← Consolidación final
-  score_calidad_dato = 95,  // ← Score sobre consolidado
-  score_fiduciario = 92,
-  flags_semanticos = [...],
-  status = 'completado',
-  es_para_matching = true
-```
-
----
-
-## 10. FUNCIONES AUXILIARES
-
-| Función | Propósito |
-|---------|-----------|
-| `obtener_propiedades_pendientes_merge()` | Lista propiedades status=actualizado |
-| `ejecutar_merge_batch()` | Merge en lote (max 50) |
-| `obtener_discrepancias()` | Consulta conflictos detectados |
-| `resetear_merge()` | Permite re-ejecutar merge |
-| `estadisticas_merge()` | Dashboard de métricas |
-
----
-
-## 11. VALIDACIÓN DE IMPLEMENTACIÓN
-
-### Checklist:
+### Checklist
 
 ```
-CONSOLIDACIÓN:
-✅ Respeta candados siempre
-✅ Enrichment > Discovery (regla general)
-✅ Discovery > Enrichment (GPS)
-✅ Detecta discrepancias correctamente
-✅ Preserva datos originales (discovery/enrichment)
+HELPERS:
+✅ get_discovery_value() implementado
+✅ Casteo GPS Remax (string→numeric)
+✅ Paths por portal normalizados
 
-SCORING (NUEVO v2.0):
-✅ Calcula sobre datos_json (consolidado)
-✅ NO calcula sobre datos_json_enrichment (parcial)
-✅ Valida 10 campos core
-✅ Score opcionales configurable
-✅ Determina es_para_matching
+PRIORIDAD:
+✅ Candados SIEMPRE respetados
+✅ Discovery > Enrichment (área, dorms, baños, GPS)
+✅ Precio condicional con fallback 10%
 
-VERIFICACIÓN (NUEVO v2.0):
-✅ Valida sobre datos consolidados
-✅ Coherencia precio/m², área vs dorms, etc.
-✅ Genera flags con niveles (info/warning/error)
-✅ Calcula score_fiduciario con penalizaciones
-✅ Determina es_para_matching_verificado
+SCORING:
+✅ Calculado sobre datos consolidados
+✅ flags_semanticos generados
+✅ requiere_revision_humana calculado
 
 PERSISTENCIA:
 ✅ Status SIEMPRE es 'completado'
-✅ datos_json contiene consolidación final
-✅ Scores finales persistidos
-✅ fecha_merge actualizada
+✅ datos_json con 11 secciones
+✅ discrepancias_detectadas poblado
 ```
+
+### Tests Validados (23 Dic 2025)
+
+| Propiedad | Fuente | Score | Status |
+|-----------|--------|-------|--------|
+| 92771 | Century21 | 100/100 | ✅ completado |
+| 120099002-225 | Remax | 95/95 | ✅ completado |
 
 ---
 
-## 12. CONTROL DE VERSIONES
+## 9. ARCHIVOS
+
+| Archivo | Versión | Ubicación |
+|---------|---------|-----------|
+| `merge_discovery_enrichment.sql` | v2.0.0 | `sql/functions/merge/` |
+| `funciones_helper_merge.sql` | v2.0.0 | `sql/functions/merge/` |
+| `funciones_auxiliares_merge.sql` | v2.0.0 | `sql/functions/merge/` |
+| `migracion_merge_v2.0.0.sql` | - | `sql/migrations/` |
+| `CHANGELOG_MERGE_v2.0.0.md` | - | `sql/functions/merge/` |
+
+---
+
+## 10. CONTROL DE VERSIONES
 
 | Versión | Fecha | Cambios |
 |---------|-------|---------|
-| 2.0.0 | Dic 2024 | **BREAKING:** Scoring y Verificación movidos de Flujo B a post-Merge. Scores ahora calculados sobre datos consolidados (datos_json), no sobre datos parciales (datos_json_enrichment). |
-| 1.2.0 | Dic 2024 | Funciones auxiliares completas |
-| 1.0.0 | Dic 2024 | Versión inicial (solo consolidación) |
+| 2.0.0 | 23 Dic 2025 | Inversión prioridad físicos, helper obligatorio, scoring integrado, fallback precio |
+| 1.2.0 | Dic 2024 | Versión inicial con funciones auxiliares |
 
 ---
 
