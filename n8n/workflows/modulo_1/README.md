@@ -2,8 +2,8 @@
 
 **Sistema:** SICI — Sistema Inteligente de Captura Inmobiliaria  
 **Módulo:** Módulo 1 — Discovery & Existencia  
-**Versión:** 1.0.3  
-**Fecha:** Diciembre 2025
+**Versión:** 1.1.0  
+**Fecha:** 23 Diciembre 2025
 
 ---
 
@@ -13,9 +13,19 @@
 |---------|-------------|---------|--------|
 | `flujo_a_discovery_century21_v1.0.3_FINAL.json` | Flujo A completo para Century21 | v1.0.3 | ✅ Producción |
 | `flujo_a_discovery_remax_v1.0.2_FINALjson` | Flujo A completo para Remax | v1.0.2 | ✅ Producción |
+| `flujo_merge_v1.0.0.json` | Merge Discovery + Enrichment | v1.0.0 | ✅ Producción |
 | `flujo_c_verificador_v1.1.0_FINAL.json.json` | Verificador de propiedades inactivas | v1.1.0 | ✅ Producción |
 
-**Nota:** Ambos workflows de Discovery ejecutan diariamente a las 1:00 AM, capturando ~273 propiedades (Century21) y ~160 propiedades (Remax).
+## ⏰ Schedule Nocturno
+
+| Hora | Workflow | Descripción |
+|------|----------|-------------|
+| 1:00 AM | Flujo A Discovery (C21 + Remax) | Detecta URLs nuevas |
+| 2:00 AM | Flujo B Enrichment | Extrae datos HTML |
+| **3:00 AM** | **Flujo Merge** | Fusiona Discovery + Enrichment |
+| 6:00 AM | Flujo C Verificador | Verifica propiedades inactivas |
+
+**Nota:** Discovery captura ~273 propiedades (Century21) y ~160 propiedades (Remax) diariamente.
 
 ---
 
