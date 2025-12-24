@@ -1,7 +1,7 @@
 # Merge - Funciones de Fusión
 
-**Versión:** 2.0.0  
-**Fecha:** 23 Diciembre 2025  
+**Versión:** 2.0.1  
+**Fecha:** 24 Diciembre 2025  
 **Estado:** ✅ Producción
 
 ---
@@ -10,10 +10,10 @@
 
 | Archivo | Versión | Propósito |
 |---------|---------|-----------|
-| `merge_discovery_enrichment.sql` | v2.0.0 | Función principal |
+| `merge_discovery_enrichment.sql` | v2.0.1 | Función principal |
 | `funciones_helper_merge.sql` | v2.0.0 | **NUEVO** - Normalización paths por portal |
 | `funciones_auxiliares_merge.sql` | v2.0.0 | Utilidades batch y estadísticas |
-| `CHANGELOG_MERGE_v2.0.0.md` | - | Historial de cambios |
+| `CHANGELOG_MERGE.md` | - | Historial de cambios |
 
 ---
 
@@ -27,12 +27,12 @@ Acepta: `codigo_propiedad` (primero), `id`, o `url`
 
 ---
 
-## Reglas de Prioridad v2.0.0
+## Reglas de Prioridad v2.0.1
 
 | Campo | Prioridad | Razón |
 |-------|-----------|-------|
 | **Candados** | SIEMPRE ganan | Manual > Automático |
-| Área, Dorms, Baños, Estac | Discovery > Enrichment | API estructurada |
+| Área, Dorms, Baños, Estac | Discovery > Enrichment (si > 0) | API estructurada |
 | GPS | Discovery > Enrichment | Coordenadas API precisas |
 | Precio | Condicional (ver abajo) | Lógica especial |
 | Resto | Enrichment > Discovery | HTML más detallado |
@@ -76,7 +76,7 @@ get_discovery_value_integer(...) → INTEGER
 
 ```javascript
 {
-  "version_merge": "2.0.0",
+  "version_merge": "2.0.1",
   "financiero": { precio_usd, precio_m2, fuente_precio, ... },
   "fisico": { area, dorms, baños, fuente_*, ... },
   "ubicacion": { lat, lon, fuente_gps, ... },
@@ -125,7 +125,7 @@ get_discovery_value_integer(...) → INTEGER
 ```json
 {
   "success": true,
-  "version": "2.0.0",
+  "version": "2.0.1",
   "property_id": "92771",
   "status_nuevo": "completado",
   "scores": {
@@ -173,4 +173,18 @@ get_discovery_value_integer(...) → INTEGER
 
 ---
 
-**Última actualización:** 23 Diciembre 2025
+## Changelog Reciente
+
+**v2.0.1 (24 Dic 2025):**
+- Fix: área=0 de Discovery ahora hace fallback a Enrichment
+- Previene violación de `check_area_positive`
+
+**v2.0.0 (23 Dic 2025):**
+- Inversión prioridad: Discovery > Enrichment para campos físicos
+- Helper obligatorio para paths por portal
+- Scoring post-merge integrado
+- 11 secciones en datos_json
+
+---
+
+**Última actualización:** 24 Diciembre 2025

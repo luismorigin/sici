@@ -1,6 +1,39 @@
+-- =====================================================================================
+-- SICI - Sistema Inteligente de Captura Inmobiliaria
+-- Módulo 1: Property Matching - Arquitectura Dual v2.0
+-- =====================================================================================
+-- Archivo: registrar_enrichment.sql
+-- Propósito: Registrar datos del extractor HTML (Flujo B) respetando candados
+-- Versión: 1.4.5
+-- Fecha: 2025-12-24
+-- =====================================================================================
+-- CHANGELOG:
+--   v1.4.5 (24 Dic 2025):
+--     - Fix estado_construccion: solo mapear valores inválidos
+--     - 'sin_informacion', 'no_definido' → 'no_especificado'
+--     - Quitar mapeo de 'nuevo_a_estrenar' (ahora valor válido del ENUM)
+--     - 'usado' y 'nuevo_a_estrenar' pasan directo al ENUM
+--   v1.4.4 (24 Dic 2025):
+--     - Agregados campos multiproyecto: area_min_m2, area_max_m2, dormitorios_opciones
+--   v1.4.3 (24 Dic 2025):
+--     - Fix estado_construccion: mapear valores no válidos del extractor
+--   v1.4.1 (22 Dic 2025):
+--     - Búsqueda por _internal_id primero (performance)
+--     - GPS con campos separados (latitud, longitud)
+-- =====================================================================================
+-- ESTADOS VÁLIDOS DEL ENUM estado_propiedad:
+--   nueva, pendiente_enriquecimiento, completado, actualizado,
+--   inactivo_pending, inactivo_confirmed
+-- =====================================================================================
+-- VALORES VÁLIDOS DEL ENUM estado_construccion_enum:
+--   entrega_inmediata, preventa, construccion, planos, no_especificado,
+--   usado, nuevo_a_estrenar
+-- =====================================================================================
+
 CREATE OR REPLACE FUNCTION registrar_enrichment(p_data JSONB)
 RETURNS JSONB
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $$
 DECLARE
     v_id INTEGER;
@@ -15,7 +48,9 @@ DECLARE
     v_status_anterior TEXT;
     v_result JSONB;
 BEGIN
-    -- FASE 1: BUSCAR PROPIEDAD
+    -- =========================================================================
+    -- FASE 1: BUSCAR PROPIEDAD (prioridad: _internal_id > property_id > url)
+    -- =========================================================================
     BEGIN
         v_id := (p_data->>'_internal_id')::INTEGER;
         IF v_id IS NOT NULL THEN
@@ -40,13 +75,19 @@ BEGIN
     END IF;
     
     IF NOT FOUND THEN
-        RETURN jsonb_build_object('success', false, 'error', 'Propiedad no encontrada', 'timestamp', NOW());
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Propiedad no encontrada',
+            'timestamp', NOW()
+        );
     END IF;
 
     v_candados := COALESCE(v_existing.campos_bloqueados, '{}'::JSONB);
     v_status_anterior := v_existing.status::TEXT;
 
-    -- FASE 2: CALCULAR CAMBIOS
+    -- =========================================================================
+    -- FASE 2: CALCULAR CAMBIOS (simplificado)
+    -- =========================================================================
     IF p_data->>'precio_usd' IS NOT NULL AND NOT COALESCE((v_candados->>'precio_usd')::boolean, false) THEN
         IF (p_data->>'precio_usd')::NUMERIC(12,2) IS DISTINCT FROM v_existing.precio_usd THEN
             v_campos_updated := array_append(v_campos_updated, 'precio_usd');
@@ -60,7 +101,9 @@ BEGIN
         'timestamp', NOW()
     );
 
+    -- =========================================================================
     -- FASE 3: UPDATE
+    -- =========================================================================
     UPDATE propiedades_v2 SET
         precio_usd = CASE 
             WHEN COALESCE((v_candados->>'precio_usd')::boolean, false) THEN propiedades_v2.precio_usd
@@ -78,6 +121,22 @@ BEGIN
             WHEN COALESCE((v_candados->>'precio_max_usd')::boolean, false) THEN propiedades_v2.precio_max_usd
             WHEN p_data->>'precio_max_usd' IS NOT NULL THEN (p_data->>'precio_max_usd')::NUMERIC(12,2)
             ELSE propiedades_v2.precio_max_usd
+        END,
+        
+        -- Campos multiproyecto (v1.4.4)
+        area_min_m2 = CASE 
+            WHEN p_data->>'area_min_m2' IS NOT NULL THEN (p_data->>'area_min_m2')::NUMERIC(10,2)
+            ELSE propiedades_v2.area_min_m2
+        END,
+        
+        area_max_m2 = CASE 
+            WHEN p_data->>'area_max_m2' IS NOT NULL THEN (p_data->>'area_max_m2')::NUMERIC(10,2)
+            ELSE propiedades_v2.area_max_m2
+        END,
+        
+        dormitorios_opciones = CASE 
+            WHEN p_data->>'dormitorios_opciones' IS NOT NULL THEN p_data->>'dormitorios_opciones'
+            ELSE propiedades_v2.dormitorios_opciones
         END,
         
         moneda_original = CASE 
@@ -126,9 +185,12 @@ BEGIN
             ELSE propiedades_v2.longitud
         END,
         
+        -- FIX v1.4.5: estado_construccion - solo mapear valores inválidos
         estado_construccion = CASE 
             WHEN COALESCE((v_candados->>'estado_construccion')::boolean, false) THEN propiedades_v2.estado_construccion
-            WHEN p_data->>'estado_construccion' = 'sin_informacion' THEN 'no_especificado'::estado_construccion_enum
+            -- Solo estos se mapean (no son estados válidos, son "sin info")
+            WHEN p_data->>'estado_construccion' IN ('sin_informacion', 'no_definido') THEN 'no_especificado'::estado_construccion_enum
+            -- El resto pasa directo (usado, nuevo_a_estrenar, entrega_inmediata, preventa, etc.)
             WHEN p_data->>'estado_construccion' IS NOT NULL THEN (p_data->>'estado_construccion')::estado_construccion_enum
             ELSE propiedades_v2.estado_construccion
         END,
@@ -157,10 +219,13 @@ BEGIN
         
     WHERE id = v_existing.id;
 
+    -- =========================================================================
+    -- FASE 4: RESPUESTA
+    -- =========================================================================
     RETURN jsonb_build_object(
         'success', true,
         'operation', 'enrichment',
-        'version', '1.4.1',
+        'version', '1.4.5',
         'property_id', v_existing.codigo_propiedad,
         'internal_id', v_existing.id,
         'status_nuevo', 'actualizado',
@@ -168,6 +233,31 @@ BEGIN
     );
 
 EXCEPTION WHEN OTHERS THEN
-    RETURN jsonb_build_object('success', false, 'error', SQLERRM, 'detail', SQLSTATE, 'timestamp', NOW());
+    RETURN jsonb_build_object(
+        'success', false,
+        'error', SQLERRM,
+        'detail', SQLSTATE,
+        'timestamp', NOW()
+    );
 END;
 $$;
+
+-- =====================================================================================
+-- COMENTARIOS Y GRANTS
+-- =====================================================================================
+
+COMMENT ON FUNCTION registrar_enrichment(JSONB) IS 
+'SICI Enrichment v1.4.5: Registra datos de extractor HTML respetando candados.
+- Búsqueda priorizada: _internal_id > property_id > url
+- Candados SIEMPRE respetados
+- estado_construccion: mapea valores inválidos a no_especificado
+- Campos multiproyecto: area_min_m2, area_max_m2, dormitorios_opciones
+- Status final SIEMPRE es actualizado
+Uso: SELECT registrar_enrichment(''{"property_id":"12345", ...}''::JSONB)';
+
+GRANT EXECUTE ON FUNCTION registrar_enrichment(JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION registrar_enrichment(JSONB) TO service_role;
+
+-- =====================================================================================
+-- FIN DEL ARCHIVO
+-- =====================================================================================

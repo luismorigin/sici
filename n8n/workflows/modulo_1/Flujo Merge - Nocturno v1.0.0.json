@@ -12,11 +12,14 @@
           ]
         }
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-111111111111",
+      "id": "7eceec3f-8114-48d0-b07d-4cc1c657ca29",
       "name": "Trigger 3:00 AM",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [-1200, 300],
+      "position": [
+        -928,
+        176
+      ],
       "notes": "Ejecuta merge nocturno a las 3:00 AM (después de Discovery 1AM y Enrichment 2AM)"
     },
     {
@@ -25,11 +28,14 @@
         "query": "-- =====================================================\n-- FLUJO MERGE v1.0.0 - Query Propiedades Pendientes\n-- Solo status='actualizado' (listas para merge)\n-- =====================================================\nSELECT \n    id,\n    codigo_propiedad,\n    url,\n    fuente,\n    status,\n    fecha_enrichment,\n    EXTRACT(EPOCH FROM (NOW() - fecha_enrichment))/3600 as horas_desde_enrichment\nFROM propiedades_v2\nWHERE status = 'actualizado'::estado_propiedad\n  AND es_activa = TRUE\nORDER BY fecha_enrichment ASC\nLIMIT 200;",
         "options": {}
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-222222222222",
+      "id": "00a3f424-7f28-40b7-8fc9-8734efc7833f",
       "name": "Query Propiedades Actualizadas",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [-960, 300],
+      "position": [
+        -688,
+        176
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -61,22 +67,28 @@
         },
         "options": {}
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-333333333333",
+      "id": "7cdf2034-fdbe-4049-8be2-b2eb3d900a7d",
       "name": "Hay propiedades?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [-720, 300],
+      "position": [
+        -448,
+        176
+      ],
       "notes": "Bifurca si hay propiedades pendientes de merge"
     },
     {
       "parameters": {
         "jsCode": "// Sin propiedades pendientes de merge\nconst timestamp = new Date().toISOString();\n\nreturn [{\n  json: {\n    status: 'completed',\n    message: 'No hay propiedades pendientes de merge (status=actualizado)',\n    total_procesadas: 0,\n    exitosas: 0,\n    errores: 0,\n    timestamp: timestamp\n  }\n}];"
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-444444444444",
+      "id": "76ba49fe-b53c-487f-a50f-7bb46529ab92",
       "name": "Sin Pendientes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-480, 500],
+      "position": [
+        -176,
+        464
+      ],
       "notes": "Retorna resumen vacío cuando no hay trabajo"
     },
     {
@@ -85,11 +97,14 @@
           "reset": false
         }
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-555555555555",
+      "id": "bcbed489-a647-4436-8920-255736fda938",
       "name": "Loop Propiedades",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [-480, 300],
+      "position": [
+        -208,
+        176
+      ],
       "notes": "Procesa una propiedad a la vez"
     },
     {
@@ -98,11 +113,14 @@
         "query": "-- =====================================================\n-- MERGE v2.0.0 - Ejecutar función merge\n-- Fusiona Discovery + Enrichment → datos_json final\n-- =====================================================\nSELECT merge_discovery_enrichment({{ $json.id }}::INTEGER) as resultado;",
         "options": {}
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-666666666666",
+      "id": "3718031a-f82f-4be1-8a38-e8eb9c1bbf84",
       "name": "Ejecutar Merge",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [-240, 300],
+      "position": [
+        32,
+        176
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -115,11 +133,14 @@
       "parameters": {
         "jsCode": "// ============================================================================\n// NODO: Procesar Resultado Merge\n// Versión: 1.0.0\n// ============================================================================\n\nconst item = $input.first();\nconst propData = $('Loop Propiedades').first().json;\n\n// Parsear resultado del merge\nlet resultado = item.json.resultado;\nif (typeof resultado === 'string') {\n  try {\n    resultado = JSON.parse(resultado);\n  } catch (e) {\n    resultado = { success: false, error: 'Parse error: ' + e.message };\n  }\n}\n\nreturn [{\n  json: {\n    // Datos de la propiedad\n    id: propData.id,\n    codigo_propiedad: propData.codigo_propiedad,\n    url: propData.url,\n    fuente: propData.fuente,\n    \n    // Resultado del merge\n    success: resultado.success || false,\n    status_anterior: resultado.status_anterior || null,\n    status_nuevo: resultado.status_nuevo || null,\n    tiene_discrepancias: resultado.tiene_discrepancias || false,\n    error: resultado.error || null,\n    \n    // Metadata\n    timestamp: new Date().toISOString()\n  }\n}];"
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-777777777777",
+      "id": "faaa7b94-a4d8-4327-b68f-1ee40d8d9d92",
       "name": "Procesar Resultado",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [0, 300],
+      "position": [
+        272,
+        176
+      ],
       "notes": "Extrae y normaliza resultado del merge"
     },
     {
@@ -128,31 +149,40 @@
         "destinationFieldName": "results",
         "options": {}
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-888888888888",
+      "id": "f158e9cf-890a-4310-83f0-eb052e3bd0df",
       "name": "Agregar Resultados",
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
-      "position": [-240, 100],
+      "position": [
+        32,
+        -32
+      ],
       "notes": "Recopila todos los resultados del loop"
     },
     {
       "parameters": {
         "jsCode": "// ============================================================================\n// NODO: Generar Resumen Final\n// Versión: 1.0.0\n// ============================================================================\n\nconst results = $input.first().json.results || [];\n\n// Contadores\nlet exitosas = 0;\nlet errores = 0;\nlet con_discrepancias = 0;\n\nconst erroresDetalle = [];\nconst discrepanciasDetalle = [];\n\nfor (const r of results) {\n  if (r.success) {\n    exitosas++;\n    if (r.tiene_discrepancias) {\n      con_discrepancias++;\n      discrepanciasDetalle.push({\n        id: r.id,\n        codigo: r.codigo_propiedad,\n        fuente: r.fuente\n      });\n    }\n  } else {\n    errores++;\n    erroresDetalle.push({\n      id: r.id,\n      codigo: r.codigo_propiedad,\n      error: r.error\n    });\n  }\n}\n\nconst total = results.length;\nconst timestamp = new Date().toISOString();\n\nreturn [{\n  json: {\n    status: 'completed',\n    flujo: 'Flujo Merge - Nocturno v1.0.0',\n    timestamp: timestamp,\n    \n    // Métricas principales\n    total_procesadas: total,\n    exitosas: exitosas,\n    errores: errores,\n    con_discrepancias: con_discrepancias,\n    \n    // Porcentajes\n    tasa_exito: total > 0 ? Math.round((exitosas / total) * 100) : 0,\n    \n    // Detalles (para debugging)\n    errores_detalle: erroresDetalle.slice(0, 10), // Max 10\n    discrepancias_detalle: discrepanciasDetalle.slice(0, 10), // Max 10\n    \n    // Para Slack\n    emoji_status: errores === 0 ? '✅' : '⚠️',\n    resumen_slack: `Merge nocturno: ${exitosas}/${total} exitosas${errores > 0 ? `, ${errores} errores` : ''}${con_discrepancias > 0 ? `, ${con_discrepancias} con discrepancias` : ''}`\n  }\n}];"
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-999999999999",
+      "id": "690a7d43-bcbd-496f-a3a2-8c63d26c17d6",
       "name": "Generar Resumen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [0, 100],
+      "position": [
+        272,
+        -32
+      ],
       "notes": "Genera estadísticas finales del batch"
     },
     {
       "parameters": {},
-      "id": "a1b2c3d4-e5f6-7890-abcd-aaaaaaaaaaaa",
+      "id": "f91a7d96-526f-4710-b032-191756dd9e90",
       "name": "Merge Outputs",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
-      "position": [240, 400],
+      "position": [
+        512,
+        272
+      ],
       "notes": "Combina rama con trabajo y rama vacía"
     },
     {
@@ -161,7 +191,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 2
           },
           "conditions": [
             {
@@ -178,38 +209,47 @@
         },
         "options": {}
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-bbbbbbbbbbbb",
+      "id": "71b29566-f897-48d2-9068-d68995f1cbe0",
       "name": "Enviar Slack?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [480, 400],
+      "position": [
+        752,
+        272
+      ],
       "notes": "Solo envía Slack si procesó propiedades"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://hooks.slack.com/services/YOUR_WEBHOOK_URL",
+        "url": "https://hooks.slack.com/services/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",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"{{ $json.emoji_status }} SICI Merge Nocturno\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Procesadas:*\\n{{ $json.total_procesadas }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Exitosas:*\\n{{ $json.exitosas }} ({{ $json.tasa_exito }}%)\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Errores:*\\n{{ $json.errores }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Discrepancias:*\\n{{ $json.con_discrepancias }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"Flujo Merge v1.0.0 | {{ $json.timestamp }}\"\n        }\n      ]\n    }\n  ]\n}",
         "options": {}
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-cccccccccccc",
+      "id": "0438cc7a-3c4c-4e51-8de5-0beac9e79998",
       "name": "Slack Resumen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [720, 300],
+      "position": [
+        992,
+        176
+      ],
       "notes": "⚠️ CONFIGURAR: Reemplazar YOUR_WEBHOOK_URL con webhook real"
     },
     {
       "parameters": {
         "jsCode": "// Log final sin Slack\nreturn $input.all();"
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-dddddddddddd",
+      "id": "42ba60a6-7c15-4bf6-ac76-143290880cbf",
       "name": "Skip Slack",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [720, 500],
+      "position": [
+        992,
+        368
+      ],
       "notes": "No envía Slack cuando no hay trabajo"
     }
   ],
@@ -358,25 +398,38 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "America/La_Paz",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1,
+    "availableInMCP": false
   },
-  "versionId": "flujo-merge-v1.0.0-initial",
+  "versionId": "4277b2dd-859d-4d42-a632-63cd80f62ff4",
   "meta": {
-    "templateCredsSetupCompleted": true,
     "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
   },
-  "id": "FLUJO_MERGE_V1",
+  "id": "LGWd6FhyOhAf6d5l",
   "tags": [
     {
+      "updatedAt": "2025-12-18T13:23:45.918Z",
+      "createdAt": "2025-12-18T13:23:45.918Z",
+      "id": "obZptuoaE3ynlZQO",
       "name": "SICI"
     },
     {
+      "updatedAt": "2025-12-18T13:23:45.932Z",
+      "createdAt": "2025-12-18T13:23:45.932Z",
+      "id": "rQ5lGbtTrI7S7Dom",
       "name": "Modulo1"
     },
     {
-      "name": "FlujoMerge"
+      "name": "FlujoMerge",
+      "id": "DOMy3kOKWNsr3e8u",
+      "updatedAt": "2025-12-24T12:01:29.672Z",
+      "createdAt": "2025-12-24T12:01:29.672Z"
     }
   ]
 }

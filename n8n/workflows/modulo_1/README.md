@@ -2,8 +2,8 @@
 
 **Sistema:** SICI — Sistema Inteligente de Captura Inmobiliaria  
 **Módulo:** Módulo 1 — Discovery & Existencia  
-**Versión:** 1.1.0  
-**Fecha:** 23 Diciembre 2025
+**Versión:** 1.2.0  
+**Fecha:** 24 Diciembre 2025
 
 ---
 
@@ -11,19 +11,22 @@
 
 | Archivo | Descripción | Versión | Estado |
 |---------|-------------|---------|--------|
-| `flujo_a_discovery_century21_v1.0.3_FINAL.json` | Flujo A completo para Century21 | v1.0.3 | ✅ Producción |
-| `flujo_a_discovery_remax_v1.0.2_FINALjson` | Flujo A completo para Remax | v1.0.2 | ✅ Producción |
-| `flujo_merge_v1.0.0.json` | Merge Discovery + Enrichment | v1.0.0 | ✅ Producción |
-| `flujo_c_verificador_v1.1.0_FINAL.json.json` | Verificador de propiedades inactivas | v1.1.0 | ✅ Producción |
+| `flujo_a_discovery_century21_v1.0.3_FINAL.json` | Flujo A Discovery Century21 | v1.0.3 | ✅ Producción |
+| `flujo_a_discovery_remax_v1.0.2_FINALjson` | Flujo A Discovery Remax | v1.0.2 | ✅ Producción |
+| `flujo_b_processing_v3.0.json` | Flujo B Enrichment (HTML) | v3.0 | ✅ Producción |
+| `Flujo Merge - Nocturno v1.0.0.json` | Merge Discovery + Enrichment | v1.0.0 | ✅ Producción |
+| `flujo_c_verificador_v1.1.0_FINAL.json.json` | Verificador propiedades inactivas | v1.1.0 | ✅ Producción |
+
+**Nota:** Flujo B fue movido de `modulo_2/` a `modulo_1/` (24 Dic 2025) ya que es parte integral del pipeline del Módulo 1.
 
 ## ⏰ Schedule Nocturno
 
-| Hora | Workflow | Descripción |
-|------|----------|-------------|
-| 1:00 AM | Flujo A Discovery (C21 + Remax) | Detecta URLs nuevas |
-| 2:00 AM | Flujo B Enrichment | Extrae datos HTML |
-| **3:00 AM** | **Flujo Merge** | Fusiona Discovery + Enrichment |
-| 6:00 AM | Flujo C Verificador | Verifica propiedades inactivas |
+| Hora | Workflow | Descripción | Slack |
+|------|----------|-------------|-------|
+| 1:00 AM | Flujo A Discovery (C21 + Remax) | Detecta URLs nuevas | ✅ |
+| 2:00 AM | Flujo B Enrichment | Extrae datos HTML | ✅ |
+| **3:00 AM** | **Flujo Merge** | Fusiona Discovery + Enrichment | ✅ |
+| 6:00 AM | Flujo C Verificador | Verifica propiedades inactivas | ✅ |
 
 **Nota:** Discovery captura ~273 propiedades (Century21) y ~160 propiedades (Remax) diariamente.
 
@@ -311,6 +314,24 @@ Si Century21 bloquea requests:
 
 ---
 
-**Versión documento:** 1.0.3  
-**Última actualización:** 18 Diciembre 2025  
+---
+
+## 📦 Changelog Repo
+
+**v1.2.0 (24 Dic 2025):**
+- Flujo B movido de modulo_2/ a modulo_1/
+- Flujo Merge con Slack webhook configurado
+- Todos los schedules activos
+
+**v1.1.0 (23 Dic 2025):**
+- Agregado Flujo Merge v1.0.0
+- SQL merge_discovery_enrichment v2.0.0
+
+**v1.0.0 (18 Dic 2025):**
+- Flujos A y C finalizados
+
+---
+
+**Versión documento:** 1.2.0  
+**Última actualización:** 24 Diciembre 2025  
 **Mantenedor:** Equipo SICI

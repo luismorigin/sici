@@ -1,4 +1,30 @@
-# CHANGELOG - Merge v2.0.0
+# CHANGELOG - Merge
+
+## [2.0.1] - 2025-12-24
+
+### Fixed 🐛
+
+- **Fix área=0 fallback:** Cuando Discovery tiene `m2C=0` (común en preventas), ahora hace fallback a Enrichment en lugar de insertar 0
+- Previene violación de `check_area_positive` constraint
+- También valida que Enrichment tenga área > 0 antes de usarla
+
+### Changed
+
+```sql
+-- ANTES (v2.0.0):
+ELSIF v_disc_area IS NOT NULL THEN
+
+-- DESPUÉS (v2.0.1):
+ELSIF v_disc_area IS NOT NULL AND v_disc_area > 0 THEN
+```
+
+### Ejemplo de Propiedad Afectada
+
+- ID: 75962 (preventa con m2C=0, m2T=37)
+- Antes: Fallaba con constraint violation
+- Ahora: Usa área de Enrichment (37 m²)
+
+---
 
 ## [2.0.0] - 2025-12-23
 

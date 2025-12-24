@@ -1,6 +1,6 @@
 # Schema: propiedades_v2
 
-**Última actualización:** 23 Diciembre 2025  
+**Última actualización:** 24 Diciembre 2025  
 **Columnas:** 55+
 
 ---
@@ -16,7 +16,7 @@
 | `codigo_propiedad` | VARCHAR | ID del portal |
 | `tipo_operacion` | VARCHAR | 'venta' \| 'alquiler' |
 | `tipo_propiedad_original` | VARCHAR | Tipo según portal |
-| `estado_construccion` | VARCHAR | 'entrega_inmediata' \| 'en_construccion' |
+| `estado_construccion` | estado_construccion_enum | Ver ENUM abajo |
 | `scraper_version` | VARCHAR | Versión del extractor |
 | `metodo_discovery` | VARCHAR | 'api_rest' \| 'grid_geografico' |
 
@@ -117,6 +117,22 @@ CREATE TYPE estado_propiedad AS ENUM (
 
 ---
 
+## Enum: estado_construccion_enum
+
+```sql
+CREATE TYPE estado_construccion_enum AS ENUM (
+    'entrega_inmediata',
+    'preventa',
+    'construccion',
+    'planos',
+    'no_especificado',
+    'usado',              -- v1.4.5: Segunda mano
+    'nuevo_a_estrenar'    -- v1.4.5: Nuevo sin uso previo
+);
+```
+
+---
+
 ## Índices Recomendados
 
 ```sql
@@ -143,4 +159,14 @@ Ver: `sql/migrations/migracion_merge_v2.0.0.sql`
 
 ---
 
-**Última actualización:** 23 Diciembre 2025
+## Migración ENUM estado_construccion (24 Dic 2025)
+
+```sql
+-- Agregar valores faltantes al ENUM
+ALTER TYPE estado_construccion_enum ADD VALUE IF NOT EXISTS 'usado';
+ALTER TYPE estado_construccion_enum ADD VALUE IF NOT EXISTS 'nuevo_a_estrenar';
+```
+
+---
+
+**Última actualización:** 24 Diciembre 2025

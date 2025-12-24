@@ -4,10 +4,14 @@
 -- =====================================================================================
 -- Archivo: merge_discovery_enrichment.sql
 -- Propósito: Unificar datos de Discovery + Enrichment respetando candados
--- Versión: 2.0.0
--- Fecha: 2025-12-23
+-- Versión: 2.0.1
+-- Fecha: 2025-12-24
 -- =====================================================================================
--- CAMBIOS v2.0.0:
+-- CAMBIOS v2.0.1 (24 Dic 2025):
+--   - FIX: Tratar área=0 como NULL para fallback a enrichment
+--   - Previene violación de check_area_positive cuando discovery tiene m2C=0
+--
+-- CAMBIOS v2.0.0 (23 Dic 2025):
 --   - Helper obligatorio para paths por portal (get_discovery_value)
 --   - Regla precio: Discovery si USD puro, fallback Enrichment si discrepancia >10%
 --   - Regla área/dorms/baños: Discovery > Enrichment (INVERTIDO de v1.2.0)
@@ -261,16 +265,19 @@ BEGIN
     
     -- -----------------------------------------------------------------
     -- ÁREA (Discovery > Enrichment)
+    -- FIX v2.0.1: Tratar área=0 como NULL para fallback a enrichment
     -- -----------------------------------------------------------------
     IF COALESCE((v_candados->>'area_total_m2')::BOOLEAN, false) THEN
         v_area_final := v_prop.area_total_m2;
         v_fuente_area := 'blocked';
         v_campos_blocked := array_append(v_campos_blocked, 'area_total_m2');
-    ELSIF v_disc_area IS NOT NULL THEN
+    ELSIF v_disc_area IS NOT NULL AND v_disc_area > 0 THEN
+        -- FIX v2.0.1: Solo usar discovery si área > 0
         v_area_final := v_disc_area;
         v_fuente_area := 'discovery';
         v_campos_kept := array_append(v_campos_kept, 'area_total_m2');
-    ELSIF v_enr_area IS NOT NULL THEN
+    ELSIF v_enr_area IS NOT NULL AND v_enr_area > 0 THEN
+        -- FIX v2.0.1: También validar enrichment > 0
         v_area_final := v_enr_area;
         v_fuente_area := 'enrichment';
         v_campos_updated := array_append(v_campos_updated, 'area_total_m2');
@@ -560,7 +567,7 @@ BEGIN
     
     v_datos_json_final := jsonb_build_object(
         -- METADATA MERGE
-        'version_merge', '2.0.0',
+        'version_merge', '2.0.1',
         'timestamp_merge', NOW(),
         'fuente', v_fuente,
         
@@ -685,7 +692,7 @@ BEGIN
             'scraper_version', v_enrichment->>'scraper_version',
             'extractor_version', v_enrichment->>'extractor_version',
             'verificador_version', v_enrichment->>'verificador_version',
-            'merge_version', '2.0.0',
+            'merge_version', '2.0.1',
             'fecha_scraping', v_enrichment->>'fecha_scraping',
             'fecha_enrichment', v_prop.fecha_enrichment,
             'fecha_merge', NOW()
@@ -757,7 +764,7 @@ BEGIN
     v_result := jsonb_build_object(
         'success', true,
         'operation', 'merge',
-        'version', '2.0.0',
+        'version', '2.0.1',
         'property_id', v_prop.codigo_propiedad,
         'internal_id', v_prop.id,
         'url', v_prop.url,
@@ -816,7 +823,8 @@ $$;
 -- =====================================================================================
 
 COMMENT ON FUNCTION merge_discovery_enrichment(TEXT) IS 
-'SICI Merge v2.0.0: Unifica Discovery + Enrichment con reglas de prioridad.
+'SICI Merge v2.0.1: Unifica Discovery + Enrichment con reglas de prioridad.
+- FIX v2.0.1: área=0 hace fallback a enrichment
 - Candados SIEMPRE respetados
 - Discovery > Enrichment para: área, dorms, baños, GPS
 - Precio: Discovery si USD puro, fallback Enrichment si discrepancia >10%
