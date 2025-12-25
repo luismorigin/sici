@@ -166,20 +166,19 @@ datos_json             ← Merge consolidado (actualizable)
 campos_bloqueados      ← Candados para proteger datos manuales
 ```
 
-### ⚠️ PROBLEMAS CONOCIDOS (24 Dic 2025)
+### ⚠️ PROBLEMAS CONOCIDOS (25 Dic 2025)
 
-**1. Columnas faltantes en propiedades_v2:**
+**1. Columnas para matching:** ✅ RESUELTO (25 Dic)
 
-| Columna | Matching la necesita | Ubicación actual | Solución |
-|---------|---------------------|------------------|----------|
-| `nombre_edificio` | ✅ Crítica | `datos_json.proyecto.nombre_edificio` | Agregar + modificar merge |
-| `zona` | ✅ Crítica (filtro fuzzy) | `datos_json.ubicacion.zona_validada_gps` | Agregar + modificar merge |
+| Columna | Estado | Solución aplicada |
+|---------|--------|-------------------|
+| `nombre_edificio` | ✅ Agregada | `migracion_columnas_matching_v1.0.0.sql` |
+| `zona` | ✅ Agregada | `merge_discovery_enrichment.sql` v2.1.0 |
 
-**2. Funciones de matching apuntan a tabla incorrecta:**
+**2. Funciones de matching apuntan a tabla incorrecta:** ⏳ PENDIENTE
 - Actualmente: `FROM propiedades` (deprecada)
 - Correcto: `FROM propiedades_v2` (producción)
-
-**Solución planificada:** Ver `docs/modulo_2/PLAN_MODULO_2_v2.0.md` Fase 0
+- **Próximo paso:** Fase 1 del Módulo 2
 
 ---
 
@@ -277,24 +276,22 @@ REPOS LOCALES:
 - C:\Users\LUCHO\Desktop\Censo inmobiliario\sici\ = Repo principal (Módulo 1 completado)
 - C:\Users\LUCHO\Desktop\Censo inmobiliario\sici-matching\ = Repo de matching (Módulo 2 en desarrollo)
 
-ESTADO ACTUAL (24 Dic 2025):
+ESTADO ACTUAL (25 Dic 2025):
 - 427 propiedades en propiedades_v2
 - 165 proyectos en proyectos_master  
 - 395 propiedades SIN proyecto asignado (100%)
-- Funciones de matching existen pero apuntan a tabla vieja (`propiedades` en vez de `propiedades_v2`)
+- Fase 0 Módulo 2 COMPLETADA: columnas nombre_edificio y zona agregadas
+- merge_discovery_enrichment() actualizado a v2.1.0
 
-PROBLEMAS POR RESOLVER:
-1. Funciones SQL en sici-matching usan `propiedades` (deprecada) → migrar a `propiedades_v2`
-2. Faltan columnas en propiedades_v2 que matching necesita:
-   - `nombre_edificio` (está en datos_json.proyecto.nombre_edificio)
-   - `zona` (está en datos_json.ubicacion.zona_validada_gps)
-3. Merge debe modificarse para poblar estas columnas automáticamente
+PRÓXIMO PASO (Fase 1):
+- Migrar funciones SQL de matching: `propiedades` → `propiedades_v2`
+- Archivos en: sici-matching/subsistema-matching-propiedades/Sql/funciones/
 
 ARCHIVOS CLAVE PARA LEER:
 - sici/docs/GUIA_ONBOARDING_CLAUDE.md (este archivo)
 - sici/docs/modulo_2/PLAN_MODULO_2_v2.0.md (plan detallado)
 - sici/docs/MODULO_1_ESTADO_FINAL.md
-- sici/sql/functions/merge/merge_discovery_enrichment.sql
+- sici/sql/functions/merge/merge_discovery_enrichment.sql (v2.1.0)
 - sici-matching/subsistema-matching-propiedades/Sql/funciones/
 ```
 
@@ -319,8 +316,8 @@ ARCHIVOS CLAVE PARA LEER:
 | Módulo | Estado | Descripción |
 |--------|--------|-------------|
 | Módulo 1 | ✅ 100% | Discovery + Enrichment + Merge |
-| Módulo 1.5 | ✅ 100% | Merge v2.0.1 |
-| Módulo 2 | 📋 0% | Matching de Propiedades (Plan listo) |
+| Módulo 1.5 | ✅ 100% | Merge v2.1.0 (con nombre_edificio y zona) |
+| Módulo 2 | 🚧 20% | Matching - Fase 0 completada, Fase 1-4 pendientes |
 | Módulo 3 | 🔴 Diseño | Unidades Reales/Virtuales |
 | Módulo 4 | 🔴 Diseño | Matching Clientes |
 
@@ -347,4 +344,4 @@ ARCHIVOS CLAVE PARA LEER:
 
 **FIN DE LA GUÍA DE ONBOARDING**
 
-*Última actualización: 24 Diciembre 2025*
+*Última actualización: 25 Diciembre 2025*

@@ -2,8 +2,8 @@
 
 **Sistema:** SICI - Sistema Inteligente de Captura Inmobiliaria  
 **Módulo:** Módulo 2 - Matching de Propiedades  
-**Fecha:** 24 Diciembre 2025  
-**Estado:** 📋 PLANIFICACIÓN
+**Fecha:** 25 Diciembre 2025  
+**Estado:** 🚧 EN IMPLEMENTACIÓN (Fase 0 completada)
 
 ---
 
@@ -151,17 +151,21 @@ Asociar cada propiedad en `propiedades_v2` con su proyecto correspondiente en `p
 
 ## 📋 PLAN DE IMPLEMENTACIÓN
 
-### Fase 0: Preparación Schema + Merge (Día 1 - Primera mitad)
+### Fase 0: Preparación Schema + Merge ✅ COMPLETADA (25 Dic 2025)
 **Objetivo:** Agregar columnas faltantes Y modificar merge para poblarlas automáticamente
 
-| # | Tarea | Tipo | Sostenible |
-|---|-------|------|------------|
-| 0.1 | Agregar columna `nombre_edificio VARCHAR` | Schema | ✅ Una vez |
-| 0.2 | Agregar columna `zona VARCHAR` | Schema | ✅ Una vez |
-| 0.3 | Crear índices para búsquedas | Schema | ✅ Una vez |
-| 0.4 | Modificar `merge_discovery_enrichment()` para poblar ambas columnas | Código | ✅ **Permanente** |
-| 0.5 | Migrar datos existentes (427 propiedades) | Script | ✅ Una vez |
-| 0.6 | Verificar datos migrados | Query | ✅ |
+| # | Tarea | Tipo | Estado |
+|---|-------|------|--------|
+| 0.1 | Agregar columna `nombre_edificio VARCHAR` | Schema | ✅ Completado |
+| 0.2 | Agregar columna `zona VARCHAR` | Schema | ✅ Completado |
+| 0.3 | Crear índices para búsquedas | Schema | ✅ Completado |
+| 0.4 | Modificar `merge_discovery_enrichment()` v2.1.0 | Código | ✅ Completado |
+| 0.5 | Migrar datos existentes (427 propiedades) | Script | ✅ Ejecutado |
+| 0.6 | Verificar datos migrados | Query | ✅ Verificado |
+
+**Archivos creados/modificados:**
+- `sql/migrations/migracion_columnas_matching_v1.0.0.sql` (nuevo)
+- `sql/functions/merge/merge_discovery_enrichment.sql` (v2.0.1 → v2.1.0)
 
 **Script SQL Fase 0.1-0.3 (Schema):**
 ```sql
@@ -314,8 +318,8 @@ WHERE p.id_proyecto_master IS NULL
 | `campos_bloqueados` | Todas (candados) | ✅ Existe |
 | `latitud` | `generar_matches_fuzzy` | ✅ Existe |
 | `longitud` | `generar_matches_fuzzy` | ✅ Existe |
-| `nombre_edificio` | `generar_matches_por_nombre`, `fuzzy` | ⚠️ **AGREGAR** (Fase 0) |
-| `zona` | `generar_matches_fuzzy` (filtro geográfico) | ⚠️ **AGREGAR** (Fase 0) |
+| `nombre_edificio` | `generar_matches_por_nombre`, `fuzzy` | ✅ Agregada (25 Dic) |
+| `zona` | `generar_matches_fuzzy` (filtro geográfico) | ✅ Agregada (25 Dic) |
 
 ### 3. Limpiar Sugerencias Viejas
 
@@ -334,14 +338,14 @@ WHERE NOT EXISTS (
 
 ## 📅 TIMELINE ESTIMADO
 
-| Fase | Días | Fechas Sugeridas |
-|------|------|------------------|
-| Fase 0: Preparación Schema | 0.5 día | 26 Dic 2025 AM |
-| Fase 1: Migración SQL | 0.5 día | 26 Dic 2025 PM |
-| Fase 2: Matching Inicial | 1-2 días | 27 Dic 2025 |
-| Fase 3: Automatización | 1 día | 28 Dic 2025 |
-| Fase 4: Integración | 0.5 días | 29 Dic 2025 |
-| **Total** | **3-4 días** | **26-29 Dic 2025** |
+| Fase | Días | Estado |
+|------|------|--------|
+| Fase 0: Schema + Merge | 0.5 día | ✅ **25 Dic 2025** |
+| Fase 1: Funciones SQL | 0.5 día | ⏳ Pendiente |
+| Fase 2: Matching Inicial | 1-2 días | ⏳ Pendiente |
+| Fase 3: Automatización | 1 día | ⏳ Pendiente |
+| Fase 4: Integración | 0.5 días | ⏳ Pendiente |
+| **Total** | **3-4 días** | **20% completado** |
 
 ---
 
@@ -352,13 +356,13 @@ WHERE NOT EXISTS (
 - [ ] Backup de merge_discovery_enrichment()
 - [ ] Confirmar 165 proyectos en proyectos_master
 
-### Post-Fase 0 (Schema + Merge)
-- [ ] Columna `nombre_edificio` creada en propiedades_v2
-- [ ] Columna `zona` creada en propiedades_v2
-- [ ] Índices creados para ambas columnas
-- [ ] `merge_discovery_enrichment()` actualizada con las 2 columnas nuevas
-- [ ] Datos migrados para 427 propiedades existentes
-- [ ] Query de verificación muestra datos completos
+### Post-Fase 0 (Schema + Merge) ✅ COMPLETADA
+- [x] Columna `nombre_edificio` creada en propiedades_v2
+- [x] Columna `zona` creada en propiedades_v2
+- [x] Índices creados para ambas columnas
+- [x] `merge_discovery_enrichment()` actualizada a v2.1.0
+- [x] Datos migrados para 427 propiedades existentes
+- [x] Query de verificación ejecutado
 
 ### Post-Fase 1 (Funciones Matching)
 - [ ] Todas las funciones apuntan a propiedades_v2
@@ -412,6 +416,6 @@ WHERE NOT EXISTS (
 
 ---
 
-**Última actualización:** 24 Diciembre 2025  
-**Autor:** Luis + Claude  
-**Estado:** 📋 LISTO PARA IMPLEMENTACIÓN
+**Última actualización:** 25 Diciembre 2025  
+**Autor:** Luis + Claude + Claude Code  
+**Estado:** 🚧 FASE 0 COMPLETADA - Listo para Fase 1
