@@ -4,9 +4,14 @@
 -- =====================================================================================
 -- Archivo: merge_discovery_enrichment.sql
 -- Propósito: Unificar datos de Discovery + Enrichment respetando candados
--- Versión: 2.0.1
--- Fecha: 2025-12-24
+-- Versión: 2.1.0
+-- Fecha: 2025-12-25
 -- =====================================================================================
+-- CAMBIOS v2.1.0 (25 Dic 2025):
+--   - NEW: Soporte para columna nombre_edificio (Discovery > Enrichment)
+--   - NEW: Soporte para columna zona (Discovery > Enrichment)
+--   - Ambos campos respetan candados y siguen lógica de prioridad estándar
+--
 -- CAMBIOS v2.0.1 (24 Dic 2025):
 --   - FIX: Tratar área=0 como NULL para fallback a enrichment
 --   - Previene violación de check_area_positive cuando discovery tiene m2C=0
@@ -58,7 +63,9 @@ DECLARE
     v_disc_latitud NUMERIC(10,8);
     v_disc_longitud NUMERIC(11,8);
     v_disc_moneda TEXT;
-    
+    v_disc_nombre_edificio TEXT;
+    v_disc_zona TEXT;
+
     -- Valores Enrichment
     v_enr_precio_usd NUMERIC(12,2);
     v_enr_area NUMERIC(10,2);
@@ -70,7 +77,9 @@ DECLARE
     v_enr_precio_fue_normalizado BOOLEAN;
     v_enr_tipo_cambio_usado NUMERIC(10,4);
     v_enr_tipo_cambio_detectado TEXT;
-    
+    v_enr_nombre_edificio TEXT;
+    v_enr_zona TEXT;
+
     -- Valores finales (resultado del merge)
     v_precio_final NUMERIC(12,2);
     v_area_final NUMERIC(10,2);
@@ -79,7 +88,9 @@ DECLARE
     v_estacionamientos_final INTEGER;
     v_latitud_final NUMERIC(10,8);
     v_longitud_final NUMERIC(11,8);
-    
+    v_nombre_edificio_final TEXT;
+    v_zona_final TEXT;
+
     -- Fuentes de cada campo
     v_fuente_precio TEXT := 'none';
     v_fuente_area TEXT := 'none';
@@ -87,7 +98,9 @@ DECLARE
     v_fuente_banos TEXT := 'none';
     v_fuente_estacionamientos TEXT := 'none';
     v_fuente_gps TEXT := 'none';
-    
+    v_fuente_nombre_edificio TEXT := 'none';
+    v_fuente_zona TEXT := 'none';
+
     -- Discrepancias
     v_disc_precio JSONB;
     v_disc_area_calc JSONB;
@@ -197,6 +210,8 @@ BEGIN
     v_disc_latitud := get_discovery_value_numeric('latitud', v_discovery, v_fuente);
     v_disc_longitud := get_discovery_value_numeric('longitud', v_discovery, v_fuente);
     v_disc_moneda := get_discovery_value('moneda_original', v_discovery, v_fuente);
+    v_disc_nombre_edificio := get_discovery_value('nombre_edificio', v_discovery, v_fuente);
+    v_disc_zona := get_discovery_value('zona', v_discovery, v_fuente);
 
     -- =========================================================================
     -- FASE 2: EXTRAER VALORES DE ENRICHMENT
@@ -216,6 +231,8 @@ BEGIN
     v_enr_precio_fue_normalizado := COALESCE((v_enrichment->>'precio_fue_normalizado')::BOOLEAN, false);
     v_enr_tipo_cambio_usado := (v_enrichment->>'tipo_cambio_usado')::NUMERIC(10,4);
     v_enr_tipo_cambio_detectado := COALESCE(v_enrichment->>'tipo_cambio_detectado', 'no_especificado');
+    v_enr_nombre_edificio := v_enrichment->>'nombre_edificio';
+    v_enr_zona := v_enrichment->>'zona';
 
     -- =========================================================================
     -- FASE 3: RESOLVER CAMPOS CON PRIORIDAD
@@ -383,6 +400,48 @@ BEGIN
         v_campos_updated := array_append(v_campos_updated, 'longitud');
     ELSE
         v_longitud_final := v_prop.longitud;
+    END IF;
+
+    -- -----------------------------------------------------------------
+    -- NOMBRE EDIFICIO (Discovery > Enrichment) - v2.1.0
+    -- -----------------------------------------------------------------
+    IF COALESCE((v_candados->>'nombre_edificio')::BOOLEAN, false) THEN
+        v_nombre_edificio_final := v_prop.nombre_edificio;
+        v_fuente_nombre_edificio := 'blocked';
+        v_campos_blocked := array_append(v_campos_blocked, 'nombre_edificio');
+    ELSIF v_disc_nombre_edificio IS NOT NULL AND v_disc_nombre_edificio != '' THEN
+        v_nombre_edificio_final := v_disc_nombre_edificio;
+        v_fuente_nombre_edificio := 'discovery';
+        v_campos_kept := array_append(v_campos_kept, 'nombre_edificio');
+    ELSIF v_enr_nombre_edificio IS NOT NULL AND v_enr_nombre_edificio != '' THEN
+        v_nombre_edificio_final := v_enr_nombre_edificio;
+        v_fuente_nombre_edificio := 'enrichment';
+        v_campos_updated := array_append(v_campos_updated, 'nombre_edificio');
+    ELSE
+        v_nombre_edificio_final := v_prop.nombre_edificio;
+        v_fuente_nombre_edificio := 'existing';
+        v_campos_kept := array_append(v_campos_kept, 'nombre_edificio');
+    END IF;
+
+    -- -----------------------------------------------------------------
+    -- ZONA (Discovery > Enrichment) - v2.1.0
+    -- -----------------------------------------------------------------
+    IF COALESCE((v_candados->>'zona')::BOOLEAN, false) THEN
+        v_zona_final := v_prop.zona;
+        v_fuente_zona := 'blocked';
+        v_campos_blocked := array_append(v_campos_blocked, 'zona');
+    ELSIF v_disc_zona IS NOT NULL AND v_disc_zona != '' THEN
+        v_zona_final := v_disc_zona;
+        v_fuente_zona := 'discovery';
+        v_campos_kept := array_append(v_campos_kept, 'zona');
+    ELSIF v_enr_zona IS NOT NULL AND v_enr_zona != '' THEN
+        v_zona_final := v_enr_zona;
+        v_fuente_zona := 'enrichment';
+        v_campos_updated := array_append(v_campos_updated, 'zona');
+    ELSE
+        v_zona_final := v_prop.zona;
+        v_fuente_zona := 'existing';
+        v_campos_kept := array_append(v_campos_kept, 'zona');
     END IF;
 
     -- =========================================================================
@@ -567,7 +626,7 @@ BEGIN
     
     v_datos_json_final := jsonb_build_object(
         -- METADATA MERGE
-        'version_merge', '2.0.1',
+        'version_merge', '2.1.0',
         'timestamp_merge', NOW(),
         'fuente', v_fuente,
         
@@ -612,8 +671,10 @@ BEGIN
             'latitud', v_latitud_final,
             'longitud', v_longitud_final,
             'fuente_gps', v_fuente_gps,
+            'zona', v_zona_final,
+            'fuente_zona', v_fuente_zona,
             'zona_validada_gps', v_enrichment->>'zona_validada_gps',
-            'metodo_gps', CASE 
+            'metodo_gps', CASE
                 WHEN v_fuente_gps = 'discovery' THEN 'api_portal'
                 WHEN v_fuente_gps = 'enrichment' THEN 'html_parsing'
                 ELSE 'unknown'
@@ -622,8 +683,8 @@ BEGIN
         
         -- PROYECTO
         'proyecto', jsonb_build_object(
-            'nombre_edificio', v_enrichment->>'nombre_edificio',
-            'fuente_nombre_edificio', v_enrichment->>'fuente_nombre_edificio',
+            'nombre_edificio', v_nombre_edificio_final,
+            'fuente_nombre_edificio', v_fuente_nombre_edificio,
             'nombre_edificio_nivel_confianza', (v_enrichment->>'nombre_edificio_nivel_confianza')::NUMERIC,
             'id_proyecto_master_sugerido', v_enrichment->>'id_proyecto_master_sugerido',
             'metodo_match_sugerido', v_enrichment->>'metodo_match_sugerido',
@@ -692,7 +753,7 @@ BEGIN
             'scraper_version', v_enrichment->>'scraper_version',
             'extractor_version', v_enrichment->>'extractor_version',
             'verificador_version', v_enrichment->>'verificador_version',
-            'merge_version', '2.0.1',
+            'merge_version', '2.1.0',
             'fecha_scraping', v_enrichment->>'fecha_scraping',
             'fecha_enrichment', v_prop.fecha_enrichment,
             'fecha_merge', NOW()
@@ -713,7 +774,9 @@ BEGIN
             'dormitorios', v_fuente_dormitorios,
             'banos', v_fuente_banos,
             'estacionamientos', v_fuente_estacionamientos,
-            'gps', v_fuente_gps
+            'gps', v_fuente_gps,
+            'nombre_edificio', v_fuente_nombre_edificio,
+            'zona', v_fuente_zona
         ),
         'datos_criticos_faltantes', v_datos_criticos_faltantes,
         'timestamp', NOW()
@@ -732,7 +795,9 @@ BEGIN
         estacionamientos = v_estacionamientos_final,
         latitud = v_latitud_final,
         longitud = v_longitud_final,
-        
+        nombre_edificio = v_nombre_edificio_final,
+        zona = v_zona_final,
+
         -- JSON consolidado
         datos_json = v_datos_json_final,
         
@@ -764,7 +829,7 @@ BEGIN
     v_result := jsonb_build_object(
         'success', true,
         'operation', 'merge',
-        'version', '2.0.1',
+        'version', '2.1.0',
         'property_id', v_prop.codigo_propiedad,
         'internal_id', v_prop.id,
         'url', v_prop.url,
@@ -822,11 +887,12 @@ $$;
 -- COMENTARIOS Y GRANTS
 -- =====================================================================================
 
-COMMENT ON FUNCTION merge_discovery_enrichment(TEXT) IS 
-'SICI Merge v2.0.1: Unifica Discovery + Enrichment con reglas de prioridad.
+COMMENT ON FUNCTION merge_discovery_enrichment(TEXT) IS
+'SICI Merge v2.1.0: Unifica Discovery + Enrichment con reglas de prioridad.
+- NEW v2.1.0: Soporte para columnas nombre_edificio y zona
 - FIX v2.0.1: área=0 hace fallback a enrichment
 - Candados SIEMPRE respetados
-- Discovery > Enrichment para: área, dorms, baños, GPS
+- Discovery > Enrichment para: área, dorms, baños, GPS, nombre_edificio, zona
 - Precio: Discovery si USD puro, fallback Enrichment si discrepancia >10%
 - Status final SIEMPRE es completado
 - Scoring post-merge integrado
