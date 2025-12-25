@@ -1,8 +1,8 @@
 # MERGE - DOCUMENTO CANÓNICO
 
-**Versión:** 2.0.0  
-**Fecha:** 23 Diciembre 2025  
-**Estado:** ✅ IMPLEMENTADO Y VALIDADO  
+**Versión:** 2.1.0
+**Fecha:** 25 Diciembre 2025
+**Estado:** ✅ IMPLEMENTADO Y VALIDADO
 **Archivo:** `docs/canonical/merge_canonical.md`
 
 ---
@@ -70,6 +70,8 @@ Propiedad status='nueva' o 'actualizado'
 | `banos` | **Discovery > Enrichment** | API estructurada más confiable |
 | `estacionamientos` | **Discovery > Enrichment** | API estructurada más confiable |
 | `latitud`, `longitud` | **Discovery > Enrichment** | GPS de API más preciso |
+| `nombre_edificio` | **Discovery > Enrichment** | v2.1.0 - Para Módulo 2 Matching |
+| `zona` | **Discovery > Enrichment** | v2.1.0 - Para Módulo 2 Matching |
 | `precio_usd` | **Condicional** | Ver regla especial |
 | Resto (amenities, agente, etc.) | Enrichment > Discovery | HTML más detallado |
 
@@ -177,8 +179,8 @@ scoreFiduciario = scoreCalidadDato - penalizaciones;
 
 ```javascript
 {
-  "version_merge": "2.0.0",
-  "timestamp_merge": "2025-12-23T...",
+  "version_merge": "2.1.0",
+  "timestamp_merge": "2025-12-25T...",
   "fuente": "century21|remax",
 
   "financiero": {
@@ -203,10 +205,16 @@ scoreFiduciario = scoreCalidadDato - penalizaciones;
   "ubicacion": {
     "latitud": -17.7718816,
     "longitud": -63.1993099,
-    "fuente_gps": "discovery"
+    "fuente_gps": "discovery",
+    "zona": "Equipetrol",
+    "fuente_zona": "discovery"
   },
 
-  "proyecto": { ... },
+  "proyecto": {
+    "nombre_edificio": "Torre Platinum",
+    "fuente_nombre_edificio": "enrichment",
+    ...
+  },
   "amenities": { ... },
   "agente": { ... },
   "contenido": { ... },
@@ -297,11 +305,12 @@ PERSISTENCIA:
 
 | Archivo | Versión | Ubicación |
 |---------|---------|-----------|
-| `merge_discovery_enrichment.sql` | v2.0.0 | `sql/functions/merge/` |
+| `merge_discovery_enrichment.sql` | v2.1.0 | `sql/functions/merge/` |
 | `funciones_helper_merge.sql` | v2.0.0 | `sql/functions/merge/` |
 | `funciones_auxiliares_merge.sql` | v2.0.0 | `sql/functions/merge/` |
 | `migracion_merge_v2.0.0.sql` | - | `sql/migrations/` |
-| `CHANGELOG_MERGE_v2.0.0.md` | - | `sql/functions/merge/` |
+| `migracion_columnas_matching_v1.0.0.sql` | - | `sql/migrations/` |
+| `CHANGELOG_MERGE.md` | - | `sql/functions/merge/` |
 
 ---
 
@@ -309,6 +318,8 @@ PERSISTENCIA:
 
 | Versión | Fecha | Cambios |
 |---------|-------|---------|
+| 2.1.0 | 25 Dic 2025 | Soporte columnas `nombre_edificio` y `zona` para Módulo 2 |
+| 2.0.1 | 24 Dic 2025 | Fix área=0 fallback a enrichment |
 | 2.0.0 | 23 Dic 2025 | Inversión prioridad físicos, helper obligatorio, scoring integrado, fallback precio |
 | 1.2.0 | Dic 2024 | Versión inicial con funciones auxiliares |
 

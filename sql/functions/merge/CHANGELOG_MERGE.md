@@ -1,5 +1,42 @@
 # CHANGELOG - Merge
 
+## [2.1.0] - 2025-12-25
+
+### New Features ✨
+
+- **Soporte para columna `nombre_edificio`:**
+  - Extracción desde Discovery y Enrichment
+  - Prioridad: Discovery > Enrichment (consistente con otros campos físicos)
+  - Respeta candados manuales
+  - Nueva fuente tracking: `v_fuente_nombre_edificio`
+
+- **Soporte para columna `zona`:**
+  - Extracción desde Discovery y Enrichment
+  - Prioridad: Discovery > Enrichment
+  - Respeta candados manuales
+  - Nueva fuente tracking: `v_fuente_zona`
+
+### Changed
+
+- Actualizado `datos_json.ubicacion` para incluir `zona` y `fuente_zona`
+- Actualizado `datos_json.proyecto` para usar valor resuelto de `nombre_edificio`
+- Actualizado `cambios_merge.fuentes` para incluir nuevas fuentes
+
+### Columnas Actualizadas en UPDATE
+
+```sql
+nombre_edificio = v_nombre_edificio_final,
+zona = v_zona_final,
+```
+
+### Preparación Módulo 2
+
+Esta versión prepara las columnas necesarias para el Módulo 2 (Property Matching) que requiere:
+- `nombre_edificio` para matching por nombre de proyecto
+- `zona` para filtrado geográfico
+
+---
+
 ## [2.0.1] - 2025-12-24
 
 ### Fixed 🐛

@@ -1,7 +1,7 @@
 # Schema: propiedades_v2
 
-**Última actualización:** 24 Diciembre 2025  
-**Columnas:** 55+
+**Última actualización:** 25 Diciembre 2025
+**Columnas:** 57+
 
 ---
 
@@ -53,13 +53,15 @@
 | `area_max_m2` | NUMERIC(10,2) | Área máxima |
 | `tipologias_detectadas` | JSONB | Array de tipologías |
 
-### Matching (4 cols)
+### Matching (6 cols)
 | Columna | Tipo | Descripción |
 |---------|------|-------------|
 | `id_proyecto_master` | INTEGER | FK a proyectos_master (confirmado) |
 | `id_proyecto_master_sugerido` | INTEGER | Sugerencia automática |
 | `metodo_match` | VARCHAR | 'fuzzy' \| 'gps' \| 'manual' |
 | `confianza_match` | NUMERIC(3,2) | 0.00-1.00 |
+| `nombre_edificio` | VARCHAR | **v2.1.0** - Nombre del edificio/proyecto |
+| `zona` | VARCHAR | **v2.1.0** - Zona geográfica |
 
 ### Estado (7 cols)
 | Columna | Tipo | Descripción |
@@ -169,4 +171,22 @@ ALTER TYPE estado_construccion_enum ADD VALUE IF NOT EXISTS 'nuevo_a_estrenar';
 
 ---
 
-**Última actualización:** 24 Diciembre 2025
+## Migración v2.1.0 - Columnas Matching (25 Dic 2025)
+
+```sql
+-- Columnas agregadas para Módulo 2 (Property Matching)
+ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS nombre_edificio VARCHAR(255);
+ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS zona VARCHAR(100);
+
+-- Índices recomendados para matching
+CREATE INDEX IF NOT EXISTS idx_propiedades_nombre_edificio
+    ON propiedades_v2(nombre_edificio) WHERE nombre_edificio IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_propiedades_zona
+    ON propiedades_v2(zona) WHERE zona IS NOT NULL;
+```
+
+Ver: `sql/migrations/migracion_columnas_matching_v1.0.0.sql`
+
+---
+
+**Última actualización:** 25 Diciembre 2025

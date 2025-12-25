@@ -1,7 +1,7 @@
 # Merge - Funciones de Fusión
 
-**Versión:** 2.0.1  
-**Fecha:** 24 Diciembre 2025  
+**Versión:** 2.1.0
+**Fecha:** 25 Diciembre 2025
 **Estado:** ✅ Producción
 
 ---
@@ -10,7 +10,7 @@
 
 | Archivo | Versión | Propósito |
 |---------|---------|-----------|
-| `merge_discovery_enrichment.sql` | v2.0.1 | Función principal |
+| `merge_discovery_enrichment.sql` | v2.1.0 | Función principal |
 | `funciones_helper_merge.sql` | v2.0.0 | **NUEVO** - Normalización paths por portal |
 | `funciones_auxiliares_merge.sql` | v2.0.0 | Utilidades batch y estadísticas |
 | `CHANGELOG_MERGE.md` | - | Historial de cambios |
@@ -27,13 +27,15 @@ Acepta: `codigo_propiedad` (primero), `id`, o `url`
 
 ---
 
-## Reglas de Prioridad v2.0.1
+## Reglas de Prioridad v2.1.0
 
 | Campo | Prioridad | Razón |
 |-------|-----------|-------|
 | **Candados** | SIEMPRE ganan | Manual > Automático |
 | Área, Dorms, Baños, Estac | Discovery > Enrichment (si > 0) | API estructurada |
 | GPS | Discovery > Enrichment | Coordenadas API precisas |
+| **nombre_edificio** | Discovery > Enrichment | v2.1.0 - Para Módulo 2 |
+| **zona** | Discovery > Enrichment | v2.1.0 - Para Módulo 2 |
 | Precio | Condicional (ver abajo) | Lógica especial |
 | Resto | Enrichment > Discovery | HTML más detallado |
 
@@ -76,11 +78,11 @@ get_discovery_value_integer(...) → INTEGER
 
 ```javascript
 {
-  "version_merge": "2.0.1",
+  "version_merge": "2.1.0",
   "financiero": { precio_usd, precio_m2, fuente_precio, ... },
   "fisico": { area, dorms, baños, fuente_*, ... },
-  "ubicacion": { lat, lon, fuente_gps, ... },
-  "proyecto": { nombre_edificio, estado_construccion, ... },
+  "ubicacion": { lat, lon, fuente_gps, zona, fuente_zona, ... },
+  "proyecto": { nombre_edificio, fuente_nombre_edificio, estado_construccion, ... },
   "amenities": { lista, equipamiento, ... },
   "agente": { nombre, telefono, ... },
   "contenido": { descripcion, fotos_urls, ... },
@@ -125,7 +127,7 @@ get_discovery_value_integer(...) → INTEGER
 ```json
 {
   "success": true,
-  "version": "2.0.1",
+  "version": "2.1.0",
   "property_id": "92771",
   "status_nuevo": "completado",
   "scores": {
@@ -135,10 +137,15 @@ get_discovery_value_integer(...) → INTEGER
     "opcionales": 30
   },
   "cambios_merge": {
-    "kept": ["area_total_m2", "dormitorios"],
+    "kept": ["area_total_m2", "dormitorios", "nombre_edificio", "zona"],
     "updated": ["precio_usd"],
     "blocked": [],
-    "fuentes": { "precio_usd": "enrichment", "area_total_m2": "discovery" }
+    "fuentes": {
+      "precio_usd": "enrichment",
+      "area_total_m2": "discovery",
+      "nombre_edificio": "enrichment",
+      "zona": "discovery"
+    }
   },
   "es_para_matching": true
 }
@@ -175,6 +182,11 @@ get_discovery_value_integer(...) → INTEGER
 
 ## Changelog Reciente
 
+**v2.1.0 (25 Dic 2025):**
+- NEW: Soporte para columna `nombre_edificio` (Discovery > Enrichment)
+- NEW: Soporte para columna `zona` (Discovery > Enrichment)
+- Preparación para Módulo 2 (Property Matching)
+
 **v2.0.1 (24 Dic 2025):**
 - Fix: área=0 de Discovery ahora hace fallback a Enrichment
 - Previene violación de `check_area_positive`
@@ -187,4 +199,4 @@ get_discovery_value_integer(...) → INTEGER
 
 ---
 
-**Última actualización:** 24 Diciembre 2025
+**Última actualización:** 25 Diciembre 2025
