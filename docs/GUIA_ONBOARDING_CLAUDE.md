@@ -2,7 +2,8 @@
 
 **Propósito:** Permitir que cualquier instancia de Claude (chat, Claude Code, nueva conversación) entienda rápidamente el proyecto SICI y sepa dónde encontrar información.
 
-**Última actualización:** 24 Diciembre 2025
+**Última actualización:** 26 Diciembre 2025  
+**Versión:** 2.0
 
 ---
 
@@ -21,12 +22,12 @@ Hay **2 repositorios principales** en el escritorio de Luis:
 ```
 C:\Users\LUCHO\Desktop\Censo inmobiliario\
 ├── sici\                      ← REPO PRINCIPAL (Módulo 1 - Producción)
-└── sici-matching\             ← REPO MATCHING (Módulo 2 - En desarrollo)
+└── sici-matching\             ← REPO MATCHING (Funciones SQL legacy)
 ```
 
 ---
 
-## 📂 REPO 1: sici\ (Principal)
+## 📂 REPO 1: sici\ (Principal - ACTIVO)
 
 **Ruta:** `C:\Users\LUCHO\Desktop\Censo inmobiliario\sici\`
 
@@ -42,10 +43,11 @@ sici\
 │   ├── extractores\
 │   │   └── heuristics\      ← Lógica de extracción por portal
 │   ├── research\            ← Investigación de APIs/portales
-│   ├── modulo_2\            ← PLAN MÓDULO 2
-│   │   └── PLAN_MODULO_2_v2.0.md  ← 📌 PLAN ACTUAL
 │   ├── MODULO_1_ESTADO_FINAL.md  ← 📌 ESTADO ACTUAL MÓDULO 1
-│   └── GUIA_ONBOARDING_CLAUDE.md ← 📌 ESTE ARCHIVO
+│   ├── GUIA_ONBOARDING_CLAUDE.md ← 📌 ESTE ARCHIVO
+│   └── modulo_2\            ← Documentación Módulo 2
+│       ├── PLAN_MODULO_2_v2.1.md        ← Plan general
+│       └── PLAN_MATCHING_MULTIFUENTE_v3.0.md ← 🔥 Plan activo FASE 1
 │
 ├── n8n\
 │   ├── extractores\         ← JSONs de extractores
@@ -63,7 +65,7 @@ sici\
 │   ├── functions\
 │   │   ├── discovery\       ← registrar_discovery.sql
 │   │   ├── enrichment\      ← registrar_enrichment.sql
-│   │   ├── merge\           ← 📌 merge_discovery_enrichment.sql (v2.0.1)
+│   │   ├── merge\           ← 📌 merge_discovery_enrichment.sql (v2.0.0)
 │   │   └── tc_dinamico\     ← Tipo de cambio dinámico
 │   ├── schema\
 │   │   └── propiedades_v2_schema.md  ← 📌 SCHEMA TABLA PRINCIPAL
@@ -73,17 +75,20 @@ sici\
 ```
 
 ### Archivos Clave para Leer Primero
-1. `docs/GUIA_ONBOARDING_CLAUDE.md` - Este archivo
-2. `docs/modulo_2/PLAN_MODULO_2_v2.0.md` - Plan del Módulo 2
-3. `docs/MODULO_1_ESTADO_FINAL.md` - Estado completo del sistema
+1. `docs/GUIA_ONBOARDING_CLAUDE.md` - Este archivo (contexto general)
+2. `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` - Plan activo
+3. `docs/MODULO_1_ESTADO_FINAL.md` - Estado del Módulo 1
 4. `sql/schema/propiedades_v2_schema.md` - Estructura de la BD
-5. `sql/functions/merge/merge_discovery_enrichment.sql` - Función de merge
 
 ---
 
-## 📂 REPO 2: sici-matching\ (Matching)
+## 📂 REPO 2: sici-matching\ (Funciones SQL - REQUIERE MIGRACIÓN)
 
 **Ruta:** `C:\Users\LUCHO\Desktop\Censo inmobiliario\sici-matching\`
+
+### ⚠️ ESTADO CRÍTICO
+Las funciones SQL en este repo **apuntan a tabla `propiedades` (deprecada)**.
+Deben migrarse a `propiedades_v2`. Ver `sici/docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md`.
 
 ### Estructura
 ```
@@ -93,40 +98,26 @@ sici-matching\
 │
 ├── Docs\
 │   ├── catalogo_post_fase1.md
-│   └── proyectos_master_catalogo.md  ← 📌 LISTA DE 165 PROYECTOS
+│   └── proyectos_master_catalogo.md  ← 📌 LISTA DE 152+ PROYECTOS
 │
 ├── subsistema-matching-propiedades\
 │   ├── Sql\
-│   │   ├── funciones\       ← 📌 FUNCIONES DE MATCHING
+│   │   ├── funciones\       ← 📌 FUNCIONES DE MATCHING (¡MIGRAR!)
 │   │   │   ├── matching_completo_automatizado.sql
 │   │   │   ├── generar_matches_por_nombre.sql
 │   │   │   ├── generar_matches_por_url.sql
 │   │   │   ├── generar_matches_fuzzy.sql
-│   │   │   ├── generar_matches_gps_limpio.sql
+│   │   │   ├── generar_matches_gps_limpio.sql (OFF)
 │   │   │   └── aplicar_matches_aprobados.sql
 │   │   └── schema\
-│   │       └── tablas.sql   ← 📌 SCHEMA MATCHING (¡USA TABLA VIEJA!)
+│   │       └── tablas.sql   ← ⚠️ USA TABLA VIEJA
 │   │
-│   ├── n8n\                 ← Workflows de extractores con fuzzy
-│   ├── extractores\         ← Documentación de extractores
-│   ├── workflows\           ← Docs de Flujo A, B, C
-│   ├── matching-nocturno.md ← 📌 DISEÑO DEL MATCHING NOCTURNO
-│   ├── Funciones_SQL.md     ← Documentación de funciones
-│   └── Arquitectura_de_Base_de_Datos.md
+│   ├── matching-nocturno.md ← Diseño del pipeline
+│   └── Funciones_SQL.md     ← Documentación de funciones
 │
 └── subsistema-validacion-gps\
-    ├── sql\
-    │   ├── funciones\       ← Funciones GPS/Google Places
-    │   └── schema\
-    │       └── sql_proyectos_master_schema.sql  ← 📌 SCHEMA PROYECTOS
-    ├── n8n\                 ← Workflows validación GPS
-    └── FASE1_VALIDACION_GPS.md
+    └── (GPS validation workflows)
 ```
-
-### Archivos Clave para Leer Primero
-1. `subsistema-matching-propiedades/matching-nocturno.md` - Diseño del matching
-2. `subsistema-matching-propiedades/Sql/funciones/` - Todas las funciones SQL
-3. `Docs/proyectos_master_catalogo.md` - Lista de proyectos
 
 ---
 
@@ -136,10 +127,10 @@ sici-matching\
 
 | Tabla | Registros | Descripción |
 |-------|-----------|-------------|
-| `propiedades_v2` | 427 | **TABLA PRINCIPAL** - Propiedades activas |
-| `proyectos_master` | 165 | Edificios/proyectos verificados |
-| `matching_sugerencias` | 152 | Cola de sugerencias de matching |
-| `propiedades` | legacy | ⚠️ DEPRECADA - No usar |
+| `propiedades_v2` | ~214+ | **TABLA PRINCIPAL** - Propiedades activas |
+| `proyectos_master` | 152+ | Edificios/proyectos verificados |
+| `matching_sugerencias` | Variable | Cola de sugerencias de matching |
+| `propiedades` | legacy | ⚠️ **DEPRECADA - NO USAR** |
 
 ### Columnas Críticas de propiedades_v2
 
@@ -148,13 +139,15 @@ sici-matching\
 id, url, fuente, codigo_propiedad
 
 -- Datos físicos
-area_total_m2, dormitorios, banos, estacionamientos, latitud, longitud
+area_total_m2, dormitorios, banos, latitud, longitud
 
 -- Precios
-precio_usd, moneda_original, tipo_cambio_usado, precio_usd_actualizado
+precio_usd, moneda_original, tipo_cambio_usado
 
--- Matching
-id_proyecto_master, id_proyecto_master_sugerido, metodo_match, confianza_match
+-- Matching (OBJETIVO MÓDULO 2)
+id_proyecto_master          ← 100% NULL actualmente
+id_proyecto_master_sugerido ← Del extractor fuzzy
+metodo_match, confianza_match
 
 -- Estado
 status, es_activa, es_para_matching, es_multiproyecto
@@ -162,23 +155,14 @@ status, es_activa, es_para_matching, es_multiproyecto
 -- Arquitectura Dual (JSONB)
 datos_json_discovery   ← Snapshot de API (inmutable)
 datos_json_enrichment  ← Datos de HTML scraping (inmutable)
-datos_json             ← Merge consolidado (actualizable)
+datos_json             ← Merge consolidado
 campos_bloqueados      ← Candados para proteger datos manuales
+
+-- IMPORTANTE: nombre_edificio
+nombre_edificio        ← Columna (a veces NULL)
+-- O extraer del JSON:
+datos_json_enrichment->>'nombre_edificio'
 ```
-
-### ⚠️ PROBLEMAS CONOCIDOS (25 Dic 2025)
-
-**1. Columnas para matching:** ✅ RESUELTO (25 Dic)
-
-| Columna | Estado | Solución aplicada |
-|---------|--------|-------------------|
-| `nombre_edificio` | ✅ Agregada | `migracion_columnas_matching_v1.0.0.sql` |
-| `zona` | ✅ Agregada | `merge_discovery_enrichment.sql` v2.1.0 |
-
-**2. Funciones de matching apuntan a tabla incorrecta:** ⏳ PENDIENTE
-- Actualmente: `FROM propiedades` (deprecada)
-- Correcto: `FROM propiedades_v2` (producción)
-- **Próximo paso:** Fase 1 del Módulo 2
 
 ---
 
@@ -186,22 +170,52 @@ campos_bloqueados      ← Candados para proteger datos manuales
 
 ```
 1:00 AM  → Flujo A Discovery (Century21 + Remax)
-           Captura ~273 C21 + ~160 Remax propiedades
+           Captura ~180 C21 + ~160 Remax propiedades
            ↓
 2:00 AM  → Flujo B Enrichment
-           Extrae detalles de HTML
+           Extrae detalles de HTML + fuzzy pre-matching
            ↓
 3:00 AM  → Flujo Merge
            Combina Discovery + Enrichment
+           ↓
+4:00 AM  → Matching Nocturno ← 🔥 PENDIENTE IMPLEMENTAR
+           Asocia propiedades → proyectos_master
            ↓
 6:00 AM  → Flujo C Verificador
            Confirma propiedades inactivas
 ```
 
-### Módulo 2 (Por Implementar)
+---
+
+## 🎯 ESTADO ACTUAL DEL PROYECTO
+
+### Módulo 1: Discovery & Existencia ✅ COMPLETADO
+- Pipeline nocturno operativo
+- ~214 propiedades procesadas
+- Extractores con fuzzy pre-matching integrado
+
+### Módulo 2: Matching Propiedades → Proyectos 🔥 EN PROGRESO
+
+**Problema actual:**
+- 100% de propiedades SIN `id_proyecto_master`
+- Funciones SQL existen pero apuntan a tabla legacy
+- `nombre_edificio` a veces NULL en columna, pero existe en JSON
+
+**Plan activo:** `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md`
+
+**Enfoque v3.0:**
+1. ❌ NO perseguir mejoras de regex en extractores
+2. ✅ Potenciar matching SQL con multi-fuente
+3. ✅ Migrar funciones a `propiedades_v2`
+4. ✅ Usar URL directamente para matching (no depende del extractor)
+
+**Fases:**
 ```
-4:00 AM  → Matching Nocturno (PENDIENTE)
-           Asocia propiedades → proyectos_master
+FASE 1: Migrar funciones SQL (1 día)
+FASE 2: Ejecutar y medir (1 día)
+FASE 3: Optimizar para escalabilidad (1-2 días)
+FASE 4: Recuperar datos existentes (opcional)
+FASE 5: Activar matching nocturno
 ```
 
 ---
@@ -216,6 +230,7 @@ campos_bloqueados      ← Candados para proteger datos manuales
 | GPS Validation | Google Places API |
 | Notificaciones | Slack |
 | Version Control | GitHub Desktop |
+| Desarrollo | Claude Code + Plugin dev-workflows |
 
 ---
 
@@ -223,44 +238,53 @@ campos_bloqueados      ← Candados para proteger datos manuales
 
 ### Ver estado general
 ```sql
-SELECT status, COUNT(*) 
+SELECT status, fuente, COUNT(*) 
 FROM propiedades_v2 
-GROUP BY status;
+GROUP BY status, fuente;
 ```
 
-### Ver propiedades sin proyecto
+### Ver propiedades sin proyecto (el problema actual)
 ```sql
-SELECT COUNT(*) 
+SELECT COUNT(*) as sin_proyecto
 FROM propiedades_v2 
 WHERE id_proyecto_master IS NULL 
-  AND status IN ('completado', 'actualizado', 'nueva');
+  AND status IN ('completado', 'actualizado');
 ```
 
-### Extraer nombre_edificio del JSON
+### Extraer nombre_edificio (columna O JSON)
 ```sql
 SELECT 
-    id,
-    url,
-    datos_json->'proyecto'->>'nombre_edificio' as nombre_edificio
+  id,
+  url,
+  COALESCE(
+    NULLIF(nombre_edificio, ''),
+    datos_json_enrichment->>'nombre_edificio'
+  ) as nombre_edificio,
+  datos_json_enrichment->>'fuente_nombre_edificio' as fuente
 FROM propiedades_v2
-WHERE datos_json->'proyecto'->>'nombre_edificio' IS NOT NULL
-LIMIT 10;
+WHERE status IN ('completado', 'actualizado')
+LIMIT 20;
 ```
 
-### Ver proyectos master
+### Ver proyectos master disponibles
 ```sql
-SELECT id_proyecto_master, nombre_oficial, zona
+SELECT id_proyecto_master, nombre_oficial, alias_conocidos, zona
 FROM proyectos_master
 WHERE activo = TRUE
 ORDER BY nombre_oficial;
 ```
 
-### Ver funciones de matching existentes
+### Diagnóstico de matching
 ```sql
-SELECT routine_name 
-FROM information_schema.routines 
-WHERE routine_type = 'FUNCTION'
-  AND routine_name LIKE '%match%';
+SELECT 
+  fuente,
+  COUNT(*) as total,
+  COUNT(nombre_edificio) as con_nombre_columna,
+  COUNT(datos_json_enrichment->>'nombre_edificio') as con_nombre_json,
+  COUNT(id_proyecto_master) as con_match
+FROM propiedades_v2
+WHERE status IN ('completado', 'actualizado')
+GROUP BY fuente;
 ```
 
 ---
@@ -273,25 +297,25 @@ Si empiezas una nueva conversación con Claude, copia esto:
 Estoy trabajando en SICI, un sistema de inteligencia inmobiliaria para Bolivia.
 
 REPOS LOCALES:
-- C:\Users\LUCHO\Desktop\Censo inmobiliario\sici\ = Repo principal (Módulo 1 completado)
-- C:\Users\LUCHO\Desktop\Censo inmobiliario\sici-matching\ = Repo de matching (Módulo 2 en desarrollo)
+- sici\ = Repo principal (Módulo 1 completado, producción)
+- sici-matching\ = Funciones SQL de matching (requieren migración)
 
-ESTADO ACTUAL (25 Dic 2025):
-- 427 propiedades en propiedades_v2
-- 165 proyectos en proyectos_master  
-- 395 propiedades SIN proyecto asignado (100%)
-- Fase 0 Módulo 2 COMPLETADA: columnas nombre_edificio y zona agregadas
-- merge_discovery_enrichment() actualizado a v2.1.0
+ESTADO ACTUAL (Dic 2025):
+- ~214 propiedades en propiedades_v2
+- 152+ proyectos en proyectos_master  
+- 100% propiedades SIN id_proyecto_master (problema a resolver)
+- Funciones de matching existen pero usan tabla deprecada
 
-PRÓXIMO PASO (Fase 1):
-- Migrar funciones SQL de matching: `propiedades` → `propiedades_v2`
-- Archivos en: sici-matching/subsistema-matching-propiedades/Sql/funciones/
+PLAN ACTIVO: docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md
+- Enfoque: Potenciar SQL, no regex de extractores
+- Paso 1: Migrar funciones de `propiedades` → `propiedades_v2`
+- Paso 2: Ejecutar matching y medir resultados
+- Paso 3: Optimizar para escalabilidad
 
-ARCHIVOS CLAVE PARA LEER:
+ARCHIVOS CLAVE:
 - sici/docs/GUIA_ONBOARDING_CLAUDE.md (este archivo)
-- sici/docs/modulo_2/PLAN_MODULO_2_v2.0.md (plan detallado)
-- sici/docs/MODULO_1_ESTADO_FINAL.md
-- sici/sql/functions/merge/merge_discovery_enrichment.sql (v2.1.0)
+- sici/docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md
+- sici/docs/modulo_2/PLAN_MODULO_2_v2.1.md
 - sici-matching/subsistema-matching-propiedades/Sql/funciones/
 ```
 
@@ -299,49 +323,44 @@ ARCHIVOS CLAVE PARA LEER:
 
 ## 🔑 PRINCIPIOS DEL PROYECTO
 
-1. **"Manual wins over automatic"** - Datos corregidos manualmente nunca se sobrescriben
+1. **"Manual wins over automatic"** - Datos corregidos manualmente nunca se sobrescriben (sistema de candados)
 2. **Discovery > Enrichment** - Para datos físicos, Discovery tiene prioridad
 3. **Scoring post-merge** - La calidad se calcula sobre datos consolidados
 4. **Incremental > Rewrite** - Preferir mejoras pequeñas sobre reescrituras totales
-5. **Columnas sostenibles** - Si un módulo necesita una columna:
-   - Agregarla al schema (una vez)
-   - Modificar merge para poblarla automáticamente (permanente)
-   - Migrar datos existentes (una vez)
-   - **NUNCA** depender solo de scripts one-time
+5. **SQL > Regex** - Potenciar matching en BD, no perseguir patrones en extractores
+6. **Zero human-in-the-loop** - Diseño orientado a automatización completa
 
 ---
 
-## 📊 ESTADO POR MÓDULO
+## 📚 DOCUMENTOS DE REFERENCIA
 
-| Módulo | Estado | Descripción |
-|--------|--------|-------------|
-| Módulo 1 | ✅ 100% | Discovery + Enrichment + Merge |
-| Módulo 1.5 | ✅ 100% | Merge v2.1.0 (con nombre_edificio y zona) |
-| Módulo 2 | 🚧 20% | Matching - Fase 0 completada, Fase 1-4 pendientes |
-| Módulo 3 | 🔴 Diseño | Unidades Reales/Virtuales |
-| Módulo 4 | 🔴 Diseño | Matching Clientes |
-
----
-
-## 📝 CÓMO USAR ESTA GUÍA
-
-### En Claude.ai (chat web)
-1. Copia la sección "Contexto para nuevas conversaciones"
-2. Pégala al inicio de tu mensaje
-3. Claude tendrá contexto básico inmediato
-
-### En Claude Code
-1. Apunta al repo con `--directory`
-2. Pide leer `docs/GUIA_ONBOARDING_CLAUDE.md` primero
-3. Luego lee los archivos clave según el módulo que trabajes
-
-### En caso de conversación cortada
-1. Abre nueva conversación
-2. Pega el contexto rápido
-3. Continúa donde quedaste
+| Documento | Ruta | Propósito |
+|-----------|------|-----------|
+| Plan Matching v3.0 | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` | 🔥 Plan activo FASE 1 |
+| Plan Módulo 2 | `docs/modulo_2/PLAN_MODULO_2_v2.1.md` | Plan completo (Fases 1-4) |
+| Estado Módulo 1 | `docs/MODULO_1_ESTADO_FINAL.md` | Cierre formal Módulo 1 |
+| Funciones SQL | `sici-matching/.../Sql/funciones/` | Código a migrar |
+| Catálogo Proyectos | `sici-matching/Docs/proyectos_master_catalogo.md` | Lista de 152+ proyectos |
 
 ---
 
-**FIN DE LA GUÍA DE ONBOARDING**
+## 🚀 COMANDOS CLAUDE CODE
 
-*Última actualización: 25 Diciembre 2025*
+```bash
+# Iniciar en proyecto SICI
+cd "C:\Users\LUCHO\Desktop\Censo inmobiliario\sici"
+claude
+
+# Para features complejas
+/dev-workflows:implement [descripción]
+
+# Para diagnóstico
+/dev-workflows:diagnose
+
+# Limpiar conversación
+/clear
+```
+
+---
+
+**FIN DE LA GUÍA DE ONBOARDING v2.0**
