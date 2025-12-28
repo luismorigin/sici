@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__postgres-sici__pg_manage_schema",
+      "mcp__postgres-sici__pg_execute_query",
+      "mcp__postgres-sici__pg_manage_constraints"
+    ]
+  }
+}
