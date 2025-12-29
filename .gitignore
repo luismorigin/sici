@@ -1,0 +1,17 @@
+# Archivos de configuración con credenciales
+.env
+config.local.json
+*.local.json
+
+# Claude Code
+.claude/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

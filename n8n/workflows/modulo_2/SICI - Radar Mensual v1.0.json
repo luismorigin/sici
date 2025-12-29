@@ -1,0 +1,709 @@
+{
+  "name": "SICI - Radar Mensual v1.0",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1712,
+        144
+      ],
+      "id": "3d56863b-b7df-4d51-b952-414ac1ef1293",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1712,
+        336
+      ],
+      "id": "a7218fd1-7dbc-4dcd-b18b-31fde7fdcce4",
+      "name": "Schedule: Dia 1 cada mes 3AM"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    id,\n    nombre_zona,\n    bbox_lat_min,\n    bbox_lat_max,\n    bbox_lng_min,\n    bbox_lng_max\nFROM zonas_barrido_equipetrol\nWHERE activo = true\nORDER BY id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1488,
+        272
+      ],
+      "id": "52ca9e65-2124-44f3-a738-8e9a9baf82f3",
+      "name": "Postgres: Cargar Zonas",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1264,
+        272
+      ],
+      "id": "fb9bd0fc-e944-406c-a4c6-443c2f41d616",
+      "name": "Loop Zonas"
+    },
+    {
+      "parameters": {
+        "jsCode": "const zona = $input.item.json;\n\n// Convertir strings a números\nconst bboxLatMin = parseFloat(zona.bbox_lat_min);\nconst bboxLatMax = parseFloat(zona.bbox_lat_max);\nconst bboxLngMin = parseFloat(zona.bbox_lng_min);\nconst bboxLngMax = parseFloat(zona.bbox_lng_max);\n\n// Centro del bbox\nconst centerLat = (bboxLatMin + bboxLatMax) / 2;\nconst centerLng = (bboxLngMin + bboxLngMax) / 2;\n\n// Radio: distancia desde centro a esquina (Haversine)\nconst R = 6371000; // Radio Tierra en metros\nconst dLat = (bboxLatMax - centerLat) * Math.PI / 180;\nconst dLng = (bboxLngMax - centerLng) * Math.PI / 180;\nconst a = Math.sin(dLat/2) * Math.sin(dLat/2) +\n          Math.cos(centerLat * Math.PI / 180) * Math.cos(bboxLatMax * Math.PI / 180) *\n          Math.sin(dLng/2) * Math.sin(dLng/2);\nconst c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));\nconst radius = Math.ceil(R * c);\n\nreturn {\n  zona_id: zona.id,\n  zona_nombre: zona.nombre_zona,\n  center_lat: centerLat,\n  center_lng: centerLng,\n  radius: radius\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1040,
+        80
+      ],
+      "id": "d9589634-1320-453b-b001-30065ab37569",
+      "name": "Code: Calcular Circulo"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    id_proyecto_master,\n    nombre_oficial,\n    google_place_id,\n    latitud,\n    longitud\nFROM proyectos_master\nWHERE activo = true;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -592,
+        80
+      ],
+      "id": "b605c4d9-ef62-43c4-a93f-f766cd602cc4",
+      "name": "Postgres: Cargar Master",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://places.googleapis.com/v1/places:searchNearby",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Goog-FieldMask",
+              "value": "places.id,places.location,places.displayName,places.formattedAddress,places.types"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"includedTypes\": [\n    \"apartment_complex\",\n    \"condominium_complex\",\n    \"housing_complex\",\n    \"apartment_building\"\n  ],\n  \"maxResultCount\": 20,\n  \"locationRestriction\": {\n    \"circle\": {\n      \"center\": {\n        \"latitude\": {{ $('Code: Calcular Circulo').item.json.center_lat }},\n        \"longitude\": {{ $('Code: Calcular Circulo').item.json.center_lng }}\n      },\n      \"radius\": {{ $('Code: Calcular Circulo').item.json.radius }}\n    }\n  },\n  \"languageCode\": \"es\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -352,
+        80
+      ],
+      "id": "7aa75507-a3ca-444e-bd0a-96fca47a05c4",
+      "name": "Google Places: searchNearby",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Mhl3Ef3vxc89rpQi",
+          "name": "Google Maps - Places API (New)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configuración\nconst tiposPermitidos = [\n  'apartment_complex',\n  'condominium_complex',\n  'housing_complex',\n  'apartment_building'\n];\n\nfunction formatPostgresArray(arr) {\n  if (!arr || arr.length === 0) return '{}';\n  return `{\"${arr.join('\",\"')}\"}`;\n}\n\nfunction esEdificio(tipos) {\n  if (!tipos || tipos.length === 0) return false;\n  return tipos.some(t => tiposPermitidos.includes(t));\n}\n\nfunction calcularDistancia(lat1, lon1, lat2, lon2) {\n  if (!lat1 || !lon1 || !lat2 || !lon2) return 9999;\n  const R = 6371000;\n  const dLat = (lat2 - lat1) * Math.PI / 180;\n  const dLon = (lon2 - lon1) * Math.PI / 180;\n  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +\n            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *\n            Math.sin(dLon/2) * Math.sin(dLon/2);\n  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));\n  return Math.round(R * c);\n}\n\n// Datos de entrada\nconst zona = $('Code: Calcular Circulo').first().json;\nconst googleResponse = $input.last().json;\nconst places = googleResponse.places || [];\nconst proyectosExistentes = $('Postgres: Cargar Master').all().map(item => item.json);\n\nconst resultados = [];\n\nif (places.length === 0) {\n  return [{\n    zona_id: zona.zona_id,\n    zona_nombre: zona.zona_nombre,\n    accion: 'sin_resultados',\n    proyectos_encontrados: 0\n  }];\n}\n\n// Procesar cada place\nfor (const place of places) {\n  if (!esEdificio(place.types)) continue;\n  \n  const googleId = place.id;\n  const latGoogle = place.location?.latitude;\n  const lngGoogle = place.location?.longitude;\n  \n  // Verificar si ya existe por google_place_id\n  let existe = proyectosExistentes.some(p => p.google_place_id === googleId);\n  \n  // Si no existe por ID, verificar por proximidad GPS (<50m)\n  if (!existe && latGoogle && lngGoogle) {\n    existe = proyectosExistentes.some(p => {\n      if (!p.latitud || !p.longitud) return false;\n      const distancia = calcularDistancia(\n        parseFloat(p.latitud),\n        parseFloat(p.longitud),\n        latGoogle,\n        lngGoogle\n      );\n      return distancia < 50;\n    });\n  }\n  \n  if (existe) {\n    resultados.push({\n      zona_id: zona.zona_id,\n      zona_nombre: zona.zona_nombre,\n      accion: 'ya_existe',\n      nombre: place.displayName?.text\n    });\n  } else {\n    // DESCUBRIMIENTO NUEVO\n    resultados.push({\n      zona_id: zona.zona_id,\n      zona_nombre: zona.zona_nombre,\n      accion: 'insert_pendiente',\n      nombre_proyecto: place.displayName?.text,\n      google_id: googleId,\n      lat: latGoogle,\n      lng: lngGoogle,\n      direccion: place.formattedAddress,\n      tipos_sql: formatPostgresArray(place.types),\n      razon: 'descubrimiento_radar_mensual',\n      origen: `radar_zona_${zona.zona_id}`\n    });\n  }\n}\n\nreturn resultados;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        80
+      ],
+      "id": "dfdcb14d-c13d-4945-9e35-3a6e31130e1e",
+      "name": "Code: Filtrar y Verificar"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.accion }}",
+                    "rightValue": "insert_pendiente",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "nuevo_descubrimiento"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.accion }}",
+                    "rightValue": "ya_existe",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ya_existe"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.accion }}",
+                    "rightValue": "sin_resultados",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sin_resultados"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        80,
+        64
+      ],
+      "id": "1c2c451c-7dd8-4b2c-9539-838e12d78417",
+      "name": "Switch: Clasificador"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO proyectos_pendientes_google (\n    nombre_proyecto,\n    gps_google_lat,\n    gps_google_lng,\n    google_place_id,\n    google_formatted_address,\n    tipos_google,\n    razon,\n    origen_datos,\n    estado,\n    notas\n) VALUES (\n    '{{ $json.nombre_proyecto.replace(/'/g, \"''\") }}',\n    {{ $json.lat }},\n    {{ $json.lng }},\n    '{{ $json.google_id }}',\n    '{{ $json.direccion.replace(/'/g, \"''\") }}',\n    '{{ $json.tipos_sql }}',\n    'descubrimiento_radar_mensual',\n    '{{ $json.origen }}',\n    'pendiente',\n    'Zona: {{ $json.zona_nombre }} | Radar mensual'\n)\nON CONFLICT (google_place_id) \nDO UPDATE SET updated_at = CURRENT_TIMESTAMP\nRETURNING *;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        304,
+        0
+      ],
+      "id": "ff580933-0478-47b2-b6af-8256909d3d50",
+      "name": "Postgres: INSERT Pendiente",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE zonas_barrido_equipetrol\nSET \n    ultima_ejecucion = CURRENT_TIMESTAMP,\n    proyectos_encontrados = (\n        SELECT COUNT(*)\n        FROM proyectos_pendientes_google\n        WHERE origen_datos LIKE CONCAT('radar_zona_', {{ $('Code: Calcular Circulo').first().json.zona_id }}, '%')\n          AND razon = 'descubrimiento_radar_mensual'\n    )\nWHERE id = {{ $('Code: Calcular Circulo').first().json.zona_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        976,
+        240
+      ],
+      "id": "ceeb9528-74be-4885-9298-f89b2e4c7545",
+      "name": "Postgres: UPDATE Zona Stats",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        752,
+        80
+      ],
+      "id": "a7beb246-938f-40ef-8919-863b64ef1b83",
+      "name": "NoOp: Convergencia"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Solo ejecutar cuando el loop haya terminado completamente\nconst batchInfo = $('Loop Zonas').context;\n\n// Si aún hay items por procesar, no hacer nada\nif (!batchInfo.noItemsLeft) {\n  return [];\n}\n\n// Verificar que solo se ejecute una vez usando el índice del item actual\nconst currentIndex = $input.item.index || 0;\nif (currentIndex > 0) {\n  return [];\n}\n\n// Loop terminado, obtener estadísticas reales\nconst totalZonas = $('Postgres: Cargar Zonas').all().length;\n\n// Contar descubrimientos del workflow actual\nlet totalEncontrados = 0;\ntry {\n  const allItems = $('Code: Filtrar y Verificar').all();\n  for (const item of allItems) {\n    if (item.json.accion === 'insert_pendiente') {\n      totalEncontrados++;\n    }\n  }\n} catch (e) {\n  totalEncontrados = 0;\n}\n\nreturn [{\n  total_zonas: totalZonas,\n  total_encontrados: totalEncontrados,\n  fecha: new Date().toLocaleDateString('es-BO')\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1040,
+        272
+      ],
+      "id": "dda438eb-59c1-4acb-b85f-4ff1f6a441f1",
+      "name": "Code: Generar Resumen Final"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.total_zonas }}",
+              "rightValue": "=0",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "id": "cd9c015c-cf26-476c-aef3-ea979036a2e4"
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -816,
+        272
+      ],
+      "id": "894aeec6-215e-4503-9403-832f6992ebce",
+      "name": "IF: Solo Primera Vez"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{SLACK_WEBHOOK_SICI}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"Radar SICI: Reporte Mensual\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Estado:*\\nCompletado\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Fecha:*\\n{{ $now.toFormat('dd/MM/yyyy') }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Resultados del Barrido Google Places:*\\nSe han escaneado las zonas de Equipetrol buscando edificios nuevos.\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Zonas Escaneadas:*\\n{{ $json.total_zonas }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Nuevos Candidatos:*\\n{{ $json.total_encontrados }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Accion Requerida:*\\nRevisar candidatos en la bandeja de aprobacion.\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"Abrir Bandeja Radar\",\n            \"emoji\": true\n          },\n          \"style\": \"primary\",\n          \"url\": \"https://docs.google.com/spreadsheets/d/1suj5WymvgyjO6hDfbKXSGwF9jopH2uBCxcIDhiSDbsE/edit\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -592,
+        272
+      ],
+      "id": "bb8feef2-0a10-4505-9771-e60e4570af9c",
+      "name": "Slack: Resumen Final",
+      "executeOnce": true,
+      "settings": {
+        "executeOnce": true
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1suj5WymvgyjO6hDfbKXSGwF9jopH2uBCxcIDhiSDbsE",
+          "mode": "list",
+          "cachedResultName": "SICI - Radar Bandeja de Aprobacion",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1suj5WymvgyjO6hDfbKXSGwF9jopH2uBCxcIDhiSDbsE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Pendientes_Revision",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1suj5WymvgyjO6hDfbKXSGwF9jopH2uBCxcIDhiSDbsE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID_PENDIENTE": "={{ $json.id }}",
+            "ZONA": "={{ $json.origen_datos }}",
+            "FECHA": "={{ $now.toFormat('yyyy-MM-dd') }}",
+            "NOMBRE_ENCONTRADO": "={{ $json.nombre_proyecto }}",
+            "DIRECCION_GOOGLE": "={{ $json.google_formatted_address }}",
+            "LINK_MAPS": "=http://maps.google.com/maps?q={{ $json.gps_google_lat }},{{ $json.gps_google_lng }}",
+            "ACCION (Humano)": "=PENDIENTE"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ID_PENDIENTE",
+              "displayName": "ID_PENDIENTE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "FECHA",
+              "displayName": "FECHA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ZONA",
+              "displayName": "ZONA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "NOMBRE_ENCONTRADO",
+              "displayName": "NOMBRE_ENCONTRADO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DIRECCION_GOOGLE",
+              "displayName": "DIRECCION_GOOGLE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LINK_MAPS",
+              "displayName": "LINK_MAPS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "COINCIDENCIA_MASTER",
+              "displayName": "COINCIDENCIA_MASTER",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ACCION (Humano)",
+              "displayName": "ACCION (Humano)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        528,
+        0
+      ],
+      "id": "aa34bb86-ae01-4c28-8f05-945920d39297",
+      "name": "Pendientes_Revision",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DbMNipx0RBpm2Hhu",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -816,
+        80
+      ],
+      "id": "3333e663-0e6f-43ab-a0ec-95eed2b33196",
+      "name": "Wait 10s Rate Limit",
+      "webhookId": "6777a21d-00eb-44c0-88ef-a57e2056fc1b"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Cargar Zonas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule: Dia 1 cada mes 3AM": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Cargar Zonas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: Cargar Zonas": {
+      "main": [
+        [
+          {
+            "node": "Loop Zonas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Zonas": {
+      "main": [
+        [
+          {
+            "node": "Code: Generar Resumen Final",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code: Calcular Circulo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Calcular Circulo": {
+      "main": [
+        [
+          {
+            "node": "Wait 10s Rate Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: Cargar Master": {
+      "main": [
+        [
+          {
+            "node": "Google Places: searchNearby",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Places: searchNearby": {
+      "main": [
+        [
+          {
+            "node": "Code: Filtrar y Verificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Filtrar y Verificar": {
+      "main": [
+        [
+          {
+            "node": "Switch: Clasificador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch: Clasificador": {
+      "main": [
+        [
+          {
+            "node": "Postgres: INSERT Pendiente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoOp: Convergencia",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoOp: Convergencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: INSERT Pendiente": {
+      "main": [
+        [
+          {
+            "node": "Pendientes_Revision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: UPDATE Zona Stats": {
+      "main": [
+        [
+          {
+            "node": "Loop Zonas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NoOp: Convergencia": {
+      "main": [
+        [
+          {
+            "node": "Postgres: UPDATE Zona Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Generar Resumen Final": {
+      "main": [
+        [
+          {
+            "node": "IF: Solo Primera Vez",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Solo Primera Vez": {
+      "main": [
+        [
+          {
+            "node": "Slack: Resumen Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pendientes_Revision": {
+      "main": [
+        [
+          {
+            "node": "NoOp: Convergencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 10s Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Cargar Master",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "63bf20b4-ff01-45f5-a9b6-3acf435a18e7",
+  "meta": {
+    "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
+  },
+  "id": "BaxkzZLZMlzKQRVn",
+  "tags": []
+}

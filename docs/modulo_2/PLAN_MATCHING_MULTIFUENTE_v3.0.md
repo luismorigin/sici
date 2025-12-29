@@ -1,8 +1,8 @@
 # PLAN MÓDULO 2: Matching Inteligente Multi-Fuente
-## Versión 3.1 - FASE 1 Completada
+## Versión 3.2 - Human-in-the-Loop Completado
 
-**Fecha:** 28 Diciembre 2025
-**Estado:** ✅ FASE 1 completada y en producción
+**Fecha:** 29 Diciembre 2025
+**Estado:** ✅ Sistema completo operativo (Matching + Human-in-the-Loop)
 **Prerequisito:** Módulo 1 ✅ 100% operativo
 **Filosofía:** Mejorar matching SQL, no perseguir regex en extractores
 
@@ -501,18 +501,61 @@ DÍA 3 (PM): Validación y documentación
 
 ---
 
+## ✅ SISTEMA HUMAN-IN-THE-LOOP (29 Dic 2025)
+
+### Componentes Implementados
+
+| Componente | Archivo | Estado |
+|------------|---------|--------|
+| Workflow Matching Nocturno (4 AM) | `n8n/workflows/modulo_2/matching_nocturno.json` | ✅ Activo |
+| Workflow Matching Supervisor (8 PM) | `n8n/workflows/modulo_2/matching_supervisor.json` | ✅ Activo |
+| Funciones RPC | `sql/functions/matching/funciones_rpc_matching.sql` | ✅ Producción |
+| Google Sheets Bandeja | `SICI - Matching Bandeja de Aprobación` | ✅ Operativo |
+| Especificación | `docs/modulo_2/MATCHING_NOCTURNO_SPEC.md` | ✅ Documentado |
+
+### Flujo Operativo Diario
+
+```
+4:00 AM  → Matching Nocturno ejecuta
+         → Auto-aprueba ≥85% confianza
+         → Pendientes (70-84%) → Google Sheets
+         → Slack: Resumen + link al Sheet
+
+Durante el día → Humano revisa Sheet (⏳ → ✅/❌)
+
+8:00 PM  → Matching Supervisor ejecuta
+         → Lee decisiones del Sheet
+         → Aplica matches aprobados
+         → Rechaza los rechazados
+         → Slack: Resumen de aplicación
+```
+
+---
+
+## 📋 BACKLOG - MEJORAS FUTURAS
+
+| Prioridad | Mejora | Descripción | Esfuerzo |
+|-----------|--------|-------------|----------|
+| Media | Proyecto alternativo en Sheet | Columna para que humano sugiera proyecto diferente al rechazar | 2-3h |
+| Baja | GPS matching activado | Reactivar `generar_matches_gps()` cuando haya más proyectos verificados | 1h |
+| Baja | Dashboard de métricas | Vista de métricas de matching en Supabase/Metabase | 4h |
+| Baja | Limpieza automática Sheet | Habilitar nodo para borrar filas procesadas del Sheet | 30min |
+
+---
+
 ## 📚 DOCUMENTOS RELACIONADOS
 
 | Documento | Ruta |
 |-----------|------|
 | Plan Módulo 2 (completo) | `docs/modulo_2/PLAN_MODULO_2_v2.1.md` |
+| Matching Nocturno Spec | `docs/modulo_2/MATCHING_NOCTURNO_SPEC.md` |
+| Funciones RPC Matching | `sql/functions/matching/funciones_rpc_matching.sql` |
 | Onboarding Claude | `docs/GUIA_ONBOARDING_CLAUDE.md` |
-| Funciones SQL (código) | `sici-matching/.../Sql/funciones/` |
-| Matching Nocturno (diseño original) | `sici-matching/.../matching-nocturno.md` |
+| Config Local (gitignored) | `config.local.json` |
 
 ---
 
 **Autor:** Luis + Claude
-**Versión:** 3.1 (FASE 1 completada)
-**Última actualización:** 28 Diciembre 2025
-**Próximo paso:** FASE 2 - Ejecutar y medir / FASE 3 - Optimización
+**Versión:** 3.2 (Human-in-the-Loop completado)
+**Última actualización:** 29 Diciembre 2025
+**Estado:** Sistema de matching automatizado operativo con revisión humana

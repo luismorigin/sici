@@ -1,0 +1,419 @@
+{
+  "name": "SICI - Matching Nocturno v1.0",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 4 * * *"
+            }
+          ]
+        }
+      },
+      "id": "8cfb79a4-33d2-49f4-8300-4120439b99c6",
+      "name": "Schedule Trigger (4 AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        208
+      ],
+      "notes": "Ejecuta todos los días a las 4:00 AM después del Merge"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cde0123e-8cb0-4d59-9308-20726220c32e",
+      "name": "Manual Trigger (Testing)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM matching_completo_automatizado();",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        112
+      ],
+      "id": "a5822dc7-0ef8-4673-95e8-14ca39c5c18e",
+      "name": "Postgres: Ejecutar Matching",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar resultados del matching\nconst resultado = $input.first().json;\n\nreturn [{\n  matches_nombre: resultado.matches_nombre || 0,\n  matches_url: resultado.matches_url || 0,\n  matches_fuzzy: resultado.matches_fuzzy || 0,\n  matches_gps: resultado.matches_gps || 0,\n  auto_aprobados: resultado.auto_aprobados || 0,\n  aplicados: resultado.aplicados || 0,\n  bloqueados: resultado.bloqueados || 0,\n  rechazados_inactivos: resultado.rechazados_inactivos || 0,\n  rechazados_ya_matcheadas: resultado.rechazados_ya_matcheadas || 0,\n  total_nuevos: (resultado.matches_nombre || 0) + \n               (resultado.matches_url || 0) + \n               (resultado.matches_fuzzy || 0) + \n               (resultado.matches_gps || 0)\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        112
+      ],
+      "id": "733f474b-01cc-476b-963d-b8cf682adcdb",
+      "name": "Code: Procesar Resultados"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM obtener_pendientes_para_sheets();",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        720,
+        112
+      ],
+      "id": "ab647bbb-feca-4e24-a1b6-f806f262200a",
+      "name": "Postgres: Obtener Pendientes",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar datos para Google Sheets\nconst pendientes = $input.all();\nconst resultadosMatching = $('Code: Procesar Resultados').first().json;\n\nif (pendientes.length === 0 || !pendientes[0].json.id_sugerencia) {\n  return [{\n    hay_pendientes: false,\n    cantidad_pendientes: 0,\n    resultados: resultadosMatching\n  }];\n}\n\n// Formatear para Google Sheets\nconst filasSheet = pendientes.map(p => ({\n  ID_SUGERENCIA: p.json.id_sugerencia,\n  FECHA: new Date().toISOString().split('T')[0],\n  PROPIEDAD_ID: p.json.propiedad_id,\n  URL_PROPIEDAD: p.json.url_propiedad,\n  NOMBRE_EDIFICIO: p.json.nombre_edificio,\n  PROYECTO_SUGERIDO: p.json.proyecto_sugerido,\n  PROYECTO_ID: p.json.proyecto_id,\n  METODO: p.json.metodo,\n  CONFIANZA: p.json.confianza,\n  DISTANCIA_M: p.json.distancia_metros ? Math.round(p.json.distancia_metros) : null,\n  LINK_MAPS: p.json.latitud && p.json.longitud \n    ? `https://maps.google.com/maps?q=${p.json.latitud},${p.json.longitud}` \n    : '',\n  'ACCION (Humano)': '⏳ PENDIENTE'\n}));\n\nreturn [{\n  hay_pendientes: true,\n  cantidad_pendientes: filasSheet.length,\n  filas: filasSheet,\n  resultados: resultadosMatching\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        112
+      ],
+      "id": "a2f1e67c-76b2-45a2-9ff6-34c6ff704866",
+      "name": "Code: Preparar para Sheets"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.hay_pendientes }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        112
+      ],
+      "id": "8a970d45-fefe-45e9-b15d-b417fc9ae226",
+      "name": "IF: Hay Pendientes?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer filas para el Sheet\nconst data = $input.first().json;\nreturn data.filas.map(fila => ({ json: fila }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        0
+      ],
+      "id": "8fbdb59e-cd1f-4ce1-a6cf-bf1a746382b2",
+      "name": "Code: Split Filas"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Pendientes_Matching",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID_SUGERENCIA": "={{ $json.ID_SUGERENCIA }}",
+            "FECHA": "={{ $json.FECHA }}",
+            "PROPIEDAD_ID": "={{ $json.PROPIEDAD_ID }}",
+            "URL_PROPIEDAD": "={{ $json.URL_PROPIEDAD }}",
+            "NOMBRE_EDIFICIO": "={{ $json.NOMBRE_EDIFICIO }}",
+            "PROYECTO_SUGERIDO": "={{ $json.PROYECTO_SUGERIDO }}",
+            "PROYECTO_ID": "={{ $json.PROYECTO_ID }}",
+            "METODO": "={{ $json.METODO }}",
+            "CONFIANZA": "={{ $json.CONFIANZA }}",
+            "DISTANCIA_M": "={{ $json.DISTANCIA_M }}",
+            "LINK_MAPS": "={{ $json.LINK_MAPS }}",
+            "ACCION (Humano)": "={{ $json['ACCION (Humano)'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ID_SUGERENCIA",
+              "displayName": "ID_SUGERENCIA",
+              "type": "string"
+            },
+            {
+              "id": "FECHA",
+              "displayName": "FECHA",
+              "type": "string"
+            },
+            {
+              "id": "PROPIEDAD_ID",
+              "displayName": "PROPIEDAD_ID",
+              "type": "string"
+            },
+            {
+              "id": "URL_PROPIEDAD",
+              "displayName": "URL_PROPIEDAD",
+              "type": "string"
+            },
+            {
+              "id": "NOMBRE_EDIFICIO",
+              "displayName": "NOMBRE_EDIFICIO",
+              "type": "string"
+            },
+            {
+              "id": "PROYECTO_SUGERIDO",
+              "displayName": "PROYECTO_SUGERIDO",
+              "type": "string"
+            },
+            {
+              "id": "PROYECTO_ID",
+              "displayName": "PROYECTO_ID",
+              "type": "string"
+            },
+            {
+              "id": "METODO",
+              "displayName": "METODO",
+              "type": "string"
+            },
+            {
+              "id": "CONFIANZA",
+              "displayName": "CONFIANZA",
+              "type": "string"
+            },
+            {
+              "id": "DISTANCIA_M",
+              "displayName": "DISTANCIA_M",
+              "type": "string"
+            },
+            {
+              "id": "LINK_MAPS",
+              "displayName": "LINK_MAPS",
+              "type": "string"
+            },
+            {
+              "id": "ACCION (Humano)",
+              "displayName": "ACCION (Humano)",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1680,
+        0
+      ],
+      "id": "6925e272-764a-4110-9d88-4a65fc6e7141",
+      "name": "Google Sheets: Agregar Pendientes",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DbMNipx0RBpm2Hhu",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{SLACK_WEBHOOK_SICI}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"🔄 SICI Matching Nocturno - Completado\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*📊 Resultados del Matching:*\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Fecha:* {{ $now.toFormat('dd/MM/yyyy HH:mm') }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Por Nombre:* {{ $('Code: Preparar para Sheets').first().json.resultados.matches_nombre }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Por URL:* {{ $('Code: Preparar para Sheets').first().json.resultados.matches_url }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Por Fuzzy:* {{ $('Code: Preparar para Sheets').first().json.resultados.matches_fuzzy }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Por GPS:* {{ $('Code: Preparar para Sheets').first().json.resultados.matches_gps }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*✅ Auto-aprobados:* {{ $('Code: Preparar para Sheets').first().json.resultados.auto_aprobados }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*📝 Aplicados:* {{ $('Code: Preparar para Sheets').first().json.resultados.aplicados }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*⚠️ Pendientes para revisión:* {{ $('Code: Preparar para Sheets').first().json.cantidad_pendientes }}\\n\\n👉 Revisar en Google Sheets y cambiar ⏳ → ✅/❌\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"📂 Abrir Bandeja de Matching\",\n            \"emoji\": true\n          },\n          \"style\": \"primary\",\n          \"url\": \"https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1920,
+        0
+      ],
+      "id": "939f4427-13d3-4b18-b3fe-537ebd4976db",
+      "name": "Slack: Con Pendientes",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{SLACK_WEBHOOK_SICI}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"✅ SICI Matching Nocturno - Todo Auto-Aprobado\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*📊 Resultados:*\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Fecha:* {{ $now.toFormat('dd/MM/yyyy HH:mm') }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Auto-aprobados:* {{ $json.resultados.auto_aprobados }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Aplicados:* {{ $json.resultados.aplicados }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"🎉 *Sin pendientes para revisión manual.*\\nTodos los matches fueron de alta confianza (≥85%).\"\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1440,
+        240
+      ],
+      "id": "e335fbba-0493-443e-9f72-c80fb2a2d849",
+      "name": "Slack: Sin Pendientes"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger (4 AM)": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Ejecutar Matching",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger (Testing)": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Ejecutar Matching",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: Ejecutar Matching": {
+      "main": [
+        [
+          {
+            "node": "Code: Procesar Resultados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Procesar Resultados": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Obtener Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: Obtener Pendientes": {
+      "main": [
+        [
+          {
+            "node": "Code: Preparar para Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Preparar para Sheets": {
+      "main": [
+        [
+          {
+            "node": "IF: Hay Pendientes?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Hay Pendientes?": {
+      "main": [
+        [
+          {
+            "node": "Code: Split Filas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack: Sin Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Split Filas": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets: Agregar Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets: Agregar Pendientes": {
+      "main": [
+        [
+          {
+            "node": "Slack: Con Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "9215d189-9528-4ef9-b90f-4fa4f9e58e3c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
+  },
+  "id": "Mm1zYrt5V3dTK3Bx",
+  "tags": [
+    {
+      "name": "SICI - Matching",
+      "id": "AbH1OPZVVZ7kwVPA",
+      "updatedAt": "2025-12-29T14:15:39.110Z",
+      "createdAt": "2025-12-29T14:15:39.110Z"
+    },
+    {
+      "name": "Modulo 2",
+      "id": "3ql4yLkRTKEWjJm1",
+      "updatedAt": "2025-12-29T14:15:39.119Z",
+      "createdAt": "2025-12-29T14:15:39.119Z"
+    }
+  ]
+}
