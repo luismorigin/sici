@@ -1,10 +1,53 @@
 # PLAN MÓDULO 2: Matching Inteligente Multi-Fuente
-## Versión 3.0 - Enfoque Sistémico
+## Versión 3.1 - FASE 1 Completada
 
-**Fecha:** 26 Diciembre 2025  
-**Estado:** Listo para implementación  
-**Prerequisito:** Módulo 1 ✅ 100% operativo  
+**Fecha:** 28 Diciembre 2025
+**Estado:** ✅ FASE 1 completada y en producción
+**Prerequisito:** Módulo 1 ✅ 100% operativo
 **Filosofía:** Mejorar matching SQL, no perseguir regex en extractores
+
+---
+
+## 🎉 ESTADO ACTUAL (28 Dic 2025)
+
+### Resultados en Producción
+
+| Métrica | Valor | Notas |
+|---------|-------|-------|
+| Total propiedades candidatas | 221 | status completado/actualizado |
+| **Propiedades matcheadas** | **82 (37.1%)** | Con id_proyecto_master |
+| Propiedades con zona GPS | 370 (86%) | 7 microzonas |
+| Matches por nombre | 45 | 95% confianza |
+| Matches por URL | 35 | 85-90% confianza |
+| Matches por fuzzy | 19 | 75-90% confianza |
+
+### Funciones Migradas a propiedades_v2
+
+| Función | Versión | Estado |
+|---------|---------|--------|
+| `generar_matches_por_nombre()` | v3.0 | ✅ Producción |
+| `generar_matches_por_url()` | v3.0 | ✅ Producción |
+| `generar_matches_fuzzy()` | v3.0 | ✅ Producción |
+| `aplicar_matches_aprobados()` | v3.0 | ✅ Producción |
+| `matching_completo_automatizado()` | v3.0 | ✅ Producción |
+
+### Infraestructura de Microzonas GPS
+
+| Componente | Estado |
+|------------|--------|
+| Tabla `zonas_geograficas` | ✅ 7 polígonos PostGIS |
+| Función `poblar_zonas_batch()` | ✅ Producción |
+| Columna `microzona` en propiedades_v2 | ✅ Poblada |
+
+### Análisis del GAP (139 sin match)
+
+| Razón | Propiedades | % |
+|-------|-------------|---|
+| Sin nombre_edificio | 98 | 70.5% |
+| Fuera de polígonos (marketing vs GPS) | 27 | 19.4% |
+| Nombre sin match en proyectos_master | 14 | 10.1% |
+
+**Decisión:** Propiedades fuera de polígonos son "aspiracionales" (anunciantes declaran Equipetrol por prestigio). No es bug del scraper.
 
 ---
 
@@ -122,9 +165,10 @@ Mejorar regex → Nuevo patrón → ∞
 
 ## 📋 FASES DE IMPLEMENTACIÓN
 
-### FASE 1: Migración SQL (Crítico - 1 día)
+### FASE 1: Migración SQL (Crítico - 1 día) ✅ COMPLETADA
 
 **Objetivo:** Funciones trabajando con `propiedades_v2`
+**Estado:** ✅ Completada el 28 Dic 2025
 
 **Ubicación de funciones a migrar:**
 ```
@@ -468,6 +512,7 @@ DÍA 3 (PM): Validación y documentación
 
 ---
 
-**Autor:** Luis + Claude  
-**Versión:** 3.0 (enfoque sistémico)  
-**Próximo paso:** Ejecutar FASE 1 - Migración SQL
+**Autor:** Luis + Claude
+**Versión:** 3.1 (FASE 1 completada)
+**Última actualización:** 28 Diciembre 2025
+**Próximo paso:** FASE 2 - Ejecutar y medir / FASE 3 - Optimización

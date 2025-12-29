@@ -2,8 +2,8 @@
 
 **Propósito:** Permitir que cualquier instancia de Claude (chat, Claude Code, nueva conversación) entienda rápidamente el proyecto SICI y sepa dónde encontrar información.
 
-**Última actualización:** 26 Diciembre 2025  
-**Versión:** 2.0
+**Última actualización:** 28 Diciembre 2025
+**Versión:** 2.1
 
 ---
 
@@ -65,11 +65,15 @@ sici\
 │   ├── functions\
 │   │   ├── discovery\       ← registrar_discovery.sql
 │   │   ├── enrichment\      ← registrar_enrichment.sql
-│   │   ├── merge\           ← 📌 merge_discovery_enrichment.sql (v2.0.0)
+│   │   ├── merge\           ← merge_discovery_enrichment.sql (v2.1.0)
+│   │   ├── matching\        ← 📌 FUNCIONES MATCHING v3.0 (MIGRADAS)
 │   │   └── tc_dinamico\     ← Tipo de cambio dinámico
 │   ├── schema\
 │   │   └── propiedades_v2_schema.md  ← 📌 SCHEMA TABLA PRINCIPAL
-│   └── migrations\
+│   ├── migrations\          ← 003, 004, 005 (FK + microzonas)
+│
+├── geodata\
+│   └── microzonas_equipetrol_v4.geojson ← 7 polígonos GPS
 │
 └── README.md
 ```
@@ -127,10 +131,11 @@ sici-matching\
 
 | Tabla | Registros | Descripción |
 |-------|-----------|-------------|
-| `propiedades_v2` | ~214+ | **TABLA PRINCIPAL** - Propiedades activas |
+| `propiedades_v2` | ~428+ | **TABLA PRINCIPAL** - Propiedades activas |
 | `proyectos_master` | 152+ | Edificios/proyectos verificados |
+| `zonas_geograficas` | 7 | Polígonos PostGIS de microzonas Equipetrol |
 | `matching_sugerencias` | Variable | Cola de sugerencias de matching |
-| `propiedades` | legacy | ⚠️ **DEPRECADA - NO USAR** |
+| `propiedades` | legacy | **DEPRECADA - NO USAR** |
 
 ### Columnas Críticas de propiedades_v2
 
@@ -194,26 +199,26 @@ datos_json_enrichment->>'nombre_edificio'
 - ~214 propiedades procesadas
 - Extractores con fuzzy pre-matching integrado
 
-### Módulo 2: Matching Propiedades → Proyectos 🔥 EN PROGRESO
+### Módulo 2: Matching Propiedades → Proyectos ✅ FASE 1 COMPLETADA
 
-**Problema actual:**
-- 100% de propiedades SIN `id_proyecto_master`
-- Funciones SQL existen pero apuntan a tabla legacy
-- `nombre_edificio` a veces NULL en columna, pero existe en JSON
+**Estado actual (28 Dic 2025):**
+- 82 propiedades matcheadas (37.1%)
+- 370 con zona GPS asignada (86%)
+- 7 microzonas de Equipetrol operativas
+- Funciones SQL v3.0 migradas a `propiedades_v2`
 
-**Plan activo:** `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md`
+**Plan activo:** `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` (v3.1)
 
-**Enfoque v3.0:**
-1. ❌ NO perseguir mejoras de regex en extractores
-2. ✅ Potenciar matching SQL con multi-fuente
-3. ✅ Migrar funciones a `propiedades_v2`
-4. ✅ Usar URL directamente para matching (no depende del extractor)
+**Infraestructura de Microzonas GPS:**
+- Tabla `zonas_geograficas` con 7 polígonos PostGIS
+- Función `poblar_zonas_batch()` para asignación masiva
+- Columnas `zona` y `microzona` en propiedades_v2
 
 **Fases:**
 ```
-FASE 1: Migrar funciones SQL (1 día)
-FASE 2: Ejecutar y medir (1 día)
-FASE 3: Optimizar para escalabilidad (1-2 días)
+FASE 1: Migrar funciones SQL ✅ COMPLETADA
+FASE 2: Ejecutar y medir (pendiente optimización)
+FASE 3: Optimizar para escalabilidad
 FASE 4: Recuperar datos existentes (opcional)
 FASE 5: Activar matching nocturno
 ```
@@ -297,26 +302,30 @@ Si empiezas una nueva conversación con Claude, copia esto:
 Estoy trabajando en SICI, un sistema de inteligencia inmobiliaria para Bolivia.
 
 REPOS LOCALES:
-- sici\ = Repo principal (Módulo 1 completado, producción)
-- sici-matching\ = Funciones SQL de matching (requieren migración)
+- sici\ = Repo principal (Módulo 1 + FASE 1 Módulo 2 completados)
+- sici-matching\ = Repo legacy (NO USAR para nuevas funciones)
 
-ESTADO ACTUAL (Dic 2025):
-- ~214 propiedades en propiedades_v2
-- 152+ proyectos en proyectos_master  
-- 100% propiedades SIN id_proyecto_master (problema a resolver)
-- Funciones de matching existen pero usan tabla deprecada
+ESTADO ACTUAL (28 Dic 2025):
+- ~428 propiedades en propiedades_v2
+- 82 matcheadas (37.1%) con id_proyecto_master
+- 370 con zona GPS (86%) via microzonas PostGIS
+- 152+ proyectos en proyectos_master
+- Funciones matching v3.0 migradas a propiedades_v2
 
-PLAN ACTIVO: docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md
-- Enfoque: Potenciar SQL, no regex de extractores
-- Paso 1: Migrar funciones de `propiedades` → `propiedades_v2`
-- Paso 2: Ejecutar matching y medir resultados
-- Paso 3: Optimizar para escalabilidad
+INFRAESTRUCTURA GPS:
+- Tabla zonas_geograficas con 7 polígonos Equipetrol
+- Función poblar_zonas_batch() para asignación masiva
+
+PLAN ACTIVO: docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md (v3.1)
+- FASE 1: ✅ Completada - Funciones migradas
+- FASE 2: Pendiente - Optimización
+- FASE 3-5: Escalabilidad y nocturno
 
 ARCHIVOS CLAVE:
 - sici/docs/GUIA_ONBOARDING_CLAUDE.md (este archivo)
 - sici/docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md
-- sici/docs/modulo_2/PLAN_MODULO_2_v2.1.md
-- sici-matching/subsistema-matching-propiedades/Sql/funciones/
+- sici/sql/functions/matching/ (funciones v3.0)
+- sici/sql/migrations/ (003, 004, 005)
 ```
 
 ---
@@ -336,10 +345,12 @@ ARCHIVOS CLAVE:
 
 | Documento | Ruta | Propósito |
 |-----------|------|-----------|
-| Plan Matching v3.0 | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` | 🔥 Plan activo FASE 1 |
+| Plan Matching v3.1 | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` | FASE 1 completada |
 | Plan Módulo 2 | `docs/modulo_2/PLAN_MODULO_2_v2.1.md` | Plan completo (Fases 1-4) |
 | Estado Módulo 1 | `docs/MODULO_1_ESTADO_FINAL.md` | Cierre formal Módulo 1 |
-| Funciones SQL | `sici-matching/.../Sql/funciones/` | Código a migrar |
+| Funciones Matching | `sql/functions/matching/` | Funciones v3.0 migradas |
+| CHANGELOG Matching | `sql/functions/matching/CHANGELOG_MATCHING.md` | Historial de cambios |
+| Migraciones | `sql/migrations/` | 003, 004, 005 (FK + microzonas) |
 | Catálogo Proyectos | `sici-matching/Docs/proyectos_master_catalogo.md` | Lista de 152+ proyectos |
 
 ---
@@ -363,4 +374,4 @@ claude
 
 ---
 
-**FIN DE LA GUÍA DE ONBOARDING v2.0**
+**FIN DE LA GUÍA DE ONBOARDING v2.1**

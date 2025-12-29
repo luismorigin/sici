@@ -49,18 +49,23 @@ sici/
 │   ├── discovery/     # registrar_discovery.sql
 │   ├── enrichment/    # registrar_enrichment.sql
 │   ├── merge/         # merge_discovery_enrichment.sql v2.1.0
-│   └── matching/      # Funciones Modulo 2 (en migracion)
+│   └── matching/      # Funciones v3.0 (migradas a propiedades_v2)
+├── sql/migrations/    # 003, 004, 005 - FK y microzonas
+├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   └── modulo_1/      # Flujos A, B, C, Merge (produccion)
 └── docs/
     ├── canonical/     # Documentos definitivos
-    └── modulo_2/      # Plan matching activo
+    └── modulo_2/      # Plan matching activo (v3.1)
 ```
 
-## Estado Actual (Dic 2025)
+## Estado Actual (28 Dic 2025)
 
 - **Modulo 1:** COMPLETADO - Pipeline nocturno operativo
-- **Modulo 2:** EN PROGRESO - Migrando funciones matching a propiedades_v2
+- **Modulo 2:** FASE 1 COMPLETADA - Funciones matching migradas a propiedades_v2
+  - 82 propiedades matcheadas (37.1%)
+  - 370 con zona GPS (86%)
+  - Infraestructura microzonas GPS operativa
 
 ## Queries Rapidos
 
