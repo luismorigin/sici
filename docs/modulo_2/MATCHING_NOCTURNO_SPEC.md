@@ -103,6 +103,7 @@ IF: ¿Hay pendientes?
 | `DISTANCIA_M` | INT | Metros (solo para GPS) |
 | `LINK_MAPS` | URL | Google Maps de la propiedad |
 | `ACCION (Humano)` | ENUM | ⏳ PENDIENTE / ✅ APROBAR / ❌ RECHAZAR |
+| `PROYECTO_ALTERNATIVO` | TEXT | (Opcional) Nombre del proyecto correcto si el sugerido es incorrecto |
 
 ### 2.3 Workflow: Matching Supervisor
 
@@ -119,6 +120,7 @@ Google Sheets: Leer Pendientes_Matching
 Code: El Auditor
     │
     ├─ Contar: pendientes, aprobados, rechazados
+    ├─ Detectar: rechazados CON proyecto_alternativo
     └─ Decisión: SYNC si pendientes == 0, sino BLOQUEAR
     ↓
 IF: ¿decision == SYNC?
@@ -128,6 +130,10 @@ IF: ¿decision == SYNC?
     │   Code: Preparar IDs                            │
     │       ↓                                         │
     │   Postgres RPC: aplicar_matches_revisados()     │
+    │       ↓                                         │
+    │   IF: ¿Hay proyectos alternativos?              │
+    │       ├─ SI → Postgres: crear_proyecto_sugerido │
+    │       └─ NO → Continuar                         │
     │       ↓                                         │
     │   Slack: "✅ X matches aplicados, Y rechazados" │
     │       ↓                                         │
@@ -139,6 +145,21 @@ IF: ¿decision == SYNC?
                                                       │
                                         FIN ←─────────┘
 ```
+
+### 2.4 Funcionalidad: Proyecto Alternativo
+
+**Escenario:** El humano rechaza un match pero identifica el edificio correcto.
+
+**Flujo:**
+1. Humano ve sugerencia con `PROYECTO_SUGERIDO = "Torre Zenith"`
+2. Humano sabe que es `"Torres del Sol"` (no existe en master)
+3. Escribe `"Torres del Sol"` en columna `PROYECTO_ALTERNATIVO`
+4. Marca `ACCION = ❌ RECHAZAR`
+5. Supervisor procesa:
+   - Rechaza el match original
+   - Crea proyecto nuevo en `proyectos_master` con estado='propuesto'
+   - Crea nueva sugerencia apuntando al nuevo proyecto
+6. Próximo ciclo: aparece nueva sugerencia para aprobar
 
 ---
 

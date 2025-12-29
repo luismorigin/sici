@@ -35,6 +35,11 @@
 
 **Dependencia:** Requiere que Matching Nocturno haya ejecutado primero
 
+**Funcionalidad Proyecto Alternativo:**
+- Detecta cuando humano rechaza con PROYECTO_ALTERNATIVO
+- Crea proyecto nuevo en proyectos_master (fuente='humano_propuesto')
+- Crea nueva sugerencia con 95% confianza para revisión
+
 ---
 
 ### 3. Radar Mensual v1.0

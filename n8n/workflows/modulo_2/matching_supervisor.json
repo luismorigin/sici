@@ -64,7 +64,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ========================================\n// EL AUDITOR: Analiza estado de revisión\n// ========================================\nconst filas = $input.all();\n\n// Filtrar filas válidas (ignorar header y vacías)\nconst filasData = filas.filter(f => \n  f.json.ID_SUGERENCIA && \n  f.json.ID_SUGERENCIA !== 'ID_SUGERENCIA' &&\n  !isNaN(parseInt(f.json.ID_SUGERENCIA))\n);\n\nif (filasData.length === 0) {\n  return [{\n    total_filas: 0,\n    pendientes: 0,\n    aprobados: 0,\n    rechazados: 0,\n    ids_aprobados: [],\n    ids_rechazados: [],\n    decision: 'VACIO',\n    mensaje: 'No hay filas para procesar'\n  }];\n}\n\n// Contar por estado (usando includes para flexibilidad con emojis)\nconst pendientesData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('PENDIENTE')\n);\n\nconst aprobadosData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('APROBAR')\n);\n\nconst rechazadosData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('RECHAZAR')\n);\n\n// Extraer IDs\nconst idsAprobados = aprobadosData\n  .map(f => parseInt(f.json.ID_SUGERENCIA))\n  .filter(id => !isNaN(id));\n  \nconst idsRechazados = rechazadosData\n  .map(f => parseInt(f.json.ID_SUGERENCIA))\n  .filter(id => !isNaN(id));\n\n// IDs procesados (para limpiar después)\nconst idsProcesados = [...idsAprobados, ...idsRechazados];\n\n// DECISIÓN\nlet decision;\nif (pendientesData.length > 0) {\n  decision = 'BLOQUEAR';\n} else if (idsAprobados.length > 0 || idsRechazados.length > 0) {\n  decision = 'SYNC';\n} else {\n  decision = 'VACIO';\n}\n\nreturn [{\n  total_filas: filasData.length,\n  pendientes: pendientesData.length,\n  aprobados: idsAprobados.length,\n  rechazados: idsRechazados.length,\n  ids_aprobados: idsAprobados,\n  ids_rechazados: idsRechazados,\n  ids_procesados: idsProcesados,\n  decision: decision,\n  // Para Slack\n  nombres_aprobados: aprobadosData.map(f => f.json.NOMBRE_EDIFICIO).slice(0, 5),\n  nombres_rechazados: rechazadosData.map(f => f.json.NOMBRE_EDIFICIO).slice(0, 5)\n}];"
+        "jsCode": "// ========================================\n// EL AUDITOR: Analiza estado de revisión\n// ========================================\nconst filas = $input.all();\n\n// Filtrar filas válidas (ignorar header y vacías)\nconst filasData = filas.filter(f => \n  f.json.ID_SUGERENCIA && \n  f.json.ID_SUGERENCIA !== 'ID_SUGERENCIA' &&\n  !isNaN(parseInt(f.json.ID_SUGERENCIA))\n);\n\nif (filasData.length === 0) {\n  return [{\n    total_filas: 0,\n    pendientes: 0,\n    aprobados: 0,\n    rechazados: 0,\n    ids_aprobados: [],\n    ids_rechazados: [],\n    proyectos_alternativos: [],\n    decision: 'VACIO',\n    mensaje: 'No hay filas para procesar'\n  }];\n}\n\n// Contar por estado (usando includes para flexibilidad con emojis)\nconst pendientesData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('PENDIENTE')\n);\n\nconst aprobadosData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('APROBAR')\n);\n\nconst rechazadosData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('RECHAZAR')\n);\n\n// NUEVO: Detectar rechazados CON proyecto alternativo\nconst rechazadosConAlternativo = rechazadosData.filter(f => \n  f.json['PROYECTO_ALTERNATIVO'] && \n  f.json['PROYECTO_ALTERNATIVO'].trim() !== ''\n).map(f => ({\n  sugerencia_id: parseInt(f.json.ID_SUGERENCIA),\n  propiedad_id: parseInt(f.json.PROPIEDAD_ID),\n  proyecto_alternativo: f.json['PROYECTO_ALTERNATIVO'].trim(),\n  nombre_edificio: f.json.NOMBRE_EDIFICIO\n}));\n\n// Extraer IDs\nconst idsAprobados = aprobadosData\n  .map(f => parseInt(f.json.ID_SUGERENCIA))\n  .filter(id => !isNaN(id));\n  \nconst idsRechazados = rechazadosData\n  .map(f => parseInt(f.json.ID_SUGERENCIA))\n  .filter(id => !isNaN(id));\n\n// IDs procesados (para limpiar después)\nconst idsProcesados = [...idsAprobados, ...idsRechazados];\n\n// DECISIÓN\nlet decision;\nif (pendientesData.length > 0) {\n  decision = 'BLOQUEAR';\n} else if (idsAprobados.length > 0 || idsRechazados.length > 0) {\n  decision = 'SYNC';\n} else {\n  decision = 'VACIO';\n}\n\nreturn [{\n  total_filas: filasData.length,\n  pendientes: pendientesData.length,\n  aprobados: idsAprobados.length,\n  rechazados: idsRechazados.length,\n  ids_aprobados: idsAprobados,\n  ids_rechazados: idsRechazados,\n  ids_procesados: idsProcesados,\n  proyectos_alternativos: rechazadosConAlternativo,\n  hay_alternativos: rechazadosConAlternativo.length > 0,\n  decision: decision,\n  // Para Slack\n  nombres_aprobados: aprobadosData.map(f => f.json.NOMBRE_EDIFICIO).slice(0, 5),\n  nombres_rechazados: rechazadosData.map(f => f.json.NOMBRE_EDIFICIO).slice(0, 5),\n  nombres_alternativos: rechazadosConAlternativo.map(p => p.proyecto_alternativo).slice(0, 5)\n}];"
       },
       "id": "72b67e5f-c6d6-48d8-800e-a964f988c104",
       "name": "Code: El Auditor",
@@ -163,7 +163,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Preparar arrays para PostgreSQL\nconst data = $input.first().json;\n\n// Formato PostgreSQL: \"{1,2,3}\"\nconst pgAprobados = data.ids_aprobados.length > 0 \n  ? `{${data.ids_aprobados.join(',')}}` \n  : '{}';\n  \nconst pgRechazados = data.ids_rechazados.length > 0 \n  ? `{${data.ids_rechazados.join(',')}}` \n  : '{}';\n\nreturn [{\n  p_ids_aprobados: pgAprobados,\n  p_ids_rechazados: pgRechazados,\n  ids_procesados: data.ids_procesados,\n  aprobados: data.aprobados,\n  rechazados: data.rechazados,\n  nombres_aprobados: data.nombres_aprobados,\n  nombres_rechazados: data.nombres_rechazados\n}];"
+        "jsCode": "// Preparar arrays para PostgreSQL\nconst data = $input.first().json;\n\n// Formato PostgreSQL: \"{1,2,3}\"\nconst pgAprobados = data.ids_aprobados.length > 0 \n  ? `{${data.ids_aprobados.join(',')}}` \n  : '{}';\n  \nconst pgRechazados = data.ids_rechazados.length > 0 \n  ? `{${data.ids_rechazados.join(',')}}` \n  : '{}';\n\nreturn [{\n  p_ids_aprobados: pgAprobados,\n  p_ids_rechazados: pgRechazados,\n  ids_procesados: data.ids_procesados,\n  aprobados: data.aprobados,\n  rechazados: data.rechazados,\n  nombres_aprobados: data.nombres_aprobados,\n  nombres_rechazados: data.nombres_rechazados,\n  // NUEVO: Proyectos alternativos\n  proyectos_alternativos: data.proyectos_alternativos || [],\n  hay_alternativos: data.hay_alternativos || false,\n  nombres_alternativos: data.nombres_alternativos || []\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -246,7 +246,7 @@
         "url": "{{SLACK_WEBHOOK_SICI}}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"✅ SICI Matching Supervisor - Sincronización Completada\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"Las decisiones humanas han sido aplicadas a la base de datos.\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*✅ Aprobados:*\\n{{ $('Code: Preparar RPC').first().json.aprobados }} matches\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*❌ Rechazados:*\\n{{ $('Code: Preparar RPC').first().json.rechazados }} sugerencias\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Proyectos aprobados:*\\n{{ $('Code: Preparar RPC').first().json.nombres_aprobados.join(', ') || 'Ninguno' }}\"\n      }\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"✅ SICI Matching Supervisor - Sincronización Completada\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"Las decisiones humanas han sido aplicadas a la base de datos.\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*✅ Aprobados:*\\n{{ $('Code: Preparar RPC').first().json.aprobados }} matches\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*❌ Rechazados:*\\n{{ $('Code: Preparar RPC').first().json.rechazados }} sugerencias\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Proyectos aprobados:*\\n{{ $('Code: Preparar RPC').first().json.nombres_aprobados.join(', ') || 'Ninguno' }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*🆕 Proyectos alternativos sugeridos:*\\n{{ $('Code: Preparar RPC').first().json.nombres_alternativos.length > 0 ? $('Code: Preparar RPC').first().json.nombres_alternativos.join(', ') : 'Ninguno' }}\"\n      }\n    }\n  ]\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -293,6 +293,88 @@
       ],
       "id": "a3d52f28-e03b-475d-a5c2-227438927eb8",
       "name": "Slack: Bandeja Vacía"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $('Code: Preparar RPC').first().json.hay_alternativos }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ],
+      "id": "alt-check-001",
+      "name": "IF: Hay Alternativos?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer proyectos alternativos para iterar\nconst data = $('Code: Preparar RPC').first().json;\nconst alternativos = data.proyectos_alternativos || [];\n\nreturn alternativos.map(alt => ({ json: alt }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -80
+      ],
+      "id": "split-alt-001",
+      "name": "Code: Split Alternativos"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://chaosoiyoeyjuwtwckix.supabase.co/rest/v1/rpc/crear_proyecto_desde_sugerencia",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoYW9zb2l5b2V5anV3dHdja2l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5MTM5MTIsImV4cCI6MjA3NDQ4OTkxMn0.MwDhUzK2_CnFtS7XbOSg0BbdNdof9Gtqib8ufpe65wg"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoYW9zb2l5b2V5anV3dHdja2l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5MTM5MTIsImV4cCI6MjA3NDQ4OTkxMn0.MwDhUzK2_CnFtS7XbOSg0BbdNdof9Gtqib8ufpe65wg"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_nombre_proyecto\": \"{{ $json.proyecto_alternativo }}\",\n  \"p_propiedad_id\": {{ $json.propiedad_id }},\n  \"p_sugerencia_id\": {{ $json.sugerencia_id }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        960,
+        -80
+      ],
+      "id": "rpc-alt-001",
+      "name": "HTTP: Crear Proyecto Alternativo"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Consolidar resultados de proyectos alternativos\nconst resultados = $input.all();\nconst data = $('Code: Preparar RPC').first().json;\n\nconst proyectosCreados = resultados.filter(r => \n  r.json && r.json[0] && r.json[0].proyecto_creado === true\n).length;\n\nreturn [{\n  aprobados: data.aprobados,\n  rechazados: data.rechazados,\n  nombres_aprobados: data.nombres_aprobados,\n  nombres_rechazados: data.nombres_rechazados,\n  proyectos_alternativos_creados: proyectosCreados,\n  nombres_alternativos: data.nombres_alternativos\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        -80
+      ],
+      "id": "consolidate-001",
+      "name": "Code: Consolidar Alternativos",
+      "executeOnce": true
     }
   ],
   "pinData": {},
@@ -381,7 +463,58 @@
       "main": [
         [
           {
-            "node": "Google Sheets: Limpiar Procesados",
+            "node": "IF: Hay Alternativos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Hay Alternativos?": {
+      "main": [
+        [
+          {
+            "node": "Code: Split Alternativos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack: Sync Completado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Split Alternativos": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Crear Proyecto Alternativo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Crear Proyecto Alternativo": {
+      "main": [
+        [
+          {
+            "node": "Code: Consolidar Alternativos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Consolidar Alternativos": {
+      "main": [
+        [
+          {
+            "node": "Slack: Sync Completado",
             "type": "main",
             "index": 0
           }
