@@ -1,10 +1,14 @@
 -- =============================================================================
 -- FUNCION: matching_completo_automatizado()
 -- DESCRIPCION: Orquestadora principal del sistema de matching automatico
--- VERSION: 3.0
+-- VERSION: 3.1
 -- AUTOR: Luis - SICI
 -- FECHA: Diciembre 2025
 -- =============================================================================
+-- CAMBIOS v3.1 (29 Dic 2025):
+--   - GPS matching REACTIVADO con generar_matches_gps() v3.0
+--   - Usa proyectos con gps_verificado_google = TRUE
+--   - Orden: nombre (95%) > URL (85-90%) > fuzzy (75-90%) > GPS (65-85%)
 -- CAMBIOS v3.0 (28 Dic 2025):
 --   - Migracion a propiedades_v2
 --   - Usa funciones generar_matches_* v3.0
@@ -34,7 +38,7 @@ DECLARE
     v_matches_nombre INT;
     v_matches_url INT;
     v_matches_fuzzy INT;
-    v_matches_gps INT := 0;  -- GPS matching desactivado por ahora
+    v_matches_gps INT;
     v_auto_aprobados INT;
     v_aplicados INT;
     v_bloqueados INT;
@@ -99,7 +103,33 @@ BEGIN
     SELECT COUNT(*) INTO v_matches_fuzzy FROM ins_fuzzy;
 
     -- ==================================================================
-    -- PASO 4: AUTO-APROBAR ALTA CONFIANZA (>= 85%)
+    -- PASO 4: MATCHING POR GPS (Proximidad)
+    -- Usa generar_matches_gps() v3.0
+    -- Confianza: 65-85% según distancia
+    -- Solo proyectos con gps_verificado_google = TRUE
+    -- ==================================================================
+    WITH ins_gps AS (
+        INSERT INTO matching_sugerencias (
+            propiedad_id, proyecto_master_sugerido, metodo_matching,
+            score_confianza, distancia_metros, razon_match, estado, created_at
+        )
+        SELECT
+            gm.propiedad_id,
+            gm.proyecto_sugerido,
+            gm.metodo,
+            gm.confianza,
+            gm.distancia_metros,
+            'Match GPS: ' || ROUND(gm.distancia_metros) || 'm de proyecto verificado',
+            'pendiente',
+            NOW()
+        FROM generar_matches_gps() gm
+        ON CONFLICT (propiedad_id, proyecto_master_sugerido, metodo_matching) DO NOTHING
+        RETURNING 1
+    )
+    SELECT COUNT(*) INTO v_matches_gps FROM ins_gps;
+
+    -- ==================================================================
+    -- PASO 5: AUTO-APROBAR ALTA CONFIANZA (>= 85%)
     -- ==================================================================
     WITH aprobados AS (
         UPDATE matching_sugerencias
@@ -113,7 +143,7 @@ BEGIN
     SELECT COUNT(*) INTO v_auto_aprobados FROM aprobados;
 
     -- ==================================================================
-    -- PASO 5: AUTO-RECHAZAR PROPIEDADES INACTIVAS
+    -- PASO 6: AUTO-RECHAZAR PROPIEDADES INACTIVAS
     -- Adaptado para status de propiedades_v2
     -- ==================================================================
     WITH rechazados_inact AS (
@@ -130,7 +160,7 @@ BEGIN
     SELECT COUNT(*) INTO v_rechazados_inactivos FROM rechazados_inact;
 
     -- ==================================================================
-    -- PASO 6: AUTO-RECHAZAR PROPIEDADES YA MATCHEADAS
+    -- PASO 7: AUTO-RECHAZAR PROPIEDADES YA MATCHEADAS
     -- ==================================================================
     WITH rechazados_match AS (
         UPDATE matching_sugerencias ms
@@ -146,7 +176,7 @@ BEGIN
     SELECT COUNT(*) INTO v_rechazados_ya_matcheadas FROM rechazados_match;
 
     -- ==================================================================
-    -- PASO 7: APLICAR MATCHES APROBADOS A PROPIEDADES
+    -- PASO 8: APLICAR MATCHES APROBADOS A PROPIEDADES
     -- Usa aplicar_matches_aprobados() v3.0
     -- ==================================================================
     SELECT a.actualizados, a.bloqueados
@@ -154,7 +184,7 @@ BEGIN
     FROM aplicar_matches_aprobados() AS a;
 
     -- ==================================================================
-    -- PASO 8: RETORNAR RESUMEN CONSOLIDADO
+    -- PASO 9: RETORNAR RESUMEN CONSOLIDADO
     -- ==================================================================
     RETURN QUERY SELECT
         v_matches_nombre,
@@ -173,9 +203,10 @@ $function$;
 -- COMENTARIOS
 -- =============================================================================
 COMMENT ON FUNCTION matching_completo_automatizado() IS
-'v3.0: Orquestador principal del sistema de matching automatico.
+'v3.1: Orquestador principal del sistema de matching automatico.
 - Tabla: propiedades_v2
-- Ejecuta: nombre (95%), URL (85-90%), fuzzy (75-90%)
+- Ejecuta: nombre (95%), URL (85-90%), fuzzy (75-90%), GPS (65-85%)
+- GPS usa proyectos con gps_verificado_google = TRUE
 - Auto-aprueba >= 85% confianza
 - Rechaza inactivas y ya matcheadas
 - Aplica matches a propiedades_v2';
