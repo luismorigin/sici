@@ -1,0 +1,359 @@
+{
+  "name": "SICI - Supervisor Sin Match",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 20 * * *"
+            }
+          ]
+        }
+      },
+      "id": "trigger-schedule",
+      "name": "Schedule: 8:30 PM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300],
+      "notes": "Ejecuta diario 8:30 PM (después de Supervisor Matching)"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sin_Match",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "sheets-leer",
+      "name": "Sheets: Leer Sin Match",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [220, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      },
+      "notes": "Leer todas las filas del tab Sin_Match"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar decisiones del Sheet\nconst filas = $input.all();\n\nif (filas.length === 0 || !filas[0].json.ID_PROPIEDAD) {\n  return [{\n    json: {\n      bandeja_vacia: true,\n      total_filas: 0,\n      para_procesar: [],\n      pendientes: 0\n    }\n  }];\n}\n\nconst paraProcesar = [];\nconst paraEliminar = [];\nlet pendientes = 0;\nlet asignar = 0;\nlet crear = 0;\nlet sinProyecto = 0;\n\nconst nombresCreados = [];\nconst proyectosAsignados = [];\n\nfor (const fila of filas) {\n  const accion = (fila.json.ACCION || '').trim();\n  const propiedadId = parseInt(fila.json.ID_PROPIEDAD);\n  \n  if (!propiedadId) continue;\n  \n  if (accion.includes('ASIGNAR') || accion === '📌 ASIGNAR EXISTENTE') {\n    // Extraer ID del proyecto de la columna o del texto de proyectos cercanos\n    let proyectoId = fila.json.PROYECTO_ID_O_NOMBRE;\n    \n    // Si es solo número, es ID directo\n    if (/^\\d+$/.test(proyectoId)) {\n      proyectoId = parseInt(proyectoId);\n    } else if (proyectoId) {\n      // Intentar extraer ID del formato \"[ID:123]\"\n      const match = proyectoId.match(/\\[ID:(\\d+)\\]/);\n      if (match) {\n        proyectoId = parseInt(match[1]);\n      } else {\n        // Buscar en proyectos cercanos\n        const cercanoMatch = (fila.json.PROYECTOS_CERCANOS || '').match(/\\[ID:(\\d+)\\]/);\n        if (cercanoMatch) {\n          proyectoId = parseInt(cercanoMatch[1]);\n        }\n      }\n    }\n    \n    if (proyectoId && !isNaN(proyectoId)) {\n      paraProcesar.push({\n        propiedad_id: propiedadId,\n        accion: 'asignar',\n        proyecto_id: proyectoId,\n        row_number: fila.json.row_number\n      });\n      paraEliminar.push(propiedadId);\n      proyectosAsignados.push(fila.json.NOMBRE_EDIFICIO || `Prop ${propiedadId}`);\n      asignar++;\n    }\n    \n  } else if (accion.includes('CREAR') || accion === '🆕 CREAR PROYECTO') {\n    const nombreProyecto = (fila.json.PROYECTO_ID_O_NOMBRE || '').trim();\n    const gpsNuevo = (fila.json.GPS_NUEVO || '').trim();\n    \n    if (nombreProyecto) {\n      paraProcesar.push({\n        propiedad_id: propiedadId,\n        accion: 'crear',\n        nombre_proyecto: nombreProyecto,\n        gps_nuevo: gpsNuevo,\n        row_number: fila.json.row_number\n      });\n      paraEliminar.push(propiedadId);\n      nombresCreados.push(nombreProyecto);\n      crear++;\n    }\n    \n  } else if (accion.includes('SIN PROYECTO') || accion === '⛔ SIN PROYECTO') {\n    paraProcesar.push({\n      propiedad_id: propiedadId,\n      accion: 'sin_proyecto',\n      notas: fila.json.NOTAS || 'Marcado como sin proyecto',\n      row_number: fila.json.row_number\n    });\n    paraEliminar.push(propiedadId);\n    sinProyecto++;\n    \n  } else {\n    // Pendiente o no reconocido\n    pendientes++;\n  }\n}\n\nreturn [{\n  json: {\n    bandeja_vacia: false,\n    total_filas: filas.length,\n    para_procesar: paraProcesar,\n    para_eliminar: paraEliminar,\n    pendientes: pendientes,\n    stats: {\n      asignar: asignar,\n      crear: crear,\n      sin_proyecto: sinProyecto\n    },\n    nombres_creados: nombresCreados,\n    proyectos_asignados: proyectosAsignados\n  }\n}];"
+      },
+      "id": "code-procesar-decisiones",
+      "name": "Code: Procesar Decisiones",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300],
+      "notes": "Parsear decisiones del Sheet y preparar para BD"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.bandeja_vacia }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-bandeja-vacia",
+      "name": "IF: Bandeja Vacía",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [660, 300],
+      "notes": "Verificar si hay filas en el Sheet"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.para_procesar.length }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "if-hay-decisiones",
+      "name": "IF: Hay Decisiones",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [880, 200],
+      "notes": "Verificar si hay decisiones para procesar"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer items para procesar uno por uno\nconst data = $('Code: Procesar Decisiones').first().json;\nreturn data.para_procesar.map(item => ({ json: item }));"
+      },
+      "id": "code-split-decisiones",
+      "name": "Code: Split Decisiones",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 100],
+      "notes": "Separar decisiones para procesar individualmente"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM procesar_decision_sin_match($1, $2, $3, $4, $5, $6)",
+        "options": {
+          "queryReplacement": "={{ $json.propiedad_id }},={{ $json.accion }},={{ $json.proyecto_id || null }},={{ $json.nombre_proyecto || null }},={{ $json.gps_nuevo || null }},={{ $json.notas || null }}"
+        }
+      },
+      "id": "pg-procesar-decision",
+      "name": "PG: Procesar Decisión",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1320, 100],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase SICI"
+        }
+      },
+      "notes": "Ejecutar función procesar_decision_sin_match"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar IDs para eliminar del Sheet\nconst data = $('Code: Procesar Decisiones').first().json;\nconst idsParaEliminar = data.para_eliminar;\n\nif (idsParaEliminar.length === 0) {\n  return [{ json: { ids_eliminar: [], cantidad: 0 } }];\n}\n\nreturn [{\n  json: {\n    ids_eliminar: idsParaEliminar,\n    cantidad: idsParaEliminar.length\n  }\n}];"
+      },
+      "id": "code-preparar-delete",
+      "name": "Code: Preparar Delete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 100],
+      "notes": "Preparar lista de IDs para eliminar del Sheet"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sin_Match",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "ID_PROPIEDAD",
+              "lookupValue": "={{ $json.ids_eliminar.join(',') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "sheets-delete",
+      "name": "Sheets: Eliminar Procesadas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1760, 100],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      },
+      "notes": "Eliminar filas procesadas del Sheet"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SLACK_WEBHOOK_SICI}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"✅ SICI Sin Match - Procesamiento Completado\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*📌 Asignadas:*\\n{{ $('Code: Procesar Decisiones').first().json.stats.asignar }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*🆕 Creadas:*\\n{{ $('Code: Procesar Decisiones').first().json.stats.crear }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*⛔ Sin proyecto:*\\n{{ $('Code: Procesar Decisiones').first().json.stats.sin_proyecto }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*⏳ Pendientes:*\\n{{ $('Code: Procesar Decisiones').first().json.pendientes }}\"\n        }\n      ]\n    },\n    {{ $('Code: Procesar Decisiones').first().json.nombres_creados.length > 0 ? `{\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Proyectos creados:* ${$('Code: Procesar Decisiones').first().json.nombres_creados.join(', ')}\"\n      }\n    },` : '' }}\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"📂 Ver Bandeja Sin Match\",\n            \"emoji\": true\n          },\n          \"url\": \"https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit#gid=SIN_MATCH_GID\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "slack-completado",
+      "name": "Slack: Procesamiento Completado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1980, 100],
+      "notes": "Notificar resultados en Slack"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SLACK_WEBHOOK_SICI}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"📭 SICI Sin Match - Bandeja Vacía\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"No hay filas en la bandeja Sin Match.\\n\\nEsto puede significar que todas las propiedades ya tienen proyecto asignado.\"\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "slack-vacia",
+      "name": "Slack: Bandeja Vacía",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [880, 400],
+      "notes": "Notificar cuando la bandeja está vacía"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SLACK_WEBHOOK_SICI}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"⏳ SICI Sin Match - Sin Decisiones Nuevas\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"Hay *{{ $('Code: Procesar Decisiones').first().json.pendientes }}* propiedades en la bandeja esperando revisión.\\n\\nNinguna tiene acción asignada aún.\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"📂 Ir a Revisar\",\n            \"emoji\": true\n          },\n          \"style\": \"primary\",\n          \"url\": \"https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit#gid=SIN_MATCH_GID\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "slack-sin-decisiones",
+      "name": "Slack: Sin Decisiones",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1100, 300],
+      "notes": "Notificar cuando hay filas pero sin decisiones"
+    }
+  ],
+  "connections": {
+    "Schedule: 8:30 PM": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Leer Sin Match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Leer Sin Match": {
+      "main": [
+        [
+          {
+            "node": "Code: Procesar Decisiones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Procesar Decisiones": {
+      "main": [
+        [
+          {
+            "node": "IF: Bandeja Vacía",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Bandeja Vacía": {
+      "main": [
+        [
+          {
+            "node": "Slack: Bandeja Vacía",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF: Hay Decisiones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Hay Decisiones": {
+      "main": [
+        [
+          {
+            "node": "Code: Split Decisiones",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack: Sin Decisiones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Split Decisiones": {
+      "main": [
+        [
+          {
+            "node": "PG: Procesar Decisión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Procesar Decisión": {
+      "main": [
+        [
+          {
+            "node": "Code: Preparar Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Preparar Delete": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Eliminar Procesadas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Eliminar Procesadas": {
+      "main": [
+        [
+          {
+            "node": "Slack: Procesamiento Completado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "timezone": "America/La_Paz"
+  },
+  "tags": [
+    {
+      "name": "SICI",
+      "id": "sici-tag"
+    },
+    {
+      "name": "Sin Match",
+      "id": "sin-match-tag"
+    }
+  ],
+  "pinData": {},
+  "versionId": "1.0.0"
+}

@@ -1,0 +1,298 @@
+{
+  "name": "SICI - Exportar Sin Match",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      },
+      "id": "trigger-schedule",
+      "name": "Schedule: 7:00 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300],
+      "notes": "Ejecuta diario 7 AM (después de Matching Nocturno)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM obtener_sin_match_para_exportar(NULL)",
+        "options": {}
+      },
+      "id": "pg-obtener-sin-match",
+      "name": "PG: Obtener Sin Match",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [220, 300],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase SICI"
+        }
+      },
+      "notes": "Obtiene propiedades sin match no exportadas + proyectos cercanos"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $input.all().length }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "if-hay-propiedades",
+      "name": "IF: Hay Propiedades",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [440, 300],
+      "notes": "Verificar si hay propiedades para exportar"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar datos para Google Sheets\nconst props = $input.all();\n\nif (props.length === 0 || !props[0].json.id) {\n  return [{\n    json: {\n      hay_propiedades: false,\n      cantidad: 0,\n      filas: [],\n      ids: []\n    }\n  }];\n}\n\nconst fecha = new Date().toISOString().split('T')[0];\n\nconst filasSheet = props.map(p => ({\n  ID_PROPIEDAD: p.json.id,\n  FECHA_EXPORT: fecha,\n  URL_PROPIEDAD: p.json.url,\n  LINK_MAPS: p.json.latitud && p.json.longitud\n    ? `https://maps.google.com/maps?q=${p.json.latitud},${p.json.longitud}`\n    : '',\n  ZONA: p.json.zona || '',\n  NOMBRE_EDIFICIO: p.json.nombre_edificio || '',\n  PROYECTOS_CERCANOS: p.json.proyectos_cercanos || 'Ninguno < 200m',\n  'ACCION': '⏳ PENDIENTE',\n  'PROYECTO_ID_O_NOMBRE': '',\n  'GPS_NUEVO': '',\n  'NOTAS': ''\n}));\n\nconst ids = props.map(p => p.json.id);\n\n// Stats para Slack\nconst sinNombre = props.filter(p => !p.json.nombre_edificio).length;\nconst conProyectosCerca = props.filter(p => p.json.proyectos_cercanos !== 'Ninguno < 200m').length;\n\nreturn [{\n  json: {\n    hay_propiedades: true,\n    cantidad: filasSheet.length,\n    sin_nombre: sinNombre,\n    con_proyectos_cerca: conProyectosCerca,\n    filas: filasSheet,\n    ids: ids\n  }\n}];"
+      },
+      "id": "code-preparar-sheets",
+      "name": "Code: Preparar para Sheets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 200],
+      "notes": "Formatear datos para Google Sheets"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer filas individuales para el append\nconst data = $input.first().json;\nreturn data.filas.map(fila => ({ json: fila }));"
+      },
+      "id": "code-split-filas",
+      "name": "Code: Split Filas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 200],
+      "notes": "Separar filas para append individual"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sin_Match",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID_PROPIEDAD": "={{ $json.ID_PROPIEDAD }}",
+            "FECHA_EXPORT": "={{ $json.FECHA_EXPORT }}",
+            "URL_PROPIEDAD": "={{ $json.URL_PROPIEDAD }}",
+            "LINK_MAPS": "={{ $json.LINK_MAPS }}",
+            "ZONA": "={{ $json.ZONA }}",
+            "NOMBRE_EDIFICIO": "={{ $json.NOMBRE_EDIFICIO }}",
+            "PROYECTOS_CERCANOS": "={{ $json.PROYECTOS_CERCANOS }}",
+            "ACCION": "={{ $json.ACCION }}",
+            "PROYECTO_ID_O_NOMBRE": "={{ $json.PROYECTO_ID_O_NOMBRE }}",
+            "GPS_NUEVO": "={{ $json.GPS_NUEVO }}",
+            "NOTAS": "={{ $json.NOTAS }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {"id": "ID_PROPIEDAD", "displayName": "ID_PROPIEDAD", "required": false, "defaultMatch": false, "canBeUsedToMatch": true, "type": "string"},
+            {"id": "FECHA_EXPORT", "displayName": "FECHA_EXPORT", "required": false, "defaultMatch": false, "canBeUsedToMatch": true, "type": "string"},
+            {"id": "URL_PROPIEDAD", "displayName": "URL_PROPIEDAD", "required": false, "defaultMatch": false, "canBeUsedToMatch": true, "type": "string"},
+            {"id": "LINK_MAPS", "displayName": "LINK_MAPS", "required": false, "defaultMatch": false, "canBeUsedToMatch": true, "type": "string"},
+            {"id": "ZONA", "displayName": "ZONA", "required": false, "defaultMatch": false, "canBeUsedToMatch": true, "type": "string"},
+            {"id": "NOMBRE_EDIFICIO", "displayName": "NOMBRE_EDIFICIO", "required": false, "defaultMatch": false, "canBeUsedToMatch": true, "type": "string"},
+            {"id": "PROYECTOS_CERCANOS", "displayName": "PROYECTOS_CERCANOS", "required": false, "defaultMatch": false, "canBeUsedToMatch": true, "type": "string"},
+            {"id": "ACCION", "displayName": "ACCION", "required": false, "defaultMatch": false, "canBeUsedToMatch": true, "type": "string"},
+            {"id": "PROYECTO_ID_O_NOMBRE", "displayName": "PROYECTO_ID_O_NOMBRE", "required": false, "defaultMatch": false, "canBeUsedToMatch": true, "type": "string"},
+            {"id": "GPS_NUEVO", "displayName": "GPS_NUEVO", "required": false, "defaultMatch": false, "canBeUsedToMatch": true, "type": "string"},
+            {"id": "NOTAS", "displayName": "NOTAS", "required": false, "defaultMatch": false, "canBeUsedToMatch": true, "type": "string"}
+          ]
+        },
+        "options": {}
+      },
+      "id": "sheets-append",
+      "name": "Sheets: Append Sin Match",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1100, 200],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      },
+      "notes": "Agregar filas al tab Sin_Match"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT registrar_exportacion_sin_match($1::INTEGER[]) as registrados",
+        "options": {
+          "queryReplacement": "={{ JSON.stringify($('Code: Preparar para Sheets').first().json.ids) }}"
+        }
+      },
+      "id": "pg-registrar-export",
+      "name": "PG: Registrar Exportación",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1320, 200],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase SICI"
+        }
+      },
+      "notes": "Registrar en sin_match_exportados para no duplicar"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SLACK_WEBHOOK_SICI}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"📤 SICI Sin Match - Exportación Diaria\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Propiedades exportadas:*\\n{{ $('Code: Preparar para Sheets').first().json.cantidad }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Sin nombre_edificio:*\\n{{ $('Code: Preparar para Sheets').first().json.sin_nombre }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Con proyectos cercanos (<200m):* {{ $('Code: Preparar para Sheets').first().json.con_proyectos_cerca }}\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"📂 Ir a Bandeja Sin Match\",\n            \"emoji\": true\n          },\n          \"url\": \"https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit#gid=SIN_MATCH_GID\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "slack-exportacion",
+      "name": "Slack: Exportación Completada",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1540, 200],
+      "notes": "Notificar en Slack con link al Sheet"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SLACK_WEBHOOK_SICI}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"📭 SICI Sin Match - Sin Propiedades Nuevas\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"No hay propiedades nuevas sin match para exportar.\\n\\nTodas las propiedades completadas ya tienen proyecto asignado o están en la bandeja.\"\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "slack-sin-propiedades",
+      "name": "Slack: Sin Propiedades",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [660, 400],
+      "notes": "Notificar cuando no hay propiedades nuevas"
+    }
+  ],
+  "connections": {
+    "Schedule: 7:00 AM": {
+      "main": [
+        [
+          {
+            "node": "PG: Obtener Sin Match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Obtener Sin Match": {
+      "main": [
+        [
+          {
+            "node": "IF: Hay Propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Hay Propiedades": {
+      "main": [
+        [
+          {
+            "node": "Code: Preparar para Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack: Sin Propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Preparar para Sheets": {
+      "main": [
+        [
+          {
+            "node": "Code: Split Filas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Split Filas": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Append Sin Match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Append Sin Match": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Exportación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Registrar Exportación": {
+      "main": [
+        [
+          {
+            "node": "Slack: Exportación Completada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "timezone": "America/La_Paz"
+  },
+  "tags": [
+    {
+      "name": "SICI",
+      "id": "sici-tag"
+    },
+    {
+      "name": "Sin Match",
+      "id": "sin-match-tag"
+    }
+  ],
+  "pinData": {},
+  "versionId": "1.0.0"
+}
