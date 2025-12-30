@@ -104,6 +104,7 @@ IF: ¿Hay pendientes?
 | `LINK_MAPS` | URL | Google Maps de la propiedad |
 | `ACCION (Humano)` | ENUM | ⏳ PENDIENTE / ✅ APROBAR / ❌ RECHAZAR |
 | `PROYECTO_ALTERNATIVO` | TEXT | (Opcional) Nombre del proyecto correcto si el sugerido es incorrecto |
+| `GPS_ALTERNATIVO` | TEXT | (Opcional) Coordenadas copiadas de Google Maps "-17.756, -63.197" |
 
 ### 2.3 Workflow: Matching Supervisor
 
@@ -152,14 +153,26 @@ IF: ¿decision == SYNC?
 
 **Flujo:**
 1. Humano ve sugerencia con `PROYECTO_SUGERIDO = "Torre Zenith"`
-2. Humano sabe que es `"Torres del Sol"` (no existe en master)
-3. Escribe `"Torres del Sol"` en columna `PROYECTO_ALTERNATIVO`
-4. Marca `ACCION = ❌ RECHAZAR`
-5. Supervisor procesa:
-   - Rechaza el match original
-   - Crea proyecto nuevo en `proyectos_master` con estado='propuesto'
-   - Crea nueva sugerencia apuntando al nuevo proyecto
-6. Próximo ciclo: aparece nueva sugerencia para aprobar
+2. Humano busca en Google Maps el edificio correcto
+3. Click derecho en el edificio → Copia coordenadas
+4. Escribe en Sheet:
+   - `PROYECTO_ALTERNATIVO` = "Torres del Sol"
+   - `GPS_ALTERNATIVO` = "-17.75669, -63.19757"
+5. Marca `ACCION = ❌ RECHAZAR`
+6. Supervisor procesa:
+   - Busca proyecto existente por nombre exacto
+   - Si no encuentra: busca por GPS < 15m + nombre 70%+ similar
+   - Si encuentra: usa proyecto existente
+   - Si no encuentra: crea proyecto nuevo con GPS verificado
+   - Crea nueva sugerencia con 95% confianza
+7. Próximo ciclo: aparece nueva sugerencia para aprobar
+
+**Validación anti-duplicados:**
+```
+GPS < 15m + Nombre >= 70% similar → Mismo edificio (usar existente)
+GPS < 15m + Nombre < 70% similar  → Edificios diferentes (crear nuevo)
+GPS >= 15m                        → Crear nuevo
+```
 
 ---
 

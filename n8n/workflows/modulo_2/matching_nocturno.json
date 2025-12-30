@@ -90,7 +90,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Preparar datos para Google Sheets\nconst pendientes = $input.all();\nconst resultadosMatching = $('Code: Procesar Resultados').first().json;\n\nif (pendientes.length === 0 || !pendientes[0].json.id_sugerencia) {\n  return [{\n    hay_pendientes: false,\n    cantidad_pendientes: 0,\n    resultados: resultadosMatching\n  }];\n}\n\n// Formatear para Google Sheets\nconst filasSheet = pendientes.map(p => ({\n  ID_SUGERENCIA: p.json.id_sugerencia,\n  FECHA: new Date().toISOString().split('T')[0],\n  PROPIEDAD_ID: p.json.propiedad_id,\n  URL_PROPIEDAD: p.json.url_propiedad,\n  NOMBRE_EDIFICIO: p.json.nombre_edificio,\n  PROYECTO_SUGERIDO: p.json.proyecto_sugerido,\n  PROYECTO_ID: p.json.proyecto_id,\n  METODO: p.json.metodo,\n  CONFIANZA: p.json.confianza,\n  DISTANCIA_M: p.json.distancia_metros ? Math.round(p.json.distancia_metros) : null,\n  LINK_MAPS: p.json.latitud && p.json.longitud \n    ? `https://maps.google.com/maps?q=${p.json.latitud},${p.json.longitud}` \n    : '',\n  'ACCION (Humano)': '⏳ PENDIENTE',\n  'PROYECTO_ALTERNATIVO': ''\n}));\n\nreturn [{\n  hay_pendientes: true,\n  cantidad_pendientes: filasSheet.length,\n  filas: filasSheet,\n  resultados: resultadosMatching\n}];"
+        "jsCode": "// Preparar datos para Google Sheets\nconst pendientes = $input.all();\nconst resultadosMatching = $('Code: Procesar Resultados').first().json;\n\nif (pendientes.length === 0 || !pendientes[0].json.id_sugerencia) {\n  return [{\n    hay_pendientes: false,\n    cantidad_pendientes: 0,\n    resultados: resultadosMatching\n  }];\n}\n\n// Formatear para Google Sheets\nconst filasSheet = pendientes.map(p => ({\n  ID_SUGERENCIA: p.json.id_sugerencia,\n  FECHA: new Date().toISOString().split('T')[0],\n  PROPIEDAD_ID: p.json.propiedad_id,\n  URL_PROPIEDAD: p.json.url_propiedad,\n  NOMBRE_EDIFICIO: p.json.nombre_edificio,\n  PROYECTO_SUGERIDO: p.json.proyecto_sugerido,\n  PROYECTO_ID: p.json.proyecto_id,\n  METODO: p.json.metodo,\n  CONFIANZA: p.json.confianza,\n  DISTANCIA_M: p.json.distancia_metros ? Math.round(p.json.distancia_metros) : null,\n  LINK_MAPS: p.json.latitud && p.json.longitud \n    ? `https://maps.google.com/maps?q=${p.json.latitud},${p.json.longitud}` \n    : '',\n  'ACCION (Humano)': '⏳ PENDIENTE',\n  'PROYECTO_ALTERNATIVO': '',\n  'GPS_ALTERNATIVO': ''\n}));\n\nreturn [{\n  hay_pendientes: true,\n  cantidad_pendientes: filasSheet.length,\n  filas: filasSheet,\n  resultados: resultadosMatching\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -162,7 +162,8 @@
             "DISTANCIA_M": "={{ $json.DISTANCIA_M }}",
             "LINK_MAPS": "={{ $json.LINK_MAPS }}",
             "ACCION (Humano)": "={{ $json['ACCION (Humano)'] }}",
-            "PROYECTO_ALTERNATIVO": "={{ $json['PROYECTO_ALTERNATIVO'] }}"
+            "PROYECTO_ALTERNATIVO": "={{ $json['PROYECTO_ALTERNATIVO'] }}",
+            "GPS_ALTERNATIVO": "={{ $json['GPS_ALTERNATIVO'] }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -229,6 +230,11 @@
             {
               "id": "PROYECTO_ALTERNATIVO",
               "displayName": "PROYECTO_ALTERNATIVO",
+              "type": "string"
+            },
+            {
+              "id": "GPS_ALTERNATIVO",
+              "displayName": "GPS_ALTERNATIVO",
               "type": "string"
             }
           ]

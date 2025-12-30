@@ -64,7 +64,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ========================================\n// EL AUDITOR: Analiza estado de revisión\n// ========================================\nconst filas = $input.all();\n\n// Filtrar filas válidas (ignorar header y vacías)\nconst filasData = filas.filter(f => \n  f.json.ID_SUGERENCIA && \n  f.json.ID_SUGERENCIA !== 'ID_SUGERENCIA' &&\n  !isNaN(parseInt(f.json.ID_SUGERENCIA))\n);\n\nif (filasData.length === 0) {\n  return [{\n    total_filas: 0,\n    pendientes: 0,\n    aprobados: 0,\n    rechazados: 0,\n    ids_aprobados: [],\n    ids_rechazados: [],\n    proyectos_alternativos: [],\n    decision: 'VACIO',\n    mensaje: 'No hay filas para procesar'\n  }];\n}\n\n// Contar por estado (usando includes para flexibilidad con emojis)\nconst pendientesData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('PENDIENTE')\n);\n\nconst aprobadosData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('APROBAR')\n);\n\nconst rechazadosData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('RECHAZAR')\n);\n\n// NUEVO: Detectar rechazados CON proyecto alternativo\nconst rechazadosConAlternativo = rechazadosData.filter(f => \n  f.json['PROYECTO_ALTERNATIVO'] && \n  f.json['PROYECTO_ALTERNATIVO'].trim() !== ''\n).map(f => ({\n  sugerencia_id: parseInt(f.json.ID_SUGERENCIA),\n  propiedad_id: parseInt(f.json.PROPIEDAD_ID),\n  proyecto_alternativo: f.json['PROYECTO_ALTERNATIVO'].trim(),\n  nombre_edificio: f.json.NOMBRE_EDIFICIO\n}));\n\n// Extraer IDs\nconst idsAprobados = aprobadosData\n  .map(f => parseInt(f.json.ID_SUGERENCIA))\n  .filter(id => !isNaN(id));\n  \nconst idsRechazados = rechazadosData\n  .map(f => parseInt(f.json.ID_SUGERENCIA))\n  .filter(id => !isNaN(id));\n\n// IDs procesados (para limpiar después)\nconst idsProcesados = [...idsAprobados, ...idsRechazados];\n\n// DECISIÓN\nlet decision;\nif (pendientesData.length > 0) {\n  decision = 'BLOQUEAR';\n} else if (idsAprobados.length > 0 || idsRechazados.length > 0) {\n  decision = 'SYNC';\n} else {\n  decision = 'VACIO';\n}\n\nreturn [{\n  total_filas: filasData.length,\n  pendientes: pendientesData.length,\n  aprobados: idsAprobados.length,\n  rechazados: idsRechazados.length,\n  ids_aprobados: idsAprobados,\n  ids_rechazados: idsRechazados,\n  ids_procesados: idsProcesados,\n  proyectos_alternativos: rechazadosConAlternativo,\n  hay_alternativos: rechazadosConAlternativo.length > 0,\n  decision: decision,\n  // Para Slack\n  nombres_aprobados: aprobadosData.map(f => f.json.NOMBRE_EDIFICIO).slice(0, 5),\n  nombres_rechazados: rechazadosData.map(f => f.json.NOMBRE_EDIFICIO).slice(0, 5),\n  nombres_alternativos: rechazadosConAlternativo.map(p => p.proyecto_alternativo).slice(0, 5)\n}];"
+        "jsCode": "// ========================================\n// EL AUDITOR: Analiza estado de revisión\n// ========================================\nconst filas = $input.all();\n\n// Filtrar filas válidas (ignorar header y vacías)\nconst filasData = filas.filter(f => \n  f.json.ID_SUGERENCIA && \n  f.json.ID_SUGERENCIA !== 'ID_SUGERENCIA' &&\n  !isNaN(parseInt(f.json.ID_SUGERENCIA))\n);\n\nif (filasData.length === 0) {\n  return [{\n    total_filas: 0,\n    pendientes: 0,\n    aprobados: 0,\n    rechazados: 0,\n    ids_aprobados: [],\n    ids_rechazados: [],\n    proyectos_alternativos: [],\n    decision: 'VACIO',\n    mensaje: 'No hay filas para procesar'\n  }];\n}\n\n// Contar por estado (usando includes para flexibilidad con emojis)\nconst pendientesData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('PENDIENTE')\n);\n\nconst aprobadosData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('APROBAR')\n);\n\nconst rechazadosData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('RECHAZAR')\n);\n\n// NUEVO: Detectar rechazados CON proyecto alternativo\nconst rechazadosConAlternativo = rechazadosData.filter(f => \n  f.json['PROYECTO_ALTERNATIVO'] && \n  f.json['PROYECTO_ALTERNATIVO'].trim() !== ''\n).map(f => ({\n  sugerencia_id: parseInt(f.json.ID_SUGERENCIA),\n  propiedad_id: parseInt(f.json.PROPIEDAD_ID),\n  proyecto_alternativo: f.json['PROYECTO_ALTERNATIVO'].trim(),\n  gps_alternativo: f.json['GPS_ALTERNATIVO'] ? f.json['GPS_ALTERNATIVO'].trim() : '',\n  nombre_edificio: f.json.NOMBRE_EDIFICIO\n}));\n\n// Extraer IDs\nconst idsAprobados = aprobadosData\n  .map(f => parseInt(f.json.ID_SUGERENCIA))\n  .filter(id => !isNaN(id));\n  \nconst idsRechazados = rechazadosData\n  .map(f => parseInt(f.json.ID_SUGERENCIA))\n  .filter(id => !isNaN(id));\n\n// IDs procesados (para limpiar después)\nconst idsProcesados = [...idsAprobados, ...idsRechazados];\n\n// DECISIÓN\nlet decision;\nif (pendientesData.length > 0) {\n  decision = 'BLOQUEAR';\n} else if (idsAprobados.length > 0 || idsRechazados.length > 0) {\n  decision = 'SYNC';\n} else {\n  decision = 'VACIO';\n}\n\nreturn [{\n  total_filas: filasData.length,\n  pendientes: pendientesData.length,\n  aprobados: idsAprobados.length,\n  rechazados: idsRechazados.length,\n  ids_aprobados: idsAprobados,\n  ids_rechazados: idsRechazados,\n  ids_procesados: idsProcesados,\n  proyectos_alternativos: rechazadosConAlternativo,\n  hay_alternativos: rechazadosConAlternativo.length > 0,\n  decision: decision,\n  // Para Slack\n  nombres_aprobados: aprobadosData.map(f => f.json.NOMBRE_EDIFICIO).slice(0, 5),\n  nombres_rechazados: rechazadosData.map(f => f.json.NOMBRE_EDIFICIO).slice(0, 5),\n  nombres_alternativos: rechazadosConAlternativo.map(p => p.proyecto_alternativo).slice(0, 5)\n}];"
       },
       "id": "72b67e5f-c6d6-48d8-800e-a964f988c104",
       "name": "Code: El Auditor",
@@ -211,6 +211,19 @@
     },
     {
       "parameters": {
+        "jsCode": "// Preparar items para eliminar del Sheet\n// Solo borrar: APROBADOS + RECHAZADOS CON ALTERNATIVO\n// Mantener: RECHAZADOS SIN ALTERNATIVO (para resolver después)\nconst data = $('Code: Preparar RPC').first().json;\n\nconst idsAprobados = data.ids_aprobados || [];\nconst alternativos = data.proyectos_alternativos || [];\nconst idsAlternativos = alternativos.map(a => a.sugerencia_id);\n\n// Combinar: aprobados + rechazados con alternativo\nconst idsABorrar = [...idsAprobados, ...idsAlternativos];\n\nif (idsABorrar.length === 0) {\n  return [{ json: { skip: true } }];\n}\n\n// Crear un item por cada ID a eliminar\nreturn idsABorrar.map(id => ({\n  json: { ID_SUGERENCIA: id.toString() }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "id": "prep-delete-001",
+      "name": "Code: Preparar Delete"
+    },
+    {
+      "parameters": {
         "operation": "delete",
         "documentId": {
           "__rl": true,
@@ -221,12 +234,20 @@
           "__rl": true,
           "value": "Pendientes_Matching",
           "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "ID_SUGERENCIA",
+              "lookupValue": "={{ $json.ID_SUGERENCIA }}"
+            }
+          ]
         }
       },
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
+      "typeVersion": 4.5,
       "position": [
-        480,
+        700,
         0
       ],
       "id": "114b145a-55ad-4a6c-944c-a7c6ff4555e9",
@@ -237,8 +258,7 @@
           "name": "Google Sheets account"
         }
       },
-      "disabled": true,
-      "notes": "Opcional: Eliminar filas procesadas del Sheet. Habilitar si prefieres limpiar automáticamente."
+      "notes": "Eliminar filas procesadas del Sheet por ID_SUGERENCIA."
     },
     {
       "parameters": {
@@ -246,7 +266,7 @@
         "url": "{{SLACK_WEBHOOK_SICI}}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"✅ SICI Matching Supervisor - Sincronización Completada\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"Las decisiones humanas han sido aplicadas a la base de datos.\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*✅ Aprobados:*\\n{{ $('Code: Preparar RPC').first().json.aprobados }} matches\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*❌ Rechazados:*\\n{{ $('Code: Preparar RPC').first().json.rechazados }} sugerencias\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Proyectos aprobados:*\\n{{ $('Code: Preparar RPC').first().json.nombres_aprobados.join(', ') || 'Ninguno' }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*🆕 Proyectos alternativos sugeridos:*\\n{{ $('Code: Preparar RPC').first().json.nombres_alternativos.length > 0 ? $('Code: Preparar RPC').first().json.nombres_alternativos.join(', ') : 'Ninguno' }}\"\n      }\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"✅ SICI Matching Supervisor - Sincronización Completada\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"Las decisiones humanas han sido aplicadas a la base de datos.\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*✅ Aprobados:*\\n{{ $('Code: Preparar RPC').first().json.aprobados }} matches\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*❌ Rechazados:*\\n{{ $('Code: Preparar RPC').first().json.rechazados }} sugerencias\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Proyectos aprobados:*\\n{{ $('Code: Preparar RPC').first().json.nombres_aprobados.join(', ') || 'Ninguno' }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*🆕 Proyectos alternativos creados y matcheados:*\\n{{ $('Code: Preparar RPC').first().json.nombres_alternativos.length > 0 ? $('Code: Preparar RPC').first().json.nombres_alternativos.join(', ') : 'Ninguno' }}\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"📂 Ver Bandeja de Matching\",\n            \"emoji\": true\n          },\n          \"url\": \"https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit\"\n        }\n      ]\n    }\n  ]\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -350,7 +370,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"p_nombre_proyecto\": \"{{ $json.proyecto_alternativo }}\",\n  \"p_propiedad_id\": {{ $json.propiedad_id }},\n  \"p_sugerencia_id\": {{ $json.sugerencia_id }}\n}",
+        "jsonBody": "={\n  \"p_nombre_proyecto\": \"{{ $json.proyecto_alternativo }}\",\n  \"p_propiedad_id\": {{ $json.propiedad_id }},\n  \"p_sugerencia_id\": {{ $json.sugerencia_id }},\n  \"p_gps_alternativo\": \"{{ $json.gps_alternativo }}\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -463,7 +483,18 @@
       "main": [
         [
           {
-            "node": "IF: Hay Alternativos?",
+            "node": "Code: Preparar Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Preparar Delete": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets: Limpiar Procesados",
             "type": "main",
             "index": 0
           }
@@ -525,7 +556,7 @@
       "main": [
         [
           {
-            "node": "Slack: Sync Completado",
+            "node": "IF: Hay Alternativos?",
             "type": "main",
             "index": 0
           }
