@@ -1,5 +1,56 @@
 # CHANGELOG - Matching
 
+## [3.1.0] - 2025-12-30
+
+### New Features
+
+1. **GPS Matching Reactivado**
+   - Filtro por `proyectos_master.gps_verificado_google = TRUE`
+   - Solo proyectos con GPS verificado participan en matching por distancia
+   - Evita falsos positivos por GPS heredado de propiedades
+
+2. **Human-in-the-Loop System**
+   - Google Sheet "SICI - Matching Bandeja de Aprobación"
+   - Sugerencias 70-84% van a revisión humana
+   - Sugerencias ≥85% se auto-aprueban
+   - Supervisor 8 PM procesa decisiones
+
+3. **Proyecto Alternativo**
+   - Columnas M (PROYECTO_ALTERNATIVO) y N (GPS_ALTERNATIVO) en Sheet
+   - Cuando humano rechaza y proporciona alternativo:
+     - Si proyecto existe (nombre exacto): usa existente
+     - Si GPS < 15m + nombre ≥70% similar: usa existente
+     - Si no: crea proyecto nuevo
+   - Match se aplica directamente (sin segunda aprobación)
+
+4. **Workflows n8n en Producción**
+   - `matching_nocturno.json` v1.0 - Ejecuta 4 AM diario
+   - `matching_supervisor.json` v1.0 - Ejecuta 8 PM diario
+   - `radar_mensual.json` v1.0 - Ejecuta día 1 de cada mes
+
+### Funciones Actualizadas
+
+| Función | Versión | Cambios |
+|---------|---------|---------|
+| `matching_completo_automatizado()` | v3.1 | Filtro gps_verificado_google |
+| `crear_proyecto_desde_sugerencia()` | v2.0 | GPS alternativo + validación duplicados |
+| `calcular_similitud()` | v1.0 | Nueva - Levenshtein para fuzzy |
+| `calcular_distancia_metros()` | v1.0 | Nueva - Haversine para GPS |
+
+### Nuevas Migraciones
+
+| # | Archivo | Propósito |
+|---|---------|-----------|
+| 006 | `crear_proyecto_desde_sugerencia.sql` | RPC básica |
+| 007 | `crear_proyecto_con_gps_validacion.sql` | RPC v2 + validación GPS/fuzzy |
+
+### Documentación
+
+- `docs/MANUAL_USUARIO_SHEETS.md` - Manual para usuarios de Google Sheets
+- `docs/modulo_2/MATCHING_NOCTURNO_SPEC.md` - Especificación técnica
+
+---
+
 ## [3.0.0] - 2025-12-28
 
 ### Breaking Changes
@@ -109,6 +160,10 @@ DROP FUNCTION IF EXISTS aplicar_matches_aprobados();
 
 -- 6. Ejecutar matching completo
 SELECT * FROM matching_completo_automatizado();
+
+-- 7. (v3.1) Funciones Human-in-the-Loop
+\i sql/migrations/006_crear_proyecto_desde_sugerencia.sql
+\i sql/migrations/007_crear_proyecto_con_gps_validacion.sql
 ```
 
 ---
