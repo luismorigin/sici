@@ -1,0 +1,212 @@
+{
+  "name": "SICI - Auditoría Diaria",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule: 9:00 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300],
+      "notes": "Ejecuta todos los días a las 9:00 AM (Bolivia UTC-4)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  COUNT(*) as total,\n  COUNT(*) FILTER (WHERE status = 'completado') as completadas,\n  COUNT(*) FILTER (WHERE status = 'nueva') as nuevas,\n  COUNT(*) FILTER (WHERE status = 'nueva' AND tipo_operacion = 'venta') as nuevas_venta,\n  COUNT(*) FILTER (WHERE status = 'inactivo_pending') as inactivas,\n  COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL) as matcheadas,\n  COUNT(*) FILTER (WHERE id_proyecto_master IS NULL AND status = 'completado') as sin_match,\n  COUNT(*) FILTER (WHERE nombre_edificio IS NOT NULL AND nombre_edificio != '') as con_nombre,\n  COUNT(*) FILTER (WHERE zona IS NOT NULL AND zona != '') as con_zona,\n  COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '24 hours') as creadas_24h,\n  COUNT(*) FILTER (WHERE fecha_enrichment >= NOW() - INTERVAL '24 hours') as enriquecidas_24h\nFROM propiedades_v2",
+        "options": {}
+      },
+      "id": "pg-stats-props",
+      "name": "PG: Stats Propiedades",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [220, 300],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase SICI"
+        }
+      },
+      "notes": "Estadísticas generales de propiedades"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  COUNT(*) as sugerencias_total,\n  COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours') as sugerencias_24h,\n  COUNT(*) FILTER (WHERE estado = 'aprobado' AND created_at >= NOW() - INTERVAL '24 hours') as aprobadas_24h,\n  COUNT(*) FILTER (WHERE estado = 'rechazado' AND created_at >= NOW() - INTERVAL '24 hours') as rechazadas_24h,\n  COUNT(*) FILTER (WHERE estado = 'pendiente') as pendientes_revision,\n  COUNT(*) FILTER (\n    WHERE created_at >= DATE_TRUNC('day', NOW()) + INTERVAL '4 hours'\n    AND created_at < DATE_TRUNC('day', NOW()) + INTERVAL '5 hours'\n  ) as matching_nocturno_hoy\nFROM matching_sugerencias",
+        "options": {}
+      },
+      "id": "pg-stats-matching",
+      "name": "PG: Stats Matching",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [440, 300],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase SICI"
+        }
+      },
+      "notes": "Estadísticas de matching y verificación de ejecución nocturna"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  COUNT(*) as total,\n  COUNT(*) FILTER (WHERE activo = true) as activos,\n  COUNT(*) FILTER (WHERE gps_verificado_google = true) as gps_verificado,\n  COUNT(*) FILTER (WHERE google_place_id IS NOT NULL) as con_place_id,\n  (SELECT COUNT(*) FROM proyectos_pendientes_google WHERE estado = 'pendiente') as pendientes_google\nFROM proyectos_master",
+        "options": {}
+      },
+      "id": "pg-stats-proyectos",
+      "name": "PG: Stats Proyectos",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [660, 300],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase SICI"
+        }
+      },
+      "notes": "Estadísticas de proyectos master"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  MAX(fecha_enrichment) as ultimo_enrichment,\n  MAX(fecha_merge) as ultimo_merge,\n  ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(fecha_enrichment))) / 3600, 1) as horas_sin_enrichment,\n  ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(fecha_merge))) / 3600, 1) as horas_sin_merge\nFROM propiedades_v2\nWHERE fecha_enrichment IS NOT NULL",
+        "options": {}
+      },
+      "id": "pg-health-check",
+      "name": "PG: Health Check",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [880, 300],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase SICI"
+        }
+      },
+      "notes": "Verificar última ejecución de flujos"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener datos de todos los nodos Postgres\nconst props = $('PG: Stats Propiedades').first().json;\nconst matching = $('PG: Stats Matching').first().json;\nconst proyectos = $('PG: Stats Proyectos').first().json;\nconst health = $('PG: Health Check').first().json;\n\n// Calcular métricas derivadas\nconst pctMatchCompletadas = props.completadas > 0 \n  ? ((props.matcheadas / props.completadas) * 100).toFixed(1) \n  : '0.0';\n\nconst pctNombreCompletadas = props.completadas > 0 \n  ? ((props.con_nombre / props.completadas) * 100).toFixed(1) \n  : '0.0';\n\nconst pctGpsVerificado = proyectos.total > 0 \n  ? ((proyectos.gps_verificado / proyectos.total) * 100).toFixed(1) \n  : '0.0';\n\nconst tasaAprobacion24h = matching.sugerencias_24h > 0 \n  ? ((matching.aprobadas_24h / matching.sugerencias_24h) * 100).toFixed(1) \n  : 'N/A';\n\n// Health status\nconst enrichmentOk = parseFloat(health.horas_sin_enrichment) < 26;\nconst mergeOk = parseFloat(health.horas_sin_merge) < 26;\nconst matchingNocturnoOk = parseInt(matching.matching_nocturno_hoy) > 0;\n\n// Alertas\nconst alertas = [];\nif (parseInt(matching.pendientes_revision) > 5) {\n  alertas.push('Revisar bandeja de matching');\n}\nif (!enrichmentOk) {\n  alertas.push('Flujo B no corrió en 24h');\n}\nif (parseInt(props.nuevas_venta) > 50) {\n  alertas.push('Backlog de enrichment creciendo');\n}\nif (parseFloat(pctMatchCompletadas) < 50) {\n  alertas.push('Cobertura de matching baja');\n}\n\n// Fecha formateada (Bolivia)\nconst fecha = new Date().toLocaleDateString('es-BO', {\n  day: '2-digit',\n  month: 'short',\n  year: 'numeric',\n  timeZone: 'America/La_Paz'\n});\n\nreturn [{\n  json: {\n    fecha,\n    // Propiedades\n    props_total: props.total,\n    props_completadas: props.completadas,\n    props_nuevas: props.nuevas,\n    props_nuevas_venta: props.nuevas_venta,\n    props_inactivas: props.inactivas,\n    props_matcheadas: props.matcheadas,\n    props_sin_match: props.sin_match,\n    props_con_nombre: props.con_nombre,\n    props_con_zona: props.con_zona,\n    props_creadas_24h: props.creadas_24h,\n    props_enriquecidas_24h: props.enriquecidas_24h,\n    pct_match_completadas: pctMatchCompletadas,\n    pct_nombre_completadas: pctNombreCompletadas,\n    // Matching\n    match_total: matching.sugerencias_total,\n    match_24h: matching.sugerencias_24h,\n    match_aprobadas_24h: matching.aprobadas_24h,\n    match_rechazadas_24h: matching.rechazadas_24h,\n    match_pendientes: matching.pendientes_revision,\n    match_nocturno_hoy: matching.matching_nocturno_hoy,\n    tasa_aprobacion_24h: tasaAprobacion24h,\n    // Proyectos\n    proy_total: proyectos.total,\n    proy_activos: proyectos.activos,\n    proy_gps_verificado: proyectos.gps_verificado,\n    proy_con_place_id: proyectos.con_place_id,\n    proy_pendientes_google: proyectos.pendientes_google,\n    pct_gps_verificado: pctGpsVerificado,\n    // Health\n    horas_sin_enrichment: health.horas_sin_enrichment,\n    horas_sin_merge: health.horas_sin_merge,\n    enrichment_ok: enrichmentOk,\n    merge_ok: mergeOk,\n    matching_nocturno_ok: matchingNocturnoOk,\n    // Alertas\n    alertas: alertas,\n    tiene_alertas: alertas.length > 0\n  }\n}];"
+      },
+      "id": "code-consolidar",
+      "name": "Code: Consolidar Reporte",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300],
+      "notes": "Consolidar todas las métricas y calcular alertas"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SLACK_WEBHOOK_SICI}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"📊 SICI Auditoría Diaria — {{ $json.fecha }}\",\n        \"emoji\": true\n      }\n    },\n    {{ $json.tiene_alertas ? `{\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"🚨 *ALERTAS:* ${$json.alertas.join(' | ')}\"\n      }\n    },` : '' }}\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*📦 PROPIEDADES*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Total:* {{ $json.props_total }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Completadas:* {{ $json.props_completadas }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Matcheadas:* {{ $json.props_matcheadas }} ({{ $json.pct_match_completadas }}%)\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Sin match:* {{ $json.props_sin_match }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Con nombre:* {{ $json.props_con_nombre }} ({{ $json.pct_nombre_completadas }}%)\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Pendientes enrich:* {{ $json.props_nuevas_venta }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"_Últimas 24h: +{{ $json.props_creadas_24h }} creadas, +{{ $json.props_enriquecidas_24h }} enriquecidas_\"\n      }\n    },\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*🔗 MATCHING*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Sugerencias 24h:* {{ $json.match_24h }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Aprobadas:* {{ $json.match_aprobadas_24h }} ✅\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Rechazadas:* {{ $json.match_rechazadas_24h }} ❌\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Tasa aprob:* {{ $json.tasa_aprobacion_24h }}%\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Pendientes revisión:* {{ $json.match_pendientes > 0 ? '⚠️ ' : '' }}{{ $json.match_pendientes }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Nocturno 4AM:* {{ $json.matching_nocturno_ok ? '✅ Corrió' : '⚠️ No corrió' }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*🏢 PROYECTOS*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Total:* {{ $json.proy_total }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*GPS verificado:* {{ $json.proy_gps_verificado }} ({{ $json.pct_gps_verificado }}%)\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Con Place ID:* {{ $json.proy_con_place_id }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Pendientes Google:* {{ $json.proy_pendientes_google }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*⚡ HEALTH CHECK*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Flujo B (Enrichment):* {{ $json.enrichment_ok ? '✅' : '🔴' }} hace {{ $json.horas_sin_enrichment }}h\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Merge:* {{ $json.merge_ok ? '✅' : '🔴' }} hace {{ $json.horas_sin_merge }}h\"\n        }\n      ]\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"📈 Total sugerencias históricas: {{ $json.match_total }} | Generado automáticamente por SICI Auditoría\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "slack-reporte",
+      "name": "Slack: Reporte Diario",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1320, 300],
+      "notes": "Enviar reporte consolidado a Slack"
+    }
+  ],
+  "connections": {
+    "Schedule: 9:00 AM": {
+      "main": [
+        [
+          {
+            "node": "PG: Stats Propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Stats Propiedades": {
+      "main": [
+        [
+          {
+            "node": "PG: Stats Matching",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Stats Matching": {
+      "main": [
+        [
+          {
+            "node": "PG: Stats Proyectos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Stats Proyectos": {
+      "main": [
+        [
+          {
+            "node": "PG: Health Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Health Check": {
+      "main": [
+        [
+          {
+            "node": "Code: Consolidar Reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Consolidar Reporte": {
+      "main": [
+        [
+          {
+            "node": "Slack: Reporte Diario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "timezone": "America/La_Paz"
+  },
+  "tags": [
+    {
+      "name": "SICI",
+      "id": "sici-tag"
+    },
+    {
+      "name": "Auditoría",
+      "id": "auditoria-tag"
+    }
+  ],
+  "pinData": {},
+  "versionId": "1.0.0"
+}
