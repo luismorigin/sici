@@ -1,5 +1,5 @@
 {
-  "name": "SICI - Supervisor Sin Match",
+  "name": "supervisor_sin_match",
   "nodes": [
     {
       "parameters": {
@@ -12,16 +12,18 @@
           ]
         }
       },
-      "id": "trigger-schedule",
+      "id": "a073507a-951f-46a0-afc5-c3594f1f4363",
       "name": "Schedule: 8:30 PM",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 300],
+      "position": [
+        -1104,
+        208
+      ],
       "notes": "Ejecuta diario 8:30 PM (después de Supervisor Matching)"
     },
     {
       "parameters": {
-        "operation": "read",
         "documentId": {
           "__rl": true,
           "mode": "list",
@@ -34,28 +36,34 @@
         },
         "options": {}
       },
-      "id": "sheets-leer",
+      "id": "c36ce4cd-f0ec-438e-b66f-0748d1102ae2",
       "name": "Sheets: Leer Sin Match",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [220, 300],
+      "position": [
+        -880,
+        208
+      ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
-          "name": "Google Sheets"
+          "id": "DbMNipx0RBpm2Hhu",
+          "name": "Google Sheets account"
         }
       },
       "notes": "Leer todas las filas del tab Sin_Match"
     },
     {
       "parameters": {
-        "jsCode": "// Procesar decisiones del Sheet\nconst filas = $input.all();\n\nif (filas.length === 0 || !filas[0].json.ID_PROPIEDAD) {\n  return [{\n    json: {\n      bandeja_vacia: true,\n      total_filas: 0,\n      para_procesar: [],\n      pendientes: 0\n    }\n  }];\n}\n\nconst paraProcesar = [];\nconst paraEliminar = [];\nlet pendientes = 0;\nlet asignar = 0;\nlet crear = 0;\nlet sinProyecto = 0;\n\nconst nombresCreados = [];\nconst proyectosAsignados = [];\n\nfor (const fila of filas) {\n  const accion = (fila.json.ACCION || '').trim();\n  const propiedadId = parseInt(fila.json.ID_PROPIEDAD);\n  \n  if (!propiedadId) continue;\n  \n  if (accion.includes('ASIGNAR') || accion === '📌 ASIGNAR EXISTENTE') {\n    // Extraer ID del proyecto de la columna o del texto de proyectos cercanos\n    let proyectoId = fila.json.PROYECTO_ID_O_NOMBRE;\n    \n    // Si es solo número, es ID directo\n    if (/^\\d+$/.test(proyectoId)) {\n      proyectoId = parseInt(proyectoId);\n    } else if (proyectoId) {\n      // Intentar extraer ID del formato \"[ID:123]\"\n      const match = proyectoId.match(/\\[ID:(\\d+)\\]/);\n      if (match) {\n        proyectoId = parseInt(match[1]);\n      } else {\n        // Buscar en proyectos cercanos\n        const cercanoMatch = (fila.json.PROYECTOS_CERCANOS || '').match(/\\[ID:(\\d+)\\]/);\n        if (cercanoMatch) {\n          proyectoId = parseInt(cercanoMatch[1]);\n        }\n      }\n    }\n    \n    if (proyectoId && !isNaN(proyectoId)) {\n      paraProcesar.push({\n        propiedad_id: propiedadId,\n        accion: 'asignar',\n        proyecto_id: proyectoId,\n        row_number: fila.json.row_number\n      });\n      paraEliminar.push(propiedadId);\n      proyectosAsignados.push(fila.json.NOMBRE_EDIFICIO || `Prop ${propiedadId}`);\n      asignar++;\n    }\n    \n  } else if (accion.includes('CREAR') || accion === '🆕 CREAR PROYECTO') {\n    const nombreProyecto = (fila.json.PROYECTO_ID_O_NOMBRE || '').trim();\n    const gpsNuevo = (fila.json.GPS_NUEVO || '').trim();\n    \n    if (nombreProyecto) {\n      paraProcesar.push({\n        propiedad_id: propiedadId,\n        accion: 'crear',\n        nombre_proyecto: nombreProyecto,\n        gps_nuevo: gpsNuevo,\n        row_number: fila.json.row_number\n      });\n      paraEliminar.push(propiedadId);\n      nombresCreados.push(nombreProyecto);\n      crear++;\n    }\n    \n  } else if (accion.includes('SIN PROYECTO') || accion === '⛔ SIN PROYECTO') {\n    paraProcesar.push({\n      propiedad_id: propiedadId,\n      accion: 'sin_proyecto',\n      notas: fila.json.NOTAS || 'Marcado como sin proyecto',\n      row_number: fila.json.row_number\n    });\n    paraEliminar.push(propiedadId);\n    sinProyecto++;\n    \n  } else {\n    // Pendiente o no reconocido\n    pendientes++;\n  }\n}\n\nreturn [{\n  json: {\n    bandeja_vacia: false,\n    total_filas: filas.length,\n    para_procesar: paraProcesar,\n    para_eliminar: paraEliminar,\n    pendientes: pendientes,\n    stats: {\n      asignar: asignar,\n      crear: crear,\n      sin_proyecto: sinProyecto\n    },\n    nombres_creados: nombresCreados,\n    proyectos_asignados: proyectosAsignados\n  }\n}];"
+        "jsCode": "// ========================================\n// ANALIZAR DECISIONES - Sin Match Supervisor\n// ========================================\nconst filas = $input.all();\n\n// Helper: extraer ID de formato \"123 - Nombre Proyecto\" o solo \"123\"\nfunction extraerIdProyecto(valor) {\n  if (!valor) return null;\n  const str = valor.toString().trim();\n  if (/^\\d+$/.test(str)) return parseInt(str);\n  const match = str.match(/^(\\d+)\\s*-/);\n  if (match) return parseInt(match[1]);\n  return null;\n}\n\n// Filtrar filas válidas Y guardar su índice (row_number)\nconst filasData = filas\n  .map((f, index) => ({\n    ...f,\n    row_number: index + 2  // +2 porque fila 1 es header, índice empieza en 0\n  }))\n  .filter(f =>\n    f.json.ID_PROPIEDAD &&\n    f.json.ID_PROPIEDAD !== 'ID_PROPIEDAD' &&\n    !isNaN(parseInt(f.json.ID_PROPIEDAD))\n  );\n\nif (filasData.length === 0) {\n  return [{\n    json: {\n      bandeja_vacia: true,\n      total_filas: 0,\n      pendientes: 0,\n      para_procesar: [],\n      para_eliminar: [],\n      filas_eliminar: [],\n      stats: { asignar: 0, crear: 0, corregir: 0, sin_proyecto: 0 },\n      nombres_creados: [],\n      nombres_corregidos: []\n    }\n  }];\n}\n\n// Clasificar por acción\nconst pendientesData = filasData.filter(f =>\n  !f.json['ACCION'] ||\n  f.json['ACCION'].includes('PENDIENTE')\n);\n\n// ASIGNAR\nconst asignarData = filasData.filter(f =>\n  f.json['ACCION'] &&\n  f.json['ACCION'].includes('ASIGNAR')\n).map(f => {\n  const proyectoId = extraerIdProyecto(f.json['PROYECTO_ID_O_NOMBRE'] || '');\n  return {\n    propiedad_id: parseInt(f.json.ID_PROPIEDAD),\n    accion: 'asignar',\n    proyecto_id: proyectoId,\n    nombre_proyecto: null,\n    gps_nuevo: null,\n    notas: f.json['NOTAS'] || '',\n    row_number: f.row_number\n  };\n}).filter(a => a.proyecto_id !== null);\n\n// CREAR\nconst crearData = filasData.filter(f =>\n  f.json['ACCION'] &&\n  f.json['ACCION'].includes('CREAR')\n).map(f => ({\n  propiedad_id: parseInt(f.json.ID_PROPIEDAD),\n  accion: 'crear',\n  proyecto_id: null,\n  nombre_proyecto: (f.json['PROYECTO_ID_O_NOMBRE'] || '').trim(),\n  gps_nuevo: (f.json['GPS_NUEVO'] || '').trim(),\n  notas: f.json['NOTAS'] || '',\n  row_number: f.row_number\n})).filter(c => c.nombre_proyecto !== '');\n\n// CORREGIR\nconst corregirData = filasData.filter(f =>\n  f.json['ACCION'] &&\n  f.json['ACCION'].includes('CORREGIR')\n).map(f => {\n  const proyectoId = extraerIdProyecto(f.json['PROYECTO_ID_O_NOMBRE'] || '');\n  return {\n    propiedad_id: parseInt(f.json.ID_PROPIEDAD),\n    accion: 'corregir',\n    proyecto_id: proyectoId,\n    nombre_proyecto: (f.json['NOTAS'] || '').trim(),\n    gps_nuevo: (f.json['GPS_NUEVO'] || '').trim(),\n    notas: null,\n    row_number: f.row_number\n  };\n}).filter(c => c.proyecto_id !== null);\n\n// SIN_PROYECTO\nconst sinProyectoData = filasData.filter(f =>\n  f.json['ACCION'] &&\n  (f.json['ACCION'].includes('SIN_PROYECTO') || f.json['ACCION'].includes('SIN PROYECTO'))\n).map(f => ({\n  propiedad_id: parseInt(f.json.ID_PROPIEDAD),\n  accion: 'sin_proyecto',\n  proyecto_id: null,\n  nombre_proyecto: null,\n  gps_nuevo: null,\n  notas: f.json['NOTAS'] || 'Marcado como sin proyecto',\n  row_number: f.row_number\n}));\n\n// Combinar TODAS las decisiones\nconst para_procesar = [\n  ...asignarData,\n  ...crearData,\n  ...corregirData,\n  ...sinProyectoData\n];\n\n// IDs para eliminar (referencia)\nconst para_eliminar = para_procesar.map(p => p.propiedad_id);\n\n// FILAS para eliminar (ordenadas de mayor a menor para no afectar índices)\nconst filas_eliminar = para_procesar\n  .map(p => p.row_number)\n  .sort((a, b) => b - a);  // Orden descendente: primero las filas más altas\n\nreturn [{\n  json: {\n    bandeja_vacia: false,\n    total_filas: filasData.length,\n    pendientes: pendientesData.length,\n    para_procesar: para_procesar,\n    para_eliminar: para_eliminar,\n    filas_eliminar: filas_eliminar,\n    stats: {\n      asignar: asignarData.length,\n      crear: crearData.length,\n      corregir: corregirData.length,\n      sin_proyecto: sinProyectoData.length\n    },\n    nombres_creados: crearData.map(c => c.nombre_proyecto).slice(0, 5),\n    nombres_corregidos: corregirData.map(c => c.nombre_proyecto || `ID:${c.proyecto_id}`).slice(0, 5)\n  }\n}];"
       },
-      "id": "code-procesar-decisiones",
+      "id": "a0332d4c-8782-4049-a2c3-4e1148125194",
       "name": "Code: Procesar Decisiones",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 300],
+      "position": [
+        -656,
+        208
+      ],
       "notes": "Parsear decisiones del Sheet y preparar para BD"
     },
     {
@@ -69,11 +77,14 @@
           ]
         }
       },
-      "id": "if-bandeja-vacia",
+      "id": "c93ef5cb-d33f-45e4-8d4e-21c16098ebe5",
       "name": "IF: Bandeja Vacía",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [660, 300],
+      "position": [
+        -448,
+        208
+      ],
       "notes": "Verificar si hay filas en el Sheet"
     },
     {
@@ -82,60 +93,71 @@
           "number": [
             {
               "value1": "={{ $json.para_procesar.length }}",
-              "operation": "larger",
-              "value2": 0
+              "operation": "larger"
             }
           ]
         }
       },
-      "id": "if-hay-decisiones",
+      "id": "2e3a0143-9d5b-40dc-bb65-aab9580a28f0",
       "name": "IF: Hay Decisiones",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [880, 200],
+      "position": [
+        -224,
+        112
+      ],
       "notes": "Verificar si hay decisiones para procesar"
     },
     {
       "parameters": {
         "jsCode": "// Extraer items para procesar uno por uno\nconst data = $('Code: Procesar Decisiones').first().json;\nreturn data.para_procesar.map(item => ({ json: item }));"
       },
-      "id": "code-split-decisiones",
+      "id": "d838c636-01a3-4e8a-8fb8-fc2fa510a96c",
       "name": "Code: Split Decisiones",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, 100],
+      "position": [
+        0,
+        0
+      ],
       "notes": "Separar decisiones para procesar individualmente"
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT * FROM procesar_decision_sin_match($1, $2, $3, $4, $5, $6)",
+        "query": "SELECT * FROM procesar_decision_sin_match($1::integer, $2::text, $3::text, $4::text, $5::text, $6::text)",
         "options": {
-          "queryReplacement": "={{ $json.propiedad_id }},={{ $json.accion }},={{ $json.proyecto_id || null }},={{ $json.nombre_proyecto || null }},={{ $json.gps_nuevo || null }},={{ $json.notas || null }}"
+          "queryReplacement": "=={{ $json.propiedad_id }},={{ $json.accion }},={{ $json.proyecto_id || 'null' }},={{ $json.nombre_proyecto || 'null' }},={{ $json.gps_nuevo || 'null' }},={{ $json.notas || 'null' }}"
         }
       },
-      "id": "pg-procesar-decision",
+      "id": "40937ba5-24e2-475f-9093-2334e68f416c",
       "name": "PG: Procesar Decisión",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1320, 100],
+      "position": [
+        224,
+        0
+      ],
       "credentials": {
         "postgres": {
-          "id": "POSTGRES_CREDENTIAL_ID",
-          "name": "Supabase SICI"
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
         }
       },
       "notes": "Ejecutar función procesar_decision_sin_match"
     },
     {
       "parameters": {
-        "jsCode": "// Preparar IDs para eliminar del Sheet\nconst data = $('Code: Procesar Decisiones').first().json;\nconst idsParaEliminar = data.para_eliminar;\n\nif (idsParaEliminar.length === 0) {\n  return [{ json: { ids_eliminar: [], cantidad: 0 } }];\n}\n\nreturn [{\n  json: {\n    ids_eliminar: idsParaEliminar,\n    cantidad: idsParaEliminar.length\n  }\n}];"
+        "jsCode": "// Preparar filas para eliminar del Sheet (en orden descendente)\nconst data = $('Code: Procesar Decisiones').first().json;\nconst filasEliminar = data.filas_eliminar || [];\n\nif (filasEliminar.length === 0) {\n  return [{ json: { skip: true } }];\n}\n\n// Devolver cada fila como item separado para eliminar una por una\nreturn filasEliminar.map(rowNum => ({\n  json: {\n    row_number: rowNum\n  }\n}));"
       },
-      "id": "code-preparar-delete",
+      "id": "22179744-acb5-4a5d-b9de-7f2a7b54b547",
       "name": "Code: Preparar Delete",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1540, 100],
+      "position": [
+        448,
+        0
+      ],
       "notes": "Preparar lista de IDs para eliminar del Sheet"
     },
     {
@@ -151,25 +173,20 @@
           "value": "Sin_Match",
           "mode": "name"
         },
-        "filtersUI": {
-          "values": [
-            {
-              "lookupColumn": "ID_PROPIEDAD",
-              "lookupValue": "={{ $json.ids_eliminar.join(',') }}"
-            }
-          ]
-        },
-        "options": {}
+        "startIndex": "={{ $json.row_number }}"
       },
-      "id": "sheets-delete",
+      "id": "68aa8b5a-5405-451e-92c1-91e1f13774d2",
       "name": "Sheets: Eliminar Procesadas",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [1760, 100],
+      "position": [
+        672,
+        0
+      ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
-          "name": "Google Sheets"
+          "id": "DbMNipx0RBpm2Hhu",
+          "name": "Google Sheets account"
         }
       },
       "notes": "Eliminar filas procesadas del Sheet"
@@ -177,52 +194,255 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{$env.SLACK_WEBHOOK_SICI}}",
+        "url": "={{ $env.SLACK_WEBHOOK_SICI }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"✅ SICI Sin Match - Procesamiento Completado\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*📌 Asignadas:*\\n{{ $('Code: Procesar Decisiones').first().json.stats.asignar }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*🆕 Creadas:*\\n{{ $('Code: Procesar Decisiones').first().json.stats.crear }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*⛔ Sin proyecto:*\\n{{ $('Code: Procesar Decisiones').first().json.stats.sin_proyecto }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*⏳ Pendientes:*\\n{{ $('Code: Procesar Decisiones').first().json.pendientes }}\"\n        }\n      ]\n    },\n    {{ $('Code: Procesar Decisiones').first().json.nombres_creados.length > 0 ? `{\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Proyectos creados:* ${$('Code: Procesar Decisiones').first().json.nombres_creados.join(', ')}\"\n      }\n    },` : '' }}\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"📂 Ver Bandeja Sin Match\",\n            \"emoji\": true\n          },\n          \"url\": \"https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit#gid=SIN_MATCH_GID\"\n        }\n      ]\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"{{ $('Code: Procesar Decisiones').first().json.para_procesar.length > 0 ? '✅ SICI Sin Match - Decisiones Aplicadas' : '📭 SICI Sin Match - Sin Decisiones Nuevas' }}\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Procesadas hoy:* {{ $('Code: Procesar Decisiones').first().json.para_procesar.length }} propiedades\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*📌 Asignadas:* {{ $('Code: Procesar Decisiones').first().json.stats.asignar }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*🆕 Creadas:* {{ $('Code: Procesar Decisiones').first().json.stats.crear }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*🔧 Corregidas:* {{ $('Code: Procesar Decisiones').first().json.stats.corregir || 0 }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*⛔ Sin proyecto:* {{ $('Code: Procesar Decisiones').first().json.stats.sin_proyecto }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*⏳ Pendientes de revisión:* {{ $('Code: Procesar Decisiones').first().json.pendientes }} propiedades en el Sheet esperando decisión\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"📂 Revisar Pendientes\",\n            \"emoji\": true\n          },\n          \"url\": \"https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit#gid=968796403\"\n        }\n      ]\n    }\n  ]\n}",
         "options": {}
       },
-      "id": "slack-completado",
+      "id": "e8a237a5-88da-464c-95d9-b5f32c2cb587",
       "name": "Slack: Procesamiento Completado",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [1980, 100],
+      "position": [
+        880,
+        0
+      ],
+      "executeOnce": true,
       "notes": "Notificar resultados en Slack"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{$env.SLACK_WEBHOOK_SICI}}",
+        "url": "={{ $env.SLACK_WEBHOOK_SICI }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"📭 SICI Sin Match - Bandeja Vacía\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"No hay filas en la bandeja Sin Match.\\n\\nEsto puede significar que todas las propiedades ya tienen proyecto asignado.\"\n      }\n    }\n  ]\n}",
         "options": {}
       },
-      "id": "slack-vacia",
+      "id": "c4dd301c-eed5-45c0-93b8-636b715dd93c",
       "name": "Slack: Bandeja Vacía",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [880, 400],
+      "position": [
+        -224,
+        304
+      ],
       "notes": "Notificar cuando la bandeja está vacía"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{$env.SLACK_WEBHOOK_SICI}}",
+        "url": "={{ $env.SLACK_WEBHOOK_SICI }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"⏳ SICI Sin Match - Sin Decisiones Nuevas\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"Hay *{{ $('Code: Procesar Decisiones').first().json.pendientes }}* propiedades en la bandeja esperando revisión.\\n\\nNinguna tiene acción asignada aún.\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"📂 Ir a Revisar\",\n            \"emoji\": true\n          },\n          \"style\": \"primary\",\n          \"url\": \"https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit#gid=SIN_MATCH_GID\"\n        }\n      ]\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"⏳ SICI Sin Match - Sin Decisiones Nuevas\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"Hay *{{ $('Code: Procesar Decisiones').first().json.pendientes }}* propiedades en la bandeja esperando revisión.\\n\\nNinguna tiene acción asignada aún.\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"📂 Ir a Revisar\",\n            \"emoji\": true\n          },\n          \"style\": \"primary\",\n          \"url\": \"https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit#gid=968796403\"\n        }\n      ]\n    }\n  ]\n}",
         "options": {}
       },
-      "id": "slack-sin-decisiones",
+      "id": "5066846b-7805-4b2d-a2df-34c8921f84cc",
       "name": "Slack: Sin Decisiones",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [1100, 300],
+      "position": [
+        0,
+        208
+      ],
       "notes": "Notificar cuando hay filas pero sin decisiones"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n      id_proyecto_master as \"ID\",\n      nombre_oficial as \"NOMBRE\",\n      id_proyecto_master || ' - ' || nombre_oficial as \"DROPDOWN_VALUE\"\n  FROM proyectos_master\n  WHERE activo = true\n  ORDER BY nombre_oficial\n  LIMIT 500",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1088,
+        0
+      ],
+      "id": "8015ba18-b418-42d4-9cad-9c9681c425cd",
+      "name": "PG: Obtener Proyectos",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "value": "1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw",
+          "mode": "list",
+          "cachedResultName": "SICI - Matching Bandeja de Aprobación",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1844478893,
+          "mode": "list",
+          "cachedResultName": " Proyectos_Lista",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit#gid=1844478893"
+        },
+        "clear": "specificRange",
+        "range": "A2:C1000"
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1328,
+        -16
+      ],
+      "id": "84ee4c61-d0d1-4f4f-91bb-68fa696b634a",
+      "name": "Sheets: Limpiar Lista",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DbMNipx0RBpm2Hhu",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw",
+          "mode": "list",
+          "cachedResultName": "SICI - Matching Bandeja de Aprobación",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1844478893,
+          "mode": "list",
+          "cachedResultName": " Proyectos_Lista",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit#gid=1844478893"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $json.ID }}",
+            "NOMBRE": "={{ $json.NOMBRE }}",
+            "DROPDOWN_VALUE": "={{ $json.DROPDOWN_VALUE }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NOMBRE",
+              "displayName": "NOMBRE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DROPDOWN_VALUE",
+              "displayName": "DROPDOWN_VALUE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2112,
+        128
+      ],
+      "id": "5059a46f-a79b-4e9b-8b4b-67fc4099317d",
+      "name": "Sheets: Escribir Proyectos",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DbMNipx0RBpm2Hhu",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1472,
+        144
+      ],
+      "id": "ec8dbd55-989f-4923-81ea-2b818ed6d0ad",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d76d96d2-aad4-48db-b2c9-58152a69cc2c",
+              "leftValue": "={{ $json.ID }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1680,
+        144
+      ],
+      "id": "e3f4f6de-de34-44f4-bbd3-cf1597962c4e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const seen = new Set();\nconst unique = [];\n\nfor (const item of $input.all()) {\n  const id = item.json.ID;\n  if (!seen.has(id)) {\n    seen.add(id);\n    unique.push(item);\n  }\n}\n\nreturn unique;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1904,
+        128
+      ],
+      "id": "398a1811-c899-4f19-b43d-75ccb634ffc9",
+      "name": "Remove Duplicates"
     }
   ],
+  "pinData": {},
   "connections": {
     "Schedule: 8:30 PM": {
       "main": [
@@ -336,24 +556,89 @@
           }
         ]
       ]
+    },
+    "Slack: Procesamiento Completado": {
+      "main": [
+        [
+          {
+            "node": "PG: Obtener Proyectos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Obtener Proyectos": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Limpiar Lista",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Sheets: Limpiar Lista": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Escribir Proyectos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
+  "active": false,
   "settings": {
     "executionOrder": "v1",
-    "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner",
-    "timezone": "America/La_Paz"
+    "availableInMCP": false
   },
-  "tags": [
-    {
-      "name": "SICI",
-      "id": "sici-tag"
-    },
-    {
-      "name": "Sin Match",
-      "id": "sin-match-tag"
-    }
-  ],
-  "pinData": {},
-  "versionId": "1.0.0"
+  "versionId": "2412ad90-0136-4036-b7b0-a07f98fd3e25",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
+  },
+  "id": "zodsPE8LHlnae4jv",
+  "tags": []
 }
