@@ -1,27 +1,27 @@
 # PLAN MÓDULO 2: Matching Inteligente Multi-Fuente
-## Versión 3.2 - Human-in-the-Loop Completado
+## Versión 3.3 - Sistema Completo con Sin Match HITL
 
-**Fecha:** 29 Diciembre 2025
-**Estado:** ✅ Sistema completo operativo (Matching + Human-in-the-Loop)
+**Fecha:** 31 Diciembre 2025
+**Estado:** ✅ Sistema completo operativo (Matching + Human-in-the-Loop + Sin Match)
 **Prerequisito:** Módulo 1 ✅ 100% operativo
 **Filosofía:** Mejorar matching SQL, no perseguir regex en extractores
 
 ---
 
-## 🎉 ESTADO ACTUAL (28 Dic 2025)
+## 🎉 ESTADO ACTUAL (31 Dic 2025)
 
 ### Resultados en Producción
 
 | Métrica | Valor | Notas |
 |---------|-------|-------|
-| Total propiedades candidatas | 221 | status completado/actualizado |
-| **Propiedades matcheadas** | **82 (37.1%)** | Con id_proyecto_master |
+| Total propiedades | 431 | todas las fuentes |
+| Propiedades completadas | 350 | status completado/actualizado |
+| **Propiedades con proyecto** | **338 (96.6%)** | Con id_proyecto_master |
+| Proyectos activos | 190 | En proyectos_master |
+| Pendientes de match | 1 | Histórico bajo |
 | Propiedades con zona GPS | 370 (86%) | 7 microzonas |
-| Matches por nombre | 45 | 95% confianza |
-| Matches por URL | 35 | 85-90% confianza |
-| Matches por fuzzy | 19 | 75-90% confianza |
 
-### Funciones Migradas a propiedades_v2
+### Funciones en Producción
 
 | Función | Versión | Estado |
 |---------|---------|--------|
@@ -29,7 +29,12 @@
 | `generar_matches_por_url()` | v3.0 | ✅ Producción |
 | `generar_matches_fuzzy()` | v3.0 | ✅ Producción |
 | `aplicar_matches_aprobados()` | v3.0 | ✅ Producción |
-| `matching_completo_automatizado()` | v3.0 | ✅ Producción |
+| `matching_completo_automatizado()` | v3.1 | ✅ Producción (GPS filtrado) |
+| `crear_proyecto_desde_sugerencia()` | v2.0 | ✅ Producción (validación GPS) |
+| `corregir_proyecto_matching()` | v1.0 | ✅ Producción |
+| `procesar_decision_sin_match()` | v1.2 | ✅ Producción |
+| `obtener_sin_match_para_exportar()` | v1.0 | ✅ Producción |
+| `registrar_exportacion_sin_match()` | v1.0 | ✅ Producción |
 
 ### Infraestructura de Microzonas GPS
 
@@ -151,15 +156,20 @@ Mejorar regex → Nuevo patrón → ∞
             (una sola llamada)
 ```
 
-### Por qué "God Function" es Correcto Aquí
+### Arquitectura Actual: Matching + HITL
 
-| Diseño Separado | Diseño Actual |
-|-----------------|---------------|
-| 5 funciones + coordinación | 1 función = todo |
-| Requiere workflow n8n | Solo cron SQL |
-| Más puntos de falla | Atómico |
-| Human-in-the-loop para coordinar | Zero intervención |
-| No escala | Escala a 1000+ props |
+| Componente | Función |
+|------------|---------|
+| `matching_completo_automatizado()` | Genera matches + auto-aprueba ≥85% |
+| Matching Nocturno (4 AM) | Ejecuta matching + exporta pendientes a Sheets |
+| Matching Supervisor (8 PM) | Procesa decisiones humanas |
+| Exportar Sin Match (7 AM) | Exporta props sin proyecto |
+| Supervisor Sin Match (8:30 PM) | Procesa asignaciones/creaciones |
+
+**Flujo de confianza:**
+- ≥85%: Auto-aprobado
+- 70-84%: Revisión humana en Sheets
+- Sin match: Human-in-the-Loop para asignar/crear
 
 ---
 
@@ -480,9 +490,10 @@ PENDIENTES: ~50 (33%) → HUMAN IN THE LOOP
 1. **NO perseguir mejoras de extractores** - El matching SQL es más poderoso
 2. **`generar_matches_por_url_mejorado()` es el MVP** - Funciona sin depender del extractor
 3. **Enriquecer proyectos_master > Mejorar regex** - ROI mucho mayor
-4. **Threshold 85% es conservador** - Evaluar bajarlo a 80% post-FASE 2
-5. **God function es diseño intencional** - Optimizado para zero human-in-the-loop
+4. **Threshold 85% auto-aprueba** - 70-84% va a revisión humana
+5. **Human-in-the-Loop activo** - Google Sheets con Supervisores 8 PM y 8:30 PM
 6. **Sistema de candados debe respetarse** - `campos_bloqueados` protege correcciones manuales
+7. **Filosofía SICI** - "Manual wins over automatic"
 
 ---
 
@@ -501,7 +512,7 @@ DÍA 3 (PM): Validación y documentación
 
 ---
 
-## ✅ SISTEMA HUMAN-IN-THE-LOOP (29 Dic 2025)
+## ✅ SISTEMA HUMAN-IN-THE-LOOP (31 Dic 2025)
 
 ### Componentes Implementados
 
@@ -509,37 +520,77 @@ DÍA 3 (PM): Validación y documentación
 |------------|---------|--------|
 | Workflow Matching Nocturno (4 AM) | `n8n/workflows/modulo_2/matching_nocturno.json` | ✅ Activo |
 | Workflow Matching Supervisor (8 PM) | `n8n/workflows/modulo_2/matching_supervisor.json` | ✅ Activo |
+| **Workflow Exportar Sin Match (7 AM)** | `n8n/workflows/modulo_2/exportar_sin_match.json` | ✅ Activo |
+| **Workflow Supervisor Sin Match (8:30 PM)** | `n8n/workflows/modulo_2/supervisor_sin_match.json` | ✅ Activo |
+| Workflow Auditoría Diaria (9 AM) | `n8n/workflows/modulo_2/auditoria_diaria_sici.json` | ✅ Activo |
 | Funciones RPC | `sql/functions/matching/funciones_rpc_matching.sql` | ✅ Producción |
 | Google Sheets Bandeja | `SICI - Matching Bandeja de Aprobación` | ✅ Operativo |
-| Especificación | `docs/modulo_2/MATCHING_NOCTURNO_SPEC.md` | ✅ Documentado |
+| Especificación Matching | `docs/modulo_2/MATCHING_NOCTURNO_SPEC.md` | ✅ Documentado |
+| **Especificación Sin Match** | `docs/modulo_2/SIN_MATCH_SPEC.md` | ✅ Documentado |
+
+### Acciones HITL Disponibles
+
+**Tab Pendientes_Matching:**
+- ✅ APROBAR - Confirma match sugerido
+- ❌ RECHAZAR - Descarta match
+- 🔧 CORREGIR - Corrige nombre/GPS del proyecto y aprueba
+- 🆕 PROYECTO_ALTERNATIVO - Crea/usa proyecto diferente
+
+**Tab Sin_Match:**
+- 📌 ASIGNAR - Asigna proyecto existente por ID
+- 🆕 CREAR - Crea proyecto nuevo con nombre/GPS
+- ✏️ CORREGIR - Corrige proyecto existente y asigna
+- ⛔ SIN_PROYECTO - Marca propiedad como no-edificio
 
 ### Flujo Operativo Diario
 
 ```
 4:00 AM  → Matching Nocturno ejecuta
          → Auto-aprueba ≥85% confianza
-         → Pendientes (70-84%) → Google Sheets
+         → Pendientes (70-84%) → Sheet tab "Pendientes_Matching"
          → Slack: Resumen + link al Sheet
 
-Durante el día → Humano revisa Sheet (⏳ → ✅/❌)
+7:00 AM  → Exportar Sin Match ejecuta
+         → Props sin proyecto → Sheet tab "Sin_Match"
+         → Slack: Resumen
+
+Durante el día → Humano revisa ambos tabs
 
 8:00 PM  → Matching Supervisor ejecuta
-         → Lee decisiones del Sheet
-         → Aplica matches aprobados
-         → Rechaza los rechazados
-         → Slack: Resumen de aplicación
+         → Procesa: APROBAR, RECHAZAR, CORREGIR, PROYECTO_ALTERNATIVO
+         → Slack: Resumen
+
+8:30 PM  → Supervisor Sin Match ejecuta
+         → Procesa: ASIGNAR, CREAR, CORREGIR, SIN_PROYECTO
+         → Sincroniza dropdown de proyectos
+         → Slack: Resumen
+
+9:00 AM  → Auditoría Diaria ejecuta
+         → Reporte consolidado a Slack
 ```
 
 ---
 
 ## 📋 BACKLOG - MEJORAS FUTURAS
 
+### ✅ Completados (31 Dic 2025)
+
+| Mejora | Estado |
+|--------|--------|
+| Proyecto alternativo en Sheet | ✅ Columnas M+N en Pendientes_Matching |
+| Limpieza automática Sheet | ✅ Filas procesadas se eliminan (ordenadas DESC) |
+| Sin Match HITL | ✅ Workflow completo con 4 acciones |
+| Acción CORREGIR | ✅ Para ambos tabs (Pendientes y Sin Match) |
+| Sincronización dropdown | ✅ Tab Proyectos_Lista auto-sincronizado |
+
+### ❌ Pendientes
+
 | Prioridad | Mejora | Descripción | Esfuerzo |
 |-----------|--------|-------------|----------|
-| Media | Proyecto alternativo en Sheet | Columna para que humano sugiera proyecto diferente al rechazar | 2-3h |
-| Baja | GPS matching activado | Reactivar `generar_matches_gps()` cuando haya más proyectos verificados | 1h |
-| Baja | Dashboard de métricas | Vista de métricas de matching en Supabase/Metabase | 4h |
-| Baja | Limpieza automática Sheet | Habilitar nodo para borrar filas procesadas del Sheet | 30min |
+| Media | Auditoría snapshots | Guardar snapshots en `auditoria_snapshots` | 2h |
+| Media | Enriquecimiento IA (FASE 3) | Columnas metadata + workflow IA | 16h |
+| Baja | Validador GPS individual | Verificar GPS de proyectos via Google Places | 4h |
+| Baja | Dashboard de métricas | Vista de métricas en Supabase/Metabase | 4h |
 
 ---
 
@@ -556,6 +607,6 @@ Durante el día → Humano revisa Sheet (⏳ → ✅/❌)
 ---
 
 **Autor:** Luis + Claude
-**Versión:** 3.2 (Human-in-the-Loop completado)
-**Última actualización:** 29 Diciembre 2025
-**Estado:** Sistema de matching automatizado operativo con revisión humana
+**Versión:** 3.3 (Sin Match HITL + CORREGIR completados)
+**Última actualización:** 31 Diciembre 2025
+**Estado:** Sistema completo - Matching 96.6% + Human-in-the-Loop + Sin Match

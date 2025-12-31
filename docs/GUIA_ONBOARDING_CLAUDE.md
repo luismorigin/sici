@@ -2,8 +2,8 @@
 
 **Propósito:** Permitir que cualquier instancia de Claude (chat, Claude Code, nueva conversación) entienda rápidamente el proyecto SICI y sepa dónde encontrar información.
 
-**Última actualización:** 28 Diciembre 2025
-**Versión:** 2.1
+**Última actualización:** 31 Diciembre 2025
+**Versión:** 3.0
 
 ---
 
@@ -15,112 +15,55 @@ Es una plataforma de inteligencia inmobiliaria para Bolivia que crea un "censo v
 
 ---
 
-## 📁 ESTRUCTURA DE REPOS LOCALES
+## 📊 MÉTRICAS ACTUALES (31 Dic 2025)
 
-Hay **2 repositorios principales** en el escritorio de Luis:
-
-```
-C:\Users\LUCHO\Desktop\Censo inmobiliario\
-├── sici\                      ← REPO PRINCIPAL (Módulo 1 - Producción)
-└── sici-matching\             ← REPO MATCHING (Funciones SQL legacy)
-```
-
----
-
-## 📂 REPO 1: sici\ (Principal - ACTIVO)
-
-**Ruta:** `C:\Users\LUCHO\Desktop\Censo inmobiliario\sici\`
-
-### Estructura
-```
-sici\
-├── docs\
-│   ├── canonical\           ← 📌 DOCUMENTOS DEFINITIVOS
-│   │   ├── discovery_canonical_v2.md
-│   │   ├── flujo_b_corepp_canonical.md
-│   │   ├── flujo_c_verificador_canonical.md
-│   │   └── merge_canonical.md
-│   ├── extractores\
-│   │   └── heuristics\      ← Lógica de extracción por portal
-│   ├── research\            ← Investigación de APIs/portales
-│   ├── MODULO_1_ESTADO_FINAL.md  ← 📌 ESTADO ACTUAL MÓDULO 1
-│   ├── GUIA_ONBOARDING_CLAUDE.md ← 📌 ESTE ARCHIVO
-│   └── modulo_2\            ← Documentación Módulo 2
-│       ├── PLAN_MODULO_2_v2.1.md        ← Plan general
-│       └── PLAN_MATCHING_MULTIFUENTE_v3.0.md ← 🔥 Plan activo FASE 1
-│
-├── n8n\
-│   ├── extractores\         ← JSONs de extractores
-│   │   ├── extractor_century21.json
-│   │   └── extractor_remax.json
-│   └── workflows\
-│       └── modulo_1\        ← 📌 WORKFLOWS PRODUCCIÓN
-│           ├── flujo_a_discovery_century21_v1.0.3_FINAL.json
-│           ├── flujo_a_discovery_remax_v1.0.2_FINAL.json
-│           ├── flujo_b_processing_v3.0.json
-│           ├── flujo_c_verificador_v1.1.0_FINAL.json
-│           └── Flujo Merge - Nocturno v1.0.0.json
-│
-├── sql\
-│   ├── functions\
-│   │   ├── discovery\       ← registrar_discovery.sql
-│   │   ├── enrichment\      ← registrar_enrichment.sql
-│   │   ├── merge\           ← merge_discovery_enrichment.sql (v2.1.0)
-│   │   ├── matching\        ← 📌 FUNCIONES MATCHING v3.0 (MIGRADAS)
-│   │   └── tc_dinamico\     ← Tipo de cambio dinámico
-│   ├── schema\
-│   │   └── propiedades_v2_schema.md  ← 📌 SCHEMA TABLA PRINCIPAL
-│   ├── migrations\          ← 003, 004, 005 (FK + microzonas)
-│
-├── geodata\
-│   └── microzonas_equipetrol_v4.geojson ← 7 polígonos GPS
-│
-└── README.md
-```
-
-### Archivos Clave para Leer Primero
-1. `docs/GUIA_ONBOARDING_CLAUDE.md` - Este archivo (contexto general)
-2. `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` - Plan activo
-3. `docs/MODULO_1_ESTADO_FINAL.md` - Estado del Módulo 1
-4. `sql/schema/propiedades_v2_schema.md` - Estructura de la BD
+| Métrica | Valor |
+|---------|-------|
+| Total propiedades | 431 |
+| Propiedades completadas | 350 |
+| Con proyecto asignado | 338 (**96.6%**) |
+| Pendientes de match | 1 |
+| Proyectos activos | 190 |
+| Microzonas GPS | 7 (Equipetrol) |
 
 ---
 
-## 📂 REPO 2: sici-matching\ (Funciones SQL - REQUIERE MIGRACIÓN)
+## 📁 ESTRUCTURA DEL REPOSITORIO
 
-**Ruta:** `C:\Users\LUCHO\Desktop\Censo inmobiliario\sici-matching\`
-
-### ⚠️ ESTADO CRÍTICO
-Las funciones SQL en este repo **apuntan a tabla `propiedades` (deprecada)**.
-Deben migrarse a `propiedades_v2`. Ver `sici/docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md`.
-
-### Estructura
 ```
-sici-matching\
-├── assets\
-│   └── zonas-geograficas\   ← GeoJSON de Equipetrol
+C:\Users\LUCHO\Desktop\Censo inmobiliario\sici\
+├── CLAUDE.md                  ← Configuración Claude Code
+├── README.md                  ← Estado general del proyecto
+├── config.local.json          ← Credenciales (gitignored)
 │
-├── Docs\
-│   ├── catalogo_post_fase1.md
-│   └── proyectos_master_catalogo.md  ← 📌 LISTA DE 152+ PROYECTOS
+├── docs/
+│   ├── canonical/             ← Documentos definitivos (Módulo 1)
+│   ├── modulo_2/              ← Specs y planes de matching
+│   │   ├── MATCHING_NOCTURNO_SPEC.md
+│   │   ├── SIN_MATCH_SPEC.md
+│   │   ├── AUDITORIA_DIARIA_SPEC.md
+│   │   ├── PLAN_MODULO_2_v2.1.md
+│   │   └── PLAN_MATCHING_MULTIFUENTE_v3.0.md
+│   ├── GUIA_ONBOARDING_CLAUDE.md  ← Este archivo
+│   └── MODULO_1_ESTADO_FINAL.md
 │
-├── subsistema-matching-propiedades\
-│   ├── Sql\
-│   │   ├── funciones\       ← 📌 FUNCIONES DE MATCHING (¡MIGRAR!)
-│   │   │   ├── matching_completo_automatizado.sql
-│   │   │   ├── generar_matches_por_nombre.sql
-│   │   │   ├── generar_matches_por_url.sql
-│   │   │   ├── generar_matches_fuzzy.sql
-│   │   │   ├── generar_matches_gps_limpio.sql (OFF)
-│   │   │   └── aplicar_matches_aprobados.sql
-│   │   └── schema\
-│   │       └── tablas.sql   ← ⚠️ USA TABLA VIEJA
-│   │
-│   ├── matching-nocturno.md ← Diseño del pipeline
-│   └── Funciones_SQL.md     ← Documentación de funciones
+├── n8n/
+│   ├── extractores/           ← JSONs de extractores
+│   └── workflows/
+│       ├── modulo_1/          ← Flujos A, B, C, Merge
+│       └── modulo_2/          ← Matching, Supervisores, Auditoría
 │
-└── subsistema-validacion-gps\
-    └── (GPS validation workflows)
+├── sql/
+│   ├── functions/
+│   │   ├── discovery/         ← registrar_discovery.sql
+│   │   ├── enrichment/        ← registrar_enrichment.sql
+│   │   ├── merge/             ← merge_discovery_enrichment.sql
+│   │   └── matching/          ← Funciones v3.1 + RPCs
+│   ├── migrations/            ← 001-012
+│   └── schema/                ← propiedades_v2_schema.md
+│
+└── geodata/
+    └── microzonas_equipetrol_v4.geojson
 ```
 
 ---
@@ -131,10 +74,12 @@ sici-matching\
 
 | Tabla | Registros | Descripción |
 |-------|-----------|-------------|
-| `propiedades_v2` | ~428+ | **TABLA PRINCIPAL** - Propiedades activas |
-| `proyectos_master` | 152+ | Edificios/proyectos verificados |
-| `zonas_geograficas` | 7 | Polígonos PostGIS de microzonas Equipetrol |
+| `propiedades_v2` | 431 | **TABLA PRINCIPAL** - Propiedades activas |
+| `proyectos_master` | 190 activos | Edificios/proyectos verificados |
 | `matching_sugerencias` | Variable | Cola de sugerencias de matching |
+| `sin_match_exportados` | Variable | Tracking de props exportadas al Sheet |
+| `zonas_geograficas` | 7 | Polígonos PostGIS de microzonas |
+| `auditoria_snapshots` | 0 ❌ | Tabla vacía (workflow no guarda) |
 | `propiedades` | legacy | **DEPRECADA - NO USAR** |
 
 ### Columnas Críticas de propiedades_v2
@@ -149,9 +94,8 @@ area_total_m2, dormitorios, banos, latitud, longitud
 -- Precios
 precio_usd, moneda_original, tipo_cambio_usado
 
--- Matching (OBJETIVO MÓDULO 2)
-id_proyecto_master          ← 100% NULL actualmente
-id_proyecto_master_sugerido ← Del extractor fuzzy
+-- Matching (96.6% poblado)
+id_proyecto_master          ← Proyecto asignado
 metodo_match, confianza_match
 
 -- Estado
@@ -162,16 +106,11 @@ datos_json_discovery   ← Snapshot de API (inmutable)
 datos_json_enrichment  ← Datos de HTML scraping (inmutable)
 datos_json             ← Merge consolidado
 campos_bloqueados      ← Candados para proteger datos manuales
-
--- IMPORTANTE: nombre_edificio
-nombre_edificio        ← Columna (a veces NULL)
--- O extraer del JSON:
-datos_json_enrichment->>'nombre_edificio'
 ```
 
 ---
 
-## 🔄 PIPELINE ACTUAL (Módulo 1 - Producción)
+## 🔄 PIPELINE NOCTURNO
 
 ```
 1:00 AM  → Flujo A Discovery (Century21 + Remax)
@@ -183,44 +122,109 @@ datos_json_enrichment->>'nombre_edificio'
 3:00 AM  → Flujo Merge
            Combina Discovery + Enrichment
            ↓
-4:00 AM  → Matching Nocturno ← 🔥 PENDIENTE IMPLEMENTAR
-           Asocia propiedades → proyectos_master
+4:00 AM  → Matching Nocturno ✅
+           Ejecuta matching_completo_automatizado()
+           Auto-aprueba ≥85%, pendientes → Sheet
            ↓
 6:00 AM  → Flujo C Verificador
            Confirma propiedades inactivas
+           ↓
+7:00 AM  → Exportar Sin Match
+           Propiedades sin proyecto → Sheet Sin_Match
+           ↓
+8:00 PM  → Matching Supervisor
+           Procesa decisiones de Pendientes_Matching
+           ↓
+8:30 PM  → Supervisor Sin Match
+           Procesa decisiones de Sin_Match
+           ↓
+9:00 AM  → Auditoría Diaria
+           Reporte Slack (❌ no guarda snapshots)
 ```
 
 ---
 
-## 🎯 ESTADO ACTUAL DEL PROYECTO
+## 🎯 ESTADO DE FASES - MÓDULO 2
 
-### Módulo 1: Discovery & Existencia ✅ COMPLETADO
-- Pipeline nocturno operativo
-- ~214 propiedades procesadas
-- Extractores con fuzzy pre-matching integrado
+### ✅ COMPLETADAS
 
-### Módulo 2: Matching Propiedades → Proyectos ✅ FASE 1 COMPLETADA
+| Fase | Descripción | Fecha |
+|------|-------------|-------|
+| **FASE 1** | Matching Nocturno + Migración SQL v3.0 | 28 Dic 2025 |
+| **FASE 2** | Human-in-the-Loop completo | 31 Dic 2025 |
+| **FASE 5** | Pipeline activado (crons activos) | 29 Dic 2025 |
 
-**Estado actual (28 Dic 2025):**
-- 82 propiedades matcheadas (37.1%)
-- 370 con zona GPS asignada (86%)
-- 7 microzonas de Equipetrol operativas
-- Funciones SQL v3.0 migradas a `propiedades_v2`
+**Sistema HITL Implementado:**
+- Matching Supervisor: APROBAR, RECHAZAR, CORREGIR, PROYECTO_ALTERNATIVO
+- Supervisor Sin Match: ASIGNAR, CREAR, CORREGIR, SIN_PROYECTO
+- Dropdown de proyectos con sincronización automática
+- Eliminación de filas procesadas (ordenada DESC para evitar index shift)
+- Fix de "null" string de n8n (migración 012)
 
-**Plan activo:** `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` (v3.1)
+### ❌ PENDIENTES
 
-**Infraestructura de Microzonas GPS:**
-- Tabla `zonas_geograficas` con 7 polígonos PostGIS
-- Función `poblar_zonas_batch()` para asignación masiva
-- Columnas `zona` y `microzona` en propiedades_v2
+| Fase | Descripción | Esfuerzo Est. |
+|------|-------------|---------------|
+| **FASE 3** | Enriquecimiento IA de Proyectos | ~16h |
+| **FASE 4** | Validación GPS (parcial) | ~8h |
 
-**Fases:**
+**FASE 3 - Detalle Pendiente:**
+```sql
+-- Columnas a agregar a proyectos_master
+ALTER TABLE proyectos_master ADD COLUMN IF NOT EXISTS
+  desarrolladora VARCHAR(100),
+  ano_construccion INTEGER,
+  total_unidades INTEGER,
+  amenities_ia JSONB,
+  descripcion_marketing TEXT,
+  segmento_mercado VARCHAR(50),
+  metadata_ia JSONB,
+  fecha_enriquecimiento TIMESTAMPTZ;
 ```
-FASE 1: Migrar funciones SQL ✅ COMPLETADA
-FASE 2: Ejecutar y medir (pendiente optimización)
-FASE 3: Optimizar para escalabilidad
-FASE 4: Recuperar datos existentes (opcional)
-FASE 5: Activar matching nocturno
+
+**Funciones Pendientes:**
+- `heredar_metadata_proyecto()` - Trigger para heredar metadata a propiedades
+- `validar_sugerencias_extractor()` - Combinar sugerencias extractor + matching
+
+**Bug Conocido:**
+- Workflow Auditoría Diaria NO guarda snapshots en `auditoria_snapshots`
+- Tabla existe pero tiene 0 registros
+
+---
+
+## 📋 QUERIES ÚTILES
+
+### Estado general
+```sql
+SELECT status, fuente, COUNT(*)
+FROM propiedades_v2
+GROUP BY status, fuente;
+```
+
+### Tasa de matching
+```sql
+SELECT
+    COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL) as con_proyecto,
+    COUNT(*) FILTER (WHERE status = 'completado') as completadas,
+    ROUND(100.0 * COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL) /
+          NULLIF(COUNT(*) FILTER (WHERE status = 'completado'), 0), 1) as tasa_matching
+FROM propiedades_v2;
+```
+
+### Pendientes de revisión
+```sql
+SELECT COUNT(*) as pendientes
+FROM matching_sugerencias
+WHERE estado = 'pendiente';
+```
+
+### Proyectos activos
+```sql
+SELECT id_proyecto_master, nombre_oficial,
+       gps_verificado_google, google_place_id IS NOT NULL as tiene_place_id
+FROM proyectos_master
+WHERE activo = TRUE
+ORDER BY nombre_oficial;
 ```
 
 ---
@@ -230,67 +234,13 @@ FASE 5: Activar matching nocturno
 | Componente | Tecnología |
 |------------|------------|
 | Orquestación | n8n (self-hosted en Elestio) |
-| Base de Datos | Supabase PostgreSQL |
+| Base de Datos | Supabase PostgreSQL + PostGIS |
 | Scraping HTML | Firecrawl API |
 | GPS Validation | Google Places API |
 | Notificaciones | Slack |
-| Version Control | GitHub Desktop |
-| Desarrollo | Claude Code + Plugin dev-workflows |
-
----
-
-## 📋 QUERIES ÚTILES
-
-### Ver estado general
-```sql
-SELECT status, fuente, COUNT(*) 
-FROM propiedades_v2 
-GROUP BY status, fuente;
-```
-
-### Ver propiedades sin proyecto (el problema actual)
-```sql
-SELECT COUNT(*) as sin_proyecto
-FROM propiedades_v2 
-WHERE id_proyecto_master IS NULL 
-  AND status IN ('completado', 'actualizado');
-```
-
-### Extraer nombre_edificio (columna O JSON)
-```sql
-SELECT 
-  id,
-  url,
-  COALESCE(
-    NULLIF(nombre_edificio, ''),
-    datos_json_enrichment->>'nombre_edificio'
-  ) as nombre_edificio,
-  datos_json_enrichment->>'fuente_nombre_edificio' as fuente
-FROM propiedades_v2
-WHERE status IN ('completado', 'actualizado')
-LIMIT 20;
-```
-
-### Ver proyectos master disponibles
-```sql
-SELECT id_proyecto_master, nombre_oficial, alias_conocidos, zona
-FROM proyectos_master
-WHERE activo = TRUE
-ORDER BY nombre_oficial;
-```
-
-### Diagnóstico de matching
-```sql
-SELECT 
-  fuente,
-  COUNT(*) as total,
-  COUNT(nombre_edificio) as con_nombre_columna,
-  COUNT(datos_json_enrichment->>'nombre_edificio') as con_nombre_json,
-  COUNT(id_proyecto_master) as con_match
-FROM propiedades_v2
-WHERE status IN ('completado', 'actualizado')
-GROUP BY fuente;
-```
+| Revisión Humana | Google Sheets |
+| Version Control | GitHub |
+| Desarrollo | Claude Code |
 
 ---
 
@@ -301,43 +251,41 @@ Si empiezas una nueva conversación con Claude, copia esto:
 ```
 Estoy trabajando en SICI, un sistema de inteligencia inmobiliaria para Bolivia.
 
-REPOS LOCALES:
-- sici\ = Repo principal (Módulo 1 + FASE 1 Módulo 2 completados)
-- sici-matching\ = Repo legacy (NO USAR para nuevas funciones)
+ESTADO ACTUAL (31 Dic 2025):
+- 431 propiedades en propiedades_v2
+- 338 matcheadas (96.6%) con id_proyecto_master
+- 190 proyectos activos en proyectos_master
+- Sistema Human-in-the-Loop COMPLETO y funcionando
 
-ESTADO ACTUAL (28 Dic 2025):
-- ~428 propiedades en propiedades_v2
-- 82 matcheadas (37.1%) con id_proyecto_master
-- 370 con zona GPS (86%) via microzonas PostGIS
-- 152+ proyectos en proyectos_master
-- Funciones matching v3.0 migradas a propiedades_v2
+FASES COMPLETADAS:
+- FASE 1: Matching Nocturno v3.1 ✅
+- FASE 2: HITL (APROBAR, RECHAZAR, CORREGIR, CREAR, ASIGNAR) ✅
+- FASE 5: Pipeline nocturno activo ✅
 
-INFRAESTRUCTURA GPS:
-- Tabla zonas_geograficas con 7 polígonos Equipetrol
-- Función poblar_zonas_batch() para asignación masiva
-
-PLAN ACTIVO: docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md (v3.1)
-- FASE 1: ✅ Completada - Funciones migradas
-- FASE 2: Pendiente - Optimización
-- FASE 3-5: Escalabilidad y nocturno
+PENDIENTE:
+- FASE 3: Enriquecimiento IA de proyectos
+- FASE 4: Validación GPS completa
+- Bug: auditoria_snapshots vacía (workflow no guarda)
 
 ARCHIVOS CLAVE:
+- sici/CLAUDE.md (configuración)
 - sici/docs/GUIA_ONBOARDING_CLAUDE.md (este archivo)
-- sici/docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md
-- sici/sql/functions/matching/ (funciones v3.0)
-- sici/sql/migrations/ (003, 004, 005)
+- sici/docs/modulo_2/*.md (specs)
+- sici/sql/migrations/ (001-012)
+
+REPO LEGACY:
+- sici-matching/ = NO USAR (deprecado)
 ```
 
 ---
 
 ## 🔑 PRINCIPIOS DEL PROYECTO
 
-1. **"Manual wins over automatic"** - Datos corregidos manualmente nunca se sobrescriben (sistema de candados)
+1. **"Manual wins over automatic"** - Datos corregidos manualmente nunca se sobrescriben
 2. **Discovery > Enrichment** - Para datos físicos, Discovery tiene prioridad
-3. **Scoring post-merge** - La calidad se calcula sobre datos consolidados
-4. **Incremental > Rewrite** - Preferir mejoras pequeñas sobre reescrituras totales
-5. **SQL > Regex** - Potenciar matching en BD, no perseguir patrones en extractores
-6. **Zero human-in-the-loop** - Diseño orientado a automatización completa
+3. **SQL > Regex** - Potenciar matching en BD, no perseguir patrones en extractores
+4. **Human-in-the-Loop** - Sistema completo para revisión humana cuando confianza < 85%
+5. **Incremental > Rewrite** - Preferir mejoras pequeñas sobre reescrituras totales
 
 ---
 
@@ -345,13 +293,12 @@ ARCHIVOS CLAVE:
 
 | Documento | Ruta | Propósito |
 |-----------|------|-----------|
-| Plan Matching v3.1 | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` | FASE 1 completada |
-| Plan Módulo 2 | `docs/modulo_2/PLAN_MODULO_2_v2.1.md` | Plan completo (Fases 1-4) |
-| Estado Módulo 1 | `docs/MODULO_1_ESTADO_FINAL.md` | Cierre formal Módulo 1 |
-| Funciones Matching | `sql/functions/matching/` | Funciones v3.0 migradas |
-| CHANGELOG Matching | `sql/functions/matching/CHANGELOG_MATCHING.md` | Historial de cambios |
-| Migraciones | `sql/migrations/` | 003, 004, 005 (FK + microzonas) |
-| Catálogo Proyectos | `sici-matching/Docs/proyectos_master_catalogo.md` | Lista de 152+ proyectos |
+| Configuración Claude | `CLAUDE.md` | Quick context + MCP |
+| Plan Matching v3.2 | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` | Estado actual |
+| Spec Matching | `docs/modulo_2/MATCHING_NOCTURNO_SPEC.md` | Arquitectura HITL |
+| Spec Sin Match | `docs/modulo_2/SIN_MATCH_SPEC.md` | Sistema Sin Match |
+| Estado Módulo 1 | `docs/MODULO_1_ESTADO_FINAL.md` | Cierre formal |
+| CHANGELOG Matching | `sql/functions/matching/CHANGELOG_MATCHING.md` | Historial |
 
 ---
 
@@ -362,16 +309,10 @@ ARCHIVOS CLAVE:
 cd "C:\Users\LUCHO\Desktop\Censo inmobiliario\sici"
 claude
 
-# Para features complejas
-/dev-workflows:implement [descripción]
-
-# Para diagnóstico
-/dev-workflows:diagnose
-
-# Limpiar conversación
-/clear
+# Para consultas de BD
+# MCP postgres-sici está configurado con usuario readonly
 ```
 
 ---
 
-**FIN DE LA GUÍA DE ONBOARDING v2.1**
+**FIN DE LA GUÍA DE ONBOARDING v3.0**

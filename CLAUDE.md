@@ -4,8 +4,9 @@
 
 **SICI** = Sistema Inteligente de Captura Inmobiliaria (Bolivia)
 - Pipeline nocturno: Discovery → Enrichment → Merge → Matching
-- Tabla principal: `propiedades_v2` (~214+ registros)
-- Tabla proyectos: `proyectos_master` (152+ edificios)
+- Tabla principal: `propiedades_v2` (431 registros)
+- Tabla proyectos: `proyectos_master` (190 activos)
+- Tasa de matching: **96.6%** (338/350 completadas)
 
 ## MCP Servers
 
@@ -23,23 +24,25 @@
 
 Usuario `claude_readonly` tiene permisos SELECT en todas las tablas.
 
-## Reglas Criticas
+## Reglas Críticas
 
 1. **Manual > Automatic** - `campos_bloqueados` SIEMPRE se respetan
-2. **Discovery > Enrichment** - Para campos fisicos (area, dorms, GPS)
-3. **propiedades_v2** - UNICA tabla activa. `propiedades` es LEGACY
+2. **Discovery > Enrichment** - Para campos físicos (area, dorms, GPS)
+3. **propiedades_v2** - ÚNICA tabla activa. `propiedades` es LEGACY
 4. **SQL > Regex** - Potenciar matching en BD, no extractores
-5. **Zero human-in-the-loop** - Automatizacion completa
+5. **Human-in-the-Loop** - Sistema HITL completo operativo (Sheets + Supervisores)
 
-## Documentacion Principal
+## Documentación Principal
 
-| Proposito | Archivo |
+| Propósito | Archivo |
 |-----------|---------|
 | Onboarding completo | `docs/GUIA_ONBOARDING_CLAUDE.md` |
 | Plan activo | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
-| Estado Modulo 1 | `docs/MODULO_1_ESTADO_FINAL.md` |
+| Estado Módulo 1 | `docs/MODULO_1_ESTADO_FINAL.md` |
+| Spec Sin Match | `docs/modulo_2/SIN_MATCH_SPEC.md` |
+| Spec Matching | `docs/modulo_2/MATCHING_NOCTURNO_SPEC.md` |
 
 ## Estructura Clave
 
@@ -49,49 +52,69 @@ sici/
 │   ├── discovery/     # registrar_discovery.sql
 │   ├── enrichment/    # registrar_enrichment.sql
 │   ├── merge/         # merge_discovery_enrichment.sql v2.1.0
-│   └── matching/      # Funciones v3.0 (migradas a propiedades_v2)
-├── sql/migrations/    # 003, 004, 005 - FK y microzonas
+│   └── matching/      # Funciones v3.1 (propiedades_v2)
+├── sql/migrations/    # 001-012 (FK, microzonas, HITL, fixes)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
-│   └── modulo_1/      # Flujos A, B, C, Merge (produccion)
+│   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
+│   └── modulo_2/      # Matching, Supervisores, Sin Match, Auditoría
 └── docs/
     ├── canonical/     # Documentos definitivos
-    └── modulo_2/      # Plan matching activo (v3.1)
+    └── modulo_2/      # Specs y planes matching
 ```
 
-## Estado Actual (28 Dic 2025)
+## Estado Actual (31 Dic 2025)
 
-- **Modulo 1:** COMPLETADO - Pipeline nocturno operativo
-- **Modulo 2:** FASE 1 COMPLETADA - Funciones matching migradas a propiedades_v2
-  - 82 propiedades matcheadas (37.1%)
-  - 370 con zona GPS (86%)
-  - Infraestructura microzonas GPS operativa
+### ✅ Completado
+- **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
+- **Módulo 2 FASE 1:** Matching Nocturno v3.1 funcionando
+- **Módulo 2 FASE 2:** Human-in-the-Loop completo
+  - Matching Supervisor: APROBAR, RECHAZAR, CORREGIR, PROYECTO_ALTERNATIVO
+  - Supervisor Sin Match: ASIGNAR, CREAR, CORREGIR, SIN_PROYECTO
+- **Módulo 2 FASE 5:** Pipeline activado (4 AM matching, 8 PM supervisores)
 
-## Queries Rapidos
+### ❌ Pendiente
+- **FASE 3:** Enriquecimiento IA de proyectos (columnas metadata + workflow Claude)
+- **FASE 4:** Validación GPS completa (workflow validador Google Places)
+- **Auditoría:** Workflow no guarda snapshots en `auditoria_snapshots`
+- **Funciones:** `heredar_metadata_proyecto()`, `validar_sugerencias_extractor()`
+
+## Queries Rápidos
 
 ```sql
 -- Estado general
 SELECT status, fuente, COUNT(*) FROM propiedades_v2 GROUP BY 1,2;
 
--- Sin proyecto asignado (problema actual)
-SELECT COUNT(*) FROM propiedades_v2
-WHERE id_proyecto_master IS NULL AND status = 'completado';
+-- Tasa de matching
+SELECT
+    COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL) as con_proyecto,
+    COUNT(*) FILTER (WHERE status = 'completado') as completadas,
+    ROUND(100.0 * COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL) /
+          NULLIF(COUNT(*) FILTER (WHERE status = 'completado'), 0), 1) as tasa
+FROM propiedades_v2;
 
--- Proyectos disponibles
-SELECT id_proyecto_master, nombre_oficial FROM proyectos_master WHERE activo;
+-- Proyectos activos
+SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Agents SICI (Globales)
+## Migraciones SQL (001-012)
 
-Agents especializados en `~/.claude/agents/` (configuración global):
-
-| Agent | Propósito | Invocar con |
-|-------|-----------|-------------|
-| `sici-sql-expert` | Funciones SQL matching | `@sici-sql-expert` |
-| `sici-code-reviewer` | Revisión de código | `@sici-code-reviewer` |
-| `sici-integration-tester` | Testing de pipeline | `@sici-integration-tester` |
+| # | Archivo | Propósito |
+|---|---------|-----------|
+| 001 | migracion_merge_v2.0.0 | Merge Discovery + Enrichment |
+| 002 | migracion_columnas_matching | Columnas matching en propiedades_v2 |
+| 003 | matching_sugerencias_fk_v2 | FK hacia propiedades_v2 |
+| 004 | microzonas_schema | Tabla zonas_geograficas |
+| 005 | asignar_zona_por_gps | Funciones GPS |
+| 006 | crear_proyecto_desde_sugerencia | RPC básica |
+| 007 | crear_proyecto_con_gps_validacion | RPC v2 + validación |
+| 008 | auditoria_snapshots | Tabla snapshots (vacía) |
+| 009 | sin_match_exportados | Sistema Sin Match |
+| 010 | accion_corregir | CORREGIR para Sin Match |
+| 011 | corregir_proyecto_matching | CORREGIR para Pendientes |
+| 012 | fix_null_strings | Fix "null" string de n8n |
 
 ## Repo Legacy
 
 `sici-matching/` contiene funciones SQL que apuntan a tabla deprecada.
-Migrar a `sici/sql/functions/matching/` apuntando a `propiedades_v2`.
+**NO USAR** - Todo migrado a `sici/sql/functions/matching/`.

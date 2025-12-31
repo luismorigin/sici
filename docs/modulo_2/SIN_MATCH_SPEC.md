@@ -1,8 +1,9 @@
 # Sin Match Human-in-the-Loop - Especificación
 
-> **Versión:** 1.0
-> **Fecha:** 30 Diciembre 2025
+> **Versión:** 1.2
+> **Fecha:** 31 Diciembre 2025
 > **Workflows:** `exportar_sin_match.json`, `supervisor_sin_match.json`
+> **Estado:** ✅ COMPLETADO Y FUNCIONANDO
 
 ---
 
@@ -232,17 +233,48 @@ Para facilitar la selección de proyectos cuando no aparecen en la lista de cerc
 
 1. Ejecutar migración `009_sin_match_exportados.sql` en Supabase
 2. Ejecutar migración `010_accion_corregir.sql` en Supabase
-3. Crear tab "Sin_Match" en Google Sheet existente con headers:
+3. Ejecutar migración `011_corregir_proyecto_matching.sql` en Supabase (opcional, para Pendientes)
+4. Ejecutar migración `012_fix_null_strings.sql` en Supabase (fix crítico)
+5. Crear tab "Sin_Match" en Google Sheet existente con headers:
    ```
    ID_PROPIEDAD | FECHA_EXPORT | URL_PROPIEDAD | LINK_MAPS | ZONA | NOMBRE_EDIFICIO | PROYECTOS_CERCANOS | ACCION | PROYECTO_ID_O_NOMBRE | GPS_NUEVO | NOTAS
    ```
-4. Crear tab "Proyectos_Lista" con headers: ID | NOMBRE | DROPDOWN_VALUE
-5. Configurar Data Validation en columna I de Sin_Match: Dropdown from `Proyectos_Lista!$C$2:$C$500`
-6. Importar `exportar_sin_match.json` en n8n
-7. Importar `supervisor_sin_match.json` en n8n
-8. Configurar credenciales Postgres y Google Sheets
-9. Actualizar GID del tab en URLs de Slack (reemplazar `SIN_MATCH_GID`)
-10. Activar ambos workflows
+6. Crear tab "Proyectos_Lista" con headers: ID | NOMBRE | DROPDOWN_VALUE
+7. Configurar Data Validation en columna I de Sin_Match:
+   - Dropdown from `Proyectos_Lista!$C$2:$C$500`
+   - **IMPORTANTE:** Usar "Mostrar advertencia" (no "Rechazar") para permitir entrada manual
+8. Importar `exportar_sin_match.json` en n8n
+9. Importar `supervisor_sin_match.json` en n8n
+10. Configurar credenciales Postgres y Google Sheets
+11. Configurar variable de entorno `SLACK_WEBHOOK_SICI` en n8n
+12. Activar ambos workflows
+
+## Troubleshooting
+
+### Error: Rate limit 60 writes/min exceeded
+**Causa:** Nodo "Sheets: Limpiar Lista" hacía demasiadas escrituras.
+**Solución aplicada:**
+- Agregar `executeOnce: true` al nodo de Clear
+- Usar Merge + Remove Duplicates para sync de dropdown
+
+### Error: Filas incorrectas eliminadas
+**Causa:** Delete usaba fila fija en vez de dinámica.
+**Solución aplicada:**
+- Trackear `row_number: index + 2` por cada fila
+- Ordenar filas DESC antes de eliminar (evita index shift)
+- Usar `{{ $json.row_number }}` en nodo Delete
+
+### Error: invalid input syntax for type integer: "null"
+**Causa:** n8n convierte JavaScript `null` a string `"null"` en queries.
+**Solución aplicada:**
+- Migración 012: Cambiar `p_proyecto_id` de INTEGER a TEXT
+- Parsear internamente con `NULLIF(NULLIF(TRIM(...), ''), 'null')::INTEGER`
+
+### CORREGIR no funciona
+**Verificar:**
+1. Que la acción sea exactamente "CORREGIR" (mayúsculas)
+2. Que `proyecto_id` contenga ID numérico válido
+3. Que el proyecto exista en `proyectos_master`
 
 ## Horarios de Ejecución
 
@@ -256,4 +288,15 @@ Para facilitar la selección de proyectos cuando no aparecen en la lista de cerc
 
 ---
 
-*Documentación generada el 30 de Diciembre 2025*
+## Migraciones Relacionadas
+
+| # | Archivo | Propósito |
+|---|---------|-----------|
+| 009 | `sin_match_exportados.sql` | Tabla tracking + funciones base |
+| 010 | `accion_corregir.sql` | Acción CORREGIR inicial |
+| 011 | `corregir_proyecto_matching.sql` | CORREGIR para Pendientes Matching |
+| 012 | `fix_null_strings.sql` | Fix "null" string de n8n |
+
+---
+
+*Documentación actualizada el 31 de Diciembre 2025*

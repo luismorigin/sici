@@ -1,5 +1,59 @@
 # CHANGELOG - Matching
 
+## [3.2.0] - 2025-12-31
+
+### New Features
+
+1. **Sistema Sin Match Human-in-the-Loop**
+   - Workflow `exportar_sin_match.json` - Exporta props sin proyecto (7 AM)
+   - Workflow `supervisor_sin_match.json` - Procesa decisiones (8:30 PM)
+   - Acciones: ASIGNAR, CREAR, CORREGIR, SIN_PROYECTO
+   - Dropdown sincronizado de proyectos
+
+2. **Acción CORREGIR para Pendientes Matching**
+   - Función `corregir_proyecto_matching()` - Corrige nombre/GPS y aprueba
+   - Integrada en Matching Supervisor
+
+3. **Fixes de Producción**
+   - Rate limit 60/min resuelto con Execute Once + Remove Duplicates
+   - Row deletion ordenada DESC para evitar index shift
+   - Null handling para string "null" de n8n
+
+### Nuevas Migraciones
+
+| # | Archivo | Propósito |
+|---|---------|-----------|
+| 008 | `auditoria_snapshots.sql` | Tabla para snapshots diarios |
+| 009 | `sin_match_exportados.sql` | Sistema Sin Match completo |
+| 010 | `accion_corregir.sql` | CORREGIR para Sin Match |
+| 011 | `corregir_proyecto_matching.sql` | CORREGIR para Pendientes |
+| 012 | `fix_null_strings.sql` | Fix "null" string de n8n |
+
+### Funciones Nuevas
+
+| Función | Versión | Descripción |
+|---------|---------|-------------|
+| `procesar_decision_sin_match()` | v1.2 | Procesa decisiones Sin Match |
+| `obtener_sin_match_para_exportar()` | v1.0 | Lista props sin proyecto |
+| `registrar_exportacion_sin_match()` | v1.0 | Registra exportaciones |
+| `corregir_proyecto_matching()` | v1.0 | CORREGIR para Pendientes |
+
+### Resultados en Producción
+
+| Métrica | Valor |
+|---------|-------|
+| Total propiedades | 431 |
+| Con proyecto asignado | 338 (**96.6%**) |
+| Proyectos activos | 190 |
+| Pendientes de match | 1 |
+
+### Documentación
+
+- `docs/modulo_2/SIN_MATCH_SPEC.md` - Especificación Sin Match
+- `docs/modulo_2/AUDITORIA_DIARIA_SPEC.md` - Especificación Auditoría
+
+---
+
 ## [3.1.0] - 2025-12-30
 
 ### New Features

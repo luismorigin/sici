@@ -1,9 +1,9 @@
 # Sistema de Matching Nocturno con Human-in-the-Loop
 
 > **Sistema:** SICI - Módulo 2 Matching
-> **Estado:** Diseño Completo
-> **Versión:** 1.0
-> **Fecha:** 29 Diciembre 2025
+> **Estado:** ✅ COMPLETADO Y FUNCIONANDO
+> **Versión:** 1.1
+> **Fecha:** 31 Diciembre 2025
 > **Basado en:** Patrón FASE 2/2.5 de subsistema-validacion-gps
 
 ---
@@ -102,9 +102,19 @@ IF: ¿Hay pendientes?
 | `CONFIANZA` | INT | Score 70-84 |
 | `DISTANCIA_M` | INT | Metros (solo para GPS) |
 | `LINK_MAPS` | URL | Google Maps de la propiedad |
-| `ACCION (Humano)` | ENUM | ⏳ PENDIENTE / ✅ APROBAR / ❌ RECHAZAR |
+| `ACCION (Humano)` | ENUM | ⏳ PENDIENTE / ✅ APROBAR / ❌ RECHAZAR / 🔧 CORREGIR |
 | `PROYECTO_ALTERNATIVO` | TEXT | (Opcional) Nombre del proyecto correcto si el sugerido es incorrecto |
 | `GPS_ALTERNATIVO` | TEXT | (Opcional) Coordenadas copiadas de Google Maps "-17.756, -63.197" |
+
+### Acciones Disponibles
+
+| Acción | Descripción | Resultado |
+|--------|-------------|-----------|
+| ⏳ PENDIENTE | No revisado aún | Permanece en Sheet |
+| ✅ APROBAR | Confirma match sugerido | Aplica vía `aplicar_matches_revisados()` |
+| ❌ RECHAZAR | Descarta match | Marca como rechazado |
+| 🔧 CORREGIR | Corrige nombre/GPS del proyecto sugerido | Aplica vía `corregir_proyecto_matching()` |
+| 🆕 PROYECTO_ALTERNATIVO | Crea/usa proyecto diferente | Vía `crear_proyecto_desde_sugerencia()` |
 
 ### 2.3 Workflow: Matching Supervisor
 
@@ -467,4 +477,17 @@ sici/
 
 ---
 
-**Fin de Especificación - Matching Nocturno v1.0**
+## 11. Migraciones Relacionadas
+
+| # | Archivo | Propósito |
+|---|---------|-----------|
+| 003 | `matching_sugerencias_fk_v2.sql` | FK hacia propiedades_v2 |
+| 006 | `crear_proyecto_desde_sugerencia.sql` | RPC crear proyecto |
+| 007 | `crear_proyecto_con_gps_validacion.sql` | RPC v2 + validación GPS |
+| 011 | `corregir_proyecto_matching.sql` | Acción CORREGIR |
+
+---
+
+**Fin de Especificación - Matching Nocturno v1.1**
+
+*Actualizado el 31 de Diciembre 2025*
