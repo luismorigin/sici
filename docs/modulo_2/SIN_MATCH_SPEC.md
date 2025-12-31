@@ -65,13 +65,36 @@ Permitir asignación manual de proyectos a propiedades que el sistema automátic
 
 **Uso:** El proyecto correcto existe en proyectos_master
 
-**Columna I:** ID del proyecto (ej: `45`) o copiar de G (ej: `Torre Sol [ID:45]`)
+**Columna I:** ID del proyecto (ej: `45`) o seleccionar del dropdown
 
 **Resultado en BD:**
 ```sql
 UPDATE propiedades_v2 SET id_proyecto_master = 45 WHERE id = X;
 UPDATE sin_match_exportados SET estado = 'asignado';
 ```
+
+### ✏️ CORREGIR PROYECTO
+
+**Uso:** El proyecto existe pero tiene nombre o GPS incorrecto
+
+**Columna I:** ID del proyecto a corregir (ej: `45`)
+**Columna J:** Nuevo GPS (opcional, ej: `-17.77181, -63.19449`)
+**Columna K (NOTAS):** Nuevo nombre del proyecto (opcional)
+
+**Resultado en BD:**
+```sql
+UPDATE proyectos_master SET
+    nombre_oficial = 'Nuevo Nombre',
+    latitud = -17.77181,
+    longitud = -63.19449,
+    gps_verificado_google = true,
+    fuente_verificacion = 'humano_correccion'
+WHERE id_proyecto_master = 45;
+UPDATE propiedades_v2 SET id_proyecto_master = 45 WHERE id = X;
+UPDATE sin_match_exportados SET estado = 'corregido';
+```
+
+**Nota:** Usar CORREGIR una vez para arreglar el proyecto. Para propiedades adicionales del mismo edificio, usar ASIGNAR.
 
 ### 🆕 CREAR PROYECTO
 
@@ -186,18 +209,40 @@ Proyectos creados: Torre Nueva, Edificio Central
 [📂 Ver Bandeja Sin Match]
 ```
 
+## Tab Proyectos_Lista (Dropdown)
+
+Para facilitar la selección de proyectos cuando no aparecen en la lista de cercanos:
+
+**Tab:** Proyectos_Lista
+**Columnas:** ID | NOMBRE | DROPDOWN_VALUE
+
+| A | B | C |
+|---|---|---|
+| ID | NOMBRE | DROPDOWN_VALUE |
+| 37 | Aqua Tower | 37 - Aqua Tower |
+| 45 | Torre Sol | 45 - Torre Sol |
+
+**Data Validation en columna I (Sin_Match):**
+- Criterio: Dropdown from range `Proyectos_Lista!$C$2:$C$500`
+- Permite escribir manualmente si el proyecto no está en lista
+
+**Sincronización:** El workflow Supervisor actualiza esta lista después de cada ejecución para incluir proyectos nuevos creados.
+
 ## Instalación
 
 1. Ejecutar migración `009_sin_match_exportados.sql` en Supabase
-2. Crear tab "Sin_Match" en Google Sheet existente con headers:
+2. Ejecutar migración `010_accion_corregir.sql` en Supabase
+3. Crear tab "Sin_Match" en Google Sheet existente con headers:
    ```
    ID_PROPIEDAD | FECHA_EXPORT | URL_PROPIEDAD | LINK_MAPS | ZONA | NOMBRE_EDIFICIO | PROYECTOS_CERCANOS | ACCION | PROYECTO_ID_O_NOMBRE | GPS_NUEVO | NOTAS
    ```
-3. Importar `exportar_sin_match.json` en n8n
-4. Importar `supervisor_sin_match.json` en n8n
-5. Configurar credenciales Postgres y Google Sheets
-6. Actualizar GID del tab en URLs de Slack (reemplazar `SIN_MATCH_GID`)
-7. Activar ambos workflows
+4. Crear tab "Proyectos_Lista" con headers: ID | NOMBRE | DROPDOWN_VALUE
+5. Configurar Data Validation en columna I de Sin_Match: Dropdown from `Proyectos_Lista!$C$2:$C$500`
+6. Importar `exportar_sin_match.json` en n8n
+7. Importar `supervisor_sin_match.json` en n8n
+8. Configurar credenciales Postgres y Google Sheets
+9. Actualizar GID del tab en URLs de Slack (reemplazar `SIN_MATCH_GID`)
+10. Activar ambos workflows
 
 ## Horarios de Ejecución
 
