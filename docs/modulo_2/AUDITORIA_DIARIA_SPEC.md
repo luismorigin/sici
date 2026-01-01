@@ -1,14 +1,14 @@
 # Auditoría Diaria SICI - Especificación
 
-> **Versión:** 1.0
-> **Fecha:** 30 Diciembre 2025
+> **Versión:** 2.0
+> **Fecha:** 1 Enero 2026
 > **Workflow:** `n8n/workflows/modulo_2/auditoria_diaria_sici.json`
 
 ---
 
 ## Objetivo
 
-Generar un reporte diario consolidado del estado completo del sistema SICI, independiente de los flujos operacionales.
+Generar un reporte diario consolidado del estado completo del sistema SICI con 5 secciones que responden preguntas específicas.
 
 ## Ejecución
 
@@ -16,187 +16,276 @@ Generar un reporte diario consolidado del estado completo del sistema SICI, inde
 |-----------|-------|
 | Horario | 9:00 AM (Bolivia UTC-4) |
 | Frecuencia | Diario (incluyendo fines de semana) |
-| Notificación | Slack (mismo webhook que Supervisor) |
+| Notificación | Slack (webhook `$env.SLACK_WEBHOOK_SICI`) |
 
-## Arquitectura
+## Arquitectura v2.0
 
 ```
 Schedule 9:00 AM
        │
        ▼
-┌──────────────────┐
-│ PG: Stats Props  │ ─── Total, status, matcheadas, nombre_edificio
-└────────┬─────────┘
+┌──────────────────────┐
+│ PG: Propiedades +    │ ─── Inventario, calidad, scores, campos faltantes
+│     Calidad          │     Health enrichment/merge/discovery
+└────────┬─────────────┘
          │
          ▼
-┌──────────────────┐
-│ PG: Stats Match  │ ─── Sugerencias 24h, estados, nocturno 4AM
-└────────┬─────────┘
+┌──────────────────────┐
+│ PG: Proyectos        │ ─── Activos/inactivos, creados 24h, GPS verificado
+└────────┬─────────────┘
          │
          ▼
-┌──────────────────┐
-│ PG: Stats Proy   │ ─── Total, GPS verificado, pendientes Google
-└────────┬─────────┘
+┌──────────────────────┐
+│ PG: Matching +       │ ─── Actividad matching, pendientes revisión
+│     Sin Match        │     Health supervisores 8PM/8:30PM
+└────────┬─────────────┘
          │
          ▼
-┌──────────────────┐
-│ PG: Health Check │ ─── Último enrichment/merge, horas sin actividad
-└────────┬─────────┘
+┌──────────────────────┐
+│ Code: Consolidar v2  │ ─── Calcular %, alertas, formatear
+└────────┬─────────────┘
          │
          ▼
-┌──────────────────┐
-│ Code: Consolidar │ ─── Calcular %, alertas, formatear
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│ Slack: Reporte   │ ─── Mensaje formateado con Block Kit
-└──────────────────┘
+┌──────────────────────┐
+│ Slack: Reporte v2    │ ─── Mensaje 5 secciones con Block Kit
+└──────────────────────┘
 ```
 
-## Métricas Reportadas
+---
 
-### Propiedades
+## Secciones del Reporte
 
-| Métrica | Descripción |
-|---------|-------------|
-| Total | Todas las propiedades en propiedades_v2 |
-| Completadas | Status = 'completado' |
-| Matcheadas | Con id_proyecto_master asignado |
-| % Match | matcheadas / completadas * 100 |
-| Con nombre | nombre_edificio no vacío |
-| % Nombre | con_nombre / completadas * 100 |
-| Pendientes enrich | Status = 'nueva' AND tipo_operacion = 'venta' |
-| Creadas 24h | fecha_creacion >= NOW() - 24h |
-| Enriquecidas 24h | fecha_enrichment >= NOW() - 24h |
+### 1. INVENTARIO (¿Qué tengo?)
 
-### Matching
+| Métrica | Query | Cambio 24h |
+|---------|-------|------------|
+| Props activas | `status IN ('completado', 'actualizado')` | `fecha_creacion >= 24h` |
+| Props inactivas | `status = 'inactivo_confirmed'` | `updated_at >= 24h` |
+| Proy activos | `activo = true` | `created_at >= 24h` |
+| Proy inactivos | `activo = false` | - |
 
-| Métrica | Descripción |
-|---------|-------------|
-| Sugerencias 24h | Creadas en últimas 24 horas |
-| Aprobadas 24h | Estado = 'aprobado' en 24h |
-| Rechazadas 24h | Estado = 'rechazado' en 24h |
-| Tasa aprobación | aprobadas / sugerencias * 100 |
-| Pendientes revisión | Estado = 'pendiente' (cualquier fecha) |
-| Nocturno 4AM | Sugerencias creadas hoy entre 4-5 AM |
+### 2. CALIDAD DE DATOS (¿Qué tan completo?)
 
-### Proyectos
+| Métrica | Query |
+|---------|-------|
+| Con proyecto | `id_proyecto_master IS NOT NULL` / activas * 100 |
+| Score alto (≥95) | `score_calidad_dato >= 95` |
+| Score medio (85-94) | `score_calidad_dato >= 85 AND < 95` |
+| Score bajo (<85) | `score_calidad_dato < 85` |
+| Sin zona | `zona IS NULL OR zona = ''` |
+| Sin dormitorios | `dormitorios IS NULL` |
+| Sin nombre | `nombre_edificio IS NULL OR = ''` |
 
-| Métrica | Descripción |
-|---------|-------------|
-| Total | Todos los proyectos en proyectos_master |
-| GPS verificado | gps_verificado_google = true |
-| Con Place ID | google_place_id no nulo |
-| Pendientes Google | Estado = 'pendiente' en proyectos_pendientes_google |
+### 3. REVISIÓN HUMANA (¿Qué necesita atención?)
 
-### Health Check
+| Métrica | Tabla | Query |
+|---------|-------|-------|
+| Pendientes matching | `matching_sugerencias` | `estado = 'pendiente'` |
+| Pendientes sin_match | `sin_match_exportados` | `estado = 'pendiente'` |
+| Excluidas matching | `propiedades_v2` | `es_para_matching = false` |
 
-| Métrica | Descripción | Umbral Alerta |
-|---------|-------------|---------------|
-| Horas sin enrichment | Tiempo desde último fecha_enrichment | > 26h |
-| Horas sin merge | Tiempo desde último fecha_merge | > 26h |
-| Matching nocturno | Si hubo sugerencias entre 4-5 AM hoy | = 0 |
+### 4. ACTIVIDAD 24H (¿Qué pasó?)
+
+| Métrica | Fuente |
+|---------|--------|
+| Propiedades nuevas | `fecha_creacion >= 24h` |
+| Propiedades inactivadas | `status = inactivo_confirmed AND updated_at >= 24h` |
+| Matches aprobados | `matching_sugerencias.estado = 'aprobado' AND updated_at >= 24h` |
+| Matches rechazados | `matching_sugerencias.estado = 'rechazado' AND updated_at >= 24h` |
+| Props asignadas | `sin_match_exportados.estado = 'asignado' AND fecha_procesado >= 24h` |
+| Proyectos creados | `sin_match_exportados.estado = 'creado' AND fecha_procesado >= 24h` |
+| Proyectos corregidos | `sin_match_exportados.estado = 'corregido' AND fecha_procesado >= 24h` |
+
+### 5. SALUD WORKFLOWS (¿Todo corrió bien?)
+
+| Workflow | Cómo se detecta | Umbral |
+|----------|-----------------|--------|
+| Discovery | `fecha_creacion >= 26h` en propiedades_v2 | Alguna nueva |
+| Enrichment | `MAX(fecha_enrichment)` | < 26h |
+| Merge | `MAX(fecha_merge)` | < 26h |
+| Match 4AM | Sugerencias entre 4-5 AM hoy | > 0 |
+| Super 8PM | Procesados entre 20-21h ayer | >= 0 |
+| SinM 8:30PM | `fecha_procesado` entre 20:30-21:30h ayer | >= 0 |
+
+---
 
 ## Sistema de Alertas
 
-Las alertas aparecen en la parte superior del mensaje cuando se cumplen estas condiciones:
-
 | Condición | Mensaje |
 |-----------|---------|
-| `pendientes_revision > 5` | "Revisar bandeja de matching" |
-| `horas_sin_enrichment > 26` | "Flujo B no corrió en 24h" |
-| `nuevas_venta > 50` | "Backlog de enrichment creciendo" |
-| `pct_match_completadas < 50` | "Cobertura de matching baja" |
+| `total_pendientes > 5` | "X pendientes revisión" |
+| `horas_enrichment > 26` | "Enrichment no corrió en 26h" |
+| `discovery_ok = false` | "Discovery no corrió en 26h" |
+| `pct_bajo > 5` | "X% calidad baja" |
+| `pct_con_proyecto < 90` | "Cobertura matching <90%" |
 
-## Ejemplo de Mensaje Slack
+---
+
+## Ejemplo de Mensaje Slack v2.0
 
 ```
-📊 SICI Auditoría Diaria — 30 dic 2025
+📊 SICI Auditoría — 1 ene 2026
 
-🚨 ALERTAS: Backlog de enrichment creciendo
+━━━ 1. INVENTARIO ━━━
+Props activas: 350 (+2)    Props inactivas: 81 (+1)
+Proy activos: 190 (+1)     Proy inactivos: 12
 
-📦 PROPIEDADES
-Total: 430          Completadas: 251
-Matcheadas: 143 (56.9%)   Sin match: 108
-Con nombre: 181 (72.1%)   Pendientes enrich: 102
+━━━ 2. CALIDAD DE DATOS ━━━
+Con proyecto: 338 (96.6%)
+Calidad: 72% alta | 25% media | 3% baja
+Faltantes: zona 54 | dorms 15 | nombre 70
 
-Últimas 24h: +2 creadas, +10 enriquecidas
-─────────────────────────────────────────
-🔗 MATCHING
-Sugerencias 24h: 23       Aprobadas: 21 ✅
-Rechazadas: 2 ❌          Tasa aprob: 91.3%
-Pendientes revisión: 1    Nocturno 4AM: ✅ Corrió
-─────────────────────────────────────────
-🏢 PROYECTOS
-Total: 172                GPS verificado: 168 (97.7%)
-Con Place ID: 136         Pendientes Google: 1
-─────────────────────────────────────────
-⚡ HEALTH CHECK
-Flujo B (Enrichment): ✅ hace 2.5h
-Merge: ✅ hace 2.5h
+━━━ 3. REVISIÓN HUMANA ━━━
+Pendientes: ✅ 0 (matching: 0, sin_match: 0)
+Excluidas matching: 20
 
-📈 Total sugerencias históricas: 198 | Generado automáticamente
+━━━ 4. ACTIVIDAD 24H ━━━
++2 nuevas  -1 inactivadas
+✅ 5 aprobados  ❌ 0 rechazados
+📌 3 asignados  🆕 1 proyectos creados  🔧 0 corregidos
+
+━━━ 5. SALUD WORKFLOWS ━━━
+✅ Discovery  ✅ Enrichment (3h)  ✅ Merge (3h)
+✅ Match 4AM  ✅ Super 8PM  ✅ SinM 8:30PM
+
+SICI Auditoría v2.0 | Generado automáticamente
 ```
+
+---
+
+## Queries SQL
+
+### Query 1: Propiedades + Calidad
+
+```sql
+SELECT
+  -- Inventario
+  COUNT(*) FILTER (WHERE status IN ('completado', 'actualizado')) as props_activas,
+  COUNT(*) FILTER (WHERE status = 'inactivo_confirmed') as props_inactivas,
+
+  -- Actividad 24h
+  COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '24 hours') as nuevas_24h,
+  COUNT(*) FILTER (WHERE status = 'inactivo_confirmed'
+    AND updated_at >= NOW() - INTERVAL '24 hours') as inactivadas_24h,
+
+  -- Calidad: Con proyecto
+  COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL
+    AND status IN ('completado', 'actualizado')) as con_proyecto,
+
+  -- Calidad: Scores
+  COUNT(*) FILTER (WHERE score_calidad_dato >= 95
+    AND status IN ('completado', 'actualizado')) as score_alto,
+  COUNT(*) FILTER (WHERE score_calidad_dato >= 85 AND score_calidad_dato < 95
+    AND status IN ('completado', 'actualizado')) as score_medio,
+  COUNT(*) FILTER (WHERE score_calidad_dato < 85
+    AND status IN ('completado', 'actualizado')) as score_bajo,
+
+  -- Calidad: Campos faltantes
+  COUNT(*) FILTER (WHERE (zona IS NULL OR zona = '')
+    AND status IN ('completado', 'actualizado')) as sin_zona,
+  COUNT(*) FILTER (WHERE dormitorios IS NULL
+    AND status IN ('completado', 'actualizado')) as sin_dormitorios,
+  COUNT(*) FILTER (WHERE (nombre_edificio IS NULL OR nombre_edificio = '')
+    AND status IN ('completado', 'actualizado')) as sin_nombre,
+
+  -- Revisión humana
+  COUNT(*) FILTER (WHERE es_para_matching = false
+    AND status IN ('completado', 'actualizado')) as excluidas_matching,
+
+  -- Health
+  MAX(fecha_enrichment) as ultimo_enrichment,
+  MAX(fecha_merge) as ultimo_merge,
+  ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(fecha_enrichment))) / 3600, 1) as horas_enrichment,
+  ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(fecha_merge))) / 3600, 1) as horas_merge,
+  CASE WHEN COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '26 hours') > 0
+    THEN true ELSE false END as discovery_ok
+FROM propiedades_v2
+```
+
+### Query 2: Proyectos
+
+```sql
+SELECT
+  COUNT(*) FILTER (WHERE activo = true) as proy_activos,
+  COUNT(*) FILTER (WHERE activo = false) as proy_inactivos,
+  COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours') as proy_creados_24h,
+  COUNT(*) FILTER (WHERE gps_verificado_google = true AND activo = true) as proy_gps_verificado
+FROM proyectos_master
+```
+
+### Query 3: Matching + Sin Match
+
+```sql
+WITH matching_stats AS (
+  SELECT
+    COUNT(*) FILTER (WHERE estado = 'aprobado'
+      AND updated_at >= NOW() - INTERVAL '24 hours') as aprobados_24h,
+    COUNT(*) FILTER (WHERE estado = 'rechazado'
+      AND updated_at >= NOW() - INTERVAL '24 hours') as rechazados_24h,
+    COUNT(*) FILTER (WHERE estado = 'pendiente') as pendientes_matching,
+    COUNT(*) FILTER (
+      WHERE created_at >= DATE_TRUNC('day', NOW()) + INTERVAL '4 hours'
+      AND created_at < DATE_TRUNC('day', NOW()) + INTERVAL '5 hours'
+    ) as matching_nocturno_hoy,
+    COUNT(*) FILTER (
+      WHERE updated_at >= DATE_TRUNC('day', NOW()) - INTERVAL '4 hours'
+      AND updated_at < DATE_TRUNC('day', NOW()) - INTERVAL '3 hours'
+      AND estado IN ('aprobado', 'rechazado')
+    ) as supervisor_match_ayer
+  FROM matching_sugerencias
+),
+sinmatch_stats AS (
+  SELECT
+    COUNT(*) FILTER (WHERE estado = 'pendiente') as pendientes_sinmatch,
+    COUNT(*) FILTER (WHERE estado = 'asignado'
+      AND fecha_procesado >= NOW() - INTERVAL '24 hours') as asignados_24h,
+    COUNT(*) FILTER (WHERE estado = 'creado'
+      AND fecha_procesado >= NOW() - INTERVAL '24 hours') as creados_24h,
+    COUNT(*) FILTER (WHERE estado = 'corregido'
+      AND fecha_procesado >= NOW() - INTERVAL '24 hours') as corregidos_24h,
+    COUNT(*) FILTER (
+      WHERE fecha_procesado >= DATE_TRUNC('day', NOW()) - INTERVAL '3 hours' - INTERVAL '30 minutes'
+      AND fecha_procesado < DATE_TRUNC('day', NOW()) - INTERVAL '2 hours' - INTERVAL '30 minutes'
+    ) as supervisor_sinmatch_ayer
+  FROM sin_match_exportados
+)
+SELECT * FROM matching_stats, sinmatch_stats
+```
+
+---
 
 ## Instalación
 
 1. Importar `auditoria_diaria_sici.json` en n8n
-2. Configurar credencial Postgres (reemplazar `POSTGRES_CREDENTIAL_ID`)
+2. Verificar credencial Postgres (`zd5IroT7BxnpW5U6`)
 3. Verificar variable de entorno `SLACK_WEBHOOK_SICI`
-4. Activar workflow
-5. (Opcional) Ejecutar manualmente para verificar
-
-## Queries SQL
-
-### Stats Propiedades
-```sql
-SELECT
-  COUNT(*) as total,
-  COUNT(*) FILTER (WHERE status = 'completado') as completadas,
-  COUNT(*) FILTER (WHERE status = 'nueva') as nuevas,
-  COUNT(*) FILTER (WHERE status = 'nueva' AND tipo_operacion = 'venta') as nuevas_venta,
-  COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL) as matcheadas,
-  COUNT(*) FILTER (WHERE id_proyecto_master IS NULL AND status = 'completado') as sin_match,
-  COUNT(*) FILTER (WHERE nombre_edificio IS NOT NULL AND nombre_edificio != '') as con_nombre,
-  COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '24 hours') as creadas_24h,
-  COUNT(*) FILTER (WHERE fecha_enrichment >= NOW() - INTERVAL '24 hours') as enriquecidas_24h
-FROM propiedades_v2
-```
-
-### Stats Matching
-```sql
-SELECT
-  COUNT(*) as sugerencias_total,
-  COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours') as sugerencias_24h,
-  COUNT(*) FILTER (WHERE estado = 'aprobado' AND created_at >= NOW() - INTERVAL '24 hours') as aprobadas_24h,
-  COUNT(*) FILTER (WHERE estado = 'rechazado' AND created_at >= NOW() - INTERVAL '24 hours') as rechazadas_24h,
-  COUNT(*) FILTER (WHERE estado = 'pendiente') as pendientes_revision,
-  COUNT(*) FILTER (
-    WHERE created_at >= DATE_TRUNC('day', NOW()) + INTERVAL '4 hours'
-    AND created_at < DATE_TRUNC('day', NOW()) + INTERVAL '5 hours'
-  ) as matching_nocturno_hoy
-FROM matching_sugerencias
-```
-
-### Health Check
-```sql
-SELECT
-  MAX(fecha_enrichment) as ultimo_enrichment,
-  MAX(fecha_merge) as ultimo_merge,
-  ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(fecha_enrichment))) / 3600, 1) as horas_sin_enrichment,
-  ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(fecha_merge))) / 3600, 1) as horas_sin_merge
-FROM propiedades_v2
-WHERE fecha_enrichment IS NOT NULL
-```
-
-## Futuras Mejoras
-
-- [ ] Guardar snapshots en tabla `auditoria_snapshots` para tendencias
-- [ ] Comparación con día/semana anterior
-- [ ] Gráficos de tendencia (requiere servicio externo)
-- [ ] Alertas por email además de Slack
+4. Ejecutar manualmente para verificar
+5. Activar workflow
 
 ---
 
-*Documentación generada el 30 de Diciembre 2025*
+## Changelog
+
+### v2.0 (1 Ene 2026)
+- Reestructurado a 5 secciones claras
+- Agregado scores de calidad (alto/medio/bajo)
+- Agregado campos faltantes (zona/dorms/nombre)
+- Agregado sección Revisión Humana
+- Mejorado health check de workflows
+- Optimizado a 3 queries (antes 4)
+
+### v1.0 (30 Dic 2025)
+- Versión inicial con estadísticas básicas
+
+---
+
+## Futuras Mejoras
+
+- [ ] INSERT a `auditoria_snapshots` para histórico
+- [ ] Comparación con día/semana anterior
+- [ ] Cobertura por fuente (Century21 vs Remax)
+- [ ] Métricas de funnel Discovery→Enrich→Match
+
+---
+
+*Documentación actualizada 1 Enero 2026*
