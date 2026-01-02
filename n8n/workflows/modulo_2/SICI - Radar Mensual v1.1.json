@@ -1,5 +1,5 @@
 {
-  "name": "SICI - Radar Mensual v1.0",
+  "name": "SICI - Radar Mensual v1.1",
   "nodes": [
     {
       "parameters": {},
@@ -101,6 +101,27 @@
     },
     {
       "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT google_place_id, estado\nFROM proyectos_pendientes_google\nWHERE google_place_id IS NOT NULL;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -592,
+        -112
+      ],
+      "id": "c8a1b2d3-e4f5-6789-abcd-ef0123456789",
+      "name": "Postgres: Cargar Pendientes Previos",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "https://places.googleapis.com/v1/places:searchNearby",
         "authentication": "genericCredentialType",
@@ -140,7 +161,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Configuración\nconst tiposPermitidos = [\n  'apartment_complex',\n  'condominium_complex',\n  'housing_complex',\n  'apartment_building'\n];\n\nfunction formatPostgresArray(arr) {\n  if (!arr || arr.length === 0) return '{}';\n  return `{\"${arr.join('\",\"')}\"}`;\n}\n\nfunction esEdificio(tipos) {\n  if (!tipos || tipos.length === 0) return false;\n  return tipos.some(t => tiposPermitidos.includes(t));\n}\n\nfunction calcularDistancia(lat1, lon1, lat2, lon2) {\n  if (!lat1 || !lon1 || !lat2 || !lon2) return 9999;\n  const R = 6371000;\n  const dLat = (lat2 - lat1) * Math.PI / 180;\n  const dLon = (lon2 - lon1) * Math.PI / 180;\n  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +\n            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *\n            Math.sin(dLon/2) * Math.sin(dLon/2);\n  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));\n  return Math.round(R * c);\n}\n\n// Datos de entrada\nconst zona = $('Code: Calcular Circulo').first().json;\nconst googleResponse = $input.last().json;\nconst places = googleResponse.places || [];\nconst proyectosExistentes = $('Postgres: Cargar Master').all().map(item => item.json);\n\nconst resultados = [];\n\nif (places.length === 0) {\n  return [{\n    zona_id: zona.zona_id,\n    zona_nombre: zona.zona_nombre,\n    accion: 'sin_resultados',\n    proyectos_encontrados: 0\n  }];\n}\n\n// Procesar cada place\nfor (const place of places) {\n  if (!esEdificio(place.types)) continue;\n  \n  const googleId = place.id;\n  const latGoogle = place.location?.latitude;\n  const lngGoogle = place.location?.longitude;\n  \n  // Verificar si ya existe por google_place_id\n  let existe = proyectosExistentes.some(p => p.google_place_id === googleId);\n  \n  // Si no existe por ID, verificar por proximidad GPS (<50m)\n  if (!existe && latGoogle && lngGoogle) {\n    existe = proyectosExistentes.some(p => {\n      if (!p.latitud || !p.longitud) return false;\n      const distancia = calcularDistancia(\n        parseFloat(p.latitud),\n        parseFloat(p.longitud),\n        latGoogle,\n        lngGoogle\n      );\n      return distancia < 50;\n    });\n  }\n  \n  if (existe) {\n    resultados.push({\n      zona_id: zona.zona_id,\n      zona_nombre: zona.zona_nombre,\n      accion: 'ya_existe',\n      nombre: place.displayName?.text\n    });\n  } else {\n    // DESCUBRIMIENTO NUEVO\n    resultados.push({\n      zona_id: zona.zona_id,\n      zona_nombre: zona.zona_nombre,\n      accion: 'insert_pendiente',\n      nombre_proyecto: place.displayName?.text,\n      google_id: googleId,\n      lat: latGoogle,\n      lng: lngGoogle,\n      direccion: place.formattedAddress,\n      tipos_sql: formatPostgresArray(place.types),\n      razon: 'descubrimiento_radar_mensual',\n      origen: `radar_zona_${zona.zona_id}`\n    });\n  }\n}\n\nreturn resultados;"
+        "jsCode": "// Configuración\nconst tiposPermitidos = [\n  'apartment_complex',\n  'condominium_complex',\n  'housing_complex',\n  'apartment_building'\n];\n\nfunction formatPostgresArray(arr) {\n  if (!arr || arr.length === 0) return '{}';\n  return `{\"${arr.join('\",\"')}\"}`;\n}\n\nfunction esEdificio(tipos) {\n  if (!tipos || tipos.length === 0) return false;\n  return tipos.some(t => tiposPermitidos.includes(t));\n}\n\nfunction calcularDistancia(lat1, lon1, lat2, lon2) {\n  if (!lat1 || !lon1 || !lat2 || !lon2) return 9999;\n  const R = 6371000;\n  const dLat = (lat2 - lat1) * Math.PI / 180;\n  const dLon = (lon2 - lon1) * Math.PI / 180;\n  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +\n            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *\n            Math.sin(dLon/2) * Math.sin(dLon/2);\n  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));\n  return Math.round(R * c);\n}\n\n// Datos de entrada\nconst zona = $('Code: Calcular Circulo').first().json;\nconst googleResponse = $input.last().json;\nconst places = googleResponse.places || [];\nconst proyectosExistentes = $('Postgres: Cargar Master').all().map(item => item.json);\n\n// NUEVO: Cargar google_place_ids ya procesados (incluyendo rechazados)\nlet pendientesPrevios = [];\ntry {\n  pendientesPrevios = $('Postgres: Cargar Pendientes Previos').all().map(item => item.json.google_place_id);\n} catch (e) {\n  pendientesPrevios = [];\n}\n\nconst resultados = [];\n\nif (places.length === 0) {\n  return [{\n    zona_id: zona.zona_id,\n    zona_nombre: zona.zona_nombre,\n    accion: 'sin_resultados',\n    proyectos_encontrados: 0\n  }];\n}\n\n// Procesar cada place\nfor (const place of places) {\n  if (!esEdificio(place.types)) continue;\n  \n  const googleId = place.id;\n  const latGoogle = place.location?.latitude;\n  const lngGoogle = place.location?.longitude;\n  \n  // NUEVO: Verificar si ya existe en pendientes_google (rechazados, aprobados, etc)\n  if (pendientesPrevios.includes(googleId)) {\n    resultados.push({\n      zona_id: zona.zona_id,\n      zona_nombre: zona.zona_nombre,\n      accion: 'ya_existe',\n      nombre: place.displayName?.text,\n      razon_skip: 'ya_procesado_anteriormente'\n    });\n    continue;\n  }\n  \n  // Verificar si ya existe en proyectos_master por google_place_id\n  let existe = proyectosExistentes.some(p => p.google_place_id === googleId);\n  \n  // Si no existe por ID, verificar por proximidad GPS (<50m)\n  if (!existe && latGoogle && lngGoogle) {\n    existe = proyectosExistentes.some(p => {\n      if (!p.latitud || !p.longitud) return false;\n      const distancia = calcularDistancia(\n        parseFloat(p.latitud),\n        parseFloat(p.longitud),\n        latGoogle,\n        lngGoogle\n      );\n      return distancia < 50;\n    });\n  }\n  \n  if (existe) {\n    resultados.push({\n      zona_id: zona.zona_id,\n      zona_nombre: zona.zona_nombre,\n      accion: 'ya_existe',\n      nombre: place.displayName?.text\n    });\n  } else {\n    // DESCUBRIMIENTO NUEVO\n    resultados.push({\n      zona_id: zona.zona_id,\n      zona_nombre: zona.zona_nombre,\n      accion: 'insert_pendiente',\n      nombre_proyecto: place.displayName?.text,\n      google_id: googleId,\n      lat: latGoogle,\n      lng: lngGoogle,\n      direccion: place.formattedAddress,\n      tipos_sql: formatPostgresArray(place.types),\n      razon: 'descubrimiento_radar_mensual',\n      origen: `radar_zona_${zona.zona_id}`\n    });\n  }\n}\n\nreturn resultados;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -560,6 +581,17 @@
       ]
     },
     "Postgres: Cargar Master": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Cargar Pendientes Previos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: Cargar Pendientes Previos": {
       "main": [
         [
           {
