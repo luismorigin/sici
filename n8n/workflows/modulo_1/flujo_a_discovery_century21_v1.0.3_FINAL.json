@@ -348,6 +348,29 @@
         448
       ],
       "notes": "Log final"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT registrar_ejecucion_workflow(\n  'discovery',\n  'success',\n  {{ $json.resultados.snapshot_total || 0 }},\n  {{ $json.resultados.nuevas_insertadas || 0 }},\n  0,\n  NULL,\n  '{{ JSON.stringify({ existentes: $json.resultados.existentes_actualizadas || 0, ausentes: $json.resultados.ausentes_marcadas || 0 }) }}'::jsonb\n);",
+        "options": {}
+      },
+      "id": "reg-exec-discovery-001",
+      "name": "PG: Registrar Ejecución",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2352,
+        448
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Registrar ejecución del workflow"
     }
   ],
   "pinData": {},
@@ -534,6 +557,17 @@
         [
           {
             "node": "Resumen Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumen Final": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecución",
             "type": "main",
             "index": 0
           }

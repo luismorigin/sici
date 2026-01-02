@@ -314,6 +314,29 @@
           "name": "Supabase - Censo Inmobiliario"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT registrar_ejecucion_workflow(\n  'verificador',\n  'success',\n  {{ $json.total_procesadas || 0 }},\n  {{ $json.confirmadas_inactivas || 0 }},\n  0,\n  NULL,\n  '{{ JSON.stringify({ reactivadas: $json.reactivadas || 0, fuente: $json.fuente || \"remax\" }) }}'::jsonb\n);",
+        "options": {}
+      },
+      "id": "reg-exec-verificador-001",
+      "name": "PG: Registrar Ejecución",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -208,
+        136
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Registrar ejecución del workflow"
     }
   ],
   "pinData": {},
@@ -505,6 +528,17 @@
         [
           {
             "node": "Split propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge outputs": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecución",
             "type": "main",
             "index": 0
           }

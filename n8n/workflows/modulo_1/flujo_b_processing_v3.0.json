@@ -529,6 +529,29 @@
         16
       ],
       "notes": "Extractor Remax v1.6.1 - Soporta Firecrawl"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT registrar_ejecucion_workflow(\n  'enrichment',\n  'success',\n  0,\n  0,\n  0,\n  NULL,\n  '{{ JSON.stringify({ mensaje: $json.mensaje || \"Procesamiento completado\" }) }}'::jsonb\n);",
+        "options": {}
+      },
+      "id": "reg-exec-enrichment-001",
+      "name": "PG: Registrar Ejecución",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        4016,
+        112
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Registrar ejecución del workflow"
     }
   ],
   "pinData": {},
@@ -848,6 +871,28 @@
         [
           {
             "node": "Merge Resultados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumen Final": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecución",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Hay Propiedades": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecución",
             "type": "main",
             "index": 0
           }
