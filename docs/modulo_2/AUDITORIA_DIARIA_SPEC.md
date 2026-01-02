@@ -1,7 +1,7 @@
 # Auditoria Diaria SICI - Especificacion
 
-> **Version:** 2.2
-> **Fecha:** 1 Enero 2026
+> **Version:** 2.3
+> **Fecha:** 2 Enero 2026
 > **Workflow:** `n8n/workflows/modulo_2/auditoria_diaria_sici.json`
 
 ---
@@ -18,7 +18,7 @@ Generar un reporte diario consolidado del estado completo del sistema SICI con 7
 | Frecuencia | Diario (incluyendo fines de semana) |
 | Notificacion | Slack (webhook `$env.SLACK_WEBHOOK_SICI`) |
 
-## Arquitectura v2.2
+## Arquitectura v2.3
 
 ```
 Schedule 9:00 AM
@@ -44,6 +44,11 @@ Schedule 9:00 AM
 +----------+-----------+
            |
            v
++------------------------+
+| PG: Stats Workflows    | --- Consulta workflow_executions para health check
++----------+-------------+
+           |
+           v
 +----------------------+
 | Code: Consolidar     | --- Calcular %, alertas, formatear, preparar snapshot
 +----------+-----------+
@@ -55,6 +60,11 @@ Schedule 9:00 AM
 | Slack    | | PG: Insert       |
 | Reporte  | | Snapshot (UPSERT)|
 +----------+ +------------------+
+           |
+           v
++-------------------------+
+| PG: Registrar Ejecución | --- Registra en workflow_executions
++-------------------------+
 ```
 
 ---
@@ -119,16 +129,18 @@ Schedule 9:00 AM
 
 ### 6. HEALTH CHECK
 
-| Workflow | Como se detecta | Umbral |
-|----------|-----------------|--------|
-| Discovery | `fecha_creacion >= 26h` en propiedades_v2 | Alguna nueva |
-| Enrichment | `MAX(fecha_enrichment)` | < 26h |
-| Merge | `MAX(fecha_merge)` | < 26h |
-| TC Dinamico | `status = 'inactivo_confirmed' AND fecha_inactivacion >= 26h` | Alguna |
-| Export 7AM | `fecha_export` entre 7-8 AM hoy | >= 0 |
-| Nocturno 4AM | Sugerencias entre 4-5 AM hoy | > 0 |
-| Super 8PM | Procesados entre 20-21h ayer | >= 0 |
-| Super SinM 8:30PM | `fecha_procesado` entre 20:30-21:30h ayer | >= 0 |
+> **v2.3:** Ahora usa tabla `workflow_executions` como fuente primaria, con fallback a inferencia por timestamps.
+
+| Workflow | Fuente Primaria (v2.3) | Fallback (si tabla vacía) |
+|----------|------------------------|---------------------------|
+| Discovery | `workflow_executions.ran_last_26h` | `fecha_creacion >= 26h` en propiedades_v2 |
+| Enrichment | `workflow_executions.ran_last_26h` | `MAX(fecha_enrichment) < 26h` |
+| Merge | `workflow_executions.ran_last_26h` | `MAX(fecha_merge) < 26h` |
+| Matching Nocturno | `workflow_executions.ran_last_26h` | Sugerencias entre 4-5 AM hoy |
+| TC Dinamico | N/A (no tiene tracking) | `inactivo_confirmed >= 26h` |
+| Export 7AM | `workflow_executions.ran_last_26h` | `fecha_export` entre 7-8 AM hoy |
+| Super 8PM | `workflow_executions.ran_last_26h` | Procesados entre 20-21h ayer |
+| Super SinM 8:30PM | `workflow_executions.ran_last_26h` | `fecha_procesado` entre 20:30-21:30h |
 
 ### 7. FOOTER
 
@@ -341,6 +353,38 @@ SELECT
 FROM sin_match_exportados
 ```
 
+### Query 5: Stats Workflows (v2.3)
+
+> Consulta la tabla `workflow_executions` para determinar si cada workflow corrió en las últimas 26 horas.
+
+```sql
+SELECT
+  CASE
+    WHEN workflow_name IN ('discovery_century21', 'discovery_remax') THEN 'discovery'
+    ELSE workflow_name
+  END as workflow_name,
+  MAX(finished_at) as last_run,
+  BOOL_OR(finished_at >= NOW() - INTERVAL '26 hours') as ran_last_26h,
+  BOOL_OR(
+    workflow_name = 'matching_nocturno' AND
+    finished_at >= DATE_TRUNC('day', NOW()) + INTERVAL '4 hours' AND
+    finished_at < DATE_TRUNC('day', NOW()) + INTERVAL '5 hours'
+  ) as ran_at_scheduled_time
+FROM workflow_executions
+WHERE workflow_name IN (
+  'discovery_century21', 'discovery_remax', 'discovery',
+  'enrichment', 'merge', 'matching_nocturno',
+  'matching_supervisor', 'exportar_sin_match',
+  'supervisor_sin_match', 'radar_mensual', 'auditoria_diaria'
+)
+GROUP BY CASE
+    WHEN workflow_name IN ('discovery_century21', 'discovery_remax') THEN 'discovery'
+    ELSE workflow_name
+  END;
+```
+
+> **Nota:** Usa `BOOL_OR()` en lugar de `MAX(boolean)` porque PostgreSQL no soporta MAX para booleanos.
+
 ---
 
 ## Instalacion
@@ -354,6 +398,15 @@ FROM sin_match_exportados
 ---
 
 ## Changelog
+
+### v2.3 (2 Ene 2026)
+- **Sistema de tracking de ejecuciones de workflows**
+- Nueva tabla `workflow_executions` para registrar cuando corren los workflows
+- Nuevo nodo `PG: Stats Workflows` con query usando `BOOL_OR()`
+- Health check ahora usa fuente primaria (workflow_executions) + fallback (timestamps)
+- Nodo `PG: Registrar Ejecución` al final del workflow
+- Fix: `MAX(boolean)` → `BOOL_OR()` (PostgreSQL no soporta MAX para booleanos)
+- Soporte para discovery_century21 y discovery_remax agrupados como 'discovery'
 
 ### v2.2 (1 Ene 2026)
 - **Guardado de snapshots en `auditoria_snapshots`**
@@ -378,4 +431,4 @@ FROM sin_match_exportados
 
 ---
 
-*Documentacion actualizada 1 Enero 2026*
+*Documentacion actualizada 2 Enero 2026*

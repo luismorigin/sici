@@ -4,9 +4,10 @@
 
 **SICI** = Sistema Inteligente de Captura Inmobiliaria (Bolivia)
 - Pipeline nocturno: Discovery → Enrichment → Merge → Matching
-- Tabla principal: `propiedades_v2` (431 registros)
-- Tabla proyectos: `proyectos_master` (190 activos)
-- Tasa de matching: **96.6%** (338/350 completadas)
+- Tabla principal: `propiedades_v2` (433 registros)
+- Tabla proyectos: `proyectos_master` (192 activos)
+- Tracking: `workflow_executions` (health check)
+- Tasa de matching: **96%** (331/345 completadas)
 
 ## MCP Servers
 
@@ -43,6 +44,8 @@ Usuario `claude_readonly` tiene permisos SELECT en todas las tablas.
 | Estado Módulo 1 | `docs/MODULO_1_ESTADO_FINAL.md` |
 | Spec Sin Match | `docs/modulo_2/SIN_MATCH_SPEC.md` |
 | Spec Matching | `docs/modulo_2/MATCHING_NOCTURNO_SPEC.md` |
+| Spec Auditoría | `docs/modulo_2/AUDITORIA_DIARIA_SPEC.md` |
+| Spec Tracking | `docs/modulo_2/WORKFLOW_TRACKING_SPEC.md` |
 
 ## Estructura Clave
 
@@ -53,7 +56,7 @@ sici/
 │   ├── enrichment/    # registrar_enrichment.sql
 │   ├── merge/         # merge_discovery_enrichment.sql v2.1.0
 │   └── matching/      # Funciones v3.1 (propiedades_v2)
-├── sql/migrations/    # 001-012 (FK, microzonas, HITL, fixes)
+├── sql/migrations/    # 001-013 (FK, microzonas, HITL, tracking)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
@@ -63,7 +66,7 @@ sici/
     └── modulo_2/      # Specs y planes matching
 ```
 
-## Estado Actual (1 Ene 2026)
+## Estado Actual (2 Ene 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
@@ -72,6 +75,7 @@ sici/
   - Matching Supervisor: APROBAR, RECHAZAR, CORREGIR, PROYECTO_ALTERNATIVO
   - Supervisor Sin Match: ASIGNAR, CREAR, CORREGIR, SIN_PROYECTO
 - **Módulo 2 FASE 5:** Pipeline activado (4 AM matching, 8 PM supervisores)
+- **Auditoría v2.3:** Health check via `workflow_executions`
 
 ### ❌ Pendiente
 - **FASE 3:** Enriquecimiento IA de proyectos (columnas metadata + workflow Claude)
@@ -96,7 +100,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-012)
+## Migraciones SQL (001-013)
 
 | # | Archivo | Propósito |
 |---|---------|-----------|
@@ -112,6 +116,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 010 | accion_corregir | CORREGIR para Sin Match |
 | 011 | corregir_proyecto_matching | CORREGIR para Pendientes |
 | 012 | fix_null_strings | Fix "null" string de n8n |
+| 013 | workflow_executions | Tabla + función tracking workflows |
 
 ## Repo Legacy
 

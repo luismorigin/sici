@@ -1,8 +1,8 @@
 # MÓDULO 1 - ESTADO FINAL
 
-**Sistema:** SICI - Sistema Inteligente de Captura Inmobiliaria  
-**Módulo:** Módulo 1 - Discovery & Existencia  
-**Fecha actualización:** 18 Diciembre 2025  
+**Sistema:** SICI - Sistema Inteligente de Captura Inmobiliaria
+**Módulo:** Módulo 1 - Discovery & Existencia
+**Fecha actualización:** 2 Enero 2026
 **Estado:** ✅ 100% COMPLETADO - PRODUCCIÓN
 
 ---
@@ -118,12 +118,25 @@ docs/
   ↓ Comparación vs BD
   ↓ INSERT nuevas / UPDATE existentes / Marcar ausentes
   ↓ ~144 propiedades procesadas
+  ↓ PG: Registrar Ejecución → workflow_executions ✅
 
 1:00 AM - Flujo A Remax ejecuta
   ↓ Snapshot API REST
-  ↓ Comparación vs BD  
+  ↓ Comparación vs BD
   ↓ INSERT nuevas / UPDATE existentes / Marcar ausentes
   ↓ ~144 propiedades procesadas
+  ↓ PG: Registrar Ejecución → workflow_executions ✅
+
+2:00 AM - Flujo B Enrichment ejecuta
+  ↓ Procesa propiedades status='nueva'
+  ↓ Extracción con Firecrawl + extractores
+  ↓ UPDATE datos enriquecidos
+  ↓ PG: Registrar Ejecución → workflow_executions ✅
+
+3:00 AM - Flujo Merge Nocturno ejecuta
+  ↓ Fusiona Discovery + Enrichment
+  ↓ Genera datos_json final
+  ↓ PG: Registrar Ejecución → workflow_executions ✅
 
 6:00 AM - Flujo C Verificador ejecuta
   ↓ Query pending Remax
@@ -131,7 +144,10 @@ docs/
   ↓ Decisión: confirm / reactivate / skip
   ↓ UPDATE BD según decisión
   ↓ Resumen de acciones
+  ↓ PG: Registrar Ejecución → workflow_executions ✅
 ```
+
+> **Nota (2 Ene 2026):** Todos los workflows ahora registran su ejecución en `workflow_executions` para health check en Auditoría Diaria.
 
 ---
 
@@ -244,6 +260,23 @@ ORDER BY fecha DESC, fuente;
 ---
 
 ## 📝 CHANGELOG DEL MÓDULO
+
+### **Enero 2, 2026 - Tracking de Ejecuciones** ✅
+
+**Workflow Tracking:**
+- ✅ Nuevo nodo `PG: Registrar Ejecución` en todos los workflows
+- ✅ Registra en tabla `workflow_executions` al finalizar
+- ✅ Permite health check preciso en Auditoría Diaria v2.3
+- ✅ Discovery Century21 → `discovery_century21`
+- ✅ Discovery Remax → `discovery_remax`
+- ✅ Enrichment → `enrichment`
+- ✅ Merge Nocturno → `merge`
+- ✅ Verificador → `verificador`
+
+**Configuración del nodo:**
+- Query: `SELECT registrar_ejecucion_workflow('nombre', 'success', 0, 0, 0, NULL, '{}'::jsonb);`
+- Execute Once: ✅ Activado
+- Conectar desde TODOS los puntos finales del workflow
 
 ### **Diciembre 18, 2025 - CIERRE MÓDULO 1** ✅
 

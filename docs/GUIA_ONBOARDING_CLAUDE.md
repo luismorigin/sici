@@ -2,8 +2,8 @@
 
 **Propósito:** Permitir que cualquier instancia de Claude (chat, Claude Code, nueva conversación) entienda rápidamente el proyecto SICI y sepa dónde encontrar información.
 
-**Última actualización:** 1 Enero 2026
-**Versión:** 3.1
+**Última actualización:** 2 Enero 2026
+**Versión:** 3.2
 
 ---
 
@@ -59,7 +59,7 @@ C:\Users\LUCHO\Desktop\Censo inmobiliario\sici\
 │   │   ├── enrichment/        ← registrar_enrichment.sql
 │   │   ├── merge/             ← merge_discovery_enrichment.sql
 │   │   └── matching/          ← Funciones v3.1 + RPCs
-│   ├── migrations/            ← 001-012
+│   ├── migrations/            ← 001-013
 │   └── schema/                ← propiedades_v2_schema.md
 │
 └── geodata/
@@ -74,12 +74,13 @@ C:\Users\LUCHO\Desktop\Censo inmobiliario\sici\
 
 | Tabla | Registros | Descripción |
 |-------|-----------|-------------|
-| `propiedades_v2` | 431 | **TABLA PRINCIPAL** - Propiedades activas |
-| `proyectos_master` | 190 activos | Edificios/proyectos verificados |
+| `propiedades_v2` | 433 | **TABLA PRINCIPAL** - Propiedades activas |
+| `proyectos_master` | 192 activos | Edificios/proyectos verificados |
 | `matching_sugerencias` | Variable | Cola de sugerencias de matching |
 | `sin_match_exportados` | Variable | Tracking de props exportadas al Sheet |
 | `zonas_geograficas` | 7 | Polígonos PostGIS de microzonas |
 | `auditoria_snapshots` | Variable | ✅ Poblada diariamente (v2.2+) |
+| `workflow_executions` | Variable | ✅ Tracking de ejecuciones (v2.3+) |
 | `propiedades` | legacy | **DEPRECADA - NO USAR** |
 
 ### Columnas Críticas de propiedades_v2
@@ -138,9 +139,12 @@ campos_bloqueados      ← Candados para proteger datos manuales
 8:30 PM  → Supervisor Sin Match
            Procesa decisiones de Sin_Match
            ↓
-9:00 AM  → Auditoría Diaria v2.2
+9:00 AM  → Auditoría Diaria v2.3
            Reporte Slack + guarda snapshots
+           Health check via workflow_executions
 ```
+
+> **Nota:** Todos los workflows registran su ejecución en `workflow_executions` usando `registrar_ejecucion_workflow()`. Esto permite a la Auditoría verificar si cada workflow corrió (aunque no haya procesado datos).
 
 ---
 
@@ -247,16 +251,18 @@ Si empiezas una nueva conversación con Claude, copia esto:
 ```
 Estoy trabajando en SICI, un sistema de inteligencia inmobiliaria para Bolivia.
 
-ESTADO ACTUAL (1 Ene 2026):
-- 431 propiedades en propiedades_v2
-- 338 matcheadas (96.6%) con id_proyecto_master
-- 190 proyectos activos en proyectos_master
+ESTADO ACTUAL (2 Ene 2026):
+- 433 propiedades en propiedades_v2
+- 331 matcheadas (96%) con id_proyecto_master
+- 192 proyectos activos en proyectos_master
 - Sistema Human-in-the-Loop COMPLETO y funcionando
+- Workflow tracking via workflow_executions ✅
 
 FASES COMPLETADAS:
 - FASE 1: Matching Nocturno v3.1 ✅
 - FASE 2: HITL (APROBAR, RECHAZAR, CORREGIR, CREAR, ASIGNAR) ✅
 - FASE 5: Pipeline nocturno activo ✅
+- Auditoría Diaria v2.3 con health check mejorado ✅
 
 PENDIENTE:
 - FASE 3: Enriquecimiento IA de proyectos
@@ -266,7 +272,7 @@ ARCHIVOS CLAVE:
 - sici/CLAUDE.md (configuración)
 - sici/docs/GUIA_ONBOARDING_CLAUDE.md (este archivo)
 - sici/docs/modulo_2/*.md (specs)
-- sici/sql/migrations/ (001-012)
+- sici/sql/migrations/ (001-013)
 
 REPO LEGACY:
 - sici-matching/ = NO USAR (deprecado)
@@ -292,6 +298,8 @@ REPO LEGACY:
 | Plan Matching v3.2 | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` | Estado actual |
 | Spec Matching | `docs/modulo_2/MATCHING_NOCTURNO_SPEC.md` | Arquitectura HITL |
 | Spec Sin Match | `docs/modulo_2/SIN_MATCH_SPEC.md` | Sistema Sin Match |
+| Spec Auditoría | `docs/modulo_2/AUDITORIA_DIARIA_SPEC.md` | Auditoría v2.3 |
+| Spec Tracking | `docs/modulo_2/WORKFLOW_TRACKING_SPEC.md` | Sistema tracking |
 | Estado Módulo 1 | `docs/MODULO_1_ESTADO_FINAL.md` | Cierre formal |
 | CHANGELOG Matching | `sql/functions/matching/CHANGELOG_MATCHING.md` | Historial |
 
@@ -310,4 +318,4 @@ claude
 
 ---
 
-**FIN DE LA GUÍA DE ONBOARDING v3.1**
+**FIN DE LA GUÍA DE ONBOARDING v3.2**
