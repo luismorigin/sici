@@ -1,5 +1,5 @@
 {
-  "name": "SICI - Exportar Sin Match",
+  "name": "SICI - Exportar Sin Match v1.1",
   "nodes": [
     {
       "parameters": {
@@ -189,6 +189,26 @@
       "typeVersion": 4.3,
       "position": [660, 400],
       "notes": "Notificar cuando no hay propiedades nuevas"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT registrar_ejecucion_workflow(\n  'exportar_sin_match',\n  'success',\n  {{ $('Code: Preparar para Sheets').first().json.cantidad || 0 }},\n  {{ $('Code: Preparar para Sheets').first().json.cantidad || 0 }},\n  0,\n  NULL,\n  '{{ JSON.stringify({ hay_propiedades: $('Code: Preparar para Sheets').first().json.hay_propiedades || false }) }}'::jsonb\n);",
+        "options": {}
+      },
+      "id": "reg-exec-exportar-001",
+      "name": "PG: Registrar Ejecución",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1760, 300],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "Supabase SICI"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Registrar ejecución del workflow"
     }
   ],
   "connections": {
@@ -270,6 +290,28 @@
         [
           {
             "node": "Slack: Exportación Completada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: Exportación Completada": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecución",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: Sin Propiedades": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecución",
             "type": "main",
             "index": 0
           }

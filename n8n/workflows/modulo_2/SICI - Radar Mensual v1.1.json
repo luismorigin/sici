@@ -514,6 +514,28 @@
       "id": "3333e663-0e6f-43ab-a0ec-95eed2b33196",
       "name": "Wait 10s Rate Limit",
       "webhookId": "6777a21d-00eb-44c0-88ef-a57e2056fc1b"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT registrar_ejecucion_workflow(\n  'radar_mensual',\n  'success',\n  {{ $('Code: Generar Resumen Final').first().json.total_zonas || 0 }},\n  {{ $('Code: Generar Resumen Final').first().json.total_encontrados || 0 }},\n  0,\n  NULL,\n  '{{ JSON.stringify({ zonas: $('Code: Generar Resumen Final').first().json.total_zonas || 0, encontrados: $('Code: Generar Resumen Final').first().json.total_encontrados || 0 }) }}'::jsonb\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -368,
+        272
+      ],
+      "id": "reg-exec-radar-001",
+      "name": "PG: Registrar Ejecución",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "executeOnce": true
     }
   ],
   "pinData": {},
@@ -698,6 +720,17 @@
         [
           {
             "node": "Slack: Resumen Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: Resumen Final": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecución",
             "type": "main",
             "index": 0
           }

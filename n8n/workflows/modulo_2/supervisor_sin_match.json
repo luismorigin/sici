@@ -1,5 +1,5 @@
 {
-  "name": "supervisor_sin_match",
+  "name": "SICI - Supervisor Sin Match v1.2",
   "nodes": [
     {
       "parameters": {
@@ -440,6 +440,25 @@
       ],
       "id": "398a1811-c899-4f19-b43d-75ccb634ffc9",
       "name": "Remove Duplicates"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT registrar_ejecucion_workflow(\n  'supervisor_sin_match',\n  'success',\n  {{ $('Code: Procesar Decisiones').first().json.para_procesar ? $('Code: Procesar Decisiones').first().json.para_procesar.length : 0 }},\n  {{ $('Code: Procesar Decisiones').first().json.stats ? $('Code: Procesar Decisiones').first().json.stats.crear : 0 }},\n  {{ $('Code: Procesar Decisiones').first().json.stats ? $('Code: Procesar Decisiones').first().json.stats.asignar : 0 }},\n  NULL,\n  '{{ JSON.stringify($('Code: Procesar Decisiones').first().json.stats || {}) }}'::jsonb\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [2320, 208],
+      "id": "reg-exec-sup-sinmatch-001",
+      "name": "PG: Registrar Ejecución",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "executeOnce": true
     }
   ],
   "pinData": {},
@@ -622,6 +641,39 @@
         [
           {
             "node": "Sheets: Escribir Proyectos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Escribir Proyectos": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecución",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: Bandeja Vacía": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecución",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: Sin Decisiones": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecución",
             "type": "main",
             "index": 0
           }

@@ -1,5 +1,5 @@
 {
-  "name": "SICI - Matching Nocturno v1.0",
+  "name": "SICI - Matching Nocturno v1.1",
   "nodes": [
     {
       "parameters": {
@@ -292,6 +292,28 @@
       ],
       "id": "e335fbba-0493-443e-9f72-c80fb2a2d849",
       "name": "Slack: Sin Pendientes"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT registrar_ejecucion_workflow(\n  'matching_nocturno',\n  'success',\n  {{ $('Code: Preparar para Sheets').first().json.resultados.total_nuevos || 0 }},\n  {{ $('Code: Preparar para Sheets').first().json.resultados.auto_aprobados || 0 }},\n  {{ $('Code: Preparar para Sheets').first().json.resultados.aplicados || 0 }},\n  NULL,\n  '{{ JSON.stringify($('Code: Preparar para Sheets').first().json.resultados) }}'::jsonb\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2160,
+        112
+      ],
+      "id": "reg-exec-nocturno-001",
+      "name": "Postgres: Registrar Ejecución",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "executeOnce": true
     }
   ],
   "pinData": {},
@@ -396,6 +418,28 @@
         [
           {
             "node": "Slack: Con Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: Con Pendientes": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Registrar Ejecución",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: Sin Pendientes": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Registrar Ejecución",
             "type": "main",
             "index": 0
           }

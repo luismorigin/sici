@@ -1,5 +1,5 @@
 {
-  "name": "SICI - Matching Supervisor v1.0",
+  "name": "SICI - Matching Supervisor v1.2",
   "nodes": [
     {
       "parameters": {
@@ -395,6 +395,28 @@
       "id": "consolidate-001",
       "name": "Code: Consolidar Alternativos",
       "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT registrar_ejecucion_workflow(\n  'matching_supervisor',\n  'success',\n  {{ $('Code: El Auditor').first().json.total_filas || 0 }},\n  {{ $('Code: El Auditor').first().json.aprobados || 0 }},\n  0,\n  NULL,\n  '{{ JSON.stringify({ decision: $('Code: El Auditor').first().json.decision, aprobados: $('Code: El Auditor').first().json.aprobados, rechazados: $('Code: El Auditor').first().json.rechazados }) }}'::jsonb\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        304
+      ],
+      "id": "reg-exec-supervisor-001",
+      "name": "Postgres: Registrar Ejecución",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "executeOnce": true
     }
   ],
   "pinData": {},
@@ -557,6 +579,39 @@
         [
           {
             "node": "IF: Hay Alternativos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: Sync Completado": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Registrar Ejecución",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: Bloqueo": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Registrar Ejecución",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: Bandeja Vacía": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Registrar Ejecución",
             "type": "main",
             "index": 0
           }
