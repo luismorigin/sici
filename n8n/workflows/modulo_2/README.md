@@ -2,8 +2,8 @@
 
 **Sistema:** SICI - Sistema Inteligente de Captura Inmobiliaria
 **Módulo:** Módulo 2 - Matching Propiedad-Proyecto
-**Versión:** 2.0
-**Fecha:** 31 Diciembre 2025
+**Versión:** 2.1
+**Fecha:** 1 Enero 2026
 
 ---
 
@@ -84,14 +84,14 @@
 
 ---
 
-### 5. Auditoría Diaria v1.0
+### 5. Auditoría Diaria v2.2
 **Archivo:** `auditoria_diaria_sici.json`
 **Schedule:** Diario a las 9:00 AM
 
 **Función:**
 - Recopila estadísticas de propiedades, matching y proyectos
-- Genera reporte consolidado en Slack
-- ⚠️ **NO guarda snapshots** en `auditoria_snapshots` (pendiente)
+- Genera reporte consolidado en Slack (7 secciones)
+- ✅ **Guarda snapshots** en `auditoria_snapshots` via UPSERT
 
 ---
 
@@ -194,10 +194,9 @@
 
 | Tarea | Prioridad |
 |-------|-----------|
-| Auditoría guardar snapshots | 🔴 Alta |
 | Workflow Enriquecedor IA | 🟡 Media |
 | Workflow Validador GPS | 🟢 Baja |
 
 ---
 
-**Última actualización:** 31 Diciembre 2025
+**Última actualización:** 1 Enero 2026

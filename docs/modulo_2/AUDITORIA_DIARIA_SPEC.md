@@ -1,6 +1,6 @@
 # Auditoria Diaria SICI - Especificacion
 
-> **Version:** 2.1
+> **Version:** 2.2
 > **Fecha:** 1 Enero 2026
 > **Workflow:** `n8n/workflows/modulo_2/auditoria_diaria_sici.json`
 
@@ -18,7 +18,7 @@ Generar un reporte diario consolidado del estado completo del sistema SICI con 7
 | Frecuencia | Diario (incluyendo fines de semana) |
 | Notificacion | Slack (webhook `$env.SLACK_WEBHOOK_SICI`) |
 
-## Arquitectura v2.1
+## Arquitectura v2.2
 
 ```
 Schedule 9:00 AM
@@ -45,13 +45,16 @@ Schedule 9:00 AM
            |
            v
 +----------------------+
-| Code: Consolidar     | --- Calcular %, alertas, formatear
+| Code: Consolidar     | --- Calcular %, alertas, formatear, preparar snapshot
 +----------+-----------+
            |
-           v
-+----------------------+
-| Slack: Reporte       | --- Mensaje 7 secciones con Block Kit
-+----------------------+
+     ------+------
+     |           |
+     v           v
++----------+ +------------------+
+| Slack    | | PG: Insert       |
+| Reporte  | | Snapshot (UPSERT)|
++----------+ +------------------+
 ```
 
 ---
@@ -147,7 +150,7 @@ Schedule 9:00 AM
 
 ---
 
-## Ejemplo de Mensaje Slack v2.1
+## Ejemplo de Mensaje Slack v2.2
 
 ```
 SICI Auditoria Diaria - 1 ene 2026
@@ -209,7 +212,7 @@ Super 8PM: OK                 Super SinM 8:30PM: OK
 
 ----------------------------------------
 
-Total sugerencias historicas: 847 | SICI Auditoria v2.1
+Total sugerencias historicas: 847 | SICI Auditoria v2.2
 ```
 
 ---
@@ -351,6 +354,13 @@ FROM sin_match_exportados
 ---
 
 ## Changelog
+
+### v2.2 (1 Ene 2026)
+- **Guardado de snapshots en `auditoria_snapshots`**
+- Nuevo nodo PG: Insert Snapshot con UPSERT
+- 21 columnas nuevas en tabla (scores, health checks, etc.)
+- Ejecucion paralela: Slack + Insert Snapshot
+- Bug de tabla vacia RESUELTO
 
 ### v2.1 (1 Ene 2026)
 - Restaurado formato original (dos columnas, dividers suaves)

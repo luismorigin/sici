@@ -63,7 +63,7 @@ sici/
     └── modulo_2/      # Specs y planes matching
 ```
 
-## Estado Actual (31 Dic 2025)
+## Estado Actual (1 Ene 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
@@ -76,7 +76,6 @@ sici/
 ### ❌ Pendiente
 - **FASE 3:** Enriquecimiento IA de proyectos (columnas metadata + workflow Claude)
 - **FASE 4:** Validación GPS completa (workflow validador Google Places)
-- **Auditoría:** Workflow no guarda snapshots en `auditoria_snapshots`
 - **Funciones:** `heredar_metadata_proyecto()`, `validar_sugerencias_extractor()`
 
 ## Queries Rápidos

@@ -1,5 +1,39 @@
 # CHANGELOG - Matching
 
+## [3.2.1] - 2026-01-01
+
+### Auditoría Diaria v2.2
+
+1. **Guardado de Snapshots**
+   - Workflow v2.2 con nodo PG: Insert Snapshot
+   - UPSERT para evitar duplicados por fecha
+   - 21 columnas nuevas en `auditoria_snapshots`
+   - Ejecución paralela: Slack + Insert Snapshot
+
+2. **Nuevas Métricas Trackeadas**
+   - Calidad: score_alto, score_medio, score_bajo + porcentajes
+   - Faltantes: sin_zona, sin_dormitorios, sin_nombre
+   - Revisión: discrepancias_merge, excluidas_matching
+   - Estados: props_inactivo_pending, props_inactivo_confirmed
+   - Health: 8 flags booleanos para cada workflow
+
+3. **Bugs Resueltos**
+   - ✅ Tabla `auditoria_snapshots` vacía → Ahora se pobla diariamente
+   - ✅ Formato Slack roto → Restaurado formato original con 7 secciones
+
+### Documentación Actualizada
+
+| Documento | Cambio |
+|-----------|--------|
+| README.md | Auditoría v2.2 con snapshots |
+| CLAUDE.md | Removido bug de snapshots pendiente |
+| GUIA_ONBOARDING | v3.1 con snapshots poblados |
+| PLAN_MODULO_2 | v2.3 con snapshots resuelto |
+| AUDITORIA_DIARIA_SPEC | v2.2 con arquitectura actualizada |
+| n8n/workflows README | v2.1 con Auditoría v2.2 |
+
+---
+
 ## [3.2.0] - 2025-12-31
 
 ### New Features

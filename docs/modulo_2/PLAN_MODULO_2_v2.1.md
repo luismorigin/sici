@@ -1,13 +1,13 @@
 # 🎯 PLAN MÓDULO 2: Matching Propiedades → Proyectos
 
-> **Versión:** 2.2
-> **Fecha:** 31 Diciembre 2025
+> **Versión:** 2.3
+> **Fecha:** 1 Enero 2026
 > **Estado:** ✅ FASES 1, 2, 5 COMPLETADAS | ⚠️ FASE 4 PARCIAL | ❌ FASE 3 PENDIENTE
 > **Prerequisito:** Módulo 1 ✅ 100% operativo
 
 ---
 
-## 📊 Estado Actual (31 Dic 2025)
+## 📊 Estado Actual (1 Ene 2026)
 
 | Métrica | Valor |
 |---------|-------|
@@ -165,7 +165,7 @@ ALTER TABLE proyectos_master ADD COLUMN IF NOT EXISTS
 | 5.2 | Cron Matching Supervisor 8 PM | ✅ Completado |
 | 5.3 | Cron Exportar Sin Match 7 AM | ✅ Completado |
 | 5.4 | Cron Supervisor Sin Match 8:30 PM | ✅ Completado |
-| 5.5 | Cron Auditoría Diaria 9 AM | ⚠️ Funciona pero no guarda snapshots |
+| 5.5 | Cron Auditoría Diaria 9 AM | ✅ Completado (v2.2 con snapshots) |
 
 ---
 
@@ -276,7 +276,7 @@ ORDER BY 1 DESC, 4 DESC;
 - [x] Cron Matching Supervisor 8 PM
 - [x] Cron Exportar Sin Match 7 AM
 - [x] Cron Supervisor Sin Match 8:30 PM
-- [x] Cron Auditoría Diaria 9 AM (⚠️ no guarda snapshots)
+- [x] Cron Auditoría Diaria 9 AM (✅ v2.2 guarda snapshots)
 
 ---
 
@@ -287,10 +287,10 @@ ORDER BY 1 DESC, 4 DESC;
 3. **Human-in-the-Loop activo** - Sugerencias 70-84% van a revisión humana en Google Sheets
 4. **Sistema de candados** - `campos_bloqueados` protege datos manuales
 5. **Filosofía SICI** - "Manual wins over automatic"
-6. **Auditoría snapshots** - Workflow funciona pero no guarda snapshots (bug pendiente)
+6. **Auditoría snapshots** - ✅ Resuelto en v2.2 (1 Ene 2026)
 
 ---
 
 **Autor:** Luis + Claude
-**Versión:** 2.2 (actualizado 31 Dic 2025)
+**Versión:** 2.3 (actualizado 1 Ene 2026)
 **Estado:** FASES 1, 2, 5 COMPLETADAS - FASE 3 PENDIENTE

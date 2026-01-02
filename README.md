@@ -2,7 +2,7 @@
 
 Este repositorio contiene la base canónica del sistema SICI.
 
-## Estado Actual (31 Dic 2025)
+## Estado Actual (1 Ene 2026)
 
 ### Métricas de Producción
 
@@ -57,7 +57,7 @@ sici/
 | Matching Supervisor (n8n) | v1.1 | ✅ Producción |
 | Supervisor Sin Match (n8n) | v1.1 | ✅ Producción |
 | Exportar Sin Match (n8n) | v1.0 | ✅ Producción |
-| Auditoría Diaria (n8n) | v1.0 | ⚠️ No guarda snapshots |
+| Auditoría Diaria (n8n) | v2.2 | ✅ Guarda snapshots |
 | Radar Mensual (n8n) | v1.0 | ✅ Producción |
 
 ## Workflows Human-in-the-Loop
@@ -68,13 +68,12 @@ sici/
 | Exportar Sin Match | 7:00 AM | Exporta props sin match al Sheet |
 | Matching Supervisor | 8:00 PM | APROBAR, RECHAZAR, CORREGIR, PROYECTO_ALTERNATIVO |
 | Supervisor Sin Match | 8:30 PM | ASIGNAR, CREAR, CORREGIR, SIN_PROYECTO |
-| Auditoría Diaria | 9:00 AM | Reporte Slack (❌ no guarda snapshots) |
+| Auditoría Diaria | 9:00 AM | Reporte Slack + snapshots diarios |
 
 ## Pendientes para Futuras Sesiones
 
 | Prioridad | Tarea | Detalle |
 |-----------|-------|---------|
-| 🔴 Alta | Auditoría guardar snapshots | Agregar INSERT a workflow |
 | 🟡 Media | FASE 3: Enriquecimiento IA | Columnas metadata + workflow Claude API |
 | 🟢 Baja | FASE 4: Validación GPS | Workflow validador Google Places |
 
@@ -91,4 +90,4 @@ sici/
 
 Este repositorio es la fuente de verdad del sistema.
 
-*Última actualización: 31 Diciembre 2025*
+*Última actualización: 1 Enero 2026*

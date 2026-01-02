@@ -2,8 +2,8 @@
 
 **Propósito:** Permitir que cualquier instancia de Claude (chat, Claude Code, nueva conversación) entienda rápidamente el proyecto SICI y sepa dónde encontrar información.
 
-**Última actualización:** 31 Diciembre 2025
-**Versión:** 3.0
+**Última actualización:** 1 Enero 2026
+**Versión:** 3.1
 
 ---
 
@@ -15,7 +15,7 @@ Es una plataforma de inteligencia inmobiliaria para Bolivia que crea un "censo v
 
 ---
 
-## 📊 MÉTRICAS ACTUALES (31 Dic 2025)
+## 📊 MÉTRICAS ACTUALES (1 Ene 2026)
 
 | Métrica | Valor |
 |---------|-------|
@@ -79,7 +79,7 @@ C:\Users\LUCHO\Desktop\Censo inmobiliario\sici\
 | `matching_sugerencias` | Variable | Cola de sugerencias de matching |
 | `sin_match_exportados` | Variable | Tracking de props exportadas al Sheet |
 | `zonas_geograficas` | 7 | Polígonos PostGIS de microzonas |
-| `auditoria_snapshots` | 0 ❌ | Tabla vacía (workflow no guarda) |
+| `auditoria_snapshots` | Variable | ✅ Poblada diariamente (v2.2+) |
 | `propiedades` | legacy | **DEPRECADA - NO USAR** |
 
 ### Columnas Críticas de propiedades_v2
@@ -138,8 +138,8 @@ campos_bloqueados      ← Candados para proteger datos manuales
 8:30 PM  → Supervisor Sin Match
            Procesa decisiones de Sin_Match
            ↓
-9:00 AM  → Auditoría Diaria
-           Reporte Slack (❌ no guarda snapshots)
+9:00 AM  → Auditoría Diaria v2.2
+           Reporte Slack + guarda snapshots
 ```
 
 ---
@@ -185,10 +185,6 @@ ALTER TABLE proyectos_master ADD COLUMN IF NOT EXISTS
 **Funciones Pendientes:**
 - `heredar_metadata_proyecto()` - Trigger para heredar metadata a propiedades
 - `validar_sugerencias_extractor()` - Combinar sugerencias extractor + matching
-
-**Bug Conocido:**
-- Workflow Auditoría Diaria NO guarda snapshots en `auditoria_snapshots`
-- Tabla existe pero tiene 0 registros
 
 ---
 
@@ -251,7 +247,7 @@ Si empiezas una nueva conversación con Claude, copia esto:
 ```
 Estoy trabajando en SICI, un sistema de inteligencia inmobiliaria para Bolivia.
 
-ESTADO ACTUAL (31 Dic 2025):
+ESTADO ACTUAL (1 Ene 2026):
 - 431 propiedades en propiedades_v2
 - 338 matcheadas (96.6%) con id_proyecto_master
 - 190 proyectos activos en proyectos_master
@@ -265,7 +261,6 @@ FASES COMPLETADAS:
 PENDIENTE:
 - FASE 3: Enriquecimiento IA de proyectos
 - FASE 4: Validación GPS completa
-- Bug: auditoria_snapshots vacía (workflow no guarda)
 
 ARCHIVOS CLAVE:
 - sici/CLAUDE.md (configuración)
@@ -315,4 +310,4 @@ claude
 
 ---
 
-**FIN DE LA GUÍA DE ONBOARDING v3.0**
+**FIN DE LA GUÍA DE ONBOARDING v3.1**
