@@ -1,5 +1,5 @@
 {
-  "name": "SICI - Auditoría Diaria v2.0",
+  "name": "SICI - Auditoría Diaria v2.1",
   "nodes": [
     {
       "parameters": {
@@ -22,11 +22,11 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT\n  -- Inventario\n  COUNT(*) FILTER (WHERE status IN ('completado', 'actualizado')) as props_activas,\n  COUNT(*) FILTER (WHERE status = 'inactivo_confirmed') as props_inactivas,\n  \n  -- Actividad 24h\n  COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '24 hours') as nuevas_24h,\n  COUNT(*) FILTER (WHERE status = 'inactivo_confirmed' AND fecha_inactivacion >= NOW() - INTERVAL '24 hours') as inactivadas_24h,\n  \n  -- Calidad: Con proyecto\n  COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL AND status IN ('completado', 'actualizado')) as con_proyecto,\n  COUNT(*) FILTER (WHERE id_proyecto_master IS NULL AND status IN ('completado', 'actualizado') AND COALESCE(es_para_matching, true) = true) as sin_proyecto,\n  \n  -- Calidad: Scores\n  COUNT(*) FILTER (WHERE score_calidad_dato >= 95 AND status IN ('completado', 'actualizado')) as score_alto,\n  COUNT(*) FILTER (WHERE score_calidad_dato >= 85 AND score_calidad_dato < 95 AND status IN ('completado', 'actualizado')) as score_medio,\n  COUNT(*) FILTER (WHERE score_calidad_dato < 85 AND status IN ('completado', 'actualizado')) as score_bajo,\n  \n  -- Calidad: Campos faltantes\n  COUNT(*) FILTER (WHERE (zona IS NULL OR zona = '') AND status IN ('completado', 'actualizado')) as sin_zona,\n  COUNT(*) FILTER (WHERE dormitorios IS NULL AND status IN ('completado', 'actualizado')) as sin_dormitorios,\n  COUNT(*) FILTER (WHERE (nombre_edificio IS NULL OR nombre_edificio = '') AND status IN ('completado', 'actualizado')) as sin_nombre,\n  \n  -- Revisión humana\n  COUNT(*) FILTER (WHERE es_para_matching = false AND status IN ('completado', 'actualizado')) as excluidas_matching,\n  \n  -- Health: timestamps\n  MAX(fecha_enrichment) as ultimo_enrichment,\n  MAX(fecha_merge) as ultimo_merge,\n  ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(fecha_enrichment))) / 3600, 1) as horas_enrichment,\n  ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(fecha_merge))) / 3600, 1) as horas_merge,\n  \n  -- Health: Discovery (hubo nuevas en 26h?)\n  CASE WHEN COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '26 hours') > 0 THEN true ELSE false END as discovery_ok\nFROM propiedades_v2",
+        "query": "SELECT \n  -- Estados (todos)\n  COUNT(*) as total,\n  COUNT(*) FILTER (WHERE status = 'completado') as completadas,\n  COUNT(*) FILTER (WHERE status = 'nueva') as nuevas,\n  COUNT(*) FILTER (WHERE status = 'inactivo_pending') as inactivo_pending,\n  COUNT(*) FILTER (WHERE status = 'inactivo_confirmed') as inactivo_confirmed,\n  \n  -- Matching\n  COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL AND status = 'completado') as matcheadas,\n  COUNT(*) FILTER (WHERE id_proyecto_master IS NULL AND status = 'completado') as sin_match,\n  COUNT(*) FILTER (WHERE nombre_edificio IS NOT NULL AND nombre_edificio != '' AND status = 'completado') as con_nombre,\n  \n  -- Pendientes enrich (nuevas venta)\n  COUNT(*) FILTER (WHERE status = 'nueva' AND tipo_operacion = 'venta') as pendientes_enrich,\n  \n  -- Actividad 24h\n  COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '24 hours') as creadas_24h,\n  COUNT(*) FILTER (WHERE fecha_enrichment >= NOW() - INTERVAL '24 hours') as enriquecidas_24h,\n  \n  -- Calidad: Scores (solo completadas)\n  COUNT(*) FILTER (WHERE score_calidad_dato >= 95 AND status = 'completado') as score_alto,\n  COUNT(*) FILTER (WHERE score_calidad_dato >= 85 AND score_calidad_dato < 95 AND status = 'completado') as score_medio,\n  COUNT(*) FILTER (WHERE score_calidad_dato < 85 AND status = 'completado') as score_bajo,\n  \n  -- Calidad: Campos faltantes (solo completadas)\n  COUNT(*) FILTER (WHERE (zona IS NULL OR zona = '') AND status = 'completado') as sin_zona,\n  COUNT(*) FILTER (WHERE dormitorios IS NULL AND status = 'completado') as sin_dormitorios,\n  COUNT(*) FILTER (WHERE (nombre_edificio IS NULL OR nombre_edificio = '') AND status = 'completado') as sin_nombre,\n  \n  -- Revisión humana: Discrepancias merge\n  COUNT(*) FILTER (WHERE (\n    (discrepancias_detectadas->'gps'->>'flag' IS NOT NULL AND discrepancias_detectadas->'gps'->>'flag' != 'null') OR\n    (discrepancias_detectadas->'area'->>'flag' IS NOT NULL AND discrepancias_detectadas->'area'->>'flag' != 'null') OR\n    (discrepancias_detectadas->'precio'->>'flag' IS NOT NULL AND discrepancias_detectadas->'precio'->>'flag' != 'null')\n  )) as discrepancias_merge,\n  \n  -- Excluidas matching\n  COUNT(*) FILTER (WHERE es_para_matching = false AND status = 'completado') as excluidas_matching,\n  \n  -- Health: timestamps\n  MAX(fecha_enrichment) as ultimo_enrichment,\n  MAX(fecha_merge) as ultimo_merge,\n  ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(fecha_enrichment))) / 3600, 1) as horas_sin_enrichment,\n  ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(fecha_merge))) / 3600, 1) as horas_sin_merge,\n  \n  -- Health: Discovery (hubo nuevas en 26h?)\n  CASE WHEN COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '26 hours') > 0 THEN true ELSE false END as discovery_ok,\n  \n  -- Health: TC Dinámico (hubo inactivaciones en 26h?)\n  CASE WHEN COUNT(*) FILTER (WHERE status = 'inactivo_confirmed' AND fecha_inactivacion >= NOW() - INTERVAL '26 hours') > 0 THEN true ELSE false END as tc_dinamico_ok\nFROM propiedades_v2",
         "options": {}
       },
-      "id": "pg-propiedades",
-      "name": "PG: Propiedades + Calidad",
+      "id": "pg-stats-props",
+      "name": "PG: Stats Propiedades",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [220, 300],
@@ -36,16 +36,16 @@
           "name": "Supabase SICI"
         }
       },
-      "notes": "Inventario, calidad de datos, campos faltantes, health enrichment/merge"
+      "notes": "Estadísticas de propiedades: estados, calidad, discrepancias"
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT\n  COUNT(*) FILTER (WHERE activo = true) as proy_activos,\n  COUNT(*) FILTER (WHERE activo = false) as proy_inactivos,\n  COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours') as proy_creados_24h,\n  COUNT(*) FILTER (WHERE gps_verificado_google = true AND activo = true) as proy_gps_verificado\nFROM proyectos_master",
+        "query": "SELECT \n  COUNT(*) as sugerencias_total,\n  COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours') as sugerencias_24h,\n  COUNT(*) FILTER (WHERE estado = 'aprobado' AND fecha_revision >= NOW() - INTERVAL '24 hours') as aprobadas_24h,\n  COUNT(*) FILTER (WHERE estado = 'rechazado' AND fecha_revision >= NOW() - INTERVAL '24 hours') as rechazadas_24h,\n  COUNT(*) FILTER (WHERE estado = 'pendiente') as pendientes_matching,\n  \n  -- Health: Matching Nocturno 4AM (sugerencias creadas entre 4-5 AM hoy)\n  COUNT(*) FILTER (\n    WHERE created_at >= DATE_TRUNC('day', NOW()) + INTERVAL '4 hours'\n    AND created_at < DATE_TRUNC('day', NOW()) + INTERVAL '5 hours'\n  ) as matching_nocturno_hoy,\n  \n  -- Health: Supervisor 8PM (procesados entre 20-21h ayer)\n  COUNT(*) FILTER (\n    WHERE fecha_revision >= DATE_TRUNC('day', NOW()) - INTERVAL '4 hours'\n    AND fecha_revision < DATE_TRUNC('day', NOW()) - INTERVAL '3 hours'\n    AND estado IN ('aprobado', 'rechazado')\n  ) as supervisor_match_ayer\nFROM matching_sugerencias",
         "options": {}
       },
-      "id": "pg-proyectos",
-      "name": "PG: Proyectos",
+      "id": "pg-stats-matching",
+      "name": "PG: Stats Matching",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [440, 300],
@@ -55,16 +55,16 @@
           "name": "Supabase SICI"
         }
       },
-      "notes": "Inventario proyectos + actividad 24h"
+      "notes": "Estadísticas de matching y verificación de ejecución nocturna"
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH matching_stats AS (\n  SELECT\n    COUNT(*) FILTER (WHERE estado = 'aprobado' AND fecha_revision >= NOW() - INTERVAL '24 hours') as aprobados_24h,\n    COUNT(*) FILTER (WHERE estado = 'rechazado' AND fecha_revision >= NOW() - INTERVAL '24 hours') as rechazados_24h,\n    COUNT(*) FILTER (WHERE estado = 'pendiente') as pendientes_matching,\n    COUNT(*) FILTER (\n      WHERE created_at >= DATE_TRUNC('day', NOW()) + INTERVAL '4 hours'\n      AND created_at < DATE_TRUNC('day', NOW()) + INTERVAL '5 hours'\n    ) as matching_nocturno_hoy,\n    COUNT(*) FILTER (\n      WHERE fecha_revision >= DATE_TRUNC('day', NOW()) - INTERVAL '4 hours'\n      AND fecha_revision < DATE_TRUNC('day', NOW()) - INTERVAL '3 hours'\n      AND estado IN ('aprobado', 'rechazado')\n    ) as supervisor_match_ayer\n  FROM matching_sugerencias\n),\nsinmatch_stats AS (\n  SELECT\n    COUNT(*) FILTER (WHERE estado = 'pendiente') as pendientes_sinmatch,\n    COUNT(*) FILTER (WHERE estado = 'asignado' AND fecha_procesado >= NOW() - INTERVAL '24 hours') as asignados_24h,\n    COUNT(*) FILTER (WHERE estado = 'creado' AND fecha_procesado >= NOW() - INTERVAL '24 hours') as creados_24h,\n    COUNT(*) FILTER (WHERE estado = 'corregido' AND fecha_procesado >= NOW() - INTERVAL '24 hours') as corregidos_24h,\n    COUNT(*) FILTER (\n      WHERE fecha_export >= DATE_TRUNC('day', NOW()) + INTERVAL '7 hours'\n      AND fecha_export < DATE_TRUNC('day', NOW()) + INTERVAL '8 hours'\n    ) as export_sinmatch_hoy,\n    COUNT(*) FILTER (\n      WHERE fecha_procesado >= DATE_TRUNC('day', NOW()) - INTERVAL '3 hours' - INTERVAL '30 minutes'\n      AND fecha_procesado < DATE_TRUNC('day', NOW()) - INTERVAL '2 hours' - INTERVAL '30 minutes'\n    ) as supervisor_sinmatch_ayer\n  FROM sin_match_exportados\n)\nSELECT * FROM matching_stats, sinmatch_stats",
+        "query": "SELECT \n  COUNT(*) as total,\n  COUNT(*) FILTER (WHERE activo = true) as activos,\n  COUNT(*) FILTER (WHERE gps_verificado_google = true) as gps_verificado,\n  COUNT(*) FILTER (WHERE google_place_id IS NOT NULL) as con_place_id,\n  COALESCE((SELECT COUNT(*) FROM proyectos_pendientes_google WHERE estado = 'pendiente'), 0) as pendientes_google\nFROM proyectos_master",
         "options": {}
       },
-      "id": "pg-matching",
-      "name": "PG: Matching + Sin Match",
+      "id": "pg-stats-proyectos",
+      "name": "PG: Stats Proyectos",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [660, 300],
@@ -74,18 +74,37 @@
           "name": "Supabase SICI"
         }
       },
-      "notes": "Actividad matching, revisión humana pendiente, health workflows supervisores"
+      "notes": "Estadísticas de proyectos master"
     },
     {
       "parameters": {
-        "jsCode": "// Obtener datos de todos los nodos Postgres\nconst props = $('PG: Propiedades + Calidad').first().json;\nconst proy = $('PG: Proyectos').first().json;\nconst match = $('PG: Matching + Sin Match').first().json;\n\n// === SECCIÓN 1: INVENTARIO ===\nconst propsActivas = parseInt(props.props_activas) || 0;\nconst propsInactivas = parseInt(props.props_inactivas) || 0;\nconst proyActivos = parseInt(proy.proy_activos) || 0;\nconst proyInactivos = parseInt(proy.proy_inactivos) || 0;\n\n// Cambios 24h\nconst nuevas24h = parseInt(props.nuevas_24h) || 0;\nconst inactivadas24h = parseInt(props.inactivadas_24h) || 0;\nconst proyCreados24h = parseInt(proy.proy_creados_24h) || 0;\n\n// === SECCIÓN 2: CALIDAD DE DATOS ===\nconst conProyecto = parseInt(props.con_proyecto) || 0;\nconst sinProyecto = parseInt(props.sin_proyecto) || 0;\nconst pctConProyecto = propsActivas > 0 \n  ? ((conProyecto / propsActivas) * 100).toFixed(1) \n  : '0.0';\n\n// Scores\nconst scoreAlto = parseInt(props.score_alto) || 0;\nconst scoreMedio = parseInt(props.score_medio) || 0;\nconst scoreBajo = parseInt(props.score_bajo) || 0;\nconst totalScored = scoreAlto + scoreMedio + scoreBajo;\nconst pctAlto = totalScored > 0 ? Math.round((scoreAlto / totalScored) * 100) : 0;\nconst pctMedio = totalScored > 0 ? Math.round((scoreMedio / totalScored) * 100) : 0;\nconst pctBajo = totalScored > 0 ? Math.round((scoreBajo / totalScored) * 100) : 0;\n\n// Campos faltantes\nconst sinZona = parseInt(props.sin_zona) || 0;\nconst sinDorms = parseInt(props.sin_dormitorios) || 0;\nconst sinNombre = parseInt(props.sin_nombre) || 0;\n\n// === SECCIÓN 3: REVISIÓN HUMANA ===\nconst pendientesMatching = parseInt(match.pendientes_matching) || 0;\nconst pendientesSinMatch = parseInt(match.pendientes_sinmatch) || 0;\nconst excluidasMatching = parseInt(props.excluidas_matching) || 0;\nconst totalPendientes = pendientesMatching + pendientesSinMatch;\n\n// === SECCIÓN 4: ACTIVIDAD 24H ===\nconst aprobados24h = parseInt(match.aprobados_24h) || 0;\nconst rechazados24h = parseInt(match.rechazados_24h) || 0;\nconst asignados24h = parseInt(match.asignados_24h) || 0;\nconst creados24h = parseInt(match.creados_24h) || 0;\nconst corregidos24h = parseInt(match.corregidos_24h) || 0;\n\n// === SECCIÓN 5: SALUD WORKFLOWS ===\nconst horasEnrichment = parseFloat(props.horas_enrichment) || 999;\nconst horasMerge = parseFloat(props.horas_merge) || 999;\nconst discoveryOk = props.discovery_ok === true || props.discovery_ok === 't';\nconst enrichmentOk = horasEnrichment < 26;\nconst mergeOk = horasMerge < 26;\nconst matchingNocturnoOk = parseInt(match.matching_nocturno_hoy) > 0;\nconst supervisorMatchOk = parseInt(match.supervisor_match_ayer) >= 0;\nconst supervisorSinMatchOk = parseInt(match.supervisor_sinmatch_ayer) >= 0;\n\n// Alertas\nconst alertas = [];\nif (totalPendientes > 5) alertas.push(`${totalPendientes} pendientes revisión`);\nif (!enrichmentOk) alertas.push('Enrichment no corrió en 26h');\nif (!discoveryOk) alertas.push('Discovery no corrió en 26h');\nif (pctBajo > 5) alertas.push(`${pctBajo}% calidad baja`);\nif (parseFloat(pctConProyecto) < 90) alertas.push('Cobertura matching <90%');\n\n// Fecha formateada (Bolivia)\nconst fecha = new Date().toLocaleDateString('es-BO', {\n  day: '2-digit',\n  month: 'short',\n  year: 'numeric',\n  timeZone: 'America/La_Paz'\n});\n\nreturn [{\n  json: {\n    fecha,\n    // Inventario\n    props_activas: propsActivas,\n    props_inactivas: propsInactivas,\n    proy_activos: proyActivos,\n    proy_inactivos: proyInactivos,\n    nuevas_24h: nuevas24h,\n    inactivadas_24h: inactivadas24h,\n    proy_creados_24h: proyCreados24h,\n    // Calidad\n    con_proyecto: conProyecto,\n    pct_con_proyecto: pctConProyecto,\n    pct_alto: pctAlto,\n    pct_medio: pctMedio,\n    pct_bajo: pctBajo,\n    sin_zona: sinZona,\n    sin_dorms: sinDorms,\n    sin_nombre: sinNombre,\n    // Revisión humana\n    pendientes_matching: pendientesMatching,\n    pendientes_sinmatch: pendientesSinMatch,\n    total_pendientes: totalPendientes,\n    excluidas_matching: excluidasMatching,\n    // Actividad\n    aprobados_24h: aprobados24h,\n    rechazados_24h: rechazados24h,\n    asignados_24h: asignados24h,\n    creados_24h: creados24h,\n    corregidos_24h: corregidos24h,\n    // Health\n    horas_enrichment: horasEnrichment,\n    horas_merge: horasMerge,\n    discovery_ok: discoveryOk,\n    enrichment_ok: enrichmentOk,\n    merge_ok: mergeOk,\n    matching_nocturno_ok: matchingNocturnoOk,\n    supervisor_match_ok: supervisorMatchOk,\n    supervisor_sinmatch_ok: supervisorSinMatchOk,\n    // Alertas\n    alertas: alertas,\n    tiene_alertas: alertas.length > 0\n  }\n}];"
+        "operation": "executeQuery",
+        "query": "SELECT\n  COUNT(*) FILTER (WHERE estado = 'pendiente') as pendientes_sinmatch,\n  \n  -- Health: Export 7AM (exportados entre 7-8 AM hoy)\n  COUNT(*) FILTER (\n    WHERE fecha_export >= DATE_TRUNC('day', NOW()) + INTERVAL '7 hours'\n    AND fecha_export < DATE_TRUNC('day', NOW()) + INTERVAL '8 hours'\n  ) as export_7am_hoy,\n  \n  -- Health: Supervisor Sin Match 8:30PM (procesados entre 20:30-21:30 ayer)\n  COUNT(*) FILTER (\n    WHERE fecha_procesado >= DATE_TRUNC('day', NOW()) - INTERVAL '3 hours' - INTERVAL '30 minutes'\n    AND fecha_procesado < DATE_TRUNC('day', NOW()) - INTERVAL '2 hours' - INTERVAL '30 minutes'\n  ) as supervisor_sinmatch_ayer\nFROM sin_match_exportados",
+        "options": {}
+      },
+      "id": "pg-stats-sinmatch",
+      "name": "PG: Stats Sin Match",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [880, 300],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase SICI"
+        }
+      },
+      "notes": "Estadísticas de sin_match_exportados y health supervisores"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener datos de todos los nodos Postgres\nconst props = $('PG: Stats Propiedades').first().json;\nconst matching = $('PG: Stats Matching').first().json;\nconst proyectos = $('PG: Stats Proyectos').first().json;\nconst sinmatch = $('PG: Stats Sin Match').first().json;\n\n// === PROPIEDADES ===\nconst total = parseInt(props.total) || 0;\nconst completadas = parseInt(props.completadas) || 0;\nconst nuevas = parseInt(props.nuevas) || 0;\nconst inactivoPending = parseInt(props.inactivo_pending) || 0;\nconst inactivoConfirmed = parseInt(props.inactivo_confirmed) || 0;\n\nconst matcheadas = parseInt(props.matcheadas) || 0;\nconst sinMatch = parseInt(props.sin_match) || 0;\nconst conNombre = parseInt(props.con_nombre) || 0;\nconst pendientesEnrich = parseInt(props.pendientes_enrich) || 0;\n\nconst creadas24h = parseInt(props.creadas_24h) || 0;\nconst enriquecidas24h = parseInt(props.enriquecidas_24h) || 0;\n\n// Porcentajes\nconst pctMatchCompletadas = completadas > 0 \n  ? ((matcheadas / completadas) * 100).toFixed(1) \n  : '0.0';\nconst pctNombreCompletadas = completadas > 0 \n  ? ((conNombre / completadas) * 100).toFixed(1) \n  : '0.0';\n\n// === CALIDAD DE DATOS ===\nconst scoreAlto = parseInt(props.score_alto) || 0;\nconst scoreMedio = parseInt(props.score_medio) || 0;\nconst scoreBajo = parseInt(props.score_bajo) || 0;\nconst totalScored = scoreAlto + scoreMedio + scoreBajo;\nconst pctAlto = totalScored > 0 ? Math.round((scoreAlto / totalScored) * 100) : 0;\nconst pctMedio = totalScored > 0 ? Math.round((scoreMedio / totalScored) * 100) : 0;\nconst pctBajo = totalScored > 0 ? Math.round((scoreBajo / totalScored) * 100) : 0;\n\nconst sinZona = parseInt(props.sin_zona) || 0;\nconst sinDorms = parseInt(props.sin_dormitorios) || 0;\nconst sinNombre = parseInt(props.sin_nombre) || 0;\n\n// === REVISIÓN HUMANA ===\nconst pendientesMatching = parseInt(matching.pendientes_matching) || 0;\nconst pendientesSinMatch = parseInt(sinmatch.pendientes_sinmatch) || 0;\nconst discrepanciasMerge = parseInt(props.discrepancias_merge) || 0;\nconst excluidasMatching = parseInt(props.excluidas_matching) || 0;\nconst totalPendientes = pendientesMatching + pendientesSinMatch;\n\n// === MATCHING ===\nconst sugerenciasTotal = parseInt(matching.sugerencias_total) || 0;\nconst sugerencias24h = parseInt(matching.sugerencias_24h) || 0;\nconst aprobadas24h = parseInt(matching.aprobadas_24h) || 0;\nconst rechazadas24h = parseInt(matching.rechazadas_24h) || 0;\nconst tasaAprobacion24h = sugerencias24h > 0 \n  ? ((aprobadas24h / sugerencias24h) * 100).toFixed(1) \n  : 'N/A';\n\n// === PROYECTOS ===\nconst proyTotal = parseInt(proyectos.total) || 0;\nconst proyActivos = parseInt(proyectos.activos) || 0;\nconst proyGpsVerificado = parseInt(proyectos.gps_verificado) || 0;\nconst proyConPlaceId = parseInt(proyectos.con_place_id) || 0;\nconst proyPendientesGoogle = parseInt(proyectos.pendientes_google) || 0;\nconst pctGpsVerificado = proyTotal > 0 \n  ? ((proyGpsVerificado / proyTotal) * 100).toFixed(1) \n  : '0.0';\n\n// === HEALTH CHECK ===\nconst horasSinEnrichment = parseFloat(props.horas_sin_enrichment) || 999;\nconst horasSinMerge = parseFloat(props.horas_sin_merge) || 999;\nconst discoveryOk = props.discovery_ok === true || props.discovery_ok === 't';\nconst enrichmentOk = horasSinEnrichment < 26;\nconst mergeOk = horasSinMerge < 26;\nconst tcDinamicoOk = props.tc_dinamico_ok === true || props.tc_dinamico_ok === 't';\nconst matchingNocturnoOk = parseInt(matching.matching_nocturno_hoy) > 0;\nconst export7amOk = parseInt(sinmatch.export_7am_hoy) >= 0; // siempre OK si corre\nconst supervisorMatchOk = parseInt(matching.supervisor_match_ayer) >= 0;\nconst supervisorSinMatchOk = parseInt(sinmatch.supervisor_sinmatch_ayer) >= 0;\n\n// === ALERTAS ===\nconst alertas = [];\nif (totalPendientes > 5) {\n  alertas.push(`${totalPendientes} pendientes revisión`);\n}\nif (discrepanciasMerge > 0) {\n  alertas.push(`${discrepanciasMerge} discrepancias merge`);\n}\nif (!enrichmentOk) {\n  alertas.push('Enrichment no corrió en 26h');\n}\nif (!discoveryOk) {\n  alertas.push('Discovery no corrió en 26h');\n}\nif (parseFloat(pctMatchCompletadas) < 90) {\n  alertas.push('Cobertura matching <90%');\n}\nif (pctBajo > 5) {\n  alertas.push(`${pctBajo}% calidad baja`);\n}\n\n// Fecha formateada (Bolivia)\nconst fecha = new Date().toLocaleDateString('es-BO', {\n  day: '2-digit',\n  month: 'short',\n  year: 'numeric',\n  timeZone: 'America/La_Paz'\n});\n\nreturn [{\n  json: {\n    fecha,\n    // Propiedades - estados\n    props_total: total,\n    props_completadas: completadas,\n    props_nuevas: nuevas,\n    props_inactivo_pending: inactivoPending,\n    props_inactivo_confirmed: inactivoConfirmed,\n    // Propiedades - matching\n    props_matcheadas: matcheadas,\n    props_sin_match: sinMatch,\n    props_con_nombre: conNombre,\n    props_pendientes_enrich: pendientesEnrich,\n    pct_match_completadas: pctMatchCompletadas,\n    pct_nombre_completadas: pctNombreCompletadas,\n    // Propiedades - actividad 24h\n    props_creadas_24h: creadas24h,\n    props_enriquecidas_24h: enriquecidas24h,\n    // Calidad\n    score_alto: scoreAlto,\n    score_medio: scoreMedio,\n    score_bajo: scoreBajo,\n    pct_alto: pctAlto,\n    pct_medio: pctMedio,\n    pct_bajo: pctBajo,\n    sin_zona: sinZona,\n    sin_dorms: sinDorms,\n    sin_nombre: sinNombre,\n    // Revisión humana\n    pendientes_matching: pendientesMatching,\n    pendientes_sinmatch: pendientesSinMatch,\n    total_pendientes: totalPendientes,\n    discrepancias_merge: discrepanciasMerge,\n    excluidas_matching: excluidasMatching,\n    // Matching\n    match_total: sugerenciasTotal,\n    match_24h: sugerencias24h,\n    match_aprobadas_24h: aprobadas24h,\n    match_rechazadas_24h: rechazadas24h,\n    tasa_aprobacion_24h: tasaAprobacion24h,\n    // Proyectos\n    proy_total: proyTotal,\n    proy_activos: proyActivos,\n    proy_gps_verificado: proyGpsVerificado,\n    proy_con_place_id: proyConPlaceId,\n    proy_pendientes_google: proyPendientesGoogle,\n    pct_gps_verificado: pctGpsVerificado,\n    // Health\n    horas_sin_enrichment: horasSinEnrichment,\n    horas_sin_merge: horasSinMerge,\n    discovery_ok: discoveryOk,\n    enrichment_ok: enrichmentOk,\n    merge_ok: mergeOk,\n    tc_dinamico_ok: tcDinamicoOk,\n    matching_nocturno_ok: matchingNocturnoOk,\n    export_7am_ok: export7amOk,\n    supervisor_match_ok: supervisorMatchOk,\n    supervisor_sinmatch_ok: supervisorSinMatchOk,\n    // Alertas\n    alertas: alertas,\n    tiene_alertas: alertas.length > 0\n  }\n}];"
       },
       "id": "code-consolidar",
-      "name": "Code: Consolidar v2",
+      "name": "Code: Consolidar Reporte",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 300],
-      "notes": "Consolidar métricas, calcular porcentajes, generar alertas"
+      "position": [1100, 300],
+      "notes": "Consolidar todas las métricas y calcular alertas"
     },
     {
       "parameters": {
@@ -93,15 +112,15 @@
         "url": "={{$env.SLACK_WEBHOOK_SICI}}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"📊 SICI Auditoría — {{ $json.fecha }}\",\n        \"emoji\": true\n      }\n    },\n    {{ $json.tiene_alertas ? `{\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"🚨 *ALERTAS:* ${$json.alertas.join(' | ')}\"\n      }\n    },` : '' }}\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*━━━ 1. INVENTARIO ━━━*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Props activas:* {{ $json.props_activas }} {{ $json.nuevas_24h > 0 ? '(+' + $json.nuevas_24h + ')' : '' }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Props inactivas:* {{ $json.props_inactivas }} {{ $json.inactivadas_24h > 0 ? '(+' + $json.inactivadas_24h + ')' : '' }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Proy activos:* {{ $json.proy_activos }} {{ $json.proy_creados_24h > 0 ? '(+' + $json.proy_creados_24h + ')' : '' }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Proy inactivos:* {{ $json.proy_inactivos }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*━━━ 2. CALIDAD DE DATOS ━━━*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Con proyecto:* {{ $json.con_proyecto }} ({{ $json.pct_con_proyecto }}%)\\n*Calidad:* {{ $json.pct_alto }}% alta | {{ $json.pct_medio }}% media | {{ $json.pct_bajo }}% baja\\n*Faltantes:* zona {{ $json.sin_zona }} | dorms {{ $json.sin_dorms }} | nombre {{ $json.sin_nombre }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*━━━ 3. REVISIÓN HUMANA ━━━*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Pendientes:* {{ $json.total_pendientes == 0 ? '✅ 0' : '⚠️ ' + $json.total_pendientes }} (matching: {{ $json.pendientes_matching }}, sin_match: {{ $json.pendientes_sinmatch }})\\n*Excluidas matching:* {{ $json.excluidas_matching }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*━━━ 4. ACTIVIDAD 24H ━━━*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"{{ $json.nuevas_24h > 0 ? '+' + $json.nuevas_24h + ' nuevas' : '' }}{{ $json.nuevas_24h > 0 && $json.inactivadas_24h > 0 ? '  ' : '' }}{{ $json.inactivadas_24h > 0 ? '-' + $json.inactivadas_24h + ' inactivadas' : '' }}{{ ($json.nuevas_24h == 0 && $json.inactivadas_24h == 0) ? '_Sin cambios en propiedades_' : '' }}\\n✅ {{ $json.aprobados_24h }} aprobados  ❌ {{ $json.rechazados_24h }} rechazados\\n📌 {{ $json.asignados_24h }} asignados  🆕 {{ $json.creados_24h }} proyectos creados  🔧 {{ $json.corregidos_24h }} corregidos\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*━━━ 5. SALUD WORKFLOWS ━━━*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"{{ $json.discovery_ok ? '✅' : '🔴' }} Discovery  {{ $json.enrichment_ok ? '✅' : '🔴' }} Enrichment ({{ $json.horas_enrichment }}h)  {{ $json.merge_ok ? '✅' : '🔴' }} Merge ({{ $json.horas_merge }}h)\\n{{ $json.matching_nocturno_ok ? '✅' : '⚪' }} Match 4AM  {{ $json.supervisor_match_ok ? '✅' : '⚪' }} Super 8PM  {{ $json.supervisor_sinmatch_ok ? '✅' : '⚪' }} SinM 8:30PM\"\n      }\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"SICI Auditoría v2.0 | Generado automáticamente\"\n        }\n      ]\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"📊 SICI Auditoría Diaria — {{ $json.fecha }}\",\n        \"emoji\": true\n      }\n    },\n    {{ $json.tiene_alertas ? '{\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"🚨 *ALERTAS:* ' + $json.alertas.join(' | ') + '\"}},' : '' }}\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*📦 PROPIEDADES*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\"type\": \"mrkdwn\", \"text\": \"*Completadas:* {{ $json.props_completadas }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Nuevas:* {{ $json.props_nuevas }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Inactivo pending:* {{ $json.props_inactivo_pending }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Inactivo confirmed:* {{ $json.props_inactivo_confirmed }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Total:* {{ $json.props_total }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \" \"}\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\"type\": \"mrkdwn\", \"text\": \"*Matcheadas:* {{ $json.props_matcheadas }} ({{ $json.pct_match_completadas }}%)\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Sin match:* {{ $json.props_sin_match }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Con nombre:* {{ $json.props_con_nombre }} ({{ $json.pct_nombre_completadas }}%)\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Pendientes enrich:* {{ $json.props_pendientes_enrich }}\"}\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"_Últimas 24h: +{{ $json.props_creadas_24h }} creadas, +{{ $json.props_enriquecidas_24h }} enriquecidas_\"\n      }\n    },\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*📈 CALIDAD DE DATOS*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\"type\": \"mrkdwn\", \"text\": \"*Score alto (≥95):* {{ $json.score_alto }} ({{ $json.pct_alto }}%)\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Score medio:* {{ $json.score_medio }} ({{ $json.pct_medio }}%)\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Score bajo (<85):* {{ $json.score_bajo }} ({{ $json.pct_bajo }}%)\"},\n        {\"type\": \"mrkdwn\", \"text\": \" \"}\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"_Faltantes: zona {{ $json.sin_zona }} | dorms {{ $json.sin_dorms }} | nombre {{ $json.sin_nombre }}_\"\n      }\n    },\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*🔗 MATCHING*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\"type\": \"mrkdwn\", \"text\": \"*Sugerencias 24h:* {{ $json.match_24h }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Aprobadas:* {{ $json.match_aprobadas_24h }} ✅\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Rechazadas:* {{ $json.match_rechazadas_24h }} ❌\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Tasa aprob:* {{ $json.tasa_aprobacion_24h }}%\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Pendientes revisión:* {{ $json.pendientes_matching > 0 ? '⚠️ ' : '' }}{{ $json.pendientes_matching }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Nocturno 4AM:* {{ $json.matching_nocturno_ok ? '✅ Corrió' : '⚠️ No corrió' }}\"}\n      ]\n    },\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*👤 REVISIÓN HUMANA*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\"type\": \"mrkdwn\", \"text\": \"*Pendientes matching:* {{ $json.pendientes_matching }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Pendientes sin_match:* {{ $json.pendientes_sinmatch }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Discrepancias merge:* {{ $json.discrepancias_merge > 0 ? '⚠️ ' : '' }}{{ $json.discrepancias_merge }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Excluidas matching:* {{ $json.excluidas_matching }}\"}\n      ]\n    },\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*🏢 PROYECTOS*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\"type\": \"mrkdwn\", \"text\": \"*Total:* {{ $json.proy_total }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*GPS verificado:* {{ $json.proy_gps_verificado }} ({{ $json.pct_gps_verificado }}%)\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Con Place ID:* {{ $json.proy_con_place_id }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Pendientes Google:* {{ $json.proy_pendientes_google }}\"}\n      ]\n    },\n    {\n      \"type\": \"divider\"\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*⚡ HEALTH CHECK*\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\"type\": \"mrkdwn\", \"text\": \"*Discovery:* {{ $json.discovery_ok ? '✅' : '🔴' }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Enrichment:* {{ $json.enrichment_ok ? '✅' : '🔴' }} hace {{ $json.horas_sin_enrichment }}h\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Merge:* {{ $json.merge_ok ? '✅' : '🔴' }} hace {{ $json.horas_sin_merge }}h\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*TC Dinámico:* {{ $json.tc_dinamico_ok ? '✅' : '⚪' }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Export 7AM:* {{ $json.export_7am_ok ? '✅' : '⚪' }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Nocturno 4AM:* {{ $json.matching_nocturno_ok ? '✅' : '⚪' }}\"}\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\"type\": \"mrkdwn\", \"text\": \"*Super 8PM:* {{ $json.supervisor_match_ok ? '✅' : '⚪' }}\"},\n        {\"type\": \"mrkdwn\", \"text\": \"*Super SinM 8:30PM:* {{ $json.supervisor_sinmatch_ok ? '✅' : '⚪' }}\"}\n      ]\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"📈 Total sugerencias históricas: {{ $json.match_total }} | SICI Auditoría v2.1\"\n        }\n      ]\n    }\n  ]\n}",
         "options": {}
       },
       "id": "slack-reporte",
-      "name": "Slack: Reporte v2",
+      "name": "Slack: Reporte Diario",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [1100, 300],
-      "notes": "Enviar reporte con 5 secciones a Slack"
+      "position": [1320, 300],
+      "notes": "Enviar reporte consolidado a Slack con formato dos columnas"
     }
   ],
   "connections": {
@@ -109,51 +128,62 @@
       "main": [
         [
           {
-            "node": "PG: Propiedades + Calidad",
+            "node": "PG: Stats Propiedades",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "PG: Propiedades + Calidad": {
+    "PG: Stats Propiedades": {
       "main": [
         [
           {
-            "node": "PG: Proyectos",
+            "node": "PG: Stats Matching",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "PG: Proyectos": {
+    "PG: Stats Matching": {
       "main": [
         [
           {
-            "node": "PG: Matching + Sin Match",
+            "node": "PG: Stats Proyectos",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "PG: Matching + Sin Match": {
+    "PG: Stats Proyectos": {
       "main": [
         [
           {
-            "node": "Code: Consolidar v2",
+            "node": "PG: Stats Sin Match",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code: Consolidar v2": {
+    "PG: Stats Sin Match": {
       "main": [
         [
           {
-            "node": "Slack: Reporte v2",
+            "node": "Code: Consolidar Reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Consolidar Reporte": {
+      "main": [
+        [
+          {
+            "node": "Slack: Reporte Diario",
             "type": "main",
             "index": 0
           }
@@ -178,5 +208,5 @@
     }
   ],
   "pinData": {},
-  "versionId": "2.0.1"
+  "versionId": "2.1.0"
 }
