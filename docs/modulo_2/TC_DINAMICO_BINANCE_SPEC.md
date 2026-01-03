@@ -1,7 +1,8 @@
 # Sistema de Tipo de Cambio Dinamico - Binance P2P
 
 > **Version:** 1.0
-> **Fecha:** 2 Enero 2026
+> **Fecha:** 3 Enero 2026
+> **Estado:** ✅ ACTIVO (schedule 00:00 AM)
 > **Migracion:** `sql/migrations/014_tc_binance_historial.sql`
 > **Workflow:** `n8n/workflows/modulo_2/tc_dinamico_binance.json`
 
