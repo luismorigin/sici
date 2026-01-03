@@ -1,0 +1,452 @@
+{
+  "name": "SICI - TC Dinamico Binance v1.1",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-tc",
+      "name": "Schedule Trigger (00:00 AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 200],
+      "notes": "Ejecuta a medianoche, ANTES del Discovery (1 AM)"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "id": "manual-trigger-tc",
+      "name": "Manual Trigger (Testing)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"page\": 1,\n  \"rows\": 10,\n  \"asset\": \"USDT\",\n  \"fiat\": \"BOB\",\n  \"tradeType\": \"SELL\",\n  \"publisherType\": null,\n  \"payTypes\": []\n}",
+        "options": {
+          "timeout": 30000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 100],
+      "id": "http-binance-sell",
+      "name": "HTTP: Binance P2P SELL",
+      "notes": "Obtiene precio al que VENDEN USDT (comprador paga esto)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"page\": 1,\n  \"rows\": 10,\n  \"asset\": \"USDT\",\n  \"fiat\": \"BOB\",\n  \"tradeType\": \"BUY\",\n  \"publisherType\": null,\n  \"payTypes\": []\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 300],
+      "id": "http-binance-buy",
+      "name": "HTTP: Binance P2P BUY",
+      "notes": "Obtiene precio al que COMPRAN USDT (vendedor recibe esto)"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "multiplex",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [480, 200],
+      "id": "merge-binance-responses",
+      "name": "Merge: Esperar Ambos HTTP"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Los datos vienen del Merge - item 0 es SELL, item 1 es BUY\nconst items = $input.all();\n\n// Buscar cual es SELL y cual es BUY por la estructura\nlet sellData = null;\nlet buyData = null;\n\nfor (const item of items) {\n  // Identificar por los datos (ambos tienen la misma estructura)\n  // El primero que llega es SELL, el segundo BUY\n  if (!sellData) {\n    sellData = item.json;\n  } else {\n    buyData = item.json;\n  }\n}\n\n// Si solo llego uno, usarlo para ambos\nif (!buyData) buyData = sellData;\n\n// Extraer precios TOP 5 SELL\nconst sellAds = sellData?.data || [];\nconst sellPrices = sellAds.slice(0, 5).map(ad => parseFloat(ad.adv?.price || 0));\nconst tcSell = sellPrices.length > 0 \n  ? sellPrices.reduce((a, b) => a + b, 0) / sellPrices.length \n  : 0;\n\n// Extraer precios TOP 5 BUY\nconst buyAds = buyData?.data || [];\nconst buyPrices = buyAds.slice(0, 5).map(ad => parseFloat(ad.adv?.price || 0));\nconst tcBuy = buyPrices.length > 0 \n  ? buyPrices.reduce((a, b) => a + b, 0) / buyPrices.length \n  : 0;\n\n// Calcular spread\nconst spread = tcBuy > 0 ? ((tcSell - tcBuy) / tcBuy * 100).toFixed(2) : 0;\n\n// TC paralelo = promedio de SELL (lo que paga un comprador de USDT)\nconst tcParalelo = tcSell;\n\nreturn [{\n  tc_sell: parseFloat(tcSell.toFixed(4)),\n  tc_buy: parseFloat(tcBuy.toFixed(4)),\n  tc_paralelo: parseFloat(tcParalelo.toFixed(4)),\n  spread_pct: parseFloat(spread),\n  num_anuncios_sell: sellAds.length,\n  num_anuncios_buy: buyAds.length,\n  timestamp: new Date().toISOString(),\n  raw_sell: sellPrices,\n  raw_buy: buyPrices\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 200],
+      "id": "code-calcular-tc",
+      "name": "Code: Calcular TC Promedio"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM validar_tc_binance({{ $json.tc_paralelo }}, 'paralelo');",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [960, 200],
+      "id": "pg-validar-tc",
+      "name": "PG: Validar TC",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const validacion = $input.first().json;\nconst tcData = $('Code: Calcular TC Promedio').first().json;\n\nreturn [{\n  es_valido: validacion.es_valido,\n  razon: validacion.razon,\n  tc_actual: validacion.tc_actual,\n  tc_nuevo: tcData.tc_paralelo,\n  diferencia_pct: validacion.diferencia_pct,\n  ...tcData\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 200],
+      "id": "code-merge-validacion",
+      "name": "Code: Merge Validacion"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.es_valido }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1440, 200],
+      "id": "if-tc-valido",
+      "name": "IF: TC Valido?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT guardar_snapshot_precios();",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1680, 100],
+      "id": "pg-snapshot-precios",
+      "name": "PG: Guardar Snapshot Precios",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "IMPORTANTE: Ejecutar ANTES de actualizar TC"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT actualizar_tipo_cambio(\n  p_nuevo_tc_paralelo := {{ $('Code: Merge Validacion').item.json.tc_nuevo }},\n  p_origen := 'binance_p2p',\n  p_notas := 'Actualizacion automatica desde Binance P2P'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1920, 100],
+      "id": "pg-actualizar-tc",
+      "name": "PG: Actualizar TC",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT registrar_consulta_binance(\n  {{ $('Code: Merge Validacion').item.json.tc_sell }},\n  {{ $('Code: Merge Validacion').item.json.tc_buy }},\n  {{ $('Code: Merge Validacion').item.json.num_anuncios_sell }},\n  {{ $('Code: Merge Validacion').item.json.num_anuncios_buy }},\n  '{{ JSON.stringify({sell: $('Code: Merge Validacion').item.json.raw_sell, buy: $('Code: Merge Validacion').item.json.raw_buy}) }}'::jsonb\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [2160, 100],
+      "id": "pg-registrar-binance",
+      "name": "PG: Registrar Consulta Binance",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "#sici-alertas",
+        "text": "=:chart_with_upwards_trend: *TC Actualizado desde Binance P2P*\n\n*TC Anterior:* {{ $('Code: Merge Validacion').item.json.tc_actual }} BOB/USD\n*TC Nuevo:* {{ $('Code: Merge Validacion').item.json.tc_nuevo }} BOB/USD\n*Diferencia:* {{ $('Code: Merge Validacion').item.json.diferencia_pct.toFixed(2) }}%\n\n*Datos Binance:*\n- SELL (promedio TOP 5): {{ $('Code: Merge Validacion').item.json.tc_sell }}\n- BUY (promedio TOP 5): {{ $('Code: Merge Validacion').item.json.tc_buy }}\n- Spread: {{ $('Code: Merge Validacion').item.json.spread_pct }}%\n- Anuncios: {{ $('Code: Merge Validacion').item.json.num_anuncios_sell }} SELL / {{ $('Code: Merge Validacion').item.json.num_anuncios_buy }} BUY\n\n_Precios recalculados automaticamente_",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [2400, 100],
+      "id": "slack-notificar-tc",
+      "name": "Slack: Notificar Cambio TC",
+      "credentials": {
+        "slackApi": {
+          "id": "wkGQNc3Xvbl3Hm9K",
+          "name": "Slack API SICI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Registrar que no hubo cambio significativo\nconst data = $('Code: Merge Validacion').first().json;\n\nreturn [{\n  status: 'sin_cambio',\n  razon: data.razon,\n  tc_actual: data.tc_actual,\n  tc_binance: data.tc_nuevo,\n  diferencia_pct: data.diferencia_pct,\n  timestamp: new Date().toISOString()\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1680, 300],
+      "id": "code-log-sin-cambio",
+      "name": "Code: Log Sin Cambio"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT registrar_ejecucion_workflow(\n  'tc_dinamico_binance',\n  'success',\n  1, 0, 0, NULL,\n  '{}'::jsonb\n);",
+        "options": {
+          "nodeExecuteOnce": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [2640, 200],
+      "id": "pg-registrar-ejecucion",
+      "name": "PG: Registrar Ejecucion",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "executeOnce": true
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (00:00 AM)": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Binance P2P SELL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP: Binance P2P BUY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger (Testing)": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Binance P2P SELL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP: Binance P2P BUY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Binance P2P SELL": {
+      "main": [
+        [
+          {
+            "node": "Merge: Esperar Ambos HTTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Binance P2P BUY": {
+      "main": [
+        [
+          {
+            "node": "Merge: Esperar Ambos HTTP",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge: Esperar Ambos HTTP": {
+      "main": [
+        [
+          {
+            "node": "Code: Calcular TC Promedio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Calcular TC Promedio": {
+      "main": [
+        [
+          {
+            "node": "PG: Validar TC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Validar TC": {
+      "main": [
+        [
+          {
+            "node": "Code: Merge Validacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Merge Validacion": {
+      "main": [
+        [
+          {
+            "node": "IF: TC Valido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: TC Valido?": {
+      "main": [
+        [
+          {
+            "node": "PG: Guardar Snapshot Precios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code: Log Sin Cambio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Guardar Snapshot Precios": {
+      "main": [
+        [
+          {
+            "node": "PG: Actualizar TC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Actualizar TC": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Consulta Binance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Registrar Consulta Binance": {
+      "main": [
+        [
+          {
+            "node": "Slack: Notificar Cambio TC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: Notificar Cambio TC": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecucion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Log Sin Cambio": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecucion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "SICI"
+    },
+    {
+      "name": "TC"
+    },
+    {
+      "name": "Binance"
+    }
+  ],
+  "triggerCount": 1,
+  "pinData": {},
+  "versionId": "1.0.0"
+}

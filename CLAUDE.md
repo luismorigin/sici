@@ -46,6 +46,7 @@ Usuario `claude_readonly` tiene permisos SELECT en todas las tablas.
 | Spec Matching | `docs/modulo_2/MATCHING_NOCTURNO_SPEC.md` |
 | Spec Auditoría | `docs/modulo_2/AUDITORIA_DIARIA_SPEC.md` |
 | Spec Tracking | `docs/modulo_2/WORKFLOW_TRACKING_SPEC.md` |
+| Spec TC Dinámico | `docs/modulo_2/TC_DINAMICO_BINANCE_SPEC.md` |
 
 ## Estructura Clave
 
@@ -56,7 +57,7 @@ sici/
 │   ├── enrichment/    # registrar_enrichment.sql
 │   ├── merge/         # merge_discovery_enrichment.sql v2.1.0
 │   └── matching/      # Funciones v3.1 (propiedades_v2)
-├── sql/migrations/    # 001-013 (FK, microzonas, HITL, tracking)
+├── sql/migrations/    # 001-014 (FK, microzonas, HITL, tracking, TC)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
@@ -66,7 +67,7 @@ sici/
     └── modulo_2/      # Specs y planes matching
 ```
 
-## Estado Actual (2 Ene 2026)
+## Estado Actual (3 Ene 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
@@ -76,6 +77,7 @@ sici/
   - Supervisor Sin Match: ASIGNAR, CREAR, CORREGIR, SIN_PROYECTO
 - **Módulo 2 FASE 5:** Pipeline activado (4 AM matching, 8 PM supervisores)
 - **Auditoría v2.3:** Health check via `workflow_executions`
+- **TC Dinámico:** Binance P2P integrado (00:00 AM, historial de precios)
 
 ### ❌ Pendiente
 - **FASE 3:** Enriquecimiento IA de proyectos (columnas metadata + workflow Claude)
@@ -100,7 +102,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-013)
+## Migraciones SQL (001-014)
 
 | # | Archivo | Propósito |
 |---|---------|-----------|
@@ -117,6 +119,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 011 | corregir_proyecto_matching | CORREGIR para Pendientes |
 | 012 | fix_null_strings | Fix "null" string de n8n |
 | 013 | workflow_executions | Tabla + función tracking workflows |
+| 014 | tc_binance_historial | TC Binance + historial precios |
 
 ## Repo Legacy
 
