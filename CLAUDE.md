@@ -76,8 +76,9 @@ sici/
   - Matching Supervisor: APROBAR, RECHAZAR, CORREGIR, PROYECTO_ALTERNATIVO
   - Supervisor Sin Match: ASIGNAR, CREAR, CORREGIR, SIN_PROYECTO
 - **Módulo 2 FASE 5:** Pipeline activado (4 AM matching, 8 PM supervisores)
-- **Auditoría v2.3:** Health check via `workflow_executions`
+- **Auditoría v2.5:** Health check + métrica excluidas operación
 - **TC Dinámico:** Binance P2P integrado (00:00 AM, historial de precios)
+- **Status Pipeline:** Nuevo status `excluido_operacion` para alquiler/anticrético
 
 ### ❌ Pendiente
 - **FASE 3:** Enriquecimiento IA de proyectos (columnas metadata + workflow Claude)
@@ -102,7 +103,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-014)
+## Migraciones SQL (001-015)
 
 | # | Archivo | Propósito |
 |---|---------|-----------|
@@ -120,6 +121,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 012 | fix_null_strings | Fix "null" string de n8n |
 | 013 | workflow_executions | Tabla + función tracking workflows |
 | 014 | tc_binance_historial | TC Binance + historial precios |
+| 015 | excluido_operacion | Status para alquiler/anticrético |
 
 ## Repo Legacy
 
