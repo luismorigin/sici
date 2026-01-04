@@ -117,7 +117,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT \n  workflow_name,\n  MAX(finished_at) as last_run,\n  MAX(CASE WHEN finished_at >= NOW() - INTERVAL '26 hours' THEN true ELSE false END) as ran_last_26h,\n  MAX(CASE \n    WHEN workflow_name = 'matching_nocturno' AND \n         finished_at >= DATE_TRUNC('day', NOW()) + INTERVAL '4 hours' AND\n         finished_at < DATE_TRUNC('day', NOW()) + INTERVAL '5 hours'\n    THEN true ELSE false END) as ran_at_scheduled_time\nFROM workflow_executions\nWHERE workflow_name IN ('discovery', 'enrichment', 'merge', 'matching_nocturno', 'matching_supervisor', 'exportar_sin_match', 'supervisor_sin_match', 'radar_mensual', 'auditoria_diaria', 'tc_dinamico_binance')\nGROUP BY workflow_name;",
+        "query": "SELECT \n  CASE WHEN workflow_name IN ('discovery_century21', 'discovery_remax') THEN 'discovery' ELSE workflow_name END as workflow_name,\n  MAX(finished_at) as last_run,\n  BOOL_OR(finished_at >= NOW() - INTERVAL '26 hours') as ran_last_26h,\n  BOOL_OR(workflow_name = 'matching_nocturno' AND finished_at >= DATE_TRUNC('day', NOW()) + INTERVAL '4 hours' AND finished_at < DATE_TRUNC('day', NOW()) + INTERVAL '5 hours') as ran_at_scheduled_time\nFROM workflow_executions\nWHERE workflow_name IN ('discovery', 'discovery_century21', 'discovery_remax', 'enrichment', 'merge', 'matching_nocturno', 'matching_supervisor', 'exportar_sin_match', 'supervisor_sin_match', 'radar_mensual', 'auditoria_diaria', 'tc_dinamico_binance')\nGROUP BY CASE WHEN workflow_name IN ('discovery_century21', 'discovery_remax') THEN 'discovery' ELSE workflow_name END;",
         "options": {}
       },
       "id": "pg-stats-workflows",
