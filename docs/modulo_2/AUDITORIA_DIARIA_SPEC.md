@@ -384,7 +384,7 @@ FROM sin_match_exportados
 SELECT
   (SELECT valor FROM config_global WHERE clave = 'tipo_cambio_paralelo') as tc_paralelo,
   (SELECT valor FROM config_global WHERE clave = 'tipo_cambio_oficial') as tc_oficial,
-  (SELECT MAX(fecha) FROM auditoria_tipo_cambio) as ultimo_cambio_tc,
+  (SELECT MAX(fecha_cambio) FROM auditoria_tipo_cambio) as ultimo_cambio_tc,
   (SELECT COUNT(*) FROM tc_binance_historial
     WHERE timestamp >= NOW() - INTERVAL '24 hours') as consultas_binance_24h,
   (SELECT MAX(timestamp) FROM tc_binance_historial) as ultima_consulta_binance
