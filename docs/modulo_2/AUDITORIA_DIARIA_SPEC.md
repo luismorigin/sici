@@ -1,14 +1,14 @@
 # Auditoria Diaria SICI - Especificacion
 
-> **Version:** 2.3
-> **Fecha:** 2 Enero 2026
+> **Version:** 2.4
+> **Fecha:** 3 Enero 2026
 > **Workflow:** `n8n/workflows/modulo_2/auditoria_diaria_sici.json`
 
 ---
 
 ## Objetivo
 
-Generar un reporte diario consolidado del estado completo del sistema SICI con 7 secciones.
+Generar un reporte diario consolidado del estado completo del sistema SICI con 8 secciones.
 
 ## Ejecucion
 
@@ -18,7 +18,7 @@ Generar un reporte diario consolidado del estado completo del sistema SICI con 7
 | Frecuencia | Diario (incluyendo fines de semana) |
 | Notificacion | Slack (webhook `$env.SLACK_WEBHOOK_SICI`) |
 
-## Arquitectura v2.3
+## Arquitectura v2.4
 
 ```
 Schedule 9:00 AM
@@ -41,6 +41,11 @@ Schedule 9:00 AM
            v
 +----------------------+
 | PG: Stats Sin Match  | --- Pendientes, export 7AM, supervisor 8:30PM
++----------+-----------+
+           |
+           v
++----------------------+
+| PG: Stats TC         | --- TC paralelo/oficial, consultas Binance 24h
 +----------+-----------+
            |
            v
@@ -127,7 +132,18 @@ Schedule 9:00 AM
 | Con Place ID | `google_place_id IS NOT NULL` |
 | Pendientes Google | `proyectos_pendientes_google.estado = 'pendiente'` |
 
-### 6. HEALTH CHECK
+### 6. TC DINAMICO
+
+> **v2.4:** Nueva sección que muestra el estado del tipo de cambio y la integración con Binance P2P.
+
+| Metrica | Query |
+|---------|-------|
+| TC Paralelo | `config_global.valor WHERE clave = 'tipo_cambio_paralelo'` |
+| TC Oficial | `config_global.valor WHERE clave = 'tipo_cambio_oficial'` |
+| Consultas Binance 24h | `tc_binance_historial WHERE timestamp >= 24h` |
+| Workflow TC Binance | `workflow_executions.ran_last_26h` |
+
+### 7. HEALTH CHECK
 
 > **v2.3:** Ahora usa tabla `workflow_executions` como fuente primaria, con fallback a inferencia por timestamps.
 
@@ -137,12 +153,12 @@ Schedule 9:00 AM
 | Enrichment | `workflow_executions.ran_last_26h` | `MAX(fecha_enrichment) < 26h` |
 | Merge | `workflow_executions.ran_last_26h` | `MAX(fecha_merge) < 26h` |
 | Matching Nocturno | `workflow_executions.ran_last_26h` | Sugerencias entre 4-5 AM hoy |
-| TC Dinamico | N/A (no tiene tracking) | `inactivo_confirmed >= 26h` |
+| TC Binance | `workflow_executions.ran_last_26h` | N/A |
 | Export 7AM | `workflow_executions.ran_last_26h` | `fecha_export` entre 7-8 AM hoy |
 | Super 8PM | `workflow_executions.ran_last_26h` | Procesados entre 20-21h ayer |
 | Super SinM 8:30PM | `workflow_executions.ran_last_26h` | `fecha_procesado` entre 20:30-21:30h |
 
-### 7. FOOTER
+### 8. FOOTER
 
 - Total sugerencias historicas
 - Version del reporte
@@ -162,10 +178,10 @@ Schedule 9:00 AM
 
 ---
 
-## Ejemplo de Mensaje Slack v2.2
+## Ejemplo de Mensaje Slack v2.4
 
 ```
-SICI Auditoria Diaria - 1 ene 2026
+SICI Auditoria Diaria - 3 ene 2026
 
 ALERTAS: 2 discrepancias merge
 
@@ -215,16 +231,23 @@ Con Place ID: 95              Pendientes Google: 5
 
 ----------------------------------------
 
+TC DINAMICO
+
+TC Paralelo: 9.67 BOB/USD     TC Oficial: 6.96 BOB/USD
+Consultas Binance 24h: 1      Workflow: Corrio
+
+----------------------------------------
+
 HEALTH CHECK
 
 Discovery: OK                 Enrichment: OK hace 3h
-Merge: OK hace 3h             TC Dinamico: OK
+Merge: OK hace 3h             TC Binance: OK
 Export 7AM: OK                Nocturno 4AM: OK
 Super 8PM: OK                 Super SinM 8:30PM: OK
 
 ----------------------------------------
 
-Total sugerencias historicas: 847 | SICI Auditoria v2.2
+Total sugerencias historicas: 847 | SICI Auditoria v2.4
 ```
 
 ---
@@ -353,7 +376,21 @@ SELECT
 FROM sin_match_exportados
 ```
 
-### Query 5: Stats Workflows (v2.3)
+### Query 5: Stats TC (v2.4)
+
+> Consulta el estado del tipo de cambio y las consultas a Binance P2P.
+
+```sql
+SELECT
+  (SELECT valor FROM config_global WHERE clave = 'tipo_cambio_paralelo') as tc_paralelo,
+  (SELECT valor FROM config_global WHERE clave = 'tipo_cambio_oficial') as tc_oficial,
+  (SELECT MAX(fecha) FROM auditoria_tipo_cambio) as ultimo_cambio_tc,
+  (SELECT COUNT(*) FROM tc_binance_historial
+    WHERE timestamp >= NOW() - INTERVAL '24 hours') as consultas_binance_24h,
+  (SELECT MAX(timestamp) FROM tc_binance_historial) as ultima_consulta_binance
+```
+
+### Query 6: Stats Workflows (v2.4)
 
 > Consulta la tabla `workflow_executions` para determinar si cada workflow corrió en las últimas 26 horas.
 
@@ -375,7 +412,8 @@ WHERE workflow_name IN (
   'discovery_century21', 'discovery_remax', 'discovery',
   'enrichment', 'merge', 'matching_nocturno',
   'matching_supervisor', 'exportar_sin_match',
-  'supervisor_sin_match', 'radar_mensual', 'auditoria_diaria'
+  'supervisor_sin_match', 'radar_mensual', 'auditoria_diaria',
+  'tc_dinamico_binance'
 )
 GROUP BY CASE
     WHEN workflow_name IN ('discovery_century21', 'discovery_remax') THEN 'discovery'
@@ -398,6 +436,14 @@ GROUP BY CASE
 ---
 
 ## Changelog
+
+### v2.4 (3 Ene 2026)
+- **Integración TC Dinámico Binance en auditoría**
+- Nueva sección "TC DINAMICO" en el mensaje Slack con TC paralelo/oficial y consultas Binance
+- Nuevo nodo `PG: Stats TC` para obtener datos de tipo de cambio
+- Workflow `tc_dinamico_binance` agregado al health check
+- Renombrado "TC Dinámico" → "TC Binance" en Health Check para claridad
+- Total secciones: 8 (antes 7)
 
 ### v2.3 (2 Ene 2026)
 - **Sistema de tracking de ejecuciones de workflows**
@@ -431,4 +477,4 @@ GROUP BY CASE
 
 ---
 
-*Documentacion actualizada 2 Enero 2026*
+*Documentacion actualizada 3 Enero 2026*
