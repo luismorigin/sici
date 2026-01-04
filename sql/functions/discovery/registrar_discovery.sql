@@ -154,7 +154,10 @@ BEGIN
             NOW(),
             p_metodo_discovery,
             
-            'nueva'::estado_propiedad,
+            CASE
+                WHEN p_tipo_operacion NOT IN ('venta') THEN 'excluido_operacion'::estado_propiedad
+                ELSE 'nueva'::estado_propiedad
+            END,
             p_fecha_publicacion,
             NOW(),
             NOW(),
@@ -163,8 +166,11 @@ BEGIN
             TRUE
         )
         RETURNING propiedades_v2.id INTO v_id;
-        
-        v_status_nuevo := 'nueva'::estado_propiedad;
+
+        v_status_nuevo := CASE
+            WHEN p_tipo_operacion NOT IN ('venta') THEN 'excluido_operacion'::estado_propiedad
+            ELSE 'nueva'::estado_propiedad
+        END;
         
     -- ========================================================================
     -- PASO 3: PROPIEDAD EXISTENTE (UPDATE)

@@ -1,6 +1,6 @@
 # Auditoria Diaria SICI - Especificacion
 
-> **Version:** 2.4
+> **Version:** 2.5
 > **Fecha:** 3 Enero 2026
 > **Workflow:** `n8n/workflows/modulo_2/auditoria_diaria_sici.json`
 
@@ -437,12 +437,20 @@ GROUP BY CASE
 
 ## Changelog
 
+### v2.5 (3 Ene 2026)
+- **Nuevo status `excluido_operacion` para propiedades de alquiler/anticrético**
+- Nueva métrica "Excluidas op" en sección PROPIEDADES
+- Migración: 32 propiedades existentes marcadas con nuevo status
+- Función `registrar_discovery()` actualizada para asignar status automáticamente
+- ENUM `estado_propiedad` extendido con nuevo valor
+
 ### v2.4 (3 Ene 2026)
 - **Integración TC Dinámico Binance en auditoría**
 - Nueva sección "TC DINAMICO" en el mensaje Slack con TC paralelo/oficial y consultas Binance
 - Nuevo nodo `PG: Stats TC` para obtener datos de tipo de cambio
 - Workflow `tc_dinamico_binance` agregado al health check
 - Renombrado "TC Dinámico" → "TC Binance" en Health Check para claridad
+- Fix: `horasSinEnrichment` y `horasSinMerge` ahora se calculan desde `workflow_executions.last_run` (preferido) en lugar de propiedades_v2 (fallback)
 - Total secciones: 8 (antes 7)
 
 ### v2.3 (2 Ene 2026)

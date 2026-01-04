@@ -108,12 +108,13 @@
 
 ```sql
 CREATE TYPE estado_propiedad AS ENUM (
-    'nueva',
+    'nueva',                    -- Recién descubierta (venta), pendiente enrichment
     'pendiente_enriquecimiento',
     'actualizado',
     'completado',
     'inactivo_pending',
-    'inactivo_confirmed'
+    'inactivo_confirmed',
+    'excluido_operacion'        -- v2.5: Alquiler/anticrético, no entra a pipeline
 );
 ```
 
