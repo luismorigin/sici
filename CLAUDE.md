@@ -4,10 +4,10 @@
 
 **SICI** = Sistema Inteligente de Captura Inmobiliaria (Bolivia)
 - Pipeline nocturno: Discovery → Enrichment → Merge → Matching
-- Tabla principal: `propiedades_v2` (433 registros)
-- Tabla proyectos: `proyectos_master` (192 activos)
+- Tabla principal: `propiedades_v2` (438 registros)
+- Tabla proyectos: `proyectos_master` (187 activos, 98.9% con GPS)
 - Tracking: `workflow_executions` (health check)
-- Tasa de matching: **96%** (331/345 completadas)
+- Tasa de matching: **100%** (312/312 completadas) ✅
 
 ## MCP Servers
 
@@ -67,7 +67,7 @@ sici/
     └── modulo_2/      # Specs y planes matching
 ```
 
-## Estado Actual (3 Ene 2026)
+## Estado Actual (4 Ene 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
@@ -79,11 +79,13 @@ sici/
 - **Auditoría v2.5:** Health check + métrica excluidas operación
 - **TC Dinámico:** Binance P2P integrado (00:00 AM, historial de precios)
 - **Status Pipeline:** Nuevo status `excluido_operacion` para alquiler/anticrético
+- **Limpieza Datos:** Auditoría Sky Properties + corrección GPS (100% matching)
 
 ### ❌ Pendiente
-- **FASE 3:** Enriquecimiento IA de proyectos (columnas metadata + workflow Claude)
+- **FASE 3:** Enriquecimiento IA de proyectos (146 sin desarrollador asignado)
 - **FASE 4:** Validación GPS completa (workflow validador Google Places)
-- **Funciones:** `heredar_metadata_proyecto()`, `validar_sugerencias_extractor()`
+- **Migración 017:** Mejoras sistema matching (FK, blacklist, detección duplicados)
+- **Supervisor Excluidas:** HITL para 16 propiedades en limbo - ver `docs/planning/SUPERVISOR_EXCLUIDAS_PLAN.md`
 
 ## Queries Rápidos
 
@@ -103,25 +105,27 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-015)
+## Migraciones SQL (001-017)
 
-| # | Archivo | Propósito |
-|---|---------|-----------|
-| 001 | migracion_merge_v2.0.0 | Merge Discovery + Enrichment |
-| 002 | migracion_columnas_matching | Columnas matching en propiedades_v2 |
-| 003 | matching_sugerencias_fk_v2 | FK hacia propiedades_v2 |
-| 004 | microzonas_schema | Tabla zonas_geograficas |
-| 005 | asignar_zona_por_gps | Funciones GPS |
-| 006 | crear_proyecto_desde_sugerencia | RPC básica |
-| 007 | crear_proyecto_con_gps_validacion | RPC v2 + validación |
-| 008 | auditoria_snapshots | Tabla snapshots (vacía) |
-| 009 | sin_match_exportados | Sistema Sin Match |
-| 010 | accion_corregir | CORREGIR para Sin Match |
-| 011 | corregir_proyecto_matching | CORREGIR para Pendientes |
-| 012 | fix_null_strings | Fix "null" string de n8n |
-| 013 | workflow_executions | Tabla + función tracking workflows |
-| 014 | tc_binance_historial | TC Binance + historial precios |
-| 015 | excluido_operacion | Status para alquiler/anticrético |
+| # | Archivo | Propósito | Estado |
+|---|---------|-----------|--------|
+| 001 | migracion_merge_v2.0.0 | Merge Discovery + Enrichment | ✅ |
+| 002 | migracion_columnas_matching | Columnas matching en propiedades_v2 | ✅ |
+| 003 | matching_sugerencias_fk_v2 | FK hacia propiedades_v2 | ✅ |
+| 004 | microzonas_schema | Tabla zonas_geograficas | ✅ |
+| 005 | asignar_zona_por_gps | Funciones GPS | ✅ |
+| 006 | crear_proyecto_desde_sugerencia | RPC básica | ✅ |
+| 007 | crear_proyecto_con_gps_validacion | RPC v2 + validación | ✅ |
+| 008 | auditoria_snapshots | Tabla snapshots (vacía) | ✅ |
+| 009 | sin_match_exportados | Sistema Sin Match | ✅ |
+| 010 | accion_corregir | CORREGIR para Sin Match | ✅ |
+| 011 | corregir_proyecto_matching | CORREGIR para Pendientes | ✅ |
+| 012 | fix_null_strings | Fix "null" string de n8n | ✅ |
+| 013 | workflow_executions | Tabla + función tracking workflows | ✅ |
+| 014 | tc_binance_historial | TC Binance + historial precios | ✅ |
+| 015 | excluido_operacion | Status para alquiler/anticrético | ✅ |
+| 016 | limpieza_sky_properties | Auditoría Sky + corrección GPS/duplicados | ✅ |
+| 017 | mejoras_matching_system | FK formal, blacklist, detección duplicados | ⏳ |
 
 ## Repo Legacy
 

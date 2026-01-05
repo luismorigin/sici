@@ -1,5 +1,5 @@
 {
-  "name": "SICI - Matching Supervisor v1.2",
+  "name": "SICI - Matching Supervisor v1.3",
   "nodes": [
     {
       "parameters": {
@@ -12,13 +12,13 @@
           ]
         }
       },
-      "id": "bfbfef46-9bc1-454f-9cbc-e837833b6c12",
+      "id": "09340a56-961e-40e4-b486-120b9f083f9c",
       "name": "Schedule Trigger (8 PM)",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
       "position": [
-        -960,
-        304
+        -1680,
+        64
       ],
       "notes": "Ejecuta todos los días a las 8:00 PM para aplicar decisiones humanas"
     },
@@ -27,10 +27,10 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -960,
-        112
+        -1680,
+        -128
       ],
-      "id": "5e0c119d-fc56-472a-8bb2-e1b393ace24b",
+      "id": "df93c719-092d-4b7b-971d-cfd2852dba5b",
       "name": "Manual Trigger (Testing)"
     },
     {
@@ -47,14 +47,15 @@
         },
         "options": {}
       },
-      "id": "97c31693-a5b9-4e8d-8467-491ad9bfc326",
+      "id": "8dda5af8-210a-4856-88ea-aba9e38332ab",
       "name": "Google Sheets: Leer Bandeja",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        -720,
-        208
+        -1456,
+        -32
       ],
+      "alwaysOutputData": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "DbMNipx0RBpm2Hhu",
@@ -64,15 +65,15 @@
     },
     {
       "parameters": {
-        "jsCode": "// ========================================\n// EL AUDITOR: Analiza estado de revisión\n// ========================================\nconst filas = $input.all();\n\n// Filtrar filas válidas (ignorar header y vacías)\nconst filasData = filas.filter(f => \n  f.json.ID_SUGERENCIA && \n  f.json.ID_SUGERENCIA !== 'ID_SUGERENCIA' &&\n  !isNaN(parseInt(f.json.ID_SUGERENCIA))\n);\n\nif (filasData.length === 0) {\n  return [{\n    total_filas: 0,\n    pendientes: 0,\n    aprobados: 0,\n    rechazados: 0,\n    ids_aprobados: [],\n    ids_rechazados: [],\n    proyectos_alternativos: [],\n    decision: 'VACIO',\n    mensaje: 'No hay filas para procesar'\n  }];\n}\n\n// Contar por estado (usando includes para flexibilidad con emojis)\nconst pendientesData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('PENDIENTE')\n);\n\nconst aprobadosData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('APROBAR')\n);\n\nconst rechazadosData = filasData.filter(f => \n  f.json['ACCION (Humano)'] && \n  f.json['ACCION (Humano)'].includes('RECHAZAR')\n);\n\n// NUEVO: Detectar rechazados CON proyecto alternativo\nconst rechazadosConAlternativo = rechazadosData.filter(f => \n  f.json['PROYECTO_ALTERNATIVO'] && \n  f.json['PROYECTO_ALTERNATIVO'].trim() !== ''\n).map(f => ({\n  sugerencia_id: parseInt(f.json.ID_SUGERENCIA),\n  propiedad_id: parseInt(f.json.PROPIEDAD_ID),\n  proyecto_alternativo: f.json['PROYECTO_ALTERNATIVO'].trim(),\n  gps_alternativo: f.json['GPS_ALTERNATIVO'] ? f.json['GPS_ALTERNATIVO'].trim() : '',\n  nombre_edificio: f.json.NOMBRE_EDIFICIO\n}));\n\n// Extraer IDs\nconst idsAprobados = aprobadosData\n  .map(f => parseInt(f.json.ID_SUGERENCIA))\n  .filter(id => !isNaN(id));\n  \nconst idsRechazados = rechazadosData\n  .map(f => parseInt(f.json.ID_SUGERENCIA))\n  .filter(id => !isNaN(id));\n\n// IDs procesados (para limpiar después)\nconst idsProcesados = [...idsAprobados, ...idsRechazados];\n\n// DECISIÓN\nlet decision;\nif (pendientesData.length > 0) {\n  decision = 'BLOQUEAR';\n} else if (idsAprobados.length > 0 || idsRechazados.length > 0) {\n  decision = 'SYNC';\n} else {\n  decision = 'VACIO';\n}\n\nreturn [{\n  total_filas: filasData.length,\n  pendientes: pendientesData.length,\n  aprobados: idsAprobados.length,\n  rechazados: idsRechazados.length,\n  ids_aprobados: idsAprobados,\n  ids_rechazados: idsRechazados,\n  ids_procesados: idsProcesados,\n  proyectos_alternativos: rechazadosConAlternativo,\n  hay_alternativos: rechazadosConAlternativo.length > 0,\n  decision: decision,\n  // Para Slack\n  nombres_aprobados: aprobadosData.map(f => f.json.NOMBRE_EDIFICIO).slice(0, 5),\n  nombres_rechazados: rechazadosData.map(f => f.json.NOMBRE_EDIFICIO).slice(0, 5),\n  nombres_alternativos: rechazadosConAlternativo.map(p => p.proyecto_alternativo).slice(0, 5)\n}];"
+        "jsCode": "// ========================================\n// EL AUDITOR v1.3: Analiza estado de revisión\n// Soporta: APROBAR, RECHAZAR, CORREGIR (texto/ID), CREAR\n// ========================================\nconst filas = $input.all();\n\n// Filtrar filas válidas Y guardar row_number\nconst filasData = filas\n  .map((f, index) => ({\n    ...f,\n    row_number: index + 2  // +2 porque fila 1 es header\n  }))\n  .filter(f =>\n    f.json.ID_SUGERENCIA &&\n    f.json.ID_SUGERENCIA !== 'ID_SUGERENCIA' &&\n    !isNaN(parseInt(f.json.ID_SUGERENCIA))\n  );\n\nif (filasData.length === 0) {\n  return [{\n    json: {\n      total_filas: 0,\n      pendientes: 0,\n      aprobados: 0,\n      rechazados: 0,\n      corregidos_texto: 0,\n      corregidos_id: 0,\n      creados: 0,\n      ids_aprobados: [],\n      ids_rechazados: [],\n      proyectos_alternativos: [],\n      proyectos_corregidos: [],\n      asignaciones_existentes: [],\n      filas_eliminar: [],\n      decision: 'VACIO',\n      mensaje: 'No hay filas para procesar'\n    }\n  }];\n}\n\n// Contar por estado\nconst pendientesData = filasData.filter(f =>\n  f.json['ACCION (Humano)'] &&\n  f.json['ACCION (Humano)'].includes('PENDIENTE')\n);\n\nconst aprobadosData = filasData.filter(f =>\n  f.json['ACCION (Humano)'] &&\n  f.json['ACCION (Humano)'].includes('APROBAR')\n);\n\nconst rechazadosData = filasData.filter(f =>\n  f.json['ACCION (Humano)'] &&\n  f.json['ACCION (Humano)'].includes('RECHAZAR')\n);\n\n// CORREGIR - separar en dos tipos:\n// 1. Con ID numérico = asignar proyecto existente\n// 2. Con texto = corregir nombre/GPS del proyecto sugerido\nconst corregidosData = filasData.filter(f =>\n  f.json['ACCION (Humano)'] &&\n  f.json['ACCION (Humano)'].includes('CORREGIR')\n);\n\n// CORREGIR con ID numérico -> asignar proyecto existente\nconst asignacionesExistentes = corregidosData\n  .filter(f => {\n    const alt = f.json['PROYECTO_ALTERNATIVO'];\n    return alt && !isNaN(parseInt(String(alt).trim()));\n  })\n  .map(f => ({\n    sugerencia_id: parseInt(f.json.ID_SUGERENCIA),\n    propiedad_id: parseInt(f.json.PROPIEDAD_ID),\n    proyecto_id_existente: parseInt(String(f.json['PROYECTO_ALTERNATIVO']).trim()),\n    nombre_edificio: f.json.NOMBRE_EDIFICIO,\n    row_number: f.row_number\n  }));\n\n// CORREGIR con texto -> corregir nombre/GPS del proyecto sugerido\nconst proyectosCorregidos = corregidosData\n  .filter(f => {\n    const alt = f.json['PROYECTO_ALTERNATIVO'];\n    // Es corrección de texto si NO es número puro o está vacío\n    return !alt || isNaN(parseInt(String(alt).trim()));\n  })\n  .map(f => ({\n    sugerencia_id: parseInt(f.json.ID_SUGERENCIA),\n    propiedad_id: parseInt(f.json.PROPIEDAD_ID),\n    nombre_nuevo: f.json['PROYECTO_ALTERNATIVO'] ? String(f.json['PROYECTO_ALTERNATIVO']).trim() : '',\n    gps_nuevo: f.json['GPS_ALTERNATIVO'] ? String(f.json['GPS_ALTERNATIVO']).trim() : '',\n    nombre_edificio: f.json.NOMBRE_EDIFICIO,\n    row_number: f.row_number\n  }));\n\n// CREAR - nueva acción explícita para crear proyecto\nconst creadosData = filasData.filter(f =>\n  f.json['ACCION (Humano)'] &&\n  f.json['ACCION (Humano)'].includes('CREAR')\n);\n\nconst creaciones = creadosData\n  .filter(f => {\n    const alt = f.json['PROYECTO_ALTERNATIVO'];\n    return alt && String(alt).trim() !== '';\n  })\n  .map(f => ({\n    sugerencia_id: parseInt(f.json.ID_SUGERENCIA),\n    propiedad_id: parseInt(f.json.PROPIEDAD_ID),\n    proyecto_alternativo: String(f.json['PROYECTO_ALTERNATIVO']).trim(),\n    gps_alternativo: f.json['GPS_ALTERNATIVO'] ? String(f.json['GPS_ALTERNATIVO']).trim() : '',\n    nombre_edificio: f.json.NOMBRE_EDIFICIO,\n    row_number: f.row_number\n  }));\n\n// Rechazados CON proyecto alternativo (legacy - también crea)\nconst rechazadosConAlternativo = rechazadosData.filter(f =>\n  f.json['PROYECTO_ALTERNATIVO'] &&\n  String(f.json['PROYECTO_ALTERNATIVO']).trim() !== '' &&\n  isNaN(parseInt(String(f.json['PROYECTO_ALTERNATIVO']).trim()))\n).map(f => ({\n  sugerencia_id: parseInt(f.json.ID_SUGERENCIA),\n  propiedad_id: parseInt(f.json.PROPIEDAD_ID),\n  proyecto_alternativo: String(f.json['PROYECTO_ALTERNATIVO']).trim(),\n  gps_alternativo: f.json['GPS_ALTERNATIVO'] ? String(f.json['GPS_ALTERNATIVO']).trim() : '',\n  nombre_edificio: f.json.NOMBRE_EDIFICIO,\n  row_number: f.row_number\n}));\n\n// Combinar CREAR explícito con RECHAZAR+ALTERNATIVO (legacy)\nconst todasCreaciones = [...creaciones, ...rechazadosConAlternativo];\n\n// Extraer IDs\nconst idsAprobados = aprobadosData\n  .map(f => parseInt(f.json.ID_SUGERENCIA))\n  .filter(id => !isNaN(id));\n\nconst idsRechazados = rechazadosData\n  .filter(f => !f.json['PROYECTO_ALTERNATIVO'] || String(f.json['PROYECTO_ALTERNATIVO']).trim() === '')\n  .map(f => parseInt(f.json.ID_SUGERENCIA))\n  .filter(id => !isNaN(id));\n\nconst idsCorregidosTexto = proyectosCorregidos.map(c => c.sugerencia_id);\nconst idsAsignacionesId = asignacionesExistentes.map(a => a.sugerencia_id);\nconst idsCreados = todasCreaciones.map(c => c.sugerencia_id);\n\n// IDs procesados\nconst idsProcesados = [...idsAprobados, ...idsRechazados, ...idsCorregidosTexto, ...idsAsignacionesId, ...idsCreados];\n\n// FILAS a eliminar (ordenadas de mayor a menor)\nconst filasAprobados = aprobadosData.map(f => f.row_number);\nconst filasRechazadosSinAlt = rechazadosData\n  .filter(f => !f.json['PROYECTO_ALTERNATIVO'] || String(f.json['PROYECTO_ALTERNATIVO']).trim() === '')\n  .map(f => f.row_number);\nconst filasCorregidosTexto = proyectosCorregidos.map(c => c.row_number);\nconst filasAsignacionesId = asignacionesExistentes.map(a => a.row_number);\nconst filasCreaciones = todasCreaciones.map(c => c.row_number);\n\nconst filas_eliminar = [\n  ...filasAprobados,\n  ...filasRechazadosSinAlt,\n  ...filasCorregidosTexto,\n  ...filasAsignacionesId,\n  ...filasCreaciones\n].sort((a, b) => b - a);\n\n// DECISIÓN\nlet decision;\nif (pendientesData.length > 0) {\n  decision = 'BLOQUEAR';\n} else if (idsProcesados.length > 0) {\n  decision = 'SYNC';\n} else {\n  decision = 'VACIO';\n}\n\nreturn [{\n  json: {\n    total_filas: filasData.length,\n    pendientes: pendientesData.length,\n    aprobados: idsAprobados.length,\n    rechazados: idsRechazados.length,\n    corregidos_texto: proyectosCorregidos.length,\n    corregidos_id: asignacionesExistentes.length,\n    creados: todasCreaciones.length,\n    ids_aprobados: idsAprobados,\n    ids_rechazados: idsRechazados,\n    ids_procesados: idsProcesados,\n    proyectos_alternativos: todasCreaciones,\n    proyectos_corregidos: proyectosCorregidos,\n    asignaciones_existentes: asignacionesExistentes,\n    hay_alternativos: todasCreaciones.length > 0,\n    hay_corregidos: proyectosCorregidos.length > 0,\n    hay_asignaciones_id: asignacionesExistentes.length > 0,\n    filas_eliminar: filas_eliminar,\n    decision: decision,\n    // Para Slack\n    nombres_aprobados: aprobadosData.map(f => f.json.NOMBRE_EDIFICIO).slice(0, 5),\n    nombres_rechazados: rechazadosData.map(f => f.json.NOMBRE_EDIFICIO).slice(0, 5),\n    nombres_alternativos: todasCreaciones.map(a => a.proyecto_alternativo).slice(0, 5),\n    nombres_corregidos: proyectosCorregidos.map(c => c.nombre_edificio).slice(0, 5),\n    nombres_asignados_id: asignacionesExistentes.map(a => `${a.nombre_edificio} -> ID ${a.proyecto_id_existente}`).slice(0, 5)\n  }\n}];"
       },
-      "id": "72b67e5f-c6d6-48d8-800e-a964f988c104",
+      "id": "ce738106-985c-4e8b-8a3c-d4b16d447800",
       "name": "Code: El Auditor",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -480,
-        208
+        -1232,
+        -32
       ]
     },
     {
@@ -155,23 +156,23 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        -240,
-        208
+        -1008,
+        -48
       ],
-      "id": "e4115f2b-bba7-4101-b36f-44de6c6564e6",
+      "id": "1c72462c-f1ae-4285-9d89-08ca07356743",
       "name": "Switch: Decision"
     },
     {
       "parameters": {
-        "jsCode": "// Preparar arrays para PostgreSQL\nconst data = $input.first().json;\n\n// Formato PostgreSQL: \"{1,2,3}\"\nconst pgAprobados = data.ids_aprobados.length > 0 \n  ? `{${data.ids_aprobados.join(',')}}` \n  : '{}';\n  \nconst pgRechazados = data.ids_rechazados.length > 0 \n  ? `{${data.ids_rechazados.join(',')}}` \n  : '{}';\n\nreturn [{\n  p_ids_aprobados: pgAprobados,\n  p_ids_rechazados: pgRechazados,\n  ids_procesados: data.ids_procesados,\n  aprobados: data.aprobados,\n  rechazados: data.rechazados,\n  nombres_aprobados: data.nombres_aprobados,\n  nombres_rechazados: data.nombres_rechazados,\n  // NUEVO: Proyectos alternativos\n  proyectos_alternativos: data.proyectos_alternativos || [],\n  hay_alternativos: data.hay_alternativos || false,\n  nombres_alternativos: data.nombres_alternativos || []\n}];"
+        "jsCode": "// Preparar arrays para PostgreSQL\nconst data = $input.first().json;\n\n// Formato PostgreSQL: \"{1,2,3}\"\nconst pgAprobados = data.ids_aprobados.length > 0\n  ? `{${data.ids_aprobados.join(',')}}`\n  : '{}';\n\nconst pgRechazados = data.ids_rechazados.length > 0\n  ? `{${data.ids_rechazados.join(',')}}`\n  : '{}';\n\nreturn [{\n  json: {\n    p_ids_aprobados: pgAprobados,\n    p_ids_rechazados: pgRechazados,\n    ids_procesados: data.ids_procesados,\n    aprobados: data.aprobados,\n    rechazados: data.rechazados,\n    corregidos_texto: data.corregidos_texto,\n    corregidos_id: data.corregidos_id,\n    creados: data.creados,\n    nombres_aprobados: data.nombres_aprobados,\n    nombres_rechazados: data.nombres_rechazados,\n    // Proyectos alternativos (CREAR + RECHAZAR+ALT)\n    proyectos_alternativos: data.proyectos_alternativos || [],\n    hay_alternativos: data.hay_alternativos || false,\n    nombres_alternativos: data.nombres_alternativos || [],\n    // Corregidos (texto - nombre/GPS)\n    proyectos_corregidos: data.proyectos_corregidos || [],\n    hay_corregidos: data.hay_corregidos || false,\n    nombres_corregidos: data.nombres_corregidos || [],\n    // NUEVO: Asignaciones a proyecto existente (por ID)\n    asignaciones_existentes: data.asignaciones_existentes || [],\n    hay_asignaciones_id: data.hay_asignaciones_id || false,\n    nombres_asignados_id: data.nombres_asignados_id || []\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        0,
-        0
+        -784,
+        -224
       ],
-      "id": "7640432e-aaa7-47bb-8bdc-1bddeaa2fe4a",
+      "id": "1e9c8bc0-31ce-4bfc-8324-4ef4f8d1015d",
       "name": "Code: Preparar RPC"
     },
     {
@@ -203,23 +204,23 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        240,
-        0
+        -560,
+        -224
       ],
-      "id": "f3980520-ea8a-42e2-a6b9-9f254fe4ee37",
+      "id": "adcf65ed-0981-4f95-9624-105acf1fbed9",
       "name": "HTTP: Aplicar Matches (RPC)"
     },
     {
       "parameters": {
-        "jsCode": "// Preparar items para eliminar del Sheet\n// Solo borrar: APROBADOS + RECHAZADOS CON ALTERNATIVO\n// Mantener: RECHAZADOS SIN ALTERNATIVO (para resolver después)\nconst data = $('Code: Preparar RPC').first().json;\n\nconst idsAprobados = data.ids_aprobados || [];\nconst alternativos = data.proyectos_alternativos || [];\nconst idsAlternativos = alternativos.map(a => a.sugerencia_id);\n\n// Combinar: aprobados + rechazados con alternativo\nconst idsABorrar = [...idsAprobados, ...idsAlternativos];\n\nif (idsABorrar.length === 0) {\n  return [{ json: { skip: true } }];\n}\n\n// Crear un item por cada ID a eliminar\nreturn idsABorrar.map(id => ({\n  json: { ID_SUGERENCIA: id.toString() }\n}));"
+        "jsCode": "// Preparar filas para eliminar (orden descendente)\nconst data = $('Code: El Auditor').first().json;\nconst filasEliminar = data.filas_eliminar || [];\n\nif (filasEliminar.length === 0) {\n  return [{ json: { skip: true } }];\n}\n\nreturn filasEliminar.map(rowNum => ({\n  json: { row_number: rowNum }\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        480,
-        0
+        -336,
+        -224
       ],
-      "id": "prep-delete-001",
+      "id": "ae0987b7-fffe-4322-83dc-8c7cc28b22b1",
       "name": "Code: Preparar Delete"
     },
     {
@@ -235,22 +236,15 @@
           "value": "Pendientes_Matching",
           "mode": "name"
         },
-        "filtersUI": {
-          "values": [
-            {
-              "lookupColumn": "ID_SUGERENCIA",
-              "lookupValue": "={{ $json.ID_SUGERENCIA }}"
-            }
-          ]
-        }
+        "startIndex": "={{ $json.row_number }}"
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        700,
-        0
+        -112,
+        -224
       ],
-      "id": "114b145a-55ad-4a6c-944c-a7c6ff4555e9",
+      "id": "d5a91176-5a21-47c3-85c3-e5b439828fd0",
       "name": "Google Sheets: Limpiar Procesados",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -258,61 +252,157 @@
           "name": "Google Sheets account"
         }
       },
-      "notes": "Eliminar filas procesadas del Sheet por ID_SUGERENCIA."
+      "notes": "Eliminar filas procesadas del Sheet por row_number."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "asign-id-check",
+              "leftValue": "={{ $('Code: Preparar RPC').first().json.hay_asignaciones_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        112,
+        -224
+      ],
+      "id": "if-asignaciones-id",
+      "name": "IF: Hay Asignaciones ID?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Code: Preparar RPC').first().json;\nconst asignaciones = data.asignaciones_existentes || [];\nreturn asignaciones.map(a => ({ json: a }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        336,
+        -384
+      ],
+      "id": "split-asignaciones-id",
+      "name": "Code: Split Asignaciones ID"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "{{SLACK_WEBHOOK_SICI}}",
+        "url": "https://chaosoiyoeyjuwtwckix.supabase.co/rest/v1/rpc/asignar_proyecto_existente",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoYW9zb2l5b2V5anV3dHdja2l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5MTM5MTIsImV4cCI6MjA3NDQ4OTkxMn0.MwDhUzK2_CnFtS7XbOSg0BbdNdof9Gtqib8ufpe65wg"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoYW9zb2l5b2V5anV3dHdja2l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5MTM5MTIsImV4cCI6MjA3NDQ4OTkxMn0.MwDhUzK2_CnFtS7XbOSg0BbdNdof9Gtqib8ufpe65wg"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"✅ SICI Matching Supervisor - Sincronización Completada\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"Las decisiones humanas han sido aplicadas a la base de datos.\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*✅ Aprobados:*\\n{{ $('Code: Preparar RPC').first().json.aprobados }} matches\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*❌ Rechazados:*\\n{{ $('Code: Preparar RPC').first().json.rechazados }} sugerencias\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Proyectos aprobados:*\\n{{ $('Code: Preparar RPC').first().json.nombres_aprobados.join(', ') || 'Ninguno' }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*🆕 Proyectos alternativos creados y matcheados:*\\n{{ $('Code: Preparar RPC').first().json.nombres_alternativos.length > 0 ? $('Code: Preparar RPC').first().json.nombres_alternativos.join(', ') : 'Ninguno' }}\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"📂 Ver Bandeja de Matching\",\n            \"emoji\": true\n          },\n          \"url\": \"https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit\"\n        }\n      ]\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"p_sugerencia_id\": {{ $json.sugerencia_id }},\n  \"p_propiedad_id\": {{ $json.propiedad_id }},\n  \"p_proyecto_id\": {{ $json.proyecto_id_existente }}\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        720,
-        0
+        560,
+        -384
       ],
-      "id": "eaffb9bb-7bd1-4b29-b987-d3570b6473fb",
-      "name": "Slack: Sync Completado"
+      "id": "http-asignar-existente",
+      "name": "HTTP: Asignar Proyecto Existente"
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "{{SLACK_WEBHOOK_SICI}}",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"🛑 SICI Matching Supervisor - Sincronización Bloqueada\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Problema Detectado:*\\nAún hay *{{ $json.pendientes }} sugerencias* en estado ⏳ PENDIENTE.\\n\\n❌ No puedo aplicar los matches hasta que decidas qué hacer con ellos.\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*📋 Total en Bandeja:*\\n{{ $json.total_filas }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*⏳ Sin Revisar:*\\n{{ $json.pendientes }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"📂 Ir a Bandeja de Matching\",\n            \"emoji\": true\n          },\n          \"style\": \"danger\",\n          \"url\": \"https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit\"\n        }\n      ]\n    }\n  ]\n}",
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8b720a1f-7675-407e-9185-f9df21d03fa7",
+              "leftValue": "={{ $('Code: Preparar RPC').first().json.hay_corregidos }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
         "options": {}
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
       "position": [
-        0,
-        208
+        336,
+        -224
       ],
-      "id": "05b4076d-3c6a-4676-8a28-004216baa68d",
-      "name": "Slack: Bloqueo"
+      "id": "db9f86aa-afa4-4ee4-8657-df50fcb82c90",
+      "name": "IF: Hay Corregidos?"
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "{{SLACK_WEBHOOK_SICI}}",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"📭 SICI Matching Supervisor - Bandeja Vacía\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"No hay sugerencias para procesar en el Google Sheets.\\n\\nEsto puede significar:\\n• No hubo matches pendientes hoy\\n• Ya fueron procesados anteriormente\"\n      }\n    }\n  ]\n}",
+        "jsCode": "const data = $('Code: Preparar RPC').first().json;\nconst corregidos = data.proyectos_corregidos || [];\nreturn corregidos.map(c => ({ json: c }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        -304
+      ],
+      "id": "de344db8-d49f-4593-a4d9-0a186773734d",
+      "name": "Code: Split Corregidos"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM corregir_proyecto_matching(\n  {{ $json.sugerencia_id }},\n  '{{ $json.nombre_nuevo }}',\n  '{{ $json.gps_nuevo }}'\n)",
         "options": {}
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
       "position": [
-        0,
-        400
+        784,
+        -304
       ],
-      "id": "a3d52f28-e03b-475d-a5c2-227438927eb8",
-      "name": "Slack: Bandeja Vacía"
+      "id": "d0947683-2a83-41c2-a236-bce8bbe2ba8f",
+      "name": "PG: Corregir Proyecto",
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
     },
     {
       "parameters": {
@@ -328,10 +418,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        480,
-        0
+        1008,
+        -224
       ],
-      "id": "alt-check-001",
+      "id": "0fddc4c2-acfc-41fa-ac2e-ca0b1c95f538",
       "name": "IF: Hay Alternativos?"
     },
     {
@@ -341,10 +431,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        720,
-        -80
+        1232,
+        -304
       ],
-      "id": "split-alt-001",
+      "id": "634c4848-a53c-40c2-812e-bcd932568840",
       "name": "Code: Split Alternativos"
     },
     {
@@ -376,50 +466,302 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        960,
-        -80
+        1456,
+        -304
       ],
-      "id": "rpc-alt-001",
+      "id": "08693234-2348-4edd-9d13-ee4558227219",
       "name": "HTTP: Crear Proyecto Alternativo"
     },
     {
       "parameters": {
-        "jsCode": "// Consolidar resultados de proyectos alternativos\nconst resultados = $input.all();\nconst data = $('Code: Preparar RPC').first().json;\n\nconst proyectosCreados = resultados.filter(r => \n  r.json && r.json[0] && r.json[0].proyecto_creado === true\n).length;\n\nreturn [{\n  aprobados: data.aprobados,\n  rechazados: data.rechazados,\n  nombres_aprobados: data.nombres_aprobados,\n  nombres_rechazados: data.nombres_rechazados,\n  proyectos_alternativos_creados: proyectosCreados,\n  nombres_alternativos: data.nombres_alternativos\n}];"
+        "jsCode": "// Consolidar resultados de proyectos alternativos\nconst resultados = $input.all();\nconst data = $('Code: Preparar RPC').first().json;\n\nconst proyectosCreados = resultados.filter(r => \n  r.json && r.json[0] && r.json[0].proyecto_creado === true\n).length;\n\nreturn [{\n  json: {\n    aprobados: data.aprobados,\n    rechazados: data.rechazados,\n    nombres_aprobados: data.nombres_aprobados,\n    nombres_rechazados: data.nombres_rechazados,\n    proyectos_alternativos_creados: proyectosCreados,\n    nombres_alternativos: data.nombres_alternativos\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1200,
-        -80
+        1680,
+        -304
       ],
-      "id": "consolidate-001",
+      "id": "86a76aec-7d46-4b39-96e2-a03ed781f17b",
       "name": "Code: Consolidar Alternativos",
       "executeOnce": true
     },
     {
       "parameters": {
+        "method": "POST",
+        "url": "https://hooks.slack.com/services/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",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"SICI Matching Supervisor - Sync Completado\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"Las decisiones humanas han sido aplicadas a la base de datos.\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Aprobados:*\\n{{ $('Code: Preparar RPC').first().json.aprobados }} matches\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Rechazados:*\\n{{ $('Code: Preparar RPC').first().json.rechazados }} sugerencias\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Corregidos (texto):*\\n{{ $('Code: Preparar RPC').first().json.corregidos_texto || 0 }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Asignados (ID):*\\n{{ $('Code: Preparar RPC').first().json.corregidos_id || 0 }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Proyectos aprobados:*\\n{{ $('Code: Preparar RPC').first().json.nombres_aprobados.join(', ') || 'Ninguno' }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Proyectos creados (CREAR/RECHAZAR+ALT):*\\n{{ $('Code: Preparar RPC').first().json.nombres_alternativos.length > 0 ? $('Code: Preparar RPC').first().json.nombres_alternativos.join(', ') : 'Ninguno' }}\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Asignados a proyecto existente:*\\n{{ $('Code: Preparar RPC').first().json.nombres_asignados_id.length > 0 ? $('Code: Preparar RPC').first().json.nombres_asignados_id.join(', ') : 'Ninguno' }}\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"Ver Bandeja de Matching\",\n            \"emoji\": true\n          },\n          \"url\": \"https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1904,
+        -224
+      ],
+      "id": "a4adf521-8428-4367-b066-4997cb633df6",
+      "name": "Slack: Sync Completado",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hooks.slack.com/services/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",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"SICI Matching Supervisor - Sincronizacion Bloqueada\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Problema Detectado:*\\nAun hay *{{ $json.pendientes }} sugerencias* en estado PENDIENTE.\\n\\nNo puedo aplicar los matches hasta que decidas que hacer con ellos.\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Total en Bandeja:*\\n{{ $json.total_filas }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Sin Revisar:*\\n{{ $json.pendientes }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"Ir a Bandeja de Matching\",\n            \"emoji\": true\n          },\n          \"style\": \"danger\",\n          \"url\": \"https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -784,
+        -32
+      ],
+      "id": "e5301193-2ab2-4cf6-8862-f9c6bd57bcd3",
+      "name": "Slack: Bloqueo"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hooks.slack.com/services/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",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"SICI Matching Supervisor - Bandeja Vacia\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"No hay sugerencias para procesar en el Google Sheets.\\n\\nEsto puede significar:\\n- No hubo matches pendientes hoy\\n- Ya fueron procesados anteriormente\"\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -784,
+        160
+      ],
+      "id": "4ca16f8d-1553-4db9-80b1-9b7219c60a96",
+      "name": "Slack: Bandeja Vacia"
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
-        "query": "=SELECT registrar_ejecucion_workflow(\n  'matching_supervisor',\n  'success',\n  {{ $('Code: El Auditor').first().json.total_filas || 0 }},\n  {{ $('Code: El Auditor').first().json.aprobados || 0 }},\n  0,\n  NULL,\n  '{{ JSON.stringify({ decision: $('Code: El Auditor').first().json.decision, aprobados: $('Code: El Auditor').first().json.aprobados, rechazados: $('Code: El Auditor').first().json.rechazados }) }}'::jsonb\n);",
+        "query": "SELECT\n      id_proyecto_master as \"ID\",\n      nombre_oficial as \"NOMBRE\",\n      id_proyecto_master || ' - ' || nombre_oficial as \"DROPDOWN_VALUE\"\n  FROM proyectos_master\n  WHERE activo = true\n  ORDER BY nombre_oficial\n  LIMIT 500",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        480,
-        304
+        2128,
+        -128
       ],
-      "id": "reg-exec-supervisor-001",
-      "name": "Postgres: Registrar Ejecución",
+      "id": "44646066-8e7b-402d-899a-118cfcf48333",
+      "name": "PG: Obtener Proyectos",
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
           "name": "Supabase - Censo Inmobiliario"
         }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1844478893,
+          "mode": "list",
+          "cachedResultName": " Proyectos_Lista",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit#gid=1844478893"
+        },
+        "clear": "specificRange",
+        "range": "A2:C1000"
       },
-      "executeOnce": true
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2352,
+        -208
+      ],
+      "id": "6726fe60-4cc4-4f5f-86c4-0f704fa5ddd9",
+      "name": "Sheets: Limpiar Lista",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DbMNipx0RBpm2Hhu",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1844478893,
+          "mode": "list",
+          "cachedResultName": " Proyectos_Lista",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ra3-MWhSiaI6ixRg-YX2KlB3rZE_LHzttPdPhzER4Xw/edit#gid=1844478893"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $json.ID }}",
+            "NOMBRE": "={{ $json.NOMBRE }}",
+            "DROPDOWN_VALUE": "={{ $json.DROPDOWN_VALUE }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NOMBRE",
+              "displayName": "NOMBRE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DROPDOWN_VALUE",
+              "displayName": "DROPDOWN_VALUE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2800,
+        -128
+      ],
+      "id": "1471aa1a-768e-4f27-9f03-9eb902c9be9f",
+      "name": "Sheets: Escribir Proyectos",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DbMNipx0RBpm2Hhu",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2576,
+        -128
+      ],
+      "id": "8fb7784a-4e0e-4b18-872c-3068967c6828",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const seen = new Set();\nconst unique = [];\nfor (const item of $input.all()) {\n  const id = item.json.ID;\n  if (!seen.has(id)) {\n    seen.add(id);\n    unique.push(item);\n  }\n}\nreturn unique;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        -208
+      ],
+      "id": "b21cdf67-4c8f-4f73-9780-5bf14b121b06",
+      "name": "Code: Remove Duplicates"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT registrar_ejecucion_workflow('matching_supervisor', 'success', 0, 0, 0, NULL, '{}'::jsonb);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -560,
+        -32
+      ],
+      "id": "8ef04f1d-16f2-45b6-8205-910076395218",
+      "name": "registrar_ejecucion_workflow",
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT registrar_ejecucion_workflow('matching_supervisor', 'success', 0, 0, 0, NULL, '{}'::jsonb);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -560,
+        160
+      ],
+      "id": "db5300ea-335c-4096-9847-258c9df298eb",
+      "name": "registrar_ejecucion_workflow1",
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT registrar_ejecucion_workflow('matching_supervisor', 'success', 0, 0, 0, NULL, '{}'::jsonb);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2128,
+        -320
+      ],
+      "id": "ed6c6582-ab25-47d6-bb98-538282d9837b",
+      "name": "registrar_ejecucion_workflow2",
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
     }
   ],
-  "pinData": {},
   "connections": {
     "Schedule Trigger (8 PM)": {
       "main": [
@@ -483,7 +825,7 @@
         ],
         [
           {
-            "node": "Slack: Bandeja Vacía",
+            "node": "Slack: Bandeja Vacia",
             "type": "main",
             "index": 0
           }
@@ -517,6 +859,97 @@
         [
           {
             "node": "Google Sheets: Limpiar Procesados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets: Limpiar Procesados": {
+      "main": [
+        [
+          {
+            "node": "IF: Hay Asignaciones ID?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Hay Asignaciones ID?": {
+      "main": [
+        [
+          {
+            "node": "Code: Split Asignaciones ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF: Hay Corregidos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Split Asignaciones ID": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Asignar Proyecto Existente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Asignar Proyecto Existente": {
+      "main": [
+        [
+          {
+            "node": "IF: Hay Corregidos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Hay Corregidos?": {
+      "main": [
+        [
+          {
+            "node": "Code: Split Corregidos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF: Hay Alternativos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Split Corregidos": {
+      "main": [
+        [
+          {
+            "node": "PG: Corregir Proyecto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Corregir Proyecto": {
+      "main": [
+        [
+          {
+            "node": "IF: Hay Alternativos?",
             "type": "main",
             "index": 0
           }
@@ -574,22 +1007,16 @@
         ]
       ]
     },
-    "Google Sheets: Limpiar Procesados": {
-      "main": [
-        [
-          {
-            "node": "IF: Hay Alternativos?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Slack: Sync Completado": {
       "main": [
         [
           {
-            "node": "Postgres: Registrar Ejecución",
+            "node": "PG: Obtener Proyectos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "registrar_ejecucion_workflow2",
             "type": "main",
             "index": 0
           }
@@ -600,18 +1027,67 @@
       "main": [
         [
           {
-            "node": "Postgres: Registrar Ejecución",
+            "node": "registrar_ejecucion_workflow",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Slack: Bandeja Vacía": {
+    "Slack: Bandeja Vacia": {
       "main": [
         [
           {
-            "node": "Postgres: Registrar Ejecución",
+            "node": "registrar_ejecucion_workflow1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Obtener Proyectos": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Limpiar Lista",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Sheets: Limpiar Lista": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code: Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Escribir Proyectos",
             "type": "main",
             "index": 0
           }
@@ -619,32 +1095,9 @@
       ]
     }
   },
-  "active": true,
-  "settings": {
-    "executionOrder": "v1",
-    "availableInMCP": false,
-    "timeSavedMode": "fixed",
-    "timezone": "America/La_Paz",
-    "callerPolicy": "workflowsFromSameOwner",
-    "executionTimeout": -1
-  },
-  "versionId": "dbb5e2b0-897b-4315-88af-32204567755b",
+  "pinData": {},
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
-  },
-  "id": "Mbm4R9q0Q5UottI7",
-  "tags": [
-    {
-      "updatedAt": "2025-12-29T14:15:39.110Z",
-      "createdAt": "2025-12-29T14:15:39.110Z",
-      "id": "AbH1OPZVVZ7kwVPA",
-      "name": "SICI - Matching"
-    },
-    {
-      "updatedAt": "2025-12-29T14:15:39.119Z",
-      "createdAt": "2025-12-29T14:15:39.119Z",
-      "id": "3ql4yLkRTKEWjJm1",
-      "name": "Modulo 2"
-    }
-  ]
+  }
 }
