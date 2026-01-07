@@ -5,6 +5,7 @@ config.local.json
 
 # Claude Code
 .claude/
+.claude-sessions/
 
 # Node
 node_modules/
