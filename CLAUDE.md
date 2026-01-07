@@ -143,3 +143,15 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 
 `sici-matching/` contiene funciones SQL que apuntan a tabla deprecada.
 **NO USAR** - Todo migrado a `sici/sql/functions/matching/`.
+
+## Backlog Calidad de Datos (7 Ene 2026)
+
+### Datos Corruptos Detectados
+| ID | Problema | Acción |
+|----|----------|--------|
+| 380 | Spazios Edén $57,153 por 105m² ($544/m²) - precio irrealmente bajo vs $146k de unidades idénticas | Revisar fuente, marcar inactivo o corregir precio |
+
+### Validaciones Pendientes en Pipeline
+- [ ] Agregar validación precio/m² en merge: si < $800 para Equipetrol, flaggear como `requiere_revision`
+- [ ] Filtro `tipo_operacion = 'venta'` en función `buscar_unidades_reales()` (actualmente solo en frontend)
+- [ ] Detectar duplicados por proyecto + área + dormitorios con precios muy diferentes
