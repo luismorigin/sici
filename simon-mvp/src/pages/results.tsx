@@ -62,6 +62,30 @@ export default function ResultsPage() {
     razon: ''
   })
   const [submitted, setSubmitted] = useState(false)
+  const [formErrors, setFormErrors] = useState<{nombre?: string; whatsapp?: string}>({})
+
+  // Validar WhatsApp Bolivia: +591 + 8 dígitos (empieza con 6, 7 u 8)
+  const validateWhatsApp = (phone: string): boolean => {
+    const cleaned = phone.replace(/\s+/g, '').replace(/-/g, '')
+    // Acepta: +5917XXXXXXX, 5917XXXXXXX, 7XXXXXXX
+    const patterns = [
+      /^\+591[678]\d{7}$/,  // +591 + 8 dígitos
+      /^591[678]\d{7}$/,    // 591 + 8 dígitos (sin +)
+      /^[678]\d{7}$/        // Solo 8 dígitos (móvil Bolivia)
+    ]
+    return patterns.some(p => p.test(cleaned))
+  }
+
+  const formatWhatsApp = (phone: string): string => {
+    const cleaned = phone.replace(/\s+/g, '').replace(/-/g, '')
+    if (/^[678]\d{7}$/.test(cleaned)) {
+      return `+591${cleaned}`
+    }
+    if (/^591[678]\d{7}$/.test(cleaned)) {
+      return `+${cleaned}`
+    }
+    return cleaned
+  }
   const [siguienteRango, setSiguienteRango] = useState<SiguienteRangoInfo | null>(null)
   const [presupuestoUsuario, setPresupuestoUsuario] = useState<number>(0)
   const [guiaClaudeAPI, setGuiaClaudeAPI] = useState<GuiaFiduciaria | null>(null)
@@ -321,14 +345,34 @@ export default function ResultsPage() {
   }
 
   const handleSubmitLead = async () => {
-    if (!leadForm.nombre || !leadForm.whatsapp) return
+    // Validaciones
+    const errors: {nombre?: string; whatsapp?: string} = {}
+
+    if (!leadForm.nombre.trim()) {
+      errors.nombre = 'Ingresa tu nombre'
+    } else if (leadForm.nombre.trim().length < 2) {
+      errors.nombre = 'Nombre muy corto'
+    }
+
+    if (!leadForm.whatsapp.trim()) {
+      errors.whatsapp = 'Ingresa tu WhatsApp'
+    } else if (!validateWhatsApp(leadForm.whatsapp)) {
+      errors.whatsapp = 'Formato: 7XXXXXXX o +591 7XXXXXXX'
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      return
+    }
+
+    setFormErrors({})
 
     try {
       if (supabase) {
         // Call registrar_lead_mvp function con datos de Claude
         const { error } = await supabase.rpc('registrar_lead_mvp', {
-          p_nombre: leadForm.nombre,
-          p_whatsapp: leadForm.whatsapp,
+          p_nombre: leadForm.nombre.trim(),
+          p_whatsapp: formatWhatsApp(leadForm.whatsapp),
           p_formulario: formData,
           p_perfil_fiduciario: guiaClaudeAPI?.perfil_fiduciario || null,
           p_guia_fiduciaria: guiaClaudeAPI?.guia_fiduciaria || null,
@@ -596,22 +640,36 @@ export default function ResultsPage() {
                 <input
                   type="text"
                   value={leadForm.nombre}
-                  onChange={e => setLeadForm(prev => ({ ...prev, nombre: e.target.value }))}
+                  onChange={e => {
+                    setLeadForm(prev => ({ ...prev, nombre: e.target.value }))
+                    if (formErrors.nombre) setFormErrors(prev => ({ ...prev, nombre: undefined }))
+                  }}
                   placeholder="Tu nombre"
-                  className="w-full px-4 py-3 bg-neutral-800 rounded-xl border border-neutral-700
-                           focus:outline-none focus:border-white transition-colors"
+                  className={`w-full px-4 py-3 bg-neutral-800 rounded-xl border transition-colors
+                           focus:outline-none focus:border-white
+                           ${formErrors.nombre ? 'border-red-500' : 'border-neutral-700'}`}
                 />
+                {formErrors.nombre && (
+                  <p className="text-red-400 text-sm mt-1">{formErrors.nombre}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm text-neutral-400 mb-2">WhatsApp</label>
                 <input
                   type="tel"
                   value={leadForm.whatsapp}
-                  onChange={e => setLeadForm(prev => ({ ...prev, whatsapp: e.target.value }))}
-                  placeholder="+591 7XXXXXXX"
-                  className="w-full px-4 py-3 bg-neutral-800 rounded-xl border border-neutral-700
-                           focus:outline-none focus:border-white transition-colors"
+                  onChange={e => {
+                    setLeadForm(prev => ({ ...prev, whatsapp: e.target.value }))
+                    if (formErrors.whatsapp) setFormErrors(prev => ({ ...prev, whatsapp: undefined }))
+                  }}
+                  placeholder="7XXXXXXX o +591 7XXXXXXX"
+                  className={`w-full px-4 py-3 bg-neutral-800 rounded-xl border transition-colors
+                           focus:outline-none focus:border-white
+                           ${formErrors.whatsapp ? 'border-red-500' : 'border-neutral-700'}`}
                 />
+                {formErrors.whatsapp && (
+                  <p className="text-red-400 text-sm mt-1">{formErrors.whatsapp}</p>
+                )}
               </div>
             </div>
 
@@ -625,10 +683,8 @@ export default function ResultsPage() {
 
             <button
               onClick={handleSubmitLead}
-              disabled={!leadForm.nombre || !leadForm.whatsapp}
               className="w-full py-4 bg-white text-neutral-900 font-semibold rounded-xl
-                        transition-all hover:bg-neutral-100
-                        disabled:opacity-50 disabled:cursor-not-allowed"
+                        transition-all hover:bg-neutral-100 active:scale-[0.98]"
             >
               Quiero que me contacten
             </button>
