@@ -1,0 +1,63 @@
+{
+  "perfil_fiduciario": {
+    "horizonte_uso": "Largo (10-20 años). Pareja con hijos pequeños buscando estabilidad. Indicaron que planean quedarse 5-10 años y la familia podría crecer.",
+    "rol_propiedad": "Vivienda principal. Buscan un hogar para criar a sus hijos, no es inversión ni transición.",
+    "tolerancia_error": "Baja. Con hijos y presupuesto ajustado de $120k, un error significaría años de incomodidad o pérdida financiera importante.",
+    "capacidad_friccion": "Media-baja. Trabajan en Equipetrol, necesitan cercanía a colegio. Ruido e inseguridad son dealbreakers declarados. No pueden absorber mucha fricción logística diaria.",
+    "estado_emocional": "ALERTA: Cansancio declarado. Llevan 6-12 meses buscando y lo marcaron explícitamente. Riesgo de decisión apresurada por agotamiento.",
+    "riesgo_principal": "Cerrar por cansancio. Después de casi un año buscando, el mayor peligro es aceptar algo que no cumple sus criterios solo para 'terminar con esto'."
+  },
+  "guia_fiduciaria": {
+    "lectura_momento": "Llevas casi un año buscando con tu pareja y tus hijos. Eso cansa. Has descartado opciones por precio alto y zonas lejanas - eso es bueno, significa que tenés criterio claro. Pero el cansancio que declaraste es una señal de alerta: no dejes que el agotamiento tome la decisión por vos.",
+    "objetivo_dominante": "Encontrar un hogar seguro y con piscina en Equipetrol Norte o Sirari, cerca del trabajo, donde tus hijos puedan crecer los próximos 10 años.",
+    "innegociables": [
+      "Piscina - lo marcaste como innegociable, no lo negocies",
+      "Seguridad 24h - con hijos pequeños, esto no es opcional",
+      "Máximo 20 min al trabajo - tu calidad de vida diaria depende de esto"
+    ],
+    "tradeoffs_aceptados": [
+      "Menos metros por mejor ubicación - indicaste que priorizás ubicación",
+      "Menos amenities por mejor precio - aceptable si mantiene piscina y seguridad"
+    ],
+    "riesgos_evitar": [
+      "Aceptar una propiedad sin piscina 'porque tiene otras cosas' - ya lo definiste como innegociable",
+      "Comprar en zona que agregue más de 20 min de traslado - la fricción diaria destruye calidad de vida",
+      "Decidir por cansancio después de ver muchas opciones seguidas",
+      "Estirar el presupuesto más allá de $120k - tu reserva de $15k es para emergencias, no para completar"
+    ],
+    "tipo_propiedad": "Departamento de 2 dormitorios, 70-85m², en edificio con piscina y seguridad 24h, en Equipetrol Norte o Sirari. Precio ideal: $100-120k. Evitar plantas bajas por seguridad y ruido.",
+    "que_no_hacer": [
+      "No visites más de 3 propiedades en un día - el cansancio nubla el juicio",
+      "No decidas el mismo día que visitás - dormí una noche antes de comprometerte",
+      "No uses la reserva de $15k para cubrir diferencia de precio",
+      "No consideres Villa Brigida ni Faremafu - no las seleccionaste y quedan más lejos"
+    ],
+    "proximo_paso": "Antes de ver más propiedades, tomate una semana de pausa. Llevas meses buscando y el cansancio es real. Volvé con energía renovada y criterio fresco."
+  },
+  "alertas": [
+    {
+      "tipo": "roja",
+      "mensaje": "Declaraste cansancio después de 6-12 meses buscando. Este es el momento más peligroso para decidir.",
+      "accion_sugerida": "Pausa de 7 días antes de cualquier decisión. Si una propiedad 'se va', aparecerá otra."
+    },
+    {
+      "tipo": "amarilla",
+      "mensaje": "Tu presupuesto de $120k está en el límite bajo para 2 dorms con piscina en Equipetrol Norte. Hay opciones, pero no abundan.",
+      "accion_sugerida": "Sé realista: quizás encuentres menos de 5 opciones que cumplan TODO. Eso está bien."
+    },
+    {
+      "tipo": "verde",
+      "mensaje": "Tenés claridad sobre tus innegociables y una reserva de emergencia separada. Eso te pone en mejor posición que la mayoría.",
+      "accion_sugerida": "Mantené esa disciplina. La reserva NO es para completar precio."
+    }
+  ],
+  "mbf_ready": {
+    "precio_max": 120000,
+    "precio_min": 80000,
+    "dormitorios_min": 2,
+    "dormitorios_max": 3,
+    "zonas": ["Equipetrol Norte", "Sirari"],
+    "amenities_requeridos": ["piscina", "seguridad"],
+    "amenities_deseados": ["areas_verdes", "gimnasio"]
+  }
+}

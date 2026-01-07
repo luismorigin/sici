@@ -1,9 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import Anthropic from '@anthropic-ai/sdk'
+import mockGuiaFiduciaria from '@/test/mockGuiaFiduciaria.json'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
+
+// Modo mock para testing sin gastar tokens
+const MOCK_MODE = process.env.MOCK_CLAUDE === 'true'
 
 // Tipos para la respuesta según METODOLOGIA_FIDUCIARIA
 export interface GuiaFiduciariaResponse {
@@ -130,6 +134,12 @@ export default async function handler(
 
     if (!formulario) {
       return res.status(400).json({ error: 'Formulario requerido' })
+    }
+
+    // Modo mock para testing sin gastar tokens
+    if (MOCK_MODE) {
+      console.log('[MOCK MODE] Retornando guía fiduciaria de prueba')
+      return res.status(200).json(mockGuiaFiduciaria)
     }
 
     const prompt = PROMPT_GUIA_FIDUCIARIA.replace(

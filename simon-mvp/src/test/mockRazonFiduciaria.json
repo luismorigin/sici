@@ -1,0 +1,25 @@
+{
+  "propiedades": [
+    {
+      "id": 450,
+      "razon_fiduciaria": "Cumple tus 2 innegociables: piscina confirmada y seguridad 24h. Está en Equipetrol Norte que seleccionaste. El precio de $115,000 te deja $5k de margen sobre tu tope de $120k - no uses tu reserva de emergencia para esto.",
+      "score": 9,
+      "encaja": true,
+      "alerta": null
+    },
+    {
+      "id": 452,
+      "razon_fiduciaria": "Tiene piscina y seguridad, tus innegociables. Ubicado en Sirari, tu segunda opción de zona. A $108,000 es 10% bajo tu presupuesto. Verificá distancia exacta a tu trabajo en Equipetrol - dijiste máximo 20 minutos.",
+      "score": 8,
+      "encaja": true,
+      "alerta": null
+    },
+    {
+      "id": 453,
+      "razon_fiduciaria": "ALERTA: No tiene piscina, que marcaste como innegociable. Aunque tiene buen precio ($95k) y está en Equipetrol Norte, viola tu criterio #1. Solo considerala si decidís flexibilizar ese innegociable.",
+      "score": 4,
+      "encaja": false,
+      "alerta": "Viola innegociable: sin piscina"
+    }
+  ]
+}

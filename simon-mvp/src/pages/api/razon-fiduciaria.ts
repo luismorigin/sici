@@ -1,9 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import Anthropic from '@anthropic-ai/sdk'
+import mockRazonFiduciaria from '@/test/mockRazonFiduciaria.json'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
+
+// Modo mock para testing sin gastar tokens
+const MOCK_MODE = process.env.MOCK_CLAUDE === 'true'
 
 export interface PropiedadInput {
   id: number
@@ -89,6 +93,19 @@ export default async function handler(
 
     if (!perfil || !propiedades || propiedades.length === 0) {
       return res.status(400).json({ error: 'Perfil y propiedades requeridos' })
+    }
+
+    // Modo mock para testing sin gastar tokens
+    if (MOCK_MODE) {
+      console.log('[MOCK MODE] Retornando razones fiduciarias de prueba')
+      // Mapear IDs reales a mock (usar los primeros 3 del mock)
+      const mockResponse = {
+        propiedades: propiedades.slice(0, 3).map((p: any, i: number) => ({
+          ...mockRazonFiduciaria.propiedades[i % 3],
+          id: p.id  // Usar el ID real de la propiedad
+        }))
+      }
+      return res.status(200).json(mockResponse)
     }
 
     const prompt = PROMPT_RAZON_FIDUCIARIA

@@ -1,8 +1,30 @@
 import { motion } from 'framer-motion'
 import Head from 'next/head'
-import Link from 'next/link'
+import { useRouter } from 'next/router'
+import testFormulario from '@/test/testFormulario.json'
+
+const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === 'true'
 
 export default function Landing() {
+  const router = useRouter()
+
+  const handleLoadTestProfile = () => {
+    // Cargar datos de prueba
+    const formData = {
+      tipo_formulario: 'vivienda_propia',
+      version: '1.0',
+      fecha: new Date().toISOString(),
+      tiempo_segundos: testFormulario.tiempo_segundos,
+      respuestas: testFormulario.respuestas
+    }
+
+    localStorage.setItem('simon_form_data', JSON.stringify(formData))
+    localStorage.setItem('simon_lead_id', '999')
+    localStorage.setItem('simon_lead_nombre', 'Usuario Prueba')
+
+    router.push('/results')
+  }
+
   return (
     <>
       <Head>
@@ -49,9 +71,14 @@ export default function Landing() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.5 }}
+          className="flex flex-col items-center gap-4"
         >
-          <Link href="/form">
-            <button className="btn-primary text-lg px-12 py-5 rounded-full
+          <button
+            onClick={() => {
+              localStorage.clear()
+              router.push('/contact')
+            }}
+            className="btn-primary text-lg px-12 py-5 rounded-full
                              flex items-center gap-3 group">
               Empezar
               <svg
@@ -68,7 +95,16 @@ export default function Landing() {
                 />
               </svg>
             </button>
-          </Link>
+
+          {/* Dev mode button */}
+          {DEV_MODE && (
+            <button
+              onClick={handleLoadTestProfile}
+              className="text-sm text-neutral-400 hover:text-neutral-600 underline"
+            >
+              [DEV] Cargar perfil de prueba
+            </button>
+          )}
         </motion.div>
 
         {/* Trust badges */}

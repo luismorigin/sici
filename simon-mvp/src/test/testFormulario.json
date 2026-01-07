@@ -1,0 +1,47 @@
+{
+  "respuestas": {
+    "A1": "pareja_hijos",
+    "A2": 2,
+    "A3": "5_10",
+    "A4": true,
+
+    "B1": "6_12_meses",
+    "B2": "5_10",
+    "B3": ["precio_alto", "zonas_lejos"],
+    "B4": "cansado",
+
+    "C1": 120000,
+    "C2": "contado_parcial",
+    "C3": 800,
+    "C4": "estable",
+    "C5": 15000,
+
+    "D1": ["equipetrol_norte_norte", "sirari"],
+    "D2": "equipetrol",
+    "D3": 20,
+    "D4": "colegio_cercano",
+
+    "E1": "2",
+    "E2": 70,
+    "E3": "departamento",
+    "E4": ["piscina", "seguridad", "areas_verdes"],
+    "E5": ["piscina", "seguridad"],
+
+    "F1": "5_10_anos",
+    "F2": "probable_crecer",
+    "F3": "estabilidad",
+
+    "G1": ["metros_por_ubicacion", "amenities_por_precio"],
+    "G2": "ubicacion",
+    "G3": false,
+
+    "H1": "moderada",
+    "H2": false,
+    "H3": "tranquilo",
+    "H4": ["ruido", "inseguridad"],
+
+    "I1": ["piscina", "seguridad", "cerca_trabajo"],
+    "I2": true
+  },
+  "tiempo_segundos": 847
+}

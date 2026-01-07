@@ -63,46 +63,33 @@ export default function ResultsPage() {
   const [formData, setFormData] = useState<FormData | null>(null)
   const [properties, setProperties] = useState<Property[]>([])
   const [selectedProperty, setSelectedProperty] = useState<number | null>(null)
-  const [leadForm, setLeadForm] = useState({
-    nombre: '',
-    whatsapp: '',
-    razon: ''
-  })
   const [submitted, setSubmitted] = useState(false)
-  const [formErrors, setFormErrors] = useState<{nombre?: string; whatsapp?: string}>({})
+  const [submitting, setSubmitting] = useState(false)
+  const [leadId, setLeadId] = useState<number | null>(null)
+  const [leadNombre, setLeadNombre] = useState<string>('')
 
-  // Validar WhatsApp Bolivia: +591 + 8 dígitos (empieza con 6, 7 u 8)
-  const validateWhatsApp = (phone: string): boolean => {
-    const cleaned = phone.replace(/\s+/g, '').replace(/-/g, '')
-    // Acepta: +5917XXXXXXX, 5917XXXXXXX, 7XXXXXXX
-    const patterns = [
-      /^\+591[678]\d{7}$/,  // +591 + 8 dígitos
-      /^591[678]\d{7}$/,    // 591 + 8 dígitos (sin +)
-      /^[678]\d{7}$/        // Solo 8 dígitos (móvil Bolivia)
-    ]
-    return patterns.some(p => p.test(cleaned))
-  }
-
-  const formatWhatsApp = (phone: string): string => {
-    const cleaned = phone.replace(/\s+/g, '').replace(/-/g, '')
-    if (/^[678]\d{7}$/.test(cleaned)) {
-      return `+591${cleaned}`
-    }
-    if (/^591[678]\d{7}$/.test(cleaned)) {
-      return `+${cleaned}`
-    }
-    return cleaned
-  }
   const [siguienteRango, setSiguienteRango] = useState<SiguienteRangoInfo | null>(null)
   const [presupuestoUsuario, setPresupuestoUsuario] = useState<number>(0)
   const [guiaClaudeAPI, setGuiaClaudeAPI] = useState<GuiaFiduciaria | null>(null)
   const [loadingGuia, setLoadingGuia] = useState(true)
 
   useEffect(() => {
+    // Verificar lead_id
+    const storedLeadId = localStorage.getItem('simon_lead_id')
+    const storedNombre = localStorage.getItem('simon_lead_nombre')
+
+    if (!storedLeadId) {
+      router.push('/contact')
+      return
+    }
+
+    setLeadId(parseInt(storedLeadId))
+    setLeadNombre(storedNombre || '')
+
     // Load form data from localStorage
     const data = localStorage.getItem('simon_form_data')
     if (!data) {
-      router.push('/')
+      router.push('/form')
       return
     }
 
@@ -361,56 +348,59 @@ export default function ResultsPage() {
     ]
   }
 
-  const handleSubmitLead = async () => {
-    // Validaciones
-    const errors: {nombre?: string; whatsapp?: string} = {}
+  const handlePropertyInterest = async (propertyId: number) => {
+    if (!leadId || submitting) return
 
-    if (!leadForm.nombre.trim()) {
-      errors.nombre = 'Ingresa tu nombre'
-    } else if (leadForm.nombre.trim().length < 2) {
-      errors.nombre = 'Nombre muy corto'
-    }
-
-    if (!leadForm.whatsapp.trim()) {
-      errors.whatsapp = 'Ingresa tu WhatsApp'
-    } else if (!validateWhatsApp(leadForm.whatsapp)) {
-      errors.whatsapp = 'Formato: 7XXXXXXX o +591 7XXXXXXX'
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors)
-      return
-    }
-
-    setFormErrors({})
+    setSubmitting(true)
+    setSelectedProperty(propertyId)
 
     try {
-      if (supabase) {
-        // Call registrar_lead_mvp function con datos de Claude
-        const { error } = await supabase.rpc('registrar_lead_mvp', {
-          p_nombre: leadForm.nombre.trim(),
-          p_whatsapp: formatWhatsApp(leadForm.whatsapp),
-          p_formulario: formData,
-          p_perfil_fiduciario: guiaClaudeAPI?.perfil_fiduciario || null,
-          p_guia_fiduciaria: guiaClaudeAPI?.guia_fiduciaria || null,
-          p_alertas: guiaClaudeAPI?.alertas || null,
-          p_mbf_ready: guiaClaudeAPI?.mbf_ready || null,
-          p_propiedades_mostradas: properties.map(p => p.id),
-          p_propiedad_interes: selectedProperty,
-          p_tiempo_segundos: formData?.tiempo_segundos
+      // Primero guardar guía fiduciaria en el lead
+      await supabase.rpc('confirmar_y_generar_guia', {
+        p_lead_id: leadId,
+        p_perfil_fiduciario: guiaClaudeAPI?.perfil_fiduciario || null,
+        p_guia_fiduciaria: guiaClaudeAPI?.guia_fiduciaria || null,
+        p_alertas: guiaClaudeAPI?.alertas || null,
+        p_mbf_ready: guiaClaudeAPI?.mbf_ready || null,
+        p_propiedades_mostradas: properties.map(p => p.id)
+      })
+
+      // Registrar interés en la propiedad
+      const { data, error } = await supabase.rpc('registrar_interes_propiedad', {
+        p_lead_id: leadId,
+        p_propiedad_id: propertyId
+      })
+
+      if (error) throw error
+
+      // Notificar a Slack
+      const property = properties.find(p => p.id === propertyId)
+      fetch('/api/notify-slack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'property_interest',
+          leadId,
+          data: {
+            nombre: leadNombre,
+            whatsapp: data?.whatsapp || '',
+            proyecto: property?.nombre_proyecto || '',
+            propiedad_id: propertyId
+          }
         })
-
-        if (error) throw error
-      }
+      }).catch(() => {})
 
       setSubmitted(true)
 
-      // Clear localStorage
+      // Limpiar localStorage
       localStorage.removeItem('simon_form_data')
-    } catch (error) {
-      console.error('Error submitting lead:', error)
-      // Still show success for MVP
-      setSubmitted(true)
+      localStorage.removeItem('simon_lead_id')
+      localStorage.removeItem('simon_lead_nombre')
+
+    } catch (error: any) {
+      console.error('Error registrando interés:', error)
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -703,72 +693,54 @@ export default function ResultsPage() {
             </div>
           </motion.section>
 
-          {/* Lead capture */}
+          {/* Property interest selection */}
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
             className="mt-12 bg-neutral-900 text-white rounded-3xl p-8"
           >
-            <h2 className="text-2xl font-bold mb-2">Te interesa alguna?</h2>
-            <p className="text-neutral-400 mb-8">
-              Un asesor verificara la propiedad y te contactara en menos de 24h.
+            <h2 className="text-2xl font-bold mb-2">
+              {leadNombre ? `${leadNombre.split(' ')[0]}, te` : 'Te'} interesa alguna?
+            </h2>
+            <p className="text-neutral-400 mb-6">
+              Selecciona una propiedad y te contactaremos por WhatsApp en menos de 24h.
             </p>
 
-            <div className="grid md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm text-neutral-400 mb-2">Nombre</label>
-                <input
-                  type="text"
-                  value={leadForm.nombre}
-                  onChange={e => {
-                    setLeadForm(prev => ({ ...prev, nombre: e.target.value }))
-                    if (formErrors.nombre) setFormErrors(prev => ({ ...prev, nombre: undefined }))
-                  }}
-                  placeholder="Tu nombre"
-                  className={`w-full px-4 py-3 bg-neutral-800 rounded-xl border transition-colors
-                           focus:outline-none focus:border-white
-                           ${formErrors.nombre ? 'border-red-500' : 'border-neutral-700'}`}
-                />
-                {formErrors.nombre && (
-                  <p className="text-red-400 text-sm mt-1">{formErrors.nombre}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm text-neutral-400 mb-2">WhatsApp</label>
-                <input
-                  type="tel"
-                  value={leadForm.whatsapp}
-                  onChange={e => {
-                    setLeadForm(prev => ({ ...prev, whatsapp: e.target.value }))
-                    if (formErrors.whatsapp) setFormErrors(prev => ({ ...prev, whatsapp: undefined }))
-                  }}
-                  placeholder="7XXXXXXX o +591 7XXXXXXX"
-                  className={`w-full px-4 py-3 bg-neutral-800 rounded-xl border transition-colors
-                           focus:outline-none focus:border-white
-                           ${formErrors.whatsapp ? 'border-red-500' : 'border-neutral-700'}`}
-                />
-                {formErrors.whatsapp && (
-                  <p className="text-red-400 text-sm mt-1">{formErrors.whatsapp}</p>
-                )}
-              </div>
+            <div className="space-y-3">
+              {properties.map((property) => (
+                <button
+                  key={property.id}
+                  onClick={() => handlePropertyInterest(property.id)}
+                  disabled={submitting}
+                  className={`w-full p-4 rounded-xl border-2 transition-all text-left
+                             flex items-center justify-between
+                             ${selectedProperty === property.id && submitting
+                               ? 'border-white bg-white/10'
+                               : 'border-neutral-700 hover:border-neutral-500 hover:bg-neutral-800'
+                             }
+                             ${submitting ? 'cursor-not-allowed opacity-70' : ''}`}
+                >
+                  <div>
+                    <p className="font-semibold">{property.nombre_proyecto}</p>
+                    <p className="text-sm text-neutral-400">
+                      {property.zona} - ${property.precio_usd.toLocaleString()}
+                    </p>
+                  </div>
+                  {selectedProperty === property.id && submitting ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-5 h-5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  )}
+                </button>
+              ))}
             </div>
 
-            {selectedProperty && (
-              <div className="mb-6">
-                <label className="block text-sm text-neutral-400 mb-2">
-                  Seleccionaste: {properties.find(p => p.id === selectedProperty)?.nombre_proyecto}
-                </label>
-              </div>
-            )}
-
-            <button
-              onClick={handleSubmitLead}
-              className="w-full py-4 bg-white text-neutral-900 font-semibold rounded-xl
-                        transition-all hover:bg-neutral-100 active:scale-[0.98]"
-            >
-              Quiero que me contacten
-            </button>
+            <p className="text-neutral-500 text-sm mt-6 text-center">
+              Ya tenemos tu contacto guardado de cuando empezaste.
+            </p>
           </motion.section>
         </div>
       </main>

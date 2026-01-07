@@ -1,15 +1,39 @@
-import { useState, useCallback } from 'react'
-import { questions, Question } from '@/data/formQuestions'
+import { useState, useCallback, useEffect } from 'react'
+import { questions, Question, sections } from '@/data/formQuestions'
 
 export interface FormState {
   [questionId: string]: any
 }
 
-export function useForm() {
+export function useForm(initialSection?: string) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<FormState>({})
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
   const [startTime] = useState(Date.now())
+  const [previousSection, setPreviousSection] = useState<string | null>(null)
+
+  // Restaurar respuestas guardadas de localStorage al montar
+  useEffect(() => {
+    const saved = localStorage.getItem('simon_form_data')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (parsed.respuestas) {
+          setAnswers(parsed.respuestas)
+        }
+      } catch (e) {
+        console.error('Error parsing saved form data:', e)
+      }
+    }
+
+    // Si hay sección inicial, navegar a ella
+    if (initialSection) {
+      const firstQuestionIndex = questions.findIndex(q => q.section === initialSection)
+      if (firstQuestionIndex >= 0) {
+        setCurrentIndex(firstQuestionIndex)
+      }
+    }
+  }, [initialSection])
 
   const currentQuestion = questions[currentIndex]
   const isFirstQuestion = currentIndex === 0
@@ -113,6 +137,57 @@ export function useForm() {
     }
   }, [answers, getElapsedSeconds])
 
+  // Get current section
+  const getCurrentSection = useCallback(() => {
+    return currentQuestion.section
+  }, [currentQuestion])
+
+  // Get section info
+  const getSectionInfo = useCallback((sectionId: string) => {
+    return sections.find(s => s.id === sectionId)
+  }, [])
+
+  // Get answers for a specific section
+  const getSectionAnswers = useCallback((sectionId: string) => {
+    const sectionQuestions = questions.filter(q => q.section === sectionId)
+    const sectionAnswers: FormState = {}
+    sectionQuestions.forEach(q => {
+      if (answers[q.id] !== undefined) {
+        sectionAnswers[q.id] = answers[q.id]
+      }
+    })
+    return sectionAnswers
+  }, [answers])
+
+  // Check if section changed (for triggering saves)
+  const checkSectionChange = useCallback(() => {
+    const currentSec = currentQuestion.section
+    if (previousSection && previousSection !== currentSec) {
+      const changedFrom = previousSection
+      setPreviousSection(currentSec)
+      return changedFrom // Return the section that was just completed
+    }
+    setPreviousSection(currentSec)
+    return null
+  }, [currentQuestion.section, previousSection])
+
+  // Go to specific section (first question of that section)
+  const goToSection = useCallback((sectionId: string) => {
+    const firstQuestionIndex = questions.findIndex(q => q.section === sectionId)
+    if (firstQuestionIndex >= 0) {
+      setDirection('forward')
+      setCurrentIndex(firstQuestionIndex)
+      return true
+    }
+    return false
+  }, [])
+
+  // Save current progress to localStorage
+  const saveProgress = useCallback(() => {
+    const formData = buildFormData()
+    localStorage.setItem('simon_form_data', JSON.stringify(formData))
+  }, [buildFormData])
+
   return {
     currentQuestion,
     currentIndex,
@@ -126,6 +201,14 @@ export function useForm() {
     next,
     previous,
     getElapsedSeconds,
-    buildFormData
+    buildFormData,
+    // Nuevas funciones para el flujo refactorizado
+    getCurrentSection,
+    getSectionInfo,
+    getSectionAnswers,
+    checkSectionChange,
+    goToSection,
+    saveProgress,
+    sections
   }
 }
