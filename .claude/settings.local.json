@@ -3,7 +3,12 @@
     "allow": [
       "mcp__postgres-sici__pg_manage_schema",
       "mcp__postgres-sici__pg_execute_query",
-      "mcp__postgres-sici__pg_manage_constraints"
+      "mcp__postgres-sici__pg_manage_constraints",
+      "Bash(git mv:*)",
+      "Bash(cd:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
