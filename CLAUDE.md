@@ -47,6 +47,8 @@ Usuario `claude_readonly` tiene permisos SELECT en todas las tablas.
 | Spec Auditoría | `docs/modulo_2/AUDITORIA_DIARIA_SPEC.md` |
 | Spec Tracking | `docs/modulo_2/WORKFLOW_TRACKING_SPEC.md` |
 | Spec TC Dinámico | `docs/modulo_2/TC_DINAMICO_BINANCE_SPEC.md` |
+| Knowledge Graph Plan | `docs/planning/KNOWLEDGE_GRAPH_VALIDATED_PLAN.md` |
+| Knowledge Graph Design | `docs/planning/SICI_KNOWLEDGE_GRAPH_DESIGN.md` |
 
 ## Estructura Clave
 
@@ -105,7 +107,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-017)
+## Migraciones SQL (001-019)
 
 | # | Archivo | Propósito | Estado |
 |---|---------|-----------|--------|
@@ -126,6 +128,8 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 015 | excluido_operacion | Status para alquiler/anticrético | ✅ |
 | 016 | limpieza_sky_properties | Auditoría Sky + corrección GPS/duplicados | ✅ |
 | 017 | mejoras_matching_system | FK formal, blacklist, detección duplicados | ⏳ |
+| 018 | asignar_proyecto_existente | RPC asignar proyecto existente | ⏳ |
+| 019 | knowledge_graph_mvp | Query Layer: buscar_unidades_reales(), v_amenities_proyecto | ⏳ |
 
 ## Repo Legacy
 
