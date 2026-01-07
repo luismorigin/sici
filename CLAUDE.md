@@ -137,7 +137,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 016 | limpieza_sky_properties | Auditoría Sky + corrección GPS/duplicados | ✅ |
 | 017 | mejoras_matching_system | FK formal, blacklist, detección duplicados | ⏳ |
 | 018 | asignar_proyecto_existente | RPC asignar proyecto existente | ⏳ |
-| 019 | knowledge_graph_mvp | Query Layer: buscar_unidades_reales(), v_amenities_proyecto | ⏳ |
+| 019 | knowledge_graph_mvp | Query Layer: buscar_unidades_reales(), v_amenities_proyecto | ✅ |
 
 ## Repo Legacy
 
