@@ -5,31 +5,35 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
-// Tipos para la respuesta
+// Tipos para la respuesta según METODOLOGIA_FIDUCIARIA
 export interface GuiaFiduciariaResponse {
+  // PERFIL FIDUCIARIO: 6 ejes (radiografía de decisión)
   perfil_fiduciario: {
-    situacion_actual: string
-    capacidad_financiera: string
-    horizonte_temporal: string
-    tolerancia_riesgo: string
-    flexibilidad: string
-    estado_emocional: string
+    horizonte_uso: string           // 1. corto (1-3 años), medio (3-7), largo (10-20)
+    rol_propiedad: string           // 2. vivienda principal, transición vital, inversión patrimonial
+    tolerancia_error: string        // 3. baja (no puede equivocarse), media, alta
+    capacidad_friccion: string      // 4. tiempo, logística, ruido, estrés financiero
+    estado_emocional: string        // 5. cansancio, presión, urgencia, ilusión, miedo
+    riesgo_principal: string        // 6. cerrar por cansancio, racionalizar, sobreestimar liquidez
   }
+  // GUÍA FIDUCIARIA: 8 componentes (constitución de decisión)
   guia_fiduciaria: {
-    lectura_situacion: string
-    validacion_presupuesto: string
-    alertas_detectadas: string[]
-    recomendacion_principal: string
-    que_priorizar: string[]
-    que_evitar: string[]
-    pregunta_clave: string
-    mensaje_final: string
+    lectura_momento: string         // 1. Lectura del momento actual
+    objetivo_dominante: string      // 2. Objetivo dominante
+    innegociables: string[]         // 3. Prioridades e innegociables (máx 3)
+    tradeoffs_aceptados: string[]   // 4. Trade-offs conscientes
+    riesgos_evitar: string[]        // 5. Riesgos a evitar
+    tipo_propiedad: string          // 6. Qué tipo de propiedad tiene sentido
+    que_no_hacer: string[]          // 7. Qué NO hacer ahora
+    proximo_paso: string            // 8. Próximo paso inteligente
   }
+  // Alertas con niveles de urgencia
   alertas: Array<{
     tipo: 'roja' | 'amarilla' | 'verde'
     mensaje: string
     accion_sugerida: string
   }>
+  // Filtros listos para MBF (Motor de Búsqueda Fiduciario)
   mbf_ready: {
     precio_max: number
     precio_min?: number
@@ -41,63 +45,77 @@ export interface GuiaFiduciariaResponse {
   }
 }
 
-const PROMPT_GUIA_FIDUCIARIA = `Eres Simón, asesor fiduciario inmobiliario especializado en Santa Cruz, Bolivia.
+const PROMPT_GUIA_FIDUCIARIA = `Eres Simón, sistema fiduciario de acompañamiento decisional inmobiliario.
 
-Tu rol es analizar las respuestas de un formulario de búsqueda de vivienda y generar una guía fiduciaria personalizada que ayude al usuario a tomar una decisión informada, sin presiones comerciales.
+Tu rol NO es vender ni recomendar. Tu rol es PROTEGER al usuario de malas decisiones.
+Actúas como si su patrimonio, tiempo y tranquilidad fueran tuyos.
 
-CONTEXTO IMPORTANTE:
+PRINCIPIO CENTRAL:
+"Si una respuesta ayuda a cerrar pero daña la coherencia, está prohibida."
+
+CONTEXTO MERCADO:
 - Zona: Equipetrol y microzonas (Sirari, Villa Brigida, Faremafu, Equipetrol Norte)
-- Mercado: Preventa y proyectos nuevos
 - Precio promedio: $1,200-1,800 USD/m²
-- Usuarios: Familias bolivianas clase media-alta buscando vivienda propia
+- Usuarios: Familias bolivianas clase media-alta
 
 Dado este formulario completado:
 {formulario_json}
 
-Genera un JSON con esta estructura exacta:
+Genera un JSON con la estructura del PERFIL FIDUCIARIO (6 ejes) y GUÍA FIDUCIARIA (8 componentes):
 
 {
   "perfil_fiduciario": {
-    "situacion_actual": "Descripción breve de su situación (ej: 'Pareja joven con hijo, actualmente alquila')",
-    "capacidad_financiera": "Análisis de su capacidad real (ej: 'Presupuesto realista para la zona')",
-    "horizonte_temporal": "Cuánto tiempo planean quedarse (ej: '5-10 años, familia en crecimiento')",
-    "tolerancia_riesgo": "Nivel de riesgo que pueden asumir (ej: 'Conservador, prioriza seguridad')",
-    "flexibilidad": "Qué tan flexibles son en sus criterios (ej: 'Flexible en zona, rígido en dormitorios')",
-    "estado_emocional": "Estado emocional detectado (ej: 'Cansado de buscar, riesgo de decisión apresurada')"
+    "horizonte_uso": "corto (1-3 años) | medio (3-7 años) | largo (10-20 años) - Explicar por qué",
+    "rol_propiedad": "vivienda principal | transición vital | inversión patrimonial - Basado en sus respuestas",
+    "tolerancia_error": "baja (no puede equivocarse) | media | alta - Qué pasa si se equivoca",
+    "capacidad_friccion": "Evaluar: tiempo disponible, tolerancia a logística, estrés financiero que puede absorber",
+    "estado_emocional": "Detectar: cansancio, presión externa, urgencia artificial, ilusión, miedo. Ser específico.",
+    "riesgo_principal": "El riesgo #1 de esta persona: cerrar por cansancio | racionalizar incoherencias | sobreestimar liquidez | subestimar fricción diaria"
   },
   "guia_fiduciaria": {
-    "lectura_situacion": "Párrafo de 2-3 oraciones que refleje comprensión profunda de su situación",
-    "validacion_presupuesto": "Es su presupuesto realista para lo que buscan? Sé honesto.",
-    "alertas_detectadas": ["Lista de señales de alerta detectadas en sus respuestas"],
-    "recomendacion_principal": "Una recomendación clara y accionable",
-    "que_priorizar": ["Top 3 cosas que deben priorizar basado en sus respuestas"],
-    "que_evitar": ["Top 3 errores comunes que deben evitar en su situación"],
-    "pregunta_clave": "Una pregunta que deberían hacerse antes de decidir",
-    "mensaje_final": "Mensaje de apoyo y perspectiva (sin ser vendedor)"
+    "lectura_momento": "2-3 oraciones que demuestren comprensión PROFUNDA de su situación. No genérico.",
+    "objetivo_dominante": "Cuál es EL objetivo principal que debe guiar toda decisión",
+    "innegociables": ["Máximo 3 criterios que NO se negocian bajo ninguna circunstancia"],
+    "tradeoffs_aceptados": ["Qué está dispuesto a resignar conscientemente"],
+    "riesgos_evitar": ["Errores específicos que ESTA persona podría cometer"],
+    "tipo_propiedad": "Descripción del tipo de propiedad que tiene SENTIDO para su perfil",
+    "que_no_hacer": ["Acciones concretas que debe EVITAR en este momento"],
+    "proximo_paso": "UNA acción concreta e inteligente antes de decidir"
   },
   "alertas": [
     {
-      "tipo": "roja|amarilla|verde",
-      "mensaje": "Descripción de la alerta",
-      "accion_sugerida": "Qué hacer al respecto"
+      "tipo": "roja",
+      "mensaje": "Solo si hay señal grave: presupuesto irreal, cansancio extremo, presión externa",
+      "accion_sugerida": "Qué hacer AHORA"
+    },
+    {
+      "tipo": "amarilla",
+      "mensaje": "Señal de precaución que requiere atención",
+      "accion_sugerida": "Qué vigilar"
+    },
+    {
+      "tipo": "verde",
+      "mensaje": "Aspectos positivos de su situación",
+      "accion_sugerida": "Cómo aprovechar esta fortaleza"
     }
   ],
   "mbf_ready": {
     "precio_max": 150000,
     "dormitorios_min": 2,
-    "zonas": ["Equipetrol", "Sirari"],
-    "amenities_requeridos": ["piscina", "seguridad"],
-    "amenities_deseados": ["gimnasio", "pet_friendly"]
+    "zonas": ["Solo zonas que el usuario SELECCIONÓ"],
+    "amenities_requeridos": ["Solo los marcados como innegociables"],
+    "amenities_deseados": ["Los deseables pero no críticos"]
   }
 }
 
-REGLAS:
-1. Sé honesto y directo, no vendedor
-2. Si detectas señales de presión o urgencia excesiva, alerta sobre esto
-3. Si el presupuesto no es realista, dilo claramente
-4. Los amenities_requeridos son los que marcó como innegociables
-5. Las zonas deben mapearse a los nombres de BD: "Equipetrol", "Sirari", "Equipetrol Norte", "Villa Brigida", "Faremafu"
-6. Responde SOLO con el JSON, sin texto adicional`
+REGLAS DURAS:
+1. NO suavices. Si hay problema, dilo directo.
+2. Si detectas cansancio o presión, ALERTA ROJA.
+3. Si el presupuesto no alcanza, dilo sin rodeos.
+4. Los innegociables son INNEGOCIABLES - no sugiereas "flexibilizar".
+5. zonas = solo las que el usuario seleccionó en D1.
+6. Responde SOLO JSON, sin markdown ni texto adicional.
+7. lectura_momento debe ser ESPECÍFICA a este usuario, no genérica.`
 
 export default async function handler(
   req: NextApiRequest,

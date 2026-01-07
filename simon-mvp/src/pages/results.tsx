@@ -14,6 +14,7 @@ interface Property {
   banos: number
   amenities: string[]
   fotos: number
+  fotos_urls: string[]  // URLs reales de fotos
   url: string
   razon_fiduciaria?: string
 }
@@ -27,21 +28,27 @@ interface FormData {
 
 interface GuiaFiduciaria {
   perfil_fiduciario: {
-    situacion_actual: string
-    capacidad_financiera: string
-    horizonte_temporal: string
+    horizonte_uso: string
+    rol_propiedad: string
+    tolerancia_error: string
+    capacidad_friccion: string
     estado_emocional: string
+    riesgo_principal: string
   }
   guia_fiduciaria: {
-    lectura_situacion: string
-    validacion_presupuesto: string
-    alertas_detectadas: string[]
-    recomendacion_principal: string
-    mensaje_final: string
+    lectura_momento: string
+    objetivo_dominante: string
+    innegociables: string[]
+    tradeoffs_aceptados: string[]
+    riesgos_evitar: string[]
+    tipo_propiedad: string
+    que_no_hacer: string[]
+    proximo_paso: string
   }
   alertas: Array<{
     tipo: 'roja' | 'amarilla' | 'verde'
     mensaje: string
+    accion_sugerida?: string
   }>
   mbf_ready: {
     precio_max: number
@@ -134,15 +141,21 @@ export default function ResultsPage() {
   }
 
   const buildFilters = (answers: any) => {
-    // Obtener primera zona seleccionada (o vacío si es flexible)
-    const zonas = answers.D1 || ['equipetrol']
-    const primeraZona = Array.isArray(zonas) ? zonas[0] : zonas
+    // Obtener zonas seleccionadas por el usuario
+    const zonasForm = answers.D1 || ['equipetrol']
+    const zonasArray = Array.isArray(zonasForm) ? zonasForm : [zonasForm]
+
+    // Convertir TODAS las zonas seleccionadas a nombres de BD
+    const zonasPermitidas = zonasArray
+      .filter((z: string) => z !== 'flexible')
+      .map((z: string) => convertirZona(z))
+      .filter((z: string) => z !== '') // Remover vacíos
 
     return {
       precio_max: answers.C1 || 200000,
       dormitorios: parseInt(answers.E1) || 2,
-      zona: convertirZona(primeraZona), // Convertir a nombre de BD
-      zonas: zonas, // Mantener para mock data
+      zonas_permitidas: zonasPermitidas.length > 0 ? zonasPermitidas : undefined,
+      zonas: zonasArray, // Mantener para mock data
       amenities: answers.E4?.filter((a: string) => a !== 'ninguno') || []
     }
   }
@@ -157,7 +170,7 @@ export default function ResultsPage() {
       const unidades = await buscarUnidadesReales({
         precio_max: filters.precio_max,
         dormitorios: filters.dormitorios,
-        zona: filters.zona || undefined, // undefined si es flexible
+        zonas_permitidas: filters.zonas_permitidas, // CRÍTICO: Solo zonas que el usuario seleccionó
         limite: 10
       })
 
@@ -173,6 +186,7 @@ export default function ResultsPage() {
           banos: Math.max(1, u.dormitorios - 1),
           amenities: u.amenities_lista || [],
           fotos: u.cantidad_fotos,
+          fotos_urls: u.fotos_urls || [],  // URLs reales de fotos
           url: u.url,
           razon_fiduciaria: generateRazonFiduciaria({
             precio_usd: u.precio_usd,
@@ -312,6 +326,7 @@ export default function ResultsPage() {
         banos: Math.max(1, dorms - 1),
         amenities: ['piscina', 'gym', 'seguridad'],
         fotos: 12,
+        fotos_urls: [],
         url: '#',
         razon_fiduciaria: `${Math.round((1 - precio1/presupuesto) * 100)}% bajo tu tope. ${dorms} dormitorios en ${zona1}.`
       },
@@ -325,6 +340,7 @@ export default function ResultsPage() {
         banos: dorms,
         amenities: ['piscina', 'pet_friendly', 'seguridad'],
         fotos: 8,
+        fotos_urls: [],
         url: '#',
         razon_fiduciaria: `Pet friendly confirmado. Un dormitorio extra por si crece la familia.`
       },
@@ -338,6 +354,7 @@ export default function ResultsPage() {
         banos: dorms,
         amenities: ['gym', 'rooftop', 'seguridad'],
         fotos: 15,
+        fotos_urls: [],
         url: '#',
         razon_fiduciaria: `Mejor relacion precio/m2. ${Math.round((1 - precio3/presupuesto) * 100)}% bajo tu tope.`
       }
@@ -399,8 +416,8 @@ export default function ResultsPage() {
 
   const getGuiaFiduciaria = () => {
     // Si tenemos guía de Claude API, usarla
-    if (guiaClaudeAPI?.guia_fiduciaria) {
-      return guiaClaudeAPI.guia_fiduciaria.lectura_situacion
+    if (guiaClaudeAPI?.guia_fiduciaria?.lectura_momento) {
+      return guiaClaudeAPI.guia_fiduciaria.lectura_momento
     }
 
     // Fallback: guía básica generada localmente
@@ -527,13 +544,56 @@ export default function ResultsPage() {
                   </div>
                 )}
 
-                {/* Recomendación principal */}
-                {guiaClaudeAPI?.guia_fiduciaria?.recomendacion_principal && (
-                  <div className="mt-4 p-4 bg-white rounded-xl border border-neutral-200">
-                    <p className="text-sm text-neutral-500 mb-1">Recomendacion:</p>
-                    <p className="text-neutral-800 font-medium">
-                      {guiaClaudeAPI.guia_fiduciaria.recomendacion_principal}
-                    </p>
+                {/* Guía Fiduciaria completa */}
+                {guiaClaudeAPI?.guia_fiduciaria && (
+                  <div className="mt-6 space-y-4">
+                    {/* Objetivo dominante */}
+                    {guiaClaudeAPI.guia_fiduciaria.objetivo_dominante && (
+                      <div className="p-4 bg-white rounded-xl border border-neutral-200">
+                        <p className="text-sm text-neutral-500 mb-1">Tu objetivo dominante:</p>
+                        <p className="text-neutral-800 font-medium">
+                          {guiaClaudeAPI.guia_fiduciaria.objetivo_dominante}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Innegociables */}
+                    {guiaClaudeAPI.guia_fiduciaria.innegociables?.length > 0 && (
+                      <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+                        <p className="text-sm text-red-600 font-semibold mb-2">Tus innegociables:</p>
+                        <ul className="space-y-1">
+                          {guiaClaudeAPI.guia_fiduciaria.innegociables.map((item, i) => (
+                            <li key={i} className="text-red-800 flex items-start gap-2">
+                              <span className="text-red-500">•</span> {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Qué NO hacer */}
+                    {guiaClaudeAPI.guia_fiduciaria.que_no_hacer?.length > 0 && (
+                      <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                        <p className="text-sm text-amber-700 font-semibold mb-2">Evita esto:</p>
+                        <ul className="space-y-1">
+                          {guiaClaudeAPI.guia_fiduciaria.que_no_hacer.map((item, i) => (
+                            <li key={i} className="text-amber-800 flex items-start gap-2">
+                              <span className="text-amber-500">✕</span> {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Próximo paso */}
+                    {guiaClaudeAPI.guia_fiduciaria.proximo_paso && (
+                      <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                        <p className="text-sm text-green-700 font-semibold mb-1">Tu proximo paso:</p>
+                        <p className="text-green-800 font-medium">
+                          {guiaClaudeAPI.guia_fiduciaria.proximo_paso}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
@@ -574,48 +634,69 @@ export default function ResultsPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 + index * 0.1 }}
-                  className={`bg-white rounded-2xl border-2 p-6 cursor-pointer transition-all
+                  className={`bg-white rounded-2xl border-2 overflow-hidden cursor-pointer transition-all
                              ${selectedProperty === property.id
                                ? 'border-neutral-900 shadow-lg'
                                : 'border-neutral-200 hover:border-neutral-400'}`}
                   onClick={() => setSelectedProperty(property.id)}
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-semibold">{property.nombre_proyecto}</h3>
-                      <p className="text-neutral-500">{property.zona}</p>
+                  {/* Foto principal */}
+                  {property.fotos_urls && property.fotos_urls.length > 0 && (
+                    <div className="relative h-48 bg-neutral-100">
+                      <img
+                        src={property.fotos_urls[0]}
+                        alt={property.nombre_proyecto}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none'
+                        }}
+                      />
+                      {property.fotos_urls.length > 1 && (
+                        <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                          +{property.fotos_urls.length - 1} fotos
+                        </span>
+                      )}
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold">${property.precio_usd.toLocaleString()}</p>
-                      <p className="text-sm text-neutral-500">{property.area_m2} m2</p>
+                  )}
+
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-xl font-semibold">{property.nombre_proyecto}</h3>
+                        <p className="text-neutral-500">{property.zona}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold">${property.precio_usd.toLocaleString()}</p>
+                        <p className="text-sm text-neutral-500">{property.area_m2} m2</p>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Features */}
-                  <div className="flex gap-4 mb-4 text-neutral-600">
-                    <span>{property.dormitorios} dorm</span>
-                    <span>{property.banos} banos</span>
-                    <span>{property.fotos} fotos</span>
-                  </div>
+                    {/* Features */}
+                    <div className="flex gap-4 mb-4 text-neutral-600">
+                      <span>{property.dormitorios} dorm</span>
+                      <span>{property.banos} banos</span>
+                      <span>${Math.round(property.precio_usd / property.area_m2)}/m2</span>
+                    </div>
 
-                  {/* Amenities */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {property.amenities.slice(0, 4).map(amenity => (
-                      <span
-                        key={amenity}
-                        className="px-3 py-1 bg-neutral-100 text-neutral-700 rounded-full text-sm"
-                      >
-                        {amenity}
-                      </span>
-                    ))}
-                  </div>
+                    {/* Amenities */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {property.amenities.slice(0, 4).map(amenity => (
+                        <span
+                          key={amenity}
+                          className="px-3 py-1 bg-neutral-100 text-neutral-700 rounded-full text-sm"
+                        >
+                          {amenity}
+                        </span>
+                      ))}
+                    </div>
 
-                  {/* Razon fiduciaria */}
-                  <div className="bg-simon-50 rounded-xl p-4">
-                    <p className="text-simon-800 font-medium">
-                      <span className="text-simon-600">Por que encaja: </span>
-                      {property.razon_fiduciaria}
-                    </p>
+                    {/* Razon fiduciaria */}
+                    <div className="bg-simon-50 rounded-xl p-4">
+                      <p className="text-simon-800 font-medium">
+                        <span className="text-simon-600">Por que encaja: </span>
+                        {property.razon_fiduciaria}
+                      </p>
+                    </div>
                   </div>
                 </motion.div>
               ))}

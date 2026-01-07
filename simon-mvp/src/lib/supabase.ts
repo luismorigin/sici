@@ -18,6 +18,7 @@ export interface UnidadReal {
   asesor_wsp: string | null
   asesor_inmobiliaria: string | null
   cantidad_fotos: number
+  fotos_urls: string[]  // URLs de fotos reales
   url: string
   amenities_lista: string[]
   es_multiproyecto: boolean
@@ -29,7 +30,8 @@ export interface FiltrosBusqueda {
   precio_max?: number
   precio_min?: number
   area_min?: number
-  zona?: string
+  zona?: string           // Una zona específica
+  zonas_permitidas?: string[]  // Lista de zonas permitidas (para excluir las no seleccionadas)
   proyecto?: string
   solo_con_telefono?: boolean
   orden?: 'precio_asc' | 'precio_desc'
@@ -113,7 +115,7 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
     }
 
     // Mapear a formato esperado y filtrar por precio/m² >= $800 (guardrail Equipetrol)
-    return (data || [])
+    const resultados = (data || [])
       .map((p: any) => ({
         id: p.id,
         proyecto: p.proyectos_master?.nombre_oficial || 'Sin proyecto',
@@ -128,11 +130,23 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
         cantidad_fotos: Array.isArray(p.datos_json?.contenido?.fotos_urls)
           ? p.datos_json.contenido.fotos_urls.length
           : 0,
+        fotos_urls: p.datos_json?.contenido?.fotos_urls || [],
         url: p.url,
         amenities_lista: p.datos_json?.amenities?.lista || [],
         es_multiproyecto: p.es_multiproyecto || false
       }))
       .filter((p: any) => p.precio_m2 >= 800) // Excluir datos corruptos ($/m² < $800)
+
+    // Filtrar por zonas permitidas (excluir zonas no seleccionadas por el usuario)
+    if (filtros.zonas_permitidas && filtros.zonas_permitidas.length > 0) {
+      return resultados.filter((p: any) =>
+        filtros.zonas_permitidas!.some(z =>
+          p.zona.toLowerCase().includes(z.toLowerCase())
+        )
+      )
+    }
+
+    return resultados
   } catch (err) {
     console.error('Error en buscarUnidadesReales:', err)
     return []
