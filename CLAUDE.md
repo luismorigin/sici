@@ -38,6 +38,11 @@ Usuario `claude_readonly` tiene permisos SELECT en todas las tablas.
 | Propósito | Archivo |
 |-----------|---------|
 | Onboarding completo | `docs/GUIA_ONBOARDING_CLAUDE.md` |
+| **Arquitectura SICI** | `docs/arquitectura/SICI_ARQUITECTURA_MAESTRA.md` |
+| **MVP Spec 30 días** | `docs/planning/SICI_MVP_SPEC.md` |
+| **Simón Arquitectura** | `docs/simon/SIMON_ARQUITECTURA_COGNITIVA.md` |
+| **Simón Formularios** | `docs/simon/formularios/BLOQUE_2_FORM_*.md` |
+| **Metodología Fiduciaria** | `docs/canonical/METODOLOGIA_FIDUCIARIA_PARTE_*.md` |
 | Plan activo | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
@@ -59,17 +64,20 @@ sici/
 │   ├── enrichment/    # registrar_enrichment.sql
 │   ├── merge/         # merge_discovery_enrichment.sql v2.1.0
 │   └── matching/      # Funciones v3.1 (propiedades_v2)
-├── sql/migrations/    # 001-014 (FK, microzonas, HITL, tracking, TC)
+├── sql/migrations/    # 001-019 (FK, microzonas, HITL, tracking, TC, KG)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
 │   └── modulo_2/      # Matching, Supervisores, Sin Match, Auditoría
 └── docs/
-    ├── canonical/     # Documentos definitivos
-    └── modulo_2/      # Specs y planes matching
+    ├── arquitectura/  # SICI_ARQUITECTURA_MAESTRA.md
+    ├── canonical/     # Metodología fiduciaria, merge, discovery
+    ├── planning/      # MVP spec, Knowledge Graph plans
+    ├── simon/         # Arquitectura cognitiva + formularios
+    └── modulo_2/      # Specs matching pipeline
 ```
 
-## Estado Actual (4 Ene 2026)
+## Estado Actual (7 Ene 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
