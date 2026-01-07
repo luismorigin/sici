@@ -246,8 +246,8 @@ BEGIN
   RETURN QUERY
   SELECT
     p.id,
-    pm.nombre_oficial,
-    pm.zona,
+    pm.nombre_oficial::TEXT,
+    pm.zona::TEXT,
     p.dormitorios,
     p.precio_usd,
     p.area_total_m2,
@@ -256,10 +256,18 @@ BEGIN
     (p.datos_json->'agente'->>'telefono')::TEXT,
     -- Usar key real 'oficina_nombre' (no 'inmobiliaria')
     (p.datos_json->'agente'->>'oficina_nombre')::TEXT,
-    -- Usar key real 'fotos_urls' (no 'fotos')
-    COALESCE(jsonb_array_length(p.datos_json->'contenido'->'fotos_urls'), 0)::INTEGER,
-    p.url,
-    COALESCE(p.datos_json->'amenities'->'lista', '[]'::jsonb),
+    -- Usar key real 'fotos_urls' (no 'fotos') - verificar que sea array
+    CASE
+      WHEN jsonb_typeof(p.datos_json->'contenido'->'fotos_urls') = 'array'
+      THEN jsonb_array_length(p.datos_json->'contenido'->'fotos_urls')
+      ELSE 0
+    END::INTEGER,
+    p.url::TEXT,
+    CASE
+      WHEN jsonb_typeof(p.datos_json->'amenities'->'lista') = 'array'
+      THEN p.datos_json->'amenities'->'lista'
+      ELSE '[]'::jsonb
+    END,
     p.es_multiproyecto
   FROM propiedades_v2 p
   JOIN proyectos_master pm ON p.id_proyecto_master = pm.id_proyecto_master
@@ -368,14 +376,14 @@ BEGIN
   propiedades_con_amenities AS (
     SELECT
       p.id,
-      pm.nombre_oficial as proyecto,
-      pm.zona,
+      pm.nombre_oficial::TEXT as proyecto,
+      pm.zona::TEXT as zona,
       p.dormitorios,
       p.precio_usd,
       p.area_total_m2,
       (p.datos_json->'agente'->>'nombre')::TEXT as asesor_nombre,
       (p.datos_json->'agente'->>'telefono')::TEXT as asesor_wsp,
-      p.url,
+      p.url::TEXT as url,
       -- Extraer amenities de la propiedad
       ARRAY(
         SELECT normalizar_amenity(a.value::text)
