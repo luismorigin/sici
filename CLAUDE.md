@@ -25,6 +25,21 @@
 
 Usuario `claude_readonly` tiene permisos SELECT en todas las tablas.
 
+## n8n Environment Variables
+
+Los workflows de n8n usan variables de entorno para secrets (NO hardcodear en JSON):
+
+```
+SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+```
+
+**Configurar en n8n:**
+1. Settings → Environment Variables
+2. Agregar `SLACK_WEBHOOK_SICI` con el webhook de Slack
+3. En los nodos HTTP, usar `={{ $env.SLACK_WEBHOOK_SICI }}`
+
+**IMPORTANTE:** Nunca commitear webhooks reales a GitHub - Slack los revoca automáticamente.
+
 ## Reglas Críticas
 
 1. **Manual > Automatic** - `campos_bloqueados` SIEMPRE se respetan

@@ -222,7 +222,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://hooks.slack.com/services/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",
+        "url": "={{ $env.SLACK_WEBHOOK_SICI }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"{{ $json.emoji_status }} SICI Merge Nocturno\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Procesadas:*\\n{{ $json.total_procesadas }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Exitosas:*\\n{{ $json.exitosas }} ({{ $json.tasa_exito }}%)\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Errores:*\\n{{ $json.errores }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"*Discrepancias:*\\n{{ $json.con_discrepancias }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"Flujo Merge v1.0.0 | {{ $json.timestamp }}\"\n        }\n      ]\n    }\n  ]\n}",
