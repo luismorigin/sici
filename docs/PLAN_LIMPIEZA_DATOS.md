@@ -5,63 +5,143 @@
 
 ---
 
-## PROGRESO DE EJECUCIÓN (8 Enero 2026)
+## ESTADO VERIFICADO EN BD (8 Enero 2026)
 
-### ✅ COMPLETADO HOY
+### ✅ INFRAESTRUCTURA IMPLEMENTADA (verificado con MCP postgres)
 
-| # | Tarea | Migración/Archivo | Estado |
-|---|-------|-------------------|--------|
-| 1 | **Vistas SQL limpieza** | `020_limpieza_datos_vistas.sql` | ✅ EJECUTADO |
-| 2 | **Fuzzy matching infra** | `022_fuzzy_matching_infraestructura.sql` | ✅ EJECUTADO |
-| 3 | **Supervisor Excluidas** | `023_supervisor_excluidas.sql` | ✅ EJECUTADO |
-| 4 | **n8n Export Excluidas** | `n8n/workflows/modulo_2/exportar_excluidas.json` | ✅ CREADO |
-| 5 | **n8n Supervisor Excluidas** | `n8n/workflows/modulo_2/supervisor_excluidas.json` | ✅ FUNCIONAL |
-| 6 | **Activar 11 props Remax** | SQL directo | ✅ EJECUTADO |
-| 7 | **Fix pct_matched** | v_salud_datos | ✅ CORREGIDO |
-| 8 | **Fix CORREGIR → activar** | procesar_accion_excluida() | ✅ CORREGIDO |
+#### Extensiones y Índices
+| Componente | Tipo | Estado |
+|------------|------|--------|
+| pg_trgm v1.6 | Extension | ✅ |
+| idx_propiedades_amenities | Índice GIN | ✅ |
+| idx_proyectos_nombre_trgm | Índice Trigram | ✅ |
+| idx_motivo_no_matching_gin | Índice GIN | ✅ |
+| trg_registrar_alias_matching | Trigger | ✅ |
 
-### Componentes Creados
+#### Vistas SQL (5 implementadas)
+| Vista | Propósito | Estado |
+|-------|-----------|--------|
+| v_metricas_mercado | Métricas por tipología (excluye multiproyecto) | ✅ |
+| v_alternativas_proyecto | Multiproyecto "desde $X" | ✅ |
+| v_salud_datos | Dashboard de gaps | ✅ |
+| v_resumen_excluidas | Resumen excluidas HITL | ✅ |
+| v_amenities_proyecto | Knowledge Graph (188 filas) | ✅ |
 
-**Migración 020 - Vistas SQL:**
-- `v_metricas_mercado` - Métricas por tipología (excluye multiproyecto)
-- `v_alternativas_proyecto` - Proyectos multiproyecto con "desde $X"
-- `v_salud_datos` - Dashboard de gaps y completitud
-- Índice GIN para amenities
+#### Funciones SQL (13 implementadas)
+| Función | Propósito | Estado |
+|---------|-----------|--------|
+| normalize_nombre() | Normaliza nombres | ✅ |
+| buscar_proyecto_fuzzy() | Fuzzy con trigrams | ✅ |
+| generar_matches_trigram() | Matching trigram | ✅ |
+| extraer_nombre_de_descripcion() | Extrae de descripción | ✅ |
+| matching_completo_automatizado() | Orquestador v3.2 | ✅ |
+| intentar_match_con_fuzzy() | Match individual | ✅ |
+| registrar_alias_desde_correccion() | Auto-alias HITL | ✅ |
+| detectar_razon_exclusion() | Diagnóstico excluidas | ✅ |
+| exportar_propiedades_excluidas() | Export HITL | ✅ |
+| procesar_accion_excluida() | Acciones HITL | ✅ |
+| buscar_unidades_reales(jsonb) | Knowledge Graph | ✅ |
+| normalizar_amenity() | Knowledge Graph | ✅ |
+| interpretar_valor_amenity() | Knowledge Graph | ✅ |
 
-**Migración 022 - Fuzzy Matching:**
-- Extensión `pg_trgm` habilitada
-- `normalize_nombre()` - Normaliza nombres para comparación
-- `buscar_proyecto_fuzzy()` - Búsqueda con alias + trigrams
-- `intentar_match_con_fuzzy()` - Para matching nocturno mejorado
-- Trigger `trg_registrar_alias_matching` - Auto-registra alias desde HITL
+#### Tablas Nuevas
+| Tabla | Propósito | Estado |
+|-------|-----------|--------|
+| propiedades_excluidas_export | Tracking HITL excluidas | ✅ |
+| proyectos_pendientes_enriquecimiento | Cola enriquecimiento | ✅ |
 
-**Migración 023 - Supervisor Excluidas:**
-- Tabla `propiedades_excluidas_export` - Tracking HITL
-- `detectar_razon_exclusion()` - Diagnóstico automático
-- `exportar_propiedades_excluidas()` - Con columnas extra (multiproyecto, precio original)
-- `procesar_accion_excluida()` - CORREGIR, ACTIVAR, EXCLUIR, ELIMINAR
-- `v_resumen_excluidas` - Resumen por razón y estado
+### 📊 MÉTRICAS ACTUALES
 
-### Datos Corregidos
-
-| Acción | Cantidad | Detalle |
-|--------|----------|---------|
-| Props Remax activadas | 11 | Score 60, datos válidos, solo faltaba es_para_matching |
-| Precio corregido | 1 | ID 335: $9,368 → $93,680 (decimal mal ubicado) |
-| Props probadas HITL | 2 | ID 309 (ACTIVAR), ID 335 (CORREGIR) |
-
-### ⏳ PENDIENTE (próxima sesión)
-
-| # | Tarea | Prioridad | Tiempo Est. |
-|---|-------|-----------|-------------|
-| 1 | Mapear columnas n8n Sheets export | Media | 15 min |
-| 2 | Procesar 14 props restantes en Sheet | Media | 30 min |
-| 3 | Enriquecer 84 desarrolladores | Alta | 1-2 hrs |
-| 4 | Ejecutar migración 019 (Knowledge Graph) | Baja | 15 min |
+| Métrica | Valor | Status |
+|---------|-------|--------|
+| Matching rate | **98.2%** | ✅ Excelente |
+| Huérfanas | **6** | ⚠️ Revisar |
+| Proyectos sin desarrollador | **16** (8.5%) | ✅ OK (<10%) |
+| Excluidas en revisión HITL | **14** | ⚠️ En Sheet |
+| Cola matching | **0** | ✅ Limpia |
+| Cola sin_match | **6** | ⚠️ Pendientes |
 
 ---
 
-## EXPLORACION PREVIA: LO QUE YA EXISTE
+## ⏳ PENDIENTE: DATOS (revisión manual)
+
+| # | Tarea | Cantidad | Prioridad | Tiempo |
+|---|-------|----------|-----------|--------|
+| 1 | Mapear columnas n8n Export Excluidas | 1 workflow | Alta | 15 min |
+| 2 | Procesar excluidas en Sheet | 14 props | Alta | 30 min |
+| 3 | Revisar/crear proyectos huérfanas | 6 props | Media | 30 min |
+| 4 | Enriquecer desarrolladores faltantes | 16 proyectos | Baja | 1 hr |
+
+---
+
+## ❌ PENDIENTE: ESCALADO (modificar extractores/flujos)
+
+### Enrichment (Flujo B) - Mejoras de extracción
+
+| # | Mejora | Archivo a Modificar | Impacto |
+|---|--------|---------------------|---------|
+| 1 | **Extraer desarrollador** de descripción | `flujo_b_processing_v3.0.json` | Evita proyectos sin desarrollador |
+| 2 | **Extraer precio_min/max** para multiproyecto | `flujo_b_processing_v3.0.json` | Rangos de precio reales |
+| 3 | **Extraer nombre_edificio** de descripción cuando meta está vacío | `flujo_b_processing_v3.0.json` | Reduce huérfanas |
+
+**Patrones a implementar:**
+```javascript
+// Desarrollador
+const patronesDesarrollador = [
+    /desarrollado por\s+([A-Za-z\s]+)/i,
+    /constructora\s+([A-Za-z\s]+)/i,
+    /([A-Za-z]+)\s+desarrollos/i,
+    /proyecto de\s+([A-Za-z\s]+)/i
+];
+
+// Precio rango (multiproyecto)
+const patronesPrecio = [
+    /desde\s*\$?\s*([\d,.]+)/i,
+    /a partir de\s*\$?\s*([\d,.]+)/i,
+    /([\d,.]+)\s*-\s*([\d,.]+)/
+];
+
+// Nombre edificio de descripción
+const patronesEdificio = [
+    /condominio\s+([A-Za-z\s]+?)[\n,\.]/i,
+    /edificio\s+([A-Za-z\s]+?)[\n,\.]/i,
+    /torre[s]?\s+([A-Za-z\s]+?)[\n,\.]/i
+];
+```
+
+### Discovery (Flujo A) - Detección temprana
+
+| # | Mejora | Archivo a Modificar | Impacto |
+|---|--------|---------------------|---------|
+| 1 | **Detectar multiproyecto** en scraping | `flujo_a_discovery_*.json` | Flag temprano |
+| 2 | **Detectar tipo_operacion** de URL/título | `flujo_a_discovery_*.json` | Evita excluir tarde |
+
+### Workflows Nuevos (n8n)
+
+| # | Workflow | Trigger | Propósito |
+|---|----------|---------|-----------|
+| 1 | `enriquecimiento_proyectos_nuevos` | Proyecto con desarrollador=NULL | Auto-enriquecer desde props matcheadas |
+| 2 | `alerta_huerfanas_24h` | Cron diario | Notificar props sin proyecto >24h |
+| 3 | `validacion_precios_anomalos` | Post-merge | Detectar $/m² fuera de rango |
+
+### Columna Calculada (mejora futura)
+
+```sql
+-- Score de completitud automático
+ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS
+    score_completitud INTEGER GENERATED ALWAYS AS (
+        (CASE WHEN precio_usd IS NOT NULL THEN 20 ELSE 0 END) +
+        (CASE WHEN area_total_m2 IS NOT NULL THEN 20 ELSE 0 END) +
+        (CASE WHEN dormitorios IS NOT NULL THEN 15 ELSE 0 END) +
+        (CASE WHEN id_proyecto_master IS NOT NULL THEN 25 ELSE 0 END) +
+        (CASE WHEN datos_json->'ubicacion'->>'latitud' IS NOT NULL THEN 10 ELSE 0 END) +
+        (CASE WHEN datos_json->'amenities'->'lista' IS NOT NULL THEN 10 ELSE 0 END)
+    ) STORED;
+```
+
+---
+
+## EXPLORACIÓN PREVIA: LO QUE YA EXISTE
 
 ### Documentación existente (39 archivos .md)
 - `docs/planning/KNOWLEDGE_GRAPH_VALIDATED_PLAN.md` - Query Layer diseñado
