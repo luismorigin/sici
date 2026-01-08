@@ -160,6 +160,9 @@ SELECT * FROM generar_matches_trigram();
 -- PASO 3: Actualizar matching_completo_automatizado()
 -- =====================================================
 
+-- IMPORTANTE: DROP primero porque cambia el return type (agrega matches_trigram)
+DROP FUNCTION IF EXISTS public.matching_completo_automatizado();
+
 CREATE OR REPLACE FUNCTION public.matching_completo_automatizado()
 RETURNS TABLE(
     matches_nombre integer,
