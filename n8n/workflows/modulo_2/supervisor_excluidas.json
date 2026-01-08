@@ -1,0 +1,177 @@
+{
+  "name": "SICI - Supervisor Propiedades Excluidas",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1",
+      "name": "Trigger Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "id": "2",
+      "name": "Read Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.ACCION }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "3",
+      "name": "Filter Con Accion",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.ACCION }}",
+              "value2": "ACTIVAR"
+            }
+          ]
+        }
+      },
+      "id": "4",
+      "name": "IF ACTIVAR",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT procesar_accion_excluida({{ $json.propiedad_id }}, 'ACTIVAR', NULL, NULL, '{{ $json.NOTAS }}')"
+      },
+      "id": "5",
+      "name": "PG ACTIVAR",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.ACCION }}",
+              "value2": "CORREGIR"
+            }
+          ]
+        }
+      },
+      "id": "6",
+      "name": "IF CORREGIR",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT procesar_accion_excluida({{ $json.propiedad_id }}, 'CORREGIR', {{ $json.DORMS_CORRECTO || 'NULL' }}, {{ $json.PRECIO_CORRECTO || 'NULL' }}, '{{ $json.NOTAS }}')"
+      },
+      "id": "7",
+      "name": "PG CORREGIR",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.ACCION }}",
+              "value2": "EXCLUIR"
+            }
+          ]
+        }
+      },
+      "id": "8",
+      "name": "IF EXCLUIR",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1340, 500]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT procesar_accion_excluida({{ $json.propiedad_id }}, 'EXCLUIR', NULL, NULL, '{{ $json.NOTAS }}')"
+      },
+      "id": "9",
+      "name": "PG EXCLUIR",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1560, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT procesar_accion_excluida({{ $json.propiedad_id }}, 'ELIMINAR', NULL, NULL, '{{ $json.NOTAS }}')"
+      },
+      "id": "10",
+      "name": "PG ELIMINAR",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1560, 600]
+    }
+  ],
+  "connections": {
+    "Trigger Manual": {
+      "main": [[{"node": "Read Sheet", "type": "main", "index": 0}]]
+    },
+    "Read Sheet": {
+      "main": [[{"node": "Filter Con Accion", "type": "main", "index": 0}]]
+    },
+    "Filter Con Accion": {
+      "main": [[{"node": "IF ACTIVAR", "type": "main", "index": 0}]]
+    },
+    "IF ACTIVAR": {
+      "main": [
+        [{"node": "PG ACTIVAR", "type": "main", "index": 0}],
+        [{"node": "IF CORREGIR", "type": "main", "index": 0}]
+      ]
+    },
+    "IF CORREGIR": {
+      "main": [
+        [{"node": "PG CORREGIR", "type": "main", "index": 0}],
+        [{"node": "IF EXCLUIR", "type": "main", "index": 0}]
+      ]
+    },
+    "IF EXCLUIR": {
+      "main": [
+        [{"node": "PG EXCLUIR", "type": "main", "index": 0}],
+        [{"node": "PG ELIMINAR", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

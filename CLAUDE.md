@@ -92,7 +92,7 @@ sici/
     └── modulo_2/      # Specs matching pipeline
 ```
 
-## Estado Actual (7 Ene 2026)
+## Estado Actual (8 Ene 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
@@ -100,17 +100,21 @@ sici/
 - **Módulo 2 FASE 2:** Human-in-the-Loop completo
   - Matching Supervisor: APROBAR, RECHAZAR, CORREGIR, PROYECTO_ALTERNATIVO
   - Supervisor Sin Match: ASIGNAR, CREAR, CORREGIR, SIN_PROYECTO
+  - **Supervisor Excluidas:** CORREGIR, ACTIVAR, EXCLUIR, ELIMINAR (migración 023)
 - **Módulo 2 FASE 5:** Pipeline activado (4 AM matching, 8 PM supervisores)
-- **Auditoría v2.5:** Health check + métrica excluidas operación
+- **Auditoría v2.8:** Health check + alertas (huérfanas >5%, sin desarrollador >10%)
 - **TC Dinámico:** Binance P2P integrado (00:00 AM, historial de precios)
 - **Status Pipeline:** Nuevo status `excluido_operacion` para alquiler/anticrético
 - **Limpieza Datos:** Auditoría Sky Properties + corrección GPS (100% matching)
+- **Fuzzy Matching:** pg_trgm + normalize_nombre() + buscar_proyecto_fuzzy() (migración 022)
+
+### ⏳ En Progreso
+- **Supervisor Excluidas:** Workflow n8n Export pendiente mapeo columnas (14 props en Sheet)
 
 ### ❌ Pendiente
-- **FASE 3:** Enriquecimiento IA de proyectos (146 sin desarrollador asignado)
+- **FASE 3:** Enriquecimiento IA de proyectos (15 sin desarrollador asignado)
 - **FASE 4:** Validación GPS completa (workflow validador Google Places)
 - **Migración 017:** Mejoras sistema matching (FK, blacklist, detección duplicados)
-- **Supervisor Excluidas:** HITL para 16 propiedades en limbo - ver `docs/planning/SUPERVISOR_EXCLUIDAS_PLAN.md`
 
 ## Queries Rápidos
 
