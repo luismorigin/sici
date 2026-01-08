@@ -1,7 +1,63 @@
 # PLAN DE LIMPIEZA DE DATOS SICI - VERSION ESCALABLE
 
-**Fecha:** 8 Enero 2026 (Actualizado tras exploración)
+**Fecha:** 8 Enero 2026 (Actualizado con ejecución)
 **Objetivo:** Limpiar datos Y crear infraestructura que escale
+
+---
+
+## PROGRESO DE EJECUCIÓN (8 Enero 2026)
+
+### ✅ COMPLETADO HOY
+
+| # | Tarea | Migración/Archivo | Estado |
+|---|-------|-------------------|--------|
+| 1 | **Vistas SQL limpieza** | `020_limpieza_datos_vistas.sql` | ✅ EJECUTADO |
+| 2 | **Fuzzy matching infra** | `022_fuzzy_matching_infraestructura.sql` | ✅ EJECUTADO |
+| 3 | **Supervisor Excluidas** | `023_supervisor_excluidas.sql` | ✅ EJECUTADO |
+| 4 | **n8n Export Excluidas** | `n8n/workflows/modulo_2/exportar_excluidas.json` | ✅ CREADO |
+| 5 | **n8n Supervisor Excluidas** | `n8n/workflows/modulo_2/supervisor_excluidas.json` | ✅ FUNCIONAL |
+| 6 | **Activar 11 props Remax** | SQL directo | ✅ EJECUTADO |
+| 7 | **Fix pct_matched** | v_salud_datos | ✅ CORREGIDO |
+| 8 | **Fix CORREGIR → activar** | procesar_accion_excluida() | ✅ CORREGIDO |
+
+### Componentes Creados
+
+**Migración 020 - Vistas SQL:**
+- `v_metricas_mercado` - Métricas por tipología (excluye multiproyecto)
+- `v_alternativas_proyecto` - Proyectos multiproyecto con "desde $X"
+- `v_salud_datos` - Dashboard de gaps y completitud
+- Índice GIN para amenities
+
+**Migración 022 - Fuzzy Matching:**
+- Extensión `pg_trgm` habilitada
+- `normalize_nombre()` - Normaliza nombres para comparación
+- `buscar_proyecto_fuzzy()` - Búsqueda con alias + trigrams
+- `intentar_match_con_fuzzy()` - Para matching nocturno mejorado
+- Trigger `trg_registrar_alias_matching` - Auto-registra alias desde HITL
+
+**Migración 023 - Supervisor Excluidas:**
+- Tabla `propiedades_excluidas_export` - Tracking HITL
+- `detectar_razon_exclusion()` - Diagnóstico automático
+- `exportar_propiedades_excluidas()` - Con columnas extra (multiproyecto, precio original)
+- `procesar_accion_excluida()` - CORREGIR, ACTIVAR, EXCLUIR, ELIMINAR
+- `v_resumen_excluidas` - Resumen por razón y estado
+
+### Datos Corregidos
+
+| Acción | Cantidad | Detalle |
+|--------|----------|---------|
+| Props Remax activadas | 11 | Score 60, datos válidos, solo faltaba es_para_matching |
+| Precio corregido | 1 | ID 335: $9,368 → $93,680 (decimal mal ubicado) |
+| Props probadas HITL | 2 | ID 309 (ACTIVAR), ID 335 (CORREGIR) |
+
+### ⏳ PENDIENTE (próxima sesión)
+
+| # | Tarea | Prioridad | Tiempo Est. |
+|---|-------|-----------|-------------|
+| 1 | Mapear columnas n8n Sheets export | Media | 15 min |
+| 2 | Procesar 14 props restantes en Sheet | Media | 30 min |
+| 3 | Enriquecer 84 desarrolladores | Alta | 1-2 hrs |
+| 4 | Ejecutar migración 019 (Knowledge Graph) | Baja | 15 min |
 
 ---
 
