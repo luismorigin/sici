@@ -134,7 +134,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-019)
+## Migraciones SQL (001-024)
 
 | # | Archivo | Propósito | Estado |
 |---|---------|-----------|--------|
@@ -156,7 +156,11 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 016 | limpieza_sky_properties | Auditoría Sky + corrección GPS/duplicados | ✅ |
 | 017 | mejoras_matching_system | FK formal, blacklist, detección duplicados | ⏳ |
 | 018 | asignar_proyecto_existente | RPC asignar proyecto existente | ⏳ |
-| 019 | knowledge_graph_mvp | Query Layer: buscar_unidades_reales(), v_amenities_proyecto | ✅ |
+| 019 | knowledge_graph_mvp | Query Layer: buscar_unidades_reales(), v_amenities_proyecto | ⏳ |
+| 020 | limpieza_datos_vistas | v_metricas_mercado, v_alternativas_proyecto, v_salud_datos | ✅ |
+| 022 | fuzzy_matching_infraestructura | pg_trgm, normalize_nombre(), buscar_proyecto_fuzzy() | ✅ |
+| 023 | supervisor_excluidas | HITL excluidas: exportar, procesar_accion, detectar_razon | ✅ |
+| 024 | matching_trigram_integration | generar_matches_trigram(), matching_completo v3.2 | ⏳ |
 
 ## Repo Legacy
 
