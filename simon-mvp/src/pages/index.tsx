@@ -9,20 +9,37 @@ export default function Landing() {
   const router = useRouter()
 
   const handleLoadTestProfile = () => {
-    // Cargar datos de prueba
+    // Cargar datos de prueba para v2
     const formData = {
-      tipo_formulario: 'vivienda_propia',
-      version: '1.0',
+      tipo_formulario: 'vivienda_mvp_v2',
+      version: '2.0',
+      nivel_completado: 1,
       fecha: new Date().toISOString(),
-      tiempo_segundos: testFormulario.tiempo_segundos,
-      respuestas: testFormulario.respuestas
+      tiempo_segundos: 120,
+      respuestas: {
+        L1_presupuesto: 150000,
+        L1_zona: ['equipetrol', 'sirari'],
+        L1_dormitorios: '2',
+        L1_area: '70',
+        L1_innegociables: ['estacionamiento', 'seguridad'],
+        L1_deseables: ['piscina'],
+        L1_financiacion: 'efectivo',
+        L1_nombre: 'Usuario Prueba'
+      },
+      mbf_filtros: {
+        precio_max: 150000,
+        dormitorios: 2,
+        area_min: 70,
+        zonas_permitidas: ['Equipetrol', 'Sirari'],
+        solo_con_fotos: true,
+        limite: 5
+      }
     }
 
     localStorage.setItem('simon_form_data', JSON.stringify(formData))
-    localStorage.setItem('simon_lead_id', '999')
-    localStorage.setItem('simon_lead_nombre', 'Usuario Prueba')
+    localStorage.setItem('simon_level', '1')
 
-    router.push('/results')
+    router.push('/resultsV2?level=1')
   }
 
   return (
@@ -76,7 +93,7 @@ export default function Landing() {
           <button
             onClick={() => {
               localStorage.clear()
-              router.push('/contact')
+              router.push('/formV2')
             }}
             className="btn-primary text-lg px-12 py-5 rounded-full
                              flex items-center gap-3 group">
@@ -124,7 +141,7 @@ export default function Landing() {
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
             </svg>
-            <span>10 minutos</span>
+            <span>5 minutos</span>
           </div>
           <div className="flex items-center gap-2">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -147,32 +164,32 @@ export default function Landing() {
 
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center p-6">
-              <div className="w-14 h-14 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">1</span>
               </div>
-              <h3 className="font-semibold text-lg mb-2">Contanos sobre vos</h3>
+              <h3 className="font-semibold text-lg mb-2">Busqueda rapida</h3>
               <p className="text-neutral-500">
-                Respondemos preguntas para entender tu vida, no solo tu presupuesto.
+                8 preguntas basicas (~2 min) y te mostramos opciones reales con fotos.
               </p>
             </div>
 
             <div className="text-center p-6">
-              <div className="w-14 h-14 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">2</span>
               </div>
-              <h3 className="font-semibold text-lg mb-2">Creamos tu guia</h3>
+              <h3 className="font-semibold text-lg mb-2">Personaliza (opcional)</h3>
               <p className="text-neutral-500">
-                Generamos tu Guia Fiduciaria: que buscar, que evitar, que no resignar.
+                10 preguntas mas (+3 min) para entender tu situacion y darte razones personalizadas.
               </p>
             </div>
 
             <div className="text-center p-6">
-              <div className="w-14 h-14 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">3</span>
               </div>
               <h3 className="font-semibold text-lg mb-2">Opciones coherentes</h3>
               <p className="text-neutral-500">
-                Te mostramos solo propiedades que realmente encajan con tu vida.
+                Te explicamos POR QUE cada propiedad encaja (o no) con tu vida.
               </p>
             </div>
           </div>
