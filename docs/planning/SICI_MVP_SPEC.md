@@ -2,7 +2,7 @@
 
 **Objetivo:** Validar metodología fiduciaria con 10 usuarios reales  
 **Plazo:** 30 días  
-**Fecha:** 6 Enero 2026  
+**Fecha:** 6 Enero 2026 (actualizado 9 Enero 2026)  
 **Regla:** Si no está en este documento, no se construye
 
 ---
@@ -107,19 +107,28 @@ Formulario completo
        ↓
 [Claude API] Generar:
 ├── perfil_fiduciario
-├── guia_fiduciaria  
+├── guia_fiduciaria
 ├── alertas[]
 └── mbf_ready (filtros)
        ↓
-[PostgreSQL] buscar_unidades_reales(mbf_ready)
+[PostgreSQL] buscar_unidades_reales(mbf_ready) ✅ v2.1 implementada
        ↓
-[Claude API] Generar razón fiduciaria por opción
+[PostgreSQL] Para cada resultado:
+├── generar_razon_fiduciaria(id) ✅ implementada
+└── calcular_posicion_mercado(precio, zona, dorms) ✅ implementada
        ↓
 Mostrar resultados
 ```
 
-**Tiempo total procesamiento:** < 30 segundos  
-**Fallback si Claude falla:** Resultados sin "razón fiduciaria" (solo datos)
+**Funciones SQL disponibles (migración 025-028):**
+| Función | Output | Estado |
+|---------|--------|--------|
+| `buscar_unidades_reales(filtros)` | Propiedades con fotos, precio_m2, score, desarrollador | ✅ v2.1 |
+| `generar_razon_fiduciaria(id)` | "1 de solo 7 bajo $120k en zona" | ✅ |
+| `calcular_posicion_mercado(precio, zona, dorms)` | "15% bajo promedio" | ✅ |
+
+**Tiempo total procesamiento:** < 30 segundos
+**Fallback si Claude falla:** Usar `razon_fiduciaria` de SQL (ya incluida en búsqueda)
 
 ### 3.4 Resultados
 
@@ -236,13 +245,16 @@ CREATE TABLE leads_mvp (
 CREATE INDEX idx_leads_estado ON leads_mvp(estado);
 ```
 
-### 4.3 Knowledge Graph (pre-requisito)
+### 4.3 Knowledge Graph (pre-requisito) ✅ COMPLETADO
 
-Antes de MVP necesitamos que esté funcionando:
+Backend SQL listo para MVP:
 
-- [x] `buscar_unidades_reales(filtros)` 
-- [x] `v_amenities_proyecto` actualizada
-- [x] Índices GIN en amenities
+- [x] `buscar_unidades_reales(filtros)` v2.1 - con fotos, precio_m2, score, razón fiduciaria
+- [x] `generar_razon_fiduciaria(id)` - EL MOAT con DATA contextual
+- [x] `calcular_posicion_mercado(precio, zona, dorms)` - comparación vs mercado
+- [x] `v_metricas_mercado` - promedios por zona/tipología
+- [x] Filtros: solo ventas, área >= 20m², excluye parqueos/bauleras
+- [x] 238 departamentos reales disponibles para búsqueda
 
 ---
 
@@ -337,9 +349,12 @@ que busca el usuario. Sé específico.
 
 ## 7. CRONOGRAMA
 
-### Semana 1: Infraestructura
+### Semana 1: Infraestructura ✅ COMPLETADA
 - [x] Aprobar Knowledge Graph plan
-- [x] Implementar `buscar_unidades_reales()`
+- [x] Implementar `buscar_unidades_reales()` v2.1
+- [x] Implementar `generar_razon_fiduciaria()` - EL MOAT
+- [x] Implementar `calcular_posicion_mercado()`
+- [x] Limpieza datos (22 parqueos/bauleras corregidos)
 - [ ] Crear tabla `leads_mvp`
 - [ ] Setup proyecto frontend
 
@@ -429,7 +444,7 @@ que busca el usuario. Sé específico.
 
 ### Antes de lanzar
 
-- [ ] `buscar_unidades_reales()` retorna datos correctos
+- [x] `buscar_unidades_reales()` retorna datos correctos (238 deptos, con fotos/precio_m2/razón)
 - [ ] Formulario funciona en móvil
 - [ ] Claude API responde < 30s
 - [ ] Notificación Slack llega
