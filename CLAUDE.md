@@ -92,7 +92,7 @@ sici/
     └── modulo_2/      # Specs matching pipeline
 ```
 
-## Estado Actual (8 Ene 2026)
+## Estado Actual (9 Ene 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
@@ -107,6 +107,8 @@ sici/
 - **Status Pipeline:** Nuevo status `excluido_operacion` para alquiler/anticrético
 - **Limpieza Datos:** Auditoría Sky Properties + corrección GPS (100% matching)
 - **Fuzzy Matching:** pg_trgm + normalize_nombre() + buscar_proyecto_fuzzy() (migración 022)
+- **MVP Simón Backend:** buscar_unidades_reales() v2.1, generar_razon_fiduciaria() (migraciones 025-026)
+- **Fix Data SANTORINI:** 22 parqueos/bauleras reclasificados (migración 027)
 
 ### ⏳ En Progreso
 - **Supervisor Excluidas:** Workflow n8n Export pendiente mapeo columnas (14 props en Sheet)
@@ -134,7 +136,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-024)
+## Migraciones SQL (001-027)
 
 | # | Archivo | Propósito | Estado |
 |---|---------|-----------|--------|
@@ -161,6 +163,9 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 022 | fuzzy_matching_infraestructura | pg_trgm, normalize_nombre(), buscar_proyecto_fuzzy() | ✅ |
 | 023 | supervisor_excluidas | HITL excluidas: exportar, procesar_accion, detectar_razon | ✅ |
 | 024 | matching_trigram_integration | generar_matches_trigram(), matching_completo v3.2 | ⏳ |
+| 025 | generar_razon_fiduciaria | EL MOAT: razones contextuales con DATA real | ✅ |
+| 026 | buscar_unidades_reales_v2 | v2.1: fotos, precio_m2, score, desarrollador, filtro área>=20m² | ✅ |
+| 027 | fix_tipo_propiedad_santorini | Reclasificar 22 parqueos/bauleras SANTORINI VENTURA | ✅ |
 
 ## Repo Legacy
 
@@ -176,5 +181,6 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 
 ### Validaciones Pendientes en Pipeline
 - [ ] Agregar validación precio/m² en merge: si < $800 para Equipetrol, flaggear como `requiere_revision`
-- [ ] Filtro `tipo_operacion = 'venta'` en función `buscar_unidades_reales()` (actualmente solo en frontend)
+- [x] Filtro `tipo_operacion = 'venta'` en función `buscar_unidades_reales()` ✅ (migración 026)
+- [x] Filtro `area >= 20m²` para excluir parqueos/bauleras mal clasificados ✅ (migración 026)
 - [ ] Detectar duplicados por proyecto + área + dormitorios con precios muy diferentes
