@@ -57,6 +57,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 | **MVP Spec 30 días** | `docs/planning/SICI_MVP_SPEC.md` |
 | **Simón Arquitectura** | `docs/simon/SIMON_ARQUITECTURA_COGNITIVA.md` |
 | **Simón Formularios** | `docs/simon/formularios/BLOQUE_2_FORM_*.md` |
+| **Formulario MVP 2 Niveles** | `docs/simon/formularios/FORM_VIVIENDA_MVP.md` |
 | **Metodología Fiduciaria** | `docs/canonical/METODOLOGIA_FIDUCIARIA_PARTE_*.md` |
 | Plan activo | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
@@ -79,7 +80,7 @@ sici/
 │   ├── enrichment/    # registrar_enrichment.sql
 │   ├── merge/         # merge_discovery_enrichment.sql v2.1.0
 │   └── matching/      # Funciones v3.1 (propiedades_v2)
-├── sql/migrations/    # 001-019 (FK, microzonas, HITL, tracking, TC, KG)
+├── sql/migrations/    # 001-028 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
@@ -107,8 +108,9 @@ sici/
 - **Status Pipeline:** Nuevo status `excluido_operacion` para alquiler/anticrético
 - **Limpieza Datos:** Auditoría Sky Properties + corrección GPS (100% matching)
 - **Fuzzy Matching:** pg_trgm + normalize_nombre() + buscar_proyecto_fuzzy() (migración 022)
-- **MVP Simón Backend:** buscar_unidades_reales() v2.1, generar_razon_fiduciaria() (migraciones 025-026)
+- **MVP Simón Backend:** buscar_unidades_reales() v2.1, generar_razon_fiduciaria(), calcular_posicion_mercado() (migraciones 025-028)
 - **Fix Data SANTORINI:** 22 parqueos/bauleras reclasificados (migración 027)
+- **Formulario MVP:** Arquitectura 2 niveles (8 campos quick search + 10 campos fiduciario)
 
 ### ⏳ En Progreso
 - **Supervisor Excluidas:** Workflow n8n Export pendiente mapeo columnas (14 props en Sheet)
@@ -136,7 +138,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-027)
+## Migraciones SQL (001-028)
 
 | # | Archivo | Propósito | Estado |
 |---|---------|-----------|--------|
@@ -166,6 +168,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 025 | generar_razon_fiduciaria | EL MOAT: razones contextuales con DATA real | ✅ |
 | 026 | buscar_unidades_reales_v2 | v2.1: fotos, precio_m2, score, desarrollador, filtro área>=20m² | ✅ |
 | 027 | fix_tipo_propiedad_santorini | Reclasificar 22 parqueos/bauleras SANTORINI VENTURA | ✅ |
+| 028 | calcular_posicion_mercado | Comparar precio vs promedio zona (oportunidad/premium) | ✅ |
 
 ## Repo Legacy
 
