@@ -5,22 +5,26 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 export const supabase = supabaseUrl ? createClient(supabaseUrl, supabaseAnonKey) : null
 
-// Tipos para las respuestas
+// Tipos para las respuestas (match con RPC buscar_unidades_reales v2.1)
 export interface UnidadReal {
   id: number
   proyecto: string
+  desarrollador: string | null
   zona: string
+  microzona: string | null
   dormitorios: number
   precio_usd: number
-  area_m2: number
   precio_m2: number
+  area_m2: number
+  score_calidad: number | null
   asesor_nombre: string | null
   asesor_wsp: string | null
   asesor_inmobiliaria: string | null
+  fotos_urls: string[]
   cantidad_fotos: number
-  fotos_urls: string[]  // URLs de fotos reales
   url: string
   amenities_lista: string[]
+  razon_fiduciaria: string | null  // NEW: razón del SQL
   es_multiproyecto: boolean
 }
 
@@ -56,90 +60,54 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
   }
 
   try {
-    // Query directo con filtro tipo_operacion = 'venta' (la función RPC no lo tiene)
-    let query = supabase
-      .from('propiedades_v2')
-      .select(`
-        id,
-        dormitorios,
-        precio_usd,
-        area_total_m2,
-        url,
-        es_multiproyecto,
-        datos_json,
-        proyectos_master!inner (
-          nombre_oficial,
-          zona
-        )
-      `)
-      .eq('es_activa', true)
-      .eq('tipo_operacion', 'venta')  // CRÍTICO: Solo ventas
-      .gte('precio_usd', 30000)       // Excluir datos corruptos (precios irreales)
-
-    // Filtro: precio máximo
-    if (filtros.precio_max) {
-      query = query.lte('precio_usd', filtros.precio_max)
+    // Construir filtros para RPC (v2.1 ya incluye filtros de venta, área>=20m², etc.)
+    const rpcFiltros: Record<string, any> = {
+      limite: filtros.limite || 10,
+      solo_con_fotos: true  // MVP siempre quiere fotos
     }
 
-    // Filtro: precio mínimo
-    if (filtros.precio_min) {
-      query = query.gte('precio_usd', filtros.precio_min)
-    }
+    if (filtros.precio_max) rpcFiltros.precio_max = filtros.precio_max
+    if (filtros.precio_min) rpcFiltros.precio_min = filtros.precio_min
+    if (filtros.dormitorios) rpcFiltros.dormitorios = filtros.dormitorios
+    if (filtros.area_min) rpcFiltros.area_min = filtros.area_min
+    if (filtros.zona) rpcFiltros.zona = filtros.zona
 
-    // Filtro: dormitorios
-    if (filtros.dormitorios) {
-      query = query.eq('dormitorios', filtros.dormitorios)
-    }
-
-    // Filtro: área mínima
-    if (filtros.area_min) {
-      query = query.gte('area_total_m2', filtros.area_min)
-    }
-
-    // Filtro: zona (en proyectos_master)
-    if (filtros.zona && filtros.zona !== '') {
-      query = query.ilike('proyectos_master.zona', `%${filtros.zona}%`)
-    }
-
-    // Ordenar por precio ascendente
-    query = query.order('precio_usd', { ascending: true })
-
-    // Límite
-    query = query.limit(filtros.limite || 10)
-
-    const { data, error } = await query
+    // Llamar RPC buscar_unidades_reales v2.1
+    const { data, error } = await supabase.rpc('buscar_unidades_reales', {
+      p_filtros: rpcFiltros
+    })
 
     if (error) {
-      console.error('Error buscando unidades:', error)
+      console.error('Error en RPC buscar_unidades_reales:', error)
       return []
     }
 
-    // Mapear a formato esperado y filtrar por precio/m² >= $800 (guardrail Equipetrol)
-    const resultados = (data || [])
-      .map((p: any) => ({
-        id: p.id,
-        proyecto: p.proyectos_master?.nombre_oficial || 'Sin proyecto',
-        zona: p.proyectos_master?.zona || 'Sin zona',
-        dormitorios: p.dormitorios,
-        precio_usd: p.precio_usd,
-        area_m2: p.area_total_m2,
-        precio_m2: p.area_total_m2 > 0 ? p.precio_usd / p.area_total_m2 : 0,
-        asesor_nombre: p.datos_json?.agente?.nombre || null,
-        asesor_wsp: p.datos_json?.agente?.telefono || null,
-        asesor_inmobiliaria: p.datos_json?.agente?.oficina_nombre || null,
-        cantidad_fotos: Array.isArray(p.datos_json?.contenido?.fotos_urls)
-          ? p.datos_json.contenido.fotos_urls.length
-          : 0,
-        fotos_urls: p.datos_json?.contenido?.fotos_urls || [],
-        url: p.url,
-        amenities_lista: p.datos_json?.amenities?.lista || [],
-        es_multiproyecto: p.es_multiproyecto || false
-      }))
-      .filter((p: any) => p.precio_m2 >= 800) // Excluir datos corruptos ($/m² < $800)
+    // Mapear respuesta RPC a interfaz UnidadReal
+    const resultados: UnidadReal[] = (data || []).map((p: any) => ({
+      id: p.id,
+      proyecto: p.proyecto || 'Sin proyecto',
+      desarrollador: p.desarrollador,
+      zona: p.zona || 'Sin zona',
+      microzona: p.microzona,
+      dormitorios: p.dormitorios,
+      precio_usd: parseFloat(p.precio_usd) || 0,
+      precio_m2: parseFloat(p.precio_m2) || 0,
+      area_m2: parseFloat(p.area_m2) || 0,
+      score_calidad: p.score_calidad,
+      asesor_nombre: p.asesor_nombre,
+      asesor_wsp: p.asesor_wsp,
+      asesor_inmobiliaria: p.asesor_inmobiliaria,
+      fotos_urls: p.fotos_urls || [],
+      cantidad_fotos: p.cantidad_fotos || 0,
+      url: p.url || '',
+      amenities_lista: p.amenities_lista || [],
+      razon_fiduciaria: p.razon_fiduciaria,  // Ya viene del SQL
+      es_multiproyecto: p.es_multiproyecto || false
+    }))
 
-    // Filtrar por zonas permitidas (excluir zonas no seleccionadas por el usuario)
+    // Filtrar por zonas permitidas si se especificaron
     if (filtros.zonas_permitidas && filtros.zonas_permitidas.length > 0) {
-      return resultados.filter((p: any) =>
+      return resultados.filter(p =>
         filtros.zonas_permitidas!.some(z =>
           p.zona.toLowerCase().includes(z.toLowerCase())
         )
