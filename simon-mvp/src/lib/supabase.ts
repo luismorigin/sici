@@ -107,9 +107,32 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
 
     // Filtrar por zonas permitidas si se especificaron
     if (filtros.zonas_permitidas && filtros.zonas_permitidas.length > 0) {
+      // Convertir IDs del formulario a nombres de BD usando el mapeo
+      // También acepta nombres directos (por compatibilidad)
+      const nombresValidos = Object.values(microzonaToZona).filter(Boolean)
+      const zonasNombres = filtros.zonas_permitidas
+        .map(z => {
+          // Si es un ID conocido, convertir a nombre
+          if (microzonaToZona[z] !== undefined) {
+            return microzonaToZona[z]
+          }
+          // Si ya es un nombre válido, usarlo directamente
+          if (nombresValidos.some(n => n.toLowerCase() === z.toLowerCase())) {
+            return z
+          }
+          return '' // Desconocido, ignorar
+        })
+        .filter(Boolean) // Eliminar vacíos
+
+      // Si no hay zonas específicas (solo 'flexible'), no filtrar
+      if (zonasNombres.length === 0) {
+        return resultados
+      }
+
+      // Filtrar por coincidencia exacta de zona
       return resultados.filter(p =>
-        filtros.zonas_permitidas!.some(z =>
-          p.zona.toLowerCase().includes(z.toLowerCase())
+        zonasNombres.some(zonaNombre =>
+          p.zona.toLowerCase() === zonaNombre.toLowerCase()
         )
       )
     }

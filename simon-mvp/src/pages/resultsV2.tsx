@@ -24,8 +24,18 @@ interface FormData {
     decision_compartida: boolean
     presion_externa: string
     innegociables: string[]
+    deseables: string[]
   }
   respuestas: Record<string, any>
+}
+
+// Respuesta del endpoint de razón fiduciaria
+interface RazonPersonalizada {
+  id: number
+  razon_fiduciaria: string
+  score: number
+  encaja: boolean
+  alerta?: string | null
 }
 
 export default function ResultsV2Page() {
@@ -33,9 +43,13 @@ export default function ResultsV2Page() {
   const { level: queryLevel } = router.query
   const [level, setLevel] = useState<1 | 2>(1)
   const [loading, setLoading] = useState(true)
+  const [loadingRazones, setLoadingRazones] = useState(false)
   const [formData, setFormData] = useState<FormData | null>(null)
   const [properties, setProperties] = useState<UnidadReal[]>([])
+  const [razonesPersonalizadas, setRazonesPersonalizadas] = useState<Record<number, RazonPersonalizada>>({})
   const [selectedProperty, setSelectedProperty] = useState<number | null>(null)
+  const [contactoEnviado, setContactoEnviado] = useState(false)
+  const [enviandoContacto, setEnviandoContacto] = useState(false)
 
   // Cargar datos
   useEffect(() => {
@@ -52,10 +66,14 @@ export default function ResultsV2Page() {
     setFormData(parsed)
 
     // Buscar propiedades
-    fetchProperties(parsed.mbf_filtros)
+    fetchProperties(parsed.mbf_filtros, lvl, parsed)
   }, [queryLevel, router])
 
-  const fetchProperties = async (filtros: FormData['mbf_filtros']) => {
+  const fetchProperties = async (
+    filtros: FormData['mbf_filtros'],
+    currentLevel: 1 | 2,
+    currentFormData: FormData
+  ) => {
     setLoading(true)
     try {
       const results = await buscarUnidadesReales({
@@ -66,6 +84,11 @@ export default function ResultsV2Page() {
         limite: 5,
       })
       setProperties(results)
+
+      // Si es nivel 2, obtener razones personalizadas de Claude
+      if (currentLevel === 2 && currentFormData.contexto_fiduciario && results.length > 0) {
+        fetchRazonesPersonalizadas(results, currentFormData)
+      }
     } catch (error) {
       console.error('Error buscando propiedades:', error)
       setProperties([])
@@ -73,9 +96,97 @@ export default function ResultsV2Page() {
     setLoading(false)
   }
 
+  // Llamar al endpoint de razones fiduciarias personalizadas
+  const fetchRazonesPersonalizadas = async (props: UnidadReal[], data: FormData) => {
+    if (!data.contexto_fiduciario) return
+
+    setLoadingRazones(true)
+    try {
+      // Preparar perfil del usuario
+      const perfil = {
+        nombre: data.respuestas?.L1_nombre || '',
+        ...data.contexto_fiduciario,
+        presupuesto_max: data.mbf_filtros.precio_max,
+        zonas_elegidas: data.mbf_filtros.zonas_permitidas,
+      }
+
+      // Preparar propiedades con datos de mercado
+      const propiedadesInput = props.map(p => ({
+        id: p.id,
+        proyecto: p.proyecto,
+        zona: p.zona,
+        microzona: p.microzona,
+        dormitorios: p.dormitorios,
+        precio_usd: p.precio_usd,
+        precio_m2: p.precio_m2,
+        area_m2: p.area_m2,
+        amenities: p.amenities_lista,
+        razon_sql: p.razon_fiduciaria, // Razón genérica del SQL
+      }))
+
+      const response = await fetch('/api/razon-fiduciaria', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          perfil,
+          propiedades: propiedadesInput,
+        }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        // Convertir array a objeto indexado por id
+        const razonesMap: Record<number, RazonPersonalizada> = {}
+        result.propiedades?.forEach((r: RazonPersonalizada) => {
+          razonesMap[r.id] = r
+        })
+        setRazonesPersonalizadas(razonesMap)
+      }
+    } catch (error) {
+      console.error('Error obteniendo razones personalizadas:', error)
+    }
+    setLoadingRazones(false)
+  }
+
   const handlePersonalizar = () => {
     // Ir a nivel 2 del formulario
     router.push('/formV2?level=2')
+  }
+
+  // Enviar solicitud de contacto a Slack
+  const handleSolicitarContacto = async () => {
+    if (!formData) return
+
+    setEnviandoContacto(true)
+    try {
+      const nombre = formData.respuestas?.L1_nombre || 'Sin nombre'
+      const whatsapp = formData.respuestas?.L1_whatsapp || 'Sin WhatsApp'
+
+      await fetch('/api/notify-slack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'contact_request',
+          data: {
+            nombre,
+            whatsapp,
+            nivel: level,
+            presupuesto: formData.mbf_filtros.precio_max,
+            dormitorios: formData.mbf_filtros.dormitorios,
+            zonas: formData.mbf_filtros.zonas_permitidas,
+            propiedades_vistas: properties.length,
+            propiedades_ids: properties.map(p => p.id),
+          }
+        })
+      })
+
+      setContactoEnviado(true)
+    } catch (error) {
+      console.error('Error enviando contacto:', error)
+      // Aún así marcar como enviado para no bloquear al usuario
+      setContactoEnviado(true)
+    }
+    setEnviandoContacto(false)
   }
 
   const getNombre = () => {
@@ -253,18 +364,54 @@ export default function ResultsV2Page() {
                       </div>
                     )}
 
-                    {/* Razon fiduciaria (solo nivel 2 o si viene del SQL) */}
-                    {(level === 2 || property.razon_fiduciaria) && property.razon_fiduciaria && (
-                      <div className="bg-purple-50 rounded-xl p-4 mt-4">
-                        <p className="text-purple-800">
-                          <span className="font-semibold text-purple-600">Por que encaja: </span>
-                          {property.razon_fiduciaria}
+                    {/* Razon fiduciaria PERSONALIZADA (nivel 2 con Claude) */}
+                    {level === 2 && razonesPersonalizadas[property.id] && (
+                      <div className={`rounded-xl p-4 mt-4 ${
+                        razonesPersonalizadas[property.id].encaja
+                          ? 'bg-purple-50'
+                          : 'bg-amber-50'
+                      }`}>
+                        <p className={razonesPersonalizadas[property.id].encaja
+                          ? 'text-purple-800'
+                          : 'text-amber-800'
+                        }>
+                          <span className={`font-semibold ${
+                            razonesPersonalizadas[property.id].encaja
+                              ? 'text-purple-600'
+                              : 'text-amber-600'
+                          }`}>
+                            {razonesPersonalizadas[property.id].encaja ? 'Por que encaja: ' : 'Atencion: '}
+                          </span>
+                          {razonesPersonalizadas[property.id].razon_fiduciaria}
                         </p>
+                        {razonesPersonalizadas[property.id].alerta && (
+                          <p className="mt-2 text-sm text-red-600 font-medium">
+                            ⚠️ {razonesPersonalizadas[property.id].alerta}
+                          </p>
+                        )}
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="text-xs text-neutral-500">Score de coherencia:</span>
+                          <span className={`text-sm font-bold ${
+                            razonesPersonalizadas[property.id].score >= 8 ? 'text-green-600' :
+                            razonesPersonalizadas[property.id].score >= 5 ? 'text-amber-600' :
+                            'text-red-600'
+                          }`}>
+                            {razonesPersonalizadas[property.id].score}/10
+                          </span>
+                        </div>
                       </div>
                     )}
 
-                    {/* Mensaje nivel 1 sin razon */}
-                    {level === 1 && !property.razon_fiduciaria && (
+                    {/* Loading razones personalizadas */}
+                    {level === 2 && loadingRazones && !razonesPersonalizadas[property.id] && (
+                      <div className="bg-purple-50 rounded-xl p-4 mt-4 animate-pulse">
+                        <div className="h-4 bg-purple-200 rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-purple-200 rounded w-1/2"></div>
+                      </div>
+                    )}
+
+                    {/* Mensaje nivel 1 - invitar a personalizar */}
+                    {level === 1 && (
                       <div className="bg-neutral-50 rounded-xl p-4 mt-4 text-center">
                         <p className="text-neutral-500 text-sm">
                           Completa el formulario para ver por que esta opcion encaja con vos
@@ -300,18 +447,37 @@ export default function ResultsV2Page() {
               transition={{ delay: 0.6 }}
               className="mt-12 bg-neutral-900 text-white rounded-3xl p-8 text-center"
             >
-              <h2 className="text-2xl font-bold mb-2">
-                ¿Te interesa alguna?
-              </h2>
-              <p className="text-neutral-400 mb-6">
-                Dejanos tu WhatsApp y te contactamos en menos de 24h
-              </p>
-              <button
-                onClick={() => router.push('/contact')}
-                className="btn-primary bg-white text-neutral-900 hover:bg-neutral-100"
-              >
-                Quiero que me contacten →
-              </button>
+              {contactoEnviado ? (
+                <>
+                  <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h2 className="text-2xl font-bold mb-2">
+                    Listo, {getNombre()}!
+                  </h2>
+                  <p className="text-neutral-400">
+                    Te contactaremos por WhatsApp en menos de 24 horas.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-bold mb-2">
+                    ¿Te interesa alguna?
+                  </h2>
+                  <p className="text-neutral-400 mb-6">
+                    Te contactamos por WhatsApp en menos de 24h
+                  </p>
+                  <button
+                    onClick={handleSolicitarContacto}
+                    disabled={enviandoContacto}
+                    className="btn-primary bg-white text-neutral-900 hover:bg-neutral-100 disabled:opacity-50"
+                  >
+                    {enviandoContacto ? 'Enviando...' : 'Quiero que me contacten'}
+                  </button>
+                </>
+              )}
             </motion.section>
           )}
         </div>

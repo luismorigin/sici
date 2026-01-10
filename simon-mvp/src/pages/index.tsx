@@ -30,7 +30,7 @@ export default function Landing() {
         precio_max: 150000,
         dormitorios: 2,
         area_min: 70,
-        zonas_permitidas: ['Equipetrol', 'Sirari'],
+        zonas_permitidas: ['equipetrol', 'sirari'],
         solo_con_fotos: true,
         limite: 5
       }

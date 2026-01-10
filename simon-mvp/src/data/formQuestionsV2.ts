@@ -38,7 +38,7 @@ export interface Question {
 // Secciones simplificadas
 export const sectionsV2 = [
   { id: 'N1', name: 'Busqueda Rapida', emoji: '🔍', level: 1, questions: 8 },
-  { id: 'N2', name: 'Contexto Personal', emoji: '👤', level: 2, questions: 10 },
+  { id: 'N2', name: 'Contexto Personal', emoji: '👤', level: 2, questions: 11 },  // +1 por hijos
 ]
 
 // =====================================================
@@ -47,7 +47,33 @@ export const sectionsV2 = [
 // =====================================================
 
 export const level1Questions: Question[] = [
-  // 1.1 PRESUPUESTO
+  // 1.1 NOMBRE (primero para capturar lead)
+  {
+    id: 'L1_nombre',
+    level: 1,
+    section: 'N1',
+    sectionName: 'Busqueda Rapida',
+    question: '¿Como te llamas?',
+    subtitle: 'Para personalizar tu experiencia',
+    type: 'text',
+    placeholder: 'Tu nombre',
+    required: true,
+  },
+
+  // 1.2 WHATSAPP (segundo para capturar lead)
+  {
+    id: 'L1_whatsapp',
+    level: 1,
+    section: 'N1',
+    sectionName: 'Busqueda Rapida',
+    question: '¿Tu WhatsApp?',
+    subtitle: 'Solo para contactarte si lo solicitas',
+    type: 'text',
+    placeholder: '70000000',
+    required: true,
+  },
+
+  // 1.3 PRESUPUESTO
   {
     id: 'L1_presupuesto',
     level: 1,
@@ -64,28 +90,28 @@ export const level1Questions: Question[] = [
     sqlField: 'precio_max'
   },
 
-  // 1.2 ZONA
+  // 1.4 ZONA (microzonas de Equipetrol)
   {
     id: 'L1_zona',
     level: 1,
     section: 'N1',
     sectionName: 'Busqueda Rapida',
     question: '¿Donde queres vivir?',
-    subtitle: 'Elegi hasta 3 zonas',
+    subtitle: 'Elegi las zonas que te interesan',
     type: 'multiple',
     required: true,
     sqlField: 'zona',
     options: [
-      { id: 'equipetrol', label: 'Equipetrol', icon: '🔵' },
-      { id: 'equipetrol_norte', label: 'Equipetrol Norte', icon: '🔴' },
-      { id: 'urbari', label: 'Urbari', icon: '🟠' },
-      { id: 'sirari', label: 'Sirari', icon: '🟡' },
-      { id: 'las_palmas', label: 'Las Palmas', icon: '🟢' },
-      { id: 'otra', label: 'Otra zona', icon: '📍' },
+      { id: 'equipetrol', label: 'Equipetrol (centro historico)', icon: '🔵' },
+      { id: 'sirari', label: 'Sirari (premium tranquila)', icon: '🟠' },
+      { id: 'equipetrol_norte_norte', label: 'Equipetrol Norte (financiero)', icon: '🔴' },
+      { id: 'equipetrol_norte_sur', label: 'Equipetrol Norte/Sur (transicion)', icon: '🟡' },
+      { id: 'villa_brigida', label: 'Villa Brigida (emergente)', icon: '🟢' },
+      { id: 'faremafu', label: 'Faremafu (sur)', icon: '🟣' },
     ]
   },
 
-  // 1.3 DORMITORIOS
+  // 1.5 DORMITORIOS
   {
     id: 'L1_dormitorios',
     level: 1,
@@ -103,7 +129,7 @@ export const level1Questions: Question[] = [
     ]
   },
 
-  // 1.4 AREA MINIMA
+  // 1.6 AREA MINIMA
   {
     id: 'L1_area',
     level: 1,
@@ -122,7 +148,7 @@ export const level1Questions: Question[] = [
     ]
   },
 
-  // 1.5 INNEGOCIABLES
+  // 1.7 INNEGOCIABLES
   {
     id: 'L1_innegociables',
     level: 1,
@@ -142,24 +168,7 @@ export const level1Questions: Question[] = [
     ]
   },
 
-  // 1.6 DESEABLES
-  {
-    id: 'L1_deseables',
-    level: 1,
-    section: 'N1',
-    sectionName: 'Busqueda Rapida',
-    question: 'Me gustaria, pero no es critico',
-    type: 'multiple',
-    required: false,
-    options: [
-      { id: 'piscina', label: 'Piscina', icon: '🏊' },
-      { id: 'gym', label: 'Gimnasio', icon: '🏋️' },
-      { id: 'parrilla', label: 'Area BBQ', icon: '🍖' },
-      { id: 'nuevo', label: 'Edificio nuevo (< 5 años)', icon: '🆕' },
-    ]
-  },
-
-  // 1.7 FINANCIACION
+  // 1.8 FINANCIACION
   {
     id: 'L1_financiacion',
     level: 1,
@@ -174,18 +183,6 @@ export const level1Questions: Question[] = [
       { id: 'venta', label: 'Venta de otra propiedad', icon: '🏠' },
       { id: 'combinacion', label: 'Combinacion', icon: '🔄' },
     ]
-  },
-
-  // 1.8 CONTACTO (se pide al final de nivel 1)
-  {
-    id: 'L1_nombre',
-    level: 1,
-    section: 'N1',
-    sectionName: 'Busqueda Rapida',
-    question: '¿Como te llamas?',
-    type: 'text',
-    placeholder: 'Tu nombre',
-    required: true,
   },
 ]
 
@@ -213,7 +210,26 @@ export const level2Questions: Question[] = [
     ]
   },
 
-  // 2.2 MASCOTAS
+  // 2.2 CANTIDAD DE HIJOS (importante para dimensionar espacio)
+  {
+    id: 'L2_hijos',
+    level: 2,
+    section: 'N2',
+    sectionName: 'Contexto Personal',
+    question: '¿Cuantos hijos?',
+    subtitle: 'Para dimensionar el espacio necesario',
+    type: 'single',
+    required: false,  // Solo aplica si tiene hijos
+    options: [
+      { id: '0', label: 'No tengo hijos', icon: '🚫' },
+      { id: '1', label: '1 hijo', icon: '1️⃣' },
+      { id: '2', label: '2 hijos', icon: '2️⃣' },
+      { id: '3', label: '3 hijos', icon: '3️⃣' },
+      { id: '4+', label: '4 o mas', icon: '4️⃣' },
+    ]
+  },
+
+  // 2.3 MASCOTAS
   {
     id: 'L2_mascotas',
     level: 2,
@@ -388,6 +404,7 @@ export function extractMBFFilters(answers: Record<string, any>) {
 export function extractFiduciaryContext(answers: Record<string, any>) {
   return {
     composicion: answers.L2_composicion || null,
+    hijos: mapHijos(answers.L2_hijos),
     mascota: answers.L2_mascotas || 'no',
     meses_buscando: mapTiempoBuscando(answers.L2_tiempo_buscando),
     estado_emocional: answers.L2_estado || 'activo',
@@ -399,6 +416,17 @@ export function extractFiduciaryContext(answers: Record<string, any>) {
     presion_externa: answers.L2_presion || 'no',
     innegociables: answers.L1_innegociables || [],
     deseables: answers.L1_deseables || [],
+  }
+}
+
+function mapHijos(value: string): number {
+  switch (value) {
+    case '0': return 0
+    case '1': return 1
+    case '2': return 2
+    case '3': return 3
+    case '4+': return 4
+    default: return 0
   }
 }
 

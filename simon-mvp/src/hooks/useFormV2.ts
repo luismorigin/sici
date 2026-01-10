@@ -19,6 +19,7 @@ export function useFormV2(initialLevel: FormLevel = 1) {
   const [answers, setAnswers] = useState<FormState>({})
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
   const [startTime] = useState(Date.now())
+  const [isInitialized, setIsInitialized] = useState(false)
 
   // Obtener preguntas según nivel
   const getQuestions = useCallback(() => {
@@ -30,23 +31,50 @@ export function useFormV2(initialLevel: FormLevel = 1) {
   const isFirstQuestion = currentIndex === 0
   const isLastQuestion = currentIndex === questions.length - 1
 
-  // Restaurar respuestas guardadas
+  // Restaurar respuestas guardadas AL INICIO
   useEffect(() => {
-    const saved = localStorage.getItem('simon_form_v2')
-    if (saved) {
+    if (isInitialized) return
+
+    // Siempre restaurar respuestas de nivel 1 (de simon_form_data o simon_form_v2)
+    const savedFormData = localStorage.getItem('simon_form_data')
+    const savedProgress = localStorage.getItem('simon_form_v2')
+
+    let restoredAnswers: FormState = {}
+
+    // Primero intentar de simon_form_data (datos completos)
+    if (savedFormData) {
       try {
-        const parsed = JSON.parse(saved)
-        if (parsed.answers) {
-          setAnswers(parsed.answers)
-        }
-        if (parsed.level) {
-          setLevel(parsed.level)
+        const parsed = JSON.parse(savedFormData)
+        if (parsed.respuestas) {
+          restoredAnswers = { ...parsed.respuestas }
         }
       } catch (e) {
-        console.error('Error parsing saved form:', e)
+        console.error('Error parsing simon_form_data:', e)
       }
     }
-  }, [])
+
+    // También de simon_form_v2 (progreso parcial)
+    if (savedProgress) {
+      try {
+        const parsed = JSON.parse(savedProgress)
+        if (parsed.answers) {
+          restoredAnswers = { ...restoredAnswers, ...parsed.answers }
+        }
+      } catch (e) {
+        console.error('Error parsing simon_form_v2:', e)
+      }
+    }
+
+    if (Object.keys(restoredAnswers).length > 0) {
+      setAnswers(restoredAnswers)
+    }
+
+    // El nivel viene del initialLevel (de la URL), NO del localStorage
+    // Esto permite que ?level=2 funcione correctamente
+    setLevel(initialLevel)
+    setCurrentIndex(0)
+    setIsInitialized(true)
+  }, [initialLevel, isInitialized])
 
   // Verificar si puede continuar
   const canProceed = useCallback(() => {

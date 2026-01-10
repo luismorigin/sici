@@ -13,10 +13,35 @@ export interface PropiedadInput {
   id: number
   proyecto: string
   zona: string
+  microzona?: string
   dormitorios: number
   precio_usd: number
+  precio_m2: number
   area_m2: number
   amenities: string[]
+  // Datos de mercado del SQL (nuevos)
+  razon_sql?: string          // Razón genérica del SQL
+  stock_bajo_precio?: number  // Cuántas hay bajo este precio
+  posicion_precio?: number    // Posición en el proyecto (1=más barato)
+  total_proyecto?: number     // Total unidades en proyecto
+  diff_vs_promedio?: number   // % vs promedio de zona
+}
+
+// Contexto del usuario (nivel 2)
+export interface PerfilUsuario {
+  nombre?: string
+  composicion: string         // solo, pareja, familia_chica, etc.
+  hijos?: number
+  mascota: string             // no, perro_chico, perro_grande, gato
+  meses_buscando: number
+  estado_emocional: string    // activo, cansado, frustrado, presionado
+  horizonte: string           // 1-3, 3-7, 7+
+  prioriza: string            // ubicacion, metros
+  sensible_expensas: boolean
+  decision_compartida: boolean
+  presion_externa: string     // no, poco, bastante
+  innegociables: string[]
+  deseables: string[]
 }
 
 export interface RazonFiduciariaResponse {
@@ -30,55 +55,64 @@ export interface RazonFiduciariaResponse {
 
 const PROMPT_RAZON_FIDUCIARIA = `Eres Simón, sistema fiduciario inmobiliario. Tu rol es evaluar COHERENCIA, no vender.
 
-PERFIL DEL COMPRADOR (extraído del formulario):
+## PERFIL DEL COMPRADOR:
 {perfil_json}
 
-PROPIEDADES A EVALUAR:
+## PROPIEDADES A EVALUAR (con datos de mercado):
 {propiedades_json}
 
-Para CADA propiedad, genera una FICHA DE COHERENCIA que responda:
-"¿Esta propiedad es coherente con lo que ESTA PERSONA ESPECÍFICA dijo que necesita?"
+## TU TAREA:
+Para CADA propiedad, genera una razón fiduciaria que COMBINE:
+1. Los DATOS DE MERCADO (escasez, precio vs promedio, posición)
+2. El CONTEXTO PERSONAL del usuario (familia, mascotas, horizonte, estado emocional)
 
-Responde en JSON:
+## FORMATO DE RESPUESTA (JSON):
 {
   "propiedades": [
     {
       "id": 123,
-      "razon_fiduciaria": "ESPECÍFICA al perfil: menciona SUS innegociables, SU presupuesto, SU situación. No genérico.",
+      "razon_fiduciaria": "2-3 oraciones que combinen datos + contexto personal",
       "score": 9,
       "encaja": true,
       "alerta": null
-    },
-    {
-      "id": 456,
-      "razon_fiduciaria": "Explica QUÉ criterio viola y por qué importa para ESTE usuario.",
-      "score": 4,
-      "encaja": false,
-      "alerta": "Viola innegociable: sin piscina"
     }
   ]
 }
 
-ESTRUCTURA DE RAZÓN FIDUCIARIA (2-3 oraciones):
-1. Primera oración: Qué criterios del USUARIO cumple/viola (ser específico)
-2. Segunda oración: Qué implica esto para SU situación (no genérico)
-3. Tercera (opcional): Trade-off o consideración relevante
+## ESTRUCTURA DE RAZÓN FIDUCIARIA (2-3 oraciones):
 
-EJEMPLOS BUENOS:
-- "Cumple tu innegociable de piscina y está en Sirari que elegiste. El precio/m² de $1,450 está en rango normal para la zona."
-- "Viola tu innegociable: sin seguridad 24h. Tu situación de pareja con niño pequeño hace esto crítico."
-- "20% bajo tu tope de $150k, pero en Villa Brigida que NO seleccionaste. Solo verla si flexibilizás zona."
+**Primera oración: DATO DE MERCADO + RELEVANCIA PERSONAL**
+- Usa el dato de escasez/precio del SQL pero hazlo relevante para SU situación
+- Ejemplo: "1 de solo 3 opciones pet-friendly bajo $120k - importante porque tu perro grande necesita edificio que realmente acepte mascotas"
 
-EJEMPLOS MALOS (NO USAR):
-- "Buena opción con amenities atractivos" (genérico)
-- "15% bajo tu tope" (sin contexto)
-- "Departamento moderno en buena zona" (no menciona al usuario)
+**Segunda oración: CONTEXTO PERSONAL**
+- Menciona su composición familiar, horizonte de vida, o estado emocional
+- Ejemplo: "Para tu familia de 4 buscando estabilidad a largo plazo, los 85m² son justos pero la ubicación en Sirari compensa"
 
-REGLAS:
-1. SIEMPRE menciona criterios específicos del usuario
-2. Si viola innegociable, ponlo en "alerta"
-3. Score: 8-10 = cumple todo, 5-7 = cumple parcial, 1-4 = viola algo importante
-4. Responde SOLO JSON, sin markdown`
+**Tercera oración (si aplica): ALERTA O TRADE-OFF**
+- Solo si hay algo que vigilar o decidir
+- Ejemplo: "Ojo: llevás 8 meses buscando - no decidas por cansancio"
+
+## EJEMPLOS BUENOS:
+
+"1 de solo 5 bajo $130k en Villa Brigida. Tu perro grande va a estar cómodo - es de los pocos edificios que realmente acepta mascotas grandes. Buena opción para tu horizonte de +7 años."
+
+"15% bajo el promedio de Equipetrol Norte ($1,850/m² vs $2,100). Para tu pareja sin hijos priorizando ubicación sobre metros, encaja perfecto. Solo asegurense de estar alineados antes de ofertar."
+
+"El más económico de 8 unidades en Sky Tower. Pero OJO: no tiene piscina que marcaste como innegociable. Solo verla si flexibilizás ese criterio."
+
+## EJEMPLOS MALOS (NO USAR):
+- "Buena opción en buena zona" (genérico, no dice nada)
+- "15% bajo tu tope" (dato sin contexto personal)
+- "Departamento moderno con amenities" (no menciona al usuario)
+
+## REGLAS DURAS:
+1. SIEMPRE combina dato de mercado + contexto personal
+2. SIEMPRE menciona algo específico del perfil del usuario
+3. Si viola innegociable → alerta obligatoria + score ≤ 4
+4. Si lleva +6 meses buscando o está "cansado/frustrado" → mencionar en alguna propiedad
+5. Score: 8-10 = encaja perfecto, 5-7 = encaja parcial, 1-4 = viola algo importante
+6. Responde SOLO JSON válido, sin markdown ni texto adicional`
 
 export default async function handler(
   req: NextApiRequest,
