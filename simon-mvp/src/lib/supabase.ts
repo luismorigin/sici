@@ -221,3 +221,170 @@ export async function verificarConexion(): Promise<boolean> {
     return false
   }
 }
+
+// ========== LANDING PAGE FUNCTIONS ==========
+
+// Métricas de mercado para la landing
+export interface MetricasMercado {
+  precio_promedio_m2: number
+  total_propiedades: number
+  por_dormitorios: { dormitorios: number; cantidad: number }[]
+  rango_min: number
+  rango_max: number
+}
+
+export async function obtenerMetricasMercado(): Promise<MetricasMercado | null> {
+  if (!supabase) return null
+
+  try {
+    // Usar la vista v_metricas_mercado si existe, o query directo
+    const { data, error } = await supabase
+      .from('propiedades_v2')
+      .select('precio_usd, area_total_m2, dormitorios')
+      .eq('es_activa', true)
+      .eq('tipo_operacion', 'venta')
+      .gte('precio_usd', 30000)
+
+    if (error || !data) return null
+
+    // Calcular métricas
+    const propiedadesValidas = data.filter((p: any) =>
+      p.area_total_m2 > 20 && p.precio_usd / p.area_total_m2 >= 800
+    )
+
+    if (propiedadesValidas.length === 0) return null
+
+    const precios = propiedadesValidas.map((p: any) => p.precio_usd)
+    const preciosM2 = propiedadesValidas.map((p: any) => p.precio_usd / p.area_total_m2)
+
+    // Agrupar por dormitorios
+    const porDorms: Record<number, number> = {}
+    propiedadesValidas.forEach((p: any) => {
+      const d = p.dormitorios || 0
+      porDorms[d] = (porDorms[d] || 0) + 1
+    })
+
+    return {
+      precio_promedio_m2: Math.round(preciosM2.reduce((a, b) => a + b, 0) / preciosM2.length),
+      total_propiedades: propiedadesValidas.length,
+      por_dormitorios: Object.entries(porDorms)
+        .map(([d, c]) => ({ dormitorios: parseInt(d), cantidad: c }))
+        .sort((a, b) => a.dormitorios - b.dormitorios),
+      rango_min: Math.min(...precios),
+      rango_max: Math.max(...precios)
+    }
+  } catch (err) {
+    console.error('Error obteniendo métricas:', err)
+    return null
+  }
+}
+
+// TC Binance para Market Lens
+export interface TCData {
+  precio_venta: number
+  precio_compra: number
+  fecha: string
+}
+
+export async function obtenerTCBinance(): Promise<TCData | null> {
+  if (!supabase) return null
+
+  try {
+    const { data, error } = await supabase
+      .from('tc_binance_historial')
+      .select('precio_venta, precio_compra, fecha')
+      .order('fecha', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (error || !data) return null
+
+    return {
+      precio_venta: parseFloat(data.precio_venta),
+      precio_compra: parseFloat(data.precio_compra),
+      fecha: data.fecha
+    }
+  } catch {
+    return null
+  }
+}
+
+// Snapshot 24h para Market Lens
+export interface Snapshot24h {
+  nuevos: number
+  tc_actual: number
+  tc_variacion: number
+  precio_real_m2: number
+}
+
+export async function obtenerSnapshot24h(): Promise<Snapshot24h | null> {
+  if (!supabase) return null
+
+  try {
+    // Propiedades nuevas en últimas 24h
+    const hace24h = new Date()
+    hace24h.setHours(hace24h.getHours() - 24)
+
+    const { data: nuevas, error: errNuevas } = await supabase
+      .from('propiedades_v2')
+      .select('id')
+      .gte('fecha_descubierto', hace24h.toISOString())
+
+    // TC actual y anterior
+    const { data: tcs, error: errTc } = await supabase
+      .from('tc_binance_historial')
+      .select('precio_venta, fecha')
+      .order('fecha', { ascending: false })
+      .limit(2)
+
+    if (errNuevas || errTc) return null
+
+    const tcActual = tcs?.[0]?.precio_venta || 10.95
+    const tcAnterior = tcs?.[1]?.precio_venta || tcActual
+    const variacion = ((tcActual - tcAnterior) / tcAnterior) * 100
+
+    // Precio real ajustado
+    const metricas = await obtenerMetricasMercado()
+    const precioRealM2 = metricas ? Math.round(metricas.precio_promedio_m2 * (6.96 / tcActual)) : 1186
+
+    return {
+      nuevos: nuevas?.length || 0,
+      tc_actual: tcActual,
+      tc_variacion: Math.round(variacion * 10) / 10,
+      precio_real_m2: precioRealM2
+    }
+  } catch {
+    return null
+  }
+}
+
+// Guardar lead
+export interface LeadData {
+  nombre: string
+  email: string
+  whatsapp: string
+  presupuesto?: number
+  dormitorios?: number
+}
+
+export async function guardarLead(lead: LeadData): Promise<boolean> {
+  if (!supabase) return false
+
+  try {
+    const { error } = await supabase
+      .from('leads')
+      .insert([{
+        nombre: lead.nombre,
+        email: lead.email,
+        whatsapp: lead.whatsapp,
+        presupuesto_usd: lead.presupuesto,
+        dormitorios: lead.dormitorios,
+        fuente: 'landing_mvp',
+        created_at: new Date().toISOString()
+      }])
+
+    return !error
+  } catch {
+    return false
+  }
+}
