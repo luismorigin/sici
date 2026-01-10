@@ -1,0 +1,1974 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Simón – Departamentos en Equipetrol</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Encontrá tu departamento ideal en Equipetrol sin marearte. Simón revisa el mercado y te muestra solo las 3 mejores opciones para vos." />
+
+  <!-- Google Fonts: Outfit (Moderna/Tech) + Inter (Lectura) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <style>
+    /* --- VARIABLES & SETUP --- */
+    :root {
+      /* Palette */
+      --bg-body: #FFFFFF;      
+      --primary: #0F172A;      
+      --primary-blue: #3B82F6; 
+      --primary-blue-hover: #2563EB;
+      --secondary-gray: #E2E8F0; 
+      --secondary-text: #64748B;
+      --accent-badge: #DBEAFE; 
+      --accent-badge-text: #1E40AF;
+      
+      --success: #10B981;      
+      --success-bg: #D1FAE5;
+      --danger: #EF4444;
+      --warning: #F59E0B;
+      
+      /* Dark Section Colors */
+      --bg-dark: #1E2538;      
+      --card-dark: #273048;    
+      
+      /* Premium Colors */
+      --premium-gold: #F59E0B;
+      --premium-gold-hover: #D97706;
+      --premium-dark: #0F172A;
+      
+      /* Lens/Data Colors (New) */
+      --lens-bg: #0F172A;
+      --lens-card: #1E293B;
+      --lens-border: #334155;
+      --lens-accent: #60A5FA;
+      
+      /* Report Specifics */
+      --bg-report: #F8FAFC;
+      --border-report: #E2E8F0;
+
+      /* UI Elements */
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-pill: 999px;
+      
+      /* Shadows */
+      --shadow-card: 0 20px 40px -5px rgba(59, 130, 246, 0.15); 
+      --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: var(--bg-body);
+      color: var(--primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4, h5, .logo-text-main, .report-title {
+      font-family: 'Outfit', sans-serif;
+      letter-spacing: -0.02em;
+    }
+
+    a { text-decoration: none; color: inherit; transition: all 0.3s ease; }
+    ul { list-style: none; }
+    img { max-width: 100%; display: block; }
+
+    /* --- UTILITIES --- */
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+    }
+    .reveal.active { opacity: 1; transform: translateY(0); }
+
+    .text-center { text-align: center; }
+    .mb-1 { margin-bottom: 0.5rem; }
+    .mb-2 { margin-bottom: 1rem; }
+    .mb-4 { margin-bottom: 2rem; }
+
+    /* --- NAVBAR --- */
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      padding: 1rem 0;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo { display: flex; align-items: center; gap: 0.5rem; }
+    .logo-mark { color: var(--primary-blue); font-size: 1.8rem; }
+    .logo-text-main { font-weight: 700; font-size: 1.4rem; color: var(--primary); }
+
+    .nav-links {
+      display: none;
+      align-items: center;
+      gap: 2rem;
+      font-weight: 500;
+      color: var(--secondary-text);
+      font-size: 0.95rem;
+    }
+    .nav-links a:hover { color: var(--primary-blue); }
+    @media (min-width: 768px) { .nav-links { display: flex; } }
+
+    /* --- BUTTONS --- */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--radius-pill);
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+      border: none;
+      width: 100%;
+    }
+    @media (min-width: 640px) { .btn { width: auto; } }
+
+    .btn-primary {
+      background: var(--primary-blue);
+      color: white;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    .btn-primary:hover {
+      background: var(--primary-blue-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-secondary {
+      background: var(--secondary-gray);
+      color: var(--primary);
+    }
+    .btn-secondary:hover {
+      background: #CBD5E1;
+      transform: translateY(-2px);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--primary-blue);
+      color: var(--primary-blue);
+    }
+    .btn-outline:hover {
+      background: rgba(59, 130, 246, 0.05);
+      transform: translateY(-2px);
+    }
+
+    /* Premium Button */
+    .btn-gold {
+      background: linear-gradient(135deg, var(--premium-gold) 0%, #B45309 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+    }
+    .btn-gold:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.5);
+    }
+
+    .btn-gold-outline {
+      background: transparent;
+      border: 2px solid var(--premium-gold);
+      color: var(--premium-gold);
+    }
+    .btn-gold-outline:hover {
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    /* Lens Button */
+    .btn-lens {
+      background: var(--lens-accent);
+      color: var(--lens-bg);
+      box-shadow: 0 0 20px rgba(96, 165, 250, 0.4);
+    }
+    .btn-lens:hover {
+      background: #93C5FD;
+      transform: translateY(-2px);
+    }
+
+    /* --- HERO SECTION --- */
+    .hero {
+      padding-top: 160px;
+      padding-bottom: 6rem;
+    }
+
+    .hero-grid {
+      display: grid;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    @media (min-width: 992px) {
+      .hero-grid { grid-template-columns: 1.1fr 0.9fr; }
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: var(--accent-badge);
+      color: var(--accent-badge-text);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.4rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-title {
+      font-size: 3rem;
+      line-height: 1.1;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      font-weight: 800;
+    }
+
+    @media (min-width: 768px) { .hero-title { font-size: 3.5rem; } }
+
+    .hero-subtitle {
+      font-size: 1.1rem;
+      color: var(--secondary-text);
+      margin-bottom: 2rem;
+      max-width: 550px;
+      line-height: 1.7;
+    }
+
+    .hero-checks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .check-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--primary); font-weight: 500; }
+    .check-icon { color: var(--primary-blue); font-size: 1.2rem; }
+
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 1rem; }
+
+    /* --- HERO CARD --- */
+    .card-container {
+      position: relative;
+      perspective: 1000px;
+    }
+    
+    .card-glow {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%; height: 90%;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
+      filter: blur(40px);
+      z-index: -1;
+    }
+
+    .match-card {
+      background: white;
+      border-radius: 24px;
+      padding: 2rem;
+      box-shadow: var(--shadow-card);
+      border: 1px solid #F1F5F9;
+      animation: float 6s ease-in-out infinite;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    .match-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .match-title { font-size: 0.95rem; color: var(--secondary-text); font-weight: 500; }
+    
+    .match-pill {
+      background: var(--success-bg);
+      color: #059669;
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: var(--radius-pill);
+    }
+
+    .match-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .match-item {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      font-weight: 600;
+      color: var(--primary);
+      font-size: 1.05rem;
+    }
+    
+    .match-icon { color: var(--primary-blue); font-size: 1.4rem; }
+
+    .match-footer {
+      border-top: 1px solid #F1F5F9;
+      padding-top: 1rem;
+      font-size: 0.75rem;
+      color: #94A3B8;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* --- PROBLEM SECTION --- */
+    .bg-dark {
+      background: var(--bg-dark); 
+      color: white;
+      padding: 6rem 0;
+    }
+    
+    .problem-header {
+      text-align: center;
+      max-width: 800px;
+      margin: 0 auto 4rem;
+    }
+
+    .problem-eyebrow {
+      color: var(--primary-blue);
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .problem-title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: white;
+      line-height: 1.2;
+    }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+    }
+
+    .problem-card {
+      background: var(--card-dark);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 3rem 2rem;
+      border-radius: 24px; 
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .problem-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+    
+    .icon-circle {
+      width: 64px; height: 64px;
+      background: var(--primary-blue); 
+      border-radius: 50%;
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+    }
+    
+    .circle-icon { font-size: 2rem; color: white; }
+
+    .p-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: white;
+    }
+
+    .p-desc {
+      color: #94A3B8;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* --- 3 STEPS SECTION --- */
+    .section-light {
+      padding: 6rem 0;
+      background: white;
+    }
+
+    .steps-title-main {
+      text-align: center;
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 4rem;
+    }
+    
+    .timeline-centered {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .timeline {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 2.5rem;
+    }
+    
+    .timeline::before {
+      content: '';
+      position: absolute;
+      top: 20px; bottom: 20px; left: 24px;
+      width: 2px;
+      background: #E2E8F0;
+      z-index: 0;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-number {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--primary-blue);
+      color: white;
+      font-weight: 700;
+      font-size: 1.2rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+    }
+
+    .step-content { padding-top: 0.25rem; }
+
+    .step-title {
+      font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;
+    }
+
+    .step-text {
+      color: var(--secondary-text); font-size: 0.95rem; line-height: 1.6;
+    }
+
+    /* --- WHO IS IT FOR SECTION --- */
+    .section-who {
+      background: #F8FAFC;
+      padding: 6rem 0;
+      border-top: 1px solid #E2E8F0;
+    }
+
+    .who-header {
+      text-align: center;
+      max-width: 700px;
+      margin: 0 auto 3.5rem;
+    }
+
+    .who-title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 1rem;
+    }
+
+    .who-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .who-card {
+      background: white;
+      border: 1px solid #E2E8F0;
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      transition: transform 0.2s;
+    }
+
+    .who-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--primary-blue);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .who-icon-box {
+      width: 48px; height: 48px;
+      background: rgba(59, 130, 246, 0.08);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      border: 1px solid rgba(59, 130, 246, 0.15);
+      transition: all 0.3s;
+    }
+
+    .who-icon { font-size: 1.5rem; color: var(--primary-blue); transition: all 0.3s; }
+    
+    .who-card:hover .who-icon-box { background: var(--primary-blue); border-color: var(--primary-blue); }
+    .who-card:hover .who-icon { color: white; }
+
+    .who-text { font-weight: 600; color: var(--primary); font-size: 1rem; line-height: 1.4; }
+
+    .who-cta-box {
+      text-align: center;
+      background: white;
+      border: 2px dashed #E2E8F0;
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* --- WHY EQUIPETROL --- */
+    .section-why {
+      background: white;
+      padding: 6rem 0;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .section-why::before {
+      content: '';
+      position: absolute;
+      top: -10%; right: -5%;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(59,130,246,0.05) 0%, transparent 70%);
+      z-index: 0;
+    }
+
+    .why-container {
+      max-width: 800px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+    
+    .why-eyebrow {
+      color: var(--primary-blue);
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    
+    .why-heading { font-size: 2.5rem; font-weight: 800; color: var(--primary); margin-bottom: 1.5rem; }
+    .why-intro { font-size: 1.1rem; color: var(--secondary-text); margin-bottom: 2.5rem; }
+    
+    .why-list {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; margin-bottom: 3rem;
+    }
+    
+    .why-item {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      padding: 0.8rem 1.5rem;
+      border-radius: 50px;
+      font-weight: 600;
+      color: var(--primary);
+      display: flex; align-items: center; gap: 0.5rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    }
+    .why-item i { color: var(--primary-blue); }
+    
+    .why-closing {
+      font-size: 1rem; color: var(--primary); font-weight: 500; max-width: 600px; margin: 0 auto; line-height: 1.6;
+      background: rgba(59, 130, 246, 0.05); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.1);
+    }
+
+    /* --- REPORT EXAMPLE SECTION --- */
+    .section-report {
+      padding: 6rem 0;
+      background: #F8FAFC;
+      border-top: 1px solid #E2E8F0;
+    }
+
+    .report-container {
+      background: white;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+      border: 1px solid #E2E8F0;
+    }
+
+    .report-header {
+      background: var(--primary);
+      color: white;
+      padding: 1.5rem 2rem;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+    }
+
+    .report-meta { display: flex; gap: 1.5rem; font-size: 0.85rem; opacity: 0.9; }
+    .meta-item { display: flex; align-items: center; gap: 0.4rem; }
+
+    .report-body { padding: 2.5rem; }
+
+    /* Fiduciary Profile Box */
+    .profile-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      margin-bottom: 2.5rem;
+      display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2rem;
+    }
+    
+    .p-stat-group h5 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--secondary-text); margin-bottom: 0.4rem; }
+    .p-stat-val { font-weight: 600; color: var(--primary); font-size: 1.1rem; }
+    .tags-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .tag-sm { font-size: 0.75rem; background: white; border: 1px solid #E2E8F0; padding: 0.2rem 0.6rem; border-radius: 4px; color: var(--primary); }
+
+    /* Charts Grid */
+    .charts-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-bottom: 3rem;
+    }
+
+    .chart-card {
+      background: white; border: 1px solid #E2E8F0; border-radius: var(--radius-md); padding: 1.5rem;
+    }
+    
+    .chart-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; color: var(--primary); }
+
+    /* CSS Bar Chart */
+    .bar-chart { display: flex; flex-direction: column; gap: 0.8rem; }
+    .bar-row { display: flex; align-items: center; gap: 1rem; font-size: 0.8rem; }
+    .bar-label { width: 70px; text-align: right; color: var(--secondary-text); }
+    .bar-track { flex: 1; background: #F1F5F9; height: 20px; border-radius: 4px; overflow: hidden; position: relative; }
+    .bar-fill { background: var(--primary-blue); height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 0.5rem; color: white; font-size: 0.7rem; font-weight: 600; }
+    
+    /* Compatibility */
+    .comp-stat { text-align: center; margin-top: 1rem; }
+    .comp-val { font-size: 2.5rem; font-weight: 800; color: var(--success); line-height: 1; }
+    .comp-sub { font-size: 0.85rem; color: var(--secondary-text); }
+    .progress-track { height: 12px; background: #F1F5F9; border-radius: 999px; overflow: hidden; margin-top: 0.5rem; }
+    .progress-fill { height: 100%; background: var(--success); border-radius: 999px; }
+
+    /* Comparison Bars */
+    .comp-row { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.4rem; }
+    .comp-bar-wrap { display: flex; gap: 2px; margin-bottom: 1rem; height: 8px; }
+    .comp-bar-segment { flex: 1; background: #E2E8F0; border-radius: 2px; }
+    .comp-bar-segment.active.pos { background: var(--primary-blue); }
+    .comp-bar-segment.active.neg { background: var(--danger); }
+
+    /* Properties Grid */
+    .props-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;
+    }
+
+    .prop-card {
+      border: 1px solid #E2E8F0; border-radius: var(--radius-md); overflow: hidden; transition: transform 0.2s;
+    }
+    .prop-card:hover { transform: translateY(-3px); border-color: var(--primary-blue); }
+    
+    .prop-header { background: #F8FAFC; padding: 1rem; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center; }
+    .prop-name { font-weight: 700; font-size: 0.95rem; }
+    .prop-match { font-size: 0.75rem; font-weight: 700; color: var(--success); background: var(--success-bg); padding: 0.2rem 0.5rem; border-radius: 4px; }
+    
+    .prop-body { padding: 1rem; }
+    .prop-price { font-size: 1.2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem; }
+    .prop-specs { display: flex; gap: 0.8rem; font-size: 0.8rem; color: var(--secondary-text); margin-bottom: 0.8rem; }
+    .spec-i { display: flex; align-items: center; gap: 0.3rem; }
+    
+    .insight-row { display: flex; justify-content: space-between; font-size: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #F1F5F9; color: var(--secondary-text); }
+    .insight-val { font-weight: 600; color: var(--primary); }
+
+    /* --- FORM SECTION --- */
+    .lead-capture {
+      background: white; padding: 3rem; border-top: 1px solid #E2E8F0; text-align: center;
+    }
+
+    .form-max-width { max-width: 500px; margin: 0 auto; }
+    
+    .lead-form {
+      display: flex; flex-direction: column; gap: 1rem; margin-top: 2rem; text-align: left;
+    }
+
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--primary); }
+    .form-input { width: 100%; padding: 0.8rem 1rem; border: 1px solid #CBD5E1; border-radius: 8px; font-family: inherit; transition: border 0.2s; }
+    .form-input:focus { border-color: var(--primary-blue); outline: none; ring: 2px solid rgba(59,130,246,0.2); }
+
+    /* --- PREMIUM SECTION --- */
+    .section-premium {
+      background: var(--premium-dark);
+      color: white;
+      padding: 6rem 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .premium-glow {
+      position: absolute;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(245,158,11,0.15) 0%, transparent 70%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .premium-container {
+      position: relative; z-index: 1;
+      margin: 0 auto; 
+    }
+
+    .premium-badge {
+      display: inline-block;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: var(--premium-gold);
+      padding: 0.4rem 1rem;
+      border-radius: 50px;
+      font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 1.5rem;
+    }
+
+    .premium-title {
+      font-size: 3rem; font-weight: 800; margin-bottom: 1.5rem;
+      background: linear-gradient(to right, #FFFFFF, #E2E8F0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .premium-price-box {
+      margin: 2rem 0;
+    }
+    .price-val { font-size: 3.5rem; font-weight: 800; color: var(--premium-gold); line-height: 1; }
+    .price-sub { font-size: 1rem; color: #94A3B8; margin-top: 0.5rem; }
+
+    .premium-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem; text-align: left; margin-bottom: 3rem;
+    }
+    
+    .premium-feat {
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      padding: 1.5rem; border-radius: 16px;
+    }
+    .pf-icon { color: var(--premium-gold); font-size: 1.5rem; margin-bottom: 0.8rem; }
+    .pf-title { font-weight: 700; margin-bottom: 0.5rem; }
+    .pf-desc { font-size: 0.9rem; color: #94A3B8; }
+
+    /* --- MARKET VIEW SECTION --- */
+    .section-market-view {
+      background: #F8FAFC;
+      padding: 6rem 0;
+      border-bottom: 1px solid #E2E8F0;
+    }
+
+    .market-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    /* Bento Card Styles */
+    .market-card {
+      background: white;
+      border: 1px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .price-card { grid-row: span 2; } 
+    
+    .mc-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+    .mc-icon { font-size: 1.2rem; color: var(--secondary-text); }
+    .mc-title { font-size: 0.9rem; font-weight: 600; color: var(--secondary-text); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .mc-main-val { font-size: 2.5rem; font-weight: 800; color: var(--primary); margin-bottom: 0.5rem; }
+    .mc-unit { font-size: 1rem; color: var(--secondary-text); font-weight: 500; }
+
+    .mc-badge { display: inline-block; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 4px; margin-bottom: 1rem; }
+    .mc-badge.stable { background: #F1F5F9; color: var(--primary); }
+
+    /* BARS FIX */
+    .mc-bars {
+      display: flex; gap: 0.5rem; height: 120px; /* Fixed height */
+      margin-top: auto; padding-top: 1rem; align-items: flex-end;
+    }
+    .mc-bar-group {
+      flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 0.5rem; height: 100%;
+    }
+    .mc-bar {
+      width: 100%; background: #E2E8F0; border-radius: 4px 4px 0 0; position: relative;
+    }
+    .mc-bar.active { background: var(--primary-blue); }
+    .mc-bar-label { font-size: 0.65rem; color: var(--secondary-text); text-align: center; }
+
+    .stock-chart {
+      width: 120px; height: 120px; border-radius: 50%;
+      background: conic-gradient(var(--primary-blue) 0% 47%, #93C5FD 47% 75%, #DBEAFE 75% 89%, #F1F5F9 89% 100%);
+      margin: 0 auto; position: relative;
+    }
+    .stock-chart::after {
+      content: '92'; position: absolute; inset: 15px; background: white; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; color: var(--primary);
+    }
+
+    .stock-legend { margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .sl-item { font-size: 0.75rem; display: flex; align-items: center; gap: 0.3rem; color: var(--secondary-text); }
+    .sl-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
+
+    .alert-box { padding: 0.8rem; border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.85rem; display: flex; gap: 0.5rem; }
+    .alert-box.green { background: #ECFDF5; color: #065F46; border: 1px solid #D1FAE5; }
+    .alert-box.yellow { background: #FFFBEB; color: #92400E; border: 1px solid #FEF3C7; }
+    .alert-box.red { background: #FEF2F2; color: #991B1B; border: 1px solid #FEE2E2; }
+
+    .risk-list { list-style: none; }
+    .risk-list li { display: flex; gap: 0.5rem; font-size: 0.9rem; color: var(--secondary-text); margin-bottom: 0.6rem; }
+    .risk-list i { color: var(--danger); margin-top: 0.2rem; }
+
+    .zone-item { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 0; border-bottom: 1px solid #F1F5F9; }
+    .zone-item:last-child { border-bottom: none; }
+    .zone-name { font-weight: 600; color: var(--primary); font-size: 0.9rem; }
+    .zone-tag { font-size: 0.7rem; background: #F1F5F9; padding: 0.2rem 0.5rem; border-radius: 4px; color: var(--secondary-text); }
+
+    .trend-item { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; font-size: 0.9rem; color: var(--secondary-text); }
+    .trend-check { width: 18px; height: 18px; border-radius: 50%; background: var(--success); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.7rem; }
+
+    .insight-card { background: linear-gradient(135deg, #0F172A, #1E293B); color: white; border: none; }
+    .insight-quote { font-size: 1.2rem; font-weight: 700; font-family: 'Outfit'; line-height: 1.4; margin-bottom: 1rem; }
+    .insight-author { font-size: 0.85rem; opacity: 0.7; }
+
+    .market-ctas { display: flex; justify-content: center; gap: 1rem; margin-top: 2rem; flex-wrap: wrap; }
+
+    /* --- MARKET LENS SECTION (NEW) --- */
+    .section-lens {
+      background: var(--lens-bg);
+      color: white;
+      padding: 6rem 0;
+      border-top: 1px solid var(--lens-border);
+    }
+
+    .lens-header {
+      text-align: center; margin-bottom: 3rem;
+    }
+    .lens-title { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; color: white; }
+    .lens-sub { color: #94A3B8; font-size: 1.1rem; }
+
+    .lens-grid {
+      display: grid; grid-template-columns: repeat(12, 1fr); gap: 1.5rem;
+    }
+
+    /* Lens Cards */
+    .l-card {
+      background: var(--lens-card);
+      border: 1px solid var(--lens-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: flex; flex-direction: column;
+    }
+
+    .span-12 { grid-column: span 12; }
+    .span-8 { grid-column: span 12; }
+    .span-6 { grid-column: span 12; }
+    .span-4 { grid-column: span 12; }
+    
+    @media (min-width: 992px) {
+      .span-8 { grid-column: span 8; }
+      .span-6 { grid-column: span 6; }
+      .span-4 { grid-column: span 4; }
+    }
+
+    .snap-row {
+      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
+    }
+    .snap-widget {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 8px; padding: 1rem; min-width: 140px; flex: 1;
+    }
+    .sw-label { font-size: 0.75rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .sw-val { font-size: 1.5rem; font-weight: 700; color: white; display: flex; align-items: center; gap: 0.5rem; }
+    .sw-change { font-size: 0.8rem; padding: 0.1rem 0.4rem; border-radius: 4px; }
+    .sw-change.pos { background: rgba(16, 185, 129, 0.2); color: var(--chart-green); }
+    .sw-change.neg { background: rgba(248, 113, 113, 0.2); color: var(--chart-red); }
+
+    .rp-header { display: flex; justify-content: space-between; margin-bottom: 1.5rem; }
+    .rp-val { font-size: 3rem; font-weight: 800; color: white; line-height: 1; }
+    .rp-label { color: #94A3B8; font-size: 0.9rem; }
+    .rp-chart-mock {
+      height: 120px; width: 100%;
+      background: linear-gradient(to bottom, rgba(59, 130, 246, 0.1), transparent);
+      border-bottom: 2px solid var(--primary-blue);
+      position: relative;
+      margin-top: auto;
+    }
+    .rp-chart-line {
+      position: absolute; top: 50%; left: 0; right: 0; height: 2px;
+      background: rgba(255,255,255,0.1); border-top: 1px dashed rgba(255,255,255,0.2);
+    }
+
+    .id-icon { color: var(--warning); font-size: 2rem; margin-bottom: 1rem; }
+    .id-text { font-size: 1.1rem; font-weight: 600; color: white; line-height: 1.5; }
+
+    .map-mock {
+      height: 250px; background: #1E293B; border-radius: 8px; position: relative; overflow: hidden;
+    }
+    .map-dot {
+      width: 12px; height: 12px; border-radius: 50%; position: absolute;
+      box-shadow: 0 0 0 4px rgba(255,255,255,0.1);
+    }
+    .map-dot.green { background: var(--chart-green); top: 40%; left: 60%; }
+    .map-dot.yellow { background: var(--warning); top: 30%; left: 30%; }
+    .map-dot.red { background: var(--chart-red); top: 70%; left: 50%; }
+
+    .risk-item-dark {
+      display: flex; gap: 0.8rem; padding: 0.8rem;
+      background: rgba(248, 113, 113, 0.1); border-radius: 8px; border: 1px solid rgba(248, 113, 113, 0.2);
+      margin-bottom: 0.8rem; font-size: 0.9rem; color: #FECACA;
+    }
+
+    .lens-cta-box {
+      display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%;
+    }
+    .lens-btn {
+      background: var(--lens-accent); color: var(--lens-bg); padding: 1rem 2rem; border-radius: 8px; font-weight: 700; margin-top: 1rem;
+      box-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
+    }
+
+    /* --- CTA FINAL --- */
+    .cta-final-dark {
+      background: #1E2538; 
+      color: white;
+      border-radius: var(--radius-lg);
+      padding: 4rem 2rem;
+      box-shadow: var(--shadow-card);
+      margin-top: 4rem;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    }
+    
+    .cta-final-dark h2 { font-size: 2rem; margin-bottom: 1rem; line-height: 1.2; }
+    .cta-final-dark p { color: #94A3B8; max-width: 800px; margin: 0 auto 2rem; font-size: 1.05rem; }
+
+    /* --- MODAL --- */
+    .modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(5px);
+      z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+      visibility: hidden;
+    }
+    
+    .modal.active { opacity: 1; pointer-events: auto; visibility: visible; }
+
+    .modal-content {
+      background: white;
+      width: 90%; max-width: 900px; height: 90vh;
+      border-radius: 16px;
+      overflow-y: auto;
+      position: relative;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-close {
+      position: absolute; top: 1rem; right: 1rem;
+      width: 36px; height: 36px;
+      background: #F1F5F9; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 1.2rem; color: var(--primary);
+      transition: all 0.2s; z-index: 10;
+    }
+    .modal-close:hover { background: #E2E8F0; color: var(--danger); }
+  </style>
+</head>
+<body>
+
+  <!-- NAVIGATION -->
+  <header class="nav">
+    <div class="container nav-inner">
+      <div class="logo">
+        <i class="ph-fill ph-house-line logo-mark"></i>
+        <div class="logo-text-main">Simón</div>
+      </div>
+      <nav class="nav-links">
+        <a href="#">Cómo Funciona</a>
+        <a href="#">Nosotros</a>
+        <a href="#">Contacto</a>
+        <a href="#cta-form" class="btn btn-primary" style="padding: 0.6rem 1.2rem;">Iniciar Búsqueda</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO SECTION -->
+    <section class="hero" id="top">
+      <div class="container hero-grid">
+        <div class="reveal active">
+          <div class="hero-badge">Inteligencia Artificial</div>
+          <h1 class="hero-title">Encuentra tu departamento perfecto en Equipetrol, inteligentemente.</h1>
+          <p class="hero-subtitle">Simón filtra todo el mercado para encontrar tu pareja ideal. Dinos qué buscas y nuestra IA te entregará una lista curada de los mejores departamentos.</p>
+          <div class="hero-checks">
+            <div class="check-item"><i class="ph-fill ph-check-circle check-icon"></i> Ahorra Tiempo</div>
+            <div class="check-item"><i class="ph-fill ph-check-circle check-icon"></i> Mejores Ofertas</div>
+            <div class="check-item"><i class="ph-fill ph-check-circle check-icon"></i> Anuncios Verificados</div>
+          </div>
+          <div class="hero-actions">
+            <a href="#cta-form" class="btn btn-primary">Encuentra Tu Departamento</a>
+            <button class="btn btn-secondary">Saber Más</button>
+          </div>
+        </div>
+
+        <div class="card-container reveal active" style="transition-delay: 0.2s;">
+          <div class="card-glow"></div>
+          <div class="match-card">
+            <div class="match-header">
+              <span class="match-title">Tu Coincidencia Ideal</span>
+              <span class="match-pill">96% Compatibilidad</span>
+            </div>
+            <div class="match-list">
+              <div class="match-item"><i class="ph-duotone ph-bed match-icon"></i> 2 Dormitorios</div>
+              <div class="match-item"><i class="ph-duotone ph-swimming-pool match-icon"></i> Piscina y Gimnasio</div>
+              <div class="match-item"><i class="ph-duotone ph-money match-icon"></i> &lt; $700 / mes</div>
+            </div>
+            <div class="match-footer">Basado en tus preferencias de ubicación, precio y comodidades.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROBLEM SECTION -->
+    <section class="section bg-dark" id="problem">
+      <div class="container">
+        <div class="problem-header reveal">
+          <span class="problem-eyebrow">EL MÉTODO ANTIGUO NO FUNCIONA</span>
+          <h2 class="problem-title">La Búsqueda de Departamento es un Lío.</h2>
+        </div>
+        <div class="problem-grid">
+          <div class="problem-card reveal">
+            <div class="icon-circle"><i class="ph ph-hourglass circle-icon"></i></div>
+            <h3 class="p-title">Búsqueda Interminable</h3>
+            <p class="p-desc">Deja de perder horas navegando por innumerables anuncios obsoletos e irrelevantes.</p>
+          </div>
+          <div class="problem-card reveal" style="transition-delay: 0.1s;">
+             <div class="icon-circle"><i class="ph ph-funnel-x circle-icon"></i></div>
+            <h3 class="p-title">Exceso de Información</h3>
+            <p class="p-desc">Eliminamos el ruido para ofrecerte solo las mejores opciones verificadas.</p>
+          </div>
+          <div class="problem-card reveal" style="transition-delay: 0.2s;">
+             <div class="icon-circle"><i class="ph ph-receipt circle-icon"></i></div>
+            <h3 class="p-title">Costos Ocultos</h3>
+            <p class="p-desc">No más sorpresas. Te ayudamos a encontrar lugares con precios transparentes.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 STEPS SECTION -->
+    <section class="section-light">
+      <div class="container">
+        <h2 class="steps-title-main reveal">Tu Búsqueda, Simplificada en 3 Pasos.</h2>
+        <div class="timeline-centered reveal">
+          <div class="timeline">
+            <div class="step-item">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <div class="step-title">Define tu Sueño</div>
+                <p class="step-text">Dinos tus requisitos no negociables: precio, tamaño, comodidades e incluso tu estilo de vida deseado.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <div class="step-title">Analiza el Mercado</div>
+                <p class="step-text">Nuestra IA se pone a trabajar, escaneando miles de anuncios y analizando datos que nunca imaginarías.</p>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <div class="step-title">Encuentra tu Pareja Ideal</div>
+                <p class="step-text">Recibe una lista personalizada y curada de los mejores departamentos. El lugar perfecto está a solo un clic.</p>
+              </div>
+            </div>
+          </div>
+          <div style="text-align: center; margin-top: 3rem;">
+            <a href="#cta-form" class="btn btn-primary" style="padding: 1rem 2.5rem;">PROBAR SIMÓN GRATIS</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHO IS IT FOR SECTION -->
+    <section class="section-who">
+      <div class="container">
+        <div class="who-header reveal">
+          <h2 class="who-title">¿Para quién es Simón?</h2>
+          <p style="color:var(--secondary-text);">Simón no es para todos. Es una herramienta especializada para compradores exigentes.</p>
+        </div>
+        <div class="who-grid">
+          <div class="who-card reveal">
+            <div class="who-icon-box"><i class="ph-duotone ph-buildings who-icon"></i></div>
+            <div class="who-text">Querés vivir en Equipetrol</div>
+          </div>
+          <div class="who-card reveal" style="transition-delay: 0.1s;">
+            <div class="who-icon-box"><i class="ph-duotone ph-timer who-icon"></i></div>
+            <div class="who-text">No querés perder tiempo con portales y varios agentes</div>
+          </div>
+          <div class="who-card reveal" style="transition-delay: 0.2s;">
+            <div class="who-icon-box"><i class="ph-duotone ph-arrows-split who-icon"></i></div>
+            <div class="who-text">Te marean tantas opciones</div>
+          </div>
+          <div class="who-card reveal" style="transition-delay: 0.3s;">
+            <div class="who-icon-box"><i class="ph-duotone ph-shield-warning who-icon"></i></div>
+            <div class="who-text">No confiás en anuncios desactualizados</div>
+          </div>
+          <div class="who-card reveal" style="transition-delay: 0.4s;">
+            <div class="who-icon-box"><i class="ph-duotone ph-lighthouse who-icon"></i></div>
+            <div class="who-text">Necesitás claridad absoluta</div>
+          </div>
+          <div class="who-card reveal" style="transition-delay: 0.5s;">
+            <div class="who-icon-box"><i class="ph-duotone ph-target who-icon"></i></div>
+            <div class="who-text">Querés ver solo lo que encaja con vos</div>
+          </div>
+        </div>
+        <div class="who-cta-box reveal">
+          <h4 style="font-size:1.2rem; font-weight:700; margin-bottom:1rem; color:var(--primary);">¿Te sentís identificado?</h4>
+          <p style="color:var(--secondary-text); margin-bottom:1.5rem;">Si respondiste sí a la mayoría, entonces Simón es tu mejor aliado.</p>
+          <a href="#cta-form" class="btn btn-outline">Empezar mi perfil ahora</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHY EQUIPETROL -->
+    <section class="section-why" id="why">
+      <div class="container">
+        <div class="why-container reveal">
+          <span class="why-eyebrow">POR QUÉ SÓLO EQUIPETROL (por ahora)</span>
+          <h2 class="why-heading">Porque queremos hacerlo perfecto.</h2>
+          <p class="why-intro">Simón está en fase inicial y estamos empezando por la zona donde:</p>
+          <div class="why-list">
+            <div class="why-item"><i class="ph-fill ph-check-circle"></i> hay más oferta</div>
+            <div class="why-item"><i class="ph-fill ph-check-circle"></i> más rotación</div>
+            <div class="why-item"><i class="ph-fill ph-check-circle"></i> más información</div>
+            <div class="why-item"><i class="ph-fill ph-check-circle"></i> más demanda</div>
+            <div class="why-item"><i class="ph-fill ph-check-circle"></i> y más ruido</div>
+          </div>
+          <div class="why-closing">Equipetrol es el lugar ideal para que Simón te entregue recomendaciones ultra precisas. Pronto estaremos en otras zonas.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORT EXAMPLE & LEAD FORM -->
+    <section class="section-report" id="informe">
+      <div class="container">
+        <div class="text-center mb-4 reveal">
+          <h2 class="steps-title-main" style="margin-bottom:1rem;">Tu Informe Preliminar Gratuito</h2>
+          <p style="color:var(--secondary-text);">Esto es exactamente lo que recibes al completar el formulario, pero adaptado a ti.</p>
+        </div>
+
+        <div class="report-container reveal">
+          <div class="report-header">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <i class="ph-fill ph-file-text" style="font-size:1.5rem;"></i>
+              <span style="font-weight:700; font-size:1.1rem;">Informe de Mercado #987</span>
+            </div>
+            <div class="report-meta">
+              <div class="meta-item"><i class="ph ph-map-pin"></i> Equipetrol</div>
+              <div class="meta-item"><i class="ph ph-calendar-blank"></i> 22 Nov 2025</div>
+              <div class="meta-item"><i class="ph ph-house-line"></i> 144 Props. Validadas</div>
+            </div>
+          </div>
+
+          <div class="report-body">
+            <!-- Profile -->
+            <div class="profile-box">
+              <div class="p-stat-group"><h5>Perfil Fiduciario</h5><div class="p-stat-val">Hogar Estratégico de Valor</div></div>
+              <div class="p-stat-group"><h5>Presupuesto Objetivo</h5><div class="p-stat-val">$90,000</div></div>
+              <div class="p-stat-group">
+                <h5>Prioridades</h5>
+                <div class="tags-group"><span class="tag-sm">Seguridad</span><span class="tag-sm">Piso Medio/Alto</span><span class="tag-sm">Piscina</span></div>
+              </div>
+              <div class="p-stat-group"><h5>Sensibilidad Precio</h5><div class="p-stat-val" style="color:var(--danger);">Alta</div></div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+              <div class="chart-card">
+                <div class="chart-title">Distribución de Precios</div>
+                <div class="bar-chart">
+                  <div class="bar-row"><div class="bar-label">60k-70k</div><div class="bar-track"><div class="bar-fill" style="width: 38%;">14</div></div></div>
+                  <div class="bar-row"><div class="bar-label">70k-80k</div><div class="bar-track"><div class="bar-fill" style="width: 60%;">22</div></div></div>
+                  <div class="bar-row"><div class="bar-label">80k-90k</div><div class="bar-track"><div class="bar-fill" style="width: 100%;">36 (Match)</div></div></div>
+                  <div class="bar-row"><div class="bar-label">90k+</div><div class="bar-track"><div class="bar-fill" style="width: 50%;">18</div></div></div>
+                </div>
+              </div>
+              <div class="chart-card">
+                <div class="chart-title">Compatibilidad General</div>
+                <div class="comp-stat">
+                  <div class="comp-val">78%</div><div class="comp-sub">Match con el mercado</div>
+                  <div class="progress-track"><div class="progress-fill" style="width: 78%;"></div></div>
+                </div>
+                <div style="margin-top:1.5rem; font-size:0.8rem; color:var(--secondary-text);"><p><strong>Insight:</strong> Hay 36 propiedades en tu "Zona Dorada".</p></div>
+              </div>
+              <div class="chart-card">
+                <div class="chart-title">Precio m² vs Media ($1200)</div>
+                <div style="margin-top:1rem;">
+                  <div class="comp-row"><span>Vienna ($1091)</span> <span style="color:var(--success); font-weight:700;">-9%</span></div>
+                  <div class="comp-bar-wrap"><div class="comp-bar-segment active pos"></div><div class="comp-bar-segment"></div></div>
+                  <div class="comp-row"><span>Belvedere ($1153)</span> <span style="color:var(--success); font-weight:700;">-4%</span></div>
+                  <div class="comp-bar-wrap"><div class="comp-bar-segment active pos"></div><div class="comp-bar-segment"></div></div>
+                  <div class="comp-row"><span>Nova Tower ($1160)</span> <span style="color:var(--danger); font-weight:700;">+3%</span></div>
+                  <div class="comp-bar-wrap"><div class="comp-bar-segment active neg"></div><div class="comp-bar-segment"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Top Properties -->
+            <h4 class="mb-2" style="font-weight:700; color:var(--primary);">Top 3 Propiedades Detectadas</h4>
+            <div class="props-grid">
+              <div class="prop-card">
+                <div class="prop-header"><span class="prop-name">Torre Vienna</span><span class="prop-match">86% Match</span></div>
+                <div class="prop-body">
+                  <div class="prop-price">$89,500</div>
+                  <div class="prop-specs"><div class="spec-i"><i class="ph ph-bed"></i> 2</div><div class="spec-i"><i class="ph ph-ruler"></i> 82m²</div></div>
+                  <div class="insight-row"><span>Confianza Datos</span><span class="insight-val" style="color:var(--success);">91%</span></div>
+                </div>
+              </div>
+              <div class="prop-card">
+                <div class="prop-header"><span class="prop-name">Belvedere</span><span class="prop-match">82% Match</span></div>
+                <div class="prop-body">
+                  <div class="prop-price">$90,000</div>
+                  <div class="prop-specs"><div class="spec-i"><i class="ph ph-bed"></i> 2</div><div class="spec-i"><i class="ph ph-ruler"></i> 78m²</div></div>
+                  <div class="insight-row"><span>Confianza Datos</span><span class="insight-val" style="color:var(--success);">89%</span></div>
+                </div>
+              </div>
+              <div class="prop-card">
+                <div class="prop-header"><span class="prop-name">Nova Tower</span><span class="prop-match">79% Match</span></div>
+                <div class="prop-body">
+                  <div class="prop-price">$87,000</div>
+                  <div class="prop-specs"><div class="spec-i"><i class="ph ph-bed"></i> 2</div><div class="spec-i"><i class="ph ph-ruler"></i> 75m²</div></div>
+                  <div class="insight-row"><span>Confianza Datos</span><span class="insight-val">88%</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- LEAD CAPTURE -->
+          <div class="lead-capture" id="cta-form">
+            <div class="form-max-width">
+              <h3 style="font-size:1.8rem; margin-bottom:0.5rem; font-weight:700; color:var(--primary);">Obtén este análisis para ti.</h3>
+              <p style="color:var(--secondary-text); margin-bottom:1.5rem;">Genera tu propio informe personalizado en menos de 2 minutos. Gratis y sin compromiso.</p>
+              <form class="lead-form" onsubmit="event.preventDefault(); alert('¡Gracias! Te enviaremos tu informe pronto.');">
+                <div class="form-group"><label>Tu Nombre Completo</label><input type="text" class="form-input" placeholder="Ej. Juan Pérez" required></div>
+                <div class="form-group"><label>Correo Electrónico</label><input type="email" class="form-input" placeholder="juan@ejemplo.com" required></div>
+                <div class="form-group"><label>Número de WhatsApp</label><input type="tel" class="form-input" placeholder="+591 70000000" required></div>
+                <button type="submit" class="btn btn-primary" style="margin-top:0.5rem; width:100%; font-size:1.1rem; padding:1rem;">Generar Mi Informe Gratis <i class="ph-bold ph-arrow-right"></i></button>
+              </form>
+              <p style="font-size:0.75rem; color:#94A3B8; margin-top:1rem;">Tus datos están seguros. No hacemos spam.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PREMIUM REPORT SECTION (UPDATED) -->
+    <section class="section-premium">
+      <div class="premium-glow"></div>
+      <div class="container premium-container">
+        <div class="reveal">
+          <div style="text-align: center;"><span class="premium-badge">Recomendado para Compradores e Inversores Serios</span></div>
+          <h2 class="premium-title" style="text-align: center;">Informe Fiduciario Premium</h2>
+          <p style="font-size:1.2rem; color:#CBD5E1; max-width:750px; margin:0 auto; text-align: center;">
+            ¿Vas a tomar una decisión de $90,000? No lo hagas a ciegas.<br>
+            Obtén seguridad total, detección de riesgos y una proyección clara de valor antes de firmar nada.
+          </p>
+          <div class="premium-price-box" style="text-align: center;">
+            <div class="price-val">29.99 $us</div>
+            <div class="price-sub">Pago único. Garantía de Satisfacción.</div>
+          </div>
+          <div class="premium-grid">
+            <div class="premium-feat">
+              <i class="ph-duotone ph-shield-check pf-icon"></i>
+              <div class="pf-title">Seguridad de Compra</div>
+              <div class="pf-desc">Analizamos 32 variables críticas para detectar problemas legales o estructurales ocultos.</div>
+            </div>
+            <div class="premium-feat">
+              <i class="ph-duotone ph-chart-line-up pf-icon"></i>
+              <div class="pf-title">Valor y Plusvalía</div>
+              <div class="pf-desc">Entendé si estás pagando el precio justo y cuánto valdrá tu departamento en el futuro.</div>
+            </div>
+            <div class="premium-feat">
+              <i class="ph-duotone ph-map-trifold pf-icon"></i>
+              <div class="pf-title">Mapa de Vida Real</div>
+              <div class="pf-desc">Conocé el entorno real: ruidos, tráfico, seguridad nocturna y comodidad diaria.</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
+            <button class="btn btn-gold" onclick="alert('Redirigiendo a pasarela de pago...')">Obtener Informe Premium</button>
+            <button class="btn btn-gold-outline" onclick="document.getElementById('premiumModal').classList.add('active')">Ver Ejemplo Real</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW: MARKET VIEW SECTION (Added after premium) -->
+    <section class="section-market-view">
+      <div class="container">
+        <div class="text-center mb-4 reveal">
+          <h2 class="steps-title-main" style="margin-bottom:0.5rem;">Vista Rápida del Mercado – Equipetrol</h2>
+          <p style="color:var(--secondary-text);">Lo esencial del mercado inmobiliario en 10 segundos</p>
+        </div>
+
+        <div class="market-grid reveal">
+          <!-- Price Card -->
+          <div class="market-card price-card">
+            <div class="mc-header">
+              <i class="ph-duotone ph-currency-dollar mc-icon"></i>
+              <h4 class="mc-title">Precio Promedio</h4>
+            </div>
+            <div class="mc-main-val">$1.230 <span class="mc-unit">USD/m²</span></div>
+            <div class="mc-badge stable">Tendencia Estable</div>
+            <div class="mc-bars">
+              <div class="mc-bar-group">
+                <div class="mc-bar" style="height: 60%;"></div>
+                <div class="mc-bar-label">Prev.</div>
+              </div>
+              <div class="mc-bar-group">
+                <div class="mc-bar active" style="height: 100%;"></div>
+                <div class="mc-bar-label">Nuevo</div>
+              </div>
+              <div class="mc-bar-group">
+                <div class="mc-bar" style="height: 80%;"></div>
+                <div class="mc-bar-label">Usado</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stock Card -->
+          <div class="market-card stock-card">
+            <div class="mc-header">
+              <i class="ph-duotone ph-house-line mc-icon"></i>
+              <h4 class="mc-title">Stock Disponible</h4>
+            </div>
+            <div class="stock-chart"></div>
+            <div class="stock-legend">
+              <div class="sl-item"><div class="sl-dot" style="background:var(--primary-blue)"></div> 1D</div>
+              <div class="sl-item"><div class="sl-dot" style="background:#93C5FD"></div> 2D</div>
+              <div class="sl-item"><div class="sl-dot" style="background:#DBEAFE"></div> 3D</div>
+              <div class="sl-item"><div class="sl-dot" style="background:#F1F5F9"></div> PH</div>
+            </div>
+          </div>
+
+          <!-- Opportunities Card -->
+          <div class="market-card opp-card">
+            <div class="mc-header">
+              <i class="ph-duotone ph-trend-up mc-icon"></i>
+              <h4 class="mc-title">Oportunidades</h4>
+            </div>
+            <div class="alert-box green">17% del mercado está entre –5% y –15% bajo la media.</div>
+            <div class="alert-box green">Solo 3 torres tienen liquidez AA comprobada.</div>
+            <div class="alert-box yellow">El 22% de las preventas muestran indicios de sobreprecio.</div>
+          </div>
+
+          <!-- Risks Card -->
+          <div class="market-card risk-card">
+            <div class="mc-header">
+              <i class="ph-duotone ph-warning mc-icon"></i>
+              <h4 class="mc-title">Riesgos Esenciales</h4>
+            </div>
+            <ul class="risk-list">
+              <li><i class="ph-fill ph-warning-circle"></i> Ruido estructural en San Martín</li>
+              <li><i class="ph-fill ph-warning-circle"></i> Vibración en Av. Beni</li>
+              <li><i class="ph-fill ph-warning-circle"></i> Preventas infladas</li>
+              <li><i class="ph-fill ph-warning-circle"></i> Ascensores viejos</li>
+            </ul>
+          </div>
+
+          <!-- Microzones -->
+          <div class="market-card zones-card">
+            <div class="mc-header">
+              <i class="ph-duotone ph-map-pin mc-icon"></i>
+              <h4 class="mc-title">Top Microzonas</h4>
+            </div>
+            <div class="zone-item">
+              <div class="zone-name">Sirari interior</div>
+              <div class="zone-tag">Silencioso</div>
+            </div>
+            <div class="zone-item">
+              <div class="zone-name">Equipetrol Norte</div>
+              <div class="zone-tag">Ejecutivo</div>
+            </div>
+            <div class="zone-item">
+              <div class="zone-name">Zona Hoteles</div>
+              <div class="zone-tag">ROI Alto</div>
+            </div>
+          </div>
+
+          <!-- Trends -->
+          <div class="market-card trends-card">
+            <div class="mc-header">
+              <i class="ph-duotone ph-magnifying-glass mc-icon"></i>
+              <h4 class="mc-title">Tendencias</h4>
+            </div>
+            <div class="trend-item"><div class="trend-check"><i class="ph-bold ph-check"></i></div> 2 Dormitorios</div>
+            <div class="trend-item"><div class="trend-check"><i class="ph-bold ph-check"></i></div> Pisos Altos</div>
+            <div class="trend-item"><div class="trend-check"><i class="ph-bold ph-check"></i></div> Sin Ruido</div>
+            <div class="trend-item"><div class="trend-check"><i class="ph-bold ph-check"></i></div> Cerca Cafés</div>
+          </div>
+
+          <!-- Insight -->
+          <div class="market-card insight-card" style="grid-column: 1 / -1;">
+            <div class="insight-quote">"Equipetrol dejó de ser un mercado general. Ahora funciona por microzonas. El valor real ya no depende de 'estar en Equipetrol', sino de en qué calle caés."</div>
+            <div class="insight-author">— Insight de Mercado 2025</div>
+          </div>
+        </div>
+
+        <div class="market-ctas reveal">
+          <a href="#cta-form" class="btn btn-primary">Ver mis 3 opciones inteligentes (Gratis)</a>
+          <a href="#cta-form" class="btn btn-outline">Hacer diagnóstico fiduciario</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW: MARKET LENS SECTION (Dark Dashboard) -->
+    <section class="section-lens" id="lens">
+      <div class="container">
+        <div class="lens-header reveal">
+          <h2 class="lens-title">Equipetrol Hoy: Inteligencia en Tiempo Real</h2>
+          <p class="lens-sub">Decisiones oportunas en tiempos volátiles. Datos vivos, normalizados al tipo de cambio real.</p>
+        </div>
+
+        <div class="lens-grid reveal">
+          <!-- 24H Snapshot (Full Width) -->
+          <div class="l-card span-12">
+            <div style="color:#94A3B8; font-size:0.85rem; margin-bottom:1rem; text-transform:uppercase; letter-spacing:0.05em;">Snapshot Últimas 24 Horas</div>
+            <div class="snap-row">
+              <div class="snap-widget">
+                <div class="sw-label">Nuevos</div>
+                <div class="sw-val">7 <span class="sw-change pos">▲</span></div>
+              </div>
+              <div class="snap-widget">
+                <div class="sw-label">Bajadas Precio</div>
+                <div class="sw-val">4 <span class="sw-change neg">-3%</span></div>
+              </div>
+              <div class="snap-widget">
+                <div class="sw-label">Retirados</div>
+                <div class="sw-val">3 <span style="color:#94A3B8; font-size:0.8rem;">•</span></div>
+              </div>
+              <div class="snap-widget">
+                <div class="sw-label">Var. TC Paralelo</div>
+                <div class="sw-val" style="color:#FCD34D;">-0.6%</div>
+              </div>
+              <div class="snap-widget">
+                <div class="sw-label">Impacto Real</div>
+                <div class="sw-val" style="color:#FCD34D;">-1.2%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Real Price Chart (Main) -->
+          <div class="l-card span-8">
+            <div class="rp-header">
+              <div>
+                <div style="color:#94A3B8; font-size:0.85rem; text-transform:uppercase; margin-bottom:0.3rem;">Precio Real m² (TC Ajustado)</div>
+                <div class="rp-val">$1,186</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="sw-change neg" style="display:inline-block;">-1.4% vs Ayer</div>
+                <div class="rp-label" style="margin-top:0.5rem;">TC Oficial: 6.96 | Paralelo: 10.95</div>
+              </div>
+            </div>
+            <div class="rp-chart-mock">
+              <div class="rp-chart-line"></div>
+              <div style="position:absolute; bottom:10px; left:10px; font-size:0.7rem; color:#475569;">00:00</div>
+              <div style="position:absolute; bottom:10px; right:10px; font-size:0.7rem; color:#475569;">23:59</div>
+            </div>
+          </div>
+
+          <!-- Daily Insight -->
+          <div class="l-card span-4">
+            <i class="ph-fill ph-lightbulb id-icon"></i>
+            <div style="color:#94A3B8; font-size:0.85rem; margin-bottom:0.5rem;">INSIGHT DEL DÍA</div>
+            <div class="id-text">"Las bajadas de precio se concentraron hoy en la microzona Sirari interior, especialmente en unidades de 2 dormitorios."</div>
+          </div>
+
+          <!-- Opportunity Map (Visual Mock) -->
+          <div class="l-card span-6" style="padding:0;">
+            <div style="padding:1.5rem; border-bottom:1px solid var(--lens-border);">
+              <div style="color:#94A3B8; font-size:0.85rem; text-transform:uppercase;">Mapa Vivo de Oportunidades</div>
+            </div>
+            <div class="map-mock">
+              <!-- Dots -->
+              <div class="map-dot green" title="Bajo Media" style="top: 40%; left: 60%;"></div>
+              <div class="map-dot yellow" title="Precio Justo" style="top: 30%; left: 30%;"></div>
+              <div class="map-dot red" title="Sobreprecio" style="top: 70%; left: 50%;"></div>
+              <div style="position:absolute; bottom:1rem; left:1rem; background:rgba(0,0,0,0.5); padding:0.3rem 0.6rem; border-radius:4px; font-size:0.7rem; color:white;">Equipetrol Central</div>
+            </div>
+          </div>
+
+          <!-- Risks & CTA -->
+          <div class="l-card span-6">
+            <div style="color:#94A3B8; font-size:0.85rem; text-transform:uppercase; margin-bottom:1rem;">Riesgos Detectados Hoy</div>
+            <div class="risk-item-dark"><i class="ph-fill ph-warning"></i> 3 publicaciones con inconsistencias área vs precio.</div>
+            <div class="risk-item-dark"><i class="ph-fill ph-warning"></i> 2 ofertas con documentación en trámite no declarada.</div>
+            
+            <div class="lens-cta-box" style="display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; padding: 2rem; gap: 1rem; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+              <div style="color:white; font-weight:700; font-size:1.1rem;">¿Quieres estos datos cada mañana?</div>
+              <a href="#" class="lens-btn" style="margin-top:0;">Suscríbete</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA FINAL -->
+    <section class="section" style="padding-top: 2rem;" id="cta">
+      <div class="container">
+        <div class="cta-final-dark reveal">
+          <h2>¿Listo para Dejar de Buscar y Empezar a Vivir?</h2>
+          <p>Deja que Simón haga el trabajo pesado. Tu departamento perfecto en Equipetrol te está esperando.</p>
+          <a href="#top" class="btn btn-primary" style="padding: 1rem 2.5rem; font-size: 1.1rem;">Encontrar Mi Departamento Perfecto Ahora</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; margin-bottom:0.5rem; color:var(--primary);">
+         <i class="ph-fill ph-house-line" style="color:var(--primary-blue);"></i> 
+         <span style="font-weight: 700; font-family: 'Outfit';">Simón</span>
+      </div>
+      <div style="margin-top: 1rem; font-size: 0.8rem;">© 2024 Simón Inteligencia Inmobiliaria. Todos los Derechos Reservados.</div>
+    </div>
+  </footer>
+
+  <!-- PREMIUM MODAL (Hidden by default) -->
+  <div class="modal" id="premiumModal">
+    <div class="modal-content">
+      <div class="modal-close" onclick="document.getElementById('premiumModal').classList.remove('active')"><i class="ph-bold ph-x"></i></div>
+      <div style="padding:3rem;">
+        <!-- Header Report -->
+        <div style="border-bottom:2px solid #E2E8F0; padding-bottom:1.5rem; margin-bottom:2rem; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h2 style="font-family:'Outfit'; font-weight:800; color:#0F172A; margin-bottom:0.5rem;">INFORME PREMIUM – SIMÓN</h2>
+            <div style="color:#64748B; font-size:0.9rem;">Estudio Fiduciario Personalizado • Equipetrol</div>
+          </div>
+          <div style="text-align:right; font-size:0.85rem; color:#64748B;">
+            <div><strong>Generado:</strong> 22 Nov 2025</div>
+            <div><strong>Propiedades:</strong> 987 Analizadas</div>
+          </div>
+        </div>
+
+        <!-- Section 1: Profile -->
+        <div style="background:#F8FAFC; padding:2rem; border-radius:12px; margin-bottom:3rem;">
+          <h3 style="color:#3B82F6; font-weight:700; font-size:1.1rem; margin-bottom:1rem;">🌐 1. PERFIL FIDUCIARIO PROFUNDO</h3>
+          <p style="margin-bottom:1rem;"><strong>Tipo:</strong> 🏡 Hogar Estratégico con Visión de Liquidez.</p>
+          <p style="color:#475569; font-size:0.95rem; line-height:1.6;">Un comprador que busca equilibrio entre seguridad financiera, comodidad de vida y liquidez futura. Tu ventana de decisión es de <strong>2 a 8 semanas</strong>, perfecta para negociar sin perder oportunidades.</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem; margin-top:1.5rem;">
+            <div>
+              <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.5rem;">Prioridades Críticas</h4>
+              <ul style="list-style:disc; padding-left:1.2rem; font-size:0.9rem; color:#475569;">
+                <li>2 Dormitorios (óptimo reventa)</li>
+                <li>Piso medio/alto (menos ruido)</li>
+                <li>Seguridad alta (prioridad emocional)</li>
+                <li>Bajo mantenimiento</li>
+              </ul>
+            </div>
+            <div>
+              <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.5rem;">Psicología Detectada</h4>
+              <ul style="list-style:disc; padding-left:1.2rem; font-size:0.9rem; color:#475569;">
+                <li>Rechazo a visitas inútiles</li>
+                <li>Sensibilidad al sobreprecio</li>
+                <li>Necesidad de control con guía experta</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Executive Summary (UPDATED WITH CHARTS) -->
+        <div style="margin-bottom:3rem;">
+          <h3 style="color:#3B82F6; font-weight:700; font-size:1.1rem; margin-bottom:1rem;">📊 2. RESUMEN EJECUTIVO</h3>
+          
+          <!-- KPIs Grid -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin-bottom:2rem;">
+            <div style="border:1px solid #E2E8F0; padding:1rem; border-radius:8px; text-align:center; background:white;">
+              <div style="font-size:1.8rem; font-weight:800; color:#0F172A;">36</div>
+              <div style="font-size:0.8rem; color:#64748B; font-weight:600;">En tu Rango</div>
+            </div>
+            <div style="border:1px solid #E2E8F0; padding:1rem; border-radius:8px; text-align:center; background:white;">
+              <div style="font-size:1.8rem; font-weight:800; color:#10B981;">8</div>
+              <div style="font-size:0.8rem; color:#64748B; font-weight:600;">Alta Compatibilidad</div>
+            </div>
+             <div style="border:1px solid #E2E8F0; padding:1rem; border-radius:8px; text-align:center; background:white;">
+              <div style="font-size:1.8rem; font-weight:800; color:#F59E0B;">2</div>
+              <div style="font-size:0.8rem; color:#64748B; font-weight:600;">Gangas Fiduciarias</div>
+            </div>
+            <div style="border:1px solid #E2E8F0; padding:1rem; border-radius:8px; text-align:center; background:white;">
+              <div style="font-size:1.8rem; font-weight:800; color:#EF4444;">4</div>
+              <div style="font-size:0.8rem; color:#64748B; font-weight:600;">Riesgos Ocultos</div>
+            </div>
+          </div>
+
+          <!-- Premium Charts Integration -->
+          <div class="charts-grid" style="margin-bottom:2rem;">
+            <!-- Chart 1 -->
+            <div class="chart-card" style="background:#F8FAFC;">
+              <div class="chart-title">Distribución de Precios</div>
+              <div class="bar-chart">
+                <div class="bar-row"><div class="bar-label">60k-70k</div><div class="bar-track"><div class="bar-fill" style="width: 38%;">14</div></div></div>
+                <div class="bar-row"><div class="bar-label">70k-80k</div><div class="bar-track"><div class="bar-fill" style="width: 60%;">22</div></div></div>
+                <div class="bar-row"><div class="bar-label">80k-90k</div><div class="bar-track"><div class="bar-fill" style="width: 100%;">36 (Match)</div></div></div>
+                <div class="bar-row"><div class="bar-label">90k+</div><div class="bar-track"><div class="bar-fill" style="width: 50%;">18</div></div></div>
+              </div>
+            </div>
+
+            <!-- Chart 2 -->
+            <div class="chart-card" style="background:#F8FAFC;">
+              <div class="chart-title">Compatibilidad de Mercado</div>
+              <div class="comp-stat">
+                <div class="comp-val">78%</div><div class="comp-sub">Match con Oferta Actual</div>
+                <div class="progress-track"><div class="progress-fill" style="width: 78%;"></div></div>
+              </div>
+              <div style="margin-top:1rem; font-size:0.75rem; color:#64748B; text-align:center;">
+                Tu perfil tiene alta resonancia con el inventario disponible.
+              </div>
+            </div>
+
+            <!-- Chart 3 -->
+            <div class="chart-card" style="background:#F8FAFC;">
+              <div class="chart-title">Análisis de Precio Real vs Media</div>
+              <div style="margin-top:1rem;">
+                <div class="comp-row"><span>Vienna ($1091)</span> <span style="color:var(--success); font-weight:700;">-9%</span></div>
+                <div class="comp-bar-wrap"><div class="comp-bar-segment active pos"></div><div class="comp-bar-segment"></div></div>
+                <div class="comp-row"><span>Belvedere ($1153)</span> <span style="color:var(--success); font-weight:700;">-4%</span></div>
+                <div class="comp-bar-wrap"><div class="comp-bar-segment active pos"></div><div class="comp-bar-segment"></div></div>
+                <div class="comp-row"><span>Nova Tower ($1160)</span> <span style="color:var(--danger); font-weight:700;">+3%</span></div>
+                <div class="comp-bar-wrap"><div class="comp-bar-segment active neg"></div><div class="comp-bar-segment"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Strategic Conclusion -->
+          <p style="background:#F0F9FF; padding:1.5rem; border-left:4px solid #3B82F6; color:#0F172A; font-size:1rem; border-radius:0 8px 8px 0;">
+            <strong>Conclusión Estratégica:</strong> Tu presupuesto cae en la franja más competitiva y segura del mercado para 2 dormitorios. Tienes poder de negociación y suficientes opciones de alta liquidez para no tener que ceder en tus requisitos clave.
+          </p>
+        </div>
+
+        <!-- Section 3: Top 3 Cards -->
+        <div style="margin-bottom:3rem;">
+          <h3 style="color:#3B82F6; font-weight:700; font-size:1.1rem; margin-bottom:1.5rem;">🏆 3. TOP 3 OPORTUNIDADES DETECTADAS</h3>
+          
+          <!-- Card 1 -->
+          <div style="border:1px solid #E2E8F0; border-radius:12px; overflow:hidden; margin-bottom:1.5rem;">
+            <div style="background:#0F172A; color:white; padding:1rem; display:flex; justify-content:space-between; align-items:center;">
+              <div style="font-weight:700;">⭐ 1. TORRE VIENNA</div>
+              <div style="background:#10B981; color:white; font-size:0.75rem; padding:0.2rem 0.6rem; border-radius:4px;">91% Match</div>
+            </div>
+            <img src="https://placehold.co/600x300/e2e8f0/1e293b?text=Fachada+Torre+Vienna" alt="Fachada Torre Vienna" style="width:100%; height:200px; object-fit:cover;">
+            <div style="padding:1.5rem; display:grid; grid-template-columns:1fr 1fr; gap:2rem;">
+              <div>
+                <div style="font-size:1.5rem; font-weight:800; color:#0F172A; margin-bottom:0.5rem;">$89,500</div>
+                <div style="color:#10B981; font-weight:600; font-size:0.9rem; margin-bottom:1rem;">▼ 9% Bajo Precio Mercado</div>
+                <ul style="font-size:0.9rem; color:#475569; list-style:none;">
+                  <li>• 82m² · 2 Dorms · Piso 8</li>
+                  <li>• Calle Las Maples</li>
+                  <li>• Piscina, Gimnasio, Seguridad 24/7</li>
+                </ul>
+                <a href="#" class="btn btn-primary" style="margin-top:1rem; padding:0.5rem 1rem; font-size:0.9rem;">Contactar Asesor Inmobiliario</a>
+              </div>
+              <div>
+                <h5 style="font-size:0.85rem; font-weight:700; color:#0F172A; margin-bottom:0.5rem;">ANÁLISIS FIDUCIARIO</h5>
+                <p style="font-size:0.85rem; color:#475569; line-height:1.5; margin-bottom:1rem;">Balance perfecto entre precio y reputación. Consistencia en mantenimiento y alta liquidez de reventa. Es la opción "Segura".</p>
+                <div style="font-size:0.85rem; color:#EF4444;"><strong>⚠️ Riesgo:</strong> Poca ventana de negociación.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div style="border:1px solid #E2E8F0; border-radius:12px; overflow:hidden; margin-bottom:1.5rem;">
+            <div style="background:#F1F5F9; color:#0F172A; padding:1rem; display:flex; justify-content:space-between; align-items:center;">
+              <div style="font-weight:700;">2. EDIFICIO BELVEDERE</div>
+              <div style="background:#94A3B8; color:white; font-size:0.75rem; padding:0.2rem 0.6rem; border-radius:4px;">88% Match</div>
+            </div>
+            <img src="https://placehold.co/600x300/e2e8f0/1e293b?text=Fachada+Belvedere" alt="Fachada Belvedere" style="width:100%; height:200px; object-fit:cover;">
+            <div style="padding:1.5rem; display:grid; grid-template-columns:1fr 1fr; gap:2rem;">
+              <div>
+                <div style="font-size:1.5rem; font-weight:800; color:#0F172A; margin-bottom:0.5rem;">$90,000</div>
+                <div style="color:#10B981; font-weight:600; font-size:0.9rem; margin-bottom:1rem;">▼ 4% Bajo Precio Mercado</div>
+                <ul style="font-size:0.9rem; color:#475569; list-style:none;">
+                  <li>• 78m² · 2 Dorms · Piso 10</li>
+                  <li>• Sirari (Zona Premium)</li>
+                  <li>• Cowork, Lobby Hotelero</li>
+                </ul>
+                <a href="#" class="btn btn-primary" style="margin-top:1rem; padding:0.5rem 1rem; font-size:0.9rem;">Contactar Asesor Inmobiliario</a>
+              </div>
+              <div>
+                <h5 style="font-size:0.85rem; font-weight:700; color:#0F172A; margin-bottom:0.5rem;">ANÁLISIS FIDUCIARIO</h5>
+                <p style="font-size:0.85rem; color:#475569; line-height:1.5; margin-bottom:1rem;">Estética superior. El mantenimiento es más alto, pero esto atrae mejores inquilinos corporativos.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3 (Park Lane) -->
+          <div style="border:1px solid #E2E8F0; border-radius:12px; overflow:hidden;">
+            <div style="background:#F1F5F9; color:#0F172A; padding:1rem; display:flex; justify-content:space-between; align-items:center;">
+              <div style="font-weight:700;">3. PARK LANE</div>
+              <div style="background:#94A3B8; color:white; font-size:0.75rem; padding:0.2rem 0.6rem; border-radius:4px;">85% Match</div>
+            </div>
+            <img src="https://placehold.co/600x300/e2e8f0/1e293b?text=Fachada+Park+Lane" alt="Fachada Park Lane" style="width:100%; height:200px; object-fit:cover;">
+            <div style="padding:1.5rem; display:grid; grid-template-columns:1fr 1fr; gap:2rem;">
+              <div>
+                <div style="font-size:1.5rem; font-weight:800; color:#0F172A; margin-bottom:0.5rem;">$88,000</div>
+                <div style="color:#EF4444; font-weight:600; font-size:0.9rem; margin-bottom:1rem;">▲ 3% Sobre Precio Mercado</div>
+                <ul style="font-size:0.9rem; color:#475569; list-style:none;">
+                  <li>• 70m² · 1 Dorm + Esc · Piso 12</li>
+                  <li>• Av. San Martín</li>
+                  <li>• Rooftop, Vista Panorámica</li>
+                </ul>
+                <a href="#" class="btn btn-primary" style="margin-top:1rem; padding:0.5rem 1rem; font-size:0.9rem;">Contactar Asesor Inmobiliario</a>
+              </div>
+              <div>
+                <h5 style="font-size:0.85rem; font-weight:700; color:#0F172A; margin-bottom:0.5rem;">ANÁLISIS FIDUCIARIO</h5>
+                <p style="font-size:0.85rem; color:#475569; line-height:1.5; margin-bottom:1rem;">Vista espectacular y altura codiciada. Ideal para mercado ejecutivo. Amenities limitados pero compensados por ubicación.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: Top 10 Summary -->
+        <div style="margin-bottom:3rem;">
+          <h3 style="color:#3B82F6; font-weight:700; font-size:1.1rem; margin-bottom:1rem;">🔟 4. TOP 10 RESUMIDO</h3>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; font-size:0.85rem; border-collapse:collapse; min-width:600px;">
+              <tr style="background:#F1F5F9; color:#0F172A;">
+                <th style="text-align:left; padding:0.8rem;">Propiedad</th>
+                <th style="padding:0.8rem;">Precio</th>
+                <th style="padding:0.8rem;">m²</th>
+                <th style="padding:0.8rem;">Matching</th>
+                <th style="padding:0.8rem;">USD/m²</th>
+                <th style="padding:0.8rem;">Ficha</th>
+              </tr>
+              <tr style="border-bottom:1px solid #E2E8F0;">
+                <td style="padding:0.8rem;"><a href="#" style="color:#3B82F6; text-decoration:underline;">Vienna</a></td>
+                <td style="text-align:center;">$89.5k</td>
+                <td style="text-align:center;">82</td>
+                <td style="text-align:center; color:#10B981; font-weight:700;">0.91</td>
+                <td style="text-align:center;">1,091</td>
+                <td style="text-align:center;"><a href="#" style="color:#3B82F6;">Ver</a></td>
+              </tr>
+              <tr style="border-bottom:1px solid #E2E8F0;">
+                <td style="padding:0.8rem;"><a href="#" style="color:#3B82F6; text-decoration:underline;">Belvedere</a></td>
+                <td style="text-align:center;">$90.0k</td>
+                <td style="text-align:center;">78</td>
+                <td style="text-align:center; color:#10B981; font-weight:700;">0.88</td>
+                <td style="text-align:center;">1,153</td>
+                <td style="text-align:center;"><a href="#" style="color:#3B82F6;">Ver</a></td>
+              </tr>
+              <tr style="border-bottom:1px solid #E2E8F0;">
+                <td style="padding:0.8rem;"><a href="#" style="color:#3B82F6; text-decoration:underline;">Park Lane</a></td>
+                <td style="text-align:center;">$88.0k</td>
+                <td style="text-align:center;">70</td>
+                <td style="text-align:center; color:#10B981; font-weight:700;">0.85</td>
+                <td style="text-align:center;">1,257</td>
+                <td style="text-align:center;"><a href="#" style="color:#3B82F6;">Ver</a></td>
+              </tr>
+              <tr style="border-bottom:1px solid #E2E8F0;">
+                <td style="padding:0.8rem;"><a href="#" style="color:#3B82F6; text-decoration:underline;">Nova Tower</a></td>
+                <td style="text-align:center;">$87.0k</td>
+                <td style="text-align:center;">75</td>
+                <td style="text-align:center;">0.82</td>
+                <td style="text-align:center;">1,160</td>
+                <td style="text-align:center;"><a href="#" style="color:#3B82F6;">Ver</a></td>
+              </tr>
+              <tr>
+                <td style="padding:0.8rem; color:#64748B;">...y 6 más</td>
+                <td colspan="5" style="text-align:center; color:#64748B;">(Ver reporte completo)</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section 5: Insights -->
+        <div style="margin-bottom:3rem;">
+          <h3 style="color:#3B82F6; font-weight:700; font-size:1.1rem; margin-bottom:1rem;">🧿 5. INSIGHTS OCULTOS</h3>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+            <div style="background:#FFFBEB; border:1px solid #FEF3C7; padding:1rem; border-radius:8px;">
+              <h5 style="color:#B45309; font-weight:700; margin-bottom:0.5rem;">Liquidez Superior</h5>
+              <p style="font-size:0.9rem; color:#78350F;">Detectamos 3 torres con rotación comprobada. Si comprás aquí, vender en 5 años será rápido.</p>
+            </div>
+            <div style="background:#FEF2F2; border:1px solid #FEE2E2; padding:1rem; border-radius:8px;">
+              <h5 style="color:#B91C1C; font-weight:700; margin-bottom:0.5rem;">Riesgos Detectados</h5>
+              <p style="font-size:0.9rem; color:#7F1D1D;">Vibración estructural en Av. Beni y sobreprecio injustificado en 3 preventas cercanas.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 6: Financial Scenario -->
+        <div style="background:#F8FAFC; padding:2rem; border-radius:12px; margin-bottom:3rem;">
+          <h3 style="color:#3B82F6; font-weight:700; font-size:1.1rem; margin-bottom:1rem;">🧮 6. ESCENARIO FINANCIERO</h3>
+          <table style="width:100%; font-size:0.9rem; border-collapse:collapse;">
+            <tr style="border-bottom:1px solid #E2E8F0;">
+              <th style="text-align:left; padding:0.5rem;">Propiedad</th>
+              <th style="text-align:left; padding:0.5rem;">Liquidez (3 años)</th>
+              <th style="text-align:left; padding:0.5rem;">Renta Est.</th>
+              <th style="text-align:left; padding:0.5rem;">Riesgo Depreciación</th>
+            </tr>
+            <tr style="border-bottom:1px solid #E2E8F0;">
+              <td style="padding:0.8rem 0.5rem;"><strong>Vienna</strong></td>
+              <td style="color:#10B981; font-weight:600;">Alta (A-)</td>
+              <td>$650 - $750</td>
+              <td>Bajo</td>
+            </tr>
+            <tr style="border-bottom:1px solid #E2E8F0;">
+              <td style="padding:0.8rem 0.5rem;"><strong>Belvedere</strong></td>
+              <td style="color:#F59E0B; font-weight:600;">Media (B+)</td>
+              <td>$620 - $700</td>
+              <td>Bajo</td>
+            </tr>
+            <tr>
+              <td style="padding:0.8rem 0.5rem;"><strong>Park Lane</strong></td>
+              <td style="color:#10B981; font-weight:600;">Alta (A)</td>
+              <td>$700 - $800</td>
+              <td>Medio</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Section 7: Real Life Map -->
+        <div style="margin-bottom:3rem;">
+          <h3 style="color:#3B82F6; font-weight:700; font-size:1.1rem; margin-bottom:1rem;">🗺 7. MAPA DE VIDA REAL</h3>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem;">
+            <div>
+              <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.5rem;">Calidad de Vida</h4>
+              <ul style="font-size:0.9rem; color:#475569; list-style:disc; padding-left:1.2rem;">
+                <li>Acceso directo a cafés y oficinas.</li>
+                <li>Rutas rápidas por San Martín y 2do anillo.</li>
+                <li>Zonas silenciosas en calles internas.</li>
+              </ul>
+            </div>
+            <div>
+              <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.5rem; color:#EF4444;">Alertas Urbanas</h4>
+              <ul style="font-size:0.9rem; color:#475569; list-style:disc; padding-left:1.2rem;">
+                <li>Ruido y tráfico en 1ra línea de San Martín.</li>
+                <li>Vibración en horas pico cerca de Av. Beni.</li>
+                <li>Revisar seguridad en zonas de flujo nocturno.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 8: Motivators -->
+        <div style="margin-bottom:3rem; background:#F0F9FF; padding:1.5rem; border-radius:12px;">
+          <h3 style="color:#3B82F6; font-weight:700; font-size:1.1rem; margin-bottom:1rem;">🧠 8. MOTIVADORES Y RIESGOS</h3>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem;">
+            <div>
+              <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.5rem;">Tus Motivadores</h4>
+              <p style="font-size:0.9rem; color:#475569;">Claridad antes que velocidad, control financiero y sensación de seguridad estructural.</p>
+            </div>
+            <div>
+              <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.5rem;">Riesgos Psicológicos</h4>
+              <p style="font-size:0.9rem; color:#475569;">Saturación por exceso de opciones y ansiedad por decidir sin respaldo técnico.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 9: Human Advice -->
+        <div style="margin-bottom:3rem;">
+          <h3 style="color:#3B82F6; font-weight:700; font-size:1.1rem; margin-bottom:1rem;">🤝 9. CAPA 3: ASESORAMIENTO HUMANO</h3>
+          <div style="border:1px solid #E2E8F0; padding:1.5rem; border-radius:12px;">
+            <p style="font-size:0.95rem; color:#475569; margin-bottom:1rem;">
+              Incluye <strong>Verificación Fiduciaria</strong> por un estratega real: visita técnica, evaluación de mantenimiento, revisión legal y chequeo de ruidos.
+            </p>
+            <div style="background:#FEFCE8; border:1px solid #FDE047; color:#854D0E; padding:0.8rem; border-radius:8px; margin-bottom:1.5rem; font-size:0.9rem;">
+              <strong>Nota:</strong> Este servicio no es gratuito. Tiene un costo de <strong>$100 USD</strong> por propiedad verificada.
+            </div>
+            <ul style="font-size:0.9rem; color:#475569; list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:1.5rem;">
+              <li>✓ Visita técnica presencial</li>
+              <li>✓ Análisis jurídico</li>
+              <li>✓ Check de administración</li>
+              <li>✓ Fotos y video real</li>
+            </ul>
+            <a href="#" style="display:inline-block; background:#25D366; color:white; padding:0.6rem 1.2rem; border-radius:6px; font-weight:600; text-decoration:none; font-size:0.9rem;">
+              <i class="ph-bold ph-whatsapp-logo" style="vertical-align:middle; margin-right:0.3rem;"></i> Contratar Verificación ($100)
+            </a>
+          </div>
+        </div>
+
+        <!-- Section 10: Conclusion -->
+        <div style="background:#0F172A; color:white; padding:2rem; border-radius:12px; text-align:center;">
+          <h3 style="font-size:1.5rem; font-weight:800; margin-bottom:1rem;">📌 CONCLUSIÓN FINAL</h3>
+          <p style="font-size:1rem; margin-bottom:1.5rem; max-width:700px; margin:0 auto;">
+            Estás en una posición privilegiada. El análisis profundo está hecho. Ahora viene la parte humana: validar físicamente, negociar con inteligencia y comprar con seguridad.
+          </p>
+          <div style="margin-bottom:1.5rem; text-align:left; font-size:0.9rem; max-width:600px; margin:0 auto 1.5rem; color:#CBD5E1;">
+            <p><strong>Recomendación:</strong> Solicitar verificación de Vienna y Belvedere. Comparar liquidez y negociar dentro de tu ventana de 2-8 semanas.</p>
+          </div>
+          <div style="background:rgba(255,255,255,0.1); display:inline-block; padding:1rem 2rem; border-radius:8px; font-weight:700; font-size:1.2rem; border:1px solid rgba(255,255,255,0.2);">
+            Simón Recomienda: ⭐ TORRE VIENNA
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const reveals = document.querySelectorAll('.reveal');
+      const revealOnScroll = () => {
+        const windowHeight = window.innerHeight;
+        const elementVisible = 100;
+        reveals.forEach((reveal) => {
+          const elementTop = reveal.getBoundingClientRect().top;
+          if (elementTop < windowHeight - elementVisible) {
+            reveal.classList.add('active');
+          }
+        });
+      };
+      window.addEventListener('scroll', revealOnScroll);
+      revealOnScroll();
+    });
+  </script>
+</body>
+</html>
