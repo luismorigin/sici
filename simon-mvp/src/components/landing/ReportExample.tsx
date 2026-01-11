@@ -9,6 +9,7 @@ import {
   obtenerAnalisisFiduciario,
   generarDistribucionPrecios,
   generarComparacionesProyecto,
+  obtenerScoresConfianza,
   type AnalisisMercadoFiduciario,
   type OpcionValida
 } from '@/lib/supabase'
@@ -40,15 +41,21 @@ const sampleData = {
 }
 
 // Convert API data to display format
-function convertirOpcionADisplay(opcion: OpcionValida, index: number) {
+function convertirOpcionADisplay(
+  opcion: OpcionValida,
+  index: number,
+  scoresMap: Map<number, number>
+) {
   // Calculate match score based on position and market position
   const baseScore = 90 - (index * 4)
   const matchScore = Math.max(70, Math.min(98, baseScore))
 
-  // Calculate confidence based on data completeness
-  const confianza = Math.min(95, 75 + (opcion.fotos > 5 ? 10 : 0) + (opcion.desarrollador ? 10 : 0))
+  // Use real score from BD if available, otherwise estimate
+  const scoreReal = scoresMap.get(opcion.id)
+  const confianza = scoreReal ?? Math.min(95, 75 + (opcion.fotos > 5 ? 10 : 0) + (opcion.desarrollador ? 10 : 0))
 
   return {
+    id: opcion.id,
     nombre: opcion.proyecto,
     precio: Math.round(opcion.precio_usd),
     dormitorios: opcion.dormitorios,
@@ -60,6 +67,7 @@ function convertirOpcionADisplay(opcion: OpcionValida, index: number) {
 
 export default function ReportExample() {
   const [analisis, setAnalisis] = useState<AnalisisMercadoFiduciario | null>(null)
+  const [scores, setScores] = useState<Map<number, number>>(new Map())
   const [loading, setLoading] = useState(true)
   const [usingRealData, setUsingRealData] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -77,6 +85,13 @@ export default function ReportExample() {
       if (data && data.bloque_1_opciones_validas.total > 0) {
         setAnalisis(data)
         setUsingRealData(true)
+
+        // Fetch real confidence scores for top 3 properties
+        const top3Ids = data.bloque_1_opciones_validas.opciones
+          .slice(0, 3)
+          .map(op => op.id)
+        const scoresData = await obtenerScoresConfianza(top3Ids)
+        setScores(scoresData)
       }
       setLoading(false)
     }
@@ -89,7 +104,7 @@ export default function ReportExample() {
     presupuesto: analisis.filtros_aplicados.precio_max || 150000,
     prioridades: ['Seguridad', 'Ubicacion', 'Amenities'],
     sensibilidad: 'alta' as const,
-    compatibilidad: Math.round(analisis.bloque_3_contexto_mercado.porcentaje_mercado * 10) || 78,
+    compatibilidad: Math.min(100, Math.round(analisis.bloque_3_contexto_mercado.porcentaje_mercado)) || 78,
     totalProps: analisis.bloque_3_contexto_mercado.stock_total,
     distribucion: generarDistribucionPrecios(
       analisis.bloque_1_opciones_validas.opciones,
@@ -101,7 +116,7 @@ export default function ReportExample() {
     ),
     topPropiedades: analisis.bloque_1_opciones_validas.opciones
       .slice(0, 3)
-      .map((op, i) => convertirOpcionADisplay(op, i))
+      .map((op, i) => convertirOpcionADisplay(op, i, scores))
   } : sampleData
 
   const mediaPrecioM2 = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 1200

@@ -362,6 +362,66 @@ export async function obtenerSnapshot24h(): Promise<Snapshot24h | null> {
   }
 }
 
+// ========== SCORE CONFIANZA ==========
+
+export interface ScoreConfianza {
+  propiedad_id: number
+  score: number
+  max_score: number
+  porcentaje: number
+  categoria: 'excelente' | 'bueno' | 'aceptable' | 'bajo'
+  resumen: string
+  detalles: {
+    componente: string
+    puntos: number
+    maximo: number
+    nota: string
+  }[]
+}
+
+export async function obtenerScoreConfianza(propiedadId: number): Promise<ScoreConfianza | null> {
+  if (!supabase) return null
+
+  try {
+    const { data, error } = await supabase.rpc('calcular_confianza_datos', {
+      p_id: propiedadId
+    })
+
+    if (error) {
+      console.warn('Error obteniendo score confianza:', error.message)
+      return null
+    }
+
+    return data as ScoreConfianza
+  } catch (err) {
+    console.warn('Error en obtenerScoreConfianza:', err)
+    return null
+  }
+}
+
+// Obtener scores para múltiples propiedades en paralelo
+export async function obtenerScoresConfianza(propiedadIds: number[]): Promise<Map<number, number>> {
+  const scores = new Map<number, number>()
+
+  if (!supabase || propiedadIds.length === 0) return scores
+
+  try {
+    // Llamar en paralelo para cada ID
+    const promises = propiedadIds.map(id => obtenerScoreConfianza(id))
+    const results = await Promise.all(promises)
+
+    results.forEach((result, index) => {
+      if (result) {
+        scores.set(propiedadIds[index], result.porcentaje)
+      }
+    })
+  } catch (err) {
+    console.warn('Error obteniendo scores múltiples:', err)
+  }
+
+  return scores
+}
+
 // ========== SLACK NOTIFICATIONS ==========
 
 export type SlackEvent = 'lead_created' | 'form_completed' | 'property_interest'
