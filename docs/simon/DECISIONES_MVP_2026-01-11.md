@@ -477,6 +477,129 @@ Estos documentos NO se deprecan. Contienen ideas valiosas para iteraciones futur
 
 ---
 
+## NIVEL 2 VIVIENDA - Validacion y Diseno Final
+
+### Wireframe Nivel 2 Vivienda
+
+```
++-------------------------------------------------------------+
+|  CONTANOS SOBRE VOS                                         |
+|                                                             |
+|  1. Quienes van a vivir?                                    |
+|     [Solo] [Pareja] [Familia] [Roommates]                   |
+|                                                             |
+|     -> Si Familia:                                          |
+|     Hijos? [ ] 1  [ ] 2  [ ] 3+   Edades: [___]             |
+|                                                             |
+|  2. Mascotas?                                               |
+|     [No] [Perro] [Gato] [Otro]                              |
+|     -> Si Perro: [Chico] [Mediano] [Grande]                 |
+|                                                             |
++-------------------------------------------------------------+
+|  TU BUSQUEDA                                                |
+|                                                             |
+|  3. Hace cuanto buscas?                                     |
+|     [Recien empiezo] [1-6 meses] [6-12 meses] [+1 ano]      |
+|                                                             |
+|  4. Como te sentis con la busqueda?                         |
+|     [Motivado] [Cansado] [Frustrado] [Presionado]           |
+|                                                             |
+|  5. Quien mas decide?                                       |
+|     [Solo yo] [Mi pareja] [Familia opina]                   |
+|     -> Si pareja: Estan alineados? [Si] [Mas o menos] [No]  |
+|                                                             |
++-------------------------------------------------------------+
+|  QUE BUSCAS                                                 |
+|                                                             |
+|  6. Sin esto NO me interesa (max 3):                        |
+|     [Seguridad 24h] [Estacionamiento] [Pet friendly]        |
+|     [Ascensor] [Piscina] [Gimnasio]                         |
+|                                                             |
+|  7. Seria un PLUS tener:                                    |
+|     [Balcon] [Vista] [Terraza] [Lavanderia]                 |
+|     [Cowork] [SUM] [Parrillero] [Area ninos]                |
+|                                                             |
++-------------------------------------------------------------+
+|  TRADE-OFFS                                                 |
+|                                                             |
+|  8. Si tuvieras que elegir:                                 |
+|     Mejor ubicacion  [----*----]  Mas metros cuadrados      |
+|                                                             |
+|  9. Y entre:                                                |
+|     Mejor calidad    [----*----]  Mejor precio              |
+|                                                             |
++-------------------------------------------------------------+
+|                                                             |
+|  [VER MIS OPCIONES]                                         |
+|                                                             |
++-------------------------------------------------------------+
+```
+
+### Validacion de campos contra BD
+
+| # | Campo | UI | Funcion SQL | Condicional |
+|---|-------|-----|-------------|-------------|
+| 1 | Quienes van a vivir? | Chips | perfil | - |
+| 1b | Hijos? | Chips + input | perfil | Solo si Familia |
+| 2 | Mascotas? | Chips iconos | `evaluar_coherencia_innegociables()` | - |
+| 2b | Tamano perro | Chips | pet_friendly | Solo si Perro |
+| 3 | Hace cuanto buscas? | Chips | `detectar_senales_alerta()` fatiga | - |
+| 4 | Como te sentis? | Chips iconos | `detectar_senales_alerta()` alertas | - |
+| 5 | Quien mas decide? | Chips | perfil/alerta | - |
+| 5b | Alineados? | Chips | alerta | Solo si Pareja |
+| 6 | Innegociables | Tags max 3 | `evaluar_coherencia_innegociables()` | - |
+| 7 | Deseables | Tags multiple | ranking futuro | - |
+| 8 | Trade-off ubicacion/metros | Slider | ranking futuro | - |
+| 9 | Trade-off calidad/precio | Slider | ranking futuro | - |
+
+### Resumen Nivel 2
+
+- **9 preguntas visibles** (+ 3 condicionales)
+- **4 funcionales SQL** (#2, #3, #4, #6)
+- **5 para perfil/ranking futuro** (#1, #5, #7, #8, #9)
+- **Tiempo estimado:** 2-3 minutos
+- **Total con Nivel 1:** ~5 minutos
+
+### Campos eliminados vs FUNNEL_SPEC original
+
+| Campo original | Razon de eliminacion |
+|----------------|----------------------|
+| Sensibilidad al ruido | No hay data en BD |
+| Trabajas desde casa? | No prioritario para MVP |
+| Cercania importante a | No hay GPS del usuario |
+| Tiempo maximo traslado | No calculable sin GPS |
+
+### Campos agregados vs FUNNEL_SPEC original
+
+| Campo nuevo | Razon de inclusion |
+|-------------|-------------------|
+| Trade-off ubicacion vs metros | Permite ranking personalizado |
+| Trade-off calidad vs precio | Permite ranking personalizado |
+
+### Mapeo a parametros SQL
+
+```json
+{
+  "innegociables": ["seguridad", "ascensor", "pet_friendly"],
+  "contexto": {
+    "composicion": "familia",
+    "hijos": 2,
+    "mascota": "perro_grande",
+    "meses_buscando": 9,
+    "estado_emocional": "cansado",
+    "decision_compartida": "pareja",
+    "alineados": "mas_o_menos"
+  },
+  "deseables": ["balcon", "vista", "piscina"],
+  "tradeoffs": {
+    "ubicacion_vs_metros": 0.7,
+    "calidad_vs_precio": 0.5
+  }
+}
+```
+
+---
+
 ## CHANGELOG
 
 | Fecha | Pregunta | Decision |
