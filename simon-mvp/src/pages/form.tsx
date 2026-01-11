@@ -56,13 +56,15 @@ export default function FormPage() {
       saveProgress()
 
       // Guardar en BD (async)
-      supabase.rpc('actualizar_progreso_seccion', {
-        p_lead_id: leadId,
-        p_seccion: completedSection,
-        p_respuestas: sectionAnswers
-      }).then(({ error }) => {
-        if (error) console.error('Error guardando progreso:', error)
-      })
+      if (supabase) {
+        supabase.rpc('actualizar_progreso_seccion', {
+          p_lead_id: leadId,
+          p_seccion: completedSection,
+          p_respuestas: sectionAnswers
+        }).then(({ error }) => {
+          if (error) console.error('Error guardando progreso:', error)
+        })
+      }
     }
 
     lastSavedSection.current = currentSec
@@ -74,8 +76,8 @@ export default function FormPage() {
       const formData = buildFormData()
       localStorage.setItem('simon_form_data', JSON.stringify(formData))
 
-      // Guardar en BD si tenemos lead_id
-      if (leadId) {
+      // Guardar en BD si tenemos lead_id y supabase
+      if (leadId && supabase) {
         try {
           await supabase.rpc('finalizar_formulario', {
             p_lead_id: leadId,

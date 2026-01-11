@@ -5,7 +5,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 export const supabase = supabaseUrl ? createClient(supabaseUrl, supabaseAnonKey) : null
 
-// Tipos para las respuestas (match con RPC buscar_unidades_reales v2.1)
+// Tipos para las respuestas (match con RPC buscar_unidades_reales v2.2)
 export interface UnidadReal {
   id: number
   proyecto: string
@@ -24,8 +24,9 @@ export interface UnidadReal {
   cantidad_fotos: number
   url: string
   amenities_lista: string[]
-  razon_fiduciaria: string | null  // NEW: razón del SQL
+  razon_fiduciaria: string | null
   es_multiproyecto: boolean
+  estado_construccion: string  // v2.2: entrega_inmediata, nuevo_a_estrenar, usado, preventa, no_especificado
 }
 
 // Filtros para búsqueda
@@ -40,6 +41,8 @@ export interface FiltrosBusqueda {
   solo_con_telefono?: boolean
   orden?: 'precio_asc' | 'precio_desc'
   limite?: number
+  // v2.2: Filtro estado construcción
+  estado_entrega?: 'entrega_inmediata' | 'preventa_ok' | 'no_importa'
 }
 
 // Mapeo de IDs de microzona del formulario a nombres en BD
@@ -60,10 +63,10 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
   }
 
   try {
-    // Construir filtros para RPC (v2.1 ya incluye filtros de venta, área>=20m², etc.)
+    // Construir filtros para RPC (v2.3 ya incluye filtros de venta, área>=20m², estado_entrega, etc.)
     const rpcFiltros: Record<string, any> = {
       limite: filtros.limite || 10,
-      solo_con_fotos: true  // MVP siempre quiere fotos
+      solo_con_fotos: true  // MVP siempre quiere fotos (fix 033 aplicado)
     }
 
     if (filtros.precio_max) rpcFiltros.precio_max = filtros.precio_max
@@ -71,8 +74,9 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
     if (filtros.dormitorios) rpcFiltros.dormitorios = filtros.dormitorios
     if (filtros.area_min) rpcFiltros.area_min = filtros.area_min
     if (filtros.zona) rpcFiltros.zona = filtros.zona
+    if (filtros.estado_entrega) rpcFiltros.estado_entrega = filtros.estado_entrega
 
-    // Llamar RPC buscar_unidades_reales v2.1
+    // Llamar RPC buscar_unidades_reales v2.2
     const { data, error } = await supabase.rpc('buscar_unidades_reales', {
       p_filtros: rpcFiltros
     })
@@ -82,7 +86,7 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       return []
     }
 
-    // Mapear respuesta RPC a interfaz UnidadReal
+    // Mapear respuesta RPC a interfaz UnidadReal (v2.2)
     const resultados: UnidadReal[] = (data || []).map((p: any) => ({
       id: p.id,
       proyecto: p.proyecto || 'Sin proyecto',
@@ -101,8 +105,9 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       cantidad_fotos: p.cantidad_fotos || 0,
       url: p.url || '',
       amenities_lista: p.amenities_lista || [],
-      razon_fiduciaria: p.razon_fiduciaria,  // Ya viene del SQL
-      es_multiproyecto: p.es_multiproyecto || false
+      razon_fiduciaria: p.razon_fiduciaria,
+      es_multiproyecto: p.es_multiproyecto || false,
+      estado_construccion: p.estado_construccion || 'no_especificado'
     }))
 
     // Filtrar por zonas permitidas si se especificaron

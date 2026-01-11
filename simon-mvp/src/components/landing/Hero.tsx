@@ -37,8 +37,8 @@ export default function Hero() {
 
             {/* CTAs */}
             <div className="flex flex-wrap gap-4">
-              <Link href="#cta-form" className="btn btn-primary px-8 py-4 text-base">
-                Encuentra Tu Departamento
+              <Link href="/filtros" className="btn btn-primary px-8 py-4 text-base">
+                Empezar Ahora
               </Link>
               <Link href="#como-funciona" className="btn btn-secondary px-6 py-4">
                 Saber Más

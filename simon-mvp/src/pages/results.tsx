@@ -349,7 +349,7 @@ export default function ResultsPage() {
   }
 
   const handlePropertyInterest = async (propertyId: number) => {
-    if (!leadId || submitting) return
+    if (!leadId || submitting || !supabase) return
 
     setSubmitting(true)
     setSelectedProperty(propertyId)

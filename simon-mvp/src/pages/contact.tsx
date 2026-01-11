@@ -62,6 +62,11 @@ export default function Contact() {
     setLoading(true)
 
     try {
+      // Verificar conexión a Supabase
+      if (!supabase) {
+        throw new Error('Supabase no configurado')
+      }
+
       // Crear lead inicial en Supabase
       const { data, error } = await supabase.rpc('crear_lead_inicial', {
         p_nombre: nombre.trim(),
