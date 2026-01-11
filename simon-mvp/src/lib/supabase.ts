@@ -281,9 +281,9 @@ export async function obtenerMetricasMercado(): Promise<MetricasMercado | null> 
 
 // TC Binance para Market Lens
 export interface TCData {
-  precio_venta: number
-  precio_compra: number
-  fecha: string
+  tc_sell: number
+  tc_buy: number
+  timestamp: string
 }
 
 export async function obtenerTCBinance(): Promise<TCData | null> {
@@ -292,17 +292,17 @@ export async function obtenerTCBinance(): Promise<TCData | null> {
   try {
     const { data, error } = await supabase
       .from('tc_binance_historial')
-      .select('precio_venta, precio_compra, fecha')
-      .order('fecha', { ascending: false })
+      .select('tc_sell, tc_buy, timestamp')
+      .order('timestamp', { ascending: false })
       .limit(1)
       .single()
 
     if (error || !data) return null
 
     return {
-      precio_venta: parseFloat(data.precio_venta),
-      precio_compra: parseFloat(data.precio_compra),
-      fecha: data.fecha
+      tc_sell: parseFloat(data.tc_sell),
+      tc_buy: parseFloat(data.tc_buy),
+      timestamp: data.timestamp
     }
   } catch {
     return null
@@ -328,20 +328,23 @@ export async function obtenerSnapshot24h(): Promise<Snapshot24h | null> {
     const { data: nuevas, error: errNuevas } = await supabase
       .from('propiedades_v2')
       .select('id')
-      .gte('fecha_descubierto', hace24h.toISOString())
+      .gte('fecha_creacion', hace24h.toISOString())
 
     // TC actual y anterior
     const { data: tcs, error: errTc } = await supabase
       .from('tc_binance_historial')
-      .select('precio_venta, fecha')
-      .order('fecha', { ascending: false })
+      .select('tc_sell, timestamp')
+      .order('timestamp', { ascending: false })
       .limit(2)
 
-    if (errNuevas || errTc) return null
+    if (errNuevas || errTc) {
+      console.warn('Error obteniendo snapshot:', errNuevas?.message, errTc?.message)
+      return null
+    }
 
-    const tcActual = tcs?.[0]?.precio_venta || 10.95
-    const tcAnterior = tcs?.[1]?.precio_venta || tcActual
-    const variacion = ((tcActual - tcAnterior) / tcAnterior) * 100
+    const tcActual = tcs?.[0]?.tc_sell ? parseFloat(tcs[0].tc_sell) : 10.95
+    const tcAnterior = tcs?.[1]?.tc_sell ? parseFloat(tcs[1].tc_sell) : tcActual
+    const variacion = tcAnterior > 0 ? ((tcActual - tcAnterior) / tcAnterior) * 100 : 0
 
     // Precio real ajustado
     const metricas = await obtenerMetricasMercado()
@@ -353,35 +356,182 @@ export async function obtenerSnapshot24h(): Promise<Snapshot24h | null> {
       tc_variacion: Math.round(variacion * 10) / 10,
       precio_real_m2: precioRealM2
     }
-  } catch {
+  } catch (err) {
+    console.warn('Error en obtenerSnapshot24h:', err)
     return null
   }
 }
 
-// Guardar lead
+// ========== SLACK NOTIFICATIONS ==========
+
+export type SlackEvent = 'lead_created' | 'form_completed' | 'property_interest'
+
+export async function notificarSlack(
+  event: SlackEvent,
+  leadId: number,
+  data: { nombre?: string; whatsapp?: string; proyecto?: string; propiedad_id?: number }
+): Promise<boolean> {
+  try {
+    const response = await fetch('/api/notify-slack', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event, leadId, data })
+    })
+
+    const result = await response.json()
+    // Nota: No actualizamos slack_notificado porque anon no tiene UPDATE permission
+    return result.ok
+  } catch (err) {
+    // Slack es secundario, no fallar por esto
+    console.warn('Error notificando a Slack:', err)
+    return false
+  }
+}
+
+// ========== GUARDAR LEAD ==========
+
 export interface LeadData {
   nombre: string
   email: string
   whatsapp: string
   presupuesto?: number
   dormitorios?: number
+  zona?: string
+  prioridades?: string[]
+  dispositivo?: string
 }
 
-export async function guardarLead(lead: LeadData): Promise<boolean> {
+export interface LeadResult {
+  success: boolean
+  leadId?: number
+  error?: string
+}
+
+export async function guardarLead(lead: LeadData): Promise<LeadResult> {
+  if (!supabase) {
+    console.warn('Supabase no configurado - lead no guardado')
+    return { success: false, error: 'Supabase no configurado' }
+  }
+
+  try {
+    // Detectar dispositivo
+    const dispositivo = typeof window !== 'undefined'
+      ? (window.innerWidth < 768 ? 'mobile' : 'desktop')
+      : 'unknown'
+
+    // Construir formulario_raw con todos los datos
+    const formularioRaw = {
+      nombre: lead.nombre,
+      email: lead.email,
+      whatsapp: lead.whatsapp,
+      presupuesto: lead.presupuesto,
+      dormitorios: lead.dormitorios,
+      zona: lead.zona,
+      prioridades: lead.prioridades,
+      fuente: 'landing_mvp',
+      timestamp: new Date().toISOString(),
+      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null
+    }
+
+    const { error } = await supabase
+      .from('leads_mvp')
+      .insert([{
+        nombre: lead.nombre,
+        whatsapp: lead.whatsapp,
+        email: lead.email || null,
+        formulario_raw: formularioRaw,
+        estado: 'nuevo',
+        dispositivo
+      }])
+
+    if (error) {
+      console.error('Error guardando lead:', error)
+      return { success: false, error: error.message }
+    }
+
+    // No podemos obtener el ID sin SELECT permission, pero el lead se guardó
+    const leadId = Date.now() // ID temporal para notificación
+    console.log('Lead guardado exitosamente:', leadId)
+
+    // Notificar a Slack (async, no bloqueante)
+    if (leadId) {
+      notificarSlack('lead_created', leadId, {
+        nombre: lead.nombre,
+        whatsapp: lead.whatsapp
+      })
+    }
+
+    return { success: true, leadId }
+  } catch (err) {
+    console.error('Error inesperado guardando lead:', err)
+    return { success: false, error: 'Error inesperado' }
+  }
+}
+
+// Actualizar progreso del lead (para formulario multi-step)
+export async function actualizarProgresoLead(
+  leadId: number,
+  seccion: string,
+  datos: Record<string, any>
+): Promise<boolean> {
+  if (!supabase) return false
+
+  try {
+    // Obtener progreso actual
+    const { data: leadActual, error: errFetch } = await supabase
+      .from('leads_mvp')
+      .select('formulario_raw, progreso_secciones')
+      .eq('id', leadId)
+      .single()
+
+    if (errFetch) return false
+
+    // Merge datos
+    const formularioActualizado = {
+      ...(leadActual?.formulario_raw || {}),
+      ...datos,
+      ultima_seccion: seccion,
+      updated_at: new Date().toISOString()
+    }
+
+    const progresoActualizado = {
+      ...(leadActual?.progreso_secciones || {}),
+      [seccion]: {
+        completado: true,
+        timestamp: new Date().toISOString()
+      }
+    }
+
+    const { error } = await supabase
+      .from('leads_mvp')
+      .update({
+        formulario_raw: formularioActualizado,
+        progreso_secciones: progresoActualizado,
+        seccion_actual: seccion,
+        estado: 'en_progreso',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', leadId)
+
+    return !error
+  } catch {
+    return false
+  }
+}
+
+// Marcar lead como confirmado
+export async function confirmarLead(leadId: number): Promise<boolean> {
   if (!supabase) return false
 
   try {
     const { error } = await supabase
-      .from('leads')
-      .insert([{
-        nombre: lead.nombre,
-        email: lead.email,
-        whatsapp: lead.whatsapp,
-        presupuesto_usd: lead.presupuesto,
-        dormitorios: lead.dormitorios,
-        fuente: 'landing_mvp',
-        created_at: new Date().toISOString()
-      }])
+      .from('leads_mvp')
+      .update({
+        estado: 'confirmado',
+        confirmado_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', leadId)
 
     return !error
   } catch {
@@ -619,96 +769,76 @@ export interface MicrozonaData {
 }
 
 export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
+  // Demo data as fallback
+  const demoData: MicrozonaData[] = [
+    { zona: 'Equipetrol', total: 76, precio_promedio: 143579, precio_m2: 2129, proyectos: 38, lat: -17.7656, lng: -63.1957, categoria: 'premium' },
+    { zona: 'Sirari', total: 25, precio_promedio: 215828, precio_m2: 2552, proyectos: 13, lat: -17.7630, lng: -63.2014, categoria: 'premium' },
+    { zona: 'Villa Brigida', total: 47, precio_promedio: 102595, precio_m2: 1642, proyectos: 17, lat: -17.7680, lng: -63.1920, categoria: 'value' },
+    { zona: 'Faremafu', total: 19, precio_promedio: 251096, precio_m2: 2023, proyectos: 12, lat: -17.7610, lng: -63.1880, categoria: 'premium' },
+    { zona: 'Equipetrol Norte', total: 20, precio_promedio: 154829, precio_m2: 2363, proyectos: 12, lat: -17.7590, lng: -63.1900, categoria: 'standard' }
+  ]
+
   if (!supabase) {
-    // Return demo data if Supabase not configured
-    return [
-      { zona: 'Equipetrol', total: 76, precio_promedio: 143579, precio_m2: 2129, proyectos: 38, lat: -17.7656, lng: -63.1957, categoria: 'premium' },
-      { zona: 'Sirari', total: 25, precio_promedio: 215828, precio_m2: 2552, proyectos: 13, lat: -17.7630, lng: -63.2014, categoria: 'premium' },
-      { zona: 'Villa Brigida', total: 47, precio_promedio: 102595, precio_m2: 1642, proyectos: 17, lat: -17.7680, lng: -63.1920, categoria: 'value' },
-      { zona: 'Faremafu', total: 19, precio_promedio: 251096, precio_m2: 2023, proyectos: 12, lat: -17.7610, lng: -63.1880, categoria: 'premium' },
-      { zona: 'Equipetrol Norte', total: 20, precio_promedio: 154829, precio_m2: 2363, proyectos: 12, lat: -17.7590, lng: -63.1900, categoria: 'standard' }
-    ]
+    return demoData
   }
 
   try {
-    // Get microzona stats
-    const { data: zonaStats, error: errStats } = await supabase.rpc('pg_execute_sql', {
-      sql: `
-        SELECT
-          COALESCE(p.microzona, p.zona, 'Sin zona') as zona,
-          COUNT(*)::int as total,
-          ROUND(AVG(p.precio_usd))::int as precio_promedio,
-          ROUND(AVG(p.precio_usd / NULLIF(p.area_total_m2, 0)))::int as precio_m2,
-          COUNT(DISTINCT p.id_proyecto_master)::int as proyectos
-        FROM propiedades_v2 p
-        WHERE p.es_activa = true
-          AND p.status = 'completado'
-          AND p.tipo_operacion = 'venta'
-          AND p.es_multiproyecto = false
-          AND p.area_total_m2 >= 20
-        GROUP BY COALESCE(p.microzona, p.zona, 'Sin zona')
-        HAVING COUNT(*) >= 5
-        ORDER BY total DESC
-      `
-    })
+    // Direct query - no RPC needed
+    const { data, error } = await supabase
+      .from('propiedades_v2')
+      .select('zona, precio_usd, area_total_m2, id_proyecto_master')
+      .eq('status', 'completado')
+      .eq('tipo_operacion', 'venta')
+      .gt('precio_usd', 30000)
+      .gt('area_total_m2', 20)
 
-    if (errStats) {
-      // Fallback to direct query
-      const { data: fallbackData, error: errFallback } = await supabase
-        .from('propiedades_v2')
-        .select('zona, precio_usd, area_total_m2, id_proyecto_master')
-        .eq('es_activa', true)
-        .eq('tipo_operacion', 'venta')
-        .gte('area_total_m2', 20)
-
-      if (errFallback || !fallbackData) return []
-
-      // Aggregate manually
-      const zonaMap: Record<string, { total: number; precios: number[]; m2: number[]; proyectos: Set<number> }> = {}
-
-      fallbackData.forEach((p: any) => {
-        const zona = p.zona || 'Sin zona'
-        if (!zonaMap[zona]) {
-          zonaMap[zona] = { total: 0, precios: [], m2: [], proyectos: new Set() }
-        }
-        zonaMap[zona].total++
-        zonaMap[zona].precios.push(p.precio_usd)
-        if (p.area_total_m2 > 0) {
-          zonaMap[zona].m2.push(p.precio_usd / p.area_total_m2)
-        }
-        if (p.id_proyecto_master) {
-          zonaMap[zona].proyectos.add(p.id_proyecto_master)
-        }
-      })
-
-      return Object.entries(zonaMap)
-        .filter(([_, v]) => v.total >= 5)
-        .map(([zona, v]) => ({
-          zona,
-          total: v.total,
-          precio_promedio: Math.round(v.precios.reduce((a, b) => a + b, 0) / v.precios.length),
-          precio_m2: Math.round(v.m2.reduce((a, b) => a + b, 0) / v.m2.length),
-          proyectos: v.proyectos.size,
-          categoria: categorizarZona(Math.round(v.m2.reduce((a, b) => a + b, 0) / v.m2.length))
-        }))
-        .sort((a, b) => b.total - a.total)
+    if (error || !data || data.length === 0) {
+      console.warn('Error o sin datos en microzonas, usando demo:', error?.message)
+      return demoData
     }
 
-    // Process results
-    return (zonaStats || [])
-      .filter((z: any) => z.zona !== 'Sin zona')
-      .map((z: any) => ({
-        zona: z.zona,
-        total: z.total,
-        precio_promedio: z.precio_promedio,
-        precio_m2: z.precio_m2,
-        proyectos: z.proyectos,
-        categoria: categorizarZona(z.precio_m2)
-      }))
+    // Aggregate manually
+    const zonaMap: Record<string, { total: number; precios: number[]; m2: number[]; proyectos: Set<number> }> = {}
+
+    data.forEach((p: any) => {
+      const zona = p.zona || 'Equipetrol'
+      if (!zonaMap[zona]) {
+        zonaMap[zona] = { total: 0, precios: [], m2: [], proyectos: new Set() }
+      }
+      zonaMap[zona].total++
+      if (p.precio_usd) zonaMap[zona].precios.push(p.precio_usd)
+      if (p.area_total_m2 > 0 && p.precio_usd) {
+        zonaMap[zona].m2.push(p.precio_usd / p.area_total_m2)
+      }
+      if (p.id_proyecto_master) {
+        zonaMap[zona].proyectos.add(p.id_proyecto_master)
+      }
+    })
+
+    const result = Object.entries(zonaMap)
+      .filter(([zona, v]) => v.total >= 3 && zona !== 'Sin zona')
+      .map(([zona, v]) => {
+        const precioM2 = v.m2.length > 0
+          ? Math.round(v.m2.reduce((a, b) => a + b, 0) / v.m2.length)
+          : 1500
+        return {
+          zona,
+          total: v.total,
+          precio_promedio: v.precios.length > 0
+            ? Math.round(v.precios.reduce((a, b) => a + b, 0) / v.precios.length)
+            : 100000,
+          precio_m2: precioM2,
+          proyectos: v.proyectos.size,
+          categoria: categorizarZona(precioM2)
+        }
+      })
+      .sort((a, b) => b.total - a.total)
+
+    return result.length > 0 ? result : demoData
 
   } catch (err) {
     console.error('Error obteniendo microzonas:', err)
-    return []
+    return demoData
   }
 }
 

@@ -62,8 +62,10 @@ export default function ReportExample() {
   const [analisis, setAnalisis] = useState<AnalisisMercadoFiduciario | null>(null)
   const [loading, setLoading] = useState(true)
   const [usingRealData, setUsingRealData] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     const fetchData = async () => {
       const data = await obtenerAnalisisFiduciario({
         dormitorios: 2,
@@ -144,7 +146,7 @@ export default function ReportExample() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <span className="font-bold">Informe de Mercado #{Math.floor(Math.random() * 900) + 100}</span>
+              <span className="font-bold">Informe de Mercado #{mounted ? 247 : '---'}</span>
             </div>
             <div className="flex gap-6 text-sm opacity-90">
               <span className="flex items-center gap-1">
@@ -157,13 +159,13 @@ export default function ReportExample() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                {new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                {mounted ? new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : '...'}
               </span>
               <span className="flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
-                {displayData.totalProps} Props. Validadas
+                {mounted ? displayData.totalProps : sampleData.totalProps} Props. Validadas
               </span>
             </div>
           </div>
@@ -172,49 +174,49 @@ export default function ReportExample() {
           <div className="p-6">
             {/* Profile box */}
             <ProfileBox
-              perfil={displayData.perfil}
-              presupuesto={displayData.presupuesto}
-              prioridades={displayData.prioridades}
-              sensibilidad={displayData.sensibilidad}
+              perfil={mounted ? displayData.perfil : sampleData.perfil}
+              presupuesto={mounted ? displayData.presupuesto : sampleData.presupuesto}
+              prioridades={mounted ? displayData.prioridades : sampleData.prioridades}
+              sensibilidad={mounted ? displayData.sensibilidad : sampleData.sensibilidad}
             />
 
             {/* Charts grid */}
             <div className="grid md:grid-cols-3 gap-6 mb-8">
               <BarChartCard
                 title="Distribucion de Precios"
-                data={displayData.distribucion}
+                data={mounted ? displayData.distribucion : sampleData.distribucion}
               />
               <CompatibilidadCard
-                porcentaje={displayData.compatibilidad}
-                mensaje={analisis
+                porcentaje={mounted ? displayData.compatibilidad : sampleData.compatibilidad}
+                mensaje={mounted && analisis
                   ? analisis.bloque_3_contexto_mercado.diagnostico
-                  : `Hay ${displayData.distribucion.find(d => d.highlight)?.value || 0} propiedades en tu "Zona Dorada".`
+                  : `Hay ${sampleData.distribucion.find(d => d.highlight)?.value || 0} propiedades en tu "Zona Dorada".`
                 }
               />
               <PrecioComparativoCard
-                title={`Precio m2 vs Media ($${mediaPrecioM2.toLocaleString('en-US')})`}
-                comparaciones={displayData.comparaciones}
-                media={mediaPrecioM2}
+                title={`Precio m2 vs Media ($${(mounted ? mediaPrecioM2 : 1200).toLocaleString('en-US')})`}
+                comparaciones={mounted ? displayData.comparaciones : sampleData.comparaciones}
+                media={mounted ? mediaPrecioM2 : 1200}
               />
             </div>
 
             {/* Top 3 properties */}
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-bold text-brand-dark">Top 3 Propiedades Detectadas</h4>
-              {analisis && analisis.bloque_4_alertas.total > 0 && (
+              {mounted && analisis && analisis.bloque_4_alertas.total > 0 && (
                 <span className="text-xs bg-state-warning/10 text-state-warning px-2 py-1 rounded">
                   {analisis.bloque_4_alertas.total} alertas detectadas
                 </span>
               )}
             </div>
             <div className="grid md:grid-cols-3 gap-4">
-              {displayData.topPropiedades.map((prop, i) => (
+              {(mounted ? displayData.topPropiedades : sampleData.topPropiedades).map((prop, i) => (
                 <PropertyCard key={i} {...prop} />
               ))}
             </div>
 
             {/* Context message if using real data */}
-            {analisis && (
+            {mounted && analisis && (
               <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
                 <p className="text-sm text-blue-800">
                   <strong>Contexto de Mercado:</strong> {analisis.bloque_3_contexto_mercado.diagnostico}

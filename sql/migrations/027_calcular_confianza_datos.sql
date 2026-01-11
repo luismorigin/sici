@@ -5,21 +5,11 @@
 -- =====================================================
 -- EJECUTAR EN SUPABASE SQL EDITOR
 -- =====================================================
---
--- Esta funcion calcula un score de 0-100 basado en:
--- - Completitud de datos basicos (precio, area, dormitorios)
--- - Presencia de fotos
--- - Proyecto asignado y verificado
--- - Datos del asesor
--- - Precio/m2 dentro de rango normal
---
--- Usado por: Landing page, informes Premium
--- =====================================================
 
 DROP FUNCTION IF EXISTS calcular_confianza_datos(INTEGER);
 
 CREATE OR REPLACE FUNCTION calcular_confianza_datos(p_id INTEGER)
-RETURNS JSONB AS $func$
+RETURNS JSONB AS $$
 DECLARE
   v_prop RECORD;
   v_proyecto RECORD;
@@ -66,10 +56,6 @@ BEGIN
   v_cantidad_fotos := COALESCE(v_prop.cantidad_fotos, 0);
   v_tiene_fotos := v_cantidad_fotos > 0;
 
-  -- ==========================================
-  -- CALCULAR SCORE POR COMPONENTES
-  -- ==========================================
-
   -- 1. Precio presente y valido (15 puntos)
   IF v_prop.precio_usd IS NOT NULL AND v_prop.precio_usd >= 30000 THEN
     v_score := v_score + 15;
@@ -95,7 +81,7 @@ BEGIN
       'componente', 'area',
       'puntos', 15,
       'maximo', 15,
-      'nota', format('Area: %sm2', v_prop.area_total_m2)
+      'nota', 'Area: ' || v_prop.area_total_m2 || 'm2'
     );
   ELSE
     v_detalles := v_detalles || jsonb_build_object(
@@ -113,7 +99,7 @@ BEGIN
       'componente', 'dormitorios',
       'puntos', 10,
       'maximo', 10,
-      'nota', format('%s dormitorios', v_prop.dormitorios)
+      'nota', v_prop.dormitorios || ' dormitorios'
     );
   ELSE
     v_detalles := v_detalles || jsonb_build_object(
@@ -131,7 +117,7 @@ BEGIN
       'componente', 'fotos',
       'puntos', 20,
       'maximo', 20,
-      'nota', format('%s fotos (excelente)', v_cantidad_fotos)
+      'nota', v_cantidad_fotos || ' fotos (excelente)'
     );
   ELSIF v_cantidad_fotos >= 5 THEN
     v_score := v_score + 15;
@@ -139,7 +125,7 @@ BEGIN
       'componente', 'fotos',
       'puntos', 15,
       'maximo', 20,
-      'nota', format('%s fotos (bueno)', v_cantidad_fotos)
+      'nota', v_cantidad_fotos || ' fotos (bueno)'
     );
   ELSIF v_cantidad_fotos >= 1 THEN
     v_score := v_score + 8;
@@ -147,7 +133,7 @@ BEGIN
       'componente', 'fotos',
       'puntos', 8,
       'maximo', 20,
-      'nota', format('%s fotos (minimo)', v_cantidad_fotos)
+      'nota', v_cantidad_fotos || ' fotos (minimo)'
     );
   ELSE
     v_detalles := v_detalles || jsonb_build_object(
@@ -197,7 +183,7 @@ BEGIN
       'componente', 'desarrollador',
       'puntos', 10,
       'maximo', 10,
-      'nota', format('Desarrollador: %s', v_proyecto.desarrollador)
+      'nota', 'Desarrollador: ' || v_proyecto.desarrollador
     );
   ELSE
     v_detalles := v_detalles || jsonb_build_object(
@@ -241,14 +227,14 @@ BEGIN
       'componente', 'precio_m2',
       'puntos', 5,
       'maximo', 5,
-      'nota', format('Precio/m2 normal: $%s', ROUND(v_precio_m2))
+      'nota', 'Precio/m2 normal: $' || ROUND(v_precio_m2)::text
     );
   ELSIF v_precio_m2 > 0 THEN
     v_detalles := v_detalles || jsonb_build_object(
       'componente', 'precio_m2',
       'puntos', 0,
       'maximo', 5,
-      'nota', format('Precio/m2 fuera de rango: $%s', ROUND(v_precio_m2))
+      'nota', 'Precio/m2 fuera de rango: $' || ROUND(v_precio_m2)::text
     );
   ELSE
     v_detalles := v_detalles || jsonb_build_object(
@@ -259,10 +245,7 @@ BEGIN
     );
   END IF;
 
-  -- ==========================================
-  -- RESULTADO
-  -- ==========================================
-
+  -- Resultado
   RETURN jsonb_build_object(
     'propiedad_id', p_id,
     'score', v_score,
@@ -275,57 +258,17 @@ BEGIN
       ELSE 'bajo'
     END,
     'detalles', v_detalles,
-    'resumen', format('%s/100 - %s',
-      v_score,
-      CASE
-        WHEN v_score >= 85 THEN 'Datos muy completos'
-        WHEN v_score >= 70 THEN 'Datos suficientes'
-        WHEN v_score >= 50 THEN 'Datos minimos'
-        ELSE 'Datos incompletos'
-      END
-    )
+    'resumen', v_score::text || '/100 - ' || CASE
+      WHEN v_score >= 85 THEN 'Datos muy completos'
+      WHEN v_score >= 70 THEN 'Datos suficientes'
+      WHEN v_score >= 50 THEN 'Datos minimos'
+      ELSE 'Datos incompletos'
+    END
   );
 END;
-$func$ LANGUAGE plpgsql STABLE;
+$$ LANGUAGE plpgsql STABLE;
 
-COMMENT ON FUNCTION calcular_confianza_datos IS
-'Calcula score de confianza (0-100) basado en completitud de datos.
-Componentes:
-- Precio valido (15 pts)
-- Area valida (15 pts)
-- Dormitorios (10 pts)
-- Fotos (20 pts, escalonado)
-- Proyecto asignado (15 pts)
-- Desarrollador (10 pts)
-- Asesor con contacto (10 pts)
-- Precio/m2 en rango (5 pts)';
+COMMENT ON FUNCTION calcular_confianza_datos IS 'Calcula score de confianza (0-100) basado en completitud de datos';
 
--- =====================================================
--- TESTS
--- =====================================================
-
-SELECT 'Test: calcular_confianza_datos() para propiedad existente' as test;
+-- Test
 SELECT calcular_confianza_datos(355);
-
-SELECT 'Test: calcular_confianza_datos() para propiedad inexistente' as test;
-SELECT calcular_confianza_datos(99999);
-
--- =====================================================
--- VERIFICACION
--- =====================================================
-
-SELECT 'Migracion 027 - Verificacion' as status;
-
-SELECT 'calcular_confianza_datos()' as funcion,
-  CASE WHEN EXISTS(SELECT 1 FROM pg_proc WHERE proname = 'calcular_confianza_datos')
-       THEN 'OK' ELSE 'FALTA' END as estado;
-
--- Estadisticas de confianza en el dataset
-SELECT 'Distribucion de confianza en propiedades activas' as reporte;
-SELECT
-  (calcular_confianza_datos(id)->>'categoria') as categoria,
-  COUNT(*) as cantidad
-FROM propiedades_v2
-WHERE es_activa = true AND status = 'completado'
-GROUP BY 1
-ORDER BY cantidad DESC;

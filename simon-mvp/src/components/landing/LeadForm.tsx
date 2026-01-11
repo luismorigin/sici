@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { guardarLead } from '@/lib/supabase'
+import { guardarLead, type LeadResult } from '@/lib/supabase'
 
 export default function LeadForm() {
   const [form, setForm] = useState({
@@ -13,6 +13,7 @@ export default function LeadForm() {
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
+  const [leadId, setLeadId] = useState<number | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -20,14 +21,21 @@ export default function LeadForm() {
     setError('')
 
     try {
-      const success = await guardarLead(form)
-      if (success) {
+      const result: LeadResult = await guardarLead(form)
+
+      if (result.success) {
         setSubmitted(true)
+        if (result.leadId) {
+          setLeadId(result.leadId)
+          console.log('Lead guardado con ID:', result.leadId)
+        }
       } else {
-        // For demo purposes, still show success
+        // Si falla Supabase, igual mostrar éxito para UX (pero logear)
+        console.warn('Lead no guardado en BD:', result.error)
         setSubmitted(true)
       }
     } catch (err) {
+      console.error('Error en formulario:', err)
       setError('Hubo un error. Por favor intenta de nuevo.')
     } finally {
       setLoading(false)
