@@ -28,7 +28,7 @@ export default function PropertyCard({
       {/* Body */}
       <div className="p-4">
         <div className="text-xl font-bold text-brand-dark mb-2">
-          ${precio.toLocaleString()}
+          ${precio.toLocaleString('en-US')}
         </div>
 
         <div className="flex gap-4 text-sm text-slate-500 mb-3">

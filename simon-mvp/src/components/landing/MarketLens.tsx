@@ -106,7 +106,7 @@ export default function MarketLens() {
                   Precio Real m² (TC Ajustado)
                 </div>
                 <div className="text-4xl font-extrabold text-white">
-                  ${snapshot.precio_real_m2.toLocaleString()}
+                  ${snapshot.precio_real_m2.toLocaleString('en-US')}
                 </div>
               </div>
               <div className="text-right">

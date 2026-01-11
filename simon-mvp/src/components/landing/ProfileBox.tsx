@@ -27,7 +27,7 @@ export default function ProfileBox({
 
         <div>
           <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Presupuesto Objetivo</h5>
-          <p className="font-semibold text-brand-dark">${presupuesto.toLocaleString()}</p>
+          <p className="font-semibold text-brand-dark">${presupuesto.toLocaleString('en-US')}</p>
         </div>
 
         <div>
