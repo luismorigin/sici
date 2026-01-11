@@ -1,11 +1,21 @@
+'use client'
+
 import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
 import ProfileBox from './ProfileBox'
 import PropertyCard from './PropertyCard'
 import { BarChartCard, CompatibilidadCard, PrecioComparativoCard } from './ChartCard'
+import {
+  obtenerAnalisisFiduciario,
+  generarDistribucionPrecios,
+  generarComparacionesProyecto,
+  type AnalisisMercadoFiduciario,
+  type OpcionValida
+} from '@/lib/supabase'
 
-// Sample data - in production this comes from backend
+// Sample data for when Supabase isn't configured
 const sampleData = {
-  perfil: 'Hogar Estratégico de Valor',
+  perfil: 'Hogar Estrategico de Valor',
   presupuesto: 90000,
   prioridades: ['Seguridad', 'Piso Medio/Alto', 'Piscina'],
   sensibilidad: 'alta' as const,
@@ -29,7 +39,71 @@ const sampleData = {
   ]
 }
 
+// Convert API data to display format
+function convertirOpcionADisplay(opcion: OpcionValida, index: number) {
+  // Calculate match score based on position and market position
+  const baseScore = 90 - (index * 4)
+  const matchScore = Math.max(70, Math.min(98, baseScore))
+
+  // Calculate confidence based on data completeness
+  const confianza = Math.min(95, 75 + (opcion.fotos > 5 ? 10 : 0) + (opcion.desarrollador ? 10 : 0))
+
+  return {
+    nombre: opcion.proyecto,
+    precio: Math.round(opcion.precio_usd),
+    dormitorios: opcion.dormitorios,
+    area: Math.round(opcion.area_m2),
+    matchScore,
+    confianza
+  }
+}
+
 export default function ReportExample() {
+  const [analisis, setAnalisis] = useState<AnalisisMercadoFiduciario | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [usingRealData, setUsingRealData] = useState(false)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const data = await obtenerAnalisisFiduciario({
+        dormitorios: 2,
+        precio_max: 150000,
+        solo_con_fotos: true,
+        limite: 10
+      })
+
+      if (data && data.bloque_1_opciones_validas.total > 0) {
+        setAnalisis(data)
+        setUsingRealData(true)
+      }
+      setLoading(false)
+    }
+    fetchData()
+  }, [])
+
+  // Derive display data from API or use sample
+  const displayData = analisis ? {
+    perfil: 'Hogar Estrategico de Valor',
+    presupuesto: analisis.filtros_aplicados.precio_max || 150000,
+    prioridades: ['Seguridad', 'Ubicacion', 'Amenities'],
+    sensibilidad: 'alta' as const,
+    compatibilidad: Math.round(analisis.bloque_3_contexto_mercado.porcentaje_mercado * 10) || 78,
+    totalProps: analisis.bloque_3_contexto_mercado.stock_total,
+    distribucion: generarDistribucionPrecios(
+      analisis.bloque_1_opciones_validas.opciones,
+      analisis.bloque_3_contexto_mercado
+    ),
+    comparaciones: generarComparacionesProyecto(
+      analisis.bloque_1_opciones_validas.opciones,
+      analisis.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 1200
+    ),
+    topPropiedades: analisis.bloque_1_opciones_validas.opciones
+      .slice(0, 3)
+      .map((op, i) => convertirOpcionADisplay(op, i))
+  } : sampleData
+
+  const mediaPrecioM2 = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 1200
+
   return (
     <section className="py-24 bg-slate-50 border-t border-slate-200" id="informe">
       <div className="max-w-5xl mx-auto px-6">
@@ -44,8 +118,17 @@ export default function ReportExample() {
             Tu Informe Preliminar Gratuito
           </h2>
           <p className="text-slate-500">
-            Esto es exactamente lo que recibes al completar el formulario, pero adaptado a ti.
+            {usingRealData
+              ? 'Datos reales del mercado de Equipetrol, actualizados hoy.'
+              : 'Esto es exactamente lo que recibes al completar el formulario, pero adaptado a ti.'
+            }
           </p>
+          {usingRealData && (
+            <span className="inline-flex items-center gap-1 mt-2 text-xs bg-state-success/10 text-state-success px-2 py-1 rounded-full">
+              <span className="w-2 h-2 bg-state-success rounded-full animate-pulse"></span>
+              Datos en vivo
+            </span>
+          )}
         </motion.div>
 
         {/* Report container */}
@@ -61,7 +144,7 @@ export default function ReportExample() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <span className="font-bold">Informe de Mercado #987</span>
+              <span className="font-bold">Informe de Mercado #{Math.floor(Math.random() * 900) + 100}</span>
             </div>
             <div className="flex gap-6 text-sm opacity-90">
               <span className="flex items-center gap-1">
@@ -80,7 +163,7 @@ export default function ReportExample() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
-                {sampleData.totalProps} Props. Validadas
+                {displayData.totalProps} Props. Validadas
               </span>
             </div>
           </div>
@@ -89,36 +172,60 @@ export default function ReportExample() {
           <div className="p-6">
             {/* Profile box */}
             <ProfileBox
-              perfil={sampleData.perfil}
-              presupuesto={sampleData.presupuesto}
-              prioridades={sampleData.prioridades}
-              sensibilidad={sampleData.sensibilidad}
+              perfil={displayData.perfil}
+              presupuesto={displayData.presupuesto}
+              prioridades={displayData.prioridades}
+              sensibilidad={displayData.sensibilidad}
             />
 
             {/* Charts grid */}
             <div className="grid md:grid-cols-3 gap-6 mb-8">
               <BarChartCard
-                title="Distribución de Precios"
-                data={sampleData.distribucion}
+                title="Distribucion de Precios"
+                data={displayData.distribucion}
               />
               <CompatibilidadCard
-                porcentaje={sampleData.compatibilidad}
-                mensaje={`Hay ${sampleData.distribucion.find(d => d.highlight)?.value || 0} propiedades en tu "Zona Dorada".`}
+                porcentaje={displayData.compatibilidad}
+                mensaje={analisis
+                  ? analisis.bloque_3_contexto_mercado.diagnostico
+                  : `Hay ${displayData.distribucion.find(d => d.highlight)?.value || 0} propiedades en tu "Zona Dorada".`
+                }
               />
               <PrecioComparativoCard
-                title="Precio m² vs Media ($1200)"
-                comparaciones={sampleData.comparaciones}
-                media={1200}
+                title={`Precio m2 vs Media ($${mediaPrecioM2.toLocaleString('en-US')})`}
+                comparaciones={displayData.comparaciones}
+                media={mediaPrecioM2}
               />
             </div>
 
             {/* Top 3 properties */}
-            <h4 className="font-bold text-brand-dark mb-4">Top 3 Propiedades Detectadas</h4>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="font-bold text-brand-dark">Top 3 Propiedades Detectadas</h4>
+              {analisis && analisis.bloque_4_alertas.total > 0 && (
+                <span className="text-xs bg-state-warning/10 text-state-warning px-2 py-1 rounded">
+                  {analisis.bloque_4_alertas.total} alertas detectadas
+                </span>
+              )}
+            </div>
             <div className="grid md:grid-cols-3 gap-4">
-              {sampleData.topPropiedades.map((prop, i) => (
+              {displayData.topPropiedades.map((prop, i) => (
                 <PropertyCard key={i} {...prop} />
               ))}
             </div>
+
+            {/* Context message if using real data */}
+            {analisis && (
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                <p className="text-sm text-blue-800">
+                  <strong>Contexto de Mercado:</strong> {analisis.bloque_3_contexto_mercado.diagnostico}
+                  {analisis.bloque_2_opciones_excluidas.total > 0 && (
+                    <span className="block mt-1 text-blue-600">
+                      Hay {analisis.bloque_2_opciones_excluidas.total} propiedades mas baratas que no cumplen todos los filtros.
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

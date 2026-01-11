@@ -388,3 +388,407 @@ export async function guardarLead(lead: LeadData): Promise<boolean> {
     return false
   }
 }
+
+// ========== ANÁLISIS MERCADO FIDUCIARIO ==========
+
+// Tipos para analisis_mercado_fiduciario()
+export interface PosicionMercado {
+  success: boolean
+  categoria: 'oportunidad' | 'precio_justo' | 'premium'
+  diferencia_pct: number
+  posicion_texto: string
+  contexto: {
+    promedio_zona: number
+    stock_disponible: number
+    precio_consultado: number
+  }
+}
+
+export interface ExplicacionPrecio {
+  propiedad_id: number
+  precio_usd: number
+  precio_m2: number
+  zona: string
+  promedio_zona: number
+  diferencia_pct: number
+  resumen: string
+  explicaciones: {
+    factor: string
+    texto: string
+    impacto: string
+  }[]
+}
+
+export interface OpcionValida {
+  id: number
+  proyecto: string
+  desarrollador: string | null
+  zona: string
+  dormitorios: number
+  precio_usd: number
+  precio_m2: number
+  area_m2: number
+  ranking: number
+  total_opciones: number
+  fotos: number
+  amenities: string[]
+  asesor_wsp: string | null
+  posicion_mercado: PosicionMercado
+  explicacion_precio: ExplicacionPrecio
+  resumen_fiduciario: string
+}
+
+export interface RazonExclusion {
+  filtro: string
+  razon: string
+  severidad: 'hard' | 'medium' | 'soft' | 'alert'
+  valor_actual: any
+  valor_requerido: any
+  sugerencia?: string
+}
+
+export interface OpcionExcluida {
+  id: number
+  proyecto: string
+  zona: string
+  precio_usd: number
+  dormitorios: number | null
+  area_m2: number
+  analisis_exclusion: {
+    propiedad_id: number
+    es_excluida: boolean
+    cantidad_razones: number
+    razon_principal: string
+    razones: RazonExclusion[]
+  }
+}
+
+export interface MetricasZona {
+  precio_promedio: number
+  precio_mediana: number
+  precio_min: number
+  precio_max: number
+  precio_m2_promedio: number
+  area_promedio: number
+}
+
+export interface ContextoMercado {
+  stock_total: number
+  stock_cumple_filtros: number
+  stock_excluido_mas_barato: number
+  porcentaje_mercado: number
+  diagnostico: string
+  metricas_zona: MetricasZona | null
+}
+
+export interface AlertaFiduciaria {
+  tipo: string
+  mensaje: string
+  severidad: 'warning' | 'info' | 'danger'
+  propiedad_id?: number
+  precio_usd?: number
+  precio_m2?: number
+}
+
+export interface AnalisisMercadoFiduciario {
+  filtros_aplicados: {
+    dormitorios?: number
+    precio_max?: number
+    zona?: string
+    solo_con_fotos?: boolean
+    limite?: number
+  }
+  timestamp: string
+  bloque_1_opciones_validas: {
+    total: number
+    opciones: OpcionValida[]
+  }
+  bloque_2_opciones_excluidas: {
+    total: number
+    nota: string
+    opciones: OpcionExcluida[]
+  }
+  bloque_3_contexto_mercado: ContextoMercado
+  bloque_4_alertas: {
+    total: number
+    alertas: AlertaFiduciaria[]
+  }
+}
+
+export interface FiltrosAnalisis {
+  dormitorios?: number
+  precio_max?: number
+  zona?: string
+  solo_con_fotos?: boolean
+  limite?: number
+}
+
+export async function obtenerAnalisisFiduciario(filtros: FiltrosAnalisis): Promise<AnalisisMercadoFiduciario | null> {
+  if (!supabase) {
+    console.warn('Supabase no configurado')
+    return null
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('analisis_mercado_fiduciario', {
+      p_filtros: filtros
+    })
+
+    if (error) {
+      console.error('Error en RPC analisis_mercado_fiduciario:', error)
+      return null
+    }
+
+    return data as AnalisisMercadoFiduciario
+  } catch (err) {
+    console.error('Error obteniendo análisis fiduciario:', err)
+    return null
+  }
+}
+
+// Función helper para generar distribución de precios
+export function generarDistribucionPrecios(
+  opciones: OpcionValida[],
+  contexto: ContextoMercado
+): { label: string; value: number; highlight?: boolean }[] {
+  if (!contexto.metricas_zona) {
+    return [
+      { label: '60k-80k', value: 0 },
+      { label: '80k-100k', value: 0 },
+      { label: '100k-120k', value: 0 },
+      { label: '120k+', value: 0 }
+    ]
+  }
+
+  // Crear rangos basados en las métricas reales
+  const min = contexto.metricas_zona.precio_min
+  const max = contexto.metricas_zona.precio_max
+  const rango = max - min
+  const step = rango / 4
+
+  const rangos = [
+    { min: min, max: min + step, label: `${Math.round(min/1000)}k-${Math.round((min+step)/1000)}k`, count: 0 },
+    { min: min + step, max: min + step*2, label: `${Math.round((min+step)/1000)}k-${Math.round((min+step*2)/1000)}k`, count: 0 },
+    { min: min + step*2, max: min + step*3, label: `${Math.round((min+step*2)/1000)}k-${Math.round((min+step*3)/1000)}k`, count: 0 },
+    { min: min + step*3, max: max + 1, label: `${Math.round((min+step*3)/1000)}k+`, count: 0 }
+  ]
+
+  // Contar opciones en cada rango
+  opciones.forEach(op => {
+    for (const r of rangos) {
+      if (op.precio_usd >= r.min && op.precio_usd < r.max) {
+        r.count++
+        break
+      }
+    }
+  })
+
+  // Encontrar el rango con más opciones para highlight
+  const maxCount = Math.max(...rangos.map(r => r.count))
+
+  return rangos.map(r => ({
+    label: r.label,
+    value: r.count,
+    highlight: r.count === maxCount && r.count > 0
+  }))
+}
+
+// Función helper para generar comparaciones de precio/m²
+export function generarComparacionesProyecto(
+  opciones: OpcionValida[],
+  mediaMercado: number
+): { proyecto: string; precio: number; diferencia: number }[] {
+  return opciones.slice(0, 3).map(op => ({
+    proyecto: op.proyecto,
+    precio: op.precio_m2,
+    diferencia: Math.round(((op.precio_m2 - mediaMercado) / mediaMercado) * 100)
+  }))
+}
+
+// ========== MICROZONAS ==========
+
+export interface MicrozonaData {
+  zona: string
+  total: number
+  precio_promedio: number
+  precio_m2: number
+  proyectos: number
+  lat?: number
+  lng?: number
+  categoria: 'premium' | 'standard' | 'value'
+}
+
+export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
+  if (!supabase) {
+    // Return demo data if Supabase not configured
+    return [
+      { zona: 'Equipetrol', total: 76, precio_promedio: 143579, precio_m2: 2129, proyectos: 38, lat: -17.7656, lng: -63.1957, categoria: 'premium' },
+      { zona: 'Sirari', total: 25, precio_promedio: 215828, precio_m2: 2552, proyectos: 13, lat: -17.7630, lng: -63.2014, categoria: 'premium' },
+      { zona: 'Villa Brigida', total: 47, precio_promedio: 102595, precio_m2: 1642, proyectos: 17, lat: -17.7680, lng: -63.1920, categoria: 'value' },
+      { zona: 'Faremafu', total: 19, precio_promedio: 251096, precio_m2: 2023, proyectos: 12, lat: -17.7610, lng: -63.1880, categoria: 'premium' },
+      { zona: 'Equipetrol Norte', total: 20, precio_promedio: 154829, precio_m2: 2363, proyectos: 12, lat: -17.7590, lng: -63.1900, categoria: 'standard' }
+    ]
+  }
+
+  try {
+    // Get microzona stats
+    const { data: zonaStats, error: errStats } = await supabase.rpc('pg_execute_sql', {
+      sql: `
+        SELECT
+          COALESCE(p.microzona, p.zona, 'Sin zona') as zona,
+          COUNT(*)::int as total,
+          ROUND(AVG(p.precio_usd))::int as precio_promedio,
+          ROUND(AVG(p.precio_usd / NULLIF(p.area_total_m2, 0)))::int as precio_m2,
+          COUNT(DISTINCT p.id_proyecto_master)::int as proyectos
+        FROM propiedades_v2 p
+        WHERE p.es_activa = true
+          AND p.status = 'completado'
+          AND p.tipo_operacion = 'venta'
+          AND p.es_multiproyecto = false
+          AND p.area_total_m2 >= 20
+        GROUP BY COALESCE(p.microzona, p.zona, 'Sin zona')
+        HAVING COUNT(*) >= 5
+        ORDER BY total DESC
+      `
+    })
+
+    if (errStats) {
+      // Fallback to direct query
+      const { data: fallbackData, error: errFallback } = await supabase
+        .from('propiedades_v2')
+        .select('zona, precio_usd, area_total_m2, id_proyecto_master')
+        .eq('es_activa', true)
+        .eq('tipo_operacion', 'venta')
+        .gte('area_total_m2', 20)
+
+      if (errFallback || !fallbackData) return []
+
+      // Aggregate manually
+      const zonaMap: Record<string, { total: number; precios: number[]; m2: number[]; proyectos: Set<number> }> = {}
+
+      fallbackData.forEach((p: any) => {
+        const zona = p.zona || 'Sin zona'
+        if (!zonaMap[zona]) {
+          zonaMap[zona] = { total: 0, precios: [], m2: [], proyectos: new Set() }
+        }
+        zonaMap[zona].total++
+        zonaMap[zona].precios.push(p.precio_usd)
+        if (p.area_total_m2 > 0) {
+          zonaMap[zona].m2.push(p.precio_usd / p.area_total_m2)
+        }
+        if (p.id_proyecto_master) {
+          zonaMap[zona].proyectos.add(p.id_proyecto_master)
+        }
+      })
+
+      return Object.entries(zonaMap)
+        .filter(([_, v]) => v.total >= 5)
+        .map(([zona, v]) => ({
+          zona,
+          total: v.total,
+          precio_promedio: Math.round(v.precios.reduce((a, b) => a + b, 0) / v.precios.length),
+          precio_m2: Math.round(v.m2.reduce((a, b) => a + b, 0) / v.m2.length),
+          proyectos: v.proyectos.size,
+          categoria: categorizarZona(Math.round(v.m2.reduce((a, b) => a + b, 0) / v.m2.length))
+        }))
+        .sort((a, b) => b.total - a.total)
+    }
+
+    // Process results
+    return (zonaStats || [])
+      .filter((z: any) => z.zona !== 'Sin zona')
+      .map((z: any) => ({
+        zona: z.zona,
+        total: z.total,
+        precio_promedio: z.precio_promedio,
+        precio_m2: z.precio_m2,
+        proyectos: z.proyectos,
+        categoria: categorizarZona(z.precio_m2)
+      }))
+
+  } catch (err) {
+    console.error('Error obteniendo microzonas:', err)
+    return []
+  }
+}
+
+function categorizarZona(precioM2: number): 'premium' | 'standard' | 'value' {
+  if (precioM2 >= 2200) return 'premium'
+  if (precioM2 >= 1800) return 'standard'
+  return 'value'
+}
+
+// ========== ESCENARIO FINANCIERO ==========
+
+export interface EscenarioFinanciero {
+  propiedad_id: number
+  proyecto: string
+  precio_usd: number
+  precio_m2: number
+  // Estimaciones de renta
+  renta_estimada_mes: number
+  yield_anual: number
+  // Liquidez
+  tiempo_venta_estimado: string
+  liquidez_categoria: 'alta' | 'media' | 'baja'
+  // Riesgo
+  riesgo_depreciacion: 'bajo' | 'medio' | 'alto'
+  factores_riesgo: string[]
+}
+
+export function calcularEscenarioFinanciero(opcion: OpcionValida): EscenarioFinanciero {
+  // Estimaciones basadas en datos del mercado boliviano
+  const YIELD_BASE = 0.045 // 4.5% yield típico en Bolivia
+  const RENTA_M2_BASE = 8 // $8/m² base de renta mensual
+
+  // Ajustar yield por categoría de precio
+  let yieldAjustado = YIELD_BASE
+  if (opcion.posicion_mercado.categoria === 'oportunidad') {
+    yieldAjustado = 0.055 // Mejor yield por precio bajo
+  } else if (opcion.posicion_mercado.categoria === 'premium') {
+    yieldAjustado = 0.035 // Menor yield pero más estable
+  }
+
+  const rentaEstimada = Math.round(opcion.area_m2 * RENTA_M2_BASE * (opcion.dormitorios >= 2 ? 1.2 : 1))
+
+  // Liquidez basada en precio y ubicación
+  let liquidez: 'alta' | 'media' | 'baja' = 'media'
+  let tiempoVenta = '3-6 meses'
+
+  if (opcion.precio_usd < 100000 && opcion.dormitorios === 2) {
+    liquidez = 'alta'
+    tiempoVenta = '1-3 meses'
+  } else if (opcion.precio_usd > 200000) {
+    liquidez = 'baja'
+    tiempoVenta = '6-12 meses'
+  }
+
+  // Factores de riesgo
+  const factoresRiesgo: string[] = []
+  if (!opcion.desarrollador) {
+    factoresRiesgo.push('Desarrollador no identificado')
+  }
+  if (opcion.precio_m2 < 1000) {
+    factoresRiesgo.push('Precio/m² muy bajo - verificar')
+  }
+  if (opcion.fotos < 5) {
+    factoresRiesgo.push('Pocas fotos disponibles')
+  }
+
+  const riesgoDepreciacion: 'bajo' | 'medio' | 'alto' =
+    factoresRiesgo.length === 0 ? 'bajo' :
+    factoresRiesgo.length <= 1 ? 'medio' : 'alto'
+
+  return {
+    propiedad_id: opcion.id,
+    proyecto: opcion.proyecto,
+    precio_usd: opcion.precio_usd,
+    precio_m2: opcion.precio_m2,
+    renta_estimada_mes: rentaEstimada,
+    yield_anual: Math.round(yieldAjustado * 1000) / 10,
+    tiempo_venta_estimado: tiempoVenta,
+    liquidez_categoria: liquidez,
+    riesgo_depreciacion: riesgoDepreciacion,
+    factores_riesgo: factoresRiesgo
+  }
+}
