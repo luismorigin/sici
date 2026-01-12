@@ -28,6 +28,16 @@ export interface UnidadReal {
   es_multiproyecto: boolean
   estado_construccion: string  // v2.2: entrega_inmediata, nuevo_a_estrenar, usado, preventa, no_especificado
   dias_en_mercado: number | null  // v2.6: días desde fecha_publicacion
+  // v2.7: Comparación dentro del edificio
+  unidades_en_edificio: number | null
+  posicion_precio_edificio: number | null  // 1 = más barata
+  precio_min_edificio: number | null
+  precio_max_edificio: number | null
+  // v2.8: Comparación por tipología (mismos dormitorios)
+  unidades_misma_tipologia: number | null
+  posicion_en_tipologia: number | null  // 1 = más barata de X dorms
+  precio_min_tipologia: number | null
+  precio_max_tipologia: number | null
 }
 
 // Filtros para búsqueda
@@ -110,7 +120,17 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       razon_fiduciaria: p.razon_fiduciaria,
       es_multiproyecto: p.es_multiproyecto || false,
       estado_construccion: p.estado_construccion || 'no_especificado',
-      dias_en_mercado: p.dias_en_mercado
+      dias_en_mercado: p.dias_en_mercado,
+      // v2.7: Comparación edificio
+      unidades_en_edificio: p.unidades_en_edificio,
+      posicion_precio_edificio: p.posicion_precio_edificio,
+      precio_min_edificio: p.precio_min_edificio ? parseFloat(p.precio_min_edificio) : null,
+      precio_max_edificio: p.precio_max_edificio ? parseFloat(p.precio_max_edificio) : null,
+      // v2.8: Comparación por tipología
+      unidades_misma_tipologia: p.unidades_misma_tipologia,
+      posicion_en_tipologia: p.posicion_en_tipologia,
+      precio_min_tipologia: p.precio_min_tipologia ? parseFloat(p.precio_min_tipologia) : null,
+      precio_max_tipologia: p.precio_max_tipologia ? parseFloat(p.precio_max_tipologia) : null
     }))
 
     // Filtrar por zonas permitidas si se especificaron

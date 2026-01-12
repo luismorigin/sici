@@ -407,6 +407,55 @@ ${top3Texto}
                             </div>
                           </div>
                         )}
+
+                        {/* Comparación edificio/tipología - interpretación fiduciaria híbrida */}
+                        {prop.unidades_en_edificio != null && prop.unidades_en_edificio > 1 && (
+                          <div className="mt-2 flex items-start gap-2 text-sm">
+                            <span className="text-gray-500">🏢</span>
+                            <div>
+                              {/* Caso A: Hay 2+ unidades de la misma tipología - comparación precisa */}
+                              {prop.unidades_misma_tipologia != null && prop.unidades_misma_tipologia >= 2 ? (
+                                <>
+                                  <span className="text-gray-700">
+                                    {prop.posicion_en_tipologia === 1
+                                      ? `La más barata de ${prop.unidades_misma_tipologia} unidades de ${prop.dormitorios} dorms`
+                                      : prop.posicion_en_tipologia === prop.unidades_misma_tipologia
+                                      ? `La más cara de ${prop.unidades_misma_tipologia} unidades de ${prop.dormitorios} dorms`
+                                      : `${prop.posicion_en_tipologia}° de ${prop.unidades_misma_tipologia} unidades de ${prop.dormitorios} dorms`}
+                                  </span>
+                                  <p className="text-xs text-gray-500">
+                                    Rango {prop.dormitorios}D: ${prop.precio_min_tipologia?.toLocaleString()} - ${prop.precio_max_tipologia?.toLocaleString()}
+                                  </p>
+                                  <p className="text-xs text-gray-600">
+                                    {prop.posicion_en_tipologia === 1
+                                      ? '¿Ganga o compromiso? Puede tener algo diferente (piso bajo, sin vista)'
+                                      : prop.posicion_en_tipologia === prop.unidades_misma_tipologia
+                                      ? '¿Premium real o sobreprecio? Verificá qué la hace especial'
+                                      : 'Opción balanceada, menor riesgo'}
+                                  </p>
+                                  {prop.posicion_en_tipologia === 1 && (
+                                    <p className="text-xs text-amber-700">
+                                      Preguntá qué la hace más barata
+                                    </p>
+                                  )}
+                                </>
+                              ) : (
+                                /* Caso B: Única unidad de esta tipología - mostrar contexto edificio */
+                                <>
+                                  <span className="text-gray-700">
+                                    Única de {prop.dormitorios} dorms en este edificio
+                                  </span>
+                                  <p className="text-xs text-gray-500">
+                                    Rango edificio (todas): ${prop.precio_min_edificio?.toLocaleString()} - ${prop.precio_max_edificio?.toLocaleString()}
+                                  </p>
+                                  <p className="text-xs text-gray-600">
+                                    No hay otras unidades de {prop.dormitorios} dorms para comparar precio
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
