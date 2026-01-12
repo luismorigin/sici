@@ -148,7 +148,7 @@ export const ESTACIONAMIENTO = {
   inclusion: {
     0: { probabilidad: 'rara_vez', texto: 'Rara vez incluido' } as InclusionInfo,
     1: { probabilidad: 'a_veces', texto: 'A veces incluido' } as InclusionInfo,
-    2: { probabilidad: 'variable', texto: 'Variable (50/50)' } as InclusionInfo,
+    2: { probabilidad: 'variable', texto: 'A veces incluido' } as InclusionInfo,
     3: { probabilidad: 'frecuente', texto: 'Frecuentemente incluido' } as InclusionInfo,
   }
 } as const
@@ -181,7 +181,7 @@ export const BAULERA = {
   inclusion: {
     0: { probabilidad: 'no', texto: 'No incluida' } as InclusionInfo,
     1: { probabilidad: 'rara_vez', texto: 'Rara vez incluida' } as InclusionInfo,
-    2: { probabilidad: 'a_veces', texto: 'A veces incluida (50/50)' } as InclusionInfo,
+    2: { probabilidad: 'a_veces', texto: 'A veces incluida' } as InclusionInfo,
     3: { probabilidad: 'frecuente', texto: 'Frecuentemente incluida' } as InclusionInfo,
   }
 } as const

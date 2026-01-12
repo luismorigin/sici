@@ -295,22 +295,36 @@ ${top3Texto}
                           const posicion = getPosicionMercado(prop.id)
                           if (!posicion) return null
                           return (
-                            <div className="mt-2 flex items-center gap-2">
-                              <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                                posicion.categoria === 'oportunidad'
-                                  ? 'bg-green-100 text-green-800'
-                                  : posicion.categoria === 'premium'
-                                  ? 'bg-purple-100 text-purple-800'
-                                  : 'bg-blue-100 text-blue-800'
-                              }`}>
-                                {posicion.categoria === 'oportunidad' ? '🎯 Oportunidad'
-                                  : posicion.categoria === 'premium' ? '⭐ Premium'
-                                  : '✓ Precio justo'}
-                              </span>
-                              {posicion.diferencia_pct != null && (
-                                <span className="text-xs text-gray-500">
-                                  {posicion.diferencia_pct > 0 ? '+' : ''}{posicion.diferencia_pct.toFixed(0)}% vs mercado
+                            <div className="mt-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                                  posicion.categoria === 'oportunidad'
+                                    ? 'bg-green-100 text-green-800'
+                                    : posicion.categoria === 'premium'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {posicion.categoria === 'oportunidad' ? '🎯 Oportunidad'
+                                    : posicion.categoria === 'premium' ? '⭐ Premium'
+                                    : '✓ Precio justo'}
                                 </span>
+                                {posicion.diferencia_pct != null && (
+                                  <span className="text-xs text-gray-500">
+                                    {posicion.diferencia_pct > 0 ? '+' : ''}{posicion.diferencia_pct.toFixed(0)}% vs mercado
+                                  </span>
+                                )}
+                              </div>
+                              {posicion.categoria === 'oportunidad' && (
+                                <p className="text-xs text-amber-700 mt-1">
+                                  {prop.estado_construccion === 'preventa'
+                                    ? 'Precio de preventa - verificá fecha de entrega'
+                                    : 'Verificá por qué está tan bajo'}
+                                </p>
+                              )}
+                              {posicion.categoria === 'premium' && (
+                                <p className="text-xs text-amber-700 mt-1">
+                                  ¿Justifica el precio extra?
+                                </p>
                               )}
                             </div>
                           )
@@ -353,6 +367,9 @@ ${top3Texto}
                                     <span className="text-gray-700">
                                       Parqueo: ${costos.estacionamiento.compra.min.toLocaleString()}-{costos.estacionamiento.compra.max.toLocaleString()}
                                     </span>
+                                    <span className="text-xs text-gray-500 ml-1">
+                                      ({costos.estacionamiento.texto_inclusion})
+                                    </span>
                                     <p className="text-xs text-amber-700">
                                       Preguntá si está incluido en el precio
                                     </p>
@@ -365,6 +382,9 @@ ${top3Texto}
                                   <div>
                                     <span className="text-gray-700">
                                       Baulera: ${costos.baulera.compra.min.toLocaleString()}-{costos.baulera.compra.max.toLocaleString()}
+                                    </span>
+                                    <span className="text-xs text-gray-500 ml-1">
+                                      ({costos.baulera.texto_inclusion})
                                     </span>
                                     <p className="text-xs text-amber-700">
                                       Preguntá si está incluida en el precio
