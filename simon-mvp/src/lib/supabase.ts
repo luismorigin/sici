@@ -27,6 +27,7 @@ export interface UnidadReal {
   razon_fiduciaria: string | null
   es_multiproyecto: boolean
   estado_construccion: string  // v2.2: entrega_inmediata, nuevo_a_estrenar, usado, preventa, no_especificado
+  dias_en_mercado: number | null  // v2.6: días desde fecha_publicacion
 }
 
 // Filtros para búsqueda
@@ -108,7 +109,8 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       amenities_lista: p.amenities_lista || [],
       razon_fiduciaria: p.razon_fiduciaria,
       es_multiproyecto: p.es_multiproyecto || false,
-      estado_construccion: p.estado_construccion || 'no_especificado'
+      estado_construccion: p.estado_construccion || 'no_especificado',
+      dias_en_mercado: p.dias_en_mercado
     }))
 
     // Filtrar por zonas permitidas si se especificaron

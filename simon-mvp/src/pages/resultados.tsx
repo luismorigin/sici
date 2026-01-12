@@ -373,6 +373,40 @@ ${top3Texto}
                             </div>
                           )
                         })()}
+
+                        {/* Días en mercado - interpretación fiduciaria */}
+                        {prop.dias_en_mercado != null && (
+                          <div className="mt-2 flex items-start gap-2 text-sm">
+                            <span className="text-gray-500">📅</span>
+                            <div>
+                              <span className="text-gray-700">
+                                {prop.dias_en_mercado} días publicado
+                                <span className="text-gray-500 text-xs ml-1">(promedio zona: 74)</span>
+                              </span>
+                              {prop.dias_en_mercado > 60 ? (
+                                <>
+                                  <p className="text-xs text-gray-600">
+                                    Hay margen de negociación
+                                  </p>
+                                  <p className="text-xs text-amber-700">
+                                    Consultá si aceptan ofertas
+                                  </p>
+                                </>
+                              ) : prop.dias_en_mercado > 30 ? (
+                                <p className="text-xs text-gray-600">
+                                  Tiempo normal en el mercado
+                                </p>
+                              ) : (
+                                <p className="text-xs text-gray-600">
+                                  Publicación reciente - precio firme probable
+                                </p>
+                              )}
+                              <p className="text-xs text-gray-400 mt-1">
+                                Nota: Promedio Equipetrol 104 días, mediana 74 días.
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
