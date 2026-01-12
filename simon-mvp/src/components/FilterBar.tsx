@@ -20,14 +20,15 @@ interface FilterBarProps {
 }
 
 const ZONAS = [
-  { id: 'equipetrol', label: 'Equipetrol (centro)' },
+  { id: 'equipetrol', label: 'Equipetrol' },
   { id: 'sirari', label: 'Sirari' },
-  { id: 'equipetrol_norte', label: 'Equipetrol Norte' },
   { id: 'villa_brigida', label: 'Villa Brigida' },
   { id: 'faremafu', label: 'Faremafu' },
+  { id: 'equipetrol_norte', label: 'Equipetrol Norte' },
 ]
 
 const DORMITORIOS = [
+  { value: 0, label: 'Monoambiente' },
   { value: 1, label: '1' },
   { value: 2, label: '2' },
   { value: 3, label: '3+' },

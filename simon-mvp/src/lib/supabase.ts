@@ -49,10 +49,11 @@ export interface FiltrosBusqueda {
 const microzonaToZona: Record<string, string> = {
   'equipetrol': 'Equipetrol',
   'sirari': 'Sirari',
-  'equipetrol_norte_norte': 'Equipetrol Norte',
-  'equipetrol_norte_sur': 'Equipetrol Norte',
   'villa_brigida': 'Villa Brigida',
   'faremafu': 'Faremafu',
+  'equipetrol_norte': 'Equipetrol Norte/Norte',  // Agrupa ambas sub-zonas
+  'equipetrol_norte_norte': 'Equipetrol Norte/Norte',
+  'equipetrol_norte_sur': 'Equipetrol Norte/Sur',
   'flexible': '' // vacío = no filtra
 }
 
@@ -730,12 +731,21 @@ export interface AnalisisMercadoFiduciario {
   }
 }
 
+export interface ContextoUsuario {
+  estado_emocional?: string
+  meses_buscando?: number
+  mascota?: string
+  quienes_viven?: string
+}
+
 export interface FiltrosAnalisis {
   dormitorios?: number
   precio_max?: number
   zona?: string
   solo_con_fotos?: boolean
   limite?: number
+  innegociables?: string[]
+  contexto?: ContextoUsuario
 }
 
 export async function obtenerAnalisisFiduciario(filtros: FiltrosAnalisis): Promise<AnalisisMercadoFiduciario | null> {
