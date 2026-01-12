@@ -1,20 +1,20 @@
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { buscarUnidadesReales, UnidadReal, FiltrosBusqueda } from '@/lib/supabase'
-
-interface PropiedadExcluida {
-  id: number
-  proyecto: string
-  precio_usd: number
-  razon: string
-  categoria: 'sin_fotos' | 'innegociable' | 'precio_sospechoso' | 'multiproyecto' | 'otro'
-}
+import {
+  buscarUnidadesReales,
+  UnidadReal,
+  FiltrosBusqueda,
+  obtenerAnalisisFiduciario,
+  AnalisisMercadoFiduciario,
+  AlertaFiduciaria,
+  OpcionExcluida
+} from '@/lib/supabase'
 
 export default function ResultadosPage() {
   const router = useRouter()
   const [propiedades, setPropiedades] = useState<UnidadReal[]>([])
-  const [excluidas, setExcluidas] = useState<PropiedadExcluida[]>([])
+  const [analisisFiduciario, setAnalisisFiduciario] = useState<AnalisisMercadoFiduciario | null>(null)
   const [loading, setLoading] = useState(true)
   const [showPremiumModal, setShowPremiumModal] = useState(false)
 
@@ -59,63 +59,58 @@ export default function ResultadosPage() {
       const data = await buscarUnidadesReales(filtros)
       setPropiedades(data)
 
-      // Buscar excluidas: más baratas pero sin fotos
-      const precioMinTop3 = data[2]?.precio_usd || data[0]?.precio_usd || 100000
+      // Llamar análisis fiduciario con contexto del usuario
+      const innegociablesArray = innegociables
+        ? (innegociables as string).split(',').filter(Boolean)
+        : []
 
-      // Buscar SIN filtro de fotos para encontrar las excluidas
-      const filtrosSinFotos: FiltrosBusqueda = {
-        ...filtros,
-        precio_max: precioMinTop3, // Solo más baratas que TOP 3
-        limite: 100,
-      }
-
-      // Nota: Necesitamos una búsqueda sin solo_con_fotos para encontrar excluidas
-      // Por ahora simulamos con datos conocidos del sistema
-      const excluidasTemp: PropiedadExcluida[] = []
-
-      // Calcular cuántas podrían estar excluidas (diferencia entre total sin fotos y con fotos)
-      // Esto es una aproximación - en producción usaríamos una query específica
-      const totalSinFiltroFotos = 236 // Total sin filtro fotos
-      const totalConFotos = 227 // Total con fotos
-      const sinFotos = totalSinFiltroFotos - totalConFotos
-
-      if (sinFotos > 0) {
-        excluidasTemp.push({
-          id: 0,
-          proyecto: `${sinFotos} propiedades`,
-          precio_usd: 0,
-          razon: 'Sin fotos verificadas',
-          categoria: 'sin_fotos'
-        })
-      }
-
-      // Multiproyecto excluidos (63 según auditoría)
-      excluidasTemp.push({
-        id: 0,
-        proyecto: '63 propiedades',
-        precio_usd: 0,
-        razon: 'Listings genéricos (precio "desde X")',
-        categoria: 'multiproyecto'
+      const analisis = await obtenerAnalisisFiduciario({
+        dormitorios: dormitorios ? parseInt(dormitorios as string) : undefined,
+        precio_max: parseInt(presupuesto as string) || 300000,
+        zona: zonas ? (zonas as string).split(',')[0] : undefined,
+        solo_con_fotos: true,
+        limite: 50,
+        // Contexto fiduciario para alertas
+        innegociables: innegociablesArray,
+        contexto: {
+          estado_emocional: estado_emocional as string || undefined,
+          meses_buscando: tiempo_buscando === 'mas_1_ano' ? 18
+            : tiempo_buscando === '6_12_meses' ? 9
+            : tiempo_buscando === '3_6_meses' ? 5
+            : tiempo_buscando === '1_3_meses' ? 2
+            : undefined,
+          mascota: mascotas as string || undefined,
+          quienes_viven: quienes_viven as string || undefined,
+        }
       })
 
-      setExcluidas(excluidasTemp)
+      setAnalisisFiduciario(analisis)
       setLoading(false)
     }
 
     cargar()
-  }, [router.isReady, presupuesto, zonas, dormitorios, estado_entrega])
+  }, [router.isReady, presupuesto, zonas, dormitorios, estado_entrega, innegociables, tiempo_buscando, estado_emocional, mascotas, quienes_viven])
 
   // Separar en TOP 3 y alternativas
   const top3 = propiedades.slice(0, 3)
   const alternativas = propiedades.slice(3, 13)
 
-  // Detectar alertas del perfil
-  const alertas: string[] = []
-  if (tiempo_buscando === 'mas_1_ano' || tiempo_buscando === '6_12_meses') {
-    alertas.push('Llevas tiempo buscando - evita la fatiga de decision')
-  }
-  if (estado_emocional === 'frustrado' || estado_emocional === 'presionado') {
-    alertas.push('Detectamos estres en tu busqueda - toma decisiones con calma')
+  // Alertas fiduciarias del SQL (bloque_4_alertas)
+  const alertasFiduciarias = analisisFiduciario?.bloque_4_alertas?.alertas || []
+
+  // Excluidas del SQL (bloque_2_opciones_excluidas)
+  const excluidasFiduciarias = analisisFiduciario?.bloque_2_opciones_excluidas?.opciones || []
+
+  // Contexto de mercado del SQL (bloque_3_contexto_mercado)
+  const contextoMercado = analisisFiduciario?.bloque_3_contexto_mercado
+
+  // Opciones válidas con posición de mercado (bloque_1_opciones_validas)
+  const opcionesValidas = analisisFiduciario?.bloque_1_opciones_validas?.opciones || []
+
+  // Helper: obtener posición de mercado para una propiedad
+  const getPosicionMercado = (propId: number) => {
+    const opcion = opcionesValidas.find(o => o.id === propId)
+    return opcion?.posicion_mercado || null
   }
 
   // Detectar compromisos/tradeoffs de una propiedad
@@ -199,15 +194,15 @@ ${top3Texto}
           </p>
         </div>
 
-        {/* Alertas fiduciarias */}
-        {alertas.length > 0 && (
+        {/* Alertas fiduciarias del SQL */}
+        {alertasFiduciarias.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
             <h3 className="font-semibold text-amber-800 mb-2">Simon te recuerda:</h3>
             <ul className="text-sm text-amber-700 space-y-1">
-              {alertas.map((a, i) => (
+              {alertasFiduciarias.map((alerta, i) => (
                 <li key={i} className="flex items-start gap-2">
-                  <span>⚠️</span>
-                  <span>{a}</span>
+                  <span>{alerta.severidad === 'danger' ? '🚨' : alerta.severidad === 'warning' ? '⚠️' : 'ℹ️'}</span>
+                  <span>{alerta.mensaje}</span>
                 </li>
               ))}
             </ul>
@@ -279,6 +274,32 @@ ${top3Texto}
                             💡 {prop.razon_fiduciaria}
                           </p>
                         )}
+
+                        {/* Teaser posición de mercado del SQL */}
+                        {(() => {
+                          const posicion = getPosicionMercado(prop.id)
+                          if (!posicion) return null
+                          return (
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                                posicion.categoria === 'oportunidad'
+                                  ? 'bg-green-100 text-green-800'
+                                  : posicion.categoria === 'premium'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}>
+                                {posicion.categoria === 'oportunidad' ? '🎯 Oportunidad'
+                                  : posicion.categoria === 'premium' ? '⭐ Premium'
+                                  : '✓ Precio justo'}
+                              </span>
+                              {posicion.diferencia_pct != null && (
+                                <span className="text-xs text-gray-500">
+                                  {posicion.diferencia_pct > 0 ? '+' : ''}{posicion.diferencia_pct.toFixed(0)}% vs mercado
+                                </span>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -347,14 +368,14 @@ ${top3Texto}
               </section>
             )}
 
-            {/* Excluidas */}
-            {excluidas.length > 0 && (
+            {/* Excluidas - datos reales del SQL */}
+            {excluidasFiduciarias.length > 0 && (
               <section className="mb-8">
                 <div className="bg-gray-100 rounded-xl p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <span className="text-xl">🚫</span>
                     <h2 className="text-lg font-semibold text-gray-700">
-                      PROPIEDADES EXCLUIDAS (más baratas)
+                      {excluidasFiduciarias.length} PROPIEDADES EXCLUIDAS (más baratas)
                     </h2>
                   </div>
 
@@ -363,29 +384,35 @@ ${top3Texto}
                   </p>
 
                   <div className="space-y-2 mb-4">
-                    {excluidas.map((exc, idx) => (
+                    {excluidasFiduciarias.slice(0, 5).map((exc) => (
                       <div
-                        key={idx}
+                        key={exc.id}
                         className="flex items-center gap-3 bg-white rounded-lg px-4 py-3"
                       >
                         <span className="text-lg">
-                          {exc.categoria === 'sin_fotos' && '📷'}
-                          {exc.categoria === 'multiproyecto' && '📋'}
-                          {exc.categoria === 'innegociable' && '❌'}
-                          {exc.categoria === 'precio_sospechoso' && '⚠️'}
-                          {exc.categoria === 'otro' && '•'}
+                          {exc.analisis_exclusion?.razon_principal?.includes('foto') ? '📷' :
+                           exc.analisis_exclusion?.razon_principal?.includes('precio') ? '⚠️' :
+                           exc.analisis_exclusion?.razon_principal?.includes('innegociable') ? '❌' : '🚫'}
                         </span>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <span className="font-medium text-gray-800">{exc.proyecto}</span>
                           <span className="text-gray-500 mx-2">—</span>
-                          <span className="text-gray-600">{exc.razon}</span>
+                          <span className="text-gray-600">${exc.precio_usd.toLocaleString()}</span>
+                          <p className="text-sm text-gray-500 truncate">
+                            {exc.analisis_exclusion?.razon_principal || 'Excluida por filtros'}
+                          </p>
                         </div>
                       </div>
                     ))}
+                    {excluidasFiduciarias.length > 5 && (
+                      <p className="text-sm text-gray-500 text-center py-2">
+                        +{excluidasFiduciarias.length - 5} propiedades más excluidas
+                      </p>
+                    )}
                   </div>
 
                   <p className="text-xs text-gray-500 mb-4">
-                    Simon excluye automáticamente propiedades que no cumplen estándares mínimos de calidad de datos.
+                    Simon excluye automáticamente propiedades que no cumplen tus criterios o estándares de calidad.
                     Esto te protege de perder tiempo con listings incompletos o sospechosos.
                   </p>
 
@@ -395,6 +422,53 @@ ${top3Texto}
                   >
                     Ver detalle en Informe Premium
                   </button>
+                </div>
+              </section>
+            )}
+
+            {/* Contexto de Mercado - datos reales del SQL */}
+            {contextoMercado && (
+              <section className="mb-8">
+                <div className="bg-blue-50 rounded-xl p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-xl">📊</span>
+                    <h2 className="text-lg font-semibold text-blue-900">
+                      CONTEXTO DE MERCADO
+                    </h2>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="bg-white rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-blue-600">{contextoMercado.stock_total}</p>
+                      <p className="text-xs text-gray-500">Total mercado</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-green-600">{contextoMercado.stock_cumple_filtros}</p>
+                      <p className="text-xs text-gray-500">Cumplen tus filtros</p>
+                    </div>
+                    {contextoMercado.metricas_zona && (
+                      <>
+                        <div className="bg-white rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-gray-700">
+                            ${Math.round(contextoMercado.metricas_zona.precio_promedio / 1000)}k
+                          </p>
+                          <p className="text-xs text-gray-500">Precio promedio</p>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 text-center">
+                          <p className="text-2xl font-bold text-gray-700">
+                            ${contextoMercado.metricas_zona.precio_m2_promedio}
+                          </p>
+                          <p className="text-xs text-gray-500">Precio/m² promedio</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {contextoMercado.diagnostico && (
+                    <p className="text-sm text-blue-800 bg-blue-100 rounded-lg px-4 py-2">
+                      💡 {contextoMercado.diagnostico}
+                    </p>
+                  )}
                 </div>
               </section>
             )}
@@ -447,7 +521,7 @@ ${top3Texto}
             <div className="space-y-3 mb-6">
               <div className="flex items-start gap-3">
                 <span className="text-green-500 text-lg">✅</span>
-                <span className="text-gray-700">Detalle de las {excluidas.reduce((acc, e) => acc + parseInt(e.proyecto) || 0, 72)} propiedades excluidas</span>
+                <span className="text-gray-700">Detalle de las {excluidasFiduciarias.length || analisisFiduciario?.bloque_2_opciones_excluidas?.total || 0} propiedades excluidas</span>
               </div>
               <div className="flex items-start gap-3">
                 <span className="text-green-500 text-lg">✅</span>
