@@ -10,6 +10,11 @@ import {
   AlertaFiduciaria,
   OpcionExcluida
 } from '@/lib/supabase'
+import {
+  getCostosOcultosEstimados,
+  getIconoInclusion,
+  METADATA_INVESTIGACION
+} from '@/config/estimados-mercado'
 
 export default function ResultadosPage() {
   const router = useRouter()
@@ -297,6 +302,74 @@ ${top3Texto}
                                   {posicion.diferencia_pct > 0 ? '+' : ''}{posicion.diferencia_pct.toFixed(0)}% vs mercado
                                 </span>
                               )}
+                            </div>
+                          )
+                        })()}
+
+                        {/* Costos a verificar - estimados de mercado */}
+                        {(() => {
+                          const costos = getCostosOcultosEstimados(prop.dormitorios, null, null)
+                          return (
+                            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-sm font-semibold text-amber-800">Costos a verificar</span>
+                                <span className="text-xs bg-amber-200 text-amber-700 px-1.5 py-0.5 rounded">estimado zona</span>
+                              </div>
+
+                              <div className="space-y-1.5 text-sm">
+                                {/* Expensas */}
+                                <div className="flex items-start gap-2">
+                                  <span className="text-gray-500 w-4">📋</span>
+                                  <div>
+                                    <span className="text-gray-700">
+                                      Expensas: ${costos.expensas.rango_completo.min}-{costos.expensas.rango_completo.max}/mes
+                                    </span>
+                                    <span className="text-xs text-gray-500 ml-1">
+                                      (+${costos.expensas.impacto_anual_completo.min.toLocaleString()}-{costos.expensas.impacto_anual_completo.max.toLocaleString()}/año)
+                                    </span>
+                                    <p className="text-xs text-gray-600">
+                                      Depende de amenities del edificio
+                                    </p>
+                                    <p className="text-xs text-amber-700">
+                                      Preguntá qué incluyen y el monto exacto
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Estacionamiento */}
+                                <div className="flex items-start gap-2">
+                                  <span className="text-gray-500 w-4">🚗</span>
+                                  <div>
+                                    <span className="text-gray-700">
+                                      Parqueo: ${costos.estacionamiento.compra.min.toLocaleString()}-{costos.estacionamiento.compra.max.toLocaleString()}
+                                    </span>
+                                    <p className="text-xs text-amber-700">
+                                      Preguntá si está incluido en el precio
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Baulera */}
+                                <div className="flex items-start gap-2">
+                                  <span className="text-gray-500 w-4">📦</span>
+                                  <div>
+                                    <span className="text-gray-700">
+                                      Baulera: ${costos.baulera.compra.min.toLocaleString()}-{costos.baulera.compra.max.toLocaleString()}
+                                    </span>
+                                    <p className="text-xs text-amber-700">
+                                      Preguntá si está incluida en el precio
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Costo adicional potencial */}
+                                <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-amber-200">
+                                  <span className="text-amber-600 w-4">💡</span>
+                                  <span className="text-amber-700 text-xs font-medium">
+                                    Costo real puede ser ${(prop.precio_usd + costos.estacionamiento.compra.min + costos.baulera.compra.min).toLocaleString()}-{(prop.precio_usd + costos.estacionamiento.compra.max + costos.baulera.compra.max).toLocaleString()} si no incluyen parqueo ni baulera
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                           )
                         })()}
