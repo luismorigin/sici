@@ -41,6 +41,8 @@ export interface UnidadReal {
   // v2.9: Amenidades con interpretación fiduciaria
   amenities_confirmados: string[]    // Confianza alta/media
   amenities_por_verificar: string[]  // Confianza baja o por_confirmar
+  // v2.10: Equipamiento detectado en descripción
+  equipamiento_detectado: string[]   // Items mencionados en publicación (A/C, Cocina equipada, etc.)
 }
 
 // Filtros para búsqueda
@@ -136,7 +138,9 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       precio_max_tipologia: p.precio_max_tipologia ? parseFloat(p.precio_max_tipologia) : null,
       // v2.9: Amenidades fiduciarias
       amenities_confirmados: p.amenities_confirmados || [],
-      amenities_por_verificar: p.amenities_por_verificar || []
+      amenities_por_verificar: p.amenities_por_verificar || [],
+      // v2.10: Equipamiento detectado
+      equipamiento_detectado: p.equipamiento_detectado || []
     }))
 
     // Filtrar por zonas permitidas si se especificaron

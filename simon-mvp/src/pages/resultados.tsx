@@ -21,6 +21,10 @@ import {
   esAmenidadDestacada,
   esAmenidadEstandar
 } from '@/config/amenidades-mercado'
+import {
+  getMensajeEquipamiento,
+  getCostoEquipamiento
+} from '@/config/estimados-equipamiento'
 
 export default function ResultadosPage() {
   const router = useRouter()
@@ -552,6 +556,41 @@ ${top3Texto}
                                 {/* Nota aclaratoria */}
                                 <p className="text-xs text-gray-400 mt-1">
                                   % = propiedades del mercado que lo tienen. <span className="text-purple-500">Morado</span> = poco común (&lt;40%).
+                                </p>
+                              </div>
+                            </div>
+                          )
+                        })()}
+
+                        {/* Equipamiento - interpretación fiduciaria */}
+                        {(() => {
+                          const mensaje = getMensajeEquipamiento(
+                            prop.dormitorios,
+                            prop.equipamiento_detectado || []
+                          )
+
+                          return (
+                            <div className="mt-2 flex items-start gap-2 text-sm">
+                              <span className="text-gray-500">🏠</span>
+                              <div>
+                                <span className={`text-gray-700 ${mensaje.hayDeteccion ? 'font-medium' : ''}`}>
+                                  {mensaje.dato}
+                                </span>
+                                {mensaje.hayDeteccion && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {(prop.equipamiento_detectado || []).map((item, i) => (
+                                      <span key={i} className="inline-flex items-center px-2 py-0.5
+                                        bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs">
+                                        {item}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {mensaje.costoReferencia}
+                                </p>
+                                <p className="text-xs text-amber-700">
+                                  {mensaje.accion}
                                 </p>
                               </div>
                             </div>
