@@ -38,6 +38,9 @@ export interface UnidadReal {
   posicion_en_tipologia: number | null  // 1 = más barata de X dorms
   precio_min_tipologia: number | null
   precio_max_tipologia: number | null
+  // v2.9: Amenidades con interpretación fiduciaria
+  amenities_confirmados: string[]    // Confianza alta/media
+  amenities_por_verificar: string[]  // Confianza baja o por_confirmar
 }
 
 // Filtros para búsqueda
@@ -130,7 +133,10 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       unidades_misma_tipologia: p.unidades_misma_tipologia,
       posicion_en_tipologia: p.posicion_en_tipologia,
       precio_min_tipologia: p.precio_min_tipologia ? parseFloat(p.precio_min_tipologia) : null,
-      precio_max_tipologia: p.precio_max_tipologia ? parseFloat(p.precio_max_tipologia) : null
+      precio_max_tipologia: p.precio_max_tipologia ? parseFloat(p.precio_max_tipologia) : null,
+      // v2.9: Amenidades fiduciarias
+      amenities_confirmados: p.amenities_confirmados || [],
+      amenities_por_verificar: p.amenities_por_verificar || []
     }))
 
     // Filtrar por zonas permitidas si se especificaron

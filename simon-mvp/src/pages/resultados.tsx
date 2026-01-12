@@ -15,6 +15,12 @@ import {
   getIconoInclusion,
   METADATA_INVESTIGACION
 } from '@/config/estimados-mercado'
+import {
+  innegociablesToAmenidades,
+  getPorcentajeMercado,
+  esAmenidadDestacada,
+  esAmenidadEstandar
+} from '@/config/amenidades-mercado'
 
 export default function ResultadosPage() {
   const router = useRouter()
@@ -456,6 +462,101 @@ ${top3Texto}
                             </div>
                           </div>
                         )}
+
+                        {/* Amenidades - interpretación fiduciaria híbrida */}
+                        {(() => {
+                          // Obtener amenidades que el usuario eligió como innegociables
+                          const innegociablesArray = innegociables
+                            ? (innegociables as string).split(',').filter(Boolean)
+                            : []
+                          const amenidadesPedidas = innegociablesToAmenidades(innegociablesArray)
+                          const usuarioEligioAmenidades = amenidadesPedidas.length > 0
+
+                          // Preparar "También tiene" / "Amenidades destacadas"
+                          // Filtrar estándar (Ascensor, Seguridad 24/7, etc.) - solo mostrar diferenciadoras
+                          const amenidadesDiferenciadoras = (prop.amenities_confirmados || [])
+                            .filter(a => !esAmenidadEstandar(a))
+                          const otrasAmenidades = amenidadesDiferenciadoras
+                            .filter(a => !amenidadesPedidas.includes(a))
+                            .slice(0, 4)
+                          const tieneDestacadas = amenidadesDiferenciadoras.some(a => esAmenidadDestacada(a))
+
+                          // Si no hay amenidades diferenciadoras ni pedidas, no mostrar nada
+                          if (!amenidadesDiferenciadoras.length && !amenidadesPedidas.length) {
+                            return null
+                          }
+
+                          return (
+                            <div className="mt-2 flex items-start gap-2 text-sm">
+                              <span className="text-gray-500">🏊</span>
+                              <div>
+                                {/* CASO A: Usuario eligió amenidades - mostrar "Lo que pediste" */}
+                                {usuarioEligioAmenidades && (
+                                  <>
+                                    <p className="text-xs text-gray-500 mb-1">Lo que pediste:</p>
+                                    <div className="flex flex-wrap gap-1.5 mb-1">
+                                      {amenidadesPedidas.map((amenidad, i) => {
+                                        const confirmada = prop.amenities_confirmados?.includes(amenidad)
+                                        const porVerificar = prop.amenities_por_verificar?.includes(amenidad)
+                                        const estado = confirmada ? 'confirmada' : porVerificar ? 'verificar' : 'no_detectado'
+                                        return (
+                                          <span key={i} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${
+                                            estado === 'confirmada'
+                                              ? 'bg-green-50 text-green-700 border-green-200'
+                                              : estado === 'verificar'
+                                              ? 'bg-gray-100 text-gray-600 border-gray-200'
+                                              : 'bg-red-50 text-red-600 border-red-200'
+                                          }`}>
+                                            {estado === 'confirmada' ? '✓' : estado === 'verificar' ? '?' : '✗'} {amenidad}
+                                          </span>
+                                        )
+                                      })}
+                                    </div>
+                                    {amenidadesPedidas.some(a => prop.amenities_por_verificar?.includes(a)) && (
+                                      <p className="text-xs text-amber-700 mb-2">
+                                        Preguntá por {amenidadesPedidas.filter(a => prop.amenities_por_verificar?.includes(a)).join(' y ')} antes de visitar
+                                      </p>
+                                    )}
+                                    {amenidadesPedidas.some(a => !prop.amenities_confirmados?.includes(a) && !prop.amenities_por_verificar?.includes(a)) && (
+                                      <p className="text-xs text-red-600 mb-2">
+                                        No tiene {amenidadesPedidas.filter(a => !prop.amenities_confirmados?.includes(a) && !prop.amenities_por_verificar?.includes(a)).join(' ni ')} confirmado
+                                      </p>
+                                    )}
+                                  </>
+                                )}
+
+                                {/* Sección de otras amenidades / destacadas (solo diferenciadoras) */}
+                                {(otrasAmenidades.length > 0 || (!usuarioEligioAmenidades && amenidadesDiferenciadoras.length > 0)) && (
+                                  <>
+                                    <p className="text-xs text-gray-500 mb-1">
+                                      {usuarioEligioAmenidades ? 'También tiene:' : 'Amenidades destacadas:'}
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5 mb-1">
+                                      {(usuarioEligioAmenidades ? otrasAmenidades : amenidadesDiferenciadoras.slice(0, 4)).map((a, i) => {
+                                        const pct = getPorcentajeMercado(a)
+                                        const destacado = esAmenidadDestacada(a)
+                                        return (
+                                          <span key={i} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${
+                                            destacado
+                                              ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                              : 'bg-green-50 text-green-700 border-green-200'
+                                          }`}>
+                                            ✓ {a} {pct && <span className="text-gray-400">({pct}%)</span>}
+                                          </span>
+                                        )
+                                      })}
+                                    </div>
+                                  </>
+                                )}
+
+                                {/* Nota aclaratoria */}
+                                <p className="text-xs text-gray-400 mt-1">
+                                  % = propiedades del mercado que lo tienen. <span className="text-purple-500">Morado</span> = poco común (&lt;40%).
+                                </p>
+                              </div>
+                            </div>
+                          )
+                        })()}
                       </div>
                     </div>
                   </div>
