@@ -17,13 +17,17 @@ SELECT
     ROUND(MIN(precio_usd)::numeric, 0) as precio_min,
     ROUND(MAX(precio_usd)::numeric, 0) as precio_max,
     ROUND(AVG(area_total_m2)::numeric, 1) as area_promedio,
-    ROUND(AVG(precio_usd / area_total_m2)::numeric, 0) as precio_m2
+    ROUND(AVG(precio_usd / area_total_m2)::numeric, 0) as precio_m2,
+    -- v2: Días en mercado para umbrales dinámicos (calculado desde fecha_publicacion)
+    ROUND(AVG(CURRENT_DATE - fecha_publicacion)::numeric, 0) as dias_promedio,
+    ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (CURRENT_DATE - fecha_publicacion))::numeric, 0) as dias_mediana
 FROM propiedades_v2
 WHERE es_activa = true
   AND tipo_operacion = 'venta'
   AND precio_usd > 30000
   AND area_total_m2 > 25
   AND (precio_usd / area_total_m2) BETWEEN 800 AND 4000
+  AND fecha_publicacion IS NOT NULL
 GROUP BY dormitorios, COALESCE(microzona, zona, 'Sin zona');
 
 COMMENT ON VIEW v_metricas_mercado IS 'Métricas agregadas del mercado inmobiliario de Equipetrol para Simón';

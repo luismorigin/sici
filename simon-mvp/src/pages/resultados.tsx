@@ -26,6 +26,243 @@ import {
   getCostoEquipamiento
 } from '@/config/estimados-equipamiento'
 
+/**
+ * SÍNTESIS FIDUCIARIA - Resumen inteligente que combina TODOS los datos
+ * Patrón MOAT: DATO → CONTEXTO → ACCIÓN
+ *
+ * Tipos:
+ * - oportunidad: Precio bajo + tiempo razonable
+ * - premium: Precio alto (puede justificarse)
+ * - justo: Precio de mercado
+ * - sospechoso: Contradicción (muy bajo + mucho tiempo)
+ */
+type TipoSintesis = 'oportunidad' | 'premium' | 'justo' | 'sospechoso'
+
+interface SintesisFiduciaria {
+  headline: string
+  detalles: string
+  accion: string
+  tipo: TipoSintesis
+}
+
+interface DatosSintesis {
+  // Precio
+  diferenciaPct: number | null  // vs mercado
+  // Tiempo
+  diasEnMercado: number | null
+  diasMedianaZona: number | null  // umbral dinámico
+  diasPromedioZona: number | null
+  // Escasez (parseado de razon_fiduciaria)
+  escasez: number | null
+  // Equipamiento
+  equipamiento: string[]
+  // Estado
+  estadoConstruccion: string
+  // Amenidades
+  amenidadesConfirmadas: string[]
+  amenidadesPorVerificar: string[]
+  // Costos
+  parqueoTexto: string  // "A veces incluido", "Rara vez incluido", etc.
+  baulераTexto: string
+  costoExtraPotencial: number | null  // monto si no incluyen parqueo+baulera
+}
+
+function generarSintesisFiduciaria(datos: DatosSintesis): SintesisFiduciaria {
+  const {
+    diferenciaPct,
+    diasEnMercado,
+    diasMedianaZona,
+    diasPromedioZona,
+    escasez,
+    equipamiento,
+    estadoConstruccion,
+    amenidadesConfirmadas,
+    amenidadesPorVerificar,
+    parqueoTexto,
+    baulераTexto,
+    costoExtraPotencial
+  } = datos
+
+  // Umbrales dinámicos (fallback a valores conocidos si no hay datos)
+  const umbralSospecha = diasMedianaZona ?? 74
+  const umbralFuerte = diasPromedioZona ?? 104
+
+  const dias = diasEnMercado ?? 0
+  const diffPct = Math.round(diferenciaPct ?? 0)
+
+  // 1. DETERMINAR TIPO BASE
+  let tipo: TipoSintesis = 'justo'
+  if (diffPct <= -10) {
+    tipo = 'oportunidad'
+  } else if (diffPct >= 10) {
+    tipo = 'premium'
+  }
+
+  // 2. DETECTAR CONTRADICCIONES (oportunidad + mucho tiempo = sospechoso)
+  // Si está MUY bajo (>20%) y lleva más que la mediana, es sospechoso
+  // Si está moderadamente bajo (10-20%) y lleva más que el promedio, es sospechoso
+  if (tipo === 'oportunidad') {
+    if (diffPct <= -20 && dias >= umbralSospecha) {
+      tipo = 'sospechoso'  // Muy bajo + sobre mediana = sospechoso
+    } else if (dias >= umbralFuerte) {
+      tipo = 'sospechoso'  // Cualquier oportunidad + sobre promedio = sospechoso
+    }
+  }
+
+  // 3. CONSTRUIR HEADLINE - Precio + Tiempo integrado
+  let headline: string
+  const meses = dias > 0 ? Math.round(dias / 30) : 0
+  const tiempoCorto = dias <= 30 ? 'publicado reciente' : dias < umbralSospecha ? `${meses} mes${meses > 1 ? 'es' : ''} publicado` : null
+  const tiempoLargo = dias >= umbralSospecha ? `${meses} meses publicado` : null
+
+  // Si no tenemos datos de comparación (diferenciaPct era null), mostrar mensaje neutro
+  const sinDatosComparacion = diferenciaPct === null
+
+  if (sinDatosComparacion) {
+    // No podemos comparar vs mercado - mostrar lo que sabemos
+    if (tiempoLargo) {
+      headline = `${tiempoLargo} - sin datos de zona para comparar precio`
+    } else {
+      headline = 'Sin datos de zona para comparar precio'
+    }
+  } else if (tipo === 'sospechoso') {
+    headline = `${Math.abs(diffPct)}% bajo mercado - ${tiempoLargo}`
+  } else if (diffPct <= -10) {
+    headline = `Oportunidad: ${Math.abs(diffPct)}% bajo mercado`
+  } else if (diffPct >= 10) {
+    headline = `Premium: ${diffPct}% sobre mercado`
+  } else if (diffPct >= -5 && diffPct <= 5) {
+    headline = 'Precio de mercado'
+  } else if (diffPct < 0) {
+    headline = `${Math.abs(diffPct)}% bajo promedio`
+  } else {
+    headline = `${diffPct}% sobre promedio`
+  }
+
+  // 4. CONSTRUIR LÍNEAS DE DETALLE - Cada una toca un aspecto
+  const lineas: string[] = []
+
+  // Línea 1: Tiempo + Escasez
+  const parteTiempo = tiempoCorto ? `${tiempoCorto}` : (tiempoLargo && tipo !== 'sospechoso') ? tiempoLargo : null
+  const parteEscasez = escasez && escasez <= 5
+    ? (escasez === 1 ? 'única opción similar' : `solo ${escasez} similares`)
+    : null
+
+  if (parteTiempo || parteEscasez) {
+    const partes = [parteTiempo, parteEscasez].filter(Boolean)
+    lineas.push(partes.join(' • '))
+  }
+
+  // Línea 2: Amenidades | Equipamiento - con contexto MOAT
+  const tieneAmenConfirmadas = amenidadesConfirmadas.length > 0
+  const tieneAmenPorVerificar = amenidadesPorVerificar.length > 0
+  const tieneEquipamiento = equipamiento.length > 0
+
+  let lineaAmenEquip = ''
+
+  if (tieneAmenConfirmadas) {
+    // Caso A: Hay amenidades confirmadas
+    const amenTop = amenidadesConfirmadas.slice(0, 2).map(a => `${a} ✓`).join(', ')
+    lineaAmenEquip = amenTop
+  } else if (tieneAmenPorVerificar) {
+    // Caso B: Solo hay por verificar - dar contexto
+    lineaAmenEquip = `Sin amenidades confirmadas (verificar: ${amenidadesPorVerificar.slice(0, 2).join(', ')})`
+  } else {
+    // Caso C: No hay ninguna amenidad
+    lineaAmenEquip = 'Amenidades no especificadas'
+  }
+
+  // Agregar equipamiento si hay
+  if (tieneEquipamiento) {
+    const equipTop = equipamiento.slice(0, 2).join(', ')
+    lineaAmenEquip = `${lineaAmenEquip} | ${equipTop}`
+  } else if (!tieneAmenConfirmadas && !tieneAmenPorVerificar) {
+    // Solo si tampoco hay amenidades, mencionar que no hay equip
+    lineaAmenEquip = 'Sin amenidades ni equipamiento especificados'
+  }
+
+  lineas.push(lineaAmenEquip)
+
+  // Línea 3: Costos (parqueo + baulera)
+  const parqueoCorto = parqueoTexto.toLowerCase().includes('rara') ? 'parqueo rara vez incluido'
+    : parqueoTexto.toLowerCase().includes('veces') ? 'parqueo a veces incluido'
+    : parqueoTexto.toLowerCase().includes('frecuente') ? 'parqueo frecuente incluido'
+    : null
+  const baulераCorto = baulераTexto.toLowerCase().includes('rara') ? 'baulera rara vez'
+    : baulераTexto.toLowerCase().includes('veces') ? 'baulera a veces'
+    : null
+
+  if (parqueoCorto || baulераCorto) {
+    const costos = [parqueoCorto, baulераCorto].filter(Boolean).join(', ')
+    lineas.push(costos)
+  }
+
+  // Línea 4: Costo extra potencial (siempre mostrar si hay)
+  if (costoExtraPotencial && costoExtraPotencial > 0) {
+    lineas.push(`Costo real: hasta +$${costoExtraPotencial.toLocaleString()} si no incluyen parqueo/baulera`)
+  }
+
+  // Línea 5: Estado construcción
+  if (estadoConstruccion === 'preventa') {
+    lineas.push('⚠️ Preventa - verificar fecha entrega')
+  }
+
+  // 5. GENERAR ACCIÓN según tipo
+  let accion: string
+
+  // Caso especial: sin datos de comparación
+  if (sinDatosComparacion) {
+    accion = 'Pedí datos de otras unidades en la zona para comparar'
+  } else {
+    switch (tipo) {
+      case 'oportunidad':
+        if (estadoConstruccion === 'preventa') {
+          accion = 'Buen precio - verificá fecha entrega y qué incluye'
+        } else if (escasez && escasez <= 2) {
+          accion = 'Pocas opciones a este precio - verificá estado real'
+        } else {
+          accion = 'Buen precio - verificá por qué y el estado real'
+        }
+        break
+      case 'premium':
+        accion = '¿Justifica el precio extra vs alternativas?'
+        break
+      case 'sospechoso':
+        accion = 'Precio atractivo pero investigá por qué no se vendió'
+        break
+      default: // justo
+        accion = 'Sin urgencia - tomá tu tiempo para comparar'
+    }
+  }
+
+  return {
+    headline,
+    detalles: lineas.join('\n'),
+    accion,
+    tipo
+  }
+}
+
+/**
+ * Extrae escasez de la razón fiduciaria del SQL
+ */
+function parseEscasezDeRazon(razon: string | null | undefined): number | null {
+  if (!razon) return null
+
+  // "1 de solo X deptos"
+  const match1 = razon.match(/de solo (\d+) deptos?/i)
+  if (match1) return parseInt(match1[1])
+
+  // "Solo X opciones"
+  const match2 = razon.match(/Solo (\d+) opciones?/i)
+  if (match2) return parseInt(match2[1])
+
+  // "Único"
+  if (/Único/i.test(razon)) return 1
+
+  return null
+}
+
 export default function ResultadosPage() {
   const router = useRouter()
   const [propiedades, setPropiedades] = useState<UnidadReal[]>([])
@@ -283,49 +520,68 @@ ${top3Texto}
                           <span className="capitalize">{prop.estado_construccion?.replace(/_/g, ' ')}</span>
                         </div>
 
-                        {/* Razon fiduciaria */}
-                        {prop.razon_fiduciaria && (
-                          <p className="mt-2 text-sm text-green-700 bg-green-50 px-3 py-1 rounded-lg inline-block">
-                            💡 {prop.razon_fiduciaria}
-                          </p>
-                        )}
-
-                        {/* Teaser posición de mercado del SQL */}
+                        {/* SÍNTESIS FIDUCIARIA - Resumen MOAT integrado */}
                         {(() => {
                           const posicion = getPosicionMercado(prop.id)
-                          if (!posicion) return null
+                          const metricas = contextoMercado?.metricas_zona
+                          const costos = getCostosOcultosEstimados(prop.dormitorios, null, null)
+
+                          // Calcular costo extra potencial (parqueo + baulera si no incluidos)
+                          // Usar promedio de min-max para cada componente
+                          const costoParqueo = Math.round((costos.estacionamiento.compra.min + costos.estacionamiento.compra.max) / 2)
+                          const costoBaulera = Math.round((costos.baulera.compra.min + costos.baulera.compra.max) / 2)
+                          const costoExtra = costoParqueo + costoBaulera
+
+                          // IMPORTANTE: Solo usar diferencia_pct si posicion_mercado fue exitosa
+                          // (tiene datos de la zona + tipología para comparar)
+                          const tieneComparacionValida = posicion?.success === true
+                          const diferenciaPctValida = tieneComparacionValida ? posicion.diferencia_pct : null
+
+                          const sintesis = generarSintesisFiduciaria({
+                            diferenciaPct: diferenciaPctValida,
+                            diasEnMercado: prop.dias_en_mercado,
+                            diasMedianaZona: metricas?.dias_mediana ?? null,
+                            diasPromedioZona: metricas?.dias_promedio ?? null,
+                            escasez: parseEscasezDeRazon(prop.razon_fiduciaria),
+                            equipamiento: prop.equipamiento_detectado || [],
+                            estadoConstruccion: prop.estado_construccion || '',
+                            amenidadesConfirmadas: prop.amenities_confirmados || [],
+                            amenidadesPorVerificar: prop.amenities_por_verificar || [],
+                            parqueoTexto: costos.estacionamiento.texto_inclusion || '',
+                            baulераTexto: costos.baulera.texto_inclusion || '',
+                            costoExtraPotencial: costoExtra
+                          })
+
+                          // Colores según tipo
+                          const colores = {
+                            oportunidad: 'bg-green-50 border-green-200 text-green-800',
+                            premium: 'bg-purple-50 border-purple-200 text-purple-800',
+                            justo: 'bg-blue-50 border-blue-200 text-blue-800',
+                            sospechoso: 'bg-orange-50 border-orange-200 text-orange-800'
+                          }
+
+                          const iconos = {
+                            oportunidad: '🎯',
+                            premium: '⭐',
+                            justo: '✓',
+                            sospechoso: '⚠️'
+                          }
+
                           return (
-                            <div className="mt-2">
-                              <div className="flex items-center gap-2">
-                                <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                                  posicion.categoria === 'oportunidad'
-                                    ? 'bg-green-100 text-green-800'
-                                    : posicion.categoria === 'premium'
-                                    ? 'bg-purple-100 text-purple-800'
-                                    : 'bg-blue-100 text-blue-800'
-                                }`}>
-                                  {posicion.categoria === 'oportunidad' ? '🎯 Oportunidad'
-                                    : posicion.categoria === 'premium' ? '⭐ Premium'
-                                    : '✓ Precio justo'}
-                                </span>
-                                {posicion.diferencia_pct != null && (
-                                  <span className="text-xs text-gray-500">
-                                    {posicion.diferencia_pct > 0 ? '+' : ''}{posicion.diferencia_pct.toFixed(0)}% vs mercado
-                                  </span>
-                                )}
-                              </div>
-                              {posicion.categoria === 'oportunidad' && (
-                                <p className="text-xs text-amber-700 mt-1">
-                                  {prop.estado_construccion === 'preventa'
-                                    ? 'Precio de preventa - verificá fecha de entrega'
-                                    : 'Verificá por qué está tan bajo'}
-                                </p>
+                            <div className={`mt-3 px-3 py-2 rounded-lg border ${colores[sintesis.tipo]}`}>
+                              <p className="text-sm font-medium">
+                                {iconos[sintesis.tipo]} {sintesis.headline}
+                              </p>
+                              {sintesis.detalles && (
+                                <div className="text-xs mt-1 opacity-80 space-y-0.5">
+                                  {sintesis.detalles.split('\n').map((linea, i) => (
+                                    <p key={i}>{linea}</p>
+                                  ))}
+                                </div>
                               )}
-                              {posicion.categoria === 'premium' && (
-                                <p className="text-xs text-amber-700 mt-1">
-                                  ¿Justifica el precio extra?
-                                </p>
-                              )}
+                              <p className="text-xs mt-2 font-medium border-t border-current/20 pt-1">
+                                → {sintesis.accion}
+                              </p>
                             </div>
                           )
                         })()}
