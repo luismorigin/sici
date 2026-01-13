@@ -262,12 +262,81 @@ function parseEscasezDeRazon(razon: string | null | undefined): number | null {
   return null
 }
 
+/**
+ * Componente para mostrar descripción del anunciante con truncado
+ */
+function DescripcionAnunciante({ descripcion }: { descripcion: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const MAX_LENGTH = 150
+
+  // Limpiar emojis excesivos y formatear
+  const textoLimpio = descripcion
+    .replace(/[\r\n]+/g, ' ')  // Reemplazar saltos de línea por espacios
+    .replace(/\s+/g, ' ')       // Múltiples espacios a uno
+    .trim()
+
+  const necesitaTruncado = textoLimpio.length > MAX_LENGTH
+  const textoMostrar = expanded || !necesitaTruncado
+    ? textoLimpio
+    : textoLimpio.slice(0, MAX_LENGTH) + '...'
+
+  return (
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-gray-500">📝</span>
+        <span className="text-sm font-medium text-gray-700">Descripción del anunciante</span>
+      </div>
+      <p className="text-sm text-gray-600 leading-relaxed">
+        {textoMostrar}
+      </p>
+      {necesitaTruncado && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-xs text-blue-600 hover:text-blue-800 mt-1 font-medium"
+        >
+          {expanded ? 'ver menos' : 'ver más'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function ResultadosPage() {
   const router = useRouter()
   const [propiedades, setPropiedades] = useState<UnidadReal[]>([])
   const [analisisFiduciario, setAnalisisFiduciario] = useState<AnalisisMercadoFiduciario | null>(null)
   const [loading, setLoading] = useState(true)
   const [showPremiumModal, setShowPremiumModal] = useState(false)
+  const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
+  const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({})
+
+  const getPhotoIndex = (propId: number) => photoIndexes[propId] || 0
+
+  const nextPhoto = (propId: number, totalPhotos: number) => {
+    setPhotoIndexes(prev => ({
+      ...prev,
+      [propId]: ((prev[propId] || 0) + 1) % totalPhotos
+    }))
+  }
+
+  const prevPhoto = (propId: number, totalPhotos: number) => {
+    setPhotoIndexes(prev => ({
+      ...prev,
+      [propId]: ((prev[propId] || 0) - 1 + totalPhotos) % totalPhotos
+    }))
+  }
+
+  const toggleCardExpanded = (propId: number) => {
+    setExpandedCards(prev => {
+      const next = new Set(prev)
+      if (next.has(propId)) {
+        next.delete(propId)
+      } else {
+        next.add(propId)
+      }
+      return next
+    })
+  }
 
   // Parsear filtros de URL
   const {
@@ -462,14 +531,42 @@ ${top3Texto}
                 {top3.map((prop, idx) => (
                   <div key={prop.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
                     <div className="flex">
-                      {/* Foto */}
-                      <div className="w-48 h-40 bg-gray-200 flex-shrink-0">
-                        {prop.fotos_urls?.[0] ? (
-                          <img
-                            src={prop.fotos_urls[0]}
-                            alt={prop.proyecto}
-                            className="w-full h-full object-cover"
-                          />
+                      {/* Carrusel de fotos */}
+                      <div className="w-48 h-40 bg-gray-200 flex-shrink-0 relative group">
+                        {prop.fotos_urls && prop.fotos_urls.length > 0 ? (
+                          <>
+                            <img
+                              src={prop.fotos_urls[getPhotoIndex(prop.id)]}
+                              alt={`${prop.proyecto} - Foto ${getPhotoIndex(prop.id) + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+
+                            {/* Navegación - solo si hay más de 1 foto */}
+                            {prop.fotos_urls.length > 1 && (
+                              <>
+                                {/* Flecha izquierda */}
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); prevPhoto(prop.id, prop.fotos_urls!.length) }}
+                                  className="absolute left-1 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  ‹
+                                </button>
+
+                                {/* Flecha derecha */}
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); nextPhoto(prop.id, prop.fotos_urls!.length) }}
+                                  className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  ›
+                                </button>
+
+                                {/* Indicador de fotos */}
+                                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+                                  {getPhotoIndex(prop.id) + 1} / {prop.fotos_urls.length}
+                                </div>
+                              </>
+                            )}
+                          </>
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-400">
                             Sin foto
@@ -519,7 +616,8 @@ ${top3Texto}
 
                         {/* SÍNTESIS FIDUCIARIA - Resumen MOAT integrado */}
                         {(() => {
-                          const posicion = getPosicionMercado(prop.id)
+                          // v2.13: Usar posicion_mercado directamente de la propiedad
+                          const posicion = prop.posicion_mercado
                           const metricas = contextoMercado?.metricas_zona
                           const costos = getCostosOcultosEstimados(prop.dormitorios, null, null)
 
@@ -583,83 +681,35 @@ ${top3Texto}
                           )
                         })()}
 
-                        {/* Costos a verificar - estimados de mercado */}
-                        {(() => {
-                          const costos = getCostosOcultosEstimados(prop.dormitorios, null, null)
-                          return (
-                            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="text-sm font-semibold text-amber-800">Costos a verificar</span>
-                                <span className="text-xs bg-amber-200 text-amber-700 px-1.5 py-0.5 rounded">estimado zona</span>
-                              </div>
+                        {/* Botón toggle detalles */}
+                        <button
+                          onClick={() => toggleCardExpanded(prop.id)}
+                          className="mt-3 w-full py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center gap-2 transition-colors"
+                        >
+                          {expandedCards.has(prop.id) ? (
+                            <>
+                              <span>Ocultar detalles</span>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              </svg>
+                            </>
+                          ) : (
+                            <>
+                              <span>Ver detalles</span>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </>
+                          )}
+                        </button>
 
-                              <div className="space-y-1.5 text-sm">
-                                {/* Expensas */}
-                                <div className="flex items-start gap-2">
-                                  <span className="text-gray-500 w-4">📋</span>
-                                  <div>
-                                    <span className="text-gray-700">
-                                      Expensas: ${costos.expensas.rango_completo.min}-{costos.expensas.rango_completo.max}/mes
-                                    </span>
-                                    <span className="text-xs text-gray-500 ml-1">
-                                      (+${costos.expensas.impacto_anual_completo.min.toLocaleString()}-{costos.expensas.impacto_anual_completo.max.toLocaleString()}/año)
-                                    </span>
-                                    <p className="text-xs text-gray-600">
-                                      Depende de amenities del edificio
-                                    </p>
-                                    <p className="text-xs text-amber-700">
-                                      Preguntá qué incluyen y el monto exacto
-                                    </p>
-                                  </div>
-                                </div>
+                        {/* Sección colapsable de detalles - Orden MOAT */}
+                        {expandedCards.has(prop.id) && (
+                        <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
 
-                                {/* Estacionamiento */}
-                                <div className="flex items-start gap-2">
-                                  <span className="text-gray-500 w-4">🚗</span>
-                                  <div>
-                                    <span className="text-gray-700">
-                                      Parqueo: ${costos.estacionamiento.compra.min.toLocaleString()}-{costos.estacionamiento.compra.max.toLocaleString()}
-                                    </span>
-                                    <span className="text-xs text-gray-500 ml-1">
-                                      ({costos.estacionamiento.texto_inclusion})
-                                    </span>
-                                    <p className="text-xs text-amber-700">
-                                      Preguntá si está incluido en el precio
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {/* Baulera */}
-                                <div className="flex items-start gap-2">
-                                  <span className="text-gray-500 w-4">📦</span>
-                                  <div>
-                                    <span className="text-gray-700">
-                                      Baulera: ${costos.baulera.compra.min.toLocaleString()}-{costos.baulera.compra.max.toLocaleString()}
-                                    </span>
-                                    <span className="text-xs text-gray-500 ml-1">
-                                      ({costos.baulera.texto_inclusion})
-                                    </span>
-                                    <p className="text-xs text-amber-700">
-                                      Preguntá si está incluida en el precio
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {/* Costo adicional potencial */}
-                                <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-amber-200">
-                                  <span className="text-amber-600 w-4">💡</span>
-                                  <span className="text-amber-700 text-xs font-medium">
-                                    Costo real puede ser ${(prop.precio_usd + costos.estacionamiento.compra.min + costos.baulera.compra.min).toLocaleString()}-{(prop.precio_usd + costos.estacionamiento.compra.max + costos.baulera.compra.max).toLocaleString()} si no incluyen parqueo ni baulera
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })()}
-
-                        {/* Días en mercado - interpretación fiduciaria */}
+                        {/* 1. DÍAS EN MERCADO - ¿Puedo negociar? */}
                         {prop.dias_en_mercado != null && (
-                          <div className="mt-2 flex items-start gap-2 text-sm">
+                          <div className="flex items-start gap-2 text-sm">
                             <span className="text-gray-500">📅</span>
                             <div>
                               <span className="text-gray-700">
@@ -691,12 +741,11 @@ ${top3Texto}
                           </div>
                         )}
 
-                        {/* Comparación edificio/tipología - interpretación fiduciaria híbrida */}
+                        {/* 2. COMPARACIÓN EDIFICIO - ¿El precio es justo? */}
                         {prop.unidades_en_edificio != null && prop.unidades_en_edificio > 1 && (
-                          <div className="mt-2 flex items-start gap-2 text-sm">
+                          <div className="flex items-start gap-2 text-sm">
                             <span className="text-gray-500">🏢</span>
                             <div>
-                              {/* Caso A: Hay 2+ unidades de la misma tipología - comparación precisa */}
                               {prop.unidades_misma_tipologia != null && prop.unidades_misma_tipologia >= 2 ? (
                                 <>
                                   <span className="text-gray-700">
@@ -723,7 +772,6 @@ ${top3Texto}
                                   )}
                                 </>
                               ) : (
-                                /* Caso B: Única unidad de esta tipología - mostrar contexto edificio */
                                 <>
                                   <span className="text-gray-700">
                                     Única de {prop.dormitorios} dorms en este edificio
@@ -740,34 +788,28 @@ ${top3Texto}
                           </div>
                         )}
 
-                        {/* Amenidades - interpretación fiduciaria híbrida */}
+                        {/* 3. AMENIDADES - ¿Tiene lo que pedí? */}
                         {(() => {
-                          // Obtener amenidades que el usuario eligió como innegociables
                           const innegociablesArray = innegociables
                             ? (innegociables as string).split(',').filter(Boolean)
                             : []
                           const amenidadesPedidas = innegociablesToAmenidades(innegociablesArray)
                           const usuarioEligioAmenidades = amenidadesPedidas.length > 0
 
-                          // Preparar "También tiene" / "Amenidades destacadas"
-                          // Filtrar estándar (Ascensor, Seguridad 24/7, etc.) - solo mostrar diferenciadoras
                           const amenidadesDiferenciadoras = (prop.amenities_confirmados || [])
                             .filter(a => !esAmenidadEstandar(a))
                           const otrasAmenidades = amenidadesDiferenciadoras
                             .filter(a => !amenidadesPedidas.includes(a))
                             .slice(0, 4)
-                          const tieneDestacadas = amenidadesDiferenciadoras.some(a => esAmenidadDestacada(a))
 
-                          // Si no hay amenidades diferenciadoras ni pedidas, no mostrar nada
                           if (!amenidadesDiferenciadoras.length && !amenidadesPedidas.length) {
                             return null
                           }
 
                           return (
-                            <div className="mt-2 flex items-start gap-2 text-sm">
+                            <div className="flex items-start gap-2 text-sm">
                               <span className="text-gray-500">🏊</span>
                               <div>
-                                {/* CASO A: Usuario eligió amenidades - mostrar "Lo que pediste" */}
                                 {usuarioEligioAmenidades && (
                                   <>
                                     <p className="text-xs text-gray-500 mb-1">Lo que pediste:</p>
@@ -802,7 +844,6 @@ ${top3Texto}
                                   </>
                                 )}
 
-                                {/* Sección de otras amenidades / destacadas (solo diferenciadoras) */}
                                 {(otrasAmenidades.length > 0 || (!usuarioEligioAmenidades && amenidadesDiferenciadoras.length > 0)) && (
                                   <>
                                     <p className="text-xs text-gray-500 mb-1">
@@ -826,7 +867,6 @@ ${top3Texto}
                                   </>
                                 )}
 
-                                {/* Nota aclaratoria */}
                                 <p className="text-xs text-gray-400 mt-1">
                                   % = propiedades del mercado que lo tienen. <span className="text-purple-500">Morado</span> = poco común (&lt;40%).
                                 </p>
@@ -835,7 +875,7 @@ ${top3Texto}
                           )
                         })()}
 
-                        {/* Equipamiento - interpretación fiduciaria */}
+                        {/* 4. EQUIPAMIENTO - ¿Qué viene incluido? */}
                         {(() => {
                           const mensaje = getMensajeEquipamiento(
                             prop.dormitorios,
@@ -843,7 +883,7 @@ ${top3Texto}
                           )
 
                           return (
-                            <div className="mt-2 flex items-start gap-2 text-sm">
+                            <div className="flex items-start gap-2 text-sm">
                               <span className="text-gray-500">🏠</span>
                               <div>
                                 <span className={`text-gray-700 ${mensaje.hayDeteccion ? 'font-medium' : ''}`}>
@@ -869,6 +909,82 @@ ${top3Texto}
                             </div>
                           )
                         })()}
+
+                        {/* 5. COSTOS OCULTOS - ¿Cuál es el costo real? */}
+                        {(() => {
+                          const costos = getCostosOcultosEstimados(prop.dormitorios, null, null)
+                          return (
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-sm font-semibold text-amber-800">💰 Costos a verificar</span>
+                                <span className="text-xs bg-amber-200 text-amber-700 px-1.5 py-0.5 rounded">estimado zona</span>
+                              </div>
+
+                              <div className="space-y-1.5 text-sm">
+                                <div className="flex items-start gap-2">
+                                  <span className="text-gray-500 w-4">📋</span>
+                                  <div>
+                                    <span className="text-gray-700">
+                                      Expensas: ${costos.expensas.rango_completo.min}-{costos.expensas.rango_completo.max}/mes
+                                    </span>
+                                    <span className="text-xs text-gray-500 ml-1">
+                                      (+${costos.expensas.impacto_anual_completo.min.toLocaleString()}-{costos.expensas.impacto_anual_completo.max.toLocaleString()}/año)
+                                    </span>
+                                    <p className="text-xs text-amber-700">
+                                      Preguntá qué incluyen y el monto exacto
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-start gap-2">
+                                  <span className="text-gray-500 w-4">🚗</span>
+                                  <div>
+                                    <span className="text-gray-700">
+                                      Parqueo: ${costos.estacionamiento.compra.min.toLocaleString()}-{costos.estacionamiento.compra.max.toLocaleString()}
+                                    </span>
+                                    <span className="text-xs text-gray-500 ml-1">
+                                      ({costos.estacionamiento.texto_inclusion})
+                                    </span>
+                                    <p className="text-xs text-amber-700">
+                                      Preguntá si está incluido en el precio
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-start gap-2">
+                                  <span className="text-gray-500 w-4">📦</span>
+                                  <div>
+                                    <span className="text-gray-700">
+                                      Baulera: ${costos.baulera.compra.min.toLocaleString()}-{costos.baulera.compra.max.toLocaleString()}
+                                    </span>
+                                    <span className="text-xs text-gray-500 ml-1">
+                                      ({costos.baulera.texto_inclusion})
+                                    </span>
+                                    <p className="text-xs text-amber-700">
+                                      Preguntá si está incluida en el precio
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-amber-200">
+                                  <span className="text-amber-600 w-4">💡</span>
+                                  <span className="text-amber-700 text-xs font-medium">
+                                    Costo real puede ser ${(prop.precio_usd + costos.estacionamiento.compra.min + costos.baulera.compra.min).toLocaleString()}-{(prop.precio_usd + costos.estacionamiento.compra.max + costos.baulera.compra.max).toLocaleString()} si no incluyen parqueo ni baulera
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })()}
+
+                        {/* 6. DESCRIPCIÓN DEL ANUNCIANTE - Info cruda (menos MOAT) */}
+                        {prop.descripcion && (
+                          <DescripcionAnunciante descripcion={prop.descripcion} />
+                        )}
+
+                        </div>
+                        )}
+                        {/* Fin sección colapsable */}
                       </div>
                     </div>
                   </div>
@@ -885,17 +1001,85 @@ ${top3Texto}
 
                 <div className="grid gap-3">
                   {alternativas.map(prop => {
-                    const compromisos = getCompromisos(prop)
+                    // Calcular síntesis para badge - v2.13: usar posicion_mercado directamente
+                    const posicion = prop.posicion_mercado
+                    const metricas = contextoMercado?.metricas_zona
+
+                    const tieneComparacionValida = posicion?.success === true
+                    const diferenciaPctValida = tieneComparacionValida ? posicion.diferencia_pct : null
+
+                    const sintesisAlt = generarSintesisFiduciaria({
+                      diferenciaPct: diferenciaPctValida,
+                      diasEnMercado: prop.dias_en_mercado,
+                      diasMedianaZona: metricas?.dias_mediana ?? null,
+                      diasPromedioZona: metricas?.dias_promedio ?? null,
+                      escasez: parseEscasezDeRazon(prop.razon_fiduciaria),
+                      equipamiento: prop.equipamiento_detectado || [],
+                      estadoConstruccion: prop.estado_construccion || '',
+                      amenidadesConfirmadas: prop.amenities_confirmados || [],
+                      amenidadesPorVerificar: prop.amenities_por_verificar || [],
+                      parqueoTexto: '',
+                      baulераTexto: '',
+                      costoExtraPotencial: null
+                    })
+
+                    // Colores y iconos para badge compacto
+                    const badgeColores = {
+                      oportunidad: 'bg-green-100 text-green-700 border-green-200',
+                      premium: 'bg-purple-100 text-purple-700 border-purple-200',
+                      justo: 'bg-blue-100 text-blue-700 border-blue-200',
+                      sospechoso: 'bg-orange-100 text-orange-700 border-orange-200'
+                    }
+                    const badgeIconos = {
+                      oportunidad: '🎯',
+                      premium: '⭐',
+                      justo: '✓',
+                      sospechoso: '⚠️'
+                    }
+                    const badgeTextos = {
+                      oportunidad: 'Oportunidad',
+                      premium: 'Premium',
+                      justo: 'Precio justo',
+                      sospechoso: 'Verificar'
+                    }
+
                     return (
                       <div key={prop.id} className="bg-white rounded-lg shadow p-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-20 h-16 bg-gray-200 rounded flex-shrink-0">
-                            {prop.fotos_urls?.[0] ? (
-                              <img
-                                src={prop.fotos_urls[0]}
-                                alt={prop.proyecto}
-                                className="w-full h-full object-cover rounded"
-                              />
+                        <div className="flex items-start gap-4">
+                          {/* Carrusel de fotos - alternativas */}
+                          <div className="w-24 h-20 bg-gray-200 rounded flex-shrink-0 relative group">
+                            {prop.fotos_urls && prop.fotos_urls.length > 0 ? (
+                              <>
+                                <img
+                                  src={prop.fotos_urls[getPhotoIndex(prop.id)]}
+                                  alt={`${prop.proyecto} - Foto ${getPhotoIndex(prop.id) + 1}`}
+                                  className="w-full h-full object-cover rounded"
+                                />
+
+                                {/* Navegación - solo si hay más de 1 foto */}
+                                {prop.fotos_urls.length > 1 && (
+                                  <>
+                                    {/* Flechas */}
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); prevPhoto(prop.id, prop.fotos_urls!.length) }}
+                                      className="absolute left-0.5 top-1/2 -translate-y-1/2 w-5 h-5 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      ‹
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); nextPhoto(prop.id, prop.fotos_urls!.length) }}
+                                      className="absolute right-0.5 top-1/2 -translate-y-1/2 w-5 h-5 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      ›
+                                    </button>
+
+                                    {/* Contador compacto */}
+                                    <div className="absolute bottom-0.5 right-0.5 bg-black/50 text-white text-[10px] px-1 rounded">
+                                      {getPhotoIndex(prop.id) + 1}/{prop.fotos_urls.length}
+                                    </div>
+                                  </>
+                                )}
+                              </>
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
                                 Sin foto
@@ -903,33 +1087,73 @@ ${top3Texto}
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-gray-900 truncate">{prop.proyecto}</h3>
-                            <p className="text-sm text-gray-500">
-                              {prop.dormitorios}D · {prop.area_m2}m² · {prop.zona}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-gray-900">${prop.precio_usd.toLocaleString()}</p>
-                            <p className="text-xs text-gray-500">${prop.precio_m2}/m²</p>
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <h3 className="font-medium text-gray-900">{prop.proyecto}</h3>
+                                <p className="text-xs text-gray-500">{prop.zona}</p>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <p className="font-bold text-gray-900">${prop.precio_usd.toLocaleString()}</p>
+                                <p className="text-xs text-gray-500">${prop.precio_m2}/m²</p>
+                              </div>
+                            </div>
+
+                            {/* Info línea: Departamento · dorms · baños · área · estado */}
+                            <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-2 text-xs text-gray-600">
+                              <span className="font-semibold text-gray-700">Departamento</span>
+                              <span>·</span>
+                              <span>{prop.dormitorios} {prop.dormitorios === 1 ? 'dorm' : 'dorms'}</span>
+                              {prop.banos != null && (
+                                <>
+                                  <span>·</span>
+                                  <span>{Math.floor(Number(prop.banos))} {Math.floor(Number(prop.banos)) === 1 ? 'baño' : 'baños'}</span>
+                                </>
+                              )}
+                              <span>·</span>
+                              <span>{prop.area_m2} m²</span>
+                              {prop.estado_construccion && prop.estado_construccion !== 'no_especificado' && (
+                                <>
+                                  <span>·</span>
+                                  <span className="capitalize">{prop.estado_construccion.replace(/_/g, ' ')}</span>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Badge síntesis expandido - Opción E */}
+                            <div className="mt-2 space-y-1">
+                              {/* Línea 1: Tipo + % + posición edificio */}
+                              <div className="flex items-center flex-wrap gap-1.5">
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${badgeColores[sintesisAlt.tipo]}`}>
+                                  {badgeIconos[sintesisAlt.tipo]} {badgeTextos[sintesisAlt.tipo]}
+                                  {posicion?.success && posicion.diferencia_pct != null && (
+                                    <span className="opacity-80">
+                                      ({posicion.diferencia_pct > 0 ? '+' : ''}{Math.round(posicion.diferencia_pct)}%)
+                                    </span>
+                                  )}
+                                </span>
+                                {prop.unidades_en_edificio != null && prop.unidades_en_edificio > 1 && prop.posicion_precio_edificio != null && (
+                                  <span className="text-xs text-gray-500">
+                                    · #{prop.posicion_precio_edificio} de {prop.unidades_en_edificio} en edificio
+                                  </span>
+                                )}
+                              </div>
+                              {/* Línea 2: Tiempo + acción si aplica */}
+                              {prop.dias_en_mercado != null && (
+                                <p className="text-xs text-gray-500">
+                                  {prop.dias_en_mercado > 60 ? (
+                                    <>
+                                      {Math.round(prop.dias_en_mercado / 30)} meses publicado · <span className="text-amber-600">consultá si aceptan ofertas</span>
+                                    </>
+                                  ) : prop.dias_en_mercado > 30 ? (
+                                    <>{Math.round(prop.dias_en_mercado / 30)} mes publicado</>
+                                  ) : (
+                                    <>{prop.dias_en_mercado} días publicado · precio firme probable</>
+                                  )}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        {/* Compromisos visibles */}
-                        {compromisos.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-gray-100">
-                            {compromisos.map((c, i) => (
-                              <span
-                                key={i}
-                                className={`text-xs px-2 py-1 rounded ${
-                                  c.tipo === 'warning'
-                                    ? 'bg-amber-50 text-amber-700'
-                                    : 'bg-gray-100 text-gray-600'
-                                }`}
-                              >
-                                {c.tipo === 'warning' ? '⚠️ ' : ''}{c.texto}
-                              </span>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     )
                   })}
@@ -937,110 +1161,192 @@ ${top3Texto}
               </section>
             )}
 
-            {/* Excluidas - datos reales del SQL */}
+            {/* Excluidas - resumen simple */}
             {excluidasFiduciarias.length > 0 && (
-              <section className="mb-8">
-                <div className="bg-gray-100 rounded-xl p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="text-xl">🚫</span>
-                    <h2 className="text-lg font-semibold text-gray-700">
-                      {excluidasFiduciarias.length} PROPIEDADES EXCLUIDAS (más baratas)
-                    </h2>
-                  </div>
-
-                  <p className="text-sm text-gray-600 mb-4">
-                    Encontramos opciones más económicas pero las excluimos por estas razones:
-                  </p>
-
-                  <div className="space-y-2 mb-4">
-                    {excluidasFiduciarias.slice(0, 5).map((exc) => (
-                      <div
-                        key={exc.id}
-                        className="flex items-center gap-3 bg-white rounded-lg px-4 py-3"
-                      >
-                        <span className="text-lg">
-                          {exc.analisis_exclusion?.razon_principal?.includes('foto') ? '📷' :
-                           exc.analisis_exclusion?.razon_principal?.includes('precio') ? '⚠️' :
-                           exc.analisis_exclusion?.razon_principal?.includes('innegociable') ? '❌' : '🚫'}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <span className="font-medium text-gray-800">{exc.proyecto}</span>
-                          <span className="text-gray-500 mx-2">—</span>
-                          <span className="text-gray-600">${exc.precio_usd.toLocaleString()}</span>
-                          <p className="text-sm text-gray-500 truncate">
-                            {exc.analisis_exclusion?.razon_principal || 'Excluida por filtros'}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                    {excluidasFiduciarias.length > 5 && (
-                      <p className="text-sm text-gray-500 text-center py-2">
-                        +{excluidasFiduciarias.length - 5} propiedades más excluidas
-                      </p>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-gray-500 mb-4">
-                    Simon excluye automáticamente propiedades que no cumplen tus criterios o estándares de calidad.
-                    Esto te protege de perder tiempo con listings incompletos o sospechosos.
-                  </p>
-
-                  <button
-                    onClick={() => setShowPremiumModal(true)}
-                    className="w-full py-3 px-4 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors"
-                  >
-                    Ver detalle en Informe Premium
-                  </button>
-                </div>
-              </section>
+              <div className="mb-6 px-4 py-3 bg-gray-100 rounded-lg flex items-center gap-3">
+                <span className="text-gray-500">ℹ️</span>
+                <p className="text-sm text-gray-600">
+                  {excluidasFiduciarias.length} propiedades más baratas excluidas (sin fotos, dormitorios incorrectos, datos incompletos)
+                </p>
+              </div>
             )}
 
-            {/* Contexto de Mercado - datos reales del SQL */}
+            {/* Contexto de Mercado - MOAT con cards visuales */}
             {contextoMercado && (
               <section className="mb-8">
-                <div className="bg-blue-50 rounded-xl p-6">
+                <div className="bg-gray-50 rounded-xl p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <span className="text-xl">📊</span>
-                    <h2 className="text-lg font-semibold text-blue-900">
-                      CONTEXTO DE MERCADO
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      TU BÚSQUEDA EN CONTEXTO
                     </h2>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                    <div className="bg-white rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold text-blue-600">{contextoMercado.stock_total}</p>
-                      <p className="text-xs text-gray-500">Total mercado</p>
-                    </div>
-                    <div className="bg-white rounded-lg p-3 text-center">
-                      <p className="text-2xl font-bold text-green-600">{contextoMercado.stock_cumple_filtros}</p>
-                      <p className="text-xs text-gray-500">Cumplen tus filtros</p>
-                    </div>
-                    {contextoMercado.metricas_zona && (
+                  {(() => {
+                    // Calcular métricas MOAT
+                    const stockTotal = contextoMercado.stock_total || 0
+                    const stockFiltros = contextoMercado.stock_cumple_filtros || 0
+                    const coberturaPct = stockTotal > 0 ? Math.round((stockFiltros / stockTotal) * 100) : 0
+
+                    const precioPromedio = contextoMercado.metricas_zona?.precio_promedio || 0
+                    const presupuestoUsuario = parseInt(presupuesto as string) || 0
+                    const diferenciaPrecio = precioPromedio > 0 && presupuestoUsuario > 0
+                      ? Math.round(((presupuestoUsuario - precioPromedio) / precioPromedio) * 100)
+                      : null
+
+                    const diasPromedio = contextoMercado.metricas_zona?.dias_promedio || 0
+
+                    // Colores según valores
+                    const coberturaColor = coberturaPct >= 50
+                      ? 'bg-green-50 border-green-200'
+                      : coberturaPct >= 20
+                      ? 'bg-yellow-50 border-yellow-200'
+                      : 'bg-red-50 border-red-200'
+                    const coberturaTextColor = coberturaPct >= 50
+                      ? 'text-green-700'
+                      : coberturaPct >= 20
+                      ? 'text-yellow-700'
+                      : 'text-red-700'
+                    const coberturaDot = coberturaPct >= 50 ? '🟢' : coberturaPct >= 20 ? '🟡' : '🔴'
+
+                    const velocidadColor = diasPromedio > 180
+                      ? 'bg-gray-100 border-gray-300'
+                      : diasPromedio >= 60
+                      ? 'bg-green-50 border-green-200'
+                      : diasPromedio >= 30
+                      ? 'bg-yellow-50 border-yellow-200'
+                      : 'bg-red-50 border-red-200'
+                    const velocidadTextColor = diasPromedio > 180
+                      ? 'text-gray-500'
+                      : diasPromedio >= 60
+                      ? 'text-green-700'
+                      : diasPromedio >= 30
+                      ? 'text-yellow-700'
+                      : 'text-red-700'
+                    const velocidadDot = diasPromedio > 180 ? '⚠️' : diasPromedio >= 60 ? '🟢' : diasPromedio >= 30 ? '🟡' : '🔴'
+
+                    // Interpretaciones
+                    const coberturaInterpretacion = coberturaPct >= 50
+                      ? 'Filtros razonables'
+                      : coberturaPct >= 20
+                      ? 'Filtros específicos'
+                      : 'Filtros muy estrictos'
+
+                    const presupuestoInterpretacion = diferenciaPrecio !== null
+                      ? diferenciaPrecio <= -20
+                        ? 'Accedés al tercio económico'
+                        : diferenciaPrecio <= 0
+                        ? 'Rango competitivo'
+                        : diferenciaPrecio <= 20
+                        ? 'Accedés a opciones premium'
+                        : 'Presupuesto amplio'
+                      : null
+
+                    const velocidadInterpretacion = diasPromedio > 180
+                      ? 'Datos no confiables'
+                      : diasPromedio >= 60
+                      ? 'Props tardan, hay margen'
+                      : diasPromedio >= 30
+                      ? 'Velocidad normal'
+                      : 'Se venden rápido'
+
+                    // Conclusión final
+                    const conclusion = stockFiltros <= 3
+                      ? 'Stock limitado. Si algo te gusta, actuá rápido.'
+                      : stockFiltros <= 10
+                      ? 'Stock moderado. Podés tomarte tiempo para comparar.'
+                      : 'Stock amplio. Sé selectivo y negociá.'
+
+                    return (
                       <>
-                        <div className="bg-white rounded-lg p-3 text-center">
-                          <p className="text-2xl font-bold text-gray-700">
-                            ${Math.round(contextoMercado.metricas_zona.precio_promedio / 1000)}k
-                          </p>
-                          <p className="text-xs text-gray-500">Precio promedio</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                          {/* Card Cobertura */}
+                          <div className={`rounded-lg border p-4 ${coberturaColor}`}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span>{coberturaDot}</span>
+                              <span className="text-xs font-semibold text-gray-600 uppercase">Cobertura</span>
+                            </div>
+                            <p className={`text-3xl font-bold ${coberturaTextColor}`}>{coberturaPct}%</p>
+                            <p className="text-sm text-gray-600">{stockFiltros} de {stockTotal} props</p>
+                            <p className={`text-xs mt-2 ${coberturaTextColor}`}>→ {coberturaInterpretacion}</p>
+                          </div>
+
+                          {/* Card Presupuesto */}
+                          {diferenciaPrecio !== null && (
+                            <div className="rounded-lg border p-4 bg-blue-50 border-blue-200">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span>💰</span>
+                                <span className="text-xs font-semibold text-gray-600 uppercase">Tu Presupuesto</span>
+                              </div>
+                              <p className="text-3xl font-bold text-blue-700">
+                                {diferenciaPrecio > 0 ? '+' : ''}{diferenciaPrecio}%
+                              </p>
+                              <p className="text-sm text-gray-600">vs ${Math.round(precioPromedio/1000)}k prom</p>
+                              <p className="text-xs mt-2 text-blue-700">→ {presupuestoInterpretacion}</p>
+                            </div>
+                          )}
+
+                          {/* Card Velocidad */}
+                          {diasPromedio > 0 && diasPromedio <= 180 && (
+                            <div className={`rounded-lg border p-4 ${velocidadColor}`}>
+                              <div className="flex items-center gap-2 mb-2">
+                                <span>{velocidadDot}</span>
+                                <span className="text-xs font-semibold text-gray-600 uppercase">Velocidad</span>
+                              </div>
+                              <p className={`text-3xl font-bold ${velocidadTextColor}`}>{diasPromedio} días</p>
+                              <p className="text-sm text-gray-600">promedio en mercado</p>
+                              <p className={`text-xs mt-2 ${velocidadTextColor}`}>→ {velocidadInterpretacion}</p>
+                            </div>
+                          )}
+                          {/* Card Velocidad - datos no confiables */}
+                          {diasPromedio > 180 && (
+                            <div className="rounded-lg border p-4 bg-gray-100 border-gray-300">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span>⚠️</span>
+                                <span className="text-xs font-semibold text-gray-600 uppercase">Velocidad</span>
+                              </div>
+                              <p className="text-xl font-bold text-gray-500">+6 meses</p>
+                              <p className="text-sm text-gray-500">promedio publicado</p>
+                              <p className="text-xs mt-2 text-gray-500">→ Hay props muy antiguas</p>
+                            </div>
+                          )}
                         </div>
-                        <div className="bg-white rounded-lg p-3 text-center">
-                          <p className="text-2xl font-bold text-gray-700">
-                            ${contextoMercado.metricas_zona.precio_m2_promedio}
+
+                        {/* Conclusión MOAT */}
+                        <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">
+                          <p className="text-sm text-gray-700">
+                            <span className="font-medium">💡 Conclusión:</span> {conclusion}
                           </p>
-                          <p className="text-xs text-gray-500">Precio/m² promedio</p>
                         </div>
                       </>
-                    )}
-                  </div>
-
-                  {contextoMercado.diagnostico && (
-                    <p className="text-sm text-blue-800 bg-blue-100 rounded-lg px-4 py-2">
-                      💡 {contextoMercado.diagnostico}
-                    </p>
-                  )}
+                    )
+                  })()}
                 </div>
               </section>
             )}
+
+            {/* Upsell Premium - después de contexto */}
+            <section className="mb-8">
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6">
+                <div className="flex items-start gap-4">
+                  <span className="text-3xl">📋</span>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-gray-900 mb-1">
+                      ¿Necesitás decidir con más datos?
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-3">
+                      El Informe Premium incluye comparador lado a lado, márgenes de negociación estimados, y checklist de preguntas para cada propiedad.
+                    </p>
+                    <button
+                      onClick={() => setShowPremiumModal(true)}
+                      className="px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                    >
+                      Ver Informe Premium
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
 
             {/* CTA WhatsApp */}
             <div className="bg-green-600 rounded-xl p-6 text-white text-center">

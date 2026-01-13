@@ -44,6 +44,20 @@ export interface UnidadReal {
   amenities_por_verificar: string[]  // Confianza baja o por_confirmar
   // v2.10: Equipamiento detectado en descripción
   equipamiento_detectado: string[]   // Items mencionados en publicación (A/C, Cocina equipada, etc.)
+  // v2.12: Descripción del anunciante
+  descripcion: string | null
+  // v2.13: Posición de mercado (comparación vs promedio zona)
+  posicion_mercado: {
+    success: boolean
+    categoria: 'oportunidad' | 'bajo_promedio' | 'precio_justo' | 'sobre_promedio' | 'premium'
+    diferencia_pct: number
+    posicion_texto: string
+    contexto: {
+      promedio_zona: number
+      stock_disponible: number
+      precio_consultado: number
+    }
+  } | null
 }
 
 // Filtros para búsqueda
@@ -142,7 +156,11 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       amenities_confirmados: p.amenities_confirmados || [],
       amenities_por_verificar: p.amenities_por_verificar || [],
       // v2.10: Equipamiento detectado
-      equipamiento_detectado: p.equipamiento_detectado || []
+      equipamiento_detectado: p.equipamiento_detectado || [],
+      // v2.12: Descripción del anunciante
+      descripcion: p.descripcion || null,
+      // v2.13: Posición de mercado
+      posicion_mercado: p.posicion_mercado || null
     }))
 
     // Filtrar por zonas permitidas si se especificaron
