@@ -358,6 +358,7 @@ function calcularScoreMOAT(
   datosUsuario: DatosUsuarioMOAT
 ): number {
   let score = 0
+  const debugScores: Record<string, number> = {}
 
   // 1. INNEGOCIABLES (0 o 100)
   // Si no hay innegociables seleccionados, dar 100 a todos
@@ -382,17 +383,44 @@ function calcularScoreMOAT(
       }
     }
     score += cumpleTodos ? 100 : 0
+    debugScores.innegociables = cumpleTodos ? 100 : 0
   }
 
   // 2. OPORTUNIDAD (0 a 40) - basado en posicion_mercado
+  // IMPORTANTE: La escala se INVIERTE según preferencia calidad_vs_precio
   const posicionMercado = prop.posicion_mercado as { diferencia_pct?: number } | null
   const difPct = posicionMercado?.diferencia_pct ?? 0
 
-  if (difPct <= -20) score += 40       // Oportunidad clara
-  else if (difPct <= -10) score += 30  // Buena oportunidad
-  else if (difPct <= 5) score += 20    // Precio justo
-  else if (difPct <= 15) score += 10   // Ligeramente caro
-  // > 15%: sin puntos (premium/caro)
+  let oportunidadScore = 0
+
+  if (datosUsuario.calidad_vs_precio <= 2) {
+    // PRIORIZA CALIDAD: Premium/caro = más puntos
+    if (difPct >= 15) oportunidadScore = 40       // Premium (usuario acepta pagar más)
+    else if (difPct >= 5) oportunidadScore = 30   // Sobre promedio
+    else if (difPct >= -10) oportunidadScore = 20 // Precio justo
+    else if (difPct >= -20) oportunidadScore = 10 // Bajo promedio
+    // < -20%: sin puntos (muy barato, sospechoso para quien busca calidad)
+  } else if (datosUsuario.calidad_vs_precio >= 4) {
+    // PRIORIZA PRECIO: Barato = más puntos (escala original)
+    if (difPct <= -20) oportunidadScore = 40      // Oportunidad clara
+    else if (difPct <= -10) oportunidadScore = 30 // Buena oportunidad
+    else if (difPct <= 5) oportunidadScore = 20   // Precio justo
+    else if (difPct <= 15) oportunidadScore = 10  // Ligeramente caro
+    // > 15%: sin puntos (premium/caro)
+  } else {
+    // NEUTRAL (slider=3): Escala balanceada, leve preferencia por oportunidades
+    if (difPct <= -20) oportunidadScore = 35
+    else if (difPct <= -10) oportunidadScore = 30
+    else if (difPct <= 10) oportunidadScore = 25  // Rango amplio "justo"
+    else if (difPct <= 20) oportunidadScore = 15
+    else oportunidadScore = 10                    // Premium todavía suma algo
+  }
+
+  score += oportunidadScore
+  debugScores.oportunidad = oportunidadScore
+  debugScores.difPct = difPct
+  debugScores.modoOportunidad = datosUsuario.calidad_vs_precio <= 2 ? 'CALIDAD' :
+                                 datosUsuario.calidad_vs_precio >= 4 ? 'PRECIO' : 'NEUTRAL'
 
   // 3. TRADE-OFFS (0 a 20)
   const medianaArea = MEDIANA_AREA_POR_DORMS[prop.dormitorios || 1] || 52
@@ -408,19 +436,22 @@ function calcularScoreMOAT(
     }
   }
 
-  // Trade-off: calidad_vs_precio
-  // 1-2 = prioriza calidad: boost si precio/m² alto O muchas amenidades
-  // 4-5 = prioriza precio: boost si precio/m² bajo
-  if (datosUsuario.calidad_vs_precio <= 2) {
-    const totalAmenidades = (prop.amenities_confirmados?.length || 0)
-    if (precioM2 > medianaPrecioM2 || totalAmenidades >= 5) {
-      score += 10
-    }
-  } else if (datosUsuario.calidad_vs_precio >= 4) {
-    if (precioM2 < medianaPrecioM2) {
-      score += 10
-    }
+  // Trade-off: calidad_vs_precio (SOLO AMENIDADES - precio ya está en OPORTUNIDAD)
+  // 1-2 = prioriza calidad: boost si muchas amenidades
+  // 4-5 = prioriza precio: sin boost adicional (ya cubierto en OPORTUNIDAD)
+  let calidadBoost = 0
+  const totalAmenidades = (prop.amenities_confirmados?.length || 0)
+  debugScores.calidad_vs_precio_slider = datosUsuario.calidad_vs_precio
+  debugScores.precioM2 = precioM2
+  debugScores.medianaPrecioM2 = medianaPrecioM2
+  debugScores.totalAmenidades = totalAmenidades
+
+  if (datosUsuario.calidad_vs_precio <= 2 && totalAmenidades >= 5) {
+    // Prioriza calidad: bonus por muchas amenidades
+    calidadBoost = 10
   }
+  score += calidadBoost
+  debugScores.calidadBoost = calidadBoost
 
   // 4. DESEABLES (0 a 15) - max 3 deseables, 5 pts cada uno
   if (datosUsuario.deseables.length > 0) {
@@ -434,7 +465,12 @@ function calcularScoreMOAT(
       }
     }
     score += deseablesScore
+    debugScores.deseables = deseablesScore
   }
+
+  // DEBUG: Log para TOP 5 propiedades
+  debugScores.total = score
+  console.log(`[MOAT] ${prop.proyecto} | Score: ${score} | Desglose:`, debugScores)
 
   return score
 }
