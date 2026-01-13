@@ -1648,18 +1648,24 @@ ${top3Texto}
                               )}
                             </div>
 
-                            {/* Badge síntesis expandido - Opción E */}
+                            {/* Badge síntesis clickeable - Click para expandir */}
                             <div className="mt-2 space-y-1">
-                              {/* Línea 1: Tipo + % + posición edificio */}
+                              {/* Línea 1: Badge clickeable + posición edificio */}
                               <div className="flex items-center flex-wrap gap-1.5">
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${badgeColores[sintesisAlt.tipo]}`}>
+                                <button
+                                  onClick={() => toggleCardExpanded(prop.id)}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border cursor-pointer hover:opacity-80 transition-opacity ${badgeColores[sintesisAlt.tipo]}`}
+                                >
                                   {badgeIconos[sintesisAlt.tipo]} {badgeTextos[sintesisAlt.tipo]}
                                   {posicion?.success && posicion.diferencia_pct != null && (
                                     <span className="opacity-80">
                                       ({posicion.diferencia_pct > 0 ? '+' : ''}{Math.round(posicion.diferencia_pct)}%)
                                     </span>
                                   )}
-                                </span>
+                                  <svg className={`w-3 h-3 ml-0.5 transition-transform ${expandedCards.has(prop.id) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                </button>
                                 {prop.unidades_en_edificio != null && prop.unidades_en_edificio > 1 && prop.posicion_precio_edificio != null && (
                                   <span className="text-xs text-gray-500">
                                     · #{prop.posicion_precio_edificio} de {prop.unidades_en_edificio} en edificio
@@ -1680,6 +1686,62 @@ ${top3Texto}
                                   )}
                                 </p>
                               )}
+
+                              {/* Síntesis fiduciaria expandida - aparece al click en badge */}
+                              {expandedCards.has(prop.id) && (() => {
+                                // Generar síntesis completa con costos
+                                const costosAlt = getCostosOcultosEstimados(prop.dormitorios, null, null)
+                                const costoParqueoAlt = Math.round((costosAlt.estacionamiento.compra.min + costosAlt.estacionamiento.compra.max) / 2)
+                                const costoBauleraAlt = Math.round((costosAlt.baulera.compra.min + costosAlt.baulera.compra.max) / 2)
+                                const costoExtraAlt = costoParqueoAlt + costoBauleraAlt
+
+                                const sintesisCompleta = generarSintesisFiduciaria({
+                                  diferenciaPct: posicion?.success ? posicion.diferencia_pct : null,
+                                  diasEnMercado: prop.dias_en_mercado,
+                                  diasMedianaZona: contextoMercado?.metricas_zona?.dias_mediana ?? null,
+                                  diasPromedioZona: contextoMercado?.metricas_zona?.dias_promedio ?? null,
+                                  escasez: parseEscasezDeRazon(prop.razon_fiduciaria),
+                                  equipamiento: prop.equipamiento_detectado || [],
+                                  estadoConstruccion: prop.estado_construccion || '',
+                                  amenidadesConfirmadas: prop.amenities_confirmados || [],
+                                  amenidadesPorVerificar: prop.amenities_por_verificar || [],
+                                  parqueoTexto: costosAlt.estacionamiento.texto_inclusion || '',
+                                  baulераTexto: costosAlt.baulera.texto_inclusion || '',
+                                  costoExtraPotencial: costoExtraAlt
+                                })
+
+                                const coloresSintesis = {
+                                  oportunidad: 'bg-green-50 border-green-200 text-green-800',
+                                  premium: 'bg-purple-50 border-purple-200 text-purple-800',
+                                  justo: 'bg-blue-50 border-blue-200 text-blue-800',
+                                  sospechoso: 'bg-orange-50 border-orange-200 text-orange-800'
+                                }
+
+                                const iconosSintesis = {
+                                  oportunidad: '🎯',
+                                  premium: '⭐',
+                                  justo: '✓',
+                                  sospechoso: '⚠️'
+                                }
+
+                                return (
+                                  <div className={`mt-2 px-3 py-2 rounded-lg border ${coloresSintesis[sintesisCompleta.tipo]}`}>
+                                    <p className="text-sm font-medium">
+                                      {iconosSintesis[sintesisCompleta.tipo]} {sintesisCompleta.headline}
+                                    </p>
+                                    {sintesisCompleta.detalles && (
+                                      <div className="text-xs mt-1 opacity-80 space-y-0.5">
+                                        {sintesisCompleta.detalles.split('\n').map((linea, i) => (
+                                          <p key={i}>{linea}</p>
+                                        ))}
+                                      </div>
+                                    )}
+                                    <p className="text-xs mt-2 font-medium border-t border-current/20 pt-1">
+                                      → {sintesisCompleta.accion}
+                                    </p>
+                                  </div>
+                                )
+                              })()}
                             </div>
                           </div>
                         </div>
