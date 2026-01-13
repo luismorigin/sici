@@ -336,10 +336,11 @@ export default function ResultadosPage() {
   const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({})
 
   // Estados para edición inline de filtros
-  const [editingFilter, setEditingFilter] = useState<'presupuesto' | 'dormitorios' | 'zonas' | null>(null)
+  const [editingFilter, setEditingFilter] = useState<'presupuesto' | 'dormitorios' | 'zonas' | 'estado_entrega' | null>(null)
   const [tempPresupuesto, setTempPresupuesto] = useState<number>(150000)
   const [tempDormitorios, setTempDormitorios] = useState<number | null>(null)
   const [tempZonas, setTempZonas] = useState<string[]>([])
+  const [tempEstadoEntrega, setTempEstadoEntrega] = useState<string>('no_importa')
 
   // Estado MOAT para impacto con contexto
   interface ImpactoMOAT {
@@ -464,13 +465,15 @@ export default function ResultadosPage() {
   }, [router.isReady, presupuesto, zonas, dormitorios, estado_entrega, innegociables, tiempo_buscando, estado_emocional, mascotas, quienes_viven])
 
   // Iniciar edición de un filtro
-  const startEditing = (filter: 'presupuesto' | 'dormitorios' | 'zonas') => {
+  const startEditing = (filter: 'presupuesto' | 'dormitorios' | 'zonas' | 'estado_entrega') => {
     if (filter === 'presupuesto') {
       setTempPresupuesto(parseInt(presupuesto as string) || 150000)
     } else if (filter === 'dormitorios') {
       setTempDormitorios(dormitorios ? parseInt(dormitorios as string) : null)
     } else if (filter === 'zonas') {
       setTempZonas(zonas ? (zonas as string).split(',').filter(Boolean) : [])
+    } else if (filter === 'estado_entrega') {
+      setTempEstadoEntrega((estado_entrega as string) || 'no_importa')
     }
     setEditingFilter(filter)
     setImpactoMOAT(null)
@@ -498,8 +501,12 @@ export default function ResultadosPage() {
         } else if (zonas && (zonas as string).length > 0) {
           nuevosFiltros.zonas_permitidas = (zonas as string).split(',').filter(Boolean)
         }
-        // Incluir estado_entrega para que coincida con carga principal
-        if (estado_entrega && estado_entrega !== 'no_importa') {
+        // Incluir estado_entrega - usar temporal si estamos editando, sino el actual
+        if (editingFilter === 'estado_entrega') {
+          if (tempEstadoEntrega && tempEstadoEntrega !== 'no_importa') {
+            nuevosFiltros.estado_entrega = tempEstadoEntrega as any
+          }
+        } else if (estado_entrega && estado_entrega !== 'no_importa') {
           nuevosFiltros.estado_entrega = estado_entrega as any
         }
 
@@ -533,6 +540,18 @@ export default function ResultadosPage() {
           if (tempZonas.length === 0) interpretacion = 'Todas las zonas = máximas opciones'
           else if (tempZonas.length === 1) interpretacion = 'Zona específica - stock limitado'
           else interpretacion = `${tempZonas.length} zonas seleccionadas`
+        } else if (editingFilter === 'estado_entrega') {
+          const diff = totalNuevo - propiedades.length
+          if (tempEstadoEntrega === 'no_importa') {
+            interpretacion = 'Todo el mercado - máximas opciones'
+          } else if (tempEstadoEntrega === 'preventa_ok') {
+            if (diff > 10) interpretacion = 'Preventa te abre muchas opciones más'
+            else interpretacion = 'Incluye preventa con precios más bajos'
+          } else {
+            // entrega_inmediata
+            if (totalNuevo < 10) interpretacion = 'Pocas opciones - considerá preventa'
+            else interpretacion = 'Buen stock listo para entregar'
+          }
         }
 
         setImpactoMOAT({
@@ -553,7 +572,7 @@ export default function ResultadosPage() {
     // Debounce de 300ms
     const timer = setTimeout(calcular, 300)
     return () => clearTimeout(timer)
-  }, [editingFilter, tempPresupuesto, tempDormitorios, tempZonas, propiedades.length, presupuesto, zonas, dormitorios, estado_entrega])
+  }, [editingFilter, tempPresupuesto, tempDormitorios, tempZonas, tempEstadoEntrega, propiedades.length, presupuesto, zonas, dormitorios, estado_entrega])
 
   // Aplicar filtros editados
   const aplicarFiltros = () => {
@@ -572,7 +591,12 @@ export default function ResultadosPage() {
 
     // Preservar innegociables y otros params
     if (innegociables) params.set('innegociables', innegociables as string)
-    if (estado_entrega) params.set('estado_entrega', estado_entrega as string)
+
+    // estado_entrega: usar temporal si estamos editando, sino preservar actual
+    const newEstadoEntrega = editingFilter === 'estado_entrega' ? tempEstadoEntrega : (estado_entrega as string)
+    if (newEstadoEntrega && newEstadoEntrega !== 'no_importa') {
+      params.set('estado_entrega', newEstadoEntrega)
+    }
     if (forma_pago) params.set('forma_pago', forma_pago as string)
     if (deseables) params.set('deseables', deseables as string)
     if (quienes_viven) params.set('quienes_viven', quienes_viven as string)
@@ -923,6 +947,94 @@ ${top3Texto}
                 <span>📍</span>
                 <span className="text-gray-700 font-medium">
                   {zonas ? (zonas as string).split(',').filter(Boolean).slice(0, 2).join(', ') + ((zonas as string).split(',').filter(Boolean).length > 2 ? '...' : '') : 'Todas las zonas'}
+                </span>
+                <span className="text-blue-500 text-xs">✎</span>
+              </button>
+            )}
+
+            {/* ESTADO ENTREGA - MOAT */}
+            {editingFilter === 'estado_entrega' ? (
+              <div className="bg-gradient-to-b from-blue-50 to-white border border-blue-200 rounded-xl p-4 w-full">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-gray-800">🏠 Estado de entrega</span>
+                  <button onClick={() => setEditingFilter(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+
+                {/* Opciones */}
+                <div className="space-y-2 mb-4">
+                  {[
+                    { val: 'entrega_inmediata', label: 'Ya lista para entregar', desc: 'Entrega inmediata, nuevo o usado' },
+                    { val: 'preventa_ok', label: 'Incluir preventa', desc: 'También opciones en construcción' },
+                    { val: 'no_importa', label: 'No me importa', desc: 'Todo el mercado' }
+                  ].map(opt => (
+                    <label
+                      key={opt.val}
+                      className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all ${
+                        tempEstadoEntrega === opt.val
+                          ? 'bg-blue-100 border border-blue-300'
+                          : 'bg-white border border-gray-200 hover:border-blue-200'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="estado_entrega"
+                        checked={tempEstadoEntrega === opt.val}
+                        onChange={() => setTempEstadoEntrega(opt.val)}
+                        className="mt-1"
+                      />
+                      <div>
+                        <span className="font-medium text-gray-800">{opt.label}</span>
+                        <p className="text-xs text-gray-500">{opt.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Contexto MOAT */}
+                <div className="bg-white rounded-lg border border-gray-100 p-3 mb-3">
+                  {calculandoImpacto ? (
+                    <div className="flex items-center gap-2 text-gray-500 text-sm">
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      Calculando...
+                    </div>
+                  ) : impactoMOAT ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">
+                          {tempEstadoEntrega === 'entrega_inmediata' ? 'Solo listas' :
+                           tempEstadoEntrega === 'preventa_ok' ? 'Con preventa' : 'Todo'}:
+                        </span>
+                        <span className="text-lg font-bold text-gray-900">{impactoMOAT.totalNuevo} opciones</span>
+                      </div>
+                      <div className={`text-sm font-medium ${impactoMOAT.diferencia > 0 ? 'text-green-600' : impactoMOAT.diferencia < 0 ? 'text-amber-600' : 'text-gray-600'}`}>
+                        → {impactoMOAT.interpretacion}
+                        {impactoMOAT.diferencia !== 0 && (
+                          <span className="ml-1">({impactoMOAT.diferencia > 0 ? '+' : ''}{impactoMOAT.diferencia} vs actual)</span>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Aplicar */}
+                <button
+                  onClick={aplicarFiltros}
+                  disabled={calculandoImpacto}
+                  className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  Aplicar cambio
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => startEditing('estado_entrega')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-blue-50 hover:border-blue-200 border border-transparent rounded-full text-sm transition-all"
+              >
+                <span>🏠</span>
+                <span className="text-gray-700 font-medium">
+                  {estado_entrega === 'entrega_inmediata' ? 'Ya lista' :
+                   estado_entrega === 'preventa_ok' ? 'Incluye preventa' :
+                   'Cualquier estado'}
                 </span>
                 <span className="text-blue-500 text-xs">✎</span>
               </button>
