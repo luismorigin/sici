@@ -93,7 +93,7 @@ sici/
     └── modulo_2/      # Specs matching pipeline
 ```
 
-## Estado Actual (9 Ene 2026)
+## Estado Actual (13 Ene 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
@@ -108,9 +108,11 @@ sici/
 - **Status Pipeline:** Nuevo status `excluido_operacion` para alquiler/anticrético
 - **Limpieza Datos:** Auditoría Sky Properties + corrección GPS (100% matching)
 - **Fuzzy Matching:** pg_trgm + normalize_nombre() + buscar_proyecto_fuzzy() (migración 022)
-- **MVP Simón Backend:** buscar_unidades_reales() v2.1, generar_razon_fiduciaria(), calcular_posicion_mercado() (migraciones 025-028)
-- **Fix Data SANTORINI:** 22 parqueos/bauleras reclasificados (migración 027)
+- **MVP Simón Backend:** buscar_unidades_reales() v2.18, generar_razon_fiduciaria(), calcular_posicion_mercado() (migraciones 025-052)
+- **Fix Data SANTORINI:** 22 parqueos/bauleras reclasificados + GPS corregido + duplicados marcados (migraciones 027, 049-051)
 - **Formulario MVP:** Arquitectura 2 niveles (8 campos quick search + 10 campos fiduciario)
+- **Filtro estado_entrega MOAT:** 3 opciones claras (entrega_inmediata, solo_preventa, no_importa) - migración 052
+- **Deduplicación:** Sistema duplicado_de activo, 36 registros marcados como duplicados
 
 ### ⏳ En Progreso
 - **Supervisor Excluidas:** Workflow n8n Export pendiente mapeo columnas (14 props en Sheet)
@@ -138,7 +140,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-028)
+## Migraciones SQL (001-052)
 
 | # | Archivo | Propósito | Estado |
 |---|---------|-----------|--------|
@@ -169,6 +171,12 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 026 | buscar_unidades_reales_v2 | v2.1: fotos, precio_m2, score, desarrollador, filtro área>=20m² | ✅ |
 | 027 | fix_tipo_propiedad_santorini | Reclasificar 22 parqueos/bauleras SANTORINI VENTURA | ✅ |
 | 028 | calcular_posicion_mercado | Comparar precio vs promedio zona (oportunidad/premium) | ✅ |
+| 033 | fix_solo_con_fotos | Fix jsonb_array_length() en fotos NULL | ✅ |
+| 048 | fix_jsonb_each_null | Fix jsonb_each crash en amenities NULL, excluir Sin zona | ✅ |
+| 049 | deduplicar_santorini | Columna duplicado_de, marcar 28 duplicados SANTORINI | ✅ |
+| 050 | fix_santorini_gps_fotos | Corregir GPS y fotos rotas SANTORINI VENTURA | ✅ |
+| 051 | deduplicar_exactos | Marcar duplicados exactos (Avanti, Spazios, etc.) | ✅ |
+| 052 | fix_estado_entrega_solo_preventa | Filtro MOAT 3 opciones: entrega_inmediata, solo_preventa, no_importa | ✅ |
 
 ## Repo Legacy
 
