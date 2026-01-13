@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import {
   buscarUnidadesReales,
@@ -325,6 +325,120 @@ const ZONAS_DISPONIBLES = [
   { value: 'equipetrol_norte', label: 'Equipetrol Norte' },
 ]
 
+// ============================================================================
+// SCORE MOAT - Ranking inteligente basado en preferencias del usuario
+// Fórmula: INNEGOCIABLES (0-100) + OPORTUNIDAD (0-40) + TRADE_OFFS (0-20) + DESEABLES (0-15)
+// Máximo: 175 puntos
+// ============================================================================
+
+// Medianas por tipología (Enero 2026, actualizar mensualmente)
+const MEDIANA_AREA_POR_DORMS: Record<number, number> = {
+  0: 36, 1: 52, 2: 88, 3: 165, 4: 200, 5: 250
+}
+
+// Medianas precio/m² por zona (Enero 2026, actualizar mensualmente)
+const MEDIANA_PRECIO_M2_POR_ZONA: Record<string, number> = {
+  'Equipetrol Norte/Norte': 2362,
+  'Faremafu': 2299,
+  'Equipetrol': 2055,
+  'Sirari': 2002,
+  'Villa Brigida': 1538,
+  'default': 2000
+}
+
+interface DatosUsuarioMOAT {
+  innegociables: string[]
+  deseables: string[]
+  ubicacion_vs_metros: number // 1-5
+  calidad_vs_precio: number   // 1-5
+}
+
+function calcularScoreMOAT(
+  prop: UnidadReal,
+  datosUsuario: DatosUsuarioMOAT
+): number {
+  let score = 0
+
+  // 1. INNEGOCIABLES (0 o 100)
+  // Si no hay innegociables seleccionados, dar 100 a todos
+  if (datosUsuario.innegociables.length === 0) {
+    score += 100
+  } else {
+    const amenidadesRequeridas = innegociablesToAmenidades(datosUsuario.innegociables)
+    let cumpleTodos = true
+
+    for (const amenidad of amenidadesRequeridas) {
+      const confirmados = prop.amenities_confirmados || []
+      const porVerificar = prop.amenities_por_verificar || []
+
+      if (confirmados.includes(amenidad)) {
+        // OK, confirmado
+      } else if (porVerificar.includes(amenidad)) {
+        // Parcial - penalizar pero no excluir
+        cumpleTodos = false
+      } else {
+        // No tiene el innegociable
+        cumpleTodos = false
+      }
+    }
+    score += cumpleTodos ? 100 : 0
+  }
+
+  // 2. OPORTUNIDAD (0 a 40) - basado en posicion_mercado
+  const posicionMercado = prop.posicion_mercado as { diferencia_pct?: number } | null
+  const difPct = posicionMercado?.diferencia_pct ?? 0
+
+  if (difPct <= -20) score += 40       // Oportunidad clara
+  else if (difPct <= -10) score += 30  // Buena oportunidad
+  else if (difPct <= 5) score += 20    // Precio justo
+  else if (difPct <= 15) score += 10   // Ligeramente caro
+  // > 15%: sin puntos (premium/caro)
+
+  // 3. TRADE-OFFS (0 a 20)
+  const medianaArea = MEDIANA_AREA_POR_DORMS[prop.dormitorios || 1] || 52
+  const medianaPrecioM2 = MEDIANA_PRECIO_M2_POR_ZONA[prop.zona || ''] || MEDIANA_PRECIO_M2_POR_ZONA['default']
+  const precioM2 = prop.precio_m2 || (prop.precio_usd / (prop.area_m2 || 1))
+
+  // Trade-off: ubicacion_vs_metros
+  // 1-2 = prioriza ubicación (sin boost en MVP)
+  // 4-5 = prioriza metros: boost si área > mediana
+  if (datosUsuario.ubicacion_vs_metros >= 4) {
+    if ((prop.area_m2 || 0) > medianaArea) {
+      score += 10
+    }
+  }
+
+  // Trade-off: calidad_vs_precio
+  // 1-2 = prioriza calidad: boost si precio/m² alto O muchas amenidades
+  // 4-5 = prioriza precio: boost si precio/m² bajo
+  if (datosUsuario.calidad_vs_precio <= 2) {
+    const totalAmenidades = (prop.amenities_confirmados?.length || 0)
+    if (precioM2 > medianaPrecioM2 || totalAmenidades >= 5) {
+      score += 10
+    }
+  } else if (datosUsuario.calidad_vs_precio >= 4) {
+    if (precioM2 < medianaPrecioM2) {
+      score += 10
+    }
+  }
+
+  // 4. DESEABLES (0 a 15) - max 3 deseables, 5 pts cada uno
+  if (datosUsuario.deseables.length > 0) {
+    const amenidadesDeseadas = innegociablesToAmenidades(datosUsuario.deseables)
+    let deseablesScore = 0
+    const confirmados = prop.amenities_confirmados || []
+
+    for (const amenidad of amenidadesDeseadas.slice(0, 3)) {
+      if (confirmados.includes(amenidad)) {
+        deseablesScore += 5
+      }
+    }
+    score += deseablesScore
+  }
+
+  return score
+}
+
 
 export default function ResultadosPage() {
   const router = useRouter()
@@ -613,9 +727,42 @@ export default function ResultadosPage() {
     router.push(`/resultados?${params.toString()}`)
   }
 
-  // Separar en TOP 3 y alternativas
-  const top3 = propiedades.slice(0, 3)
-  const alternativas = propiedades.slice(3, 13)
+  // Datos del usuario para MOAT score (de URL params)
+  const datosUsuarioMOAT: DatosUsuarioMOAT = useMemo(() => ({
+    innegociables: innegociables ? (innegociables as string).split(',').filter(Boolean) : [],
+    deseables: deseables ? (deseables as string).split(',').filter(Boolean) : [],
+    ubicacion_vs_metros: parseInt(ubicacion_vs_metros as string) || 3,
+    calidad_vs_precio: parseInt(calidad_vs_precio as string) || 3,
+  }), [innegociables, deseables, ubicacion_vs_metros, calidad_vs_precio])
+
+  // Ordenar propiedades por MOAT score
+  const propiedadesOrdenadas = useMemo(() => {
+    if (propiedades.length === 0) return []
+
+    // Calcular score para cada propiedad
+    const conScore = propiedades.map(p => ({
+      ...p,
+      score_moat: calcularScoreMOAT(p, datosUsuarioMOAT)
+    }))
+
+    // Ordenar por score MOAT descendente
+    // Desempate: mejor oportunidad de precio (diferencia_pct más negativa)
+    conScore.sort((a, b) => {
+      if (b.score_moat !== a.score_moat) {
+        return b.score_moat - a.score_moat
+      }
+      // Desempate por posición de mercado
+      const difA = (a.posicion_mercado as { diferencia_pct?: number } | null)?.diferencia_pct ?? 0
+      const difB = (b.posicion_mercado as { diferencia_pct?: number } | null)?.diferencia_pct ?? 0
+      return difA - difB  // Menor diferencia (más negativa = mejor) primero
+    })
+
+    return conScore
+  }, [propiedades, datosUsuarioMOAT])
+
+  // Separar en TOP 3 y alternativas (ahora ordenados por MOAT score)
+  const top3 = propiedadesOrdenadas.slice(0, 3)
+  const alternativas = propiedadesOrdenadas.slice(3, 13)
 
   // Excluidas del SQL (bloque_2_opciones_excluidas)
   const excluidasFiduciarias = analisisFiduciario?.bloque_2_opciones_excluidas?.opciones || []
