@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 
@@ -45,13 +45,11 @@ const INNEGOCIABLES = [
 ]
 
 const DESEABLES = [
-  { id: 'balcon', label: 'Balcon' },
-  { id: 'vista', label: 'Vista' },
-  { id: 'terraza', label: 'Terraza' },
-  { id: 'lavanderia', label: 'Lavanderia' },
-  { id: 'cowork', label: 'Cowork' },
-  { id: 'sum', label: 'SUM' },
-  { id: 'parrillero', label: 'Parrillero' },
+  { id: 'terraza_balcon', label: 'Terraza/Balcon' },
+  { id: 'sauna_jacuzzi', label: 'Sauna/Jacuzzi' },
+  { id: 'cowork', label: 'Co-working' },
+  { id: 'sum', label: 'Salon eventos' },
+  { id: 'churrasquera', label: 'Churrasquera' },
   { id: 'area_ninos', label: 'Area ninos' },
 ]
 
@@ -86,6 +84,97 @@ export default function FormularioViviendaPage() {
   })
 
   const [submitting, setSubmitting] = useState(false)
+  const [initialized, setInitialized] = useState(false)
+
+  // Restaurar valores nivel 2 desde URL (para "Editar búsqueda")
+  useEffect(() => {
+    if (!router.isReady || initialized) return
+
+    const {
+      innegociables: urlInnegociables,
+      deseables: urlDeseables,
+      quienes_viven: urlQuienesViven,
+      mascotas: urlMascotas,
+      tamano_perro: urlTamanoPerro,
+      tiempo_buscando: urlTiempoBuscando,
+      estado_emocional: urlEstadoEmocional,
+      quien_decide: urlQuienDecide,
+      pareja_alineados: urlParejaAlineados,
+      ubicacion_vs_metros: urlUbicacionVsMetros,
+      calidad_vs_precio: urlCalidadVsPrecio,
+    } = router.query
+
+    const newForm: FormularioVivienda = { ...form }
+    let hasChanges = false
+
+    if (urlQuienesViven && ['solo', 'pareja', 'familia', 'roommates'].includes(urlQuienesViven as string)) {
+      newForm.quienes_viven = urlQuienesViven as FormularioVivienda['quienes_viven']
+      hasChanges = true
+    }
+
+    if (urlMascotas && ['no', 'perro', 'gato', 'otro'].includes(urlMascotas as string)) {
+      newForm.mascotas = urlMascotas as FormularioVivienda['mascotas']
+      hasChanges = true
+    }
+
+    if (urlTamanoPerro && ['chico', 'mediano', 'grande'].includes(urlTamanoPerro as string)) {
+      newForm.tamano_perro = urlTamanoPerro as FormularioVivienda['tamano_perro']
+      hasChanges = true
+    }
+
+    if (urlTiempoBuscando && ['recien_empiezo', '1_6_meses', '6_12_meses', 'mas_1_ano'].includes(urlTiempoBuscando as string)) {
+      newForm.tiempo_buscando = urlTiempoBuscando as FormularioVivienda['tiempo_buscando']
+      hasChanges = true
+    }
+
+    if (urlEstadoEmocional && ['motivado', 'cansado', 'frustrado', 'presionado'].includes(urlEstadoEmocional as string)) {
+      newForm.estado_emocional = urlEstadoEmocional as FormularioVivienda['estado_emocional']
+      hasChanges = true
+    }
+
+    if (urlQuienDecide && ['solo_yo', 'mi_pareja', 'familia_opina'].includes(urlQuienDecide as string)) {
+      newForm.quien_decide = urlQuienDecide as FormularioVivienda['quien_decide']
+      hasChanges = true
+    }
+
+    if (urlParejaAlineados && ['si', 'mas_o_menos', 'no'].includes(urlParejaAlineados as string)) {
+      newForm.pareja_alineados = urlParejaAlineados as FormularioVivienda['pareja_alineados']
+      hasChanges = true
+    }
+
+    if (urlInnegociables && (urlInnegociables as string).length > 0) {
+      newForm.innegociables = (urlInnegociables as string).split(',').filter(Boolean)
+      hasChanges = true
+    }
+
+    if (urlDeseables && (urlDeseables as string).length > 0) {
+      newForm.deseables = (urlDeseables as string).split(',').filter(Boolean)
+      hasChanges = true
+    }
+
+    if (urlUbicacionVsMetros) {
+      const parsed = parseInt(urlUbicacionVsMetros as string)
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 5) {
+        newForm.ubicacion_vs_metros = parsed
+        hasChanges = true
+      }
+    }
+
+    if (urlCalidadVsPrecio) {
+      const parsed = parseInt(urlCalidadVsPrecio as string)
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 5) {
+        newForm.calidad_vs_precio = parsed
+        hasChanges = true
+      }
+    }
+
+    if (hasChanges) {
+      setForm(newForm)
+    }
+
+    setInitialized(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, initialized])
 
   const handleInnegociable = (id: string) => {
     setForm(prev => {
