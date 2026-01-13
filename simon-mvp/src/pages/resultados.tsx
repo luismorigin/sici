@@ -541,16 +541,16 @@ export default function ResultadosPage() {
           else if (tempZonas.length === 1) interpretacion = 'Zona específica - stock limitado'
           else interpretacion = `${tempZonas.length} zonas seleccionadas`
         } else if (editingFilter === 'estado_entrega') {
-          const diff = totalNuevo - propiedades.length
           if (tempEstadoEntrega === 'no_importa') {
             interpretacion = 'Todo el mercado - máximas opciones'
-          } else if (tempEstadoEntrega === 'preventa_ok') {
-            if (diff > 10) interpretacion = 'Preventa te abre muchas opciones más'
-            else interpretacion = 'Incluye preventa con precios más bajos'
+          } else if (tempEstadoEntrega === 'solo_preventa') {
+            if (totalNuevo === 0) interpretacion = 'Sin preventas disponibles ahora'
+            else if (totalNuevo < 10) interpretacion = 'Pocas preventas, pero con mejores precios'
+            else interpretacion = 'Buenas opciones en preventa - precios más bajos'
           } else {
             // entrega_inmediata
-            if (totalNuevo < 10) interpretacion = 'Pocas opciones - considerá preventa'
-            else interpretacion = 'Buen stock listo para entregar'
+            if (totalNuevo < 10) interpretacion = 'Pocas opciones listas - considerá preventa'
+            else interpretacion = 'Buen stock listo para mudarte ya'
           }
         }
 
@@ -963,9 +963,9 @@ ${top3Texto}
                 {/* Opciones */}
                 <div className="space-y-2 mb-4">
                   {[
-                    { val: 'entrega_inmediata', label: 'Ya lista para entregar', desc: 'Entrega inmediata, nuevo o usado' },
-                    { val: 'preventa_ok', label: 'Incluir preventa', desc: 'También opciones en construcción' },
-                    { val: 'no_importa', label: 'No me importa', desc: 'Todo el mercado' }
+                    { val: 'entrega_inmediata', label: 'Ya lista para entregar', desc: 'Puedo mudarme inmediatamente' },
+                    { val: 'solo_preventa', label: 'Solo preventa', desc: 'Precios más bajos, esperar 6-24 meses' },
+                    { val: 'no_importa', label: 'Todo el mercado', desc: 'Ver todas las opciones disponibles' }
                   ].map(opt => (
                     <label
                       key={opt.val}
@@ -1002,7 +1002,7 @@ ${top3Texto}
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-600">
                           {tempEstadoEntrega === 'entrega_inmediata' ? 'Solo listas' :
-                           tempEstadoEntrega === 'preventa_ok' ? 'Con preventa' : 'Todo'}:
+                           tempEstadoEntrega === 'solo_preventa' ? 'Solo preventa' : 'Todo'}:
                         </span>
                         <span className="text-lg font-bold text-gray-900">{impactoMOAT.totalNuevo} opciones</span>
                       </div>
@@ -1033,8 +1033,8 @@ ${top3Texto}
                 <span>🏠</span>
                 <span className="text-gray-700 font-medium">
                   {estado_entrega === 'entrega_inmediata' ? 'Ya lista' :
-                   estado_entrega === 'preventa_ok' ? 'Incluye preventa' :
-                   'Cualquier estado'}
+                   estado_entrega === 'solo_preventa' ? 'Solo preventa' :
+                   'Todo el mercado'}
                 </span>
                 <span className="text-blue-500 text-xs">✎</span>
               </button>

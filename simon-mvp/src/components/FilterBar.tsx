@@ -9,7 +9,7 @@ export interface FiltrosNivel1 {
   presupuesto_max: number
   zonas: string[]
   dormitorios: number | null
-  estado_entrega: 'entrega_inmediata' | 'preventa_ok' | 'no_importa'
+  estado_entrega: 'entrega_inmediata' | 'solo_preventa' | 'no_importa'
   para_que_es: 'vivienda' | 'inversion_renta' | 'inversion_plusvalia'
   forma_pago: 'contado' | 'credito_bancario' | 'financiamiento_directo' | 'no_se'
 }
@@ -35,9 +35,9 @@ const DORMITORIOS = [
 ]
 
 const ESTADO_ENTREGA = [
-  { value: 'entrega_inmediata' as const, label: 'Ya (lista para entrega)' },
-  { value: 'preventa_ok' as const, label: 'Puedo esperar (preventa ok)' },
-  { value: 'no_importa' as const, label: 'No me importa' },
+  { value: 'entrega_inmediata' as const, label: 'Ya lista para entregar', desc: 'Puedo mudarme inmediatamente' },
+  { value: 'solo_preventa' as const, label: 'Solo preventa', desc: 'Precios más bajos, esperar 6-24 meses' },
+  { value: 'no_importa' as const, label: 'Todo el mercado', desc: 'Ver todas las opciones' },
 ]
 
 const PARA_QUE_ES = [
@@ -67,10 +67,69 @@ export default function FilterBar({ onFiltrosChange, className = '' }: FilterBar
   const [count, setCount] = useState<number | null>(null)
   const [countSinFiltros, setCountSinFiltros] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
+  const [initialized, setInitialized] = useState(false)
+
+  // Restaurar filtros desde URL query params (para "Editar búsqueda")
+  useEffect(() => {
+    if (!router.isReady || initialized) return
+
+    const { presupuesto, dormitorios, zonas, estado_entrega, forma_pago } = router.query
+
+    const newFiltros: FiltrosNivel1 = {
+      presupuesto_max: 150000,
+      zonas: [],
+      dormitorios: null,
+      estado_entrega: 'no_importa',
+      para_que_es: 'vivienda',
+      forma_pago: 'no_se',
+    }
+    let hasChanges = false
+
+    if (presupuesto) {
+      const parsed = parseInt(presupuesto as string)
+      if (!isNaN(parsed) && parsed >= 50000 && parsed <= 300000) {
+        newFiltros.presupuesto_max = parsed
+        hasChanges = true
+      }
+    }
+
+    if (dormitorios !== undefined && dormitorios !== '') {
+      const parsed = parseInt(dormitorios as string)
+      if (!isNaN(parsed) && parsed >= 0 && parsed <= 3) {
+        newFiltros.dormitorios = parsed
+        hasChanges = true
+      }
+    }
+
+    if (zonas && (zonas as string).length > 0) {
+      const zonasArray = (zonas as string).split(',').filter(Boolean)
+      if (zonasArray.length > 0) {
+        newFiltros.zonas = zonasArray
+        hasChanges = true
+      }
+    }
+
+    if (estado_entrega && ['entrega_inmediata', 'solo_preventa', 'no_importa'].includes(estado_entrega as string)) {
+      newFiltros.estado_entrega = estado_entrega as FiltrosNivel1['estado_entrega']
+      hasChanges = true
+    }
+
+    if (forma_pago && ['contado', 'credito_bancario', 'financiamiento_directo', 'no_se'].includes(forma_pago as string)) {
+      newFiltros.forma_pago = forma_pago as FiltrosNivel1['forma_pago']
+      hasChanges = true
+    }
+
+    if (hasChanges) {
+      setFiltros(newFiltros)
+    }
+
+    setInitialized(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, initialized])
 
   // Navegar al formulario Nivel 2 según perfil
   const handleContinuar = () => {
-    // Serializar filtros como URL params
+    // Serializar filtros nivel 1 como URL params
     const params = new URLSearchParams({
       presupuesto: filtros.presupuesto_max.toString(),
       zonas: filtros.zonas.join(','),
@@ -78,6 +137,19 @@ export default function FilterBar({ onFiltrosChange, className = '' }: FilterBar
       estado_entrega: filtros.estado_entrega,
       forma_pago: filtros.forma_pago,
       count: count?.toString() || '0',
+    })
+
+    // Pasar params nivel 2 que vengan de la URL (para no perderlos en flujo de edición)
+    const nivel2Params = [
+      'innegociables', 'deseables', 'quienes_viven', 'mascotas', 'tamano_perro',
+      'tiempo_buscando', 'estado_emocional', 'quien_decide', 'pareja_alineados',
+      'ubicacion_vs_metros', 'calidad_vs_precio'
+    ]
+    nivel2Params.forEach(key => {
+      const value = router.query[key]
+      if (value && (value as string).length > 0) {
+        params.set(key, value as string)
+      }
     })
 
     // Elegir ruta según perfil
@@ -350,7 +422,10 @@ export default function FilterBar({ onFiltrosChange, className = '' }: FilterBar
                 onChange={() => handleEstadoEntrega(estado.value)}
                 className="w-4 h-4 text-blue-600"
               />
-              <span className="text-sm">{estado.label}</span>
+              <div>
+                <span className="text-sm font-medium">{estado.label}</span>
+                <p className="text-xs text-gray-500">{estado.desc}</p>
+              </div>
             </label>
           ))}
         </div>

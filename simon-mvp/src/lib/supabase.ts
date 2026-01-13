@@ -72,8 +72,8 @@ export interface FiltrosBusqueda {
   solo_con_telefono?: boolean
   orden?: 'precio_asc' | 'precio_desc'
   limite?: number
-  // v2.2: Filtro estado construcción
-  estado_entrega?: 'entrega_inmediata' | 'preventa_ok' | 'no_importa'
+  // v2.4: Filtro estado entrega (3 opciones MOAT)
+  estado_entrega?: 'entrega_inmediata' | 'solo_preventa' | 'no_importa'
 }
 
 // Mapeo de IDs de microzona del formulario a nombres en BD
@@ -103,7 +103,7 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
 
     if (filtros.precio_max) rpcFiltros.precio_max = filtros.precio_max
     if (filtros.precio_min) rpcFiltros.precio_min = filtros.precio_min
-    if (filtros.dormitorios) rpcFiltros.dormitorios = filtros.dormitorios
+    if (filtros.dormitorios !== undefined) rpcFiltros.dormitorios = filtros.dormitorios
     if (filtros.area_min) rpcFiltros.area_min = filtros.area_min
     if (filtros.zona) rpcFiltros.zona = filtros.zona
     if (filtros.estado_entrega) rpcFiltros.estado_entrega = filtros.estado_entrega
