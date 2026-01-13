@@ -360,7 +360,8 @@ BEGIN
           OR p_filtros->>'estado_entrega' = 'preventa_ok'
         THEN true
         WHEN p_filtros->>'estado_entrega' = 'entrega_inmediata'
-        THEN p.estado_construccion::text IN ('entrega_inmediata', 'nuevo_a_estrenar', 'usado')
+        -- MOAT: Excluir solo preventa, incluir todo lo demás (incluso no_especificado)
+        THEN COALESCE(p.estado_construccion::text, '') != 'preventa'
         ELSE true
       END
     )
@@ -377,8 +378,8 @@ END;
 $func$ LANGUAGE plpgsql STABLE;
 
 COMMENT ON FUNCTION buscar_unidades_reales IS
-'v2.15: FIX - Verificar estado_amenities sea object antes de jsonb_each.
-Excluir propiedades con zona="Sin zona" (fuera del polígono actual).';
+'v2.16: MOAT - Filtro entrega_inmediata ahora excluye solo preventa.
+Incluye no_especificado (probablemente listas). Excluye zona="Sin zona".';
 
 -- Test: Debe funcionar ahora
 SELECT 'Migracion 048 - Test jsonb_each fix:' as status;
