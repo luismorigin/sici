@@ -7,7 +7,6 @@ import {
   FiltrosBusqueda,
   obtenerAnalisisFiduciario,
   AnalisisMercadoFiduciario,
-  AlertaFiduciaria,
   OpcionExcluida
 } from '@/lib/supabase'
 import {
@@ -347,9 +346,6 @@ export default function ResultadosPage() {
   const top3 = propiedades.slice(0, 3)
   const alternativas = propiedades.slice(3, 13)
 
-  // Alertas fiduciarias del SQL (bloque_4_alertas)
-  const alertasFiduciarias = analisisFiduciario?.bloque_4_alertas?.alertas || []
-
   // Excluidas del SQL (bloque_2_opciones_excluidas)
   const excluidasFiduciarias = analisisFiduciario?.bloque_2_opciones_excluidas?.opciones || []
 
@@ -446,20 +442,7 @@ ${top3Texto}
           </p>
         </div>
 
-        {/* Alertas fiduciarias del SQL */}
-        {alertasFiduciarias.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-            <h3 className="font-semibold text-amber-800 mb-2">Simon te recuerda:</h3>
-            <ul className="text-sm text-amber-700 space-y-1">
-              {alertasFiduciarias.map((alerta, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span>{alerta.severidad === 'danger' ? '🚨' : alerta.severidad === 'warning' ? '⚠️' : 'ℹ️'}</span>
-                  <span>{alerta.mensaje}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {/* Alertas fiduciarias removidas - la síntesis por propiedad ya detecta precios sospechosos */}
 
         {loading ? (
           <div className="bg-white rounded-xl shadow p-12 text-center">
@@ -514,10 +497,24 @@ ${top3Texto}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-4 mt-3 text-sm text-gray-600">
-                          <span>{prop.dormitorios} dorms</span>
-                          <span>{prop.area_m2}m²</span>
-                          <span className="capitalize">{prop.estado_construccion?.replace(/_/g, ' ')}</span>
+                        <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mt-3 text-sm text-gray-600">
+                          <span className="font-semibold text-gray-800">Departamento</span>
+                          <span>·</span>
+                          <span>{prop.dormitorios} {prop.dormitorios === 1 ? 'dormitorio' : 'dormitorios'}</span>
+                          <span>·</span>
+                          {prop.banos != null && (
+                            <>
+                              <span>{Math.floor(Number(prop.banos))} {Math.floor(Number(prop.banos)) === 1 ? 'baño' : 'baños'}</span>
+                              <span>·</span>
+                            </>
+                          )}
+                          <span>{prop.area_m2} m²</span>
+                          {prop.estado_construccion && prop.estado_construccion !== 'no_especificado' && (
+                            <>
+                              <span>·</span>
+                              <span className="capitalize">{prop.estado_construccion.replace(/_/g, ' ')}</span>
+                            </>
+                          )}
                         </div>
 
                         {/* SÍNTESIS FIDUCIARIA - Resumen MOAT integrado */}

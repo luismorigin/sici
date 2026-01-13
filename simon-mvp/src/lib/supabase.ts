@@ -13,6 +13,7 @@ export interface UnidadReal {
   zona: string
   microzona: string | null
   dormitorios: number
+  banos: number | null  // v2.11
   precio_usd: number
   precio_m2: number
   area_m2: number
@@ -111,6 +112,7 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       zona: p.zona || 'Sin zona',
       microzona: p.microzona,
       dormitorios: p.dormitorios,
+      banos: p.banos ? parseFloat(p.banos) : null,  // v2.11
       precio_usd: parseFloat(p.precio_usd) || 0,
       precio_m2: parseFloat(p.precio_m2) || 0,
       area_m2: parseFloat(p.area_m2) || 0,
@@ -718,6 +720,9 @@ export interface MetricasZona {
   precio_max: number
   precio_m2_promedio: number
   area_promedio: number
+  // v2: Días en mercado para umbrales dinámicos
+  dias_promedio: number | null
+  dias_mediana: number | null
 }
 
 export interface ContextoMercado {
