@@ -31,6 +31,12 @@ UPDATE propiedades_v2
 SET duplicado_de = 342
 WHERE id = 344;
 
+-- SANTORINI VENTURA $70,402: IDs 118,119 son duplicados de 120
+-- Evidencia: Mismo precio/area/dorms, conservar el de mas fotos (10)
+UPDATE propiedades_v2
+SET duplicado_de = 120
+WHERE id IN (118, 119);
+
 -- Verificar resultado
 SELECT 'Duplicados marcados en migracion 051:' as status;
 
@@ -41,7 +47,7 @@ SELECT
   COUNT(*) as cantidad
 FROM propiedades_v2 p
 JOIN proyectos_master pm ON p.id_proyecto_master = pm.id_proyecto_master
-WHERE p.duplicado_de IN (35, 349, 343, 342)
+WHERE p.duplicado_de IN (35, 349, 343, 342, 120)
 GROUP BY pm.nombre_oficial, p.duplicado_de
 ORDER BY pm.nombre_oficial;
 
