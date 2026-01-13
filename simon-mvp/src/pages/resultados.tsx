@@ -198,7 +198,7 @@ function generarSintesisFiduciaria(datos: DatosSintesis): SintesisFiduciaria {
 
   // Línea 4: Costo extra potencial (siempre mostrar si hay)
   if (costoExtraPotencial && costoExtraPotencial > 0) {
-    lineas.push(`Costo real: hasta +$${costoExtraPotencial.toLocaleString()} si no incluyen parqueo/baulera`)
+    lineas.push(`Costo real: hasta +$${formatNum(costoExtraPotencial)} si no incluyen parqueo/baulera`)
   }
 
   // Línea 5: Estado construcción
@@ -301,6 +301,31 @@ function DescripcionAnunciante({ descripcion }: { descripcion: string }) {
   )
 }
 
+// Helper para formatear números (evita error de hidratación con toLocaleString)
+const formatNum = (num: number | null | undefined): string => {
+  if (num === null || num === undefined || isNaN(num)) return '0'
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+// Helper para formatear dormitorios (0 = Monoambiente)
+const formatDorms = (dorms: number | string | null | undefined, formato: 'largo' | 'corto' = 'corto'): string => {
+  const num = typeof dorms === 'string' ? parseInt(dorms) : dorms
+  if (num === null || num === undefined || isNaN(num)) return 'Todos'
+  if (num === 0) return formato === 'largo' ? 'Monoambiente' : 'Mono'
+  if (formato === 'largo') return num === 1 ? '1 dormitorio' : `${num} dormitorios`
+  return num === 1 ? '1 dorm' : `${num} dorms`
+}
+
+// Microzonas disponibles (mismas que FilterBar)
+const ZONAS_DISPONIBLES = [
+  { value: 'equipetrol', label: 'Equipetrol' },
+  { value: 'sirari', label: 'Sirari' },
+  { value: 'villa_brigida', label: 'Villa Brigida' },
+  { value: 'faremafu', label: 'Faremafu' },
+  { value: 'equipetrol_norte', label: 'Equipetrol Norte' },
+]
+
+
 export default function ResultadosPage() {
   const router = useRouter()
   const [propiedades, setPropiedades] = useState<UnidadReal[]>([])
@@ -309,6 +334,25 @@ export default function ResultadosPage() {
   const [showPremiumModal, setShowPremiumModal] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({})
+
+  // Estados para edición inline de filtros
+  const [editingFilter, setEditingFilter] = useState<'presupuesto' | 'dormitorios' | 'zonas' | null>(null)
+  const [tempPresupuesto, setTempPresupuesto] = useState<number>(150000)
+  const [tempDormitorios, setTempDormitorios] = useState<number | null>(null)
+  const [tempZonas, setTempZonas] = useState<string[]>([])
+
+  // Estado MOAT para impacto con contexto
+  interface ImpactoMOAT {
+    totalActual: number
+    totalNuevo: number
+    diferencia: number
+    porcentajeMercado: number
+    rangoPrecios?: { min: number; max: number }
+    precioPromedio?: number
+    interpretacion: string
+  }
+  const [impactoMOAT, setImpactoMOAT] = useState<ImpactoMOAT | null>(null)
+  const [calculandoImpacto, setCalculandoImpacto] = useState(false)
 
   const getPhotoIndex = (propId: number) => photoIndexes[propId] || 0
 
@@ -340,16 +384,24 @@ export default function ResultadosPage() {
 
   // Parsear filtros de URL
   const {
+    // Nivel 1
     presupuesto,
     zonas,
     dormitorios,
     estado_entrega,
+    forma_pago,
+    // Nivel 2
     innegociables,
-    // Nivel 2 - para contexto
+    deseables,
     quienes_viven,
     mascotas,
+    tamano_perro,
     tiempo_buscando,
     estado_emocional,
+    quien_decide,
+    pareja_alineados,
+    ubicacion_vs_metros,
+    calidad_vs_precio,
   } = router.query
 
   useEffect(() => {
@@ -411,6 +463,132 @@ export default function ResultadosPage() {
     cargar()
   }, [router.isReady, presupuesto, zonas, dormitorios, estado_entrega, innegociables, tiempo_buscando, estado_emocional, mascotas, quienes_viven])
 
+  // Iniciar edición de un filtro
+  const startEditing = (filter: 'presupuesto' | 'dormitorios' | 'zonas') => {
+    if (filter === 'presupuesto') {
+      setTempPresupuesto(parseInt(presupuesto as string) || 150000)
+    } else if (filter === 'dormitorios') {
+      setTempDormitorios(dormitorios ? parseInt(dormitorios as string) : null)
+    } else if (filter === 'zonas') {
+      setTempZonas(zonas ? (zonas as string).split(',').filter(Boolean) : [])
+    }
+    setEditingFilter(filter)
+    setImpactoMOAT(null)
+  }
+
+  // Calcular impacto MOAT automáticamente (con debounce via useEffect)
+  useEffect(() => {
+    if (!editingFilter) return
+
+    const calcular = async () => {
+      setCalculandoImpacto(true)
+      try {
+        // Filtros con valores temporales - DEBEN coincidir con carga principal
+        const nuevosFiltros: FiltrosBusqueda = {
+          precio_max: editingFilter === 'presupuesto' ? tempPresupuesto : (parseInt(presupuesto as string) || 300000),
+          limite: 50, // Mismo límite que carga principal
+        }
+        if (editingFilter === 'dormitorios') {
+          if (tempDormitorios !== null) nuevosFiltros.dormitorios = tempDormitorios
+        } else if (dormitorios) {
+          nuevosFiltros.dormitorios = parseInt(dormitorios as string)
+        }
+        if (editingFilter === 'zonas') {
+          if (tempZonas.length > 0) nuevosFiltros.zonas_permitidas = tempZonas
+        } else if (zonas && (zonas as string).length > 0) {
+          nuevosFiltros.zonas_permitidas = (zonas as string).split(',').filter(Boolean)
+        }
+        // Incluir estado_entrega para que coincida con carga principal
+        if (estado_entrega && estado_entrega !== 'no_importa') {
+          nuevosFiltros.estado_entrega = estado_entrega as any
+        }
+
+        console.log('🔍 Cálculo impacto - filtros:', JSON.stringify(nuevosFiltros))
+        const resultado = await buscarUnidadesReales(nuevosFiltros)
+        console.log('🔍 Cálculo impacto - resultados:', resultado.length)
+        const totalNuevo = resultado.length
+
+        // Calcular métricas
+        const precios = resultado.map(r => r.precio_usd).filter(p => p > 0)
+        const precioMin = precios.length ? Math.min(...precios) : 0
+        const precioMax = precios.length ? Math.max(...precios) : 0
+        const precioPromedio = precios.length ? Math.round(precios.reduce((a, b) => a + b, 0) / precios.length) : 0
+
+        // Stock total de la zona (aproximado - usamos 50 como base)
+        const stockTotal = 50
+        const porcentaje = Math.round((totalNuevo / stockTotal) * 100)
+
+        // Interpretación MOAT
+        let interpretacion = ''
+        if (editingFilter === 'presupuesto') {
+          if (porcentaje >= 60) interpretacion = 'Accedés a la mayoría del mercado'
+          else if (porcentaje >= 30) interpretacion = 'Rango competitivo'
+          else if (porcentaje >= 10) interpretacion = 'Opciones limitadas'
+          else interpretacion = 'Muy pocas opciones'
+        } else if (editingFilter === 'dormitorios') {
+          if (totalNuevo >= 15) interpretacion = 'Buena oferta en esta tipología'
+          else if (totalNuevo >= 5) interpretacion = 'Stock moderado'
+          else interpretacion = 'Pocas opciones - considerá flexibilizar'
+        } else if (editingFilter === 'zonas') {
+          if (tempZonas.length === 0) interpretacion = 'Todas las zonas = máximas opciones'
+          else if (tempZonas.length === 1) interpretacion = 'Zona específica - stock limitado'
+          else interpretacion = `${tempZonas.length} zonas seleccionadas`
+        }
+
+        setImpactoMOAT({
+          totalActual: propiedades.length,
+          totalNuevo,
+          diferencia: totalNuevo - propiedades.length,
+          porcentajeMercado: porcentaje,
+          rangoPrecios: { min: precioMin, max: precioMax },
+          precioPromedio,
+          interpretacion
+        })
+      } catch (e) {
+        setImpactoMOAT(null)
+      }
+      setCalculandoImpacto(false)
+    }
+
+    // Debounce de 300ms
+    const timer = setTimeout(calcular, 300)
+    return () => clearTimeout(timer)
+  }, [editingFilter, tempPresupuesto, tempDormitorios, tempZonas, propiedades.length, presupuesto, zonas, dormitorios, estado_entrega])
+
+  // Aplicar filtros editados
+  const aplicarFiltros = () => {
+    const params = new URLSearchParams()
+
+    // Aplicar valores según qué filtro estamos editando
+    params.set('presupuesto', editingFilter === 'presupuesto'
+      ? tempPresupuesto.toString()
+      : (presupuesto as string || '150000'))
+
+    const newDorms = editingFilter === 'dormitorios' ? tempDormitorios : (dormitorios ? parseInt(dormitorios as string) : null)
+    if (newDorms !== null) params.set('dormitorios', newDorms.toString())
+
+    const newZonas = editingFilter === 'zonas' ? tempZonas : (zonas ? (zonas as string).split(',').filter(Boolean) : [])
+    if (newZonas.length > 0) params.set('zonas', newZonas.join(','))
+
+    // Preservar innegociables y otros params
+    if (innegociables) params.set('innegociables', innegociables as string)
+    if (estado_entrega) params.set('estado_entrega', estado_entrega as string)
+    if (forma_pago) params.set('forma_pago', forma_pago as string)
+    if (deseables) params.set('deseables', deseables as string)
+    if (quienes_viven) params.set('quienes_viven', quienes_viven as string)
+    if (mascotas) params.set('mascotas', mascotas as string)
+    if (tamano_perro) params.set('tamano_perro', tamano_perro as string)
+    if (tiempo_buscando) params.set('tiempo_buscando', tiempo_buscando as string)
+    if (estado_emocional) params.set('estado_emocional', estado_emocional as string)
+    if (quien_decide) params.set('quien_decide', quien_decide as string)
+    if (pareja_alineados) params.set('pareja_alineados', pareja_alineados as string)
+    if (ubicacion_vs_metros) params.set('ubicacion_vs_metros', ubicacion_vs_metros as string)
+    if (calidad_vs_precio) params.set('calidad_vs_precio', calidad_vs_precio as string)
+
+    setEditingFilter(null)
+    router.push(`/resultados?${params.toString()}`)
+  }
+
   // Separar en TOP 3 y alternativas
   const top3 = propiedades.slice(0, 3)
   const alternativas = propiedades.slice(3, 13)
@@ -470,15 +648,15 @@ export default function ResultadosPage() {
       : 'Vivienda'
 
     const top3Texto = top3.map((p, i) =>
-      `${i + 1}. ${p.proyecto} - $${p.precio_usd.toLocaleString()}`
+      `${i + 1}. ${p.proyecto} - $${formatNum(p.precio_usd)}`
     ).join('\n')
 
     const mensaje = `Hola! Usé Simón y encontré opciones que me interesan.
 
 🔍 Mi búsqueda:
-- Presupuesto: hasta $${parseInt(presupuesto as string)?.toLocaleString() || '150,000'}
+- Presupuesto: hasta $${formatNum(parseInt(presupuesto as string)) || '150,000'}
 - Zona: ${zonasTexto}
-- Dormitorios: ${dormitorios || 'Todos'}
+- Dormitorios: ${dormitorios === '0' ? 'Monoambiente' : dormitorios || 'Todos'}
 - Para: ${paraQueTexto}
 
 🏆 TOP 3 que me gustaron:
@@ -511,7 +689,246 @@ ${top3Texto}
           </p>
         </div>
 
-        {/* Alertas fiduciarias removidas - la síntesis por propiedad ya detecta precios sospechosos */}
+        {/* Tu Búsqueda - Edición Inline MOAT */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Tu Búsqueda</h2>
+            <Link
+              href={`/filtros?presupuesto=${presupuesto || 150000}&dormitorios=${dormitorios || ''}&zonas=${zonas || ''}&estado_entrega=${estado_entrega || ''}&forma_pago=${forma_pago || ''}&innegociables=${innegociables || ''}&deseables=${deseables || ''}&quienes_viven=${quienes_viven || ''}&mascotas=${mascotas || ''}&tamano_perro=${tamano_perro || ''}&tiempo_buscando=${tiempo_buscando || ''}&estado_emocional=${estado_emocional || ''}&quien_decide=${quien_decide || ''}&pareja_alineados=${pareja_alineados || ''}&ubicacion_vs_metros=${ubicacion_vs_metros || ''}&calidad_vs_precio=${calidad_vs_precio || ''}`}
+              className="text-xs text-blue-600 hover:underline"
+            >
+              Editar todo
+            </Link>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {/* PRESUPUESTO - MOAT */}
+            {editingFilter === 'presupuesto' ? (
+              <div className="bg-gradient-to-b from-blue-50 to-white border border-blue-200 rounded-xl p-4 w-full">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-gray-800">💰 Presupuesto</span>
+                  <button onClick={() => setEditingFilter(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+
+                {/* Slider + Valor */}
+                <div className="mb-4">
+                  <input
+                    type="range"
+                    min={50000}
+                    max={500000}
+                    step={5000}
+                    value={tempPresupuesto}
+                    onChange={(e) => setTempPresupuesto(parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>$50k</span>
+                    <span className="text-lg font-bold text-blue-700">${formatNum(tempPresupuesto)}</span>
+                    <span>$500k</span>
+                  </div>
+                </div>
+
+                {/* Contexto MOAT */}
+                <div className="bg-white rounded-lg border border-gray-100 p-3 mb-3">
+                  {calculandoImpacto ? (
+                    <div className="flex items-center gap-2 text-gray-500 text-sm">
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      Calculando...
+                    </div>
+                  ) : impactoMOAT ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Con ${formatNum(tempPresupuesto)}:</span>
+                        <span className="text-lg font-bold text-gray-900">{impactoMOAT.totalNuevo} opciones</span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {impactoMOAT.porcentajeMercado}% del mercado · Rango ${formatNum(impactoMOAT.rangoPrecios?.min || 0)} - ${formatNum(impactoMOAT.rangoPrecios?.max || 0)}
+                      </div>
+                      <div className={`text-sm font-medium ${impactoMOAT.diferencia > 0 ? 'text-green-600' : impactoMOAT.diferencia < 0 ? 'text-red-600' : 'text-gray-600'}`}>
+                        → {impactoMOAT.interpretacion}
+                        {impactoMOAT.diferencia !== 0 && (
+                          <span className="ml-1">({impactoMOAT.diferencia > 0 ? '+' : ''}{impactoMOAT.diferencia} vs actual)</span>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Aplicar */}
+                <button
+                  onClick={aplicarFiltros}
+                  disabled={calculandoImpacto}
+                  className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  Aplicar cambio
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => startEditing('presupuesto')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-blue-50 hover:border-blue-200 border border-transparent rounded-full text-sm transition-all"
+              >
+                <span>💰</span>
+                <span className="text-gray-700 font-medium">Hasta ${formatNum(parseInt(presupuesto as string) || 150000)}</span>
+                <span className="text-blue-500 text-xs">✎</span>
+              </button>
+            )}
+
+            {/* DORMITORIOS - MOAT */}
+            {editingFilter === 'dormitorios' ? (
+              <div className="bg-gradient-to-b from-blue-50 to-white border border-blue-200 rounded-xl p-4 w-full">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-gray-800">🛏️ Dormitorios</span>
+                  <button onClick={() => setEditingFilter(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+
+                {/* Botones */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {[{ val: null, label: 'Todos' }, { val: 0, label: 'Mono' }, { val: 1, label: '1' }, { val: 2, label: '2' }, { val: 3, label: '3' }, { val: 4, label: '4+' }].map(opt => (
+                    <button
+                      key={opt.label}
+                      onClick={() => setTempDormitorios(opt.val)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        tempDormitorios === opt.val
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Contexto MOAT */}
+                <div className="bg-white rounded-lg border border-gray-100 p-3 mb-3">
+                  {calculandoImpacto ? (
+                    <div className="flex items-center gap-2 text-gray-500 text-sm">
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      Calculando...
+                    </div>
+                  ) : impactoMOAT ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">
+                          {tempDormitorios === null ? 'Todos los dormitorios' : tempDormitorios === 0 ? 'Monoambientes' : `${tempDormitorios} dormitorio${tempDormitorios > 1 ? 's' : ''}`}:
+                        </span>
+                        <span className="text-lg font-bold text-gray-900">{impactoMOAT.totalNuevo} opciones</span>
+                      </div>
+                      {impactoMOAT.rangoPrecios && impactoMOAT.rangoPrecios.min > 0 && (
+                        <div className="text-xs text-gray-500">
+                          Rango: ${formatNum(impactoMOAT.rangoPrecios.min)} - ${formatNum(impactoMOAT.rangoPrecios.max)} · Prom: ${formatNum(impactoMOAT.precioPromedio || 0)}
+                        </div>
+                      )}
+                      <div className={`text-sm font-medium ${impactoMOAT.diferencia > 0 ? 'text-green-600' : impactoMOAT.diferencia < 0 ? 'text-amber-600' : 'text-gray-600'}`}>
+                        → {impactoMOAT.interpretacion}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Aplicar */}
+                <button
+                  onClick={aplicarFiltros}
+                  disabled={calculandoImpacto}
+                  className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  Aplicar cambio
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => startEditing('dormitorios')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-blue-50 hover:border-blue-200 border border-transparent rounded-full text-sm transition-all"
+              >
+                <span>🛏️</span>
+                <span className="text-gray-700 font-medium">
+                  {formatDorms(dormitorios as string, 'largo')}
+                </span>
+                <span className="text-blue-500 text-xs">✎</span>
+              </button>
+            )}
+
+            {/* ZONAS - MOAT */}
+            {editingFilter === 'zonas' ? (
+              <div className="bg-gradient-to-b from-blue-50 to-white border border-blue-200 rounded-xl p-4 w-full">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-gray-800">📍 Zonas</span>
+                  <button onClick={() => setEditingFilter(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+
+                {/* Botones zonas */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {ZONAS_DISPONIBLES.map(zona => (
+                    <button
+                      key={zona.value}
+                      onClick={() => {
+                        if (tempZonas.includes(zona.value)) {
+                          setTempZonas(tempZonas.filter(z => z !== zona.value))
+                        } else {
+                          setTempZonas([...tempZonas, zona.value])
+                        }
+                      }}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        tempZonas.includes(zona.value)
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                      }`}
+                    >
+                      {zona.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Contexto MOAT */}
+                <div className="bg-white rounded-lg border border-gray-100 p-3 mb-3">
+                  {calculandoImpacto ? (
+                    <div className="flex items-center gap-2 text-gray-500 text-sm">
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      Calculando...
+                    </div>
+                  ) : impactoMOAT ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">
+                          {tempZonas.length === 0 ? 'Todas las zonas' : tempZonas.length === 1 ? tempZonas[0] : `${tempZonas.length} zonas`}:
+                        </span>
+                        <span className="text-lg font-bold text-gray-900">{impactoMOAT.totalNuevo} opciones</span>
+                      </div>
+                      {impactoMOAT.precioPromedio && impactoMOAT.precioPromedio > 0 && (
+                        <div className="text-xs text-gray-500">
+                          Precio promedio: ${formatNum(impactoMOAT.precioPromedio)}
+                        </div>
+                      )}
+                      <div className={`text-sm font-medium ${impactoMOAT.diferencia > 0 ? 'text-green-600' : impactoMOAT.diferencia < 0 ? 'text-amber-600' : 'text-gray-600'}`}>
+                        → {impactoMOAT.interpretacion}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Aplicar */}
+                <button
+                  onClick={aplicarFiltros}
+                  disabled={calculandoImpacto}
+                  className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  Aplicar cambio
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => startEditing('zonas')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-blue-50 hover:border-blue-200 border border-transparent rounded-full text-sm transition-all"
+              >
+                <span>📍</span>
+                <span className="text-gray-700 font-medium">
+                  {zonas ? (zonas as string).split(',').filter(Boolean).slice(0, 2).join(', ') + ((zonas as string).split(',').filter(Boolean).length > 2 ? '...' : '') : 'Todas las zonas'}
+                </span>
+                <span className="text-blue-500 text-xs">✎</span>
+              </button>
+            )}
+          </div>
+        </div>
 
         {loading ? (
           <div className="bg-white rounded-xl shadow p-12 text-center">
@@ -586,7 +1003,7 @@ ${top3Texto}
                           </div>
                           <div className="text-right">
                             <p className="text-xl font-bold text-gray-900">
-                              ${prop.precio_usd.toLocaleString()}
+                              ${formatNum(prop.precio_usd)}
                             </p>
                             <p className="text-sm text-gray-500">
                               ${prop.precio_m2}/m²
@@ -597,7 +1014,7 @@ ${top3Texto}
                         <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mt-3 text-sm text-gray-600">
                           <span className="font-semibold text-gray-800">Departamento</span>
                           <span>·</span>
-                          <span>{prop.dormitorios} {prop.dormitorios === 1 ? 'dormitorio' : 'dormitorios'}</span>
+                          <span>{formatDorms(prop.dormitorios, 'largo')}</span>
                           <span>·</span>
                           {prop.banos != null && (
                             <>
@@ -750,13 +1167,13 @@ ${top3Texto}
                                 <>
                                   <span className="text-gray-700">
                                     {prop.posicion_en_tipologia === 1
-                                      ? `La más barata de ${prop.unidades_misma_tipologia} unidades de ${prop.dormitorios} dorms`
+                                      ? `La más barata de ${prop.unidades_misma_tipologia} unidades ${prop.dormitorios === 0 ? 'mono' : `de ${prop.dormitorios}D`}`
                                       : prop.posicion_en_tipologia === prop.unidades_misma_tipologia
-                                      ? `La más cara de ${prop.unidades_misma_tipologia} unidades de ${prop.dormitorios} dorms`
-                                      : `${prop.posicion_en_tipologia}° de ${prop.unidades_misma_tipologia} unidades de ${prop.dormitorios} dorms`}
+                                      ? `La más cara de ${prop.unidades_misma_tipologia} unidades ${prop.dormitorios === 0 ? 'mono' : `de ${prop.dormitorios}D`}`
+                                      : `${prop.posicion_en_tipologia}° de ${prop.unidades_misma_tipologia} unidades ${prop.dormitorios === 0 ? 'mono' : `de ${prop.dormitorios}D`}`}
                                   </span>
                                   <p className="text-xs text-gray-500">
-                                    Rango {prop.dormitorios}D: ${prop.precio_min_tipologia?.toLocaleString()} - ${prop.precio_max_tipologia?.toLocaleString()}
+                                    Rango {prop.dormitorios === 0 ? 'Mono' : `${prop.dormitorios}D`}: ${formatNum(prop.precio_min_tipologia)} - ${formatNum(prop.precio_max_tipologia)}
                                   </p>
                                   <p className="text-xs text-gray-600">
                                     {prop.posicion_en_tipologia === 1
@@ -774,13 +1191,13 @@ ${top3Texto}
                               ) : (
                                 <>
                                   <span className="text-gray-700">
-                                    Única de {prop.dormitorios} dorms en este edificio
+                                    Única {prop.dormitorios === 0 ? 'mono' : `de ${prop.dormitorios}D`} en este edificio
                                   </span>
                                   <p className="text-xs text-gray-500">
-                                    Rango edificio (todas): ${prop.precio_min_edificio?.toLocaleString()} - ${prop.precio_max_edificio?.toLocaleString()}
+                                    Rango edificio (todas): ${formatNum(prop.precio_min_edificio)} - ${formatNum(prop.precio_max_edificio)}
                                   </p>
                                   <p className="text-xs text-gray-600">
-                                    No hay otras unidades de {prop.dormitorios} dorms para comparar precio
+                                    No hay otras unidades {prop.dormitorios === 0 ? 'mono' : `de ${prop.dormitorios}D`} para comparar precio
                                   </p>
                                 </>
                               )}
@@ -928,7 +1345,7 @@ ${top3Texto}
                                       Expensas: ${costos.expensas.rango_completo.min}-{costos.expensas.rango_completo.max}/mes
                                     </span>
                                     <span className="text-xs text-gray-500 ml-1">
-                                      (+${costos.expensas.impacto_anual_completo.min.toLocaleString()}-{costos.expensas.impacto_anual_completo.max.toLocaleString()}/año)
+                                      (+${formatNum(costos.expensas.impacto_anual_completo.min)}-{formatNum(costos.expensas.impacto_anual_completo.max)}/año)
                                     </span>
                                     <p className="text-xs text-amber-700">
                                       Preguntá qué incluyen y el monto exacto
@@ -940,7 +1357,7 @@ ${top3Texto}
                                   <span className="text-gray-500 w-4">🚗</span>
                                   <div>
                                     <span className="text-gray-700">
-                                      Parqueo: ${costos.estacionamiento.compra.min.toLocaleString()}-{costos.estacionamiento.compra.max.toLocaleString()}
+                                      Parqueo: ${formatNum(costos.estacionamiento.compra.min)}-{formatNum(costos.estacionamiento.compra.max)}
                                     </span>
                                     <span className="text-xs text-gray-500 ml-1">
                                       ({costos.estacionamiento.texto_inclusion})
@@ -955,7 +1372,7 @@ ${top3Texto}
                                   <span className="text-gray-500 w-4">📦</span>
                                   <div>
                                     <span className="text-gray-700">
-                                      Baulera: ${costos.baulera.compra.min.toLocaleString()}-{costos.baulera.compra.max.toLocaleString()}
+                                      Baulera: ${formatNum(costos.baulera.compra.min)}-{formatNum(costos.baulera.compra.max)}
                                     </span>
                                     <span className="text-xs text-gray-500 ml-1">
                                       ({costos.baulera.texto_inclusion})
@@ -969,7 +1386,7 @@ ${top3Texto}
                                 <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-amber-200">
                                   <span className="text-amber-600 w-4">💡</span>
                                   <span className="text-amber-700 text-xs font-medium">
-                                    Costo real puede ser ${(prop.precio_usd + costos.estacionamiento.compra.min + costos.baulera.compra.min).toLocaleString()}-{(prop.precio_usd + costos.estacionamiento.compra.max + costos.baulera.compra.max).toLocaleString()} si no incluyen parqueo ni baulera
+                                    Costo real puede ser ${formatNum(prop.precio_usd + costos.estacionamiento.compra.min + costos.baulera.compra.min)}-{formatNum(prop.precio_usd + costos.estacionamiento.compra.max + costos.baulera.compra.max)} si no incluyen parqueo ni baulera
                                   </span>
                                 </div>
                               </div>
@@ -1093,8 +1510,8 @@ ${top3Texto}
                                 <p className="text-xs text-gray-500">{prop.zona}</p>
                               </div>
                               <div className="text-right flex-shrink-0">
-                                <p className="font-bold text-gray-900">${prop.precio_usd.toLocaleString()}</p>
-                                <p className="text-xs text-gray-500">${prop.precio_m2}/m²</p>
+                                <p className="font-bold text-gray-900">${formatNum(prop.precio_usd)}</p>
+                                <p className="text-xs text-gray-500">${formatNum(prop.precio_m2)}/m²</p>
                               </div>
                             </div>
 
@@ -1102,7 +1519,7 @@ ${top3Texto}
                             <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-2 text-xs text-gray-600">
                               <span className="font-semibold text-gray-700">Departamento</span>
                               <span>·</span>
-                              <span>{prop.dormitorios} {prop.dormitorios === 1 ? 'dorm' : 'dorms'}</span>
+                              <span>{formatDorms(prop.dormitorios)}</span>
                               {prop.banos != null && (
                                 <>
                                   <span>·</span>
