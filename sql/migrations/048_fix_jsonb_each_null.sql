@@ -271,6 +271,7 @@ BEGIN
     AND pm.activo = true
     AND p.status = 'completado'
     AND pm.zona != 'Sin zona'  -- Excluir propiedades fuera del polígono actual
+    AND p.duplicado_de IS NULL  -- Excluir duplicados (ver migración 049)
     AND (
       CASE
         WHEN p_filtros->>'tipo_operacion' IS NOT NULL
@@ -378,8 +379,8 @@ END;
 $func$ LANGUAGE plpgsql STABLE;
 
 COMMENT ON FUNCTION buscar_unidades_reales IS
-'v2.16: MOAT - Filtro entrega_inmediata ahora excluye solo preventa.
-Incluye no_especificado (probablemente listas). Excluye zona="Sin zona".';
+'v2.17: Excluye duplicados (duplicado_de IS NULL).
+MOAT - entrega_inmediata excluye solo preventa. Excluye zona="Sin zona".';
 
 -- Test: Debe funcionar ahora
 SELECT 'Migracion 048 - Test jsonb_each fix:' as status;
