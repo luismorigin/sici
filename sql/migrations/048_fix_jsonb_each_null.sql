@@ -270,6 +270,7 @@ BEGIN
   WHERE p.es_activa = true
     AND pm.activo = true
     AND p.status = 'completado'
+    AND pm.zona != 'Sin zona'  -- Excluir propiedades fuera del polígono actual
     AND (
       CASE
         WHEN p_filtros->>'tipo_operacion' IS NOT NULL
@@ -376,8 +377,8 @@ END;
 $func$ LANGUAGE plpgsql STABLE;
 
 COMMENT ON FUNCTION buscar_unidades_reales IS
-'v2.14: FIX - Verificar que estado_amenities sea object antes de jsonb_each.
-Evita error "cannot call jsonb_each on a non-object" cuando amenities es NULL.';
+'v2.15: FIX - Verificar estado_amenities sea object antes de jsonb_each.
+Excluir propiedades con zona="Sin zona" (fuera del polígono actual).';
 
 -- Test: Debe funcionar ahora
 SELECT 'Migracion 048 - Test jsonb_each fix:' as status;
