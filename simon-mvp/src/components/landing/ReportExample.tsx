@@ -35,9 +35,9 @@ const sampleData = {
     { proyecto: 'SMART STUDIO', precio: 1209, diferencia: -43 }
   ],
   topPropiedades: [
-    { nombre: 'PORTOBELLO 5', precio: 95983, dormitorios: 2, area: 56, matchScore: 90, confianza: 85 },
-    { nombre: 'Dunas', precio: 100000, dormitorios: 2, area: 74, matchScore: 86, confianza: 88 },
-    { nombre: 'SMART STUDIO', precio: 110632, dormitorios: 2, area: 92, matchScore: 82, confianza: 91 }
+    { nombre: 'PORTOBELLO 5', precio: 95983, dormitorios: 2, area: 56, matchScore: 90, confianza: 85, fotoUrl: 'https://cdn.21online.lat/bolivia/cache/awsTest1/rc/dv6NwwtM/uploads/88/propiedades/90003/69023b4c6f96a.jpg' },
+    { nombre: 'EDIFICIO K1', precio: 99421, dormitorios: 2, area: 70, matchScore: 86, confianza: 88, fotoUrl: 'https://cdn.21online.lat/bolivia/cache/awsTest1/rc/WUMj9bay/uploads/23/propiedades/94777/694051783bb9c.jpg' },
+    { nombre: 'Dunas', precio: 100000, dormitorios: 2, area: 74, matchScore: 82, confianza: 91, fotoUrl: 'https://cdn.21online.lat/bolivia/cache/awsTest1/rc/tdYPpGZV/uploads/9/propiedades/88894/68fa4d8f930c1.jpg' }
   ]
 }
 
