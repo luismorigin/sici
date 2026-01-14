@@ -21,6 +21,7 @@ const sampleData = {
   prioridades: ['Seguridad', 'Ubicacion', 'Amenities'],
   sensibilidad: 'alta' as const,
   compatibilidad: 5,  // Solo 5% del mercado cumple filtros estrictos
+  opcionesCumplen: 3, // Cantidad absoluta que cumple filtros
   totalProps: 302,
   distribucion: [
     { label: '<120k', value: 8 },
@@ -203,10 +204,13 @@ export default function ReportExample() {
               />
               <CompatibilidadCard
                 porcentaje={mounted ? displayData.compatibilidad : sampleData.compatibilidad}
+                opcionesCumplen={mounted && analisis
+                  ? analisis.bloque_3_contexto_mercado.stock_cumple_filtros
+                  : sampleData.opcionesCumplen}
+                totalMercado={mounted ? displayData.totalProps : sampleData.totalProps}
                 mensaje={mounted && analisis
                   ? analisis.bloque_3_contexto_mercado.diagnostico
-                  : `Hay ${sampleData.distribucion.find(d => d.highlight)?.value || 0} propiedades en tu "Zona Dorada".`
-                }
+                  : 'Filtros: 2 dorm, <$150k, con fotos'}
               />
               <PrecioComparativoCard
                 title={`Precio m2 vs Media ($${(mounted ? mediaPrecioM2 : 2139).toLocaleString('en-US')})`}
