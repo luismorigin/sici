@@ -370,49 +370,93 @@ export async function obtenerTCBinance(): Promise<TCData | null> {
 // Snapshot 24h para Market Lens
 export interface Snapshot24h {
   nuevos: number
+  retirados: number
+  bajadas_precio: number
   tc_actual: number
   tc_variacion: number
-  precio_real_m2: number
+  precio_m2_promedio: number
+  // MOAT: datos para alertas fiduciarias
+  score_bajo: number
+  props_tc_paralelo: number
+  dias_mediana_equipetrol: number
+  unidades_equipetrol_2d: number
+  total_activas: number
+  proyectos_monitoreados: number
 }
 
 export async function obtenerSnapshot24h(): Promise<Snapshot24h | null> {
   if (!supabase) return null
 
   try {
-    // Propiedades nuevas en últimas 24h
-    const hace24h = new Date()
-    hace24h.setHours(hace24h.getHours() - 24)
+    // 1. Obtener últimos 2 snapshots de auditoría para calcular diferencias
+    const { data: snapshots, error: errSnap } = await supabase
+      .from('auditoria_snapshots')
+      .select('*')
+      .order('fecha', { ascending: false })
+      .limit(2)
 
-    const { data: nuevas, error: errNuevas } = await supabase
-      .from('propiedades_v2')
-      .select('id')
-      .gte('fecha_creacion', hace24h.toISOString())
-
-    // TC actual y anterior
+    // 2. TC actual y anterior
     const { data: tcs, error: errTc } = await supabase
       .from('tc_binance_historial')
       .select('tc_sell, timestamp')
       .order('timestamp', { ascending: false })
       .limit(2)
 
-    if (errNuevas || errTc) {
-      console.warn('Error obteniendo snapshot:', errNuevas?.message, errTc?.message)
+    // 3. Propiedades con TC paralelo
+    const { data: tcParalelo, error: errTcPar } = await supabase
+      .from('propiedades_v2')
+      .select('id')
+      .eq('status', 'completado')
+      .eq('tipo_cambio_detectado', 'paralelo')
+
+    // 4. Días en mercado Equipetrol 2D (desde v_metricas_mercado)
+    const { data: metricasEqui, error: errMetricas } = await supabase
+      .from('v_metricas_mercado')
+      .select('dias_mediana, stock')
+      .eq('zona', 'Equipetrol')
+      .eq('dormitorios', 2)
+      .single()
+
+    // 5. Proyectos monitoreados
+    const { data: proyectos, error: errProy } = await supabase
+      .from('proyectos_master')
+      .select('id')
+      .eq('activo', true)
+
+    if (errSnap || errTc) {
+      console.warn('Error obteniendo snapshot:', errSnap?.message, errTc?.message)
       return null
     }
 
-    const tcActual = tcs?.[0]?.tc_sell ? parseFloat(tcs[0].tc_sell) : 10.95
+    const snapHoy = snapshots?.[0]
+    const snapAyer = snapshots?.[1]
+
+    const tcActual = tcs?.[0]?.tc_sell ? parseFloat(tcs[0].tc_sell) : 9.72
     const tcAnterior = tcs?.[1]?.tc_sell ? parseFloat(tcs[1].tc_sell) : tcActual
     const variacion = tcAnterior > 0 ? ((tcActual - tcAnterior) / tcAnterior) * 100 : 0
 
-    // Precio real ajustado
+    // Calcular retirados = diferencia de inactivas
+    const retirados = snapHoy && snapAyer
+      ? Math.max(0, (snapHoy.props_inactivas || 0) - (snapAyer.props_inactivas || 0))
+      : 0
+
+    // Precio promedio m² desde métricas
     const metricas = await obtenerMetricasMercado()
-    const precioRealM2 = metricas ? Math.round(metricas.precio_promedio_m2 * (6.96 / tcActual)) : 1186
 
     return {
-      nuevos: nuevas?.length || 0,
+      nuevos: snapHoy?.props_creadas_24h || 0,
+      retirados,
+      bajadas_precio: 0, // TODO: calcular desde precios_historial cuando haya data
       tc_actual: tcActual,
-      tc_variacion: Math.round(variacion * 10) / 10,
-      precio_real_m2: precioRealM2
+      tc_variacion: Math.round(variacion * 100) / 100,
+      precio_m2_promedio: metricas?.precio_promedio_m2 || 2022,
+      // MOAT data
+      score_bajo: snapHoy?.score_bajo || 0,
+      props_tc_paralelo: tcParalelo?.length || 0,
+      dias_mediana_equipetrol: metricasEqui?.dias_mediana || 51,
+      unidades_equipetrol_2d: metricasEqui?.stock || 31,
+      total_activas: snapHoy?.props_completadas || 302,
+      proyectos_monitoreados: proyectos?.length || 189
     }
   } catch (err) {
     console.warn('Error en obtenerSnapshot24h:', err)
@@ -899,13 +943,13 @@ export interface MicrozonaData {
 }
 
 export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
-  // Demo data as fallback
+  // Fallback con datos REALES de Enero 2026
   const demoData: MicrozonaData[] = [
-    { zona: 'Equipetrol', total: 76, precio_promedio: 143579, precio_m2: 2129, proyectos: 38, lat: -17.7656, lng: -63.1957, categoria: 'premium' },
-    { zona: 'Sirari', total: 25, precio_promedio: 215828, precio_m2: 2552, proyectos: 13, lat: -17.7630, lng: -63.2014, categoria: 'premium' },
-    { zona: 'Villa Brigida', total: 47, precio_promedio: 102595, precio_m2: 1642, proyectos: 17, lat: -17.7680, lng: -63.1920, categoria: 'value' },
-    { zona: 'Faremafu', total: 19, precio_promedio: 251096, precio_m2: 2023, proyectos: 12, lat: -17.7610, lng: -63.1880, categoria: 'premium' },
-    { zona: 'Equipetrol Norte', total: 20, precio_promedio: 154829, precio_m2: 2363, proyectos: 12, lat: -17.7590, lng: -63.1900, categoria: 'standard' }
+    { zona: 'Equipetrol', total: 93, precio_promedio: 160608, precio_m2: 2125, proyectos: 41, lat: -17.7656, lng: -63.1957, categoria: 'standard' },
+    { zona: 'Sirari', total: 47, precio_promedio: 198457, precio_m2: 1991, proyectos: 13, lat: -17.7630, lng: -63.2014, categoria: 'standard' },
+    { zona: 'Villa Brigida', total: 36, precio_promedio: 94649, precio_m2: 1685, proyectos: 16, lat: -17.7680, lng: -63.1920, categoria: 'value' },
+    { zona: 'Equipetrol Norte', total: 19, precio_promedio: 152984, precio_m2: 2331, proyectos: 11, lat: -17.7590, lng: -63.1900, categoria: 'premium' },
+    { zona: 'Faremafu', total: 16, precio_promedio: 277350, precio_m2: 2122, proyectos: 9, lat: -17.7610, lng: -63.1880, categoria: 'standard' }
   ]
 
   if (!supabase) {

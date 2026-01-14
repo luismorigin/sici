@@ -14,29 +14,29 @@ import {
   type OpcionValida
 } from '@/lib/supabase'
 
-// Sample data for when Supabase isn't configured
+// Sample data con valores REALES de Enero 2026 (fallback si Supabase no disponible)
 const sampleData = {
   perfil: 'Hogar Estrategico de Valor',
-  presupuesto: 90000,
-  prioridades: ['Seguridad', 'Piso Medio/Alto', 'Piscina'],
+  presupuesto: 150000,
+  prioridades: ['Seguridad', 'Ubicacion', 'Amenities'],
   sensibilidad: 'alta' as const,
-  compatibilidad: 78,
-  totalProps: 144,
+  compatibilidad: 5,  // Solo 5% del mercado cumple filtros estrictos
+  totalProps: 302,
   distribucion: [
-    { label: '60k-70k', value: 14 },
-    { label: '70k-80k', value: 22 },
-    { label: '80k-90k', value: 36, highlight: true },
-    { label: '90k+', value: 18 }
+    { label: '<120k', value: 8 },
+    { label: '120k-150k', value: 13, highlight: true },
+    { label: '150k-180k', value: 21 },
+    { label: '180k+', value: 49 }
   ],
   comparaciones: [
-    { proyecto: 'Vienna', precio: 1091, diferencia: -9 },
-    { proyecto: 'Belvedere', precio: 1153, diferencia: -4 },
-    { proyecto: 'Nova Tower', precio: 1160, diferencia: 3 }
+    { proyecto: 'PORTOBELLO 5', precio: 1724, diferencia: -19 },
+    { proyecto: 'Dunas', precio: 1348, diferencia: -37 },
+    { proyecto: 'SMART STUDIO', precio: 1209, diferencia: -43 }
   ],
   topPropiedades: [
-    { nombre: 'Torre Vienna', precio: 89500, dormitorios: 2, area: 82, matchScore: 86, confianza: 91 },
-    { nombre: 'Belvedere', precio: 90000, dormitorios: 2, area: 78, matchScore: 82, confianza: 89 },
-    { nombre: 'Nova Tower', precio: 87000, dormitorios: 2, area: 75, matchScore: 79, confianza: 88 }
+    { nombre: 'PORTOBELLO 5', precio: 95983, dormitorios: 2, area: 56, matchScore: 90, confianza: 85 },
+    { nombre: 'Dunas', precio: 100000, dormitorios: 2, area: 74, matchScore: 86, confianza: 88 },
+    { nombre: 'SMART STUDIO', precio: 110632, dormitorios: 2, area: 92, matchScore: 82, confianza: 91 }
   ]
 }
 
@@ -119,7 +119,7 @@ export default function ReportExample() {
       .map((op, i) => convertirOpcionADisplay(op, i, scores))
   } : sampleData
 
-  const mediaPrecioM2 = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 1200
+  const mediaPrecioM2 = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2139
 
   return (
     <section className="py-24 bg-slate-50 border-t border-slate-200" id="informe">
@@ -209,9 +209,9 @@ export default function ReportExample() {
                 }
               />
               <PrecioComparativoCard
-                title={`Precio m2 vs Media ($${(mounted ? mediaPrecioM2 : 1200).toLocaleString('en-US')})`}
+                title={`Precio m2 vs Media ($${(mounted ? mediaPrecioM2 : 2139).toLocaleString('en-US')})`}
                 comparaciones={mounted ? displayData.comparaciones : sampleData.comparaciones}
-                media={mounted ? mediaPrecioM2 : 1200}
+                media={mounted ? mediaPrecioM2 : 2139}
               />
             </div>
 
