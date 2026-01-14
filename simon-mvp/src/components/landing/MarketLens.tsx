@@ -22,10 +22,12 @@ const demoSnapshot: Snapshot24h = {
 }
 
 const demoMicrozonas: MicrozonaData[] = [
-  { zona: 'Equipetrol', total: 93, precio_promedio: 160608, precio_m2: 2125, proyectos: 41, categoria: 'standard' },
-  { zona: 'Sirari', total: 47, precio_promedio: 198457, precio_m2: 1991, proyectos: 13, categoria: 'standard' },
-  { zona: 'Villa Brigida', total: 36, precio_promedio: 94649, precio_m2: 1685, proyectos: 16, categoria: 'value' },
-  { zona: 'Equipetrol Norte', total: 19, precio_promedio: 152984, precio_m2: 2331, proyectos: 11, categoria: 'premium' }
+  { zona: 'Eq. Centro', total: 98, precio_promedio: 156709, precio_m2: 2098, proyectos: 41, categoria: 'standard' },
+  { zona: 'Villa Brigida', total: 67, precio_promedio: 71838, precio_m2: 1495, proyectos: 16, categoria: 'value' },
+  { zona: 'Sirari', total: 47, precio_promedio: 199536, precio_m2: 2258, proyectos: 13, categoria: 'premium' },
+  { zona: 'Eq. Norte/Norte', total: 19, precio_promedio: 153354, precio_m2: 2340, proyectos: 11, categoria: 'premium' },
+  { zona: 'Faremafu', total: 16, precio_promedio: 277350, precio_m2: 2122, proyectos: 9, categoria: 'premium' },
+  { zona: 'Eq. Norte/Sur', total: 3, precio_promedio: 128006, precio_m2: 2145, proyectos: 3, categoria: 'standard' }
 ]
 
 // Formato boliviano: $150,000 → $150.000
@@ -252,44 +254,72 @@ export default function MarketLens() {
                 </span>
               </div>
             </div>
-            <div className="h-64 bg-lens-card relative p-4">
-              {/* Simple map representation */}
-              <div className="absolute inset-4 border border-lens-border rounded-lg">
-                {/* Microzona dots with labels */}
-                {microzonas.slice(0, 5).map((z, i) => {
-                  const positions = [
-                    { top: '30%', left: '50%' },
-                    { top: '45%', left: '70%' },
-                    { top: '60%', left: '35%' },
-                    { top: '25%', left: '25%' },
-                    { top: '70%', left: '60%' }
-                  ]
-                  return (
+            <div className="h-72 relative">
+              {/* Mapa visual con posiciones geográficas reales */}
+              {microzonas.map((z) => {
+                // Posiciones geográficas reales
+                const posiciones: Record<string, { top: string; left: string }> = {
+                  'Sirari': { top: '12%', left: '12%' },
+                  'Eq. Norte/Norte': { top: '12%', left: '58%' },
+                  'Villa Brigida': { top: '32%', left: '82%' },
+                  'Eq. Norte/Sur': { top: '42%', left: '58%' },
+                  'Eq. Centro': { top: '62%', left: '38%' },
+                  'Faremafu': { top: '82%', left: '18%' },
+                }
+                const pos = posiciones[z.zona]
+                if (!pos) return null
+
+                return (
+                  <div
+                    key={z.zona}
+                    className="absolute transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
+                    style={{ top: pos.top, left: pos.left }}
+                  >
+                    {/* Punto con tamaño proporcional al stock */}
                     <div
-                      key={i}
-                      className="absolute transform -translate-x-1/2 -translate-y-1/2 group"
-                      style={positions[i]}
-                    >
-                      <div className={`w-4 h-4 rounded-full ${
+                      className={`rounded-full flex items-center justify-center transition-transform group-hover:scale-110 ${
                         z.categoria === 'premium' ? 'bg-premium-gold' :
                         z.categoria === 'standard' ? 'bg-brand-primary' :
                         'bg-state-success'
-                      } shadow-lg cursor-pointer transition-transform hover:scale-150`} />
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                        {z.zona}: ${z.precio_m2.toLocaleString('es-BO')}/m²
-                      </div>
+                      }`}
+                      style={{
+                        width: `${Math.max(32, Math.min(56, z.total * 0.5))}px`,
+                        height: `${Math.max(32, Math.min(56, z.total * 0.5))}px`,
+                      }}
+                    >
+                      <span className="text-white text-xs font-bold">{z.total}</span>
                     </div>
-                  )
-                })}
-              </div>
 
-              <div className="absolute bottom-4 left-4 bg-black/50 px-3 py-1 rounded text-xs text-white">
-                Equipetrol y Alrededores
+                    {/* Label */}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 text-center whitespace-nowrap">
+                      <div className="text-white text-xs font-semibold">{z.zona}</div>
+                      <div className="text-slate-400 text-[10px]">${z.precio_m2.toLocaleString('es-BO')}/m²</div>
+                    </div>
+
+                    {/* Tooltip hover */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/90 text-white text-xs px-3 py-2 rounded-lg whitespace-nowrap z-10 pointer-events-none">
+                      <div className="font-bold">{z.zona}</div>
+                      <div>{z.total} unidades · {z.proyectos} proyectos</div>
+                      <div className="text-slate-300">Prom: ${z.precio_promedio.toLocaleString('es-BO')}</div>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {/* Footer */}
+              <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-xs text-slate-500">
+                <span className="flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
+                  </svg>
+                  Santa Cruz, Bolivia
+                </span>
+                <span>{microzonas.reduce((sum, z) => sum + z.total, 0)} propiedades</span>
               </div>
             </div>
           </motion.div>
 
-          {/* Microzonas Stats & CTA */}
+          {/* Insights MOAT */}
           <motion.div
             className="col-span-12 lg:col-span-6 bg-lens-card border border-lens-border rounded-xl p-6"
             initial={{ opacity: 0, y: 20 }}
@@ -298,42 +328,67 @@ export default function MarketLens() {
             transition={{ delay: 0.25 }}
           >
             <div className="text-slate-400 text-sm uppercase tracking-wider mb-4">
-              Precio por Microzona
+              Insights de Mercado
             </div>
 
-            <div className="space-y-3 mb-6">
-              {microzonas.slice(0, 4).map((z, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${
-                      z.categoria === 'premium' ? 'bg-premium-gold' :
-                      z.categoria === 'standard' ? 'bg-brand-primary' :
-                      'bg-state-success'
-                    }`} />
-                    <div>
-                      <span className="font-medium text-white">{z.zona}</span>
-                      <span className="text-xs text-slate-500 ml-2">{z.total} unidades</span>
+            <div className="space-y-3 mb-4">
+              {/* Insight 1: Mejor valor */}
+              <div className="p-3 bg-state-success/10 border border-state-success/20 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <span className="text-state-success text-lg">💰</span>
+                  <div>
+                    <div className="text-white font-semibold text-sm">Villa Brigida: Mejor valor</div>
+                    <div className="text-slate-400 text-xs mt-1">
+                      29% más barato que Eq. Centro. Ideal para primer departamento.
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="font-bold text-white">${z.precio_m2.toLocaleString('es-BO')}/m²</span>
-                    <span className={`text-xs block ${
-                      z.categoria === 'premium' ? 'text-premium-gold' :
-                      z.categoria === 'value' ? 'text-state-success' :
-                      'text-slate-400'
-                    }`}>
-                      {z.categoria === 'premium' ? 'Premium' :
-                       z.categoria === 'value' ? 'Valor' : 'Standard'}
-                    </span>
+                </div>
+              </div>
+
+              {/* Insight 2: Stock limitado */}
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <span className="text-amber-400 text-lg">⚡</span>
+                  <div>
+                    <div className="text-white font-semibold text-sm">Eq. Norte: Stock limitado</div>
+                    <div className="text-slate-400 text-xs mt-1">
+                      Solo 22 unidades en zona premium. Alta demanda, pocas opciones.
+                    </div>
                   </div>
                 </div>
-              ))}
+              </div>
+
+              {/* Insight 3: Mayor oferta */}
+              <div className="p-3 bg-brand-primary/10 border border-brand-primary/20 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <span className="text-brand-primary text-lg">📊</span>
+                  <div>
+                    <div className="text-white font-semibold text-sm">Eq. Centro: Mayor oferta</div>
+                    <div className="text-slate-400 text-xs mt-1">
+                      98 unidades disponibles. Más opciones para comparar y negociar.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Insight 4: Premium */}
+              <div className="p-3 bg-premium-gold/10 border border-premium-gold/20 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <span className="text-premium-gold text-lg">✨</span>
+                  <div>
+                    <div className="text-white font-semibold text-sm">Sirari: Zona premium</div>
+                    <div className="text-slate-400 text-xs mt-1">
+                      $2,258/m² promedio. Proyectos de alto standing y plusvalía.
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center">
-              <p className="text-white font-bold mb-3">¿Querés estos datos cada mañana?</p>
-              <Link href="#cta-form" className="btn btn-lens">
-                Suscribite
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+              <p className="text-white font-bold text-sm mb-2">¿Querés estos insights cada mañana?</p>
+              <Link href="#cta-form" className="btn btn-lens text-sm">
+                Suscribite Gratis
               </Link>
             </div>
           </motion.div>

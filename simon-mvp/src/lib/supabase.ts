@@ -945,11 +945,12 @@ export interface MicrozonaData {
 export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
   // Fallback con datos REALES de Enero 2026
   const demoData: MicrozonaData[] = [
-    { zona: 'Equipetrol', total: 93, precio_promedio: 160608, precio_m2: 2125, proyectos: 41, lat: -17.7656, lng: -63.1957, categoria: 'standard' },
-    { zona: 'Sirari', total: 47, precio_promedio: 198457, precio_m2: 1991, proyectos: 13, lat: -17.7630, lng: -63.2014, categoria: 'standard' },
-    { zona: 'Villa Brigida', total: 36, precio_promedio: 94649, precio_m2: 1685, proyectos: 16, lat: -17.7680, lng: -63.1920, categoria: 'value' },
-    { zona: 'Equipetrol Norte', total: 19, precio_promedio: 152984, precio_m2: 2331, proyectos: 11, lat: -17.7590, lng: -63.1900, categoria: 'premium' },
-    { zona: 'Faremafu', total: 16, precio_promedio: 277350, precio_m2: 2122, proyectos: 9, lat: -17.7610, lng: -63.1880, categoria: 'standard' }
+    { zona: 'Eq. Centro', total: 98, precio_promedio: 156709, precio_m2: 2098, proyectos: 41, categoria: 'standard' },
+    { zona: 'Villa Brigida', total: 67, precio_promedio: 71838, precio_m2: 1495, proyectos: 16, categoria: 'value' },
+    { zona: 'Sirari', total: 47, precio_promedio: 199536, precio_m2: 2258, proyectos: 13, categoria: 'premium' },
+    { zona: 'Eq. Norte/Norte', total: 19, precio_promedio: 153354, precio_m2: 2340, proyectos: 11, categoria: 'premium' },
+    { zona: 'Faremafu', total: 16, precio_promedio: 277350, precio_m2: 2122, proyectos: 9, categoria: 'premium' },
+    { zona: 'Eq. Norte/Sur', total: 3, precio_promedio: 128006, precio_m2: 2145, proyectos: 3, categoria: 'standard' }
   ]
 
   if (!supabase) {
@@ -957,14 +958,15 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
   }
 
   try {
-    // Direct query - no RPC needed
+    // Direct query usando MICROZONA (no zona)
     const { data, error } = await supabase
       .from('propiedades_v2')
-      .select('zona, precio_usd, area_total_m2, id_proyecto_master')
+      .select('microzona, precio_usd, area_total_m2, id_proyecto_master')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gt('precio_usd', 30000)
       .gt('area_total_m2', 20)
+      .not('microzona', 'is', null)
 
     if (error || !data || data.length === 0) {
       console.warn('Error o sin datos en microzonas, usando demo:', error?.message)
@@ -975,17 +977,25 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
     const zonaMap: Record<string, { total: number; precios: number[]; m2: number[]; proyectos: Set<number> }> = {}
 
     data.forEach((p: any) => {
-      const zona = p.zona || 'Equipetrol'
-      if (!zonaMap[zona]) {
-        zonaMap[zona] = { total: 0, precios: [], m2: [], proyectos: new Set() }
+      const zona = p.microzona
+      if (!zona) return // Skip si no tiene microzona
+
+      // Acortar/renombrar nombres
+      let zonaDisplay = zona
+      if (zona === 'Equipetrol') zonaDisplay = 'Eq. Centro'
+      else if (zona === 'Equipetrol Norte/Norte') zonaDisplay = 'Eq. Norte/Norte'
+      else if (zona === 'Equipetrol Norte/Sur') zonaDisplay = 'Eq. Norte/Sur'
+
+      if (!zonaMap[zonaDisplay]) {
+        zonaMap[zonaDisplay] = { total: 0, precios: [], m2: [], proyectos: new Set() }
       }
-      zonaMap[zona].total++
-      if (p.precio_usd) zonaMap[zona].precios.push(p.precio_usd)
+      zonaMap[zonaDisplay].total++
+      if (p.precio_usd) zonaMap[zonaDisplay].precios.push(p.precio_usd)
       if (p.area_total_m2 > 0 && p.precio_usd) {
-        zonaMap[zona].m2.push(p.precio_usd / p.area_total_m2)
+        zonaMap[zonaDisplay].m2.push(p.precio_usd / p.area_total_m2)
       }
       if (p.id_proyecto_master) {
-        zonaMap[zona].proyectos.add(p.id_proyecto_master)
+        zonaMap[zonaDisplay].proyectos.add(p.id_proyecto_master)
       }
     })
 
