@@ -360,30 +360,36 @@ function calcularScoreMOAT(
   let score = 0
   const debugScores: Record<string, number> = {}
 
-  // 1. INNEGOCIABLES (0 o 100)
-  // Si no hay innegociables seleccionados, dar 100 a todos
+  // 1. INNEGOCIABLES (0 a 100) - Score gradual
+  // Confirmado = 100%, Por verificar = 50%, No tiene = 0%
   if (datosUsuario.innegociables.length === 0) {
     score += 100
+    debugScores.innegociables = 100
   } else {
     const amenidadesRequeridas = innegociablesToAmenidades(datosUsuario.innegociables)
-    let cumpleTodos = true
+    const confirmados = prop.amenities_confirmados || []
+    const porVerificar = prop.amenities_por_verificar || []
+
+    let puntosInnegociables = 0
+    const maxPuntosPorInnegociable = 100 / amenidadesRequeridas.length
 
     for (const amenidad of amenidadesRequeridas) {
-      const confirmados = prop.amenities_confirmados || []
-      const porVerificar = prop.amenities_por_verificar || []
-
       if (confirmados.includes(amenidad)) {
-        // OK, confirmado
+        // Confirmado = 100% de los puntos para este innegociable
+        puntosInnegociables += maxPuntosPorInnegociable
+        debugScores[`inneg_${amenidad}`] = maxPuntosPorInnegociable
       } else if (porVerificar.includes(amenidad)) {
-        // Parcial - penalizar pero no excluir
-        cumpleTodos = false
+        // Por verificar = 50% de los puntos (G4: Indeterminado ≠ Cumple, pero tampoco = Falla)
+        puntosInnegociables += maxPuntosPorInnegociable * 0.5
+        debugScores[`inneg_${amenidad}`] = maxPuntosPorInnegociable * 0.5
       } else {
-        // No tiene el innegociable
-        cumpleTodos = false
+        // No tiene = 0 puntos
+        debugScores[`inneg_${amenidad}`] = 0
       }
     }
-    score += cumpleTodos ? 100 : 0
-    debugScores.innegociables = cumpleTodos ? 100 : 0
+
+    score += Math.round(puntosInnegociables)
+    debugScores.innegociables = Math.round(puntosInnegociables)
   }
 
   // 2. OPORTUNIDAD (0 a 40) - basado en posicion_mercado
@@ -419,8 +425,9 @@ function calcularScoreMOAT(
   score += oportunidadScore
   debugScores.oportunidad = oportunidadScore
   debugScores.difPct = difPct
-  debugScores.modoOportunidad = datosUsuario.calidad_vs_precio <= 2 ? 'CALIDAD' :
-                                 datosUsuario.calidad_vs_precio >= 4 ? 'PRECIO' : 'NEUTRAL'
+  // modoOportunidad: 1=CALIDAD, 2=NEUTRAL, 3=PRECIO
+  debugScores.modoOportunidad = datosUsuario.calidad_vs_precio <= 2 ? 1 :
+                                 datosUsuario.calidad_vs_precio >= 4 ? 3 : 2
 
   // 3. TRADE-OFFS (0 a 20)
   const medianaArea = MEDIANA_AREA_POR_DORMS[prop.dormitorios || 1] || 52
