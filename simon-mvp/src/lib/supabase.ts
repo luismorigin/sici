@@ -1059,7 +1059,8 @@ export async function obtenerFotosPorIds(ids: number[]): Promise<Record<number, 
 
     const result: Record<number, string[]> = {}
     for (const row of data || []) {
-      const fotos = row.datos_json?.fotos || []
+      // Fotos están en datos_json.contenido.fotos_urls
+      const fotos = row.datos_json?.contenido?.fotos_urls || []
       result[row.id] = Array.isArray(fotos) ? fotos : []
     }
     return result
