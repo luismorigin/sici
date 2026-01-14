@@ -20,11 +20,11 @@ interface FilterBarProps {
 }
 
 const ZONAS = [
-  { id: 'equipetrol', label: 'Eq. Centro' },
-  { id: 'sirari', label: 'Sirari' },
-  { id: 'equipetrol_norte', label: 'Eq. Norte' },
-  { id: 'villa_brigida', label: 'Villa Brigida' },
-  { id: 'faremafu', label: 'Faremafu' },
+  { id: 'equipetrol', label: 'Equipetrol Centro', precio: '$2,098/m²', desc: 'La más consolidada, mayor oferta mixta.' },
+  { id: 'sirari', label: 'Sirari', precio: '$2,258/m²', desc: 'Premium tranquila, ideal para familias.' },
+  { id: 'equipetrol_norte', label: 'Equipetrol Norte', precio: '$2,340/m²', desc: 'Zona financiera, edificios nuevos de lujo.' },
+  { id: 'villa_brigida', label: 'Villa Brígida', precio: '$1,495/m²', desc: 'Expansión residencial, precio de entrada competitivo.' },
+  { id: 'faremafu', label: 'Equipetrol Oeste (Busch)', precio: '$2,122/m²', desc: 'Perfil universitario, alta rotación de alquileres.' },
 ]
 
 const DORMITORIOS = [
@@ -373,13 +373,13 @@ export default function FilterBar({ onFiltrosChange, className = '' }: FilterBar
           2. ¿Dónde en Equipetrol?
         </label>
         <p className="text-xs text-gray-500 mb-3">
-          Cada zona tiene precio/m² distinto
+          Seleccioná las zonas que te interesan
         </p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-2">
           {ZONAS.map((zona) => (
             <label
               key={zona.id}
-              className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
+              className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                 filtros.zonas.includes(zona.id)
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300'
@@ -389,14 +389,20 @@ export default function FilterBar({ onFiltrosChange, className = '' }: FilterBar
                 type="checkbox"
                 checked={filtros.zonas.includes(zona.id)}
                 onChange={() => handleZona(zona.id)}
-                className="w-4 h-4 text-blue-600 rounded"
+                className="w-4 h-4 text-blue-600 rounded mt-0.5"
               />
-              <span className="text-sm">{zona.label}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-sm text-gray-900">{zona.label}</span>
+                  <span className="text-xs font-semibold text-blue-600 whitespace-nowrap">{zona.precio}</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">{zona.desc}</p>
+              </div>
             </label>
           ))}
         </div>
         {filtros.zonas.length === 0 && (
-          <p className="text-xs text-gray-500 mt-1">Sin filtro = todas las zonas</p>
+          <p className="text-xs text-gray-500 mt-2">Sin filtro = todas las zonas</p>
         )}
       </div>
 
