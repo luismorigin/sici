@@ -41,6 +41,11 @@ export default function MarketLens() {
   const [loading, setLoading] = useState(true)
   const [usingRealData, setUsingRealData] = useState(false)
 
+  // Waitlist modal state
+  const [showWaitlist, setShowWaitlist] = useState(false)
+  const [waitlistEmail, setWaitlistEmail] = useState('')
+  const [waitlistStatus, setWaitlistStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+
   useEffect(() => {
     const fetchData = async () => {
       const [snapshotData, microzonasData] = await Promise.all([
@@ -59,6 +64,27 @@ export default function MarketLens() {
     }
     fetchData()
   }, [])
+
+  // Handler para lista de espera
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!waitlistEmail.trim()) return
+
+    setWaitlistStatus('loading')
+
+    // Por ahora solo guardamos en localStorage (MVP)
+    // TODO: Conectar con Supabase tabla waitlist
+    try {
+      const waitlist = JSON.parse(localStorage.getItem('sici_waitlist') || '[]')
+      if (!waitlist.includes(waitlistEmail)) {
+        waitlist.push(waitlistEmail)
+        localStorage.setItem('sici_waitlist', JSON.stringify(waitlist))
+      }
+      setWaitlistStatus('success')
+    } catch {
+      setWaitlistStatus('error')
+    }
+  }
 
   // Calcular diferencia TC oficial vs paralelo
   const tcOficial = 6.96
@@ -387,9 +413,12 @@ export default function MarketLens() {
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
               <p className="text-white font-bold text-sm mb-2">¿Querés estos insights cada mañana?</p>
-              <Link href="#cta-form" className="btn btn-lens text-sm">
+              <button
+                onClick={() => setShowWaitlist(true)}
+                className="btn btn-lens text-sm"
+              >
                 Suscribite Gratis
-              </Link>
+              </button>
             </div>
           </motion.div>
 
@@ -450,6 +479,88 @@ export default function MarketLens() {
           </motion.div>
         </div>
       </div>
+
+      {/* Modal Lista de Espera */}
+      {showWaitlist && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            className="bg-lens-card border border-lens-border rounded-2xl p-6 max-w-md w-full relative"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setShowWaitlist(false)
+                setWaitlistStatus('idle')
+                setWaitlistEmail('')
+              }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {waitlistStatus === 'success' ? (
+              // Success state
+              <div className="text-center py-4">
+                <div className="w-16 h-16 bg-state-success/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-state-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-white text-xl font-bold mb-2">Te anotamos en la lista</h3>
+                <p className="text-slate-400 text-sm">
+                  Te avisaremos apenas los insights diarios estén disponibles.
+                </p>
+              </div>
+            ) : (
+              // Form state
+              <>
+                <div className="text-center mb-6">
+                  <div className="w-12 h-12 bg-premium-gold/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-6 h-6 text-premium-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                  </div>
+                  <h3 className="text-white text-xl font-bold mb-2">Insights Diarios</h3>
+                  <div className="inline-flex items-center gap-2 bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full text-xs font-medium mb-3">
+                    <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
+                    En desarrollo
+                  </div>
+                  <p className="text-slate-400 text-sm">
+                    Estamos trabajando en enviarte cada mañana un resumen personalizado del mercado.
+                    Dejá tu email para avisarte cuando esté listo.
+                  </p>
+                </div>
+
+                <form onSubmit={handleWaitlistSubmit}>
+                  <input
+                    type="email"
+                    value={waitlistEmail}
+                    onChange={(e) => setWaitlistEmail(e.target.value)}
+                    placeholder="tu@email.com"
+                    required
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-brand-primary mb-3"
+                  />
+                  <button
+                    type="submit"
+                    disabled={waitlistStatus === 'loading'}
+                    className="w-full btn btn-primary py-3 disabled:opacity-50"
+                  >
+                    {waitlistStatus === 'loading' ? 'Guardando...' : 'Unirme a la Lista de Espera'}
+                  </button>
+                </form>
+
+                <p className="text-xs text-slate-500 text-center mt-4">
+                  Sin spam. Solo te avisamos cuando esté listo.
+                </p>
+              </>
+            )}
+          </motion.div>
+        </div>
+      )}
     </section>
   )
 }
