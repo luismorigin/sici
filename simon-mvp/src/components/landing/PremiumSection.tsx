@@ -60,7 +60,7 @@ export default function PremiumSection() {
 
             {/* Subtitle */}
             <p className="text-xl text-slate-300 max-w-2xl mx-auto mb-8">
-              ¿Vas a tomar una decisión de $90,000? No lo hagas a ciegas.
+              ¿Vas a tomar una decisión de $150,000? No lo hagas a ciegas.
               <br />
               <span className="text-slate-400">Obtén seguridad total, detección de riesgos y una proyección clara de valor antes de firmar nada.</span>
             </p>
