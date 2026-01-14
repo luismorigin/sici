@@ -179,12 +179,16 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
             <section className="mb-8">
               <h3 className="text-brand-primary font-bold mb-4">3. TOP 3 OPORTUNIDADES DETECTADAS</h3>
 
-              {topOpciones.slice(0, 1).map((op, i) => (
+              {topOpciones.slice(0, 1).map((op, i) => {
+                const media = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2100
+                const diffReal = Math.round(((op.precio_m2 - media) / media) * 100)
+                const esBajo = diffReal < 0
+                return (
                 <div key={i} className="border border-slate-200 rounded-xl overflow-hidden mb-4">
                   <div className="bg-brand-dark text-white p-4 flex justify-between items-center">
                     <span className="font-bold">1. {op.proyecto.toUpperCase()}</span>
-                    <span className="bg-state-success text-white text-xs px-2 py-1 rounded">
-                      {Math.abs(Math.round(op.posicion_mercado.diferencia_pct))}% Bajo Mercado
+                    <span className={`text-white text-xs px-2 py-1 rounded ${esBajo ? 'bg-state-success' : 'bg-state-warning'}`}>
+                      {Math.abs(diffReal)}% {esBajo ? 'Bajo' : 'Sobre'} Mercado
                     </span>
                   </div>
                   <div className="p-4 grid md:grid-cols-2 gap-6">
@@ -192,8 +196,8 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                       <div className="text-2xl font-extrabold text-brand-dark mb-1">
                         ${op.precio_usd.toLocaleString('en-US')}
                       </div>
-                      <div className="text-state-success font-semibold text-sm mb-3">
-                        {op.posicion_mercado.posicion_texto}
+                      <div className={`font-semibold text-sm mb-3 ${esBajo ? 'text-state-success' : 'text-state-warning'}`}>
+                        {esBajo ? `${Math.abs(diffReal)}% bajo promedio de zona` : `${diffReal}% sobre promedio de zona`}
                       </div>
                       <ul className="text-sm text-slate-600 space-y-1">
                         <li>- {op.area_m2}m2 - {op.dormitorios} Dorms</li>
@@ -212,22 +216,27 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
+
 
               {/* Property 2 & 3 simplified */}
               <div className="grid md:grid-cols-2 gap-4">
-                {topOpciones.slice(1, 3).map((op, i) => (
+                {topOpciones.slice(1, 3).map((op, i) => {
+                  const media = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2100
+                  const diffReal = Math.round(((op.precio_m2 - media) / media) * 100)
+                  const esBajo = diffReal < 0
+                  return (
                   <div key={i} className="border border-slate-200 rounded-xl p-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-brand-dark">{i + 2}. {op.proyecto}</span>
-                      <span className="text-xs bg-slate-100 px-2 py-1 rounded">
-                        {Math.abs(Math.round(op.posicion_mercado.diferencia_pct))}% Bajo
+                      <span className={`text-xs px-2 py-1 rounded ${esBajo ? 'bg-state-success/10 text-state-success' : 'bg-state-warning/10 text-state-warning'}`}>
+                        {Math.abs(diffReal)}% {esBajo ? 'Bajo' : 'Sobre'}
                       </span>
                     </div>
                     <div className="text-xl font-bold text-brand-dark">${op.precio_usd.toLocaleString('en-US')}</div>
                     <p className="text-sm text-slate-500">{op.area_m2}m2 - {op.dormitorios} Dorms - {op.zona}</p>
                   </div>
-                ))}
+                )})}
               </div>
             </section>
 
@@ -287,9 +296,12 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
               </div>
             </section>
 
-            {/* Section 6: Financial Scenario - NOW FUNCTIONAL */}
+            {/* Section 6: Financial Scenario - BETA */}
             <section className="mb-8">
               <h3 className="text-brand-primary font-bold mb-4">6. ESCENARIO FINANCIERO</h3>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-800">
+                <strong>🚧 En desarrollo:</strong> Esta sección estará disponible en una versión futura del informe premium. Los datos mostrados son estimaciones preliminares.
+              </div>
               {escenarios.length > 0 ? (
                 <div className="space-y-4">
                   {escenarios.map((esc, i) => (
