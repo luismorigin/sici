@@ -25,7 +25,7 @@ export default function Hero() {
 
             {/* Subtitle */}
             <p className="text-lg text-slate-500 mb-8 max-w-lg leading-relaxed">
-              Simón cruza 3 portales, compara precio/m² por zona, y te muestra solo lo que vale la pena. Sin publicidad pagada, sin agentes, solo datos.
+              Simón analiza el mercado completo de Equipetrol, compara precio/m² por zona, y te muestra solo lo que vale la pena. Sin publicidad pagada, sin agentes, solo datos.
             </p>
 
             {/* Checks */}
