@@ -229,7 +229,8 @@ export default function ReportExample() {
               )}
             </div>
             <div className="grid md:grid-cols-3 gap-4">
-              {(mounted ? displayData.topPropiedades : sampleData.topPropiedades).map((prop, i) => (
+              {/* Siempre usamos sampleData para las cards porque tiene fotos reales */}
+              {sampleData.topPropiedades.map((prop, i) => (
                 <PropertyCard key={i} {...prop} />
               ))}
             </div>
