@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { obtenerSnapshot24h, obtenerMicrozonas, type Snapshot24h, type MicrozonaData } from '@/lib/supabase'
 import Link from 'next/link'
 
-// Fallback con datos REALES de Enero 2026
+// Fallback con datos REALES de Enero 2026 (verificados en BD)
 const demoSnapshot: Snapshot24h = {
   nuevos: 8,
   retirados: 1,
@@ -14,10 +14,10 @@ const demoSnapshot: Snapshot24h = {
   tc_variacion: 0.52,
   precio_m2_promedio: 2022,
   score_bajo: 18,
-  props_tc_paralelo: 46,
+  props_tc_paralelo: 42,  // Dato real: 42 propiedades con TC paralelo
   dias_mediana_equipetrol: 51,
   unidades_equipetrol_2d: 31,
-  total_activas: 302,
+  total_activas: 370,     // 283 no_especificado + 45 oficial + 42 paralelo
   proyectos_monitoreados: 189
 }
 
