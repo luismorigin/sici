@@ -62,7 +62,7 @@ export default function WhoSection() {
             Si respondiste sí a la mayoría, entonces Simón es tu mejor aliado.
           </p>
           <Link href="#cta-form" className="btn btn-outline">
-            Empezar mi perfil ahora
+            Empezar Ahora
           </Link>
         </motion.div>
       </div>

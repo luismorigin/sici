@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/router'
 import { motion } from 'framer-motion'
 import { guardarLead, type LeadResult } from '@/lib/supabase'
 
 export default function LeadForm() {
+  const router = useRouter()
   const [form, setForm] = useState({
     nombre: '',
     email: '',
@@ -29,10 +31,17 @@ export default function LeadForm() {
           setLeadId(result.leadId)
           console.log('Lead guardado con ID:', result.leadId)
         }
+        // Redirect a búsqueda después de 2 segundos
+        setTimeout(() => {
+          router.push('/filtros')
+        }, 2000)
       } else {
         // Si falla Supabase, igual mostrar éxito para UX (pero logear)
         console.warn('Lead no guardado en BD:', result.error)
         setSubmitted(true)
+        setTimeout(() => {
+          router.push('/filtros')
+        }, 2000)
       }
     } catch (err) {
       console.error('Error en formulario:', err)
@@ -59,7 +68,10 @@ export default function LeadForm() {
             ¡Gracias, {form.nombre.split(' ')[0]}!
           </h3>
           <p className="text-slate-500">
-            Te enviaremos tu informe personalizado a <strong>{form.email}</strong> en las próximas horas.
+            Redirigiendo a tu búsqueda personalizada...
+          </p>
+          <p className="text-xs text-slate-400 mt-2">
+            También te enviaremos resultados a <strong>{form.email}</strong>
           </p>
         </div>
       </motion.div>

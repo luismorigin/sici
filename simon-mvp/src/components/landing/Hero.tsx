@@ -30,15 +30,15 @@ export default function Hero() {
 
             {/* Checks */}
             <div className="flex flex-wrap gap-6 mb-8">
-              <CheckItem text="Ahorra Tiempo" />
-              <CheckItem text="Mejores Ofertas" />
-              <CheckItem text="Datos Verificados" />
+              <CheckItem text="Equipetrol: $2.098/m² promedio" />
+              <CheckItem text="187 proyectos activos" />
+              <CheckItem text="Verificado diariamente" />
             </div>
 
             {/* CTAs */}
             <div className="flex flex-wrap gap-4">
-              <Link href="/filtros" className="btn btn-primary px-8 py-4 text-base">
-                Empezar Ahora
+              <Link href="#cta-form" className="btn btn-primary px-8 py-4 text-base">
+                Ver Resultados Gratis
               </Link>
               <Link href="#como-funciona" className="btn btn-secondary px-6 py-4">
                 Saber Más

@@ -4,29 +4,29 @@ const problems = [
   {
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
       </svg>
     ),
-    title: 'Búsqueda Interminable',
-    description: 'Deja de perder horas navegando por innumerables anuncios obsoletos e irrelevantes.'
+    title: '189 proyectos, 3 portales, precios distintos',
+    description: 'El mismo depto aparece en varios portales con precios diferentes. Simón cruza todo y te muestra el precio real verificado.'
   },
   {
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
       </svg>
     ),
-    title: 'Exceso de Información',
-    description: 'Eliminamos el ruido para ofrecerte solo las mejores opciones verificadas.'
+    title: '$150k... ¿es caro o barato?',
+    description: 'Sin saber el precio/m² de la zona, no podés comparar. Simón te muestra $2.125/m² en Equipetrol vs $1.685/m² en Villa Brígida.'
   },
   {
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
       </svg>
     ),
-    title: 'Costos Ocultos',
-    description: 'No más sorpresas. Te ayudamos a encontrar lugares con precios transparentes.'
+    title: '6 microzonas, personalidades distintas',
+    description: 'Equipetrol Norte no es lo mismo que Sirari. Simón mapea cada microzona y te dice cuál encaja con lo que buscás.'
   }
 ]
 
@@ -43,10 +43,10 @@ export default function ProblemSection() {
           transition={{ duration: 0.6 }}
         >
           <span className="text-brand-primary text-sm font-bold uppercase tracking-wider">
-            El método antiguo no funciona
+            Buscar en Equipetrol es confuso
           </span>
           <h2 className="font-display text-3xl md:text-4xl font-extrabold text-white mt-2">
-            La Búsqueda de Departamento es un Lío.
+            Simón lo simplifica con datos reales.
           </h2>
         </motion.div>
 

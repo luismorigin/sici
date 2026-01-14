@@ -39,11 +39,14 @@ export default function LandingPage() {
         {/* 3 Steps */}
         <StepsSection />
 
-        {/* Who is it for */}
-        <WhoSection />
-
         {/* Why Equipetrol only */}
         <WhyEquipetrol />
+
+        {/* Market Lens - Real-time data (MOAT temprano) */}
+        <MarketLens />
+
+        {/* Who is it for - antes del form para auto-identificación */}
+        <WhoSection />
 
         {/* Report Example with Lead Form embedded */}
         <ReportExample />
@@ -57,9 +60,6 @@ export default function LandingPage() {
 
         {/* Premium Section */}
         <PremiumSection />
-
-        {/* Market Lens - Real-time data */}
-        <MarketLens />
 
         {/* Final CTA */}
         <CTAFinal />

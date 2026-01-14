@@ -77,7 +77,7 @@ export default function StepsSection() {
             transition={{ delay: 0.5 }}
           >
             <Link href="#cta-form" className="btn btn-primary px-10 py-4 text-base">
-              PROBAR SIMÓN GRATIS
+              Empezar Búsqueda
             </Link>
           </motion.div>
         </div>
