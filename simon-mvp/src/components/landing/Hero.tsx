@@ -15,17 +15,17 @@ export default function Hero() {
           >
             {/* Badge */}
             <span className="badge badge-primary mb-6">
-              Inteligencia Artificial
+              Solo Equipetrol
             </span>
 
             {/* Title */}
             <h1 className="font-display text-4xl md:text-5xl font-extrabold text-brand-dark leading-tight mb-6">
-              Encuentra tu departamento perfecto en Equipetrol, inteligentemente.
+              Tu departamento en Equipetrol, con datos que nadie más te muestra.
             </h1>
 
             {/* Subtitle */}
             <p className="text-lg text-slate-500 mb-8 max-w-lg leading-relaxed">
-              Simón filtra todo el mercado para encontrar tu pareja ideal. Dinos qué buscas y nuestra IA te entregará una lista curada de los mejores departamentos.
+              Simón cruza 3 portales, compara precio/m² por zona, y te muestra solo lo que vale la pena. Sin publicidad pagada, sin agentes, solo datos.
             </p>
 
             {/* Checks */}
