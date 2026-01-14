@@ -156,12 +156,15 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                 />
                 <PrecioComparativoCard
                   title="Precio Real vs Media"
-                  comparaciones={topOpciones.slice(0, 3).map(op => ({
-                    proyecto: op.proyecto,
-                    precio: op.precio_m2,
-                    diferencia: Math.round(op.posicion_mercado.diferencia_pct)
-                  }))}
-                  media={analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 1200}
+                  comparaciones={(() => {
+                    const media = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2100
+                    return topOpciones.slice(0, 3).map(op => ({
+                      proyecto: op.proyecto,
+                      precio: op.precio_m2,
+                      diferencia: Math.round(((op.precio_m2 - media) / media) * 100)
+                    }))
+                  })()}
+                  media={analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2100}
                 />
               </div>
 
