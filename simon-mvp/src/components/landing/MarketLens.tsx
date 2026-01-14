@@ -264,7 +264,7 @@ export default function MarketLens() {
                   'Villa Brigida': { top: '32%', left: '82%' },
                   'Eq. Norte/Sur': { top: '42%', left: '58%' },
                   'Eq. Centro': { top: '62%', left: '38%' },
-                  'Faremafu': { top: '82%', left: '18%' },
+                  'Faremafu': { top: '78%', left: '18%' },
                 }
                 const pos = posiciones[z.zona]
                 if (!pos) return null
