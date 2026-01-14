@@ -748,6 +748,7 @@ export interface OpcionValida {
   ranking: number
   total_opciones: number
   fotos: number
+  fotos_urls?: string[]  // Enriquecido desde cliente
   amenities: string[]
   asesor_wsp: string | null
   posicion_mercado: PosicionMercado
@@ -1036,6 +1037,36 @@ function categorizarZona(precioM2: number): 'premium' | 'standard' | 'value' {
   if (precioM2 >= 2200) return 'premium'
   if (precioM2 >= 1800) return 'standard'
   return 'value'
+}
+
+// ========== FOTOS POR ID ==========
+
+export async function obtenerFotosPorIds(ids: number[]): Promise<Record<number, string[]>> {
+  if (!supabase || ids.length === 0) {
+    return {}
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('propiedades_v2')
+      .select('id, datos_json')
+      .in('id', ids)
+
+    if (error) {
+      console.error('Error obteniendo fotos:', error)
+      return {}
+    }
+
+    const result: Record<number, string[]> = {}
+    for (const row of data || []) {
+      const fotos = row.datos_json?.fotos || []
+      result[row.id] = Array.isArray(fotos) ? fotos : []
+    }
+    return result
+  } catch (err) {
+    console.error('Error obteniendo fotos por IDs:', err)
+    return {}
+  }
 }
 
 // ========== ESCENARIO FINANCIERO ==========

@@ -7,6 +7,7 @@ import {
   obtenerAnalisisFiduciario,
   obtenerMicrozonas,
   calcularEscenarioFinanciero,
+  obtenerFotosPorIds,
   type AnalisisMercadoFiduciario,
   type MicrozonaData,
   type EscenarioFinanciero
@@ -35,6 +36,19 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
       ])
 
       if (analisisData) {
+        // Obtener fotos para TOP 4 opciones
+        const topIds = analisisData.bloque_1_opciones_validas.opciones
+          .slice(0, 4)
+          .map(op => op.id)
+        const fotosMap = await obtenerFotosPorIds(topIds)
+
+        // Enriquecer opciones con fotos
+        const opcionesConFotos = analisisData.bloque_1_opciones_validas.opciones.map(op => ({
+          ...op,
+          fotos_urls: fotosMap[op.id] || []
+        }))
+        analisisData.bloque_1_opciones_validas.opciones = opcionesConFotos
+
         setAnalisis(analisisData)
         // Calcular escenarios financieros para top 3
         const escenariosCalc = analisisData.bloque_1_opciones_validas.opciones
@@ -183,6 +197,7 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                 const media = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2100
                 const diffReal = Math.round(((op.precio_m2 - media) / media) * 100)
                 const esBajo = diffReal < 0
+                const fotos = op.fotos_urls || []
                 return (
                 <div key={i} className="border border-slate-200 rounded-xl overflow-hidden mb-4">
                   <div className="bg-brand-dark text-white p-4 flex justify-between items-center">
@@ -191,6 +206,26 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                       {Math.abs(diffReal)}% {esBajo ? 'Bajo' : 'Sobre'} Mercado
                     </span>
                   </div>
+
+                  {/* Galería de fotos */}
+                  {fotos.length > 0 && (
+                    <div className="flex gap-1 overflow-x-auto bg-slate-100 p-2">
+                      {fotos.slice(0, 4).map((foto, idx) => (
+                        <img
+                          key={idx}
+                          src={foto}
+                          alt={`${op.proyecto} foto ${idx + 1}`}
+                          className="h-24 w-32 object-cover rounded flex-shrink-0"
+                        />
+                      ))}
+                      {fotos.length > 4 && (
+                        <div className="h-24 w-32 bg-slate-200 rounded flex-shrink-0 flex items-center justify-center text-slate-500 text-sm">
+                          +{fotos.length - 4} fotos
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="p-4 grid md:grid-cols-2 gap-6">
                     <div>
                       <div className="text-2xl font-extrabold text-brand-dark mb-1">
@@ -225,16 +260,27 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                   const media = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2100
                   const diffReal = Math.round(((op.precio_m2 - media) / media) * 100)
                   const esBajo = diffReal < 0
+                  const fotos = op.fotos_urls || []
                   return (
-                  <div key={i} className="border border-slate-200 rounded-xl p-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-bold text-brand-dark">{i + 2}. {op.proyecto}</span>
-                      <span className={`text-xs px-2 py-1 rounded ${esBajo ? 'bg-state-success/10 text-state-success' : 'bg-state-warning/10 text-state-warning'}`}>
-                        {Math.abs(diffReal)}% {esBajo ? 'Bajo' : 'Sobre'}
-                      </span>
+                  <div key={i} className="border border-slate-200 rounded-xl overflow-hidden">
+                    {/* Thumbnail foto */}
+                    {fotos.length > 0 && (
+                      <img
+                        src={fotos[0]}
+                        alt={op.proyecto}
+                        className="w-full h-32 object-cover"
+                      />
+                    )}
+                    <div className="p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-bold text-brand-dark">{i + 2}. {op.proyecto}</span>
+                        <span className={`text-xs px-2 py-1 rounded ${esBajo ? 'bg-state-success/10 text-state-success' : 'bg-state-warning/10 text-state-warning'}`}>
+                          {Math.abs(diffReal)}% {esBajo ? 'Bajo' : 'Sobre'}
+                        </span>
+                      </div>
+                      <div className="text-xl font-bold text-brand-dark">${op.precio_usd.toLocaleString('en-US')}</div>
+                      <p className="text-sm text-slate-500">{op.area_m2}m2 - {op.dormitorios} Dorms - {op.zona}</p>
                     </div>
-                    <div className="text-xl font-bold text-brand-dark">${op.precio_usd.toLocaleString('en-US')}</div>
-                    <p className="text-sm text-slate-500">{op.area_m2}m2 - {op.dormitorios} Dorms - {op.zona}</p>
                   </div>
                 )})}
               </div>
