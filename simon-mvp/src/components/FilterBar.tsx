@@ -22,8 +22,7 @@ interface FilterBarProps {
 const ZONAS = [
   { id: 'equipetrol', label: 'Eq. Centro' },
   { id: 'sirari', label: 'Sirari' },
-  { id: 'equipetrol_norte_norte', label: 'Eq. Norte/Norte' },
-  { id: 'equipetrol_norte_sur', label: 'Eq. Norte/Sur' },
+  { id: 'equipetrol_norte', label: 'Eq. Norte' },
   { id: 'villa_brigida', label: 'Villa Brigida' },
   { id: 'faremafu', label: 'Faremafu' },
 ]

@@ -77,12 +77,13 @@ export interface FiltrosBusqueda {
 }
 
 // Mapeo de IDs de microzona del formulario a nombres en BD
-const microzonaToZona: Record<string, string> = {
+// Algunos IDs expanden a múltiples zonas (ej: equipetrol_norte → ambas subzonas)
+const microzonaToZona: Record<string, string | string[]> = {
   'equipetrol': 'Equipetrol',
   'sirari': 'Sirari',
   'villa_brigida': 'Villa Brigida',
   'faremafu': 'Faremafu',
-  'equipetrol_norte': 'Equipetrol Norte/Norte',  // Agrupa ambas sub-zonas
+  'equipetrol_norte': ['Equipetrol Norte/Norte', 'Equipetrol Norte/Sur'],  // Agrupa ambas sub-zonas
   'equipetrol_norte_norte': 'Equipetrol Norte/Norte',
   'equipetrol_norte_sur': 'Equipetrol Norte/Sur',
   'flexible': '' // vacío = no filtra
@@ -167,20 +168,24 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
     if (filtros.zonas_permitidas && filtros.zonas_permitidas.length > 0) {
       // Convertir IDs del formulario a nombres de BD usando el mapeo
       // También acepta nombres directos (por compatibilidad)
-      const nombresValidos = Object.values(microzonaToZona).filter(Boolean)
-      const zonasNombres = filtros.zonas_permitidas
-        .map(z => {
-          // Si es un ID conocido, convertir a nombre
-          if (microzonaToZona[z] !== undefined) {
-            return microzonaToZona[z]
+      // Nota: algunos IDs expanden a múltiples zonas (ej: equipetrol_norte → array)
+      const nombresValidos = Object.values(microzonaToZona).flat().filter(Boolean)
+      const zonasNombres: string[] = []
+
+      for (const z of filtros.zonas_permitidas) {
+        // Si es un ID conocido, convertir a nombre(s)
+        if (microzonaToZona[z] !== undefined) {
+          const valor = microzonaToZona[z]
+          if (Array.isArray(valor)) {
+            zonasNombres.push(...valor)
+          } else if (valor) {
+            zonasNombres.push(valor)
           }
+        } else if (nombresValidos.some(n => typeof n === 'string' && n.toLowerCase() === z.toLowerCase())) {
           // Si ya es un nombre válido, usarlo directamente
-          if (nombresValidos.some(n => n.toLowerCase() === z.toLowerCase())) {
-            return z
-          }
-          return '' // Desconocido, ignorar
-        })
-        .filter(Boolean) // Eliminar vacíos
+          zonasNombres.push(z)
+        }
+      }
 
       // Si no hay zonas específicas (solo 'flexible'), no filtrar
       if (zonasNombres.length === 0) {
