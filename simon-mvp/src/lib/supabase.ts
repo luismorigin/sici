@@ -954,7 +954,7 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
     { zona: 'Villa Brigida', total: 67, precio_promedio: 71838, precio_m2: 1495, proyectos: 16, categoria: 'value' },
     { zona: 'Sirari', total: 47, precio_promedio: 199536, precio_m2: 2258, proyectos: 13, categoria: 'premium' },
     { zona: 'Eq. Norte/Norte', total: 19, precio_promedio: 153354, precio_m2: 2340, proyectos: 11, categoria: 'premium' },
-    { zona: 'Faremafu', total: 16, precio_promedio: 277350, precio_m2: 2122, proyectos: 9, categoria: 'premium' },
+    { zona: 'Eq. Oeste (Busch)', total: 16, precio_promedio: 277350, precio_m2: 2122, proyectos: 9, categoria: 'premium' },
     { zona: 'Eq. Norte/Sur', total: 3, precio_promedio: 128006, precio_m2: 2145, proyectos: 3, categoria: 'standard' }
   ]
 
@@ -990,6 +990,7 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
       if (zona === 'Equipetrol') zonaDisplay = 'Eq. Centro'
       else if (zona === 'Equipetrol Norte/Norte') zonaDisplay = 'Eq. Norte/Norte'
       else if (zona === 'Equipetrol Norte/Sur') zonaDisplay = 'Eq. Norte/Sur'
+      else if (zona === 'Faremafu') zonaDisplay = 'Eq. Oeste (Busch)'
 
       if (!zonaMap[zonaDisplay]) {
         zonaMap[zonaDisplay] = { total: 0, precios: [], m2: [], proyectos: new Set() }

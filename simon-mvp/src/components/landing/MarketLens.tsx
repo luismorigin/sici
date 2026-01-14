@@ -26,7 +26,7 @@ const demoMicrozonas: MicrozonaData[] = [
   { zona: 'Villa Brigida', total: 67, precio_promedio: 71838, precio_m2: 1495, proyectos: 16, categoria: 'value' },
   { zona: 'Sirari', total: 47, precio_promedio: 199536, precio_m2: 2258, proyectos: 13, categoria: 'premium' },
   { zona: 'Eq. Norte/Norte', total: 19, precio_promedio: 153354, precio_m2: 2340, proyectos: 11, categoria: 'premium' },
-  { zona: 'Faremafu', total: 16, precio_promedio: 277350, precio_m2: 2122, proyectos: 9, categoria: 'premium' },
+  { zona: 'Eq. Oeste (Busch)', total: 16, precio_promedio: 277350, precio_m2: 2122, proyectos: 9, categoria: 'premium' },
   { zona: 'Eq. Norte/Sur', total: 3, precio_promedio: 128006, precio_m2: 2145, proyectos: 3, categoria: 'standard' }
 ]
 
@@ -290,7 +290,7 @@ export default function MarketLens() {
                   'Villa Brigida': { top: '32%', left: '82%' },
                   'Eq. Norte/Sur': { top: '42%', left: '58%' },
                   'Eq. Centro': { top: '62%', left: '38%' },
-                  'Faremafu': { top: '78%', left: '18%' },
+                  'Eq. Oeste (Busch)': { top: '78%', left: '18%' },
                 }
                 const pos = posiciones[z.zona]
                 if (!pos) return null

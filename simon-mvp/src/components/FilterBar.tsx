@@ -376,6 +376,26 @@ export default function FilterBar({ onFiltrosChange, className = '' }: FilterBar
           Seleccioná las zonas que te interesan
         </p>
         <div className="space-y-2">
+          {/* Opción Todas las zonas */}
+          <label
+            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+              filtros.zonas.length === 0
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <input
+              type="radio"
+              checked={filtros.zonas.length === 0}
+              onChange={() => setFiltros(prev => ({ ...prev, zonas: [] }))}
+              className="w-4 h-4 text-blue-600"
+            />
+            <div>
+              <span className="font-medium text-sm text-gray-900">Todas las zonas</span>
+              <p className="text-xs text-gray-500">Ver todo el mercado de Equipetrol</p>
+            </div>
+          </label>
+
           {ZONAS.map((zona) => (
             <label
               key={zona.id}
