@@ -309,15 +309,44 @@ export default function FilterBar({ onFiltrosChange, className = '' }: FilterBar
 
   return (
     <div className={`bg-white rounded-xl shadow-lg p-6 ${className}`}>
-      <h2 className="text-xl font-bold text-gray-900 mb-6">
-        CONSTRUYENDO TU BUSQUEDA
+      {/* P1: Badge de confianza */}
+      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex items-center gap-2 mb-4">
+        <span className="text-slate-400">🔒</span>
+        <span className="text-sm text-slate-600">
+          Tus datos están protegidos. No compartimos tu información con terceros.
+        </span>
+      </div>
+
+      {/* P2: Header fiduciario */}
+      <h2 className="text-xl font-bold text-gray-900 mb-1">
+        ENCONTREMOS TU DEPARTAMENTO
       </h2>
+      <p className="text-sm text-gray-600 mb-4">
+        Respondé estas preguntas para filtrar las {countSinFiltros ?? '...'} opciones del mercado
+      </p>
+
+      {/* P4: Progress bar (Paso 1 de 2) */}
+      <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-blue-800">Paso 1 de 2: Filtros básicos</span>
+          <span className="text-xs text-blue-600">50%</span>
+        </div>
+        <div className="w-full bg-blue-200 rounded-full h-2">
+          <div className="bg-blue-600 h-2 rounded-full" style={{ width: '50%' }} />
+        </div>
+        <p className="text-xs text-blue-600 mt-2">
+          Siguiente: Personalizar búsqueda según tu perfil
+        </p>
+      </div>
 
       {/* 1. Presupuesto */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          1. Cuanto queres invertir?
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          1. ¿Cuánto querés invertir?
         </label>
+        <p className="text-xs text-gray-500 mb-3">
+          Así descartamos opciones fuera de tu alcance
+        </p>
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-500">$50k</span>
           <input
@@ -340,9 +369,12 @@ export default function FilterBar({ onFiltrosChange, className = '' }: FilterBar
 
       {/* 2. Zona */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          2. Donde en Equipetrol?
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          2. ¿Dónde en Equipetrol?
         </label>
+        <p className="text-xs text-gray-500 mb-3">
+          Cada zona tiene precio/m² distinto
+        </p>
         <div className="grid grid-cols-2 gap-2">
           {ZONAS.map((zona) => (
             <label
@@ -370,9 +402,12 @@ export default function FilterBar({ onFiltrosChange, className = '' }: FilterBar
 
       {/* 3. Dormitorios */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          3. Cuantos dormitorios?
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          3. ¿Cuántos dormitorios?
         </label>
+        <p className="text-xs text-gray-500 mb-3">
+          Para calcular espacio por persona según quiénes vivirán
+        </p>
         <div className="flex gap-2">
           <button
             onClick={() => handleDormitorios(null)}
@@ -433,9 +468,12 @@ export default function FilterBar({ onFiltrosChange, className = '' }: FilterBar
 
       {/* 5. Para que es */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          5. Para que es?
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          5. ¿Para qué es?
         </label>
+        <p className="text-xs text-gray-500 mb-3">
+          Esto determina qué preguntas te hacemos después
+        </p>
         <div className="space-y-2">
           {PARA_QUE_ES.map((opcion) => (
             <label
@@ -542,13 +580,25 @@ export default function FilterBar({ onFiltrosChange, className = '' }: FilterBar
           </div>
         )}
 
+        {/* P5: CTA mejorado con contexto */}
+        {count !== null && count > 0 && (
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-slate-700 mb-2">
+              <strong>{count} opciones</strong> cumplen tus filtros básicos.
+            </p>
+            <p className="text-xs text-slate-500">
+              En el siguiente paso personalizaremos la búsqueda para ordenar
+              estas opciones según tus prioridades reales.
+            </p>
+          </div>
+        )}
         <button
           onClick={handleContinuar}
           disabled={loading || count === null || count === 0}
           className="w-full py-4 px-6 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
         >
           {count !== null && count > 0
-            ? `VER MIS ${count} OPCIONES`
+            ? 'PERSONALIZAR MI BÚSQUEDA →'
             : 'Sin resultados para estos filtros'}
         </button>
       </div>

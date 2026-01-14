@@ -317,12 +317,19 @@ Si alguna respuesta es NO, agregar micro-copy explicativo.
 
 ## 6. CHECKLIST DE IMPLEMENTACIÓN
 
-### Fase 1 (Alta Prioridad) ✅ COMPLETADO 14-Ene-2026
+### Nivel 2 (FormularioVivienda) ✅ COMPLETADO 14-Ene-2026
 - [x] P1: Agregar micro-copy a las 9 preguntas
 - [x] P2: Implementar progress bar con texto dinámico
 - [x] P3: Agregar feedback visual a los 2 sliders
 - [x] P4: Agregar badge de confianza en header
 - [x] P5: Rediseñar CTA con valor comunicado
+
+### Nivel 1 (FilterBar) ✅ COMPLETADO 14-Ene-2026
+- [x] P1: Badge de confianza
+- [x] P2: Header fiduciario ("ENCONTREMOS TU DEPARTAMENTO")
+- [x] P3: Micro-copy en preguntas 1, 2, 3 y 5
+- [x] P4: Progress bar (Paso 1 de 2)
+- [x] P5: CTA mejorado ("PERSONALIZAR MI BÚSQUEDA")
 
 ### Fase 2 (Media Prioridad)
 - [ ] P6: Agregar sección "Por qué Simón"
@@ -343,4 +350,5 @@ Si alguna respuesta es NO, agregar micro-copy explicativo.
 | 2026-01-14 | v1.0 - Documento creado |
 | 2026-01-14 | Análisis completo de estado actual |
 | 2026-01-14 | Propuestas priorizadas definidas |
-| 2026-01-14 | **Fase 1 COMPLETADA** - 5 mejoras alta prioridad implementadas |
+| 2026-01-14 | **Nivel 2 COMPLETADO** - 5 mejoras alta prioridad en formulario-vivienda |
+| 2026-01-14 | **Nivel 1 COMPLETADO** - 5 mejoras alta prioridad en FilterBar |
