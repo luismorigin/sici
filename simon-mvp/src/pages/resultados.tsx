@@ -318,12 +318,26 @@ const formatDorms = (dorms: number | string | null | undefined, formato: 'largo'
 
 // Microzonas disponibles (mismas que FilterBar)
 const ZONAS_DISPONIBLES = [
-  { value: 'equipetrol', label: 'Equipetrol' },
+  { value: 'equipetrol', label: 'Equipetrol Centro' },
   { value: 'sirari', label: 'Sirari' },
-  { value: 'villa_brigida', label: 'Villa Brigida' },
-  { value: 'faremafu', label: 'Faremafu' },
+  { value: 'villa_brigida', label: 'Villa Brígida' },
+  { value: 'faremafu', label: 'Equipetrol Oeste (Busch)' },
   { value: 'equipetrol_norte', label: 'Equipetrol Norte' },
 ]
+
+// Convertir nombre de zona de BD a nombre de display
+function zonaDisplay(zonaBD: string | undefined): string {
+  if (!zonaBD) return 'Sin zona'
+  const mapeo: Record<string, string> = {
+    'Equipetrol': 'Equipetrol Centro',
+    'Faremafu': 'Eq. Oeste (Busch)',
+    'Equipetrol Norte/Norte': 'Eq. Norte',
+    'Equipetrol Norte/Sur': 'Eq. Norte',
+    'Villa Brigida': 'Villa Brígida',
+    'Sirari': 'Sirari',
+  }
+  return mapeo[zonaBD] || zonaBD
+}
 
 // ============================================================================
 // SCORE MOAT - Ranking inteligente basado en preferencias del usuario
@@ -1301,7 +1315,7 @@ ${top3Texto}
                               #{idx + 1} Match
                             </span>
                             <h3 className="font-bold text-gray-900 mt-1">{prop.proyecto}</h3>
-                            <p className="text-sm text-gray-500">{prop.zona}</p>
+                            <p className="text-sm text-gray-500">{zonaDisplay(prop.zona)}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-xl font-bold text-gray-900">
@@ -1809,7 +1823,7 @@ ${top3Texto}
                             <div className="flex items-start justify-between gap-2">
                               <div>
                                 <h3 className="font-medium text-gray-900">{prop.proyecto}</h3>
-                                <p className="text-xs text-gray-500">{prop.zona}</p>
+                                <p className="text-xs text-gray-500">{zonaDisplay(prop.zona)}</p>
                               </div>
                               <div className="text-right flex-shrink-0">
                                 <p className="font-bold text-gray-900">${formatNum(prop.precio_usd)}</p>
