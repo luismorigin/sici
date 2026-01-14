@@ -201,7 +201,7 @@ export default function MarketLens() {
                 <div className="text-slate-400 text-sm uppercase tracking-wider mb-1">
                   Precio Promedio m² Equipetrol
                 </div>
-                <div className="text-4xl font-extrabold text-white">
+                <div className="text-3xl md:text-4xl font-extrabold text-white">
                   ${snapshot.precio_m2_promedio.toLocaleString('es-BO')}
                 </div>
               </div>

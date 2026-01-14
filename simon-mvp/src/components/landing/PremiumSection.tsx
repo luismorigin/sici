@@ -85,7 +85,7 @@ export default function PremiumSection() {
             {/* Price */}
             <div className="mb-10">
               <span className="text-2xl text-slate-500 line-through mr-3">$49.99</span>
-              <span className="text-5xl font-extrabold text-premium-gold">$29.99</span>
+              <span className="text-4xl md:text-5xl font-extrabold text-premium-gold">$29.99</span>
               <p className="text-slate-400 mt-2">Precio de lanzamiento</p>
             </div>
 
