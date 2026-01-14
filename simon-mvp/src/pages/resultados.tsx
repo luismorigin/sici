@@ -24,6 +24,7 @@ import {
   getMensajeEquipamiento,
   getCostoEquipamiento
 } from '@/config/estimados-equipamiento'
+import PremiumModal from '@/components/landing/PremiumModal'
 
 /**
  * SÍNTESIS FIDUCIARIA - Resumen inteligente que combina TODOS los datos
@@ -503,6 +504,10 @@ export default function ResultadosPage() {
   const [analisisFiduciario, setAnalisisFiduciario] = useState<AnalisisMercadoFiduciario | null>(null)
   const [loading, setLoading] = useState(true)
   const [showPremiumModal, setShowPremiumModal] = useState(false)
+  const [showPremiumExample, setShowPremiumExample] = useState(false)
+  const [premiumEmail, setPremiumEmail] = useState('')
+  const [premiumSubmitted, setPremiumSubmitted] = useState(false)
+  const [premiumLoading, setPremiumLoading] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({})
 
@@ -2165,8 +2170,8 @@ ${top3Texto}
         )}
       </div>
 
-      {/* Modal Premium */}
-      {showPremiumModal && (
+      {/* Modal Premium - Waitlist */}
+      {showPremiumModal && !showPremiumExample && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 relative">
             {/* Close button */}
@@ -2181,61 +2186,102 @@ ${top3Texto}
 
             {/* Header */}
             <div className="text-center mb-6">
-              <span className="text-4xl mb-2 block">🔓</span>
+              <span className="text-4xl mb-2 block">📋</span>
               <h2 className="text-2xl font-bold text-gray-900">
-                DESBLOQUEAR INFORME COMPLETO
+                Informe Fiduciario Premium
               </h2>
+              <p className="text-gray-500 mt-2">Próximamente disponible</p>
             </div>
 
             {/* Benefits */}
             <div className="space-y-3 mb-6">
               <div className="flex items-start gap-3">
-                <span className="text-green-500 text-lg">✅</span>
-                <span className="text-gray-700">Detalle de las {excluidasFiduciarias.length || analisisFiduciario?.bloque_2_opciones_excluidas?.total || 0} propiedades excluidas</span>
+                <span className="text-purple-500 text-lg">✓</span>
+                <span className="text-gray-700">Comparador TOP 3 lado a lado</span>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-green-500 text-lg">✅</span>
-                <span className="text-gray-700">Comparador lado a lado de tus TOP 3</span>
+                <span className="text-purple-500 text-lg">✓</span>
+                <span className="text-gray-700">Precio/m² vs promedio de zona</span>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-green-500 text-lg">✅</span>
-                <span className="text-gray-700">Análisis de mercado completo (CMA)</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-green-500 text-lg">✅</span>
-                <span className="text-gray-700">Alertas de precio y oportunidades</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-green-500 text-lg">✅</span>
-                <span className="text-gray-700">Contacto directo con asesores verificados</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-green-500 text-lg">✅</span>
-                <span className="text-gray-700">PDF descargable para compartir</span>
+                <span className="text-purple-500 text-lg">✓</span>
+                <span className="text-gray-700">Lo que NO sabemos (transparencia total)</span>
               </div>
             </div>
 
-            {/* Price */}
-            <div className="text-center mb-6">
+            {/* Price preview */}
+            <div className="text-center mb-6 bg-gray-50 rounded-lg p-4">
               <p className="text-gray-500 text-sm line-through">$49.99 USD</p>
-              <p className="text-3xl font-bold text-gray-900">$29.99 <span className="text-lg font-normal text-gray-500">USD</span></p>
-              <p className="text-sm text-green-600 font-medium">Precio de lanzamiento</p>
+              <p className="text-2xl font-bold text-gray-900">$29.99 <span className="text-sm font-normal text-gray-500">USD</span></p>
+              <p className="text-sm text-purple-600 font-medium">Precio de lanzamiento</p>
             </div>
 
-            {/* CTA */}
+            {/* Waitlist Form */}
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-4">
+              <div className="text-purple-600 text-xl mb-2">🎁</div>
+              <h4 className="font-bold text-gray-900 mb-1">
+                Los primeros 50 lo reciben gratis
+              </h4>
+              <p className="text-gray-600 text-sm mb-3">
+                Dejá tu email y te avisamos cuando esté listo.
+              </p>
+
+              {premiumSubmitted ? (
+                <div className="text-green-600 text-sm font-medium">
+                  ✓ ¡Listo! Te avisamos cuando esté disponible.
+                </div>
+              ) : (
+                <form onSubmit={(e) => {
+                  e.preventDefault()
+                  if (!premiumEmail) return
+                  setPremiumLoading(true)
+                  // Guardar en localStorage
+                  const waitlist = JSON.parse(localStorage.getItem('premium_waitlist') || '[]')
+                  waitlist.push({ email: premiumEmail, timestamp: new Date().toISOString(), desde: 'resultados' })
+                  localStorage.setItem('premium_waitlist', JSON.stringify(waitlist))
+                  setPremiumSubmitted(true)
+                  setPremiumLoading(false)
+                }} className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="tu@email.com"
+                    value={premiumEmail}
+                    onChange={(e) => setPremiumEmail(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-purple-500"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={premiumLoading}
+                    className="px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                  >
+                    {premiumLoading ? '...' : 'Unirme'}
+                  </button>
+                </form>
+              )}
+            </div>
+
+            {/* Ver ejemplo */}
             <button
-              onClick={() => setShowPremiumModal(false)}
-              className="w-full py-4 px-6 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors mb-4"
+              onClick={() => setShowPremiumExample(true)}
+              className="w-full py-3 px-6 border border-purple-300 text-purple-700 font-medium rounded-lg hover:bg-purple-50 transition-colors text-sm"
             >
-              DESBLOQUEAR AHORA
+              Ver Ejemplo Real
             </button>
 
-            {/* Trust badges */}
-            <p className="text-center text-xs text-gray-500">
-              🔒 Pago seguro · Acceso inmediato · PDF descargable
+            <p className="text-center text-xs text-gray-400 mt-3">
+              🔒 Sin compromiso · Te avisamos por email
             </p>
           </div>
         </div>
+      )}
+
+      {/* Modal Ejemplo Premium (PremiumModal real) */}
+      {showPremiumExample && (
+        <PremiumModal onClose={() => {
+          setShowPremiumExample(false)
+          setShowPremiumModal(false)
+        }} />
       )}
     </div>
   )
