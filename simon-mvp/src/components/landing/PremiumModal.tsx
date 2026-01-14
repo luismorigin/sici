@@ -91,29 +91,29 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
             </svg>
           </button>
 
-          <div className="p-8">
+          <div className="p-4 md:p-8">
             {/* Header */}
-            <div className="border-b-2 border-slate-200 pb-6 mb-8 flex justify-between items-start">
+            <div className="border-b-2 border-slate-200 pb-4 md:pb-6 mb-6 md:mb-8 flex flex-col md:flex-row md:justify-between md:items-start gap-2">
               <div>
-                <h2 className="font-display text-2xl font-extrabold text-brand-dark mb-1">
+                <h2 className="font-display text-xl md:text-2xl font-extrabold text-brand-dark mb-1">
                   INFORME PREMIUM - SIMON
                 </h2>
-                <p className="text-slate-500">Estudio Fiduciario Personalizado - Equipetrol</p>
+                <p className="text-slate-500 text-sm">Estudio Fiduciario - Equipetrol</p>
               </div>
-              <div className="text-right text-sm text-slate-500">
+              <div className="text-left md:text-right text-xs md:text-sm text-slate-500">
                 <div><strong>Generado:</strong> {new Date().toLocaleDateString('es-ES')}</div>
                 <div><strong>Propiedades:</strong> {analisis?.bloque_3_contexto_mercado.stock_total || 987} Analizadas</div>
               </div>
             </div>
 
             {/* Section 1: Profile */}
-            <section className="bg-slate-50 rounded-xl p-6 mb-8">
-              <h3 className="text-brand-primary font-bold mb-4">1. PERFIL FIDUCIARIO PROFUNDO</h3>
+            <section className="bg-slate-50 rounded-xl p-4 md:p-6 mb-6 md:mb-8">
+              <h3 className="text-brand-primary font-bold mb-3 md:mb-4 text-sm md:text-base">1. PERFIL FIDUCIARIO PROFUNDO</h3>
               <p className="mb-3"><strong>Tipo:</strong> Hogar Estrategico con Vision de Liquidez.</p>
               <p className="text-slate-600 text-sm leading-relaxed mb-4">
                 Un comprador que busca equilibrio entre seguridad financiera, comodidad de vida y liquidez futura. Tu ventana de decision es de <strong>2 a 8 semanas</strong>, perfecta para negociar sin perder oportunidades.
               </p>
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-2 gap-4 md:gap-6">
                 <div>
                   <h4 className="text-sm font-bold mb-2">Prioridades Criticas</h4>
                   <ul className="text-sm text-slate-600 space-y-1 list-disc list-inside">
@@ -135,26 +135,26 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
             </section>
 
             {/* Section 2: Executive Summary */}
-            <section className="mb-8">
+            <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">2. RESUMEN EJECUTIVO</h3>
 
               {/* KPIs */}
-              <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-4 md:mb-6">
                 {[
                   { value: analisis?.bloque_1_opciones_validas.total || 36, label: 'En tu Rango' },
-                  { value: Math.min(8, analisis?.bloque_1_opciones_validas.total || 8), label: 'Alta Compatibilidad', color: 'text-state-success' },
-                  { value: escenarios.filter(e => e.liquidez_categoria === 'alta').length || 2, label: 'Gangas Fiduciarias', color: 'text-premium-gold' },
-                  { value: analisis?.bloque_4_alertas.total || 4, label: 'Riesgos Ocultos', color: 'text-state-danger' }
+                  { value: Math.min(8, analisis?.bloque_1_opciones_validas.total || 8), label: 'Alta Compat.', color: 'text-state-success' },
+                  { value: escenarios.filter(e => e.liquidez_categoria === 'alta').length || 2, label: 'Gangas', color: 'text-premium-gold' },
+                  { value: analisis?.bloque_4_alertas.total || 4, label: 'Riesgos', color: 'text-state-danger' }
                 ].map((kpi, i) => (
-                  <div key={i} className="border border-slate-200 rounded-lg p-4 text-center bg-white">
-                    <div className={`text-2xl font-extrabold ${kpi.color || 'text-brand-dark'}`}>{kpi.value}</div>
-                    <div className="text-xs text-slate-500 font-semibold">{kpi.label}</div>
+                  <div key={i} className="border border-slate-200 rounded-lg p-2 md:p-4 text-center bg-white">
+                    <div className={`text-xl md:text-2xl font-extrabold ${kpi.color || 'text-brand-dark'}`}>{kpi.value}</div>
+                    <div className="text-[10px] md:text-xs text-slate-500 font-semibold">{kpi.label}</div>
                   </div>
                 ))}
               </div>
 
               {/* Charts */}
-              <div className="grid md:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
                 <BarChartCard
                   title="Distribucion de Precios"
                   data={[
@@ -190,7 +190,7 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
             </section>
 
             {/* Section 3: Top 3 */}
-            <section className="mb-8">
+            <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">3. TOP 3 OPORTUNIDADES DETECTADAS</h3>
 
               {topOpciones.slice(0, 1).map((op, i) => {
@@ -226,7 +226,7 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                     </div>
                   )}
 
-                  <div className="p-4 grid md:grid-cols-2 gap-6">
+                  <div className="p-4 grid md:grid-cols-2 gap-4 md:gap-6">
                     <div>
                       <div className="text-2xl font-extrabold text-brand-dark mb-1">
                         ${op.precio_usd.toLocaleString('en-US')}
@@ -287,7 +287,7 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
             </section>
 
             {/* Section 4: Top 10 Table */}
-            <section className="mb-8">
+            <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">4. TOP 10 RESUMIDO</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -322,7 +322,7 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
             </section>
 
             {/* Section 5: Insights */}
-            <section className="mb-8">
+            <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">5. INSIGHTS OCULTOS</h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -343,7 +343,7 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
             </section>
 
             {/* Section 6: Financial Scenario - BETA */}
-            <section className="mb-8">
+            <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">6. ESCENARIO FINANCIERO</h3>
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-800">
                 <strong>🚧 En desarrollo:</strong> Esta sección estará disponible en una versión futura del informe premium. Los datos mostrados son estimaciones preliminares.
@@ -390,14 +390,14 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                   ))}
                 </div>
               ) : (
-                <div className="bg-slate-50 rounded-xl p-6 text-center text-slate-500">
+                <div className="bg-slate-50 rounded-xl p-4 md:p-6 text-center text-slate-500">
                   Cargando escenarios financieros...
                 </div>
               )}
             </section>
 
             {/* Section 7: Microzonas Map - NOW FUNCTIONAL */}
-            <section className="mb-8">
+            <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">7. MAPA DE MICROZONAS</h3>
               {microzonas.length > 0 ? (
                 <div className="grid md:grid-cols-2 gap-4">
@@ -461,16 +461,16 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                   </div>
                 </div>
               ) : (
-                <div className="bg-slate-50 rounded-xl p-6 text-center text-slate-500">
+                <div className="bg-slate-50 rounded-xl p-4 md:p-6 text-center text-slate-500">
                   Cargando datos de microzonas...
                 </div>
               )}
             </section>
 
             {/* Section 8: Motivators */}
-            <section className="mb-8 bg-blue-50 rounded-xl p-6">
+            <section className="mb-6 md:mb-8 bg-blue-50 rounded-xl p-4 md:p-6">
               <h3 className="text-brand-primary font-bold mb-4">8. MOTIVADORES Y RIESGOS</h3>
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-2 gap-4 md:gap-6">
                 <div>
                   <h4 className="text-sm font-bold mb-2">Tus Motivadores</h4>
                   <p className="text-sm text-slate-600">Claridad antes que velocidad, control financiero y sensacion de seguridad estructural.</p>
@@ -483,9 +483,9 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
             </section>
 
             {/* Section 9: Human Advice */}
-            <section className="mb-8">
+            <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">9. CAPA 3: ASESORAMIENTO HUMANO</h3>
-              <div className="border border-slate-200 rounded-xl p-6">
+              <div className="border border-slate-200 rounded-xl p-4 md:p-6">
                 <p className="text-slate-600 mb-4">
                   Incluye <strong>Verificacion Fiduciaria</strong> por un estratega real: visita tecnica, evaluacion de mantenimiento, revision legal y chequeo de ruidos.
                 </p>
