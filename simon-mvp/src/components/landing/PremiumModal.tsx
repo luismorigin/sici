@@ -195,7 +195,7 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                       <ul className="text-sm text-slate-600 space-y-1">
                         <li>- {op.area_m2}m2 - {op.dormitorios} Dorms</li>
                         <li>- {op.zona}</li>
-                        <li>- {op.amenities.slice(0, 3).join(', ')}</li>
+                        <li>- {(op.amenities || []).slice(0, 3).join(', ') || 'Sin amenities confirmados'}</li>
                       </ul>
                     </div>
                     <div>
@@ -321,7 +321,7 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                       {esc.factores_riesgo.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-slate-200">
                           <span className="text-xs text-state-danger">
-                            Riesgos: {esc.factores_riesgo.join(' | ')}
+                            Riesgos: {(esc.factores_riesgo || []).join(' | ')}
                           </span>
                         </div>
                       )}
