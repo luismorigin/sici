@@ -88,6 +88,21 @@ export default function LeadForm() {
           Genera tu propio informe personalizado en menos de 2 minutos. Gratis y sin compromiso.
         </p>
 
+        {/* Disclaimer con opción de saltar */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+          <p className="text-sm text-slate-600">
+            <strong>Esto es un test.</strong> Podés explorar sin dejar tus datos,
+            pero si los dejás te avisamos cuando haya propiedades nuevas que encajen.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push('/filtros')}
+            className="text-brand-primary text-sm font-medium mt-2 hover:underline"
+          >
+            → Saltar y explorar directamente
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4 text-left">
           <div>
             <label className="block text-sm font-semibold text-brand-dark mb-1">

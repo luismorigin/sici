@@ -25,6 +25,7 @@ import {
   getCostoEquipamiento
 } from '@/config/estimados-equipamiento'
 import PremiumModal from '@/components/landing/PremiumModal'
+import InternalHeader from '@/components/InternalHeader'
 
 /**
  * SÍNTESIS FIDUCIARIA - Resumen inteligente que combina TODOS los datos
@@ -510,6 +511,8 @@ export default function ResultadosPage() {
   const [premiumLoading, setPremiumLoading] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({})
+  // Contador para forzar refresh del modal cuando cambian filtros
+  const [filterRefreshKey, setFilterRefreshKey] = useState(0)
 
   // Estados para edición inline de filtros
   const [editingFilter, setEditingFilter] = useState<'presupuesto' | 'dormitorios' | 'zonas' | 'estado_entrega' | null>(null)
@@ -786,6 +789,10 @@ export default function ResultadosPage() {
     if (calidad_vs_precio) params.set('calidad_vs_precio', calidad_vs_precio as string)
 
     setEditingFilter(null)
+    // Cerrar modal premium si está abierto (para que muestre datos frescos al reabrir)
+    setShowPremiumExample(false)
+    // Incrementar key para forzar refresh del modal
+    setFilterRefreshKey(prev => prev + 1)
     router.push(`/resultados?${params.toString()}`)
   }
 
@@ -907,14 +914,12 @@ ${top3Texto}
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50">
+      <InternalHeader backLink={{ href: '/filtros', label: '← Nueva búsqueda' }} />
+      <div className="max-w-4xl mx-auto px-4 pb-8">
         {/* Header */}
         <div className="mb-6">
-          <Link href="/filtros" className="text-blue-600 hover:underline text-sm">
-            ← Nueva busqueda
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900 mt-2">
+          <h1 className="text-2xl font-bold text-gray-900">
             Tus resultados personalizados
           </h1>
           <p className="text-gray-600 mt-1">
@@ -2276,12 +2281,27 @@ ${top3Texto}
         </div>
       )}
 
-      {/* Modal Ejemplo Premium (PremiumModal real) */}
+      {/* Modal Ejemplo Premium (PremiumModal real) - con filtros del usuario */}
+      {/* Key incluye filterRefreshKey para forzar re-mount cuando cambian filtros */}
       {showPremiumExample && (
-        <PremiumModal onClose={() => {
-          setShowPremiumExample(false)
-          setShowPremiumModal(false)
-        }} />
+        <PremiumModal
+          key={`premium-${filterRefreshKey}-${presupuesto}-${dormitorios}-${zonas}-${estado_entrega}-${innegociables}`}
+          onClose={() => {
+            setShowPremiumExample(false)
+            setShowPremiumModal(false)
+          }}
+          filtros={{
+            presupuesto: presupuesto ? parseInt(presupuesto as string) : undefined,
+            dormitorios: dormitorios ? parseInt(dormitorios as string) : undefined,
+            zonas: zonas ? (zonas as string).split(',').filter(Boolean) : undefined,
+            estado_entrega: (estado_entrega as string) || undefined,
+            // Filtros MOAT para ordenamiento consistente
+            innegociables: innegociables ? (innegociables as string).split(',').filter(Boolean) : undefined,
+            deseables: deseables ? (deseables as string).split(',').filter(Boolean) : undefined,
+            ubicacion_vs_metros: ubicacion_vs_metros ? parseInt(ubicacion_vs_metros as string) : undefined,
+            calidad_vs_precio: calidad_vs_precio ? parseInt(calidad_vs_precio as string) : undefined
+          }}
+        />
       )}
     </div>
   )

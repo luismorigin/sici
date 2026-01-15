@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { innegociablesToAmenidades } from '@/config/amenidades-mercado'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -872,6 +873,255 @@ export async function obtenerAnalisisFiduciario(filtros: FiltrosAnalisis): Promi
     return data as AnalisisMercadoFiduciario
   } catch (err) {
     console.error('Error obteniendo análisis fiduciario:', err)
+    return null
+  }
+}
+
+// ========== ANÁLISIS FIDUCIARIO DESDE BÚSQUEDA REAL ==========
+// Esta función construye el análisis usando los mismos filtros que buscarUnidadesReales
+// para garantizar que PremiumModal muestre exactamente los mismos datos que /resultados
+
+// Constantes MOAT (Enero 2026, actualizar mensualmente)
+const MEDIANA_AREA_POR_DORMS: Record<number, number> = {
+  0: 36, 1: 52, 2: 88, 3: 165, 4: 200, 5: 250
+}
+
+const MEDIANA_PRECIO_M2_POR_ZONA: Record<string, number> = {
+  'Equipetrol Norte/Norte': 2362,
+  'Faremafu': 2299,
+  'Equipetrol': 2055,
+  'Sirari': 2002,
+  'Villa Brigida': 1538,
+  'default': 2000
+}
+
+interface DatosUsuarioMOAT {
+  innegociables: string[]
+  deseables: string[]
+  ubicacion_vs_metros: number
+  calidad_vs_precio: number
+}
+
+// Función de score MOAT (copia de resultados.tsx para consistencia)
+function calcularScoreMOATInterno(
+  prop: UnidadReal,
+  datosUsuario: DatosUsuarioMOAT
+): number {
+  let score = 0
+
+  // 1. INNEGOCIABLES (0 a 100)
+  if (datosUsuario.innegociables.length === 0) {
+    score += 100
+  } else {
+    const amenidadesRequeridas = innegociablesToAmenidades(datosUsuario.innegociables)
+    const confirmados = prop.amenities_confirmados || []
+    const porVerificar = prop.amenities_por_verificar || []
+
+    let puntosInnegociables = 0
+    const maxPuntosPorInnegociable = 100 / amenidadesRequeridas.length
+
+    for (const amenidad of amenidadesRequeridas) {
+      if (confirmados.includes(amenidad)) {
+        puntosInnegociables += maxPuntosPorInnegociable
+      } else if (porVerificar.includes(amenidad)) {
+        puntosInnegociables += maxPuntosPorInnegociable * 0.5
+      }
+    }
+    score += Math.round(puntosInnegociables)
+  }
+
+  // 2. OPORTUNIDAD (0 a 40) - basado en posicion_mercado
+  const posicionMercado = prop.posicion_mercado as { diferencia_pct?: number } | null
+  const difPct = posicionMercado?.diferencia_pct ?? 0
+
+  let oportunidadScore = 0
+  if (datosUsuario.calidad_vs_precio <= 2) {
+    // PRIORIZA CALIDAD
+    if (difPct >= 15) oportunidadScore = 40
+    else if (difPct >= 5) oportunidadScore = 30
+    else if (difPct >= -10) oportunidadScore = 20
+    else if (difPct >= -20) oportunidadScore = 10
+  } else if (datosUsuario.calidad_vs_precio >= 4) {
+    // PRIORIZA PRECIO
+    if (difPct <= -20) oportunidadScore = 40
+    else if (difPct <= -10) oportunidadScore = 30
+    else if (difPct <= 5) oportunidadScore = 20
+    else if (difPct <= 15) oportunidadScore = 10
+  } else {
+    // NEUTRAL
+    if (difPct <= -20) oportunidadScore = 35
+    else if (difPct <= -10) oportunidadScore = 30
+    else if (difPct <= 10) oportunidadScore = 25
+    else if (difPct <= 20) oportunidadScore = 15
+    else oportunidadScore = 10
+  }
+  score += oportunidadScore
+
+  // 3. TRADE-OFFS (0 a 20)
+  const medianaArea = MEDIANA_AREA_POR_DORMS[prop.dormitorios || 1] || 52
+
+  if (datosUsuario.ubicacion_vs_metros >= 4) {
+    if ((prop.area_m2 || 0) > medianaArea) {
+      score += 10
+    }
+  }
+
+  const totalAmenidades = (prop.amenities_confirmados?.length || 0)
+  if (datosUsuario.calidad_vs_precio <= 2 && totalAmenidades >= 5) {
+    score += 10
+  }
+
+  // 4. DESEABLES (0 a 15)
+  if (datosUsuario.deseables.length > 0) {
+    const amenidadesDeseadas = innegociablesToAmenidades(datosUsuario.deseables)
+    let deseablesScore = 0
+    const confirmados = prop.amenities_confirmados || []
+
+    for (const amenidad of amenidadesDeseadas.slice(0, 3)) {
+      if (confirmados.includes(amenidad)) {
+        deseablesScore += 5
+      }
+    }
+    score += deseablesScore
+  }
+
+  return score
+}
+
+// Interfaz extendida para filtros con MOAT
+export interface FiltrosBusquedaMOAT extends FiltrosBusqueda {
+  innegociables?: string[]
+  deseables?: string[]
+  ubicacion_vs_metros?: number
+  calidad_vs_precio?: number
+}
+
+export async function construirAnalisisDesdeBusqueda(
+  filtros: FiltrosBusquedaMOAT
+): Promise<AnalisisMercadoFiduciario | null> {
+  try {
+    // Usar la misma función de búsqueda que /resultados
+    const resultados = await buscarUnidadesReales({
+      ...filtros,
+      limite: filtros.limite || 10
+    })
+
+    if (resultados.length === 0) {
+      return null
+    }
+
+    // Aplicar ordenamiento MOAT si hay datos de usuario
+    const datosUsuarioMOAT: DatosUsuarioMOAT = {
+      innegociables: filtros.innegociables || [],
+      deseables: filtros.deseables || [],
+      ubicacion_vs_metros: filtros.ubicacion_vs_metros || 3,
+      calidad_vs_precio: filtros.calidad_vs_precio || 3
+    }
+
+    // Calcular score y ordenar
+    const resultadosConScore = resultados.map(r => ({
+      ...r,
+      score_moat: calcularScoreMOATInterno(r, datosUsuarioMOAT)
+    }))
+
+    resultadosConScore.sort((a, b) => {
+      if (b.score_moat !== a.score_moat) {
+        return b.score_moat - a.score_moat
+      }
+      const difA = (a.posicion_mercado as { diferencia_pct?: number } | null)?.diferencia_pct ?? 0
+      const difB = (b.posicion_mercado as { diferencia_pct?: number } | null)?.diferencia_pct ?? 0
+      return difA - difB
+    })
+
+    // Calcular métricas desde los resultados ordenados
+    const precios = resultadosConScore.map(r => r.precio_usd)
+    const preciosM2 = resultadosConScore.map(r => r.precio_m2)
+    const areas = resultadosConScore.map(r => r.area_m2)
+
+    const precioPromedio = precios.reduce((a, b) => a + b, 0) / precios.length
+    const precioM2Promedio = preciosM2.reduce((a, b) => a + b, 0) / preciosM2.length
+    const areaPromedio = areas.reduce((a, b) => a + b, 0) / areas.length
+
+    // Convertir UnidadReal[] a OpcionValida[] (YA ORDENADOS POR MOAT)
+    const opciones: OpcionValida[] = resultadosConScore.map((r, idx) => ({
+      id: r.id,
+      proyecto: r.proyecto,
+      desarrollador: r.desarrollador || null,
+      zona: r.zona,
+      dormitorios: r.dormitorios || 0,
+      precio_usd: r.precio_usd,
+      precio_m2: r.precio_m2,
+      area_m2: r.area_m2,
+      ranking: idx + 1,
+      total_opciones: resultadosConScore.length,
+      fotos: r.cantidad_fotos || 0,
+      fotos_urls: r.fotos_urls || [],
+      amenities: r.amenities_confirmados || r.amenities_lista || [],
+      asesor_wsp: r.asesor_wsp || null,
+      posicion_mercado: r.posicion_mercado || {
+        success: true,
+        categoria: 'precio_justo' as const,
+        diferencia_pct: 0,
+        posicion_texto: 'Precio de mercado',
+        contexto: {
+          promedio_zona: precioM2Promedio,
+          stock_disponible: resultadosConScore.length,
+          precio_consultado: r.precio_m2
+        }
+      },
+      explicacion_precio: {
+        diferencia_pct: r.posicion_mercado?.diferencia_pct || 0,
+        resumen: r.posicion_mercado?.posicion_texto || 'Precio de mercado',
+        explicaciones: []
+      },
+      resumen_fiduciario: r.razon_fiduciaria || `${r.proyecto} en ${r.zona} - ${r.dormitorios} dorm, ${Math.round(r.area_m2)}m²`
+    }))
+
+    // Construir respuesta en formato AnalisisMercadoFiduciario
+    const analisis: AnalisisMercadoFiduciario = {
+      filtros_aplicados: {
+        dormitorios: filtros.dormitorios,
+        precio_max: filtros.precio_max,
+        zona: filtros.zona || filtros.zonas_permitidas?.[0],
+        solo_con_fotos: true,
+        limite: filtros.limite || 10
+      },
+      timestamp: new Date().toISOString(),
+      bloque_1_opciones_validas: {
+        total: resultadosConScore.length,
+        opciones
+      },
+      bloque_2_opciones_excluidas: {
+        total: 0,
+        nota: 'Opciones excluidas no disponibles en búsqueda directa',
+        opciones: []
+      },
+      bloque_3_contexto_mercado: {
+        stock_total: resultadosConScore.length,
+        stock_cumple_filtros: resultadosConScore.length,
+        stock_excluido_mas_barato: 0,
+        porcentaje_mercado: 100,
+        diagnostico: `Encontramos ${resultadosConScore.length} opciones que cumplen tus criterios.`,
+        metricas_zona: {
+          precio_promedio: Math.round(precioPromedio),
+          precio_mediana: Math.round(precios.sort((a, b) => a - b)[Math.floor(precios.length / 2)]),
+          precio_min: Math.min(...precios),
+          precio_max: Math.max(...precios),
+          precio_m2_promedio: Math.round(precioM2Promedio),
+          area_promedio: Math.round(areaPromedio),
+          dias_promedio: null,
+          dias_mediana: null
+        }
+      },
+      bloque_4_alertas: {
+        total: 0,
+        alertas: []
+      }
+    }
+
+    return analisis
+  } catch (err) {
+    console.error('Error construyendo análisis desde búsqueda:', err)
     return null
   }
 }

@@ -1,4 +1,5 @@
 import FilterBar, { FiltrosNivel1 } from '@/components/FilterBar'
+import InternalHeader from '@/components/InternalHeader'
 import { useState } from 'react'
 
 export default function FiltrosPage() {
@@ -13,8 +14,9 @@ export default function FiltrosPage() {
   const isDev = process.env.NODE_ENV === 'development'
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8">
-      <div className="max-w-2xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-100">
+      <InternalHeader />
+      <div className="max-w-2xl mx-auto px-4 pb-8">
         <FilterBar onFiltrosChange={handleFiltrosChange} />
 
         {/* Debug info - solo en desarrollo */}

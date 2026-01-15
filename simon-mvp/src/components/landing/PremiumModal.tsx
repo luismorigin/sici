@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { BarChartCard, CompatibilidadCard, PrecioComparativoCard } from './ChartCard'
 import {
   obtenerAnalisisFiduciario,
+  construirAnalisisDesdeBusqueda,
   obtenerMicrozonas,
   calcularEscenarioFinanciero,
   obtenerFotosPorIds,
@@ -13,41 +14,81 @@ import {
   type EscenarioFinanciero
 } from '@/lib/supabase'
 
-interface PremiumModalProps {
-  onClose: () => void
+// Filtros opcionales para hacer el modal dinámico
+interface FiltrosUsuario {
+  presupuesto?: number
+  dormitorios?: number
+  zonas?: string[]
+  estado_entrega?: string
+  // Filtros MOAT para ordenamiento
+  innegociables?: string[]
+  deseables?: string[]
+  ubicacion_vs_metros?: number
+  calidad_vs_precio?: number
 }
 
-export default function PremiumModal({ onClose }: PremiumModalProps) {
+interface PremiumModalProps {
+  onClose: () => void
+  filtros?: FiltrosUsuario  // Si se pasan, usa datos del usuario
+}
+
+export default function PremiumModal({ onClose, filtros }: PremiumModalProps) {
   const [analisis, setAnalisis] = useState<AnalisisMercadoFiduciario | null>(null)
   const [microzonas, setMicrozonas] = useState<MicrozonaData[]>([])
   const [escenarios, setEscenarios] = useState<EscenarioFinanciero[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Si tiene filtros, es dinámico (desde resultados)
+  const isDinamico = !!filtros
+
   useEffect(() => {
     const fetchData = async () => {
-      const [analisisData, microzonasData] = await Promise.all([
-        obtenerAnalisisFiduciario({
+      let analisisData: AnalisisMercadoFiduciario | null = null
+
+      if (filtros) {
+        // Dinámico: usar mismos filtros que buscarUnidadesReales + ordenamiento MOAT
+        analisisData = await construirAnalisisDesdeBusqueda({
+          dormitorios: filtros.dormitorios,
+          precio_max: filtros.presupuesto || 300000,
+          zonas_permitidas: filtros.zonas,  // Soporta múltiples zonas
+          estado_entrega: filtros.estado_entrega as any,
+          limite: 10,
+          // Filtros MOAT para ordenamiento consistente con /resultados
+          innegociables: filtros.innegociables,
+          deseables: filtros.deseables,
+          ubicacion_vs_metros: filtros.ubicacion_vs_metros,
+          calidad_vs_precio: filtros.calidad_vs_precio
+        })
+      } else {
+        // Landing: usar ejemplo hardcodeado
+        analisisData = await obtenerAnalisisFiduciario({
           dormitorios: 2,
           precio_max: 150000,
           solo_con_fotos: true,
           limite: 10
-        }),
-        obtenerMicrozonas()
-      ])
+        })
+      }
+
+      const microzonasData = await obtenerMicrozonas()
 
       if (analisisData) {
-        // Obtener fotos para TOP 4 opciones
-        const topIds = analisisData.bloque_1_opciones_validas.opciones
-          .slice(0, 4)
-          .map(op => op.id)
-        const fotosMap = await obtenerFotosPorIds(topIds)
+        // Obtener fotos para TOP 4 opciones (si no vienen ya)
+        const opcionesSinFotos = analisisData.bloque_1_opciones_validas.opciones.filter(
+          op => !op.fotos_urls || op.fotos_urls.length === 0
+        )
+        if (opcionesSinFotos.length > 0) {
+          const topIds = analisisData.bloque_1_opciones_validas.opciones
+            .slice(0, 4)
+            .map(op => op.id)
+          const fotosMap = await obtenerFotosPorIds(topIds)
 
-        // Enriquecer opciones con fotos
-        const opcionesConFotos = analisisData.bloque_1_opciones_validas.opciones.map(op => ({
-          ...op,
-          fotos_urls: fotosMap[op.id] || []
-        }))
-        analisisData.bloque_1_opciones_validas.opciones = opcionesConFotos
+          // Enriquecer opciones con fotos
+          const opcionesConFotos = analisisData.bloque_1_opciones_validas.opciones.map(op => ({
+            ...op,
+            fotos_urls: op.fotos_urls?.length ? op.fotos_urls : (fotosMap[op.id] || [])
+          }))
+          analisisData.bloque_1_opciones_validas.opciones = opcionesConFotos
+        }
 
         setAnalisis(analisisData)
         // Calcular escenarios financieros para top 3
@@ -61,7 +102,8 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
       setLoading(false)
     }
     fetchData()
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(filtros)])
 
   const topOpciones = analisis?.bloque_1_opciones_validas.opciones.slice(0, 4) || []
 
@@ -109,6 +151,11 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
             {/* Section 1: Profile */}
             <section className="bg-slate-50 rounded-xl p-4 md:p-6 mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-3 md:mb-4 text-sm md:text-base">1. PERFIL FIDUCIARIO PROFUNDO</h3>
+              {isDinamico && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-800">
+                  <strong>Ejemplo:</strong> Esta sección se personalizará con un formulario más extenso en una versión futura. Los datos mostrados son ilustrativos.
+                </div>
+              )}
               <p className="mb-3"><strong>Tipo:</strong> Hogar Estrategico con Vision de Liquidez.</p>
               <p className="text-slate-600 text-sm leading-relaxed mb-4">
                 Un comprador que busca equilibrio entre seguridad financiera, comodidad de vida y liquidez futura. Tu ventana de decision es de <strong>2 a 8 semanas</strong>, perfecta para negociar sin perder oportunidades.
@@ -321,25 +368,48 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
               </div>
             </section>
 
-            {/* Section 5: Insights */}
+            {/* Section 5: Insights - Datos reales calculados */}
             <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">5. INSIGHTS OCULTOS</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <h5 className="font-bold text-amber-800 mb-2">Liquidez Superior</h5>
-                  <p className="text-sm text-amber-900">
-                    Detectamos {escenarios.filter(e => e.liquidez_categoria === 'alta').length} torres con rotacion comprobada.
-                    Si compras aqui, vender en 5 anos sera rapido.
-                  </p>
-                </div>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <h5 className="font-bold text-red-800 mb-2">Riesgos Detectados</h5>
-                  <p className="text-sm text-red-900">
-                    {analisis?.bloque_4_alertas.total || 0} alertas activas.
-                    {analisis?.bloque_4_alertas.alertas[0]?.mensaje || 'Vibracion estructural en Av. Beni y sobreprecio injustificado en 3 preventas cercanas.'}
-                  </p>
-                </div>
-              </div>
+              {(() => {
+                // Calcular insights desde datos reales
+                const oportunidades = topOpciones.filter(op => {
+                  const dif = op.posicion_mercado?.diferencia_pct ?? 0
+                  return dif < -10
+                }).length
+                const porVerificar = topOpciones.filter(op =>
+                  (op.amenities as string[])?.some(a => a.includes('verificar')) || false
+                ).length
+                // Alternativa: contar propiedades con amenities limitados
+                const pocasAmenidades = topOpciones.filter(op =>
+                  (op.amenities?.length || 0) < 3
+                ).length
+
+                return (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                      <h5 className="font-bold text-emerald-800 mb-2">🎯 Oportunidades de Precio</h5>
+                      <p className="text-sm text-emerald-900">
+                        {oportunidades > 0 ? (
+                          <>Detectamos <strong>{oportunidades}</strong> {oportunidades === 1 ? 'propiedad' : 'propiedades'} con precio 10% o más bajo que el mercado. Margen de negociación favorable.</>
+                        ) : (
+                          <>Los precios están alineados con el mercado. No hay gangas evidentes, pero tampoco sobreprecios.</>
+                        )}
+                      </p>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <h5 className="font-bold text-amber-800 mb-2">⚠️ Verificar Antes de Decidir</h5>
+                      <p className="text-sm text-amber-900">
+                        {pocasAmenidades > 0 ? (
+                          <><strong>{pocasAmenidades}</strong> {pocasAmenidades === 1 ? 'propiedad tiene' : 'propiedades tienen'} información limitada de amenidades. Recomendamos confirmar con el asesor antes de visitar.</>
+                        ) : (
+                          <>Todas las propiedades tienen información completa de amenidades. Datos confiables para comparar.</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })()}
             </section>
 
             {/* Section 6: Financial Scenario - BETA */}
@@ -470,6 +540,11 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
             {/* Section 8: Motivators */}
             <section className="mb-6 md:mb-8 bg-blue-50 rounded-xl p-4 md:p-6">
               <h3 className="text-brand-primary font-bold mb-4">8. MOTIVADORES Y RIESGOS</h3>
+              {isDinamico && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-800">
+                  <strong>Ejemplo:</strong> Esta sección se personalizará con un formulario más extenso en una versión futura. Los datos mostrados son ilustrativos.
+                </div>
+              )}
               <div className="grid md:grid-cols-2 gap-4 md:gap-6">
                 <div>
                   <h4 className="text-sm font-bold mb-2">Tus Motivadores</h4>

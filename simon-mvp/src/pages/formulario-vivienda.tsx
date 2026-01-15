@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
+import InternalHeader from '@/components/InternalHeader'
 
 // Tipos
 interface FiltrosNivel1 {
@@ -268,14 +269,12 @@ export default function FormularioViviendaPage() {
   const progreso = calcularProgreso(form)
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50">
+      <InternalHeader backLink={{ href: '/filtros', label: '← Volver a filtros' }} />
+      <div className="max-w-2xl mx-auto px-4 pb-8">
         {/* Header */}
         <div className="mb-6">
-          <Link href="/filtros" className="text-blue-600 hover:underline text-sm">
-            ← Volver a filtros
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900 mt-2">
+          <h1 className="text-2xl font-bold text-gray-900">
             Contanos mas sobre tu busqueda
           </h1>
           <p className="text-gray-600 mt-1">
