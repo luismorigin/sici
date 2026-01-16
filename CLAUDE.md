@@ -193,7 +193,8 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 380 | Spazios Edén $57,153 por 105m² ($544/m²) - precio irrealmente bajo vs $146k de unidades idénticas | Revisar fuente, marcar inactivo o corregir precio |
 
 ### Backlog Extractores n8n
-- [ ] **Fix TC Paralelo extractores** - Ver `docs/backlog/FIX_TC_PARALELO_EXTRACTORES.md`
+- [ ] **REIMPORTAR flujo_b_processing_v3.0.json en n8n** - Contiene Fix 1 TC paralelo (patrones regex)
+- [ ] **Fix 2 TC Paralelo** - Lógica normalización USD paralelo - Ver `docs/backlog/FIX_TC_PARALELO_EXTRACTORES.md`
 
 ### Validaciones Pendientes en Pipeline
 - [ ] Agregar validación precio/m² en merge: si < $800 para Equipetrol, flaggear como `requiere_revision`
