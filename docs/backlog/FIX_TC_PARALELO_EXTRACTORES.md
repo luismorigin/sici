@@ -1,27 +1,27 @@
-# FIX TC Paralelo - Extractores n8n (EN PROGRESO)
+# FIX TC Paralelo - Extractores n8n
 
 **Fecha:** 14 Ene 2026
-**Última sesión:** 14 Ene 2026
+**Última sesión:** 16 Ene 2026
 **Prioridad:** Media (no bloquea, hay vista de monitoreo)
 **Repo afectado:** n8n workflows (extractores)
 
-## ESTADO ACTUAL (para continuar)
+## ESTADO ACTUAL
 
-### Fix 1: PARCIALMENTE APLICADO
-- ✅ Se actualizó `testParaleloExplicito` en `flujo_b_processing_v3.0.json`
-- ⚠️ Hay 2 patrones inline adicionales que también necesitan actualización
-- Buscar: `cambio.*paralelo.*blue` (2 ocurrencias más)
+### Fix 1: COMPLETADO ✅
+- ✅ `testParaleloExplicito` actualizado
+- ✅ 2 patrones inline actualizados
+- ✅ Commit: `c7b5b40`
+- ⚠️ **PENDIENTE: Reimportar workflow en n8n**
 
 ### Fix 2: PENDIENTE
 - Lógica de normalización USD→USD paralelo aún no implementada
 
 ### Para continuar:
 ```bash
-# Buscar los otros 2 patrones que faltan:
-grep -c "cambio.*paralelo.*blue" "n8n/workflows/modulo_1/flujo_b_processing_v3.0.json"
-# Resultado esperado: 2
-
-# Después de arreglar, reimportar workflow en n8n
+# Reimportar el workflow en n8n:
+# 1. Abrir n8n
+# 2. Importar flujo_b_processing_v3.0.json
+# 3. Activar workflow
 ```
 
 ---
