@@ -94,7 +94,7 @@ const UMBRALES = {
 }
 
 // Tipos
-type Modo = 'verificar' | 'estimar'
+type Modo = 'verificar' | 'estimar' | 'vender'
 type TipoEdificio = 'premium' | 'standard' | 'basico'
 type EstadoEntrega = 'inmediata' | 'preventa'
 type PreferenciaUsuario = 'calidad' | 'balance' | 'precio'
@@ -154,6 +154,38 @@ interface Estimacion {
   expensasMax: number
   expensasAnualMin: number
   expensasAnualMax: number
+}
+
+// Interface para análisis de venta (modo vendedor)
+interface AnalisisVenta {
+  // Competencia
+  competidores: number
+  competidoresTotal: number
+  promedioDiasMercado: number | null
+  // Precios de mercado
+  precioM2Min: number
+  precioM2Max: number
+  precioM2Promedio: number
+  // Valor de tu depto
+  valorBaseMin: number
+  valorBaseMax: number
+  valorParqueos: number
+  valorBaulera: number
+  valorTotalMin: number
+  valorTotalMax: number
+  // Ventajas competitivas (datos reales)
+  pctCompetenciaConParqueo: number
+  pctCompetenciaConBaulera: number
+  tieneParqueo: boolean
+  tieneBaulera: boolean
+  // Posición en mercado
+  tuPrecioM2: number
+  percentilEnMercado: number
+  // Contexto
+  tipoEdificioLabel: string
+  // Expensas (para informar al comprador)
+  expensasMin: number
+  expensasMax: number
 }
 
 // Colores por categoria
@@ -382,6 +414,7 @@ export default function PriceChecker() {
   const [warning, setWarning] = useState<string | null>(null)
   const [veredicto, setVeredicto] = useState<VeredictoProfundo | null>(null)
   const [estimacion, setEstimacion] = useState<Estimacion | null>(null)
+  const [analisisVenta, setAnalisisVenta] = useState<AnalisisVenta | null>(null)
   const [mostrarAnalisisFiduciario, setMostrarAnalisisFiduciario] = useState(false)
 
   // Validaciones - permitir noSeMetraje como alternativa a areaM2
@@ -392,7 +425,11 @@ export default function PriceChecker() {
 
   const formBasicoValidoEstimar = zona && dormitorios !== null && tieneMetraje
 
-  const formBasicoValido = modo === 'verificar' ? formBasicoValidoVerificar : formBasicoValidoEstimar
+  const formBasicoValidoVender = zona && dormitorios !== null && tieneMetraje
+
+  const formBasicoValido = modo === 'verificar'
+    ? formBasicoValidoVerificar
+    : (modo === 'estimar' ? formBasicoValidoEstimar : formBasicoValidoVender)
 
   // Obtener área efectiva (input o típico)
   const getAreaEfectiva = (): number => {
@@ -402,7 +439,10 @@ export default function PriceChecker() {
     }
     return 0
   }
-  const formCalificadorasValido = tipoEdificio !== null && estadoEntrega !== null
+  // Para vender no necesitamos estadoEntrega
+  const formCalificadorasValido = modo === 'vender'
+    ? tipoEdificio !== null
+    : tipoEdificio !== null && estadoEntrega !== null
 
   const toggleAmenity = (id: string) => {
     setAmenitiesEdificio(prev =>
@@ -669,11 +709,139 @@ export default function PriceChecker() {
     }
   }
 
+  // ========== HANDLER VENDER ==========
+  const handleVender = async () => {
+    if (!formBasicoValido || !tipoEdificio) return
+
+    setLoading(true)
+    setError(null)
+    setWarning(null)
+    setAnalisisVenta(null)
+
+    try {
+      const area = getAreaEfectiva()
+
+      const todas = await buscarConFallback()
+
+      if (todas.length < 3) {
+        setError('No hay suficientes datos para analizar. Proba con otra zona.')
+        setLoading(false)
+        return
+      }
+
+      // Filtrar por tipo de edificio (no por estado entrega - vendedor ya tiene el depto)
+      let competencia = todas.filter(prop => {
+        const amenities = prop.amenities_confirmados || []
+        const countAmenities = contarAmenitiesClave(amenities)
+
+        if (tipoEdificio === 'premium') return countAmenities >= 3
+        if (tipoEdificio === 'standard') return countAmenities >= 1 && countAmenities < 3
+        return true
+      })
+
+      if (competencia.length < 3) {
+        competencia = todas
+        setWarning('Pocos edificios del mismo tipo. Comparando con todo el mercado.')
+      }
+
+      // Calcular métricas de competencia
+      const preciosM2 = competencia.map(c => c.precio_m2)
+      const precioM2Min = Math.min(...preciosM2)
+      const precioM2Max = Math.max(...preciosM2)
+      const precioM2Promedio = preciosM2.reduce((a, b) => a + b, 0) / preciosM2.length
+
+      // Días en mercado
+      const diasValidos = competencia.filter(c => c.dias_en_mercado != null)
+      const promedioDiasMercado = diasValidos.length > 0
+        ? Math.round(diasValidos.reduce((sum, c) => sum + c.dias_en_mercado!, 0) / diasValidos.length)
+        : null
+
+      // Calcular % competencia con parqueo/baulera
+      const conParqueo = competencia.filter(c => {
+        const amenities = c.amenities_confirmados || []
+        return amenities.some(a => a.toLowerCase().includes('parqueo') || a.toLowerCase().includes('estacionamiento'))
+      }).length
+      const conBaulera = competencia.filter(c => {
+        const amenities = c.amenities_confirmados || []
+        return amenities.some(a => a.toLowerCase().includes('baulera') || a.toLowerCase().includes('deposito'))
+      }).length
+
+      const pctCompetenciaConParqueo = Math.round((conParqueo / competencia.length) * 100)
+      const pctCompetenciaConBaulera = Math.round((conBaulera / competencia.length) * 100)
+
+      // Obtener costos de extras
+      const estacionamiento = getEstacionamientoEstimado(dormitorios!)
+      const baulera = getBauleraEstimada(dormitorios!)
+
+      const costoParqueoUnit = Math.round((estacionamiento.compra.min + estacionamiento.compra.max) / 2)
+      const costoBauleraUnit = Math.round((baulera.compra.min + baulera.compra.max) / 2)
+
+      // Valor de tu depto
+      const valorBaseMin = Math.round(area * percentile(preciosM2, 25) / 1000) * 1000
+      const valorBaseMax = Math.round(area * percentile(preciosM2, 75) / 1000) * 1000
+      const valorParqueos = cantParqueos * costoParqueoUnit
+      const valorBaulera = (incluyeBaulera === true) ? costoBauleraUnit : 0
+
+      const valorTotalMin = valorBaseMin + valorParqueos + valorBaulera
+      const valorTotalMax = valorBaseMax + valorParqueos + valorBaulera
+
+      // Tu precio por m2
+      const tuPrecioM2 = Math.round(((valorTotalMin + valorTotalMax) / 2) / area)
+
+      // En qué percentil está tu precio
+      const preciosSorted = [...preciosM2].sort((a, b) => a - b)
+      const indexTuPrecio = preciosSorted.findIndex(p => p >= tuPrecioM2)
+      const percentilEnMercado = indexTuPrecio >= 0
+        ? Math.round((indexTuPrecio / preciosSorted.length) * 100)
+        : 50
+
+      // Expensas
+      const categoriaExpensas = tipoEdificio === 'premium' ? 'premium' : 'estandar'
+      const expensasData = getExpensasEstimadas(dormitorios!, categoriaExpensas)
+
+      const tipoLabel = tipoEdificio === 'premium' ? 'edificios premium'
+        : tipoEdificio === 'standard' ? 'edificios standard' : 'todos los edificios'
+
+      setPaso(3)
+      setAnalisisVenta({
+        competidores: competencia.length,
+        competidoresTotal: todas.length,
+        promedioDiasMercado,
+        precioM2Min: Math.round(precioM2Min),
+        precioM2Max: Math.round(precioM2Max),
+        precioM2Promedio: Math.round(precioM2Promedio),
+        valorBaseMin,
+        valorBaseMax,
+        valorParqueos,
+        valorBaulera,
+        valorTotalMin,
+        valorTotalMax,
+        pctCompetenciaConParqueo,
+        pctCompetenciaConBaulera,
+        tieneParqueo: cantParqueos > 0,
+        tieneBaulera: incluyeBaulera === true,
+        tuPrecioM2,
+        percentilEnMercado,
+        tipoEdificioLabel: tipoLabel,
+        expensasMin: expensasData.rango.min,
+        expensasMax: expensasData.rango.max
+      })
+
+    } catch (err) {
+      console.error('Error analizando venta:', err)
+      setError('Error al analizar. Intenta de nuevo.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleAnalizar = () => {
     if (modo === 'verificar') {
       handleVerificar()
-    } else {
+    } else if (modo === 'estimar') {
       handleEstimar()
+    } else {
+      handleVender()
     }
   }
 
@@ -682,6 +850,7 @@ export default function PriceChecker() {
     setModo('verificar')
     setVeredicto(null)
     setEstimacion(null)
+    setAnalisisVenta(null)
     setMostrarAnalisisFiduciario(false)
     setError(null)
     setWarning(null)
@@ -722,7 +891,7 @@ export default function PriceChecker() {
               <h3 className="text-lg font-bold text-slate-800 mb-2 text-center">¿Que queres saber?</h3>
               <p className="text-sm text-slate-500 mb-6 text-center">Elegi segun tu situacion</p>
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-3 gap-4">
                 <button
                   onClick={() => handleSeleccionarModo('verificar')}
                   className="p-5 border-2 border-slate-200 rounded-xl hover:border-brand-primary hover:bg-blue-50 transition-all text-left group"
@@ -736,7 +905,7 @@ export default function PriceChecker() {
                     <span className="font-bold text-slate-800">Ya tengo un precio</span>
                   </div>
                   <p className="text-sm text-slate-500">
-                    Me ofrecieron un depa y quiero saber si el precio es justo
+                    Me ofrecieron un depa y quiero saber si es justo
                   </p>
                 </button>
 
@@ -750,10 +919,27 @@ export default function PriceChecker() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
-                    <span className="font-bold text-slate-800">¿Cuanto deberia valer?</span>
+                    <span className="font-bold text-slate-800">¿Cuanto vale?</span>
                   </div>
                   <p className="text-sm text-slate-500">
-                    Quiero saber el rango de precios antes de negociar
+                    Quiero saber el rango antes de negociar
+                  </p>
+                </button>
+
+                <button
+                  onClick={() => handleSeleccionarModo('vender')}
+                  className="p-5 border-2 border-slate-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all text-left group"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center group-hover:bg-emerald-500/20 transition">
+                      <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <span className="font-bold text-slate-800">Quiero vender</span>
+                  </div>
+                  <p className="text-sm text-slate-500">
+                    Tengo un depa y quiero saber a cuanto ponerlo
                   </p>
                 </button>
               </div>
@@ -770,7 +956,7 @@ export default function PriceChecker() {
 
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-slate-800">
-                  {modo === 'verificar' ? 'Datos de la oferta' : 'Datos del departamento'}
+                  {modo === 'verificar' ? 'Datos de la oferta' : modo === 'vender' ? 'Datos de tu departamento' : 'Datos del departamento'}
                 </h3>
                 <button
                   onClick={() => setPaso(0)}
@@ -872,8 +1058,8 @@ export default function PriceChecker() {
                 </div>
               )}
 
-              {/* Extras incluidos - Solo en modo estimar */}
-              {modo === 'estimar' && (
+              {/* Extras incluidos - Modo estimar y vender */}
+              {(modo === 'estimar' || modo === 'vender') && (
                 <div className="bg-slate-50 rounded-xl p-4 mb-6">
                   <h4 className="text-sm font-medium text-slate-700 mb-3">¿Que incluye la oferta?</h4>
                   <div className="grid grid-cols-2 gap-4">
@@ -978,22 +1164,25 @@ export default function PriceChecker() {
                 </div>
               </div>
 
-              <div className="mb-5">
-                <label className="block text-sm font-medium text-slate-700 mb-2">¿Estado de entrega?</label>
-                <div className="flex gap-3">
-                  {ESTADO_ENTREGA.map(e => (
-                    <button
-                      key={e.value}
-                      onClick={() => setEstadoEntrega(e.value)}
-                      className={`flex-1 py-3 px-4 rounded-lg border font-medium text-sm transition-all ${
-                        estadoEntrega === e.value ? 'border-brand-primary bg-blue-50 text-brand-primary' : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                      }`}
-                    >
-                      {e.label}
-                    </button>
-                  ))}
+              {/* Estado entrega - Solo para compradores, no para vendedores */}
+              {modo !== 'vender' && (
+                <div className="mb-5">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">¿Estado de entrega?</label>
+                  <div className="flex gap-3">
+                    {ESTADO_ENTREGA.map(e => (
+                      <button
+                        key={e.value}
+                        onClick={() => setEstadoEntrega(e.value)}
+                        className={`flex-1 py-3 px-4 rounded-lg border font-medium text-sm transition-all ${
+                          estadoEntrega === e.value ? 'border-brand-primary bg-blue-50 text-brand-primary' : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        {e.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="mb-5">
                 <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -1075,7 +1264,7 @@ export default function PriceChecker() {
                       Analizando...
                     </span>
                   ) : (
-                    modo === 'verificar' ? 'Analizar Oferta →' : 'Estimar Valor →'
+                    modo === 'verificar' ? 'Analizar Oferta →' : modo === 'vender' ? 'Analizar Mercado →' : 'Estimar Valor →'
                   )}
                 </button>
               </div>
@@ -1367,6 +1556,197 @@ export default function PriceChecker() {
                             className="flex-1 border-2 border-brand-primary text-brand-primary py-3 rounded-xl font-semibold text-center hover:bg-brand-primary/5 transition"
                           >
                             Nueva estimacion
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </>
+                )}
+
+                {/* ========== RESULTADO MODO VENDER ========== */}
+                {modo === 'vender' && analisisVenta && (
+                  <>
+                    <div className="bg-emerald-50 text-sm text-emerald-700 rounded-lg px-4 py-2.5 mb-5 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>
+                        Analizando <strong>{analisisVenta.competidores} {analisisVenta.tipoEdificioLabel}</strong> como competencia
+                      </span>
+                    </div>
+
+                    {/* PASO 3a: Resultado basico "Portal" */}
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-slate-700">Analisis de Mercado</h3>
+                        <button onClick={handleReset} className="text-sm text-slate-500 hover:text-slate-700 underline">
+                          Nueva consulta
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="bg-slate-50 p-4 rounded-lg text-center">
+                          <div className="text-sm text-slate-500 mb-1">Tu competencia</div>
+                          <div className="text-2xl font-bold text-slate-800">
+                            {analisisVenta.competidores} deptos
+                          </div>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-lg text-center">
+                          <div className="text-sm text-slate-500 mb-1">Precio/m² mercado</div>
+                          <div className="text-xl font-bold text-slate-800">
+                            ${analisisVenta.precioM2Min.toLocaleString()} - ${analisisVenta.precioM2Max.toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+
+                      {analisisVenta.promedioDiasMercado && (
+                        <div className="text-center py-3 rounded-lg border bg-slate-50 border-slate-200 mb-4">
+                          <span className="text-sm text-slate-600">
+                            Llevan publicados en promedio: <strong>{analisisVenta.promedioDiasMercado} dias</strong>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Warning + CTA para analisis completo */}
+                    {!mostrarAnalisisFiduciario && (
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="border-t pt-6">
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-5">
+                          <div className="flex items-start gap-3">
+                            <span className="text-amber-500 text-xl">⚠️</span>
+                            <div className="text-sm text-amber-800">
+                              <strong>Esto es lo que te diria cualquier portal.</strong><br />
+                              Veamos como se posiciona tu departamento vs la competencia.
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setMostrarAnalisisFiduciario(true)}
+                          className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/25"
+                        >
+                          Ver Analisis Completo →
+                        </button>
+                      </motion.div>
+                    )}
+
+                    {/* PASO 3b: Analisis completo para vendedor */}
+                    {mostrarAnalisisFiduciario && (
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="border-t pt-6">
+                        {/* VALOR DE TU DEPARTAMENTO */}
+                        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-5 mb-5 border border-emerald-200">
+                          <h4 className="text-sm font-semibold text-emerald-800 mb-4 flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Valor de tu Departamento
+                          </h4>
+
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between items-center py-2 border-b border-emerald-200">
+                              <span className="text-emerald-700">
+                                Base (~{Math.round(getAreaEfectiva())}m² × ${analisisVenta.precioM2Promedio}/m²)
+                              </span>
+                              <span className="font-medium text-emerald-800">
+                                ${analisisVenta.valorBaseMin.toLocaleString()} - ${analisisVenta.valorBaseMax.toLocaleString()}
+                              </span>
+                            </div>
+
+                            {analisisVenta.tieneParqueo && (
+                              <div className="flex justify-between items-center py-2 border-b border-emerald-200">
+                                <span className="text-emerald-700">+ {cantParqueos} parqueo{cantParqueos > 1 ? 's' : ''}</span>
+                                <span className="font-medium text-emerald-800">+${analisisVenta.valorParqueos.toLocaleString()}</span>
+                              </div>
+                            )}
+
+                            {analisisVenta.tieneBaulera && (
+                              <div className="flex justify-between items-center py-2 border-b border-emerald-200">
+                                <span className="text-emerald-700">+ Baulera</span>
+                                <span className="font-medium text-emerald-800">+${analisisVenta.valorBaulera.toLocaleString()}</span>
+                              </div>
+                            )}
+
+                            <div className="flex justify-between items-center py-3 bg-white rounded-lg px-3 mt-3">
+                              <span className="font-bold text-emerald-900">RANGO SUGERIDO</span>
+                              <span className="font-bold text-xl text-emerald-700">
+                                ${analisisVenta.valorTotalMin.toLocaleString()} - ${analisisVenta.valorTotalMax.toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* VENTAJAS COMPETITIVAS */}
+                        <div className="bg-blue-50 rounded-xl p-4 mb-5 border border-blue-200">
+                          <h4 className="font-semibold text-blue-900 mb-3 text-sm">Tus ventajas vs competencia:</h4>
+                          <div className="space-y-2 text-sm text-blue-800">
+                            {analisisVenta.tieneParqueo && analisisVenta.pctCompetenciaConParqueo < 60 && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-green-500">✓</span>
+                                <span>Tenes parqueo (solo {analisisVenta.pctCompetenciaConParqueo}% de la competencia lo tiene)</span>
+                              </div>
+                            )}
+                            {analisisVenta.tieneParqueo && analisisVenta.pctCompetenciaConParqueo >= 60 && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-400">•</span>
+                                <span>Tenes parqueo ({analisisVenta.pctCompetenciaConParqueo}% de la competencia tambien)</span>
+                              </div>
+                            )}
+                            {!analisisVenta.tieneParqueo && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-amber-500">!</span>
+                                <span>No tenes parqueo ({analisisVenta.pctCompetenciaConParqueo}% de la competencia si tiene)</span>
+                              </div>
+                            )}
+                            {analisisVenta.tieneBaulera && analisisVenta.pctCompetenciaConBaulera < 40 && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-green-500">✓</span>
+                                <span>Tenes baulera (solo {analisisVenta.pctCompetenciaConBaulera}% la incluye)</span>
+                              </div>
+                            )}
+                            {analisisVenta.competidores > 15 && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-amber-500">!</span>
+                                <span>Mucha competencia ({analisisVenta.competidores} deptos similares)</span>
+                              </div>
+                            )}
+                            {analisisVenta.competidores <= 5 && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-green-500">✓</span>
+                                <span>Poca competencia (solo {analisisVenta.competidores} deptos similares)</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* INFO PARA EL COMPRADOR */}
+                        <div className="bg-slate-50 rounded-lg p-4 mb-5 border border-slate-200">
+                          <h4 className="font-semibold text-slate-700 mb-2 text-sm">Para informar al comprador:</h4>
+                          <div className="text-sm text-slate-600">
+                            Expensas estimadas: <strong>${analisisVenta.expensasMin}-${analisisVenta.expensasMax}/mes</strong>
+                          </div>
+                        </div>
+
+                        {/* LO QUE NO SABEMOS */}
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-5">
+                          <h4 className="font-semibold text-amber-800 mb-2 text-sm flex items-center gap-2">
+                            <span>⚠️</span> Lo que no sabemos:
+                          </h4>
+                          <ul className="text-sm text-amber-700 space-y-1">
+                            <li>• Cuanto tiempo tardara en venderse</li>
+                            <li>• Si los precios van a subir o bajar</li>
+                            <li>• Cuanto te van a negociar</li>
+                          </ul>
+                        </div>
+
+                        {/* CTAs */}
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <Link href={`/filtros?zona=${zona}&dormitorios=${dormitorios}`} className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-semibold text-center hover:bg-emerald-700 transition">
+                            Ver mi competencia
+                          </Link>
+                          <button
+                            onClick={handleReset}
+                            className="flex-1 border-2 border-emerald-600 text-emerald-600 py-3 rounded-xl font-semibold text-center hover:bg-emerald-50 transition"
+                          >
+                            Nuevo analisis
                           </button>
                         </div>
                       </motion.div>
