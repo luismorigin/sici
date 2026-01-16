@@ -14,12 +14,16 @@ import Link from 'next/link'
 
 // Opciones de zona (simplificado de FilterBar)
 const ZONAS = [
+  { id: 'todas', label: 'Todo Equipetrol' },
   { id: 'equipetrol', label: 'Equipetrol Centro' },
   { id: 'sirari', label: 'Sirari' },
   { id: 'equipetrol_norte', label: 'Equipetrol Norte' },
   { id: 'villa_brigida', label: 'Villa Brigida' },
   { id: 'faremafu', label: 'Equipetrol Oeste' },
 ]
+
+// Todas las zonas para búsqueda completa
+const TODAS_LAS_ZONAS = ['equipetrol', 'sirari', 'equipetrol_norte', 'villa_brigida', 'faremafu']
 
 const DORMITORIOS = [
   { value: 0, label: 'Mono' },
@@ -459,15 +463,21 @@ export default function PriceChecker() {
   const buscarConFallback = async () => {
     setWarning(null)
 
+    // Si seleccionó "todas", buscar en todas las zonas directamente
+    const zonasABuscar = zona === 'todas'
+      ? TODAS_LAS_ZONAS
+      : [convertirZona(zona)]
+
     let todas = await buscarUnidadesReales({
-      zonas_permitidas: [convertirZona(zona)],
+      zonas_permitidas: zonasABuscar,
       dormitorios: dormitorios!,
       limite: 100
     })
 
+    // Fallback 1: misma zona pero cualquier dormitorio
     if (todas.length < 3) {
       todas = await buscarUnidadesReales({
-        zonas_permitidas: [convertirZona(zona)],
+        zonas_permitidas: zonasABuscar,
         limite: 100
       })
       if (todas.length >= 3) {
@@ -475,9 +485,10 @@ export default function PriceChecker() {
       }
     }
 
-    if (todas.length < 3) {
+    // Fallback 2: todas las zonas con dormitorios (solo si no es "todas")
+    if (todas.length < 3 && zona !== 'todas') {
       todas = await buscarUnidadesReales({
-        zonas_permitidas: ['equipetrol', 'sirari', 'equipetrol_norte'],
+        zonas_permitidas: TODAS_LAS_ZONAS,
         dormitorios: dormitorios!,
         limite: 100
       })
@@ -1382,7 +1393,7 @@ export default function PriceChecker() {
                           <div className="text-emerald-800 text-lg font-medium">"{veredicto.conclusionAccionable}"</div>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-3">
-                          <Link href={`/filtros?zonas=${zona}&dormitorios=${dormitorios}`} className="flex-1 bg-brand-primary text-white py-3 rounded-xl font-semibold text-center hover:bg-brand-primary/90 transition">
+                          <Link href={`/filtros?zonas=${zona === 'todas' ? TODAS_LAS_ZONAS.join(',') : zona}&dormitorios=${dormitorios}`} className="flex-1 bg-brand-primary text-white py-3 rounded-xl font-semibold text-center hover:bg-brand-primary/90 transition">
                             Ver alternativas
                           </Link>
                           <Link href="/filtros" className="flex-1 border-2 border-brand-primary text-brand-primary py-3 rounded-xl font-semibold text-center hover:bg-brand-primary/5 transition">
@@ -1548,7 +1559,7 @@ export default function PriceChecker() {
 
                         {/* CTAs */}
                         <div className="flex flex-col sm:flex-row gap-3">
-                          <Link href={`/filtros?zonas=${zona}&dormitorios=${dormitorios}`} className="flex-1 bg-brand-primary text-white py-3 rounded-xl font-semibold text-center hover:bg-brand-primary/90 transition">
+                          <Link href={`/filtros?zonas=${zona === 'todas' ? TODAS_LAS_ZONAS.join(',') : zona}&dormitorios=${dormitorios}`} className="flex-1 bg-brand-primary text-white py-3 rounded-xl font-semibold text-center hover:bg-brand-primary/90 transition">
                             Ver opciones disponibles
                           </Link>
                           <button
@@ -1739,7 +1750,7 @@ export default function PriceChecker() {
 
                         {/* CTAs */}
                         <div className="flex flex-col sm:flex-row gap-3">
-                          <Link href={`/filtros?zonas=${zona}&dormitorios=${dormitorios}`} className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-semibold text-center hover:bg-emerald-700 transition">
+                          <Link href={`/filtros?zonas=${zona === 'todas' ? TODAS_LAS_ZONAS.join(',') : zona}&dormitorios=${dormitorios}`} className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-semibold text-center hover:bg-emerald-700 transition">
                             Ver mi competencia
                           </Link>
                           <button
