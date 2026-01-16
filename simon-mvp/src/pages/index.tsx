@@ -10,6 +10,7 @@ import {
   LeadForm,
   PremiumSection,
   MarketLens,
+  PriceChecker,
   CTAFinal,
   Footer
 } from '@/components/landing'
@@ -44,6 +45,9 @@ export default function LandingPage() {
 
         {/* Market Lens - Real-time data (MOAT temprano) */}
         <MarketLens />
+
+        {/* Price Checker - Verificador de ofertas */}
+        <PriceChecker />
 
         {/* Who is it for - antes del form para auto-identificación */}
         <WhoSection />
