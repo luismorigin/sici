@@ -78,9 +78,9 @@ sici/
 ├── sql/functions/
 │   ├── discovery/     # registrar_discovery.sql
 │   ├── enrichment/    # registrar_enrichment.sql
-│   ├── merge/         # merge_discovery_enrichment.sql v2.1.0
+│   ├── merge/         # merge_discovery_enrichment.sql v2.2.0
 │   └── matching/      # Funciones v3.1 (propiedades_v2)
-├── sql/migrations/    # 001-028 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón)
+├── sql/migrations/    # 001-059 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
@@ -93,7 +93,7 @@ sici/
     └── modulo_2/      # Specs matching pipeline
 ```
 
-## Estado Actual (13 Ene 2026)
+## Estado Actual (14 Ene 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
@@ -113,6 +113,7 @@ sici/
 - **Formulario MVP:** Arquitectura 2 niveles (8 campos quick search + 10 campos fiduciario)
 - **Filtro estado_entrega MOAT:** 3 opciones claras (entrega_inmediata, solo_preventa, no_importa) - migración 052
 - **Deduplicación:** Sistema duplicado_de activo, 36 registros marcados como duplicados
+- **Fix TC Paralelo:** Bug merge v2.2.0 + retroactivo 13 props + vista monitoreo (migración 059)
 
 ### ⏳ En Progreso
 - **Supervisor Excluidas:** Workflow n8n Export pendiente mapeo columnas (14 props en Sheet)
@@ -140,7 +141,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-052)
+## Migraciones SQL (001-059)
 
 | # | Archivo | Propósito | Estado |
 |---|---------|-----------|--------|
@@ -177,6 +178,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 050 | fix_santorini_gps_fotos | Corregir GPS y fotos rotas SANTORINI VENTURA | ✅ |
 | 051 | deduplicar_exactos | Marcar duplicados exactos (Avanti, Spazios, etc.) | ✅ |
 | 052 | fix_estado_entrega_solo_preventa | Filtro MOAT 3 opciones: entrega_inmediata, solo_preventa, no_importa | ✅ |
+| 059 | fix_tc_paralelo_retroactivo | Fix bug merge TC + 13 props corregidas + vista monitoreo | ✅ |
 
 ## Repo Legacy
 
@@ -189,6 +191,9 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | ID | Problema | Acción |
 |----|----------|--------|
 | 380 | Spazios Edén $57,153 por 105m² ($544/m²) - precio irrealmente bajo vs $146k de unidades idénticas | Revisar fuente, marcar inactivo o corregir precio |
+
+### Backlog Extractores n8n
+- [ ] **Fix TC Paralelo extractores** - Ver `docs/backlog/FIX_TC_PARALELO_EXTRACTORES.md`
 
 ### Validaciones Pendientes en Pipeline
 - [ ] Agregar validación precio/m² en merge: si < $800 para Equipetrol, flaggear como `requiere_revision`
