@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { innegociablesToAmenidades } from '@/config/amenidades-mercado'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -77,12 +78,13 @@ export interface FiltrosBusqueda {
 }
 
 // Mapeo de IDs de microzona del formulario a nombres en BD
-const microzonaToZona: Record<string, string> = {
+// Algunos IDs expanden a múltiples zonas (ej: equipetrol_norte → ambas subzonas)
+const microzonaToZona: Record<string, string | string[]> = {
   'equipetrol': 'Equipetrol',
   'sirari': 'Sirari',
   'villa_brigida': 'Villa Brigida',
   'faremafu': 'Faremafu',
-  'equipetrol_norte': 'Equipetrol Norte/Norte',  // Agrupa ambas sub-zonas
+  'equipetrol_norte': ['Equipetrol Norte/Norte', 'Equipetrol Norte/Sur'],  // Agrupa ambas sub-zonas
   'equipetrol_norte_norte': 'Equipetrol Norte/Norte',
   'equipetrol_norte_sur': 'Equipetrol Norte/Sur',
   'flexible': '' // vacío = no filtra
@@ -167,20 +169,24 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
     if (filtros.zonas_permitidas && filtros.zonas_permitidas.length > 0) {
       // Convertir IDs del formulario a nombres de BD usando el mapeo
       // También acepta nombres directos (por compatibilidad)
-      const nombresValidos = Object.values(microzonaToZona).filter(Boolean)
-      const zonasNombres = filtros.zonas_permitidas
-        .map(z => {
-          // Si es un ID conocido, convertir a nombre
-          if (microzonaToZona[z] !== undefined) {
-            return microzonaToZona[z]
+      // Nota: algunos IDs expanden a múltiples zonas (ej: equipetrol_norte → array)
+      const nombresValidos = Object.values(microzonaToZona).flat().filter(Boolean)
+      const zonasNombres: string[] = []
+
+      for (const z of filtros.zonas_permitidas) {
+        // Si es un ID conocido, convertir a nombre(s)
+        if (microzonaToZona[z] !== undefined) {
+          const valor = microzonaToZona[z]
+          if (Array.isArray(valor)) {
+            zonasNombres.push(...valor)
+          } else if (valor) {
+            zonasNombres.push(valor)
           }
+        } else if (nombresValidos.some(n => typeof n === 'string' && n.toLowerCase() === z.toLowerCase())) {
           // Si ya es un nombre válido, usarlo directamente
-          if (nombresValidos.some(n => n.toLowerCase() === z.toLowerCase())) {
-            return z
-          }
-          return '' // Desconocido, ignorar
-        })
-        .filter(Boolean) // Eliminar vacíos
+          zonasNombres.push(z)
+        }
+      }
 
       // Si no hay zonas específicas (solo 'flexible'), no filtrar
       if (zonasNombres.length === 0) {
@@ -204,7 +210,10 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
 
 // Convertir zona del formulario a nombre de BD
 export function convertirZona(zonaForm: string): string {
-  return microzonaToZona[zonaForm] || ''
+  const resultado = microzonaToZona[zonaForm]
+  if (!resultado) return ''
+  // Si es array, devolver el primero
+  return Array.isArray(resultado) ? resultado[0] : resultado
 }
 
 // Buscar cuántas opciones hay en el siguiente rango de precio
@@ -370,49 +379,93 @@ export async function obtenerTCBinance(): Promise<TCData | null> {
 // Snapshot 24h para Market Lens
 export interface Snapshot24h {
   nuevos: number
+  retirados: number
+  bajadas_precio: number
   tc_actual: number
   tc_variacion: number
-  precio_real_m2: number
+  precio_m2_promedio: number
+  // MOAT: datos para alertas fiduciarias
+  score_bajo: number
+  props_tc_paralelo: number
+  dias_mediana_equipetrol: number
+  unidades_equipetrol_2d: number
+  total_activas: number
+  proyectos_monitoreados: number
 }
 
 export async function obtenerSnapshot24h(): Promise<Snapshot24h | null> {
   if (!supabase) return null
 
   try {
-    // Propiedades nuevas en últimas 24h
-    const hace24h = new Date()
-    hace24h.setHours(hace24h.getHours() - 24)
+    // 1. Obtener últimos 2 snapshots de auditoría para calcular diferencias
+    const { data: snapshots, error: errSnap } = await supabase
+      .from('auditoria_snapshots')
+      .select('*')
+      .order('fecha', { ascending: false })
+      .limit(2)
 
-    const { data: nuevas, error: errNuevas } = await supabase
-      .from('propiedades_v2')
-      .select('id')
-      .gte('fecha_creacion', hace24h.toISOString())
-
-    // TC actual y anterior
+    // 2. TC actual y anterior
     const { data: tcs, error: errTc } = await supabase
       .from('tc_binance_historial')
       .select('tc_sell, timestamp')
       .order('timestamp', { ascending: false })
       .limit(2)
 
-    if (errNuevas || errTc) {
-      console.warn('Error obteniendo snapshot:', errNuevas?.message, errTc?.message)
+    // 3. Propiedades con TC paralelo
+    const { data: tcParalelo, error: errTcPar } = await supabase
+      .from('propiedades_v2')
+      .select('id')
+      .eq('status', 'completado')
+      .eq('tipo_cambio_detectado', 'paralelo')
+
+    // 4. Días en mercado Equipetrol 2D (desde v_metricas_mercado)
+    const { data: metricasEqui, error: errMetricas } = await supabase
+      .from('v_metricas_mercado')
+      .select('dias_mediana, stock')
+      .eq('zona', 'Equipetrol')
+      .eq('dormitorios', 2)
+      .single()
+
+    // 5. Proyectos monitoreados
+    const { data: proyectos, error: errProy } = await supabase
+      .from('proyectos_master')
+      .select('id')
+      .eq('activo', true)
+
+    if (errSnap || errTc) {
+      console.warn('Error obteniendo snapshot:', errSnap?.message, errTc?.message)
       return null
     }
 
-    const tcActual = tcs?.[0]?.tc_sell ? parseFloat(tcs[0].tc_sell) : 10.95
+    const snapHoy = snapshots?.[0]
+    const snapAyer = snapshots?.[1]
+
+    const tcActual = tcs?.[0]?.tc_sell ? parseFloat(tcs[0].tc_sell) : 9.72
     const tcAnterior = tcs?.[1]?.tc_sell ? parseFloat(tcs[1].tc_sell) : tcActual
     const variacion = tcAnterior > 0 ? ((tcActual - tcAnterior) / tcAnterior) * 100 : 0
 
-    // Precio real ajustado
+    // Calcular retirados = diferencia de inactivas
+    const retirados = snapHoy && snapAyer
+      ? Math.max(0, (snapHoy.props_inactivas || 0) - (snapAyer.props_inactivas || 0))
+      : 0
+
+    // Precio promedio m² desde métricas
     const metricas = await obtenerMetricasMercado()
-    const precioRealM2 = metricas ? Math.round(metricas.precio_promedio_m2 * (6.96 / tcActual)) : 1186
 
     return {
-      nuevos: nuevas?.length || 0,
+      nuevos: snapHoy?.props_creadas_24h || 0,
+      retirados,
+      bajadas_precio: 0, // TODO: calcular desde precios_historial cuando haya data
       tc_actual: tcActual,
-      tc_variacion: Math.round(variacion * 10) / 10,
-      precio_real_m2: precioRealM2
+      tc_variacion: Math.round(variacion * 100) / 100,
+      precio_m2_promedio: metricas?.precio_promedio_m2 || 2022,
+      // MOAT data
+      score_bajo: snapHoy?.score_bajo || 0,
+      props_tc_paralelo: tcParalelo?.length || 0,
+      dias_mediana_equipetrol: metricasEqui?.dias_mediana || 51,
+      unidades_equipetrol_2d: metricasEqui?.stock || 31,
+      total_activas: snapHoy?.props_completadas || 302,
+      proyectos_monitoreados: proyectos?.length || 189
     }
   } catch (err) {
     console.warn('Error en obtenerSnapshot24h:', err)
@@ -662,7 +715,7 @@ export async function confirmarLead(leadId: number): Promise<boolean> {
 // Tipos para analisis_mercado_fiduciario()
 export interface PosicionMercado {
   success: boolean
-  categoria: 'oportunidad' | 'precio_justo' | 'premium'
+  categoria: 'oportunidad' | 'bajo_promedio' | 'precio_justo' | 'sobre_promedio' | 'premium'
   diferencia_pct: number
   posicion_texto: string
   contexto: {
@@ -699,6 +752,7 @@ export interface OpcionValida {
   ranking: number
   total_opciones: number
   fotos: number
+  fotos_urls?: string[]  // Enriquecido desde cliente
   amenities: string[]
   asesor_wsp: string | null
   posicion_mercado: PosicionMercado
@@ -826,6 +880,260 @@ export async function obtenerAnalisisFiduciario(filtros: FiltrosAnalisis): Promi
   }
 }
 
+// ========== ANÁLISIS FIDUCIARIO DESDE BÚSQUEDA REAL ==========
+// Esta función construye el análisis usando los mismos filtros que buscarUnidadesReales
+// para garantizar que PremiumModal muestre exactamente los mismos datos que /resultados
+
+// Constantes MOAT (Enero 2026, actualizar mensualmente)
+const MEDIANA_AREA_POR_DORMS: Record<number, number> = {
+  0: 36, 1: 52, 2: 88, 3: 165, 4: 200, 5: 250
+}
+
+const MEDIANA_PRECIO_M2_POR_ZONA: Record<string, number> = {
+  'Equipetrol Norte/Norte': 2362,
+  'Faremafu': 2299,
+  'Equipetrol': 2055,
+  'Sirari': 2002,
+  'Villa Brigida': 1538,
+  'default': 2000
+}
+
+interface DatosUsuarioMOAT {
+  innegociables: string[]
+  deseables: string[]
+  ubicacion_vs_metros: number
+  calidad_vs_precio: number
+}
+
+// Función de score MOAT (copia de resultados.tsx para consistencia)
+function calcularScoreMOATInterno(
+  prop: UnidadReal,
+  datosUsuario: DatosUsuarioMOAT
+): number {
+  let score = 0
+
+  // 1. INNEGOCIABLES (0 a 100)
+  if (datosUsuario.innegociables.length === 0) {
+    score += 100
+  } else {
+    const amenidadesRequeridas = innegociablesToAmenidades(datosUsuario.innegociables)
+    const confirmados = prop.amenities_confirmados || []
+    const porVerificar = prop.amenities_por_verificar || []
+
+    let puntosInnegociables = 0
+    const maxPuntosPorInnegociable = 100 / amenidadesRequeridas.length
+
+    for (const amenidad of amenidadesRequeridas) {
+      if (confirmados.includes(amenidad)) {
+        puntosInnegociables += maxPuntosPorInnegociable
+      } else if (porVerificar.includes(amenidad)) {
+        puntosInnegociables += maxPuntosPorInnegociable * 0.5
+      }
+    }
+    score += Math.round(puntosInnegociables)
+  }
+
+  // 2. OPORTUNIDAD (0 a 40) - basado en posicion_mercado
+  const posicionMercado = prop.posicion_mercado as { diferencia_pct?: number } | null
+  const difPct = posicionMercado?.diferencia_pct ?? 0
+
+  let oportunidadScore = 0
+  if (datosUsuario.calidad_vs_precio <= 2) {
+    // PRIORIZA CALIDAD
+    if (difPct >= 15) oportunidadScore = 40
+    else if (difPct >= 5) oportunidadScore = 30
+    else if (difPct >= -10) oportunidadScore = 20
+    else if (difPct >= -20) oportunidadScore = 10
+  } else if (datosUsuario.calidad_vs_precio >= 4) {
+    // PRIORIZA PRECIO
+    if (difPct <= -20) oportunidadScore = 40
+    else if (difPct <= -10) oportunidadScore = 30
+    else if (difPct <= 5) oportunidadScore = 20
+    else if (difPct <= 15) oportunidadScore = 10
+  } else {
+    // NEUTRAL
+    if (difPct <= -20) oportunidadScore = 35
+    else if (difPct <= -10) oportunidadScore = 30
+    else if (difPct <= 10) oportunidadScore = 25
+    else if (difPct <= 20) oportunidadScore = 15
+    else oportunidadScore = 10
+  }
+  score += oportunidadScore
+
+  // 3. TRADE-OFFS (0 a 20)
+  const medianaArea = MEDIANA_AREA_POR_DORMS[prop.dormitorios || 1] || 52
+
+  if (datosUsuario.ubicacion_vs_metros >= 4) {
+    if ((prop.area_m2 || 0) > medianaArea) {
+      score += 10
+    }
+  }
+
+  const totalAmenidades = (prop.amenities_confirmados?.length || 0)
+  if (datosUsuario.calidad_vs_precio <= 2 && totalAmenidades >= 5) {
+    score += 10
+  }
+
+  // 4. DESEABLES (0 a 15)
+  if (datosUsuario.deseables.length > 0) {
+    const amenidadesDeseadas = innegociablesToAmenidades(datosUsuario.deseables)
+    let deseablesScore = 0
+    const confirmados = prop.amenities_confirmados || []
+
+    for (const amenidad of amenidadesDeseadas.slice(0, 3)) {
+      if (confirmados.includes(amenidad)) {
+        deseablesScore += 5
+      }
+    }
+    score += deseablesScore
+  }
+
+  return score
+}
+
+// Interfaz extendida para filtros con MOAT
+export interface FiltrosBusquedaMOAT extends FiltrosBusqueda {
+  innegociables?: string[]
+  deseables?: string[]
+  ubicacion_vs_metros?: number
+  calidad_vs_precio?: number
+}
+
+export async function construirAnalisisDesdeBusqueda(
+  filtros: FiltrosBusquedaMOAT
+): Promise<AnalisisMercadoFiduciario | null> {
+  try {
+    // Usar la misma función de búsqueda que /resultados
+    const resultados = await buscarUnidadesReales({
+      ...filtros,
+      limite: filtros.limite || 10
+    })
+
+    if (resultados.length === 0) {
+      return null
+    }
+
+    // Aplicar ordenamiento MOAT si hay datos de usuario
+    const datosUsuarioMOAT: DatosUsuarioMOAT = {
+      innegociables: filtros.innegociables || [],
+      deseables: filtros.deseables || [],
+      ubicacion_vs_metros: filtros.ubicacion_vs_metros || 3,
+      calidad_vs_precio: filtros.calidad_vs_precio || 3
+    }
+
+    // Calcular score y ordenar
+    const resultadosConScore = resultados.map(r => ({
+      ...r,
+      score_moat: calcularScoreMOATInterno(r, datosUsuarioMOAT)
+    }))
+
+    resultadosConScore.sort((a, b) => {
+      if (b.score_moat !== a.score_moat) {
+        return b.score_moat - a.score_moat
+      }
+      const difA = (a.posicion_mercado as { diferencia_pct?: number } | null)?.diferencia_pct ?? 0
+      const difB = (b.posicion_mercado as { diferencia_pct?: number } | null)?.diferencia_pct ?? 0
+      return difA - difB
+    })
+
+    // Calcular métricas desde los resultados ordenados
+    const precios = resultadosConScore.map(r => r.precio_usd)
+    const preciosM2 = resultadosConScore.map(r => r.precio_m2)
+    const areas = resultadosConScore.map(r => r.area_m2)
+
+    const precioPromedio = precios.reduce((a, b) => a + b, 0) / precios.length
+    const precioM2Promedio = preciosM2.reduce((a, b) => a + b, 0) / preciosM2.length
+    const areaPromedio = areas.reduce((a, b) => a + b, 0) / areas.length
+
+    // Convertir UnidadReal[] a OpcionValida[] (YA ORDENADOS POR MOAT)
+    const opciones: OpcionValida[] = resultadosConScore.map((r, idx) => ({
+      id: r.id,
+      proyecto: r.proyecto,
+      desarrollador: r.desarrollador || null,
+      zona: r.zona,
+      dormitorios: r.dormitorios || 0,
+      precio_usd: r.precio_usd,
+      precio_m2: r.precio_m2,
+      area_m2: r.area_m2,
+      ranking: idx + 1,
+      total_opciones: resultadosConScore.length,
+      fotos: r.cantidad_fotos || 0,
+      fotos_urls: r.fotos_urls || [],
+      amenities: r.amenities_confirmados || r.amenities_lista || [],
+      asesor_wsp: r.asesor_wsp || null,
+      posicion_mercado: r.posicion_mercado || {
+        success: true,
+        categoria: 'precio_justo' as const,
+        diferencia_pct: 0,
+        posicion_texto: 'Precio de mercado',
+        contexto: {
+          promedio_zona: precioM2Promedio,
+          stock_disponible: resultadosConScore.length,
+          precio_consultado: r.precio_m2
+        }
+      },
+      explicacion_precio: {
+        propiedad_id: r.id,
+        precio_usd: r.precio_usd,
+        precio_m2: r.precio_m2,
+        zona: r.zona,
+        promedio_zona: precioM2Promedio,
+        diferencia_pct: r.posicion_mercado?.diferencia_pct || 0,
+        resumen: r.posicion_mercado?.posicion_texto || 'Precio de mercado',
+        explicaciones: []
+      },
+      resumen_fiduciario: r.razon_fiduciaria || `${r.proyecto} en ${r.zona} - ${r.dormitorios} dorm, ${Math.round(r.area_m2)}m²`
+    }))
+
+    // Construir respuesta en formato AnalisisMercadoFiduciario
+    const analisis: AnalisisMercadoFiduciario = {
+      filtros_aplicados: {
+        dormitorios: filtros.dormitorios,
+        precio_max: filtros.precio_max,
+        zona: filtros.zona || filtros.zonas_permitidas?.[0],
+        solo_con_fotos: true,
+        limite: filtros.limite || 10
+      },
+      timestamp: new Date().toISOString(),
+      bloque_1_opciones_validas: {
+        total: resultadosConScore.length,
+        opciones
+      },
+      bloque_2_opciones_excluidas: {
+        total: 0,
+        nota: 'Opciones excluidas no disponibles en búsqueda directa',
+        opciones: []
+      },
+      bloque_3_contexto_mercado: {
+        stock_total: resultadosConScore.length,
+        stock_cumple_filtros: resultadosConScore.length,
+        stock_excluido_mas_barato: 0,
+        porcentaje_mercado: 100,
+        diagnostico: `Encontramos ${resultadosConScore.length} opciones que cumplen tus criterios.`,
+        metricas_zona: {
+          precio_promedio: Math.round(precioPromedio),
+          precio_mediana: Math.round(precios.sort((a, b) => a - b)[Math.floor(precios.length / 2)]),
+          precio_min: Math.min(...precios),
+          precio_max: Math.max(...precios),
+          precio_m2_promedio: Math.round(precioM2Promedio),
+          area_promedio: Math.round(areaPromedio),
+          dias_promedio: null,
+          dias_mediana: null
+        }
+      },
+      bloque_4_alertas: {
+        total: 0,
+        alertas: []
+      }
+    }
+
+    return analisis
+  } catch (err) {
+    console.error('Error construyendo análisis desde búsqueda:', err)
+    return null
+  }
+}
+
 // Función helper para generar distribución de precios
 export function generarDistribucionPrecios(
   opciones: OpcionValida[],
@@ -899,13 +1207,14 @@ export interface MicrozonaData {
 }
 
 export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
-  // Demo data as fallback
+  // Fallback con datos REALES de Enero 2026
   const demoData: MicrozonaData[] = [
-    { zona: 'Equipetrol', total: 76, precio_promedio: 143579, precio_m2: 2129, proyectos: 38, lat: -17.7656, lng: -63.1957, categoria: 'premium' },
-    { zona: 'Sirari', total: 25, precio_promedio: 215828, precio_m2: 2552, proyectos: 13, lat: -17.7630, lng: -63.2014, categoria: 'premium' },
-    { zona: 'Villa Brigida', total: 47, precio_promedio: 102595, precio_m2: 1642, proyectos: 17, lat: -17.7680, lng: -63.1920, categoria: 'value' },
-    { zona: 'Faremafu', total: 19, precio_promedio: 251096, precio_m2: 2023, proyectos: 12, lat: -17.7610, lng: -63.1880, categoria: 'premium' },
-    { zona: 'Equipetrol Norte', total: 20, precio_promedio: 154829, precio_m2: 2363, proyectos: 12, lat: -17.7590, lng: -63.1900, categoria: 'standard' }
+    { zona: 'Eq. Centro', total: 98, precio_promedio: 156709, precio_m2: 2098, proyectos: 41, categoria: 'standard' },
+    { zona: 'Villa Brigida', total: 67, precio_promedio: 71838, precio_m2: 1495, proyectos: 16, categoria: 'value' },
+    { zona: 'Sirari', total: 47, precio_promedio: 199536, precio_m2: 2258, proyectos: 13, categoria: 'premium' },
+    { zona: 'Eq. Norte/Norte', total: 19, precio_promedio: 153354, precio_m2: 2340, proyectos: 11, categoria: 'premium' },
+    { zona: 'Eq. Oeste (Busch)', total: 16, precio_promedio: 277350, precio_m2: 2122, proyectos: 9, categoria: 'premium' },
+    { zona: 'Eq. Norte/Sur', total: 3, precio_promedio: 128006, precio_m2: 2145, proyectos: 3, categoria: 'standard' }
   ]
 
   if (!supabase) {
@@ -913,14 +1222,15 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
   }
 
   try {
-    // Direct query - no RPC needed
+    // Direct query usando MICROZONA (no zona)
     const { data, error } = await supabase
       .from('propiedades_v2')
-      .select('zona, precio_usd, area_total_m2, id_proyecto_master')
+      .select('microzona, precio_usd, area_total_m2, id_proyecto_master')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gt('precio_usd', 30000)
       .gt('area_total_m2', 20)
+      .not('microzona', 'is', null)
 
     if (error || !data || data.length === 0) {
       console.warn('Error o sin datos en microzonas, usando demo:', error?.message)
@@ -931,17 +1241,26 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
     const zonaMap: Record<string, { total: number; precios: number[]; m2: number[]; proyectos: Set<number> }> = {}
 
     data.forEach((p: any) => {
-      const zona = p.zona || 'Equipetrol'
-      if (!zonaMap[zona]) {
-        zonaMap[zona] = { total: 0, precios: [], m2: [], proyectos: new Set() }
+      const zona = p.microzona
+      if (!zona) return // Skip si no tiene microzona
+
+      // Acortar/renombrar nombres
+      let zonaDisplay = zona
+      if (zona === 'Equipetrol') zonaDisplay = 'Eq. Centro'
+      else if (zona === 'Equipetrol Norte/Norte') zonaDisplay = 'Eq. Norte/Norte'
+      else if (zona === 'Equipetrol Norte/Sur') zonaDisplay = 'Eq. Norte/Sur'
+      else if (zona === 'Faremafu') zonaDisplay = 'Eq. Oeste (Busch)'
+
+      if (!zonaMap[zonaDisplay]) {
+        zonaMap[zonaDisplay] = { total: 0, precios: [], m2: [], proyectos: new Set() }
       }
-      zonaMap[zona].total++
-      if (p.precio_usd) zonaMap[zona].precios.push(p.precio_usd)
+      zonaMap[zonaDisplay].total++
+      if (p.precio_usd) zonaMap[zonaDisplay].precios.push(p.precio_usd)
       if (p.area_total_m2 > 0 && p.precio_usd) {
-        zonaMap[zona].m2.push(p.precio_usd / p.area_total_m2)
+        zonaMap[zonaDisplay].m2.push(p.precio_usd / p.area_total_m2)
       }
       if (p.id_proyecto_master) {
-        zonaMap[zona].proyectos.add(p.id_proyecto_master)
+        zonaMap[zonaDisplay].proyectos.add(p.id_proyecto_master)
       }
     })
 
@@ -976,6 +1295,37 @@ function categorizarZona(precioM2: number): 'premium' | 'standard' | 'value' {
   if (precioM2 >= 2200) return 'premium'
   if (precioM2 >= 1800) return 'standard'
   return 'value'
+}
+
+// ========== FOTOS POR ID ==========
+
+export async function obtenerFotosPorIds(ids: number[]): Promise<Record<number, string[]>> {
+  if (!supabase || ids.length === 0) {
+    return {}
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('propiedades_v2')
+      .select('id, datos_json')
+      .in('id', ids)
+
+    if (error) {
+      console.error('Error obteniendo fotos:', error)
+      return {}
+    }
+
+    const result: Record<number, string[]> = {}
+    for (const row of data || []) {
+      // Fotos están en datos_json.contenido.fotos_urls
+      const fotos = row.datos_json?.contenido?.fotos_urls || []
+      result[row.id] = Array.isArray(fotos) ? fotos : []
+    }
+    return result
+  } catch (err) {
+    console.error('Error obteniendo fotos por IDs:', err)
+    return {}
+  }
 }
 
 // ========== ESCENARIO FINANCIERO ==========

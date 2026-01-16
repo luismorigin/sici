@@ -15,30 +15,30 @@ export default function Hero() {
           >
             {/* Badge */}
             <span className="badge badge-primary mb-6">
-              Inteligencia Artificial
+              Solo Equipetrol
             </span>
 
             {/* Title */}
             <h1 className="font-display text-4xl md:text-5xl font-extrabold text-brand-dark leading-tight mb-6">
-              Encuentra tu departamento perfecto en Equipetrol, inteligentemente.
+              Tu departamento en Equipetrol, con datos que nadie más te muestra.
             </h1>
 
             {/* Subtitle */}
             <p className="text-lg text-slate-500 mb-8 max-w-lg leading-relaxed">
-              Simón filtra todo el mercado para encontrar tu pareja ideal. Dinos qué buscas y nuestra IA te entregará una lista curada de los mejores departamentos.
+              Simón analiza el mercado completo de Equipetrol, compara precio/m² por zona, y te muestra solo lo que vale la pena. Sin publicidad pagada, sin agentes, solo datos.
             </p>
 
             {/* Checks */}
             <div className="flex flex-wrap gap-6 mb-8">
-              <CheckItem text="Ahorra Tiempo" />
-              <CheckItem text="Mejores Ofertas" />
-              <CheckItem text="Datos Verificados" />
+              <CheckItem text="Equipetrol: $2.098/m² promedio" />
+              <CheckItem text="187 proyectos activos" />
+              <CheckItem text="Verificado diariamente" />
             </div>
 
             {/* CTAs */}
             <div className="flex flex-wrap gap-4">
-              <Link href="/filtros" className="btn btn-primary px-8 py-4 text-base">
-                Empezar Ahora
+              <Link href="#cta-form" className="btn btn-primary px-8 py-4 text-base">
+                Ver Resultados Gratis
               </Link>
               <Link href="#como-funciona" className="btn btn-secondary px-6 py-4">
                 Saber Más

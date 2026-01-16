@@ -5,36 +5,91 @@ import { useEffect, useState } from 'react'
 import { BarChartCard, CompatibilidadCard, PrecioComparativoCard } from './ChartCard'
 import {
   obtenerAnalisisFiduciario,
+  construirAnalisisDesdeBusqueda,
   obtenerMicrozonas,
   calcularEscenarioFinanciero,
+  obtenerFotosPorIds,
   type AnalisisMercadoFiduciario,
   type MicrozonaData,
   type EscenarioFinanciero
 } from '@/lib/supabase'
 
-interface PremiumModalProps {
-  onClose: () => void
+// Filtros opcionales para hacer el modal dinámico
+interface FiltrosUsuario {
+  presupuesto?: number
+  dormitorios?: number
+  zonas?: string[]
+  estado_entrega?: string
+  // Filtros MOAT para ordenamiento
+  innegociables?: string[]
+  deseables?: string[]
+  ubicacion_vs_metros?: number
+  calidad_vs_precio?: number
 }
 
-export default function PremiumModal({ onClose }: PremiumModalProps) {
+interface PremiumModalProps {
+  onClose: () => void
+  filtros?: FiltrosUsuario  // Si se pasan, usa datos del usuario
+}
+
+export default function PremiumModal({ onClose, filtros }: PremiumModalProps) {
   const [analisis, setAnalisis] = useState<AnalisisMercadoFiduciario | null>(null)
   const [microzonas, setMicrozonas] = useState<MicrozonaData[]>([])
   const [escenarios, setEscenarios] = useState<EscenarioFinanciero[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Si tiene filtros, es dinámico (desde resultados)
+  const isDinamico = !!filtros
+
   useEffect(() => {
     const fetchData = async () => {
-      const [analisisData, microzonasData] = await Promise.all([
-        obtenerAnalisisFiduciario({
+      let analisisData: AnalisisMercadoFiduciario | null = null
+
+      if (filtros) {
+        // Dinámico: usar mismos filtros que buscarUnidadesReales + ordenamiento MOAT
+        analisisData = await construirAnalisisDesdeBusqueda({
+          dormitorios: filtros.dormitorios,
+          precio_max: filtros.presupuesto || 300000,
+          zonas_permitidas: filtros.zonas,  // Soporta múltiples zonas
+          estado_entrega: filtros.estado_entrega as any,
+          limite: 10,
+          // Filtros MOAT para ordenamiento consistente con /resultados
+          innegociables: filtros.innegociables,
+          deseables: filtros.deseables,
+          ubicacion_vs_metros: filtros.ubicacion_vs_metros,
+          calidad_vs_precio: filtros.calidad_vs_precio
+        })
+      } else {
+        // Landing: usar ejemplo hardcodeado
+        analisisData = await obtenerAnalisisFiduciario({
           dormitorios: 2,
           precio_max: 150000,
           solo_con_fotos: true,
           limite: 10
-        }),
-        obtenerMicrozonas()
-      ])
+        })
+      }
+
+      const microzonasData = await obtenerMicrozonas()
 
       if (analisisData) {
+        // Obtener fotos para TOP 4 opciones (si no vienen ya)
+        const opcionesSinFotos = analisisData.bloque_1_opciones_validas.opciones.filter(
+          op => !op.fotos_urls || op.fotos_urls.length === 0
+        )
+        if (opcionesSinFotos.length > 0) {
+          const topIds = analisisData.bloque_1_opciones_validas.opciones
+            .slice(0, 4)
+            .map(op => op.id)
+          const fotosMap = await obtenerFotosPorIds(topIds)
+
+          // Enriquecer opciones con fotos
+          const opcionesConFotos = analisisData.bloque_1_opciones_validas.opciones.map(op => ({
+            ...op,
+            fotos_urls: op.fotos_urls?.length ? op.fotos_urls : (fotosMap[op.id] || [])
+          }))
+          analisisData.bloque_1_opciones_validas.opciones = opcionesConFotos
+        }
+
         setAnalisis(analisisData)
         // Calcular escenarios financieros para top 3
         const escenariosCalc = analisisData.bloque_1_opciones_validas.opciones
@@ -47,7 +102,8 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
       setLoading(false)
     }
     fetchData()
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(filtros)])
 
   const topOpciones = analisis?.bloque_1_opciones_validas.opciones.slice(0, 4) || []
 
@@ -77,29 +133,34 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
             </svg>
           </button>
 
-          <div className="p-8">
+          <div className="p-4 md:p-8">
             {/* Header */}
-            <div className="border-b-2 border-slate-200 pb-6 mb-8 flex justify-between items-start">
+            <div className="border-b-2 border-slate-200 pb-4 md:pb-6 mb-6 md:mb-8 flex flex-col md:flex-row md:justify-between md:items-start gap-2">
               <div>
-                <h2 className="font-display text-2xl font-extrabold text-brand-dark mb-1">
+                <h2 className="font-display text-xl md:text-2xl font-extrabold text-brand-dark mb-1">
                   INFORME PREMIUM - SIMON
                 </h2>
-                <p className="text-slate-500">Estudio Fiduciario Personalizado - Equipetrol</p>
+                <p className="text-slate-500 text-sm">Estudio Fiduciario - Equipetrol</p>
               </div>
-              <div className="text-right text-sm text-slate-500">
+              <div className="text-left md:text-right text-xs md:text-sm text-slate-500">
                 <div><strong>Generado:</strong> {new Date().toLocaleDateString('es-ES')}</div>
                 <div><strong>Propiedades:</strong> {analisis?.bloque_3_contexto_mercado.stock_total || 987} Analizadas</div>
               </div>
             </div>
 
             {/* Section 1: Profile */}
-            <section className="bg-slate-50 rounded-xl p-6 mb-8">
-              <h3 className="text-brand-primary font-bold mb-4">1. PERFIL FIDUCIARIO PROFUNDO</h3>
+            <section className="bg-slate-50 rounded-xl p-4 md:p-6 mb-6 md:mb-8">
+              <h3 className="text-brand-primary font-bold mb-3 md:mb-4 text-sm md:text-base">1. PERFIL FIDUCIARIO PROFUNDO</h3>
+              {isDinamico && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-800">
+                  <strong>Ejemplo:</strong> Esta sección se personalizará con un formulario más extenso en una versión futura. Los datos mostrados son ilustrativos.
+                </div>
+              )}
               <p className="mb-3"><strong>Tipo:</strong> Hogar Estrategico con Vision de Liquidez.</p>
               <p className="text-slate-600 text-sm leading-relaxed mb-4">
                 Un comprador que busca equilibrio entre seguridad financiera, comodidad de vida y liquidez futura. Tu ventana de decision es de <strong>2 a 8 semanas</strong>, perfecta para negociar sin perder oportunidades.
               </p>
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-2 gap-4 md:gap-6">
                 <div>
                   <h4 className="text-sm font-bold mb-2">Prioridades Criticas</h4>
                   <ul className="text-sm text-slate-600 space-y-1 list-disc list-inside">
@@ -121,26 +182,26 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
             </section>
 
             {/* Section 2: Executive Summary */}
-            <section className="mb-8">
+            <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">2. RESUMEN EJECUTIVO</h3>
 
               {/* KPIs */}
-              <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-4 md:mb-6">
                 {[
                   { value: analisis?.bloque_1_opciones_validas.total || 36, label: 'En tu Rango' },
-                  { value: Math.min(8, analisis?.bloque_1_opciones_validas.total || 8), label: 'Alta Compatibilidad', color: 'text-state-success' },
-                  { value: escenarios.filter(e => e.liquidez_categoria === 'alta').length || 2, label: 'Gangas Fiduciarias', color: 'text-premium-gold' },
-                  { value: analisis?.bloque_4_alertas.total || 4, label: 'Riesgos Ocultos', color: 'text-state-danger' }
+                  { value: Math.min(8, analisis?.bloque_1_opciones_validas.total || 8), label: 'Alta Compat.', color: 'text-state-success' },
+                  { value: escenarios.filter(e => e.liquidez_categoria === 'alta').length || 2, label: 'Gangas', color: 'text-premium-gold' },
+                  { value: analisis?.bloque_4_alertas.total || 4, label: 'Riesgos', color: 'text-state-danger' }
                 ].map((kpi, i) => (
-                  <div key={i} className="border border-slate-200 rounded-lg p-4 text-center bg-white">
-                    <div className={`text-2xl font-extrabold ${kpi.color || 'text-brand-dark'}`}>{kpi.value}</div>
-                    <div className="text-xs text-slate-500 font-semibold">{kpi.label}</div>
+                  <div key={i} className="border border-slate-200 rounded-lg p-2 md:p-4 text-center bg-white">
+                    <div className={`text-xl md:text-2xl font-extrabold ${kpi.color || 'text-brand-dark'}`}>{kpi.value}</div>
+                    <div className="text-[10px] md:text-xs text-slate-500 font-semibold">{kpi.label}</div>
                   </div>
                 ))}
               </div>
 
               {/* Charts */}
-              <div className="grid md:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
                 <BarChartCard
                   title="Distribucion de Precios"
                   data={[
@@ -156,12 +217,15 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                 />
                 <PrecioComparativoCard
                   title="Precio Real vs Media"
-                  comparaciones={topOpciones.slice(0, 3).map(op => ({
-                    proyecto: op.proyecto,
-                    precio: op.precio_m2,
-                    diferencia: Math.round(op.posicion_mercado.diferencia_pct)
-                  }))}
-                  media={analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 1200}
+                  comparaciones={(() => {
+                    const media = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2100
+                    return topOpciones.slice(0, 3).map(op => ({
+                      proyecto: op.proyecto,
+                      precio: op.precio_m2,
+                      diferencia: Math.round(((op.precio_m2 - media) / media) * 100)
+                    }))
+                  })()}
+                  media={analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2100}
                 />
               </div>
 
@@ -173,29 +237,54 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
             </section>
 
             {/* Section 3: Top 3 */}
-            <section className="mb-8">
+            <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">3. TOP 3 OPORTUNIDADES DETECTADAS</h3>
 
-              {topOpciones.slice(0, 1).map((op, i) => (
+              {topOpciones.slice(0, 1).map((op, i) => {
+                const media = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2100
+                const diffReal = Math.round(((op.precio_m2 - media) / media) * 100)
+                const esBajo = diffReal < 0
+                const fotos = op.fotos_urls || []
+                return (
                 <div key={i} className="border border-slate-200 rounded-xl overflow-hidden mb-4">
                   <div className="bg-brand-dark text-white p-4 flex justify-between items-center">
                     <span className="font-bold">1. {op.proyecto.toUpperCase()}</span>
-                    <span className="bg-state-success text-white text-xs px-2 py-1 rounded">
-                      {Math.abs(Math.round(op.posicion_mercado.diferencia_pct))}% Bajo Mercado
+                    <span className={`text-white text-xs px-2 py-1 rounded ${esBajo ? 'bg-state-success' : 'bg-state-warning'}`}>
+                      {Math.abs(diffReal)}% {esBajo ? 'Bajo' : 'Sobre'} Mercado
                     </span>
                   </div>
-                  <div className="p-4 grid md:grid-cols-2 gap-6">
+
+                  {/* Galería de fotos */}
+                  {fotos.length > 0 && (
+                    <div className="flex gap-1 overflow-x-auto bg-slate-100 p-2">
+                      {fotos.slice(0, 4).map((foto, idx) => (
+                        <img
+                          key={idx}
+                          src={foto}
+                          alt={`${op.proyecto} foto ${idx + 1}`}
+                          className="h-24 w-32 object-cover rounded flex-shrink-0"
+                        />
+                      ))}
+                      {fotos.length > 4 && (
+                        <div className="h-24 w-32 bg-slate-200 rounded flex-shrink-0 flex items-center justify-center text-slate-500 text-sm">
+                          +{fotos.length - 4} fotos
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="p-4 grid md:grid-cols-2 gap-4 md:gap-6">
                     <div>
                       <div className="text-2xl font-extrabold text-brand-dark mb-1">
                         ${op.precio_usd.toLocaleString('en-US')}
                       </div>
-                      <div className="text-state-success font-semibold text-sm mb-3">
-                        {op.posicion_mercado.posicion_texto}
+                      <div className={`font-semibold text-sm mb-3 ${esBajo ? 'text-state-success' : 'text-state-warning'}`}>
+                        {esBajo ? `${Math.abs(diffReal)}% bajo promedio de zona` : `${diffReal}% sobre promedio de zona`}
                       </div>
                       <ul className="text-sm text-slate-600 space-y-1">
                         <li>- {op.area_m2}m2 - {op.dormitorios} Dorms</li>
                         <li>- {op.zona}</li>
-                        <li>- {op.amenities.slice(0, 3).join(', ')}</li>
+                        <li>- {(op.amenities || []).slice(0, 3).join(', ') || 'Sin amenities confirmados'}</li>
                       </ul>
                     </div>
                     <div>
@@ -209,27 +298,43 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
+
 
               {/* Property 2 & 3 simplified */}
               <div className="grid md:grid-cols-2 gap-4">
-                {topOpciones.slice(1, 3).map((op, i) => (
-                  <div key={i} className="border border-slate-200 rounded-xl p-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-bold text-brand-dark">{i + 2}. {op.proyecto}</span>
-                      <span className="text-xs bg-slate-100 px-2 py-1 rounded">
-                        {Math.abs(Math.round(op.posicion_mercado.diferencia_pct))}% Bajo
-                      </span>
+                {topOpciones.slice(1, 3).map((op, i) => {
+                  const media = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2100
+                  const diffReal = Math.round(((op.precio_m2 - media) / media) * 100)
+                  const esBajo = diffReal < 0
+                  const fotos = op.fotos_urls || []
+                  return (
+                  <div key={i} className="border border-slate-200 rounded-xl overflow-hidden">
+                    {/* Thumbnail foto */}
+                    {fotos.length > 0 && (
+                      <img
+                        src={fotos[0]}
+                        alt={op.proyecto}
+                        className="w-full h-32 object-cover"
+                      />
+                    )}
+                    <div className="p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-bold text-brand-dark">{i + 2}. {op.proyecto}</span>
+                        <span className={`text-xs px-2 py-1 rounded ${esBajo ? 'bg-state-success/10 text-state-success' : 'bg-state-warning/10 text-state-warning'}`}>
+                          {Math.abs(diffReal)}% {esBajo ? 'Bajo' : 'Sobre'}
+                        </span>
+                      </div>
+                      <div className="text-xl font-bold text-brand-dark">${op.precio_usd.toLocaleString('en-US')}</div>
+                      <p className="text-sm text-slate-500">{op.area_m2}m2 - {op.dormitorios} Dorms - {op.zona}</p>
                     </div>
-                    <div className="text-xl font-bold text-brand-dark">${op.precio_usd.toLocaleString('en-US')}</div>
-                    <p className="text-sm text-slate-500">{op.area_m2}m2 - {op.dormitorios} Dorms - {op.zona}</p>
                   </div>
-                ))}
+                )})}
               </div>
             </section>
 
             {/* Section 4: Top 10 Table */}
-            <section className="mb-8">
+            <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">4. TOP 10 RESUMIDO</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -263,30 +368,56 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
               </div>
             </section>
 
-            {/* Section 5: Insights */}
-            <section className="mb-8">
+            {/* Section 5: Insights - Datos reales calculados */}
+            <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">5. INSIGHTS OCULTOS</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <h5 className="font-bold text-amber-800 mb-2">Liquidez Superior</h5>
-                  <p className="text-sm text-amber-900">
-                    Detectamos {escenarios.filter(e => e.liquidez_categoria === 'alta').length} torres con rotacion comprobada.
-                    Si compras aqui, vender en 5 anos sera rapido.
-                  </p>
-                </div>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <h5 className="font-bold text-red-800 mb-2">Riesgos Detectados</h5>
-                  <p className="text-sm text-red-900">
-                    {analisis?.bloque_4_alertas.total || 0} alertas activas.
-                    {analisis?.bloque_4_alertas.alertas[0]?.mensaje || 'Vibracion estructural en Av. Beni y sobreprecio injustificado en 3 preventas cercanas.'}
-                  </p>
-                </div>
-              </div>
+              {(() => {
+                // Calcular insights desde datos reales
+                const oportunidades = topOpciones.filter(op => {
+                  const dif = op.posicion_mercado?.diferencia_pct ?? 0
+                  return dif < -10
+                }).length
+                const porVerificar = topOpciones.filter(op =>
+                  (op.amenities as string[])?.some(a => a.includes('verificar')) || false
+                ).length
+                // Alternativa: contar propiedades con amenities limitados
+                const pocasAmenidades = topOpciones.filter(op =>
+                  (op.amenities?.length || 0) < 3
+                ).length
+
+                return (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                      <h5 className="font-bold text-emerald-800 mb-2">🎯 Oportunidades de Precio</h5>
+                      <p className="text-sm text-emerald-900">
+                        {oportunidades > 0 ? (
+                          <>Detectamos <strong>{oportunidades}</strong> {oportunidades === 1 ? 'propiedad' : 'propiedades'} con precio 10% o más bajo que el mercado. Margen de negociación favorable.</>
+                        ) : (
+                          <>Los precios están alineados con el mercado. No hay gangas evidentes, pero tampoco sobreprecios.</>
+                        )}
+                      </p>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <h5 className="font-bold text-amber-800 mb-2">⚠️ Verificar Antes de Decidir</h5>
+                      <p className="text-sm text-amber-900">
+                        {pocasAmenidades > 0 ? (
+                          <><strong>{pocasAmenidades}</strong> {pocasAmenidades === 1 ? 'propiedad tiene' : 'propiedades tienen'} información limitada de amenidades. Recomendamos confirmar con el asesor antes de visitar.</>
+                        ) : (
+                          <>Todas las propiedades tienen información completa de amenidades. Datos confiables para comparar.</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })()}
             </section>
 
-            {/* Section 6: Financial Scenario - NOW FUNCTIONAL */}
-            <section className="mb-8">
+            {/* Section 6: Financial Scenario - BETA */}
+            <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">6. ESCENARIO FINANCIERO</h3>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-800">
+                <strong>🚧 En desarrollo:</strong> Esta sección estará disponible en una versión futura del informe premium. Los datos mostrados son estimaciones preliminares.
+              </div>
               {escenarios.length > 0 ? (
                 <div className="space-y-4">
                   {escenarios.map((esc, i) => (
@@ -321,7 +452,7 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                       {esc.factores_riesgo.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-slate-200">
                           <span className="text-xs text-state-danger">
-                            Riesgos: {esc.factores_riesgo.join(' | ')}
+                            Riesgos: {(esc.factores_riesgo || []).join(' | ')}
                           </span>
                         </div>
                       )}
@@ -329,14 +460,14 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                   ))}
                 </div>
               ) : (
-                <div className="bg-slate-50 rounded-xl p-6 text-center text-slate-500">
+                <div className="bg-slate-50 rounded-xl p-4 md:p-6 text-center text-slate-500">
                   Cargando escenarios financieros...
                 </div>
               )}
             </section>
 
             {/* Section 7: Microzonas Map - NOW FUNCTIONAL */}
-            <section className="mb-8">
+            <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">7. MAPA DE MICROZONAS</h3>
               {microzonas.length > 0 ? (
                 <div className="grid md:grid-cols-2 gap-4">
@@ -400,16 +531,21 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
                   </div>
                 </div>
               ) : (
-                <div className="bg-slate-50 rounded-xl p-6 text-center text-slate-500">
+                <div className="bg-slate-50 rounded-xl p-4 md:p-6 text-center text-slate-500">
                   Cargando datos de microzonas...
                 </div>
               )}
             </section>
 
             {/* Section 8: Motivators */}
-            <section className="mb-8 bg-blue-50 rounded-xl p-6">
+            <section className="mb-6 md:mb-8 bg-blue-50 rounded-xl p-4 md:p-6">
               <h3 className="text-brand-primary font-bold mb-4">8. MOTIVADORES Y RIESGOS</h3>
-              <div className="grid md:grid-cols-2 gap-6">
+              {isDinamico && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-800">
+                  <strong>Ejemplo:</strong> Esta sección se personalizará con un formulario más extenso en una versión futura. Los datos mostrados son ilustrativos.
+                </div>
+              )}
+              <div className="grid md:grid-cols-2 gap-4 md:gap-6">
                 <div>
                   <h4 className="text-sm font-bold mb-2">Tus Motivadores</h4>
                   <p className="text-sm text-slate-600">Claridad antes que velocidad, control financiero y sensacion de seguridad estructural.</p>
@@ -422,9 +558,9 @@ export default function PremiumModal({ onClose }: PremiumModalProps) {
             </section>
 
             {/* Section 9: Human Advice */}
-            <section className="mb-8">
+            <section className="mb-6 md:mb-8">
               <h3 className="text-brand-primary font-bold mb-4">9. CAPA 3: ASESORAMIENTO HUMANO</h3>
-              <div className="border border-slate-200 rounded-xl p-6">
+              <div className="border border-slate-200 rounded-xl p-4 md:p-6">
                 <p className="text-slate-600 mb-4">
                   Incluye <strong>Verificacion Fiduciaria</strong> por un estratega real: visita tecnica, evaluacion de mantenimiento, revision legal y chequeo de ruidos.
                 </p>

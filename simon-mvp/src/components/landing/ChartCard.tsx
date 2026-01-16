@@ -32,24 +32,50 @@ export function BarChartCard({ title, data, maxValue }: BarChartProps) {
 interface CompatibilidadProps {
   porcentaje: number
   mensaje?: string
+  opcionesCumplen?: number
+  totalMercado?: number
 }
 
-export function CompatibilidadCard({ porcentaje, mensaje }: CompatibilidadProps) {
+export function CompatibilidadCard({ porcentaje, mensaje, opcionesCumplen, totalMercado }: CompatibilidadProps) {
+  // Determinar si es stock limitado, normal o amplio
+  const esLimitado = porcentaje < 15
+  const esAmplio = porcentaje > 50
+
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-5">
-      <h4 className="font-semibold text-brand-dark mb-4">Compatibilidad General</h4>
+      <h4 className="font-semibold text-brand-dark mb-4">Tu Busqueda vs Mercado</h4>
       <div className="text-center">
-        <div className="text-5xl font-extrabold text-state-success leading-none">{porcentaje}%</div>
-        <div className="text-sm text-slate-500 mt-1">Match con el mercado</div>
+        {opcionesCumplen !== undefined && totalMercado !== undefined ? (
+          <>
+            <div className="text-4xl font-extrabold text-brand-dark leading-none">
+              {opcionesCumplen} <span className="text-lg font-normal text-slate-400">opciones</span>
+            </div>
+            <div className="text-sm text-slate-500 mt-1">
+              de {totalMercado} disponibles ({porcentaje}%)
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="text-5xl font-extrabold text-brand-dark leading-none">{porcentaje}%</div>
+            <div className="text-sm text-slate-500 mt-1">del mercado cumple filtros</div>
+          </>
+        )}
         <div className="h-3 bg-slate-100 rounded-full overflow-hidden mt-3">
           <div
-            className="h-full bg-state-success rounded-full transition-all duration-700"
-            style={{ width: `${porcentaje}%` }}
+            className={`h-full rounded-full transition-all duration-700 ${
+              esLimitado ? 'bg-amber-500' : esAmplio ? 'bg-state-success' : 'bg-brand-primary'
+            }`}
+            style={{ width: `${Math.max(porcentaje, 3)}%` }}
           />
         </div>
+        <div className={`text-xs mt-2 ${
+          esLimitado ? 'text-amber-600' : esAmplio ? 'text-state-success' : 'text-slate-500'
+        }`}>
+          {esLimitado ? 'Filtros muy específicos' : esAmplio ? 'Muchas opciones' : 'Stock moderado'}
+        </div>
         {mensaje && (
-          <p className="mt-4 text-sm text-slate-500">
-            <strong>Insight:</strong> {mensaje}
+          <p className="mt-3 text-sm text-slate-500 bg-slate-50 rounded-lg p-2">
+            {mensaje}
           </p>
         )}
       </div>

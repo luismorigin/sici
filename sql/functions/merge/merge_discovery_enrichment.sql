@@ -4,9 +4,15 @@
 -- =====================================================================================
 -- Archivo: merge_discovery_enrichment.sql
 -- Propósito: Unificar datos de Discovery + Enrichment respetando candados
--- Versión: 2.1.0
--- Fecha: 2025-12-25
+-- Versión: 2.2.0
+-- Fecha: 2026-01-14
 -- =====================================================================================
+-- CAMBIOS v2.2.0 (14 Ene 2026):
+--   - FIX: Escribir tipo_cambio_detectado a columna (antes solo quedaba en JSON)
+--   - FIX: Escribir tipo_cambio_usado a columna
+--   - FIX: Calcular depende_de_tc basado en tipo_cambio y precio_fue_normalizado
+--   - REF: Postmortem bug TC paralelo - 477 propiedades tenían columna NULL
+--
 -- CAMBIOS v2.1.0 (25 Dic 2025):
 --   - NEW: Soporte para columna nombre_edificio (Discovery > Enrichment)
 --   - NEW: Soporte para columna zona (Discovery > Enrichment)
@@ -797,6 +803,16 @@ BEGIN
         longitud = v_longitud_final,
         nombre_edificio = v_nombre_edificio_final,
         zona = v_zona_final,
+
+        -- Tipo de cambio (FIX 2026-01-14: antes no se escribía a columna)
+        tipo_cambio_detectado = v_enr_tipo_cambio_detectado,
+        tipo_cambio_usado = v_enr_tipo_cambio_usado,
+        depende_de_tc = CASE
+            WHEN v_enr_tipo_cambio_detectado IN ('paralelo', 'oficial')
+                 AND v_enr_precio_fue_normalizado = true
+            THEN true
+            ELSE false
+        END,
 
         -- JSON consolidado
         datos_json = v_datos_json_final,

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
+import InternalHeader from '@/components/InternalHeader'
 
 interface FormInversionPlusvalia {
   horizonte_salida: '3_anos' | '5_anos' | '10_plus' | null
@@ -40,14 +41,9 @@ export default function FormularioInversionPlusvaliaPage() {
   const isFormValid = form.horizonte_salida && form.apetito_riesgo && form.experiencia
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-6">
-          <Link href="/filtros" className="text-blue-600 hover:underline text-sm">
-            ← Volver a filtros
-          </Link>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <InternalHeader backLink={{ href: '/filtros', label: '← Volver a filtros' }} />
+      <div className="max-w-2xl mx-auto px-4 pb-8">
 
         {/* Disclaimer BETA */}
         <div className="bg-purple-50 border-2 border-purple-300 rounded-xl p-6 mb-6">
@@ -66,16 +62,16 @@ export default function FormularioInversionPlusvaliaPage() {
                 <p className="font-medium text-gray-800 mb-3">Lo que SÍ podemos darte hoy:</p>
                 <ul className="text-sm text-gray-600 space-y-2">
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500 font-bold">✓</span> Precio/m² vs promedio histórico de zona
+                    <span className="text-green-500 font-bold">✓</span> Precio/m² comparado con promedio actual de zona
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-green-500 font-bold">✓</span> Estado de construcción (preventa vs entrega)
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500 font-bold">✓</span> Desarrollador y track record
+                    <span className="text-green-500 font-bold">✓</span> Cantidad de unidades disponibles por proyecto
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500 font-bold">✓</span> Ubicación y potencial de zona
+                    <span className="text-green-500 font-bold">✓</span> Días en mercado de la publicación
                   </li>
                 </ul>
               </div>
@@ -87,10 +83,13 @@ export default function FormularioInversionPlusvaliaPage() {
                     <span className="text-red-500 font-bold">✗</span> Proyección de apreciación anual
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-red-500 font-bold">✗</span> Comparativa histórica de precios
+                    <span className="text-red-500 font-bold">✗</span> Histórico de precios por zona
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-red-500 font-bold">✗</span> Análisis de liquidez de reventa
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-red-500 font-bold">✗</span> Track record de desarrolladores
                   </li>
                 </ul>
               </div>

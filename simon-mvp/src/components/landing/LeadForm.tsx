@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/router'
 import { motion } from 'framer-motion'
 import { guardarLead, type LeadResult } from '@/lib/supabase'
 
 export default function LeadForm() {
+  const router = useRouter()
   const [form, setForm] = useState({
     nombre: '',
     email: '',
@@ -29,10 +31,17 @@ export default function LeadForm() {
           setLeadId(result.leadId)
           console.log('Lead guardado con ID:', result.leadId)
         }
+        // Redirect a búsqueda después de 2 segundos
+        setTimeout(() => {
+          router.push('/filtros')
+        }, 2000)
       } else {
         // Si falla Supabase, igual mostrar éxito para UX (pero logear)
         console.warn('Lead no guardado en BD:', result.error)
         setSubmitted(true)
+        setTimeout(() => {
+          router.push('/filtros')
+        }, 2000)
       }
     } catch (err) {
       console.error('Error en formulario:', err)
@@ -59,7 +68,10 @@ export default function LeadForm() {
             ¡Gracias, {form.nombre.split(' ')[0]}!
           </h3>
           <p className="text-slate-500">
-            Te enviaremos tu informe personalizado a <strong>{form.email}</strong> en las próximas horas.
+            Redirigiendo a tu búsqueda personalizada...
+          </p>
+          <p className="text-xs text-slate-400 mt-2">
+            También te enviaremos resultados a <strong>{form.email}</strong>
           </p>
         </div>
       </motion.div>
@@ -75,6 +87,21 @@ export default function LeadForm() {
         <p className="text-slate-500 mb-6">
           Genera tu propio informe personalizado en menos de 2 minutos. Gratis y sin compromiso.
         </p>
+
+        {/* Disclaimer con opción de saltar */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+          <p className="text-sm text-slate-600">
+            <strong>Esto es un test.</strong> Podés explorar sin dejar tus datos,
+            pero si los dejás te avisamos cuando haya propiedades nuevas que encajen.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push('/filtros')}
+            className="text-brand-primary text-sm font-medium mt-2 hover:underline"
+          >
+            → Saltar y explorar directamente
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-left">
           <div>

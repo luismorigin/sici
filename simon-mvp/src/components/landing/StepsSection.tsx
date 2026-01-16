@@ -4,18 +4,18 @@ import Link from 'next/link'
 const steps = [
   {
     number: 1,
-    title: 'Define tu Sueño',
-    description: 'Dinos tus requisitos no negociables: precio, tamaño, comodidades e incluso tu estilo de vida deseado.'
+    title: 'Decinos qué buscás',
+    description: 'Presupuesto, dormitorios, zona. En 30 segundos tenemos lo básico.'
   },
   {
     number: 2,
-    title: 'Analiza el Mercado',
-    description: 'Nuestra IA se pone a trabajar, escaneando miles de anuncios y analizando datos que nunca imaginarías.'
+    title: 'Cruzamos los datos',
+    description: 'Simón compara 189 proyectos en 6 microzonas, calcula precio/m² y te muestra precio/m² por zona.'
   },
   {
     number: 3,
-    title: 'Encuentra tu Pareja Ideal',
-    description: 'Recibe una lista personalizada y curada de los mejores departamentos. El lugar perfecto está a solo un clic.'
+    title: 'Ves lo que vale',
+    description: 'Te mostramos las opciones ordenadas por valor real, no por quién pagó más publicidad.'
   }
 ]
 
@@ -29,7 +29,7 @@ export default function StepsSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          Tu Búsqueda, Simplificada en 3 Pasos.
+          Cómo funciona Simón
         </motion.h2>
 
         <div className="max-w-2xl mx-auto">
@@ -77,7 +77,7 @@ export default function StepsSection() {
             transition={{ delay: 0.5 }}
           >
             <Link href="#cta-form" className="btn btn-primary px-10 py-4 text-base">
-              PROBAR SIMÓN GRATIS
+              Empezar Búsqueda
             </Link>
           </motion.div>
         </div>

@@ -1,4 +1,5 @@
 import FilterBar, { FiltrosNivel1 } from '@/components/FilterBar'
+import InternalHeader from '@/components/InternalHeader'
 import { useState } from 'react'
 
 export default function FiltrosPage() {
@@ -10,18 +11,16 @@ export default function FiltrosPage() {
     setLastCount(count)
   }
 
-  return (
-    <div className="min-h-screen bg-gray-100 py-8">
-      <div className="max-w-2xl mx-auto px-4">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Simon MVP</h1>
-          <p className="text-gray-600 mt-2">Nivel 1: Filtros con contador en tiempo real</p>
-        </div>
+  const isDev = process.env.NODE_ENV === 'development'
 
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <InternalHeader />
+      <div className="max-w-2xl mx-auto px-4 pb-8">
         <FilterBar onFiltrosChange={handleFiltrosChange} />
 
-        {/* Debug info */}
-        {lastFiltros && (
+        {/* Debug info - solo en desarrollo */}
+        {isDev && lastFiltros && (
           <div className="mt-8 bg-gray-800 text-green-400 p-4 rounded-lg font-mono text-sm">
             <p className="text-gray-400 mb-2">// Debug: Estado actual</p>
             <pre>{JSON.stringify(lastFiltros, null, 2)}</pre>

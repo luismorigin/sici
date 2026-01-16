@@ -6,34 +6,51 @@ const features = [
   {
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
       </svg>
     ),
-    title: 'Seguridad de Compra',
-    description: 'Analizamos 32 variables críticas para detectar problemas legales o estructurales ocultos.'
+    title: 'Comparador TOP 3',
+    description: 'Tus 3 mejores opciones lado a lado: precio/m², amenities, días publicado. Comparás con la misma base.'
   },
   {
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
       </svg>
     ),
-    title: 'Valor y Plusvalía',
-    description: 'Entendé si estás pagando el precio justo y cuánto valdrá tu departamento en el futuro.'
+    title: 'Precio vs Mercado',
+    description: 'Sabé si estás pagando de más. Te mostramos cómo se compara cada depto contra el promedio de su zona.'
   },
   {
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
-    title: 'Mapa de Vida Real',
-    description: 'Conocé el entorno real: ruidos, tráfico, seguridad nocturna y comodidad diaria.'
+    title: 'Lo que NO sabemos',
+    description: 'Somos honestos: expensas, parqueo incluido, estado real. Te marcamos qué falta verificar antes de decidir.'
   }
 ]
 
 export default function PremiumSection() {
   const [showModal, setShowModal] = useState(false)
+  const [email, setEmail] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const handleWaitlist = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email) return
+
+    setLoading(true)
+    // Guardar en localStorage por ahora (TODO: conectar a Supabase leads_mvp)
+    const waitlist = JSON.parse(localStorage.getItem('premium_waitlist') || '[]')
+    waitlist.push({ email, timestamp: new Date().toISOString(), interes_premium: true })
+    localStorage.setItem('premium_waitlist', JSON.stringify(waitlist))
+
+    setSubmitted(true)
+    setLoading(false)
+  }
 
   return (
     <>
@@ -60,15 +77,16 @@ export default function PremiumSection() {
 
             {/* Subtitle */}
             <p className="text-xl text-slate-300 max-w-2xl mx-auto mb-8">
-              ¿Vas a tomar una decisión de $90,000? No lo hagas a ciegas.
+              ¿Vas a tomar una decisión de $150,000? No lo hagas a ciegas.
               <br />
-              <span className="text-slate-400">Obtén seguridad total, detección de riesgos y una proyección clara de valor antes de firmar nada.</span>
+              <span className="text-slate-400">Compará con datos reales, no con intuición.</span>
             </p>
 
             {/* Price */}
             <div className="mb-10">
-              <span className="text-5xl font-extrabold text-premium-gold">29.99 $us</span>
-              <p className="text-slate-400 mt-2">Pago único. Garantía de Satisfacción.</p>
+              <span className="text-2xl text-slate-500 line-through mr-3">$49.99</span>
+              <span className="text-4xl md:text-5xl font-extrabold text-premium-gold">$29.99</span>
+              <p className="text-slate-400 mt-2">Precio de lanzamiento</p>
             </div>
 
             {/* Features grid */}
@@ -91,17 +109,53 @@ export default function PremiumSection() {
               ))}
             </div>
 
-            {/* CTAs */}
-            <div className="flex flex-wrap gap-4 justify-center">
-              <button className="btn btn-gold px-8 py-4 text-base">
-                Obtener Informe Premium
-              </button>
+            {/* CTA: Ver Ejemplo */}
+            <div className="mb-10">
               <button
                 onClick={() => setShowModal(true)}
                 className="btn btn-gold-outline px-8 py-4 text-base"
               >
                 Ver Ejemplo Real
               </button>
+            </div>
+
+            {/* Waitlist Section */}
+            <div className="bg-white/5 border border-premium-gold/30 rounded-2xl p-8 max-w-md mx-auto">
+              <div className="text-premium-gold text-2xl mb-2">🎁</div>
+              <h4 className="text-white font-bold text-lg mb-2">
+                ¿Querés probarlo gratis?
+              </h4>
+              <p className="text-slate-400 text-sm mb-4">
+                Los primeros 50 lo reciben sin costo. Dejá tu email y te avisamos.
+              </p>
+
+              {submitted ? (
+                <div className="text-state-success text-sm">
+                  ✓ ¡Listo! Te avisamos cuando esté disponible.
+                </div>
+              ) : (
+                <form onSubmit={handleWaitlist} className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="tu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="flex-1 px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-premium-gold"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn btn-gold px-6 py-3 text-sm whitespace-nowrap"
+                  >
+                    {loading ? '...' : 'Unirme'}
+                  </button>
+                </form>
+              )}
+
+              <p className="text-slate-500 text-xs mt-4">
+                🔒 Sin compromiso · Te avisamos por email
+              </p>
             </div>
           </motion.div>
         </div>

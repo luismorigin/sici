@@ -22,13 +22,13 @@ export default function Navbar() {
             <Link href="#informe" className="text-slate-500 hover:text-brand-primary font-medium text-sm transition-colors">
               Ver Informe
             </Link>
-            <Link href="/filtros" className="btn btn-primary text-sm py-2 px-5">
+            <Link href="#cta-form" className="btn btn-primary text-sm py-2 px-5">
               Iniciar Búsqueda
             </Link>
           </nav>
 
           {/* Mobile CTA */}
-          <Link href="/filtros" className="md:hidden btn btn-primary text-sm py-2 px-4">
+          <Link href="#cta-form" className="md:hidden btn btn-primary text-sm py-2 px-4">
             Empezar
           </Link>
         </div>

@@ -107,7 +107,7 @@ export const level1Questions: Question[] = [
       { id: 'equipetrol_norte_norte', label: 'Equipetrol Norte (financiero)', icon: '🔴' },
       { id: 'equipetrol_norte_sur', label: 'Equipetrol Norte/Sur (transicion)', icon: '🟡' },
       { id: 'villa_brigida', label: 'Villa Brigida (emergente)', icon: '🟢' },
-      { id: 'faremafu', label: 'Faremafu (sur)', icon: '🟣' },
+      { id: 'faremafu', label: 'Equipetrol Oeste - Busch (universitario)', icon: '🟣' },
     ]
   },
 

@@ -429,3 +429,7 @@ En Equipetrol, estas amenidades son estándar y los brokers no siempre las menci
 | 2026-01-12 | Implementado: Acción contextual por posición mercado |
 | 2026-01-12 | Implementado: Preventa contextual ("verificá fecha de entrega") |
 | 2026-01-12 | Pendiente: Mostrar fecha entrega real desde proyectos_master |
+| 2026-01-12 | Reformulado: Razón fiduciaria - solo escasez con patrón MOAT |
+| 2026-01-12 | Coherencia: Acción de escasez vinculada con días en mercado |
+| 2026-01-12 | SÍNTESIS FIDUCIARIA: Resumen inteligente combinando todos los datos |
+| 2026-01-12 | SQL dinámico: dias_promedio y dias_mediana en v_metricas_mercado |

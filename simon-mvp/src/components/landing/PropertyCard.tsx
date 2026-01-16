@@ -5,6 +5,7 @@ interface PropertyCardProps {
   area: number
   matchScore: number
   confianza?: number
+  fotoUrl?: string
 }
 
 export default function PropertyCard({
@@ -13,20 +14,44 @@ export default function PropertyCard({
   dormitorios,
   area,
   matchScore,
-  confianza = 89
+  confianza = 89,
+  fotoUrl
 }: PropertyCardProps) {
   return (
     <div className="border border-slate-200 rounded-2xl overflow-hidden hover:border-brand-primary hover:-translate-y-1 transition-all">
-      {/* Header */}
-      <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-        <span className="font-bold text-brand-dark">{nombre}</span>
-        <span className="text-xs font-bold bg-state-success-bg text-emerald-700 px-2 py-1 rounded">
-          {matchScore}% Match
-        </span>
-      </div>
+      {/* Foto */}
+      {fotoUrl && (
+        <div className="relative h-36 bg-slate-100 overflow-hidden">
+          <img
+            src={fotoUrl}
+            alt={nombre}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none'
+            }}
+          />
+          <span className="absolute top-2 right-2 text-xs font-bold bg-state-success text-white px-2 py-1 rounded shadow">
+            {matchScore}% Match
+          </span>
+        </div>
+      )}
+
+      {/* Header (solo si no hay foto) */}
+      {!fotoUrl && (
+        <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+          <span className="font-bold text-brand-dark">{nombre}</span>
+          <span className="text-xs font-bold bg-state-success-bg text-emerald-700 px-2 py-1 rounded">
+            {matchScore}% Match
+          </span>
+        </div>
+      )}
 
       {/* Body */}
       <div className="p-4">
+        {/* Nombre si hay foto */}
+        {fotoUrl && (
+          <h4 className="font-bold text-brand-dark mb-1 truncate">{nombre}</h4>
+        )}
         <div className="text-xl font-bold text-brand-dark mb-2">
           ${precio.toLocaleString('en-US')}
         </div>

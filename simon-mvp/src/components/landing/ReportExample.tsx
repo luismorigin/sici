@@ -14,29 +14,30 @@ import {
   type OpcionValida
 } from '@/lib/supabase'
 
-// Sample data for when Supabase isn't configured
+// Sample data con valores REALES de Enero 2026 (fallback si Supabase no disponible)
 const sampleData = {
   perfil: 'Hogar Estrategico de Valor',
-  presupuesto: 90000,
-  prioridades: ['Seguridad', 'Piso Medio/Alto', 'Piscina'],
+  presupuesto: 150000,
+  prioridades: ['Seguridad', 'Ubicacion', 'Amenities'],
   sensibilidad: 'alta' as const,
-  compatibilidad: 78,
-  totalProps: 144,
+  compatibilidad: 5,  // Solo 5% del mercado cumple filtros estrictos
+  opcionesCumplen: 3, // Cantidad absoluta que cumple filtros
+  totalProps: 302,
   distribucion: [
-    { label: '60k-70k', value: 14 },
-    { label: '70k-80k', value: 22 },
-    { label: '80k-90k', value: 36, highlight: true },
-    { label: '90k+', value: 18 }
+    { label: '<120k', value: 8 },
+    { label: '120k-150k', value: 13, highlight: true },
+    { label: '150k-180k', value: 21 },
+    { label: '180k+', value: 49 }
   ],
   comparaciones: [
-    { proyecto: 'Vienna', precio: 1091, diferencia: -9 },
-    { proyecto: 'Belvedere', precio: 1153, diferencia: -4 },
-    { proyecto: 'Nova Tower', precio: 1160, diferencia: 3 }
+    { proyecto: 'PORTOBELLO 5', precio: 1724, diferencia: -19 },
+    { proyecto: 'Dunas', precio: 1348, diferencia: -37 },
+    { proyecto: 'SMART STUDIO', precio: 1209, diferencia: -43 }
   ],
   topPropiedades: [
-    { nombre: 'Torre Vienna', precio: 89500, dormitorios: 2, area: 82, matchScore: 86, confianza: 91 },
-    { nombre: 'Belvedere', precio: 90000, dormitorios: 2, area: 78, matchScore: 82, confianza: 89 },
-    { nombre: 'Nova Tower', precio: 87000, dormitorios: 2, area: 75, matchScore: 79, confianza: 88 }
+    { nombre: 'PORTOBELLO 5', precio: 95983, dormitorios: 2, area: 56, matchScore: 90, confianza: 85, fotoUrl: 'https://cdn.21online.lat/bolivia/cache/awsTest1/rc/dv6NwwtM/uploads/88/propiedades/90003/69023b4c6f96a.jpg' },
+    { nombre: 'EDIFICIO K1', precio: 99421, dormitorios: 2, area: 70, matchScore: 86, confianza: 88, fotoUrl: 'https://cdn.21online.lat/bolivia/cache/awsTest1/rc/WUMj9bay/uploads/23/propiedades/94777/694051783bb9c.jpg' },
+    { nombre: 'Dunas', precio: 100000, dormitorios: 2, area: 74, matchScore: 82, confianza: 91, fotoUrl: 'https://cdn.21online.lat/bolivia/cache/awsTest1/rc/tdYPpGZV/uploads/9/propiedades/88894/68fa4d8f930c1.jpg' }
   ]
 }
 
@@ -119,7 +120,7 @@ export default function ReportExample() {
       .map((op, i) => convertirOpcionADisplay(op, i, scores))
   } : sampleData
 
-  const mediaPrecioM2 = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 1200
+  const mediaPrecioM2 = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2139
 
   return (
     <section className="py-24 bg-slate-50 border-t border-slate-200" id="informe">
@@ -203,15 +204,18 @@ export default function ReportExample() {
               />
               <CompatibilidadCard
                 porcentaje={mounted ? displayData.compatibilidad : sampleData.compatibilidad}
+                opcionesCumplen={mounted && analisis
+                  ? analisis.bloque_3_contexto_mercado.stock_cumple_filtros
+                  : sampleData.opcionesCumplen}
+                totalMercado={mounted ? displayData.totalProps : sampleData.totalProps}
                 mensaje={mounted && analisis
                   ? analisis.bloque_3_contexto_mercado.diagnostico
-                  : `Hay ${sampleData.distribucion.find(d => d.highlight)?.value || 0} propiedades en tu "Zona Dorada".`
-                }
+                  : 'Filtros: 2 dorm, <$150k, con fotos'}
               />
               <PrecioComparativoCard
-                title={`Precio m2 vs Media ($${(mounted ? mediaPrecioM2 : 1200).toLocaleString('en-US')})`}
+                title={`Precio m2 vs Media ($${(mounted ? mediaPrecioM2 : 2139).toLocaleString('en-US')})`}
                 comparaciones={mounted ? displayData.comparaciones : sampleData.comparaciones}
-                media={mounted ? mediaPrecioM2 : 1200}
+                media={mounted ? mediaPrecioM2 : 2139}
               />
             </div>
 
@@ -225,7 +229,8 @@ export default function ReportExample() {
               )}
             </div>
             <div className="grid md:grid-cols-3 gap-4">
-              {(mounted ? displayData.topPropiedades : sampleData.topPropiedades).map((prop, i) => (
+              {/* Siempre usamos sampleData para las cards porque tiene fotos reales */}
+              {sampleData.topPropiedades.map((prop, i) => (
                 <PropertyCard key={i} {...prop} />
               ))}
             </div>

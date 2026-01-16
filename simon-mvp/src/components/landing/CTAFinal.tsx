@@ -16,8 +16,8 @@ export default function CTAFinal() {
         <p className="text-slate-400 text-lg max-w-2xl mx-auto mb-8">
           Deja que Simón haga el trabajo pesado. Tu departamento perfecto en Equipetrol te está esperando.
         </p>
-        <Link href="/filtros" className="btn btn-primary px-10 py-5 text-lg">
-          Empezar Ahora
+        <Link href="#cta-form" className="btn btn-primary px-10 py-5 text-lg">
+          Empezar Búsqueda Gratis
         </Link>
       </motion.div>
     </section>

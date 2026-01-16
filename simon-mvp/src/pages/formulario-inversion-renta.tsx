@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
+import InternalHeader from '@/components/InternalHeader'
 
 interface FormInversionRenta {
   retorno_esperado: '4_6' | '6_8' | '8_plus' | null
@@ -43,14 +44,9 @@ export default function FormularioInversionRentaPage() {
   const isFormValid = form.retorno_esperado && form.horizonte && form.experiencia
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-6">
-          <Link href="/filtros" className="text-blue-600 hover:underline text-sm">
-            ← Volver a filtros
-          </Link>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <InternalHeader backLink={{ href: '/filtros', label: '← Volver a filtros' }} />
+      <div className="max-w-2xl mx-auto px-4 pb-8">
 
         {/* Disclaimer BETA */}
         <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-6 mb-6">
@@ -72,13 +68,13 @@ export default function FormularioInversionRentaPage() {
                     <span className="text-green-500 font-bold">✓</span> Precio/m² comparado con promedio de zona
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500 font-bold">✓</span> Stock y competencia en tu tipología
+                    <span className="text-green-500 font-bold">✓</span> Stock disponible en tu tipología
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500 font-bold">✓</span> Alertas de precios sospechosos
+                    <span className="text-green-500 font-bold">✓</span> Posición de precio vs mercado (oportunidad/premium)
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500 font-bold">✓</span> Desarrolladores con track record
+                    <span className="text-green-500 font-bold">✓</span> Amenidades confirmadas del edificio
                   </li>
                 </ul>
               </div>
@@ -94,6 +90,9 @@ export default function FormularioInversionRentaPage() {
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-red-500 font-bold">✗</span> Tasa de ocupación promedio
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-red-500 font-bold">✗</span> Track record de desarrolladores
                   </li>
                 </ul>
               </div>

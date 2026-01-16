@@ -8,10 +8,10 @@ interface MatchCardProps {
 }
 
 export default function MatchCard({
-  compatibilidad = 96,
+  compatibilidad = 87,
   dormitorios = 2,
-  amenities = ['Piscina', 'Gimnasio'],
-  precioMax = 90000
+  amenities = ['Piscina', 'Seguridad 24/7'],
+  precioMax = 150000
 }: MatchCardProps) {
   return (
     <motion.div

@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import {
   buscarUnidadesReales,
@@ -24,6 +24,8 @@ import {
   getMensajeEquipamiento,
   getCostoEquipamiento
 } from '@/config/estimados-equipamiento'
+import PremiumModal from '@/components/landing/PremiumModal'
+import InternalHeader from '@/components/InternalHeader'
 
 /**
  * SÍNTESIS FIDUCIARIA - Resumen inteligente que combina TODOS los datos
@@ -318,12 +320,183 @@ const formatDorms = (dorms: number | string | null | undefined, formato: 'largo'
 
 // Microzonas disponibles (mismas que FilterBar)
 const ZONAS_DISPONIBLES = [
-  { value: 'equipetrol', label: 'Equipetrol' },
+  { value: 'equipetrol', label: 'Equipetrol Centro' },
   { value: 'sirari', label: 'Sirari' },
-  { value: 'villa_brigida', label: 'Villa Brigida' },
-  { value: 'faremafu', label: 'Faremafu' },
+  { value: 'villa_brigida', label: 'Villa Brígida' },
+  { value: 'faremafu', label: 'Equipetrol Oeste (Busch)' },
   { value: 'equipetrol_norte', label: 'Equipetrol Norte' },
 ]
+
+// Convertir nombre de zona de BD a nombre de display
+function zonaDisplay(zonaBD: string | undefined): string {
+  if (!zonaBD) return 'Sin zona'
+  const mapeo: Record<string, string> = {
+    'Equipetrol': 'Equipetrol Centro',
+    'Faremafu': 'Eq. Oeste (Busch)',
+    'Equipetrol Norte/Norte': 'Eq. Norte',
+    'Equipetrol Norte/Sur': 'Eq. Norte',
+    'Villa Brigida': 'Villa Brígida',
+    'Sirari': 'Sirari',
+  }
+  return mapeo[zonaBD] || zonaBD
+}
+
+// ============================================================================
+// SCORE MOAT - Ranking inteligente basado en preferencias del usuario
+// Fórmula: INNEGOCIABLES (0-100) + OPORTUNIDAD (0-40) + TRADE_OFFS (0-20) + DESEABLES (0-15)
+// Máximo: 175 puntos
+// ============================================================================
+
+// Medianas por tipología (Enero 2026, actualizar mensualmente)
+const MEDIANA_AREA_POR_DORMS: Record<number, number> = {
+  0: 36, 1: 52, 2: 88, 3: 165, 4: 200, 5: 250
+}
+
+// Medianas precio/m² por zona (Enero 2026, actualizar mensualmente)
+const MEDIANA_PRECIO_M2_POR_ZONA: Record<string, number> = {
+  'Equipetrol Norte/Norte': 2362,
+  'Faremafu': 2299,
+  'Equipetrol': 2055,
+  'Sirari': 2002,
+  'Villa Brigida': 1538,
+  'default': 2000
+}
+
+interface DatosUsuarioMOAT {
+  innegociables: string[]
+  deseables: string[]
+  ubicacion_vs_metros: number // 1-5
+  calidad_vs_precio: number   // 1-5
+}
+
+function calcularScoreMOAT(
+  prop: UnidadReal,
+  datosUsuario: DatosUsuarioMOAT
+): number {
+  let score = 0
+  const debugScores: Record<string, number> = {}
+
+  // 1. INNEGOCIABLES (0 a 100) - Score gradual
+  // Confirmado = 100%, Por verificar = 50%, No tiene = 0%
+  if (datosUsuario.innegociables.length === 0) {
+    score += 100
+    debugScores.innegociables = 100
+  } else {
+    const amenidadesRequeridas = innegociablesToAmenidades(datosUsuario.innegociables)
+    const confirmados = prop.amenities_confirmados || []
+    const porVerificar = prop.amenities_por_verificar || []
+
+    let puntosInnegociables = 0
+    const maxPuntosPorInnegociable = 100 / amenidadesRequeridas.length
+
+    for (const amenidad of amenidadesRequeridas) {
+      if (confirmados.includes(amenidad)) {
+        // Confirmado = 100% de los puntos para este innegociable
+        puntosInnegociables += maxPuntosPorInnegociable
+        debugScores[`inneg_${amenidad}`] = maxPuntosPorInnegociable
+      } else if (porVerificar.includes(amenidad)) {
+        // Por verificar = 50% de los puntos (G4: Indeterminado ≠ Cumple, pero tampoco = Falla)
+        puntosInnegociables += maxPuntosPorInnegociable * 0.5
+        debugScores[`inneg_${amenidad}`] = maxPuntosPorInnegociable * 0.5
+      } else {
+        // No tiene = 0 puntos
+        debugScores[`inneg_${amenidad}`] = 0
+      }
+    }
+
+    score += Math.round(puntosInnegociables)
+    debugScores.innegociables = Math.round(puntosInnegociables)
+  }
+
+  // 2. OPORTUNIDAD (0 a 40) - basado en posicion_mercado
+  // IMPORTANTE: La escala se INVIERTE según preferencia calidad_vs_precio
+  const posicionMercado = prop.posicion_mercado as { diferencia_pct?: number } | null
+  const difPct = posicionMercado?.diferencia_pct ?? 0
+
+  let oportunidadScore = 0
+
+  if (datosUsuario.calidad_vs_precio <= 2) {
+    // PRIORIZA CALIDAD: Premium/caro = más puntos
+    if (difPct >= 15) oportunidadScore = 40       // Premium (usuario acepta pagar más)
+    else if (difPct >= 5) oportunidadScore = 30   // Sobre promedio
+    else if (difPct >= -10) oportunidadScore = 20 // Precio justo
+    else if (difPct >= -20) oportunidadScore = 10 // Bajo promedio
+    // < -20%: sin puntos (muy barato, sospechoso para quien busca calidad)
+  } else if (datosUsuario.calidad_vs_precio >= 4) {
+    // PRIORIZA PRECIO: Barato = más puntos (escala original)
+    if (difPct <= -20) oportunidadScore = 40      // Oportunidad clara
+    else if (difPct <= -10) oportunidadScore = 30 // Buena oportunidad
+    else if (difPct <= 5) oportunidadScore = 20   // Precio justo
+    else if (difPct <= 15) oportunidadScore = 10  // Ligeramente caro
+    // > 15%: sin puntos (premium/caro)
+  } else {
+    // NEUTRAL (slider=3): Escala balanceada, leve preferencia por oportunidades
+    if (difPct <= -20) oportunidadScore = 35
+    else if (difPct <= -10) oportunidadScore = 30
+    else if (difPct <= 10) oportunidadScore = 25  // Rango amplio "justo"
+    else if (difPct <= 20) oportunidadScore = 15
+    else oportunidadScore = 10                    // Premium todavía suma algo
+  }
+
+  score += oportunidadScore
+  debugScores.oportunidad = oportunidadScore
+  debugScores.difPct = difPct
+  // modoOportunidad: 1=CALIDAD, 2=NEUTRAL, 3=PRECIO
+  debugScores.modoOportunidad = datosUsuario.calidad_vs_precio <= 2 ? 1 :
+                                 datosUsuario.calidad_vs_precio >= 4 ? 3 : 2
+
+  // 3. TRADE-OFFS (0 a 20)
+  const medianaArea = MEDIANA_AREA_POR_DORMS[prop.dormitorios || 1] || 52
+  const medianaPrecioM2 = MEDIANA_PRECIO_M2_POR_ZONA[prop.zona || ''] || MEDIANA_PRECIO_M2_POR_ZONA['default']
+  const precioM2 = prop.precio_m2 || (prop.precio_usd / (prop.area_m2 || 1))
+
+  // Trade-off: ubicacion_vs_metros
+  // 1-2 = prioriza ubicación (sin boost en MVP)
+  // 4-5 = prioriza metros: boost si área > mediana
+  if (datosUsuario.ubicacion_vs_metros >= 4) {
+    if ((prop.area_m2 || 0) > medianaArea) {
+      score += 10
+    }
+  }
+
+  // Trade-off: calidad_vs_precio (SOLO AMENIDADES - precio ya está en OPORTUNIDAD)
+  // 1-2 = prioriza calidad: boost si muchas amenidades
+  // 4-5 = prioriza precio: sin boost adicional (ya cubierto en OPORTUNIDAD)
+  let calidadBoost = 0
+  const totalAmenidades = (prop.amenities_confirmados?.length || 0)
+  debugScores.calidad_vs_precio_slider = datosUsuario.calidad_vs_precio
+  debugScores.precioM2 = precioM2
+  debugScores.medianaPrecioM2 = medianaPrecioM2
+  debugScores.totalAmenidades = totalAmenidades
+
+  if (datosUsuario.calidad_vs_precio <= 2 && totalAmenidades >= 5) {
+    // Prioriza calidad: bonus por muchas amenidades
+    calidadBoost = 10
+  }
+  score += calidadBoost
+  debugScores.calidadBoost = calidadBoost
+
+  // 4. DESEABLES (0 a 15) - max 3 deseables, 5 pts cada uno
+  if (datosUsuario.deseables.length > 0) {
+    const amenidadesDeseadas = innegociablesToAmenidades(datosUsuario.deseables)
+    let deseablesScore = 0
+    const confirmados = prop.amenities_confirmados || []
+
+    for (const amenidad of amenidadesDeseadas.slice(0, 3)) {
+      if (confirmados.includes(amenidad)) {
+        deseablesScore += 5
+      }
+    }
+    score += deseablesScore
+    debugScores.deseables = deseablesScore
+  }
+
+  // DEBUG: Log para TOP 5 propiedades
+  debugScores.total = score
+  console.log(`[MOAT] ${prop.proyecto} | Score: ${score} | Desglose:`, debugScores)
+
+  return score
+}
 
 
 export default function ResultadosPage() {
@@ -332,8 +505,14 @@ export default function ResultadosPage() {
   const [analisisFiduciario, setAnalisisFiduciario] = useState<AnalisisMercadoFiduciario | null>(null)
   const [loading, setLoading] = useState(true)
   const [showPremiumModal, setShowPremiumModal] = useState(false)
+  const [showPremiumExample, setShowPremiumExample] = useState(false)
+  const [premiumEmail, setPremiumEmail] = useState('')
+  const [premiumSubmitted, setPremiumSubmitted] = useState(false)
+  const [premiumLoading, setPremiumLoading] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({})
+  // Contador para forzar refresh del modal cuando cambian filtros
+  const [filterRefreshKey, setFilterRefreshKey] = useState(0)
 
   // Estados para edición inline de filtros
   const [editingFilter, setEditingFilter] = useState<'presupuesto' | 'dormitorios' | 'zonas' | 'estado_entrega' | null>(null)
@@ -610,12 +789,49 @@ export default function ResultadosPage() {
     if (calidad_vs_precio) params.set('calidad_vs_precio', calidad_vs_precio as string)
 
     setEditingFilter(null)
+    // Cerrar modal premium si está abierto (para que muestre datos frescos al reabrir)
+    setShowPremiumExample(false)
+    // Incrementar key para forzar refresh del modal
+    setFilterRefreshKey(prev => prev + 1)
     router.push(`/resultados?${params.toString()}`)
   }
 
-  // Separar en TOP 3 y alternativas
-  const top3 = propiedades.slice(0, 3)
-  const alternativas = propiedades.slice(3, 13)
+  // Datos del usuario para MOAT score (de URL params)
+  const datosUsuarioMOAT: DatosUsuarioMOAT = useMemo(() => ({
+    innegociables: innegociables ? (innegociables as string).split(',').filter(Boolean) : [],
+    deseables: deseables ? (deseables as string).split(',').filter(Boolean) : [],
+    ubicacion_vs_metros: parseInt(ubicacion_vs_metros as string) || 3,
+    calidad_vs_precio: parseInt(calidad_vs_precio as string) || 3,
+  }), [innegociables, deseables, ubicacion_vs_metros, calidad_vs_precio])
+
+  // Ordenar propiedades por MOAT score
+  const propiedadesOrdenadas = useMemo(() => {
+    if (propiedades.length === 0) return []
+
+    // Calcular score para cada propiedad
+    const conScore = propiedades.map(p => ({
+      ...p,
+      score_moat: calcularScoreMOAT(p, datosUsuarioMOAT)
+    }))
+
+    // Ordenar por score MOAT descendente
+    // Desempate: mejor oportunidad de precio (diferencia_pct más negativa)
+    conScore.sort((a, b) => {
+      if (b.score_moat !== a.score_moat) {
+        return b.score_moat - a.score_moat
+      }
+      // Desempate por posición de mercado
+      const difA = (a.posicion_mercado as { diferencia_pct?: number } | null)?.diferencia_pct ?? 0
+      const difB = (b.posicion_mercado as { diferencia_pct?: number } | null)?.diferencia_pct ?? 0
+      return difA - difB  // Menor diferencia (más negativa = mejor) primero
+    })
+
+    return conScore
+  }, [propiedades, datosUsuarioMOAT])
+
+  // Separar en TOP 3 y alternativas (ahora ordenados por MOAT score)
+  const top3 = propiedadesOrdenadas.slice(0, 3)
+  const alternativas = propiedadesOrdenadas.slice(3, 13)
 
   // Excluidas del SQL (bloque_2_opciones_excluidas)
   const excluidasFiduciarias = analisisFiduciario?.bloque_2_opciones_excluidas?.opciones || []
@@ -698,14 +914,12 @@ ${top3Texto}
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50">
+      <InternalHeader backLink={{ href: '/filtros', label: '← Nueva búsqueda' }} />
+      <div className="max-w-4xl mx-auto px-4 pb-8">
         {/* Header */}
         <div className="mb-6">
-          <Link href="/filtros" className="text-blue-600 hover:underline text-sm">
-            ← Nueva busqueda
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900 mt-2">
+          <h1 className="text-2xl font-bold text-gray-900">
             Tus resultados personalizados
           </h1>
           <p className="text-gray-600 mt-1">
@@ -1059,9 +1273,9 @@ ${top3Texto}
               <div className="space-y-4">
                 {top3.map((prop, idx) => (
                   <div key={prop.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                    <div className="flex">
+                    <div className="flex flex-col md:flex-row">
                       {/* Carrusel de fotos */}
-                      <div className="w-48 h-40 bg-gray-200 flex-shrink-0 relative group">
+                      <div className="w-full aspect-square md:w-48 md:h-40 md:aspect-auto bg-gray-200 flex-shrink-0 relative group">
                         {prop.fotos_urls && prop.fotos_urls.length > 0 ? (
                           <>
                             <img
@@ -1111,7 +1325,7 @@ ${top3Texto}
                               #{idx + 1} Match
                             </span>
                             <h3 className="font-bold text-gray-900 mt-1">{prop.proyecto}</h3>
-                            <p className="text-sm text-gray-500">{prop.zona}</p>
+                            <p className="text-sm text-gray-500">{zonaDisplay(prop.zona)}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-xl font-bold text-gray-900">
@@ -1619,7 +1833,7 @@ ${top3Texto}
                             <div className="flex items-start justify-between gap-2">
                               <div>
                                 <h3 className="font-medium text-gray-900">{prop.proyecto}</h3>
-                                <p className="text-xs text-gray-500">{prop.zona}</p>
+                                <p className="text-xs text-gray-500">{zonaDisplay(prop.zona)}</p>
                               </div>
                               <div className="text-right flex-shrink-0">
                                 <p className="font-bold text-gray-900">${formatNum(prop.precio_usd)}</p>
@@ -1961,8 +2175,8 @@ ${top3Texto}
         )}
       </div>
 
-      {/* Modal Premium */}
-      {showPremiumModal && (
+      {/* Modal Premium - Waitlist */}
+      {showPremiumModal && !showPremiumExample && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 relative">
             {/* Close button */}
@@ -1977,61 +2191,117 @@ ${top3Texto}
 
             {/* Header */}
             <div className="text-center mb-6">
-              <span className="text-4xl mb-2 block">🔓</span>
+              <span className="text-4xl mb-2 block">📋</span>
               <h2 className="text-2xl font-bold text-gray-900">
-                DESBLOQUEAR INFORME COMPLETO
+                Informe Fiduciario Premium
               </h2>
+              <p className="text-gray-500 mt-2">Próximamente disponible</p>
             </div>
 
             {/* Benefits */}
             <div className="space-y-3 mb-6">
               <div className="flex items-start gap-3">
-                <span className="text-green-500 text-lg">✅</span>
-                <span className="text-gray-700">Detalle de las {excluidasFiduciarias.length || analisisFiduciario?.bloque_2_opciones_excluidas?.total || 0} propiedades excluidas</span>
+                <span className="text-purple-500 text-lg">✓</span>
+                <span className="text-gray-700">Comparador TOP 3 lado a lado</span>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-green-500 text-lg">✅</span>
-                <span className="text-gray-700">Comparador lado a lado de tus TOP 3</span>
+                <span className="text-purple-500 text-lg">✓</span>
+                <span className="text-gray-700">Precio/m² vs promedio de zona</span>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-green-500 text-lg">✅</span>
-                <span className="text-gray-700">Análisis de mercado completo (CMA)</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-green-500 text-lg">✅</span>
-                <span className="text-gray-700">Alertas de precio y oportunidades</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-green-500 text-lg">✅</span>
-                <span className="text-gray-700">Contacto directo con asesores verificados</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-green-500 text-lg">✅</span>
-                <span className="text-gray-700">PDF descargable para compartir</span>
+                <span className="text-purple-500 text-lg">✓</span>
+                <span className="text-gray-700">Lo que NO sabemos (transparencia total)</span>
               </div>
             </div>
 
-            {/* Price */}
-            <div className="text-center mb-6">
+            {/* Price preview */}
+            <div className="text-center mb-6 bg-gray-50 rounded-lg p-4">
               <p className="text-gray-500 text-sm line-through">$49.99 USD</p>
-              <p className="text-3xl font-bold text-gray-900">$29.99 <span className="text-lg font-normal text-gray-500">USD</span></p>
-              <p className="text-sm text-green-600 font-medium">Precio de lanzamiento</p>
+              <p className="text-2xl font-bold text-gray-900">$29.99 <span className="text-sm font-normal text-gray-500">USD</span></p>
+              <p className="text-sm text-purple-600 font-medium">Precio de lanzamiento</p>
             </div>
 
-            {/* CTA */}
+            {/* Waitlist Form */}
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-4">
+              <div className="text-purple-600 text-xl mb-2">🎁</div>
+              <h4 className="font-bold text-gray-900 mb-1">
+                Los primeros 50 lo reciben gratis
+              </h4>
+              <p className="text-gray-600 text-sm mb-3">
+                Dejá tu email y te avisamos cuando esté listo.
+              </p>
+
+              {premiumSubmitted ? (
+                <div className="text-green-600 text-sm font-medium">
+                  ✓ ¡Listo! Te avisamos cuando esté disponible.
+                </div>
+              ) : (
+                <form onSubmit={(e) => {
+                  e.preventDefault()
+                  if (!premiumEmail) return
+                  setPremiumLoading(true)
+                  // Guardar en localStorage
+                  const waitlist = JSON.parse(localStorage.getItem('premium_waitlist') || '[]')
+                  waitlist.push({ email: premiumEmail, timestamp: new Date().toISOString(), desde: 'resultados' })
+                  localStorage.setItem('premium_waitlist', JSON.stringify(waitlist))
+                  setPremiumSubmitted(true)
+                  setPremiumLoading(false)
+                }} className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="tu@email.com"
+                    value={premiumEmail}
+                    onChange={(e) => setPremiumEmail(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-purple-500"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={premiumLoading}
+                    className="px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                  >
+                    {premiumLoading ? '...' : 'Unirme'}
+                  </button>
+                </form>
+              )}
+            </div>
+
+            {/* Ver ejemplo */}
             <button
-              onClick={() => setShowPremiumModal(false)}
-              className="w-full py-4 px-6 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors mb-4"
+              onClick={() => setShowPremiumExample(true)}
+              className="w-full py-3 px-6 border border-purple-300 text-purple-700 font-medium rounded-lg hover:bg-purple-50 transition-colors text-sm"
             >
-              DESBLOQUEAR AHORA
+              Ver Ejemplo Real
             </button>
 
-            {/* Trust badges */}
-            <p className="text-center text-xs text-gray-500">
-              🔒 Pago seguro · Acceso inmediato · PDF descargable
+            <p className="text-center text-xs text-gray-400 mt-3">
+              🔒 Sin compromiso · Te avisamos por email
             </p>
           </div>
         </div>
+      )}
+
+      {/* Modal Ejemplo Premium (PremiumModal real) - con filtros del usuario */}
+      {/* Key incluye filterRefreshKey para forzar re-mount cuando cambian filtros */}
+      {showPremiumExample && (
+        <PremiumModal
+          key={`premium-${filterRefreshKey}-${presupuesto}-${dormitorios}-${zonas}-${estado_entrega}-${innegociables}`}
+          onClose={() => {
+            setShowPremiumExample(false)
+            setShowPremiumModal(false)
+          }}
+          filtros={{
+            presupuesto: presupuesto ? parseInt(presupuesto as string) : undefined,
+            dormitorios: dormitorios ? parseInt(dormitorios as string) : undefined,
+            zonas: zonas ? (zonas as string).split(',').filter(Boolean) : undefined,
+            estado_entrega: (estado_entrega as string) || undefined,
+            // Filtros MOAT para ordenamiento consistente
+            innegociables: innegociables ? (innegociables as string).split(',').filter(Boolean) : undefined,
+            deseables: deseables ? (deseables as string).split(',').filter(Boolean) : undefined,
+            ubicacion_vs_metros: ubicacion_vs_metros ? parseInt(ubicacion_vs_metros as string) : undefined,
+            calidad_vs_precio: calidad_vs_precio ? parseInt(calidad_vs_precio as string) : undefined
+          }}
+        />
       )}
     </div>
   )
