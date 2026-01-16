@@ -1273,9 +1273,9 @@ ${top3Texto}
               <div className="space-y-4">
                 {top3.map((prop, idx) => (
                   <div key={prop.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                    <div className="flex">
+                    <div className="flex flex-col md:flex-row">
                       {/* Carrusel de fotos */}
-                      <div className="w-48 h-40 bg-gray-200 flex-shrink-0 relative group">
+                      <div className="w-full aspect-square md:w-48 md:h-40 md:aspect-auto bg-gray-200 flex-shrink-0 relative group">
                         {prop.fotos_urls && prop.fotos_urls.length > 0 ? (
                           <>
                             <img

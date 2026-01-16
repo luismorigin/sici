@@ -210,7 +210,10 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
 
 // Convertir zona del formulario a nombre de BD
 export function convertirZona(zonaForm: string): string {
-  return microzonaToZona[zonaForm] || ''
+  const resultado = microzonaToZona[zonaForm]
+  if (!resultado) return ''
+  // Si es array, devolver el primero
+  return Array.isArray(resultado) ? resultado[0] : resultado
 }
 
 // Buscar cuántas opciones hay en el siguiente rango de precio
@@ -712,7 +715,7 @@ export async function confirmarLead(leadId: number): Promise<boolean> {
 // Tipos para analisis_mercado_fiduciario()
 export interface PosicionMercado {
   success: boolean
-  categoria: 'oportunidad' | 'precio_justo' | 'premium'
+  categoria: 'oportunidad' | 'bajo_promedio' | 'precio_justo' | 'sobre_promedio' | 'premium'
   diferencia_pct: number
   posicion_texto: string
   contexto: {
@@ -1070,6 +1073,11 @@ export async function construirAnalisisDesdeBusqueda(
         }
       },
       explicacion_precio: {
+        propiedad_id: r.id,
+        precio_usd: r.precio_usd,
+        precio_m2: r.precio_m2,
+        zona: r.zona,
+        promedio_zona: precioM2Promedio,
         diferencia_pct: r.posicion_mercado?.diferencia_pct || 0,
         resumen: r.posicion_mercado?.posicion_texto || 'Precio de mercado',
         explicaciones: []
