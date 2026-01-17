@@ -5,8 +5,52 @@ import { useRouter } from 'next/router'
 import { motion } from 'framer-motion'
 import { guardarLead, type LeadResult } from '@/lib/supabase'
 
-export default function LeadForm() {
+export type LeadTipo = 'comprador' | 'vendedor' | 'broker' | 'avaluador'
+
+interface LeadFormProps {
+  tipo?: LeadTipo
+}
+
+// Copy adaptado por tipo
+const copyPorTipo = {
+  comprador: {
+    titulo: 'Obten este analisis para ti.',
+    subtitulo: 'Genera tu propio informe personalizado en menos de 2 minutos. Gratis y sin compromiso.',
+    cta: 'Generar Mi Informe Gratis',
+    exito: 'Redirigiendo a tu busqueda personalizada...',
+    redireccion: '/filtros',
+    mostrarDisclaimer: true
+  },
+  vendedor: {
+    titulo: 'Solicitar Avaluo Comercial',
+    subtitulo: 'Un asesor te contactara para darte un analisis personalizado de tu propiedad.',
+    cta: 'Solicitar Avaluo',
+    exito: 'Te contactaremos pronto con tu analisis.',
+    redireccion: null,
+    mostrarDisclaimer: false
+  },
+  broker: {
+    titulo: 'Descargar CMA Profesional',
+    subtitulo: 'Genera un PDF profesional para presentar a tu cliente.',
+    cta: 'Generar CMA en PDF',
+    exito: 'Te enviaremos el CMA a tu email.',
+    redireccion: null,
+    mostrarDisclaimer: false
+  },
+  avaluador: {
+    titulo: 'Exportar Referencias',
+    subtitulo: 'Exporta los datos en formato compatible con tu sistema de avaluos.',
+    cta: 'Exportar Datos',
+    exito: 'Te enviaremos las referencias a tu email.',
+    redireccion: null,
+    mostrarDisclaimer: false
+  }
+}
+
+export default function LeadForm({ tipo = 'comprador' }: LeadFormProps) {
   const router = useRouter()
+  const config = copyPorTipo[tipo]
+
   const [form, setForm] = useState({
     nombre: '',
     email: '',
@@ -23,25 +67,31 @@ export default function LeadForm() {
     setError('')
 
     try {
-      const result: LeadResult = await guardarLead(form)
+      // Agregar tipo al lead para tracking
+      const leadData = { ...form, tipo }
+      const result: LeadResult = await guardarLead(leadData)
 
       if (result.success) {
         setSubmitted(true)
         if (result.leadId) {
           setLeadId(result.leadId)
-          console.log('Lead guardado con ID:', result.leadId)
+          console.log('Lead guardado con ID:', result.leadId, 'tipo:', tipo)
         }
-        // Redirect a búsqueda después de 2 segundos
-        setTimeout(() => {
-          router.push('/filtros')
-        }, 2000)
+        // Redirect solo si hay redireccion configurada
+        if (config.redireccion) {
+          setTimeout(() => {
+            router.push(config.redireccion!)
+          }, 2000)
+        }
       } else {
         // Si falla Supabase, igual mostrar éxito para UX (pero logear)
         console.warn('Lead no guardado en BD:', result.error)
         setSubmitted(true)
-        setTimeout(() => {
-          router.push('/filtros')
-        }, 2000)
+        if (config.redireccion) {
+          setTimeout(() => {
+            router.push(config.redireccion!)
+          }, 2000)
+        }
       }
     } catch (err) {
       console.error('Error en formulario:', err)
@@ -68,7 +118,7 @@ export default function LeadForm() {
             ¡Gracias, {form.nombre.split(' ')[0]}!
           </h3>
           <p className="text-slate-500">
-            Redirigiendo a tu búsqueda personalizada...
+            {config.exito}
           </p>
           <p className="text-xs text-slate-400 mt-2">
             También te enviaremos resultados a <strong>{form.email}</strong>
@@ -79,29 +129,31 @@ export default function LeadForm() {
   }
 
   return (
-    <div className="bg-white border-t border-slate-200 p-8" id="cta-form">
+    <div className={`bg-white ${tipo === 'comprador' ? 'border-t border-slate-200' : ''} p-8`} id="cta-form">
       <div className="max-w-md mx-auto text-center">
         <h3 className="font-display text-2xl font-bold text-brand-dark mb-2">
-          Obtén este análisis para ti.
+          {config.titulo}
         </h3>
         <p className="text-slate-500 mb-6">
-          Genera tu propio informe personalizado en menos de 2 minutos. Gratis y sin compromiso.
+          {config.subtitulo}
         </p>
 
-        {/* Disclaimer con opción de saltar */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
-          <p className="text-sm text-slate-600">
-            <strong>Esto es un test.</strong> Podés explorar sin dejar tus datos,
-            pero si los dejás te avisamos cuando haya propiedades nuevas que encajen.
-          </p>
-          <button
-            type="button"
-            onClick={() => router.push('/filtros')}
-            className="text-brand-primary text-sm font-medium mt-2 hover:underline"
-          >
-            → Saltar y explorar directamente
-          </button>
-        </div>
+        {/* Disclaimer con opción de saltar - solo para compradores */}
+        {config.mostrarDisclaimer && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+            <p className="text-sm text-slate-600">
+              <strong>Esto es un test.</strong> Podes explorar sin dejar tus datos,
+              pero si los dejas te avisamos cuando haya propiedades nuevas que encajen.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push('/filtros')}
+              className="text-brand-primary text-sm font-medium mt-2 hover:underline"
+            >
+              → Saltar y explorar directamente
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4 text-left">
           <div>
@@ -165,7 +217,7 @@ export default function LeadForm() {
               </span>
             ) : (
               <>
-                Generar Mi Informe Gratis
+                {config.cta}
                 <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
