@@ -48,18 +48,16 @@ export default function ProResults({ perfil, datosPropiedad, onBack, onShowLeadF
       setError(null)
 
       try {
-        // Convertir zona a formato esperado
-        const zonasMap: Record<string, string> = {
-          'equipetrol_norte': 'Equipetrol Norte',
-          'equipetrol_centro': 'Equipetrol',
-          'equipetrol_sur': 'Equipetrol Sur',
-          'sirari': 'Sirari',
-          'villa_olimpica': 'Villa Olimpica',
-          'las_palmas': 'Las Palmas'
-        }
+        // Todas las microzonas disponibles
+        const TODAS_LAS_ZONAS = ['equipetrol', 'sirari', 'equipetrol_norte', 'villa_brigida', 'faremafu']
+
+        // Si seleccionó "todas", buscar en todas las microzonas
+        const zonasABuscar = datosPropiedad.zona === 'todas'
+          ? TODAS_LAS_ZONAS
+          : [datosPropiedad.zona]
 
         const data = await buscarUnidadesReales({
-          zona: zonasMap[datosPropiedad.zona] || 'Equipetrol',
+          zonas_permitidas: zonasABuscar,
           dormitorios: datosPropiedad.dormitorios === 3 ? undefined : datosPropiedad.dormitorios,
           precio_max: datosPropiedad.precio_referencia
             ? datosPropiedad.precio_referencia * 1.5

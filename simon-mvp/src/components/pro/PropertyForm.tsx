@@ -4,14 +4,14 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import type { Perfil } from './ProfileSelector'
 
-// Zonas disponibles
+// Microzonas disponibles (igual que PriceChecker)
 const ZONAS = [
-  { value: 'equipetrol_norte', label: 'Equipetrol Norte' },
-  { value: 'equipetrol_centro', label: 'Equipetrol Centro' },
-  { value: 'equipetrol_sur', label: 'Equipetrol Sur' },
+  { value: 'todas', label: 'Todo Equipetrol' },
+  { value: 'equipetrol', label: 'Equipetrol Centro' },
   { value: 'sirari', label: 'Sirari' },
-  { value: 'villa_olimpica', label: 'Villa Olimpica' },
-  { value: 'las_palmas', label: 'Las Palmas' }
+  { value: 'equipetrol_norte', label: 'Equipetrol Norte' },
+  { value: 'villa_brigida', label: 'Villa Brigida' },
+  { value: 'faremafu', label: 'Equipetrol Oeste' }
 ]
 
 const DORMITORIOS = [
