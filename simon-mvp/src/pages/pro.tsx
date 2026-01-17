@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import { useState } from 'react'
 import { Navbar, Footer, LeadForm } from '@/components/landing'
-import { ProHero, ProfileSelector, PropertyForm, ProResults } from '@/components/pro'
+import { ProHero, ProfileSelector, PropertyForm, ProResults, VendedorResults } from '@/components/pro'
 import type { Perfil } from '@/components/pro/ProfileSelector'
 import type { DatosPropiedad } from '@/components/pro/PropertyForm'
 
@@ -76,12 +76,20 @@ export default function ProPage() {
 
         {/* Paso 3: Resultados */}
         {paso === 'resultados' && perfil && datosPropiedad && (
-          <ProResults
-            perfil={perfil}
-            datosPropiedad={datosPropiedad}
-            onBack={handleBackToForm}
-            onShowLeadForm={handleShowLeadForm}
-          />
+          perfil === 'vendedor' ? (
+            <VendedorResults
+              datosPropiedad={datosPropiedad}
+              onBack={handleBackToForm}
+              onShowLeadForm={handleShowLeadForm}
+            />
+          ) : (
+            <ProResults
+              perfil={perfil}
+              datosPropiedad={datosPropiedad}
+              onBack={handleBackToForm}
+              onShowLeadForm={handleShowLeadForm}
+            />
+          )
         )}
 
         {/* Paso 4: Lead Form */}
