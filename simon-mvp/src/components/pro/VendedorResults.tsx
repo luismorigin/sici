@@ -19,6 +19,8 @@ interface AnalisisCompetidor {
   diasEnMercado: number
   impacto: 'te_afecta' | 'te_beneficia' | 'neutral'
   razon: string
+  tipoEdificio: 'premium' | 'standard' | 'basico'
+  estadoEntrega: string
 }
 
 interface Veredicto {
@@ -53,6 +55,93 @@ interface AnalisisVendedor {
   competidoresAnalizados: AnalisisCompetidor[]
   argumentosContra: { argumento: string; respuesta: string }[]
   escenarios: EscenarioPrecio[]
+  advertencias: string[]
+  filtrosAplicados: string
+}
+
+// ============ AMENITIES CLAVE PARA TIPO EDIFICIO ============
+
+const AMENITIES_PREMIUM = ['piscina', 'pileta', 'gym', 'gimnasio', 'sauna', 'salon_eventos', 'bbq', 'parrilla', 'seguridad_24h', 'lobby']
+const AMENITIES_STANDARD = ['ascensor', 'estacionamiento', 'areas_comunes', 'jardin']
+
+function inferirTipoEdificio(amenities: string[] | null): 'premium' | 'standard' | 'basico' {
+  if (!amenities || amenities.length === 0) return 'basico'
+
+  const amenitiesLower = amenities.map(a => a.toLowerCase().replace(/\s+/g, '_'))
+
+  const countPremium = AMENITIES_PREMIUM.filter(a =>
+    amenitiesLower.some(am => am.includes(a))
+  ).length
+
+  if (countPremium >= 3) return 'premium'
+  if (countPremium >= 1 || amenitiesLower.length >= 2) return 'standard'
+  return 'basico'
+}
+
+function filtrarComparables(
+  resultados: UnidadReal[],
+  datosPropiedad: DatosPropiedad
+): { filtrados: UnidadReal[]; advertencias: string[] } {
+  const advertencias: string[] = []
+  const areaMin = datosPropiedad.area_m2 * 0.7
+  const areaMax = datosPropiedad.area_m2 * 1.3
+
+  // Paso 1: Filtrar por area similar
+  let filtrados = resultados.filter(r => r.area_m2 >= areaMin && r.area_m2 <= areaMax)
+
+  if (filtrados.length < 3) {
+    advertencias.push(`Pocos comparables con area similar (${Math.round(areaMin)}-${Math.round(areaMax)}m²). Ampliamos rango.`)
+    filtrados = resultados.filter(r => r.area_m2 >= areaMin * 0.7 && r.area_m2 <= areaMax * 1.3)
+  }
+
+  // Paso 2: Filtrar por tipo edificio
+  const tipoUsuario = datosPropiedad.tipo_edificio
+  const filtradosPorTipo = filtrados.filter(r => {
+    const tipoInferido = inferirTipoEdificio(r.amenities_confirmados)
+    return tipoInferido === tipoUsuario
+  })
+
+  if (filtradosPorTipo.length >= 3) {
+    filtrados = filtradosPorTipo
+  } else if (tipoUsuario === 'premium') {
+    // Premium: comparar solo con premium/standard, nunca basico
+    const premiumYStandard = filtrados.filter(r => {
+      const tipo = inferirTipoEdificio(r.amenities_confirmados)
+      return tipo === 'premium' || tipo === 'standard'
+    })
+    if (premiumYStandard.length >= 3) {
+      filtrados = premiumYStandard
+      advertencias.push('Incluimos algunos edificios standard por falta de premium comparables.')
+    } else {
+      advertencias.push('Pocos edificios premium en la zona. Comparacion incluye otros tipos.')
+    }
+  } else if (tipoUsuario === 'basico') {
+    // Basico: comparar solo con basico/standard, nunca premium
+    const basicoYStandard = filtrados.filter(r => {
+      const tipo = inferirTipoEdificio(r.amenities_confirmados)
+      return tipo === 'basico' || tipo === 'standard'
+    })
+    if (basicoYStandard.length >= 3) {
+      filtrados = basicoYStandard
+      advertencias.push('Incluimos algunos edificios standard por falta de basicos comparables.')
+    } else {
+      advertencias.push('Pocos edificios basicos en la zona. Comparacion incluye otros tipos.')
+    }
+  }
+
+  // Paso 3: Filtrar preventa si usuario selecciono entrega inmediata
+  if (datosPropiedad.estado_entrega === 'entrega_inmediata') {
+    const sinPreventa = filtrados.filter(r =>
+      r.estado_construccion !== 'preventa' && r.estado_construccion !== 'construccion' && r.estado_construccion !== 'planos'
+    )
+    if (sinPreventa.length >= 3) {
+      filtrados = sinPreventa
+    } else {
+      advertencias.push('Incluimos algunas preventas por falta de unidades disponibles comparables.')
+    }
+  }
+
+  return { filtrados, advertencias }
 }
 
 // ============ FUNCIONES DE ANALISIS ============
@@ -117,7 +206,9 @@ function analizarCompetidor(
     diferenciaPct,
     diasEnMercado,
     impacto,
-    razon
+    razon,
+    tipoEdificio: inferirTipoEdificio(prop.amenities_confirmados),
+    estadoEntrega: prop.estado_construccion || 'no_especificado'
   }
 }
 
@@ -211,10 +302,26 @@ function realizarAnalisis(
 ): AnalisisVendedor | null {
   if (!datosPropiedad.precio_referencia || resultados.length === 0) return null
 
+  // FILTRAR comparables (area similar + tipo edificio + estado entrega)
+  const { filtrados, advertencias } = filtrarComparables(resultados, datosPropiedad)
+
+  if (filtrados.length === 0) {
+    advertencias.push('No hay comparables con tus criterios. Mostrando mercado general.')
+  }
+
+  const comparables = filtrados.length > 0 ? filtrados : resultados
+
+  // Descripcion de filtros aplicados
+  const tipoLabel = datosPropiedad.tipo_edificio === 'premium' ? 'premium' :
+                    datosPropiedad.tipo_edificio === 'standard' ? 'standard' : 'basico'
+  const estadoLabel = datosPropiedad.estado_entrega === 'entrega_inmediata' ? 'listos para entregar' :
+                      datosPropiedad.estado_entrega === 'solo_preventa' ? 'en preventa' : 'todos'
+  const filtrosAplicados = `${comparables.length} edificios ${tipoLabel}, ${estadoLabel}, ${Math.round(datosPropiedad.area_m2 * 0.7)}-${Math.round(datosPropiedad.area_m2 * 1.3)}m²`
+
   const tuPrecioM2 = datosPropiedad.precio_referencia / datosPropiedad.area_m2
 
-  // Estadisticas de mercado
-  const preciosM2 = resultados.map(r => r.precio_m2)
+  // Estadisticas de mercado (usando comparables filtrados)
+  const preciosM2 = comparables.map(r => r.precio_m2)
   const precioM2Mercado = preciosM2.reduce((a, b) => a + b, 0) / preciosM2.length
   const precioM2Min = Math.min(...preciosM2)
   const precioM2Max = Math.max(...preciosM2)
@@ -228,7 +335,7 @@ function realizarAnalisis(
   const percentil = Math.round((masBaratos / preciosM2.length) * 100)
 
   // Dias en mercado
-  const diasList = resultados.map(r => r.dias_en_mercado || 0).filter(d => d > 0)
+  const diasList = comparables.map(r => r.dias_en_mercado || 0).filter(d => d > 0)
   const diasPromedioMercado = diasList.length > 0
     ? diasList.reduce((a, b) => a + b, 0) / diasList.length
     : 45
@@ -255,8 +362,8 @@ function realizarAnalisis(
                           veredicto.tipo === 'muy_alto' ? 0.12 : 0.02
   const cierreTipico = Math.round(datosPropiedad.precio_referencia * (1 - descuentoTipico))
 
-  // Analizar competidores
-  const competidoresAnalizados = resultados
+  // Analizar competidores (usando comparables filtrados)
+  const competidoresAnalizados = comparables
     .slice(0, 10)
     .map(prop => analizarCompetidor(prop, tuPrecioM2, datosPropiedad.area_m2))
     .sort((a, b) => a.diferenciaPct - b.diferenciaPct)
@@ -280,14 +387,16 @@ function realizarAnalisis(
     rangoMax,
     percentil,
     competidoresMasBaratos: masBaratos,
-    competidoresMasCaros: resultados.length - masBaratos,
+    competidoresMasCaros: comparables.length - masBaratos,
     diasPromedioMercado,
     tiempoEstimadoVenta,
     ofertasProbables,
     cierreTipico,
     competidoresAnalizados,
     argumentosContra,
-    escenarios
+    escenarios,
+    advertencias,
+    filtrosAplicados
   }
 }
 
@@ -382,7 +491,26 @@ export default function VendedorResults({ datosPropiedad, onBack, onShowLeadForm
               <p className="text-slate-500">
                 {datosPropiedad.area_m2}m², {datosPropiedad.dormitorios} dorms, {datosPropiedad.zona === 'todas' ? 'Todo Equipetrol' : datosPropiedad.zona}
               </p>
+              <p className="text-xs text-slate-400 mt-2">
+                Comparando con: {analisis.filtrosAplicados}
+              </p>
             </div>
+
+            {/* Advertencias de filtrado */}
+            {analisis.advertencias.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+                <div className="flex items-start gap-2">
+                  <svg className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="text-sm text-blue-700">
+                    {analisis.advertencias.map((adv, i) => (
+                      <p key={i}>{adv}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Veredicto */}
             <div className={`text-center p-6 rounded-xl mb-6 ${
@@ -491,6 +619,31 @@ export default function VendedorResults({ datosPropiedad, onBack, onShowLeadForm
                           : 'bg-slate-100 text-slate-700'
                     }`}>
                       {comp.diferenciaPct > 0 ? '+' : ''}{comp.diferenciaPct.toFixed(0)}% vs tu precio
+                    </span>
+                  </div>
+
+                  {/* Badges: tipo edificio + estado entrega */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                      comp.tipoEdificio === 'premium'
+                        ? 'bg-purple-100 text-purple-700'
+                        : comp.tipoEdificio === 'standard'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {comp.tipoEdificio === 'premium' ? '★ Premium' :
+                       comp.tipoEdificio === 'standard' ? 'Standard' : 'Basico'}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                      comp.estadoEntrega === 'preventa' || comp.estadoEntrega === 'construccion' || comp.estadoEntrega === 'planos'
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-green-100 text-green-700'
+                    }`}>
+                      {comp.estadoEntrega === 'preventa' ? '📋 Preventa' :
+                       comp.estadoEntrega === 'construccion' ? '🏗️ En obra' :
+                       comp.estadoEntrega === 'planos' ? '📐 En planos' :
+                       comp.estadoEntrega === 'entregado' ? '✓ Entregado' :
+                       '✓ Disponible'}
                     </span>
                   </div>
 
