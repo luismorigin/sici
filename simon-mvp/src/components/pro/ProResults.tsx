@@ -37,6 +37,22 @@ const getDiferenciaLabel = (diff: number, perfil: Perfil) => {
   return null // Avaluador no muestra diferencia
 }
 
+// Label para estado de construccion
+const getEstadoLabel = (estado: string | null | undefined): { label: string; sinConfirmar: boolean } => {
+  if (!estado || estado === 'no_especificado') {
+    return { label: 'Entrega sin confirmar', sinConfirmar: true }
+  }
+  const labels: Record<string, string> = {
+    'entrega_inmediata': 'Entrega inmediata',
+    'nuevo_a_estrenar': 'Nuevo a estrenar',
+    'usado': 'Usado',
+    'preventa': 'Preventa',
+    'construccion': 'En construccion',
+    'planos': 'En planos'
+  }
+  return { label: labels[estado] || estado, sinConfirmar: false }
+}
+
 export default function ProResults({ perfil, datosPropiedad, onBack, onShowLeadForm }: ProResultsProps) {
   const [resultados, setResultados] = useState<UnidadReal[]>([])
   const [loading, setLoading] = useState(true)
@@ -63,6 +79,7 @@ export default function ProResults({ perfil, datosPropiedad, onBack, onShowLeadF
             ? datosPropiedad.precio_referencia * 1.5
             : 300000,
           area_min: Math.max(20, datosPropiedad.area_m2 * 0.7),
+          estado_entrega: datosPropiedad.estado_entrega,
           limite: 50
         })
 
@@ -268,6 +285,29 @@ export default function ProResults({ perfil, datosPropiedad, onBack, onShowLeadF
                       </span>
                     )}
                   </div>
+
+                  {/* Badge estado de entrega */}
+                  {(() => {
+                    const estado = getEstadoLabel(prop.estado_construccion)
+                    return (
+                      <div className="mt-2">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                          estado.sinConfirmar
+                            ? 'bg-amber-100 text-amber-700'
+                            : prop.estado_construccion === 'preventa'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-green-100 text-green-700'
+                        }`}>
+                          {estado.sinConfirmar && (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          )}
+                          {estado.label}
+                        </span>
+                      </div>
+                    )
+                  })()}
 
                   {/* Mini análisis */}
                   {tuPrecioM2 && perfil !== 'avaluador' && (

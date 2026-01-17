@@ -27,11 +27,21 @@ const TIPO_EDIFICIO = [
   { value: 'basico', label: 'Basico', desc: 'Sin amenities especiales' }
 ]
 
+// Estado de entrega MOAT (3 opciones claras)
+const ESTADO_ENTREGA = [
+  { value: 'entrega_inmediata', label: 'Lista para entregar', desc: 'Disponible ahora' },
+  { value: 'solo_preventa', label: 'Solo preventa', desc: 'En construccion o planos' },
+  { value: 'no_importa', label: 'Todo el mercado', desc: 'Incluir ambos' }
+]
+
+export type EstadoEntrega = 'entrega_inmediata' | 'solo_preventa' | 'no_importa'
+
 export interface DatosPropiedad {
   zona: string
   dormitorios: number
   area_m2: number
   tipo_edificio: 'premium' | 'standard' | 'basico'
+  estado_entrega: EstadoEntrega
   parqueos: number
   baulera: boolean
   // Campos según perfil
@@ -49,6 +59,7 @@ export default function PropertyForm({ perfil, onSubmit, onBack }: PropertyFormP
   const [dormitorios, setDormitorios] = useState<number | null>(null)
   const [areaM2, setAreaM2] = useState('')
   const [tipoEdificio, setTipoEdificio] = useState<'premium' | 'standard' | 'basico' | null>(null)
+  const [estadoEntrega, setEstadoEntrega] = useState<EstadoEntrega>('entrega_inmediata')
   const [parqueos, setParqueos] = useState(0)
   const [baulera, setBaulera] = useState(false)
   const [precioReferencia, setPrecioReferencia] = useState('')
@@ -91,6 +102,7 @@ export default function PropertyForm({ perfil, onSubmit, onBack }: PropertyFormP
       dormitorios: dormitorios!,
       area_m2: parseFloat(areaM2),
       tipo_edificio: tipoEdificio!,
+      estado_entrega: estadoEntrega,
       parqueos,
       baulera,
       precio_referencia: precioReferencia ? parseFloat(precioReferencia) : null
@@ -206,6 +218,32 @@ export default function PropertyForm({ perfil, onSubmit, onBack }: PropertyFormP
                       {t.label}
                     </div>
                     <div className="text-xs text-slate-500 mt-0.5">{t.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Estado de entrega */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Estado de entrega
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {ESTADO_ENTREGA.map(e => (
+                  <button
+                    key={e.value}
+                    type="button"
+                    onClick={() => setEstadoEntrega(e.value as EstadoEntrega)}
+                    className={`p-3 rounded-lg border text-left transition-all ${
+                      estadoEntrega === e.value
+                        ? 'border-brand-primary bg-blue-50'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className={`text-sm font-semibold ${estadoEntrega === e.value ? 'text-brand-primary' : 'text-slate-700'}`}>
+                      {e.label}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-0.5">{e.desc}</div>
                   </button>
                 ))}
               </div>
