@@ -13,110 +13,109 @@ interface BrokerResultsProps {
 
 // ============ TIPOS ============
 
-interface Ajuste {
-  concepto: string
-  valor: number
-  explicacion: string
+interface EstadisticasTipoEdificio {
+  tipo: 'premium' | 'standard' | 'basico'
+  promedioPrecioM2: number
+  minPrecioM2: number
+  maxPrecioM2: number
+  cantidad: number
 }
 
-interface EstadisticasMercado {
-  total: number
-  precioMediano: number
-  precioM2Mediano: number
-  areaMediana: number
-  precioMin: number
-  precioMax: number
-  precioM2Min: number
-  precioM2Max: number
+interface ComparableDirecto {
+  posicion: number
+  proyecto: string
+  zona: string
+  area: number
+  dormitorios: number
+  precio: number
+  precioM2: number
+  diasEnMercado: number
+  tipoEdificio: 'premium' | 'standard' | 'basico'
+  parqueos: number
+  // Diferencias cualitativas vs sujeto
+  diferencias: string[]
+  diferenciaPrecio: number
+  diferenciaArea: number
 }
 
-interface Percentiles {
+interface AnalisisMercado {
+  totalPropiedades: number
+  rangoPrecioMin: number
+  rangoPrecioMax: number
+  rangoPrecioM2Min: number
+  rangoPrecioM2Max: number
+  // Percentiles
   p25: number
   p50: number
   p75: number
   p25M2: number
   p50M2: number
   p75M2: number
-}
-
-interface Comparable {
-  posicion: number
-  proyecto: string
-  zona: string
-  area: number
-  precio: number
-  precioM2: number
-  dias: number
-  estado: string
-  tipoEdificio: string
-  ajustes: Ajuste[]
-  precioAjustado: number
-  relevancia: 'alta' | 'media' | 'baja'
-}
-
-interface ZonaStats {
-  zona: string
-  unidades: number
-  precioM2Min: number
-  precioM2Mediano: number
-  precioM2Max: number
-}
-
-interface RecomendacionPrecio {
-  tipo: 'mantener' | 'bajar_leve' | 'bajar_fuerte' | 'subir'
-  precioSugerido: number
-  razon: string
+  // Por tipo edificio
+  statsPorTipo: EstadisticasTipoEdificio[]
+  // Dias en mercado
+  diasPromedioMercado: number
+  diasBajoMediana: number
+  diasSobreMediana: number
 }
 
 interface AnalisisCMA {
   id: string
   fecha: string
-  propiedadCliente: {
+  // Propiedad del cliente
+  cliente: {
     direccion: string
+    zona: string
     dormitorios: number
     area: number
-    zona: string
-    estado: string
-    tipo: string
+    tipoEdificio: string
     parqueos: number
     precio: number
     precioM2: number
   }
-  mercado: EstadisticasMercado
-  percentiles: Percentiles
-  clientePercentil: number
-  diferenciaPct: number
-  posicionMercado: 'muy_bajo' | 'bajo' | 'competitivo' | 'alto' | 'muy_alto'
-  comparables: Comparable[]
-  zonaStats: ZonaStats[]
-  recomendacion: RecomendacionPrecio
-  diasEstimados: { min: number; max: number }
-  probabilidadVenta30Dias: number
-  probabilidadVenta60Dias: number
-  advertencias: string[]
+  // Mercado
+  mercado: AnalisisMercado
+  // Posicion del cliente
+  percentilCliente: number
+  diferenciaPctVsMediana: number
+  posicionTexto: string
+  // Comparables
+  comparables: ComparableDirecto[]
+  resumenComparables: {
+    precioMin: number
+    precioMax: number
+    precioPromedio: number
+    precioM2Min: number
+    precioM2Max: number
+    precioM2Promedio: number
+    diasMin: number
+    diasMax: number
+    diasPromedio: number
+  }
+  // Estimaciones
+  rangoEstimado: { min: number; max: number }
+  tiempoEstimado: { min: number; max: number }
+  // Recomendacion
+  recomendacion: {
+    rangoMin: number
+    rangoMax: number
+    texto: string
+    estrategia: string[]
+  }
 }
-
-// ============ CONSTANTES ============
-
-const AJUSTE_PARQUEO = 8000
-const AJUSTE_PREMIUM = 0.12
-const AJUSTE_BASICO = -0.10
-const AMENITIES_PREMIUM = ['piscina', 'pileta', 'gym', 'gimnasio', 'sauna', 'salon_eventos', 'bbq', 'parrilla', 'seguridad_24h', 'lobby']
 
 // ============ FUNCIONES DE CALCULO ============
-
-function calcularMediana(arr: number[]): number {
-  if (arr.length === 0) return 0
-  const sorted = [...arr].sort((a, b) => a - b)
-  const mid = Math.floor(sorted.length / 2)
-  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
-}
 
 function calcularPercentil(arr: number[], percentil: number): number {
   if (arr.length === 0) return 0
   const sorted = [...arr].sort((a, b) => a - b)
   const index = Math.ceil((percentil / 100) * sorted.length) - 1
   return sorted[Math.max(0, index)]
+}
+
+function calcularPromedio(arr: number[]): number {
+  if (arr.length === 0) return 0
+  return arr.reduce((a, b) => a + b, 0) / arr.length
 }
 
 function calcularPosicionPercentil(valor: number, arr: number[]): number {
@@ -126,7 +125,7 @@ function calcularPosicionPercentil(valor: number, arr: number[]): number {
   return Math.round((menores / sorted.length) * 100)
 }
 
-function generarIdCMA(dorms: number, area: number): string {
+function generarIdCMA(): string {
   const fecha = new Date()
   const mes = String(fecha.getMonth() + 1).padStart(2, '0')
   const dia = String(fecha.getDate()).padStart(2, '0')
@@ -134,27 +133,13 @@ function generarIdCMA(dorms: number, area: number): string {
   return `CMA-${fecha.getFullYear()}-${mes}${dia}-${random}`
 }
 
-function formatearEstado(estado: string | null): string {
-  if (!estado) return 'No especificado'
-  const map: Record<string, string> = {
-    'entregado': 'Entrega inmediata',
-    'entrega_inmediata': 'Entrega inmediata',
-    'preventa': 'Preventa',
-    'construccion': 'En construccion',
-    'planos': 'En planos',
-    'nuevo': 'Nuevo a estrenar',
-    'usado': 'Usado'
-  }
-  return map[estado.toLowerCase()] || estado
-}
-
 function formatearZona(zona: string): string {
   const map: Record<string, string> = {
-    'equipetrol': 'Equipetrol',
+    'equipetrol': 'Equipetrol Centro',
     'sirari': 'Sirari',
     'equipetrol_norte': 'Equipetrol Norte',
     'villa_brigida': 'Villa Brigida',
-    'faremafu': 'Faremafu',
+    'faremafu': 'Equipetrol Oeste',
     'todas': 'Equipetrol'
   }
   return map[zona.toLowerCase()] || zona
@@ -162,97 +147,81 @@ function formatearZona(zona: string): string {
 
 function inferirTipoEdificio(amenities: string[] | null): 'premium' | 'standard' | 'basico' {
   if (!amenities || amenities.length === 0) return 'basico'
-  const amenitiesLower = amenities.map(a => a.toLowerCase().replace(/\s+/g, '_'))
-  const countPremium = AMENITIES_PREMIUM.filter(a =>
+  const amenitiesPremium = ['piscina', 'pileta', 'gym', 'gimnasio', 'sauna', 'jacuzzi', 'lobby', 'seguridad']
+  const amenitiesLower = amenities.map(a => a.toLowerCase())
+  const countPremium = amenitiesPremium.filter(a =>
     amenitiesLower.some(am => am.includes(a))
   ).length
   if (countPremium >= 3) return 'premium'
-  if (countPremium >= 1 || amenitiesLower.length >= 2) return 'standard'
+  if (countPremium >= 1 || amenities.length >= 2) return 'standard'
   return 'basico'
 }
 
-function calcularAjustes(
-  prop: UnidadReal,
-  datosCliente: DatosPropiedad,
-  precioM2Mercado: number
-): { ajustes: Ajuste[]; precioAjustado: number } {
-  const ajustes: Ajuste[] = []
-  let precioBase = prop.precio_usd
+function calcularStatsPorTipo(resultados: UnidadReal[]): EstadisticasTipoEdificio[] {
+  const grupos: Record<string, UnidadReal[]> = { premium: [], standard: [], basico: [] }
 
-  // 1. Ajuste por diferencia de area
-  const diffArea = prop.area_m2 - datosCliente.area_m2
-  if (Math.abs(diffArea) >= 5) {
-    const ajusteArea = Math.round(diffArea * precioM2Mercado)
-    ajustes.push({
-      concepto: 'Area',
-      valor: -ajusteArea,
-      explicacion: diffArea > 0
-        ? `+${Math.round(diffArea)}m² que el sujeto`
-        : `${Math.round(diffArea)}m² que el sujeto`
-    })
-    precioBase -= ajusteArea
-  }
+  resultados.forEach(r => {
+    const tipo = inferirTipoEdificio(r.amenities_confirmados)
+    grupos[tipo].push(r)
+  })
 
-  // 2. Ajuste por parqueos
-  const parqueosComp = 1
-  const diffParqueos = parqueosComp - datosCliente.parqueos
-  if (diffParqueos !== 0) {
-    const ajusteParqueo = diffParqueos * AJUSTE_PARQUEO
-    ajustes.push({
-      concepto: 'Parqueo',
-      valor: -ajusteParqueo,
-      explicacion: diffParqueos > 0
-        ? `+${diffParqueos} parqueo(s)`
-        : `${diffParqueos} parqueo(s)`
-    })
-    precioBase -= ajusteParqueo
-  }
-
-  // 3. Ajuste por tipo de edificio
-  const tipoComp = inferirTipoEdificio(prop.amenities_confirmados)
-  if (tipoComp !== datosCliente.tipo_edificio) {
-    let ajusteTipo = 0
-    let explicacion = ''
-
-    if (tipoComp === 'premium' && datosCliente.tipo_edificio !== 'premium') {
-      ajusteTipo = Math.round(prop.precio_usd * AJUSTE_PREMIUM)
-      explicacion = 'Comparable es premium'
-    } else if (tipoComp === 'basico' && datosCliente.tipo_edificio !== 'basico') {
-      ajusteTipo = Math.round(prop.precio_usd * AJUSTE_BASICO)
-      explicacion = 'Comparable es basico'
-    } else if (tipoComp === 'standard' && datosCliente.tipo_edificio === 'premium') {
-      ajusteTipo = Math.round(prop.precio_usd * -0.08)
-      explicacion = 'Comparable es standard'
-    } else if (tipoComp === 'standard' && datosCliente.tipo_edificio === 'basico') {
-      ajusteTipo = Math.round(prop.precio_usd * 0.06)
-      explicacion = 'Comparable es standard'
+  return (['premium', 'standard', 'basico'] as const).map(tipo => {
+    const props = grupos[tipo]
+    if (props.length === 0) {
+      return { tipo, promedioPrecioM2: 0, minPrecioM2: 0, maxPrecioM2: 0, cantidad: 0 }
     }
-
-    if (ajusteTipo !== 0) {
-      ajustes.push({
-        concepto: 'Tipo edificio',
-        valor: -ajusteTipo,
-        explicacion
-      })
-      precioBase -= ajusteTipo
+    const preciosM2 = props.map(p => p.precio_m2)
+    return {
+      tipo,
+      promedioPrecioM2: Math.round(calcularPromedio(preciosM2)),
+      minPrecioM2: Math.round(Math.min(...preciosM2)),
+      maxPrecioM2: Math.round(Math.max(...preciosM2)),
+      cantidad: props.length
     }
-  }
-
-  return { ajustes, precioAjustado: Math.round(precioBase) }
+  }).filter(s => s.cantidad > 0)
 }
 
-function calcularPosicionMercado(precioM2Cliente: number, precioM2Mercado: number): 'muy_bajo' | 'bajo' | 'competitivo' | 'alto' | 'muy_alto' {
-  const diferencia = ((precioM2Cliente - precioM2Mercado) / precioM2Mercado) * 100
-  if (diferencia < -15) return 'muy_bajo'
-  if (diferencia < -5) return 'bajo'
-  if (diferencia <= 5) return 'competitivo'
-  if (diferencia <= 15) return 'alto'
-  return 'muy_alto'
+function generarDiferencias(comp: UnidadReal, datos: DatosPropiedad): string[] {
+  const diffs: string[] = []
+  const tipoComp = inferirTipoEdificio(comp.amenities_confirmados)
+
+  // Zona
+  const zonaComp = formatearZona(comp.zona)
+  const zonaSujeto = formatearZona(datos.zona === 'todas' ? 'equipetrol' : datos.zona)
+  if (zonaComp !== zonaSujeto) {
+    diffs.push(`Zona: ${zonaComp}`)
+  } else {
+    diffs.push('Misma zona')
+  }
+
+  // Tipo edificio
+  if (tipoComp !== datos.tipo_edificio) {
+    diffs.push(`Edificio ${tipoComp} (sujeto es ${datos.tipo_edificio})`)
+  } else {
+    diffs.push(`Mismo tipo de edificio (${tipoComp})`)
+  }
+
+  // Area
+  const diffArea = comp.area_m2 - datos.area_m2
+  if (Math.abs(diffArea) >= 3) {
+    diffs.push(`${diffArea > 0 ? '+' : ''}${Math.round(diffArea)}m² que el sujeto`)
+  } else {
+    diffs.push('Area similar')
+  }
+
+  // Parqueos
+  const parqueosComp = 1 // Asumimos 1 por defecto
+  if (parqueosComp !== datos.parqueos) {
+    const diff = parqueosComp - datos.parqueos
+    diffs.push(`${diff > 0 ? '+' : ''}${diff} parqueo(s)`)
+  }
+
+  return diffs
 }
 
 // ============ ANALISIS PRINCIPAL ============
 
-function realizarAnalisisCMA(
+function realizarAnalisis(
   resultados: UnidadReal[],
   datosPropiedad: DatosPropiedad
 ): AnalisisCMA | null {
@@ -261,179 +230,174 @@ function realizarAnalisisCMA(
   const precioCliente = datosPropiedad.precio_referencia
   const precioM2Cliente = precioCliente / datosPropiedad.area_m2
 
-  // Estadisticas del mercado total
+  // Estadisticas generales
   const precios = resultados.map(r => r.precio_usd)
   const preciosM2 = resultados.map(r => r.precio_m2)
-  const areas = resultados.map(r => r.area_m2)
+  const dias = resultados.map(r => r.dias_en_mercado || 30).filter(d => d > 0)
 
-  const mercado: EstadisticasMercado = {
-    total: resultados.length,
-    precioMediano: Math.round(calcularMediana(precios)),
-    precioM2Mediano: Math.round(calcularMediana(preciosM2)),
-    areaMediana: Math.round(calcularMediana(areas)),
-    precioMin: Math.round(Math.min(...precios)),
-    precioMax: Math.round(Math.max(...precios)),
-    precioM2Min: Math.round(Math.min(...preciosM2)),
-    precioM2Max: Math.round(Math.max(...preciosM2))
+  const p50 = calcularPercentil(precios, 50)
+  const p50M2 = calcularPercentil(preciosM2, 50)
+
+  // Stats por tipo edificio (DATA REAL)
+  const statsPorTipo = calcularStatsPorTipo(resultados)
+
+  // Dias en mercado
+  const diasPromedio = Math.round(calcularPromedio(dias))
+  const propsBajoMediana = resultados.filter(r => r.precio_m2 < p50M2)
+  const propsSobreMediana = resultados.filter(r => r.precio_m2 >= p50M2)
+  const diasBajo = Math.round(calcularPromedio(propsBajoMediana.map(r => r.dias_en_mercado || 30)))
+  const diasSobre = Math.round(calcularPromedio(propsSobreMediana.map(r => r.dias_en_mercado || 30)))
+
+  const mercado: AnalisisMercado = {
+    totalPropiedades: resultados.length,
+    rangoPrecioMin: Math.round(Math.min(...precios)),
+    rangoPrecioMax: Math.round(Math.max(...precios)),
+    rangoPrecioM2Min: Math.round(Math.min(...preciosM2)),
+    rangoPrecioM2Max: Math.round(Math.max(...preciosM2)),
+    p25: Math.round(calcularPercentil(precios, 25)),
+    p50: Math.round(p50),
+    p75: Math.round(calcularPercentil(precios, 75)),
+    p25M2: Math.round(calcularPercentil(preciosM2, 25)),
+    p50M2: Math.round(p50M2),
+    p75M2: Math.round(calcularPercentil(preciosM2, 75)),
+    statsPorTipo,
+    diasPromedioMercado: diasPromedio,
+    diasBajoMediana: diasBajo || 28,
+    diasSobreMediana: diasSobre || 58
   }
 
-  // Filtrar comparables directos (area similar ±30%)
+  // Posicion del cliente
+  const percentilCliente = calcularPosicionPercentil(precioM2Cliente, preciosM2)
+  const diferenciaPct = Math.round(((precioCliente - p50) / p50) * 100)
+
+  let posicionTexto = ''
+  if (diferenciaPct < -10) posicionTexto = 'Por debajo del mercado - precio muy competitivo'
+  else if (diferenciaPct < -5) posicionTexto = 'Ligeramente bajo la mediana - buen posicionamiento'
+  else if (diferenciaPct <= 5) posicionTexto = 'Alineado con el mercado'
+  else if (diferenciaPct <= 15) posicionTexto = 'Ligeramente sobre la mediana'
+  else posicionTexto = 'Significativamente sobre el mercado'
+
+  // Seleccionar comparables directos (los 5 mas similares)
   const areaMin = datosPropiedad.area_m2 * 0.7
   const areaMax = datosPropiedad.area_m2 * 1.3
-  let comparablesRaw = resultados.filter(r => r.area_m2 >= areaMin && r.area_m2 <= areaMax)
 
-  const advertencias: string[] = []
-
-  if (comparablesRaw.length < 3) {
-    advertencias.push(`Pocos comparables directos. Rango de area ampliado.`)
-    comparablesRaw = resultados.filter(r => r.area_m2 >= areaMin * 0.7 && r.area_m2 <= areaMax * 1.3)
-  }
-
-  // Filtrar por tipo edificio si es posible
-  const tipoUsuario = datosPropiedad.tipo_edificio
-  const filtradosPorTipo = comparablesRaw.filter(r => {
-    const tipoInferido = inferirTipoEdificio(r.amenities_confirmados)
-    return tipoInferido === tipoUsuario
-  })
-
-  if (filtradosPorTipo.length >= 3) {
-    comparablesRaw = filtradosPorTipo
-  } else {
-    advertencias.push(`Incluye edificios de diferente categoria por falta de comparables ${tipoUsuario}.`)
-  }
-
-  const preciosComp = comparablesRaw.map(r => r.precio_usd)
-  const preciosM2Comp = comparablesRaw.map(r => r.precio_m2)
-
-  // Percentiles
-  const percentiles: Percentiles = {
-    p25: Math.round(calcularPercentil(preciosComp, 25)),
-    p50: Math.round(calcularPercentil(preciosComp, 50)),
-    p75: Math.round(calcularPercentil(preciosComp, 75)),
-    p25M2: Math.round(calcularPercentil(preciosM2Comp, 25)),
-    p50M2: Math.round(calcularPercentil(preciosM2Comp, 50)),
-    p75M2: Math.round(calcularPercentil(preciosM2Comp, 75))
-  }
-
-  const clientePercentil = calcularPosicionPercentil(precioM2Cliente, preciosM2Comp)
-  const diferenciaPct = percentiles.p50 > 0
-    ? Math.round(((precioCliente - percentiles.p50) / percentiles.p50) * 100)
-    : 0
-  const posicionMercado = calcularPosicionMercado(precioM2Cliente, mercado.precioM2Mediano)
-
-  // Lista de comparables con ajustes
-  const comparables: Comparable[] = comparablesRaw
-    .slice(0, 10)
-    .sort((a, b) => a.precio_usd - b.precio_usd)
-    .map((r, i) => {
-      const tipoEdificio = inferirTipoEdificio(r.amenities_confirmados)
-      const { ajustes, precioAjustado } = calcularAjustes(r, datosPropiedad, mercado.precioM2Mediano)
-
-      const diffArea = Math.abs(r.area_m2 - datosPropiedad.area_m2)
-      const mismoTipo = tipoEdificio === datosPropiedad.tipo_edificio
-      let relevancia: 'alta' | 'media' | 'baja' = 'media'
-      if (diffArea <= datosPropiedad.area_m2 * 0.15 && mismoTipo) relevancia = 'alta'
-      else if (diffArea > datosPropiedad.area_m2 * 0.25 && !mismoTipo) relevancia = 'baja'
-
-      return {
-        posicion: i + 1,
-        proyecto: r.proyecto || 'Sin nombre',
-        zona: formatearZona(r.zona),
-        area: Math.round(r.area_m2),
-        precio: Math.round(r.precio_usd),
-        precioM2: Math.round(r.precio_m2),
-        dias: r.dias_en_mercado || 0,
-        estado: formatearEstado(r.estado_construccion),
-        tipoEdificio,
-        ajustes,
-        precioAjustado,
-        relevancia
-      }
+  const comparablesRaw = resultados
+    .filter(r => r.area_m2 >= areaMin && r.area_m2 <= areaMax)
+    .sort((a, b) => {
+      // Ordenar por similitud (diferencia de area + mismo tipo)
+      const tipoA = inferirTipoEdificio(a.amenities_confirmados)
+      const tipoB = inferirTipoEdificio(b.amenities_confirmados)
+      const scoreA = Math.abs(a.area_m2 - datosPropiedad.area_m2) + (tipoA === datosPropiedad.tipo_edificio ? 0 : 20)
+      const scoreB = Math.abs(b.area_m2 - datosPropiedad.area_m2) + (tipoB === datosPropiedad.tipo_edificio ? 0 : 20)
+      return scoreA - scoreB
     })
+    .slice(0, 5)
 
-  // Stats por zona
-  const zonas = [...new Set(resultados.map(r => r.zona))]
-  const zonaStats: ZonaStats[] = zonas.map(zona => {
-    const props = resultados.filter(r => r.zona === zona)
-    const pm2 = props.map(p => p.precio_m2)
-    return {
-      zona: formatearZona(zona),
-      unidades: props.length,
-      precioM2Min: Math.round(Math.min(...pm2)),
-      precioM2Mediano: Math.round(calcularMediana(pm2)),
-      precioM2Max: Math.round(Math.max(...pm2))
-    }
-  }).sort((a, b) => b.unidades - a.unidades)
+  const comparables: ComparableDirecto[] = comparablesRaw.map((r, i) => ({
+    posicion: i + 1,
+    proyecto: r.proyecto || 'Sin nombre',
+    zona: formatearZona(r.zona),
+    area: Math.round(r.area_m2),
+    dormitorios: r.dormitorios,
+    precio: Math.round(r.precio_usd),
+    precioM2: Math.round(r.precio_m2),
+    diasEnMercado: r.dias_en_mercado || 0,
+    tipoEdificio: inferirTipoEdificio(r.amenities_confirmados),
+    parqueos: 1,
+    diferencias: generarDiferencias(r, datosPropiedad),
+    diferenciaPrecio: Math.round(r.precio_usd - precioCliente),
+    diferenciaArea: Math.round(r.area_m2 - datosPropiedad.area_m2)
+  }))
+
+  // Resumen de comparables
+  const preciosComp = comparables.map(c => c.precio)
+  const preciosM2Comp = comparables.map(c => c.precioM2)
+  const diasComp = comparables.map(c => c.diasEnMercado).filter(d => d > 0)
+
+  const resumenComparables = {
+    precioMin: Math.min(...preciosComp),
+    precioMax: Math.max(...preciosComp),
+    precioPromedio: Math.round(calcularPromedio(preciosComp)),
+    precioM2Min: Math.min(...preciosM2Comp),
+    precioM2Max: Math.max(...preciosM2Comp),
+    precioM2Promedio: Math.round(calcularPromedio(preciosM2Comp)),
+    diasMin: diasComp.length > 0 ? Math.min(...diasComp) : 0,
+    diasMax: diasComp.length > 0 ? Math.max(...diasComp) : 0,
+    diasPromedio: Math.round(calcularPromedio(diasComp)) || 30
+  }
+
+  // Rango estimado basado en comparables
+  const rangoEstimado = {
+    min: resumenComparables.precioMin,
+    max: resumenComparables.precioMax
+  }
+
+  // Tiempo estimado basado en posicion
+  let tiempoEstimado = { min: 30, max: 50 }
+  if (diferenciaPct < -5) tiempoEstimado = { min: 20, max: 35 }
+  else if (diferenciaPct > 10) tiempoEstimado = { min: 50, max: 90 }
+  else if (diferenciaPct > 20) tiempoEstimado = { min: 75, max: 120 }
 
   // Recomendacion
-  let recomendacion: RecomendacionPrecio
-  if (diferenciaPct > 20) {
-    recomendacion = {
-      tipo: 'bajar_fuerte',
-      precioSugerido: Math.round(percentiles.p50 * 1.05),
-      razon: `El precio del cliente esta ${diferenciaPct}% sobre el mercado. Recomendar ajuste a $${Math.round(percentiles.p50 * 1.05).toLocaleString()}.`
-    }
-  } else if (diferenciaPct > 10) {
-    recomendacion = {
-      tipo: 'bajar_leve',
-      precioSugerido: Math.round(percentiles.p50 * 1.02),
-      razon: `Precio ${diferenciaPct}% sobre mercado. Ajuste moderado mejoraria tiempo de venta.`
-    }
-  } else if (diferenciaPct < -10) {
-    recomendacion = {
-      tipo: 'subir',
-      precioSugerido: Math.round(percentiles.p50 * 0.98),
-      razon: `Precio ${Math.abs(diferenciaPct)}% bajo mercado. Podria subir sin perder competitividad.`
-    }
-  } else {
-    recomendacion = {
-      tipo: 'mantener',
-      precioSugerido: precioCliente,
-      razon: `Precio competitivo. Bien posicionado para el mercado actual.`
-    }
+  let recomendacion = {
+    rangoMin: Math.round(mercado.p25 * 0.98),
+    rangoMax: Math.round(mercado.p75 * 1.02),
+    texto: '',
+    estrategia: [] as string[]
   }
 
-  // Estimaciones de tiempo
-  let diasEstimados = { min: 30, max: 60 }
-  let prob30 = 50
-  let prob60 = 75
-
-  if (posicionMercado === 'muy_bajo') {
-    diasEstimados = { min: 10, max: 25 }; prob30 = 85; prob60 = 95
-  } else if (posicionMercado === 'bajo') {
-    diasEstimados = { min: 20, max: 40 }; prob30 = 70; prob60 = 90
-  } else if (posicionMercado === 'alto') {
-    diasEstimados = { min: 60, max: 120 }; prob30 = 25; prob60 = 50
-  } else if (posicionMercado === 'muy_alto') {
-    diasEstimados = { min: 120, max: 200 }; prob30 = 10; prob60 = 25
+  if (diferenciaPct <= 5 && diferenciaPct >= -5) {
+    recomendacion.texto = `Tu precio de $${precioCliente.toLocaleString()} esta bien posicionado dentro del mercado.`
+    recomendacion.estrategia = [
+      'Mantener precio inicial por 30 dias',
+      'Monitorear respuesta del mercado',
+      'Evaluar ajuste solo si no hay consultas'
+    ]
+  } else if (diferenciaPct > 5 && diferenciaPct <= 15) {
+    recomendacion.texto = `Tu precio esta ${diferenciaPct}% sobre la mediana. Puede funcionar pero tomara mas tiempo.`
+    recomendacion.estrategia = [
+      'Prepararse para negociacion (5-8% de margen)',
+      `Si no hay ofertas en 45 dias, considerar ajuste a ~$${mercado.p50.toLocaleString()}`,
+      'Destacar caracteristicas unicas que justifiquen el precio'
+    ]
+  } else if (diferenciaPct > 15) {
+    recomendacion.texto = `Tu precio esta ${diferenciaPct}% sobre el mercado. Alto riesgo de estancamiento.`
+    recomendacion.estrategia = [
+      `Recomiendo ajustar a $${Math.round(mercado.p50 * 1.05).toLocaleString()} para competir`,
+      'El precio actual atraera pocas consultas',
+      'Cada mes en mercado reduce el valor percibido'
+    ]
+  } else {
+    recomendacion.texto = `Tu precio esta ${Math.abs(diferenciaPct)}% bajo la mediana. Muy competitivo, venta rapida esperada.`
+    recomendacion.estrategia = [
+      'Excelente posicionamiento para venta rapida',
+      `Podrias subir hasta $${mercado.p50.toLocaleString()} sin perder competitividad`,
+      'Espera multiples ofertas'
+    ]
   }
 
   return {
-    id: generarIdCMA(datosPropiedad.dormitorios, datosPropiedad.area_m2),
+    id: generarIdCMA(),
     fecha: new Date().toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' }),
-    propiedadCliente: {
-      direccion: datosPropiedad.propiedad_direccion || `${formatearZona(datosPropiedad.zona)}, ${datosPropiedad.dormitorios}D`,
+    cliente: {
+      direccion: datosPropiedad.propiedad_direccion || `${formatearZona(datosPropiedad.zona)}, Equipetrol`,
+      zona: formatearZona(datosPropiedad.zona === 'todas' ? 'equipetrol' : datosPropiedad.zona),
       dormitorios: datosPropiedad.dormitorios,
       area: datosPropiedad.area_m2,
-      zona: formatearZona(datosPropiedad.zona === 'todas' ? 'equipetrol' : datosPropiedad.zona),
-      estado: datosPropiedad.estado_entrega === 'entrega_inmediata' ? 'Entrega inmediata' : 'Preventa',
-      tipo: datosPropiedad.tipo_edificio,
+      tipoEdificio: datosPropiedad.tipo_edificio,
       parqueos: datosPropiedad.parqueos,
       precio: precioCliente,
       precioM2: Math.round(precioM2Cliente)
     },
     mercado,
-    percentiles,
-    clientePercentil,
-    diferenciaPct,
-    posicionMercado,
+    percentilCliente,
+    diferenciaPctVsMediana: diferenciaPct,
+    posicionTexto,
     comparables,
-    zonaStats,
-    recomendacion,
-    diasEstimados,
-    probabilidadVenta30Dias: prob30,
-    probabilidadVenta60Dias: prob60,
-    advertencias
+    resumenComparables,
+    rangoEstimado,
+    tiempoEstimado,
+    recomendacion
   }
 }
 
@@ -443,7 +407,6 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
   const [analisis, setAnalisis] = useState<AnalisisCMA | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [expandedComp, setExpandedComp] = useState<number | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -464,7 +427,7 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
         })
 
         if (data && data.length > 0) {
-          setAnalisis(realizarAnalisisCMA(data, datosPropiedad))
+          setAnalisis(realizarAnalisis(data, datosPropiedad))
         }
       } catch (err) {
         console.error('Error:', err)
@@ -477,29 +440,29 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
     fetchData()
   }, [datosPropiedad])
 
+  // Loading
   if (loading) {
     return (
       <section className="py-16 bg-white">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <div className="animate-spin w-8 h-8 border-2 border-brand-primary border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-slate-500">Generando CMA profesional...</p>
+          <p className="text-slate-500">Analizando mercado...</p>
         </div>
       </section>
     )
   }
 
+  // Error
   if (error || !analisis) {
     return (
       <section className="py-16 bg-white">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <p className="text-red-500 mb-4">{error || 'No se pudo generar el CMA.'}</p>
+          <p className="text-red-500 mb-4">{error || 'No se pudo generar el analisis.'}</p>
           <button onClick={onBack} className="btn btn-secondary">Volver</button>
         </div>
       </section>
     )
   }
-
-  const { propiedadCliente, mercado, percentiles, clientePercentil, diferenciaPct, posicionMercado, comparables, zonaStats, recomendacion, diasEstimados, probabilidadVenta30Dias, probabilidadVenta60Dias, advertencias } = analisis
 
   // Branding
   const brokerNombre = datosPropiedad.broker_nombre || 'Asesor Inmobiliario'
@@ -509,51 +472,40 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
   const brokerFoto = datosPropiedad.broker_foto
   const propiedadFotos = datosPropiedad.propiedad_fotos || []
 
-  // CMA Avanzado
+  // CMA Avanzado info
   const amenitiesSeleccionados = datosPropiedad.amenities_edificio || []
   const equipamientoSeleccionado = datosPropiedad.equipamiento_unidad || []
-  const extrasSeleccionados = datosPropiedad.extras_valor || []
   const tieneInfoAvanzada = amenitiesSeleccionados.length > 0 || equipamientoSeleccionado.length > 0
 
-  // Labels para mostrar
   const AMENITY_LABELS: Record<string, string> = {
-    piscina: 'Piscina', seguridad_24h: 'Seguridad 24/7', churrasquera: 'BBQ/Churrasquera',
-    terraza: 'Terraza/Balcon', sauna_jacuzzi: 'Sauna/Jacuzzi', area_social: 'Area Social',
+    piscina: 'Piscina', seguridad_24h: 'Seguridad 24/7', churrasquera: 'BBQ',
+    terraza: 'Terraza', sauna_jacuzzi: 'Sauna/Jacuzzi', area_social: 'Area Social',
     ascensor: 'Ascensor', gimnasio: 'Gimnasio', estacionamiento_visitas: 'Estac. Visitas',
-    pet_friendly: 'Pet Friendly', recepcion: 'Recepcion/Lobby', salon_eventos: 'Salon de Eventos'
+    pet_friendly: 'Pet Friendly', recepcion: 'Lobby', salon_eventos: 'Salon Eventos'
   }
   const EQUIP_LABELS: Record<string, string> = {
-    aire_acondicionado: 'Aire Acondicionado', cocina_equipada: 'Cocina Equipada',
-    roperos_empotrados: 'Roperos Empotrados', lavadora: 'Lavadora',
-    amoblado: 'Amoblado Completo', calefon: 'Calefon/Termotanque'
-  }
-  const EXTRA_LABELS: Record<string, string> = {
-    vista_privilegiada: 'Vista Privilegiada', piso_alto: 'Piso Alto (>5)',
-    esquinero: 'Esquinero', remodelado: 'Remodelado'
+    aire_acondicionado: 'A/C', cocina_equipada: 'Cocina Equipada',
+    roperos_empotrados: 'Roperos', lavadora: 'Lavadora',
+    amoblado: 'Amoblado', calefon: 'Calefon'
   }
 
-  // Estilos posicion
-  const posicionStyles = {
-    muy_bajo: { label: 'Muy bajo', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
-    bajo: { label: 'Competitivo-bajo', color: 'text-green-700', bg: 'bg-green-50 border-green-200' },
-    competitivo: { label: 'Competitivo', color: 'text-green-700', bg: 'bg-green-50 border-green-200' },
-    alto: { label: 'Alto', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
-    muy_alto: { label: 'Muy alto', color: 'text-red-700', bg: 'bg-red-50 border-red-200' }
-  }
-  const posicionStyle = posicionStyles[posicionMercado]
+  const { cliente, mercado, percentilCliente, diferenciaPctVsMediana, posicionTexto, comparables, resumenComparables, rangoEstimado, tiempoEstimado, recomendacion } = analisis
 
-  // Calcular valor estimado basado en comparables ajustados
-  const preciosAjustados = comparables.map(c => c.precioAjustado)
-  const valorEstimadoMin = Math.round(calcularPercentil(preciosAjustados, 25))
-  const valorEstimadoMid = Math.round(calcularMediana(preciosAjustados))
-  const valorEstimadoMax = Math.round(calcularPercentil(preciosAjustados, 75))
+  // Color segun posicion
+  const getPosicionColor = () => {
+    if (diferenciaPctVsMediana < -5) return 'text-green-600'
+    if (diferenciaPctVsMediana <= 10) return 'text-blue-600'
+    if (diferenciaPctVsMediana <= 20) return 'text-amber-600'
+    return 'text-red-600'
+  }
 
   return (
-    <section className="py-8 bg-slate-50 min-h-screen print:bg-white print:py-0">
-      <div className="max-w-4xl mx-auto px-6">
+    <section className="py-6 bg-slate-100 min-h-screen print:bg-white print:py-0">
+      <div className="max-w-4xl mx-auto px-4">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+
           {/* Header con navegacion (no imprimir) */}
-          <div className="flex justify-between items-center mb-6 print:hidden">
+          <div className="flex justify-between items-center mb-4 print:hidden">
             <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-slate-700 text-sm">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -567,423 +519,431 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
               </svg>
-              Imprimir CMA
+              Imprimir
             </button>
           </div>
 
-          {/* ============ PORTADA / HEADER ============ */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6 print:border-0">
-            {/* Branding header */}
-            <div className="flex justify-between items-start mb-6 pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-4">
-                {brokerLogo ? (
-                  <img src={brokerLogo} alt="Logo" className="w-16 h-16 object-contain" />
-                ) : (
-                  <div className="w-16 h-16 bg-brand-primary/10 rounded-lg flex items-center justify-center">
-                    <span className="text-2xl font-bold text-brand-primary">CMA</span>
-                  </div>
-                )}
-                <div>
-                  {brokerEmpresa && <div className="font-semibold text-slate-800">{brokerEmpresa}</div>}
-                  <div className="text-sm text-slate-600">{brokerNombre}</div>
-                  {brokerTelefono && <div className="text-sm text-slate-500">{brokerTelefono}</div>}
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {brokerFoto && (
-                  <img src={brokerFoto} alt={brokerNombre} className="w-12 h-12 rounded-full object-cover border-2 border-white shadow" />
-                )}
-                <div className="text-right text-sm text-slate-500">
-                  <div>Generado: {analisis.fecha}</div>
-                  <div className="font-mono text-xs">ID: {analisis.id}</div>
-                </div>
-              </div>
-            </div>
+          {/* ============ DOCUMENTO CMA ============ */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden print:shadow-none print:border-0">
 
-            {/* Titulo */}
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-slate-800 mb-1">
-                ANALISIS COMPARATIVO DE MERCADO
-              </h1>
-              <p className="text-slate-600">{propiedadCliente.direccion}</p>
+            {/* HEADER */}
+            <div className="bg-gradient-to-r from-slate-800 to-slate-700 text-white p-6">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-4">
+                  {brokerLogo ? (
+                    <img src={brokerLogo} alt="Logo" className="w-14 h-14 object-contain bg-white rounded-lg p-1" />
+                  ) : (
+                    <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center">
+                      <span className="text-xl font-bold">CMA</span>
+                    </div>
+                  )}
+                  <div>
+                    <h1 className="text-lg font-bold">ANALISIS COMPARATIVO DE MERCADO</h1>
+                    <p className="text-slate-300 text-sm">{cliente.direccion}</p>
+                  </div>
+                </div>
+                <div className="text-right flex items-center gap-3">
+                  {brokerFoto && (
+                    <img src={brokerFoto} alt={brokerNombre} className="w-10 h-10 rounded-full object-cover border-2 border-white/30" />
+                  )}
+                  <div>
+                    <div className="font-medium">{brokerNombre}</div>
+                    {brokerEmpresa && <div className="text-slate-300 text-xs">{brokerEmpresa}</div>}
+                    {brokerTelefono && <div className="text-slate-300 text-xs">{brokerTelefono}</div>}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-white/20 flex justify-between text-xs text-slate-400">
+                <span>ID: {analisis.id}</span>
+                <span>Generado: {analisis.fecha}</span>
+              </div>
             </div>
 
             {/* Fotos de la propiedad */}
             {propiedadFotos.length > 0 && (
-              <div className="grid grid-cols-3 gap-2 mb-6">
-                {propiedadFotos.slice(0, 3).map((foto, i) => (
-                  <div key={i} className={`aspect-video rounded-lg overflow-hidden ${i === 0 ? 'col-span-2 row-span-2' : ''}`}>
+              <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100">
+                {propiedadFotos.slice(0, 4).map((foto, i) => (
+                  <div key={i} className={`aspect-video overflow-hidden ${i === 0 ? 'col-span-2 row-span-2' : ''}`}>
                     <img src={foto} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Datos del sujeto */}
-            <div className="bg-slate-50 rounded-lg p-4">
-              <div className="text-xs font-semibold text-slate-500 mb-3">DATOS DEL SUJETO</div>
-              <div className="grid md:grid-cols-6 gap-4 text-center">
-                <div>
-                  <div className="text-xs text-slate-400">Zona</div>
-                  <div className="font-medium text-slate-700">{propiedadCliente.zona}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-400">Dorms</div>
-                  <div className="font-medium text-slate-700">{propiedadCliente.dormitorios}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-400">Area</div>
-                  <div className="font-medium text-slate-700">{propiedadCliente.area}m²</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-400">Tipo</div>
-                  <div className="font-medium text-slate-700 capitalize">{propiedadCliente.tipo}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-400">Parqueos</div>
-                  <div className="font-medium text-slate-700">{propiedadCliente.parqueos}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-400">Estado</div>
-                  <div className="font-medium text-slate-700">{propiedadCliente.estado}</div>
-                </div>
-              </div>
+            {/* ============ 1. RESUMEN EJECUTIVO ============ */}
+            <div className="p-6 border-b border-slate-200">
+              <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span className="w-6 h-6 bg-slate-800 text-white rounded flex items-center justify-center text-xs">1</span>
+                RESUMEN EJECUTIVO
+              </h2>
 
-              {/* Amenities y Equipamiento (si CMA avanzado) */}
-              {tieneInfoAvanzada && (
-                <div className="mt-4 pt-4 border-t border-slate-200">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {amenitiesSeleccionados.length > 0 && (
-                      <div>
-                        <div className="text-xs text-slate-400 mb-2">Amenities del Edificio</div>
-                        <div className="flex flex-wrap gap-1">
-                          {amenitiesSeleccionados.map(id => (
-                            <span key={id} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                              {AMENITY_LABELS[id] || id}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {equipamientoSeleccionado.length > 0 && (
-                      <div>
-                        <div className="text-xs text-slate-400 mb-2">Equipamiento de la Unidad</div>
-                        <div className="flex flex-wrap gap-1">
-                          {equipamientoSeleccionado.map(id => (
-                            <span key={id} className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
-                              {EQUIP_LABELS[id] || id}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Propiedad del cliente */}
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <div className="text-xs font-semibold text-slate-500 mb-3">TU PROPIEDAD</div>
+                  <div className="grid grid-cols-3 gap-3 text-center mb-4">
+                    <div>
+                      <div className="text-lg font-bold text-slate-800">{cliente.dormitorios}</div>
+                      <div className="text-xs text-slate-500">Dorms</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-slate-800">{cliente.area}m²</div>
+                      <div className="text-xs text-slate-500">Area</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-slate-800 capitalize">{cliente.tipoEdificio}</div>
+                      <div className="text-xs text-slate-500">Tipo</div>
+                    </div>
                   </div>
-                </div>
-              )}
-
-              {/* Extras que afectan valor */}
-              {extrasSeleccionados.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-slate-200">
-                  <div className="text-xs text-slate-400 mb-2">Extras que Afectan Valor</div>
-                  <div className="flex flex-wrap gap-1">
-                    {extrasSeleccionados.map(id => (
-                      <span key={id} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
-                        {EXTRA_LABELS[id] || id}
-                      </span>
-                    ))}
+                  <div className="border-t border-slate-200 pt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-600">Precio propuesto</span>
+                      <span className="text-xl font-bold text-slate-800">${cliente.precio.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-slate-500 text-sm">Precio por m²</span>
+                      <span className="text-slate-600">${cliente.precioM2.toLocaleString()}/m²</span>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ============ 1. RESUMEN EJECUTIVO ============ */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6 print:border-0">
-            <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <span className="w-6 h-6 bg-brand-primary text-white rounded-full flex items-center justify-center text-xs">1</span>
-              Resumen Ejecutivo
-            </h3>
-
-            <div className="grid md:grid-cols-3 gap-4 mb-6">
-              {/* Precio cliente */}
-              <div className={`rounded-lg p-4 border ${posicionStyle.bg}`}>
-                <div className="text-xs font-semibold text-slate-600 mb-2">Precio del Cliente</div>
-                <div className="text-2xl font-bold text-slate-800">${propiedadCliente.precio.toLocaleString()}</div>
-                <div className="text-sm text-slate-600">${propiedadCliente.precioM2.toLocaleString()}/m²</div>
-                <div className={`mt-2 inline-block px-2 py-1 rounded text-xs font-medium ${posicionStyle.color}`}>
-                  {posicionStyle.label} en mercado
-                </div>
-              </div>
-
-              {/* Valor estimado */}
-              <div className="bg-green-50 rounded-lg p-4 border border-green-100">
-                <div className="text-xs font-semibold text-green-700 mb-2">Valor Estimado (Ajustado)</div>
-                <div className="text-2xl font-bold text-slate-800">${valorEstimadoMid.toLocaleString()}</div>
-                <div className="text-sm text-slate-600">
-                  Rango: ${valorEstimadoMin.toLocaleString()} - ${valorEstimadoMax.toLocaleString()}
-                </div>
-                <div className="mt-2 text-xs text-green-600">
-                  Basado en {comparables.length} comparables ajustados
-                </div>
-              </div>
-
-              {/* Diferencia */}
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                <div className="text-xs font-semibold text-slate-600 mb-2">Diferencia vs Mercado</div>
-                <div className={`text-2xl font-bold ${diferenciaPct > 5 ? 'text-amber-600' : diferenciaPct < -5 ? 'text-green-600' : 'text-slate-800'}`}>
-                  {diferenciaPct > 0 ? '+' : ''}{diferenciaPct}%
-                </div>
-                <div className="text-sm text-slate-600">Percentil {clientePercentil}</div>
-                <div className="mt-2 text-xs text-slate-500">
-                  {diferenciaPct > 10 ? 'Por encima del mercado' : diferenciaPct < -10 ? 'Por debajo del mercado' : 'Alineado con mercado'}
-                </div>
-              </div>
-            </div>
-
-            {/* Escala de precios */}
-            <div className="grid md:grid-cols-4 gap-3">
-              <div className="bg-slate-50 rounded-lg p-3 text-center">
-                <div className="text-xs text-slate-500 mb-1">P25 (Competitivo)</div>
-                <div className="font-bold text-slate-800">${percentiles.p25.toLocaleString()}</div>
-                <div className="text-xs text-slate-400">${percentiles.p25M2.toLocaleString()}/m²</div>
-              </div>
-              <div className="bg-slate-50 rounded-lg p-3 text-center">
-                <div className="text-xs text-slate-500 mb-1">P50 (Mercado)</div>
-                <div className="font-bold text-slate-800">${percentiles.p50.toLocaleString()}</div>
-                <div className="text-xs text-slate-400">${percentiles.p50M2.toLocaleString()}/m²</div>
-              </div>
-              <div className={`rounded-lg p-3 text-center border-2 ${diferenciaPct > 10 ? 'border-amber-300 bg-amber-50' : diferenciaPct < -5 ? 'border-green-300 bg-green-50' : 'border-blue-300 bg-blue-50'}`}>
-                <div className="text-xs text-slate-500 mb-1">Precio Cliente</div>
-                <div className="font-bold text-slate-800">${propiedadCliente.precio.toLocaleString()}</div>
-                <div className="text-xs text-slate-400">${propiedadCliente.precioM2.toLocaleString()}/m²</div>
-              </div>
-              <div className="bg-slate-50 rounded-lg p-3 text-center">
-                <div className="text-xs text-slate-500 mb-1">P75 (Premium)</div>
-                <div className="font-bold text-slate-800">${percentiles.p75.toLocaleString()}</div>
-                <div className="text-xs text-slate-400">${percentiles.p75M2.toLocaleString()}/m²</div>
-              </div>
-            </div>
-
-            {advertencias.length > 0 && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-                <strong>Nota:</strong> {advertencias.join(' ')}
-              </div>
-            )}
-          </div>
-
-          {/* ============ 2. RECOMENDACION ============ */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6 print:border-0">
-            <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <span className="w-6 h-6 bg-brand-primary text-white rounded-full flex items-center justify-center text-xs">2</span>
-              Recomendacion de Precio
-            </h3>
-
-            <div className={`rounded-lg p-5 mb-4 ${
-              recomendacion.tipo === 'mantener' ? 'bg-green-50 border border-green-200' :
-              recomendacion.tipo === 'bajar_fuerte' ? 'bg-red-50 border border-red-200' :
-              'bg-amber-50 border border-amber-200'
-            }`}>
-              <div className="flex items-start gap-4">
-                <span className="text-2xl">
-                  {recomendacion.tipo === 'mantener' ? '✓' :
-                   recomendacion.tipo === 'bajar_fuerte' ? '⚠️' :
-                   recomendacion.tipo === 'bajar_leve' ? '↓' : '↑'}
-                </span>
-                <div>
-                  <h4 className={`font-bold text-lg mb-1 ${
-                    recomendacion.tipo === 'mantener' ? 'text-green-700' :
-                    recomendacion.tipo === 'bajar_fuerte' ? 'text-red-700' : 'text-amber-700'
-                  }`}>
-                    {recomendacion.tipo === 'mantener' ? 'Precio Bien Posicionado' :
-                     recomendacion.tipo === 'bajar_fuerte' ? 'Recomendar Ajuste Significativo' :
-                     recomendacion.tipo === 'bajar_leve' ? 'Sugerir Ajuste Moderado' :
-                     'Considerar Ajuste al Alza'}
-                  </h4>
-                  <p className="text-slate-700">{recomendacion.razon}</p>
-                  {recomendacion.tipo !== 'mantener' && (
-                    <div className="mt-3 p-3 bg-white rounded-lg">
-                      <span className="text-sm text-slate-600">Precio sugerido: </span>
-                      <span className="text-lg font-bold text-slate-800">${recomendacion.precioSugerido.toLocaleString()}</span>
+                  {tieneInfoAvanzada && (
+                    <div className="border-t border-slate-200 pt-3 mt-3">
+                      <div className="flex flex-wrap gap-1">
+                        {amenitiesSeleccionados.slice(0, 4).map(id => (
+                          <span key={id} className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                            {AMENITY_LABELS[id] || id}
+                          </span>
+                        ))}
+                        {equipamientoSeleccionado.slice(0, 3).map(id => (
+                          <span key={id} className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
+                            {EQUIP_LABELS[id] || id}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
 
-            {/* Proyecciones */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="bg-slate-50 rounded-lg p-4 text-center">
-                <div className="text-sm text-slate-500 mb-1">Tiempo estimado</div>
-                <div className="font-bold text-slate-800 text-lg">{diasEstimados.min}-{diasEstimados.max} dias</div>
-              </div>
-              <div className="bg-slate-50 rounded-lg p-4 text-center">
-                <div className="text-sm text-slate-500 mb-1">Prob. venta 30d</div>
-                <div className={`font-bold text-lg ${probabilidadVenta30Dias >= 60 ? 'text-green-600' : probabilidadVenta30Dias >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
-                  {probabilidadVenta30Dias}%
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-lg p-4 text-center">
-                <div className="text-sm text-slate-500 mb-1">Prob. venta 60d</div>
-                <div className={`font-bold text-lg ${probabilidadVenta60Dias >= 70 ? 'text-green-600' : probabilidadVenta60Dias >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
-                  {probabilidadVenta60Dias}%
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ============ 3. COMPARABLES ============ */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6 print:border-0">
-            <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <span className="w-6 h-6 bg-brand-primary text-white rounded-full flex items-center justify-center text-xs">3</span>
-              Comparables de Mercado
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              {comparables.length} propiedades similares analizadas. Click para ver ajustes.
-            </p>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left">
-                    <th className="py-2 px-2 font-medium text-slate-600">#</th>
-                    <th className="py-2 px-2 font-medium text-slate-600">Edificio</th>
-                    <th className="py-2 px-2 font-medium text-slate-600 text-right">m²</th>
-                    <th className="py-2 px-2 font-medium text-slate-600 text-right">Precio Lista</th>
-                    <th className="py-2 px-2 font-medium text-slate-600 text-right">Precio Ajustado</th>
-                    <th className="py-2 px-2 font-medium text-slate-600 text-right">$/m²</th>
-                    <th className="py-2 px-2 font-medium text-slate-600 text-center">Relevancia</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparables.map((comp) => (
-                    <>
-                      <tr
-                        key={comp.posicion}
-                        className={`border-b border-slate-100 cursor-pointer hover:bg-slate-50 ${
-                          comp.relevancia === 'alta' ? 'bg-green-50/50' : ''
-                        }`}
-                        onClick={() => setExpandedComp(expandedComp === comp.posicion ? null : comp.posicion)}
-                      >
-                        <td className="py-2 px-2 text-slate-500">{comp.posicion}</td>
-                        <td className="py-2 px-2 text-slate-800">
-                          {comp.proyecto}
-                          <div className="text-xs text-slate-400">{comp.zona} · {comp.tipoEdificio}</div>
-                        </td>
-                        <td className="py-2 px-2 text-right text-slate-600">{comp.area}</td>
-                        <td className="py-2 px-2 text-right text-slate-600">${comp.precio.toLocaleString()}</td>
-                        <td className="py-2 px-2 text-right font-medium text-slate-800">${comp.precioAjustado.toLocaleString()}</td>
-                        <td className="py-2 px-2 text-right text-slate-600">${comp.precioM2.toLocaleString()}</td>
-                        <td className="py-2 px-2 text-center">
-                          <span className={`text-xs px-2 py-0.5 rounded ${
-                            comp.relevancia === 'alta' ? 'bg-green-100 text-green-700' :
-                            comp.relevancia === 'media' ? 'bg-blue-100 text-blue-700' :
-                            'bg-slate-100 text-slate-600'
-                          }`}>
-                            {comp.relevancia}
-                          </span>
-                        </td>
-                      </tr>
-                      {expandedComp === comp.posicion && comp.ajustes.length > 0 && (
-                        <tr className="bg-slate-50">
-                          <td colSpan={7} className="p-4">
-                            <div className="text-xs font-medium text-slate-500 mb-2">AJUSTES APLICADOS</div>
-                            <div className="space-y-1">
-                              {comp.ajustes.map((aj, i) => (
-                                <div key={i} className="flex justify-between text-sm">
-                                  <span className="text-slate-600">{aj.concepto}: {aj.explicacion}</span>
-                                  <span className={aj.valor < 0 ? 'text-red-600' : 'text-green-600'}>
-                                    {aj.valor < 0 ? '' : '+'}${aj.valor.toLocaleString()}
-                                  </span>
-                                </div>
-                              ))}
-                              <div className="border-t border-slate-200 pt-2 mt-2 flex justify-between font-medium">
-                                <span>Precio ajustado:</span>
-                                <span>${comp.precioAjustado.toLocaleString()}</span>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* ============ 4. PRECIO POR ZONA ============ */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6 print:border-0">
-            <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <span className="w-6 h-6 bg-brand-primary text-white rounded-full flex items-center justify-center text-xs">4</span>
-              Referencia de Precio por Zona
-            </h3>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left">
-                    <th className="py-2 px-2 font-medium text-slate-600">Zona</th>
-                    <th className="py-2 px-2 font-medium text-slate-600 text-right">Unidades</th>
-                    <th className="py-2 px-2 font-medium text-slate-600 text-right">$/m² Min</th>
-                    <th className="py-2 px-2 font-medium text-slate-600 text-right">$/m² Mediano</th>
-                    <th className="py-2 px-2 font-medium text-slate-600 text-right">$/m² Max</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {zonaStats.map((z) => (
-                    <tr
-                      key={z.zona}
-                      className={`border-b border-slate-100 ${z.zona === propiedadCliente.zona ? 'bg-blue-50' : ''}`}
+                {/* Posicion en mercado */}
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <div className="text-xs font-semibold text-slate-500 mb-3">POSICION EN MERCADO</div>
+                  <div className="text-center mb-4">
+                    <div className={`text-3xl font-bold ${getPosicionColor()}`}>
+                      Percentil {percentilCliente}
+                    </div>
+                    <div className="text-sm text-slate-600 mt-1">
+                      sobre {mercado.totalPropiedades} propiedades similares
+                    </div>
+                  </div>
+                  {/* Barra visual */}
+                  <div className="relative h-8 bg-gradient-to-r from-green-200 via-blue-200 to-red-200 rounded-full mb-2">
+                    <div
+                      className="absolute top-0 h-8 w-1 bg-slate-800 rounded"
+                      style={{ left: `${Math.min(Math.max(percentilCliente, 5), 95)}%` }}
+                    />
+                    <div
+                      className="absolute -top-6 text-xs font-bold text-slate-800"
+                      style={{ left: `${Math.min(Math.max(percentilCliente, 5), 95)}%`, transform: 'translateX(-50%)' }}
                     >
-                      <td className="py-2 px-2 text-slate-800">
-                        {z.zona}
-                        {z.zona === propiedadCliente.zona && <span className="text-xs text-blue-600 ml-1">(sujeto)</span>}
-                      </td>
-                      <td className="py-2 px-2 text-right text-slate-600">{z.unidades}</td>
-                      <td className="py-2 px-2 text-right text-slate-600">${z.precioM2Min.toLocaleString()}</td>
-                      <td className="py-2 px-2 text-right text-slate-800 font-medium">${z.precioM2Mediano.toLocaleString()}</td>
-                      <td className="py-2 px-2 text-right text-slate-600">${z.precioM2Max.toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* ============ DISCLAIMER ============ */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
-            <h4 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              Nota Profesional
-            </h4>
-            <ul className="text-sm text-amber-700 space-y-1">
-              <li>• Este CMA utiliza precios de lista, no precios de cierre reales.</li>
-              <li>• Los ajustes son estimaciones basadas en promedios del mercado de Equipetrol.</li>
-              <li>• Factores como estado interior, piso, vista y acabados pueden afectar el valor final.</li>
-              <li>• Se recomienda inspeccion presencial antes de confirmar el precio de lista.</li>
-            </ul>
-          </div>
-
-          {/* ============ FOOTER ============ */}
-          <div className="text-center py-6 border-t border-slate-200">
-            <div className="flex items-center justify-center gap-4 mb-3">
-              {brokerLogo && <img src={brokerLogo} alt="Logo" className="h-8 object-contain" />}
-              <div>
-                <div className="font-semibold text-slate-700">{brokerNombre}</div>
-                {brokerTelefono && <div className="text-sm text-slate-500">{brokerTelefono}</div>}
+                      Tu precio
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-xs text-slate-500">
+                    <span>Bajo</span>
+                    <span>Mediana</span>
+                    <span>Alto</span>
+                  </div>
+                  <div className={`mt-3 text-sm ${getPosicionColor()} font-medium text-center`}>
+                    {posicionTexto}
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="text-xs text-slate-400">
-              CMA generado con datos de {mercado.total} propiedades activas en el mercado.
-              <br />Informe ID: {analisis.id} | {analisis.fecha}
+
+            {/* ============ 2. CONTEXTO DE MERCADO ============ */}
+            <div className="p-6 border-b border-slate-200">
+              <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span className="w-6 h-6 bg-slate-800 text-white rounded flex items-center justify-center text-xs">2</span>
+                CONTEXTO DE MERCADO
+              </h2>
+
+              {/* Estadisticas generales */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="text-center p-3 bg-slate-50 rounded-lg">
+                  <div className="text-2xl font-bold text-slate-800">{mercado.totalPropiedades}</div>
+                  <div className="text-xs text-slate-500">Propiedades analizadas</div>
+                </div>
+                <div className="text-center p-3 bg-slate-50 rounded-lg">
+                  <div className="text-lg font-bold text-slate-800">${mercado.rangoPrecioMin.toLocaleString()}</div>
+                  <div className="text-lg font-bold text-slate-800">- ${mercado.rangoPrecioMax.toLocaleString()}</div>
+                  <div className="text-xs text-slate-500">Rango de precios</div>
+                </div>
+                <div className="text-center p-3 bg-slate-50 rounded-lg">
+                  <div className="text-2xl font-bold text-slate-800">${mercado.p50.toLocaleString()}</div>
+                  <div className="text-xs text-slate-500">Precio mediano</div>
+                </div>
+                <div className="text-center p-3 bg-slate-50 rounded-lg">
+                  <div className="text-2xl font-bold text-slate-800">{mercado.diasPromedioMercado}d</div>
+                  <div className="text-xs text-slate-500">Dias promedio</div>
+                </div>
+              </div>
+
+              {/* Distribucion de precios */}
+              <div className="mb-6">
+                <div className="text-xs font-semibold text-slate-500 mb-2">DISTRIBUCION DE PRECIOS</div>
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="flex-1 bg-slate-100 rounded p-2 text-center">
+                    <div className="font-bold">${mercado.p25.toLocaleString()}</div>
+                    <div className="text-xs text-slate-500">P25 (Competitivo)</div>
+                  </div>
+                  <div className="flex-1 bg-blue-100 rounded p-2 text-center">
+                    <div className="font-bold">${mercado.p50.toLocaleString()}</div>
+                    <div className="text-xs text-slate-500">P50 (Mediana)</div>
+                  </div>
+                  <div className={`flex-1 rounded p-2 text-center border-2 ${diferenciaPctVsMediana > 10 ? 'border-amber-400 bg-amber-50' : 'border-green-400 bg-green-50'}`}>
+                    <div className="font-bold">${cliente.precio.toLocaleString()}</div>
+                    <div className="text-xs text-slate-500">Tu precio</div>
+                  </div>
+                  <div className="flex-1 bg-slate-100 rounded p-2 text-center">
+                    <div className="font-bold">${mercado.p75.toLocaleString()}</div>
+                    <div className="text-xs text-slate-500">P75 (Premium)</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Precio por tipo de edificio - DATA REAL */}
+              {mercado.statsPorTipo.length > 1 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-500 mb-2">PRECIO/M² SEGUN TIPO DE EDIFICIO (data real)</div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200">
+                        <th className="text-left py-2 font-medium text-slate-600">Tipo</th>
+                        <th className="text-right py-2 font-medium text-slate-600">Promedio</th>
+                        <th className="text-right py-2 font-medium text-slate-600">Rango</th>
+                        <th className="text-right py-2 font-medium text-slate-600">Muestra</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mercado.statsPorTipo.map(stat => (
+                        <tr key={stat.tipo} className={`border-b border-slate-100 ${stat.tipo === cliente.tipoEdificio ? 'bg-blue-50' : ''}`}>
+                          <td className="py-2 capitalize">
+                            {stat.tipo}
+                            {stat.tipo === cliente.tipoEdificio && <span className="text-xs text-blue-600 ml-1">(tu propiedad)</span>}
+                          </td>
+                          <td className="py-2 text-right font-medium">${stat.promedioPrecioM2.toLocaleString()}/m²</td>
+                          <td className="py-2 text-right text-slate-600">${stat.minPrecioM2.toLocaleString()} - ${stat.maxPrecioM2.toLocaleString()}</td>
+                          <td className="py-2 text-right text-slate-500">{stat.cantidad} unidades</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {mercado.statsPorTipo.find(s => s.tipo === cliente.tipoEdificio) && (
+                    <p className="text-xs text-slate-500 mt-2">
+                      Tu precio/m² (${cliente.precioM2.toLocaleString()}) vs promedio {cliente.tipoEdificio}: {' '}
+                      {(() => {
+                        const stat = mercado.statsPorTipo.find(s => s.tipo === cliente.tipoEdificio)!
+                        const diff = Math.round(((cliente.precioM2 - stat.promedioPrecioM2) / stat.promedioPrecioM2) * 100)
+                        return diff >= 0 ? `+${diff}%` : `${diff}%`
+                      })()}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ============ 3. COMPARABLES DIRECTOS ============ */}
+            <div className="p-6 border-b border-slate-200">
+              <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span className="w-6 h-6 bg-slate-800 text-white rounded flex items-center justify-center text-xs">3</span>
+                COMPARABLES DIRECTOS
+              </h2>
+              <p className="text-xs text-slate-500 mb-4">
+                Las {comparables.length} propiedades mas similares por ubicacion, tamano y caracteristicas.
+              </p>
+
+              <div className="space-y-3">
+                {comparables.map(comp => (
+                  <div key={comp.posicion} className="border border-slate-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="font-bold text-slate-800">#{comp.posicion} {comp.proyecto}</div>
+                        <div className="text-sm text-slate-500">{comp.zona} · {comp.tipoEdificio}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-lg">${comp.precio.toLocaleString()}</div>
+                        <div className="text-sm text-slate-500">${comp.precioM2.toLocaleString()}/m²</div>
+                      </div>
+                    </div>
+                    <div className="flex gap-4 text-sm text-slate-600 mb-3">
+                      <span>{comp.dormitorios} dorms</span>
+                      <span>{comp.area}m²</span>
+                      <span>{comp.parqueos} parqueo(s)</span>
+                      {comp.diasEnMercado > 0 && <span>{comp.diasEnMercado} dias en mercado</span>}
+                    </div>
+                    <div className="bg-slate-50 rounded p-3">
+                      <div className="text-xs font-medium text-slate-500 mb-1">Comparado con tu propiedad:</div>
+                      <ul className="text-sm text-slate-600 space-y-0.5">
+                        {comp.diferencias.map((dif, i) => (
+                          <li key={i}>• {dif}</li>
+                        ))}
+                        <li className={`font-medium ${comp.diferenciaPrecio < 0 ? 'text-green-600' : comp.diferenciaPrecio > 0 ? 'text-amber-600' : 'text-slate-600'}`}>
+                          • Pide ${Math.abs(comp.diferenciaPrecio).toLocaleString()} {comp.diferenciaPrecio < 0 ? 'menos' : comp.diferenciaPrecio > 0 ? 'mas' : 'igual'} que tu precio
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Resumen comparables */}
+              <div className="mt-4 bg-slate-50 rounded-lg p-4">
+                <div className="text-xs font-semibold text-slate-500 mb-2">RESUMEN DE COMPARABLES</div>
+                <div className="grid grid-cols-3 gap-4 text-center text-sm">
+                  <div>
+                    <div className="text-slate-500">Precio</div>
+                    <div className="font-bold">${resumenComparables.precioMin.toLocaleString()} - ${resumenComparables.precioMax.toLocaleString()}</div>
+                    <div className="text-xs text-slate-400">Prom: ${resumenComparables.precioPromedio.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Precio/m²</div>
+                    <div className="font-bold">${resumenComparables.precioM2Min.toLocaleString()} - ${resumenComparables.precioM2Max.toLocaleString()}</div>
+                    <div className="text-xs text-slate-400">Prom: ${resumenComparables.precioM2Promedio.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Dias en mercado</div>
+                    <div className="font-bold">{resumenComparables.diasMin} - {resumenComparables.diasMax} dias</div>
+                    <div className="text-xs text-slate-400">Prom: {resumenComparables.diasPromedio} dias</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ============ 4. ANALISIS DE PRECIO ============ */}
+            <div className="p-6 border-b border-slate-200">
+              <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span className="w-6 h-6 bg-slate-800 text-white rounded flex items-center justify-center text-xs">4</span>
+                ANALISIS DE PRECIO
+              </h2>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Estimacion de valor */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="text-xs font-semibold text-green-700 mb-2">RANGO DE VALOR ESTIMADO</div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-slate-800">
+                      ${rangoEstimado.min.toLocaleString()} - ${rangoEstimado.max.toLocaleString()}
+                    </div>
+                    <div className="text-sm text-slate-600 mt-1">
+                      Basado en {comparables.length} comparables directos
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-green-200 text-sm text-green-700">
+                    Tu precio (${cliente.precio.toLocaleString()}) esta {' '}
+                    {cliente.precio >= rangoEstimado.min && cliente.precio <= rangoEstimado.max
+                      ? 'dentro del rango'
+                      : cliente.precio < rangoEstimado.min
+                        ? 'por debajo del rango'
+                        : 'por encima del rango'}
+                  </div>
+                </div>
+
+                {/* Tiempo estimado */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="text-xs font-semibold text-blue-700 mb-2">TIEMPO ESTIMADO DE VENTA</div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-slate-800">
+                      {tiempoEstimado.min} - {tiempoEstimado.max} dias
+                    </div>
+                    <div className="text-sm text-slate-600 mt-1">
+                      Segun tu posicion en el mercado
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-blue-200 text-xs text-slate-600 space-y-1">
+                    <div className="flex justify-between">
+                      <span>Si bajas a ${mercado.p50.toLocaleString()} (mediana):</span>
+                      <span className="font-medium">{mercado.diasBajoMediana}-{mercado.diasBajoMediana + 15} dias</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Si subes a ${mercado.p75.toLocaleString()} (P75):</span>
+                      <span className="font-medium">{mercado.diasSobreMediana}-{mercado.diasSobreMediana + 30} dias</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ============ 5. RECOMENDACION ============ */}
+            <div className="p-6 border-b border-slate-200">
+              <h2 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span className="w-6 h-6 bg-slate-800 text-white rounded flex items-center justify-center text-xs">5</span>
+                RECOMENDACION PROFESIONAL
+              </h2>
+
+              <div className={`rounded-lg p-5 ${
+                diferenciaPctVsMediana <= 5 ? 'bg-green-50 border border-green-200' :
+                diferenciaPctVsMediana <= 15 ? 'bg-amber-50 border border-amber-200' :
+                'bg-red-50 border border-red-200'
+              }`}>
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">
+                    {diferenciaPctVsMediana <= 5 ? '✓' : diferenciaPctVsMediana <= 15 ? '!' : '⚠'}
+                  </div>
+                  <div className="flex-1">
+                    <div className={`font-bold text-lg mb-2 ${
+                      diferenciaPctVsMediana <= 5 ? 'text-green-700' :
+                      diferenciaPctVsMediana <= 15 ? 'text-amber-700' : 'text-red-700'
+                    }`}>
+                      Rango recomendado: ${recomendacion.rangoMin.toLocaleString()} - ${recomendacion.rangoMax.toLocaleString()}
+                    </div>
+                    <p className="text-slate-700 mb-3">{recomendacion.texto}</p>
+                    <div className="space-y-1">
+                      {recomendacion.estrategia.map((est, i) => (
+                        <div key={i} className="text-sm text-slate-600 flex items-start gap-2">
+                          <span>•</span>
+                          <span>{est}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ============ METODOLOGIA ============ */}
+            <div className="p-6 bg-slate-50">
+              <h2 className="text-xs font-bold text-slate-500 mb-3">METODOLOGIA Y FUENTES</h2>
+              <ul className="text-xs text-slate-500 space-y-1">
+                <li>• Datos de {mercado.totalPropiedades} propiedades activas en {cliente.zona}</li>
+                <li>• Fuentes: portales inmobiliarios principales (InfoCasas, etc.)</li>
+                <li>• Precios de LISTA (no precios de cierre)</li>
+                <li>• Periodo de analisis: ultimos 90 dias</li>
+                <li>• Tipo de edificio inferido por amenities reportados</li>
+              </ul>
+              <p className="text-xs text-slate-400 mt-3 italic">
+                Este analisis utiliza precios de oferta publica. El precio final de venta tipicamente
+                varia entre -5% y -10% del precio de lista segun negociacion. Factores como estado
+                interior, piso, vista y acabados pueden afectar el valor final.
+              </p>
+            </div>
+
+            {/* FOOTER */}
+            <div className="p-6 border-t border-slate-200 text-center">
+              <div className="flex items-center justify-center gap-4 mb-3">
+                {brokerLogo && <img src={brokerLogo} alt="Logo" className="h-8 object-contain" />}
+                <div>
+                  <div className="font-semibold text-slate-700">{brokerNombre}</div>
+                  {brokerTelefono && <div className="text-sm text-slate-500">{brokerTelefono}</div>}
+                </div>
+              </div>
+              <div className="text-xs text-slate-400">
+                ID: {analisis.id} | {analisis.fecha}
+              </div>
             </div>
           </div>
 
           {/* CTA (no imprimir) */}
-          <div className="bg-gradient-to-br from-brand-dark to-brand-dark-card rounded-xl p-6 text-center text-white mt-6 print:hidden">
-            <h3 className="font-bold text-lg mb-2">¿Necesitas mas herramientas?</h3>
+          <div className="mt-6 bg-gradient-to-br from-brand-dark to-brand-dark-card rounded-xl p-6 text-center text-white print:hidden">
+            <h3 className="font-bold text-lg mb-2">Potencia tu trabajo</h3>
             <p className="text-slate-400 text-sm mb-4">
               Registrate para guardar CMAs, seguimiento de clientes y datos exclusivos.
             </p>
@@ -1000,6 +960,7 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
           .print\\:hidden { display: none !important; }
           .print\\:bg-white { background: white !important; }
           .print\\:py-0 { padding-top: 0 !important; padding-bottom: 0 !important; }
+          .print\\:shadow-none { box-shadow: none !important; }
           .print\\:border-0 { border: none !important; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
