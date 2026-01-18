@@ -46,6 +46,10 @@ export interface DatosPropiedad {
   baulera: boolean
   // Campos según perfil
   precio_referencia: number | null  // vendedor: precio esperado, broker: precio cliente, avaluador: valor a validar
+  // Branding broker (opcional)
+  broker_nombre?: string
+  broker_telefono?: string
+  broker_empresa?: string
 }
 
 interface PropertyFormProps {
@@ -63,6 +67,10 @@ export default function PropertyForm({ perfil, onSubmit, onBack }: PropertyFormP
   const [parqueos, setParqueos] = useState(0)
   const [baulera, setBaulera] = useState(false)
   const [precioReferencia, setPrecioReferencia] = useState('')
+  // Branding broker
+  const [brokerNombre, setBrokerNombre] = useState('')
+  const [brokerTelefono, setBrokerTelefono] = useState('')
+  const [brokerEmpresa, setBrokerEmpresa] = useState('')
 
   // Labels según perfil
   const labels = {
@@ -105,7 +113,11 @@ export default function PropertyForm({ perfil, onSubmit, onBack }: PropertyFormP
       estado_entrega: estadoEntrega,
       parqueos,
       baulera,
-      precio_referencia: precioReferencia ? parseFloat(precioReferencia) : null
+      precio_referencia: precioReferencia ? parseFloat(precioReferencia) : null,
+      // Branding broker
+      broker_nombre: brokerNombre || undefined,
+      broker_telefono: brokerTelefono || undefined,
+      broker_empresa: brokerEmpresa || undefined
     })
   }
 
@@ -304,6 +316,38 @@ export default function PropertyForm({ perfil, onSubmit, onBack }: PropertyFormP
                 </div>
               </div>
             </div>
+
+            {/* Branding broker */}
+            {perfil === 'broker' && (
+              <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <label className="block text-sm font-semibold text-slate-700 mb-3">
+                  Tu informacion (aparecera en el CMA)
+                </label>
+                <div className="grid md:grid-cols-3 gap-3">
+                  <input
+                    type="text"
+                    value={brokerNombre}
+                    onChange={(e) => setBrokerNombre(e.target.value)}
+                    placeholder="Tu nombre"
+                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-brand-primary focus:outline-none"
+                  />
+                  <input
+                    type="tel"
+                    value={brokerTelefono}
+                    onChange={(e) => setBrokerTelefono(e.target.value)}
+                    placeholder="Tu telefono"
+                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-brand-primary focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={brokerEmpresa}
+                    onChange={(e) => setBrokerEmpresa(e.target.value)}
+                    placeholder="Tu empresa (opcional)"
+                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-brand-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Precio referencia */}
             <div className="mb-8">
