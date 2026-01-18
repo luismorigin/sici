@@ -30,8 +30,8 @@ interface ComparableDirecto {
   precio: number
   precioM2: number
   diasEnMercado: number
-  tipoEdificio: 'premium' | 'standard' | 'basico'
-  parqueos: number
+  // Amenities reales del comparable
+  amenities: string[]
   // Diferencias cualitativas vs sujeto
   diferencias: string[]
   diferenciaPrecio: number
@@ -145,23 +145,32 @@ function formatearZona(zona: string): string {
   return map[zona.toLowerCase()] || zona
 }
 
-function inferirTipoEdificio(amenities: string[] | null): 'premium' | 'standard' | 'basico' {
-  if (!amenities || amenities.length === 0) return 'basico'
-  const amenitiesPremium = ['piscina', 'pileta', 'gym', 'gimnasio', 'sauna', 'jacuzzi', 'lobby', 'seguridad']
+function inferirTipoEdificio(
+  amenitiesConfirmados: string[] | null,
+  amenitiesLista?: string[] | null
+): 'premium' | 'standard' | 'basico' {
+  // Usar confirmados primero, lista como fallback
+  const amenities = (amenitiesConfirmados && amenitiesConfirmados.length > 0)
+    ? amenitiesConfirmados
+    : (amenitiesLista || [])
+
+  if (!amenities || amenities.length === 0) return 'standard' // Sin datos = asumir standard, no basico
+
+  const amenitiesPremium = ['piscina', 'pileta', 'gym', 'gimnasio', 'sauna', 'jacuzzi', 'lobby', 'seguridad', 'churrasquera', 'area_social', 'salon']
   const amenitiesLower = amenities.map(a => a.toLowerCase())
   const countPremium = amenitiesPremium.filter(a =>
     amenitiesLower.some(am => am.includes(a))
   ).length
   if (countPremium >= 3) return 'premium'
   if (countPremium >= 1 || amenities.length >= 2) return 'standard'
-  return 'basico'
+  return 'standard' // Default a standard, no basico
 }
 
 function calcularStatsPorTipo(resultados: UnidadReal[]): EstadisticasTipoEdificio[] {
   const grupos: Record<string, UnidadReal[]> = { premium: [], standard: [], basico: [] }
 
   resultados.forEach(r => {
-    const tipo = inferirTipoEdificio(r.amenities_confirmados)
+    const tipo = inferirTipoEdificio(r.amenities_confirmados, r.amenities_lista)
     grupos[tipo].push(r)
   })
 
@@ -183,7 +192,6 @@ function calcularStatsPorTipo(resultados: UnidadReal[]): EstadisticasTipoEdifici
 
 function generarDiferencias(comp: UnidadReal, datos: DatosPropiedad): string[] {
   const diffs: string[] = []
-  const tipoComp = inferirTipoEdificio(comp.amenities_confirmados)
 
   // Zona
   const zonaComp = formatearZona(comp.zona)
@@ -194,26 +202,27 @@ function generarDiferencias(comp: UnidadReal, datos: DatosPropiedad): string[] {
     diffs.push('Misma zona')
   }
 
-  // Tipo edificio
-  if (tipoComp !== datos.tipo_edificio) {
-    diffs.push(`Edificio ${tipoComp} (sujeto es ${datos.tipo_edificio})`)
-  } else {
-    diffs.push(`Mismo tipo de edificio (${tipoComp})`)
-  }
-
-  // Area
+  // Área
   const diffArea = comp.area_m2 - datos.area_m2
   if (Math.abs(diffArea) >= 3) {
     diffs.push(`${diffArea > 0 ? '+' : ''}${Math.round(diffArea)}m² que el sujeto`)
   } else {
-    diffs.push('Area similar')
+    diffs.push('Área similar')
   }
 
-  // Parqueos
-  const parqueosComp = 1 // Asumimos 1 por defecto
-  if (parqueosComp !== datos.parqueos) {
-    const diff = parqueosComp - datos.parqueos
-    diffs.push(`${diff > 0 ? '+' : ''}${diff} parqueo(s)`)
+  // Amenities del comparable (mostrar lo que tiene)
+  const amenitiesComp = [
+    ...(comp.amenities_confirmados || []),
+    ...(comp.amenities_lista || [])
+  ]
+  if (amenitiesComp.length > 0) {
+    const amenitiesClave = ['piscina', 'pileta', 'gym', 'gimnasio', 'sauna', 'seguridad', 'ascensor', 'churrasquera']
+    const tieneClaves = amenitiesClave.filter(clave =>
+      amenitiesComp.some(a => a.toLowerCase().includes(clave))
+    )
+    if (tieneClaves.length > 0) {
+      diffs.push(`Tiene: ${tieneClaves.slice(0, 3).join(', ')}${tieneClaves.length > 3 ? '...' : ''}`)
+    }
   }
 
   return diffs
@@ -277,37 +286,92 @@ function realizarAnalisis(
   else if (diferenciaPct <= 15) posicionTexto = 'Ligeramente sobre la mediana'
   else posicionTexto = 'Significativamente sobre el mercado'
 
-  // Seleccionar comparables directos (los 5 mas similares)
-  const areaMin = datosPropiedad.area_m2 * 0.7
-  const areaMax = datosPropiedad.area_m2 * 1.3
+  // Seleccionar comparables directos (los 5 más similares)
+  // NOTA: El SQL ya filtró por dormitorios y estado_construcción
+  // Aquí solo afinamos por:
+  // 1. Misma zona (importante)
+  // 2. Área similar
+  // 3. Amenities similares
+  // 4. Precio similar
+
+  const zonaSujeto = formatearZona(datosPropiedad.zona === 'todas' ? 'equipetrol' : datosPropiedad.zona)
+
+  // Amenities del sujeto (del formulario)
+  const amenitiesSujeto = datosPropiedad.amenities_edificio || []
+
+  const calcularScoreComparable = (r: UnidadReal): number => {
+    let score = 0
+
+    // 1. ZONA - priorizar misma zona
+    const zonaComp = formatearZona(r.zona)
+    if (zonaComp !== zonaSujeto && datosPropiedad.zona !== 'todas') {
+      score += 30
+    }
+
+    // 2. ÁREA - diferencia normalizada (hasta 40 puntos)
+    const diffAreaPct = Math.abs(r.area_m2 - datosPropiedad.area_m2) / datosPropiedad.area_m2
+    score += diffAreaPct * 40
+
+    // 3. AMENITIES - comparar amenities clave
+    if (amenitiesSujeto.length > 0) {
+      const amenitiesComp = [
+        ...(r.amenities_confirmados || []),
+        ...(r.amenities_lista || [])
+      ].map(a => a.toLowerCase())
+
+      const amenitiesClave = ['piscina', 'pileta', 'gym', 'gimnasio', 'sauna', 'seguridad', 'ascensor']
+
+      const sujetoTiene = amenitiesSujeto.filter(a =>
+        amenitiesClave.some(clave => a.toLowerCase().includes(clave))
+      ).length
+
+      const compTiene = amenitiesClave.filter(clave =>
+        amenitiesComp.some(a => a.includes(clave))
+      ).length
+
+      // Hasta 30 puntos por diferencia de amenities
+      const diffAmenities = Math.abs(sujetoTiene - compTiene)
+      score += diffAmenities * 10
+    }
+
+    // 4. PRECIO - diferencia normalizada (hasta 20 puntos)
+    const diffPrecioPct = Math.abs(r.precio_usd - precioCliente) / precioCliente
+    score += diffPrecioPct * 20
+
+    return score
+  }
+
+  // Filtrar primero por área razonable (±50%) y ordenar por score
+  const areaMin = datosPropiedad.area_m2 * 0.5
+  const areaMax = datosPropiedad.area_m2 * 1.5
 
   const comparablesRaw = resultados
     .filter(r => r.area_m2 >= areaMin && r.area_m2 <= areaMax)
-    .sort((a, b) => {
-      // Ordenar por similitud (diferencia de area + mismo tipo)
-      const tipoA = inferirTipoEdificio(a.amenities_confirmados)
-      const tipoB = inferirTipoEdificio(b.amenities_confirmados)
-      const scoreA = Math.abs(a.area_m2 - datosPropiedad.area_m2) + (tipoA === datosPropiedad.tipo_edificio ? 0 : 20)
-      const scoreB = Math.abs(b.area_m2 - datosPropiedad.area_m2) + (tipoB === datosPropiedad.tipo_edificio ? 0 : 20)
-      return scoreA - scoreB
-    })
+    .map(r => ({ ...r, _score: calcularScoreComparable(r) }))
+    .sort((a, b) => a._score - b._score)
     .slice(0, 5)
 
-  const comparables: ComparableDirecto[] = comparablesRaw.map((r, i) => ({
-    posicion: i + 1,
-    proyecto: r.proyecto || 'Sin nombre',
-    zona: formatearZona(r.zona),
-    area: Math.round(r.area_m2),
-    dormitorios: r.dormitorios,
-    precio: Math.round(r.precio_usd),
-    precioM2: Math.round(r.precio_m2),
-    diasEnMercado: r.dias_en_mercado || 0,
-    tipoEdificio: inferirTipoEdificio(r.amenities_confirmados),
-    parqueos: 1,
-    diferencias: generarDiferencias(r, datosPropiedad),
-    diferenciaPrecio: Math.round(r.precio_usd - precioCliente),
-    diferenciaArea: Math.round(r.area_m2 - datosPropiedad.area_m2)
-  }))
+  const comparables: ComparableDirecto[] = comparablesRaw.map((r, i) => {
+    // Usar amenities confirmados, o lista como fallback
+    const amenitiesReales = (r.amenities_confirmados && r.amenities_confirmados.length > 0)
+      ? r.amenities_confirmados
+      : (r.amenities_lista || [])
+
+    return {
+      posicion: i + 1,
+      proyecto: r.proyecto || 'Sin nombre',
+      zona: formatearZona(r.zona),
+      area: Math.round(r.area_m2),
+      dormitorios: r.dormitorios,
+      precio: Math.round(r.precio_usd),
+      precioM2: Math.round(r.precio_m2),
+      diasEnMercado: r.dias_en_mercado || 0,
+      amenities: amenitiesReales,
+      diferencias: generarDiferencias(r, datosPropiedad),
+      diferenciaPrecio: Math.round(r.precio_usd - precioCliente),
+      diferenciaArea: Math.round(r.area_m2 - datosPropiedad.area_m2)
+    }
+  })
 
   // Resumen de comparables
   const preciosComp = comparables.map(c => c.precio)
@@ -414,6 +478,10 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
       setError(null)
 
       try {
+        // CMA: Buscar comparables REALES (mismo producto)
+        // - Mismos dormitorios (obligatorio)
+        // - Mismo estado construcción (obligatorio)
+        // - Zonas similares (flexible)
         const TODAS_LAS_ZONAS = ['equipetrol', 'sirari', 'equipetrol_norte', 'villa_brigida', 'faremafu']
         const zonasABuscar = datosPropiedad.zona === 'todas'
           ? TODAS_LAS_ZONAS
@@ -421,8 +489,8 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
 
         const data = await buscarUnidadesReales({
           zonas_permitidas: zonasABuscar,
-          dormitorios: datosPropiedad.dormitorios === 3 ? undefined : datosPropiedad.dormitorios,
-          estado_entrega: datosPropiedad.estado_entrega,
+          dormitorios: datosPropiedad.dormitorios, // Siempre filtrar por dormitorios exactos
+          estado_entrega: datosPropiedad.estado_entrega || 'entrega_inmediata', // Mismo estado
           limite: 100
         })
 
@@ -767,19 +835,35 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <div className="font-bold text-slate-800">#{comp.posicion} {comp.proyecto}</div>
-                        <div className="text-sm text-slate-500">{comp.zona} · {comp.tipoEdificio}</div>
+                        <div className="text-sm text-slate-500">{comp.zona}</div>
                       </div>
                       <div className="text-right">
                         <div className="font-bold text-lg">${comp.precio.toLocaleString()}</div>
                         <div className="text-sm text-slate-500">${comp.precioM2.toLocaleString()}/m²</div>
                       </div>
                     </div>
-                    <div className="flex gap-4 text-sm text-slate-600 mb-3">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600 mb-2">
                       <span>{comp.dormitorios} dorms</span>
                       <span>{comp.area}m²</span>
-                      <span>{comp.parqueos} parqueo(s)</span>
-                      {comp.diasEnMercado > 0 && <span>{comp.diasEnMercado} dias en mercado</span>}
+                      {comp.diasEnMercado > 0 && <span>{comp.diasEnMercado} días en mercado</span>}
                     </div>
+                    {comp.amenities.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {comp.amenities.slice(0, 5).map((am, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded">
+                            {am.replace(/_/g, ' ')}
+                          </span>
+                        ))}
+                        {comp.amenities.length > 5 && (
+                          <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs rounded">
+                            +{comp.amenities.length - 5} más
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {comp.amenities.length === 0 && (
+                      <div className="text-xs text-slate-400 mb-3 italic">Sin amenities confirmados</div>
+                    )}
                     <div className="bg-slate-50 rounded p-3">
                       <div className="text-xs font-medium text-slate-500 mb-1">Comparado con tu propiedad:</div>
                       <ul className="text-sm text-slate-600 space-y-0.5">
@@ -913,16 +997,20 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
             <div className="p-6 bg-slate-50">
               <h2 className="text-xs font-bold text-slate-500 mb-3">METODOLOGIA Y FUENTES</h2>
               <ul className="text-xs text-slate-500 space-y-1">
-                <li>• Datos de {mercado.totalPropiedades} propiedades activas en {cliente.zona}</li>
-                <li>• Fuentes: portales inmobiliarios principales (InfoCasas, etc.)</li>
+                <li>• Datos de {mercado.totalPropiedades} propiedades activas en oferta</li>
+                <li>• Fuentes: Remax, Century21, InfoCasas (scraping automatizado)</li>
                 <li>• Precios de LISTA (no precios de cierre)</li>
-                <li>• Periodo de analisis: ultimos 90 dias</li>
-                <li>• Tipo de edificio inferido por amenities reportados</li>
+                <li>• Propiedades activas al momento del análisis</li>
+                <li>• Amenities: cuando están reportados en el anuncio original</li>
               </ul>
               <p className="text-xs text-slate-400 mt-3 italic">
-                Este analisis utiliza precios de oferta publica. El precio final de venta tipicamente
-                varia entre -5% y -10% del precio de lista segun negociacion. Factores como estado
+                Este análisis utiliza precios de oferta pública. El precio final de venta típicamente
+                varía entre -5% y -10% del precio de lista según negociación. Factores como estado
                 interior, piso, vista y acabados pueden afectar el valor final.
+              </p>
+              <p className="text-xs text-slate-400 mt-2 italic">
+                Limitaciones: No todos los anuncios reportan amenities completos. Las propiedades en
+                preventa no son directamente comparables con entrega inmediata.
               </p>
             </div>
 
