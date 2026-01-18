@@ -50,6 +50,10 @@ export interface DatosPropiedad {
   broker_nombre?: string
   broker_telefono?: string
   broker_empresa?: string
+  broker_logo?: string        // Data URL del logo
+  broker_foto?: string        // Data URL de la foto del broker
+  propiedad_fotos?: string[]  // Data URLs de fotos de la propiedad
+  propiedad_direccion?: string // Direccion de la propiedad (para CMA)
 }
 
 interface PropertyFormProps {
@@ -71,6 +75,51 @@ export default function PropertyForm({ perfil, onSubmit, onBack }: PropertyFormP
   const [brokerNombre, setBrokerNombre] = useState('')
   const [brokerTelefono, setBrokerTelefono] = useState('')
   const [brokerEmpresa, setBrokerEmpresa] = useState('')
+  const [brokerLogo, setBrokerLogo] = useState<string | null>(null)
+  const [brokerFoto, setBrokerFoto] = useState<string | null>(null)
+  const [propiedadFotos, setPropiedadFotos] = useState<string[]>([])
+  const [propiedadDireccion, setPropiedadDireccion] = useState('')
+
+  // Handlers para uploads
+  const handleImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: (value: string | null) => void
+  ) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      alert('La imagen debe ser menor a 2MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      setter(event.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleMultipleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+    const newFotos: string[] = []
+    const maxFotos = 6 - propiedadFotos.length
+
+    Array.from(files).slice(0, maxFotos).forEach(file => {
+      if (file.size > 2 * 1024 * 1024) return
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        newFotos.push(event.target?.result as string)
+        if (newFotos.length === Math.min(files.length, maxFotos)) {
+          setPropiedadFotos(prev => [...prev, ...newFotos])
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const removeFoto = (index: number) => {
+    setPropiedadFotos(prev => prev.filter((_, i) => i !== index))
+  }
 
   // Labels según perfil
   const labels = {
@@ -117,7 +166,11 @@ export default function PropertyForm({ perfil, onSubmit, onBack }: PropertyFormP
       // Branding broker
       broker_nombre: brokerNombre || undefined,
       broker_telefono: brokerTelefono || undefined,
-      broker_empresa: brokerEmpresa || undefined
+      broker_empresa: brokerEmpresa || undefined,
+      broker_logo: brokerLogo || undefined,
+      broker_foto: brokerFoto || undefined,
+      propiedad_fotos: propiedadFotos.length > 0 ? propiedadFotos : undefined,
+      propiedad_direccion: propiedadDireccion || undefined
     })
   }
 
@@ -319,34 +372,157 @@ export default function PropertyForm({ perfil, onSubmit, onBack }: PropertyFormP
 
             {/* Branding broker */}
             {perfil === 'broker' && (
-              <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <label className="block text-sm font-semibold text-slate-700 mb-3">
-                  Tu informacion (aparecera en el CMA)
-                </label>
-                <div className="grid md:grid-cols-3 gap-3">
+              <>
+                {/* Direccion propiedad */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Direccion de la propiedad (opcional)
+                  </label>
                   <input
                     type="text"
-                    value={brokerNombre}
-                    onChange={(e) => setBrokerNombre(e.target.value)}
-                    placeholder="Tu nombre"
-                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-brand-primary focus:outline-none"
-                  />
-                  <input
-                    type="tel"
-                    value={brokerTelefono}
-                    onChange={(e) => setBrokerTelefono(e.target.value)}
-                    placeholder="Tu telefono"
-                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-brand-primary focus:outline-none"
-                  />
-                  <input
-                    type="text"
-                    value={brokerEmpresa}
-                    onChange={(e) => setBrokerEmpresa(e.target.value)}
-                    placeholder="Tu empresa (opcional)"
-                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-brand-primary focus:outline-none"
+                    value={propiedadDireccion}
+                    onChange={(e) => setPropiedadDireccion(e.target.value)}
+                    placeholder="Ej: Av. San Martin #500, Edificio Torre Sol"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
-              </div>
+
+                {/* Fotos de la propiedad */}
+                <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                    Fotos de la propiedad (max 6)
+                  </label>
+                  <div className="grid grid-cols-3 gap-3 mb-3">
+                    {propiedadFotos.map((foto, index) => (
+                      <div key={index} className="relative aspect-video bg-slate-200 rounded-lg overflow-hidden">
+                        <img src={foto} alt={`Foto ${index + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeFoto(index)}
+                          className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    {propiedadFotos.length < 6 && (
+                      <label className="aspect-video bg-white border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-brand-primary hover:bg-blue-50 transition-colors">
+                        <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span className="text-xs text-slate-500 mt-1">Agregar</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleMultipleImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400">Las fotos apareceran en el CMA. Max 2MB cada una.</p>
+                </div>
+
+                {/* Info del broker */}
+                <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                    Tu informacion (aparecera en el CMA)
+                  </label>
+
+                  {/* Logo y foto */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    {/* Logo */}
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-2">Logo de tu empresa</label>
+                      <div className="flex items-center gap-3">
+                        {brokerLogo ? (
+                          <div className="relative w-16 h-16 bg-white border border-slate-200 rounded-lg overflow-hidden">
+                            <img src={brokerLogo} alt="Logo" className="w-full h-full object-contain" />
+                            <button
+                              type="button"
+                              onClick={() => setBrokerLogo(null)}
+                              className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="w-16 h-16 bg-white border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-brand-primary transition-colors">
+                            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleImageUpload(e, setBrokerLogo)}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                        <span className="text-xs text-slate-400">PNG/JPG</span>
+                      </div>
+                    </div>
+
+                    {/* Foto broker */}
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-2">Tu foto</label>
+                      <div className="flex items-center gap-3">
+                        {brokerFoto ? (
+                          <div className="relative w-16 h-16 bg-white border border-slate-200 rounded-full overflow-hidden">
+                            <img src={brokerFoto} alt="Tu foto" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setBrokerFoto(null)}
+                              className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="w-16 h-16 bg-white border-2 border-dashed border-slate-300 rounded-full flex flex-col items-center justify-center cursor-pointer hover:border-brand-primary transition-colors">
+                            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleImageUpload(e, setBrokerFoto)}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                        <span className="text-xs text-slate-400">Foto perfil</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Datos de contacto */}
+                  <div className="grid md:grid-cols-3 gap-3">
+                    <input
+                      type="text"
+                      value={brokerNombre}
+                      onChange={(e) => setBrokerNombre(e.target.value)}
+                      placeholder="Tu nombre"
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-brand-primary focus:outline-none"
+                    />
+                    <input
+                      type="tel"
+                      value={brokerTelefono}
+                      onChange={(e) => setBrokerTelefono(e.target.value)}
+                      placeholder="Tu telefono"
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-brand-primary focus:outline-none"
+                    />
+                    <input
+                      type="text"
+                      value={brokerEmpresa}
+                      onChange={(e) => setBrokerEmpresa(e.target.value)}
+                      placeholder="Tu empresa (opcional)"
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:border-brand-primary focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Precio referencia */}

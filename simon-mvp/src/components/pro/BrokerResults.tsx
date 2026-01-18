@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import type { DatosPropiedad } from './PropertyForm'
 import { buscarUnidadesReales, type UnidadReal } from '@/lib/supabase'
@@ -19,59 +19,146 @@ interface Ajuste {
   explicacion: string
 }
 
+interface EstadisticasMercado {
+  total: number
+  precioMediano: number
+  precioM2Mediano: number
+  areaMediana: number
+  precioMin: number
+  precioMax: number
+  precioM2Min: number
+  precioM2Max: number
+}
+
+interface Percentiles {
+  p25: number
+  p50: number
+  p75: number
+  p25M2: number
+  p50M2: number
+  p75M2: number
+}
+
 interface Comparable {
-  propiedad: UnidadReal
-  diferenciaPct: number
-  diasEnMercado: number
-  tipoEdificio: 'premium' | 'standard' | 'basico'
-  estadoEntrega: string
-  relevancia: 'alta' | 'media' | 'baja'
-  notaRelevancia: string
+  posicion: number
+  proyecto: string
+  zona: string
+  area: number
+  precio: number
+  precioM2: number
+  dias: number
+  estado: string
+  tipoEdificio: string
   ajustes: Ajuste[]
   precioAjustado: number
+  relevancia: 'alta' | 'media' | 'baja'
+}
+
+interface ZonaStats {
+  zona: string
+  unidades: number
+  precioM2Min: number
+  precioM2Mediano: number
+  precioM2Max: number
 }
 
 interface RecomendacionPrecio {
-  tipo: 'mantener' | 'bajar_leve' | 'bajar_fuerte' | 'subir_leve' | 'subir_considerar'
+  tipo: 'mantener' | 'bajar_leve' | 'bajar_fuerte' | 'subir'
   precioSugerido: number
-  precioMinimo: number
-  precioMaximo: number
   razon: string
-  confianza: 'alta' | 'media' | 'baja'
 }
 
-interface ArgumentoCliente {
-  situacion: string
-  argumento: string
-  dato: string
-}
-
-interface AnalisisBroker {
-  precioCliente: number
-  precioM2Cliente: number
-  precioM2Mercado: number
+interface AnalisisCMA {
+  id: string
+  fecha: string
+  propiedadCliente: {
+    direccion: string
+    dormitorios: number
+    area: number
+    zona: string
+    estado: string
+    tipo: string
+    parqueos: number
+    precio: number
+    precioM2: number
+  }
+  mercado: EstadisticasMercado
+  percentiles: Percentiles
+  clientePercentil: number
+  diferenciaPct: number
   posicionMercado: 'muy_bajo' | 'bajo' | 'competitivo' | 'alto' | 'muy_alto'
-  percentil: number
-  recomendacion: RecomendacionPrecio
   comparables: Comparable[]
-  totalMercado: number
-  argumentosCliente: ArgumentoCliente[]
+  zonaStats: ZonaStats[]
+  recomendacion: RecomendacionPrecio
   diasEstimados: { min: number; max: number }
   probabilidadVenta30Dias: number
   probabilidadVenta60Dias: number
   advertencias: string[]
-  filtrosAplicados: string
 }
 
-// ============ CONSTANTES DE AJUSTES ============
+// ============ CONSTANTES ============
 
-const PRECIO_M2_BASE = 1800 // USD/m2 promedio Equipetrol
-const AJUSTE_PARQUEO = 8000 // USD por parqueo
-const AJUSTE_BAULERA = 3000 // USD
-const AJUSTE_PREMIUM = 0.12 // +12% por premium
-const AJUSTE_BASICO = -0.10 // -10% por basico
-
+const AJUSTE_PARQUEO = 8000
+const AJUSTE_PREMIUM = 0.12
+const AJUSTE_BASICO = -0.10
 const AMENITIES_PREMIUM = ['piscina', 'pileta', 'gym', 'gimnasio', 'sauna', 'salon_eventos', 'bbq', 'parrilla', 'seguridad_24h', 'lobby']
+
+// ============ FUNCIONES DE CALCULO ============
+
+function calcularMediana(arr: number[]): number {
+  if (arr.length === 0) return 0
+  const sorted = [...arr].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+}
+
+function calcularPercentil(arr: number[], percentil: number): number {
+  if (arr.length === 0) return 0
+  const sorted = [...arr].sort((a, b) => a - b)
+  const index = Math.ceil((percentil / 100) * sorted.length) - 1
+  return sorted[Math.max(0, index)]
+}
+
+function calcularPosicionPercentil(valor: number, arr: number[]): number {
+  if (arr.length === 0) return 50
+  const sorted = [...arr].sort((a, b) => a - b)
+  const menores = sorted.filter(v => v < valor).length
+  return Math.round((menores / sorted.length) * 100)
+}
+
+function generarIdCMA(dorms: number, area: number): string {
+  const fecha = new Date()
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0')
+  const dia = String(fecha.getDate()).padStart(2, '0')
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase()
+  return `CMA-${fecha.getFullYear()}-${mes}${dia}-${random}`
+}
+
+function formatearEstado(estado: string | null): string {
+  if (!estado) return 'No especificado'
+  const map: Record<string, string> = {
+    'entregado': 'Entrega inmediata',
+    'entrega_inmediata': 'Entrega inmediata',
+    'preventa': 'Preventa',
+    'construccion': 'En construccion',
+    'planos': 'En planos',
+    'nuevo': 'Nuevo a estrenar',
+    'usado': 'Usado'
+  }
+  return map[estado.toLowerCase()] || estado
+}
+
+function formatearZona(zona: string): string {
+  const map: Record<string, string> = {
+    'equipetrol': 'Equipetrol',
+    'sirari': 'Sirari',
+    'equipetrol_norte': 'Equipetrol Norte',
+    'villa_brigida': 'Villa Brigida',
+    'faremafu': 'Faremafu',
+    'todas': 'Equipetrol'
+  }
+  return map[zona.toLowerCase()] || zona
+}
 
 function inferirTipoEdificio(amenities: string[] | null): 'premium' | 'standard' | 'basico' {
   if (!amenities || amenities.length === 0) return 'basico'
@@ -83,65 +170,6 @@ function inferirTipoEdificio(amenities: string[] | null): 'premium' | 'standard'
   if (countPremium >= 1 || amenitiesLower.length >= 2) return 'standard'
   return 'basico'
 }
-
-function filtrarComparables(
-  resultados: UnidadReal[],
-  datosPropiedad: DatosPropiedad
-): { filtrados: UnidadReal[]; advertencias: string[] } {
-  const advertencias: string[] = []
-  const areaMin = datosPropiedad.area_m2 * 0.7
-  const areaMax = datosPropiedad.area_m2 * 1.3
-
-  let filtrados = resultados.filter(r => r.area_m2 >= areaMin && r.area_m2 <= areaMax)
-
-  if (filtrados.length < 3) {
-    advertencias.push(`Pocos comparables con area similar. Rango ampliado.`)
-    filtrados = resultados.filter(r => r.area_m2 >= areaMin * 0.7 && r.area_m2 <= areaMax * 1.3)
-  }
-
-  const tipoUsuario = datosPropiedad.tipo_edificio
-  const filtradosPorTipo = filtrados.filter(r => {
-    const tipoInferido = inferirTipoEdificio(r.amenities_confirmados)
-    return tipoInferido === tipoUsuario
-  })
-
-  if (filtradosPorTipo.length >= 3) {
-    filtrados = filtradosPorTipo
-  } else if (tipoUsuario === 'premium') {
-    const premiumYStandard = filtrados.filter(r => {
-      const tipo = inferirTipoEdificio(r.amenities_confirmados)
-      return tipo === 'premium' || tipo === 'standard'
-    })
-    if (premiumYStandard.length >= 3) {
-      filtrados = premiumYStandard
-      advertencias.push('Incluye edificios standard por falta de premium.')
-    }
-  } else if (tipoUsuario === 'basico') {
-    const basicoYStandard = filtrados.filter(r => {
-      const tipo = inferirTipoEdificio(r.amenities_confirmados)
-      return tipo === 'basico' || tipo === 'standard'
-    })
-    if (basicoYStandard.length >= 3) {
-      filtrados = basicoYStandard
-      advertencias.push('Incluye edificios standard por falta de basicos.')
-    }
-  }
-
-  if (datosPropiedad.estado_entrega === 'entrega_inmediata') {
-    const sinPreventa = filtrados.filter(r =>
-      r.estado_construccion !== 'preventa' && r.estado_construccion !== 'construccion' && r.estado_construccion !== 'planos'
-    )
-    if (sinPreventa.length >= 3) {
-      filtrados = sinPreventa
-    } else {
-      advertencias.push('Incluye preventas por falta de unidades disponibles.')
-    }
-  }
-
-  return { filtrados, advertencias }
-}
-
-// ============ FUNCION DE AJUSTES ============
 
 function calcularAjustes(
   prop: UnidadReal,
@@ -157,16 +185,16 @@ function calcularAjustes(
     const ajusteArea = Math.round(diffArea * precioM2Mercado)
     ajustes.push({
       concepto: 'Area',
-      valor: -ajusteArea, // Negativo porque restamos la diferencia
+      valor: -ajusteArea,
       explicacion: diffArea > 0
-        ? `Tiene ${Math.round(diffArea)}m² mas`
-        : `Tiene ${Math.round(Math.abs(diffArea))}m² menos`
+        ? `+${Math.round(diffArea)}m² que el sujeto`
+        : `${Math.round(diffArea)}m² que el sujeto`
     })
     precioBase -= ajusteArea
   }
 
-  // 2. Ajuste por parqueos (asumimos 1 parqueo por defecto si no sabemos)
-  const parqueosComp = 1 // Asumimos 1 si no tenemos dato
+  // 2. Ajuste por parqueos
+  const parqueosComp = 1
   const diffParqueos = parqueosComp - datosCliente.parqueos
   if (diffParqueos !== 0) {
     const ajusteParqueo = diffParqueos * AJUSTE_PARQUEO
@@ -174,8 +202,8 @@ function calcularAjustes(
       concepto: 'Parqueo',
       valor: -ajusteParqueo,
       explicacion: diffParqueos > 0
-        ? `Tiene ${diffParqueos} parqueo(s) mas`
-        : `Tiene ${Math.abs(diffParqueos)} parqueo(s) menos`
+        ? `+${diffParqueos} parqueo(s)`
+        : `${diffParqueos} parqueo(s)`
     })
     precioBase -= ajusteParqueo
   }
@@ -188,16 +216,16 @@ function calcularAjustes(
 
     if (tipoComp === 'premium' && datosCliente.tipo_edificio !== 'premium') {
       ajusteTipo = Math.round(prop.precio_usd * AJUSTE_PREMIUM)
-      explicacion = 'Es premium (piscina, gym, etc)'
+      explicacion = 'Comparable es premium'
     } else if (tipoComp === 'basico' && datosCliente.tipo_edificio !== 'basico') {
       ajusteTipo = Math.round(prop.precio_usd * AJUSTE_BASICO)
-      explicacion = 'Es basico (sin amenities)'
+      explicacion = 'Comparable es basico'
     } else if (tipoComp === 'standard' && datosCliente.tipo_edificio === 'premium') {
       ajusteTipo = Math.round(prop.precio_usd * -0.08)
-      explicacion = 'Es standard (menos amenities)'
+      explicacion = 'Comparable es standard'
     } else if (tipoComp === 'standard' && datosCliente.tipo_edificio === 'basico') {
       ajusteTipo = Math.round(prop.precio_usd * 0.06)
-      explicacion = 'Es standard (mas amenities)'
+      explicacion = 'Comparable es standard'
     }
 
     if (ajusteTipo !== 0) {
@@ -213,8 +241,6 @@ function calcularAjustes(
   return { ajustes, precioAjustado: Math.round(precioBase) }
 }
 
-// ============ FUNCIONES DE ANALISIS ============
-
 function calcularPosicionMercado(precioM2Cliente: number, precioM2Mercado: number): 'muy_bajo' | 'bajo' | 'competitivo' | 'alto' | 'muy_alto' {
   const diferencia = ((precioM2Cliente - precioM2Mercado) / precioM2Mercado) * 100
   if (diferencia < -15) return 'muy_bajo'
@@ -224,226 +250,150 @@ function calcularPosicionMercado(precioM2Cliente: number, precioM2Mercado: numbe
   return 'muy_alto'
 }
 
-function generarRecomendacion(
-  precioCliente: number,
-  precioM2Cliente: number,
-  precioM2Mercado: number,
-  area: number,
-  comparables: UnidadReal[]
-): RecomendacionPrecio {
-  const diferenciaPct = ((precioM2Cliente - precioM2Mercado) / precioM2Mercado) * 100
-  const precioMercado = precioM2Mercado * area
+// ============ ANALISIS PRINCIPAL ============
 
-  const preciosM2 = comparables.map(c => c.precio_m2)
-  const precioM2Min = Math.min(...preciosM2)
-  const precioM2Max = Math.max(...preciosM2)
-
-  const precioMinimo = Math.round(precioM2Min * area)
-  const precioMaximo = Math.round(precioM2Max * area)
-
-  if (diferenciaPct > 20) {
-    return {
-      tipo: 'bajar_fuerte',
-      precioSugerido: Math.round(precioMercado * 1.05),
-      precioMinimo,
-      precioMaximo,
-      razon: `El precio del cliente esta ${diferenciaPct.toFixed(0)}% sobre el mercado. Dificil vender sin ajuste significativo.`,
-      confianza: 'alta'
-    }
-  }
-
-  if (diferenciaPct > 10) {
-    return {
-      tipo: 'bajar_leve',
-      precioSugerido: Math.round(precioMercado * 1.02),
-      precioMinimo,
-      precioMaximo,
-      razon: `Precio ${diferenciaPct.toFixed(0)}% sobre mercado. Ajuste moderado aceleraria la venta.`,
-      confianza: 'alta'
-    }
-  }
-
-  if (diferenciaPct >= -5 && diferenciaPct <= 10) {
-    return {
-      tipo: 'mantener',
-      precioSugerido: precioCliente,
-      precioMinimo,
-      precioMaximo,
-      razon: `Precio competitivo. Bien posicionado para el mercado actual.`,
-      confianza: 'alta'
-    }
-  }
-
-  if (diferenciaPct >= -15) {
-    return {
-      tipo: 'subir_considerar',
-      precioSugerido: Math.round(precioMercado * 0.98),
-      precioMinimo,
-      precioMaximo,
-      razon: `Precio ${Math.abs(diferenciaPct).toFixed(0)}% bajo mercado. Podria estar dejando dinero en la mesa.`,
-      confianza: 'media'
-    }
-  }
-
-  return {
-    tipo: 'subir_leve',
-    precioSugerido: Math.round(precioMercado * 0.95),
-    precioMinimo,
-    precioMaximo,
-    razon: `Precio muy bajo. Revisar si hay razon especifica o subir.`,
-    confianza: 'media'
-  }
-}
-
-function analizarComparable(
-  prop: UnidadReal,
-  precioM2Cliente: number,
-  datosCliente: DatosPropiedad,
-  precioM2Mercado: number
-): Comparable {
-  const diferenciaPct = ((prop.precio_m2 - precioM2Cliente) / precioM2Cliente) * 100
-  const diasEnMercado = prop.dias_en_mercado || 0
-  const tipoEdificio = inferirTipoEdificio(prop.amenities_confirmados)
-
-  // Calcular ajustes
-  const { ajustes, precioAjustado } = calcularAjustes(prop, datosCliente, precioM2Mercado)
-
-  // Determinar relevancia
-  let relevancia: 'alta' | 'media' | 'baja' = 'media'
-  let notaRelevancia = ''
-
-  const diferenciaArea = Math.abs(prop.area_m2 - datosCliente.area_m2)
-  const mismoTipo = tipoEdificio === datosCliente.tipo_edificio
-
-  if (diferenciaArea <= datosCliente.area_m2 * 0.15 && mismoTipo) {
-    relevancia = 'alta'
-    notaRelevancia = 'Area y tipo similares'
-  } else if (diferenciaArea <= datosCliente.area_m2 * 0.25 || mismoTipo) {
-    relevancia = 'media'
-    notaRelevancia = mismoTipo ? 'Mismo tipo edificio' : 'Area similar'
-  } else {
-    relevancia = 'baja'
-    notaRelevancia = 'Referencia general'
-  }
-
-  return {
-    propiedad: prop,
-    diferenciaPct,
-    diasEnMercado,
-    tipoEdificio,
-    estadoEntrega: prop.estado_construccion || 'disponible',
-    relevancia,
-    notaRelevancia,
-    ajustes,
-    precioAjustado
-  }
-}
-
-function generarArgumentosCliente(
-  posicion: string,
-  recomendacion: RecomendacionPrecio,
-  comparables: Comparable[],
-  diasPromedio: number
-): ArgumentoCliente[] {
-  const args: ArgumentoCliente[] = []
-
-  if (recomendacion.tipo === 'bajar_fuerte' || recomendacion.tipo === 'bajar_leve') {
-    const masBaratos = comparables.filter(c => c.diferenciaPct < -5)
-    if (masBaratos.length > 0) {
-      args.push({
-        situacion: 'El cliente cree que su precio es justo',
-        argumento: `Hay ${masBaratos.length} propiedades similares mas baratas. Los compradores las veran primero.`,
-        dato: `Ej: ${masBaratos[0].propiedad.proyecto} a $${masBaratos[0].propiedad.precio_usd.toLocaleString()} (${Math.abs(masBaratos[0].diferenciaPct).toFixed(0)}% menos)`
-      })
-    }
-
-    const viejos = comparables.filter(c => c.diasEnMercado > 60 && c.diferenciaPct > 5)
-    if (viejos.length > 0) {
-      args.push({
-        situacion: 'El cliente quiere esperar',
-        argumento: `Las propiedades caras llevan mucho tiempo sin venderse.`,
-        dato: `${viejos.length} propiedades con precio alto llevan +60 dias publicadas`
-      })
-    }
-
-    args.push({
-      situacion: 'El cliente pregunta cuanto bajar',
-      argumento: `Mi recomendacion es $${recomendacion.precioSugerido.toLocaleString()}. Competitivo sin regalar.`,
-      dato: `Rango de mercado: $${recomendacion.precioMinimo.toLocaleString()} - $${recomendacion.precioMaximo.toLocaleString()}`
-    })
-  }
-
-  if (recomendacion.tipo === 'mantener') {
-    args.push({
-      situacion: 'Confirmar que el precio esta bien',
-      argumento: `Su precio esta dentro del rango competitivo. No hay necesidad de ajustar.`,
-      dato: `Tiempo estimado de venta razonable con este precio.`
-    })
-
-    args.push({
-      situacion: 'El cliente quiere subir el precio',
-      argumento: `Subir podria sacarlo del rango competitivo y alargar el tiempo de venta.`,
-      dato: `Promedio de dias en mercado: ${Math.round(diasPromedio)} dias`
-    })
-  }
-
-  if (recomendacion.tipo === 'subir_considerar' || recomendacion.tipo === 'subir_leve') {
-    args.push({
-      situacion: 'Oportunidad de subir precio',
-      argumento: `El precio actual esta por debajo del mercado. Podria ajustar sin perder competitividad.`,
-      dato: `Precio sugerido: $${recomendacion.precioSugerido.toLocaleString()}`
-    })
-  }
-
-  return args
-}
-
-function realizarAnalisis(
+function realizarAnalisisCMA(
   resultados: UnidadReal[],
   datosPropiedad: DatosPropiedad
-): AnalisisBroker | null {
+): AnalisisCMA | null {
   if (!datosPropiedad.precio_referencia || resultados.length === 0) return null
-
-  const { filtrados, advertencias } = filtrarComparables(resultados, datosPropiedad)
-  const comparablesRaw = filtrados.length > 0 ? filtrados : resultados
-
-  const tipoLabel = datosPropiedad.tipo_edificio
-  const estadoLabel = datosPropiedad.estado_entrega === 'entrega_inmediata' ? 'disponibles' :
-                      datosPropiedad.estado_entrega === 'solo_preventa' ? 'preventa' : 'todos'
-  const filtrosAplicados = `${comparablesRaw.length} comparables ${tipoLabel}, ${estadoLabel}`
 
   const precioCliente = datosPropiedad.precio_referencia
   const precioM2Cliente = precioCliente / datosPropiedad.area_m2
-  const preciosM2 = comparablesRaw.map(r => r.precio_m2)
-  const precioM2Mercado = preciosM2.reduce((a, b) => a + b, 0) / preciosM2.length
 
-  const posicionMercado = calcularPosicionMercado(precioM2Cliente, precioM2Mercado)
-  const masBaratos = preciosM2.filter(p => p < precioM2Cliente).length
-  const percentil = Math.round((masBaratos / preciosM2.length) * 100)
+  // Estadisticas del mercado total
+  const precios = resultados.map(r => r.precio_usd)
+  const preciosM2 = resultados.map(r => r.precio_m2)
+  const areas = resultados.map(r => r.area_m2)
 
-  const recomendacion = generarRecomendacion(
-    precioCliente,
-    precioM2Cliente,
-    precioM2Mercado,
-    datosPropiedad.area_m2,
-    comparablesRaw
-  )
+  const mercado: EstadisticasMercado = {
+    total: resultados.length,
+    precioMediano: Math.round(calcularMediana(precios)),
+    precioM2Mediano: Math.round(calcularMediana(preciosM2)),
+    areaMediana: Math.round(calcularMediana(areas)),
+    precioMin: Math.round(Math.min(...precios)),
+    precioMax: Math.round(Math.max(...precios)),
+    precioM2Min: Math.round(Math.min(...preciosM2)),
+    precioM2Max: Math.round(Math.max(...preciosM2))
+  }
 
-  // Analizar comparables CON AJUSTES
-  const comparables = comparablesRaw
-    .slice(0, 15)
-    .map(prop => analizarComparable(prop, precioM2Cliente, datosPropiedad, precioM2Mercado))
-    .sort((a, b) => {
-      const relOrder = { alta: 0, media: 1, baja: 2 }
-      if (relOrder[a.relevancia] !== relOrder[b.relevancia]) {
-        return relOrder[a.relevancia] - relOrder[b.relevancia]
+  // Filtrar comparables directos (area similar ±30%)
+  const areaMin = datosPropiedad.area_m2 * 0.7
+  const areaMax = datosPropiedad.area_m2 * 1.3
+  let comparablesRaw = resultados.filter(r => r.area_m2 >= areaMin && r.area_m2 <= areaMax)
+
+  const advertencias: string[] = []
+
+  if (comparablesRaw.length < 3) {
+    advertencias.push(`Pocos comparables directos. Rango de area ampliado.`)
+    comparablesRaw = resultados.filter(r => r.area_m2 >= areaMin * 0.7 && r.area_m2 <= areaMax * 1.3)
+  }
+
+  // Filtrar por tipo edificio si es posible
+  const tipoUsuario = datosPropiedad.tipo_edificio
+  const filtradosPorTipo = comparablesRaw.filter(r => {
+    const tipoInferido = inferirTipoEdificio(r.amenities_confirmados)
+    return tipoInferido === tipoUsuario
+  })
+
+  if (filtradosPorTipo.length >= 3) {
+    comparablesRaw = filtradosPorTipo
+  } else {
+    advertencias.push(`Incluye edificios de diferente categoria por falta de comparables ${tipoUsuario}.`)
+  }
+
+  const preciosComp = comparablesRaw.map(r => r.precio_usd)
+  const preciosM2Comp = comparablesRaw.map(r => r.precio_m2)
+
+  // Percentiles
+  const percentiles: Percentiles = {
+    p25: Math.round(calcularPercentil(preciosComp, 25)),
+    p50: Math.round(calcularPercentil(preciosComp, 50)),
+    p75: Math.round(calcularPercentil(preciosComp, 75)),
+    p25M2: Math.round(calcularPercentil(preciosM2Comp, 25)),
+    p50M2: Math.round(calcularPercentil(preciosM2Comp, 50)),
+    p75M2: Math.round(calcularPercentil(preciosM2Comp, 75))
+  }
+
+  const clientePercentil = calcularPosicionPercentil(precioM2Cliente, preciosM2Comp)
+  const diferenciaPct = percentiles.p50 > 0
+    ? Math.round(((precioCliente - percentiles.p50) / percentiles.p50) * 100)
+    : 0
+  const posicionMercado = calcularPosicionMercado(precioM2Cliente, mercado.precioM2Mediano)
+
+  // Lista de comparables con ajustes
+  const comparables: Comparable[] = comparablesRaw
+    .slice(0, 10)
+    .sort((a, b) => a.precio_usd - b.precio_usd)
+    .map((r, i) => {
+      const tipoEdificio = inferirTipoEdificio(r.amenities_confirmados)
+      const { ajustes, precioAjustado } = calcularAjustes(r, datosPropiedad, mercado.precioM2Mediano)
+
+      const diffArea = Math.abs(r.area_m2 - datosPropiedad.area_m2)
+      const mismoTipo = tipoEdificio === datosPropiedad.tipo_edificio
+      let relevancia: 'alta' | 'media' | 'baja' = 'media'
+      if (diffArea <= datosPropiedad.area_m2 * 0.15 && mismoTipo) relevancia = 'alta'
+      else if (diffArea > datosPropiedad.area_m2 * 0.25 && !mismoTipo) relevancia = 'baja'
+
+      return {
+        posicion: i + 1,
+        proyecto: r.proyecto || 'Sin nombre',
+        zona: formatearZona(r.zona),
+        area: Math.round(r.area_m2),
+        precio: Math.round(r.precio_usd),
+        precioM2: Math.round(r.precio_m2),
+        dias: r.dias_en_mercado || 0,
+        estado: formatearEstado(r.estado_construccion),
+        tipoEdificio,
+        ajustes,
+        precioAjustado,
+        relevancia
       }
-      return Math.abs(a.diferenciaPct) - Math.abs(b.diferenciaPct)
     })
 
-  const diasList = comparablesRaw.map(r => r.dias_en_mercado || 0).filter(d => d > 0)
-  const diasPromedio = diasList.length > 0 ? diasList.reduce((a, b) => a + b, 0) / diasList.length : 45
+  // Stats por zona
+  const zonas = [...new Set(resultados.map(r => r.zona))]
+  const zonaStats: ZonaStats[] = zonas.map(zona => {
+    const props = resultados.filter(r => r.zona === zona)
+    const pm2 = props.map(p => p.precio_m2)
+    return {
+      zona: formatearZona(zona),
+      unidades: props.length,
+      precioM2Min: Math.round(Math.min(...pm2)),
+      precioM2Mediano: Math.round(calcularMediana(pm2)),
+      precioM2Max: Math.round(Math.max(...pm2))
+    }
+  }).sort((a, b) => b.unidades - a.unidades)
 
+  // Recomendacion
+  let recomendacion: RecomendacionPrecio
+  if (diferenciaPct > 20) {
+    recomendacion = {
+      tipo: 'bajar_fuerte',
+      precioSugerido: Math.round(percentiles.p50 * 1.05),
+      razon: `El precio del cliente esta ${diferenciaPct}% sobre el mercado. Recomendar ajuste a $${Math.round(percentiles.p50 * 1.05).toLocaleString()}.`
+    }
+  } else if (diferenciaPct > 10) {
+    recomendacion = {
+      tipo: 'bajar_leve',
+      precioSugerido: Math.round(percentiles.p50 * 1.02),
+      razon: `Precio ${diferenciaPct}% sobre mercado. Ajuste moderado mejoraria tiempo de venta.`
+    }
+  } else if (diferenciaPct < -10) {
+    recomendacion = {
+      tipo: 'subir',
+      precioSugerido: Math.round(percentiles.p50 * 0.98),
+      razon: `Precio ${Math.abs(diferenciaPct)}% bajo mercado. Podria subir sin perder competitividad.`
+    }
+  } else {
+    recomendacion = {
+      tipo: 'mantener',
+      precioSugerido: precioCliente,
+      razon: `Precio competitivo. Bien posicionado para el mercado actual.`
+    }
+  }
+
+  // Estimaciones de tiempo
   let diasEstimados = { min: 30, max: 60 }
   let prob30 = 50
   let prob60 = 75
@@ -458,37 +408,42 @@ function realizarAnalisis(
     diasEstimados = { min: 120, max: 200 }; prob30 = 10; prob60 = 25
   }
 
-  const argumentosCliente = generarArgumentosCliente(posicionMercado, recomendacion, comparables, diasPromedio)
-
   return {
-    precioCliente,
-    precioM2Cliente,
-    precioM2Mercado,
+    id: generarIdCMA(datosPropiedad.dormitorios, datosPropiedad.area_m2),
+    fecha: new Date().toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' }),
+    propiedadCliente: {
+      direccion: datosPropiedad.propiedad_direccion || `${formatearZona(datosPropiedad.zona)}, ${datosPropiedad.dormitorios}D`,
+      dormitorios: datosPropiedad.dormitorios,
+      area: datosPropiedad.area_m2,
+      zona: formatearZona(datosPropiedad.zona === 'todas' ? 'equipetrol' : datosPropiedad.zona),
+      estado: datosPropiedad.estado_entrega === 'entrega_inmediata' ? 'Entrega inmediata' : 'Preventa',
+      tipo: datosPropiedad.tipo_edificio,
+      parqueos: datosPropiedad.parqueos,
+      precio: precioCliente,
+      precioM2: Math.round(precioM2Cliente)
+    },
+    mercado,
+    percentiles,
+    clientePercentil,
+    diferenciaPct,
     posicionMercado,
-    percentil,
-    recomendacion,
     comparables,
-    totalMercado: resultados.length,
-    argumentosCliente,
+    zonaStats,
+    recomendacion,
     diasEstimados,
     probabilidadVenta30Dias: prob30,
     probabilidadVenta60Dias: prob60,
-    advertencias,
-    filtrosAplicados
+    advertencias
   }
 }
 
 // ============ COMPONENTE PRINCIPAL ============
 
 export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }: BrokerResultsProps) {
-  const [resultados, setResultados] = useState<UnidadReal[]>([])
-  const [analisis, setAnalisis] = useState<AnalisisBroker | null>(null)
+  const [analisis, setAnalisis] = useState<AnalisisCMA | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [mostrarTodos, setMostrarTodos] = useState(false)
-  const [modoExportar, setModoExportar] = useState(false)
-  const [comparableExpandido, setComparableExpandido] = useState<number | null>(null)
-  const printRef = useRef<HTMLDivElement>(null)
+  const [expandedComp, setExpandedComp] = useState<number | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -505,17 +460,15 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
           zonas_permitidas: zonasABuscar,
           dormitorios: datosPropiedad.dormitorios === 3 ? undefined : datosPropiedad.dormitorios,
           estado_entrega: datosPropiedad.estado_entrega,
-          limite: 50
+          limite: 100
         })
 
-        setResultados(data || [])
-
         if (data && data.length > 0) {
-          setAnalisis(realizarAnalisis(data, datosPropiedad))
+          setAnalisis(realizarAnalisisCMA(data, datosPropiedad))
         }
       } catch (err) {
-        console.error('Error buscando propiedades:', err)
-        setError('Error al generar CMA. Intenta de nuevo.')
+        console.error('Error:', err)
+        setError('Error al generar CMA.')
       } finally {
         setLoading(false)
       }
@@ -524,17 +477,9 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
     fetchData()
   }, [datosPropiedad])
 
-  const handlePrint = () => {
-    setModoExportar(true)
-    setTimeout(() => {
-      window.print()
-      setModoExportar(false)
-    }, 100)
-  }
-
   if (loading) {
     return (
-      <section className="py-16 bg-slate-50">
+      <section className="py-16 bg-white">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <div className="animate-spin w-8 h-8 border-2 border-brand-primary border-t-transparent rounded-full mx-auto mb-4" />
           <p className="text-slate-500">Generando CMA profesional...</p>
@@ -545,437 +490,451 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
 
   if (error || !analisis) {
     return (
-      <section className="py-16 bg-slate-50">
+      <section className="py-16 bg-white">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <p className="text-red-500 mb-4">{error || 'No pudimos generar el CMA.'}</p>
-          <button onClick={onBack} className="btn btn-secondary">Volver a intentar</button>
+          <p className="text-red-500 mb-4">{error || 'No se pudo generar el CMA.'}</p>
+          <button onClick={onBack} className="btn btn-secondary">Volver</button>
         </div>
       </section>
     )
   }
 
-  const posicionLabels = {
-    muy_bajo: { label: 'Muy bajo', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
-    bajo: { label: 'Competitivo-bajo', color: 'text-green-600', bg: 'bg-green-50 border-green-200' },
-    competitivo: { label: 'Competitivo', color: 'text-green-600', bg: 'bg-green-50 border-green-200' },
-    alto: { label: 'Alto', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
-    muy_alto: { label: 'Muy alto', color: 'text-red-600', bg: 'bg-red-50 border-red-200' }
-  }
+  const { propiedadCliente, mercado, percentiles, clientePercentil, diferenciaPct, posicionMercado, comparables, zonaStats, recomendacion, diasEstimados, probabilidadVenta30Dias, probabilidadVenta60Dias, advertencias } = analisis
 
-  const posicionStyle = posicionLabels[analisis.posicionMercado]
-  const comparablesVisibles = mostrarTodos ? analisis.comparables : analisis.comparables.slice(0, 6)
-
-  // Branding del broker
+  // Branding
   const brokerNombre = datosPropiedad.broker_nombre || 'Asesor Inmobiliario'
-  const brokerTelefono = datosPropiedad.broker_telefono || ''
-  const brokerEmpresa = datosPropiedad.broker_empresa || ''
+  const brokerTelefono = datosPropiedad.broker_telefono
+  const brokerEmpresa = datosPropiedad.broker_empresa
+  const brokerLogo = datosPropiedad.broker_logo
+  const brokerFoto = datosPropiedad.broker_foto
+  const propiedadFotos = datosPropiedad.propiedad_fotos || []
+
+  // Estilos posicion
+  const posicionStyles = {
+    muy_bajo: { label: 'Muy bajo', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
+    bajo: { label: 'Competitivo-bajo', color: 'text-green-700', bg: 'bg-green-50 border-green-200' },
+    competitivo: { label: 'Competitivo', color: 'text-green-700', bg: 'bg-green-50 border-green-200' },
+    alto: { label: 'Alto', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
+    muy_alto: { label: 'Muy alto', color: 'text-red-700', bg: 'bg-red-50 border-red-200' }
+  }
+  const posicionStyle = posicionStyles[posicionMercado]
+
+  // Calcular valor estimado basado en comparables ajustados
+  const preciosAjustados = comparables.map(c => c.precioAjustado)
+  const valorEstimadoMin = Math.round(calcularPercentil(preciosAjustados, 25))
+  const valorEstimadoMid = Math.round(calcularMediana(preciosAjustados))
+  const valorEstimadoMax = Math.round(calcularPercentil(preciosAjustados, 75))
 
   return (
-    <>
-      {/* Estilos para impresion */}
+    <section className="py-8 bg-slate-50 min-h-screen print:bg-white print:py-0">
+      <div className="max-w-4xl mx-auto px-6">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          {/* Header con navegacion (no imprimir) */}
+          <div className="flex justify-between items-center mb-6 print:hidden">
+            <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-slate-700 text-sm">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Editar datos
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium hover:bg-brand-primary-hover"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Imprimir CMA
+            </button>
+          </div>
+
+          {/* ============ PORTADA / HEADER ============ */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6 print:border-0">
+            {/* Branding header */}
+            <div className="flex justify-between items-start mb-6 pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-4">
+                {brokerLogo ? (
+                  <img src={brokerLogo} alt="Logo" className="w-16 h-16 object-contain" />
+                ) : (
+                  <div className="w-16 h-16 bg-brand-primary/10 rounded-lg flex items-center justify-center">
+                    <span className="text-2xl font-bold text-brand-primary">CMA</span>
+                  </div>
+                )}
+                <div>
+                  {brokerEmpresa && <div className="font-semibold text-slate-800">{brokerEmpresa}</div>}
+                  <div className="text-sm text-slate-600">{brokerNombre}</div>
+                  {brokerTelefono && <div className="text-sm text-slate-500">{brokerTelefono}</div>}
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {brokerFoto && (
+                  <img src={brokerFoto} alt={brokerNombre} className="w-12 h-12 rounded-full object-cover border-2 border-white shadow" />
+                )}
+                <div className="text-right text-sm text-slate-500">
+                  <div>Generado: {analisis.fecha}</div>
+                  <div className="font-mono text-xs">ID: {analisis.id}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Titulo */}
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold text-slate-800 mb-1">
+                ANALISIS COMPARATIVO DE MERCADO
+              </h1>
+              <p className="text-slate-600">{propiedadCliente.direccion}</p>
+            </div>
+
+            {/* Fotos de la propiedad */}
+            {propiedadFotos.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mb-6">
+                {propiedadFotos.slice(0, 3).map((foto, i) => (
+                  <div key={i} className={`aspect-video rounded-lg overflow-hidden ${i === 0 ? 'col-span-2 row-span-2' : ''}`}>
+                    <img src={foto} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Datos del sujeto */}
+            <div className="bg-slate-50 rounded-lg p-4">
+              <div className="text-xs font-semibold text-slate-500 mb-3">DATOS DEL SUJETO</div>
+              <div className="grid md:grid-cols-6 gap-4 text-center">
+                <div>
+                  <div className="text-xs text-slate-400">Zona</div>
+                  <div className="font-medium text-slate-700">{propiedadCliente.zona}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-400">Dorms</div>
+                  <div className="font-medium text-slate-700">{propiedadCliente.dormitorios}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-400">Area</div>
+                  <div className="font-medium text-slate-700">{propiedadCliente.area}m²</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-400">Tipo</div>
+                  <div className="font-medium text-slate-700 capitalize">{propiedadCliente.tipo}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-400">Parqueos</div>
+                  <div className="font-medium text-slate-700">{propiedadCliente.parqueos}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-400">Estado</div>
+                  <div className="font-medium text-slate-700">{propiedadCliente.estado}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ============ 1. RESUMEN EJECUTIVO ============ */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6 print:border-0">
+            <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <span className="w-6 h-6 bg-brand-primary text-white rounded-full flex items-center justify-center text-xs">1</span>
+              Resumen Ejecutivo
+            </h3>
+
+            <div className="grid md:grid-cols-3 gap-4 mb-6">
+              {/* Precio cliente */}
+              <div className={`rounded-lg p-4 border ${posicionStyle.bg}`}>
+                <div className="text-xs font-semibold text-slate-600 mb-2">Precio del Cliente</div>
+                <div className="text-2xl font-bold text-slate-800">${propiedadCliente.precio.toLocaleString()}</div>
+                <div className="text-sm text-slate-600">${propiedadCliente.precioM2.toLocaleString()}/m²</div>
+                <div className={`mt-2 inline-block px-2 py-1 rounded text-xs font-medium ${posicionStyle.color}`}>
+                  {posicionStyle.label} en mercado
+                </div>
+              </div>
+
+              {/* Valor estimado */}
+              <div className="bg-green-50 rounded-lg p-4 border border-green-100">
+                <div className="text-xs font-semibold text-green-700 mb-2">Valor Estimado (Ajustado)</div>
+                <div className="text-2xl font-bold text-slate-800">${valorEstimadoMid.toLocaleString()}</div>
+                <div className="text-sm text-slate-600">
+                  Rango: ${valorEstimadoMin.toLocaleString()} - ${valorEstimadoMax.toLocaleString()}
+                </div>
+                <div className="mt-2 text-xs text-green-600">
+                  Basado en {comparables.length} comparables ajustados
+                </div>
+              </div>
+
+              {/* Diferencia */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <div className="text-xs font-semibold text-slate-600 mb-2">Diferencia vs Mercado</div>
+                <div className={`text-2xl font-bold ${diferenciaPct > 5 ? 'text-amber-600' : diferenciaPct < -5 ? 'text-green-600' : 'text-slate-800'}`}>
+                  {diferenciaPct > 0 ? '+' : ''}{diferenciaPct}%
+                </div>
+                <div className="text-sm text-slate-600">Percentil {clientePercentil}</div>
+                <div className="mt-2 text-xs text-slate-500">
+                  {diferenciaPct > 10 ? 'Por encima del mercado' : diferenciaPct < -10 ? 'Por debajo del mercado' : 'Alineado con mercado'}
+                </div>
+              </div>
+            </div>
+
+            {/* Escala de precios */}
+            <div className="grid md:grid-cols-4 gap-3">
+              <div className="bg-slate-50 rounded-lg p-3 text-center">
+                <div className="text-xs text-slate-500 mb-1">P25 (Competitivo)</div>
+                <div className="font-bold text-slate-800">${percentiles.p25.toLocaleString()}</div>
+                <div className="text-xs text-slate-400">${percentiles.p25M2.toLocaleString()}/m²</div>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-3 text-center">
+                <div className="text-xs text-slate-500 mb-1">P50 (Mercado)</div>
+                <div className="font-bold text-slate-800">${percentiles.p50.toLocaleString()}</div>
+                <div className="text-xs text-slate-400">${percentiles.p50M2.toLocaleString()}/m²</div>
+              </div>
+              <div className={`rounded-lg p-3 text-center border-2 ${diferenciaPct > 10 ? 'border-amber-300 bg-amber-50' : diferenciaPct < -5 ? 'border-green-300 bg-green-50' : 'border-blue-300 bg-blue-50'}`}>
+                <div className="text-xs text-slate-500 mb-1">Precio Cliente</div>
+                <div className="font-bold text-slate-800">${propiedadCliente.precio.toLocaleString()}</div>
+                <div className="text-xs text-slate-400">${propiedadCliente.precioM2.toLocaleString()}/m²</div>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-3 text-center">
+                <div className="text-xs text-slate-500 mb-1">P75 (Premium)</div>
+                <div className="font-bold text-slate-800">${percentiles.p75.toLocaleString()}</div>
+                <div className="text-xs text-slate-400">${percentiles.p75M2.toLocaleString()}/m²</div>
+              </div>
+            </div>
+
+            {advertencias.length > 0 && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                <strong>Nota:</strong> {advertencias.join(' ')}
+              </div>
+            )}
+          </div>
+
+          {/* ============ 2. RECOMENDACION ============ */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6 print:border-0">
+            <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <span className="w-6 h-6 bg-brand-primary text-white rounded-full flex items-center justify-center text-xs">2</span>
+              Recomendacion de Precio
+            </h3>
+
+            <div className={`rounded-lg p-5 mb-4 ${
+              recomendacion.tipo === 'mantener' ? 'bg-green-50 border border-green-200' :
+              recomendacion.tipo === 'bajar_fuerte' ? 'bg-red-50 border border-red-200' :
+              'bg-amber-50 border border-amber-200'
+            }`}>
+              <div className="flex items-start gap-4">
+                <span className="text-2xl">
+                  {recomendacion.tipo === 'mantener' ? '✓' :
+                   recomendacion.tipo === 'bajar_fuerte' ? '⚠️' :
+                   recomendacion.tipo === 'bajar_leve' ? '↓' : '↑'}
+                </span>
+                <div>
+                  <h4 className={`font-bold text-lg mb-1 ${
+                    recomendacion.tipo === 'mantener' ? 'text-green-700' :
+                    recomendacion.tipo === 'bajar_fuerte' ? 'text-red-700' : 'text-amber-700'
+                  }`}>
+                    {recomendacion.tipo === 'mantener' ? 'Precio Bien Posicionado' :
+                     recomendacion.tipo === 'bajar_fuerte' ? 'Recomendar Ajuste Significativo' :
+                     recomendacion.tipo === 'bajar_leve' ? 'Sugerir Ajuste Moderado' :
+                     'Considerar Ajuste al Alza'}
+                  </h4>
+                  <p className="text-slate-700">{recomendacion.razon}</p>
+                  {recomendacion.tipo !== 'mantener' && (
+                    <div className="mt-3 p-3 bg-white rounded-lg">
+                      <span className="text-sm text-slate-600">Precio sugerido: </span>
+                      <span className="text-lg font-bold text-slate-800">${recomendacion.precioSugerido.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Proyecciones */}
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="bg-slate-50 rounded-lg p-4 text-center">
+                <div className="text-sm text-slate-500 mb-1">Tiempo estimado</div>
+                <div className="font-bold text-slate-800 text-lg">{diasEstimados.min}-{diasEstimados.max} dias</div>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-4 text-center">
+                <div className="text-sm text-slate-500 mb-1">Prob. venta 30d</div>
+                <div className={`font-bold text-lg ${probabilidadVenta30Dias >= 60 ? 'text-green-600' : probabilidadVenta30Dias >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
+                  {probabilidadVenta30Dias}%
+                </div>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-4 text-center">
+                <div className="text-sm text-slate-500 mb-1">Prob. venta 60d</div>
+                <div className={`font-bold text-lg ${probabilidadVenta60Dias >= 70 ? 'text-green-600' : probabilidadVenta60Dias >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                  {probabilidadVenta60Dias}%
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ============ 3. COMPARABLES ============ */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6 print:border-0">
+            <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <span className="w-6 h-6 bg-brand-primary text-white rounded-full flex items-center justify-center text-xs">3</span>
+              Comparables de Mercado
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              {comparables.length} propiedades similares analizadas. Click para ver ajustes.
+            </p>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left">
+                    <th className="py-2 px-2 font-medium text-slate-600">#</th>
+                    <th className="py-2 px-2 font-medium text-slate-600">Edificio</th>
+                    <th className="py-2 px-2 font-medium text-slate-600 text-right">m²</th>
+                    <th className="py-2 px-2 font-medium text-slate-600 text-right">Precio Lista</th>
+                    <th className="py-2 px-2 font-medium text-slate-600 text-right">Precio Ajustado</th>
+                    <th className="py-2 px-2 font-medium text-slate-600 text-right">$/m²</th>
+                    <th className="py-2 px-2 font-medium text-slate-600 text-center">Relevancia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparables.map((comp) => (
+                    <>
+                      <tr
+                        key={comp.posicion}
+                        className={`border-b border-slate-100 cursor-pointer hover:bg-slate-50 ${
+                          comp.relevancia === 'alta' ? 'bg-green-50/50' : ''
+                        }`}
+                        onClick={() => setExpandedComp(expandedComp === comp.posicion ? null : comp.posicion)}
+                      >
+                        <td className="py-2 px-2 text-slate-500">{comp.posicion}</td>
+                        <td className="py-2 px-2 text-slate-800">
+                          {comp.proyecto}
+                          <div className="text-xs text-slate-400">{comp.zona} · {comp.tipoEdificio}</div>
+                        </td>
+                        <td className="py-2 px-2 text-right text-slate-600">{comp.area}</td>
+                        <td className="py-2 px-2 text-right text-slate-600">${comp.precio.toLocaleString()}</td>
+                        <td className="py-2 px-2 text-right font-medium text-slate-800">${comp.precioAjustado.toLocaleString()}</td>
+                        <td className="py-2 px-2 text-right text-slate-600">${comp.precioM2.toLocaleString()}</td>
+                        <td className="py-2 px-2 text-center">
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            comp.relevancia === 'alta' ? 'bg-green-100 text-green-700' :
+                            comp.relevancia === 'media' ? 'bg-blue-100 text-blue-700' :
+                            'bg-slate-100 text-slate-600'
+                          }`}>
+                            {comp.relevancia}
+                          </span>
+                        </td>
+                      </tr>
+                      {expandedComp === comp.posicion && comp.ajustes.length > 0 && (
+                        <tr className="bg-slate-50">
+                          <td colSpan={7} className="p-4">
+                            <div className="text-xs font-medium text-slate-500 mb-2">AJUSTES APLICADOS</div>
+                            <div className="space-y-1">
+                              {comp.ajustes.map((aj, i) => (
+                                <div key={i} className="flex justify-between text-sm">
+                                  <span className="text-slate-600">{aj.concepto}: {aj.explicacion}</span>
+                                  <span className={aj.valor < 0 ? 'text-red-600' : 'text-green-600'}>
+                                    {aj.valor < 0 ? '' : '+'}${aj.valor.toLocaleString()}
+                                  </span>
+                                </div>
+                              ))}
+                              <div className="border-t border-slate-200 pt-2 mt-2 flex justify-between font-medium">
+                                <span>Precio ajustado:</span>
+                                <span>${comp.precioAjustado.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ============ 4. PRECIO POR ZONA ============ */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6 print:border-0">
+            <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <span className="w-6 h-6 bg-brand-primary text-white rounded-full flex items-center justify-center text-xs">4</span>
+              Referencia de Precio por Zona
+            </h3>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left">
+                    <th className="py-2 px-2 font-medium text-slate-600">Zona</th>
+                    <th className="py-2 px-2 font-medium text-slate-600 text-right">Unidades</th>
+                    <th className="py-2 px-2 font-medium text-slate-600 text-right">$/m² Min</th>
+                    <th className="py-2 px-2 font-medium text-slate-600 text-right">$/m² Mediano</th>
+                    <th className="py-2 px-2 font-medium text-slate-600 text-right">$/m² Max</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {zonaStats.map((z) => (
+                    <tr
+                      key={z.zona}
+                      className={`border-b border-slate-100 ${z.zona === propiedadCliente.zona ? 'bg-blue-50' : ''}`}
+                    >
+                      <td className="py-2 px-2 text-slate-800">
+                        {z.zona}
+                        {z.zona === propiedadCliente.zona && <span className="text-xs text-blue-600 ml-1">(sujeto)</span>}
+                      </td>
+                      <td className="py-2 px-2 text-right text-slate-600">{z.unidades}</td>
+                      <td className="py-2 px-2 text-right text-slate-600">${z.precioM2Min.toLocaleString()}</td>
+                      <td className="py-2 px-2 text-right text-slate-800 font-medium">${z.precioM2Mediano.toLocaleString()}</td>
+                      <td className="py-2 px-2 text-right text-slate-600">${z.precioM2Max.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ============ DISCLAIMER ============ */}
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
+            <h4 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Nota Profesional
+            </h4>
+            <ul className="text-sm text-amber-700 space-y-1">
+              <li>• Este CMA utiliza precios de lista, no precios de cierre reales.</li>
+              <li>• Los ajustes son estimaciones basadas en promedios del mercado de Equipetrol.</li>
+              <li>• Factores como estado interior, piso, vista y acabados pueden afectar el valor final.</li>
+              <li>• Se recomienda inspeccion presencial antes de confirmar el precio de lista.</li>
+            </ul>
+          </div>
+
+          {/* ============ FOOTER ============ */}
+          <div className="text-center py-6 border-t border-slate-200">
+            <div className="flex items-center justify-center gap-4 mb-3">
+              {brokerLogo && <img src={brokerLogo} alt="Logo" className="h-8 object-contain" />}
+              <div>
+                <div className="font-semibold text-slate-700">{brokerNombre}</div>
+                {brokerTelefono && <div className="text-sm text-slate-500">{brokerTelefono}</div>}
+              </div>
+            </div>
+            <div className="text-xs text-slate-400">
+              CMA generado con datos de {mercado.total} propiedades activas en el mercado.
+              <br />Informe ID: {analisis.id} | {analisis.fecha}
+            </div>
+          </div>
+
+          {/* CTA (no imprimir) */}
+          <div className="bg-gradient-to-br from-brand-dark to-brand-dark-card rounded-xl p-6 text-center text-white mt-6 print:hidden">
+            <h3 className="font-bold text-lg mb-2">¿Necesitas mas herramientas?</h3>
+            <p className="text-slate-400 text-sm mb-4">
+              Registrate para guardar CMAs, seguimiento de clientes y datos exclusivos.
+            </p>
+            <button onClick={onShowLeadForm} className="btn btn-primary">
+              Registrarme como Broker
+            </button>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Estilos de impresion */}
       <style jsx global>{`
         @media print {
-          body * { visibility: hidden; }
-          .print-area, .print-area * { visibility: visible; }
-          .print-area { position: absolute; left: 0; top: 0; width: 100%; }
-          .no-print { display: none !important; }
-          .print-break { page-break-before: always; }
+          .print\\:hidden { display: none !important; }
+          .print\\:bg-white { background: white !important; }
+          .print\\:py-0 { padding-top: 0 !important; padding-bottom: 0 !important; }
+          .print\\:border-0 { border: none !important; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
       `}</style>
-
-      <section className={`py-12 bg-slate-50 min-h-screen ${modoExportar ? 'print-area' : ''}`} ref={printRef}>
-        <div className="max-w-5xl mx-auto px-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            {/* Controles (no imprimir) */}
-            <div className="flex justify-between items-center mb-6 no-print">
-              <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-slate-700 text-sm">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Editar datos
-              </button>
-              <button
-                onClick={handlePrint}
-                className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium hover:bg-brand-primary-hover"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                </svg>
-                Imprimir / Exportar
-              </button>
-            </div>
-
-            {/* ============ HEADER CMA CON BRANDING ============ */}
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-6">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <div className="text-xs font-medium text-brand-primary uppercase tracking-wide mb-1">
-                    Analisis Comparativo de Mercado
-                  </div>
-                  <h2 className="font-display text-2xl font-bold text-brand-dark">
-                    CMA Profesional
-                  </h2>
-                </div>
-                {/* Branding broker */}
-                <div className="text-right">
-                  <div className="font-semibold text-brand-dark">{brokerNombre}</div>
-                  {brokerEmpresa && <div className="text-sm text-slate-500">{brokerEmpresa}</div>}
-                  {brokerTelefono && <div className="text-sm text-slate-500">{brokerTelefono}</div>}
-                  <div className="text-xs text-slate-400 mt-1">{new Date().toLocaleDateString('es-BO')}</div>
-                </div>
-              </div>
-
-              {/* Datos de la propiedad */}
-              <div className="bg-slate-50 rounded-xl p-4 mb-4">
-                <div className="text-xs text-slate-500 mb-2 font-medium">PROPIEDAD DEL CLIENTE</div>
-                <div className="grid md:grid-cols-5 gap-4 text-center">
-                  <div>
-                    <div className="text-xs text-slate-400">Zona</div>
-                    <div className="font-semibold text-slate-700 text-sm">
-                      {datosPropiedad.zona === 'todas' ? 'Equipetrol' : datosPropiedad.zona}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-400">Dorms</div>
-                    <div className="font-semibold text-slate-700 text-sm">{datosPropiedad.dormitorios}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-400">Area</div>
-                    <div className="font-semibold text-slate-700 text-sm">{datosPropiedad.area_m2}m²</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-400">Tipo</div>
-                    <div className="font-semibold text-slate-700 text-sm capitalize">{datosPropiedad.tipo_edificio}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-400">Parqueos</div>
-                    <div className="font-semibold text-slate-700 text-sm">{datosPropiedad.parqueos}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-xs text-slate-400 text-center">
-                {analisis.filtrosAplicados} | {analisis.totalMercado} propiedades en mercado
-              </div>
-
-              {analisis.advertencias.length > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
-                  <div className="flex items-start gap-2 text-sm text-blue-700">
-                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div>{analisis.advertencias.join(' ')}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* ============ POSICION DEL CLIENTE ============ */}
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-6">
-              <h3 className="font-display text-lg font-bold text-brand-dark mb-4">
-                Posicion del Precio del Cliente
-              </h3>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className={`rounded-xl border p-5 ${posicionStyle.bg}`}>
-                  <div className="text-center">
-                    <div className="text-sm text-slate-600 mb-2">Precio del cliente</div>
-                    <div className="text-3xl font-bold text-brand-dark mb-1">
-                      ${analisis.precioCliente.toLocaleString()}
-                    </div>
-                    <div className="text-sm text-slate-500 mb-4">
-                      ${Math.round(analisis.precioM2Cliente).toLocaleString()}/m²
-                    </div>
-                    <div className={`inline-block px-4 py-2 rounded-full font-semibold ${posicionStyle.color} bg-white`}>
-                      {posicionStyle.label}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 rounded-xl p-5">
-                  <div className="text-center">
-                    <div className="text-sm text-slate-600 mb-2">Promedio de mercado</div>
-                    <div className="text-3xl font-bold text-slate-700 mb-1">
-                      ${Math.round(analisis.precioM2Mercado * datosPropiedad.area_m2).toLocaleString()}
-                    </div>
-                    <div className="text-sm text-slate-500 mb-4">
-                      ${Math.round(analisis.precioM2Mercado).toLocaleString()}/m²
-                    </div>
-                    <div className="text-sm text-slate-600">
-                      Rango: ${analisis.recomendacion.precioMinimo.toLocaleString()} - ${analisis.recomendacion.precioMaximo.toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Barra percentil */}
-              <div className="mt-6 bg-slate-50 rounded-xl p-4">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-500">Percentil de mercado</span>
-                  <span className="font-semibold text-brand-dark">{analisis.percentil}%</span>
-                </div>
-                <div className="h-3 bg-slate-200 rounded-full overflow-hidden relative">
-                  <div className="h-full bg-brand-primary rounded-full" style={{ width: `${analisis.percentil}%` }} />
-                </div>
-                <div className="flex justify-between text-xs text-slate-400 mt-2">
-                  <span>Mas economico</span>
-                  <span>Mas caro</span>
-                </div>
-              </div>
-            </div>
-
-            {/* ============ RECOMENDACION ============ */}
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-6">
-              <h3 className="font-display text-lg font-bold text-brand-dark mb-4">
-                Recomendacion
-              </h3>
-
-              <div className={`rounded-xl p-6 mb-6 ${
-                analisis.recomendacion.tipo === 'mantener' ? 'bg-green-50 border border-green-200' :
-                analisis.recomendacion.tipo === 'bajar_fuerte' ? 'bg-red-50 border border-red-200' :
-                'bg-amber-50 border border-amber-200'
-              }`}>
-                <div className="flex items-start gap-4">
-                  <div className="text-3xl">
-                    {analisis.recomendacion.tipo === 'mantener' ? '✓' :
-                     analisis.recomendacion.tipo === 'bajar_fuerte' ? '⚠️' :
-                     analisis.recomendacion.tipo === 'bajar_leve' ? '↓' : '↑'}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className={`font-bold text-lg mb-2 ${
-                      analisis.recomendacion.tipo === 'mantener' ? 'text-green-700' :
-                      analisis.recomendacion.tipo === 'bajar_fuerte' ? 'text-red-700' : 'text-amber-700'
-                    }`}>
-                      {analisis.recomendacion.tipo === 'mantener' ? 'Mantener precio actual' :
-                       analisis.recomendacion.tipo === 'bajar_fuerte' ? 'Recomendar ajuste significativo' :
-                       analisis.recomendacion.tipo === 'bajar_leve' ? 'Sugerir ajuste moderado' :
-                       'Considerar ajuste al alza'}
-                    </h4>
-                    <p className="text-slate-700 mb-4">{analisis.recomendacion.razon}</p>
-
-                    {analisis.recomendacion.tipo !== 'mantener' && (
-                      <div className="bg-white rounded-lg p-4">
-                        <div className="text-sm text-slate-600 mb-1">Precio sugerido</div>
-                        <div className="text-2xl font-bold text-brand-dark">
-                          ${analisis.recomendacion.precioSugerido.toLocaleString()}
-                        </div>
-                        <div className="text-sm text-slate-500">
-                          {analisis.recomendacion.precioSugerido > analisis.precioCliente
-                            ? `+$${(analisis.recomendacion.precioSugerido - analisis.precioCliente).toLocaleString()}`
-                            : `-$${(analisis.precioCliente - analisis.recomendacion.precioSugerido).toLocaleString()}`
-                          } vs precio cliente
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Proyeccion */}
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="bg-slate-50 rounded-xl p-4 text-center">
-                  <div className="text-sm text-slate-500 mb-1">Tiempo estimado</div>
-                  <div className="font-bold text-brand-dark text-lg">
-                    {analisis.diasEstimados.min}-{analisis.diasEstimados.max} dias
-                  </div>
-                </div>
-                <div className="bg-slate-50 rounded-xl p-4 text-center">
-                  <div className="text-sm text-slate-500 mb-1">Prob. venta 30d</div>
-                  <div className={`font-bold text-lg ${
-                    analisis.probabilidadVenta30Dias >= 60 ? 'text-green-600' :
-                    analisis.probabilidadVenta30Dias >= 40 ? 'text-amber-600' : 'text-red-600'
-                  }`}>
-                    {analisis.probabilidadVenta30Dias}%
-                  </div>
-                </div>
-                <div className="bg-slate-50 rounded-xl p-4 text-center">
-                  <div className="text-sm text-slate-500 mb-1">Prob. venta 60d</div>
-                  <div className={`font-bold text-lg ${
-                    analisis.probabilidadVenta60Dias >= 70 ? 'text-green-600' :
-                    analisis.probabilidadVenta60Dias >= 50 ? 'text-amber-600' : 'text-red-600'
-                  }`}>
-                    {analisis.probabilidadVenta60Dias}%
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ============ COMPARABLES CON AJUSTES ============ */}
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-6 print-break">
-              <h3 className="font-display text-lg font-bold text-brand-dark mb-2">
-                Comparables de Mercado
-              </h3>
-              <p className="text-sm text-slate-500 mb-6">
-                Click en un comparable para ver ajustes detallados
-              </p>
-
-              <div className="space-y-3">
-                {comparablesVisibles.map((comp) => (
-                  <div key={comp.propiedad.id} className="border border-slate-200 rounded-xl overflow-hidden">
-                    {/* Row principal */}
-                    <div
-                      className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors ${
-                        comp.relevancia === 'alta' ? 'bg-green-50/50' : ''
-                      }`}
-                      onClick={() => setComparableExpandido(
-                        comparableExpandido === comp.propiedad.id ? null : comp.propiedad.id
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-slate-700">{comp.propiedad.proyecto}</span>
-                            {comp.relevancia === 'alta' && (
-                              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
-                                Comparable directo
-                              </span>
-                            )}
-                            <span className={`text-xs px-2 py-0.5 rounded ${
-                              comp.tipoEdificio === 'premium' ? 'bg-purple-100 text-purple-700' :
-                              comp.tipoEdificio === 'standard' ? 'bg-blue-100 text-blue-700' :
-                              'bg-slate-100 text-slate-600'
-                            }`}>
-                              {comp.tipoEdificio}
-                            </span>
-                          </div>
-                          <div className="text-sm text-slate-500 mt-1">
-                            {Math.round(comp.propiedad.area_m2)}m² • {comp.propiedad.zona}
-                            {comp.diasEnMercado > 0 && ` • ${comp.diasEnMercado}d publicado`}
-                          </div>
-                        </div>
-
-                        <div className="text-right flex items-center gap-4">
-                          <div>
-                            <div className="font-bold text-slate-700">
-                              ${comp.propiedad.precio_usd.toLocaleString()}
-                            </div>
-                            <div className="text-xs text-slate-500">
-                              ${Math.round(comp.propiedad.precio_m2).toLocaleString()}/m²
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <span className={`px-2 py-1 rounded text-sm font-medium ${
-                              comp.diferenciaPct < -3 ? 'bg-red-100 text-red-700' :
-                              comp.diferenciaPct > 3 ? 'bg-green-100 text-green-700' :
-                              'bg-slate-100 text-slate-600'
-                            }`}>
-                              {comp.diferenciaPct > 0 ? '+' : ''}{comp.diferenciaPct.toFixed(0)}%
-                            </span>
-                          </div>
-                          <svg className={`w-5 h-5 text-slate-400 transition-transform ${
-                            comparableExpandido === comp.propiedad.id ? 'rotate-180' : ''
-                          }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Ajustes expandidos */}
-                    {comparableExpandido === comp.propiedad.id && comp.ajustes.length > 0 && (
-                      <div className="border-t border-slate-200 bg-slate-50 p-4">
-                        <div className="text-xs font-medium text-slate-500 mb-3">AJUSTES POR DIFERENCIAS</div>
-                        <div className="space-y-2">
-                          {comp.ajustes.map((ajuste, i) => (
-                            <div key={i} className="flex justify-between items-center text-sm">
-                              <div>
-                                <span className="font-medium text-slate-700">{ajuste.concepto}:</span>
-                                <span className="text-slate-500 ml-2">{ajuste.explicacion}</span>
-                              </div>
-                              <span className={`font-semibold ${ajuste.valor < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                {ajuste.valor < 0 ? '' : '+'}${ajuste.valor.toLocaleString()}
-                              </span>
-                            </div>
-                          ))}
-                          <div className="border-t border-slate-300 pt-2 mt-2 flex justify-between items-center">
-                            <span className="font-semibold text-slate-700">Precio ajustado</span>
-                            <span className="font-bold text-brand-dark text-lg">
-                              ${comp.precioAjustado.toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Sin ajustes */}
-                    {comparableExpandido === comp.propiedad.id && comp.ajustes.length === 0 && (
-                      <div className="border-t border-slate-200 bg-slate-50 p-4">
-                        <div className="text-sm text-slate-500 text-center">
-                          Sin ajustes significativos - comparable muy similar
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {analisis.comparables.length > 6 && (
-                <button
-                  onClick={() => setMostrarTodos(!mostrarTodos)}
-                  className="w-full mt-4 py-2 text-sm text-brand-primary hover:text-brand-primary-hover font-medium no-print"
-                >
-                  {mostrarTodos ? 'Ver menos' : `Ver ${analisis.comparables.length - 6} comparables mas`}
-                </button>
-              )}
-            </div>
-
-            {/* ============ ARGUMENTOS PARA CLIENTE ============ */}
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 md:p-8 mb-6">
-              <h3 className="font-display text-lg font-bold text-brand-dark mb-2">
-                Guia para la Conversacion
-              </h3>
-              <p className="text-sm text-slate-500 mb-6">
-                Argumentos para presentar al cliente
-              </p>
-
-              <div className="space-y-4">
-                {analisis.argumentosCliente.map((arg, i) => (
-                  <div key={i} className="border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
-                      <div className="font-medium text-slate-700">{arg.situacion}</div>
-                    </div>
-                    <div className="p-4">
-                      <p className="text-slate-600 mb-2">{arg.argumento}</p>
-                      <div className="text-sm text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
-                        <strong>Dato:</strong> {arg.dato}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* ============ DISCLAIMER ============ */}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-8">
-              <h4 className="font-semibold text-amber-800 mb-2 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                Nota Profesional
-              </h4>
-              <ul className="text-sm text-amber-700 space-y-1">
-                <li>• Este CMA usa precios de lista, no precios de cierre reales</li>
-                <li>• Los ajustes son estimaciones basadas en promedios de mercado</li>
-                <li>• Factores como estado, piso y vista pueden afectar el valor</li>
-                <li>• Recomendamos inspeccion presencial antes de confirmar precio</li>
-              </ul>
-            </div>
-
-            {/* ============ CTA (no imprimir) ============ */}
-            <div className="bg-gradient-to-br from-brand-dark to-brand-dark-card rounded-2xl p-8 text-center text-white no-print">
-              <h3 className="font-display text-2xl font-bold mb-3">
-                ¿Te resulto util este CMA?
-              </h3>
-              <p className="text-slate-400 mb-6">
-                Registrate para guardar CMAs, dar seguimiento a clientes y acceder a datos exclusivos.
-              </p>
-              <button onClick={onShowLeadForm} className="btn btn-primary px-8 py-4 text-base">
-                Registrarme como Broker
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-    </>
+    </section>
   )
 }
