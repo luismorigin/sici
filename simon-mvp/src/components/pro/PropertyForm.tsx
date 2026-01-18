@@ -34,6 +34,40 @@ const ESTADO_ENTREGA = [
   { value: 'no_importa', label: 'Todo el mercado', desc: 'Incluir ambos' }
 ]
 
+// Amenities de edificio (basado en análisis de BD - frecuencia >10%)
+const AMENITIES_EDIFICIO = [
+  { id: 'piscina', label: 'Piscina', frecuencia: 55 },
+  { id: 'seguridad_24h', label: 'Seguridad 24/7', frecuencia: 50 },
+  { id: 'churrasquera', label: 'BBQ/Churrasquera', frecuencia: 42 },
+  { id: 'terraza', label: 'Terraza/Balcon', frecuencia: 40 },
+  { id: 'sauna_jacuzzi', label: 'Sauna/Jacuzzi', frecuencia: 30 },
+  { id: 'area_social', label: 'Area Social', frecuencia: 26 },
+  { id: 'ascensor', label: 'Ascensor', frecuencia: 25 },
+  { id: 'gimnasio', label: 'Gimnasio', frecuencia: 24 },
+  { id: 'estacionamiento_visitas', label: 'Estac. Visitas', frecuencia: 15 },
+  { id: 'pet_friendly', label: 'Pet Friendly', frecuencia: 12 },
+  { id: 'recepcion', label: 'Recepcion/Lobby', frecuencia: 11 },
+  { id: 'salon_eventos', label: 'Salon de Eventos', frecuencia: 10 }
+]
+
+// Equipamiento de unidad (basado en análisis de BD)
+const EQUIPAMIENTO_UNIDAD = [
+  { id: 'aire_acondicionado', label: 'Aire Acondicionado', frecuencia: 60 },
+  { id: 'cocina_equipada', label: 'Cocina Equipada', frecuencia: 32 },
+  { id: 'roperos_empotrados', label: 'Roperos Empotrados', frecuencia: 21 },
+  { id: 'lavadora', label: 'Lavadora', frecuencia: 15 },
+  { id: 'amoblado', label: 'Amoblado Completo', frecuencia: 12 },
+  { id: 'calefon', label: 'Calefon/Termotanque', frecuencia: 10 }
+]
+
+// Extras que afectan valor (ajustes manuales)
+const EXTRAS_VALOR = [
+  { id: 'vista_privilegiada', label: 'Vista Privilegiada', ajuste: '+5%' },
+  { id: 'piso_alto', label: 'Piso Alto (>5)', ajuste: '+3%' },
+  { id: 'esquinero', label: 'Esquinero', ajuste: '+2%' },
+  { id: 'remodelado', label: 'Remodelado', ajuste: '+5%' }
+]
+
 export type EstadoEntrega = 'entrega_inmediata' | 'solo_preventa' | 'no_importa'
 
 export interface DatosPropiedad {
@@ -54,6 +88,10 @@ export interface DatosPropiedad {
   broker_foto?: string        // Data URL de la foto del broker
   propiedad_fotos?: string[]  // Data URLs de fotos de la propiedad
   propiedad_direccion?: string // Direccion de la propiedad (para CMA)
+  // CMA Avanzado (opcional)
+  amenities_edificio?: string[]   // IDs de amenities seleccionados
+  equipamiento_unidad?: string[]  // IDs de equipamiento seleccionado
+  extras_valor?: string[]         // IDs de extras que afectan valor
 }
 
 interface PropertyFormProps {
@@ -79,6 +117,11 @@ export default function PropertyForm({ perfil, onSubmit, onBack }: PropertyFormP
   const [brokerFoto, setBrokerFoto] = useState<string | null>(null)
   const [propiedadFotos, setPropiedadFotos] = useState<string[]>([])
   const [propiedadDireccion, setPropiedadDireccion] = useState('')
+  // CMA Avanzado
+  const [modoAvanzado, setModoAvanzado] = useState(false)
+  const [amenitiesEdificio, setAmenitiesEdificio] = useState<string[]>([])
+  const [equipamientoUnidad, setEquipamientoUnidad] = useState<string[]>([])
+  const [extrasValor, setExtrasValor] = useState<string[]>([])
 
   // Handlers para uploads
   const handleImageUpload = (
@@ -119,6 +162,25 @@ export default function PropertyForm({ perfil, onSubmit, onBack }: PropertyFormP
 
   const removeFoto = (index: number) => {
     setPropiedadFotos(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // Toggles para checkboxes
+  const toggleAmenity = (id: string) => {
+    setAmenitiesEdificio(prev =>
+      prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
+    )
+  }
+
+  const toggleEquipamiento = (id: string) => {
+    setEquipamientoUnidad(prev =>
+      prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
+    )
+  }
+
+  const toggleExtra = (id: string) => {
+    setExtrasValor(prev =>
+      prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
+    )
   }
 
   // Labels según perfil
@@ -170,7 +232,11 @@ export default function PropertyForm({ perfil, onSubmit, onBack }: PropertyFormP
       broker_logo: brokerLogo || undefined,
       broker_foto: brokerFoto || undefined,
       propiedad_fotos: propiedadFotos.length > 0 ? propiedadFotos : undefined,
-      propiedad_direccion: propiedadDireccion || undefined
+      propiedad_direccion: propiedadDireccion || undefined,
+      // CMA Avanzado
+      amenities_edificio: amenitiesEdificio.length > 0 ? amenitiesEdificio : undefined,
+      equipamiento_unidad: equipamientoUnidad.length > 0 ? equipamientoUnidad : undefined,
+      extras_valor: extrasValor.length > 0 ? extrasValor : undefined
     })
   }
 
@@ -523,6 +589,155 @@ export default function PropertyForm({ perfil, onSubmit, onBack }: PropertyFormP
                   </div>
                 </div>
               </>
+            )}
+
+            {/* CMA Avanzado (solo broker) */}
+            {perfil === 'broker' && (
+              <div className="mb-6">
+                {/* Toggle modo avanzado */}
+                <button
+                  type="button"
+                  onClick={() => setModoAvanzado(!modoAvanzado)}
+                  className="flex items-center gap-3 w-full p-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl border border-slate-200 hover:border-brand-primary transition-colors"
+                >
+                  <div className={`w-12 h-6 rounded-full transition-colors relative ${modoAvanzado ? 'bg-brand-primary' : 'bg-slate-300'}`}>
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${modoAvanzado ? 'left-7' : 'left-1'}`} />
+                  </div>
+                  <div className="text-left flex-1">
+                    <div className="font-semibold text-slate-700">CMA Avanzado</div>
+                    <div className="text-xs text-slate-500">Detallar amenities y equipamiento para mejor comparacion</div>
+                  </div>
+                  <svg className={`w-5 h-5 text-slate-400 transition-transform ${modoAvanzado ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Campos avanzados */}
+                {modoAvanzado && (
+                  <div className="mt-4 space-y-5 p-4 bg-white rounded-xl border border-slate-200">
+                    {/* Amenities del edificio */}
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">
+                        Amenities del Edificio
+                      </label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {AMENITIES_EDIFICIO.map(amenity => (
+                          <button
+                            key={amenity.id}
+                            type="button"
+                            onClick={() => toggleAmenity(amenity.id)}
+                            className={`flex items-center gap-2 p-2.5 rounded-lg border text-left text-sm transition-all ${
+                              amenitiesEdificio.includes(amenity.id)
+                                ? 'border-brand-primary bg-blue-50 text-brand-primary'
+                                : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                              amenitiesEdificio.includes(amenity.id)
+                                ? 'border-brand-primary bg-brand-primary'
+                                : 'border-slate-300'
+                            }`}>
+                              {amenitiesEdificio.includes(amenity.id) && (
+                                <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </div>
+                            <span>{amenity.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-slate-400 mt-2">
+                        {amenitiesEdificio.length} seleccionados
+                      </p>
+                    </div>
+
+                    {/* Equipamiento de la unidad */}
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">
+                        Equipamiento de la Unidad
+                      </label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {EQUIPAMIENTO_UNIDAD.map(equip => (
+                          <button
+                            key={equip.id}
+                            type="button"
+                            onClick={() => toggleEquipamiento(equip.id)}
+                            className={`flex items-center gap-2 p-2.5 rounded-lg border text-left text-sm transition-all ${
+                              equipamientoUnidad.includes(equip.id)
+                                ? 'border-brand-primary bg-blue-50 text-brand-primary'
+                                : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                              equipamientoUnidad.includes(equip.id)
+                                ? 'border-brand-primary bg-brand-primary'
+                                : 'border-slate-300'
+                            }`}>
+                              {equipamientoUnidad.includes(equip.id) && (
+                                <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </div>
+                            <span>{equip.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-slate-400 mt-2">
+                        {equipamientoUnidad.length} seleccionados
+                      </p>
+                    </div>
+
+                    {/* Extras que afectan valor */}
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">
+                        Extras que Afectan Valor
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {EXTRAS_VALOR.map(extra => (
+                          <button
+                            key={extra.id}
+                            type="button"
+                            onClick={() => toggleExtra(extra.id)}
+                            className={`flex items-center justify-between p-2.5 rounded-lg border text-sm transition-all ${
+                              extrasValor.includes(extra.id)
+                                ? 'border-green-500 bg-green-50 text-green-700'
+                                : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                extrasValor.includes(extra.id)
+                                  ? 'border-green-500 bg-green-500'
+                                  : 'border-slate-300'
+                              }`}>
+                                {extrasValor.includes(extra.id) && (
+                                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span>{extra.label}</span>
+                            </div>
+                            <span className={`text-xs font-medium ${extrasValor.includes(extra.id) ? 'text-green-600' : 'text-slate-400'}`}>
+                              {extra.ajuste}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                      {extrasValor.length > 0 && (
+                        <p className="text-xs text-green-600 mt-2 font-medium">
+                          Ajuste total estimado: +{extrasValor.reduce((acc, id) => {
+                            const extra = EXTRAS_VALOR.find(e => e.id === id)
+                            return acc + parseInt(extra?.ajuste.replace(/[^0-9]/g, '') || '0')
+                          }, 0)}%
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Precio referencia */}

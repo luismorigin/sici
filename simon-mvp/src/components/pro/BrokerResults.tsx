@@ -509,6 +509,29 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
   const brokerFoto = datosPropiedad.broker_foto
   const propiedadFotos = datosPropiedad.propiedad_fotos || []
 
+  // CMA Avanzado
+  const amenitiesSeleccionados = datosPropiedad.amenities_edificio || []
+  const equipamientoSeleccionado = datosPropiedad.equipamiento_unidad || []
+  const extrasSeleccionados = datosPropiedad.extras_valor || []
+  const tieneInfoAvanzada = amenitiesSeleccionados.length > 0 || equipamientoSeleccionado.length > 0
+
+  // Labels para mostrar
+  const AMENITY_LABELS: Record<string, string> = {
+    piscina: 'Piscina', seguridad_24h: 'Seguridad 24/7', churrasquera: 'BBQ/Churrasquera',
+    terraza: 'Terraza/Balcon', sauna_jacuzzi: 'Sauna/Jacuzzi', area_social: 'Area Social',
+    ascensor: 'Ascensor', gimnasio: 'Gimnasio', estacionamiento_visitas: 'Estac. Visitas',
+    pet_friendly: 'Pet Friendly', recepcion: 'Recepcion/Lobby', salon_eventos: 'Salon de Eventos'
+  }
+  const EQUIP_LABELS: Record<string, string> = {
+    aire_acondicionado: 'Aire Acondicionado', cocina_equipada: 'Cocina Equipada',
+    roperos_empotrados: 'Roperos Empotrados', lavadora: 'Lavadora',
+    amoblado: 'Amoblado Completo', calefon: 'Calefon/Termotanque'
+  }
+  const EXTRA_LABELS: Record<string, string> = {
+    vista_privilegiada: 'Vista Privilegiada', piso_alto: 'Piso Alto (>5)',
+    esquinero: 'Esquinero', remodelado: 'Remodelado'
+  }
+
   // Estilos posicion
   const posicionStyles = {
     muy_bajo: { label: 'Muy bajo', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
@@ -625,6 +648,52 @@ export default function BrokerResults({ datosPropiedad, onBack, onShowLeadForm }
                   <div className="font-medium text-slate-700">{propiedadCliente.estado}</div>
                 </div>
               </div>
+
+              {/* Amenities y Equipamiento (si CMA avanzado) */}
+              {tieneInfoAvanzada && (
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {amenitiesSeleccionados.length > 0 && (
+                      <div>
+                        <div className="text-xs text-slate-400 mb-2">Amenities del Edificio</div>
+                        <div className="flex flex-wrap gap-1">
+                          {amenitiesSeleccionados.map(id => (
+                            <span key={id} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                              {AMENITY_LABELS[id] || id}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {equipamientoSeleccionado.length > 0 && (
+                      <div>
+                        <div className="text-xs text-slate-400 mb-2">Equipamiento de la Unidad</div>
+                        <div className="flex flex-wrap gap-1">
+                          {equipamientoSeleccionado.map(id => (
+                            <span key={id} className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
+                              {EQUIP_LABELS[id] || id}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Extras que afectan valor */}
+              {extrasSeleccionados.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <div className="text-xs text-slate-400 mb-2">Extras que Afectan Valor</div>
+                  <div className="flex flex-wrap gap-1">
+                    {extrasSeleccionados.map(id => (
+                      <span key={id} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                        {EXTRA_LABELS[id] || id}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
