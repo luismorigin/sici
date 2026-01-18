@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 
 export default function ProHero() {
   return (
-    <section className="pt-32 pb-16 bg-gradient-to-b from-brand-dark to-brand-dark-card">
+    <section className="pt-32 pb-16 bg-gradient-to-b from-brand-dark to-brand-dark-card print:hidden">
       <div className="max-w-4xl mx-auto px-6 text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
