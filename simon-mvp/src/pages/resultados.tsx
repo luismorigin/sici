@@ -519,7 +519,7 @@ export default function ResultadosPage() {
 
   // Propiedades seleccionadas para informe premium personalizado
   const [selectedProps, setSelectedProps] = useState<Set<number>>(new Set())
-  const MAX_SELECTED = 5
+  const MAX_SELECTED = 10
 
   const toggleSelected = (propId: number) => {
     setSelectedProps(prev => {
@@ -1364,10 +1364,10 @@ ${top3Texto}
                             {/* Botón guardar - sobre la foto */}
                             <button
                               onClick={(e) => { e.stopPropagation(); toggleSelected(prop.id) }}
-                              className={`absolute top-3 left-3 w-10 h-10 rounded-full flex items-center justify-center text-xl shadow transition-all ${
+                              className={`absolute top-3 left-3 w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all ${
                                 isSelected(prop.id)
-                                  ? 'bg-red-500 text-white'
-                                  : 'bg-white/90 text-gray-400 hover:text-red-500'
+                                  ? 'bg-red-500 text-white shadow-lg'
+                                  : 'bg-black/30 backdrop-blur-sm text-white/80 hover:bg-black/50 hover:text-white'
                               }`}
                             >
                               {isSelected(prop.id) ? '❤️' : '🤍'}
@@ -1939,8 +1939,8 @@ ${top3Texto}
                                   onClick={(e) => { e.stopPropagation(); toggleSelected(prop.id) }}
                                   className={`w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0 transition-all ${
                                     isSelected(prop.id)
-                                      ? 'bg-red-100 text-red-500'
-                                      : 'bg-gray-100 text-gray-400 hover:text-red-500'
+                                      ? 'bg-red-500 text-white'
+                                      : 'bg-transparent text-gray-300 hover:text-red-400'
                                   }`}
                                 >
                                   {isSelected(prop.id) ? '❤️' : '🤍'}
@@ -2424,10 +2424,10 @@ ${top3Texto}
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900 text-sm">
-                    {selectedProps.size} {selectedProps.size === 1 ? 'propiedad guardada' : 'propiedades guardadas'}
+                    {selectedProps.size} {selectedProps.size === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {selectedProps.size < 3 ? `Elegí ${3 - selectedProps.size} más para comparar` : 'Listas para comparar'}
+                    {selectedProps.size < MAX_SELECTED ? `Podés elegir hasta ${MAX_SELECTED}` : 'Máximo alcanzado'}
                   </p>
                 </div>
               </div>

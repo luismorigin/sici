@@ -14,7 +14,10 @@
       "Bash(mkdir:*)",
       "Bash(npm install)",
       "Bash(npm run dev:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }
