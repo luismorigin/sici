@@ -1850,8 +1850,11 @@ ${top3Texto}
                     return (
                       <div key={prop.id} className="bg-white rounded-lg shadow p-4">
                         <div className="flex items-start gap-4">
-                          {/* Carrusel de fotos - alternativas */}
-                          <div className="w-24 h-20 bg-gray-200 rounded flex-shrink-0 relative group">
+                          {/* Carrusel de fotos - alternativas (click para fullscreen) */}
+                          <div
+                            className="w-24 h-20 bg-gray-200 rounded flex-shrink-0 relative group cursor-pointer"
+                            onClick={() => openLightbox(prop)}
+                          >
                             {prop.fotos_urls && prop.fotos_urls.length > 0 ? (
                               <>
                                 <img
@@ -1859,6 +1862,13 @@ ${top3Texto}
                                   alt={`${prop.proyecto} - Foto ${getPhotoIndex(prop.id) + 1}`}
                                   className="w-full h-full object-cover rounded"
                                 />
+
+                                {/* Contador de fotos */}
+                                {prop.fotos_urls.length > 1 && (
+                                  <div className="absolute bottom-0.5 right-0.5 bg-black/60 text-white text-[10px] px-1 rounded">
+                                    {prop.fotos_urls.length} 📷
+                                  </div>
+                                )}
 
                                 {/* Navegación - solo si hay más de 1 foto */}
                                 {prop.fotos_urls.length > 1 && (
@@ -1876,11 +1886,6 @@ ${top3Texto}
                                     >
                                       ›
                                     </button>
-
-                                    {/* Contador compacto */}
-                                    <div className="absolute bottom-0.5 right-0.5 bg-black/50 text-white text-[10px] px-1 rounded">
-                                      {getPhotoIndex(prop.id) + 1}/{prop.fotos_urls.length}
-                                    </div>
                                   </>
                                 )}
                               </>
