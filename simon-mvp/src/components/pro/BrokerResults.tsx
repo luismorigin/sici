@@ -391,7 +391,7 @@ function realizarAnalisis(
     precioM2Promedio: Math.round(calcularPromedio(preciosM2Comp)),
     diasMin: diasComp.length > 0 ? Math.min(...diasComp) : 0,
     diasMax: diasComp.length > 0 ? Math.max(...diasComp) : 0,
-    diasPromedio: Math.round(calcularPromedio(diasComp)) || 30
+    diasPromedio: diasComp.length > 0 ? Math.round(calcularPromedio(diasComp)) : 0
   }
 
   // Rango estimado basado en comparables
