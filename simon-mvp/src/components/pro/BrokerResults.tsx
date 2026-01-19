@@ -239,26 +239,40 @@ function realizarAnalisis(
   const precioCliente = datosPropiedad.precio_referencia
   const precioM2Cliente = precioCliente / datosPropiedad.area_m2
 
-  // Estadisticas generales
-  const precios = resultados.map(r => r.precio_usd)
-  const preciosM2 = resultados.map(r => r.precio_m2)
-  const dias = resultados.map(r => r.dias_en_mercado || 30).filter(d => d > 0)
+  // ============ FILTROS ESTRICTOS CMA ============
+  // ±10% área + mismos dormitorios = comparables reales
+  const areaMin = datosPropiedad.area_m2 * 0.9
+  const areaMax = datosPropiedad.area_m2 * 1.1
+
+  const resultadosFiltrados = resultados.filter(r =>
+    r.area_m2 >= areaMin &&
+    r.area_m2 <= areaMax &&
+    r.dormitorios === datosPropiedad.dormitorios
+  )
+
+  // Si no hay suficientes comparables con ±10%, no generar CMA
+  if (resultadosFiltrados.length === 0) return null
+
+  // Estadisticas generales (sobre comparables reales)
+  const precios = resultadosFiltrados.map(r => r.precio_usd)
+  const preciosM2 = resultadosFiltrados.map(r => r.precio_m2)
+  const dias = resultadosFiltrados.map(r => r.dias_en_mercado || 30).filter(d => d > 0)
 
   const p50 = calcularPercentil(precios, 50)
   const p50M2 = calcularPercentil(preciosM2, 50)
 
-  // Stats por tipo edificio (DATA REAL)
-  const statsPorTipo = calcularStatsPorTipo(resultados)
+  // Stats por tipo edificio (DATA REAL - solo comparables)
+  const statsPorTipo = calcularStatsPorTipo(resultadosFiltrados)
 
   // Dias en mercado
   const diasPromedio = Math.round(calcularPromedio(dias))
-  const propsBajoMediana = resultados.filter(r => r.precio_m2 < p50M2)
-  const propsSobreMediana = resultados.filter(r => r.precio_m2 >= p50M2)
+  const propsBajoMediana = resultadosFiltrados.filter(r => r.precio_m2 < p50M2)
+  const propsSobreMediana = resultadosFiltrados.filter(r => r.precio_m2 >= p50M2)
   const diasBajo = Math.round(calcularPromedio(propsBajoMediana.map(r => r.dias_en_mercado || 30)))
   const diasSobre = Math.round(calcularPromedio(propsSobreMediana.map(r => r.dias_en_mercado || 30)))
 
   const mercado: AnalisisMercado = {
-    totalPropiedades: resultados.length,
+    totalPropiedades: resultadosFiltrados.length,
     rangoPrecioMin: Math.round(Math.min(...precios)),
     rangoPrecioMax: Math.round(Math.max(...precios)),
     rangoPrecioM2Min: Math.round(Math.min(...preciosM2)),
@@ -287,12 +301,11 @@ function realizarAnalisis(
   else posicionTexto = 'Significativamente sobre el mercado'
 
   // Seleccionar comparables directos (los 5 más similares)
-  // NOTA: El SQL ya filtró por dormitorios y estado_construcción
-  // Aquí solo afinamos por:
+  // NOTA: Ya filtramos por dormitorios, área ±10%, y estado_construcción
+  // Aquí solo ordenamos por similitud:
   // 1. Misma zona (importante)
-  // 2. Área similar
-  // 3. Amenities similares
-  // 4. Precio similar
+  // 2. Amenities similares
+  // 3. Precio similar
 
   const zonaSujeto = formatearZona(datosPropiedad.zona === 'todas' ? 'equipetrol' : datosPropiedad.zona)
 
@@ -302,17 +315,13 @@ function realizarAnalisis(
   const calcularScoreComparable = (r: UnidadReal): number => {
     let score = 0
 
-    // 1. ZONA - priorizar misma zona
+    // 1. ZONA - priorizar misma zona (40 pts si diferente)
     const zonaComp = formatearZona(r.zona)
     if (zonaComp !== zonaSujeto && datosPropiedad.zona !== 'todas') {
-      score += 30
+      score += 40
     }
 
-    // 2. ÁREA - diferencia normalizada (hasta 40 puntos)
-    const diffAreaPct = Math.abs(r.area_m2 - datosPropiedad.area_m2) / datosPropiedad.area_m2
-    score += diffAreaPct * 40
-
-    // 3. AMENITIES - comparar amenities clave
+    // 2. AMENITIES - comparar amenities clave (hasta 30 pts)
     if (amenitiesSujeto.length > 0) {
       const amenitiesComp = [
         ...(r.amenities_confirmados || []),
@@ -329,24 +338,19 @@ function realizarAnalisis(
         amenitiesComp.some(a => a.includes(clave))
       ).length
 
-      // Hasta 30 puntos por diferencia de amenities
       const diffAmenities = Math.abs(sujetoTiene - compTiene)
       score += diffAmenities * 10
     }
 
-    // 4. PRECIO - diferencia normalizada (hasta 20 puntos)
+    // 3. PRECIO - diferencia normalizada (hasta 30 pts)
     const diffPrecioPct = Math.abs(r.precio_usd - precioCliente) / precioCliente
-    score += diffPrecioPct * 20
+    score += diffPrecioPct * 30
 
     return score
   }
 
-  // Filtrar primero por área razonable (±50%) y ordenar por score
-  const areaMin = datosPropiedad.area_m2 * 0.5
-  const areaMax = datosPropiedad.area_m2 * 1.5
-
-  const comparablesRaw = resultados
-    .filter(r => r.area_m2 >= areaMin && r.area_m2 <= areaMax)
+  // Ya filtrados por ±10% área y mismos dormitorios, solo ordenar por score
+  const comparablesRaw = resultadosFiltrados
     .map(r => ({ ...r, _score: calcularScoreComparable(r) }))
     .sort((a, b) => a._score - b._score)
     .slice(0, 5)
