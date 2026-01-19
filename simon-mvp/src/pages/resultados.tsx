@@ -511,6 +511,12 @@ export default function ResultadosPage() {
   const [premiumLoading, setPremiumLoading] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({})
+
+  // Lightbox fullscreen para fotos
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxProp, setLightboxProp] = useState<UnidadReal | null>(null)
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+
   // Contador para forzar refresh del modal cuando cambian filtros
   const [filterRefreshKey, setFilterRefreshKey] = useState(0)
 
@@ -560,6 +566,42 @@ export default function ResultadosPage() {
       }
       return next
     })
+  }
+
+  // Lightbox functions
+  const openLightbox = (prop: UnidadReal) => {
+    setLightboxProp(prop)
+    setLightboxOpen(true)
+    document.body.style.overflow = 'hidden' // Prevenir scroll del body
+  }
+
+  const closeLightbox = () => {
+    setLightboxOpen(false)
+    setLightboxProp(null)
+    document.body.style.overflow = '' // Restaurar scroll
+  }
+
+  // Touch handlers para swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientX)
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent, propId: number, totalPhotos: number) => {
+    if (touchStart === null) return
+    const touchEnd = e.changedTouches[0].clientX
+    const diff = touchStart - touchEnd
+
+    // Swipe threshold de 50px
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        // Swipe left -> next photo
+        nextPhoto(propId, totalPhotos)
+      } else {
+        // Swipe right -> prev photo
+        prevPhoto(propId, totalPhotos)
+      }
+    }
+    setTouchStart(null)
   }
 
   // Parsear filtros de URL
@@ -1273,9 +1315,15 @@ ${top3Texto}
               <div className="space-y-4">
                 {top3.map((prop, idx) => (
                   <div key={prop.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                    <div className="flex flex-col md:flex-row">
-                      {/* Carrusel de fotos */}
-                      <div className="w-full aspect-square md:w-48 md:h-40 md:aspect-auto bg-gray-200 flex-shrink-0 relative group">
+                    {/* Layout vertical - Mobile first */}
+                    <div className="flex flex-col">
+                      {/* Galería de fotos - Grande en mobile, click para fullscreen */}
+                      <div
+                        className="w-full h-56 md:h-64 bg-gray-200 relative cursor-pointer"
+                        onClick={() => openLightbox(prop)}
+                        onTouchStart={handleTouchStart}
+                        onTouchEnd={(e) => handleTouchEnd(e, prop.id, prop.fotos_urls?.length || 0)}
+                      >
                         {prop.fotos_urls && prop.fotos_urls.length > 0 ? (
                           <>
                             <img
@@ -1284,48 +1332,49 @@ ${top3Texto}
                               className="w-full h-full object-cover"
                             />
 
-                            {/* Navegación - solo si hay más de 1 foto */}
+                            {/* Badge Match - sobre la foto */}
+                            <span className="absolute top-3 right-3 text-sm font-bold bg-blue-600 text-white px-3 py-1 rounded-full shadow">
+                              #{idx + 1} Match
+                            </span>
+
+                            {/* Navegación fotos - Siempre visible en mobile */}
                             {prop.fotos_urls.length > 1 && (
                               <>
-                                {/* Flecha izquierda */}
                                 <button
                                   onClick={(e) => { e.stopPropagation(); prevPhoto(prop.id, prop.fotos_urls!.length) }}
-                                  className="absolute left-1 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center text-lg"
                                 >
                                   ‹
                                 </button>
 
-                                {/* Flecha derecha */}
                                 <button
                                   onClick={(e) => { e.stopPropagation(); nextPhoto(prop.id, prop.fotos_urls!.length) }}
-                                  className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center text-lg"
                                 >
                                   ›
                                 </button>
 
-                                {/* Indicador de fotos */}
-                                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full">
                                   {getPhotoIndex(prop.id) + 1} / {prop.fotos_urls.length}
                                 </div>
                               </>
                             )}
                           </>
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            Sin foto
+                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-lg">
+                            📷 Sin foto
                           </div>
                         )}
                       </div>
 
-                      {/* Info */}
+                      {/* Info - Nombre + Precio */}
                       <div className="flex-1 p-4">
                         <div className="flex items-start justify-between">
                           <div>
-                            <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                              #{idx + 1} Match
-                            </span>
-                            <h3 className="font-bold text-gray-900 mt-1">{prop.proyecto}</h3>
-                            <p className="text-sm text-gray-500">{zonaDisplay(prop.zona)}</p>
+                            <h3 className="font-bold text-lg text-gray-900">{prop.proyecto}</h3>
+                            {prop.desarrollador && (
+                              <p className="text-sm text-gray-500">{prop.desarrollador}</p>
+                            )}
                           </div>
                           <div className="text-right">
                             <p className="text-xl font-bold text-gray-900">
@@ -1337,23 +1386,35 @@ ${top3Texto}
                           </div>
                         </div>
 
-                        <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mt-3 text-sm text-gray-600">
-                          <span className="font-semibold text-gray-800">Departamento</span>
-                          <span>·</span>
-                          <span>{formatDorms(prop.dormitorios, 'largo')}</span>
-                          <span>·</span>
+                        {/* Pills compactos - Mobile first */}
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">🛏️ {prop.dormitorios}d</span>
                           {prop.banos != null && (
-                            <>
-                              <span>{Math.floor(Number(prop.banos))} {Math.floor(Number(prop.banos)) === 1 ? 'baño' : 'baños'}</span>
-                              <span>·</span>
-                            </>
+                            <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">🚿 {Math.floor(Number(prop.banos))}b</span>
                           )}
-                          <span>{prop.area_m2} m²</span>
+                          <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">📐 {prop.area_m2}m²</span>
+                          {prop.estacionamientos && prop.estacionamientos > 0 && (
+                            <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">🚗 {prop.estacionamientos}p</span>
+                          )}
                           {prop.estado_construccion && prop.estado_construccion !== 'no_especificado' && (
-                            <>
-                              <span>·</span>
-                              <span className="capitalize">{prop.estado_construccion.replace(/_/g, ' ')}</span>
-                            </>
+                            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-sm capitalize">{prop.estado_construccion.replace(/_/g, ' ')}</span>
+                          )}
+                        </div>
+
+                        {/* Ubicación con link a Maps */}
+                        <div className="flex items-center justify-between mt-3 py-2 border-t border-gray-100">
+                          <span className="text-sm text-gray-600">
+                            📍 {prop.zona}{prop.microzona && prop.microzona !== prop.zona ? ` · ${prop.microzona}` : ''}
+                          </span>
+                          {prop.latitud && prop.longitud && (
+                            <a
+                              href={`https://maps.google.com/?q=${prop.latitud},${prop.longitud}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:underline"
+                            >
+                              Ver en Maps →
+                            </a>
                           )}
                         </div>
 
@@ -1446,11 +1507,16 @@ ${top3Texto}
                           )}
                         </button>
 
-                        {/* Sección colapsable de detalles - Orden MOAT */}
+                        {/* Sección colapsable de detalles - Orden: QUÉ ES → MOAT */}
                         {expandedCards.has(prop.id) && (
                         <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
 
-                        {/* 1. DÍAS EN MERCADO - ¿Puedo negociar? */}
+                        {/* 1. DESCRIPCIÓN - ¿Qué es esta propiedad? (PRIMERO) */}
+                        {prop.descripcion && (
+                          <DescripcionAnunciante descripcion={prop.descripcion} />
+                        )}
+
+                        {/* 2. DÍAS EN MERCADO - ¿Puedo negociar? */}
                         {prop.dias_en_mercado != null && (
                           <div className="flex items-start gap-2 text-sm">
                             <span className="text-gray-500">📅</span>
@@ -1484,7 +1550,7 @@ ${top3Texto}
                           </div>
                         )}
 
-                        {/* 2. COMPARACIÓN EDIFICIO - ¿El precio es justo? */}
+                        {/* 3. COMPARACIÓN EDIFICIO - ¿El precio es justo? */}
                         {prop.unidades_en_edificio != null && prop.unidades_en_edificio > 1 && (
                           <div className="flex items-start gap-2 text-sm">
                             <span className="text-gray-500">🏢</span>
@@ -1531,7 +1597,7 @@ ${top3Texto}
                           </div>
                         )}
 
-                        {/* 3. AMENIDADES - ¿Tiene lo que pedí? */}
+                        {/* 4. AMENIDADES - ¿Tiene lo que pedí? */}
                         {(() => {
                           const innegociablesArray = innegociables
                             ? (innegociables as string).split(',').filter(Boolean)
@@ -1618,7 +1684,7 @@ ${top3Texto}
                           )
                         })()}
 
-                        {/* 4. EQUIPAMIENTO - ¿Qué viene incluido? */}
+                        {/* 5. EQUIPAMIENTO - ¿Qué viene incluido? */}
                         {(() => {
                           const mensaje = getMensajeEquipamiento(
                             prop.dormitorios,
@@ -1653,7 +1719,7 @@ ${top3Texto}
                           )
                         })()}
 
-                        {/* 5. COSTOS OCULTOS - ¿Cuál es el costo real? */}
+                        {/* 6. COSTOS OCULTOS - ¿Cuál es el costo real? */}
                         {(() => {
                           const costos = getCostosOcultosEstimados(prop.dormitorios, null, null)
                           return (
@@ -1719,11 +1785,6 @@ ${top3Texto}
                             </div>
                           )
                         })()}
-
-                        {/* 6. DESCRIPCIÓN DEL ANUNCIANTE - Info cruda (menos MOAT) */}
-                        {prop.descripcion && (
-                          <DescripcionAnunciante descripcion={prop.descripcion} />
-                        )}
 
                         </div>
                         )}
@@ -2302,6 +2363,70 @@ ${top3Texto}
             calidad_vs_precio: calidad_vs_precio ? parseInt(calidad_vs_precio as string) : undefined
           }}
         />
+      )}
+
+      {/* Lightbox fullscreen para fotos */}
+      {lightboxOpen && lightboxProp && lightboxProp.fotos_urls && (
+        <div
+          className="fixed inset-0 z-50 bg-black flex items-center justify-center"
+          onClick={closeLightbox}
+        >
+          {/* Botón cerrar */}
+          <button
+            onClick={closeLightbox}
+            className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 hover:bg-white/30 text-white rounded-full flex items-center justify-center text-2xl"
+          >
+            ✕
+          </button>
+
+          {/* Contador de fotos */}
+          <div className="absolute top-4 left-4 z-10 bg-black/50 text-white text-sm px-3 py-1 rounded-full">
+            {getPhotoIndex(lightboxProp.id) + 1} / {lightboxProp.fotos_urls.length}
+          </div>
+
+          {/* Nombre del proyecto */}
+          <div className="absolute bottom-4 left-4 right-4 z-10 text-center">
+            <p className="text-white font-semibold text-lg">{lightboxProp.proyecto}</p>
+            <p className="text-white/70 text-sm">${formatNum(lightboxProp.precio_usd)} · {lightboxProp.area_m2}m²</p>
+          </div>
+
+          {/* Imagen principal */}
+          <div
+            className="w-full h-full flex items-center justify-center p-4"
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={(e) => handleTouchEnd(e, lightboxProp.id, lightboxProp.fotos_urls!.length)}
+          >
+            <img
+              src={lightboxProp.fotos_urls[getPhotoIndex(lightboxProp.id)]}
+              alt={`${lightboxProp.proyecto} - Foto ${getPhotoIndex(lightboxProp.id) + 1}`}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+
+          {/* Navegación */}
+          {lightboxProp.fotos_urls.length > 1 && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); prevPhoto(lightboxProp.id, lightboxProp.fotos_urls!.length) }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/30 text-white rounded-full flex items-center justify-center text-2xl"
+              >
+                ‹
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); nextPhoto(lightboxProp.id, lightboxProp.fotos_urls!.length) }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/30 text-white rounded-full flex items-center justify-center text-2xl"
+              >
+                ›
+              </button>
+            </>
+          )}
+
+          {/* Instrucción swipe (solo mobile) */}
+          <p className="absolute bottom-20 left-0 right-0 text-center text-white/50 text-xs md:hidden">
+            ← Deslizá para ver más fotos →
+          </p>
+        </div>
       )}
     </div>
   )
