@@ -59,6 +59,10 @@ export interface UnidadReal {
       precio_consultado: number
     }
   } | null
+  // v2.22: GPS y estacionamientos para mobile-first UI
+  latitud: number | null
+  longitud: number | null
+  estacionamientos: number | null
 }
 
 // Filtros para búsqueda
@@ -162,7 +166,11 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       // v2.12: Descripción del anunciante
       descripcion: p.descripcion || null,
       // v2.13: Posición de mercado
-      posicion_mercado: p.posicion_mercado || null
+      posicion_mercado: p.posicion_mercado || null,
+      // v2.22: GPS y estacionamientos
+      latitud: p.latitud ? parseFloat(p.latitud) : null,
+      longitud: p.longitud ? parseFloat(p.longitud) : null,
+      estacionamientos: p.estacionamientos || null
     }))
 
     // Filtrar por zonas permitidas si se especificaron
