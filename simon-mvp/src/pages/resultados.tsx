@@ -517,6 +517,30 @@ export default function ResultadosPage() {
   const [lightboxProp, setLightboxProp] = useState<UnidadReal | null>(null)
   const [touchStart, setTouchStart] = useState<number | null>(null)
 
+  // Propiedades seleccionadas para informe premium personalizado
+  const [selectedProps, setSelectedProps] = useState<Set<number>>(new Set())
+  const MAX_SELECTED = 5
+
+  const toggleSelected = (propId: number) => {
+    setSelectedProps(prev => {
+      const next = new Set(prev)
+      if (next.has(propId)) {
+        next.delete(propId)
+      } else if (next.size < MAX_SELECTED) {
+        next.add(propId)
+      }
+      return next
+    })
+  }
+
+  const isSelected = (propId: number) => selectedProps.has(propId)
+
+  // Obtener propiedades seleccionadas completas
+  const getSelectedProperties = (): UnidadReal[] => {
+    const allProps = [...propiedades]
+    return allProps.filter(p => selectedProps.has(p.id))
+  }
+
   // Contador para forzar refresh del modal cuando cambian filtros
   const [filterRefreshKey, setFilterRefreshKey] = useState(0)
 
@@ -1337,6 +1361,18 @@ ${top3Texto}
                               #{idx + 1} Match
                             </span>
 
+                            {/* Botón guardar - sobre la foto */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleSelected(prop.id) }}
+                              className={`absolute top-3 left-3 w-10 h-10 rounded-full flex items-center justify-center text-xl shadow transition-all ${
+                                isSelected(prop.id)
+                                  ? 'bg-red-500 text-white'
+                                  : 'bg-white/90 text-gray-400 hover:text-red-500'
+                              }`}
+                            >
+                              {isSelected(prop.id) ? '❤️' : '🤍'}
+                            </button>
+
                             {/* Navegación fotos - Siempre visible en mobile */}
                             {prop.fotos_urls.length > 1 && (
                               <>
@@ -1897,9 +1933,22 @@ ${top3Texto}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <h3 className="font-medium text-gray-900">{prop.proyecto}</h3>
-                                <p className="text-xs text-gray-500">{zonaDisplay(prop.zona)}</p>
+                              <div className="flex items-start gap-2">
+                                {/* Botón guardar */}
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); toggleSelected(prop.id) }}
+                                  className={`w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0 transition-all ${
+                                    isSelected(prop.id)
+                                      ? 'bg-red-100 text-red-500'
+                                      : 'bg-gray-100 text-gray-400 hover:text-red-500'
+                                  }`}
+                                >
+                                  {isSelected(prop.id) ? '❤️' : '🤍'}
+                                </button>
+                                <div>
+                                  <h3 className="font-medium text-gray-900">{prop.proyecto}</h3>
+                                  <p className="text-xs text-gray-500">{zonaDisplay(prop.zona)}</p>
+                                </div>
                               </div>
                               <div className="text-right flex-shrink-0">
                                 <p className="font-bold text-gray-900">${formatNum(prop.precio_usd)}</p>
@@ -2343,6 +2392,60 @@ ${top3Texto}
             <p className="text-center text-xs text-gray-400 mt-3">
               🔒 Sin compromiso · Te avisamos por email
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Barra flotante inferior - Propiedades seleccionadas */}
+      {selectedProps.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-lg safe-area-pb">
+          <div className="max-w-4xl mx-auto px-4 py-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex -space-x-2">
+                  {getSelectedProperties().slice(0, 3).map((prop, i) => (
+                    <div
+                      key={prop.id}
+                      className="w-10 h-10 rounded-full border-2 border-white bg-gray-200 overflow-hidden"
+                      style={{ zIndex: 3 - i }}
+                    >
+                      {prop.fotos_urls && prop.fotos_urls[0] ? (
+                        <img src={prop.fotos_urls[0]} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">📷</div>
+                      )}
+                    </div>
+                  ))}
+                  {selectedProps.size > 3 && (
+                    <div className="w-10 h-10 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs text-gray-600">
+                      +{selectedProps.size - 3}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">
+                    {selectedProps.size} {selectedProps.size === 1 ? 'propiedad guardada' : 'propiedades guardadas'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {selectedProps.size < 3 ? `Elegí ${3 - selectedProps.size} más para comparar` : 'Listas para comparar'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedProps(new Set())}
+                  className="text-sm text-gray-500 hover:text-gray-700 px-2"
+                >
+                  Limpiar
+                </button>
+                <button
+                  onClick={() => setShowPremiumModal(true)}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  Comparar {selectedProps.size}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
