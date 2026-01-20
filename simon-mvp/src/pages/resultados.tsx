@@ -26,6 +26,13 @@ import {
 } from '@/config/estimados-equipamiento'
 import PremiumModal from '@/components/landing/PremiumModal'
 import InternalHeader from '@/components/InternalHeader'
+import dynamic from 'next/dynamic'
+
+// Cargar mapa dinámicamente para evitar SSR issues con Leaflet
+const MapaResultados = dynamic(() => import('@/components/MapaResultados'), {
+  ssr: false,
+  loading: () => <div className="fixed inset-0 z-50 bg-black flex items-center justify-center text-white">Cargando mapa...</div>
+})
 
 /**
  * SÍNTESIS FIDUCIARIA - Resumen inteligente que combina TODOS los datos
@@ -520,6 +527,7 @@ export default function ResultadosPage() {
   // Propiedades seleccionadas para informe premium personalizado
   const [selectedProps, setSelectedProps] = useState<Set<number>>(new Set())
   const [showLimitToast, setShowLimitToast] = useState(false)
+  const [showMapa, setShowMapa] = useState(false)
   const MAX_SELECTED = 3
 
   const toggleSelected = (propId: number) => {
@@ -1351,7 +1359,7 @@ ${top3Texto}
 
               <div className="space-y-4">
                 {top3.map((prop, idx) => (
-                  <div key={prop.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
+                  <div key={prop.id} id={`propiedad-${prop.id}`} className="bg-white rounded-xl shadow-lg overflow-hidden">
                     {/* Layout vertical - Mobile first */}
                     <div className="flex flex-col">
                       {/* Galería de fotos - Grande en mobile, click para fullscreen */}
@@ -1903,7 +1911,7 @@ ${top3Texto}
                     }
 
                     return (
-                      <div key={prop.id} className="bg-white rounded-lg shadow p-4">
+                      <div key={prop.id} id={`propiedad-${prop.id}`} className="bg-white rounded-lg shadow p-4">
                         <div className="flex items-start gap-4">
                           {/* Carrusel de fotos - alternativas (click para fullscreen) */}
                           <div
@@ -2599,6 +2607,53 @@ ${top3Texto}
             ← Deslizá para ver más fotos →
           </p>
         </div>
+      )}
+
+      {/* Botón flotante Mapa */}
+      {propiedadesOrdenadas.some(p => p.latitud && p.longitud) && !showMapa && !lightboxOpen && !showPremiumExample && (
+        <button
+          onClick={() => setShowMapa(true)}
+          className="fixed bottom-6 right-6 z-40 bg-white shadow-lg rounded-full px-4 py-3 flex items-center gap-2 border border-gray-200 hover:shadow-xl transition-shadow"
+        >
+          <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+          </svg>
+          <span className="text-sm font-medium text-gray-700">Ver mapa</span>
+        </button>
+      )}
+
+      {/* Mapa de resultados fullscreen */}
+      {showMapa && (
+        <MapaResultados
+          propiedades={propiedadesOrdenadas.map(p => ({
+            id: p.id,
+            proyecto: p.proyecto,
+            precio_usd: p.precio_usd,
+            dormitorios: p.dormitorios,
+            area_m2: p.area_m2,
+            latitud: p.latitud,
+            longitud: p.longitud,
+            foto_url: p.fotos_urls?.[0] || null,
+            diferencia_pct: p.posicion_mercado?.diferencia_pct ?? null,
+            categoria_precio: p.posicion_mercado?.categoria ?? null
+          }))}
+          onClose={() => setShowMapa(false)}
+          onVerDetalle={(id) => {
+            setShowMapa(false)
+            // Expandir la síntesis fiduciaria del card
+            setExpandedCards(prev => new Set(prev).add(id))
+            // Scroll al card de la propiedad
+            setTimeout(() => {
+              const element = document.getElementById(`propiedad-${id}`)
+              if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                // Highlight temporal
+                element.classList.add('ring-2', 'ring-blue-500')
+                setTimeout(() => element.classList.remove('ring-2', 'ring-blue-500'), 2000)
+              }
+            }, 100)
+          }}
+        />
       )}
     </div>
   )
