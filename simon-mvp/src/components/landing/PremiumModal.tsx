@@ -27,6 +27,14 @@ interface FiltrosUsuario {
   calidad_vs_precio?: number
 }
 
+// Síntesis fiduciaria generada en resultados
+interface SintesisFiduciaria {
+  headline: string
+  detalles: string
+  accion: string
+  tipo: 'oportunidad' | 'premium' | 'justo' | 'sospechoso'
+}
+
 // Propiedad seleccionada desde resultados (UnidadReal simplificado)
 interface PropiedadSeleccionada {
   id: number
@@ -44,6 +52,7 @@ interface PropiedadSeleccionada {
     diferencia_pct: number
     categoria: string
   } | null
+  sintesisFiduciaria?: SintesisFiduciaria  // Síntesis completa generada en resultados
 }
 
 interface PremiumModalProps {
@@ -152,7 +161,8 @@ export default function PremiumModal({ onClose, filtros, propiedadesSeleccionada
           contexto: { promedio_zona: 0, stock_disponible: 0, precio_consultado: 0 }
         } : { success: false, diferencia_pct: 0, categoria: 'precio_justo', posicion_texto: '', contexto: { promedio_zona: 0, stock_disponible: 0, precio_consultado: 0 } },
         explicacion_precio: { explicaciones: [], alerta_general: null },
-        resumen_fiduciario: p.razon_fiduciaria || 'Análisis fiduciario disponible en informe completo.'
+        resumen_fiduciario: p.razon_fiduciaria || 'Análisis fiduciario disponible en informe completo.',
+        sintesisFiduciaria: p.sintesisFiduciaria || null
       }))
     : []
 
@@ -347,13 +357,41 @@ export default function PremiumModal({ onClose, filtros, propiedadesSeleccionada
                       </ul>
                     </div>
                     <div>
-                      <h5 className="text-sm font-bold mb-2">ANALISIS FIDUCIARIO</h5>
-                      <p className="text-sm text-slate-600 mb-2">{op.resumen_fiduciario}</p>
-                      {op.explicacion_precio.explicaciones.length > 0 && (
-                        <p className="text-sm text-state-warning">
-                          <strong>Nota:</strong> {op.explicacion_precio.explicaciones[0].texto}
-                        </p>
-                      )}
+                      <h5 className="text-sm font-bold mb-2">SÍNTESIS FIDUCIARIA</h5>
+                      {(() => {
+                        const sintesis = (op as any).sintesisFiduciaria as SintesisFiduciaria | null
+                        if (sintesis) {
+                          return (
+                            <div className={`rounded-lg p-3 ${
+                              sintesis.tipo === 'oportunidad' ? 'bg-green-50 border border-green-200' :
+                              sintesis.tipo === 'sospechoso' ? 'bg-amber-50 border border-amber-200' :
+                              sintesis.tipo === 'premium' ? 'bg-red-50 border border-red-200' :
+                              'bg-slate-50 border border-slate-200'
+                            }`}>
+                              <p className={`font-semibold text-sm mb-2 ${
+                                sintesis.tipo === 'oportunidad' ? 'text-green-800' :
+                                sintesis.tipo === 'sospechoso' ? 'text-amber-800' :
+                                sintesis.tipo === 'premium' ? 'text-red-800' :
+                                'text-slate-800'
+                              }`}>
+                                {sintesis.headline}
+                              </p>
+                              <p className="text-xs text-slate-600 whitespace-pre-line mb-2">
+                                {sintesis.detalles}
+                              </p>
+                              <p className={`text-xs font-medium ${
+                                sintesis.tipo === 'oportunidad' ? 'text-green-700' :
+                                sintesis.tipo === 'sospechoso' ? 'text-amber-700' :
+                                sintesis.tipo === 'premium' ? 'text-red-700' :
+                                'text-slate-700'
+                              }`}>
+                                → {sintesis.accion}
+                              </p>
+                            </div>
+                          )
+                        }
+                        return <p className="text-sm text-slate-600 mb-2">{op.resumen_fiduciario}</p>
+                      })()}
                     </div>
                   </div>
                 </div>

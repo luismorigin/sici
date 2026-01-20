@@ -926,6 +926,29 @@ export default function ResultadosPage() {
     return opcion?.posicion_mercado || null
   }
 
+  // Helper: generar síntesis fiduciaria para una propiedad
+  const getSintesisFiduciaria = (prop: UnidadReal) => {
+    const costos = getCostosOcultosEstimados(prop.dormitorios, null, null)
+    const costoParqueo = Math.round((costos.estacionamiento.compra.min + costos.estacionamiento.compra.max) / 2)
+    const costoBaulera = Math.round((costos.baulera.compra.min + costos.baulera.compra.max) / 2)
+    const costoExtra = costoParqueo + costoBaulera
+
+    return generarSintesisFiduciaria({
+      diferenciaPct: prop.posicion_mercado?.success ? prop.posicion_mercado.diferencia_pct : null,
+      diasEnMercado: prop.dias_en_mercado,
+      diasMedianaZona: contextoMercado?.metricas_zona?.dias_mediana ?? null,
+      diasPromedioZona: contextoMercado?.metricas_zona?.dias_promedio ?? null,
+      escasez: parseEscasezDeRazon(prop.razon_fiduciaria),
+      equipamiento: prop.equipamiento_detectado || [],
+      estadoConstruccion: prop.estado_construccion || '',
+      amenidadesConfirmadas: prop.amenities_confirmados || [],
+      amenidadesPorVerificar: prop.amenities_por_verificar || [],
+      parqueoTexto: costos.estacionamiento.texto_inclusion || '',
+      baulераTexto: costos.baulera.texto_inclusion || '',
+      costoExtraPotencial: costoExtra
+    })
+  }
+
   // Detectar compromisos/tradeoffs de una propiedad
   const getCompromisos = (prop: UnidadReal): { texto: string, tipo: 'warning' | 'info' }[] => {
     const compromisos: { texto: string, tipo: 'warning' | 'info' }[] = []
@@ -2540,7 +2563,8 @@ ${top3Texto}
             posicion_mercado: p.posicion_mercado ? {
               diferencia_pct: p.posicion_mercado.diferencia_pct,
               categoria: p.posicion_mercado.categoria
-            } : null
+            } : null,
+            sintesisFiduciaria: getSintesisFiduciaria(p)
           })) : undefined}
         />
       )}
@@ -2635,24 +2659,13 @@ ${top3Texto}
             longitud: p.longitud,
             foto_url: p.fotos_urls?.[0] || null,
             diferencia_pct: p.posicion_mercado?.diferencia_pct ?? null,
-            categoria_precio: p.posicion_mercado?.categoria ?? null
+            categoria_precio: p.posicion_mercado?.categoria ?? null,
+            sintesisFiduciaria: getSintesisFiduciaria(p)
           }))}
+          selectedIds={selectedProps}
+          maxSelected={MAX_SELECTED}
           onClose={() => setShowMapa(false)}
-          onVerDetalle={(id) => {
-            setShowMapa(false)
-            // Expandir la síntesis fiduciaria del card
-            setExpandedCards(prev => new Set(prev).add(id))
-            // Scroll al card de la propiedad
-            setTimeout(() => {
-              const element = document.getElementById(`propiedad-${id}`)
-              if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                // Highlight temporal
-                element.classList.add('ring-2', 'ring-blue-500')
-                setTimeout(() => element.classList.remove('ring-2', 'ring-blue-500'), 2000)
-              }
-            }, 100)
-          }}
+          onToggleSelected={toggleSelected}
         />
       )}
     </div>
