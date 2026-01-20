@@ -46,8 +46,12 @@ const RANGOS_PRECIO = [
   { id: '300+', label: '$300k+', min: 300000, max: Infinity },
 ]
 
+// Top 13 = 3 recomendadas + 10 alternativas
+const TOP_13_COUNT = 13
+
 // Categorías MOAT
 type CategoriaFiltro = 'oportunidad' | 'justo' | 'premium'
+type ConjuntoBase = 'top13' | 'todas'
 
 // Formatear precio compacto
 function formatPrecioCompacto(precio: number): string {
@@ -126,6 +130,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
   const [showLimitToast, setShowLimitToast] = useState(false)
 
   // Estados para filtros
+  const [conjuntoBase, setConjuntoBase] = useState<ConjuntoBase>('top13') // Por defecto Top 13
   const [filtrosCategorias, setFiltrosCategorias] = useState<Set<CategoriaFiltro>>(new Set())
   const [filtroPrecio, setFiltroPrecio] = useState<string>('cualquiera')
   const [showPrecioSheet, setShowPrecioSheet] = useState(false)
@@ -138,18 +143,28 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
   // Filtrar propiedades con GPS válido
   const propsConGPS = propiedades.filter(p => p.latitud && p.longitud)
 
+  // IDs del Top 13 (las primeras 13 propiedades ordenadas por MOAT score)
+  const top13Ids = new Set(propiedades.slice(0, TOP_13_COUNT).map(p => p.id))
+  const totalConGPS = propsConGPS.length
+
   // Aplicar filtros a las propiedades
-  const propsFiltradas = propsConGPS.filter(prop => {
+  const propsFiltradas = propsConGPS.filter((prop, index) => {
     // Los elegidos siempre se muestran
     if (selectedIds.has(prop.id)) return true
 
-    // Filtro por categoría MOAT
+    // Paso 1: Filtro por conjunto base (Top 13 vs Todas)
+    if (conjuntoBase === 'top13') {
+      // Solo mostrar si está en el Top 13
+      if (!top13Ids.has(prop.id)) return false
+    }
+
+    // Paso 2: Filtro por categoría MOAT
     if (filtrosCategorias.size > 0) {
       const catProp = getCategoriaMOAT(prop.diferencia_pct, prop.categoria_precio)
       if (!catProp || !filtrosCategorias.has(catProp)) return false
     }
 
-    // Filtro por precio
+    // Paso 3: Filtro por precio
     if (filtroPrecio !== 'cualquiera') {
       const rango = RANGOS_PRECIO.find(r => r.id === filtroPrecio)
       if (rango && (prop.precio_usd < rango.min || prop.precio_usd > rango.max)) {
@@ -159,6 +174,11 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
 
     return true
   })
+
+  // Calcular cuántas hay en el conjunto base (para mostrar en UI)
+  const totalConjuntoBase = conjuntoBase === 'top13'
+    ? propsConGPS.filter(p => top13Ids.has(p.id)).length
+    : totalConGPS
 
   // Calcular rango de precios de elegidos para leyenda dinámica
   const preciosElegidos = propiedades
@@ -191,13 +211,17 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
     })
   }
 
-  // Limpiar todos los filtros
+  // Limpiar todos los filtros (vuelve a Top 13 sin filtros MOAT/precio)
   const limpiarFiltros = () => {
+    setConjuntoBase('top13')
     setFiltrosCategorias(new Set())
     setFiltroPrecio('cualquiera')
   }
 
   const hayFiltrosActivos = filtrosCategorias.size > 0 || filtroPrecio !== 'cualquiera'
+
+  // Contar Top 13 con GPS para mostrar en el toggle
+  const top13ConGPS = propsConGPS.filter(p => top13Ids.has(p.id)).length
 
   // Funciones de navegación de fotos
   const nextPhoto = () => {
@@ -295,7 +319,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
       updateMarkerVisibility()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedIds, mapReady, filtrosCategorias, filtroPrecio])
+  }, [selectedIds, mapReady, conjuntoBase, filtrosCategorias, filtroPrecio])
 
   // Reset photo index cuando cambia la propiedad seleccionada
   useEffect(() => {
@@ -407,7 +431,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
           <div>
             <h2 className="font-bold text-gray-900">Mapa de Resultados</h2>
             <p className="text-xs text-gray-500">
-              {propsFiltradas.length} de {propsConGPS.length} props · {selectedIds.size}/{maxSelected} elegidas
+              {propsFiltradas.length} de {totalConjuntoBase} props · {selectedIds.size}/{maxSelected} elegidas
             </p>
           </div>
           <button
@@ -420,6 +444,33 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
 
         {/* Chips de filtro - scroll horizontal */}
         <div className="px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
+          {/* Toggle Conjunto Base: Top 13 / Todas */}
+          <div className="flex-shrink-0 flex rounded-full border border-gray-300 overflow-hidden">
+            <button
+              onClick={() => setConjuntoBase('top13')}
+              className={`px-3 py-2 text-sm font-medium transition-all ${
+                conjuntoBase === 'top13'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white text-gray-600'
+              }`}
+            >
+              Top {top13ConGPS}
+            </button>
+            <button
+              onClick={() => setConjuntoBase('todas')}
+              className={`px-3 py-2 text-sm font-medium transition-all ${
+                conjuntoBase === 'todas'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white text-gray-600'
+              }`}
+            >
+              Todas {totalConGPS}
+            </button>
+          </div>
+
+          {/* Separador visual */}
+          <div className="flex-shrink-0 w-px bg-gray-300 my-1"></div>
+
           {/* Chip Oportunidad */}
           <button
             onClick={() => toggleCategoria('oportunidad')}
