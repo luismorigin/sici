@@ -519,6 +519,7 @@ export default function ResultadosPage() {
 
   // Propiedades seleccionadas para informe premium personalizado
   const [selectedProps, setSelectedProps] = useState<Set<number>>(new Set())
+  const [showLimitToast, setShowLimitToast] = useState(false)
   const MAX_SELECTED = 3
 
   const toggleSelected = (propId: number) => {
@@ -528,6 +529,9 @@ export default function ResultadosPage() {
         next.delete(propId)
       } else if (next.size < MAX_SELECTED) {
         next.add(propId)
+      } else {
+        // Mostrar toast MOAT cuando intenta agregar más de 3
+        setShowLimitToast(true)
       }
       return next
     })
@@ -1331,10 +1335,19 @@ ${top3Texto}
           <>
             {/* TOP 3 */}
             <section className="mb-8">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-2">
                 <span className="text-2xl">🏆</span>
                 <h2 className="text-xl font-bold text-gray-900">TUS 3 MEJORES OPCIONES</h2>
               </div>
+              {/* Hint para selección premium */}
+              {selectedProps.size === 0 && (
+                <p className="text-sm text-gray-500 mb-4 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                  Tocá el corazón en 3 propiedades para un análisis comparativo premium
+                </p>
+              )}
 
               <div className="space-y-4">
                 {top3.map((prop, idx) => (
@@ -2458,6 +2471,28 @@ ${top3Texto}
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast MOAT - Límite de selección alcanzado */}
+      {showLimitToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="bg-gray-900 text-white px-5 py-4 rounded-xl shadow-xl max-w-sm relative">
+            <button
+              onClick={() => setShowLimitToast(false)}
+              className="absolute top-2 right-2 text-gray-400 hover:text-white p-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <p className="font-semibold text-sm mb-1 pr-6">¿Por qué solo 3?</p>
+            <p className="text-xs text-gray-300 leading-relaxed">
+              Más opciones = peores decisiones. Con 3 propiedades analizamos cada detalle a fondo: costos ocultos, historial de precios, y riesgos reales.
+              <span className="block mt-2 text-purple-300">El premium ya incluye +10 alternativas como contexto comparativo.</span>
+            </p>
+            <p className="text-xs text-gray-400 mt-2">Quitá una para agregar esta →</p>
           </div>
         </div>
       )}
