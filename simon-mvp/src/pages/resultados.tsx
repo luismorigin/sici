@@ -2657,7 +2657,7 @@ ${top3Texto}
             area_m2: p.area_m2,
             latitud: p.latitud,
             longitud: p.longitud,
-            foto_url: p.fotos_urls?.[0] || null,
+            fotos_urls: p.fotos_urls || [],
             diferencia_pct: p.posicion_mercado?.diferencia_pct ?? null,
             categoria_precio: p.posicion_mercado?.categoria ?? null,
             sintesisFiduciaria: getSintesisFiduciaria(p)
