@@ -539,10 +539,10 @@ export default function ResultadosPage() {
 
   const isSelected = (propId: number) => selectedProps.has(propId)
 
-  // Obtener propiedades seleccionadas completas
+  // Obtener propiedades seleccionadas completas (en orden MOAT)
+  // Nota: Se usa propiedadesOrdenadas para mantener el orden de recomendación
   const getSelectedProperties = (): UnidadReal[] => {
-    const allProps = [...propiedades]
-    return allProps.filter(p => selectedProps.has(p.id))
+    return propiedadesOrdenadas.filter(p => selectedProps.has(p.id))
   }
 
   // Contador para forzar refresh del modal cuando cambian filtros
@@ -2501,7 +2501,7 @@ ${top3Texto}
       {/* Key incluye filterRefreshKey para forzar re-mount cuando cambian filtros */}
       {showPremiumExample && (
         <PremiumModal
-          key={`premium-${filterRefreshKey}-${presupuesto}-${dormitorios}-${zonas}-${estado_entrega}-${innegociables}`}
+          key={`premium-${filterRefreshKey}-${presupuesto}-${dormitorios}-${zonas}-${estado_entrega}-${innegociables}-${Array.from(selectedProps).join(',')}`}
           onClose={() => {
             setShowPremiumExample(false)
             setShowPremiumModal(false)
@@ -2517,6 +2517,23 @@ ${top3Texto}
             ubicacion_vs_metros: ubicacion_vs_metros ? parseInt(ubicacion_vs_metros as string) : undefined,
             calidad_vs_precio: calidad_vs_precio ? parseInt(calidad_vs_precio as string) : undefined
           }}
+          propiedadesSeleccionadas={selectedProps.size > 0 ? getSelectedProperties().map(p => ({
+            id: p.id,
+            proyecto: p.proyecto,
+            desarrollador: p.desarrollador,
+            zona: p.zona,
+            dormitorios: p.dormitorios,
+            precio_usd: p.precio_usd,
+            precio_m2: p.precio_m2,
+            area_m2: p.area_m2,
+            fotos_urls: p.fotos_urls || [],
+            amenities_lista: p.amenities_lista || [],
+            razon_fiduciaria: p.razon_fiduciaria,
+            posicion_mercado: p.posicion_mercado ? {
+              diferencia_pct: p.posicion_mercado.diferencia_pct,
+              categoria: p.posicion_mercado.categoria
+            } : null
+          })) : undefined}
         />
       )}
 

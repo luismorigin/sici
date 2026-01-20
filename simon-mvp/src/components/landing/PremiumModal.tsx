@@ -27,12 +27,32 @@ interface FiltrosUsuario {
   calidad_vs_precio?: number
 }
 
+// Propiedad seleccionada desde resultados (UnidadReal simplificado)
+interface PropiedadSeleccionada {
+  id: number
+  proyecto: string
+  desarrollador: string | null
+  zona: string
+  dormitorios: number
+  precio_usd: number
+  precio_m2: number
+  area_m2: number
+  fotos_urls: string[]
+  amenities_lista: string[]
+  razon_fiduciaria: string | null
+  posicion_mercado: {
+    diferencia_pct: number
+    categoria: string
+  } | null
+}
+
 interface PremiumModalProps {
   onClose: () => void
   filtros?: FiltrosUsuario  // Si se pasan, usa datos del usuario
+  propiedadesSeleccionadas?: PropiedadSeleccionada[]  // Las 3 elegidas por el usuario
 }
 
-export default function PremiumModal({ onClose, filtros }: PremiumModalProps) {
+export default function PremiumModal({ onClose, filtros, propiedadesSeleccionadas }: PremiumModalProps) {
   const [analisis, setAnalisis] = useState<AnalisisMercadoFiduciario | null>(null)
   const [microzonas, setMicrozonas] = useState<MicrozonaData[]>([])
   const [escenarios, setEscenarios] = useState<EscenarioFinanciero[]>([])
@@ -40,6 +60,8 @@ export default function PremiumModal({ onClose, filtros }: PremiumModalProps) {
 
   // Si tiene filtros, es dinámico (desde resultados)
   const isDinamico = !!filtros
+  // Si tiene propiedades seleccionadas, mostrar esas en vez de query
+  const tieneSeleccion = propiedadesSeleccionadas && propiedadesSeleccionadas.length > 0
 
   useEffect(() => {
     const fetchData = async () => {
@@ -105,7 +127,39 @@ export default function PremiumModal({ onClose, filtros }: PremiumModalProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(filtros)])
 
-  const topOpciones = analisis?.bloque_1_opciones_validas.opciones.slice(0, 4) || []
+  // Mapear propiedades seleccionadas a formato compatible con OpcionValida
+  const propiedadesComoOpciones = tieneSeleccion
+    ? propiedadesSeleccionadas!.map((p, i) => ({
+        id: p.id,
+        proyecto: p.proyecto,
+        desarrollador: p.desarrollador,
+        zona: p.zona,
+        dormitorios: p.dormitorios,
+        precio_usd: p.precio_usd,
+        precio_m2: p.precio_m2,
+        area_m2: p.area_m2,
+        ranking: i + 1,
+        total_opciones: propiedadesSeleccionadas!.length,
+        fotos: p.fotos_urls?.length || 0,
+        fotos_urls: p.fotos_urls || [],
+        amenities: p.amenities_lista || [],
+        asesor_wsp: null,
+        posicion_mercado: p.posicion_mercado ? {
+          success: true,
+          diferencia_pct: p.posicion_mercado.diferencia_pct,
+          categoria: p.posicion_mercado.categoria,
+          posicion_texto: '',
+          contexto: { promedio_zona: 0, stock_disponible: 0, precio_consultado: 0 }
+        } : { success: false, diferencia_pct: 0, categoria: 'precio_justo', posicion_texto: '', contexto: { promedio_zona: 0, stock_disponible: 0, precio_consultado: 0 } },
+        explicacion_precio: { explicaciones: [], alerta_general: null },
+        resumen_fiduciario: p.razon_fiduciaria || 'Análisis fiduciario disponible en informe completo.'
+      }))
+    : []
+
+  // Usar propiedades seleccionadas si existen, sino las del análisis
+  const topOpciones = tieneSeleccion
+    ? propiedadesComoOpciones
+    : (analisis?.bloque_1_opciones_validas.opciones.slice(0, 4) || [])
 
   return (
     <AnimatePresence>
@@ -217,14 +271,12 @@ export default function PremiumModal({ onClose, filtros }: PremiumModalProps) {
                 />
                 <PrecioComparativoCard
                   title="Precio Real vs Media"
-                  comparaciones={(() => {
-                    const media = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2100
-                    return topOpciones.slice(0, 3).map(op => ({
-                      proyecto: op.proyecto,
-                      precio: op.precio_m2,
-                      diferencia: Math.round(((op.precio_m2 - media) / media) * 100)
-                    }))
-                  })()}
+                  comparaciones={topOpciones.slice(0, 3).map(op => ({
+                    proyecto: op.proyecto,
+                    precio: op.precio_m2,
+                    // Usar diferencia_pct de posicion_mercado (consistente con resultados)
+                    diferencia: Math.round(op.posicion_mercado?.diferencia_pct ?? 0)
+                  }))}
                   media={analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2100}
                 />
               </div>
@@ -238,11 +290,18 @@ export default function PremiumModal({ onClose, filtros }: PremiumModalProps) {
 
             {/* Section 3: Top 3 */}
             <section className="mb-6 md:mb-8">
-              <h3 className="text-brand-primary font-bold mb-4">3. TOP 3 OPORTUNIDADES DETECTADAS</h3>
+              <h3 className="text-brand-primary font-bold mb-4">
+                3. {tieneSeleccion ? 'TUS PROPIEDADES ELEGIDAS' : 'TOP 3 OPORTUNIDADES DETECTADAS'}
+              </h3>
+              {tieneSeleccion && (
+                <p className="text-sm text-slate-500 mb-4">
+                  Análisis detallado de las {topOpciones.length} propiedades que seleccionaste para comparar.
+                </p>
+              )}
 
               {topOpciones.slice(0, 1).map((op, i) => {
-                const media = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2100
-                const diffReal = Math.round(((op.precio_m2 - media) / media) * 100)
+                // Usar diferencia_pct de posicion_mercado (consistente con resultados)
+                const diffReal = op.posicion_mercado?.diferencia_pct ?? 0
                 const esBajo = diffReal < 0
                 const fotos = op.fotos_urls || []
                 return (
@@ -250,7 +309,7 @@ export default function PremiumModal({ onClose, filtros }: PremiumModalProps) {
                   <div className="bg-brand-dark text-white p-4 flex justify-between items-center">
                     <span className="font-bold">1. {op.proyecto.toUpperCase()}</span>
                     <span className={`text-white text-xs px-2 py-1 rounded ${esBajo ? 'bg-state-success' : 'bg-state-warning'}`}>
-                      {Math.abs(diffReal)}% {esBajo ? 'Bajo' : 'Sobre'} Mercado
+                      {Math.abs(Math.round(diffReal))}% {esBajo ? 'Bajo' : 'Sobre'} Mercado
                     </span>
                   </div>
 
@@ -279,7 +338,7 @@ export default function PremiumModal({ onClose, filtros }: PremiumModalProps) {
                         ${op.precio_usd.toLocaleString('en-US')}
                       </div>
                       <div className={`font-semibold text-sm mb-3 ${esBajo ? 'text-state-success' : 'text-state-warning'}`}>
-                        {esBajo ? `${Math.abs(diffReal)}% bajo promedio de zona` : `${diffReal}% sobre promedio de zona`}
+                        {esBajo ? `${Math.abs(Math.round(diffReal))}% bajo promedio de zona` : `${Math.round(diffReal)}% sobre promedio de zona`}
                       </div>
                       <ul className="text-sm text-slate-600 space-y-1">
                         <li>- {op.area_m2}m2 - {op.dormitorios} Dorms</li>
@@ -304,8 +363,8 @@ export default function PremiumModal({ onClose, filtros }: PremiumModalProps) {
               {/* Property 2 & 3 simplified */}
               <div className="grid md:grid-cols-2 gap-4">
                 {topOpciones.slice(1, 3).map((op, i) => {
-                  const media = analisis?.bloque_3_contexto_mercado.metricas_zona?.precio_m2_promedio || 2100
-                  const diffReal = Math.round(((op.precio_m2 - media) / media) * 100)
+                  // Usar diferencia_pct de posicion_mercado (consistente con resultados)
+                  const diffReal = op.posicion_mercado?.diferencia_pct ?? 0
                   const esBajo = diffReal < 0
                   const fotos = op.fotos_urls || []
                   return (
@@ -322,7 +381,7 @@ export default function PremiumModal({ onClose, filtros }: PremiumModalProps) {
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-bold text-brand-dark">{i + 2}. {op.proyecto}</span>
                         <span className={`text-xs px-2 py-1 rounded ${esBajo ? 'bg-state-success/10 text-state-success' : 'bg-state-warning/10 text-state-warning'}`}>
-                          {Math.abs(diffReal)}% {esBajo ? 'Bajo' : 'Sobre'}
+                          {Math.abs(Math.round(diffReal))}% {esBajo ? 'Bajo' : 'Sobre'}
                         </span>
                       </div>
                       <div className="text-xl font-bold text-brand-dark">${op.precio_usd.toLocaleString('en-US')}</div>
