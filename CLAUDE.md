@@ -59,6 +59,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 | **Simón Formularios** | `docs/simon/formularios/BLOQUE_2_FORM_*.md` |
 | **Formulario MVP 2 Niveles** | `docs/simon/formularios/FORM_VIVIENDA_MVP.md` |
 | **Metodología Fiduciaria** | `docs/canonical/METODOLOGIA_FIDUCIARIA_PARTE_*.md` |
+| **Beta Feedback System** | `docs/simon/BETA_FEEDBACK_SYSTEM_PLAN.md` |
 | Plan activo | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
@@ -80,7 +81,7 @@ sici/
 │   ├── enrichment/    # registrar_enrichment.sql
 │   ├── merge/         # merge_discovery_enrichment.sql v2.2.0
 │   └── matching/      # Funciones v3.1 (propiedades_v2)
-├── sql/migrations/    # 001-059 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón)
+├── sql/migrations/    # 001-064 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
@@ -93,7 +94,7 @@ sici/
     └── modulo_2/      # Specs matching pipeline
 ```
 
-## Estado Actual (14 Ene 2026)
+## Estado Actual (20 Ene 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
@@ -114,6 +115,7 @@ sici/
 - **Filtro estado_entrega MOAT:** 3 opciones claras (entrega_inmediata, solo_preventa, no_importa) - migración 052
 - **Deduplicación:** Sistema duplicado_de activo, 36 registros marcados como duplicados
 - **Fix TC Paralelo:** Bug merge v2.2.0 + retroactivo 13 props + vista monitoreo (migración 059)
+- **Enriquecimiento Amenities:** 69 campos extraídos de descripciones (45 equipamiento + 24 amenities), con candados (migración 064)
 
 ### ⏳ En Progreso
 - **Supervisor Excluidas:** Workflow n8n Export pendiente mapeo columnas (14 props en Sheet)
@@ -122,6 +124,7 @@ sici/
 - **FASE 3:** Enriquecimiento IA de proyectos (15 sin desarrollador asignado)
 - **FASE 4:** Validación GPS completa (workflow validador Google Places)
 - **Migración 017:** Mejoras sistema matching (FK, blacklist, detección duplicados)
+- **Beta Feedback System:** Formulario + Slack + PDF automático (prerequisito: pulir informe) → `docs/simon/BETA_FEEDBACK_SYSTEM_PLAN.md`
 
 ## Queries Rápidos
 
@@ -141,7 +144,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-059)
+## Migraciones SQL (001-064)
 
 | # | Archivo | Propósito | Estado |
 |---|---------|-----------|--------|
@@ -179,6 +182,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 051 | deduplicar_exactos | Marcar duplicados exactos (Avanti, Spazios, etc.) | ✅ |
 | 052 | fix_estado_entrega_solo_preventa | Filtro MOAT 3 opciones: entrega_inmediata, solo_preventa, no_importa | ✅ |
 | 059 | fix_tc_paralelo_retroactivo | Fix bug merge TC + 13 props corregidas + vista monitoreo | ✅ |
+| 064 | enriquecer_amenities_equipamiento | Extracción 69 campos (45 equip + 24 amenities) de descripciones a JSONB | ✅ |
 
 ## Repo Legacy
 
