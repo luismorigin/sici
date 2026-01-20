@@ -516,6 +516,7 @@ export default function ResultadosPage() {
   const [premiumEmail, setPremiumEmail] = useState('')
   const [premiumSubmitted, setPremiumSubmitted] = useState(false)
   const [premiumLoading, setPremiumLoading] = useState(false)
+  const [generandoInforme, setGenerandoInforme] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({})
 
@@ -551,6 +552,79 @@ export default function ResultadosPage() {
   // Nota: Se usa propiedadesOrdenadas para mantener el orden de recomendación
   const getSelectedProperties = (): UnidadReal[] => {
     return propiedadesOrdenadas.filter(p => selectedProps.has(p.id))
+  }
+
+  // Función para descargar informe directamente
+  const descargarInforme = async () => {
+    const propsSeleccionadas = getSelectedProperties()
+    if (propsSeleccionadas.length === 0) return
+
+    setGenerandoInforme(true)
+    try {
+      // Mapear propiedades al formato del API
+      const propiedadesData = propsSeleccionadas.map(p => ({
+        id: p.id,
+        proyecto: p.proyecto || 'Sin nombre',
+        desarrollador: p.desarrollador || null,
+        zona: p.zona || 'Sin zona',
+        dormitorios: p.dormitorios,
+        banos: null,
+        precio_usd: p.precio_usd || 0,
+        precio_m2: p.precio_m2 || 0,
+        area_m2: p.area_m2 || 0,
+        dias_en_mercado: p.dias_en_mercado || null,
+        fotos_urls: p.fotos_urls || [],
+        amenities_confirmados: p.amenities_lista || [],
+        amenities_por_verificar: [],
+        razon_fiduciaria: p.razon_fiduciaria || null,
+        posicion_mercado: p.posicion_mercado || null,
+        posicion_precio_edificio: null,
+        unidades_en_edificio: null,
+        estado_construccion: 'no_especificado'
+      }))
+
+      const datosUsuario = {
+        presupuesto: presupuesto ? parseInt(presupuesto as string) : 150000,
+        dormitorios: dormitorios ? parseInt(dormitorios as string) : null,
+        zonas: zonas ? (zonas as string).split(',').filter(Boolean) : [],
+        estado_entrega: (estado_entrega as string) || 'no_importa',
+        innegociables: innegociables ? (innegociables as string).split(',').filter(Boolean) : [],
+        deseables: deseables ? (deseables as string).split(',').filter(Boolean) : [],
+        ubicacion_vs_metros: ubicacion_vs_metros ? parseInt(ubicacion_vs_metros as string) : 3,
+        calidad_vs_precio: calidad_vs_precio ? parseInt(calidad_vs_precio as string) : 3,
+        quienes_viven: 'No especificado'
+      }
+
+      const analisisData = {
+        precio_m2_promedio: analisisFiduciario?.bloque_3_contexto_mercado?.precio_m2_promedio || 1500,
+        dias_mediana: analisisFiduciario?.bloque_3_contexto_mercado?.dias_mediana || 45,
+        total_analizadas: analisisFiduciario?.bloque_3_contexto_mercado?.stock_total || propiedadesData.length
+      }
+
+      const response = await fetch('/api/informe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propiedades: propiedadesData, datosUsuario, analisis: analisisData })
+      })
+
+      if (!response.ok) throw new Error('Error generando informe')
+
+      const html = await response.text()
+      const blob = new Blob([html], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `informe-fiduciario-${propsSeleccionadas[0]?.proyecto?.toLowerCase().replace(/\s+/g, '-') || 'simon'}.html`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error descargando informe:', error)
+      alert('Error generando el informe. Intentá de nuevo.')
+    } finally {
+      setGenerandoInforme(false)
+    }
   }
 
   // Contador para forzar refresh del modal cuando cambian filtros
@@ -2437,6 +2511,32 @@ ${top3Texto}
               )}
             </div>
 
+            {/* Botón descarga informe - aparece si hay propiedades seleccionadas */}
+            {selectedProps.size > 0 && (
+              <button
+                onClick={descargarInforme}
+                disabled={generandoInforme}
+                className="w-full py-3 px-6 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors text-sm mb-3 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {generandoInforme ? (
+                  <>
+                    <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generando...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Descargar Informe ({selectedProps.size} propiedades)
+                  </>
+                )}
+              </button>
+            )}
+
             {/* Ver ejemplo */}
             <button
               onClick={() => setShowPremiumExample(true)}
@@ -2494,6 +2594,26 @@ ${top3Texto}
                 >
                   Limpiar
                 </button>
+                {/* Botón descarga directo cuando hay 3 seleccionadas */}
+                {selectedProps.size === MAX_SELECTED && (
+                  <button
+                    onClick={descargarInforme}
+                    disabled={generandoInforme}
+                    className="bg-green-600 hover:bg-green-700 text-white font-semibold px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-1 disabled:opacity-50"
+                    title="Descargar informe HTML"
+                  >
+                    {generandoInforme ? (
+                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                    )}
+                  </button>
+                )}
                 <button
                   onClick={() => setShowPremiumModal(true)}
                   className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"

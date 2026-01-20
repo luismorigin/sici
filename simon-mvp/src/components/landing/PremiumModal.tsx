@@ -66,6 +66,7 @@ export default function PremiumModal({ onClose, filtros, propiedadesSeleccionada
   const [microzonas, setMicrozonas] = useState<MicrozonaData[]>([])
   const [escenarios, setEscenarios] = useState<EscenarioFinanciero[]>([])
   const [loading, setLoading] = useState(true)
+  const [generandoInforme, setGenerandoInforme] = useState(false)
 
   // Si tiene filtros, es dinámico (desde resultados)
   const isDinamico = !!filtros
@@ -170,6 +171,82 @@ export default function PremiumModal({ onClose, filtros, propiedadesSeleccionada
   const topOpciones = tieneSeleccion
     ? propiedadesComoOpciones
     : (analisis?.bloque_1_opciones_validas.opciones.slice(0, 4) || [])
+
+  // Función para descargar el informe HTML
+  const descargarInforme = async () => {
+    // Solo necesitamos propiedades seleccionadas, no el análisis completo
+    if (topOpciones.length === 0) return
+
+    setGenerandoInforme(true)
+    try {
+      // Mapear datos al formato del API
+      const propiedades = topOpciones.map(op => ({
+        id: op.id,
+        proyecto: op.proyecto || 'Sin nombre',
+        desarrollador: op.desarrollador || null,
+        zona: op.zona || 'Sin zona',
+        dormitorios: op.dormitorios || filtros?.dormitorios || 2,
+        banos: (op as any).banos || null,
+        precio_usd: op.precio_usd || 0,
+        precio_m2: op.precio_m2 || 0,
+        area_m2: op.area_m2 || 0,
+        dias_en_mercado: (op as any).dias_en_mercado || null,
+        fotos_urls: op.fotos_urls || [],
+        amenities_confirmados: (op as any).amenities_confirmados || op.amenities || [],
+        amenities_por_verificar: (op as any).amenities_por_verificar || [],
+        razon_fiduciaria: (op as any).razon_fiduciaria || op.resumen_fiduciario || null,
+        posicion_mercado: op.posicion_mercado || null,
+        posicion_precio_edificio: (op as any).posicion_precio_edificio || null,
+        unidades_en_edificio: (op as any).unidades_en_edificio || null,
+        estado_construccion: (op as any).estado_construccion || 'no_especificado'
+      }))
+
+      const datosUsuario = {
+        presupuesto: filtros?.presupuesto || 150000,
+        dormitorios: filtros?.dormitorios || null,
+        zonas: filtros?.zonas || [],
+        estado_entrega: filtros?.estado_entrega || 'no_importa',
+        innegociables: filtros?.innegociables || [],
+        deseables: filtros?.deseables || [],
+        ubicacion_vs_metros: filtros?.ubicacion_vs_metros || 3,
+        calidad_vs_precio: filtros?.calidad_vs_precio || 3,
+        quienes_viven: 'No especificado'
+      }
+
+      // Usar datos del análisis si existe, sino defaults
+      const analisisData = {
+        precio_m2_promedio: analisis?.bloque_3_contexto_mercado?.precio_m2_promedio || 1500,
+        dias_mediana: analisis?.bloque_3_contexto_mercado?.dias_mediana || 45,
+        total_analizadas: analisis?.bloque_3_contexto_mercado?.stock_total || propiedades.length
+      }
+
+      // Llamar al API
+      const response = await fetch('/api/informe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propiedades, datosUsuario, analisis: analisisData })
+      })
+
+      if (!response.ok) throw new Error('Error generando informe')
+
+      // Obtener el HTML y descargarlo
+      const html = await response.text()
+      const blob = new Blob([html], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `informe-fiduciario-${topOpciones[0]?.proyecto?.toLowerCase().replace(/\s+/g, '-') || 'simon'}.html`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error descargando informe:', error)
+      alert('Error generando el informe. Intentá de nuevo.')
+    } finally {
+      setGenerandoInforme(false)
+    }
+  }
 
   return (
     <AnimatePresence>
@@ -685,8 +762,37 @@ export default function PremiumModal({ onClose, filtros, propiedadesSeleccionada
               <p className="text-slate-300 text-sm mb-6 max-w-xl mx-auto">
                 <strong>Recomendacion:</strong> Solicitar verificacion de {topOpciones[0]?.proyecto || 'Vienna'} y {topOpciones[1]?.proyecto || 'Belvedere'}. Comparar liquidez y negociar dentro de tu ventana de 2-8 semanas.
               </p>
-              <div className="inline-block bg-white/10 border border-white/20 rounded-lg px-8 py-4 font-bold text-lg">
+              <div className="inline-block bg-white/10 border border-white/20 rounded-lg px-8 py-4 font-bold text-lg mb-6">
                 Simon Recomienda: {topOpciones[0]?.proyecto?.toUpperCase() || 'TORRE VIENNA'}
+              </div>
+
+              {/* Botón descargar informe */}
+              <div className="mt-6">
+                <button
+                  onClick={descargarInforme}
+                  disabled={generandoInforme || topOpciones.length === 0}
+                  className="bg-white text-brand-dark px-6 py-3 rounded-lg font-semibold hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                >
+                  {generandoInforme ? (
+                    <>
+                      <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generando...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Descargar Informe HTML
+                    </>
+                  )}
+                </button>
+                <p className="text-slate-400 text-xs mt-2">
+                  Informe completo con 9 secciones, mapa y checklist para imprimir
+                </p>
               </div>
             </section>
           </div>
