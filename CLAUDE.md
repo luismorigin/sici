@@ -81,7 +81,7 @@ sici/
 │   ├── enrichment/    # registrar_enrichment.sql
 │   ├── merge/         # merge_discovery_enrichment.sql v2.2.0
 │   └── matching/      # Funciones v3.1 (propiedades_v2)
-├── sql/migrations/    # 001-064 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities)
+├── sql/migrations/    # 001-068 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Baulera)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
@@ -185,6 +185,8 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 064 | enriquecer_amenities_equipamiento | Extracción 69 campos (45 equip + 24 amenities) de descripciones a JSONB | ✅ |
 | 065 | agregar_gps_estacionamientos | Añadir estacionamientos al retorno de buscar_unidades_reales() | ✅ |
 | 066 | enriquecer_estacionamientos | Extraer cantidad de parqueos desde descripciones (11.6% → 18%) | ✅ |
+| 067 | enriquecer_baulera | Crear columna baulera + extraer desde descripciones (14 props, 4.3%) | ✅ |
+| 068 | agregar_baulera_funcion | Añadir baulera al retorno de buscar_unidades_reales() v2.23 | ✅ |
 
 ## Repo Legacy
 
