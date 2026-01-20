@@ -97,6 +97,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
   const mapInstanceRef = useRef<L.Map | null>(null)
   const markersRef = useRef<Map<number, L.Marker>>(new Map())
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null)
+  const selectedLayerRef = useRef<L.LayerGroup | null>(null) // Capa separada para seleccionados
   const [selectedProp, setSelectedProp] = useState<PropiedadMapa | null>(null)
   const [mapReady, setMapReady] = useState(false)
   const [showLimitToast, setShowLimitToast] = useState(false)
@@ -104,21 +105,55 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
   // Filtrar propiedades con GPS válido
   const propsConGPS = propiedades.filter(p => p.latitud && p.longitud)
 
-  // Función para actualizar todos los iconos de markers
-  const updateMarkerIcons = () => {
+  // Calcular rango de precios de elegidos para leyenda dinámica
+  const preciosElegidos = propiedades
+    .filter(p => selectedIds.has(p.id))
+    .map(p => p.precio_usd)
+    .sort((a, b) => a - b)
+
+  const getLeyendaElegidos = () => {
+    if (preciosElegidos.length === 0) {
+      return { texto: '❤ Elegí hasta 3', showPill: false }
+    }
+    if (preciosElegidos.length === 1) {
+      return { texto: `${formatPrecioCompacto(preciosElegidos[0])} ❤ Elegido`, showPill: true }
+    }
+    const min = preciosElegidos[0]
+    const max = preciosElegidos[preciosElegidos.length - 1]
+    return { texto: `${formatPrecioCompacto(min)}-${formatPrecioCompacto(max)} ❤ Elegidos`, showPill: true }
+  }
+
+  // Función para actualizar markers: mover entre capas según selección
+  const updateMarkerLayers = () => {
+    if (!clusterGroupRef.current || !selectedLayerRef.current) return
+
     markersRef.current.forEach((marker, propId) => {
       const prop = propiedades.find(p => p.id === propId)
-      if (prop) {
-        const isSelected = selectedIds.has(propId)
-        const icon = crearPinConPrecio(prop.precio_usd, prop.diferencia_pct, prop.categoria_precio, isSelected)
-        marker.setIcon(icon)
+      if (!prop) return
 
-        // Traer seleccionados al frente
-        if (isSelected) {
-          marker.setZIndexOffset(1000)
-        } else {
-          marker.setZIndexOffset(0)
+      const isSelected = selectedIds.has(propId)
+      const icon = crearPinConPrecio(prop.precio_usd, prop.diferencia_pct, prop.categoria_precio, isSelected)
+      marker.setIcon(icon)
+
+      // Mover entre capas según estado de selección
+      if (isSelected) {
+        // Sacar del cluster y poner en capa de seleccionados
+        if (clusterGroupRef.current!.hasLayer(marker)) {
+          clusterGroupRef.current!.removeLayer(marker)
         }
+        if (!selectedLayerRef.current!.hasLayer(marker)) {
+          selectedLayerRef.current!.addLayer(marker)
+        }
+        marker.setZIndexOffset(2000) // Muy alto para estar siempre arriba
+      } else {
+        // Sacar de capa de seleccionados y poner en cluster
+        if (selectedLayerRef.current!.hasLayer(marker)) {
+          selectedLayerRef.current!.removeLayer(marker)
+        }
+        if (!clusterGroupRef.current!.hasLayer(marker)) {
+          clusterGroupRef.current!.addLayer(marker)
+        }
+        marker.setZIndexOffset(0)
       }
     })
   }
@@ -133,10 +168,10 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
     onToggleSelected(id)
   }
 
-  // Actualizar iconos cuando cambia la selección o el mapa está listo
+  // Actualizar capas cuando cambia la selección o el mapa está listo
   useEffect(() => {
     if (mapReady) {
-      updateMarkerIcons()
+      updateMarkerLayers()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIds, mapReady])
@@ -164,7 +199,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
     // Controles de zoom
     L.control.zoom({ position: 'bottomright' }).addTo(map)
 
-    // Crear cluster group
+    // Crear cluster group para pins NO seleccionados
     const clusterGroup = L.markerClusterGroup({
       maxClusterRadius: 50,
       spiderfyOnMaxZoom: true,
@@ -181,21 +216,34 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
       }
     })
 
+    // Crear capa separada para pins seleccionados (siempre visibles, sin clustering)
+    const selectedLayer = L.layerGroup()
+
     // Crear markers
     propsConGPS.forEach(prop => {
-      const icon = crearPinConPrecio(prop.precio_usd, prop.diferencia_pct, prop.categoria_precio, false)
+      const isSelected = selectedIds.has(prop.id)
+      const icon = crearPinConPrecio(prop.precio_usd, prop.diferencia_pct, prop.categoria_precio, isSelected)
 
       const marker = L.marker([prop.latitud!, prop.longitud!], { icon })
         .on('click', () => {
           setSelectedProp(prop)
         })
 
-      clusterGroup.addLayer(marker)
+      // Poner en la capa correcta según si está seleccionado
+      if (isSelected) {
+        selectedLayer.addLayer(marker)
+        marker.setZIndexOffset(2000)
+      } else {
+        clusterGroup.addLayer(marker)
+      }
       markersRef.current.set(prop.id, marker)
     })
 
+    // Agregar capas al mapa (clusterGroup primero, selectedLayer arriba)
     map.addLayer(clusterGroup)
+    map.addLayer(selectedLayer)
     clusterGroupRef.current = clusterGroup
+    selectedLayerRef.current = selectedLayer
 
     // Ajustar bounds
     if (propsConGPS.length > 1) {
@@ -211,6 +259,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
       mapInstanceRef.current = null
       markersRef.current.clear()
       clusterGroupRef.current = null
+      selectedLayerRef.current = null
       setMapReady(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -267,10 +316,21 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
           <span className="w-3 h-3 rounded bg-blue-500"></span>
           <span>Premium</span>
         </div>
-        <div className="flex items-center gap-2 pt-1 border-t border-gray-200 mt-1">
-          <span className="px-1.5 py-0.5 text-[10px] bg-amber-400 text-white rounded font-bold">$100k ❤</span>
-          <span>Elegido</span>
-        </div>
+        {/* Leyenda dinámica de elegidos */}
+        {(() => {
+          const leyenda = getLeyendaElegidos()
+          return (
+            <div className="flex items-center gap-2 pt-1 border-t border-gray-200 mt-1">
+              {leyenda.showPill ? (
+                <span className="px-1.5 py-0.5 text-[10px] bg-amber-400 text-white rounded font-bold whitespace-nowrap">
+                  {leyenda.texto}
+                </span>
+              ) : (
+                <span className="text-amber-600 font-medium">{leyenda.texto}</span>
+              )}
+            </div>
+          )
+        })()}
       </div>
 
       {/* Mapa */}
