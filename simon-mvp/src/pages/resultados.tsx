@@ -519,7 +519,7 @@ export default function ResultadosPage() {
 
   // Propiedades seleccionadas para informe premium personalizado
   const [selectedProps, setSelectedProps] = useState<Set<number>>(new Set())
-  const MAX_SELECTED = 10
+  const MAX_SELECTED = 3
 
   const toggleSelected = (propId: number) => {
     setSelectedProps(prev => {
@@ -1364,13 +1364,19 @@ ${top3Texto}
                             {/* Botón guardar - sobre la foto */}
                             <button
                               onClick={(e) => { e.stopPropagation(); toggleSelected(prop.id) }}
-                              className={`absolute top-3 left-3 w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all ${
-                                isSelected(prop.id)
-                                  ? 'bg-red-500 text-white shadow-lg'
-                                  : 'bg-black/30 backdrop-blur-sm text-white/80 hover:bg-black/50 hover:text-white'
-                              }`}
+                              className="absolute top-3 left-3 p-2 transition-all"
                             >
-                              {isSelected(prop.id) ? '❤️' : '🤍'}
+                              <svg
+                                className={`w-6 h-6 transition-all ${
+                                  isSelected(prop.id)
+                                    ? 'fill-red-500 stroke-red-500'
+                                    : 'fill-transparent stroke-white drop-shadow-md hover:stroke-red-400'
+                                }`}
+                                viewBox="0 0 24 24"
+                                strokeWidth={2}
+                              >
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                              </svg>
                             </button>
 
                             {/* Navegación fotos - Siempre visible en mobile */}
@@ -1937,13 +1943,19 @@ ${top3Texto}
                                 {/* Botón guardar */}
                                 <button
                                   onClick={(e) => { e.stopPropagation(); toggleSelected(prop.id) }}
-                                  className={`w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0 transition-all ${
-                                    isSelected(prop.id)
-                                      ? 'bg-red-500 text-white'
-                                      : 'bg-transparent text-gray-300 hover:text-red-400'
-                                  }`}
+                                  className="flex-shrink-0 p-1 transition-all"
                                 >
-                                  {isSelected(prop.id) ? '❤️' : '🤍'}
+                                  <svg
+                                    className={`w-5 h-5 transition-all ${
+                                      isSelected(prop.id)
+                                        ? 'fill-red-500 stroke-red-500'
+                                        : 'fill-transparent stroke-gray-300 hover:stroke-red-400'
+                                    }`}
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={2}
+                                  >
+                                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                  </svg>
                                 </button>
                                 <div>
                                   <h3 className="font-medium text-gray-900">{prop.proyecto}</h3>
@@ -2427,7 +2439,7 @@ ${top3Texto}
                     {selectedProps.size} {selectedProps.size === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {selectedProps.size < MAX_SELECTED ? `Podés elegir hasta ${MAX_SELECTED}` : 'Máximo alcanzado'}
+                    {selectedProps.size < MAX_SELECTED ? `Elegí ${MAX_SELECTED - selectedProps.size} más para comparar` : 'Listas para análisis premium'}
                   </p>
                 </div>
               </div>
