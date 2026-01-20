@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import 'leaflet.markercluster/dist/MarkerCluster.css'
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
+import 'leaflet.markercluster'
 
 // Síntesis fiduciaria (mismo formato que en resultados)
 interface SintesisFiduciaria {
@@ -34,55 +37,66 @@ interface MapaResultadosProps {
   onToggleSelected: (id: number) => void
 }
 
-// Colores MOAT alineados con landing (emerald=oportunidad, blue=premium, slate=justo)
-function getColorMOAT(diferencia_pct: number | null, categoria: string | null): { fill: string, name: string } {
-  if (diferencia_pct === null) return { fill: '#64748B', name: 'gray' } // slate-500
-  if (diferencia_pct <= -10 || categoria === 'oportunidad' || categoria === 'bajo_promedio') {
-    return { fill: '#10B981', name: 'emerald' } // emerald-500
+// Formatear precio compacto
+function formatPrecioCompacto(precio: number): string {
+  if (precio >= 1000000) {
+    return `$${(precio / 1000000).toFixed(1)}M`
   }
-  if (diferencia_pct >= 10 || categoria === 'premium' || categoria === 'sobre_promedio') {
-    return { fill: '#3B82F6', name: 'blue' } // blue-500
-  }
-  return { fill: '#64748B', name: 'slate' } // slate-500 - precio justo
+  return `$${Math.round(precio / 1000)}k`
 }
 
-function getIconoMOAT(diferencia_pct: number | null, categoria: string | null, isSelected: boolean): string {
-  const { fill: color } = getColorMOAT(diferencia_pct, categoria)
+// Colores MOAT alineados con landing
+function getColorMOAT(diferencia_pct: number | null, categoria: string | null): { bg: string, text: string, name: string } {
+  if (diferencia_pct === null) return { bg: '#64748B', text: '#FFFFFF', name: 'gray' }
+  if (diferencia_pct <= -10 || categoria === 'oportunidad' || categoria === 'bajo_promedio') {
+    return { bg: '#10B981', text: '#FFFFFF', name: 'emerald' } // emerald-500
+  }
+  if (diferencia_pct >= 10 || categoria === 'premium' || categoria === 'sobre_promedio') {
+    return { bg: '#3B82F6', text: '#FFFFFF', name: 'blue' } // blue-500
+  }
+  return { bg: '#64748B', text: '#FFFFFF', name: 'slate' } // slate-500
+}
 
-  // Si está seleccionado: pin más grande, borde dorado, corazón relleno
+// Crear pin tipo pill con precio
+function crearPinConPrecio(precio: number, diferencia_pct: number | null, categoria: string | null, isSelected: boolean): L.DivIcon {
+  const { bg } = getColorMOAT(diferencia_pct, categoria)
+  const precioTexto = formatPrecioCompacto(precio)
+
   if (isSelected) {
-    return `
-      <svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-            <feMerge>
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-        <path d="M20 0C8.954 0 0 8.954 0 20c0 11.046 20 30 20 30s20-18.954 20-30C40 8.954 31.046 0 20 0z"
-              fill="${color}" stroke="#F59E0B" stroke-width="3" filter="url(#glow)"/>
-        <path d="M20 12c-1.4-1.6-3.6-2.5-5.6-2.5C11.2 9.5 8.5 12 8.5 15.1c0 4.7 11.5 11.9 11.5 11.9s11.5-7.2 11.5-11.9c0-3.1-2.7-5.6-5.9-5.6-2 0-4.2.9-5.6 2.5z"
-              fill="#EF4444" stroke="white" stroke-width="1.5"/>
-      </svg>
+    // Pin seleccionado: más grande, borde dorado, corazón
+    const html = `
+      <div class="pin-pill pin-selected">
+        <span class="pin-precio">${precioTexto}</span>
+        <span class="pin-heart">❤</span>
+      </div>
     `
+    return L.divIcon({
+      html,
+      className: 'custom-pin-container',
+      iconSize: [90, 36],
+      iconAnchor: [45, 36]
+    })
   }
 
-  // No seleccionado: pin normal con círculo blanco
-  return `
-    <svg width="32" height="40" viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
-      <path d="M16 0C7.163 0 0 7.163 0 16c0 8.837 16 24 16 24s16-15.163 16-24C32 7.163 24.837 0 16 0z" fill="${color}" stroke="white" stroke-width="2"/>
-      <circle cx="16" cy="16" r="6" fill="white" opacity="0.9"/>
-    </svg>
+  // Pin normal con precio
+  const html = `
+    <div class="pin-pill" style="background-color: ${bg};">
+      <span class="pin-precio">${precioTexto}</span>
+    </div>
   `
+  return L.divIcon({
+    html,
+    className: 'custom-pin-container',
+    iconSize: [70, 30],
+    iconAnchor: [35, 30]
+  })
 }
 
 export default function MapaResultados({ propiedades, selectedIds, maxSelected, onClose, onToggleSelected }: MapaResultadosProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
   const markersRef = useRef<Map<number, L.Marker>>(new Map())
+  const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null)
   const [selectedProp, setSelectedProp] = useState<PropiedadMapa | null>(null)
   const [mapReady, setMapReady] = useState(false)
   const [showLimitToast, setShowLimitToast] = useState(false)
@@ -96,14 +110,15 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
       const prop = propiedades.find(p => p.id === propId)
       if (prop) {
         const isSelected = selectedIds.has(propId)
-        const icon = L.divIcon({
-          html: getIconoMOAT(prop.diferencia_pct, prop.categoria_precio, isSelected),
-          className: 'custom-marker',
-          // Pins seleccionados son más grandes
-          iconSize: isSelected ? [40, 50] : [32, 40],
-          iconAnchor: isSelected ? [20, 50] : [16, 40]
-        })
+        const icon = crearPinConPrecio(prop.precio_usd, prop.diferencia_pct, prop.categoria_precio, isSelected)
         marker.setIcon(icon)
+
+        // Traer seleccionados al frente
+        if (isSelected) {
+          marker.setZIndexOffset(1000)
+        } else {
+          marker.setZIndexOffset(0)
+        }
       }
     })
   }
@@ -112,7 +127,6 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
   const handleToggleSelected = (id: number) => {
     const isCurrentlySelected = selectedIds.has(id)
     if (!isCurrentlySelected && selectedIds.size >= maxSelected) {
-      // Mostrar toast MOAT
       setShowLimitToast(true)
       return
     }
@@ -131,7 +145,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
     if (!mapRef.current || mapInstanceRef.current) return
     if (propsConGPS.length === 0) return
 
-    // Centro inicial: promedio de todas las propiedades o Equipetrol
+    // Centro inicial
     const centerLat = propsConGPS.reduce((sum, p) => sum + (p.latitud || 0), 0) / propsConGPS.length || -17.7833
     const centerLng = propsConGPS.reduce((sum, p) => sum + (p.longitud || 0), 0) / propsConGPS.length || -63.1821
 
@@ -142,33 +156,48 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
       zoomControl: false
     })
 
-    // Agregar tiles de OpenStreetMap
+    // Tiles de OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap'
     }).addTo(map)
 
-    // Controles de zoom en posición mobile-friendly
+    // Controles de zoom
     L.control.zoom({ position: 'bottomright' }).addTo(map)
 
-    // Crear markers para cada propiedad (inicialmente sin selección, se actualizará después)
+    // Crear cluster group
+    const clusterGroup = L.markerClusterGroup({
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      iconCreateFunction: (cluster) => {
+        const count = cluster.getChildCount()
+        return L.divIcon({
+          html: `<div class="cluster-icon">${count}</div>`,
+          className: 'custom-cluster-container',
+          iconSize: [40, 40],
+          iconAnchor: [20, 20]
+        })
+      }
+    })
+
+    // Crear markers
     propsConGPS.forEach(prop => {
-      const icon = L.divIcon({
-        html: getIconoMOAT(prop.diferencia_pct, prop.categoria_precio, false),
-        className: 'custom-marker',
-        iconSize: [32, 40],
-        iconAnchor: [16, 40]
-      })
+      const icon = crearPinConPrecio(prop.precio_usd, prop.diferencia_pct, prop.categoria_precio, false)
 
       const marker = L.marker([prop.latitud!, prop.longitud!], { icon })
-        .addTo(map)
         .on('click', () => {
           setSelectedProp(prop)
         })
 
+      clusterGroup.addLayer(marker)
       markersRef.current.set(prop.id, marker)
     })
 
-    // Ajustar bounds para mostrar todos los markers
+    map.addLayer(clusterGroup)
+    clusterGroupRef.current = clusterGroup
+
+    // Ajustar bounds
     if (propsConGPS.length > 1) {
       const bounds = L.latLngBounds(propsConGPS.map(p => [p.latitud!, p.longitud!]))
       map.fitBounds(bounds, { padding: [50, 50] })
@@ -181,6 +210,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
       map.remove()
       mapInstanceRef.current = null
       markersRef.current.clear()
+      clusterGroupRef.current = null
       setMapReady(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -197,11 +227,11 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
   const getColoresSintesis = (tipo: string) => {
     switch (tipo) {
       case 'oportunidad':
-        return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-800', action: 'text-green-700' }
+        return { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', action: 'text-emerald-700' }
       case 'sospechoso':
         return { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', action: 'text-amber-700' }
       case 'premium':
-        return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', action: 'text-red-700' }
+        return { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', action: 'text-blue-700' }
       default:
         return { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-800', action: 'text-slate-700' }
     }
@@ -226,30 +256,30 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
       {/* Leyenda MOAT */}
       <div className="absolute top-20 left-4 z-[1000] bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 text-xs shadow">
         <div className="flex items-center gap-2 mb-1">
-          <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
+          <span className="w-3 h-3 rounded bg-emerald-500"></span>
           <span>Oportunidad</span>
         </div>
         <div className="flex items-center gap-2 mb-1">
-          <span className="w-3 h-3 rounded-full bg-slate-500"></span>
+          <span className="w-3 h-3 rounded bg-slate-500"></span>
           <span>Precio justo</span>
         </div>
         <div className="flex items-center gap-2 mb-1">
-          <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+          <span className="w-3 h-3 rounded bg-blue-500"></span>
           <span>Premium</span>
         </div>
         <div className="flex items-center gap-2 pt-1 border-t border-gray-200 mt-1">
-          <span className="w-3 h-3 rounded-full bg-amber-400 ring-2 ring-amber-400/50"></span>
-          <span>Seleccionado</span>
+          <span className="px-1.5 py-0.5 text-[10px] bg-amber-400 text-white rounded font-bold">$100k ❤</span>
+          <span>Elegido</span>
         </div>
       </div>
 
       {/* Mapa */}
       <div ref={mapRef} className="w-full h-full pt-16" />
 
-      {/* Card de propiedad seleccionada - Expandido con síntesis */}
+      {/* Card de propiedad seleccionada */}
       {selectedProp && (
         <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-white rounded-t-2xl shadow-2xl animate-slide-up max-h-[70vh] overflow-y-auto">
-          {/* Header del card con foto y datos básicos */}
+          {/* Header del card */}
           <div className="p-4 border-b border-gray-100">
             <div className="flex gap-3">
               {/* Foto */}
@@ -358,7 +388,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
         </div>
       )}
 
-      {/* Toast MOAT - Límite de selección alcanzado */}
+      {/* Toast MOAT */}
       {showLimitToast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[1001] animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="bg-gray-900 text-white px-5 py-4 rounded-xl shadow-xl max-w-sm relative">
@@ -372,8 +402,8 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
             </button>
             <p className="font-semibold text-sm mb-1 pr-6">¿Por qué solo {maxSelected}?</p>
             <p className="text-xs text-gray-300 leading-relaxed">
-              Más opciones = peores decisiones. Con {maxSelected} propiedades analizamos cada detalle a fondo: costos ocultos, historial de precios, y riesgos reales.
-              <span className="block mt-2 text-purple-300">El premium ya incluye +10 alternativas como contexto comparativo.</span>
+              Más opciones = peores decisiones. Con {maxSelected} propiedades analizamos cada detalle a fondo.
+              <span className="block mt-2 text-purple-300">El premium incluye +10 alternativas como contexto.</span>
             </p>
             <p className="text-xs text-gray-400 mt-2">Quitá una para agregar esta →</p>
           </div>
@@ -382,19 +412,74 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
 
       <style jsx>{`
         @keyframes slide-up {
-          from {
-            transform: translateY(100%);
-          }
-          to {
-            transform: translateY(0);
-          }
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
         }
         .animate-slide-up {
           animation: slide-up 0.3s ease-out;
         }
-        :global(.custom-marker) {
+        :global(.custom-pin-container) {
           background: transparent !important;
           border: none !important;
+        }
+        :global(.pin-pill) {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          padding: 6px 12px;
+          border-radius: 20px;
+          color: white;
+          font-weight: 600;
+          font-size: 13px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          white-space: nowrap;
+          border: 2px solid white;
+        }
+        :global(.pin-pill::after) {
+          content: '';
+          position: absolute;
+          bottom: -8px;
+          left: 50%;
+          transform: translateX(-50%);
+          border-left: 8px solid transparent;
+          border-right: 8px solid transparent;
+          border-top: 8px solid currentColor;
+        }
+        :global(.pin-selected) {
+          background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%) !important;
+          border: 3px solid #FCD34D !important;
+          box-shadow: 0 0 12px rgba(245, 158, 11, 0.5), 0 4px 12px rgba(0,0,0,0.3);
+          font-size: 14px;
+          padding: 8px 14px;
+        }
+        :global(.pin-heart) {
+          font-size: 12px;
+        }
+        :global(.custom-cluster-container) {
+          background: transparent !important;
+          border: none !important;
+        }
+        :global(.cluster-icon) {
+          width: 40px;
+          height: 40px;
+          background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+          border: 3px solid white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: 14px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        :global(.leaflet-marker-icon) {
+          transition: transform 0.2s ease;
+        }
+        :global(.leaflet-marker-icon:hover) {
+          transform: scale(1.1);
+          z-index: 10000 !important;
         }
       `}</style>
     </div>
