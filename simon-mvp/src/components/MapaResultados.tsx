@@ -48,6 +48,10 @@ const RANGOS_PRECIO = [
 
 // Top 13 = 3 recomendadas + 10 alternativas
 const TOP_13_COUNT = 13
+const TOP_3_COUNT = 3
+
+// Números circundados para ranking
+const RANKING_NUMBERS = ['①', '②', '③']
 
 // Categorías MOAT
 type CategoriaFiltro = 'oportunidad' | 'justo' | 'premium'
@@ -86,13 +90,18 @@ function getCategoriaMOAT(diferencia_pct: number | null, categoria: string | nul
 }
 
 // Crear pin tipo pill con precio
-function crearPinConPrecio(precio: number, diferencia_pct: number | null, categoria: string | null, isSelected: boolean): L.DivIcon {
+// rankingIndex: 0, 1, 2 para Top 3, null para el resto
+function crearPinConPrecio(precio: number, diferencia_pct: number | null, categoria: string | null, isSelected: boolean, rankingIndex: number | null = null): L.DivIcon {
   const { bg } = getColorMOAT(diferencia_pct, categoria)
   const precioTexto = formatPrecioCompacto(precio)
+  const isTop3 = rankingIndex !== null && rankingIndex < TOP_3_COUNT
+  const rankingSymbol = isTop3 ? RANKING_NUMBERS[rankingIndex] : ''
 
   if (isSelected) {
+    // Pin seleccionado: fondo amber + corazón (mantiene ranking si es Top 3)
     const html = `
       <div class="pin-pill pin-selected">
+        ${isTop3 ? `<span class="pin-ranking">${rankingSymbol}</span>` : ''}
         <span class="pin-precio">${precioTexto}</span>
         <span class="pin-heart">❤</span>
       </div>
@@ -100,11 +109,28 @@ function crearPinConPrecio(precio: number, diferencia_pct: number | null, catego
     return L.divIcon({
       html,
       className: 'custom-pin-container',
-      iconSize: [90, 36],
-      iconAnchor: [45, 36]
+      iconSize: [isTop3 ? 105 : 90, 36],
+      iconAnchor: [isTop3 ? 52 : 45, 36]
     })
   }
 
+  if (isTop3) {
+    // Pin Top 3: con número de ranking
+    const html = `
+      <div class="pin-pill pin-top3" style="background-color: ${bg};">
+        <span class="pin-ranking">${rankingSymbol}</span>
+        <span class="pin-precio">${precioTexto}</span>
+      </div>
+    `
+    return L.divIcon({
+      html,
+      className: 'custom-pin-container',
+      iconSize: [85, 32],
+      iconAnchor: [42, 32]
+    })
+  }
+
+  // Pin normal (alternativas y resto)
   const html = `
     <div class="pin-pill" style="background-color: ${bg};">
       <span class="pin-precio">${precioTexto}</span>
@@ -146,6 +172,17 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
   // IDs del Top 13 (las primeras 13 propiedades ordenadas por MOAT score)
   const top13Ids = new Set(propiedades.slice(0, TOP_13_COUNT).map(p => p.id))
   const totalConGPS = propsConGPS.length
+
+  // Mapa de propId -> rankingIndex (0, 1, 2 para Top 3, null para el resto)
+  const rankingMap = new Map<number, number>()
+  propiedades.slice(0, TOP_3_COUNT).forEach((p, idx) => {
+    rankingMap.set(p.id, idx)
+  })
+
+  // Helper para obtener ranking de una propiedad
+  const getRanking = (propId: number): number | null => {
+    return rankingMap.has(propId) ? rankingMap.get(propId)! : null
+  }
 
   // Aplicar filtros a las propiedades
   const propsFiltradas = propsConGPS.filter((prop, index) => {
@@ -270,7 +307,8 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
 
       const isSelected = selectedIds.has(propId)
       const shouldShow = filteredIds.has(propId)
-      const icon = crearPinConPrecio(prop.precio_usd, prop.diferencia_pct, prop.categoria_precio, isSelected)
+      const ranking = getRanking(propId)
+      const icon = crearPinConPrecio(prop.precio_usd, prop.diferencia_pct, prop.categoria_precio, isSelected, ranking)
       marker.setIcon(icon)
 
       if (isSelected) {
@@ -365,7 +403,8 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
 
     propsConGPS.forEach(prop => {
       const isSelected = selectedIds.has(prop.id)
-      const icon = crearPinConPrecio(prop.precio_usd, prop.diferencia_pct, prop.categoria_precio, isSelected)
+      const ranking = getRanking(prop.id)
+      const icon = crearPinConPrecio(prop.precio_usd, prop.diferencia_pct, prop.categoria_precio, isSelected, ranking)
 
       const marker = L.marker([prop.latitud!, prop.longitud!], { icon })
         .on('click', () => {
@@ -544,6 +583,27 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
 
       {/* Leyenda MOAT */}
       <div className="absolute top-36 left-4 z-[1000] bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 text-xs shadow">
+        {/* Colores MOAT */}
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-2.5 h-2.5 rounded bg-emerald-500"></span>
+          <span>Oportunidad</span>
+        </div>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-2.5 h-2.5 rounded bg-slate-500"></span>
+          <span>Justo</span>
+        </div>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-2.5 h-2.5 rounded bg-blue-500"></span>
+          <span>Premium</span>
+        </div>
+        {/* Separador */}
+        <div className="border-t border-gray-200 my-1.5"></div>
+        {/* Top 3 */}
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-[10px] font-bold">①②③</span>
+          <span>Top 3</span>
+        </div>
+        {/* Elegidos */}
         {(() => {
           const leyenda = getLeyendaElegidos()
           return (
@@ -879,6 +939,15 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
         }
         :global(.pin-heart) {
           font-size: 12px;
+        }
+        :global(.pin-top3) {
+          border: 2px solid rgba(255,255,255,0.9);
+          box-shadow: 0 2px 10px rgba(0,0,0,0.35), 0 0 0 2px rgba(255,215,0,0.4);
+        }
+        :global(.pin-ranking) {
+          font-size: 14px;
+          font-weight: bold;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.3);
         }
         :global(.custom-cluster-container) {
           background: transparent !important;
