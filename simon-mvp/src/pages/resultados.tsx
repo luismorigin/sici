@@ -62,17 +62,18 @@ interface DatosSintesis {
   diasPromedioZona: number | null
   // Escasez (parseado de razon_fiduciaria)
   escasez: number | null
-  // Equipamiento
-  equipamiento: string[]
   // Estado
   estadoConstruccion: string
-  // Amenidades
-  amenidadesConfirmadas: string[]
-  amenidadesPorVerificar: string[]
-  // Costos
-  parqueoTexto: string  // "A veces incluido", "Rara vez incluido", etc.
-  baulераTexto: string
-  costoExtraPotencial: number | null  // monto si no incluyen parqueo+baulera
+  // Innegociables del usuario vs lo que tiene la propiedad
+  innegociablesUsuario: string[]
+  amenidadesPropiedad: string[]  // confirmadas + detectadas
+  // Parqueo/baulera - personalizado
+  usuarioNecesitaParqueo: boolean
+  usuarioNecesitaBaulera: boolean
+  tieneParqueoConfirmado: boolean | null  // true=sí, false=no, null=sin info
+  tieneBauleraConfirmada: boolean | null
+  costoExtraParqueo: number  // costo estimado si no incluye
+  costoExtraBaulera: number
 }
 
 function generarSintesisFiduciaria(datos: DatosSintesis): SintesisFiduciaria {
@@ -82,165 +83,136 @@ function generarSintesisFiduciaria(datos: DatosSintesis): SintesisFiduciaria {
     diasMedianaZona,
     diasPromedioZona,
     escasez,
-    equipamiento,
     estadoConstruccion,
-    amenidadesConfirmadas,
-    amenidadesPorVerificar,
-    parqueoTexto,
-    baulераTexto,
-    costoExtraPotencial
+    innegociablesUsuario,
+    amenidadesPropiedad,
+    usuarioNecesitaParqueo,
+    usuarioNecesitaBaulera,
+    tieneParqueoConfirmado,
+    tieneBauleraConfirmada,
+    costoExtraParqueo,
+    costoExtraBaulera
   } = datos
 
-  // Umbrales dinámicos (fallback a valores conocidos si no hay datos)
-  const umbralSospecha = diasMedianaZona ?? 74
-  const umbralFuerte = diasPromedioZona ?? 104
+  // Umbrales dinámicos
+  const umbralReciente = 30
+  const umbralMedio = diasMedianaZona ?? 74
+  const umbralLargo = diasPromedioZona ?? 104
 
   const dias = diasEnMercado ?? 0
   const diffPct = Math.round(diferenciaPct ?? 0)
+  const sinDatosComparacion = diferenciaPct === null
 
-  // 1. DETERMINAR TIPO BASE
+  // 1. DETERMINAR TIPO
   let tipo: TipoSintesis = 'justo'
   if (diffPct <= -10) {
     tipo = 'oportunidad'
+    // Detectar sospechoso: muy barato + mucho tiempo
+    if ((diffPct <= -20 && dias >= umbralMedio) || dias >= umbralLargo) {
+      tipo = 'sospechoso'
+    }
   } else if (diffPct >= 10) {
     tipo = 'premium'
   }
 
-  // 2. DETECTAR CONTRADICCIONES (oportunidad + mucho tiempo = sospechoso)
-  // Si está MUY bajo (>20%) y lleva más que la mediana, es sospechoso
-  // Si está moderadamente bajo (10-20%) y lleva más que el promedio, es sospechoso
-  if (tipo === 'oportunidad') {
-    if (diffPct <= -20 && dias >= umbralSospecha) {
-      tipo = 'sospechoso'  // Muy bajo + sobre mediana = sospechoso
-    } else if (dias >= umbralFuerte) {
-      tipo = 'sospechoso'  // Cualquier oportunidad + sobre promedio = sospechoso
-    }
-  }
-
-  // 3. CONSTRUIR HEADLINE - Precio + Tiempo integrado
+  // 2. HEADLINE: Precio + Tiempo → Conclusión
   let headline: string
-  const meses = dias > 0 ? Math.round(dias / 30) : 0
-  const tiempoCorto = dias <= 30 ? 'publicado reciente' : dias < umbralSospecha ? `${meses} mes${meses > 1 ? 'es' : ''} publicado` : null
-  const tiempoLargo = dias >= umbralSospecha ? `${meses} meses publicado` : null
-
-  // Si no tenemos datos de comparación (diferenciaPct era null), mostrar mensaje neutro
-  const sinDatosComparacion = diferenciaPct === null
+  const tiempoTexto = dias <= umbralReciente ? 'reciente'
+    : dias < umbralMedio ? `${Math.round(dias / 30)} mes${Math.round(dias / 30) > 1 ? 'es' : ''}`
+    : `${Math.round(dias / 30)} meses`
 
   if (sinDatosComparacion) {
-    // No podemos comparar vs mercado - mostrar lo que sabemos
-    if (tiempoLargo) {
-      headline = `${tiempoLargo} - sin datos de zona para comparar precio`
-    } else {
-      headline = 'Sin datos de zona para comparar precio'
-    }
+    headline = dias > 0 ? `${tiempoTexto} publicado • Sin datos de zona para comparar` : 'Sin datos para comparar precio'
   } else if (tipo === 'sospechoso') {
-    headline = `${Math.abs(diffPct)}% bajo mercado - ${tiempoLargo}`
-  } else if (diffPct <= -10) {
-    headline = `Oportunidad: ${Math.abs(diffPct)}% bajo mercado`
-  } else if (diffPct >= 10) {
-    headline = `Premium: ${diffPct}% sobre mercado`
-  } else if (diffPct >= -5 && diffPct <= 5) {
-    headline = 'Precio de mercado'
-  } else if (diffPct < 0) {
-    headline = `${Math.abs(diffPct)}% bajo promedio`
+    headline = `${Math.abs(diffPct)}% bajo mercado + ${tiempoTexto} → ¿Por qué no se vendió?`
+  } else if (tipo === 'oportunidad') {
+    const conclusion = dias <= umbralReciente ? 'Buen precio, reciente' : 'Buen precio'
+    headline = `${Math.abs(diffPct)}% bajo mercado + ${tiempoTexto} → ${conclusion}`
+  } else if (tipo === 'premium') {
+    const conclusion = dias <= umbralReciente ? 'Precio firme' : dias >= umbralMedio ? 'Margen para negociar' : ''
+    headline = `${diffPct}% sobre mercado + ${tiempoTexto}${conclusion ? ` → ${conclusion}` : ''}`
   } else {
-    headline = `${diffPct}% sobre promedio`
+    headline = `Precio de mercado + ${tiempoTexto}`
   }
 
-  // 4. CONSTRUIR LÍNEAS DE DETALLE - Cada una toca un aspecto
+  // 3. DETALLE: Solo info que agrega valor (no repetir listas)
   const lineas: string[] = []
 
-  // Línea 1: Tiempo + Escasez
-  const parteTiempo = tiempoCorto ? `${tiempoCorto}` : (tiempoLargo && tipo !== 'sospechoso') ? tiempoLargo : null
-  const parteEscasez = escasez && escasez <= 5
-    ? (escasez === 1 ? 'única opción similar' : `solo ${escasez} similares`)
-    : null
+  // Filtrar valores nulos/vacíos para evitar errores
+  const innegociablesLimpios = (innegociablesUsuario || []).filter(x => x && typeof x === 'string')
+  const amenidadesLimpias = (amenidadesPropiedad || []).filter(x => x && typeof x === 'string')
 
-  if (parteTiempo || parteEscasez) {
-    const partes = [parteTiempo, parteEscasez].filter(Boolean)
-    lineas.push(partes.join(' • '))
-  }
-
-  // Línea 2: Amenidades | Equipamiento - con contexto MOAT
-  const tieneAmenConfirmadas = amenidadesConfirmadas.length > 0
-  const tieneAmenPorVerificar = amenidadesPorVerificar.length > 0
-  const tieneEquipamiento = equipamiento.length > 0
-
-  let lineaAmenEquip = ''
-
-  if (tieneAmenConfirmadas) {
-    // Caso A: Hay amenidades confirmadas
-    const amenTop = amenidadesConfirmadas.slice(0, 2).map(a => `${a} ✓`).join(', ')
-    lineaAmenEquip = amenTop
-  } else if (tieneAmenPorVerificar) {
-    // Caso B: Solo hay por verificar - dar contexto
-    lineaAmenEquip = `Sin amenidades confirmadas (verificar: ${amenidadesPorVerificar.slice(0, 2).join(', ')})`
-  } else {
-    // Caso C: No hay ninguna amenidad
-    lineaAmenEquip = 'Amenidades no especificadas'
-  }
-
-  // Agregar equipamiento si hay
-  if (tieneEquipamiento) {
-    const equipTop = equipamiento.slice(0, 2).join(', ')
-    lineaAmenEquip = `${lineaAmenEquip} | ${equipTop}`
-  } else if (!tieneAmenConfirmadas && !tieneAmenPorVerificar) {
-    // Solo si tampoco hay amenidades, mencionar que no hay equip
-    lineaAmenEquip = 'Sin amenidades ni equipamiento especificados'
-  }
-
-  lineas.push(lineaAmenEquip)
-
-  // Línea 3: Costos (parqueo + baulera)
-  const parqueoCorto = parqueoTexto.toLowerCase().includes('rara') ? 'parqueo rara vez incluido'
-    : parqueoTexto.toLowerCase().includes('veces') ? 'parqueo a veces incluido'
-    : parqueoTexto.toLowerCase().includes('frecuente') ? 'parqueo frecuente incluido'
-    : null
-  const baulераCorto = baulераTexto.toLowerCase().includes('rara') ? 'baulera rara vez'
-    : baulераTexto.toLowerCase().includes('veces') ? 'baulera a veces'
-    : null
-
-  if (parqueoCorto || baulераCorto) {
-    const costos = [parqueoCorto, baulераCorto].filter(Boolean).join(', ')
-    lineas.push(costos)
-  }
-
-  // Línea 4: Costo extra potencial (siempre mostrar si hay)
-  if (costoExtraPotencial && costoExtraPotencial > 0) {
-    lineas.push(`Costo real: hasta +$${formatNum(costoExtraPotencial)} si no incluyen parqueo/baulera`)
-  }
-
-  // Línea 5: Estado construcción
-  if (estadoConstruccion === 'preventa') {
-    lineas.push('⚠️ Preventa - verificar fecha entrega')
-  }
-
-  // 5. GENERAR ACCIÓN según tipo
-  let accion: string
-
-  // Caso especial: sin datos de comparación
-  if (sinDatosComparacion) {
-    accion = 'Pedí datos de otras unidades en la zona para comparar'
-  } else {
-    switch (tipo) {
-      case 'oportunidad':
-        if (estadoConstruccion === 'preventa') {
-          accion = 'Buen precio - verificá fecha entrega y qué incluye'
-        } else if (escasez && escasez <= 2) {
-          accion = 'Pocas opciones a este precio - verificá estado real'
-        } else {
-          accion = 'Buen precio - verificá por qué y el estado real'
-        }
-        break
-      case 'premium':
-        accion = '¿Justifica el precio extra vs alternativas?'
-        break
-      case 'sospechoso':
-        accion = 'Precio atractivo pero investigá por qué no se vendió'
-        break
-      default: // justo
-        accion = 'Sin urgencia - tomá tu tiempo para comparar'
+  // Línea 1: Innegociables del usuario - cuántos tiene
+  if (innegociablesLimpios.length > 0) {
+    const tieneInnegociables = innegociablesLimpios.filter(inn =>
+      amenidadesLimpias.some(a => a.toLowerCase().includes(inn.toLowerCase()))
+    )
+    if (tieneInnegociables.length === innegociablesLimpios.length) {
+      lineas.push(`✓ Tiene tus ${innegociablesLimpios.length} innegociables`)
+    } else if (tieneInnegociables.length > 0) {
+      const faltan = innegociablesLimpios.filter(inn =>
+        !amenidadesLimpias.some(a => a.toLowerCase().includes(inn.toLowerCase()))
+      )
+      lineas.push(`${tieneInnegociables.length}/${innegociablesLimpios.length} innegociables • Falta: ${faltan.slice(0, 2).join(', ')}`)
+    } else {
+      lineas.push(`⚠️ No tiene tus innegociables confirmados`)
     }
+  }
+
+  // Línea 2: Parqueo/Baulera - solo si el usuario lo necesita
+  const costosExtra: string[] = []
+  if (usuarioNecesitaParqueo) {
+    if (tieneParqueoConfirmado === true) {
+      // No mostrar nada, está OK
+    } else if (tieneParqueoConfirmado === false) {
+      costosExtra.push(`Parqueo no incluido (+$${formatNum(costoExtraParqueo)})`)
+    } else {
+      costosExtra.push(`Parqueo sin confirmar → preguntá`)
+    }
+  }
+  if (usuarioNecesitaBaulera) {
+    if (tieneBauleraConfirmada === true) {
+      // OK
+    } else if (tieneBauleraConfirmada === false) {
+      costosExtra.push(`Baulera no incluida (+$${formatNum(costoExtraBaulera)})`)
+    } else {
+      costosExtra.push(`Baulera sin confirmar`)
+    }
+  }
+  if (costosExtra.length > 0) {
+    lineas.push(`💰 ${costosExtra.join(' • ')}`)
+  }
+
+  // Línea 3: Escasez si es relevante
+  if (escasez && escasez <= 3) {
+    lineas.push(`📊 Solo ${escasez} similar${escasez > 1 ? 'es' : ''} disponible${escasez > 1 ? 's' : ''}`)
+  }
+
+  // Línea 4: Preventa
+  if (estadoConstruccion === 'preventa') {
+    lineas.push(`🏗️ Preventa → Verificá fecha entrega`)
+  }
+
+  // 4. ACCIÓN fiduciaria (verificar, preguntar - nunca decidir)
+  let accion: string
+  if (sinDatosComparacion) {
+    accion = 'Pedí info de otras unidades para comparar'
+  } else if (tipo === 'sospechoso') {
+    accion = 'Preguntá por qué lleva tanto tiempo publicado'
+  } else if (tipo === 'oportunidad') {
+    accion = estadoConstruccion === 'preventa'
+      ? 'Verificá fecha entrega y qué incluye el precio'
+      : 'Verificá estado real y por qué el precio'
+  } else if (tipo === 'premium') {
+    if (dias >= umbralMedio) {
+      accion = 'Hay margen para negociar - hacé oferta'
+    } else if (costosExtra.length > 0) {
+      accion = 'Confirmá qué incluye antes de comparar'
+    } else {
+      accion = 'Si te gusta, no demores - a buen ritmo de venta'
+    }
+  } else {
+    accion = 'Tomá tu tiempo para comparar opciones'
   }
 
   return {
@@ -661,19 +633,23 @@ export default function ResultadosPage() {
         desarrollador: p.desarrollador || null,
         zona: p.zona || 'Sin zona',
         dormitorios: p.dormitorios,
-        banos: null,
+        banos: p.banos || null,
         precio_usd: p.precio_usd || 0,
         precio_m2: p.precio_m2 || 0,
         area_m2: p.area_m2 || 0,
         dias_en_mercado: p.dias_en_mercado || null,
         fotos_urls: p.fotos_urls || [],
-        amenities_confirmados: p.amenities_lista || [],
-        amenities_por_verificar: [],
+        amenities_confirmados: p.amenities_confirmados || p.amenities_lista || [],
+        amenities_por_verificar: p.amenities_por_verificar || [],
         razon_fiduciaria: p.razon_fiduciaria || null,
         posicion_mercado: p.posicion_mercado || null,
-        posicion_precio_edificio: null,
-        unidades_en_edificio: null,
-        estado_construccion: 'no_especificado'
+        posicion_precio_edificio: p.posicion_precio_edificio || null,
+        unidades_en_edificio: p.unidades_en_edificio || null,
+        estado_construccion: p.estado_construccion || 'no_especificado',
+        // Nuevos campos para informe premium
+        estacionamientos: p.estacionamientos,
+        baulera: p.baulera,
+        equipamiento_detectado: p.equipamiento_detectado || []
       }))
 
       const datosUsuario = {
@@ -685,7 +661,11 @@ export default function ResultadosPage() {
         deseables: deseables ? (deseables as string).split(',').filter(Boolean) : [],
         ubicacion_vs_metros: ubicacion_vs_metros ? parseInt(ubicacion_vs_metros as string) : 3,
         calidad_vs_precio: calidad_vs_precio ? parseInt(calidad_vs_precio as string) : 3,
-        quienes_viven: 'No especificado'
+        quienes_viven: 'No especificado',
+        // Nuevos campos Level 2 para personalización
+        necesita_parqueo: usuarioNecesitaParqueo,
+        necesita_baulera: usuarioNecesitaBaulera,
+        pareja_alineados: pareja_alineados === 'true'
       }
 
       // Calcular promedio real del mercado filtrado (no hardcodeado)
@@ -705,7 +685,11 @@ export default function ResultadosPage() {
         body: JSON.stringify({ propiedades: propiedadesData, datosUsuario, analisis: analisisData })
       })
 
-      if (!response.ok) throw new Error('Error generando informe')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Error response:', errorData)
+        throw new Error(errorData.details || 'Error generando informe')
+      }
 
       const html = await response.text()
       const blob = new Blob([html], { type: 'text/html' })
@@ -713,7 +697,7 @@ export default function ResultadosPage() {
       window.open(url, '_blank')
     } catch (error) {
       console.error('Error abriendo informe:', error)
-      alert('Error generando el informe. Intentá de nuevo.')
+      alert(`Error generando el informe: ${(error as Error).message}`)
     } finally {
       setGenerandoInforme(false)
     }
@@ -1103,7 +1087,25 @@ export default function ResultadosPage() {
     const costos = getCostosOcultosEstimados(prop.dormitorios, null, null)
     const costoParqueo = Math.round((costos.estacionamiento.compra.min + costos.estacionamiento.compra.max) / 2)
     const costoBaulera = Math.round((costos.baulera.compra.min + costos.baulera.compra.max) / 2)
-    const costoExtra = costoParqueo + costoBaulera
+
+    // Parsear innegociables del usuario
+    const innegociablesArray = innegociables
+      ? (innegociables as string).split(',').filter(Boolean)
+      : []
+
+    // Combinar amenidades (confirmadas + detectadas)
+    const amenidadesPropiedad = [
+      ...(prop.amenities_confirmados || []),
+      ...(prop.equipamiento_detectado || [])
+    ]
+
+    // Estado parqueo/baulera: true=tiene, false=no tiene, null=desconocido
+    const tieneParqueoConfirmado = prop.estacionamientos == null
+      ? null
+      : prop.estacionamientos > 0
+    const tieneBauleraConfirmada = prop.baulera == null
+      ? null
+      : prop.baulera === true
 
     return generarSintesisFiduciaria({
       diferenciaPct: prop.posicion_mercado?.success ? prop.posicion_mercado.diferencia_pct : null,
@@ -1111,13 +1113,15 @@ export default function ResultadosPage() {
       diasMedianaZona: contextoMercado?.metricas_zona?.dias_mediana ?? null,
       diasPromedioZona: contextoMercado?.metricas_zona?.dias_promedio ?? null,
       escasez: parseEscasezDeRazon(prop.razon_fiduciaria),
-      equipamiento: prop.equipamiento_detectado || [],
       estadoConstruccion: prop.estado_construccion || '',
-      amenidadesConfirmadas: prop.amenities_confirmados || [],
-      amenidadesPorVerificar: prop.amenities_por_verificar || [],
-      parqueoTexto: costos.estacionamiento.texto_inclusion || '',
-      baulераTexto: costos.baulera.texto_inclusion || '',
-      costoExtraPotencial: costoExtra
+      innegociablesUsuario: innegociablesArray,
+      amenidadesPropiedad,
+      usuarioNecesitaParqueo,
+      usuarioNecesitaBaulera,
+      tieneParqueoConfirmado,
+      tieneBauleraConfirmada,
+      costoExtraParqueo: costoParqueo,
+      costoExtraBaulera: costoBaulera
     })
   }
 
@@ -1782,15 +1786,31 @@ ${top3Texto}
                           const costos = getCostosOcultosEstimados(prop.dormitorios, null, null)
 
                           // Calcular costo extra potencial (parqueo + baulera si no incluidos)
-                          // Usar promedio de min-max para cada componente
                           const costoParqueo = Math.round((costos.estacionamiento.compra.min + costos.estacionamiento.compra.max) / 2)
                           const costoBaulera = Math.round((costos.baulera.compra.min + costos.baulera.compra.max) / 2)
-                          const costoExtra = costoParqueo + costoBaulera
 
                           // IMPORTANTE: Solo usar diferencia_pct si posicion_mercado fue exitosa
-                          // (tiene datos de la zona + tipología para comparar)
                           const tieneComparacionValida = posicion?.success === true
                           const diferenciaPctValida = tieneComparacionValida ? posicion.diferencia_pct : null
+
+                          // Parsear innegociables del usuario
+                          const innegociablesArray = innegociables
+                            ? (innegociables as string).split(',').filter(Boolean)
+                            : []
+
+                          // Combinar amenidades (confirmadas + detectadas)
+                          const amenidadesProp = [
+                            ...(prop.amenities_confirmados || []),
+                            ...(prop.equipamiento_detectado || [])
+                          ]
+
+                          // Estado parqueo/baulera: true=tiene, false=no tiene, null=desconocido
+                          const tieneParqueoConf = prop.estacionamientos == null
+                            ? null
+                            : prop.estacionamientos > 0
+                          const tieneBauleraConf = prop.baulera == null
+                            ? null
+                            : prop.baulera === true
 
                           const sintesis = generarSintesisFiduciaria({
                             diferenciaPct: diferenciaPctValida,
@@ -1798,13 +1818,15 @@ ${top3Texto}
                             diasMedianaZona: metricas?.dias_mediana ?? null,
                             diasPromedioZona: metricas?.dias_promedio ?? null,
                             escasez: parseEscasezDeRazon(prop.razon_fiduciaria),
-                            equipamiento: prop.equipamiento_detectado || [],
                             estadoConstruccion: prop.estado_construccion || '',
-                            amenidadesConfirmadas: prop.amenities_confirmados || [],
-                            amenidadesPorVerificar: prop.amenities_por_verificar || [],
-                            parqueoTexto: costos.estacionamiento.texto_inclusion || '',
-                            baulераTexto: costos.baulera.texto_inclusion || '',
-                            costoExtraPotencial: costoExtra
+                            innegociablesUsuario: innegociablesArray,
+                            amenidadesPropiedad: amenidadesProp,
+                            usuarioNecesitaParqueo,
+                            usuarioNecesitaBaulera,
+                            tieneParqueoConfirmado: tieneParqueoConf,
+                            tieneBauleraConfirmada: tieneBauleraConf,
+                            costoExtraParqueo: costoParqueo,
+                            costoExtraBaulera: costoBaulera
                           })
 
                           // Colores según tipo
@@ -2379,9 +2401,29 @@ ${top3Texto}
                     // Calcular síntesis para badge - v2.13: usar posicion_mercado directamente
                     const posicion = prop.posicion_mercado
                     const metricas = contextoMercado?.metricas_zona
+                    const costosAltBadge = getCostosOcultosEstimados(prop.dormitorios, null, null)
 
                     const tieneComparacionValida = posicion?.success === true
                     const diferenciaPctValida = tieneComparacionValida ? posicion.diferencia_pct : null
+
+                    // Parsear innegociables del usuario
+                    const innegociablesAltBadge = innegociables
+                      ? (innegociables as string).split(',').filter(Boolean)
+                      : []
+
+                    // Combinar amenidades
+                    const amenidadesAltBadge = [
+                      ...(prop.amenities_confirmados || []),
+                      ...(prop.equipamiento_detectado || [])
+                    ]
+
+                    // Estado parqueo/baulera
+                    const tieneParqueoAltBadge = prop.estacionamientos == null
+                      ? null
+                      : prop.estacionamientos > 0
+                    const tieneBauleraAltBadge = prop.baulera == null
+                      ? null
+                      : prop.baulera === true
 
                     const sintesisAlt = generarSintesisFiduciaria({
                       diferenciaPct: diferenciaPctValida,
@@ -2389,13 +2431,15 @@ ${top3Texto}
                       diasMedianaZona: metricas?.dias_mediana ?? null,
                       diasPromedioZona: metricas?.dias_promedio ?? null,
                       escasez: parseEscasezDeRazon(prop.razon_fiduciaria),
-                      equipamiento: prop.equipamiento_detectado || [],
                       estadoConstruccion: prop.estado_construccion || '',
-                      amenidadesConfirmadas: prop.amenities_confirmados || [],
-                      amenidadesPorVerificar: prop.amenities_por_verificar || [],
-                      parqueoTexto: '',
-                      baulераTexto: '',
-                      costoExtraPotencial: null
+                      innegociablesUsuario: innegociablesAltBadge,
+                      amenidadesPropiedad: amenidadesAltBadge,
+                      usuarioNecesitaParqueo,
+                      usuarioNecesitaBaulera,
+                      tieneParqueoConfirmado: tieneParqueoAltBadge,
+                      tieneBauleraConfirmada: tieneBauleraAltBadge,
+                      costoExtraParqueo: Math.round((costosAltBadge.estacionamiento.compra.min + costosAltBadge.estacionamiento.compra.max) / 2),
+                      costoExtraBaulera: Math.round((costosAltBadge.baulera.compra.min + costosAltBadge.baulera.compra.max) / 2)
                     })
 
                     // Colores y iconos para badge compacto
@@ -2560,10 +2604,28 @@ ${top3Texto}
                               {/* Síntesis fiduciaria expandida - aparece al click en badge */}
                               {expandedCards.has(prop.id) && (() => {
                                 // Generar síntesis completa con costos
-                                const costosAlt = getCostosOcultosEstimados(prop.dormitorios, null, null)
-                                const costoParqueoAlt = Math.round((costosAlt.estacionamiento.compra.min + costosAlt.estacionamiento.compra.max) / 2)
-                                const costoBauleraAlt = Math.round((costosAlt.baulera.compra.min + costosAlt.baulera.compra.max) / 2)
-                                const costoExtraAlt = costoParqueoAlt + costoBauleraAlt
+                                const costosAltExp = getCostosOcultosEstimados(prop.dormitorios, null, null)
+                                const costoParqueoAltExp = Math.round((costosAltExp.estacionamiento.compra.min + costosAltExp.estacionamiento.compra.max) / 2)
+                                const costoBauleraAltExp = Math.round((costosAltExp.baulera.compra.min + costosAltExp.baulera.compra.max) / 2)
+
+                                // Parsear innegociables del usuario
+                                const innegociablesAltExp = innegociables
+                                  ? (innegociables as string).split(',').filter(Boolean)
+                                  : []
+
+                                // Combinar amenidades
+                                const amenidadesAltExp = [
+                                  ...(prop.amenities_confirmados || []),
+                                  ...(prop.equipamiento_detectado || [])
+                                ]
+
+                                // Estado parqueo/baulera
+                                const tieneParqueoAltExp = prop.estacionamientos == null
+                                  ? null
+                                  : prop.estacionamientos > 0
+                                const tieneBauleraAltExp = prop.baulera == null
+                                  ? null
+                                  : prop.baulera === true
 
                                 const sintesisCompleta = generarSintesisFiduciaria({
                                   diferenciaPct: posicion?.success ? posicion.diferencia_pct : null,
@@ -2571,13 +2633,15 @@ ${top3Texto}
                                   diasMedianaZona: contextoMercado?.metricas_zona?.dias_mediana ?? null,
                                   diasPromedioZona: contextoMercado?.metricas_zona?.dias_promedio ?? null,
                                   escasez: parseEscasezDeRazon(prop.razon_fiduciaria),
-                                  equipamiento: prop.equipamiento_detectado || [],
                                   estadoConstruccion: prop.estado_construccion || '',
-                                  amenidadesConfirmadas: prop.amenities_confirmados || [],
-                                  amenidadesPorVerificar: prop.amenities_por_verificar || [],
-                                  parqueoTexto: costosAlt.estacionamiento.texto_inclusion || '',
-                                  baulераTexto: costosAlt.baulera.texto_inclusion || '',
-                                  costoExtraPotencial: costoExtraAlt
+                                  innegociablesUsuario: innegociablesAltExp,
+                                  amenidadesPropiedad: amenidadesAltExp,
+                                  usuarioNecesitaParqueo,
+                                  usuarioNecesitaBaulera,
+                                  tieneParqueoConfirmado: tieneParqueoAltExp,
+                                  tieneBauleraConfirmada: tieneBauleraAltExp,
+                                  costoExtraParqueo: costoParqueoAltExp,
+                                  costoExtraBaulera: costoBauleraAltExp
                                 })
 
                                 const coloresSintesis = {
@@ -3368,7 +3432,14 @@ ${top3Texto}
             fotos_urls: p.fotos_urls || [],
             diferencia_pct: p.posicion_mercado?.diferencia_pct ?? null,
             categoria_precio: p.posicion_mercado?.categoria ?? null,
-            sintesisFiduciaria: getSintesisFiduciaria(p)
+            sintesisFiduciaria: (() => {
+              try {
+                return getSintesisFiduciaria(p)
+              } catch (e) {
+                console.error('Error en síntesis para prop', p.id, p.proyecto, e)
+                return null
+              }
+            })()
           }))}
           selectedIds={selectedProps}
           maxSelected={MAX_SELECTED}
