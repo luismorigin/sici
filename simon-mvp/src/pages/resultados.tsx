@@ -2032,36 +2032,51 @@ ${top3Texto}
                           )
                         })()}
 
-                        {/* 5. EQUIPAMIENTO - ¿Qué viene incluido? */}
+                        {/* 5. EQUIPAMIENTO - Análisis MOAT dinámico */}
                         {(() => {
                           const mensaje = getMensajeEquipamiento(
                             prop.dormitorios,
                             prop.equipamiento_detectado || []
                           )
 
+                          const colorFondo = {
+                            'equipado': 'bg-green-50 border-green-200',
+                            'basico': 'bg-amber-50 border-amber-200',
+                            'sin_info': 'bg-gray-50 border-gray-200'
+                          }[mensaje.tipo]
+
+                          const colorTexto = {
+                            'equipado': 'text-green-800',
+                            'basico': 'text-amber-800',
+                            'sin_info': 'text-gray-700'
+                          }[mensaje.tipo]
+
+                          const icono = {
+                            'equipado': '✅',
+                            'basico': '⚠️',
+                            'sin_info': '❓'
+                          }[mensaje.tipo]
+
                           return (
-                            <div className="flex items-start gap-2 text-sm">
-                              <span className="text-gray-500">🏠</span>
-                              <div>
-                                <span className={`text-gray-700 ${mensaje.hayDeteccion ? 'font-medium' : ''}`}>
-                                  {mensaje.dato}
-                                </span>
-                                {mensaje.hayDeteccion && (
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {(prop.equipamiento_detectado || []).map((item, i) => (
-                                      <span key={i} className="inline-flex items-center px-2 py-0.5
-                                        bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs">
-                                        {item}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {mensaje.costoReferencia}
-                                </p>
-                                <p className="text-xs text-amber-700">
-                                  {mensaje.accion}
-                                </p>
+                            <div className={`rounded-lg border p-3 ${colorFondo}`}>
+                              <div className="flex items-start gap-2">
+                                <span>{icono}</span>
+                                <div className="flex-1">
+                                  <p className={`font-medium ${colorTexto}`}>
+                                    {mensaje.mensaje}
+                                  </p>
+                                  {mensaje.costoFaltante.max > 0 && (
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      💰 Equipar faltante: ~${mensaje.costoFaltante.min.toLocaleString()}-{mensaje.costoFaltante.max.toLocaleString()}
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-amber-700 mt-1">
+                                    → {mensaje.accion}
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-2 italic">
+                                    * Valores orientativos basados en precios Santa Cruz 2026
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           )

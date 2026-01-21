@@ -108,6 +108,71 @@ export const ITEMS_EQUIPAMIENTO = {
 }
 
 /**
+ * Valor estimado promedio por item detectado (USD)
+ * Usado para calcular valor aproximado del equipamiento incluido
+ */
+export const VALOR_ITEM_DETECTADO: Record<string, number> = {
+  // Cocina
+  'Heladera': 550,
+  'Encimera': 300,
+  'Microondas': 100,
+  'Horno empotrado': 400,
+  'Campana extractora': 150,
+  'Muebles cocina': 700,
+  'Cocina equipada': 1200,
+  'Lavavajillas': 500,
+  'Grifería': 80,
+  'Mesada piedra natural': 400,
+
+  // Agua caliente
+  'Calefón': 220,
+  'Termotanque': 280,
+
+  // Baño
+  'Box ducha': 300,
+  'Tina/Bañera': 400,
+  'Muebles de baño': 200,
+  'Espejo': 60,
+  'Ducha española': 250,
+
+  // Dormitorio
+  'Closets': 400,
+  'Roperos empotrados': 450,
+  'Vestidor': 600,
+  'Cortinas': 120,
+  'Blackout': 150,
+
+  // Lavandería
+  'Área de lavado': 50,
+  'Lavadora': 400,
+  'Secadora': 350,
+  'Tendedero': 30,
+
+  // Tecnología
+  'Aire acondicionado': 550,
+  'Iluminación LED': 100,
+  'Cerradura inteligente': 150,
+  'Internet/WiFi': 50,
+  'Intercomunicador': 80,
+  'Domótica': 300,
+  'Alarma de seguridad': 200,
+
+  // Servicios/Extras
+  'Gas domiciliario': 100,
+  'Balcón': 0, // no tiene costo de equipamiento
+  'Terraza privada': 0,
+  'Vista panorámica': 0,
+  'Amoblado': 2500,
+
+  // Acabados
+  'Acabados premium': 500,
+  'Piso porcelanato': 300,
+  'Vidrio doble': 200,
+  'Aislamiento acústico': 150,
+  'Construcción antisísmica': 0,
+}
+
+/**
  * Obtiene el costo de equipamiento según dormitorios
  */
 export function getCostoEquipamiento(dormitorios: number): CostoEquipamiento {
@@ -178,41 +243,70 @@ export function calcularAhorroEquipamiento(
 }
 
 /**
- * Genera mensaje fiduciario sobre equipamiento
+ * Genera mensaje fiduciario MOAT sobre equipamiento
  *
  * IMPORTANTE - Restricciones fiduciarias:
- * - SI detectamos → "La publicación menciona X" (no "incluye" - no sabemos si es todo)
- * - SI NO detectamos → "No especificado" (no "no tiene" - puede tener pero broker no lo puso)
- * - SIEMPRE mostrar costo de referencia (educativo)
+ * - SI detectamos → Calcular valor aproximado de lo detectado
+ * - SI NO detectamos → Mostrar costo total de equipar
+ * - SIEMPRE disclaimer de valores orientativos
  * - SIEMPRE pedir que pregunte/verifique
  */
 export function getMensajeEquipamiento(
   dormitorios: number,
   itemsDetectados: string[]
 ): {
-  dato: string
-  costoReferencia: string
+  tipo: 'equipado' | 'basico' | 'sin_info'
+  valorDetectado: number
+  costoFaltante: { min: number; max: number }
+  mensaje: string
   accion: string
   hayDeteccion: boolean
 } {
   const costos = getCostoEquipamiento(dormitorios)
-  const costoRef = `Equipar un ${dormitorios}D desde cero cuesta $${costos.gamaBasica.min.toLocaleString()}-${costos.gamaMedia.max.toLocaleString()}`
+  const costoTotalMin = costos.gamaBasica.min
+  const costoTotalMax = costos.gamaMedia.max
+
+  // Calcular valor de items detectados
+  let valorDetectado = 0
+  for (const item of itemsDetectados) {
+    valorDetectado += VALOR_ITEM_DETECTADO[item] || 0
+  }
+
+  // Calcular faltante estimado
+  const faltanteMin = Math.max(0, costoTotalMin - valorDetectado)
+  const faltanteMax = Math.max(0, costoTotalMax - valorDetectado)
 
   if (itemsDetectados.length === 0) {
     return {
-      dato: 'Equipamiento no especificado en publicación',
-      costoReferencia: costoRef,
+      tipo: 'sin_info',
+      valorDetectado: 0,
+      costoFaltante: { min: costoTotalMin, max: costoTotalMax },
+      mensaje: `Sin equipamiento confirmado`,
       accion: 'Preguntá qué incluye el precio',
       hayDeteccion: false
     }
   }
 
-  const itemsTexto = itemsDetectados.slice(0, 3).join(', ')
+  // Determinar nivel de equipamiento
+  const porcentajeEquipado = (valorDetectado / costoTotalMin) * 100
+
+  if (porcentajeEquipado >= 70) {
+    return {
+      tipo: 'equipado',
+      valorDetectado,
+      costoFaltante: { min: faltanteMin, max: faltanteMax },
+      mensaje: `Bien equipado (~$${valorDetectado.toLocaleString()} detectado)`,
+      accion: 'Verificá estado del equipamiento',
+      hayDeteccion: true
+    }
+  }
 
   return {
-    dato: `Publicación menciona: ${itemsTexto}`,
-    costoReferencia: costoRef,
-    accion: 'Preguntá qué más incluye y su estado',
+    tipo: 'basico',
+    valorDetectado,
+    costoFaltante: { min: faltanteMin, max: faltanteMax },
+    mensaje: `Equipamiento parcial (~$${valorDetectado.toLocaleString()} detectado)`,
+    accion: 'Preguntá qué más incluye',
     hayDeteccion: true
   }
 }
