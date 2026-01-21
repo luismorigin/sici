@@ -276,7 +276,7 @@ function parseEscasezDeRazon(razon: string | null | undefined): number | null {
  */
 function DescripcionAnunciante({ descripcion }: { descripcion: string }) {
   const [expanded, setExpanded] = useState(false)
-  const MAX_LENGTH = 150
+  const MAX_LENGTH = 120
 
   // Limpiar emojis excesivos y formatear
   const textoLimpio = descripcion
@@ -290,20 +290,22 @@ function DescripcionAnunciante({ descripcion }: { descripcion: string }) {
     : textoLimpio.slice(0, MAX_LENGTH) + '...'
 
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-gray-500">📝</span>
-        <span className="text-sm font-medium text-gray-700">Descripción del anunciante</span>
+    <div className="rounded-lg border border-gray-200 bg-gray-50/50 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-gray-500">📝 Del anunciante</span>
+        <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">portal inmobiliario</span>
       </div>
-      <p className="text-sm text-gray-600 leading-relaxed">
-        {textoMostrar}
-      </p>
+      <div className="relative pl-3 border-l-2 border-gray-300">
+        <p className="text-sm text-gray-600 leading-relaxed italic">
+          "{textoMostrar}"
+        </p>
+      </div>
       {necesitaTruncado && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-xs text-blue-600 hover:text-blue-800 mt-1 font-medium"
+          className="text-xs text-gray-500 hover:text-gray-700 mt-2 font-medium flex items-center gap-1"
         >
-          {expanded ? 'ver menos' : 'ver más'}
+          {expanded ? '↑ ver menos' : '↓ ver más'}
         </button>
       )}
     </div>
@@ -1855,97 +1857,304 @@ ${top3Texto}
                           )}
                         </button>
 
-                        {/* Sección colapsable de detalles - Orden: QUÉ ES → MOAT */}
+                        {/* Sección colapsable de detalles - Orden MOAT: dinero primero, descripción al final */}
                         {expandedCards.has(prop.id) && (
                         <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
 
-                        {/* 1. DESCRIPCIÓN - ¿Qué es esta propiedad? (PRIMERO) */}
-                        {prop.descripcion && (
-                          <DescripcionAnunciante descripcion={prop.descripcion} />
-                        )}
-
-                        {/* 2. DÍAS EN MERCADO - ¿Puedo negociar? */}
-                        {prop.dias_en_mercado != null && (
-                          <div className="flex items-start gap-2 text-sm">
-                            <span className="text-gray-500">📅</span>
-                            <div>
-                              <span className="text-gray-700">
-                                {prop.dias_en_mercado} días publicado
-                                <span className="text-gray-500 text-xs ml-1">(promedio zona: 74)</span>
-                              </span>
-                              {prop.dias_en_mercado > 60 ? (
-                                <>
-                                  <p className="text-xs text-gray-600">
-                                    Hay margen de negociación
-                                  </p>
-                                  <p className="text-xs text-amber-700">
-                                    Consultá si aceptan ofertas
-                                  </p>
-                                </>
-                              ) : prop.dias_en_mercado > 30 ? (
-                                <p className="text-xs text-gray-600">
-                                  Tiempo normal en el mercado
-                                </p>
-                              ) : (
-                                <p className="text-xs text-gray-600">
-                                  Publicación reciente - precio firme probable
-                                </p>
-                              )}
-                              <p className="text-xs text-gray-400 mt-1">
-                                Nota: Promedio Equipetrol 104 días, mediana 74 días.
-                              </p>
+                        {/* 1. PRECIO REAL DE COMPRA - Lo más importante */}
+                        {(() => {
+                          const costos = getCostosOcultosEstimados(prop.dormitorios, null, null)
+                          const tieneParqueo = prop.estacionamientos != null && prop.estacionamientos > 0
+                          const tieneBaulera = prop.baulera === true
+                          const parqueoDesconocido = prop.estacionamientos == null
+                          const bauleraDesconocida = prop.baulera == null
+                          let costoAdicionalMin = 0
+                          let costoAdicionalMax = 0
+                          const itemsPendientes: string[] = []
+                          if (!tieneParqueo && parqueoDesconocido) {
+                            costoAdicionalMin += costos.estacionamiento.compra.min
+                            costoAdicionalMax += costos.estacionamiento.compra.max
+                            itemsPendientes.push('parqueo')
+                          }
+                          if (!tieneBaulera && bauleraDesconocida) {
+                            costoAdicionalMin += costos.baulera.compra.min
+                            costoAdicionalMax += costos.baulera.compra.max
+                            itemsPendientes.push('baulera')
+                          }
+                          const todoConfirmado = tieneParqueo && tieneBaulera
+                          return (
+                            <div className={`rounded-lg border p-3 ${todoConfirmado ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className={`text-sm font-semibold ${todoConfirmado ? 'text-green-800' : 'text-amber-800'}`}>
+                                  {todoConfirmado ? '✅ Precio completo' : '💰 Precio real de compra'}
+                                </span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${todoConfirmado ? 'bg-green-200 text-green-700' : 'bg-amber-200 text-amber-700'}`}>
+                                  costo único
+                                </span>
+                              </div>
+                              <div className="space-y-1.5 text-sm">
+                                <div className="flex items-start gap-2">
+                                  <span className={`w-4 ${tieneParqueo ? 'text-green-500' : 'text-amber-500'}`}>🚗</span>
+                                  <div>
+                                    {tieneParqueo ? (
+                                      <span className="text-green-700 font-medium">Parqueo: ✓ Incluido ({prop.estacionamientos}p)</span>
+                                    ) : (
+                                      <>
+                                        <span className="text-gray-700">Parqueo: ${formatNum(costos.estacionamiento.compra.min)}-{formatNum(costos.estacionamiento.compra.max)}</span>
+                                        <p className="text-xs text-amber-700">{parqueoDesconocido ? 'Preguntá si está incluido' : 'No incluido - costo adicional'}</p>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <span className={`w-4 ${tieneBaulera ? 'text-green-500' : 'text-amber-500'}`}>📦</span>
+                                  <div>
+                                    {tieneBaulera ? (
+                                      <span className="text-green-700 font-medium">Baulera: ✓ Incluida</span>
+                                    ) : (
+                                      <>
+                                        <span className="text-gray-700">Baulera: ${formatNum(costos.baulera.compra.min)}-{formatNum(costos.baulera.compra.max)}</span>
+                                        <p className="text-xs text-amber-700">{bauleraDesconocida ? 'Preguntá si está incluida' : 'No incluida - costo adicional'}</p>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                                {itemsPendientes.length > 0 ? (
+                                  <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-amber-200">
+                                    <span className="text-amber-600 w-4">💡</span>
+                                    <span className="text-amber-700 text-xs font-medium">
+                                      Precio real: ${formatNum(prop.precio_usd + costoAdicionalMin)}-{formatNum(prop.precio_usd + costoAdicionalMax)} si no incluye {itemsPendientes.join(' ni ')}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-green-200">
+                                    <span className="text-green-600 w-4">✓</span>
+                                    <span className="text-green-700 text-xs font-medium">${formatNum(prop.precio_usd)} = Precio real (todo incluido)</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )
+                        })()}
 
-                        {/* 3. COMPARACIÓN EDIFICIO - ¿El precio es justo? */}
-                        {prop.unidades_en_edificio != null && prop.unidades_en_edificio > 1 && (
-                          <div className="flex items-start gap-2 text-sm">
-                            <span className="text-gray-500">🏢</span>
-                            <div>
-                              {prop.unidades_misma_tipologia != null && prop.unidades_misma_tipologia >= 2 ? (
+                        {/* 2. COSTO MENSUAL DE VIVIR */}
+                        {(() => {
+                          const costos = getCostosOcultosEstimados(prop.dormitorios, null, null)
+                          const expensasMin = costos.expensas.rango_completo.min
+                          const expensasMax = costos.expensas.rango_completo.max
+                          const expensasPromedio = Math.round((expensasMin + expensasMax) / 2)
+                          const impactoAnual = expensasPromedio * 12
+                          const impacto5Anos = impactoAnual * 5
+                          return (
+                            <div className="rounded-lg border p-3 bg-blue-50 border-blue-200">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-sm font-semibold text-blue-800">📋 Costo mensual de vivir</span>
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-blue-200 text-blue-700">recurrente</span>
+                              </div>
+                              <div className="space-y-1.5 text-sm">
+                                <div className="flex items-start gap-2">
+                                  <span className="text-blue-500 w-4">💵</span>
+                                  <div>
+                                    <span className="text-gray-700 font-medium">Expensas: ${expensasMin}-{expensasMax}/mes</span>
+                                    <p className="text-xs text-blue-700">Preguntá monto exacto al vendedor</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-blue-200">
+                                  <span className="text-blue-600 w-4">📊</span>
+                                  <div className="text-xs text-blue-700">
+                                    <p className="font-medium">Impacto financiero estimado:</p>
+                                    <p>~${formatNum(impactoAnual)}/año • ~${formatNum(impacto5Anos)} en 5 años</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })()}
+
+                        {/* 3. DÍAS EN MERCADO - ¿Puedo negociar? */}
+                        {prop.dias_en_mercado != null && (() => {
+                          const dias = prop.dias_en_mercado
+                          const medianaZona = contextoMercado?.metricas_zona?.dias_mediana || 74
+                          const maxBarra = Math.max(medianaZona * 1.5, dias + 10)
+                          const porcentajeDias = Math.min((dias / maxBarra) * 100, 100)
+                          const porcentajeMediana = Math.min((medianaZona / maxBarra) * 100, 100)
+
+                          // Color según días
+                          const esReciente = dias < 30
+                          const esNormal = dias >= 30 && dias <= 60
+                          const esNegociable = dias > 60
+
+                          const colorBarra = esReciente
+                            ? 'bg-green-500'
+                            : esNormal
+                            ? 'bg-blue-500'
+                            : 'bg-amber-500'
+
+                          const colorFondo = esReciente
+                            ? 'bg-green-50 border-green-200'
+                            : esNormal
+                            ? 'bg-gray-50 border-gray-200'
+                            : 'bg-amber-50 border-amber-200'
+
+                          return (
+                            <div className={`rounded-lg border p-3 ${colorFondo}`}>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-gray-700">📅 Tiempo en mercado</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                  esReciente ? 'bg-green-200 text-green-700' :
+                                  esNormal ? 'bg-gray-200 text-gray-700' :
+                                  'bg-amber-200 text-amber-700'
+                                }`}>
+                                  {esReciente ? 'Reciente' : esNormal ? 'Normal' : 'Negociable'}
+                                </span>
+                              </div>
+
+                              {/* Barra visual */}
+                              <div className="relative h-3 bg-gray-200 rounded-full mb-2">
+                                {/* Barra de días */}
+                                <div
+                                  className={`absolute h-full rounded-full ${colorBarra} transition-all`}
+                                  style={{ width: `${porcentajeDias}%` }}
+                                />
+                                {/* Marcador de mediana */}
+                                <div
+                                  className="absolute top-0 h-full w-0.5 bg-gray-500"
+                                  style={{ left: `${porcentajeMediana}%` }}
+                                  title={`Mediana: ${medianaZona} días`}
+                                />
+                              </div>
+
+                              {/* Labels */}
+                              <div className="flex justify-between text-xs text-gray-500 mb-2">
+                                <span className="font-medium text-gray-700">{dias} días</span>
+                                <span>Mediana zona: {medianaZona}d</span>
+                              </div>
+
+                              {/* Mensaje accionable */}
+                              <div className={`text-xs ${
+                                esReciente ? 'text-green-700' :
+                                esNormal ? 'text-gray-600' :
+                                'text-amber-700'
+                              }`}>
+                                {esReciente ? (
+                                  <p>💡 Publicación fresca → precio firme, actuá rápido si te interesa</p>
+                                ) : esNormal ? (
+                                  <p>💡 Tiempo normal → podés consultar si hay flexibilidad</p>
+                                ) : (
+                                  <p>💡 Lleva tiempo → hay margen de negociación, consultá si aceptan ofertas</p>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })()}
+
+                        {/* 4. RANKING EDIFICIO - ¿Es buen precio? */}
+                        {prop.unidades_en_edificio != null && prop.unidades_en_edificio > 1 && (() => {
+                          const tieneComparables = prop.unidades_misma_tipologia != null && prop.unidades_misma_tipologia >= 2
+                          const tipologia = prop.dormitorios === 0 ? 'Mono' : `${prop.dormitorios}D`
+                          const posicion = prop.posicion_en_tipologia || 1
+                          const total = prop.unidades_misma_tipologia || 1
+                          const precioMin = prop.precio_min_tipologia || prop.precio_usd
+                          const precioMax = prop.precio_max_tipologia || prop.precio_usd
+
+                          // Determinar tipo de posición
+                          const esMasBarata = posicion === 1 && total > 1
+                          const esMasCara = posicion === total && total > 1
+                          const esBalanceada = !esMasBarata && !esMasCara
+
+                          // Colores según posición
+                          const colorFondo = esMasBarata
+                            ? 'bg-green-50 border-green-200'
+                            : esMasCara
+                            ? 'bg-purple-50 border-purple-200'
+                            : 'bg-blue-50 border-blue-200'
+
+                          const colorBadge = esMasBarata
+                            ? 'bg-green-200 text-green-700'
+                            : esMasCara
+                            ? 'bg-purple-200 text-purple-700'
+                            : 'bg-blue-200 text-blue-700'
+
+                          // Calcular posición en la barra (0-100%)
+                          const rango = precioMax - precioMin
+                          const posicionBarra = rango > 0
+                            ? ((prop.precio_usd - precioMin) / rango) * 100
+                            : 50
+
+                          return (
+                            <div className={`rounded-lg border p-3 ${colorFondo}`}>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-gray-700">🏢 Ranking {tipologia} en edificio</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${colorBadge}`}>
+                                  {esMasBarata ? 'Más económica' : esMasCara ? 'Premium' : 'Balanceada'}
+                                </span>
+                              </div>
+
+                              {tieneComparables ? (
                                 <>
-                                  <span className="text-gray-700">
-                                    {prop.posicion_en_tipologia === 1
-                                      ? `La más barata de ${prop.unidades_misma_tipologia} unidades ${prop.dormitorios === 0 ? 'mono' : `de ${prop.dormitorios}D`}`
-                                      : prop.posicion_en_tipologia === prop.unidades_misma_tipologia
-                                      ? `La más cara de ${prop.unidades_misma_tipologia} unidades ${prop.dormitorios === 0 ? 'mono' : `de ${prop.dormitorios}D`}`
-                                      : `${prop.posicion_en_tipologia}° de ${prop.unidades_misma_tipologia} unidades ${prop.dormitorios === 0 ? 'mono' : `de ${prop.dormitorios}D`}`}
-                                  </span>
-                                  <p className="text-xs text-gray-500">
-                                    Rango {prop.dormitorios === 0 ? 'Mono' : `${prop.dormitorios}D`}: ${formatNum(prop.precio_min_tipologia)} - ${formatNum(prop.precio_max_tipologia)}
-                                  </p>
-                                  <p className="text-xs text-gray-600">
-                                    {prop.posicion_en_tipologia === 1
-                                      ? '¿Ganga o compromiso? Puede tener algo diferente (piso bajo, sin vista)'
-                                      : prop.posicion_en_tipologia === prop.unidades_misma_tipologia
-                                      ? '¿Premium real o sobreprecio? Verificá qué la hace especial'
-                                      : 'Opción balanceada, menor riesgo'}
-                                  </p>
-                                  {prop.posicion_en_tipologia === 1 && (
-                                    <p className="text-xs text-amber-700">
-                                      Preguntá qué la hace más barata
-                                    </p>
-                                  )}
+                                  {/* Barra de rango con posición */}
+                                  <div className="relative mb-2">
+                                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                      <span>${formatNum(precioMin)}</span>
+                                      <span>${formatNum(precioMax)}</span>
+                                    </div>
+                                    <div className="relative h-3 bg-gray-200 rounded-full">
+                                      {/* Marcador de posición actual */}
+                                      <div
+                                        className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow ${
+                                          esMasBarata ? 'bg-green-500' : esMasCara ? 'bg-purple-500' : 'bg-blue-500'
+                                        }`}
+                                        style={{ left: `calc(${Math.min(Math.max(posicionBarra, 5), 95)}% - 8px)` }}
+                                        title={`$${formatNum(prop.precio_usd)}`}
+                                      />
+                                      {/* Puntos de otras unidades */}
+                                      {Array.from({ length: total }).map((_, i) => {
+                                        if (i + 1 === posicion) return null
+                                        const pos = total > 1 ? (i / (total - 1)) * 100 : 50
+                                        return (
+                                          <div
+                                            key={i}
+                                            className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gray-400"
+                                            style={{ left: `calc(${pos}% - 4px)` }}
+                                          />
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+
+                                  {/* Posición y mensaje */}
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-700">
+                                      Posición <span className="font-semibold">{posicion}</span> de {total}
+                                    </span>
+                                  </div>
+
+                                  {/* Insight accionable */}
+                                  <div className={`text-xs mt-2 ${
+                                    esMasBarata ? 'text-green-700' : esMasCara ? 'text-purple-700' : 'text-blue-700'
+                                  }`}>
+                                    {esMasBarata ? (
+                                      <p>💡 ¿Ganga real? Preguntá qué la diferencia (piso, vista, orientación)</p>
+                                    ) : esMasCara ? (
+                                      <p>💡 ¿Vale el premium? Verificá qué la hace especial antes de decidir</p>
+                                    ) : (
+                                      <p>💡 Opción equilibrada, menor riesgo de sorpresas</p>
+                                    )}
+                                  </div>
                                 </>
                               ) : (
-                                <>
-                                  <span className="text-gray-700">
-                                    Única {prop.dormitorios === 0 ? 'mono' : `de ${prop.dormitorios}D`} en este edificio
-                                  </span>
-                                  <p className="text-xs text-gray-500">
+                                <div className="text-sm text-gray-600">
+                                  <p>Única unidad {tipologia} disponible en este edificio</p>
+                                  <p className="text-xs text-gray-500 mt-1">
                                     Rango edificio (todas): ${formatNum(prop.precio_min_edificio)} - ${formatNum(prop.precio_max_edificio)}
                                   </p>
-                                  <p className="text-xs text-gray-600">
-                                    No hay otras unidades {prop.dormitorios === 0 ? 'mono' : `de ${prop.dormitorios}D`} para comparar precio
-                                  </p>
-                                </>
+                                </div>
                               )}
                             </div>
-                          </div>
-                        )}
+                          )
+                        })()}
 
-                        {/* 4. AMENIDADES - ¿Tiene lo que pedí? */}
+                        {/* 5. AMENIDADES - ¿Tiene lo que pedí? */}
                         {(() => {
                           const innegociablesArray = innegociables
                             ? (innegociables as string).split(',').filter(Boolean)
@@ -1963,76 +2172,102 @@ ${top3Texto}
                             return null
                           }
 
-                          return (
-                            <div className="flex items-start gap-2 text-sm">
-                              <span className="text-gray-500">🏊</span>
-                              <div>
-                                {usuarioEligioAmenidades && (
-                                  <>
-                                    <p className="text-xs text-gray-500 mb-1">Lo que pediste:</p>
-                                    <div className="flex flex-wrap gap-1.5 mb-1">
-                                      {amenidadesPedidas.map((amenidad, i) => {
-                                        const confirmada = prop.amenities_confirmados?.includes(amenidad)
-                                        const porVerificar = prop.amenities_por_verificar?.includes(amenidad)
-                                        const estado = confirmada ? 'confirmada' : porVerificar ? 'verificar' : 'no_detectado'
-                                        return (
-                                          <span key={i} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${
-                                            estado === 'confirmada'
-                                              ? 'bg-green-50 text-green-700 border-green-200'
-                                              : estado === 'verificar'
-                                              ? 'bg-gray-100 text-gray-600 border-gray-200'
-                                              : 'bg-red-50 text-red-600 border-red-200'
-                                          }`}>
-                                            {estado === 'confirmada' ? '✓' : estado === 'verificar' ? '?' : '✗'} {amenidad}
-                                          </span>
-                                        )
-                                      })}
-                                    </div>
-                                    {amenidadesPedidas.some(a => prop.amenities_por_verificar?.includes(a)) && (
-                                      <p className="text-xs text-amber-700 mb-2">
-                                        Preguntá por {amenidadesPedidas.filter(a => prop.amenities_por_verificar?.includes(a)).join(' y ')} antes de visitar
-                                      </p>
-                                    )}
-                                    {amenidadesPedidas.some(a => !prop.amenities_confirmados?.includes(a) && !prop.amenities_por_verificar?.includes(a)) && (
-                                      <p className="text-xs text-red-600 mb-2">
-                                        No tiene {amenidadesPedidas.filter(a => !prop.amenities_confirmados?.includes(a) && !prop.amenities_por_verificar?.includes(a)).join(' ni ')} confirmado
-                                      </p>
-                                    )}
-                                  </>
-                                )}
+                          // Contar matches
+                          const totalPedidas = amenidadesPedidas.length
+                          const confirmadas = amenidadesPedidas.filter(a => prop.amenities_confirmados?.includes(a)).length
+                          const matchPct = totalPedidas > 0 ? Math.round((confirmadas / totalPedidas) * 100) : 0
 
-                                {(otrasAmenidades.length > 0 || (!usuarioEligioAmenidades && amenidadesDiferenciadoras.length > 0)) && (
-                                  <>
-                                    <p className="text-xs text-gray-500 mb-1">
-                                      {usuarioEligioAmenidades ? 'También tiene:' : 'Amenidades destacadas:'}
-                                    </p>
-                                    <div className="flex flex-wrap gap-1.5 mb-1">
-                                      {(usuarioEligioAmenidades ? otrasAmenidades : amenidadesDiferenciadoras.slice(0, 4)).map((a, i) => {
-                                        const pct = getPorcentajeMercado(a)
-                                        const destacado = esAmenidadDestacada(a)
-                                        return (
-                                          <span key={i} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${
-                                            destacado
-                                              ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                              : 'bg-green-50 text-green-700 border-green-200'
-                                          }`}>
-                                            ✓ {a} {pct && <span className="text-gray-400">({pct}%)</span>}
-                                          </span>
-                                        )
-                                      })}
-                                    </div>
-                                  </>
-                                )}
-
-                                <p className="text-xs text-gray-400 mt-1">
-                                  % = propiedades del mercado que lo tienen. <span className="text-purple-500">Morado</span> = poco común (&lt;40%).
-                                </p>
+                          // Mini barra visual para porcentaje de mercado
+                          const MiniBarraPct = ({ pct }: { pct: number }) => {
+                            const esRaro = pct < 20
+                            const esPocoCom = pct < 40
+                            return (
+                              <div className="inline-flex items-center gap-1 ml-1">
+                                <div className="w-8 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${esPocoCom ? 'bg-purple-400' : 'bg-gray-400'}`}
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                                <span className={`text-[10px] ${esPocoCom ? 'text-purple-500' : 'text-gray-400'}`}>
+                                  {pct}%{esRaro && ' ⭐'}
+                                </span>
                               </div>
+                            )
+                          }
+
+                          return (
+                            <div className="rounded-lg border p-3 bg-gray-50 border-gray-200">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-gray-700">✨ Amenidades</span>
+                                {usuarioEligioAmenidades && (
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    matchPct === 100
+                                      ? 'bg-green-200 text-green-700'
+                                      : matchPct >= 50
+                                      ? 'bg-blue-200 text-blue-700'
+                                      : 'bg-amber-200 text-amber-700'
+                                  }`}>
+                                    {confirmadas}/{totalPedidas} pedidas
+                                  </span>
+                                )}
+                              </div>
+
+                              {usuarioEligioAmenidades && (
+                                <div className="mb-3">
+                                  <p className="text-xs text-gray-500 mb-1.5">Lo que pediste:</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {amenidadesPedidas.map((amenidad, i) => {
+                                      const confirmada = prop.amenities_confirmados?.includes(amenidad)
+                                      const porVerificar = prop.amenities_por_verificar?.includes(amenidad)
+                                      const estado = confirmada ? 'confirmada' : porVerificar ? 'verificar' : 'no_detectado'
+                                      return (
+                                        <span key={i} className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                                          estado === 'confirmada'
+                                            ? 'bg-green-100 text-green-700'
+                                            : estado === 'verificar'
+                                            ? 'bg-amber-100 text-amber-700'
+                                            : 'bg-red-100 text-red-600'
+                                        }`}>
+                                          {estado === 'confirmada' ? '✓' : estado === 'verificar' ? '?' : '✗'} {amenidad}
+                                        </span>
+                                      )
+                                    })}
+                                  </div>
+                                  {amenidadesPedidas.some(a => prop.amenities_por_verificar?.includes(a)) && (
+                                    <p className="text-xs text-amber-700 mt-1.5">
+                                      💡 Preguntá por {amenidadesPedidas.filter(a => prop.amenities_por_verificar?.includes(a)).join(' y ')}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              {(otrasAmenidades.length > 0 || (!usuarioEligioAmenidades && amenidadesDiferenciadoras.length > 0)) && (
+                                <div>
+                                  <p className="text-xs text-gray-500 mb-1.5">
+                                    {usuarioEligioAmenidades ? 'Bonus que tiene:' : 'Amenidades destacadas:'}
+                                  </p>
+                                  <div className="space-y-1">
+                                    {(usuarioEligioAmenidades ? otrasAmenidades : amenidadesDiferenciadoras.slice(0, 4)).map((a, i) => {
+                                      const pct = getPorcentajeMercado(a)
+                                      const esPocoCom = pct && pct < 40
+                                      return (
+                                        <div key={i} className="flex items-center justify-between text-xs">
+                                          <span className={`${esPocoCom ? 'text-purple-700 font-medium' : 'text-gray-700'}`}>
+                                            ✓ {a}
+                                          </span>
+                                          {pct && <MiniBarraPct pct={pct} />}
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )
                         })()}
 
-                        {/* 5. EQUIPAMIENTO - Análisis MOAT dinámico */}
+                        {/* 6. EQUIPAMIENTO - ¿Qué incluye el precio? */}
                         {(() => {
                           const mensaje = getMensajeEquipamiento(
                             prop.dormitorios,
@@ -2082,123 +2317,10 @@ ${top3Texto}
                           )
                         })()}
 
-                        {/* 6. COSTOS OCULTOS - Dinámico según lo confirmado */}
-                        {(() => {
-                          const costos = getCostosOcultosEstimados(prop.dormitorios, null, null)
-
-                          // Determinar qué está confirmado
-                          const tieneParqueo = prop.estacionamientos != null && prop.estacionamientos > 0
-                          const tieneBaulera = prop.baulera === true
-                          const parqueoDesconocido = prop.estacionamientos == null
-                          const bauleraDesconocida = prop.baulera == null
-
-                          // Calcular costo adicional potencial (solo items no confirmados)
-                          let costoAdicionalMin = 0
-                          let costoAdicionalMax = 0
-                          const itemsPendientes: string[] = []
-
-                          if (!tieneParqueo && parqueoDesconocido) {
-                            costoAdicionalMin += costos.estacionamiento.compra.min
-                            costoAdicionalMax += costos.estacionamiento.compra.max
-                            itemsPendientes.push('parqueo')
-                          }
-                          if (!tieneBaulera && bauleraDesconocida) {
-                            costoAdicionalMin += costos.baulera.compra.min
-                            costoAdicionalMax += costos.baulera.compra.max
-                            itemsPendientes.push('baulera')
-                          }
-
-                          const todoConfirmado = tieneParqueo && tieneBaulera
-
-                          return (
-                            <div className={`rounded-lg border p-3 ${todoConfirmado ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className={`text-sm font-semibold ${todoConfirmado ? 'text-green-800' : 'text-amber-800'}`}>
-                                  {todoConfirmado ? '✅ Costos incluidos' : '💰 Costos a verificar'}
-                                </span>
-                                <span className={`text-xs px-1.5 py-0.5 rounded ${todoConfirmado ? 'bg-green-200 text-green-700' : 'bg-amber-200 text-amber-700'}`}>
-                                  estimado zona
-                                </span>
-                              </div>
-
-                              <div className="space-y-1.5 text-sm">
-                                {/* Expensas - siempre a verificar */}
-                                <div className="flex items-start gap-2">
-                                  <span className="text-amber-500 w-4">📋</span>
-                                  <div>
-                                    <span className="text-gray-700">
-                                      Expensas: ${costos.expensas.rango_completo.min}-{costos.expensas.rango_completo.max}/mes
-                                    </span>
-                                    <p className="text-xs text-amber-700">
-                                      Preguntá monto exacto
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {/* Parqueo - dinámico */}
-                                <div className="flex items-start gap-2">
-                                  <span className={`w-4 ${tieneParqueo ? 'text-green-500' : 'text-amber-500'}`}>🚗</span>
-                                  <div>
-                                    {tieneParqueo ? (
-                                      <span className="text-green-700 font-medium">
-                                        Parqueo: ✓ Incluido ({prop.estacionamientos}p)
-                                      </span>
-                                    ) : (
-                                      <>
-                                        <span className="text-gray-700">
-                                          Parqueo: ${formatNum(costos.estacionamiento.compra.min)}-{formatNum(costos.estacionamiento.compra.max)}
-                                        </span>
-                                        <p className="text-xs text-amber-700">
-                                          {parqueoDesconocido ? 'Preguntá si está incluido' : 'No incluido'}
-                                        </p>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Baulera - dinámico */}
-                                <div className="flex items-start gap-2">
-                                  <span className={`w-4 ${tieneBaulera ? 'text-green-500' : 'text-amber-500'}`}>📦</span>
-                                  <div>
-                                    {tieneBaulera ? (
-                                      <span className="text-green-700 font-medium">
-                                        Baulera: ✓ Incluida
-                                      </span>
-                                    ) : (
-                                      <>
-                                        <span className="text-gray-700">
-                                          Baulera: ${formatNum(costos.baulera.compra.min)}-{formatNum(costos.baulera.compra.max)}
-                                        </span>
-                                        <p className="text-xs text-amber-700">
-                                          {bauleraDesconocida ? 'Preguntá si está incluida' : 'No incluida'}
-                                        </p>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Costo real - solo si hay items pendientes */}
-                                {itemsPendientes.length > 0 && (
-                                  <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-amber-200">
-                                    <span className="text-amber-600 w-4">💡</span>
-                                    <span className="text-amber-700 text-xs font-medium">
-                                      Costo real: ${formatNum(prop.precio_usd + costoAdicionalMin)}-{formatNum(prop.precio_usd + costoAdicionalMax)} si no incluye {itemsPendientes.join(' ni ')}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {todoConfirmado && (
-                                  <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-green-200">
-                                    <span className="text-green-600 w-4">✓</span>
-                                    <span className="text-green-700 text-xs font-medium">
-                                      Precio publicado = Costo real (parqueo y baulera incluidos)
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )
-                        })()}
+                        {/* 7. DESCRIPCIÓN DEL ANUNCIANTE - Al final */}
+                        {prop.descripcion && (
+                          <DescripcionAnunciante descripcion={prop.descripcion} />
+                        )}
 
                         </div>
                         )}
