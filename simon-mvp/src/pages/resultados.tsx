@@ -615,15 +615,21 @@ export default function ResultadosPage() {
     setShowPremiumModal(true)
   }
 
-  // Función para descargar informe directamente
-  const descargarInforme = async () => {
-    const propsSeleccionadas = getSelectedProperties()
-    if (propsSeleccionadas.length === 0) return
+  // Función para ver informe (abre en nueva pestaña)
+  const verInforme = async (propsParaInforme?: UnidadReal[]) => {
+    // Usar props pasadas, o seleccionadas, o las primeras 3 como ejemplo
+    const props = propsParaInforme || getOrderedSelectedProperties()
+    const propsFinales = props.length > 0 ? props : propiedadesOrdenadas.slice(0, 3)
+
+    if (propsFinales.length === 0) {
+      alert('No hay propiedades para mostrar en el informe')
+      return
+    }
 
     setGenerandoInforme(true)
     try {
       // Mapear propiedades al formato del API
-      const propiedadesData = propsSeleccionadas.map(p => ({
+      const propiedadesData = propsFinales.map(p => ({
         id: p.id,
         proyecto: p.proyecto || 'Sin nombre',
         desarrollador: p.desarrollador || null,
@@ -673,15 +679,9 @@ export default function ResultadosPage() {
       const html = await response.text()
       const blob = new Blob([html], { type: 'text/html' })
       const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `informe-fiduciario-${propsSeleccionadas[0]?.proyecto?.toLowerCase().replace(/\s+/g, '-') || 'simon'}.html`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      window.open(url, '_blank')
     } catch (error) {
-      console.error('Error descargando informe:', error)
+      console.error('Error abriendo informe:', error)
       alert('Error generando el informe. Intentá de nuevo.')
     } finally {
       setGenerandoInforme(false)
@@ -2778,38 +2778,28 @@ ${top3Texto}
               )}
             </div>
 
-            {/* Botón descarga informe - aparece si hay propiedades seleccionadas */}
-            {selectedProps.size > 0 && (
-              <button
-                onClick={descargarInforme}
-                disabled={generandoInforme}
-                className="w-full py-3 px-6 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors text-sm mb-3 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {generandoInforme ? (
-                  <>
-                    <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Generando...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Descargar Informe ({selectedProps.size} propiedades)
-                  </>
-                )}
-              </button>
-            )}
-
-            {/* Ver ejemplo */}
+            {/* Ver ejemplo - abre HTML generado por API */}
             <button
-              onClick={() => setShowPremiumExample(true)}
-              className="w-full py-3 px-6 border border-purple-300 text-purple-700 font-medium rounded-lg hover:bg-purple-50 transition-colors text-sm"
+              onClick={() => verInforme()}
+              disabled={generandoInforme}
+              className="w-full py-3 px-6 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              Ver Ejemplo Real
+              {generandoInforme ? (
+                <>
+                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  Ver Ejemplo Real
+                </>
+              )}
             </button>
 
             <p className="text-center text-xs text-gray-400 mt-3">
@@ -2861,26 +2851,6 @@ ${top3Texto}
                 >
                   Limpiar
                 </button>
-                {/* Botón descarga directo cuando hay 3 seleccionadas */}
-                {selectedProps.size === MAX_SELECTED && (
-                  <button
-                    onClick={descargarInforme}
-                    disabled={generandoInforme}
-                    className="bg-green-600 hover:bg-green-700 text-white font-semibold px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-1 disabled:opacity-50"
-                    title="Descargar informe HTML"
-                  >
-                    {generandoInforme ? (
-                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                    )}
-                  </button>
-                )}
                 <button
                   onClick={iniciarOrdenar}
                   className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"

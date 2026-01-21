@@ -238,19 +238,13 @@ export default function PremiumModal({ onClose, filtros, propiedadesSeleccionada
 
       if (!response.ok) throw new Error('Error generando informe')
 
-      // Obtener el HTML y descargarlo
+      // Obtener el HTML y abrirlo en nueva pestaña
       const html = await response.text()
       const blob = new Blob([html], { type: 'text/html' })
       const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `informe-fiduciario-${topOpciones[0]?.proyecto?.toLowerCase().replace(/\s+/g, '-') || 'simon'}.html`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      window.open(url, '_blank')
     } catch (error) {
-      console.error('Error descargando informe:', error)
+      console.error('Error abriendo informe:', error)
       alert('Error generando el informe. Intentá de nuevo.')
     } finally {
       setGenerandoInforme(false)
@@ -782,7 +776,7 @@ export default function PremiumModal({ onClose, filtros, propiedadesSeleccionada
                 Simon Recomienda: {topOpciones[0]?.proyecto?.toUpperCase() || 'TORRE VIENNA'}
               </div>
 
-              {/* Botón descargar informe */}
+              {/* Botón ver informe */}
               <div className="mt-6">
                 <button
                   onClick={descargarInforme}
@@ -800,14 +794,14 @@ export default function PremiumModal({ onClose, filtros, propiedadesSeleccionada
                   ) : (
                     <>
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
-                      Descargar Informe HTML
+                      Ver Informe Completo
                     </>
                   )}
                 </button>
                 <p className="text-slate-400 text-xs mt-2">
-                  Informe completo con 9 secciones, mapa y checklist para imprimir
+                  Se abre en nueva pestaña con 9 secciones y mapa
                 </p>
               </div>
             </section>
