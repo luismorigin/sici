@@ -149,6 +149,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const fechaHoy = new Date().toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' })
     const precioM2Promedio = analisis?.precio_m2_promedio || Math.round(todas.reduce((s, p) => s + p.precio_m2, 0) / todas.length)
 
+    // Generar barras del gráfico (pre-computado para evitar template literals anidados)
+    const generarBarrasChart = (): string => {
+      const propsParaChart = todas.slice(0, 6)
+      const propsOrdenadas = [...propsParaChart].sort((a, b) => a.precio_m2 - b.precio_m2)
+
+      interface BarraData { html: string; precio_m2: number }
+      const barrasProps: BarraData[] = propsOrdenadas.map(p => {
+        const height = Math.max(40, Math.min(180, (p.precio_m2 / precioM2Promedio) * 100))
+        const originalIndex = todas.findIndex(t => t.id === p.id)
+        const isSelected = originalIndex < 3
+        const isWarning = p.precio_m2 > precioM2Promedio * 1.05
+        const barClass = isSelected ? 'selected' : isWarning ? 'warning' : ''
+        const nameClass = isSelected ? 'selected' : ''
+        const label = originalIndex === 0 ? ' (tuya)' : originalIndex < 3 ? ' (#' + (originalIndex + 1) + ')' : ''
+        return {
+          html: '<div class="chart-bar"><div class="bar ' + barClass + '" style="height: ' + height + 'px;"><span class="bar-label">$' + fmt(p.precio_m2) + '</span></div><div class="bar-name ' + nameClass + '">' + p.proyecto.substring(0, 10) + label + '</div></div>',
+          precio_m2: p.precio_m2
+        }
+      })
+
+      // Barra de PROMEDIO
+      const heightPromedio = 100
+      const barraPromedio: BarraData = {
+        html: '<div class="chart-bar"><div class="bar" style="height: ' + heightPromedio + 'px; background: var(--gray-400);"><span class="bar-label">$' + fmt(precioM2Promedio) + '</span></div><div class="bar-name" style="font-weight: 700;">PROMEDIO</div></div>',
+        precio_m2: precioM2Promedio
+      }
+
+      // Combinar y ordenar por precio
+      const todasBarras = [...barrasProps, barraPromedio].sort((a, b) => a.precio_m2 - b.precio_m2)
+      return todasBarras.map(b => b.html).join('')
+    }
+    const barrasChartHTML = generarBarrasChart()
+
     // CSS completo del template v3
     const css = `
         :root {
@@ -672,22 +705,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 <div class="price-chart">
                     <h4>Precio/m² - ${fav.proyecto} vs Alternativas</h4>
                     <div class="chart-container">
-                        ${todas.slice(0, 7).map((p, i) => {
-                          const height = Math.max(40, Math.min(180, (p.precio_m2 / precioM2Promedio) * 100))
-                          const isSelected = i < 3
-                          const isWarning = p.precio_m2 > precioM2Promedio * 1.05
-                          return `
-                        <div class="chart-bar">
-                            <div class="bar ${isSelected ? 'selected' : isWarning ? 'warning' : ''}" style="height: ${height}px;">
-                                <span class="bar-label">$${fmt(p.precio_m2)}</span>
-                            </div>
-                            <div class="bar-name ${isSelected ? 'selected' : ''}">${p.proyecto.substring(0, 10)}${i === 0 ? ' (#1)' : i < 3 ? ` (#${i+1})` : ''}</div>
-                        </div>`
-                        }).join('')}
+                        ${barrasChartHTML}
                     </div>
                     <div class="chart-legend">
                         <div class="legend-item"><div class="legend-color" style="background: var(--oportunidad);"></div><span>Tus elegidas</span></div>
                         <div class="legend-item"><div class="legend-color" style="background: var(--primary);"></div><span>Alternativas</span></div>
+                        <div class="legend-item"><div class="legend-color" style="background: var(--gray-400);"></div><span>Promedio zona</span></div>
                         <div class="legend-item"><div class="legend-color" style="background: var(--warning);"></div><span>Sobre promedio</span></div>
                     </div>
                 </div>

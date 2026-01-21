@@ -618,18 +618,27 @@ export default function ResultadosPage() {
   // Función para ver informe (abre en nueva pestaña)
   const verInforme = async (propsParaInforme?: UnidadReal[]) => {
     // Usar props pasadas, o seleccionadas, o las primeras 3 como ejemplo
-    const props = propsParaInforme || getOrderedSelectedProperties()
-    const propsFinales = props.length > 0 ? props : propiedadesOrdenadas.slice(0, 3)
+    const elegidas = propsParaInforme || getOrderedSelectedProperties()
+    const elegidasFinales = elegidas.length > 0 ? elegidas : propiedadesOrdenadas.slice(0, 3)
 
-    if (propsFinales.length === 0) {
+    if (elegidasFinales.length === 0) {
       alert('No hay propiedades para mostrar en el informe')
       return
     }
 
+    // IDs de las elegidas para no duplicarlas
+    const idsElegidas = new Set(elegidasFinales.map(p => p.id))
+
+    // Combinar: elegidas primero + resto del mercado (sin duplicados)
+    const todasLasPropiedades = [
+      ...elegidasFinales,
+      ...propiedadesOrdenadas.filter(p => !idsElegidas.has(p.id))
+    ]
+
     setGenerandoInforme(true)
     try {
-      // Mapear propiedades al formato del API
-      const propiedadesData = propsFinales.map(p => ({
+      // Mapear TODAS las propiedades al formato del API (elegidas primero + mercado)
+      const propiedadesData = todasLasPropiedades.map(p => ({
         id: p.id,
         proyecto: p.proyecto || 'Sin nombre',
         desarrollador: p.desarrollador || null,
