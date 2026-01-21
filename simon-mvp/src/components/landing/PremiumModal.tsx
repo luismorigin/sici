@@ -224,8 +224,8 @@ export default function PremiumModal({ onClose, filtros, propiedadesSeleccionada
 
       // Usar datos del análisis si existe, sino defaults
       const analisisData = {
-        precio_m2_promedio: analisis?.bloque_3_contexto_mercado?.precio_m2_promedio || 1500,
-        dias_mediana: analisis?.bloque_3_contexto_mercado?.dias_mediana || 45,
+        precio_m2_promedio: analisis?.bloque_3_contexto_mercado?.metricas_zona?.precio_m2_promedio || 1500,
+        dias_mediana: analisis?.bloque_3_contexto_mercado?.metricas_zona?.dias_mediana || 45,
         total_analizadas: analisis?.bloque_3_contexto_mercado?.stock_total || propiedades.length
       }
 

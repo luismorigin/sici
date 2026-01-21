@@ -694,8 +694,8 @@ export default function ResultadosPage() {
         : 1500
 
       const analisisData = {
-        precio_m2_promedio: analisisFiduciario?.bloque_3_contexto_mercado?.precio_m2_promedio || promedioRealM2,
-        dias_mediana: analisisFiduciario?.bloque_3_contexto_mercado?.dias_mediana || 45,
+        precio_m2_promedio: analisisFiduciario?.bloque_3_contexto_mercado?.metricas_zona?.precio_m2_promedio || promedioRealM2,
+        dias_mediana: analisisFiduciario?.bloque_3_contexto_mercado?.metricas_zona?.dias_mediana || 45,
         total_analizadas: analisisFiduciario?.bloque_3_contexto_mercado?.stock_total || propiedadesOrdenadas.length
       }
 
@@ -826,7 +826,13 @@ export default function ResultadosPage() {
     pareja_alineados,
     ubicacion_vs_metros,
     calidad_vs_precio,
+    necesita_parqueo,
+    necesita_baulera,
   } = router.query
+
+  // Parsear preferencias de parqueo/baulera (default: true para parqueo, false para baulera)
+  const usuarioNecesitaParqueo = necesita_parqueo !== 'false'
+  const usuarioNecesitaBaulera = necesita_baulera === 'true'
 
   useEffect(() => {
     const cargar = async () => {
@@ -1871,17 +1877,40 @@ ${top3Texto}
                           let costoAdicionalMin = 0
                           let costoAdicionalMax = 0
                           const itemsPendientes: string[] = []
-                          if (!tieneParqueo && parqueoDesconocido) {
+
+                          // Solo calcular costos para items que el usuario necesita
+                          if (usuarioNecesitaParqueo && !tieneParqueo && parqueoDesconocido) {
                             costoAdicionalMin += costos.estacionamiento.compra.min
                             costoAdicionalMax += costos.estacionamiento.compra.max
                             itemsPendientes.push('parqueo')
                           }
-                          if (!tieneBaulera && bauleraDesconocida) {
+                          if (usuarioNecesitaBaulera && !tieneBaulera && bauleraDesconocida) {
                             costoAdicionalMin += costos.baulera.compra.min
                             costoAdicionalMax += costos.baulera.compra.max
                             itemsPendientes.push('baulera')
                           }
-                          const todoConfirmado = tieneParqueo && tieneBaulera
+
+                          // "Todo confirmado" solo considera lo que el usuario necesita
+                          const parqueoOk = !usuarioNecesitaParqueo || tieneParqueo
+                          const bauleraOk = !usuarioNecesitaBaulera || tieneBaulera
+                          const todoConfirmado = parqueoOk && bauleraOk
+
+                          // Si no necesita ni parqueo ni baulera, no mostrar esta sección
+                          if (!usuarioNecesitaParqueo && !usuarioNecesitaBaulera) {
+                            return (
+                              <div className="rounded-lg border p-3 bg-green-50 border-green-200">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-sm font-semibold text-green-800">✅ Precio completo</span>
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-green-200 text-green-700">costo único</span>
+                                </div>
+                                <div className="flex items-start gap-2 text-sm">
+                                  <span className="text-green-600 w-4">✓</span>
+                                  <span className="text-green-700 font-medium">${formatNum(prop.precio_usd)} = Precio final (no necesitás parqueo ni baulera)</span>
+                                </div>
+                              </div>
+                            )
+                          }
+
                           return (
                             <div className={`rounded-lg border p-3 ${todoConfirmado ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
                               <div className="flex items-center gap-2 mb-2">
@@ -1893,32 +1922,38 @@ ${top3Texto}
                                 </span>
                               </div>
                               <div className="space-y-1.5 text-sm">
-                                <div className="flex items-start gap-2">
-                                  <span className={`w-4 ${tieneParqueo ? 'text-green-500' : 'text-amber-500'}`}>🚗</span>
-                                  <div>
-                                    {tieneParqueo ? (
-                                      <span className="text-green-700 font-medium">Parqueo: ✓ Incluido ({prop.estacionamientos}p)</span>
-                                    ) : (
-                                      <>
-                                        <span className="text-gray-700">Parqueo: ${formatNum(costos.estacionamiento.compra.min)}-{formatNum(costos.estacionamiento.compra.max)}</span>
-                                        <p className="text-xs text-amber-700">{parqueoDesconocido ? 'Preguntá si está incluido' : 'No incluido - costo adicional'}</p>
-                                      </>
-                                    )}
+                                {/* Solo mostrar parqueo si el usuario lo necesita */}
+                                {usuarioNecesitaParqueo && (
+                                  <div className="flex items-start gap-2">
+                                    <span className={`w-4 ${tieneParqueo ? 'text-green-500' : 'text-amber-500'}`}>🚗</span>
+                                    <div>
+                                      {tieneParqueo ? (
+                                        <span className="text-green-700 font-medium">Parqueo: ✓ Incluido ({prop.estacionamientos}p)</span>
+                                      ) : (
+                                        <>
+                                          <span className="text-gray-700">Parqueo: ${formatNum(costos.estacionamiento.compra.min)}-{formatNum(costos.estacionamiento.compra.max)}</span>
+                                          <p className="text-xs text-amber-700">{parqueoDesconocido ? 'Preguntá si está incluido' : 'No incluido - costo adicional'}</p>
+                                        </>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="flex items-start gap-2">
-                                  <span className={`w-4 ${tieneBaulera ? 'text-green-500' : 'text-amber-500'}`}>📦</span>
-                                  <div>
-                                    {tieneBaulera ? (
-                                      <span className="text-green-700 font-medium">Baulera: ✓ Incluida</span>
-                                    ) : (
-                                      <>
-                                        <span className="text-gray-700">Baulera: ${formatNum(costos.baulera.compra.min)}-{formatNum(costos.baulera.compra.max)}</span>
-                                        <p className="text-xs text-amber-700">{bauleraDesconocida ? 'Preguntá si está incluida' : 'No incluida - costo adicional'}</p>
-                                      </>
-                                    )}
+                                )}
+                                {/* Solo mostrar baulera si el usuario la necesita */}
+                                {usuarioNecesitaBaulera && (
+                                  <div className="flex items-start gap-2">
+                                    <span className={`w-4 ${tieneBaulera ? 'text-green-500' : 'text-amber-500'}`}>📦</span>
+                                    <div>
+                                      {tieneBaulera ? (
+                                        <span className="text-green-700 font-medium">Baulera: ✓ Incluida</span>
+                                      ) : (
+                                        <>
+                                          <span className="text-gray-700">Baulera: ${formatNum(costos.baulera.compra.min)}-{formatNum(costos.baulera.compra.max)}</span>
+                                          <p className="text-xs text-amber-700">{bauleraDesconocida ? 'Preguntá si está incluida' : 'No incluida - costo adicional'}</p>
+                                        </>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                                 {itemsPendientes.length > 0 ? (
                                   <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-amber-200">
                                     <span className="text-amber-600 w-4">💡</span>
@@ -1929,7 +1964,7 @@ ${top3Texto}
                                 ) : (
                                   <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-green-200">
                                     <span className="text-green-600 w-4">✓</span>
-                                    <span className="text-green-700 text-xs font-medium">${formatNum(prop.precio_usd)} = Precio real (todo incluido)</span>
+                                    <span className="text-green-700 text-xs font-medium">${formatNum(prop.precio_usd)} = Precio real (todo lo que necesitás incluido)</span>
                                   </div>
                                 )}
                               </div>

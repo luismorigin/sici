@@ -31,6 +31,10 @@ interface FormularioVivienda {
   innegociables: string[]
   deseables: string[]
 
+  // Seccion 3b: Extras (parqueo/baulera)
+  necesita_parqueo: boolean
+  necesita_baulera: boolean
+
   // Seccion 4: Trade-offs
   ubicacion_vs_metros: number // 1-5 (1=ubicacion, 5=metros)
   calidad_vs_precio: number // 1-5 (1=calidad, 5=precio)
@@ -124,6 +128,8 @@ export default function FormularioViviendaPage() {
     pareja_alineados: null,
     innegociables: [],
     deseables: [],
+    necesita_parqueo: true,  // Default: sí necesita
+    necesita_baulera: false, // Default: no necesita
     ubicacion_vs_metros: 3,
     calidad_vs_precio: 3,
   })
@@ -147,6 +153,8 @@ export default function FormularioViviendaPage() {
       pareja_alineados: urlParejaAlineados,
       ubicacion_vs_metros: urlUbicacionVsMetros,
       calidad_vs_precio: urlCalidadVsPrecio,
+      necesita_parqueo: urlNecesitaParqueo,
+      necesita_baulera: urlNecesitaBaulera,
     } = router.query
 
     const newForm: FormularioVivienda = { ...form }
@@ -213,6 +221,16 @@ export default function FormularioViviendaPage() {
       }
     }
 
+    if (urlNecesitaParqueo !== undefined) {
+      newForm.necesita_parqueo = urlNecesitaParqueo === 'true'
+      hasChanges = true
+    }
+
+    if (urlNecesitaBaulera !== undefined) {
+      newForm.necesita_baulera = urlNecesitaBaulera === 'true'
+      hasChanges = true
+    }
+
     if (hasChanges) {
       setForm(newForm)
     }
@@ -258,6 +276,8 @@ export default function FormularioViviendaPage() {
       deseables: form.deseables.join(','),
       ubicacion_vs_metros: form.ubicacion_vs_metros.toString(),
       calidad_vs_precio: form.calidad_vs_precio.toString(),
+      necesita_parqueo: form.necesita_parqueo.toString(),
+      necesita_baulera: form.necesita_baulera.toString(),
     })
 
     router.push(`/resultados?${params.toString()}`)
@@ -599,6 +619,82 @@ export default function FormularioViviendaPage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* 8. Parqueo y Baulera - Para personalizar costos */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                8. Para calcular el precio real:
+              </label>
+              <p className="text-xs text-gray-500 mb-4">
+                Esto no filtra resultados, solo personaliza qué costos te mostramos.
+              </p>
+
+              <div className="space-y-3">
+                {/* Parqueo */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span>🚗</span>
+                    <span className="text-sm text-gray-700">¿Vas a necesitar estacionamiento?</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setForm(prev => ({ ...prev, necesita_parqueo: true }))}
+                      className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                        form.necesita_parqueo
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      Sí
+                    </button>
+                    <button
+                      onClick={() => setForm(prev => ({ ...prev, necesita_parqueo: false }))}
+                      className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                        !form.necesita_parqueo
+                          ? 'border-gray-500 bg-gray-100 text-gray-700'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+
+                {/* Baulera */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span>📦</span>
+                    <span className="text-sm text-gray-700">¿Vas a necesitar baulera?</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setForm(prev => ({ ...prev, necesita_baulera: true }))}
+                      className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                        form.necesita_baulera
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      Sí
+                    </button>
+                    <button
+                      onClick={() => setForm(prev => ({ ...prev, necesita_baulera: false }))}
+                      className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                        !form.necesita_baulera
+                          ? 'border-gray-500 bg-gray-100 text-gray-700'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-400 mt-3 italic">
+                Si no necesitás, no lo sumamos al "precio real de compra"
+              </p>
             </div>
           </section>
 
