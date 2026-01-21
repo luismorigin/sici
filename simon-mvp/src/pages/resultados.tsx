@@ -531,6 +531,13 @@ export default function ResultadosPage() {
   const [showMapa, setShowMapa] = useState(false)
   const MAX_SELECTED = 3
 
+  // Modal de ordenar favoritas (paso previo al premium)
+  const [showOrdenarModal, setShowOrdenarModal] = useState(false)
+  const [orderedProps, setOrderedProps] = useState<number[]>([]) // IDs en orden del usuario
+  const [razonFavorita, setRazonFavorita] = useState<string | null>(null) // Por qué eligió la #1
+  const [ordenPaso, setOrdenPaso] = useState<1 | 2 | 3>(1) // Paso actual de selección
+  const [propsDisponibles, setPropsDisponibles] = useState<number[]>([]) // Props aún no elegidas
+
   const toggleSelected = (propId: number) => {
     setSelectedProps(prev => {
       const next = new Set(prev)
@@ -552,6 +559,60 @@ export default function ResultadosPage() {
   // Nota: Se usa propiedadesOrdenadas para mantener el orden de recomendación
   const getSelectedProperties = (): UnidadReal[] => {
     return propiedadesOrdenadas.filter(p => selectedProps.has(p.id))
+  }
+
+  // Obtener propiedades en el orden definido por el usuario
+  const getOrderedSelectedProperties = (): UnidadReal[] => {
+    if (orderedProps.length === 0) return getSelectedProperties()
+    return orderedProps
+      .map(id => propiedades.find(p => p.id === id))
+      .filter((p): p is UnidadReal => p !== undefined)
+  }
+
+  // Iniciar flujo de ordenar favoritas (selección secuencial)
+  const iniciarOrdenar = () => {
+    const selected = getSelectedProperties()
+    setPropsDisponibles(selected.map(p => p.id))
+    setOrderedProps([])
+    setRazonFavorita(null)
+    setOrdenPaso(1)
+    setShowOrdenarModal(true)
+  }
+
+  // Seleccionar una propiedad en el paso actual
+  const seleccionarEnOrden = (propId: number) => {
+    const nuevasOrdenadas = [...orderedProps, propId]
+    const nuevasDisponibles = propsDisponibles.filter(id => id !== propId)
+
+    setOrderedProps(nuevasOrdenadas)
+    setPropsDisponibles(nuevasDisponibles)
+
+    if (nuevasDisponibles.length === 1) {
+      // Solo queda una, es automáticamente la #3
+      setOrderedProps([...nuevasOrdenadas, nuevasDisponibles[0]])
+      setPropsDisponibles([])
+      setOrdenPaso(3)
+    } else if (nuevasDisponibles.length === 0) {
+      // Ya están todas ordenadas
+      setOrdenPaso(3)
+    } else {
+      setOrdenPaso(2)
+    }
+  }
+
+  // Reiniciar selección
+  const reiniciarOrden = () => {
+    const selected = getSelectedProperties()
+    setPropsDisponibles(selected.map(p => p.id))
+    setOrderedProps([])
+    setRazonFavorita(null)
+    setOrdenPaso(1)
+  }
+
+  // Continuar al modal premium después de ordenar
+  const continuarAPremium = () => {
+    setShowOrdenarModal(false)
+    setShowPremiumModal(true)
   }
 
   // Función para descargar informe directamente
@@ -2420,6 +2481,212 @@ ${top3Texto}
         )}
       </div>
 
+      {/* Modal Ordenar Favoritas - SELECCIÓN SECUENCIAL */}
+      {showOrdenarModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative max-h-[90vh] overflow-y-auto">
+            {/* Close button */}
+            <button
+              onClick={() => setShowOrdenarModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Paso 1: ¿Cuál es tu favorita? */}
+            {ordenPaso === 1 && propsDisponibles.length > 0 && (
+              <>
+                <div className="text-center mb-6">
+                  <span className="text-4xl mb-3 block">🥇</span>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    ¿Cuál es tu FAVORITA?
+                  </h2>
+                  <p className="text-gray-500 mt-2 text-sm">
+                    Tocá la que más te interesa
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {propsDisponibles.map(propId => {
+                    const prop = propiedades.find(p => p.id === propId)
+                    if (!prop) return null
+                    return (
+                      <button
+                        key={propId}
+                        onClick={() => seleccionarEnOrden(propId)}
+                        className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+                      >
+                        <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                          {prop.fotos_urls && prop.fotos_urls[0] ? (
+                            <img src={prop.fotos_urls[0]} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">📷</div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-gray-900 truncate">{prop.proyecto}</p>
+                          <p className="text-sm text-gray-500">${prop.precio_usd?.toLocaleString('en-US')}</p>
+                          <p className="text-xs text-gray-400">{prop.area_m2}m² · {prop.dormitorios} dorm</p>
+                        </div>
+                        <div className="text-purple-500">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Paso 2: ¿Y entre estas dos? */}
+            {ordenPaso === 2 && propsDisponibles.length > 0 && (
+              <>
+                <div className="text-center mb-6">
+                  <span className="text-4xl mb-3 block">🥈</span>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    ¿Y entre estas dos?
+                  </h2>
+                  <p className="text-gray-500 mt-2 text-sm">
+                    Tocá tu segunda opción
+                  </p>
+                </div>
+
+                {/* Mostrar #1 elegida */}
+                <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-xl">
+                  <p className="text-xs text-purple-600 font-medium mb-1">Tu #1:</p>
+                  <p className="font-bold text-purple-800">{propiedades.find(p => p.id === orderedProps[0])?.proyecto}</p>
+                </div>
+
+                <div className="space-y-3">
+                  {propsDisponibles.map(propId => {
+                    const prop = propiedades.find(p => p.id === propId)
+                    if (!prop) return null
+                    return (
+                      <button
+                        key={propId}
+                        onClick={() => seleccionarEnOrden(propId)}
+                        className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+                      >
+                        <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                          {prop.fotos_urls && prop.fotos_urls[0] ? (
+                            <img src={prop.fotos_urls[0]} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">📷</div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-gray-900 truncate">{prop.proyecto}</p>
+                          <p className="text-sm text-gray-500">${prop.precio_usd?.toLocaleString('en-US')}</p>
+                          <p className="text-xs text-gray-400">{prop.area_m2}m² · {prop.dormitorios} dorm</p>
+                        </div>
+                        <div className="text-purple-500">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Botón volver */}
+                <button
+                  onClick={reiniciarOrden}
+                  className="w-full mt-4 py-2 text-sm text-gray-500 hover:text-gray-700"
+                >
+                  ← Empezar de nuevo
+                </button>
+              </>
+            )}
+
+            {/* Paso 3: Resumen + ¿Por qué tu #1? */}
+            {ordenPaso === 3 && orderedProps.length === 3 && (
+              <>
+                <div className="text-center mb-6">
+                  <span className="text-4xl mb-3 block">✅</span>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    ¡Listo! Tu orden:
+                  </h2>
+                </div>
+
+                {/* Resumen visual */}
+                <div className="space-y-2 mb-6">
+                  {orderedProps.map((propId, index) => {
+                    const prop = propiedades.find(p => p.id === propId)
+                    if (!prop) return null
+                    const medals = ['🥇', '🥈', '🥉']
+                    return (
+                      <div
+                        key={propId}
+                        className={`flex items-center gap-3 p-3 rounded-xl ${
+                          index === 0 ? 'bg-purple-50 border-2 border-purple-300' : 'bg-gray-50'
+                        }`}
+                      >
+                        <span className="text-2xl">{medals[index]}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-semibold truncate ${index === 0 ? 'text-purple-900' : 'text-gray-700'}`}>
+                            {prop.proyecto}
+                          </p>
+                          <p className="text-xs text-gray-500">${prop.precio_usd?.toLocaleString('en-US')}</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Pregunta: ¿Por qué es tu #1? */}
+                <div className="mb-6">
+                  <p className="font-medium text-gray-900 mb-3 text-sm">
+                    ¿Por qué <span className="text-purple-600">{propiedades.find(p => p.id === orderedProps[0])?.proyecto}</span> es tu #1?
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'precio', label: '💰 Precio' },
+                      { value: 'ubicacion', label: '📍 Ubicación' },
+                      { value: 'amenidades', label: '🏊 Amenidades' },
+                      { value: 'intuicion', label: '✨ Intuición' },
+                    ].map(option => (
+                      <button
+                        key={option.value}
+                        onClick={() => setRazonFavorita(option.value)}
+                        className={`p-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                          razonFavorita === option.value
+                            ? 'border-purple-500 bg-purple-100 text-purple-700'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-purple-300'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Botones */}
+                <div className="space-y-2">
+                  <button
+                    onClick={continuarAPremium}
+                    disabled={!razonFavorita}
+                    className="w-full py-3 px-6 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Ver Informe Premium →
+                  </button>
+                  <button
+                    onClick={reiniciarOrden}
+                    className="w-full py-2 text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    Cambiar orden
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Modal Premium - Waitlist */}
       {showPremiumModal && !showPremiumExample && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -2615,7 +2882,7 @@ ${top3Texto}
                   </button>
                 )}
                 <button
-                  onClick={() => setShowPremiumModal(true)}
+                  onClick={iniciarOrdenar}
                   className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
                 >
                   Comparar {selectedProps.size}
@@ -2649,10 +2916,10 @@ ${top3Texto}
       )}
 
       {/* Modal Ejemplo Premium (PremiumModal real) - con filtros del usuario */}
-      {/* Key incluye filterRefreshKey para forzar re-mount cuando cambian filtros */}
+      {/* Key incluye filterRefreshKey + orden del usuario para forzar re-mount */}
       {showPremiumExample && (
         <PremiumModal
-          key={`premium-${filterRefreshKey}-${presupuesto}-${dormitorios}-${zonas}-${estado_entrega}-${innegociables}-${Array.from(selectedProps).join(',')}`}
+          key={`premium-${filterRefreshKey}-${presupuesto}-${dormitorios}-${zonas}-${estado_entrega}-${innegociables}-${orderedProps.join(',')}-${razonFavorita}`}
           onClose={() => {
             setShowPremiumExample(false)
             setShowPremiumModal(false)
@@ -2668,7 +2935,7 @@ ${top3Texto}
             ubicacion_vs_metros: ubicacion_vs_metros ? parseInt(ubicacion_vs_metros as string) : undefined,
             calidad_vs_precio: calidad_vs_precio ? parseInt(calidad_vs_precio as string) : undefined
           }}
-          propiedadesSeleccionadas={selectedProps.size > 0 ? getSelectedProperties().map(p => ({
+          propiedadesSeleccionadas={orderedProps.length > 0 ? getOrderedSelectedProperties().map(p => ({
             id: p.id,
             proyecto: p.proyecto,
             desarrollador: p.desarrollador,
@@ -2686,6 +2953,7 @@ ${top3Texto}
             } : null,
             sintesisFiduciaria: getSintesisFiduciaria(p)
           })) : undefined}
+          razonFavorita={razonFavorita}
         />
       )}
 

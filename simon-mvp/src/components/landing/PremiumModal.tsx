@@ -58,10 +58,19 @@ interface PropiedadSeleccionada {
 interface PremiumModalProps {
   onClose: () => void
   filtros?: FiltrosUsuario  // Si se pasan, usa datos del usuario
-  propiedadesSeleccionadas?: PropiedadSeleccionada[]  // Las 3 elegidas por el usuario
+  propiedadesSeleccionadas?: PropiedadSeleccionada[]  // Las 3 elegidas por el usuario (en orden del usuario)
+  razonFavorita?: string | null  // Por qué eligió la #1: precio|ubicacion|amenidades|intuicion
 }
 
-export default function PremiumModal({ onClose, filtros, propiedadesSeleccionadas }: PremiumModalProps) {
+// Mapeo de razón a texto legible
+const RAZONES_TEXTO: Record<string, string> = {
+  precio: 'mejor precio',
+  ubicacion: 'mejor ubicación',
+  amenidades: 'mejores amenidades',
+  intuicion: 'intuición personal'
+}
+
+export default function PremiumModal({ onClose, filtros, propiedadesSeleccionadas, razonFavorita }: PremiumModalProps) {
   const [analisis, setAnalisis] = useState<AnalisisMercadoFiduciario | null>(null)
   const [microzonas, setMicrozonas] = useState<MicrozonaData[]>([])
   const [escenarios, setEscenarios] = useState<EscenarioFinanciero[]>([])
@@ -381,9 +390,16 @@ export default function PremiumModal({ onClose, filtros, propiedadesSeleccionada
                 3. {tieneSeleccion ? 'TUS PROPIEDADES ELEGIDAS' : 'TOP 3 OPORTUNIDADES DETECTADAS'}
               </h3>
               {tieneSeleccion && (
-                <p className="text-sm text-slate-500 mb-4">
-                  Análisis detallado de las {topOpciones.length} propiedades que seleccionaste para comparar.
-                </p>
+                <div className="mb-4">
+                  <p className="text-sm text-slate-500">
+                    Análisis detallado de las {topOpciones.length} propiedades que seleccionaste para comparar.
+                  </p>
+                  {razonFavorita && topOpciones[0] && (
+                    <p className="text-sm text-purple-600 mt-1">
+                      <strong>{topOpciones[0].proyecto}</strong> es tu #1 por <strong>{RAZONES_TEXTO[razonFavorita] || razonFavorita}</strong>.
+                    </p>
+                  )}
+                </div>
               )}
 
               {topOpciones.slice(0, 1).map((op, i) => {
