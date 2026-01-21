@@ -1860,44 +1860,7 @@ ${top3Texto}
                           <DescripcionAnunciante descripcion={prop.descripcion} />
                         )}
 
-                        {/* 2. AMENITIES Y EQUIPAMIENTO - Detalle completo */}
-                        {((prop.amenities_confirmados && prop.amenities_confirmados.length > 0) ||
-                          (prop.equipamiento_detectado && prop.equipamiento_detectado.length > 0)) && (
-                          <div className="space-y-2">
-                            {prop.amenities_confirmados && prop.amenities_confirmados.length > 0 && (
-                              <div className="flex items-start gap-2 text-sm">
-                                <span className="text-gray-500">🏢</span>
-                                <div>
-                                  <span className="text-gray-700 font-medium">Amenities del edificio</span>
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {prop.amenities_confirmados.map((a, i) => (
-                                      <span key={i} className="inline-flex items-center px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs">
-                                        {a} ✓
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                            {prop.equipamiento_detectado && prop.equipamiento_detectado.length > 0 && (
-                              <div className="flex items-start gap-2 text-sm">
-                                <span className="text-gray-500">🏠</span>
-                                <div>
-                                  <span className="text-gray-700 font-medium">Equipamiento del departamento</span>
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {prop.equipamiento_detectado.map((item, i) => (
-                                      <span key={i} className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs">
-                                        {item}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* 3. DÍAS EN MERCADO - ¿Puedo negociar? */}
+                        {/* 2. DÍAS EN MERCADO - ¿Puedo negociar? */}
                         {prop.dias_en_mercado != null && (
                           <div className="flex items-start gap-2 text-sm">
                             <span className="text-gray-500">📅</span>
