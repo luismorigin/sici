@@ -313,7 +313,7 @@ function DescripcionAnunciante({ descripcion }: { descripcion: string }) {
 // Helper para formatear números (evita error de hidratación con toLocaleString)
 const formatNum = (num: number | null | undefined): string => {
   if (num === null || num === undefined || isNaN(num)) return '0'
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
 // Helper para formatear dormitorios (0 = Monoambiente)
@@ -2687,7 +2687,7 @@ ${top3Texto}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-gray-900 truncate">{prop.proyecto}</p>
-                          <p className="text-sm text-gray-500">${prop.precio_usd?.toLocaleString('en-US')}</p>
+                          <p className="text-sm text-gray-500">${formatNum(prop.precio_usd)}</p>
                           <p className="text-xs text-gray-400">{prop.area_m2}m² · {prop.dormitorios} dorm</p>
                         </div>
                         <div className="text-purple-500">
@@ -2740,7 +2740,7 @@ ${top3Texto}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-gray-900 truncate">{prop.proyecto}</p>
-                          <p className="text-sm text-gray-500">${prop.precio_usd?.toLocaleString('en-US')}</p>
+                          <p className="text-sm text-gray-500">${formatNum(prop.precio_usd)}</p>
                           <p className="text-xs text-gray-400">{prop.area_m2}m² · {prop.dormitorios} dorm</p>
                         </div>
                         <div className="text-purple-500">
@@ -2791,7 +2791,7 @@ ${top3Texto}
                           <p className={`font-semibold truncate ${index === 0 ? 'text-purple-900' : 'text-gray-700'}`}>
                             {prop.proyecto}
                           </p>
-                          <p className="text-xs text-gray-500">${prop.precio_usd?.toLocaleString('en-US')}</p>
+                          <p className="text-xs text-gray-500">${formatNum(prop.precio_usd)}</p>
                         </div>
                       </div>
                     )
