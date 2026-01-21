@@ -2082,68 +2082,119 @@ ${top3Texto}
                           )
                         })()}
 
-                        {/* 6. COSTOS OCULTOS - ¿Cuál es el costo real? */}
+                        {/* 6. COSTOS OCULTOS - Dinámico según lo confirmado */}
                         {(() => {
                           const costos = getCostosOcultosEstimados(prop.dormitorios, null, null)
+
+                          // Determinar qué está confirmado
+                          const tieneParqueo = prop.estacionamientos != null && prop.estacionamientos > 0
+                          const tieneBaulera = prop.baulera === true
+                          const parqueoDesconocido = prop.estacionamientos == null
+                          const bauleraDesconocida = prop.baulera == null
+
+                          // Calcular costo adicional potencial (solo items no confirmados)
+                          let costoAdicionalMin = 0
+                          let costoAdicionalMax = 0
+                          const itemsPendientes: string[] = []
+
+                          if (!tieneParqueo && parqueoDesconocido) {
+                            costoAdicionalMin += costos.estacionamiento.compra.min
+                            costoAdicionalMax += costos.estacionamiento.compra.max
+                            itemsPendientes.push('parqueo')
+                          }
+                          if (!tieneBaulera && bauleraDesconocida) {
+                            costoAdicionalMin += costos.baulera.compra.min
+                            costoAdicionalMax += costos.baulera.compra.max
+                            itemsPendientes.push('baulera')
+                          }
+
+                          const todoConfirmado = tieneParqueo && tieneBaulera
+
                           return (
-                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                            <div className={`rounded-lg border p-3 ${todoConfirmado ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
                               <div className="flex items-center gap-2 mb-2">
-                                <span className="text-sm font-semibold text-amber-800">💰 Costos a verificar</span>
-                                <span className="text-xs bg-amber-200 text-amber-700 px-1.5 py-0.5 rounded">estimado zona</span>
+                                <span className={`text-sm font-semibold ${todoConfirmado ? 'text-green-800' : 'text-amber-800'}`}>
+                                  {todoConfirmado ? '✅ Costos incluidos' : '💰 Costos a verificar'}
+                                </span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${todoConfirmado ? 'bg-green-200 text-green-700' : 'bg-amber-200 text-amber-700'}`}>
+                                  estimado zona
+                                </span>
                               </div>
 
                               <div className="space-y-1.5 text-sm">
+                                {/* Expensas - siempre a verificar */}
                                 <div className="flex items-start gap-2">
-                                  <span className="text-gray-500 w-4">📋</span>
+                                  <span className="text-amber-500 w-4">📋</span>
                                   <div>
                                     <span className="text-gray-700">
                                       Expensas: ${costos.expensas.rango_completo.min}-{costos.expensas.rango_completo.max}/mes
                                     </span>
-                                    <span className="text-xs text-gray-500 ml-1">
-                                      (+${formatNum(costos.expensas.impacto_anual_completo.min)}-{formatNum(costos.expensas.impacto_anual_completo.max)}/año)
-                                    </span>
                                     <p className="text-xs text-amber-700">
-                                      Preguntá qué incluyen y el monto exacto
+                                      Preguntá monto exacto
                                     </p>
                                   </div>
                                 </div>
 
+                                {/* Parqueo - dinámico */}
                                 <div className="flex items-start gap-2">
-                                  <span className="text-gray-500 w-4">🚗</span>
+                                  <span className={`w-4 ${tieneParqueo ? 'text-green-500' : 'text-amber-500'}`}>🚗</span>
                                   <div>
-                                    <span className="text-gray-700">
-                                      Parqueo: ${formatNum(costos.estacionamiento.compra.min)}-{formatNum(costos.estacionamiento.compra.max)}
-                                    </span>
-                                    <span className="text-xs text-gray-500 ml-1">
-                                      ({costos.estacionamiento.texto_inclusion})
-                                    </span>
-                                    <p className="text-xs text-amber-700">
-                                      Preguntá si está incluido en el precio
-                                    </p>
+                                    {tieneParqueo ? (
+                                      <span className="text-green-700 font-medium">
+                                        Parqueo: ✓ Incluido ({prop.estacionamientos}p)
+                                      </span>
+                                    ) : (
+                                      <>
+                                        <span className="text-gray-700">
+                                          Parqueo: ${formatNum(costos.estacionamiento.compra.min)}-{formatNum(costos.estacionamiento.compra.max)}
+                                        </span>
+                                        <p className="text-xs text-amber-700">
+                                          {parqueoDesconocido ? 'Preguntá si está incluido' : 'No incluido'}
+                                        </p>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
 
+                                {/* Baulera - dinámico */}
                                 <div className="flex items-start gap-2">
-                                  <span className="text-gray-500 w-4">📦</span>
+                                  <span className={`w-4 ${tieneBaulera ? 'text-green-500' : 'text-amber-500'}`}>📦</span>
                                   <div>
-                                    <span className="text-gray-700">
-                                      Baulera: ${formatNum(costos.baulera.compra.min)}-{formatNum(costos.baulera.compra.max)}
-                                    </span>
-                                    <span className="text-xs text-gray-500 ml-1">
-                                      ({costos.baulera.texto_inclusion})
-                                    </span>
-                                    <p className="text-xs text-amber-700">
-                                      Preguntá si está incluida en el precio
-                                    </p>
+                                    {tieneBaulera ? (
+                                      <span className="text-green-700 font-medium">
+                                        Baulera: ✓ Incluida
+                                      </span>
+                                    ) : (
+                                      <>
+                                        <span className="text-gray-700">
+                                          Baulera: ${formatNum(costos.baulera.compra.min)}-{formatNum(costos.baulera.compra.max)}
+                                        </span>
+                                        <p className="text-xs text-amber-700">
+                                          {bauleraDesconocida ? 'Preguntá si está incluida' : 'No incluida'}
+                                        </p>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
 
-                                <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-amber-200">
-                                  <span className="text-amber-600 w-4">💡</span>
-                                  <span className="text-amber-700 text-xs font-medium">
-                                    Costo real puede ser ${formatNum(prop.precio_usd + costos.estacionamiento.compra.min + costos.baulera.compra.min)}-{formatNum(prop.precio_usd + costos.estacionamiento.compra.max + costos.baulera.compra.max)} si no incluyen parqueo ni baulera
-                                  </span>
-                                </div>
+                                {/* Costo real - solo si hay items pendientes */}
+                                {itemsPendientes.length > 0 && (
+                                  <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-amber-200">
+                                    <span className="text-amber-600 w-4">💡</span>
+                                    <span className="text-amber-700 text-xs font-medium">
+                                      Costo real: ${formatNum(prop.precio_usd + costoAdicionalMin)}-{formatNum(prop.precio_usd + costoAdicionalMax)} si no incluye {itemsPendientes.join(' ni ')}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {todoConfirmado && (
+                                  <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-green-200">
+                                    <span className="text-green-600 w-4">✓</span>
+                                    <span className="text-green-700 text-xs font-medium">
+                                      Precio publicado = Costo real (parqueo y baulera incluidos)
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )
