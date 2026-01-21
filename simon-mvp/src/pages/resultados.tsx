@@ -1643,11 +1643,15 @@ ${top3Texto}
                             <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">🚿 {Math.floor(Number(prop.banos))}b</span>
                           )}
                           <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">📐 {prop.area_m2}m²</span>
-                          {prop.estacionamientos && prop.estacionamientos > 0 && (
+                          {prop.estacionamientos != null && prop.estacionamientos > 0 ? (
                             <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">🚗 {prop.estacionamientos}p</span>
+                          ) : prop.estacionamientos == null && (
+                            <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-full text-sm">🚗 ?</span>
                           )}
-                          {prop.baulera === true && (
+                          {prop.baulera === true ? (
                             <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">📦 Baulera</span>
+                          ) : prop.baulera == null && (
+                            <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-full text-sm">📦 ?</span>
                           )}
                           {prop.estado_construccion && prop.estado_construccion !== 'no_especificado' && (
                             <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-sm capitalize">{prop.estado_construccion.replace(/_/g, ' ')}</span>
