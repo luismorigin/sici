@@ -1748,7 +1748,7 @@ ${top3Texto}
                         {/* Ubicación con link a Maps */}
                         <div className="flex items-center justify-between mt-3 py-2 border-t border-gray-100">
                           <span className="text-sm text-gray-600">
-                            📍 {prop.zona}{prop.microzona && prop.microzona !== prop.zona ? ` · ${prop.microzona}` : ''}
+                            📍 {prop.microzona || prop.zona}
                           </span>
                           {prop.latitud && prop.longitud && (
                             <a
