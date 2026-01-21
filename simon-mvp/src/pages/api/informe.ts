@@ -68,12 +68,13 @@ const fmt = (n: number | null | undefined): string => {
 }
 
 const getCategoria = (p: Propiedad): { clase: string; texto: string; pct: number; badgeClass: string } => {
-  const cat = p.posicion_mercado?.categoria || 'precio_justo'
+  // Usar posicion_mercado pre-calculado de BD (compara vs promedio de SU zona específica)
   const diff = p.posicion_mercado?.diferencia_pct || 0
-  if (cat === 'oportunidad' || cat === 'bajo_promedio' || diff <= -10) {
-    return { clase: 'good', texto: `${Math.abs(Math.round(diff))}% bajo mercado`, pct: diff, badgeClass: 'oportunidad' }
-  } else if (cat === 'premium' || cat === 'sobre_promedio' || diff >= 10) {
-    return { clase: 'high', texto: `${Math.round(diff)}% sobre mercado`, pct: diff, badgeClass: 'premium' }
+
+  if (diff <= -10) {
+    return { clase: 'good', texto: `${Math.abs(Math.round(diff))}% bajo su zona`, pct: diff, badgeClass: 'oportunidad' }
+  } else if (diff >= 10) {
+    return { clase: 'high', texto: `${Math.round(diff)}% sobre su zona`, pct: diff, badgeClass: 'premium' }
   }
   return { clase: 'fair', texto: 'Precio de mercado', pct: diff, badgeClass: 'justo' }
 }
@@ -145,11 +146,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const todas = propiedades
     const top3 = propiedades.slice(0, 3)
 
-    const favCat = getCategoria(fav)
     const fechaHoy = new Date().toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' })
     const precioM2Promedio = analisis?.precio_m2_promedio || Math.round(todas.reduce((s, p) => s + p.precio_m2, 0) / todas.length)
+    const favCat = getCategoria(fav)
 
     // Generar barras del gráfico (pre-computado para evitar template literals anidados)
+    // Colores simplificados: Verde=elegidas, Azul=alternativas, Gris oscuro=promedio
     const generarBarrasChart = (): string => {
       const propsParaChart = todas.slice(0, 6)
       const propsOrdenadas = [...propsParaChart].sort((a, b) => a.precio_m2 - b.precio_m2)
@@ -158,10 +160,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const barrasProps: BarraData[] = propsOrdenadas.map(p => {
         const height = Math.max(40, Math.min(180, (p.precio_m2 / precioM2Promedio) * 100))
         const originalIndex = todas.findIndex(t => t.id === p.id)
-        const isSelected = originalIndex < 3
-        const isWarning = p.precio_m2 > precioM2Promedio * 1.05
-        const barClass = isSelected ? 'selected' : isWarning ? 'warning' : ''
-        const nameClass = isSelected ? 'selected' : ''
+        const isElegida = originalIndex < 3
+        // Verde para elegidas, Azul para alternativas
+        const barClass = isElegida ? 'selected' : ''
+        const nameClass = isElegida ? 'selected' : ''
         const label = originalIndex === 0 ? ' (tuya)' : originalIndex < 3 ? ' (#' + (originalIndex + 1) + ')' : ''
         return {
           html: '<div class="chart-bar"><div class="bar ' + barClass + '" style="height: ' + height + 'px;"><span class="bar-label">$' + fmt(p.precio_m2) + '</span></div><div class="bar-name ' + nameClass + '">' + p.proyecto.substring(0, 10) + label + '</div></div>',
@@ -169,10 +171,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
 
-      // Barra de PROMEDIO
+      // Barra de PROMEDIO - gris oscuro para contraste
       const heightPromedio = 100
       const barraPromedio: BarraData = {
-        html: '<div class="chart-bar"><div class="bar" style="height: ' + heightPromedio + 'px; background: var(--gray-400);"><span class="bar-label">$' + fmt(precioM2Promedio) + '</span></div><div class="bar-name" style="font-weight: 700;">PROMEDIO</div></div>',
+        html: '<div class="chart-bar"><div class="bar" style="height: ' + heightPromedio + 'px; background: var(--gray-600);"><span class="bar-label">$' + fmt(precioM2Promedio) + '</span></div><div class="bar-name" style="font-weight: 700; color: var(--gray-600);">PROMEDIO</div></div>',
         precio_m2: precioM2Promedio
       }
 
@@ -309,13 +311,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         /* Chart */
         .price-chart { margin-top: 30px; padding: 25px; background: var(--gray-50); border-radius: 12px; }
         .price-chart h4 { text-align: center; color: var(--gray-700); margin-bottom: 25px; }
-        .chart-container { position: relative; height: 220px; display: flex; align-items: flex-end; gap: 8px; padding-bottom: 35px; }
-        .chart-bar { flex: 1; display: flex; flex-direction: column; align-items: center; }
-        .bar { width: 100%; max-width: 60px; background: var(--primary); border-radius: 4px 4px 0 0; position: relative; }
+        .chart-container { position: relative; height: 250px; display: flex; align-items: flex-end; gap: 8px; }
+        .chart-bar { flex: 1; display: flex; flex-direction: column; align-items: center; height: 210px; justify-content: flex-end; }
+        .bar { width: 100%; max-width: 60px; background: var(--primary); border-radius: 4px 4px 0 0; position: relative; min-height: 20px; }
         .bar.selected { background: var(--oportunidad); }
         .bar.warning { background: var(--warning); }
-        .bar-label { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; font-weight: 700; color: var(--gray-700); white-space: nowrap; }
-        .bar-name { margin-top: 8px; font-size: 0.6rem; color: var(--gray-600); text-align: center; max-width: 60px; }
+        .bar-label { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; font-weight: 700; color: var(--gray-700); white-space: nowrap; }
+        .bar-name { margin-top: 8px; font-size: 0.6rem; color: var(--gray-600); text-align: center; max-width: 70px; height: 30px; }
         .bar-name.selected { font-weight: 700; color: var(--oportunidad); }
         .chart-legend { display: flex; justify-content: center; gap: 20px; margin-top: 15px; flex-wrap: wrap; }
         .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--gray-700); }
@@ -362,28 +364,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         .comparable-conclusion { margin-top: 15px; padding: 15px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: white; border-radius: 8px; }
         .comparable-conclusion strong { display: block; margin-bottom: 5px; font-size: 0.8rem; opacity: 0.9; }
-
-        /* Map */
-        .map-container { background: linear-gradient(135deg, #e8f4ea 0%, #d4e8d9 100%); border-radius: 12px; height: 380px; position: relative; overflow: hidden; margin-top: 20px; }
-        .map-pins { position: absolute; inset: 0; }
-        .map-pin-pill { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; }
-        .pin-pill { padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.2); white-space: nowrap; display: flex; align-items: center; gap: 5px; position: relative; }
-        .pin-pill::after { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); border-left: 8px solid transparent; border-right: 8px solid transparent; }
-        .pin-pill.oportunidad { background: var(--oportunidad); color: white; }
-        .pin-pill.oportunidad::after { border-top: 8px solid var(--oportunidad); }
-        .pin-pill.justo { background: var(--justo); color: white; }
-        .pin-pill.justo::after { border-top: 8px solid var(--justo); }
-        .pin-pill.premium { background: var(--premium); color: white; }
-        .pin-pill.premium::after { border-top: 8px solid var(--premium); }
-        .pin-pill.heart { background: var(--heart); color: white; font-size: 0.85rem; padding: 8px 14px; }
-        .pin-pill.heart::after { border-top: 8px solid var(--heart); }
-        .pin-label { font-size: 0.7rem; color: var(--gray-600); margin-top: 12px; background: white; padding: 2px 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .map-legend { position: absolute; bottom: 15px; left: 15px; background: white; padding: 12px 16px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; gap: 15px; font-size: 0.8rem; }
-        .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
-        .legend-dot.heart { background: var(--heart); }
-        .legend-dot.oportunidad { background: var(--oportunidad); }
-        .legend-dot.justo { background: var(--justo); }
-        .legend-dot.premium { background: var(--premium); }
 
         /* Table */
         .summary-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.85rem; }
@@ -439,23 +419,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
     `
 
-    // Generar posiciones pseudo-aleatorias para el mapa basadas en el índice
-    const getMapPosition = (index: number, total: number) => {
-      const positions = [
-        { top: 35, left: 38 },
-        { top: 45, left: 58 },
-        { top: 62, left: 32 },
-        { top: 28, left: 65 },
-        { top: 52, left: 75 },
-        { top: 70, left: 55 },
-        { top: 40, left: 22 },
-        { top: 25, left: 45 },
-        { top: 55, left: 42 },
-        { top: 75, left: 68 },
-      ]
-      return positions[index % positions.length]
-    }
-
     // Generar HTML
     const html = `<!DOCTYPE html>
 <html lang="es">
@@ -509,7 +472,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     <div class="label">Entrega</div>
                 </div>
                 <div class="search-item">
-                    <div class="value">${todas.length}</div>
+                    <div class="value">${analisis?.total_analizadas || todas.length}</div>
                     <div class="label">Analizadas</div>
                 </div>
                 <div class="search-item">
@@ -675,19 +638,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 <div class="section-title">Posición en el Mercado</div>
             </div>
             <div class="section-content">
-                <p>Comparamos ${fav.proyecto} contra el mercado de <strong>${fav.dormitorios} dormitorios en ${zonaDisplay(fav.zona)}</strong>.</p>
+                <p>Comparamos ${fav.proyecto} contra el mercado de <strong>${datosUsuario.dormitorios ? datosUsuario.dormitorios + ' dormitorios' : 'departamentos'} en ${datosUsuario.zonas?.length ? datosUsuario.zonas.map(z => zonaDisplay(z)).join(', ') : 'todas las zonas'}</strong>.</p>
                 <div class="market-position">
                     <h4>Métricas Clave</h4>
                     <div class="position-grid">
                         <div class="position-item">
                             <div class="metric ${favCat.clase}">${Math.round(favCat.pct)}%</div>
-                            <div class="metric-label">vs Promedio Zona</div>
+                            <div class="metric-label">vs su zona</div>
                             <div class="metric-context">Promedio: $${fmt(precioM2Promedio)}/m² | ${fav.proyecto}: $${fmt(fav.precio_m2)}/m²</div>
-                        </div>
-                        <div class="position-item">
-                            <div class="metric">${fav.posicion_precio_edificio || '?'}° de ${fav.unidades_en_edificio || '?'}</div>
-                            <div class="metric-label">Posición en Edificio</div>
-                            <div class="metric-context">${fav.posicion_precio_edificio === 1 ? 'La más barata' : `${fav.posicion_precio_edificio}° más barata`}</div>
                         </div>
                         <div class="position-item">
                             <div class="metric ${(fav.dias_en_mercado || 0) > 60 ? 'warning' : ''}">${fav.dias_en_mercado || '?'} días</div>
@@ -695,7 +653,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             <div class="metric-context">Mediana zona: ${analisis?.dias_mediana || 45} días</div>
                         </div>
                         <div class="position-item">
-                            <div class="metric">${todas.length}</div>
+                            <div class="metric">${analisis?.total_analizadas || todas.length}</div>
                             <div class="metric-label">Similares Disponibles</div>
                             <div class="metric-context">En tu rango de búsqueda</div>
                         </div>
@@ -710,8 +668,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     <div class="chart-legend">
                         <div class="legend-item"><div class="legend-color" style="background: var(--oportunidad);"></div><span>Tus elegidas</span></div>
                         <div class="legend-item"><div class="legend-color" style="background: var(--primary);"></div><span>Alternativas</span></div>
-                        <div class="legend-item"><div class="legend-color" style="background: var(--gray-400);"></div><span>Promedio zona</span></div>
-                        <div class="legend-item"><div class="legend-color" style="background: var(--warning);"></div><span>Sobre promedio</span></div>
+                        <div class="legend-item"><div class="legend-color" style="background: var(--gray-600);"></div><span>Promedio resultados</span></div>
                     </div>
                 </div>
             </div>
@@ -803,66 +760,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         </div>
     </div>` : ''}
 
-    <!-- Section 5: Mapa -->
+    <!-- Section 5: Tabla de Alternativas -->
     <div class="container">
         <div class="section">
             <div class="section-header">
                 <div class="section-number">5</div>
-                <div class="section-title">Mapa: Ubicación de tus Elegidas</div>
+                <div class="section-title">Tus 3 Elegidas + Mejores Alternativas</div>
             </div>
             <div class="section-content">
-                <p>Tus ${Math.min(3, todas.length)} propiedades elegidas y alternativas en ${zonaDisplay(fav.zona)}.</p>
-                <div class="map-container">
-                    <div class="map-pins">
-                        ${top3.map((p, i) => {
-                          const pos = getMapPosition(i, todas.length)
-                          return `
-                        <div class="map-pin-pill" style="top: ${pos.top}%; left: ${pos.left}%;">
-                            <div class="pin-pill heart">❤️ $${fmt(p.precio_usd / 1000)}k</div>
-                            <div class="pin-label">${p.proyecto} (#${i + 1})</div>
-                        </div>`
-                        }).join('')}
-                        ${todas.slice(3, 7).map((p, i) => {
-                          const pos = getMapPosition(i + 3, todas.length)
-                          const cat = getCategoria(p)
-                          return `
-                        <div class="map-pin-pill" style="top: ${pos.top}%; left: ${pos.left}%;">
-                            <div class="pin-pill ${cat.badgeClass}">$${fmt(p.precio_usd / 1000)}k</div>
-                        </div>`
-                        }).join('')}
-                    </div>
-                    <div class="map-legend">
-                        <div class="legend-item">
-                            <div class="legend-dot heart"></div>
-                            <span>Tus elegidas</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-dot oportunidad"></div>
-                            <span>Oportunidad</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-dot justo"></div>
-                            <span>Precio justo</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-dot premium"></div>
-                            <span>Premium</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Section 6: Tabla de Alternativas -->
-    <div class="container">
-        <div class="section">
-            <div class="section-header">
-                <div class="section-number">6</div>
-                <div class="section-title">Contexto: ${todas.length} Alternativas Analizadas</div>
-            </div>
-            <div class="section-content">
-                <p>Todas las opciones de <strong>${fav.dormitorios} dormitorios en ${zonaDisplay(fav.zona)} hasta $${fmt(datosUsuario.presupuesto)}</strong>.</p>
+                <p>Todas las opciones de <strong>${datosUsuario.dormitorios ? datosUsuario.dormitorios + ' dormitorios' : 'departamentos'} en ${datosUsuario.zonas?.length ? datosUsuario.zonas.map(z => zonaDisplay(z)).join(', ') : 'todas las zonas'} hasta $${fmt(datosUsuario.presupuesto)}</strong>.</p>
                 <table class="summary-table">
                     <thead>
                         <tr>
@@ -871,7 +777,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             <th>m²</th>
                             <th>$/m²</th>
                             <th>Días</th>
-                            <th>vs Mercado</th>
+                            <th>vs su zona</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -893,18 +799,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     <div class="alert-icon">📊</div>
                     <div class="alert-content">
                         <h4>Resumen del Mercado</h4>
-                        <p>Promedio zona: <strong>$${fmt(precioM2Promedio)}/m²</strong> | Tus elegidas promedian: <strong>$${fmt(Math.round(top3.reduce((s, p) => s + p.precio_m2, 0) / top3.length))}/m²</strong></p>
+                        <p>Promedio tus resultados: <strong>$${fmt(precioM2Promedio)}/m²</strong> | Tus elegidas promedian: <strong>$${fmt(Math.round(top3.reduce((s, p) => s + p.precio_m2, 0) / top3.length))}/m²</strong></p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Section 7: Checklist -->
+    <!-- Section 6: Checklist -->
     <div class="container">
         <div class="section">
             <div class="section-header">
-                <div class="section-number">7</div>
+                <div class="section-number">6</div>
                 <div class="section-title">Checklist: Preguntas Antes de Ofertar</div>
             </div>
             <div class="section-content">
@@ -975,11 +881,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         </div>
     </div>
 
-    <!-- Section 8: Negociación -->
+    <!-- Section 7: Negociación -->
     <div class="container">
         <div class="section">
             <div class="section-header">
-                <div class="section-number">8</div>
+                <div class="section-number">7</div>
                 <div class="section-title">Estrategia de Negociación para ${fav.proyecto}</div>
             </div>
             <div class="section-content">
@@ -1028,11 +934,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         </div>
     </div>
 
-    <!-- Section 9: Conclusión -->
+    <!-- Section 8: Conclusión -->
     <div class="container">
         <div class="section">
             <div class="section-header">
-                <div class="section-number">9</div>
+                <div class="section-number">8</div>
                 <div class="section-title">Conclusión y Recomendación</div>
             </div>
             <div class="section-content">
@@ -1096,7 +1002,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </div>
                 <div class="footer-meta">
                     <p><strong>Análisis basado en:</strong></p>
-                    <p>${todas.length} propiedades analizadas</p>
+                    <p>${analisis?.total_analizadas || todas.length} propiedades analizadas</p>
                     <p>Datos de mercado: ${fechaHoy}</p>
                     <div class="confidence-badge">
                         <span>📊</span>

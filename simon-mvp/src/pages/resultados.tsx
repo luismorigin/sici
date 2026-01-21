@@ -520,6 +520,21 @@ export default function ResultadosPage() {
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({})
 
+  // Estado para amenities/equipamiento expandidos inline (por propiedad y tipo)
+  const [expandedAmenities, setExpandedAmenities] = useState<Set<string>>(new Set())
+  const toggleAmenityExpand = (propId: number, type: 'amenities' | 'equipamiento') => {
+    const key = `${propId}-${type}`
+    setExpandedAmenities(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      return next
+    })
+  }
+
   // Lightbox fullscreen para fotos
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxProp, setLightboxProp] = useState<UnidadReal | null>(null)
@@ -629,10 +644,10 @@ export default function ResultadosPage() {
     // IDs de las elegidas para no duplicarlas
     const idsElegidas = new Set(elegidasFinales.map(p => p.id))
 
-    // Combinar: elegidas primero + resto del mercado (sin duplicados)
+    // Combinar: elegidas primero + máximo 10 alternativas (13 total)
     const todasLasPropiedades = [
       ...elegidasFinales,
-      ...propiedadesOrdenadas.filter(p => !idsElegidas.has(p.id))
+      ...propiedadesOrdenadas.filter(p => !idsElegidas.has(p.id)).slice(0, 10)
     ]
 
     setGenerandoInforme(true)
@@ -671,10 +686,15 @@ export default function ResultadosPage() {
         quienes_viven: 'No especificado'
       }
 
+      // Calcular promedio real del mercado filtrado (no hardcodeado)
+      const promedioRealM2 = propiedadesOrdenadas.length > 0
+        ? Math.round(propiedadesOrdenadas.reduce((s, p) => s + (p.precio_m2 || 0), 0) / propiedadesOrdenadas.length)
+        : 1500
+
       const analisisData = {
-        precio_m2_promedio: analisisFiduciario?.bloque_3_contexto_mercado?.precio_m2_promedio || 1500,
+        precio_m2_promedio: analisisFiduciario?.bloque_3_contexto_mercado?.precio_m2_promedio || promedioRealM2,
         dias_mediana: analisisFiduciario?.bloque_3_contexto_mercado?.dias_mediana || 45,
-        total_analizadas: analisisFiduciario?.bloque_3_contexto_mercado?.stock_total || propiedadesData.length
+        total_analizadas: analisisFiduciario?.bloque_3_contexto_mercado?.stock_total || propiedadesOrdenadas.length
       }
 
       const response = await fetch('/api/informe', {
@@ -1626,10 +1646,104 @@ ${top3Texto}
                           {prop.estacionamientos && prop.estacionamientos > 0 && (
                             <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">🚗 {prop.estacionamientos}p</span>
                           )}
+                          {prop.baulera === true && (
+                            <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">📦 Baulera</span>
+                          )}
                           {prop.estado_construccion && prop.estado_construccion !== 'no_especificado' && (
                             <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-sm capitalize">{prop.estado_construccion.replace(/_/g, ' ')}</span>
                           )}
                         </div>
+
+                        {/* Amenities y Equipamiento - Chips colapsables inline */}
+                        {(() => {
+                          // Amenities de edificio que deben separarse del equipamiento
+                          const AMENITIES_EDIFICIO = [
+                            'Piscina', 'Piscina infinita', 'Gimnasio', 'Cowork', 'Sala TV/Cine',
+                            'Jacuzzi', 'Sauna', 'Seguridad 24h', 'Cámaras seguridad', 'Sala de juegos',
+                            'Billar', 'Bar/Lounge', 'Churrasquera', 'Roof garden', 'Lobby/Recepción',
+                            'Jardín', 'Parque infantil', 'Canchas deportivas', 'Sala yoga',
+                            'Pet friendly', 'Ascensor', 'Salón de eventos'
+                          ]
+
+                          // Separar: equipamiento_detectado puede tener amenities mezclados
+                          const equipamientoRaw = prop.equipamiento_detectado || []
+                          const amenitiesFromEquip = equipamientoRaw.filter(item => AMENITIES_EDIFICIO.includes(item))
+                          const equipamientoReal = equipamientoRaw.filter(item => !AMENITIES_EDIFICIO.includes(item))
+
+                          // Combinar amenities confirmados + detectados (sin duplicados)
+                          const amenitiesConfirmados = prop.amenities_confirmados || []
+                          const allAmenities = [...new Set([...amenitiesConfirmados, ...amenitiesFromEquip])]
+
+                          const hasAmenities = allAmenities.length > 0
+                          const hasEquipamiento = equipamientoReal.length > 0
+
+                          if (!hasAmenities && !hasEquipamiento) return null
+
+                          return (
+                            <div className="mt-2 space-y-1.5 text-sm">
+                              {/* Amenities del edificio */}
+                              {hasAmenities && (
+                                <div className="flex items-center flex-wrap gap-1">
+                                  <span className="text-gray-500 mr-1">🏢</span>
+                                  {(() => {
+                                    const isExpanded = expandedAmenities.has(`${prop.id}-amenities`)
+                                    const visibleCount = 2
+                                    const hasMore = allAmenities.length > visibleCount
+                                    const displayItems = isExpanded ? allAmenities : allAmenities.slice(0, visibleCount)
+
+                                    return (
+                                      <>
+                                        {displayItems.map((a, i) => (
+                                          <span key={i} className="inline-flex items-center px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs">
+                                            {a} ✓
+                                          </span>
+                                        ))}
+                                        {hasMore && (
+                                          <button
+                                            onClick={() => toggleAmenityExpand(prop.id, 'amenities')}
+                                            className="inline-flex items-center px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full text-xs transition-colors"
+                                          >
+                                            {isExpanded ? '▲' : `+${allAmenities.length - visibleCount} ▼`}
+                                          </button>
+                                        )}
+                                      </>
+                                    )
+                                  })()}
+                                </div>
+                              )}
+                              {/* Equipamiento del departamento */}
+                              {hasEquipamiento && (
+                                <div className="flex items-center flex-wrap gap-1">
+                                  <span className="text-gray-500 mr-1">🏠</span>
+                                  {(() => {
+                                    const isExpanded = expandedAmenities.has(`${prop.id}-equipamiento`)
+                                    const visibleCount = 2
+                                    const hasMore = equipamientoReal.length > visibleCount
+                                    const displayItems = isExpanded ? equipamientoReal : equipamientoReal.slice(0, visibleCount)
+
+                                    return (
+                                      <>
+                                        {displayItems.map((item, i) => (
+                                          <span key={i} className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs">
+                                            {item}
+                                          </span>
+                                        ))}
+                                        {hasMore && (
+                                          <button
+                                            onClick={() => toggleAmenityExpand(prop.id, 'equipamiento')}
+                                            className="inline-flex items-center px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full text-xs transition-colors"
+                                          >
+                                            {isExpanded ? '▲' : `+${equipamientoReal.length - visibleCount} ▼`}
+                                          </button>
+                                        )}
+                                      </>
+                                    )
+                                  })()}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()}
 
                         {/* Ubicación con link a Maps */}
                         <div className="flex items-center justify-between mt-3 py-2 border-t border-gray-100">
@@ -1746,7 +1860,44 @@ ${top3Texto}
                           <DescripcionAnunciante descripcion={prop.descripcion} />
                         )}
 
-                        {/* 2. DÍAS EN MERCADO - ¿Puedo negociar? */}
+                        {/* 2. AMENITIES Y EQUIPAMIENTO - Detalle completo */}
+                        {((prop.amenities_confirmados && prop.amenities_confirmados.length > 0) ||
+                          (prop.equipamiento_detectado && prop.equipamiento_detectado.length > 0)) && (
+                          <div className="space-y-2">
+                            {prop.amenities_confirmados && prop.amenities_confirmados.length > 0 && (
+                              <div className="flex items-start gap-2 text-sm">
+                                <span className="text-gray-500">🏢</span>
+                                <div>
+                                  <span className="text-gray-700 font-medium">Amenities del edificio</span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {prop.amenities_confirmados.map((a, i) => (
+                                      <span key={i} className="inline-flex items-center px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs">
+                                        {a} ✓
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            {prop.equipamiento_detectado && prop.equipamiento_detectado.length > 0 && (
+                              <div className="flex items-start gap-2 text-sm">
+                                <span className="text-gray-500">🏠</span>
+                                <div>
+                                  <span className="text-gray-700 font-medium">Equipamiento del departamento</span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {prop.equipamiento_detectado.map((item, i) => (
+                                      <span key={i} className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs">
+                                        {item}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 3. DÍAS EN MERCADO - ¿Puedo negociar? */}
                         {prop.dias_en_mercado != null && (
                           <div className="flex items-start gap-2 text-sm">
                             <span className="text-gray-500">📅</span>
