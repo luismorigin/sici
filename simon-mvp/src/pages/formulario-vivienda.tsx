@@ -42,7 +42,6 @@ interface FormularioVivienda {
 
 const INNEGOCIABLES = [
   { id: 'seguridad_24h', label: 'Seguridad 24h' },
-  { id: 'estacionamiento', label: 'Estacionamiento' },
   { id: 'pet_friendly', label: 'Pet friendly' },
   { id: 'ascensor', label: 'Ascensor' },
   { id: 'piscina', label: 'Piscina' },
@@ -50,12 +49,12 @@ const INNEGOCIABLES = [
 ]
 
 const DESEABLES = [
-  { id: 'terraza_balcon', label: 'Terraza/Balcon' },
+  { id: 'terraza_comun', label: 'Terraza común' },
   { id: 'sauna_jacuzzi', label: 'Sauna/Jacuzzi' },
   { id: 'cowork', label: 'Co-working' },
-  { id: 'sum', label: 'Salon eventos' },
+  { id: 'sum', label: 'Salón eventos' },
   { id: 'churrasquera', label: 'Churrasquera' },
-  { id: 'area_ninos', label: 'Area ninos' },
+  { id: 'area_ninos', label: 'Área niños' },
 ]
 
 // Helper: Feedback dinámico para sliders
@@ -570,7 +569,7 @@ export default function FormularioViviendaPage() {
             {/* 6. Innegociables */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                6. Sin esto NO me interesa (máx 3):
+                6. Sin esto NO me interesa <span className="text-gray-500 font-normal">(del edificio, máx 3)</span>
               </label>
               <p className="text-xs text-gray-500 mb-3">
                 Las opciones sin estos requisitos quedan al fondo del ranking, pero no desaparecen por si querés revisar.
@@ -599,7 +598,7 @@ export default function FormularioViviendaPage() {
             {/* 7. Deseables */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                7. Sería un PLUS tener:
+                7. Sería un PLUS tener <span className="text-gray-500 font-normal">(del edificio)</span>
               </label>
               <p className="text-xs text-gray-500 mb-3">
                 Esto suma puntos en el ranking pero no descarta opciones. Si no encontramos con todo, igual te mostramos buenas alternativas.
