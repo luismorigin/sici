@@ -2411,8 +2411,8 @@ ${top3Texto}
                           )
                         })()}
 
-                        {/* 7. DESCRIPCIÓN DEL ANUNCIANTE - Al final */}
-                        {prop.descripcion && (
+                        {/* 7. DESCRIPCIÓN DEL ANUNCIANTE - Solo visible en desarrollo */}
+                        {process.env.NODE_ENV !== 'production' && prop.descripcion && (
                           <DescripcionAnunciante descripcion={prop.descripcion} />
                         )}
 
