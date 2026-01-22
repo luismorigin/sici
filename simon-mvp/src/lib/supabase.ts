@@ -63,6 +63,8 @@ export interface UnidadReal {
   latitud: number | null
   longitud: number | null
   estacionamientos: number | null
+  // v2.23: Baulera
+  baulera: boolean | null
 }
 
 // Filtros para búsqueda
@@ -170,7 +172,9 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       // v2.22: GPS y estacionamientos
       latitud: p.latitud ? parseFloat(p.latitud) : null,
       longitud: p.longitud ? parseFloat(p.longitud) : null,
-      estacionamientos: p.estacionamientos || null
+      estacionamientos: p.estacionamientos || null,
+      // v2.23: Baulera
+      baulera: p.baulera ?? null
     }))
 
     // Filtrar por zonas permitidas si se especificaron
