@@ -99,27 +99,27 @@ function getBadgeTiempo(diasEnMercado: number, diasMedianaZona: number): {
 
   const ratio = diasEnMercado / diasMedianaZona
 
-  // Menos que promedio (< 50% mediana)
+  // Poco tiempo publicada (< 50% mediana)
   if (ratio < 0.5) return {
-    label: 'Menos que promedio',
+    label: 'Poco tiempo publicada',
     color: 'bg-blue-100 text-blue-700',
     emoji: '📅',
     tooltip: `${diasEnMercado} días (mediana zona: ${diasMedianaZona}d)`,
-    accion: 'Todavía fresca en el mercado'
+    accion: null
   }
 
-  // Normal para zona (50-100% mediana)
+  // Tiempo promedio publicada (50-100% mediana)
   if (ratio < 1.0) return {
-    label: 'Normal para zona',
+    label: 'Tiempo promedio publicada',
     color: 'bg-gray-100 text-gray-600',
     emoji: '📊',
     tooltip: `${diasEnMercado} días (mediana zona: ${diasMedianaZona}d)`,
     accion: null
   }
 
-  // Más que promedio (100-150% mediana)
+  // Más tiempo publicada (100-150% mediana)
   if (ratio < 1.5) return {
-    label: 'Más que promedio',
+    label: 'Más tiempo publicada',
     color: 'bg-amber-50 text-amber-700',
     emoji: '💰',
     tooltip: `${diasEnMercado} días (mediana zona: ${diasMedianaZona}d)`,
@@ -556,7 +556,7 @@ export default function ResultadosPage() {
 
   // Estado para amenities/equipamiento expandidos inline (por propiedad y tipo)
   const [expandedAmenities, setExpandedAmenities] = useState<Set<string>>(new Set())
-  const toggleAmenityExpand = (propId: number, type: 'amenities' | 'equipamiento') => {
+  const toggleAmenityExpand = (propId: number, type: string) => {
     const key = `${propId}-${type}`
     setExpandedAmenities(prev => {
       const next = new Set(prev)
@@ -1704,25 +1704,36 @@ ${top3Texto}
                           </div>
                         </div>
 
-                        {/* Pills compactos - Mobile first */}
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">🛏️ {prop.dormitorios}d</span>
+                        {/* Info línea unificada - mismo formato que alternativas */}
+                        <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-3 text-sm text-gray-600">
+                          <span className="font-semibold text-gray-700">Departamento</span>
+                          <span>·</span>
+                          <span>🛏️ {prop.dormitorios}d</span>
                           {prop.banos != null && (
-                            <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">🚿 {Math.floor(Number(prop.banos))}b</span>
+                            <>
+                              <span>·</span>
+                              <span>🚿 {Math.floor(Number(prop.banos))}b</span>
+                            </>
                           )}
-                          <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">📐 {prop.area_m2}m²</span>
+                          <span>·</span>
+                          <span>📐 {prop.area_m2}m²</span>
+                          <span>·</span>
                           {prop.estacionamientos != null && prop.estacionamientos > 0 ? (
-                            <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">🚗 {prop.estacionamientos}p</span>
-                          ) : prop.estacionamientos == null && (
-                            <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-full text-sm">🚗 ?</span>
+                            <span>🚗 {prop.estacionamientos}p</span>
+                          ) : (
+                            <span className="text-amber-600">🚗 ?</span>
                           )}
+                          <span>·</span>
                           {prop.baulera === true ? (
-                            <span className="bg-gray-100 px-2 py-1 rounded-full text-sm">📦 Baulera</span>
-                          ) : prop.baulera == null && (
-                            <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-full text-sm">📦 ?</span>
+                            <span>📦 ✓</span>
+                          ) : (
+                            <span className="text-amber-600">📦 ?</span>
                           )}
                           {prop.estado_construccion && prop.estado_construccion !== 'no_especificado' && (
-                            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-sm capitalize">{prop.estado_construccion.replace(/_/g, ' ')}</span>
+                            <>
+                              <span>·</span>
+                              <span className="text-blue-600 capitalize">{prop.estado_construccion.replace(/_/g, ' ')}</span>
+                            </>
                           )}
                         </div>
 
@@ -1833,6 +1844,26 @@ ${top3Texto}
                             </a>
                           )}
                         </div>
+
+                        {/* Badge tiempo inteligente - antes de síntesis */}
+                        {prop.dias_en_mercado != null && (() => {
+                          const medianaZona = contextoMercado?.metricas_zona?.dias_mediana || 74
+                          const badge = getBadgeTiempo(prop.dias_en_mercado, medianaZona)
+
+                          return (
+                            <div className="mt-2">
+                              <span
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-sm ${badge.color}`}
+                                title={badge.tooltip}
+                              >
+                                {badge.emoji} {badge.label}
+                                {badge.accion && (
+                                  <span className="ml-1 opacity-80">· {badge.accion}</span>
+                                )}
+                              </span>
+                            </div>
+                          )
+                        })()}
 
                         {/* SÍNTESIS FIDUCIARIA - Resumen MOAT integrado */}
                         {(() => {
@@ -2547,30 +2578,148 @@ ${top3Texto}
                               </div>
                             </div>
 
-                            {/* Info línea: Departamento · dorms · baños · área · estado */}
+                            {/* Info línea unificada - mismo formato que TOP 3 */}
                             <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-2 text-xs text-gray-600">
                               <span className="font-semibold text-gray-700">Departamento</span>
                               <span>·</span>
-                              <span>{formatDorms(prop.dormitorios)}</span>
+                              <span>🛏️ {prop.dormitorios}d</span>
                               {prop.banos != null && (
                                 <>
                                   <span>·</span>
-                                  <span>{Math.floor(Number(prop.banos))} {Math.floor(Number(prop.banos)) === 1 ? 'baño' : 'baños'}</span>
+                                  <span>🚿 {Math.floor(Number(prop.banos))}b</span>
                                 </>
                               )}
                               <span>·</span>
-                              <span>{prop.area_m2} m²</span>
+                              <span>📐 {prop.area_m2}m²</span>
+                              <span>·</span>
+                              {prop.estacionamientos != null && prop.estacionamientos > 0 ? (
+                                <span>🚗 {prop.estacionamientos}p</span>
+                              ) : (
+                                <span className="text-amber-600">🚗 ?</span>
+                              )}
+                              <span>·</span>
+                              {prop.baulera === true ? (
+                                <span>📦 ✓</span>
+                              ) : (
+                                <span className="text-amber-600">📦 ?</span>
+                              )}
                               {prop.estado_construccion && prop.estado_construccion !== 'no_especificado' && (
                                 <>
                                   <span>·</span>
-                                  <span className="capitalize">{prop.estado_construccion.replace(/_/g, ' ')}</span>
+                                  <span className="text-blue-600 capitalize">{prop.estado_construccion.replace(/_/g, ' ')}</span>
                                 </>
                               )}
                             </div>
 
-                            {/* Badge síntesis clickeable - Click para expandir */}
+                            {/* Amenities y Equipamiento compacto - igual que TOP 3 */}
+                            {(() => {
+                              const AMENITIES_EDIFICIO = [
+                                'Piscina', 'Piscina infinita', 'Gimnasio', 'Cowork', 'Sala TV/Cine',
+                                'Jacuzzi', 'Sauna', 'Seguridad 24h', 'Cámaras seguridad', 'Sala de juegos',
+                                'Billar', 'Bar/Lounge', 'Churrasquera', 'Roof garden', 'Lobby/Recepción',
+                                'Jardín', 'Parque infantil', 'Canchas deportivas', 'Sala yoga',
+                                'Pet friendly', 'Ascensor', 'Salón de eventos'
+                              ]
+
+                              const equipamientoRaw = prop.equipamiento_detectado || []
+                              const amenitiesFromEquip = equipamientoRaw.filter(item => AMENITIES_EDIFICIO.includes(item))
+                              const equipamientoReal = equipamientoRaw.filter(item => !AMENITIES_EDIFICIO.includes(item))
+
+                              const amenitiesConfirmados = prop.amenities_confirmados || []
+                              const allAmenities = [...new Set([...amenitiesConfirmados, ...amenitiesFromEquip])]
+
+                              const hasAmenities = allAmenities.length > 0
+                              const hasEquipamiento = equipamientoReal.length > 0
+
+                              if (!hasAmenities && !hasEquipamiento) return null
+
+                              return (
+                                <div className="mt-1.5 space-y-1 text-xs">
+                                  {hasAmenities && (
+                                    <div className="flex items-center flex-wrap gap-1">
+                                      <span className="text-gray-500">🏢</span>
+                                      {(() => {
+                                        const isExpanded = expandedAmenities.has(`${prop.id}-alt-amenities`)
+                                        const visibleCount = 2
+                                        const hasMore = allAmenities.length > visibleCount
+                                        const displayItems = isExpanded ? allAmenities : allAmenities.slice(0, visibleCount)
+
+                                        return (
+                                          <>
+                                            {displayItems.map((a, i) => (
+                                              <span key={i} className="inline-flex items-center px-1.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-[10px]">
+                                                {a} ✓
+                                              </span>
+                                            ))}
+                                            {hasMore && (
+                                              <button
+                                                onClick={(e) => { e.stopPropagation(); toggleAmenityExpand(prop.id, 'alt-amenities') }}
+                                                className="inline-flex items-center px-1.5 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-[10px] transition-colors"
+                                              >
+                                                {isExpanded ? '▲' : `+${allAmenities.length - visibleCount} ▼`}
+                                              </button>
+                                            )}
+                                          </>
+                                        )
+                                      })()}
+                                    </div>
+                                  )}
+                                  {hasEquipamiento && (
+                                    <div className="flex items-center flex-wrap gap-1">
+                                      <span className="text-gray-500">🏠</span>
+                                      {(() => {
+                                        const isExpanded = expandedAmenities.has(`${prop.id}-alt-equipamiento`)
+                                        const visibleCount = 2
+                                        const hasMore = equipamientoReal.length > visibleCount
+                                        const displayItems = isExpanded ? equipamientoReal : equipamientoReal.slice(0, visibleCount)
+
+                                        return (
+                                          <>
+                                            {displayItems.map((item, i) => (
+                                              <span key={i} className="inline-flex items-center px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px]">
+                                                {item}
+                                              </span>
+                                            ))}
+                                            {hasMore && (
+                                              <button
+                                                onClick={(e) => { e.stopPropagation(); toggleAmenityExpand(prop.id, 'alt-equipamiento') }}
+                                                className="inline-flex items-center px-1.5 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-[10px] transition-colors"
+                                              >
+                                                {isExpanded ? '▲' : `+${equipamientoReal.length - visibleCount} ▼`}
+                                              </button>
+                                            )}
+                                          </>
+                                        )
+                                      })()}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })()}
+
+                            {/* Badges en orden: tiempo primero, síntesis al final */}
                             <div className="mt-2 space-y-1">
-                              {/* Línea 1: Badge clickeable + posición edificio */}
+                              {/* Línea 1: Badge tiempo inteligente */}
+                              {prop.dias_en_mercado != null && (() => {
+                                const medianaZona = metricas?.dias_mediana || 74
+                                const badge = getBadgeTiempo(prop.dias_en_mercado, medianaZona)
+
+                                return (
+                                  <p className="text-xs text-gray-500">
+                                    <span
+                                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs ${badge.color}`}
+                                      title={badge.tooltip}
+                                    >
+                                      {badge.emoji} {badge.label}
+                                    </span>
+                                    {badge.accion && (
+                                      <span className="ml-1 text-gray-600">· {badge.accion}</span>
+                                    )}
+                                  </p>
+                                )
+                              })()}
+
+                              {/* Línea 2: Badge síntesis clickeable + posición edificio */}
                               <div className="flex items-center flex-wrap gap-1.5">
                                 <button
                                   onClick={() => toggleCardExpanded(prop.id)}
@@ -2592,25 +2741,6 @@ ${top3Texto}
                                   </span>
                                 )}
                               </div>
-                              {/* Línea 2: Badge tiempo inteligente */}
-                              {prop.dias_en_mercado != null && (() => {
-                                const medianaZona = metricas?.dias_mediana || 74
-                                const badge = getBadgeTiempo(prop.dias_en_mercado, medianaZona)
-
-                                return (
-                                  <p className="text-xs text-gray-500">
-                                    <span
-                                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs ${badge.color}`}
-                                      title={badge.tooltip}
-                                    >
-                                      {badge.emoji} {badge.label}
-                                    </span>
-                                    {badge.accion && (
-                                      <span className="ml-1 text-gray-600">· {badge.accion}</span>
-                                    )}
-                                  </p>
-                                )
-                              })()}
 
                               {/* Síntesis fiduciaria expandida - aparece al click en badge */}
                               {expandedCards.has(prop.id) && (() => {
