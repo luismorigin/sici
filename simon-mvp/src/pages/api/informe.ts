@@ -35,6 +35,10 @@ interface Propiedad {
   estado_construccion: string
   lat?: number
   lng?: number
+  // Nuevos campos para informe premium v3
+  estacionamientos?: number | null
+  baulera?: boolean | null
+  equipamiento_detectado?: string[]
 }
 
 interface DatosUsuario {
@@ -47,6 +51,11 @@ interface DatosUsuario {
   ubicacion_vs_metros: number  // 1-5
   calidad_vs_precio: number    // 1-5
   quienes_viven: string
+  // Nuevos campos Level 2 para personalización
+  necesita_parqueo?: boolean
+  necesita_baulera?: boolean
+  pareja_alineados?: boolean
+  mascotas?: boolean
 }
 
 interface Analisis {
@@ -127,6 +136,64 @@ const zonaDisplay = (zona: string): string => {
   return mapeo[zona?.toLowerCase()] || zona || 'Sin zona'
 }
 
+// Costos estimados por dormitorios
+const getCostosEstimados = (dormitorios: number) => {
+  const costos: Record<number, { expensasMin: number; expensasMax: number; parqueoMin: number; parqueoMax: number; bauleraMin: number; bauleraMax: number }> = {
+    0: { expensasMin: 50, expensasMax: 80, parqueoMin: 10000, parqueoMax: 14000, bauleraMin: 3000, bauleraMax: 5000 },
+    1: { expensasMin: 60, expensasMax: 100, parqueoMin: 12000, parqueoMax: 16000, bauleraMin: 4000, bauleraMax: 6000 },
+    2: { expensasMin: 80, expensasMax: 130, parqueoMin: 14000, parqueoMax: 18000, bauleraMin: 5000, bauleraMax: 8000 },
+    3: { expensasMin: 100, expensasMax: 160, parqueoMin: 15000, parqueoMax: 20000, bauleraMin: 6000, bauleraMax: 10000 }
+  }
+  const key = dormitorios > 3 ? 3 : dormitorios
+  return costos[key] || costos[2]
+}
+
+// Valor estimado del equipamiento detectado
+const VALOR_EQUIPAMIENTO: Record<string, number> = {
+  'Heladera': 550, 'Encimera': 300, 'Microondas': 100, 'Horno empotrado': 400,
+  'Campana extractora': 150, 'Muebles cocina': 700, 'Cocina equipada': 1200,
+  'Calefón': 220, 'Termotanque': 280, 'Box ducha': 300, 'Closets': 400,
+  'Cortinas': 120, 'Aire acondicionado': 550, 'Lavadora': 400, 'Amoblado': 2500
+}
+
+const calcularValorEquipamiento = (items: string[]): number => {
+  return items.reduce((total, item) => {
+    for (const [key, valor] of Object.entries(VALOR_EQUIPAMIENTO)) {
+      if (item.toLowerCase().includes(key.toLowerCase())) return total + valor
+    }
+    return total
+  }, 0)
+}
+
+// Calcular precio real incluyendo extras faltantes
+const calcularPrecioReal = (
+  p: Propiedad,
+  necesitaParqueo: boolean,
+  necesitaBaulera: boolean
+): { precioReal: number; extras: string[]; costoExtras: number } => {
+  const costos = getCostosEstimados(p.dormitorios)
+  const tieneParqueo = p.estacionamientos != null && p.estacionamientos > 0
+  const tieneBaulera = p.baulera === true
+
+  let costoExtras = 0
+  const extras: string[] = []
+
+  if (necesitaParqueo && !tieneParqueo) {
+    costoExtras += Math.round((costos.parqueoMin + costos.parqueoMax) / 2)
+    extras.push('parqueo')
+  }
+  if (necesitaBaulera && !tieneBaulera) {
+    costoExtras += Math.round((costos.bauleraMin + costos.bauleraMax) / 2)
+    extras.push('baulera')
+  }
+
+  return {
+    precioReal: p.precio_usd + costoExtras,
+    extras,
+    costoExtras
+  }
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Solo POST
   if (req.method !== 'POST') {
@@ -149,6 +216,69 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const fechaHoy = new Date().toLocaleDateString('es-BO', { day: 'numeric', month: 'long', year: 'numeric' })
     const precioM2Promedio = analisis?.precio_m2_promedio || Math.round(todas.reduce((s, p) => s + p.precio_m2, 0) / todas.length)
     const favCat = getCategoria(fav)
+
+    // Preferencias del usuario (con defaults)
+    const necesitaParqueo = datosUsuario.necesita_parqueo !== false
+    const necesitaBaulera = datosUsuario.necesita_baulera === true
+
+    // Cálculos para tabla comparativa
+    const calcularDatosComparativos = (p: Propiedad) => {
+      const costos = getCostosEstimados(p.dormitorios)
+      const precioRealData = calcularPrecioReal(p, necesitaParqueo, necesitaBaulera)
+      const valorEquip = calcularValorEquipamiento(p.equipamiento_detectado || [])
+      const tieneParqueo = p.estacionamientos != null && p.estacionamientos > 0
+      const tieneBaulera = p.baulera === true
+
+      // Contar amenidades pedidas que tiene
+      const amenidadesPedidas = datosUsuario.innegociables || []
+      const amenidadesTiene = amenidadesPedidas.filter(a =>
+        (p.amenities_confirmados || []).some(ac => ac.toLowerCase().includes(a.toLowerCase()))
+      ).length
+
+      return {
+        precioPublicado: p.precio_usd,
+        precioReal: precioRealData.precioReal,
+        extrasNecesarios: precioRealData.extras,
+        costoExtras: precioRealData.costoExtras,
+        expensasMin: costos.expensasMin,
+        expensasMax: costos.expensasMax,
+        impacto5Anos: Math.round((costos.expensasMin + costos.expensasMax) / 2) * 60,
+        diasMercado: p.dias_en_mercado || 0,
+        rankingEdificio: p.posicion_precio_edificio,
+        unidadesEdificio: p.unidades_en_edificio,
+        amenidadesPedidas: amenidadesPedidas.length,
+        amenidadesTiene,
+        valorEquipamiento: valorEquip,
+        tieneParqueo,
+        tieneBaulera
+      }
+    }
+
+    const datosFav = calcularDatosComparativos(fav)
+    const datosComp1 = comp1 ? calcularDatosComparativos(comp1) : null
+    const datosComp2 = comp2 ? calcularDatosComparativos(comp2) : null
+
+    // Separar amenidades de edificio vs equipamiento del depto
+    const AMENITIES_EDIFICIO = [
+      'Piscina', 'Piscina infinita', 'Gimnasio', 'Cowork', 'Sala TV/Cine',
+      'Jacuzzi', 'Sauna', 'Seguridad 24h', 'Cámaras seguridad', 'Sala de juegos',
+      'Billar', 'Bar/Lounge', 'Churrasquera', 'Roof garden', 'Lobby/Recepción',
+      'Jardín', 'Parque infantil', 'Canchas deportivas', 'Sala yoga',
+      'Pet friendly', 'Ascensor', 'Salón de eventos'
+    ]
+
+    const separarEquipamiento = (p: Propiedad) => {
+      const equipRaw = p.equipamiento_detectado || []
+      const amenitiesFromEquip = equipRaw.filter(item => AMENITIES_EDIFICIO.includes(item))
+      const equipamientoReal = equipRaw.filter(item => !AMENITIES_EDIFICIO.includes(item))
+      const amenitiesConfirmados = p.amenities_confirmados || []
+      const allAmenities = [...new Set([...amenitiesConfirmados, ...amenitiesFromEquip])]
+      return { equipamientoReal, allAmenities }
+    }
+
+    const equipFav = separarEquipamiento(fav)
+    const equipComp1 = comp1 ? separarEquipamiento(comp1) : null
+    const equipComp2 = comp2 ? separarEquipamiento(comp2) : null
 
     // Generar barras del gráfico (pre-computado para evitar template literals anidados)
     // Colores simplificados: Verde=elegidas, Azul=alternativas, Gris oscuro=promedio
@@ -583,9 +713,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     </div>
                 </div>
 
-                <h4 style="margin-top: 30px; margin-bottom: 15px; color: var(--gray-700);">Amenidades Confirmadas</h4>
+                ${equipFav.allAmenities.length > 0 ? `
+                <h4 style="margin-top: 30px; margin-bottom: 15px; color: var(--gray-700);">🏢 Amenidades del Edificio</h4>
                 <div class="amenities-grid">
-                    ${(fav.amenities_confirmados || []).slice(0, 6).map(a => `
+                    ${equipFav.allAmenities.slice(0, 8).map(a => `
                     <div class="amenity-item">
                         <div class="amenity-icon">${getAmenityEmoji(a)}</div>
                         <div class="amenity-details">
@@ -593,15 +724,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             <div class="vs-market standard">Confirmado</div>
                         </div>
                     </div>`).join('')}
-                    ${(fav.amenities_por_verificar || []).slice(0, 2).map(a => `
-                    <div class="amenity-item">
-                        <div class="amenity-icon">${getAmenityEmoji(a)}</div>
-                        <div class="amenity-details">
-                            <div class="name">${a}</div>
-                            <div class="vs-market warning">⚠️ Por verificar</div>
-                        </div>
-                    </div>`).join('')}
-                </div>
+                </div>` : ''}
+
+                ${equipFav.equipamientoReal.length > 0 ? `
+                <h4 style="margin-top: 25px; margin-bottom: 15px; color: var(--gray-700);">🏠 Equipamiento del Departamento</h4>
+                <div style="background: var(--gray-50); border-radius: 10px; padding: 15px;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+                        ${equipFav.equipamientoReal.map(item => `
+                        <span style="background: white; border: 1px solid var(--gray-200); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;">
+                            ${item}
+                        </span>`).join('')}
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--gray-600); border-top: 1px solid var(--gray-200); padding-top: 10px;">
+                        <strong>Valor estimado:</strong> ~$${fmt(calcularValorEquipamiento(equipFav.equipamientoReal))} USD
+                        <span style="margin-left: 10px; color: var(--oportunidad);">✓ Incluido en el precio</span>
+                    </div>
+                </div>` : `
+                <div class="alert warning" style="margin-top: 25px;">
+                    <div class="alert-icon">⚠️</div>
+                    <div class="alert-content">
+                        <h4>Equipamiento no especificado</h4>
+                        <p>La publicación no detalla qué equipamiento incluye. <strong>Preguntá específicamente</strong> por: aire acondicionado, cocina equipada, closets, calefón.</p>
+                    </div>
+                </div>`}
 
                 ${fav.razon_fiduciaria ? `
                 <div class="alert success">
@@ -675,90 +820,157 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         </div>
     </div>
 
-    <!-- Section 4: Comparables -->
-    ${comp1 || comp2 ? `
+    <!-- Section 4: Tabla Comparativa Lado a Lado -->
     <div class="container">
         <div class="section">
             <div class="section-header">
                 <div class="section-number">4</div>
-                <div class="section-title">Comparación con tus otras elegidas</div>
+                <div class="section-title">Comparación Lado a Lado</div>
             </div>
             <div class="section-content">
-                <p>Tus opciones #2 y #3 comparadas contra ${fav.proyecto}.</p>
-                ${[comp1, comp2].filter(Boolean).map((p, i) => {
-                  if (!p) return ''
-                  const cat = getCategoria(p)
-                  const neg = getNegociacion(p.dias_en_mercado)
-                  const diffPrecio = p.precio_usd - fav.precio_usd
-                  return `
-                <div class="comparable-card" style="margin-top: 25px;">
-                    <div class="comparable-header">
-                        <div class="comparable-name">
-                            <div class="comparable-number heart">${i + 2}</div>
-                            <div>
-                                <h3>${p.proyecto.toUpperCase()}</h3>
-                                <div class="subtitle">Tu ${i === 0 ? 'segunda' : 'tercera'} elección</div>
-                            </div>
-                        </div>
-                        <div class="comparable-badges">
-                            <span class="badge price-${cat.clase === 'good' ? 'good' : cat.clase === 'high' ? 'high' : 'fair'}">$${fmt(p.precio_usd)}</span>
-                            <span class="badge days ${(p.dias_en_mercado || 0) > 90 ? 'high' : ''}">${p.dias_en_mercado || '?'} días</span>
-                            <span class="badge negotiation ${neg.clase}">Negociación: ${neg.texto}</span>
-                        </div>
+                <p>Todas las métricas importantes de tus 3 elegidas en una sola vista.</p>
+                <div style="overflow-x: auto;">
+                <table class="summary-table" style="margin-top: 20px;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left;">Criterio</th>
+                            <th style="text-align: center;">❤️ #1 ${fav.proyecto.substring(0, 12)}</th>
+                            ${comp1 ? `<th style="text-align: center;">#2 ${comp1.proyecto.substring(0, 12)}</th>` : ''}
+                            ${comp2 ? `<th style="text-align: center;">#3 ${comp2.proyecto.substring(0, 12)}</th>` : ''}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>💰 Precio publicado</strong></td>
+                            <td style="text-align: center;">$${fmt(fav.precio_usd)}</td>
+                            ${comp1 ? `<td style="text-align: center;">$${fmt(comp1.precio_usd)}</td>` : ''}
+                            ${comp2 ? `<td style="text-align: center;">$${fmt(comp2.precio_usd)}</td>` : ''}
+                        </tr>
+                        <tr style="background: #fef3c7;">
+                            <td><strong>💵 Precio REAL</strong><br><small style="color: #92400e;">(con extras que necesitás)</small></td>
+                            <td style="text-align: center; font-weight: 700; color: ${datosFav.costoExtras > 0 ? '#92400e' : '#166534'};">
+                                $${fmt(datosFav.precioReal)}
+                                ${datosFav.costoExtras > 0 ? `<br><small>+$${fmt(datosFav.costoExtras)} (${datosFav.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #166534;">✓ Todo incluido</small>'}
+                            </td>
+                            ${datosComp1 ? `<td style="text-align: center; font-weight: 700; color: ${datosComp1.costoExtras > 0 ? '#92400e' : '#166534'};">
+                                $${fmt(datosComp1.precioReal)}
+                                ${datosComp1.costoExtras > 0 ? `<br><small>+$${fmt(datosComp1.costoExtras)} (${datosComp1.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #166534;">✓ Todo incluido</small>'}
+                            </td>` : ''}
+                            ${datosComp2 ? `<td style="text-align: center; font-weight: 700; color: ${datosComp2.costoExtras > 0 ? '#92400e' : '#166534'};">
+                                $${fmt(datosComp2.precioReal)}
+                                ${datosComp2.costoExtras > 0 ? `<br><small>+$${fmt(datosComp2.costoExtras)} (${datosComp2.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #166534;">✓ Todo incluido</small>'}
+                            </td>` : ''}
+                        </tr>
+                        <tr>
+                            <td><strong>📐 Superficie</strong></td>
+                            <td style="text-align: center;">${Math.round(fav.area_m2)} m²</td>
+                            ${comp1 ? `<td style="text-align: center;">${Math.round(comp1.area_m2)} m²</td>` : ''}
+                            ${comp2 ? `<td style="text-align: center;">${Math.round(comp2.area_m2)} m²</td>` : ''}
+                        </tr>
+                        <tr>
+                            <td><strong>📋 Costo mensual</strong><br><small>(expensas estimadas)</small></td>
+                            <td style="text-align: center;">$${datosFav.expensasMin}-${datosFav.expensasMax}/mes</td>
+                            ${datosComp1 ? `<td style="text-align: center;">$${datosComp1.expensasMin}-${datosComp1.expensasMax}/mes</td>` : ''}
+                            ${datosComp2 ? `<td style="text-align: center;">$${datosComp2.expensasMin}-${datosComp2.expensasMax}/mes</td>` : ''}
+                        </tr>
+                        <tr>
+                            <td><strong>📊 Impacto 5 años</strong><br><small>(expensas acumuladas)</small></td>
+                            <td style="text-align: center;">~$${fmt(datosFav.impacto5Anos)}</td>
+                            ${datosComp1 ? `<td style="text-align: center;">~$${fmt(datosComp1.impacto5Anos)}</td>` : ''}
+                            ${datosComp2 ? `<td style="text-align: center;">~$${fmt(datosComp2.impacto5Anos)}</td>` : ''}
+                        </tr>
+                        <tr>
+                            <td><strong>📅 Días en mercado</strong></td>
+                            <td style="text-align: center; color: ${datosFav.diasMercado > 90 ? '#d97706' : datosFav.diasMercado < 30 ? '#166534' : 'inherit'};">
+                                ${datosFav.diasMercado || '?'} días
+                                ${datosFav.diasMercado > 90 ? '<br><small style="color: #d97706;">🟡 Negociable</small>' : datosFav.diasMercado < 30 ? '<br><small style="color: #166534;">🟢 Reciente</small>' : ''}
+                            </td>
+                            ${datosComp1 ? `<td style="text-align: center; color: ${datosComp1.diasMercado > 90 ? '#d97706' : datosComp1.diasMercado < 30 ? '#166534' : 'inherit'};">
+                                ${datosComp1.diasMercado || '?'} días
+                                ${datosComp1.diasMercado > 90 ? '<br><small style="color: #d97706;">🟡 Negociable</small>' : datosComp1.diasMercado < 30 ? '<br><small style="color: #166534;">🟢 Reciente</small>' : ''}
+                            </td>` : ''}
+                            ${datosComp2 ? `<td style="text-align: center; color: ${datosComp2.diasMercado > 90 ? '#d97706' : datosComp2.diasMercado < 30 ? '#166534' : 'inherit'};">
+                                ${datosComp2.diasMercado || '?'} días
+                                ${datosComp2.diasMercado > 90 ? '<br><small style="color: #d97706;">🟡 Negociable</small>' : datosComp2.diasMercado < 30 ? '<br><small style="color: #166534;">🟢 Reciente</small>' : ''}
+                            </td>` : ''}
+                        </tr>
+                        ${datosFav.rankingEdificio ? `<tr>
+                            <td><strong>🏢 Ranking edificio</strong></td>
+                            <td style="text-align: center;">${datosFav.rankingEdificio}º de ${datosFav.unidadesEdificio || '?'}</td>
+                            ${datosComp1 ? `<td style="text-align: center;">${datosComp1.rankingEdificio ? `${datosComp1.rankingEdificio}º de ${datosComp1.unidadesEdificio || '?'}` : '-'}</td>` : ''}
+                            ${datosComp2 ? `<td style="text-align: center;">${datosComp2.rankingEdificio ? `${datosComp2.rankingEdificio}º de ${datosComp2.unidadesEdificio || '?'}` : '-'}</td>` : ''}
+                        </tr>` : ''}
+                        ${datosFav.amenidadesPedidas > 0 ? `<tr>
+                            <td><strong>✨ Amenidades pedidas</strong></td>
+                            <td style="text-align: center; color: ${datosFav.amenidadesTiene === datosFav.amenidadesPedidas ? '#166534' : '#d97706'};">
+                                ${datosFav.amenidadesTiene}/${datosFav.amenidadesPedidas}
+                                ${datosFav.amenidadesTiene === datosFav.amenidadesPedidas ? ' ✓' : ''}
+                            </td>
+                            ${datosComp1 ? `<td style="text-align: center; color: ${datosComp1.amenidadesTiene === datosComp1.amenidadesPedidas ? '#166534' : '#d97706'};">
+                                ${datosComp1.amenidadesTiene}/${datosComp1.amenidadesPedidas}
+                                ${datosComp1.amenidadesTiene === datosComp1.amenidadesPedidas ? ' ✓' : ''}
+                            </td>` : ''}
+                            ${datosComp2 ? `<td style="text-align: center; color: ${datosComp2.amenidadesTiene === datosComp2.amenidadesPedidas ? '#166534' : '#d97706'};">
+                                ${datosComp2.amenidadesTiene}/${datosComp2.amenidadesPedidas}
+                                ${datosComp2.amenidadesTiene === datosComp2.amenidadesPedidas ? ' ✓' : ''}
+                            </td>` : ''}
+                        </tr>` : ''}
+                        <tr>
+                            <td><strong>🏠 Equipamiento</strong><br><small>(del depto)</small></td>
+                            <td style="text-align: center; font-size: 0.85rem;">
+                                ${equipFav.equipamientoReal.length > 0
+                                  ? `${equipFav.equipamientoReal.slice(0, 3).join(', ')}${equipFav.equipamientoReal.length > 3 ? '...' : ''}<br><small style="color: #166534;">~$${fmt(calcularValorEquipamiento(equipFav.equipamientoReal))}</small>`
+                                  : '<span style="color: #d97706;">Sin info</span>'}
+                            </td>
+                            ${datosComp1 && equipComp1 ? `<td style="text-align: center; font-size: 0.85rem;">
+                                ${equipComp1.equipamientoReal.length > 0
+                                  ? `${equipComp1.equipamientoReal.slice(0, 3).join(', ')}${equipComp1.equipamientoReal.length > 3 ? '...' : ''}<br><small style="color: #166534;">~$${fmt(calcularValorEquipamiento(equipComp1.equipamientoReal))}</small>`
+                                  : '<span style="color: #d97706;">Sin info</span>'}
+                            </td>` : ''}
+                            ${datosComp2 && equipComp2 ? `<td style="text-align: center; font-size: 0.85rem;">
+                                ${equipComp2.equipamientoReal.length > 0
+                                  ? `${equipComp2.equipamientoReal.slice(0, 3).join(', ')}${equipComp2.equipamientoReal.length > 3 ? '...' : ''}<br><small style="color: #166534;">~$${fmt(calcularValorEquipamiento(equipComp2.equipamientoReal))}</small>`
+                                  : '<span style="color: #d97706;">Sin info</span>'}
+                            </td>` : ''}
+                        </tr>
+                        <tr>
+                            <td><strong>🚗 Parqueo</strong></td>
+                            <td style="text-align: center; color: ${datosFav.tieneParqueo ? '#166534' : '#d97706'};">
+                                ${datosFav.tieneParqueo ? `✓ Incluido (${fav.estacionamientos}p)` : '⚠️ Preguntar'}
+                            </td>
+                            ${datosComp1 ? `<td style="text-align: center; color: ${datosComp1.tieneParqueo ? '#166534' : '#d97706'};">
+                                ${datosComp1.tieneParqueo ? `✓ Incluido (${comp1?.estacionamientos}p)` : '⚠️ Preguntar'}
+                            </td>` : ''}
+                            ${datosComp2 ? `<td style="text-align: center; color: ${datosComp2.tieneParqueo ? '#166534' : '#d97706'};">
+                                ${datosComp2.tieneParqueo ? `✓ Incluido (${comp2?.estacionamientos}p)` : '⚠️ Preguntar'}
+                            </td>` : ''}
+                        </tr>
+                    </tbody>
+                </table>
+                </div>
+
+                <div class="alert info" style="margin-top: 20px;">
+                    <div class="alert-icon">💡</div>
+                    <div class="alert-content">
+                        <h4>Lectura rápida</h4>
+                        <p>
+                            ${(() => {
+                              // Encontrar la mejor opción según precio real
+                              const opciones = [
+                                { nombre: fav.proyecto, precioReal: datosFav.precioReal, dias: datosFav.diasMercado },
+                                ...(datosComp1 ? [{ nombre: comp1!.proyecto, precioReal: datosComp1.precioReal, dias: datosComp1.diasMercado }] : []),
+                                ...(datosComp2 ? [{ nombre: comp2!.proyecto, precioReal: datosComp2.precioReal, dias: datosComp2.diasMercado }] : [])
+                              ]
+                              const mejorPrecio = opciones.reduce((a, b) => a.precioReal < b.precioReal ? a : b)
+                              const masNegociable = opciones.reduce((a, b) => a.dias > b.dias ? a : b)
+                              return `<strong>Mejor precio real:</strong> ${mejorPrecio.nombre} ($${fmt(mejorPrecio.precioReal)}). <strong>Más negociable:</strong> ${masNegociable.nombre} (${masNegociable.dias} días).`
+                            })()}
+                        </p>
                     </div>
-                    <div class="comparable-body">
-                        <div class="comparable-gallery">
-                            ${p.fotos_urls?.[0]
-                              ? `<img src="${p.fotos_urls[0]}" alt="${p.proyecto}">`
-                              : '<div class="comparable-gallery-placeholder">🏠</div>'}
-                        </div>
-                        <div class="comparable-details">
-                            <div class="detail-grid">
-                                <div class="detail-item">
-                                    <div class="value">${Math.round(p.area_m2)} m²</div>
-                                    <div class="label">Superficie</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="value ${cat.clase === 'good' ? 'good' : ''}">$${fmt(p.precio_m2)}</div>
-                                    <div class="label">Precio/m²</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="value">${zonaDisplay(p.zona)}</div>
-                                    <div class="label">Ubicación</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="value ${(p.dias_en_mercado || 0) > 90 ? 'warning' : ''}">${p.dias_en_mercado || '?'}</div>
-                                    <div class="label">Días mercado</div>
-                                </div>
-                            </div>
-                            <div class="includes-list">
-                                <h4>Incluye</h4>
-                                <ul>
-                                    <li>${p.dormitorios} dormitorios</li>
-                                    <li>${p.banos || '?'} baños</li>
-                                    ${(p.amenities_confirmados || []).slice(0, 3).map(a => `<li>${a}</li>`).join('')}
-                                    ${(p.amenities_por_verificar || []).slice(0, 1).map(a => `<li class="warning">⚠️ ${a}</li>`).join('')}
-                                </ul>
-                            </div>
-                            <div class="comparable-conclusion">
-                                <strong>COMPARACIÓN VS ${fav.proyecto.toUpperCase()}</strong>
-                                ${diffPrecio > 0
-                                  ? `$${fmt(diffPrecio)} más cara.`
-                                  : `$${fmt(Math.abs(diffPrecio))} más barata.`}
-                                ${Math.round(p.area_m2) !== Math.round(fav.area_m2)
-                                  ? ` ${Math.round(p.area_m2 - fav.area_m2) > 0 ? '+' : ''}${Math.round(p.area_m2 - fav.area_m2)}m² de diferencia.`
-                                  : ''}
-                                ${(p.dias_en_mercado || 0) > 90
-                                  ? ' Mucho tiempo en mercado - investigar por qué.'
-                                  : ''}
-                            </div>
-                        </div>
-                    </div>
-                </div>`
-                }).join('')}
+                </div>
             </div>
         </div>
-    </div>` : ''}
+    </div>
 
     <!-- Section 5: Tabla de Alternativas -->
     <div class="container">
@@ -806,82 +1018,116 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         </div>
     </div>
 
-    <!-- Section 6: Checklist -->
+    <!-- Section 6: Checklist Personalizado -->
     <div class="container">
         <div class="section">
             <div class="section-header">
                 <div class="section-number">6</div>
-                <div class="section-title">Checklist: Preguntas Antes de Ofertar</div>
+                <div class="section-title">Checklist Personalizado: Preguntas Antes de Ofertar</div>
             </div>
             <div class="section-content">
-                <h4 style="color: var(--primary); margin-bottom: 15px;">Crítico: Sobre el Precio</h4>
+                <div class="alert info" style="margin-bottom: 20px;">
+                    <div class="alert-icon">📋</div>
+                    <div class="alert-content">
+                        <h4>Checklist basado en TU búsqueda</h4>
+                        <p>Estas preguntas están personalizadas según lo que indicaste que necesitás.</p>
+                    </div>
+                </div>
+
+                <h4 style="color: var(--primary); margin-bottom: 15px;">💰 Sobre el Precio</h4>
                 <ul class="checklist">
+                    ${necesitaParqueo && !datosFav.tieneParqueo ? `
                     <li>
                         <div class="checkbox"></div>
                         <div>
                             <div class="question">¿El parqueo está incluido en el precio?</div>
-                            <div class="why">En ${zonaDisplay(fav.zona)} suelen venderse aparte (+$12,000 - $18,000)</div>
-                        </div>
-                    </li>
-                    ${fav.dias_en_mercado && fav.dias_en_mercado > 60 ? `
-                    <li>
-                        <div class="checkbox"></div>
-                        <div>
-                            <div class="question">¿Por qué ${fav.proyecto} lleva ${fav.dias_en_mercado} días publicado?</div>
-                            <div class="why">Puede ser precio negociable o problema oculto.</div>
+                            <div class="why">Indicaste que necesitás parqueo y no está confirmado en la publicación</div>
                         </div>
                     </li>` : ''}
+                    ${necesitaBaulera && !datosFav.tieneBaulera ? `
                     <li>
                         <div class="checkbox"></div>
                         <div>
-                            <div class="question">¿Precio en TC oficial o paralelo?</div>
-                            <div class="why">Diferencia de ~15% en el valor real en Bolivia</div>
+                            <div class="question">¿La baulera está incluida en el precio?</div>
+                            <div class="why">Indicaste que necesitás baulera y no está confirmada en la publicación</div>
                         </div>
-                    </li>
+                    </li>` : ''}
                 </ul>
 
-                <h4 style="color: var(--primary); margin: 25px 0 15px;">Sobre la Propiedad</h4>
+                ${fav.estado_construccion === 'preventa' ? `
+                <h4 style="color: var(--primary); margin: 25px 0 15px;">🏗️ Sobre la Preventa</h4>
+                <ul class="checklist">
+                    <li>
+                        <div class="checkbox"></div>
+                        <div>
+                            <div class="question">¿Cuál es la fecha de entrega?</div>
+                            <div class="why">Verificá que esté garantizada por contrato con penalidades por retraso</div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="checkbox"></div>
+                        <div>
+                            <div class="question">¿Cuál es el plan de pagos?</div>
+                            <div class="why">Consultá montos y fechas de cada cuota hasta la entrega</div>
+                        </div>
+                    </li>
+                </ul>` : ''}
+
+                <h4 style="color: var(--primary); margin: 25px 0 15px;">🏠 Sobre la Propiedad</h4>
                 <ul class="checklist">
                     <li>
                         <div class="checkbox"></div>
                         <div>
                             <div class="question">¿En qué piso está el departamento?</div>
-                            <div class="why">No tenemos este dato. Pisos altos = mejor vista pero más espera de ascensor</div>
+                            <div class="why">Confirmá ubicación exacta dentro del edificio</div>
                         </div>
                     </li>
                     <li>
                         <div class="checkbox"></div>
                         <div>
-                            <div class="question">¿Cuántos m² útiles vs totales?</div>
-                            <div class="why">A veces inflan con balcones y muros</div>
+                            <div class="question">¿Cuánto es el pago de expensas mensuales?</div>
+                            <div class="why">Costo fijo que tendrás que pagar todos los meses</div>
                         </div>
                     </li>
+                    ${(() => {
+                      const petFriendlyConfirmado = (fav.amenities_confirmados || []).some(a =>
+                        a.toLowerCase().includes('pet') || a.toLowerCase().includes('mascota')
+                      )
+                      const petFriendlyEnInnegociables = (datosUsuario.innegociables || []).some(a =>
+                        a.toLowerCase().includes('pet') || a.toLowerCase().includes('mascota')
+                      )
+                      const tieneMascotas = datosUsuario.mascotas === true
+
+                      if ((tieneMascotas || petFriendlyEnInnegociables) && !petFriendlyConfirmado) {
+                        return `
                     <li>
                         <div class="checkbox"></div>
                         <div>
-                            <div class="question">¿Orientación del departamento?</div>
-                            <div class="why">Norte = más luz natural</div>
+                            <div class="question">¿El edificio es pet-friendly?</div>
+                            <div class="why">${tieneMascotas ? 'Indicaste que tenés mascotas' : 'Lo marcaste como innegociable'} - confirmá que permiten mascotas</div>
                         </div>
-                    </li>
+                    </li>`
+                      }
+                      return ''
+                    })()}
                 </ul>
 
-                ${(fav.amenities_por_verificar || []).length > 0 ? `
-                <h4 style="color: var(--primary); margin: 25px 0 15px;">Equipamiento sin confirmar</h4>
+                ${(datosUsuario.innegociables || []).length > 0 ? `
+                <h4 style="color: var(--primary); margin: 25px 0 15px;">✨ Tus Innegociables</h4>
                 <ul class="checklist">
-                    ${fav.amenities_por_verificar.map(a => `
                     <li>
                         <div class="checkbox"></div>
                         <div>
-                            <div class="question">¿Tiene ${a}?</div>
-                            <div class="why">No está confirmado en la publicación</div>
+                            <div class="question">Confirmá que el edificio tiene: ${datosUsuario.innegociables.join(', ')}</div>
+                            <div class="why">Los marcaste como innegociables - verificá que estén funcionando</div>
                         </div>
-                    </li>`).join('')}
+                    </li>
                 </ul>` : ''}
             </div>
         </div>
     </div>
 
-    <!-- Section 7: Negociación -->
+    <!-- Section 7: Negociación Personalizada -->
     <div class="container">
         <div class="section">
             <div class="section-header">
@@ -889,44 +1135,109 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 <div class="section-title">Estrategia de Negociación para ${fav.proyecto}</div>
             </div>
             <div class="section-content">
-                <p>Basado en <strong>${fav.dias_en_mercado || '?'} días en mercado</strong> y precio <strong>${favCat.texto}</strong>, tenés poder de negociación.</p>
+                ${(() => {
+                  // Determinar nivel de agresividad según datos
+                  const diasAlto = (fav.dias_en_mercado || 0) > 90
+                  const diasMedio = (fav.dias_en_mercado || 0) > 45
+                  const priorizaPrecio = datosUsuario.calidad_vs_precio >= 4
+                  const priorizaCalidad = datosUsuario.calidad_vs_precio <= 2
 
+                  const nivelNegociacion = diasAlto ? 'agresivo' : diasMedio ? 'moderado' : 'conservador'
+                  const colorNivel = diasAlto ? 'var(--oportunidad)' : diasMedio ? 'var(--warning)' : 'var(--primary)'
+                  const textoNivel = diasAlto ? 'ALTA oportunidad de negociar' : diasMedio ? 'Oportunidad moderada' : 'Poco margen - propiedad reciente'
+
+                  return `
+                <div class="alert ${diasAlto ? 'success' : diasMedio ? 'warning' : 'info'}" style="margin-bottom: 20px;">
+                    <div class="alert-icon">${diasAlto ? '💪' : diasMedio ? '🤝' : '⚡'}</div>
+                    <div class="alert-content">
+                        <h4 style="color: ${colorNivel};">${textoNivel}</h4>
+                        <p>${fav.dias_en_mercado || '?'} días en mercado + precio ${favCat.texto}. ${priorizaPrecio ? 'Priorizás precio → negociá firme.' : priorizaCalidad ? 'Priorizás calidad → no arriesgues perderlo por regatear mucho.' : ''}</p>
+                    </div>
+                </div>`
+                })()}
+
+                ${(fav.dias_en_mercado || 0) > 30 ? `
                 <div class="negotiation-card">
-                    <h4>Argumento 1: Tiempo en mercado</h4>
+                    <h4>💬 Argumento 1: Tiempo en mercado</h4>
                     <blockquote>
-                        "Vi que la propiedad lleva ${fav.dias_en_mercado ? `más de ${Math.floor(fav.dias_en_mercado / 30)} mes${Math.floor(fav.dias_en_mercado / 30) > 1 ? 'es' : ''}` : 'un tiempo'} publicada. ¿Hay flexibilidad en el precio para cerrar rápido?"
+                        "${(fav.dias_en_mercado || 0) > 90
+                          ? `Vi que la propiedad lleva más de ${Math.floor((fav.dias_en_mercado || 0) / 30)} meses publicada. Entiendo que quieren vender - yo puedo cerrar rápido si llegamos a un acuerdo. ¿Qué flexibilidad tienen en el precio?`
+                          : `Noté que llevan más de un mes con la propiedad publicada. ¿Hay margen para negociar si cierro esta semana?`}"
                     </blockquote>
-                </div>
+                    <p style="font-size: 0.85rem; color: var(--gray-600); margin-top: 10px;">
+                        <strong>Tip:</strong> ${(fav.dias_en_mercado || 0) > 90 ? 'Mucho tiempo = vendedor ansioso. Podés pedir 10-15% de descuento.' : 'Tiempo moderado. Apuntá a 5-8% de descuento.'}
+                    </p>
+                </div>` : `
+                <div class="negotiation-card">
+                    <h4>💬 Argumento 1: Interés serio</h4>
+                    <blockquote>
+                        "Vi que la propiedad es nueva en el mercado. Estoy listo para avanzar rápido si el precio es el correcto. ¿Tienen algún incentivo por cierre rápido?"
+                    </blockquote>
+                    <p style="font-size: 0.85rem; color: var(--gray-600); margin-top: 10px;">
+                        <strong>Tip:</strong> Propiedad reciente = vendedor con expectativas altas. Poco margen, pero podés pedir 2-4%.
+                    </p>
+                </div>`}
 
                 ${comp1 || comp2 ? `
                 <div class="negotiation-card">
-                    <h4>Argumento 2: Comparación con alternativas</h4>
+                    <h4>💬 Argumento 2: Tenés alternativas</h4>
                     <blockquote>
-                        "Estoy viendo también ${comp2 ? `un departamento en ${comp2.proyecto} por $${fmt(comp2.precio_usd)}` : comp1 ? `otro en ${comp1.proyecto}` : 'otras opciones'}. ¿Pueden acercarse a ese rango?"
+                        "Estoy evaluando también ${comp1 ? `${comp1.proyecto} por $${fmt(comp1.precio_usd)}` : ''}${comp1 && comp2 ? ' y ' : ''}${comp2 ? `${comp2.proyecto} por $${fmt(comp2.precio_usd)}` : ''}. Me gusta ${fav.proyecto} pero necesito que el precio sea competitivo."
                     </blockquote>
+                    <p style="font-size: 0.85rem; color: var(--gray-600); margin-top: 10px;">
+                        <strong>Tip:</strong> Mostrar que tenés opciones reales te da poder. No inventes - usá datos reales.
+                    </p>
                 </div>` : ''}
 
+                ${necesitaParqueo && !datosFav.tieneParqueo ? `
                 <div class="negotiation-card">
-                    <h4>Argumento 3: Parqueo</h4>
+                    <h4>💬 Argumento 3: El parqueo</h4>
                     <blockquote>
-                        "Si el parqueo no está incluido, necesito descontar esos $15,000 de mi presupuesto. ¿Pueden incluirlo o ajustar?"
+                        "Mi presupuesto es $${fmt(datosUsuario.presupuesto)} TODO INCLUIDO. Si el parqueo no está en ese precio, necesito que lo incluyan o ajusten para que entre en mi número."
                     </blockquote>
-                </div>
+                    <p style="font-size: 0.85rem; color: var(--gray-600); margin-top: 10px;">
+                        <strong>Tip:</strong> El parqueo vale $12-18k. Usá esto para negociar: "sin parqueo, mi oferta sería $${fmt(fav.precio_usd - 15000)}".
+                    </p>
+                </div>` : ''}
 
-                <h4 style="color: var(--gray-700); margin: 25px 0 15px;">Contexto para tu Negociación</h4>
+                ${datosUsuario.calidad_vs_precio >= 4 ? `
+                <div class="negotiation-card" style="border-left: 4px solid var(--oportunidad);">
+                    <h4>💡 Estrategia para vos (priorizás precio)</h4>
+                    <p>Indicaste que priorizás precio sobre calidad. <strong>Negociá firme:</strong></p>
+                    <ul style="margin: 10px 0 0 20px; font-size: 0.9rem;">
+                        <li>Empezá oferando 15% menos del publicado</li>
+                        <li>No muestres entusiasmo - mantené opciones abiertas</li>
+                        <li>Pedí tiempo para "pensarlo" incluso si te gusta</li>
+                    </ul>
+                </div>` : datosUsuario.calidad_vs_precio <= 2 ? `
+                <div class="negotiation-card" style="border-left: 4px solid var(--primary);">
+                    <h4>💡 Estrategia para vos (priorizás calidad)</h4>
+                    <p>Indicaste que priorizás calidad sobre precio. <strong>No arriesgues perderlo:</strong></p>
+                    <ul style="margin: 10px 0 0 20px; font-size: 0.9rem;">
+                        <li>Ofertá cerca del precio (5-8% menos máximo)</li>
+                        <li>Mostrá interés genuino para que te tomen en serio</li>
+                        <li>Si te gusta mucho, mejor asegurar que seguir regateando</li>
+                    </ul>
+                </div>` : ''}
+
+                <h4 style="color: var(--gray-700); margin: 25px 0 15px;">📊 Números para tu Negociación</h4>
                 <div style="background: var(--gray-50); border-radius: 10px; padding: 20px;">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; text-align: center;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; text-align: center;">
                         <div>
                             <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">$${fmt(fav.precio_usd)}</div>
                             <div style="font-size: 0.85rem; color: var(--gray-600);">Precio publicado</div>
                         </div>
                         <div>
-                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--oportunidad);">${getDescuento(fav.dias_en_mercado)}</div>
-                            <div style="font-size: 0.85rem; color: var(--gray-600);">Descuento promedio en propiedades similares</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--oportunidad);">$${fmt(Math.round(fav.precio_usd * 0.92))}</div>
+                            <div style="font-size: 0.85rem; color: var(--gray-600);">Oferta inicial sugerida (-8%)</div>
                         </div>
                         <div>
-                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--warning);">$12-18k</div>
-                            <div style="font-size: 0.85rem; color: var(--gray-600);">Costo parqueo si no está incluido</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--warning);">$${fmt(Math.round(fav.precio_usd * 0.95))}</div>
+                            <div style="font-size: 0.85rem; color: var(--gray-600);">Precio objetivo (-5%)</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--danger);">$${fmt(datosFav.precioReal)}</div>
+                            <div style="font-size: 0.85rem; color: var(--gray-600);">Tu precio real (con extras)</div>
                         </div>
                     </div>
                 </div>
@@ -934,50 +1245,139 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         </div>
     </div>
 
-    <!-- Section 8: Conclusión -->
+    <!-- Section 8: Conclusión Personalizada -->
     <div class="container">
         <div class="section">
             <div class="section-header">
                 <div class="section-number">8</div>
-                <div class="section-title">Conclusión y Recomendación</div>
+                <div class="section-title">Conclusión y Recomendación Personalizada</div>
             </div>
             <div class="section-content">
-                <h4 style="color: var(--gray-700); margin-bottom: 15px;">Veredicto Fiduciario</h4>
-                <p style="margin-bottom: 20px;">
-                    <strong>${fav.proyecto}</strong> es una opción ${favCat.clase === 'good' ? 'sólida' : 'a evaluar'}: precio ${favCat.texto}, ${Math.round(fav.area_m2)}m², y ${fav.dias_en_mercado || '?'} días publicado te dan ${fav.dias_en_mercado && fav.dias_en_mercado > 45 ? 'poder de negociación' : 'poco margen de negociación'}.
-                </p>
+                <h4 style="color: var(--gray-700); margin-bottom: 15px;">🎯 Veredicto Basado en TU Perfil</h4>
+
+                ${(() => {
+                  // Análisis personalizado según preferencias
+                  const priorizaUbicacion = datosUsuario.ubicacion_vs_metros <= 2
+                  const priorizaMetros = datosUsuario.ubicacion_vs_metros >= 4
+                  const priorizaCalidad = datosUsuario.calidad_vs_precio <= 2
+                  const priorizaPrecio = datosUsuario.calidad_vs_precio >= 4
+
+                  // Encontrar la mejor opción para cada criterio
+                  const opciones = [
+                    { nombre: fav.proyecto, p: fav, datos: datosFav, num: 1 },
+                    ...(comp1 && datosComp1 ? [{ nombre: comp1.proyecto, p: comp1, datos: datosComp1, num: 2 }] : []),
+                    ...(comp2 && datosComp2 ? [{ nombre: comp2.proyecto, p: comp2, datos: datosComp2, num: 3 }] : [])
+                  ]
+
+                  const mejorPrecioReal = opciones.reduce((a, b) => a.datos.precioReal < b.datos.precioReal ? a : b)
+                  const mejorMetros = opciones.reduce((a, b) => a.p.area_m2 > b.p.area_m2 ? a : b)
+                  const masNegociable = opciones.reduce((a, b) => a.datos.diasMercado > b.datos.diasMercado ? a : b)
+                  const mejorEquipada = opciones.reduce((a, b) => a.datos.valorEquipamiento > b.datos.valorEquipamiento ? a : b)
+
+                  return `
+                <div style="background: var(--gray-50); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                    <p style="margin-bottom: 15px;">
+                        <strong>${fav.proyecto}</strong> es tu #1. Analizando tus preferencias:
+                    </p>
+                    <ul style="margin: 0 0 0 20px; line-height: 1.8;">
+                        ${priorizaUbicacion ? `<li>Priorizás <strong>ubicación</strong> → ${fav.proyecto} está en ${zonaDisplay(fav.zona)} ✓</li>` : ''}
+                        ${priorizaMetros ? `<li>Priorizás <strong>metros</strong> → ${mejorMetros.nombre} tiene más m² (${Math.round(mejorMetros.p.area_m2)}m²) ${mejorMetros.num === 1 ? '✓' : '- considerá #' + mejorMetros.num}</li>` : ''}
+                        ${priorizaCalidad ? `<li>Priorizás <strong>calidad</strong> → ${mejorEquipada.nombre} tiene mejor equipamiento (~$${fmt(mejorEquipada.datos.valorEquipamiento)}) ${mejorEquipada.num === 1 ? '✓' : '- considerá #' + mejorEquipada.num}</li>` : ''}
+                        ${priorizaPrecio ? `<li>Priorizás <strong>precio</strong> → ${mejorPrecioReal.nombre} tiene mejor precio real ($${fmt(mejorPrecioReal.datos.precioReal)}) ${mejorPrecioReal.num === 1 ? '✓' : '- considerá #' + mejorPrecioReal.num}</li>` : ''}
+                        <li>Más <strong>negociable</strong>: ${masNegociable.nombre} (${masNegociable.datos.diasMercado} días) ${masNegociable.num === 1 ? '✓' : ''}</li>
+                    </ul>
+                </div>`
+                })()}
 
                 <div class="recommendation-box">
-                    <h3>✅ Recomendación Final</h3>
+                    <h3>✅ Recomendación según tu situación</h3>
                     <table class="recommendation-table">
                         <thead>
                             <tr>
-                                <th>Escenario</th>
-                                <th>Acción</th>
+                                <th>Si...</th>
+                                <th>Entonces...</th>
                             </tr>
                         </thead>
                         <tbody>
+                            ${necesitaParqueo && !datosFav.tieneParqueo ? `
                             <tr>
-                                <td>Si ${fav.proyecto} incluye parqueo</td>
-                                <td><strong>Excelente opción. Ofertar $${fmt(Math.round(fav.precio_usd * 0.95))}.</strong></td>
+                                <td>${fav.proyecto} incluye parqueo</td>
+                                <td><strong>Excelente.</strong> Ofertá $${fmt(Math.round(fav.precio_usd * 0.95))} (-5%)</td>
                             </tr>
                             <tr>
-                                <td>Si ${fav.proyecto} NO incluye parqueo</td>
-                                <td>${comp1 ? `Comparar con ${comp1.proyecto} ($${fmt(comp1.precio_usd)}). ` : ''}Pedir descuento a $${fmt(Math.round(fav.precio_usd * 0.90))}.</td>
+                                <td>${fav.proyecto} NO incluye parqueo</td>
+                                <td>Precio real = $${fmt(datosFav.precioReal)}. Ofertá $${fmt(Math.round(fav.precio_usd * 0.88))} pidiendo incluir parqueo.</td>
+                            </tr>` : `
+                            <tr>
+                                <td>Querés asegurar ${fav.proyecto}</td>
+                                <td><strong>Ofertá $${fmt(Math.round(fav.precio_usd * 0.95))}</strong> (-5%) para cerrar rápido</td>
                             </tr>
                             <tr>
-                                <td>Si no hay flexibilidad</td>
-                                <td>${comp2 ? `Considerar ${comp2.proyecto} ($${fmt(comp2.precio_usd)}) pero investigar.` : 'Evaluar otras alternativas de la lista.'}</td>
-                            </tr>
+                                <td>Querés negociar más</td>
+                                <td>Empezá con $${fmt(Math.round(fav.precio_usd * 0.90))} (-10%) y subí gradualmente</td>
+                            </tr>`}
+                            ${comp1 && datosComp1 ? `
+                            <tr>
+                                <td>${fav.proyecto} no da flexibilidad</td>
+                                <td>Considerá ${comp1.proyecto}: $${fmt(datosComp1.precioReal)} precio real${datosComp1.diasMercado > 60 ? ' + más negociable' : ''}</td>
+                            </tr>` : ''}
+                            ${datosUsuario.pareja_alineados === false ? `
+                            <tr style="background: rgba(255,193,7,0.1);">
+                                <td>No están 100% alineados</td>
+                                <td><strong>Visiten juntos ANTES de ofertar.</strong> No comprometan sin consenso.</td>
+                            </tr>` : ''}
                         </tbody>
                     </table>
                 </div>
 
+                ${(comp1 || comp2) ? `
+                <h4 style="color: var(--gray-700); margin: 25px 0 15px;">🏆 ¿Cuál elegir según tus prioridades?</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="background: ${datosUsuario.calidad_vs_precio >= 4 ? 'var(--oportunidad)' : 'var(--gray-100)'}; color: ${datosUsuario.calidad_vs_precio >= 4 ? 'white' : 'inherit'}; padding: 15px; border-radius: 10px; text-align: center;">
+                        <div style="font-size: 0.8rem; opacity: 0.9;">Si priorizás PRECIO</div>
+                        <div style="font-size: 1.1rem; font-weight: 700; margin-top: 5px;">${(() => {
+                          const opciones = [
+                            { nombre: fav.proyecto, precioReal: datosFav.precioReal },
+                            ...(datosComp1 ? [{ nombre: comp1!.proyecto, precioReal: datosComp1.precioReal }] : []),
+                            ...(datosComp2 ? [{ nombre: comp2!.proyecto, precioReal: datosComp2.precioReal }] : [])
+                          ]
+                          return opciones.reduce((a, b) => a.precioReal < b.precioReal ? a : b).nombre
+                        })()}</div>
+                    </div>
+                    <div style="background: ${datosUsuario.ubicacion_vs_metros >= 4 ? 'var(--primary)' : 'var(--gray-100)'}; color: ${datosUsuario.ubicacion_vs_metros >= 4 ? 'white' : 'inherit'}; padding: 15px; border-radius: 10px; text-align: center;">
+                        <div style="font-size: 0.8rem; opacity: 0.9;">Si priorizás METROS</div>
+                        <div style="font-size: 1.1rem; font-weight: 700; margin-top: 5px;">${(() => {
+                          const opciones = [
+                            { nombre: fav.proyecto, area: fav.area_m2 },
+                            ...(comp1 ? [{ nombre: comp1.proyecto, area: comp1.area_m2 }] : []),
+                            ...(comp2 ? [{ nombre: comp2.proyecto, area: comp2.area_m2 }] : [])
+                          ]
+                          return opciones.reduce((a, b) => a.area > b.area ? a : b).nombre
+                        })()}</div>
+                    </div>
+                    <div style="background: var(--gray-100); padding: 15px; border-radius: 10px; text-align: center;">
+                        <div style="font-size: 0.8rem; opacity: 0.9;">Más NEGOCIABLE</div>
+                        <div style="font-size: 1.1rem; font-weight: 700; margin-top: 5px;">${(() => {
+                          const opciones = [
+                            { nombre: fav.proyecto, dias: datosFav.diasMercado },
+                            ...(datosComp1 ? [{ nombre: comp1!.proyecto, dias: datosComp1.diasMercado }] : []),
+                            ...(datosComp2 ? [{ nombre: comp2!.proyecto, dias: datosComp2.diasMercado }] : [])
+                          ]
+                          return opciones.reduce((a, b) => a.dias > b.dias ? a : b).nombre
+                        })()}</div>
+                    </div>
+                </div>` : ''}
+
                 <div class="alert success" style="margin-top: 25px;">
                     <div class="alert-icon">📱</div>
                     <div class="alert-content">
-                        <h4>Próximo Paso</h4>
-                        <p>Agendar visita a ${fav.proyecto} esta semana. Llevar este checklist impreso y confirmar los puntos pendientes antes de hacer una oferta.</p>
+                        <h4>Tu Próximo Paso</h4>
+                        <p>
+                            ${datosUsuario.pareja_alineados === false
+                              ? `1. Alinear con tu pareja sobre prioridades. 2. Visitar ${fav.proyecto} juntos. 3. Usar el checklist de este informe.`
+                              : `Agendar visita a ${fav.proyecto} esta semana. Llevá este informe impreso y confirmá los puntos del checklist antes de ofertar.`
+                            }
+                        </p>
                     </div>
                 </div>
 
@@ -985,7 +1385,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     <span class="icon">💡</span>
                     <div>
                         <strong>Los números son una guía, no una regla</strong>
-                        <p>Los porcentajes y rangos de este informe son <strong>promedios del mercado</strong>. Cuando estés frente al vendedor, <strong>confiá en tu instinto</strong>: si sentís urgencia de su parte, podés ir más bajo. Si hay mucho interés de otros compradores, quizás convenga cerrar rápido. Simón te da el contexto, pero vos tomás la decisión.</p>
+                        <p>Este informe está personalizado según <strong>tus preferencias</strong>, pero vos conocés tu situación mejor que nadie. Confiá en tu instinto: si sentís urgencia del vendedor, negociá más fuerte. Si hay competencia, quizás convenga cerrar rápido. Simón te da el contexto, <strong>vos tomás la decisión</strong>.</p>
                     </div>
                 </div>
             </div>

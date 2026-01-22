@@ -665,7 +665,7 @@ export default function ResultadosPage() {
         // Nuevos campos Level 2 para personalización
         necesita_parqueo: usuarioNecesitaParqueo,
         necesita_baulera: usuarioNecesitaBaulera,
-        pareja_alineados: pareja_alineados === 'true'
+        mascotas: mascotas === 'true' || mascotas === 'si'
       }
 
       // Calcular promedio real del mercado filtrado (no hardcodeado)
