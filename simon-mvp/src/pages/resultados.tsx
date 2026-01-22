@@ -76,6 +76,66 @@ interface DatosSintesis {
   costoExtraBaulera: number
 }
 
+/**
+ * BADGE TIEMPO EN MERCADO - Sistema de badges inteligentes
+ * Compara días publicado vs mediana de la zona
+ * MOAT honesto: solo afirmamos lo que SABEMOS del tiempo publicado
+ */
+function getBadgeTiempo(diasEnMercado: number, diasMedianaZona: number): {
+  label: string
+  color: string
+  emoji: string
+  tooltip: string
+  accion: string | null  // null = sin acción (solo badge)
+} {
+  // Nueva (< 7 días)
+  if (diasEnMercado < 7) return {
+    label: 'Nueva',
+    color: 'bg-green-100 text-green-700',
+    emoji: '🆕',
+    tooltip: `${diasEnMercado} días (mediana zona: ${diasMedianaZona}d)`,
+    accion: 'Si te interesa, no esperes'
+  }
+
+  const ratio = diasEnMercado / diasMedianaZona
+
+  // Menos que promedio (< 50% mediana)
+  if (ratio < 0.5) return {
+    label: 'Menos que promedio',
+    color: 'bg-blue-100 text-blue-700',
+    emoji: '📅',
+    tooltip: `${diasEnMercado} días (mediana zona: ${diasMedianaZona}d)`,
+    accion: 'Todavía fresca en el mercado'
+  }
+
+  // Normal para zona (50-100% mediana)
+  if (ratio < 1.0) return {
+    label: 'Normal para zona',
+    color: 'bg-gray-100 text-gray-600',
+    emoji: '📊',
+    tooltip: `${diasEnMercado} días (mediana zona: ${diasMedianaZona}d)`,
+    accion: null
+  }
+
+  // Más que promedio (100-150% mediana)
+  if (ratio < 1.5) return {
+    label: 'Más que promedio',
+    color: 'bg-amber-50 text-amber-700',
+    emoji: '💰',
+    tooltip: `${diasEnMercado} días (mediana zona: ${diasMedianaZona}d)`,
+    accion: 'Consultá si hay flexibilidad'
+  }
+
+  // Oportunidad (> 150% mediana)
+  return {
+    label: 'Oportunidad',
+    color: 'bg-amber-50 text-amber-700',
+    emoji: '👍',
+    tooltip: `${diasEnMercado} días (mediana zona: ${diasMedianaZona}d)`,
+    accion: 'Buen momento para ofertar'
+  }
+}
+
 function generarSintesisFiduciaria(datos: DatosSintesis): SintesisFiduciaria {
   const {
     diferenciaPct,
@@ -126,10 +186,10 @@ function generarSintesisFiduciaria(datos: DatosSintesis): SintesisFiduciaria {
   } else if (tipo === 'sospechoso') {
     headline = `${Math.abs(diffPct)}% bajo mercado + ${tiempoTexto} → ¿Por qué no se vendió?`
   } else if (tipo === 'oportunidad') {
-    const conclusion = dias <= umbralReciente ? 'Buen precio, reciente' : 'Buen precio'
+    const conclusion = dias <= umbralReciente ? 'Precio bajo promedio, reciente' : 'Precio bajo promedio'
     headline = `${Math.abs(diffPct)}% bajo mercado + ${tiempoTexto} → ${conclusion}`
   } else if (tipo === 'premium') {
-    const conclusion = dias <= umbralReciente ? 'Precio firme' : dias >= umbralMedio ? 'Margen para negociar' : ''
+    const conclusion = dias <= umbralReciente ? 'Precio probablemente firme' : dias >= umbralMedio ? 'Consultá por flexibilidad' : ''
     headline = `${diffPct}% sobre mercado + ${tiempoTexto}${conclusion ? ` → ${conclusion}` : ''}`
   } else {
     headline = `Precio de mercado + ${tiempoTexto}`
@@ -205,11 +265,11 @@ function generarSintesisFiduciaria(datos: DatosSintesis): SintesisFiduciaria {
       : 'Verificá estado real y por qué el precio'
   } else if (tipo === 'premium') {
     if (dias >= umbralMedio) {
-      accion = 'Hay margen para negociar - hacé oferta'
+      accion = 'Lleva tiempo publicada, podés tantear con una oferta'
     } else if (costosExtra.length > 0) {
       accion = 'Confirmá qué incluye antes de comparar'
     } else {
-      accion = 'Si te gusta, no demores - a buen ritmo de venta'
+      accion = 'Si te gusta, no demores'
     }
   } else {
     accion = 'Tomá tu tiempo para comparar opciones'
@@ -2024,79 +2084,29 @@ ${top3Texto}
                           )
                         })()}
 
-                        {/* 3. DÍAS EN MERCADO - ¿Puedo negociar? */}
+                        {/* 3. DÍAS EN MERCADO - Badge inteligente */}
                         {prop.dias_en_mercado != null && (() => {
-                          const dias = prop.dias_en_mercado
                           const medianaZona = contextoMercado?.metricas_zona?.dias_mediana || 74
-                          const maxBarra = Math.max(medianaZona * 1.5, dias + 10)
-                          const porcentajeDias = Math.min((dias / maxBarra) * 100, 100)
-                          const porcentajeMediana = Math.min((medianaZona / maxBarra) * 100, 100)
-
-                          // Color según días
-                          const esReciente = dias < 30
-                          const esNormal = dias >= 30 && dias <= 60
-                          const esNegociable = dias > 60
-
-                          const colorBarra = esReciente
-                            ? 'bg-green-500'
-                            : esNormal
-                            ? 'bg-blue-500'
-                            : 'bg-amber-500'
-
-                          const colorFondo = esReciente
-                            ? 'bg-green-50 border-green-200'
-                            : esNormal
-                            ? 'bg-gray-50 border-gray-200'
-                            : 'bg-amber-50 border-amber-200'
+                          const badge = getBadgeTiempo(prop.dias_en_mercado, medianaZona)
 
                           return (
-                            <div className={`rounded-lg border p-3 ${colorFondo}`}>
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-gray-700">📅 Tiempo en mercado</span>
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                  esReciente ? 'bg-green-200 text-green-700' :
-                                  esNormal ? 'bg-gray-200 text-gray-700' :
-                                  'bg-amber-200 text-amber-700'
-                                }`}>
-                                  {esReciente ? 'Reciente' : esNormal ? 'Normal' : 'Negociable'}
+                            <div className="bg-white rounded-lg border p-3 shadow-sm">
+                              <div className={`flex items-center justify-between ${badge.accion ? 'mb-1' : ''}`}>
+                                <span className="text-xs font-semibold text-gray-500 uppercase">
+                                  ¿Puedo negociar?
+                                </span>
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}
+                                  title={badge.tooltip}
+                                >
+                                  {badge.emoji} {badge.label}
                                 </span>
                               </div>
-
-                              {/* Barra visual */}
-                              <div className="relative h-3 bg-gray-200 rounded-full mb-2">
-                                {/* Barra de días */}
-                                <div
-                                  className={`absolute h-full rounded-full ${colorBarra} transition-all`}
-                                  style={{ width: `${porcentajeDias}%` }}
-                                />
-                                {/* Marcador de mediana */}
-                                <div
-                                  className="absolute top-0 h-full w-0.5 bg-gray-500"
-                                  style={{ left: `${porcentajeMediana}%` }}
-                                  title={`Mediana: ${medianaZona} días`}
-                                />
-                              </div>
-
-                              {/* Labels */}
-                              <div className="flex justify-between text-xs text-gray-500 mb-2">
-                                <span className="font-medium text-gray-700">{dias} días</span>
-                                <span>Mediana zona: {medianaZona}d</span>
-                              </div>
-
-                              {/* Mensaje accionable */}
-                              <div className={`text-xs ${
-                                esReciente ? 'text-green-700' :
-                                esNormal ? 'text-gray-600' :
-                                'text-amber-700'
-                              }`}>
-                                {esReciente ? (
-                                  <p>💡 Publicación fresca → precio firme, actuá rápido si te interesa</p>
-                                ) : esNormal ? (
-                                  <p>💡 Tiempo normal → podés consultar si hay flexibilidad</p>
-                                ) : (
-                                  <p>💡 Lleva tiempo → hay margen de negociación, consultá si aceptan ofertas</p>
-                                )}
-                              </div>
+                              {badge.accion && (
+                                <p className="text-sm text-gray-600">
+                                  → {badge.accion}
+                                </p>
+                              )}
                             </div>
                           )
                         })()}
@@ -2582,20 +2592,25 @@ ${top3Texto}
                                   </span>
                                 )}
                               </div>
-                              {/* Línea 2: Tiempo + acción si aplica */}
-                              {prop.dias_en_mercado != null && (
-                                <p className="text-xs text-gray-500">
-                                  {prop.dias_en_mercado > 60 ? (
-                                    <>
-                                      {Math.round(prop.dias_en_mercado / 30)} meses publicado · <span className="text-amber-600">consultá si aceptan ofertas</span>
-                                    </>
-                                  ) : prop.dias_en_mercado > 30 ? (
-                                    <>{Math.round(prop.dias_en_mercado / 30)} mes publicado</>
-                                  ) : (
-                                    <>{prop.dias_en_mercado} días publicado · precio firme probable</>
-                                  )}
-                                </p>
-                              )}
+                              {/* Línea 2: Badge tiempo inteligente */}
+                              {prop.dias_en_mercado != null && (() => {
+                                const medianaZona = metricas?.dias_mediana || 74
+                                const badge = getBadgeTiempo(prop.dias_en_mercado, medianaZona)
+
+                                return (
+                                  <p className="text-xs text-gray-500">
+                                    <span
+                                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs ${badge.color}`}
+                                      title={badge.tooltip}
+                                    >
+                                      {badge.emoji} {badge.label}
+                                    </span>
+                                    {badge.accion && (
+                                      <span className="ml-1 text-gray-600">· {badge.accion}</span>
+                                    )}
+                                  </p>
+                                )
+                              })()}
 
                               {/* Síntesis fiduciaria expandida - aparece al click en badge */}
                               {expandedCards.has(prop.id) && (() => {
