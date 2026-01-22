@@ -18,8 +18,7 @@ interface FormularioVivienda {
   quienes_viven: 'solo' | 'pareja' | 'familia' | 'roommates' | null
   hijos_cantidad: number | null
   hijos_edades: string
-  mascotas: 'no' | 'perro' | 'gato' | 'otro' | null
-  tamano_perro: 'chico' | 'mediano' | 'grande' | null
+  mascotas: 'si' | 'no' | null
 
   // Seccion 2: Tu busqueda
   tiempo_buscando: 'recien_empiezo' | '1_6_meses' | '6_12_meses' | 'mas_1_ano' | null
@@ -120,7 +119,6 @@ export default function FormularioViviendaPage() {
     hijos_cantidad: null,
     hijos_edades: '',
     mascotas: null,
-    tamano_perro: null,
     tiempo_buscando: null,
     estado_emocional: null,
     quien_decide: null,
@@ -145,7 +143,6 @@ export default function FormularioViviendaPage() {
       deseables: urlDeseables,
       quienes_viven: urlQuienesViven,
       mascotas: urlMascotas,
-      tamano_perro: urlTamanoPerro,
       tiempo_buscando: urlTiempoBuscando,
       estado_emocional: urlEstadoEmocional,
       quien_decide: urlQuienDecide,
@@ -164,13 +161,8 @@ export default function FormularioViviendaPage() {
       hasChanges = true
     }
 
-    if (urlMascotas && ['no', 'perro', 'gato', 'otro'].includes(urlMascotas as string)) {
+    if (urlMascotas && ['si', 'no'].includes(urlMascotas as string)) {
       newForm.mascotas = urlMascotas as FormularioVivienda['mascotas']
-      hasChanges = true
-    }
-
-    if (urlTamanoPerro && ['chico', 'mediano', 'grande'].includes(urlTamanoPerro as string)) {
-      newForm.tamano_perro = urlTamanoPerro as FormularioVivienda['tamano_perro']
       hasChanges = true
     }
 
@@ -267,7 +259,6 @@ export default function FormularioViviendaPage() {
       ),
       quienes_viven: form.quienes_viven || '',
       mascotas: form.mascotas || '',
-      tamano_perro: form.tamano_perro || '',
       tiempo_buscando: form.tiempo_buscando || '',
       estado_emocional: form.estado_emocional || '',
       quien_decide: form.quien_decide || '',
@@ -399,7 +390,7 @@ export default function FormularioViviendaPage() {
                 Muchos edificios no son pet-friendly. Así evitamos mostrarte opciones incompatibles.
               </p>
               <div className="flex flex-wrap gap-2">
-                {(['no', 'perro', 'gato', 'otro'] as const).map(opt => (
+                {(['si', 'no'] as const).map(opt => (
                   <button
                     key={opt}
                     onClick={() => setForm(prev => ({ ...prev, mascotas: opt }))}
@@ -409,32 +400,10 @@ export default function FormularioViviendaPage() {
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    {opt === 'no' ? 'No' : opt.charAt(0).toUpperCase() + opt.slice(1)}
+                    {opt === 'si' ? 'Sí' : 'No'}
                   </button>
                 ))}
               </div>
-
-              {/* Condicional: Perro */}
-              {form.mascotas === 'perro' && (
-                <div className="mt-3 pl-4 border-l-2 border-blue-200">
-                  <label className="block text-sm text-gray-600 mb-2">Tamano?</label>
-                  <div className="flex gap-2">
-                    {(['chico', 'mediano', 'grande'] as const).map(t => (
-                      <button
-                        key={t}
-                        onClick={() => setForm(prev => ({ ...prev, tamano_perro: t }))}
-                        className={`px-4 py-2 rounded-lg border ${
-                          form.tamano_perro === t
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200'
-                        }`}
-                      >
-                        {t.charAt(0).toUpperCase() + t.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </section>
 
