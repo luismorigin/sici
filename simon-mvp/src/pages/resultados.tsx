@@ -767,11 +767,13 @@ export default function ResultadosPage() {
   const [filterRefreshKey, setFilterRefreshKey] = useState(0)
 
   // Estados para edición inline de filtros
-  const [editingFilter, setEditingFilter] = useState<'presupuesto' | 'dormitorios' | 'zonas' | 'estado_entrega' | null>(null)
+  const [editingFilter, setEditingFilter] = useState<'presupuesto' | 'dormitorios' | 'zonas' | 'estado_entrega' | 'cantidad_resultados' | 'innegociables' | null>(null)
   const [tempPresupuesto, setTempPresupuesto] = useState<number>(150000)
   const [tempDormitorios, setTempDormitorios] = useState<number | null>(null)
   const [tempZonas, setTempZonas] = useState<string[]>([])
   const [tempEstadoEntrega, setTempEstadoEntrega] = useState<string>('no_importa')
+  const [tempCantidadResultados, setTempCantidadResultados] = useState<number>(5)
+  const [tempInnegociables, setTempInnegociables] = useState<string[]>([])
 
   // Estado MOAT para impacto con contexto
   interface ImpactoMOAT {
@@ -930,7 +932,7 @@ export default function ResultadosPage() {
   }, [router.isReady, presupuesto, zonas, dormitorios, estado_entrega, innegociables, mascotas, quienes_viven])
 
   // Iniciar edición de un filtro
-  const startEditing = (filter: 'presupuesto' | 'dormitorios' | 'zonas' | 'estado_entrega') => {
+  const startEditing = (filter: 'presupuesto' | 'dormitorios' | 'zonas' | 'estado_entrega' | 'cantidad_resultados' | 'innegociables') => {
     if (filter === 'presupuesto') {
       setTempPresupuesto(parseInt(presupuesto as string) || 150000)
     } else if (filter === 'dormitorios') {
@@ -939,6 +941,10 @@ export default function ResultadosPage() {
       setTempZonas(zonas ? (zonas as string).split(',').filter(Boolean) : [])
     } else if (filter === 'estado_entrega') {
       setTempEstadoEntrega((estado_entrega as string) || 'no_importa')
+    } else if (filter === 'cantidad_resultados') {
+      setTempCantidadResultados(parseInt(cantidad_resultados as string) || 5)
+    } else if (filter === 'innegociables') {
+      setTempInnegociables(innegociables ? (innegociables as string).split(',').filter(Boolean) : [])
     }
     setEditingFilter(filter)
     setImpactoMOAT(null)
@@ -1054,8 +1060,9 @@ export default function ResultadosPage() {
     const newZonas = editingFilter === 'zonas' ? tempZonas : (zonas ? (zonas as string).split(',').filter(Boolean) : [])
     if (newZonas.length > 0) params.set('zonas', newZonas.join(','))
 
-    // Preservar innegociables y otros params
-    if (innegociables) params.set('innegociables', innegociables as string)
+    // innegociables: usar temporal si estamos editando, sino preservar actual
+    const newInnegociables = editingFilter === 'innegociables' ? tempInnegociables : (innegociables ? (innegociables as string).split(',').filter(Boolean) : [])
+    if (newInnegociables.length > 0) params.set('innegociables', newInnegociables.join(','))
 
     // estado_entrega: usar temporal si estamos editando, sino preservar actual
     const newEstadoEntrega = editingFilter === 'estado_entrega' ? tempEstadoEntrega : (estado_entrega as string)
@@ -1066,7 +1073,10 @@ export default function ResultadosPage() {
     if (deseables) params.set('deseables', deseables as string)
     if (quienes_viven) params.set('quienes_viven', quienes_viven as string)
     if (mascotas) params.set('mascotas', mascotas as string)
-    if (cantidad_resultados) params.set('cantidad_resultados', cantidad_resultados as string)
+
+    // cantidad_resultados: usar temporal si estamos editando, sino preservar actual
+    const newCantidadResultados = editingFilter === 'cantidad_resultados' ? tempCantidadResultados : (cantidad_resultados ? parseInt(cantidad_resultados as string) : 5)
+    params.set('cantidad_resultados', newCantidadResultados.toString())
     if (quien_decide) params.set('quien_decide', quien_decide as string)
     if (pareja_alineados) params.set('pareja_alineados', pareja_alineados as string)
     if (ubicacion_vs_metros) params.set('ubicacion_vs_metros', ubicacion_vs_metros as string)
@@ -1582,6 +1592,129 @@ ${top3Texto}
                   {estado_entrega === 'entrega_inmediata' ? 'Ya lista' :
                    estado_entrega === 'solo_preventa' ? 'Solo preventa' :
                    'Todo el mercado'}
+                </span>
+                <span className="text-blue-500 text-xs">✎</span>
+              </button>
+            )}
+
+            {/* CANTIDAD RESULTADOS - Inline */}
+            {editingFilter === 'cantidad_resultados' ? (
+              <div className="bg-gradient-to-b from-blue-50 to-white border border-blue-200 rounded-xl p-4 w-full">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-gray-800">📊 Cantidad de resultados</span>
+                  <button onClick={() => setEditingFilter(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {[
+                    { val: 3, label: 'Top 3' },
+                    { val: 5, label: 'Top 5' },
+                    { val: 10, label: 'Top 10' },
+                    { val: 0, label: 'Todas' }
+                  ].map(opt => (
+                    <button
+                      key={opt.val}
+                      onClick={() => setTempCantidadResultados(opt.val)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        tempCantidadResultados === opt.val
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                <p className="text-xs text-gray-500 mb-3">
+                  {tempCantidadResultados === 0
+                    ? `Mostrando las ${propiedades.length} propiedades encontradas`
+                    : `Mostrando las ${Math.min(tempCantidadResultados, propiedades.length)} mejores opciones de ${propiedades.length}`}
+                </p>
+
+                <button
+                  onClick={aplicarFiltros}
+                  className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Aplicar cambio
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => startEditing('cantidad_resultados')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-blue-50 hover:border-blue-200 border border-transparent rounded-full text-sm transition-all"
+              >
+                <span>📊</span>
+                <span className="text-gray-700 font-medium">
+                  {!cantidad_resultados || cantidad_resultados === '0' ? 'Todas' : `Top ${cantidad_resultados}`}
+                </span>
+                <span className="text-blue-500 text-xs">✎</span>
+              </button>
+            )}
+
+            {/* INNEGOCIABLES - Inline */}
+            {editingFilter === 'innegociables' ? (
+              <div className="bg-gradient-to-b from-blue-50 to-white border border-blue-200 rounded-xl p-4 w-full">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-gray-800">⭐ Requisitos mínimos</span>
+                  <button onClick={() => setEditingFilter(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+
+                <p className="text-xs text-gray-500 mb-3">
+                  Las propiedades que NO cumplan estos requisitos quedarán como alternativas
+                </p>
+
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  {[
+                    { val: 'piscina', label: '🏊 Piscina', emoji: '🏊' },
+                    { val: 'gimnasio', label: '💪 Gimnasio', emoji: '💪' },
+                    { val: 'quincho', label: '🔥 Quincho/BBQ', emoji: '🔥' },
+                    { val: 'porteria_24h', label: '🔒 Portería 24h', emoji: '🔒' },
+                    { val: 'salon_eventos', label: '🎉 Salón eventos', emoji: '🎉' },
+                    { val: 'area_juegos', label: '🎮 Área juegos', emoji: '🎮' }
+                  ].map(opt => (
+                    <label
+                      key={opt.val}
+                      className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all ${
+                        tempInnegociables.includes(opt.val)
+                          ? 'bg-blue-100 border border-blue-300'
+                          : 'bg-white border border-gray-200 hover:border-blue-200'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={tempInnegociables.includes(opt.val)}
+                        onChange={() => {
+                          if (tempInnegociables.includes(opt.val)) {
+                            setTempInnegociables(tempInnegociables.filter(i => i !== opt.val))
+                          } else {
+                            setTempInnegociables([...tempInnegociables, opt.val])
+                          }
+                        }}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span className="text-sm">{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+
+                <button
+                  onClick={aplicarFiltros}
+                  className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Aplicar cambio
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => startEditing('innegociables')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-blue-50 hover:border-blue-200 border border-transparent rounded-full text-sm transition-all"
+              >
+                <span>⭐</span>
+                <span className="text-gray-700 font-medium">
+                  {innegociables && (innegociables as string).split(',').filter(Boolean).length > 0
+                    ? `${(innegociables as string).split(',').filter(Boolean).length} innegociables`
+                    : 'Sin mínimos'}
                 </span>
                 <span className="text-blue-500 text-xs">✎</span>
               </button>
