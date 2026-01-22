@@ -21,10 +21,11 @@ interface FormularioVivienda {
   mascotas: 'si' | 'no' | null
 
   // Seccion 2: Tu busqueda
-  tiempo_buscando: 'recien_empiezo' | '1_6_meses' | '6_12_meses' | 'mas_1_ano' | null
-  estado_emocional: 'motivado' | 'cansado' | 'frustrado' | 'presionado' | null
   quien_decide: 'solo_yo' | 'mi_pareja' | 'familia_opina' | null
   pareja_alineados: 'si' | 'mas_o_menos' | 'no' | null
+
+  // Seccion 5: Configuracion de resultados
+  cantidad_resultados: 3 | 5 | 'todas' | null
 
   // Seccion 3: Que buscas
   innegociables: string[]
@@ -82,7 +83,7 @@ const calcularProgreso = (form: FormularioVivienda): {
   // Sección 1: Sobre vos
   if (form.quienes_viven && form.mascotas !== null) completadas++
   // Sección 2: Tu búsqueda
-  if (form.tiempo_buscando && form.quien_decide) completadas++
+  if (form.quien_decide) completadas++
   // Sección 3: Qué buscas (siempre "completada" aunque vacío)
   completadas++
   // Sección 4: Trade-offs (siempre tiene valores default)
@@ -119,8 +120,6 @@ export default function FormularioViviendaPage() {
     hijos_cantidad: null,
     hijos_edades: '',
     mascotas: null,
-    tiempo_buscando: null,
-    estado_emocional: null,
     quien_decide: null,
     pareja_alineados: null,
     innegociables: [],
@@ -129,6 +128,7 @@ export default function FormularioViviendaPage() {
     necesita_baulera: false, // Default: no necesita
     ubicacion_vs_metros: 3,
     calidad_vs_precio: 3,
+    cantidad_resultados: null,
   })
 
   const [submitting, setSubmitting] = useState(false)
@@ -143,9 +143,8 @@ export default function FormularioViviendaPage() {
       deseables: urlDeseables,
       quienes_viven: urlQuienesViven,
       mascotas: urlMascotas,
-      tiempo_buscando: urlTiempoBuscando,
-      estado_emocional: urlEstadoEmocional,
       quien_decide: urlQuienDecide,
+      cantidad_resultados: urlCantidadResultados,
       pareja_alineados: urlParejaAlineados,
       ubicacion_vs_metros: urlUbicacionVsMetros,
       calidad_vs_precio: urlCalidadVsPrecio,
@@ -163,16 +162,6 @@ export default function FormularioViviendaPage() {
 
     if (urlMascotas && ['si', 'no'].includes(urlMascotas as string)) {
       newForm.mascotas = urlMascotas as FormularioVivienda['mascotas']
-      hasChanges = true
-    }
-
-    if (urlTiempoBuscando && ['recien_empiezo', '1_6_meses', '6_12_meses', 'mas_1_ano'].includes(urlTiempoBuscando as string)) {
-      newForm.tiempo_buscando = urlTiempoBuscando as FormularioVivienda['tiempo_buscando']
-      hasChanges = true
-    }
-
-    if (urlEstadoEmocional && ['motivado', 'cansado', 'frustrado', 'presionado'].includes(urlEstadoEmocional as string)) {
-      newForm.estado_emocional = urlEstadoEmocional as FormularioVivienda['estado_emocional']
       hasChanges = true
     }
 
@@ -222,6 +211,13 @@ export default function FormularioViviendaPage() {
       hasChanges = true
     }
 
+    if (urlCantidadResultados && ['3', '5', 'todas'].includes(urlCantidadResultados as string)) {
+      newForm.cantidad_resultados = urlCantidadResultados === 'todas'
+        ? 'todas'
+        : parseInt(urlCantidadResultados as string) as 3 | 5
+      hasChanges = true
+    }
+
     if (hasChanges) {
       setForm(newForm)
     }
@@ -259,9 +255,8 @@ export default function FormularioViviendaPage() {
       ),
       quienes_viven: form.quienes_viven || '',
       mascotas: form.mascotas || '',
-      tiempo_buscando: form.tiempo_buscando || '',
-      estado_emocional: form.estado_emocional || '',
       quien_decide: form.quien_decide || '',
+      cantidad_resultados: form.cantidad_resultados?.toString() || '',
       innegociables: form.innegociables.join(','),
       deseables: form.deseables.join(','),
       ubicacion_vs_metros: form.ubicacion_vs_metros.toString(),
@@ -273,7 +268,7 @@ export default function FormularioViviendaPage() {
     router.push(`/resultados?${params.toString()}`)
   }
 
-  const isFormValid = form.quienes_viven && form.tiempo_buscando && form.quien_decide
+  const isFormValid = form.quienes_viven && form.quien_decide && form.cantidad_resultados
 
   // P2: Progress bar dinámico
   const progreso = calcularProgreso(form)
@@ -413,70 +408,10 @@ export default function FormularioViviendaPage() {
               TU CONTEXTO DE BÚSQUEDA
             </h2>
 
-            {/* 3. Tiempo buscando */}
+            {/* 3. Quien decide */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                3. ¿Hace cuánto buscás?
-              </label>
-              <p className="text-xs text-gray-500 mb-3">
-                Si llevás mucho tiempo, podemos priorizar opciones que otros pasaron por alto.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { value: 'recien_empiezo', label: 'Recien empiezo' },
-                  { value: '1_6_meses', label: '1-6 meses' },
-                  { value: '6_12_meses', label: '6-12 meses' },
-                  { value: 'mas_1_ano', label: '+1 ano' },
-                ].map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setForm(prev => ({ ...prev, tiempo_buscando: opt.value as any }))}
-                    className={`px-4 py-2 rounded-lg border transition-colors ${
-                      form.tiempo_buscando === opt.value
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 4. Estado emocional */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                4. ¿Cómo te sentís con la búsqueda?
-              </label>
-              <p className="text-xs text-gray-500 mb-3">
-                Si estás cansado o presionado, te mostraremos menos opciones para no abrumarte.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { value: 'motivado', label: 'Motivado' },
-                  { value: 'cansado', label: 'Cansado' },
-                  { value: 'frustrado', label: 'Frustrado' },
-                  { value: 'presionado', label: 'Presionado' },
-                ].map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setForm(prev => ({ ...prev, estado_emocional: opt.value as any }))}
-                    className={`px-4 py-2 rounded-lg border transition-colors ${
-                      form.estado_emocional === opt.value
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 5. Quien decide */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                5. ¿Quién más decide?
+                3. ¿Quién más decide?
               </label>
               <p className="text-xs text-gray-500 mb-3">
                 Si decide otro también, preparamos información fácil de compartir.
@@ -535,10 +470,10 @@ export default function FormularioViviendaPage() {
               TUS PRIORIDADES
             </h2>
 
-            {/* 6. Innegociables */}
+            {/* 4. Innegociables */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                6. Sin esto NO me interesa <span className="text-gray-500 font-normal">(del edificio, máx 3)</span>
+                4. Sin esto NO me interesa <span className="text-gray-500 font-normal">(del edificio, máx 3)</span>
               </label>
               <p className="text-xs text-gray-500 mb-3">
                 Las opciones sin estos requisitos quedan al fondo del ranking, pero no desaparecen por si querés revisar.
@@ -564,10 +499,10 @@ export default function FormularioViviendaPage() {
               </p>
             </div>
 
-            {/* 7. Deseables */}
+            {/* 5. Deseables */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                7. Sería un PLUS tener <span className="text-gray-500 font-normal">(del edificio)</span>
+                5. Sería un PLUS tener <span className="text-gray-500 font-normal">(del edificio)</span>
               </label>
               <p className="text-xs text-gray-500 mb-3">
                 Esto suma puntos en el ranking pero no descarta opciones. Si no encontramos con todo, igual te mostramos buenas alternativas.
@@ -589,7 +524,7 @@ export default function FormularioViviendaPage() {
               </div>
             </div>
 
-            {/* 8. Parqueo y Baulera - Para personalizar costos */}
+            {/* 6. Parqueo y Baulera - Para personalizar costos */}
             <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 8. Para calcular el precio real:
@@ -675,10 +610,10 @@ export default function FormularioViviendaPage() {
               Estos sliders ajustan cómo ordenamos tus opciones. No hay respuesta correcta, solo tu preferencia.
             </p>
 
-            {/* 8. Ubicacion vs Metros */}
+            {/* 7. Ubicacion vs Metros */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                8. Si tuvieras que elegir:
+                7. Si tuvieras que elegir:
               </label>
               <p className="text-xs text-gray-500 mb-3">
                 ← Zona premium aunque sea más chico | Más espacio aunque sea menos céntrico →
@@ -701,10 +636,10 @@ export default function FormularioViviendaPage() {
               </p>
             </div>
 
-            {/* 9. Calidad vs Precio */}
+            {/* 8. Calidad vs Precio */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                9. Y entre:
+                8. Y entre:
               </label>
               <p className="text-xs text-gray-500 mb-3">
                 ← Mejores terminaciones aunque cueste más | Ahorro aunque sea más básico →
@@ -725,6 +660,36 @@ export default function FormularioViviendaPage() {
               <p className="text-xs text-blue-600 mt-2 text-center italic">
                 {getCalidadFeedback(form.calidad_vs_precio)}
               </p>
+            </div>
+
+            {/* 9. Cantidad de resultados */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                9. ¿Cuántas opciones querés ver?
+              </label>
+              <p className="text-xs text-gray-500 mb-3">
+                Menos opciones = decisión más fácil. Siempre podés volver a buscar.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: 3, label: 'Solo las 3 mejores', desc: 'Foco total' },
+                  { value: 5, label: 'Hasta 5 opciones', desc: 'Balance' },
+                  { value: 'todas', label: 'Mostrame todas', desc: 'Quiero explorar' },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setForm(prev => ({ ...prev, cantidad_resultados: opt.value as 3 | 5 | 'todas' }))}
+                    className={`px-4 py-3 rounded-lg border transition-colors flex-1 min-w-[140px] ${
+                      form.cantidad_resultados === opt.value
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="block font-medium">{opt.label}</span>
+                    <span className="block text-xs text-gray-500 mt-1">{opt.desc}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </section>
 
@@ -767,11 +732,11 @@ export default function FormularioViviendaPage() {
                   {!form.quienes_viven && (
                     <li>• Quiénes van a vivir — para calcular espacio necesario</li>
                   )}
-                  {!form.tiempo_buscando && (
-                    <li>• Hace cuánto buscás — para ajustar recomendaciones</li>
-                  )}
                   {!form.quien_decide && (
                     <li>• Quién más decide — para preparar info compartible</li>
+                  )}
+                  {!form.cantidad_resultados && (
+                    <li>• Cuántas opciones querés ver — para no abrumarte</li>
                   )}
                 </ul>
               </div>

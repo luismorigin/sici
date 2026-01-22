@@ -35,6 +35,7 @@ interface MapaResultadosProps {
   maxSelected: number
   onClose: () => void
   onToggleSelected: (id: number) => void
+  cantidadDestacadas?: number // Cuántas propiedades destacar (default 13)
 }
 
 // Rangos de precio predefinidos
@@ -144,7 +145,7 @@ function crearPinConPrecio(precio: number, diferencia_pct: number | null, catego
   })
 }
 
-export default function MapaResultados({ propiedades, selectedIds, maxSelected, onClose, onToggleSelected }: MapaResultadosProps) {
+export default function MapaResultados({ propiedades, selectedIds, maxSelected, onClose, onToggleSelected, cantidadDestacadas = 13 }: MapaResultadosProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
   const markersRef = useRef<Map<number, L.Marker>>(new Map())
@@ -169,8 +170,8 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
   // Filtrar propiedades con GPS válido
   const propsConGPS = propiedades.filter(p => p.latitud && p.longitud)
 
-  // IDs del Top 13 (las primeras 13 propiedades ordenadas por MOAT score)
-  const top13Ids = new Set(propiedades.slice(0, TOP_13_COUNT).map(p => p.id))
+  // IDs de las propiedades destacadas (según cantidad_resultados del usuario)
+  const topDestacadasIds = new Set(propiedades.slice(0, cantidadDestacadas).map(p => p.id))
   const totalConGPS = propsConGPS.length
 
   // Mapa de propId -> rankingIndex (0, 1, 2 para Top 3, null para el resto)
@@ -192,7 +193,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
     // Paso 1: Filtro por conjunto base (Top 13 vs Todas)
     if (conjuntoBase === 'top13') {
       // Solo mostrar si está en el Top 13
-      if (!top13Ids.has(prop.id)) return false
+      if (!topDestacadasIds.has(prop.id)) return false
     }
 
     // Paso 2: Filtro por categoría MOAT
@@ -214,7 +215,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
 
   // Calcular cuántas hay en el conjunto base (para mostrar en UI)
   const totalConjuntoBase = conjuntoBase === 'top13'
-    ? propsConGPS.filter(p => top13Ids.has(p.id)).length
+    ? propsConGPS.filter(p => topDestacadasIds.has(p.id)).length
     : totalConGPS
 
   // Calcular rango de precios de elegidos para leyenda dinámica
@@ -257,8 +258,8 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
 
   const hayFiltrosActivos = filtrosCategorias.size > 0 || filtroPrecio !== 'cualquiera'
 
-  // Contar Top 13 con GPS para mostrar en el toggle
-  const top13ConGPS = propsConGPS.filter(p => top13Ids.has(p.id)).length
+  // Contar propiedades destacadas con GPS para mostrar en el toggle
+  const destacadasConGPS = propsConGPS.filter(p => topDestacadasIds.has(p.id)).length
 
   // Funciones de navegación de fotos
   const nextPhoto = () => {
@@ -493,7 +494,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
                   : 'bg-white text-gray-600'
               }`}
             >
-              Top {top13ConGPS}
+              Top {destacadasConGPS}
             </button>
             <button
               onClick={() => setConjuntoBase('todas')}

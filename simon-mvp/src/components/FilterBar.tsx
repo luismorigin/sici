@@ -141,9 +141,9 @@ export default function FilterBar({ onFiltrosChange, className = '' }: FilterBar
 
     // Pasar params nivel 2 que vengan de la URL (para no perderlos en flujo de edición)
     const nivel2Params = [
-      'innegociables', 'deseables', 'quienes_viven', 'mascotas', 'tamano_perro',
-      'tiempo_buscando', 'estado_emocional', 'quien_decide', 'pareja_alineados',
-      'ubicacion_vs_metros', 'calidad_vs_precio'
+      'innegociables', 'deseables', 'quienes_viven', 'mascotas',
+      'quien_decide', 'pareja_alineados',
+      'ubicacion_vs_metros', 'calidad_vs_precio', 'cantidad_resultados'
     ]
     nivel2Params.forEach(key => {
       const value = router.query[key]

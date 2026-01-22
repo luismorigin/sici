@@ -803,10 +803,8 @@ export default function ResultadosPage() {
     deseables,
     quienes_viven,
     mascotas,
-    tamano_perro,
-    tiempo_buscando,
-    estado_emocional,
     quien_decide,
+    cantidad_resultados,
     pareja_alineados,
     ubicacion_vs_metros,
     calidad_vs_precio,
@@ -859,12 +857,6 @@ export default function ResultadosPage() {
         // Contexto fiduciario para alertas
         innegociables: innegociablesArray,
         contexto: {
-          estado_emocional: estado_emocional as string || undefined,
-          meses_buscando: tiempo_buscando === 'mas_1_ano' ? 18
-            : tiempo_buscando === '6_12_meses' ? 9
-            : tiempo_buscando === '3_6_meses' ? 5
-            : tiempo_buscando === '1_3_meses' ? 2
-            : undefined,
           mascota: mascotas as string || undefined,
           quienes_viven: quienes_viven as string || undefined,
         }
@@ -875,7 +867,7 @@ export default function ResultadosPage() {
     }
 
     cargar()
-  }, [router.isReady, presupuesto, zonas, dormitorios, estado_entrega, innegociables, tiempo_buscando, estado_emocional, mascotas, quienes_viven])
+  }, [router.isReady, presupuesto, zonas, dormitorios, estado_entrega, innegociables, mascotas, quienes_viven])
 
   // Iniciar edición de un filtro
   const startEditing = (filter: 'presupuesto' | 'dormitorios' | 'zonas' | 'estado_entrega') => {
@@ -1014,9 +1006,7 @@ export default function ResultadosPage() {
     if (deseables) params.set('deseables', deseables as string)
     if (quienes_viven) params.set('quienes_viven', quienes_viven as string)
     if (mascotas) params.set('mascotas', mascotas as string)
-    if (tamano_perro) params.set('tamano_perro', tamano_perro as string)
-    if (tiempo_buscando) params.set('tiempo_buscando', tiempo_buscando as string)
-    if (estado_emocional) params.set('estado_emocional', estado_emocional as string)
+    if (cantidad_resultados) params.set('cantidad_resultados', cantidad_resultados as string)
     if (quien_decide) params.set('quien_decide', quien_decide as string)
     if (pareja_alineados) params.set('pareja_alineados', pareja_alineados as string)
     if (ubicacion_vs_metros) params.set('ubicacion_vs_metros', ubicacion_vs_metros as string)
@@ -1064,8 +1054,12 @@ export default function ResultadosPage() {
   }, [propiedades, datosUsuarioMOAT])
 
   // Separar en TOP 3 y alternativas (ahora ordenados por MOAT score)
+  // cantidad_resultados controla cuántas alternativas mostrar
   const top3 = propiedadesOrdenadas.slice(0, 3)
-  const alternativas = propiedadesOrdenadas.slice(3, 13)
+  const cantidadTotal = cantidad_resultados === '3' ? 3
+    : cantidad_resultados === '5' ? 5
+    : 13 // 'todas' o no definido = máximo 13
+  const alternativas = cantidadTotal <= 3 ? [] : propiedadesOrdenadas.slice(3, cantidadTotal)
 
   // Excluidas del SQL (bloque_2_opciones_excluidas)
   const excluidasFiduciarias = analisisFiduciario?.bloque_2_opciones_excluidas?.opciones || []
@@ -1209,7 +1203,7 @@ ${top3Texto}
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Tu Búsqueda</h2>
             <Link
-              href={`/filtros?presupuesto=${presupuesto || 150000}&dormitorios=${dormitorios || ''}&zonas=${zonas || ''}&estado_entrega=${estado_entrega || ''}&forma_pago=${forma_pago || ''}&innegociables=${innegociables || ''}&deseables=${deseables || ''}&quienes_viven=${quienes_viven || ''}&mascotas=${mascotas || ''}&tamano_perro=${tamano_perro || ''}&tiempo_buscando=${tiempo_buscando || ''}&estado_emocional=${estado_emocional || ''}&quien_decide=${quien_decide || ''}&pareja_alineados=${pareja_alineados || ''}&ubicacion_vs_metros=${ubicacion_vs_metros || ''}&calidad_vs_precio=${calidad_vs_precio || ''}`}
+              href={`/filtros?presupuesto=${presupuesto || 150000}&dormitorios=${dormitorios || ''}&zonas=${zonas || ''}&estado_entrega=${estado_entrega || ''}&forma_pago=${forma_pago || ''}&innegociables=${innegociables || ''}&deseables=${deseables || ''}&quienes_viven=${quienes_viven || ''}&mascotas=${mascotas || ''}&quien_decide=${quien_decide || ''}&pareja_alineados=${pareja_alineados || ''}&ubicacion_vs_metros=${ubicacion_vs_metros || ''}&calidad_vs_precio=${calidad_vs_precio || ''}&cantidad_resultados=${cantidad_resultados || ''}`}
               className="text-xs text-blue-600 hover:underline"
             >
               Editar todo
@@ -3445,6 +3439,7 @@ ${top3Texto}
           maxSelected={MAX_SELECTED}
           onClose={() => setShowMapa(false)}
           onToggleSelected={toggleSelected}
+          cantidadDestacadas={cantidadTotal}
         />
       )}
     </div>
