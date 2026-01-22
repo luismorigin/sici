@@ -25,7 +25,7 @@ interface FormularioVivienda {
   pareja_alineados: 'si' | 'mas_o_menos' | 'no' | null
 
   // Seccion 5: Configuracion de resultados
-  cantidad_resultados: 3 | 5 | 'todas' | null
+  cantidad_resultados: 3 | 5 | 10 | 'todas' | null
 
   // Seccion 3: Que buscas
   innegociables: string[]
@@ -211,10 +211,10 @@ export default function FormularioViviendaPage() {
       hasChanges = true
     }
 
-    if (urlCantidadResultados && ['3', '5', 'todas'].includes(urlCantidadResultados as string)) {
+    if (urlCantidadResultados && ['3', '5', '10', 'todas'].includes(urlCantidadResultados as string)) {
       newForm.cantidad_resultados = urlCantidadResultados === 'todas'
         ? 'todas'
-        : parseInt(urlCantidadResultados as string) as 3 | 5
+        : parseInt(urlCantidadResultados as string) as 3 | 5 | 10
       hasChanges = true
     }
 
@@ -662,34 +662,76 @@ export default function FormularioViviendaPage() {
               </p>
             </div>
 
-            {/* 9. Cantidad de resultados */}
+            {/* 9. Cantidad de resultados - dinámico según count */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 9. ¿Cuántas opciones querés ver?
               </label>
               <p className="text-xs text-gray-500 mb-3">
-                Menos opciones = decisión más fácil. Siempre podés volver a buscar.
+                Encontramos {filtrosNivel1.count} propiedades. Menos opciones = decisión más fácil.
               </p>
               <div className="flex flex-wrap gap-2">
-                {[
-                  { value: 3, label: 'Solo las 3 mejores', desc: 'Foco total' },
-                  { value: 5, label: 'Hasta 5 opciones', desc: 'Balance' },
-                  { value: 'todas', label: 'Mostrame todas', desc: 'Quiero explorar' },
-                ].map(opt => (
+                {/* Siempre mostrar opción de 3 */}
+                <button
+                  onClick={() => setForm(prev => ({ ...prev, cantidad_resultados: 3 }))}
+                  className={`px-4 py-3 rounded-lg border transition-colors flex-1 min-w-[140px] ${
+                    form.cantidad_resultados === 3
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <span className="block font-medium">Las 3 mejores</span>
+                  <span className="block text-xs text-gray-500 mt-1">Decisión enfocada</span>
+                </button>
+
+                {/* Mostrar opción de 5 si hay suficientes */}
+                {filtrosNivel1.count >= 5 && (
                   <button
-                    key={opt.value}
-                    onClick={() => setForm(prev => ({ ...prev, cantidad_resultados: opt.value as 3 | 5 | 'todas' }))}
+                    onClick={() => setForm(prev => ({ ...prev, cantidad_resultados: 5 }))}
                     className={`px-4 py-3 rounded-lg border transition-colors flex-1 min-w-[140px] ${
-                      form.cantidad_resultados === opt.value
+                      form.cantidad_resultados === 5
                         ? 'border-blue-500 bg-blue-50 text-blue-700'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <span className="block font-medium">{opt.label}</span>
-                    <span className="block text-xs text-gray-500 mt-1">{opt.desc}</span>
+                    <span className="block font-medium">Las 5 mejores</span>
+                    <span className="block text-xs text-gray-500 mt-1">Buen balance</span>
                   </button>
-                ))}
+                )}
+
+                {/* Mostrar opción de 10 si hay más de 10 */}
+                {filtrosNivel1.count > 10 && (
+                  <button
+                    onClick={() => setForm(prev => ({ ...prev, cantidad_resultados: 10 }))}
+                    className={`px-4 py-3 rounded-lg border transition-colors flex-1 min-w-[140px] ${
+                      form.cantidad_resultados === 10
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="block font-medium">Top 10</span>
+                    <span className="block text-xs text-gray-500 mt-1">Para comparar</span>
+                  </button>
+                )}
+
+                {/* Siempre mostrar opción de ver todas */}
+                <button
+                  onClick={() => setForm(prev => ({ ...prev, cantidad_resultados: 'todas' }))}
+                  className={`px-4 py-3 rounded-lg border transition-colors flex-1 min-w-[140px] ${
+                    form.cantidad_resultados === 'todas'
+                      ? 'border-amber-500 bg-amber-50 text-amber-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <span className="block font-medium">Ver todas ({filtrosNivel1.count})</span>
+                  <span className="block text-xs text-gray-500 mt-1">Modo exploración</span>
+                </button>
               </div>
+              {form.cantidad_resultados === 'todas' && filtrosNivel1.count > 10 && (
+                <p className="text-xs text-amber-600 mt-2 italic">
+                  💡 Más opciones puede hacer la decisión más difícil, pero vos mandás.
+                </p>
+              )}
             </div>
           </section>
 

@@ -1058,7 +1058,9 @@ export default function ResultadosPage() {
   const top3 = propiedadesOrdenadas.slice(0, 3)
   const cantidadTotal = cantidad_resultados === '3' ? 3
     : cantidad_resultados === '5' ? 5
-    : 13 // 'todas' o no definido = máximo 13
+    : cantidad_resultados === '10' ? 10
+    : cantidad_resultados === 'todas' ? propiedadesOrdenadas.length // Modo exploración: todas
+    : 10 // Default: top 10
   const alternativas = cantidadTotal <= 3 ? [] : propiedadesOrdenadas.slice(3, cantidadTotal)
 
   // Excluidas del SQL (bloque_2_opciones_excluidas)
@@ -3440,6 +3442,7 @@ ${top3Texto}
           onClose={() => setShowMapa(false)}
           onToggleSelected={toggleSelected}
           cantidadDestacadas={cantidadTotal}
+          modoExploracion={cantidad_resultados === 'todas'}
         />
       )}
     </div>

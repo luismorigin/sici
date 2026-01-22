@@ -36,6 +36,7 @@ interface MapaResultadosProps {
   onClose: () => void
   onToggleSelected: (id: number) => void
   cantidadDestacadas?: number // Cuántas propiedades destacar (default 13)
+  modoExploracion?: boolean // Si true, el usuario eligió "Ver todas"
 }
 
 // Rangos de precio predefinidos
@@ -92,7 +93,8 @@ function getCategoriaMOAT(diferencia_pct: number | null, categoria: string | nul
 
 // Crear pin tipo pill con precio
 // rankingIndex: 0, 1, 2 para Top 3, null para el resto
-function crearPinConPrecio(precio: number, diferencia_pct: number | null, categoria: string | null, isSelected: boolean, rankingIndex: number | null = null): L.DivIcon {
+// isDestacada: true si está dentro de la cantidad elegida por el usuario
+function crearPinConPrecio(precio: number, diferencia_pct: number | null, categoria: string | null, isSelected: boolean, rankingIndex: number | null = null, isDestacada: boolean = true): L.DivIcon {
   const { bg } = getColorMOAT(diferencia_pct, categoria)
   const precioTexto = formatPrecioCompacto(precio)
   const isTop3 = rankingIndex !== null && rankingIndex < TOP_3_COUNT
@@ -131,7 +133,22 @@ function crearPinConPrecio(precio: number, diferencia_pct: number | null, catego
     })
   }
 
-  // Pin normal (alternativas y resto)
+  // Pin sutil para no destacadas (modo exploración)
+  if (!isDestacada) {
+    const html = `
+      <div class="pin-pill pin-subtle">
+        <span class="pin-precio">${precioTexto}</span>
+      </div>
+    `
+    return L.divIcon({
+      html,
+      className: 'custom-pin-container',
+      iconSize: [60, 26],
+      iconAnchor: [30, 26]
+    })
+  }
+
+  // Pin normal (alternativas dentro de destacadas)
   const html = `
     <div class="pin-pill" style="background-color: ${bg};">
       <span class="pin-precio">${precioTexto}</span>
@@ -145,7 +162,7 @@ function crearPinConPrecio(precio: number, diferencia_pct: number | null, catego
   })
 }
 
-export default function MapaResultados({ propiedades, selectedIds, maxSelected, onClose, onToggleSelected, cantidadDestacadas = 13 }: MapaResultadosProps) {
+export default function MapaResultados({ propiedades, selectedIds, maxSelected, onClose, onToggleSelected, cantidadDestacadas = 13, modoExploracion = false }: MapaResultadosProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
   const markersRef = useRef<Map<number, L.Marker>>(new Map())
@@ -157,7 +174,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
   const [showLimitToast, setShowLimitToast] = useState(false)
 
   // Estados para filtros
-  const [conjuntoBase, setConjuntoBase] = useState<ConjuntoBase>('top13') // Por defecto Top 13
+  const [conjuntoBase, setConjuntoBase] = useState<ConjuntoBase>(modoExploracion ? 'todas' : 'top13')
   const [filtrosCategorias, setFiltrosCategorias] = useState<Set<CategoriaFiltro>>(new Set())
   const [filtroPrecio, setFiltroPrecio] = useState<string>('cualquiera')
   const [showPrecioSheet, setShowPrecioSheet] = useState(false)
@@ -309,7 +326,8 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
       const isSelected = selectedIds.has(propId)
       const shouldShow = filteredIds.has(propId)
       const ranking = getRanking(propId)
-      const icon = crearPinConPrecio(prop.precio_usd, prop.diferencia_pct, prop.categoria_precio, isSelected, ranking)
+      const isDestacada = topDestacadasIds.has(propId)
+      const icon = crearPinConPrecio(prop.precio_usd, prop.diferencia_pct, prop.categoria_precio, isSelected, ranking, isDestacada)
       marker.setIcon(icon)
 
       if (isSelected) {
@@ -405,7 +423,8 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
     propsConGPS.forEach(prop => {
       const isSelected = selectedIds.has(prop.id)
       const ranking = getRanking(prop.id)
-      const icon = crearPinConPrecio(prop.precio_usd, prop.diferencia_pct, prop.categoria_precio, isSelected, ranking)
+      const isDestacada = topDestacadasIds.has(prop.id)
+      const icon = crearPinConPrecio(prop.precio_usd, prop.diferencia_pct, prop.categoria_precio, isSelected, ranking, isDestacada)
 
       const marker = L.marker([prop.latitud!, prop.longitud!], { icon })
         .on('click', () => {
@@ -484,29 +503,37 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
 
         {/* Chips de filtro - scroll horizontal */}
         <div className="px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
-          {/* Toggle Conjunto Base: Top 13 / Todas */}
-          <div className="flex-shrink-0 flex rounded-full border border-gray-300 overflow-hidden">
-            <button
-              onClick={() => setConjuntoBase('top13')}
-              className={`px-3 py-2 text-sm font-medium transition-all ${
-                conjuntoBase === 'top13'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white text-gray-600'
-              }`}
-            >
-              Top {destacadasConGPS}
-            </button>
-            <button
-              onClick={() => setConjuntoBase('todas')}
-              className={`px-3 py-2 text-sm font-medium transition-all ${
-                conjuntoBase === 'todas'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white text-gray-600'
-              }`}
-            >
-              Todas {totalConGPS}
-            </button>
-          </div>
+          {/* Toggle Conjunto Base: Top X / Todas - oculto si modoExploracion */}
+          {!modoExploracion && (
+            <div className="flex-shrink-0 flex rounded-full border border-gray-300 overflow-hidden">
+              <button
+                onClick={() => setConjuntoBase('top13')}
+                className={`px-3 py-2 text-sm font-medium transition-all ${
+                  conjuntoBase === 'top13'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-white text-gray-600'
+                }`}
+              >
+                Top {destacadasConGPS}
+              </button>
+              <button
+                onClick={() => setConjuntoBase('todas')}
+                className={`px-3 py-2 text-sm font-medium transition-all ${
+                  conjuntoBase === 'todas'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-white text-gray-600'
+                }`}
+              >
+                Todas {totalConGPS}
+              </button>
+            </div>
+          )}
+          {/* Indicador modo exploración */}
+          {modoExploracion && (
+            <div className="flex-shrink-0 px-3 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
+              🔍 Explorando {totalConGPS} propiedades
+            </div>
+          )}
 
           {/* Separador visual */}
           <div className="flex-shrink-0 w-px bg-gray-300 my-1"></div>
@@ -944,6 +971,13 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
         :global(.pin-top3) {
           border: 2px solid rgba(255,255,255,0.9);
           box-shadow: 0 2px 10px rgba(0,0,0,0.35), 0 0 0 2px rgba(255,215,0,0.4);
+        }
+        :global(.pin-subtle) {
+          background: #9ca3af !important;
+          opacity: 0.7;
+          font-size: 10px;
+          padding: 4px 8px;
+          border: 1px solid rgba(255,255,255,0.5);
         }
         :global(.pin-ranking) {
           font-size: 14px;
