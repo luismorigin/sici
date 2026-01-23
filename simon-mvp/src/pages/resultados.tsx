@@ -26,6 +26,8 @@ import {
 } from '@/config/estimados-equipamiento'
 import PremiumModal from '@/components/landing/PremiumModal'
 import InternalHeader from '@/components/InternalHeader'
+import ContactarBrokerModal from '@/components/ContactarBrokerModal'
+import FeedbackPremiumModal from '@/components/FeedbackPremiumModal'
 import dynamic from 'next/dynamic'
 
 // Cargar mapa dinámicamente para evitar SSR issues con Leaflet
@@ -551,6 +553,16 @@ export default function ResultadosPage() {
   const [premiumSubmitted, setPremiumSubmitted] = useState(false)
   const [premiumLoading, setPremiumLoading] = useState(false)
   const [generandoInforme, setGenerandoInforme] = useState(false)
+
+  // Estado para feedback modal beta y datos del lead
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const [leadData, setLeadData] = useState<{
+    leadId: number
+    codigoRef: string
+    nombre: string
+    whatsapp: string
+  } | null>(null)
+  const [propsParaInformeTemp, setPropsParaInformeTemp] = useState<UnidadReal[] | undefined>(undefined)
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({})
 
@@ -658,14 +670,38 @@ export default function ResultadosPage() {
     setOrdenPaso(1)
   }
 
-  // Continuar al modal premium después de ordenar
+  // Continuar al feedback modal después de ordenar (flujo unificado)
   const continuarAPremium = () => {
     setShowOrdenarModal(false)
-    setShowPremiumModal(true)
+    // Usar las propiedades ordenadas por el usuario
+    const propsOrdenadas = getOrderedSelectedProperties()
+    setPropsParaInformeTemp(propsOrdenadas)
+    setShowFeedbackModal(true)
+  }
+
+  // Abrir feedback modal para beta testers (antes de ver informe)
+  const solicitarInformePremium = (propsParaInforme?: UnidadReal[]) => {
+    setPropsParaInformeTemp(propsParaInforme)
+    setShowFeedbackModal(true)
+  }
+
+  // Callback cuando el feedback se completa exitosamente
+  const handleFeedbackSuccess = (newLeadId: number, newCodigoRef: string, nombre: string, whatsapp: string) => {
+    // Guardar datos del lead para uso posterior
+    const newLeadData = {
+      leadId: newLeadId,
+      codigoRef: newCodigoRef,
+      nombre,
+      whatsapp
+    }
+    setLeadData(newLeadData)
+    setShowFeedbackModal(false)
+    // Generar informe con los datos del lead
+    verInforme(propsParaInformeTemp, newLeadData)
   }
 
   // Función para ver informe (abre en nueva pestaña)
-  const verInforme = async (propsParaInforme?: UnidadReal[]) => {
+  const verInforme = async (propsParaInforme?: UnidadReal[], leadDataParam?: { leadId: number; codigoRef: string; nombre: string; whatsapp: string }) => {
     // Usar props pasadas, o seleccionadas, o las primeras 3 como ejemplo
     const elegidas = propsParaInforme || getOrderedSelectedProperties()
     const elegidasFinales = elegidas.length > 0 ? elegidas : propiedadesOrdenadas.slice(0, 3)
@@ -709,7 +745,11 @@ export default function ResultadosPage() {
         // Nuevos campos para informe premium
         estacionamientos: p.estacionamientos,
         baulera: p.baulera,
-        equipamiento_detectado: p.equipamiento_detectado || []
+        equipamiento_detectado: p.equipamiento_detectado || [],
+        // Datos del asesor para contacto
+        asesor_nombre: p.asesor_nombre,
+        asesor_wsp: p.asesor_wsp,
+        asesor_inmobiliaria: p.asesor_inmobiliaria
       }))
 
       const datosUsuario = {
@@ -742,7 +782,12 @@ export default function ResultadosPage() {
       const response = await fetch('/api/informe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ propiedades: propiedadesData, datosUsuario, analisis: analisisData })
+        body: JSON.stringify({
+          propiedades: propiedadesData,
+          datosUsuario,
+          analisis: analisisData,
+          leadData: leadDataParam || leadData || undefined
+        })
       })
 
       if (!response.ok) {
@@ -787,6 +832,142 @@ export default function ResultadosPage() {
   }
   const [impactoMOAT, setImpactoMOAT] = useState<ImpactoMOAT | null>(null)
   const [calculandoImpacto, setCalculandoImpacto] = useState(false)
+
+  // Estado para modal de contactar broker
+  const [showContactarBrokerModal, setShowContactarBrokerModal] = useState(false)
+  const [contactarBrokerData, setContactarBrokerData] = useState<{
+    propiedadId: number
+    posicionTop3: number
+    proyectoNombre: string
+    precioUsd: number
+    estadoConstruccion: string
+    diasEnMercado: number | null
+    brokerNombre: string
+    brokerWhatsapp: string
+    brokerInmobiliaria: string
+    tieneParqueo: boolean
+    tieneBaulera: boolean
+    petFriendlyConfirmado: boolean
+    // Nuevos campos del lead (beta feedback)
+    leadId?: number | null
+    codigoRef?: string
+    usuarioNombre?: string
+    usuarioWhatsapp?: string
+  } | null>(null)
+
+  // Función para contactar broker directamente (cuando ya tenemos leadData)
+  // Estado para el modal de WhatsApp listo
+  const [whatsappReady, setWhatsappReady] = useState<{
+    url: string
+    codigoRef: string
+    brokerNombre: string
+    proyectoNombre: string
+  } | null>(null)
+
+  const contactarBrokerDirecto = async (data: typeof contactarBrokerData) => {
+    if (!data || !data.leadId || !data.usuarioNombre || !data.usuarioWhatsapp) {
+      // Sin leadData, mostrar el modal para capturar datos
+      setContactarBrokerData(data)
+      setShowContactarBrokerModal(true)
+      return
+    }
+
+    // Obtener valores desde router.query
+    const { necesita_parqueo: np, necesita_baulera: nb, mascotas: m, innegociables: inn } = router.query
+
+    try {
+      const response = await fetch('/api/contactar-broker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: data.leadId,
+          usuarioNombre: data.usuarioNombre,
+          usuarioWhatsapp: data.usuarioWhatsapp,
+          propiedadId: data.propiedadId,
+          posicionTop3: data.posicionTop3,
+          proyectoNombre: data.proyectoNombre,
+          precioUsd: data.precioUsd,
+          estadoConstruccion: data.estadoConstruccion,
+          diasEnMercado: data.diasEnMercado,
+          brokerNombre: data.brokerNombre,
+          brokerWhatsapp: data.brokerWhatsapp,
+          brokerInmobiliaria: data.brokerInmobiliaria,
+          necesitaParqueo: np !== 'false',
+          necesitaBaulera: nb === 'true',
+          tieneMascotas: m === 'si' || m === 'true',
+          innegociables: inn ? (inn as string).split(',').filter(Boolean) : [],
+          tieneParqueo: data.tieneParqueo,
+          tieneBaulera: data.tieneBaulera,
+          petFriendlyConfirmado: data.petFriendlyConfirmado
+        })
+      })
+
+      const result = await response.json()
+      if (result.success && result.whatsappUrl) {
+        // Mostrar modal con botón de WhatsApp (evita bloqueo de popup)
+        setWhatsappReady({
+          url: result.whatsappUrl,
+          codigoRef: result.codigoRef,
+          brokerNombre: data.brokerNombre,
+          proyectoNombre: data.proyectoNombre
+        })
+      } else {
+        console.error('Error contactar-broker:', result.error)
+        setContactarBrokerData(data)
+        setShowContactarBrokerModal(true)
+      }
+    } catch (error) {
+      console.error('Error contactando broker:', error)
+      setContactarBrokerData(data)
+      setShowContactarBrokerModal(true)
+    }
+  }
+
+  // Escuchar localStorage del informe para abrir modal de contacto
+  // (postMessage no funciona con blob URLs, usamos localStorage como puente)
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'CONTACTAR_BROKER' && event.newValue) {
+        try {
+          const parsed = JSON.parse(event.newValue)
+          if (parsed.data) {
+            localStorage.removeItem('CONTACTAR_BROKER')
+            // Si tiene leadData, contactar directamente; si no, mostrar modal
+            contactarBrokerDirecto(parsed.data)
+          }
+        } catch (e) {
+          console.error('Error parsing CONTACTAR_BROKER:', e)
+        }
+      }
+    }
+
+    // También revisar al montar por si ya hay datos (misma pestaña)
+    const checkExisting = () => {
+      const existing = localStorage.getItem('CONTACTAR_BROKER')
+      if (existing) {
+        try {
+          const parsed = JSON.parse(existing)
+          if (parsed.data) {
+            localStorage.removeItem('CONTACTAR_BROKER')
+            // Si tiene leadData, contactar directamente; si no, mostrar modal
+            contactarBrokerDirecto(parsed.data)
+          }
+        } catch (e) {
+          console.error('Error parsing existing CONTACTAR_BROKER:', e)
+        }
+      }
+    }
+
+    // Revisar cada 500ms por si el storage cambió en otra pestaña
+    const interval = setInterval(checkExisting, 500)
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      clearInterval(interval)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const getPhotoIndex = (propId: number) => photoIndexes[propId] || 0
 
@@ -1729,25 +1910,72 @@ ${top3Texto}
           </div>
         ) : (
           <>
+            {/* CTA Informe Premium - PROMINENTE arriba */}
+            <section className="mb-6">
+              <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-5 text-white shadow-lg">
+                <div className="flex items-start gap-4">
+                  <div className="bg-white/20 rounded-full p-3">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-lg mb-1">
+                      Tu Análisis Fiduciario Personalizado
+                    </h3>
+                    <p className="text-purple-100 text-sm mb-3">
+                      Elegí 3 propiedades y te decimos cuál te conviene más, con datos reales de mercado.
+                    </p>
+
+                    {/* Progress bar */}
+                    <div className="bg-white/20 rounded-full h-2 mb-2">
+                      <div
+                        className="bg-white rounded-full h-2 transition-all duration-300"
+                        style={{ width: `${Math.min((selectedProps.size / 3) * 100, 100)}%` }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">
+                        {selectedProps.size === 0 && '❤️ Tocá el corazón en las que te gusten'}
+                        {selectedProps.size === 1 && '❤️ ¡Bien! Elegí 2 más'}
+                        {selectedProps.size === 2 && '❤️ ¡Una más y listo!'}
+                        {selectedProps.size >= 3 && '✓ ¡Listo para tu análisis!'}
+                      </span>
+                      <span className="font-bold text-lg">{selectedProps.size}/3</span>
+                    </div>
+
+                    {selectedProps.size >= 3 && (
+                      <button
+                        onClick={iniciarOrdenar}
+                        className="mt-3 w-full py-2.5 bg-white text-purple-700 font-semibold rounded-lg hover:bg-purple-50 transition-colors"
+                      >
+                        Ver mi Análisis Premium →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+
             {/* TOP 3 */}
             <section className="mb-8">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-4">
                 <span className="text-2xl">🏆</span>
-                <h2 className="text-xl font-bold text-gray-900">TUS 3 MEJORES OPCIONES</h2>
+                <h2 className="text-xl font-bold text-gray-900">TUS MEJORES OPCIONES</h2>
               </div>
-              {/* Hint para selección premium */}
-              {selectedProps.size === 0 && (
-                <p className="text-sm text-gray-500 mb-4 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                  </svg>
-                  Tocá el corazón en 3 propiedades para un análisis comparativo premium
-                </p>
-              )}
 
               <div className="space-y-4">
                 {top3.map((prop, idx) => (
-                  <div key={prop.id} id={`propiedad-${prop.id}`} className="bg-white rounded-xl shadow-lg overflow-hidden">
+                  <div
+                    key={prop.id}
+                    id={`propiedad-${prop.id}`}
+                    className={`bg-white rounded-xl overflow-hidden transition-all duration-300 ${
+                      isSelected(prop.id)
+                        ? 'ring-2 ring-red-400 shadow-[0_0_20px_rgba(239,68,68,0.3)]'
+                        : 'shadow-lg'
+                    }`}
+                  >
                     {/* Layout vertical - Mobile first */}
                     <div className="flex flex-col">
                       {/* Galería de fotos - Grande en mobile, click para fullscreen */}
@@ -2633,7 +2861,15 @@ ${top3Texto}
                     }
 
                     return (
-                      <div key={prop.id} id={`propiedad-${prop.id}`} className="bg-white rounded-lg shadow p-4">
+                      <div
+                        key={prop.id}
+                        id={`propiedad-${prop.id}`}
+                        className={`bg-white rounded-lg p-4 transition-all duration-300 ${
+                          isSelected(prop.id)
+                            ? 'ring-2 ring-red-400 shadow-[0_0_15px_rgba(239,68,68,0.25)]'
+                            : 'shadow'
+                        }`}
+                      >
                         <div className="flex items-start gap-4">
                           {/* Carrusel de fotos - alternativas (click para fullscreen) */}
                           <div
@@ -3124,29 +3360,6 @@ ${top3Texto}
               </section>
             )}
 
-            {/* Upsell Premium - después de contexto */}
-            <section className="mb-8">
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6">
-                <div className="flex items-start gap-4">
-                  <span className="text-3xl">📋</span>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-gray-900 mb-1">
-                      ¿Necesitás decidir con más datos?
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-3">
-                      El Informe Premium incluye comparador lado a lado, márgenes de negociación estimados, y checklist de preguntas para cada propiedad.
-                    </p>
-                    <button
-                      onClick={() => setShowPremiumModal(true)}
-                      className="px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors text-sm"
-                    >
-                      Ver Informe Premium
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </section>
-
             {/* CTA WhatsApp */}
             <div className="bg-green-600 rounded-xl p-6 text-white text-center">
               <h3 className="text-xl font-bold mb-2">
@@ -3466,9 +3679,12 @@ ${top3Texto}
               )}
             </div>
 
-            {/* Ver ejemplo - abre HTML generado por API */}
+            {/* Ver ejemplo - abre HTML generado por API (con feedback primero para beta) */}
             <button
-              onClick={() => verInforme()}
+              onClick={() => {
+                setShowPremiumModal(false)
+                solicitarInformePremium()
+              }}
               disabled={generandoInforme}
               className="w-full py-3 px-6 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-50"
             >
@@ -3485,7 +3701,7 @@ ${top3Texto}
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
-                  Ver Ejemplo Real
+                  Ver mi Informe
                 </>
               )}
             </button>
@@ -3497,53 +3713,74 @@ ${top3Texto}
         </div>
       )}
 
-      {/* Barra flotante inferior - Propiedades seleccionadas */}
-      {selectedProps.size > 0 && (
+      {/* Barra flotante inferior - SIEMPRE VISIBLE con progreso */}
+      {!loading && (
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-lg safe-area-pb">
           <div className="max-w-4xl mx-auto px-4 py-3">
             <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  {getSelectedProperties().slice(0, 3).map((prop, i) => (
-                    <div
-                      key={prop.id}
-                      className="w-10 h-10 rounded-full border-2 border-white bg-gray-200 overflow-hidden"
-                      style={{ zIndex: 3 - i }}
-                    >
-                      {prop.fotos_urls && prop.fotos_urls[0] ? (
-                        <img src={prop.fotos_urls[0]} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">📷</div>
-                      )}
+              {/* Lado izquierdo - Progreso */}
+              <div className="flex items-center gap-3 flex-1">
+                {selectedProps.size > 0 ? (
+                  <>
+                    {/* Thumbnails de propiedades seleccionadas */}
+                    <div className="flex -space-x-2">
+                      {getSelectedProperties().slice(0, 3).map((prop, i) => (
+                        <div
+                          key={prop.id}
+                          className="w-10 h-10 rounded-full border-2 border-white bg-gray-200 overflow-hidden"
+                          style={{ zIndex: 3 - i }}
+                        >
+                          {prop.fotos_urls && prop.fotos_urls[0] ? (
+                            <img src={prop.fotos_urls[0]} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">📷</div>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  {selectedProps.size > 3 && (
-                    <div className="w-10 h-10 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs text-gray-600">
-                      +{selectedProps.size - 3}
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {selectedProps.size}/3 seleccionadas
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {selectedProps.size < 3 ? `Elegí ${3 - selectedProps.size} más` : '✓ Listo para análisis'}
+                      </p>
                     </div>
-                  )}
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900 text-sm">
-                    {selectedProps.size} {selectedProps.size === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {selectedProps.size < MAX_SELECTED ? `Elegí ${MAX_SELECTED - selectedProps.size} más para comparar` : 'Listas para análisis premium'}
-                  </p>
-                </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Estado vacío - incentivo */}
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <span className="text-xl">❤️</span>
+                      <div>
+                        <p className="font-medium text-sm">Elegí 3 propiedades</p>
+                        <p className="text-xs text-gray-500">para tu análisis fiduciario gratis</p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
+
+              {/* Lado derecho - Acción */}
               <div className="flex items-center gap-2">
+                {selectedProps.size > 0 && (
+                  <button
+                    onClick={() => setSelectedProps(new Set())}
+                    className="text-sm text-gray-400 hover:text-gray-600 px-2"
+                  >
+                    ✕
+                  </button>
+                )}
                 <button
-                  onClick={() => setSelectedProps(new Set())}
-                  className="text-sm text-gray-500 hover:text-gray-700 px-2"
+                  onClick={selectedProps.size >= 3 ? iniciarOrdenar : undefined}
+                  disabled={selectedProps.size < 3}
+                  className={`font-semibold px-4 py-2 rounded-lg text-sm transition-colors ${
+                    selectedProps.size >= 3
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
                 >
-                  Limpiar
-                </button>
-                <button
-                  onClick={iniciarOrdenar}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
-                >
-                  Comparar {selectedProps.size}
+                  {selectedProps.size >= 3 ? 'Ver Análisis →' : `${selectedProps.size}/3`}
                 </button>
               </div>
             </div>
@@ -3721,6 +3958,90 @@ ${top3Texto}
           onToggleSelected={toggleSelected}
           cantidadDestacadas={cantidadTotal}
           modoExploracion={cantidad_resultados === 'todas'}
+        />
+      )}
+
+      {/* Modal WhatsApp Listo (después de registrar contacto) */}
+      {whatsappReady && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 text-center">
+            <div className="text-5xl mb-4">✅</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Mensaje listo
+            </h3>
+            <p className="text-gray-600 mb-1">
+              Para <span className="font-medium">{whatsappReady.brokerNombre}</span>
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              {whatsappReady.proyectoNombre}
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-xs text-blue-600">Tu codigo de referencia</p>
+              <p className="text-xl font-bold text-blue-700">#{whatsappReady.codigoRef}</p>
+            </div>
+            <a
+              href={whatsappReady.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setWhatsappReady(null)}
+              className="block w-full py-3 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl transition-colors mb-3"
+            >
+              Abrir WhatsApp
+            </a>
+            <button
+              onClick={() => setWhatsappReady(null)}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Feedback Beta (antes de ver informe premium) */}
+      <FeedbackPremiumModal
+        isOpen={showFeedbackModal}
+        onClose={() => {
+          setShowFeedbackModal(false)
+          setPropsParaInformeTemp(undefined)
+        }}
+        onSuccess={handleFeedbackSuccess}
+        formularioRaw={{
+          presupuesto: presupuesto ? parseInt(presupuesto as string) : 150000,
+          dormitorios: dormitorios ? parseInt(dormitorios as string) : null,
+          zonas: zonas ? (zonas as string).split(',').filter(Boolean) : [],
+          estado_entrega: estado_entrega as string,
+          innegociables: innegociables ? (innegociables as string).split(',').filter(Boolean) : [],
+          necesita_parqueo: usuarioNecesitaParqueo,
+          necesita_baulera: usuarioNecesitaBaulera,
+          mascotas: mascotas === 'si' || mascotas === 'true'
+        }}
+      />
+
+      {/* Modal Contactar Broker desde Informe Premium */}
+      {showContactarBrokerModal && contactarBrokerData && (
+        <ContactarBrokerModal
+          isOpen={showContactarBrokerModal}
+          onClose={() => {
+            setShowContactarBrokerModal(false)
+            setContactarBrokerData(null)
+          }}
+          propiedadId={contactarBrokerData.propiedadId}
+          posicionTop3={contactarBrokerData.posicionTop3}
+          proyectoNombre={contactarBrokerData.proyectoNombre}
+          precioUsd={contactarBrokerData.precioUsd}
+          estadoConstruccion={contactarBrokerData.estadoConstruccion}
+          diasEnMercado={contactarBrokerData.diasEnMercado}
+          brokerNombre={contactarBrokerData.brokerNombre}
+          brokerWhatsapp={contactarBrokerData.brokerWhatsapp}
+          brokerInmobiliaria={contactarBrokerData.brokerInmobiliaria}
+          necesitaParqueo={usuarioNecesitaParqueo}
+          necesitaBaulera={usuarioNecesitaBaulera}
+          tieneMascotas={mascotas === 'si' || mascotas === 'true'}
+          innegociables={innegociables ? (innegociables as string).split(',').filter(Boolean) : []}
+          tieneParqueo={contactarBrokerData.tieneParqueo}
+          tieneBaulera={contactarBrokerData.tieneBaulera}
+          petFriendlyConfirmado={contactarBrokerData.petFriendlyConfirmado}
         />
       )}
     </div>

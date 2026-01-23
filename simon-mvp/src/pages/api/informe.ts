@@ -39,6 +39,10 @@ interface Propiedad {
   estacionamientos?: number | null
   baulera?: boolean | null
   equipamiento_detectado?: string[]
+  // Datos del asesor para contacto
+  asesor_nombre?: string | null
+  asesor_wsp?: string | null
+  asesor_inmobiliaria?: string | null
 }
 
 interface DatosUsuario {
@@ -64,10 +68,18 @@ interface Analisis {
   total_analizadas: number
 }
 
+interface LeadData {
+  leadId: number
+  codigoRef: string
+  nombre: string
+  whatsapp: string
+}
+
 interface InformeRequest {
   propiedades: Propiedad[]
   datosUsuario: DatosUsuario
   analisis: Analisis
+  leadData?: LeadData  // Datos del lead (beta tester con feedback)
 }
 
 // Helpers
@@ -201,7 +213,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { propiedades, datosUsuario, analisis } = req.body as InformeRequest
+    const { propiedades, datosUsuario, analisis, leadData } = req.body as InformeRequest
 
     if (!propiedades || propiedades.length === 0) {
       return res.status(400).json({ error: 'No hay propiedades para generar el informe' })
@@ -547,6 +559,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .section { break-inside: avoid; }
             .comparable-card { break-inside: avoid; }
         }
+
+        /* Toast notification */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            pointer-events: none;
+        }
+        .toast {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            animation: toastSlideIn 0.4s ease-out, toastFadeOut 0.4s ease-in 3.5s forwards;
+            pointer-events: auto;
+        }
+        .toast-icon {
+            font-size: 1.5rem;
+        }
+        @keyframes toastSlideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toastFadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
     `
 
     // Generar HTML
@@ -557,6 +604,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Informe Fiduciario Premium - ${fav.proyecto} | Simón</title>
     <style>${css}</style>
+    <script>
+        function showToast(message, icon) {
+            var container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'toast-container';
+                document.body.appendChild(container);
+            }
+            var toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = '<span class="toast-icon">' + icon + '</span><span>' + message + '</span>';
+            container.appendChild(toast);
+            setTimeout(function() { toast.remove(); }, 4000);
+        }
+    </script>
 </head>
 <body>
     <!-- Hero -->
@@ -1392,6 +1455,226 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         </div>
     </div>
 
+    <!-- Section 9: Contactar Broker -->
+    <div class="container">
+        <div class="section" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+            <div class="section-header" style="border-bottom-color: rgba(255,255,255,0.2);">
+                <div class="section-number" style="background: rgba(255,255,255,0.2); color: white;">9</div>
+                <div class="section-title" style="color: white;">¿Listo para dar el siguiente paso?</div>
+            </div>
+            <div class="section-content">
+                <p style="text-align: center; opacity: 0.9; margin-bottom: 30px; font-size: 1.1rem;">
+                    Contactá directamente al asesor de las propiedades que te interesan
+                </p>
+
+                <div style="display: grid; gap: 20px; ${comp1 || comp2 ? 'grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));' : ''}">
+                    ${/* Favorita (#1) */ ''}
+                    <div style="background: rgba(255,255,255,0.15); border-radius: 16px; padding: 20px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                            <span style="background: #fbbf24; color: #78350f; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">⭐ #1 FAVORITA</span>
+                        </div>
+                        <h4 style="font-size: 1.1rem; margin-bottom: 5px;">${fav.proyecto}</h4>
+                        <p style="opacity: 0.8; font-size: 0.9rem; margin-bottom: 15px;">$${fmt(fav.precio_usd)} · ${Math.round(fav.area_m2)}m²</p>
+                        ${fav.asesor_wsp ? `
+                            <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px;">
+                                👔 ${fav.asesor_nombre || 'Asesor'}${fav.asesor_inmobiliaria ? ` · ${fav.asesor_inmobiliaria}` : ''}
+                            </p>
+                            <button
+                                onclick="(async function(){
+                                    const btn = event.target;
+                                    btn.disabled = true;
+                                    btn.textContent = 'Preparando...';
+                                    try {
+                                        const res = await fetch('/api/contactar-broker', {
+                                            method: 'POST',
+                                            headers: {'Content-Type': 'application/json'},
+                                            body: JSON.stringify({
+                                                leadId: ${leadData?.leadId || 'null'},
+                                                usuarioNombre: '${(leadData?.nombre || '').replace(/'/g, "\\'")}',
+                                                usuarioWhatsapp: '${leadData?.whatsapp || ''}',
+                                                propiedadId: ${fav.id},
+                                                posicionTop3: 1,
+                                                proyectoNombre: '${fav.proyecto.replace(/'/g, "\\'")}',
+                                                precioUsd: ${fav.precio_usd},
+                                                estadoConstruccion: '${fav.estado_construccion}',
+                                                diasEnMercado: ${fav.dias_en_mercado || 'null'},
+                                                brokerNombre: '${(fav.asesor_nombre || 'Asesor').replace(/'/g, "\\'")}',
+                                                brokerWhatsapp: '${fav.asesor_wsp || ''}',
+                                                brokerInmobiliaria: '${(fav.asesor_inmobiliaria || '').replace(/'/g, "\\'")}',
+                                                necesitaParqueo: ${necesitaParqueo},
+                                                necesitaBaulera: ${necesitaBaulera},
+                                                tieneMascotas: ${datosUsuario.mascotas === true},
+                                                innegociables: ${JSON.stringify(datosUsuario.innegociables || [])},
+                                                tieneParqueo: ${(fav.estacionamientos || 0) > 0},
+                                                tieneBaulera: ${fav.baulera === true},
+                                                petFriendlyConfirmado: ${(fav.amenities_confirmados || []).some((a: string) => a.toLowerCase().includes('pet') || a.toLowerCase().includes('mascota'))}
+                                            })
+                                        });
+                                        const data = await res.json();
+                                        if(data.success && data.whatsappUrl) {
+                                            window.open(data.whatsappUrl, '_blank');
+                                            showToast('WhatsApp abierto en nueva pestaña', '✅');
+                                            btn.textContent = '✓ Abierto';
+                                        } else {
+                                            throw new Error(data.error || 'Error');
+                                        }
+                                    } catch(e) {
+                                        btn.textContent = 'Error - Reintentar';
+                                        btn.disabled = false;
+                                        console.error(e);
+                                    }
+                                })()"
+                                style="width: 100%; padding: 12px; background: white; color: #059669; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem;"
+                            >
+                                📱 CONTACTAR
+                            </button>
+                        ` : `
+                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center;">📞 Contacto no disponible</p>
+                        `}
+                    </div>
+
+                    ${comp1 ? `
+                    ${/* Segunda opción (#2) */ ''}
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 16px; padding: 20px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                            <span style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">🥈 #2</span>
+                        </div>
+                        <h4 style="font-size: 1.1rem; margin-bottom: 5px;">${comp1.proyecto}</h4>
+                        <p style="opacity: 0.8; font-size: 0.9rem; margin-bottom: 15px;">$${fmt(comp1.precio_usd)} · ${Math.round(comp1.area_m2)}m²</p>
+                        ${comp1.asesor_wsp ? `
+                            <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px;">
+                                👔 ${comp1.asesor_nombre || 'Asesor'}${comp1.asesor_inmobiliaria ? ` · ${comp1.asesor_inmobiliaria}` : ''}
+                            </p>
+                            <button
+                                onclick="(async function(){
+                                    const btn = event.target;
+                                    btn.disabled = true;
+                                    btn.textContent = 'Preparando...';
+                                    try {
+                                        const res = await fetch('/api/contactar-broker', {
+                                            method: 'POST',
+                                            headers: {'Content-Type': 'application/json'},
+                                            body: JSON.stringify({
+                                                leadId: ${leadData?.leadId || 'null'},
+                                                usuarioNombre: '${(leadData?.nombre || '').replace(/'/g, "\\'")}',
+                                                usuarioWhatsapp: '${leadData?.whatsapp || ''}',
+                                                propiedadId: ${comp1.id},
+                                                posicionTop3: 2,
+                                                proyectoNombre: '${comp1.proyecto.replace(/'/g, "\\'")}',
+                                                precioUsd: ${comp1.precio_usd},
+                                                estadoConstruccion: '${comp1.estado_construccion}',
+                                                diasEnMercado: ${comp1.dias_en_mercado || 'null'},
+                                                brokerNombre: '${(comp1.asesor_nombre || 'Asesor').replace(/'/g, "\\'")}',
+                                                brokerWhatsapp: '${comp1.asesor_wsp || ''}',
+                                                brokerInmobiliaria: '${(comp1.asesor_inmobiliaria || '').replace(/'/g, "\\'")}',
+                                                necesitaParqueo: ${necesitaParqueo},
+                                                necesitaBaulera: ${necesitaBaulera},
+                                                tieneMascotas: ${datosUsuario.mascotas === true},
+                                                innegociables: ${JSON.stringify(datosUsuario.innegociables || [])},
+                                                tieneParqueo: ${(comp1.estacionamientos || 0) > 0},
+                                                tieneBaulera: ${comp1.baulera === true},
+                                                petFriendlyConfirmado: ${(comp1.amenities_confirmados || []).some((a: string) => a.toLowerCase().includes('pet') || a.toLowerCase().includes('mascota'))}
+                                            })
+                                        });
+                                        const data = await res.json();
+                                        if(data.success && data.whatsappUrl) {
+                                            window.open(data.whatsappUrl, '_blank');
+                                            showToast('WhatsApp abierto en nueva pestaña', '✅');
+                                            btn.textContent = '✓ Abierto';
+                                        } else {
+                                            throw new Error(data.error || 'Error');
+                                        }
+                                    } catch(e) {
+                                        btn.textContent = 'Error - Reintentar';
+                                        btn.disabled = false;
+                                        console.error(e);
+                                    }
+                                })()"
+                                style="width: 100%; padding: 12px; background: rgba(255,255,255,0.9); color: #059669; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem;"
+                            >
+                                📱 CONTACTAR
+                            </button>
+                        ` : `
+                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center;">📞 Contacto no disponible</p>
+                        `}
+                    </div>
+                    ` : ''}
+
+                    ${comp2 ? `
+                    ${/* Tercera opción (#3) */ ''}
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 16px; padding: 20px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                            <span style="background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">🥉 #3</span>
+                        </div>
+                        <h4 style="font-size: 1.1rem; margin-bottom: 5px;">${comp2.proyecto}</h4>
+                        <p style="opacity: 0.8; font-size: 0.9rem; margin-bottom: 15px;">$${fmt(comp2.precio_usd)} · ${Math.round(comp2.area_m2)}m²</p>
+                        ${comp2.asesor_wsp ? `
+                            <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px;">
+                                👔 ${comp2.asesor_nombre || 'Asesor'}${comp2.asesor_inmobiliaria ? ` · ${comp2.asesor_inmobiliaria}` : ''}
+                            </p>
+                            <button
+                                onclick="(async function(){
+                                    const btn = event.target;
+                                    btn.disabled = true;
+                                    btn.textContent = 'Preparando...';
+                                    try {
+                                        const res = await fetch('/api/contactar-broker', {
+                                            method: 'POST',
+                                            headers: {'Content-Type': 'application/json'},
+                                            body: JSON.stringify({
+                                                leadId: ${leadData?.leadId || 'null'},
+                                                usuarioNombre: '${(leadData?.nombre || '').replace(/'/g, "\\'")}',
+                                                usuarioWhatsapp: '${leadData?.whatsapp || ''}',
+                                                propiedadId: ${comp2.id},
+                                                posicionTop3: 3,
+                                                proyectoNombre: '${comp2.proyecto.replace(/'/g, "\\'")}',
+                                                precioUsd: ${comp2.precio_usd},
+                                                estadoConstruccion: '${comp2.estado_construccion}',
+                                                diasEnMercado: ${comp2.dias_en_mercado || 'null'},
+                                                brokerNombre: '${(comp2.asesor_nombre || 'Asesor').replace(/'/g, "\\'")}',
+                                                brokerWhatsapp: '${comp2.asesor_wsp || ''}',
+                                                brokerInmobiliaria: '${(comp2.asesor_inmobiliaria || '').replace(/'/g, "\\'")}',
+                                                necesitaParqueo: ${necesitaParqueo},
+                                                necesitaBaulera: ${necesitaBaulera},
+                                                tieneMascotas: ${datosUsuario.mascotas === true},
+                                                innegociables: ${JSON.stringify(datosUsuario.innegociables || [])},
+                                                tieneParqueo: ${(comp2.estacionamientos || 0) > 0},
+                                                tieneBaulera: ${comp2.baulera === true},
+                                                petFriendlyConfirmado: ${(comp2.amenities_confirmados || []).some((a: string) => a.toLowerCase().includes('pet') || a.toLowerCase().includes('mascota'))}
+                                            })
+                                        });
+                                        const data = await res.json();
+                                        if(data.success && data.whatsappUrl) {
+                                            window.open(data.whatsappUrl, '_blank');
+                                            showToast('WhatsApp abierto en nueva pestaña', '✅');
+                                            btn.textContent = '✓ Abierto';
+                                        } else {
+                                            throw new Error(data.error || 'Error');
+                                        }
+                                    } catch(e) {
+                                        btn.textContent = 'Error - Reintentar';
+                                        btn.disabled = false;
+                                        console.error(e);
+                                    }
+                                })()"
+                                style="width: 100%; padding: 12px; background: rgba(255,255,255,0.9); color: #059669; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem;"
+                            >
+                                📱 CONTACTAR
+                            </button>
+                        ` : `
+                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center;">📞 Contacto no disponible</p>
+                        `}
+                    </div>
+                    ` : ''}
+                </div>
+
+                <p style="text-align: center; opacity: 0.7; margin-top: 25px; font-size: 0.85rem;">
+                    💡 Al contactar se generará un código de referencia único para tu seguimiento
+                </p>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
@@ -1412,6 +1695,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             </div>
         </div>
     </footer>
+
 </body>
 </html>`
 
