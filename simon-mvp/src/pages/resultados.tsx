@@ -720,6 +720,38 @@ export default function ResultadosPage() {
       ...propiedadesOrdenadas.filter(p => !idsElegidas.has(p.id)).slice(0, 10)
     ]
 
+    // MOBILE FIX: Abrir ventana ANTES del fetch (sync con el click del usuario)
+    // Los navegadores móviles bloquean window.open dentro de callbacks async
+    const newWindow = window.open('', '_blank')
+    if (!newWindow) {
+      alert('Por favor habilita popups en tu navegador para ver el informe')
+      return
+    }
+    // Mostrar loading mientras se genera
+    newWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Generando Informe...</title>
+        <style>
+          body { font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+          .loader { text-align: center; color: white; }
+          .spinner { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+          @keyframes spin { to { transform: rotate(360deg); } }
+        </style>
+      </head>
+      <body>
+        <div class="loader">
+          <div class="spinner"></div>
+          <h2>Generando tu informe...</h2>
+          <p>Analizando propiedades seleccionadas</p>
+        </div>
+      </body>
+      </html>
+    `)
+
     setGenerandoInforme(true)
     try {
       // Mapear TODAS las propiedades al formato del API (elegidas primero + mercado)
@@ -797,12 +829,26 @@ export default function ResultadosPage() {
       }
 
       const html = await response.text()
-      const blob = new Blob([html], { type: 'text/html' })
-      const url = URL.createObjectURL(blob)
-      window.open(url, '_blank')
+      // Escribir el HTML en la ventana ya abierta
+      newWindow.document.open()
+      newWindow.document.write(html)
+      newWindow.document.close()
     } catch (error) {
       console.error('Error abriendo informe:', error)
-      alert(`Error generando el informe: ${(error as Error).message}`)
+      // Mostrar error en la ventana abierta
+      newWindow.document.open()
+      newWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head><title>Error</title></head>
+        <body style="font-family: system-ui; padding: 40px; text-align: center;">
+          <h2>Error generando el informe</h2>
+          <p>${(error as Error).message}</p>
+          <button onclick="window.close()" style="padding: 10px 20px; margin-top: 20px; cursor: pointer;">Cerrar</button>
+        </body>
+        </html>
+      `)
+      newWindow.document.close()
     } finally {
       setGenerandoInforme(false)
     }
@@ -3916,11 +3962,11 @@ ${top3Texto}
         </div>
       )}
 
-      {/* Botón flotante Mapa */}
+      {/* Botón flotante Mapa - bottom-24 para no sobrelapar barra de seleccionadas */}
       {propiedadesOrdenadas.some(p => p.latitud && p.longitud) && !showMapa && !lightboxOpen && !showPremiumExample && (
         <button
           onClick={() => setShowMapa(true)}
-          className="fixed bottom-6 right-6 z-40 bg-white shadow-lg rounded-full px-4 py-3 flex items-center gap-2 border border-gray-200 hover:shadow-xl transition-shadow"
+          className="fixed bottom-24 right-4 z-40 bg-white shadow-lg rounded-full px-4 py-3 flex items-center gap-2 border border-gray-200 hover:shadow-xl transition-shadow"
         >
           <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
