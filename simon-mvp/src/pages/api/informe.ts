@@ -1659,7 +1659,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                                   dormitorios: fav.dormitorios,
                                   broker: fav.asesor_nombre || 'Asesor',
                                   brokerWsp: fav.asesor_wsp || '',
-                                  inmobiliaria: fav.asesor_inmobiliaria,
+                                  inmobiliaria: fav.asesor_inmobiliaria || undefined,
                                   codigoRef: leadData?.codigoRef,
                                   preguntas: generarPreguntasPersonalizadas(fav, datosUsuario, necesitaParqueo, necesitaBaulera)
                                 })}"
@@ -1697,7 +1697,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                                   dormitorios: comp1.dormitorios,
                                   broker: comp1.asesor_nombre || 'Asesor',
                                   brokerWsp: comp1.asesor_wsp || '',
-                                  inmobiliaria: comp1.asesor_inmobiliaria,
+                                  inmobiliaria: comp1.asesor_inmobiliaria || undefined,
                                   codigoRef: leadData?.codigoRef,
                                   preguntas: generarPreguntasPersonalizadas(comp1, datosUsuario, necesitaParqueo, necesitaBaulera)
                                 })}"
@@ -1736,7 +1736,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                                   dormitorios: comp2.dormitorios,
                                   broker: comp2.asesor_nombre || 'Asesor',
                                   brokerWsp: comp2.asesor_wsp || '',
-                                  inmobiliaria: comp2.asesor_inmobiliaria,
+                                  inmobiliaria: comp2.asesor_inmobiliaria || undefined,
                                   codigoRef: leadData?.codigoRef,
                                   preguntas: generarPreguntasPersonalizadas(comp2, datosUsuario, necesitaParqueo, necesitaBaulera)
                                 })}"
