@@ -252,6 +252,14 @@ const zonaDisplay = (zona: string): string => {
   return mapeo[zona?.toLowerCase()] || zona || 'Sin zona'
 }
 
+// Formatear dormitorios: 0 = Monoambiente, 1 = 1 Dormitorio, 2+ = X Dormitorios
+const formatDormitorios = (dorms: number | null | undefined, capitalize = true): string => {
+  const num = Number(dorms) || 0
+  if (num === 0) return capitalize ? 'Monoambiente' : 'monoambiente'
+  if (num === 1) return capitalize ? '1 Dormitorio' : '1 dormitorio'
+  return `${num} ${capitalize ? 'Dormitorios' : 'dormitorios'}`
+}
+
 // Costos estimados por dormitorios
 const getCostosEstimados = (dormitorios: number) => {
   const costos: Record<number, { expensasMin: number; expensasMax: number; parqueoMin: number; parqueoMax: number; bauleraMin: number; bauleraMax: number }> = {
@@ -799,7 +807,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             <div class="container">
                 <div class="logo">Simón<span>.</span></div>
                 <h1 class="hero-title">Tu Favorita: ${fav.proyecto.toUpperCase()}</h1>
-                <p class="hero-subtitle">Informe Fiduciario Premium | ${zonaDisplay(fav.zona)}, ${Math.round(fav.area_m2)} m², ${fav.dormitorios} Dormitorios</p>
+                <p class="hero-subtitle">Informe Fiduciario Premium | ${zonaDisplay(fav.zona)}, ${Math.round(fav.area_m2)} m², ${formatDormitorios(fav.dormitorios)}</p>
                 <div class="hero-badges">
                     <span class="hero-badge heart">❤️ Tu #1</span>
                     <span class="hero-badge ${favCat.badgeClass}">${favCat.texto}</span>
@@ -821,7 +829,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     <div class="label">Presupuesto</div>
                 </div>
                 <div class="search-item">
-                    <div class="value">${datosUsuario.dormitorios || 'Todos'}</div>
+                    <div class="value">${datosUsuario.dormitorios !== null && datosUsuario.dormitorios !== undefined ? formatDormitorios(datosUsuario.dormitorios) : 'Todos'}</div>
                     <div class="label">Dormitorios</div>
                 </div>
                 <div class="search-item">
@@ -913,7 +921,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         <ul class="spec-list">
                             <li><span class="label">Proyecto</span><span class="value">${fav.proyecto}</span></li>
                             <li><span class="label">Superficie</span><span class="value">${Math.round(fav.area_m2)} m²</span></li>
-                            <li><span class="label">Dormitorios</span><span class="value">${fav.dormitorios}</span></li>
+                            <li><span class="label">Dormitorios</span><span class="value">${formatDormitorios(fav.dormitorios)}</span></li>
                             <li><span class="label">Baños</span><span class="value">${fav.banos || '?'}</span></li>
                             <li><span class="label">Zona</span><span class="value">${zonaDisplay(fav.zona)}</span></li>
                             <li><span class="label">Estado</span><span class="value">${fav.estado_construccion === 'preventa' ? 'Preventa' : 'Entrega Inmediata'}</span></li>
@@ -932,7 +940,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             <div class="price-card secondary">
                                 <div class="label-top">Promedio Zona</div>
                                 <div class="price-main">$${fmt(precioM2Promedio)}</div>
-                                <div class="price-detail">por m² (${fav.dormitorios} dorms)</div>
+                                <div class="price-detail">por m² (${formatDormitorios(fav.dormitorios, false)})</div>
                             </div>
                             <div class="price-card warning">
                                 <div class="label-top">Días Publicado</div>
@@ -1014,7 +1022,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 <div class="section-title">Posición en el Mercado</div>
             </div>
             <div class="section-content">
-                <p>Comparamos ${fav.proyecto} contra el mercado de <strong>${datosUsuario.dormitorios ? datosUsuario.dormitorios + ' dormitorios' : 'departamentos'} en ${datosUsuario.zonas?.length ? datosUsuario.zonas.map(z => zonaDisplay(z)).join(', ') : 'todas las zonas'}</strong>.</p>
+                <p>Comparamos ${fav.proyecto} contra el mercado de <strong>${datosUsuario.dormitorios !== null && datosUsuario.dormitorios !== undefined ? formatDormitorios(datosUsuario.dormitorios, false) : 'departamentos'} en ${datosUsuario.zonas?.length ? datosUsuario.zonas.map(z => zonaDisplay(z)).join(', ') : 'todas las zonas'}</strong>.</p>
                 <div class="market-position">
                     <h4>Métricas Clave</h4>
                     <div class="position-grid">
@@ -1211,7 +1219,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 <div class="section-title">Tus 3 Elegidas + Mejores Alternativas</div>
             </div>
             <div class="section-content">
-                <p>Todas las opciones de <strong>${datosUsuario.dormitorios ? datosUsuario.dormitorios + ' dormitorios' : 'departamentos'} en ${datosUsuario.zonas?.length ? datosUsuario.zonas.map(z => zonaDisplay(z)).join(', ') : 'todas las zonas'} hasta $${fmt(datosUsuario.presupuesto)}</strong>.</p>
+                <p>Todas las opciones de <strong>${datosUsuario.dormitorios !== null && datosUsuario.dormitorios !== undefined ? formatDormitorios(datosUsuario.dormitorios, false) : 'departamentos'} en ${datosUsuario.zonas?.length ? datosUsuario.zonas.map(z => zonaDisplay(z)).join(', ') : 'todas las zonas'} hasta $${fmt(datosUsuario.presupuesto)}</strong>.</p>
                 <table class="summary-table">
                     <thead>
                         <tr>

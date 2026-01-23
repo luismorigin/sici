@@ -58,7 +58,9 @@ export default async function handler(
     const nombreUsuario = nombre || 'Usuario'
     const proyectoNombre = proyecto || 'la propiedad'
     const precioStr = precio ? `$${Number(precio).toLocaleString('en-US')}` : ''
-    const dormsStr = dormitorios ? `${dormitorios} dorms` : ''
+    // Formatear dormitorios: 0 = monoambiente, 1 = 1 dormitorio, 2+ = X dormitorios
+    const dormsNum = Number(dormitorios) || 0
+    const dormsStr = dormsNum === 0 ? 'monoambiente' : dormsNum === 1 ? '1 dormitorio' : `${dormsNum} dormitorios`
     const ref = codigoRef || `SIM-${Date.now().toString(36).toUpperCase()}`
     const brokerNombre = typeof broker === 'string' ? broker.split(' ')[0] : 'Asesor' // Solo primer nombre
 
