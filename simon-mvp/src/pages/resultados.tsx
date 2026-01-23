@@ -720,38 +720,6 @@ export default function ResultadosPage() {
       ...propiedadesOrdenadas.filter(p => !idsElegidas.has(p.id)).slice(0, 10)
     ]
 
-    // MOBILE FIX: Abrir ventana ANTES del fetch (sync con el click del usuario)
-    // Los navegadores móviles bloquean window.open dentro de callbacks async
-    const newWindow = window.open('', '_blank')
-    if (!newWindow) {
-      alert('Por favor habilita popups en tu navegador para ver el informe')
-      return
-    }
-    // Mostrar loading mientras se genera
-    newWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Generando Informe...</title>
-        <style>
-          body { font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-          .loader { text-align: center; color: white; }
-          .spinner { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
-          @keyframes spin { to { transform: rotate(360deg); } }
-        </style>
-      </head>
-      <body>
-        <div class="loader">
-          <div class="spinner"></div>
-          <h2>Generando tu informe...</h2>
-          <p>Analizando propiedades seleccionadas</p>
-        </div>
-      </body>
-      </html>
-    `)
-
     setGenerandoInforme(true)
     try {
       // Mapear TODAS las propiedades al formato del API (elegidas primero + mercado)
@@ -829,26 +797,12 @@ export default function ResultadosPage() {
       }
 
       const html = await response.text()
-      // Escribir el HTML en la ventana ya abierta
-      newWindow.document.open()
-      newWindow.document.write(html)
-      newWindow.document.close()
+      // Guardar HTML y mostrar modal fullscreen (funciona en mobile sin popups)
+      setInformeHtml(html)
+      setShowInformeModal(true)
     } catch (error) {
-      console.error('Error abriendo informe:', error)
-      // Mostrar error en la ventana abierta
-      newWindow.document.open()
-      newWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head><title>Error</title></head>
-        <body style="font-family: system-ui; padding: 40px; text-align: center;">
-          <h2>Error generando el informe</h2>
-          <p>${(error as Error).message}</p>
-          <button onclick="window.close()" style="padding: 10px 20px; margin-top: 20px; cursor: pointer;">Cerrar</button>
-        </body>
-        </html>
-      `)
-      newWindow.document.close()
+      console.error('Error generando informe:', error)
+      alert(`Error generando el informe: ${(error as Error).message}`)
     } finally {
       setGenerandoInforme(false)
     }
@@ -909,6 +863,10 @@ export default function ResultadosPage() {
     brokerNombre: string
     proyectoNombre: string
   } | null>(null)
+
+  // Estado para mostrar informe en modal fullscreen (evita bloqueo de popups en mobile)
+  const [informeHtml, setInformeHtml] = useState<string | null>(null)
+  const [showInformeModal, setShowInformeModal] = useState(false)
 
   const contactarBrokerDirecto = async (data: typeof contactarBrokerData) => {
     if (!data || !data.leadId || !data.usuarioNombre || !data.usuarioWhatsapp) {
@@ -4089,6 +4047,55 @@ ${top3Texto}
           tieneBaulera={contactarBrokerData.tieneBaulera}
           petFriendlyConfirmado={contactarBrokerData.petFriendlyConfirmado}
         />
+      )}
+
+      {/* Modal Fullscreen para Informe Premium (evita bloqueo de popups en mobile) */}
+      {showInformeModal && informeHtml && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+          {/* Header del modal */}
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg">
+            <div className="flex items-center gap-3">
+              <span className="text-xl font-bold">Simon<span className="text-yellow-300">.</span></span>
+              <span className="text-sm opacity-90">Tu Informe Premium</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Botón Descargar PDF - usa la función del informe */}
+              <button
+                onClick={() => {
+                  // Trigger download desde el iframe
+                  const iframe = document.getElementById('informe-iframe') as HTMLIFrameElement
+                  if (iframe?.contentWindow) {
+                    const btn = iframe.contentDocument?.getElementById('btn-descargar-pdf')
+                    if (btn) btn.click()
+                  }
+                }}
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                PDF
+              </button>
+              {/* Botón Cerrar */}
+              <button
+                onClick={() => {
+                  setShowInformeModal(false)
+                  setInformeHtml(null)
+                }}
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+          {/* Iframe con el informe */}
+          <iframe
+            id="informe-iframe"
+            srcDoc={informeHtml}
+            className="flex-1 w-full border-0"
+            title="Informe Premium"
+          />
+        </div>
       )}
     </div>
   )
