@@ -729,6 +729,65 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             setTimeout(function() { toast.remove(); }, 4000);
         }
     </script>
+    <!-- html2canvas + jsPDF para descarga PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        async function descargarPDF() {
+            var btn = document.getElementById('btn-pdf');
+            var originalText = btn.innerHTML;
+            btn.innerHTML = 'Generando PDF...';
+            btn.disabled = true;
+
+            try {
+                // Ocultar botón PDF y botones de contactar durante captura
+                btn.style.display = 'none';
+                var contactBtns = document.querySelectorAll('a[href*="abrir-whatsapp"]');
+                contactBtns.forEach(function(b) { b.style.visibility = 'hidden'; });
+
+                // Capturar todo el body
+                var element = document.body;
+                var canvas = await html2canvas(element, {
+                    scale: 2, // Mayor calidad
+                    useCORS: true, // Para imágenes externas
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    logging: false
+                });
+
+                // Restaurar botones
+                btn.style.display = 'flex';
+                contactBtns.forEach(function(b) { b.style.visibility = 'visible'; });
+
+                // Crear PDF - Una sola página larga (scroll continuo)
+                var { jsPDF } = window.jspdf;
+                var imgData = canvas.toDataURL('image/jpeg', 0.85);
+
+                // Calcular dimensiones - ancho fijo, alto proporcional
+                var pdfWidth = 210; // mm (ancho A4)
+                var imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+                // Crear PDF con tamaño personalizado (una sola página larga)
+                var pdf = new jsPDF('p', 'mm', [pdfWidth, imgHeight]);
+
+                // Agregar imagen completa
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
+
+                // Descargar
+                pdf.save('Informe-Simon-${fav.proyecto.replace(/[^a-zA-Z0-9]/g, '_')}.pdf');
+
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showToast('PDF descargado', '✅');
+            } catch (err) {
+                console.error('Error generando PDF:', err);
+                btn.style.display = 'flex';
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showToast('Error al generar PDF', '❌');
+            }
+        }
+    </script>
 </head>
 <body>
     <!-- Hero -->
@@ -1720,6 +1779,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             </div>
         </div>
     </footer>
+
+    <!-- Botón flotante Descargar PDF -->
+    <button
+        id="btn-pdf"
+        onclick="descargarPDF()"
+        style="
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 1000;
+            transition: transform 0.2s, box-shadow 0.2s;
+        "
+        onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.5)';"
+        onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.4)';"
+    >
+        <span style="font-size: 1.2rem;">📥</span>
+        Descargar PDF
+    </button>
 
 </body>
 </html>`
