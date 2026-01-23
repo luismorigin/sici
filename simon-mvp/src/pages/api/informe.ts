@@ -88,6 +88,110 @@ const fmt = (n: number | null | undefined): string => {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
+// Helper para construir URL de contacto broker (redirect-based, funciona desde blob URLs)
+// Usa URL absoluta porque el informe se abre en blob: URL donde relativas no funcionan
+const buildContactarUrl = (baseHost: string, params: {
+  leadId?: number | null
+  nombre?: string
+  whatsapp?: string
+  propId: number
+  posicion: number
+  proyecto: string
+  precio: number
+  dormitorios: number
+  broker: string
+  brokerWsp: string
+  inmobiliaria?: string
+  codigoRef?: string
+  preguntas?: string[] // Preguntas personalizadas del checklist
+}): string => {
+  const queryParams = new URLSearchParams()
+
+  if (params.leadId) queryParams.set('leadId', String(params.leadId))
+  if (params.nombre) queryParams.set('nombre', params.nombre)
+  if (params.whatsapp) queryParams.set('whatsapp', params.whatsapp)
+  queryParams.set('propId', String(params.propId))
+  queryParams.set('posicion', String(params.posicion))
+  queryParams.set('proyecto', params.proyecto)
+  queryParams.set('precio', String(params.precio))
+  queryParams.set('dormitorios', String(params.dormitorios))
+  queryParams.set('broker', params.broker)
+  queryParams.set('brokerWsp', params.brokerWsp)
+  if (params.inmobiliaria) queryParams.set('inmobiliaria', params.inmobiliaria)
+  if (params.codigoRef) queryParams.set('codigoRef', params.codigoRef)
+  if (params.preguntas && params.preguntas.length > 0) {
+    queryParams.set('preguntas', JSON.stringify(params.preguntas))
+  }
+
+  return `${baseHost}/api/abrir-whatsapp?${queryParams.toString()}`
+}
+
+// Helper para generar preguntas personalizadas basadas en preferencias del usuario y datos de la propiedad
+// Estas preguntas deben coincidir con el checklist del informe (Sección 6)
+const generarPreguntasPersonalizadas = (
+  prop: Propiedad,
+  datosUsuario: DatosUsuario,
+  necesitaParqueo: boolean,
+  necesitaBaulera: boolean
+): string[] => {
+  const preguntas: string[] = []
+
+  // === SOBRE EL PRECIO ===
+  // Parqueo
+  const tieneParqueo = (prop.estacionamientos || 0) > 0
+  if (necesitaParqueo && !tieneParqueo) {
+    preguntas.push('¿El parqueo está incluido en el precio?')
+  }
+
+  // Baulera
+  if (necesitaBaulera && !prop.baulera) {
+    preguntas.push('¿La baulera está incluida en el precio?')
+  }
+
+  // === SOBRE LA PREVENTA ===
+  if (prop.estado_construccion === 'preventa') {
+    preguntas.push('¿Cuál es la fecha de entrega?')
+    preguntas.push('¿Cuál es el plan de pagos?')
+  }
+
+  // === SOBRE LA PROPIEDAD ===
+  // Piso (siempre útil saber)
+  preguntas.push('¿En qué piso está el departamento?')
+
+  // Expensas (siempre importante)
+  preguntas.push('¿Cuánto es el pago de expensas mensuales?')
+
+  // Pet-friendly (si tiene mascotas o está en innegociables)
+  const petFriendlyConfirmado = (prop.amenities_confirmados || []).some((a: string) =>
+    a.toLowerCase().includes('pet') || a.toLowerCase().includes('mascota')
+  )
+  const tieneMascotas = datosUsuario.mascotas === true
+  const petEnInnegociables = (datosUsuario.innegociables || []).some(a =>
+    a.toLowerCase().includes('pet') || a.toLowerCase().includes('mascota')
+  )
+  if ((tieneMascotas || petEnInnegociables) && !petFriendlyConfirmado) {
+    preguntas.push('¿El edificio acepta mascotas?')
+  }
+
+  // === INNEGOCIABLES DEL USUARIO ===
+  const innegociables = datosUsuario.innegociables || []
+  if (innegociables.length > 0) {
+    // Filtrar pet-friendly (ya lo preguntamos arriba si aplica)
+    const amenitiesParaPreguntar = innegociables.filter(a =>
+      !a.toLowerCase().includes('pet') && !a.toLowerCase().includes('mascota')
+    )
+    if (amenitiesParaPreguntar.length > 0) {
+      // Formatear nombres bonitos
+      const nombresFormateados = amenitiesParaPreguntar.map(a =>
+        a.replace(/_/g, ' ').toLowerCase()
+      )
+      preguntas.push(`¿Tiene ${nombresFormateados.join(' y ')} funcionando?`)
+    }
+  }
+
+  return preguntas
+}
+
 const getCategoria = (p: Propiedad): { clase: string; texto: string; pct: number; badgeClass: string } => {
   // Usar posicion_mercado pre-calculado de BD (compara vs promedio de SU zona específica)
   const diff = p.posicion_mercado?.diferencia_pct || 0
@@ -213,6 +317,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    // Obtener host para URLs absolutas (necesario porque el informe abre en blob: URL)
+    const protocol = req.headers['x-forwarded-proto'] || 'http'
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000'
+    const baseHost = `${protocol}://${host}`
+
     const { propiedades, datosUsuario, analisis, leadData } = req.body as InformeRequest
 
     if (!propiedades || propiedades.length === 0) {
@@ -1479,55 +1588,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px;">
                                 👔 ${fav.asesor_nombre || 'Asesor'}${fav.asesor_inmobiliaria ? ` · ${fav.asesor_inmobiliaria}` : ''}
                             </p>
-                            <button
-                                onclick="(async function(){
-                                    const btn = event.target;
-                                    btn.disabled = true;
-                                    btn.textContent = 'Preparando...';
-                                    try {
-                                        const res = await fetch('/api/contactar-broker', {
-                                            method: 'POST',
-                                            headers: {'Content-Type': 'application/json'},
-                                            body: JSON.stringify({
-                                                leadId: ${leadData?.leadId || 'null'},
-                                                usuarioNombre: '${(leadData?.nombre || '').replace(/'/g, "\\'")}',
-                                                usuarioWhatsapp: '${leadData?.whatsapp || ''}',
-                                                propiedadId: ${fav.id},
-                                                posicionTop3: 1,
-                                                proyectoNombre: '${fav.proyecto.replace(/'/g, "\\'")}',
-                                                precioUsd: ${fav.precio_usd},
-                                                estadoConstruccion: '${fav.estado_construccion}',
-                                                diasEnMercado: ${fav.dias_en_mercado || 'null'},
-                                                brokerNombre: '${(fav.asesor_nombre || 'Asesor').replace(/'/g, "\\'")}',
-                                                brokerWhatsapp: '${fav.asesor_wsp || ''}',
-                                                brokerInmobiliaria: '${(fav.asesor_inmobiliaria || '').replace(/'/g, "\\'")}',
-                                                necesitaParqueo: ${necesitaParqueo},
-                                                necesitaBaulera: ${necesitaBaulera},
-                                                tieneMascotas: ${datosUsuario.mascotas === true},
-                                                innegociables: ${JSON.stringify(datosUsuario.innegociables || [])},
-                                                tieneParqueo: ${(fav.estacionamientos || 0) > 0},
-                                                tieneBaulera: ${fav.baulera === true},
-                                                petFriendlyConfirmado: ${(fav.amenities_confirmados || []).some((a: string) => a.toLowerCase().includes('pet') || a.toLowerCase().includes('mascota'))}
-                                            })
-                                        });
-                                        const data = await res.json();
-                                        if(data.success && data.whatsappUrl) {
-                                            window.open(data.whatsappUrl, '_blank');
-                                            showToast('WhatsApp abierto en nueva pestaña', '✅');
-                                            btn.textContent = '✓ Abierto';
-                                        } else {
-                                            throw new Error(data.error || 'Error');
-                                        }
-                                    } catch(e) {
-                                        btn.textContent = 'Error - Reintentar';
-                                        btn.disabled = false;
-                                        console.error(e);
-                                    }
-                                })()"
-                                style="width: 100%; padding: 12px; background: white; color: #059669; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem;"
+                            <a
+                                href="${buildContactarUrl(baseHost, {
+                                  leadId: leadData?.leadId,
+                                  nombre: leadData?.nombre,
+                                  whatsapp: leadData?.whatsapp,
+                                  propId: fav.id,
+                                  posicion: 1,
+                                  proyecto: fav.proyecto,
+                                  precio: fav.precio_usd,
+                                  dormitorios: fav.dormitorios,
+                                  broker: fav.asesor_nombre || 'Asesor',
+                                  brokerWsp: fav.asesor_wsp || '',
+                                  inmobiliaria: fav.asesor_inmobiliaria,
+                                  codigoRef: leadData?.codigoRef,
+                                  preguntas: generarPreguntasPersonalizadas(fav, datosUsuario, necesitaParqueo, necesitaBaulera)
+                                })}"
+                                target="_blank"
+                                style="display: block; width: 100%; padding: 12px; background: white; color: #059669; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
                             >
                                 📱 CONTACTAR
-                            </button>
+                            </a>
                         ` : `
                             <p style="opacity: 0.7; font-size: 0.85rem; text-align: center;">📞 Contacto no disponible</p>
                         `}
@@ -1545,55 +1626,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px;">
                                 👔 ${comp1.asesor_nombre || 'Asesor'}${comp1.asesor_inmobiliaria ? ` · ${comp1.asesor_inmobiliaria}` : ''}
                             </p>
-                            <button
-                                onclick="(async function(){
-                                    const btn = event.target;
-                                    btn.disabled = true;
-                                    btn.textContent = 'Preparando...';
-                                    try {
-                                        const res = await fetch('/api/contactar-broker', {
-                                            method: 'POST',
-                                            headers: {'Content-Type': 'application/json'},
-                                            body: JSON.stringify({
-                                                leadId: ${leadData?.leadId || 'null'},
-                                                usuarioNombre: '${(leadData?.nombre || '').replace(/'/g, "\\'")}',
-                                                usuarioWhatsapp: '${leadData?.whatsapp || ''}',
-                                                propiedadId: ${comp1.id},
-                                                posicionTop3: 2,
-                                                proyectoNombre: '${comp1.proyecto.replace(/'/g, "\\'")}',
-                                                precioUsd: ${comp1.precio_usd},
-                                                estadoConstruccion: '${comp1.estado_construccion}',
-                                                diasEnMercado: ${comp1.dias_en_mercado || 'null'},
-                                                brokerNombre: '${(comp1.asesor_nombre || 'Asesor').replace(/'/g, "\\'")}',
-                                                brokerWhatsapp: '${comp1.asesor_wsp || ''}',
-                                                brokerInmobiliaria: '${(comp1.asesor_inmobiliaria || '').replace(/'/g, "\\'")}',
-                                                necesitaParqueo: ${necesitaParqueo},
-                                                necesitaBaulera: ${necesitaBaulera},
-                                                tieneMascotas: ${datosUsuario.mascotas === true},
-                                                innegociables: ${JSON.stringify(datosUsuario.innegociables || [])},
-                                                tieneParqueo: ${(comp1.estacionamientos || 0) > 0},
-                                                tieneBaulera: ${comp1.baulera === true},
-                                                petFriendlyConfirmado: ${(comp1.amenities_confirmados || []).some((a: string) => a.toLowerCase().includes('pet') || a.toLowerCase().includes('mascota'))}
-                                            })
-                                        });
-                                        const data = await res.json();
-                                        if(data.success && data.whatsappUrl) {
-                                            window.open(data.whatsappUrl, '_blank');
-                                            showToast('WhatsApp abierto en nueva pestaña', '✅');
-                                            btn.textContent = '✓ Abierto';
-                                        } else {
-                                            throw new Error(data.error || 'Error');
-                                        }
-                                    } catch(e) {
-                                        btn.textContent = 'Error - Reintentar';
-                                        btn.disabled = false;
-                                        console.error(e);
-                                    }
-                                })()"
-                                style="width: 100%; padding: 12px; background: rgba(255,255,255,0.9); color: #059669; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem;"
+                            <a
+                                href="${buildContactarUrl(baseHost, {
+                                  leadId: leadData?.leadId,
+                                  nombre: leadData?.nombre,
+                                  whatsapp: leadData?.whatsapp,
+                                  propId: comp1.id,
+                                  posicion: 2,
+                                  proyecto: comp1.proyecto,
+                                  precio: comp1.precio_usd,
+                                  dormitorios: comp1.dormitorios,
+                                  broker: comp1.asesor_nombre || 'Asesor',
+                                  brokerWsp: comp1.asesor_wsp || '',
+                                  inmobiliaria: comp1.asesor_inmobiliaria,
+                                  codigoRef: leadData?.codigoRef,
+                                  preguntas: generarPreguntasPersonalizadas(comp1, datosUsuario, necesitaParqueo, necesitaBaulera)
+                                })}"
+                                target="_blank"
+                                style="display: block; width: 100%; padding: 12px; background: rgba(255,255,255,0.9); color: #059669; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
                             >
                                 📱 CONTACTAR
-                            </button>
+                            </a>
                         ` : `
                             <p style="opacity: 0.7; font-size: 0.85rem; text-align: center;">📞 Contacto no disponible</p>
                         `}
@@ -1612,55 +1665,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px;">
                                 👔 ${comp2.asesor_nombre || 'Asesor'}${comp2.asesor_inmobiliaria ? ` · ${comp2.asesor_inmobiliaria}` : ''}
                             </p>
-                            <button
-                                onclick="(async function(){
-                                    const btn = event.target;
-                                    btn.disabled = true;
-                                    btn.textContent = 'Preparando...';
-                                    try {
-                                        const res = await fetch('/api/contactar-broker', {
-                                            method: 'POST',
-                                            headers: {'Content-Type': 'application/json'},
-                                            body: JSON.stringify({
-                                                leadId: ${leadData?.leadId || 'null'},
-                                                usuarioNombre: '${(leadData?.nombre || '').replace(/'/g, "\\'")}',
-                                                usuarioWhatsapp: '${leadData?.whatsapp || ''}',
-                                                propiedadId: ${comp2.id},
-                                                posicionTop3: 3,
-                                                proyectoNombre: '${comp2.proyecto.replace(/'/g, "\\'")}',
-                                                precioUsd: ${comp2.precio_usd},
-                                                estadoConstruccion: '${comp2.estado_construccion}',
-                                                diasEnMercado: ${comp2.dias_en_mercado || 'null'},
-                                                brokerNombre: '${(comp2.asesor_nombre || 'Asesor').replace(/'/g, "\\'")}',
-                                                brokerWhatsapp: '${comp2.asesor_wsp || ''}',
-                                                brokerInmobiliaria: '${(comp2.asesor_inmobiliaria || '').replace(/'/g, "\\'")}',
-                                                necesitaParqueo: ${necesitaParqueo},
-                                                necesitaBaulera: ${necesitaBaulera},
-                                                tieneMascotas: ${datosUsuario.mascotas === true},
-                                                innegociables: ${JSON.stringify(datosUsuario.innegociables || [])},
-                                                tieneParqueo: ${(comp2.estacionamientos || 0) > 0},
-                                                tieneBaulera: ${comp2.baulera === true},
-                                                petFriendlyConfirmado: ${(comp2.amenities_confirmados || []).some((a: string) => a.toLowerCase().includes('pet') || a.toLowerCase().includes('mascota'))}
-                                            })
-                                        });
-                                        const data = await res.json();
-                                        if(data.success && data.whatsappUrl) {
-                                            window.open(data.whatsappUrl, '_blank');
-                                            showToast('WhatsApp abierto en nueva pestaña', '✅');
-                                            btn.textContent = '✓ Abierto';
-                                        } else {
-                                            throw new Error(data.error || 'Error');
-                                        }
-                                    } catch(e) {
-                                        btn.textContent = 'Error - Reintentar';
-                                        btn.disabled = false;
-                                        console.error(e);
-                                    }
-                                })()"
-                                style="width: 100%; padding: 12px; background: rgba(255,255,255,0.9); color: #059669; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem;"
+                            <a
+                                href="${buildContactarUrl(baseHost, {
+                                  leadId: leadData?.leadId,
+                                  nombre: leadData?.nombre,
+                                  whatsapp: leadData?.whatsapp,
+                                  propId: comp2.id,
+                                  posicion: 3,
+                                  proyecto: comp2.proyecto,
+                                  precio: comp2.precio_usd,
+                                  dormitorios: comp2.dormitorios,
+                                  broker: comp2.asesor_nombre || 'Asesor',
+                                  brokerWsp: comp2.asesor_wsp || '',
+                                  inmobiliaria: comp2.asesor_inmobiliaria,
+                                  codigoRef: leadData?.codigoRef,
+                                  preguntas: generarPreguntasPersonalizadas(comp2, datosUsuario, necesitaParqueo, necesitaBaulera)
+                                })}"
+                                target="_blank"
+                                style="display: block; width: 100%; padding: 12px; background: rgba(255,255,255,0.9); color: #059669; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
                             >
                                 📱 CONTACTAR
-                            </button>
+                            </a>
                         ` : `
                             <p style="opacity: 0.7; font-size: 0.85rem; text-align: center;">📞 Contacto no disponible</p>
                         `}
