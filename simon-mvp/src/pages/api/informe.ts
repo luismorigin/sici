@@ -625,9 +625,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .comparable-conclusion strong { display: block; margin-bottom: 5px; font-size: 0.8rem; opacity: 0.9; }
 
         /* Table */
-        .summary-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.85rem; }
-        .summary-table th { background: var(--primary); color: white; padding: 12px 10px; text-align: left; font-weight: 600; }
-        .summary-table td { padding: 12px 10px; border-bottom: 1px solid var(--gray-200); }
+        /* Table with horizontal scroll for mobile */
+        .table-scroll-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 20px -15px; padding: 0 15px; }
+        .table-scroll-wrapper::-webkit-scrollbar { height: 6px; }
+        .table-scroll-wrapper::-webkit-scrollbar-track { background: var(--gray-100); border-radius: 3px; }
+        .table-scroll-wrapper::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 3px; }
+        .summary-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 600px; }
+        .summary-table th { background: var(--primary); color: white; padding: 12px 10px; text-align: left; font-weight: 600; white-space: nowrap; }
+        .summary-table td { padding: 12px 10px; border-bottom: 1px solid var(--gray-200); white-space: nowrap; }
         .summary-table tr:nth-child(even) { background: var(--gray-50); }
         .summary-table tr.highlighted { background: #fef2f2; }
         .table-heart { color: var(--heart); margin-right: 4px; }
@@ -764,6 +769,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             /* Checklist mobile */
             .checklist-item { padding: 10px; }
             .checklist-item label { font-size: 0.85rem; }
+
+            /* Table scroll hint */
+            .scroll-hint { display: block !important; text-align: center; }
+            .table-scroll-wrapper { margin: 10px -12px; padding: 0 12px; }
+            .summary-table { font-size: 0.75rem; }
+            .summary-table th, .summary-table td { padding: 8px 6px; }
         }
 
         @media print {
@@ -1315,32 +1326,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             </div>
             <div class="section-content">
                 <p>Todas las opciones de <strong>${datosUsuario.dormitorios !== null && datosUsuario.dormitorios !== undefined ? formatDormitorios(datosUsuario.dormitorios, false) : 'departamentos'} en ${datosUsuario.zonas?.length ? datosUsuario.zonas.map(z => zonaDisplay(z)).join(', ') : 'todas las zonas'} hasta $${fmt(datosUsuario.presupuesto)}</strong>.</p>
-                <table class="summary-table">
-                    <thead>
-                        <tr>
-                            <th>Propiedad</th>
-                            <th>Precio</th>
-                            <th>m²</th>
-                            <th>$/m²</th>
-                            <th>Días</th>
-                            <th>vs su zona</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${todas.map((p, i) => {
-                          const cat = getCategoria(p)
-                          return `
-                        <tr ${i < 3 ? 'class="highlighted"' : ''}>
-                            <td>${i < 3 ? `<span class="table-heart">❤️${i+1}</span>` : ''}<strong>${p.proyecto}</strong></td>
-                            <td>$${fmt(p.precio_usd)}</td>
-                            <td>${Math.round(p.area_m2)}</td>
-                            <td>$${fmt(p.precio_m2)}</td>
-                            <td>${p.dias_en_mercado || '?'}</td>
-                            <td><span class="position-badge ${cat.clase}">${cat.texto}</span></td>
-                        </tr>`
-                        }).join('')}
-                    </tbody>
-                </table>
+                <p class="scroll-hint" style="font-size: 0.75rem; color: var(--gray-500); margin-bottom: 8px; display: none;">← Deslizá para ver más →</p>
+                <div class="table-scroll-wrapper">
+                    <table class="summary-table">
+                        <thead>
+                            <tr>
+                                <th>Propiedad</th>
+                                <th>Precio</th>
+                                <th>m²</th>
+                                <th>$/m²</th>
+                                <th>Días</th>
+                                <th>vs su zona</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${todas.map((p, i) => {
+                              const cat = getCategoria(p)
+                              return `
+                            <tr ${i < 3 ? 'class="highlighted"' : ''}>
+                                <td>${i < 3 ? `<span class="table-heart">❤️${i+1}</span>` : ''}<strong>${p.proyecto}</strong></td>
+                                <td>$${fmt(p.precio_usd)}</td>
+                                <td>${Math.round(p.area_m2)}</td>
+                                <td>$${fmt(p.precio_m2)}</td>
+                                <td>${p.dias_en_mercado || '?'}</td>
+                                <td><span class="position-badge ${cat.clase}">${cat.texto}</span></td>
+                            </tr>`
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
                 <div class="alert info" style="margin-top: 20px;">
                     <div class="alert-icon">📊</div>
                     <div class="alert-content">
