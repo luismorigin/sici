@@ -671,6 +671,101 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .footer-meta { text-align: right; font-size: 0.9rem; opacity: 0.8; }
         .confidence-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); padding: 8px 16px; border-radius: 20px; font-weight: 600; margin-top: 10px; }
 
+        /* ========== MOBILE RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            .container { padding: 0 15px; }
+
+            /* Hero mobile */
+            .hero { height: 300px; }
+            .hero-overlay { padding: 40px 15px 20px; }
+            .hero-overlay .logo { font-size: 1.3rem; }
+            .hero-title { font-size: 1.4rem; }
+            .hero-subtitle { font-size: 0.9rem; }
+            .hero-badge { padding: 4px 10px; font-size: 0.75rem; }
+
+            /* Search summary mobile */
+            .search-summary { margin: -20px 10px 20px; padding: 15px; }
+            .search-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .search-item .value { font-size: 1rem; }
+            .search-item .label { font-size: 0.65rem; }
+
+            /* Sections mobile */
+            .section { margin: 15px 10px; }
+            .section-header { padding: 15px; gap: 10px; }
+            .section-number { width: 32px; height: 32px; font-size: 1rem; }
+            .section-title { font-size: 1.1rem; }
+            .section-content { padding: 15px; }
+
+            /* Price cards mobile */
+            .price-cards { grid-template-columns: 1fr; gap: 10px; }
+            .price-card { padding: 15px; }
+            .price-card .price-main { font-size: 1.5rem; }
+
+            /* Amenities mobile */
+            .amenities-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .amenity-item { padding: 10px; gap: 8px; }
+            .amenity-icon { width: 28px; height: 28px; font-size: 0.85rem; }
+            .amenity-details .name { font-size: 0.8rem; }
+
+            /* Photos mobile */
+            .photos-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+            .photos-grid img { height: 80px; }
+
+            /* Comparable cards mobile */
+            .comparable-card { margin-bottom: 15px; }
+            .comparable-header { padding: 12px 15px; }
+            .comparable-header h3 { font-size: 1rem; }
+            .comparable-body { grid-template-columns: 1fr; padding: 15px; gap: 15px; }
+
+            /* Footer mobile */
+            .footer { padding: 25px 0; }
+            .footer-content { flex-direction: column; text-align: center; }
+            .footer-meta { text-align: center; }
+
+            /* Buttons mobile */
+            .btn-contactar { padding: 12px 20px; font-size: 0.9rem; }
+
+            /* Tables mobile */
+            .detail-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .detail-item { padding: 10px; }
+
+            /* Profile grid mobile */
+            .profile-grid { grid-template-columns: 1fr; }
+
+            /* Alert mobile */
+            .alert { padding: 12px; }
+            .alert-content h4 { font-size: 0.85rem; }
+            .alert-content p { font-size: 0.8rem; }
+        }
+
+        @media (max-width: 480px) {
+            .hero { height: 250px; }
+            .hero-title { font-size: 1.2rem; }
+            .hero-badges { gap: 6px; }
+            .hero-badge { padding: 3px 8px; font-size: 0.7rem; }
+
+            .search-grid { grid-template-columns: repeat(2, 1fr); }
+            .search-item { padding: 8px; }
+            .search-item .value { font-size: 0.9rem; }
+
+            .section-title { font-size: 1rem; }
+            .section-content { padding: 12px; }
+
+            .price-card .price-main { font-size: 1.3rem; }
+            .price-card .label-top { font-size: 0.7rem; }
+            .price-card .price-detail { font-size: 0.75rem; }
+
+            .amenities-grid { grid-template-columns: 1fr; }
+
+            .photos-grid { grid-template-columns: repeat(2, 1fr); }
+
+            .btn-contactar { width: 100%; justify-content: center; }
+
+            /* Checklist mobile */
+            .checklist-item { padding: 10px; }
+            .checklist-item label { font-size: 0.85rem; }
+        }
+
         @media print {
             .hero { height: 350px; }
             .section { break-inside: avoid; }

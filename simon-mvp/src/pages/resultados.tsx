@@ -2073,7 +2073,7 @@ ${top3Texto}
                         <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-3 text-sm text-gray-600">
                           <span className="font-semibold text-gray-700">Departamento</span>
                           <span>·</span>
-                          <span>🛏️ {prop.dormitorios}d</span>
+                          <span>🛏️ {formatDorms(prop.dormitorios)}</span>
                           {prop.banos != null && (
                             <>
                               <span>·</span>
@@ -2955,7 +2955,7 @@ ${top3Texto}
                             <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-2 text-xs text-gray-600">
                               <span className="font-semibold text-gray-700">Departamento</span>
                               <span>·</span>
-                              <span>🛏️ {prop.dormitorios}d</span>
+                              <span>🛏️ {formatDorms(prop.dormitorios)}</span>
                               {prop.banos != null && (
                                 <>
                                   <span>·</span>
