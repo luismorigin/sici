@@ -10,11 +10,15 @@ interface FormData {
   desarrollador: string
   zona: string
   direccion: string
+  piso: string
   precio_usd: string
+  tipo_cambio: 'paralelo' | 'oficial'
   area_m2: string
   dormitorios: string
   banos: string
   estado_construccion: 'entrega_inmediata' | 'construccion' | 'preventa' | 'planos'
+  fecha_entrega: string
+  plan_pagos: string
   descripcion: string
   parqueo_incluido: boolean
   cantidad_parqueos: string
@@ -22,6 +26,8 @@ interface FormData {
   expensas_usd: string
   amenidades: string[]
   amenidades_custom: string[]
+  equipamiento: string[]
+  equipamiento_custom: string[]
 }
 
 // Zonas iguales a FilterBar.tsx para consistencia
@@ -46,6 +52,24 @@ const AMENIDADES_OPCIONES = [
   'Área de juegos'
 ]
 
+const EQUIPAMIENTO_OPCIONES = [
+  'Aire acondicionado',
+  'Cocina amoblada',
+  'Closets empotrados',
+  'Calefón/Termotanque',
+  'Cortinas/Blackouts',
+  'Muebles incluidos',
+  'Lavadora',
+  'Secadora',
+  'Refrigerador',
+  'Microondas',
+  'Horno',
+  'Lavavajillas',
+  'Balcón/Terraza',
+  'Jacuzzi privado',
+  'Vista panorámica'
+]
+
 export default function NuevaPropiedad() {
   const router = useRouter()
   const { broker } = useBrokerAuth(true)
@@ -58,21 +82,28 @@ export default function NuevaPropiedad() {
     desarrollador: '',
     zona: '',
     direccion: '',
+    piso: '',
     precio_usd: '',
+    tipo_cambio: 'paralelo',
     area_m2: '',
     dormitorios: '2',
     banos: '2',
     estado_construccion: 'entrega_inmediata',
+    fecha_entrega: '',
+    plan_pagos: '',
     descripcion: '',
     parqueo_incluido: true,
     cantidad_parqueos: '1',
     baulera_incluida: false,
     expensas_usd: '',
     amenidades: [],
-    amenidades_custom: []
+    amenidades_custom: [],
+    equipamiento: [],
+    equipamiento_custom: []
   })
 
   const [nuevoAmenidad, setNuevoAmenidad] = useState('')
+  const [nuevoEquipamiento, setNuevoEquipamiento] = useState('')
 
   const agregarAmenidadCustom = () => {
     if (!nuevoAmenidad.trim()) return
@@ -94,6 +125,26 @@ export default function NuevaPropiedad() {
     }))
   }
 
+  const agregarEquipamientoCustom = () => {
+    if (!nuevoEquipamiento.trim()) return
+    const equip = nuevoEquipamiento.trim()
+    if (formData.equipamiento_custom.includes(equip) || formData.equipamiento.includes(equip)) {
+      return
+    }
+    setFormData(prev => ({
+      ...prev,
+      equipamiento_custom: [...prev.equipamiento_custom, equip]
+    }))
+    setNuevoEquipamiento('')
+  }
+
+  const eliminarEquipamientoCustom = (equip: string) => {
+    setFormData(prev => ({
+      ...prev,
+      equipamiento_custom: prev.equipamiento_custom.filter(e => e !== equip)
+    }))
+  }
+
   const updateField = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
@@ -104,6 +155,15 @@ export default function NuevaPropiedad() {
       amenidades: prev.amenidades.includes(amenidad)
         ? prev.amenidades.filter(a => a !== amenidad)
         : [...prev.amenidades, amenidad]
+    }))
+  }
+
+  const toggleEquipamiento = (equip: string) => {
+    setFormData(prev => ({
+      ...prev,
+      equipamiento: prev.equipamiento.includes(equip)
+        ? prev.equipamiento.filter(e => e !== equip)
+        : [...prev.equipamiento, equip]
     }))
   }
 
@@ -135,11 +195,15 @@ export default function NuevaPropiedad() {
           desarrollador: formData.desarrollador || null,
           zona: convertirZona(formData.zona) || formData.zona,
           direccion: formData.direccion || null,
+          piso: formData.piso ? parseInt(formData.piso) : null,
           precio_usd: parseFloat(formData.precio_usd),
+          tipo_cambio: formData.tipo_cambio,
           area_m2: parseFloat(formData.area_m2),
           dormitorios: parseInt(formData.dormitorios),
           banos: parseFloat(formData.banos),
           estado_construccion: formData.estado_construccion,
+          fecha_entrega: formData.fecha_entrega || null,
+          plan_pagos: formData.plan_pagos || null,
           descripcion: formData.descripcion || null,
           parqueo_incluido: formData.parqueo_incluido,
           cantidad_parqueos: formData.parqueo_incluido ? parseInt(formData.cantidad_parqueos) : 0,
@@ -147,12 +211,20 @@ export default function NuevaPropiedad() {
           expensas_usd: formData.expensas_usd ? parseFloat(formData.expensas_usd) : null,
           amenidades: {
             lista: [...formData.amenidades, ...formData.amenidades_custom],
-            equipamiento: [],
+            equipamiento: [...formData.equipamiento, ...formData.equipamiento_custom],
             estado_amenities: [...formData.amenidades, ...formData.amenidades_custom].reduce((acc, a) => ({
               ...acc,
               [a]: {
                 valor: true,
                 fuente: formData.amenidades_custom.includes(a) ? 'broker_custom' : 'broker',
+                confianza: 'alta'
+              }
+            }), {}),
+            estado_equipamiento: [...formData.equipamiento, ...formData.equipamiento_custom].reduce((acc, e) => ({
+              ...acc,
+              [e]: {
+                valor: true,
+                fuente: formData.equipamiento_custom.includes(e) ? 'broker_custom' : 'broker',
                 confianza: 'alta'
               }
             }), {})
@@ -281,18 +353,54 @@ export default function NuevaPropiedad() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Dirección
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.direccion}
-                    onChange={(e) => updateField('direccion', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                    placeholder="Ej: Av. San Martín 1234"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Dirección
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.direccion}
+                      onChange={(e) => updateField('direccion', e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      placeholder="Ej: Av. San Martín 1234"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Piso
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.piso}
+                      onChange={(e) => updateField('piso', e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      placeholder="Ej: 5"
+                      min="1"
+                      max="50"
+                    />
+                  </div>
                 </div>
+
+                {/* Fecha de entrega - solo si NO es entrega inmediata */}
+                {formData.estado_construccion !== 'entrega_inmediata' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Fecha estimada de entrega *
+                    </label>
+                    <input
+                      type="month"
+                      value={formData.fecha_entrega}
+                      onChange={(e) => updateField('fecha_entrega', e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      required={formData.estado_construccion !== 'entrega_inmediata'}
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Selecciona el mes y año de entrega estimado
+                    </p>
+                  </div>
+                )}
 
                 <div className="pt-4 flex justify-end">
                   <button
@@ -328,6 +436,38 @@ export default function NuevaPropiedad() {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Tipo de cambio *
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateField('tipo_cambio', 'paralelo')}
+                        className={`flex-1 py-3 px-4 rounded-lg border-2 text-sm font-medium transition-colors ${
+                          formData.tipo_cambio === 'paralelo'
+                            ? 'border-amber-500 bg-amber-50 text-amber-700'
+                            : 'border-slate-300 text-slate-600 hover:border-slate-400'
+                        }`}
+                      >
+                        Paralelo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateField('tipo_cambio', 'oficial')}
+                        className={`flex-1 py-3 px-4 rounded-lg border-2 text-sm font-medium transition-colors ${
+                          formData.tipo_cambio === 'oficial'
+                            ? 'border-amber-500 bg-amber-50 text-amber-700'
+                            : 'border-slate-300 text-slate-600 hover:border-slate-400'
+                        }`}
+                      >
+                        Oficial
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
                       Área m² *
                     </label>
                     <input
@@ -337,6 +477,19 @@ export default function NuevaPropiedad() {
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                       placeholder="85"
                       required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Expensas (USD/mes)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.expensas_usd}
+                      onChange={(e) => updateField('expensas_usd', e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      placeholder="85"
                     />
                   </div>
                 </div>
@@ -412,18 +565,24 @@ export default function NuevaPropiedad() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Expensas (USD/mes)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.expensas_usd}
-                    onChange={(e) => updateField('expensas_usd', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                    placeholder="85"
-                  />
-                </div>
+                {/* Plan de pagos - solo si NO es entrega inmediata */}
+                {formData.estado_construccion !== 'entrega_inmediata' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Plan de Pagos
+                    </label>
+                    <textarea
+                      value={formData.plan_pagos}
+                      onChange={(e) => updateField('plan_pagos', e.target.value)}
+                      rows={3}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none resize-none"
+                      placeholder="Ej: 30% reserva, 40% durante construcción, 30% contra entrega"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Describe las condiciones de pago si aplica
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -507,7 +666,7 @@ export default function NuevaPropiedad() {
                 )}
 
                 {/* Agregar amenidad custom */}
-                <div className="flex gap-2 mb-4">
+                <div className="flex gap-2 mb-6">
                   <input
                     type="text"
                     value={nuevoAmenidad}
@@ -523,6 +682,75 @@ export default function NuevaPropiedad() {
                   >
                     + Agregar
                   </button>
+                </div>
+
+                {/* Separador */}
+                <div className="border-t border-slate-200 pt-6">
+                  <h2 className="text-lg font-semibold text-slate-900 mb-4">Equipamiento del Departamento</h2>
+
+                  <p className="text-sm text-slate-500 mb-4">
+                    Selecciona qué incluye el departamento
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    {EQUIPAMIENTO_OPCIONES.map((equip) => (
+                      <button
+                        key={equip}
+                        type="button"
+                        onClick={() => toggleEquipamiento(equip)}
+                        className={`px-4 py-3 rounded-lg border-2 text-left transition-colors ${
+                          formData.equipamiento.includes(equip)
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                        }`}
+                      >
+                        <span className="text-sm font-medium">{equip}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Equipamiento Custom */}
+                  {formData.equipamiento_custom.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-sm text-slate-500 mb-2">Equipamiento adicional:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {formData.equipamiento_custom.map((equip) => (
+                          <span
+                            key={equip}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm"
+                          >
+                            {equip}
+                            <button
+                              type="button"
+                              onClick={() => eliminarEquipamientoCustom(equip)}
+                              className="ml-1 text-blue-500 hover:text-blue-700"
+                            >
+                              x
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Agregar equipamiento custom */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={nuevoEquipamiento}
+                      onChange={(e) => setNuevoEquipamiento(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), agregarEquipamientoCustom())}
+                      placeholder="Agregar otro equipamiento..."
+                      className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={agregarEquipamientoCustom}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      + Agregar
+                    </button>
+                  </div>
                 </div>
 
                 {error && (
