@@ -8,6 +8,13 @@
 -- =====================================================
 
 -- =====================================================
+-- 0. DESACTIVAR RLS TEMPORALMENTE (para poder insertar sin auth)
+-- =====================================================
+ALTER TABLE brokers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE propiedades_broker DISABLE ROW LEVEL SECURITY;
+ALTER TABLE propiedad_fotos DISABLE ROW LEVEL SECURITY;
+
+-- =====================================================
 -- 1. BROKER DE PRUEBA
 -- =====================================================
 INSERT INTO brokers (
@@ -329,7 +336,14 @@ SELECT
 FROM generate_series(1, 5) n;
 
 -- =====================================================
--- 7. VERIFICACION
+-- 7. REACTIVAR RLS
+-- =====================================================
+ALTER TABLE brokers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE propiedades_broker ENABLE ROW LEVEL SECURITY;
+ALTER TABLE propiedad_fotos ENABLE ROW LEVEL SECURITY;
+
+-- =====================================================
+-- 8. VERIFICACION
 -- =====================================================
 SELECT 'Migracion 074 completada. Datos de prueba insertados:' as status;
 
