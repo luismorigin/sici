@@ -870,14 +870,256 @@ FROM propiedades_broker pb
 WHERE estado = 'publicada';
 ```
 
-### Funcion buscar_unidades_reales() Actualizada
+---
 
-La funcion existente `buscar_unidades_reales()` debera modificarse para incluir propiedades de brokers:
+## Estrategia de Integracion Segura con buscar_unidades_reales()
+
+### Analisis de la Funcion Actual (v2.24)
+
+La funcion `buscar_unidades_reales()` es **critica** para el MVP de Simon:
+- ~800 lineas de SQL complejo
+- 4 CTEs para calculos estadisticos
+- 55+ campos de retorno
+- 69 patterns de deteccion de equipamiento
+- ~30 filtros dinamicos en WHERE
+
+**Componentes de la funcion:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                buscar_unidades_reales() v2.24               │
+├─────────────────────────────────────────────────────────────┤
+│  CTEs (calculan promedios para comparaciones):              │
+│  - proyecto_stats: promedio precio/m² por proyecto          │
+│  - zona_stats: promedio precio/m² por zona                  │
+│  - edificio_stats: min/max precios en edificio              │
+│  - tipologia_stats: min/max por dormitorios                 │
+├─────────────────────────────────────────────────────────────┤
+│  SELECT principal:                                          │
+│  - Campos basicos (id, proyecto, zona, precio, area)        │
+│  - CASE para fotos_urls (3 fuentes: C21, Remax, contenido) │
+│  - Subquery para equipamiento_detectado (69 patterns)       │
+│  - Llamadas a funciones externas:                           │
+│    - razon_fiduciaria_texto()                               │
+│    - calcular_posicion_mercado()                            │
+├─────────────────────────────────────────────────────────────┤
+│  WHERE (filtros criticos):                                  │
+│  - es_activa = true, status = 'completado'                  │
+│  - tipo_operacion = 'venta', area >= 20m²                   │
+│  - duplicado_de IS NULL                                     │
+│  - Exclusion de bauleras/parqueos                           │
+│  - Filtros dinamicos por p_filtros JSONB                    │
+├─────────────────────────────────────────────────────────────┤
+│  ORDER BY + LIMIT                                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Riesgos de Modificar la Funcion
+
+| Componente | Riesgo si se modifica | Impacto |
+|------------|----------------------|---------|
+| CTEs de stats | 🔴 ALTO - Afecta promedios | Rankings incorrectos |
+| CASE fotos_urls | 🔴 ALTO - Lógica C21/Remax | UI sin fotos |
+| equipamiento_detectado | 🟡 MEDIO - 69 patterns | Amenities vacias |
+| WHERE filters | 🔴 ALTO - Excluye basura | Datos corruptos en UI |
+| calcular_posicion_mercado() | 🔴 ALTO - Calculo financiero | Posiciones erroneas |
+
+### Opcion Recomendada: Tabla Separada + Funcion Nueva
+
+**NO modificar** `buscar_unidades_reales()` hasta que el sistema de brokers este probado.
+
+**Fase 1: Aislamiento Total (0 riesgo)**
+```
+┌──────────────────────┐     ┌──────────────────────┐
+│    propiedades_v2    │     │  propiedades_broker  │
+│    (scraping C21/    │     │  (carga manual       │
+│     Remax)           │     │   brokers)           │
+└──────────────────────┘     └──────────────────────┘
+          │                            │
+          ▼                            ▼
+┌──────────────────────┐     ┌──────────────────────┐
+│ buscar_unidades_     │     │ buscar_unidades_     │
+│ reales() v2.24       │     │ broker() v1.0        │
+│ (SIN CAMBIOS)        │     │ (NUEVA)              │
+└──────────────────────┘     └──────────────────────┘
+          │                            │
+          ▼                            ▼
+┌──────────────────────────────────────────────────┐
+│              UI /resultados                       │
+│  (muestra ambas fuentes con indicador visual)    │
+└──────────────────────────────────────────────────┘
+```
+
+**Fase 2: Funcion Broker Simplificada**
+```sql
+-- Nueva funcion que NO toca la existente
+CREATE OR REPLACE FUNCTION buscar_unidades_broker(p_filtros JSONB DEFAULT '{}')
+RETURNS TABLE (
+  -- Mismos campos que buscar_unidades_reales para compatibilidad
+  id INTEGER,
+  proyecto TEXT,
+  desarrollador TEXT,
+  zona TEXT,
+  -- ... etc
+) AS $func$
+BEGIN
+  RETURN QUERY
+  SELECT
+    pb.id,
+    pb.proyecto_nombre,
+    pb.desarrollador,
+    pb.zona,
+    pb.microzona,
+    pb.dormitorios,
+    pb.banos,
+    pb.precio_usd,
+    ROUND(pb.precio_usd / NULLIF(pb.area_m2, 0), 0) as precio_m2,
+    pb.area_m2,
+    pb.score_calidad,
+    b.nombre as asesor_nombre,
+    b.whatsapp as asesor_wsp,
+    b.empresa as asesor_inmobiliaria,
+    -- Fotos desde tabla separada (MAS SIMPLE que C21/Remax)
+    ARRAY(SELECT url FROM propiedad_fotos WHERE propiedad_id = pb.id ORDER BY orden),
+    pb.cantidad_fotos,
+    'https://simon.bo/p/' || pb.codigo as url,
+    pb.amenidades->'lista' as amenities_lista,
+    -- ... resto de campos
+    pb.codigo as codigo_sim  -- Campo extra para brokers
+  FROM propiedades_broker pb
+  JOIN brokers b ON b.id = pb.broker_id
+  WHERE pb.estado = 'publicada'
+    AND (p_filtros->>'dormitorios' IS NULL OR pb.dormitorios = (p_filtros->>'dormitorios')::int)
+    AND (p_filtros->>'precio_max' IS NULL OR pb.precio_usd <= (p_filtros->>'precio_max')::numeric)
+    -- ... filtros similares
+  ORDER BY pb.precio_usd ASC
+  LIMIT COALESCE((p_filtros->>'limite')::int, 50);
+END;
+$func$ LANGUAGE plpgsql STABLE;
+```
+
+**Fase 3: Unificacion (solo despues de probar Fase 2)**
+```sql
+-- Opcion A: Vista materializada
+CREATE MATERIALIZED VIEW propiedades_todas AS
+SELECT *, 'scraping' as fuente_tipo FROM propiedades_v2 WHERE status = 'completado'
+UNION ALL
+SELECT *, 'broker' as fuente_tipo FROM propiedades_broker WHERE estado = 'publicada';
+
+-- Opcion B: Funcion wrapper
+CREATE FUNCTION buscar_unidades_todas(p_filtros JSONB)
+RETURNS TABLE (...) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT * FROM buscar_unidades_reales(p_filtros)
+  UNION ALL
+  SELECT * FROM buscar_unidades_broker(p_filtros);
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Campos que Brokers NO Tienen (y como manejarlos)
+
+| Campo en buscar_unidades_reales | Fuente Actual | Solucion para Broker |
+|---------------------------------|---------------|---------------------|
+| `datos_json_discovery` | Scraping C21/Remax | No aplica - datos directos |
+| `datos_json_enrichment` | Pipeline nocturno | No aplica |
+| `fuente` = 'century21' | Detectado | `fuente` = 'broker' |
+| `url` | URL original C21/Remax | simon.bo/p/SIM-XXXXX |
+| `es_multiproyecto` | Pipeline matching | false (broker elige proyecto) |
+| `fecha_discovery` | Scraping | `created_at` |
+
+### Lo que NO se Debe Cambiar en buscar_unidades_reales()
 
 ```sql
--- En el futuro, agregar al final de buscar_unidades_reales():
-UNION ALL
-SELECT ... FROM propiedades_broker WHERE estado = 'publicada' AND ...
+-- ❌ NO TOCAR: CTEs de estadisticas
+-- Calculan promedios de mercado usados en posicion_mercado
+WITH proyecto_stats AS (...),
+     zona_stats AS (...),
+     edificio_stats AS (...),
+     tipologia_stats AS (...)
+
+-- ❌ NO TOCAR: CASE de fotos_urls
+-- Logica compleja para extraer fotos de C21/Remax
+CASE
+  WHEN jsonb_typeof(p.datos_json->'contenido'->'fotos_urls') = 'array' ...
+  WHEN p.fuente = 'remax' ...
+  WHEN p.fuente = 'century21' ...
+END
+
+-- ❌ NO TOCAR: WHERE filters criticos
+-- Excluyen duplicados, bauleras, datos viejos
+WHERE p.es_activa = true
+  AND p.status = 'completado'
+  AND p.duplicado_de IS NULL
+  AND lower(COALESCE(p.tipo_propiedad_original, '')) NOT IN ('baulera', 'parqueo', ...)
+
+-- ❌ NO TOCAR: Llamadas a funciones externas
+-- razon_fiduciaria_texto(), calcular_posicion_mercado()
+```
+
+### Plan de Implementacion por Fases
+
+| Fase | Accion | Riesgo | Rollback |
+|------|--------|--------|----------|
+| 1 | Crear `propiedades_broker` y tablas relacionadas | 0% | DROP TABLE |
+| 2 | Crear `buscar_unidades_broker()` nueva | 0% | DROP FUNCTION |
+| 3 | UI muestra resultados de ambas funciones | 5% | Revertir commit |
+| 4 | Probar en produccion 1 semana | 10% | Desactivar brokers |
+| 5 | Crear vista/funcion unificada (opcional) | 20% | Volver a Fase 3 |
+
+### Compatibilidad de Interfaz TypeScript
+
+La interfaz `UnidadReal` en `supabase.ts` debe recibir los mismos campos de ambas funciones:
+
+```typescript
+// Campos que DEBEN existir en ambas funciones
+interface UnidadReal {
+  id: number
+  proyecto: string
+  desarrollador: string | null
+  zona: string
+  microzona: string | null
+  dormitorios: number
+  banos: number | null
+  precio_usd: number
+  precio_m2: number
+  area_m2: number
+  fotos_urls: string[]
+  cantidad_fotos: number
+  url: string
+  amenities_lista: string[]
+  // ... 40+ campos mas
+
+  // NUEVO: Campo para identificar fuente
+  fuente_tipo?: 'scraping' | 'broker'
+  codigo_sim?: string  // Solo brokers
+}
+```
+
+### Diferenciacion Visual en UI
+
+Cuando se muestren resultados de brokers, agregar indicador visual:
+
+```
+┌─────────────────────────────────────────┐
+│ [📷] Vienna - Equipetrol Norte          │
+│ $127,000 USD • 85m² • 2 dorms           │
+│                                         │
+│ [🏷️ SIM-7K2M9] Publicado por broker    │
+│ Juan Pérez - Century21                  │
+└─────────────────────────────────────────┘
+```
+
+vs propiedad scrapeada:
+
+```
+┌─────────────────────────────────────────┐
+│ [📷] Vienna - Equipetrol Norte          │
+│ $127,000 USD • 85m² • 2 dorms           │
+│                                         │
+│ Datos de c21.com.bo                     │
+└─────────────────────────────────────────┘
 ```
 
 ---
@@ -889,3 +1131,4 @@ SELECT ... FROM propiedades_broker WHERE estado = 'publicada' AND ...
 | 0.1 | 2026-01-23 | Claude + Luis | Borrador inicial |
 | 0.2 | 2026-01-23 | Claude + Luis | Tabla propiedad_pdfs, fuente_origen, deteccion watermarks, funciones duplicados y PDF |
 | 0.3 | 2026-01-23 | Claude + Luis | Alineacion BD: ENUMs existentes, FK zonas_geograficas/proyectos_master, estructura amenities compatible |
+| 0.4 | 2026-01-23 | Claude + Luis | Estrategia integracion segura: analisis buscar_unidades_reales v2.24, plan por fases, tabla separada, funcion nueva |
