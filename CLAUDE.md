@@ -60,6 +60,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 | **Formulario MVP 2 Niveles** | `docs/simon/formularios/FORM_VIVIENDA_MVP.md` |
 | **Metodología Fiduciaria** | `docs/canonical/METODOLOGIA_FIDUCIARIA_PARTE_*.md` |
 | **Beta Feedback System** | `docs/simon/BETA_FEEDBACK_SYSTEM_PLAN.md` |
+| **Sistema Broker B2B** | `docs/simon/SIMON_BROKER_SYSTEM.md` |
 | Plan activo | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
@@ -81,7 +82,7 @@ sici/
 │   ├── enrichment/    # registrar_enrichment.sql
 │   ├── merge/         # merge_discovery_enrichment.sql v2.2.0
 │   └── matching/      # Funciones v3.1 (propiedades_v2)
-├── sql/migrations/    # 001-069 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Baulera)
+├── sql/migrations/    # 001-074 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Broker B2B)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
@@ -94,7 +95,7 @@ sici/
     └── modulo_2/      # Specs matching pipeline
 ```
 
-## Estado Actual (21 Ene 2026)
+## Estado Actual (24 Ene 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
@@ -117,9 +118,10 @@ sici/
 - **Fix TC Paralelo:** Bug merge v2.2.0 + retroactivo 13 props + vista monitoreo (migración 059)
 - **Enriquecimiento Amenities:** 69 campos extraídos de descripciones (45 equipamiento + 24 amenities), con candados (migración 064)
 - **Auditoría Baños:** 14 propiedades corregidas con `campos_bloqueados`, 17 pendientes de revisión manual
+- **Sistema Broker B2B (Fases 1-4):** Tablas broker, propiedades_broker, buscar_unidades_broker(), UI integrada (migraciones 070-074)
 
 ### ⏳ En Progreso
-- **Supervisor Excluidas:** Workflow n8n Export pendiente mapeo columnas (14 props en Sheet)
+- **Sistema Broker Fase 5-7:** Portal broker, sistema leads, CMA (pendiente)
 
 ### ❌ Pendiente
 - **FASE 3:** Enriquecimiento IA de proyectos (15 sin desarrollador asignado)
@@ -145,7 +147,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-064)
+## Migraciones SQL (001-074)
 
 | # | Archivo | Propósito | Estado |
 |---|---------|-----------|--------|
@@ -189,6 +191,10 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 067 | enriquecer_baulera | Crear columna baulera + extraer desde descripciones (14 props, 4.3%) | ✅ |
 | 068 | agregar_baulera_funcion | Añadir baulera al retorno de buscar_unidades_reales() v2.23 | ✅ |
 | 069 | expandir_equipamiento_detectado | Detección tiempo real ~60 amenities (v2.24), promedio 9.4/prop | ✅ |
+| 070 | leads_contacto_broker | Sistema contacto lead-broker con código REF (SIM-XXXXX) | ✅ |
+| 072 | broker_system_tables | 7 tablas sistema broker: brokers, propiedades_broker, fotos, leads, CMA | ✅ |
+| 073 | buscar_unidades_broker | Función búsqueda propiedades broker compatible con buscar_unidades_reales | ✅ |
+| 074 | broker_datos_prueba | Datos test: 1 broker + 3 propiedades (SIM-TEST1/2/3) + 25 fotos | ✅ |
 
 ## Repo Legacy
 
