@@ -19,7 +19,7 @@ interface PropiedadBroker {
   score_calidad: number
   created_at: string
   vistas: number
-  leads_count: number
+  foto_principal?: string
 }
 
 interface DashboardStats {
@@ -66,8 +66,7 @@ export default function BrokerDashboard() {
           cantidad_fotos,
           score_calidad,
           created_at,
-          vistas,
-          leads_count
+          vistas
         `)
         .eq('broker_id', broker.id)
         .order('created_at', { ascending: false })
@@ -78,6 +77,23 @@ export default function BrokerDashboard() {
       }
 
       const props = data || []
+
+      // Obtener fotos principales para cada propiedad
+      const propIds = props.map(p => p.id)
+      if (propIds.length > 0) {
+        const { data: fotosData } = await supabase
+          .from('propiedad_fotos')
+          .select('propiedad_id, url')
+          .in('propiedad_id', propIds)
+          .eq('es_principal', true)
+
+        // Mapear fotos a propiedades
+        const fotosMap = new Map(fotosData?.map(f => [f.propiedad_id, f.url]) || [])
+        props.forEach(p => {
+          p.foto_principal = fotosMap.get(p.id) || undefined
+        })
+      }
+
       setPropiedades(props)
 
       // Calcular stats
@@ -85,7 +101,7 @@ export default function BrokerDashboard() {
         total_propiedades: props.length,
         propiedades_publicadas: props.filter(p => p.estado === 'publicada').length,
         total_vistas: props.reduce((sum, p) => sum + (p.vistas || 0), 0),
-        total_leads: props.reduce((sum, p) => sum + (p.leads_count || 0), 0)
+        total_leads: 0 // TODO: contar desde broker_leads
       })
     } catch (err) {
       console.error('Error:', err)
@@ -180,6 +196,21 @@ export default function BrokerDashboard() {
               {propiedades.map((prop) => (
                 <div key={prop.id} className="p-4 md:p-6 hover:bg-slate-50 transition-colors">
                   <div className="flex flex-col md:flex-row md:items-center gap-4">
+                    {/* Foto Principal */}
+                    <div className="w-20 h-20 md:w-24 md:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
+                      {prop.foto_principal ? (
+                        <img
+                          src={prop.foto_principal}
+                          alt={prop.proyecto_nombre}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400">
+                          <span className="text-3xl">🏢</span>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Main Info */}
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
@@ -214,18 +245,16 @@ export default function BrokerDashboard() {
                     <div className="flex items-center gap-2">
                       <Link
                         href={`/broker/editar/${prop.id}`}
-                        className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                        className="px-4 py-2 text-sm font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                       >
                         Editar
                       </Link>
-                      <a
-                        href={`https://simon.bo/p/${prop.codigo}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 text-sm font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                      <Link
+                        href={`/broker/fotos/${prop.id}`}
+                        className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                       >
-                        Ver →
-                      </a>
+                        Fotos
+                      </Link>
                     </div>
                   </div>
 

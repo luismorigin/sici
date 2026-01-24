@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import BrokerLayout from '@/components/BrokerLayout'
@@ -14,7 +14,7 @@ interface FormData {
   area_m2: string
   dormitorios: string
   banos: string
-  estado_construccion: 'entrega_inmediata' | 'construccion' | 'preventa' | 'planos'
+  estado_construccion: 'entrega_inmediata' | 'construccion' | 'preventa' | 'planos' | 'no_especificado'
   descripcion: string
   parqueo_incluido: boolean
   cantidad_parqueos: string
@@ -46,12 +46,30 @@ const AMENIDADES_OPCIONES = [
   'Área de juegos'
 ]
 
-export default function NuevaPropiedad() {
+// Mapeo inverso de zona normalizada a id del select
+const zonaToId = (zona: string): string => {
+  const mapeo: Record<string, string> = {
+    'Equipetrol': 'equipetrol',
+    'Equipetrol Centro': 'equipetrol',
+    'Sirari': 'sirari',
+    'Equipetrol Norte': 'equipetrol_norte',
+    'Villa Brígida': 'villa_brigida',
+    'Equipetrol Oeste': 'faremafu',
+    'Equipetrol Oeste (Busch)': 'faremafu'
+  }
+  return mapeo[zona] || zona
+}
+
+export default function EditarPropiedad() {
   const router = useRouter()
+  const { id } = router.query
   const { broker } = useBrokerAuth(true)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [step, setStep] = useState(1)
+  const [success, setSuccess] = useState(false)
+  const [propiedadCodigo, setPropiedadCodigo] = useState('')
+  const [nuevoAmenidad, setNuevoAmenidad] = useState('')
 
   const [formData, setFormData] = useState<FormData>({
     proyecto_nombre: '',
@@ -72,26 +90,61 @@ export default function NuevaPropiedad() {
     amenidades_custom: []
   })
 
-  const [nuevoAmenidad, setNuevoAmenidad] = useState('')
-
-  const agregarAmenidadCustom = () => {
-    if (!nuevoAmenidad.trim()) return
-    const amenidad = nuevoAmenidad.trim()
-    if (formData.amenidades_custom.includes(amenidad) || formData.amenidades.includes(amenidad)) {
-      return
+  useEffect(() => {
+    if (id && broker) {
+      fetchPropiedad()
     }
-    setFormData(prev => ({
-      ...prev,
-      amenidades_custom: [...prev.amenidades_custom, amenidad]
-    }))
-    setNuevoAmenidad('')
-  }
+  }, [id, broker])
 
-  const eliminarAmenidadCustom = (amenidad: string) => {
-    setFormData(prev => ({
-      ...prev,
-      amenidades_custom: prev.amenidades_custom.filter(a => a !== amenidad)
-    }))
+  const fetchPropiedad = async () => {
+    if (!supabase || !broker || !id) return
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('propiedades_broker')
+        .select('*')
+        .eq('id', id)
+        .eq('broker_id', broker.id)
+        .single()
+
+      if (fetchError || !data) {
+        router.push('/broker/dashboard')
+        return
+      }
+
+      setPropiedadCodigo(data.codigo)
+
+      // Parsear amenidades
+      const amenidadesData = data.amenidades || { lista: [], equipamiento: [] }
+      const listaAmenidades = amenidadesData.lista || []
+
+      // Separar amenidades standard de custom
+      const standardAmenidades = listaAmenidades.filter((a: string) => AMENIDADES_OPCIONES.includes(a))
+      const customAmenidades = listaAmenidades.filter((a: string) => !AMENIDADES_OPCIONES.includes(a))
+
+      setFormData({
+        proyecto_nombre: data.proyecto_nombre || '',
+        desarrollador: data.desarrollador || '',
+        zona: zonaToId(data.zona || ''),
+        direccion: data.direccion || '',
+        precio_usd: data.precio_usd?.toString() || '',
+        area_m2: data.area_m2?.toString() || '',
+        dormitorios: data.dormitorios?.toString() || '2',
+        banos: data.banos?.toString() || '2',
+        estado_construccion: data.estado_construccion || 'entrega_inmediata',
+        descripcion: data.descripcion || '',
+        parqueo_incluido: data.parqueo_incluido ?? true,
+        cantidad_parqueos: data.cantidad_parqueos?.toString() || '1',
+        baulera_incluida: data.baulera_incluida ?? false,
+        expensas_usd: data.expensas_usd?.toString() || '',
+        amenidades: standardAmenidades,
+        amenidades_custom: customAmenidades
+      })
+    } catch (err) {
+      console.error('Error fetching propiedad:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const updateField = (field: keyof FormData, value: any) => {
@@ -107,30 +160,44 @@ export default function NuevaPropiedad() {
     }))
   }
 
-  const handleSubmit = async () => {
-    if (!supabase || !broker) return
+  const agregarAmenidadCustom = () => {
+    if (!nuevoAmenidad.trim()) return
 
-    setLoading(true)
+    const amenidad = nuevoAmenidad.trim()
+    if (formData.amenidades_custom.includes(amenidad) || formData.amenidades.includes(amenidad)) {
+      setError('Esta amenidad ya existe')
+      return
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      amenidades_custom: [...prev.amenidades_custom, amenidad]
+    }))
+    setNuevoAmenidad('')
     setError(null)
+  }
+
+  const eliminarAmenidadCustom = (amenidad: string) => {
+    setFormData(prev => ({
+      ...prev,
+      amenidades_custom: prev.amenidades_custom.filter(a => a !== amenidad)
+    }))
+  }
+
+  const handleSubmit = async () => {
+    if (!supabase || !broker || !id) return
+
+    setSaving(true)
+    setError(null)
+    setSuccess(false)
 
     try {
-      // Generar código único (requiere prefijo 'SIM')
-      const { data: codigoData, error: codigoError } = await supabase
-        .rpc('generar_codigo_unico', { prefijo: 'SIM' })
+      // Combinar amenidades standard y custom
+      const todasAmenidades = [...formData.amenidades, ...formData.amenidades_custom]
 
-      if (codigoError) {
-        console.error('Error generando código:', codigoError)
-        throw new Error('Error generando código: ' + codigoError.message)
-      }
-
-      const codigo = codigoData as string
-
-      // Crear propiedad
-      const { data, error: insertError } = await supabase
+      const { error: updateError } = await supabase
         .from('propiedades_broker')
-        .insert({
-          broker_id: broker.id,
-          codigo,
+        .update({
           proyecto_nombre: formData.proyecto_nombre,
           desarrollador: formData.desarrollador || null,
           zona: convertirZona(formData.zona) || formData.zona,
@@ -146,9 +213,9 @@ export default function NuevaPropiedad() {
           baulera_incluida: formData.baulera_incluida,
           expensas_usd: formData.expensas_usd ? parseFloat(formData.expensas_usd) : null,
           amenidades: {
-            lista: [...formData.amenidades, ...formData.amenidades_custom],
+            lista: todasAmenidades,
             equipamiento: [],
-            estado_amenities: [...formData.amenidades, ...formData.amenidades_custom].reduce((acc, a) => ({
+            estado_amenities: todasAmenidades.reduce((acc, a) => ({
               ...acc,
               [a]: {
                 valor: true,
@@ -157,68 +224,55 @@ export default function NuevaPropiedad() {
               }
             }), {})
           },
-          estado: 'borrador',
-          cantidad_fotos: 0,
-          score_calidad: 0
+          updated_at: new Date().toISOString()
         })
-        .select()
-        .single()
+        .eq('id', id)
+        .eq('broker_id', broker.id)
 
-      if (insertError) {
-        throw new Error(insertError.message)
+      if (updateError) {
+        throw new Error(updateError.message)
       }
 
-      // Redirigir a subir fotos
-      router.push(`/broker/fotos/${data.id}`)
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 3000)
 
     } catch (err: any) {
-      setError(err.message || 'Error al crear propiedad')
+      setError(err.message || 'Error al guardar cambios')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <BrokerLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+        </div>
+      </BrokerLayout>
+    )
   }
 
   return (
     <>
       <Head>
-        <title>Nueva Propiedad | Simón Broker</title>
+        <title>Editar {propiedadCodigo} | Simón Broker</title>
       </Head>
 
-      <BrokerLayout title="Nueva Propiedad">
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center gap-4">
-            {[1, 2, 3].map((s) => (
-              <div key={s} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  step >= s ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-500'
-                }`}>
-                  {s}
-                </div>
-                {s < 3 && (
-                  <div className={`w-16 h-1 mx-2 ${
-                    step > s ? 'bg-amber-500' : 'bg-slate-200'
-                  }`} />
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-center mt-2 text-sm text-slate-500">
-            <span className={step === 1 ? 'text-amber-600 font-medium' : ''}>Información</span>
-            <span className="mx-8" />
-            <span className={step === 2 ? 'text-amber-600 font-medium' : ''}>Detalles</span>
-            <span className="mx-8" />
-            <span className={step === 3 ? 'text-amber-600 font-medium' : ''}>Amenidades</span>
-          </div>
-        </div>
-
+      <BrokerLayout>
         <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-xl shadow-sm p-6 md:p-8">
-            {/* Step 1: Información Básica */}
-            {step === 1 && (
-              <div className="space-y-6">
-                <h2 className="text-lg font-semibold text-slate-900 mb-4">Información Básica</h2>
+          {/* Header */}
+          <div className="mb-6">
+            <span className="text-sm text-slate-500 font-mono">{propiedadCodigo}</span>
+            <h1 className="text-2xl font-bold text-slate-900">Editar Propiedad</h1>
+          </div>
 
+          <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 space-y-6">
+            {/* Información Básica */}
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">Información Básica</h2>
+
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Nombre del Proyecto *
@@ -228,8 +282,6 @@ export default function NuevaPropiedad() {
                     value={formData.proyecto_nombre}
                     onChange={(e) => updateField('proyecto_nombre', e.target.value)}
                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                    placeholder="Ej: Vienna Residences"
-                    required
                   />
                 </div>
 
@@ -242,7 +294,6 @@ export default function NuevaPropiedad() {
                     value={formData.desarrollador}
                     onChange={(e) => updateField('desarrollador', e.target.value)}
                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                    placeholder="Ej: Grupo Jenecheru"
                   />
                 </div>
 
@@ -255,7 +306,6 @@ export default function NuevaPropiedad() {
                       value={formData.zona}
                       onChange={(e) => updateField('zona', e.target.value)}
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                      required
                     >
                       <option value="">Seleccionar...</option>
                       {ZONAS.map(z => (
@@ -290,27 +340,16 @@ export default function NuevaPropiedad() {
                     value={formData.direccion}
                     onChange={(e) => updateField('direccion', e.target.value)}
                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                    placeholder="Ej: Av. San Martín 1234"
                   />
                 </div>
-
-                <div className="pt-4 flex justify-end">
-                  <button
-                    onClick={() => setStep(2)}
-                    disabled={!formData.proyecto_nombre || !formData.zona}
-                    className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Siguiente →
-                  </button>
-                </div>
               </div>
-            )}
+            </div>
 
-            {/* Step 2: Detalles */}
-            {step === 2 && (
-              <div className="space-y-6">
-                <h2 className="text-lg font-semibold text-slate-900 mb-4">Detalles de la Propiedad</h2>
+            {/* Detalles */}
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">Detalles de la Propiedad</h2>
 
+              <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -321,8 +360,6 @@ export default function NuevaPropiedad() {
                       value={formData.precio_usd}
                       onChange={(e) => updateField('precio_usd', e.target.value)}
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                      placeholder="120000"
-                      required
                     />
                   </div>
 
@@ -335,8 +372,6 @@ export default function NuevaPropiedad() {
                       value={formData.area_m2}
                       onChange={(e) => updateField('area_m2', e.target.value)}
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                      placeholder="85"
-                      required
                     />
                   </div>
                 </div>
@@ -421,7 +456,6 @@ export default function NuevaPropiedad() {
                     value={formData.expensas_usd}
                     onChange={(e) => updateField('expensas_usd', e.target.value)}
                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                    placeholder="85"
                   />
                 </div>
 
@@ -434,120 +468,114 @@ export default function NuevaPropiedad() {
                     onChange={(e) => updateField('descripcion', e.target.value)}
                     rows={4}
                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none resize-none"
-                    placeholder="Describe la propiedad, sus características especiales..."
                   />
-                </div>
-
-                <div className="pt-4 flex justify-between">
-                  <button
-                    onClick={() => setStep(1)}
-                    className="text-slate-600 hover:text-slate-900 font-medium px-6 py-3"
-                  >
-                    ← Anterior
-                  </button>
-                  <button
-                    onClick={() => setStep(3)}
-                    disabled={!formData.precio_usd || !formData.area_m2}
-                    className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Siguiente →
-                  </button>
                 </div>
               </div>
-            )}
+            </div>
 
-            {/* Step 3: Amenidades */}
-            {step === 3 && (
-              <div className="space-y-6">
-                <h2 className="text-lg font-semibold text-slate-900 mb-4">Amenidades del Edificio</h2>
+            {/* Amenidades */}
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">Amenidades del Edificio</h2>
 
-                <p className="text-sm text-slate-500 mb-4">
-                  Selecciona las amenidades que tiene el edificio/condominio
-                </p>
-
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {AMENIDADES_OPCIONES.map((amenidad) => (
-                    <button
-                      key={amenidad}
-                      type="button"
-                      onClick={() => toggleAmenidad(amenidad)}
-                      className={`px-4 py-3 rounded-lg border-2 text-left transition-colors ${
-                        formData.amenidades.includes(amenidad)
-                          ? 'border-amber-500 bg-amber-50 text-amber-700'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
-                      }`}
-                    >
-                      <span className="text-sm font-medium">{amenidad}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Amenidades Custom */}
-                {formData.amenidades_custom.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-sm text-slate-500 mb-2">Amenidades personalizadas:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.amenidades_custom.map((amenidad) => (
-                        <span
-                          key={amenidad}
-                          className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm"
-                        >
-                          {amenidad}
-                          <button
-                            type="button"
-                            onClick={() => eliminarAmenidadCustom(amenidad)}
-                            className="ml-1 text-blue-500 hover:text-blue-700"
-                          >
-                            x
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Agregar amenidad custom */}
-                <div className="flex gap-2 mb-4">
-                  <input
-                    type="text"
-                    value={nuevoAmenidad}
-                    onChange={(e) => setNuevoAmenidad(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), agregarAmenidadCustom())}
-                    placeholder="Agregar otra amenidad..."
-                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm"
-                  />
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {AMENIDADES_OPCIONES.map((amenidad) => (
                   <button
+                    key={amenidad}
                     type="button"
-                    onClick={agregarAmenidadCustom}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+                    onClick={() => toggleAmenidad(amenidad)}
+                    className={`px-4 py-3 rounded-lg border-2 text-left transition-colors ${
+                      formData.amenidades.includes(amenidad)
+                        ? 'border-amber-500 bg-amber-50 text-amber-700'
+                        : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                    }`}
                   >
-                    + Agregar
+                    <span className="text-sm font-medium">{amenidad}</span>
                   </button>
-                </div>
+                ))}
+              </div>
 
-                {error && (
-                  <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
-                    {error}
+              {/* Amenidades Custom */}
+              {formData.amenidades_custom.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm text-slate-500 mb-2">Amenidades personalizadas:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.amenidades_custom.map((amenidad) => (
+                      <span
+                        key={amenidad}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm"
+                      >
+                        {amenidad}
+                        <button
+                          type="button"
+                          onClick={() => eliminarAmenidadCustom(amenidad)}
+                          className="ml-1 text-blue-500 hover:text-blue-700"
+                        >
+                          x
+                        </button>
+                      </span>
+                    ))}
                   </div>
-                )}
-
-                <div className="pt-4 flex justify-between">
-                  <button
-                    onClick={() => setStep(2)}
-                    className="text-slate-600 hover:text-slate-900 font-medium px-6 py-3"
-                  >
-                    ← Anterior
-                  </button>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-8 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? 'Guardando...' : 'Guardar y Subir Fotos →'}
-                  </button>
                 </div>
+              )}
+
+              {/* Agregar amenidad custom */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={nuevoAmenidad}
+                  onChange={(e) => setNuevoAmenidad(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && agregarAmenidadCustom()}
+                  placeholder="Agregar otra amenidad..."
+                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={agregarAmenidadCustom}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+                >
+                  + Agregar
+                </button>
+              </div>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
+                {error}
               </div>
             )}
+
+            {/* Success */}
+            {success && (
+              <div className="bg-green-50 text-green-600 px-4 py-3 rounded-lg text-sm">
+                Cambios guardados correctamente
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="pt-4 flex justify-between items-center border-t border-slate-200">
+              <button
+                onClick={() => router.push('/broker/dashboard')}
+                className="text-slate-600 hover:text-slate-900 font-medium px-6 py-3"
+              >
+                Volver al Dashboard
+              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => router.push(`/broker/fotos/${id}`)}
+                  className="px-6 py-3 border border-amber-500 text-amber-600 font-semibold rounded-lg hover:bg-amber-50 transition-colors"
+                >
+                  Editar Fotos
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={saving || !formData.proyecto_nombre || !formData.zona || !formData.precio_usd || !formData.area_m2}
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-8 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </BrokerLayout>
