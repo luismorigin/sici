@@ -65,6 +65,9 @@ export interface UnidadReal {
   estacionamientos: number | null
   // v2.23: Baulera
   baulera: boolean | null
+  // v2.24: Campos para propiedades de broker
+  fuente_tipo?: 'scraping' | 'broker'
+  codigo_sim?: string  // Solo para broker (SIM-XXXXX)
 }
 
 // Filtros para búsqueda
@@ -218,6 +221,123 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
     console.error('Error en buscarUnidadesReales:', err)
     return []
   }
+}
+
+// ========== BUSQUEDA PROPIEDADES BROKER ==========
+
+// Buscar propiedades cargadas por brokers (tabla separada)
+export async function buscarUnidadesBroker(filtros: FiltrosBusqueda): Promise<UnidadReal[]> {
+  if (!supabase) {
+    console.warn('Supabase no configurado')
+    return []
+  }
+
+  try {
+    // Construir filtros para RPC
+    const rpcFiltros: Record<string, any> = {
+      limite: filtros.limite || 10,
+      solo_con_fotos: true
+    }
+
+    if (filtros.precio_max) rpcFiltros.precio_max = filtros.precio_max
+    if (filtros.precio_min) rpcFiltros.precio_min = filtros.precio_min
+    if (filtros.dormitorios !== undefined) rpcFiltros.dormitorios = filtros.dormitorios
+    if (filtros.area_min) rpcFiltros.area_min = filtros.area_min
+    if (filtros.zona) rpcFiltros.zona = filtros.zona
+    if (filtros.estado_entrega) rpcFiltros.estado_entrega = filtros.estado_entrega
+
+    // Llamar RPC buscar_unidades_broker
+    const { data, error } = await supabase.rpc('buscar_unidades_broker', {
+      p_filtros: rpcFiltros
+    })
+
+    if (error) {
+      // No es error critico si la tabla no existe todavia
+      console.warn('buscar_unidades_broker no disponible:', error.message)
+      return []
+    }
+
+    // Mapear respuesta RPC a interfaz UnidadReal
+    return (data || []).map((p: any) => ({
+      id: p.id,
+      proyecto: p.proyecto || 'Sin proyecto',
+      desarrollador: p.desarrollador,
+      zona: p.zona || 'Sin zona',
+      microzona: p.microzona,
+      dormitorios: p.dormitorios,
+      banos: p.banos ? parseFloat(p.banos) : null,
+      precio_usd: parseFloat(p.precio_usd) || 0,
+      precio_m2: parseFloat(p.precio_m2) || 0,
+      area_m2: parseFloat(p.area_m2) || 0,
+      score_calidad: p.score_calidad,
+      asesor_nombre: p.asesor_nombre,
+      asesor_wsp: p.asesor_wsp,
+      asesor_inmobiliaria: p.asesor_inmobiliaria,
+      fotos_urls: p.fotos_urls || [],
+      cantidad_fotos: p.cantidad_fotos || 0,
+      url: p.url || '',
+      amenities_lista: p.amenities_lista || [],
+      razon_fiduciaria: p.razon_fiduciaria,
+      es_multiproyecto: false,
+      estado_construccion: p.estado_construccion || 'no_especificado',
+      dias_en_mercado: p.dias_en_mercado,
+      // Stats edificio (null para broker)
+      unidades_en_edificio: null,
+      posicion_precio_edificio: null,
+      precio_min_edificio: null,
+      precio_max_edificio: null,
+      unidades_misma_tipologia: null,
+      posicion_en_tipologia: null,
+      precio_min_tipologia: null,
+      precio_max_tipologia: null,
+      // Amenities
+      amenities_confirmados: p.amenities_confirmados || [],
+      amenities_por_verificar: [],
+      equipamiento_detectado: p.equipamiento_detectado || [],
+      descripcion: p.descripcion || null,
+      posicion_mercado: p.posicion_mercado || null,
+      latitud: p.latitud ? parseFloat(p.latitud) : null,
+      longitud: p.longitud ? parseFloat(p.longitud) : null,
+      estacionamientos: p.estacionamientos || null,
+      baulera: p.baulera ?? null,
+      // Campos broker
+      fuente_tipo: 'broker' as const,
+      codigo_sim: p.codigo_sim
+    }))
+  } catch (err) {
+    console.warn('Error en buscarUnidadesBroker:', err)
+    return []
+  }
+}
+
+// Busqueda unificada: combina scraping + broker
+export async function buscarUnidadesUnificadas(filtros: FiltrosBusqueda): Promise<UnidadReal[]> {
+  // Ejecutar ambas busquedas en paralelo
+  const [resultadosScraping, resultadosBroker] = await Promise.all([
+    buscarUnidadesReales(filtros),
+    buscarUnidadesBroker(filtros)
+  ])
+
+  // Agregar fuente_tipo a resultados de scraping (si no tienen)
+  const scrapingConFuente = resultadosScraping.map(r => ({
+    ...r,
+    fuente_tipo: r.fuente_tipo || 'scraping' as const
+  }))
+
+  // Combinar y ordenar por precio (o segun filtro orden)
+  const combinados = [...scrapingConFuente, ...resultadosBroker]
+
+  // Ordenar segun criterio
+  if (filtros.orden === 'precio_desc') {
+    combinados.sort((a, b) => b.precio_usd - a.precio_usd)
+  } else {
+    // Default: precio ascendente
+    combinados.sort((a, b) => a.precio_usd - b.precio_usd)
+  }
+
+  // Respetar limite total
+  const limite = filtros.limite || 50
+  return combinados.slice(0, limite)
 }
 
 // Convertir zona del formulario a nombre de BD

@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import {
   buscarUnidadesReales,
+  buscarUnidadesUnificadas,
   UnidadReal,
   FiltrosBusqueda,
   obtenerAnalisisFiduciario,
@@ -1087,7 +1088,8 @@ export default function ResultadosPage() {
       }
 
       // Buscar propiedades que cumplen filtros (con fotos)
-      const data = await buscarUnidadesReales(filtros)
+      // v2.24: Usa busqueda unificada (scraping + broker)
+      const data = await buscarUnidadesUnificadas(filtros)
       setPropiedades(data)
 
       // Llamar análisis fiduciario con contexto del usuario
@@ -2001,6 +2003,14 @@ ${top3Texto}
                             <span className="absolute top-3 right-3 text-sm font-bold bg-blue-600 text-white px-3 py-1 rounded-full shadow">
                               #{idx + 1} Match
                             </span>
+
+                            {/* Badge Broker - si es propiedad de broker */}
+                            {prop.fuente_tipo === 'broker' && prop.codigo_sim && (
+                              <span className="absolute top-12 right-3 text-xs font-medium bg-amber-500 text-white px-2 py-1 rounded-full shadow flex items-center gap-1">
+                                <span>🏷️</span>
+                                <span>{prop.codigo_sim}</span>
+                              </span>
+                            )}
 
                             {/* Botón guardar - sobre la foto */}
                             <button
