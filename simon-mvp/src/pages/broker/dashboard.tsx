@@ -30,7 +30,7 @@ interface DashboardStats {
 }
 
 export default function BrokerDashboard() {
-  const { broker, isVerified } = useBrokerAuth(true)
+  const { broker, isVerified, isImpersonating, exitImpersonation } = useBrokerAuth(true)
   const [propiedades, setPropiedades] = useState<PropiedadBroker[]>([])
   const [stats, setStats] = useState<DashboardStats>({
     total_propiedades: 0,
@@ -140,6 +140,31 @@ export default function BrokerDashboard() {
       </Head>
 
       <BrokerLayout title="Dashboard">
+        {/* Admin Impersonation Banner */}
+        {isImpersonating && broker && (
+          <div className="mb-6 p-4 rounded-xl bg-purple-600 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">👁️</span>
+                <div>
+                  <h3 className="font-semibold">Modo Administrador</h3>
+                  <p className="text-sm text-purple-200">
+                    Viendo como: <strong>{broker.nombre}</strong>
+                    {broker.inmobiliaria && ` • ${broker.inmobiliaria}`}
+                    {' • '}{broker.estado_verificacion.replace('_', ' ')}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={exitImpersonation}
+                className="px-4 py-2 bg-white text-purple-600 font-semibold rounded-lg hover:bg-purple-50 transition-colors"
+              >
+                Salir
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Verification Status Banner */}
         {broker && !isVerified && (
           <div className={`mb-6 p-4 rounded-xl ${
@@ -220,7 +245,7 @@ export default function BrokerDashboard() {
 
         {/* Action Button */}
         <div className="mb-6">
-          {isVerified ? (
+          {(isVerified || isImpersonating) ? (
             <Link
               href="/broker/nueva-propiedad"
               className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
@@ -312,7 +337,7 @@ export default function BrokerDashboard() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2">
-                      {isVerified ? (
+                      {(isVerified || isImpersonating) ? (
                         <>
                           <Link
                             href={`/broker/editar/${prop.id}`}

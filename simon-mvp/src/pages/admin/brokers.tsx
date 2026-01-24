@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/router'
 import Head from 'next/head'
 import { supabase } from '@/lib/supabase'
+import { startImpersonation } from '@/hooks/useBrokerAuth'
 
 interface BrokerPendiente {
   id: string
@@ -17,11 +19,18 @@ interface BrokerPendiente {
 }
 
 export default function AdminBrokers() {
+  const router = useRouter()
   const [brokers, setBrokers] = useState<BrokerPendiente[]>([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState<'todos' | 'pendientes' | 'verificados'>('pendientes')
   const [orden, setOrden] = useState<'fecha' | 'propiedades'>('fecha')
   const [procesando, setProcesando] = useState<string | null>(null)
+
+  // Ver como broker (impersonar)
+  const verComoBroker = (brokerId: string) => {
+    startImpersonation(brokerId)
+    router.push('/broker/dashboard')
+  }
 
   useEffect(() => {
     fetchBrokers()
@@ -270,27 +279,38 @@ export default function AdminBrokers() {
                         {getFuenteBadge(broker.fuente_registro)}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {broker.estado_verificacion !== 'verificado' && (
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => verificarBroker(broker.id, 'aprobar')}
-                              disabled={procesando === broker.id}
-                              className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-sm rounded-lg disabled:opacity-50"
-                            >
-                              {procesando === broker.id ? '...' : 'Aprobar'}
-                            </button>
-                            <button
-                              onClick={() => verificarBroker(broker.id, 'rechazar')}
-                              disabled={procesando === broker.id}
-                              className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg disabled:opacity-50"
-                            >
-                              Rechazar
-                            </button>
-                          </div>
-                        )}
-                        {broker.estado_verificacion === 'verificado' && (
-                          <span className="text-green-600 text-sm">✓ Verificado</span>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Botón Ver como - siempre visible */}
+                          <button
+                            onClick={() => verComoBroker(broker.id)}
+                            className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg"
+                            title="Ver dashboard como este broker"
+                          >
+                            Ver como
+                          </button>
+
+                          {broker.estado_verificacion !== 'verificado' && (
+                            <>
+                              <button
+                                onClick={() => verificarBroker(broker.id, 'aprobar')}
+                                disabled={procesando === broker.id}
+                                className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-sm rounded-lg disabled:opacity-50"
+                              >
+                                {procesando === broker.id ? '...' : 'Aprobar'}
+                              </button>
+                              <button
+                                onClick={() => verificarBroker(broker.id, 'rechazar')}
+                                disabled={procesando === broker.id}
+                                className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg disabled:opacity-50"
+                              >
+                                Rechazar
+                              </button>
+                            </>
+                          )}
+                          {broker.estado_verificacion === 'verificado' && (
+                            <span className="text-green-600 text-sm">✓</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))

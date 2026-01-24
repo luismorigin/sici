@@ -72,7 +72,7 @@ const EQUIPAMIENTO_OPCIONES = [
 
 export default function NuevaPropiedad() {
   const router = useRouter()
-  const { broker } = useBrokerAuth(true)
+  const { broker, isImpersonating, exitImpersonation } = useBrokerAuth(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [step, setStep] = useState(1)
@@ -257,6 +257,29 @@ export default function NuevaPropiedad() {
       </Head>
 
       <BrokerLayout title="Nueva Propiedad">
+        {/* Admin Impersonation Banner */}
+        {isImpersonating && broker && (
+          <div className="mb-6 p-4 rounded-xl bg-purple-600 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">👁️</span>
+                <div>
+                  <h3 className="font-semibold">Modo Administrador</h3>
+                  <p className="text-sm text-purple-200">
+                    Creando propiedad como: <strong>{broker.nombre}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={exitImpersonation}
+                className="px-4 py-2 bg-white text-purple-600 font-semibold rounded-lg hover:bg-purple-50 transition-colors"
+              >
+                Salir
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Progress Steps */}
         <div className="mb-8">
           <div className="flex items-center justify-center gap-4">

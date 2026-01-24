@@ -87,7 +87,7 @@ const zonaToId = (zona: string): string => {
 export default function EditarPropiedad() {
   const router = useRouter()
   const { id } = router.query
-  const { broker } = useBrokerAuth(true)
+  const { broker, isImpersonating, exitImpersonation } = useBrokerAuth(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -344,6 +344,29 @@ export default function EditarPropiedad() {
       </Head>
 
       <BrokerLayout>
+        {/* Admin Impersonation Banner */}
+        {isImpersonating && broker && (
+          <div className="mb-6 p-4 rounded-xl bg-purple-600 text-white max-w-2xl mx-auto">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">👁️</span>
+                <div>
+                  <h3 className="font-semibold">Modo Administrador</h3>
+                  <p className="text-sm text-purple-200">
+                    Editando propiedad de: <strong>{broker.nombre}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={exitImpersonation}
+                className="px-4 py-2 bg-white text-purple-600 font-semibold rounded-lg hover:bg-purple-50 transition-colors"
+              >
+                Salir
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="mb-6">
