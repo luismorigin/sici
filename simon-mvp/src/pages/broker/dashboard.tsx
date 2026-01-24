@@ -30,7 +30,7 @@ interface DashboardStats {
 }
 
 export default function BrokerDashboard() {
-  const { broker } = useBrokerAuth(true)
+  const { broker, isVerified } = useBrokerAuth(true)
   const [propiedades, setPropiedades] = useState<PropiedadBroker[]>([])
   const [stats, setStats] = useState<DashboardStats>({
     total_propiedades: 0,
@@ -140,6 +140,64 @@ export default function BrokerDashboard() {
       </Head>
 
       <BrokerLayout title="Dashboard">
+        {/* Verification Status Banner */}
+        {broker && !isVerified && (
+          <div className={`mb-6 p-4 rounded-xl ${
+            broker.estado_verificacion === 'pendiente'
+              ? 'bg-amber-50 border border-amber-200'
+              : broker.estado_verificacion === 'pre_registrado'
+                ? 'bg-blue-50 border border-blue-200'
+                : 'bg-red-50 border border-red-200'
+          }`}>
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">
+                {broker.estado_verificacion === 'pendiente' ? '⏳' :
+                 broker.estado_verificacion === 'pre_registrado' ? '👤' : '❌'}
+              </span>
+              <div>
+                <h3 className={`font-semibold ${
+                  broker.estado_verificacion === 'pendiente' ? 'text-amber-800' :
+                  broker.estado_verificacion === 'pre_registrado' ? 'text-blue-800' :
+                  'text-red-800'
+                }`}>
+                  {broker.estado_verificacion === 'pendiente' && 'Verificación pendiente'}
+                  {broker.estado_verificacion === 'pre_registrado' && 'Completa tu registro'}
+                  {broker.estado_verificacion === 'rechazado' && 'Verificación rechazada'}
+                </h3>
+                <p className={`text-sm ${
+                  broker.estado_verificacion === 'pendiente' ? 'text-amber-700' :
+                  broker.estado_verificacion === 'pre_registrado' ? 'text-blue-700' :
+                  'text-red-700'
+                }`}>
+                  {broker.estado_verificacion === 'pendiente' &&
+                    'Tu cuenta está siendo revisada. Mientras tanto puedes ver tus propiedades pero no publicar nuevas.'}
+                  {broker.estado_verificacion === 'pre_registrado' &&
+                    `Encontramos ${broker.total_propiedades || 0} propiedades vinculadas a tu teléfono. Verifica tu email para activar tu cuenta.`}
+                  {broker.estado_verificacion === 'rechazado' &&
+                    'Tu cuenta no pudo ser verificada. Contacta a soporte@simon.bo para más información.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Verified Badge */}
+        {broker && isVerified && (
+          <div className="mb-6 p-4 rounded-xl bg-green-50 border border-green-200">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">✅</span>
+              <div>
+                <h3 className="font-semibold text-green-800">Cuenta verificada</h3>
+                <p className="text-sm text-green-700">
+                  {broker.tipo_cuenta === 'desarrolladora' ? 'Desarrolladora' : 'Broker'} verificado
+                  {broker.inmobiliaria && ` • ${broker.inmobiliaria}`}
+                  {broker.empresa && ` • ${broker.empresa}`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -162,13 +220,24 @@ export default function BrokerDashboard() {
 
         {/* Action Button */}
         <div className="mb-6">
-          <Link
-            href="/broker/nueva-propiedad"
-            className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
-          >
-            <span>➕</span>
-            Nueva Propiedad
-          </Link>
+          {isVerified ? (
+            <Link
+              href="/broker/nueva-propiedad"
+              className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+            >
+              <span>➕</span>
+              Nueva Propiedad
+            </Link>
+          ) : (
+            <button
+              disabled
+              className="inline-flex items-center gap-2 bg-slate-300 text-slate-500 font-semibold px-6 py-3 rounded-lg cursor-not-allowed"
+              title="Debes estar verificado para agregar propiedades"
+            >
+              <span>🔒</span>
+              Nueva Propiedad
+            </button>
+          )}
         </div>
 
         {/* Properties List */}
@@ -243,18 +312,31 @@ export default function BrokerDashboard() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2">
-                      <Link
-                        href={`/broker/editar/${prop.id}`}
-                        className="px-4 py-2 text-sm font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                      >
-                        Editar
-                      </Link>
-                      <Link
-                        href={`/broker/fotos/${prop.id}`}
-                        className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-                      >
-                        Fotos
-                      </Link>
+                      {isVerified ? (
+                        <>
+                          <Link
+                            href={`/broker/editar/${prop.id}`}
+                            className="px-4 py-2 text-sm font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                          >
+                            Editar
+                          </Link>
+                          <Link
+                            href={`/broker/fotos/${prop.id}`}
+                            className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                          >
+                            Fotos
+                          </Link>
+                        </>
+                      ) : (
+                        <>
+                          <span className="px-4 py-2 text-sm font-medium text-slate-400 cursor-not-allowed" title="Verificación pendiente">
+                            🔒 Editar
+                          </span>
+                          <span className="px-4 py-2 text-sm font-medium text-slate-400 cursor-not-allowed" title="Verificación pendiente">
+                            🔒 Fotos
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 

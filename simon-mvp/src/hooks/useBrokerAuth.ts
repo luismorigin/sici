@@ -9,11 +9,17 @@ export interface Broker {
   telefono: string | null
   whatsapp: string | null
   empresa: string | null
+  inmobiliaria: string | null
   cma_creditos: number
   es_founding_broker: boolean
   tier: 'beta' | 'founding' | 'premium' | 'standard'
   activo: boolean
   badge: string | null
+  // Campos de verificación
+  estado_verificacion: 'pendiente' | 'verificado' | 'rechazado' | 'pre_registrado'
+  tipo_cuenta: 'broker' | 'desarrolladora'
+  fuente_registro: 'manual' | 'scraping' | 'invitacion'
+  total_propiedades: number
 }
 
 export interface UseBrokerAuthReturn {
@@ -21,6 +27,7 @@ export interface UseBrokerAuthReturn {
   loading: boolean
   error: string | null
   logout: () => Promise<void>
+  isVerified: boolean
 }
 
 export function useBrokerAuth(requireAuth: boolean = true): UseBrokerAuthReturn {
@@ -114,5 +121,7 @@ export function useBrokerAuth(requireAuth: boolean = true): UseBrokerAuthReturn 
     router.push('/broker/login')
   }
 
-  return { broker, loading, error, logout }
+  const isVerified = broker?.estado_verificacion === 'verificado'
+
+  return { broker, loading, error, logout, isVerified }
 }

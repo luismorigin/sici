@@ -3,13 +3,34 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import { supabase } from '@/lib/supabase'
 
+// Normalizar teléfono igual que en PostgreSQL
+const normalizarTelefono = (tel: string): string => {
+  if (!tel) return ''
+  return tel.replace(/^\+591/, '').replace(/[^0-9]/g, '')
+}
+
+interface BrokerPreRegistrado {
+  id: string
+  nombre: string
+  telefono: string
+  inmobiliaria: string | null
+  estado_verificacion: string
+  propiedades_count: number
+}
+
 export default function BrokerLogin() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [nombre, setNombre] = useState('')
+  const [telefono, setTelefono] = useState('')
+  const [tipoCuenta, setTipoCuenta] = useState<'broker' | 'desarrolladora'>('broker')
+  const [inmobiliaria, setInmobiliaria] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [brokerEncontrado, setBrokerEncontrado] = useState<BrokerPreRegistrado | null>(null)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -64,6 +85,45 @@ export default function BrokerLogin() {
     }
   }
 
+  // Buscar broker pre-registrado por teléfono
+  const buscarPorTelefono = async () => {
+    if (!supabase || !telefono) return
+
+    const telNorm = normalizarTelefono(telefono)
+    if (telNorm.length < 7) {
+      setBrokerEncontrado(null)
+      return
+    }
+
+    try {
+      // Buscar broker por teléfono normalizado
+      const { data } = await supabase
+        .from('brokers')
+        .select('id, nombre, telefono, inmobiliaria, estado_verificacion, total_propiedades')
+        .eq('telefono_normalizado', telNorm)
+        .single()
+
+      if (data) {
+        setBrokerEncontrado({
+          id: data.id,
+          nombre: data.nombre,
+          telefono: data.telefono,
+          inmobiliaria: data.inmobiliaria,
+          estado_verificacion: data.estado_verificacion,
+          propiedades_count: data.total_propiedades || 0
+        })
+        // Auto-rellenar nombre si existe
+        if (data.nombre && !nombre) {
+          setNombre(data.nombre)
+        }
+      } else {
+        setBrokerEncontrado(null)
+      }
+    } catch {
+      setBrokerEncontrado(null)
+    }
+  }
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!supabase) {
@@ -73,23 +133,13 @@ export default function BrokerLogin() {
 
     setLoading(true)
     setError(null)
+    setSuccess(null)
 
     try {
-      // Verificar si el email ya existe como broker
-      const { data: existingBroker } = await supabase
-        .from('brokers')
-        .select('id')
-        .eq('email', email)
-        .single()
+      const telNorm = normalizarTelefono(telefono)
 
-      if (!existingBroker) {
-        setError('Este email no está pre-registrado. Contacta a Simón para obtener acceso.')
-        setLoading(false)
-        return
-      }
-
-      // Crear cuenta en Supabase Auth
-      const { data, error: authError } = await supabase.auth.signUp({
+      // 1. Crear cuenta en Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -106,20 +156,71 @@ export default function BrokerLogin() {
         return
       }
 
-      if (data.user) {
-        // Actualizar broker con el auth_user_id
-        await supabase
+      if (!authData.user) {
+        setError('Error al crear cuenta')
+        return
+      }
+
+      // 2. Verificar si existe broker pre-registrado con este teléfono
+      if (brokerEncontrado) {
+        // Vincular cuenta existente
+        const { error: updateError } = await supabase
           .from('brokers')
           .update({
-            auth_user_id: data.user.id,
-            email_verificado: false
+            auth_user_id: authData.user.id,
+            email: email,
+            email_verificado: false,
+            estado_verificacion: 'verificado', // Auto-verificar porque coincide teléfono
+            fecha_verificacion: new Date().toISOString(),
+            verificado_por: 'auto_telefono',
+            notas_verificacion: 'Verificado automáticamente por coincidencia de teléfono'
           })
-          .eq('email', email)
+          .eq('id', brokerEncontrado.id)
 
-        setError(null)
-        alert('Cuenta creada. Revisa tu email para verificar tu cuenta.')
-        setMode('login')
+        if (updateError) {
+          setError('Error al vincular cuenta: ' + updateError.message)
+          return
+        }
+
+        setSuccess(`¡Bienvenido ${brokerEncontrado.nombre}! Encontramos ${brokerEncontrado.propiedades_count} propiedades tuyas. Revisa tu email para confirmar tu cuenta.`)
+      } else {
+        // 3. Crear nuevo broker (pendiente de verificación manual)
+        const { error: insertError } = await supabase
+          .from('brokers')
+          .insert({
+            auth_user_id: authData.user.id,
+            nombre: nombre,
+            email: email,
+            telefono: telefono,
+            telefono_normalizado: telNorm,
+            tipo_cuenta: tipoCuenta,
+            inmobiliaria: tipoCuenta === 'broker' ? inmobiliaria : null,
+            empresa: tipoCuenta === 'desarrolladora' ? inmobiliaria : null,
+            estado_verificacion: 'pendiente',
+            fuente_registro: 'manual',
+            email_verificado: false,
+            activo: true
+          })
+
+        if (insertError) {
+          // Si falla por email duplicado, intentar vincular
+          if (insertError.message.includes('duplicate') || insertError.message.includes('unique')) {
+            setError('Este email o teléfono ya está registrado.')
+          } else {
+            setError('Error al crear broker: ' + insertError.message)
+          }
+          return
+        }
+
+        setSuccess('Cuenta creada. Tu cuenta será revisada y verificada pronto. Revisa tu email para confirmar.')
       }
+
+      // Cambiar a modo login después de éxito
+      setTimeout(() => {
+        setMode('login')
+        setSuccess(null)
+      }, 5000)
+
     } catch (err) {
       setError('Error al registrar')
     } finally {
@@ -171,6 +272,131 @@ export default function BrokerLogin() {
 
             <form onSubmit={mode === 'login' ? handleLogin : handleRegister}>
               <div className="space-y-4">
+                {/* Campos solo para registro */}
+                {mode === 'register' && (
+                  <>
+                    {/* Teléfono - campo principal para verificación */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Teléfono <span className="text-amber-600">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={telefono}
+                        onChange={(e) => setTelefono(e.target.value)}
+                        onBlur={buscarPorTelefono}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-colors"
+                        placeholder="+591 70000000"
+                        required
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        Usamos tu teléfono para verificar tu identidad
+                      </p>
+                    </div>
+
+                    {/* Mensaje si encontramos broker pre-registrado */}
+                    {brokerEncontrado && (
+                      <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                        <p className="font-medium">¡Te encontramos!</p>
+                        <p>{brokerEncontrado.nombre}</p>
+                        {brokerEncontrado.inmobiliaria && (
+                          <p className="text-green-600">{brokerEncontrado.inmobiliaria}</p>
+                        )}
+                        <p className="text-green-600 mt-1">
+                          {brokerEncontrado.propiedades_count} propiedades vinculadas
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Nombre - solo si no se encontró broker */}
+                    {!brokerEncontrado && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Nombre completo
+                        </label>
+                        <input
+                          type="text"
+                          value={nombre}
+                          onChange={(e) => setNombre(e.target.value)}
+                          className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-colors"
+                          placeholder="Tu nombre"
+                          required={!brokerEncontrado}
+                        />
+                      </div>
+                    )}
+
+                    {/* Tipo de cuenta - solo si no se encontró broker */}
+                    {!brokerEncontrado && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Tipo de cuenta
+                        </label>
+                        <div className="flex gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setTipoCuenta('broker')}
+                            className={`flex-1 py-2 px-4 rounded-lg border-2 text-sm font-medium transition-colors ${
+                              tipoCuenta === 'broker'
+                                ? 'border-amber-500 bg-amber-50 text-amber-700'
+                                : 'border-slate-300 text-slate-600 hover:border-slate-400'
+                            }`}
+                          >
+                            Broker / Agente
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTipoCuenta('desarrolladora')}
+                            className={`flex-1 py-2 px-4 rounded-lg border-2 text-sm font-medium transition-colors ${
+                              tipoCuenta === 'desarrolladora'
+                                ? 'border-amber-500 bg-amber-50 text-amber-700'
+                                : 'border-slate-300 text-slate-600 hover:border-slate-400'
+                            }`}
+                          >
+                            Desarrolladora
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Inmobiliaria - solo para brokers nuevos */}
+                    {!brokerEncontrado && tipoCuenta === 'broker' && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Inmobiliaria
+                        </label>
+                        <select
+                          value={inmobiliaria}
+                          onChange={(e) => setInmobiliaria(e.target.value)}
+                          className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-colors bg-white"
+                          required
+                        >
+                          <option value="">Selecciona tu inmobiliaria</option>
+                          <option value="Century21">Century 21</option>
+                          <option value="RE/MAX">RE/MAX</option>
+                          <option value="Bien Inmuebles">Bien Inmuebles</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Nombre empresa - solo para desarrolladoras nuevas */}
+                    {!brokerEncontrado && tipoCuenta === 'desarrolladora' && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Nombre de la empresa
+                        </label>
+                        <input
+                          type="text"
+                          value={inmobiliaria}
+                          onChange={(e) => setInmobiliaria(e.target.value)}
+                          className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-colors"
+                          placeholder="Ej: Grupo Constructor XYZ"
+                          required
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Email
@@ -206,6 +432,12 @@ export default function BrokerLogin() {
                   </div>
                 )}
 
+                {success && (
+                  <div className="bg-green-50 text-green-600 px-4 py-3 rounded-lg text-sm">
+                    {success}
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   disabled={loading}
@@ -215,7 +447,9 @@ export default function BrokerLogin() {
                     ? 'Cargando...'
                     : mode === 'login'
                       ? 'Iniciar Sesión'
-                      : 'Crear Cuenta'
+                      : brokerEncontrado
+                        ? 'Vincular mi cuenta'
+                        : 'Crear Cuenta'
                   }
                 </button>
               </div>
@@ -223,9 +457,19 @@ export default function BrokerLogin() {
 
             {mode === 'register' && (
               <p className="mt-4 text-xs text-slate-500 text-center">
-                Solo brokers pre-registrados pueden crear cuenta.
-                <br />
-                Contacta a <span className="text-amber-600">soporte@simon.bo</span> para obtener acceso.
+                {brokerEncontrado ? (
+                  <>
+                    Tu teléfono coincide con un broker en nuestra base.
+                    <br />
+                    Al registrarte se vincularán tus propiedades automáticamente.
+                  </>
+                ) : (
+                  <>
+                    Si tu teléfono coincide con propiedades en el mercado,
+                    <br />
+                    tu cuenta será verificada automáticamente.
+                  </>
+                )}
               </p>
             )}
           </div>
