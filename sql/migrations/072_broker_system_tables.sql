@@ -516,7 +516,7 @@ CREATE POLICY broker_own_cma ON broker_cma_uso
 GRANT SELECT ON propiedades_broker TO anon;
 GRANT SELECT ON propiedad_fotos TO anon;
 GRANT SELECT ON propiedad_pdfs TO anon;
-GRANT EXECUTE ON FUNCTION buscar_unidades_broker TO anon;
+-- NOTA: GRANT para buscar_unidades_broker está en migración 073
 
 -- =====================================================
 -- TEST: Verificar tablas creadas
