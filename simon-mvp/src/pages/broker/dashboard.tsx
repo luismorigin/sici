@@ -76,7 +76,10 @@ export default function BrokerDashboard() {
         return
       }
 
-      const props = data || []
+      const props: PropiedadBroker[] = (data || []).map(d => ({
+        ...d,
+        foto_principal: undefined
+      }))
 
       // Obtener fotos principales para cada propiedad
       const propIds = props.map(p => p.id)

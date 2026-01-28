@@ -417,7 +417,7 @@ export default function NuevaPropiedad() {
                       value={formData.fecha_entrega}
                       onChange={(e) => updateField('fecha_entrega', e.target.value)}
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                      required={formData.estado_construccion !== 'entrega_inmediata'}
+                      required
                     />
                     <p className="text-xs text-slate-500 mt-1">
                       Selecciona el mes y año de entrega estimado

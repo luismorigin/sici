@@ -64,6 +64,18 @@ const ZONAS = [
   { id: 'Faremafu', label: 'Equipetrol Oeste (Busch)' }   // Faremafu en BD
 ]
 
+interface ProyectoOption {
+  id: number
+  nombre: string
+  desarrollador: string | null
+}
+
+interface BrokerOption {
+  nombre: string
+  inmobiliaria: string | null
+  cantidad: number
+}
+
 export default function AdminPropiedades() {
   const [propiedades, setPropiedades] = useState<PropiedadConCandados[]>([])
   const [loading, setLoading] = useState(true)
@@ -78,9 +90,101 @@ export default function AdminPropiedades() {
   const [soloPreciosSospechosos, setSoloPreciosSospechosos] = useState(false)
   const [soloHuerfanas, setSoloHuerfanas] = useState(false)
 
+  // Autocompletado de proyectos
+  const [proyectosList, setProyectosList] = useState<ProyectoOption[]>([])
+  const [showProyectoSuggestions, setShowProyectoSuggestions] = useState(false)
+  const [tipoBusqueda, setTipoBusqueda] = useState<'proyecto' | 'broker'>('proyecto')
+  const [proyectoSeleccionadoId, setProyectoSeleccionadoId] = useState<number | null>(null)
+
+  // Autocompletado de brokers
+  const [brokersList, setBrokersList] = useState<BrokerOption[]>([])
+  const [showBrokerSuggestions, setShowBrokerSuggestions] = useState(false)
+  const [brokerSeleccionado, setBrokerSeleccionado] = useState<string | null>(null)
+
   useEffect(() => {
     fetchPropiedades()
-  }, [zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas])
+  }, [zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado])
+
+  // Cargar lista de proyectos para autocompletado
+  useEffect(() => {
+    const fetchProyectos = async () => {
+      if (!supabase) return
+      const { data, error } = await supabase
+        .from('proyectos_master')
+        .select('id_proyecto_master, nombre_oficial, desarrollador')
+        .eq('activo', true)
+        .order('nombre_oficial')
+
+      if (!error && data) {
+        setProyectosList(data.map(p => ({
+          id: p.id_proyecto_master,
+          nombre: p.nombre_oficial,
+          desarrollador: p.desarrollador
+        })))
+      }
+    }
+    fetchProyectos()
+  }, [])
+
+  // Cargar lista de brokers para autocompletado
+  useEffect(() => {
+    const fetchBrokers = async () => {
+      if (!supabase) return
+      // Query para obtener brokers únicos con cantidad de propiedades
+      const { data, error } = await supabase
+        .rpc('buscar_unidades_reales', {
+          p_filtros: {
+            limite: 500,
+            incluir_outliers: true,
+            incluir_multiproyecto: true,
+            incluir_datos_viejos: true
+          }
+        })
+
+      if (!error && data) {
+        // Agrupar por asesor_nombre y contar
+        const brokersMap = new Map<string, { inmobiliaria: string | null, cantidad: number }>()
+        data.forEach((p: any) => {
+          if (p.asesor_nombre) {
+            const existing = brokersMap.get(p.asesor_nombre)
+            if (existing) {
+              existing.cantidad++
+            } else {
+              brokersMap.set(p.asesor_nombre, {
+                inmobiliaria: p.asesor_inmobiliaria || null,
+                cantidad: 1
+              })
+            }
+          }
+        })
+
+        // Convertir a array y ordenar por cantidad
+        const brokers: BrokerOption[] = Array.from(brokersMap.entries())
+          .map(([nombre, info]) => ({
+            nombre,
+            inmobiliaria: info.inmobiliaria,
+            cantidad: info.cantidad
+          }))
+          .sort((a, b) => b.cantidad - a.cantidad)
+
+        setBrokersList(brokers)
+      }
+    }
+    fetchBrokers()
+  }, [])
+
+  // Cerrar sugerencias al hacer click afuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.busqueda-container')) {
+        setShowProyectoSuggestions(false)
+        setShowBrokerSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const fetchPropiedades = async () => {
     if (!supabase) return
@@ -102,6 +206,19 @@ export default function AdminPropiedades() {
       }
       if (dormitorios && dormitorios !== 'todos') {
         filtros.dormitorios = parseInt(dormitorios)
+      }
+      // Búsqueda por texto (broker o proyecto)
+      if (busqueda && tipoBusqueda === 'broker') {
+        // Para broker buscamos en asesor_nombre (se filtra después en frontend)
+      } else if (tipoBusqueda === 'proyecto' && proyectoSeleccionadoId) {
+        // Proyecto específico seleccionado: buscar por nombre exacto en RPC
+        const proyectoSeleccionado = proyectosList.find(p => p.id === proyectoSeleccionadoId)
+        if (proyectoSeleccionado) {
+          filtros.proyecto = proyectoSeleccionado.nombre
+        }
+      } else if (busqueda && tipoBusqueda === 'proyecto') {
+        // Búsqueda por texto libre en nombre proyecto
+        filtros.proyecto = busqueda
       }
 
       // Llamar a buscar_unidades_reales via RPC
@@ -168,11 +285,22 @@ export default function AdminPropiedades() {
           resultado = resultado.filter((p: PropiedadConCandados) => !p.id_proyecto_master)
         }
 
-        // Filtrar por búsqueda
-        if (busqueda.trim()) {
+        // Filtrar por proyecto específico seleccionado
+        if (tipoBusqueda === 'proyecto' && proyectoSeleccionadoId) {
+          resultado = resultado.filter((p: PropiedadConCandados) =>
+            p.id_proyecto_master === proyectoSeleccionadoId
+          )
+        }
+        // Filtrar por broker específico seleccionado (exacto)
+        else if (tipoBusqueda === 'broker' && brokerSeleccionado) {
+          resultado = resultado.filter((p: PropiedadConCandados) =>
+            p.asesor_nombre === brokerSeleccionado
+          )
+        }
+        // Filtrar por broker (texto parcial en asesor_nombre o inmobiliaria)
+        else if (tipoBusqueda === 'broker' && busqueda.trim()) {
           const termino = busqueda.toLowerCase()
           resultado = resultado.filter((p: PropiedadConCandados) =>
-            p.proyecto?.toLowerCase().includes(termino) ||
             p.asesor_nombre?.toLowerCase().includes(termino) ||
             p.asesor_inmobiliaria?.toLowerCase().includes(termino)
           )
@@ -315,15 +443,190 @@ export default function AdminPropiedades() {
           {/* Filtros */}
           <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
             <div className="flex flex-wrap items-center gap-4">
-              <div className="flex-1 min-w-[200px]">
-                <input
-                  type="text"
-                  placeholder="Buscar proyecto o broker..."
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && fetchPropiedades()}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                />
+              <div className="flex-1 min-w-[280px] busqueda-container">
+                {/* Tabs Proyecto / Broker */}
+                <div className="flex mb-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTipoBusqueda('proyecto')
+                      setBusqueda('')
+                      setProyectoSeleccionadoId(null)
+                      setBrokerSeleccionado(null)
+                      setShowBrokerSuggestions(false)
+                    }}
+                    className={`text-xs px-3 py-1 rounded-t ${
+                      tipoBusqueda === 'proyecto'
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                    }`}
+                  >
+                    🏢 Proyecto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTipoBusqueda('broker')
+                      setBusqueda('')
+                      setShowProyectoSuggestions(false)
+                      setProyectoSeleccionadoId(null)
+                      setBrokerSeleccionado(null)
+                    }}
+                    className={`text-xs px-3 py-1 rounded-t ${
+                      tipoBusqueda === 'broker'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                    }`}
+                  >
+                    👤 Broker
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder={tipoBusqueda === 'proyecto' ? 'Buscar proyecto...' : 'Buscar broker...'}
+                    value={busqueda}
+                    onChange={(e) => {
+                      setBusqueda(e.target.value)
+                      if (tipoBusqueda === 'proyecto') {
+                        setShowProyectoSuggestions(e.target.value.length > 0)
+                        setShowBrokerSuggestions(false)
+                        // Si el texto cambió y no coincide con el proyecto seleccionado, limpiar
+                        const proyectoActual = proyectosList.find(p => p.id === proyectoSeleccionadoId)
+                        if (proyectoActual && e.target.value !== proyectoActual.nombre) {
+                          setProyectoSeleccionadoId(null)
+                        }
+                      } else {
+                        setShowBrokerSuggestions(e.target.value.length > 0)
+                        setShowProyectoSuggestions(false)
+                        // Si el texto cambió y no coincide con el broker seleccionado, limpiar
+                        if (brokerSeleccionado && e.target.value !== brokerSeleccionado) {
+                          setBrokerSeleccionado(null)
+                        }
+                      }
+                    }}
+                    onFocus={() => {
+                      if (tipoBusqueda === 'proyecto' && busqueda.length > 0) {
+                        setShowProyectoSuggestions(true)
+                      } else if (tipoBusqueda === 'broker' && busqueda.length > 0) {
+                        setShowBrokerSuggestions(true)
+                      }
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && fetchPropiedades()}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 outline-none ${
+                      tipoBusqueda === 'proyecto' && proyectoSeleccionadoId
+                        ? 'border-green-400 bg-green-50 focus:ring-green-500'
+                        : tipoBusqueda === 'broker' && brokerSeleccionado
+                          ? 'border-green-400 bg-green-50 focus:ring-green-500'
+                          : tipoBusqueda === 'proyecto'
+                            ? 'border-amber-300 focus:ring-amber-500'
+                            : 'border-blue-300 focus:ring-blue-500'
+                    }`}
+                  />
+                  {/* Indicador de proyecto seleccionado */}
+                  {tipoBusqueda === 'proyecto' && proyectoSeleccionadoId && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-sm flex items-center gap-1">
+                      ✓
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProyectoSeleccionadoId(null)
+                          setBusqueda('')
+                        }}
+                        className="text-red-400 hover:text-red-600 ml-1"
+                        title="Limpiar filtro"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  )}
+
+                  {/* Indicador de broker seleccionado */}
+                  {tipoBusqueda === 'broker' && brokerSeleccionado && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-sm flex items-center gap-1">
+                      ✓
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBrokerSeleccionado(null)
+                          setBusqueda('')
+                        }}
+                        className="text-red-400 hover:text-red-600 ml-1"
+                        title="Limpiar filtro"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  )}
+
+                  {/* Sugerencias de proyectos */}
+                  {tipoBusqueda === 'proyecto' && showProyectoSuggestions && busqueda.length > 0 && (
+                    <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {proyectosList
+                        .filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+                        .slice(0, 8)
+                        .map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              setBusqueda(p.nombre)
+                              setProyectoSeleccionadoId(p.id)
+                              setShowProyectoSuggestions(false)
+                              // El useEffect se encarga de buscar cuando cambia proyectoSeleccionadoId
+                            }}
+                            className="w-full px-4 py-2 text-left hover:bg-amber-50 border-b border-slate-100 last:border-0"
+                          >
+                            <span className="font-medium text-slate-900">{p.nombre}</span>
+                            {p.desarrollador && (
+                              <span className="block text-xs text-slate-500">{p.desarrollador}</span>
+                            )}
+                          </button>
+                        ))
+                      }
+                      {proyectosList.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase())).length === 0 && (
+                        <div className="px-4 py-3 text-sm text-slate-500">
+                          No se encontró "{busqueda}"
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sugerencias de brokers */}
+                  {tipoBusqueda === 'broker' && showBrokerSuggestions && busqueda.length > 0 && (
+                    <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {brokersList
+                        .filter(b => b.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+                        .slice(0, 8)
+                        .map(b => (
+                          <button
+                            key={b.nombre}
+                            type="button"
+                            onClick={() => {
+                              setBusqueda(b.nombre)
+                              setBrokerSeleccionado(b.nombre)
+                              setShowBrokerSuggestions(false)
+                              // El useEffect se encarga de buscar cuando cambia brokerSeleccionado
+                            }}
+                            className="w-full px-4 py-2 text-left hover:bg-blue-50 border-b border-slate-100 last:border-0"
+                          >
+                            <span className="font-medium text-slate-900">{b.nombre}</span>
+                            <span className="block text-xs text-slate-500">
+                              {b.cantidad} {b.cantidad === 1 ? 'propiedad' : 'propiedades'}
+                              {b.inmobiliaria && ` • ${b.inmobiliaria}`}
+                            </span>
+                          </button>
+                        ))
+                      }
+                      {brokersList.filter(b => b.nombre.toLowerCase().includes(busqueda.toLowerCase())).length === 0 && (
+                        <div className="px-4 py-3 text-sm text-slate-500">
+                          No se encontró broker "{busqueda}"
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <select
