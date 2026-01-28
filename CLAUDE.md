@@ -82,7 +82,7 @@ sici/
 │   ├── enrichment/    # registrar_enrichment.sql
 │   ├── merge/         # merge_discovery_enrichment.sql v2.2.0
 │   └── matching/      # Funciones v3.1 (propiedades_v2)
-├── sql/migrations/    # 001-074 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Broker B2B)
+├── sql/migrations/    # 001-077 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Broker B2B, Admin)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
@@ -95,7 +95,7 @@ sici/
     └── modulo_2/      # Specs matching pipeline
 ```
 
-## Estado Actual (24 Ene 2026)
+## Estado Actual (28 Ene 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
@@ -119,9 +119,11 @@ sici/
 - **Enriquecimiento Amenities:** 69 campos extraídos de descripciones (45 equipamiento + 24 amenities), con candados (migración 064)
 - **Auditoría Baños:** 14 propiedades corregidas con `campos_bloqueados`, 17 pendientes de revisión manual
 - **Sistema Broker B2B (Fases 1-4):** Tablas broker, propiedades_broker, buscar_unidades_broker(), UI integrada (migraciones 070-074)
+- **Piso + Forma de Pago:** 6 columnas directas + buscar_unidades_reales() v2.25 + editor admin (migraciones 081-082)
 
 ### ⏳ En Progreso
 - **Sistema Broker Fase 5-7:** Portal broker, sistema leads, CMA (pendiente)
+- **Admin Dashboard Propiedades:** Editor visual de propiedades_v2 con auditoría (migración 077)
 
 ### ❌ Pendiente
 - **FASE 3:** Enriquecimiento IA de proyectos (15 sin desarrollador asignado)
@@ -147,7 +149,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-074)
+## Migraciones SQL (001-077)
 
 | # | Archivo | Propósito | Estado |
 |---|---------|-----------|--------|
@@ -195,6 +197,13 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 072 | broker_system_tables | 7 tablas sistema broker: brokers, propiedades_broker, fotos, leads, CMA | ✅ |
 | 073 | buscar_unidades_broker | Función búsqueda propiedades broker compatible con buscar_unidades_reales | ✅ |
 | 074 | broker_datos_prueba | Datos test: 1 broker + 3 propiedades (SIM-TEST1/2/3) + 25 fotos | ✅ |
+| 075 | brokers_verificacion_preregistro | Sistema verificación brokers + pre-registro scraping | ✅ |
+| 076 | propiedades_broker_campos_adicionales | Campos adicionales propiedades broker | ✅ |
+| 077 | propiedades_historial_auditoria | **Tabla auditoría cambios + vistas + funciones historial** | ⏳ |
+| 081 | columnas_piso_forma_pago | **Columnas piso + forma de pago (6 campos) en propiedades_v2** | ✅ |
+| 082 | buscar_unidades_forma_pago | **buscar_unidades_reales() v2.25 + filtros forma de pago** | ✅ |
+| 083 | parqueo_baulera_precio | **Columnas parqueo/baulera incluido + precio adicional** | ⏳ |
+| 084 | buscar_unidades_parqueo_baulera | **buscar_unidades_reales() v2.26 + filtros parqueo/baulera** | ⏳ |
 
 ## Repo Legacy
 
@@ -252,6 +261,9 @@ Auditoría manual con IA completada. 14 propiedades corregidas con `campos_bloqu
 - [x] Filtro `tipo_operacion = 'venta'` en función `buscar_unidades_reales()` ✅ (migración 026)
 - [x] Filtro `area >= 20m²` para excluir parqueos/bauleras mal clasificados ✅ (migración 026)
 - [ ] Detectar duplicados por proyecto + área + dormitorios con precios muy diferentes
+
+### UX Pendiente
+- [ ] **Leyenda de símbolos en landing** - Banner colapsable explicando: ✓=confirmado, ?=sin confirmar, 🚗=parqueos, 📦=baulera, 🏢=piso, 💵=contado, 📅=plan pagos, 💱=TC paralelo
 
 ## Deuda Técnica (20 Ene 2026)
 

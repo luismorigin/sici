@@ -1,7 +1,7 @@
 # Schema: propiedades_v2
 
-**Última actualización:** 25 Diciembre 2025
-**Columnas:** 57+
+**Última actualización:** 28 Enero 2026
+**Columnas:** 67+
 
 ---
 
@@ -34,15 +34,30 @@
 | `requiere_actualizacion_precio` | BOOLEAN | Flag para recálculo TC |
 | `depende_de_tc` | BOOLEAN | Si precio depende de TC |
 
-### Físico (6 cols)
+### Físico (12 cols)
 | Columna | Tipo | Descripción |
 |---------|------|-------------|
 | `area_total_m2` | NUMERIC(10,2) | Metros cuadrados |
 | `dormitorios` | INTEGER | Cantidad dormitorios |
 | `banos` | NUMERIC(3,1) | Cantidad baños |
 | `estacionamientos` | INTEGER | Cantidad parking |
+| `parqueo_incluido` | BOOLEAN | **v2.26** true=incluido en precio, false=adicional |
+| `parqueo_precio_adicional` | NUMERIC(12,2) | **v2.26** USD por parqueo si no incluido |
+| `baulera` | BOOLEAN | Tiene baulera (v2.23) |
+| `baulera_incluido` | BOOLEAN | **v2.26** true=incluida en precio, false=adicional |
+| `baulera_precio_adicional` | NUMERIC(12,2) | **v2.26** USD por baulera si no incluida |
+| `piso` | INTEGER | **v2.25** Número de piso. NULL=sin confirmar |
 | `latitud` | NUMERIC(10,8) | GPS latitud |
 | `longitud` | NUMERIC(11,8) | GPS longitud |
+
+### Forma de Pago (5 cols) - v2.25
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `plan_pagos_desarrollador` | BOOLEAN | Acepta cuotas. NULL=sin confirmar, false=solo contado |
+| `acepta_permuta` | BOOLEAN | Acepta vehículo/propiedad. NULL=sin confirmar |
+| `solo_tc_paralelo` | BOOLEAN | Solo USD paralelo. NULL=sin confirmar, false=acepta oficial/Bs |
+| `precio_negociable` | BOOLEAN | Acepta ofertas. NULL=sin confirmar |
+| `descuento_contado_pct` | NUMERIC(5,2) | % descuento contado. NULL=sin descuento/sin confirmar |
 
 ### Multiproyecto (5 cols)
 | Columna | Tipo | Descripción |
@@ -190,4 +205,51 @@ Ver: `sql/migrations/migracion_columnas_matching_v1.0.0.sql`
 
 ---
 
-**Última actualización:** 25 Diciembre 2025
+## Migración v2.25 - Piso y Forma de Pago (28 Ene 2026)
+
+```sql
+-- Piso del departamento
+ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS piso INTEGER;
+
+-- Forma de pago
+ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS plan_pagos_desarrollador BOOLEAN;
+ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS acepta_permuta BOOLEAN;
+ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS solo_tc_paralelo BOOLEAN;
+ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS precio_negociable BOOLEAN;
+ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS descuento_contado_pct NUMERIC(5,2);
+
+-- Índices para filtros
+CREATE INDEX IF NOT EXISTS idx_propiedades_plan_pagos
+  ON propiedades_v2(plan_pagos_desarrollador) WHERE plan_pagos_desarrollador = true;
+CREATE INDEX IF NOT EXISTS idx_propiedades_tc_paralelo
+  ON propiedades_v2(solo_tc_paralelo) WHERE solo_tc_paralelo = true;
+CREATE INDEX IF NOT EXISTS idx_propiedades_piso
+  ON propiedades_v2(piso) WHERE piso IS NOT NULL;
+```
+
+### Interpretación de valores NULL
+
+| Valor | Significado | UI |
+|-------|-------------|-----|
+| `true` | Confirmado que SÍ | ✓ o badge específico |
+| `false` | Confirmado que NO | No mostrar o ✗ |
+| `NULL` | Sin confirmar | ? con tooltip |
+
+### Lógica derivada
+
+```sql
+-- "Solo contado" = no acepta ningún financiamiento
+CASE
+  WHEN plan_pagos_desarrollador = false
+   AND (acepta_permuta = false OR acepta_permuta IS NULL)
+  THEN 'Solo contado'
+  ELSE NULL
+END
+```
+
+Ver: `sql/migrations/081_columnas_piso_forma_pago.sql`
+Ver: `sql/migrations/082_buscar_unidades_forma_pago.sql`
+
+---
+
+**Última actualización:** 28 Enero 2026
