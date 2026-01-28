@@ -662,6 +662,7 @@ export default function AdminPropiedades() {
               >
                 <option value="">Dormitorios</option>
                 <option value="todos">Todos</option>
+                <option value="0">Monoambiente</option>
                 <option value="1">1 dorm</option>
                 <option value="2">2 dorms</option>
                 <option value="3">3 dorms</option>
