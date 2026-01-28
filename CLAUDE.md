@@ -262,8 +262,8 @@ Auditoría manual con IA completada. 14 propiedades corregidas con `campos_bloqu
 - [x] Filtro `area >= 20m²` para excluir parqueos/bauleras mal clasificados ✅ (migración 026)
 - [ ] Detectar duplicados por proyecto + área + dormitorios con precios muy diferentes
 
-### UX Pendiente
-- [ ] **Leyenda de símbolos en landing** - Banner colapsable explicando: ✓=confirmado, ?=sin confirmar, 🚗=parqueos, 📦=baulera, 🏢=piso, 💵=contado, 📅=plan pagos, 💱=TC paralelo
+### UX Completado
+- [x] **Leyenda de símbolos en resultados** - Banner colapsable en resultsV2.tsx explicando: ✓=incluido, ?=sin confirmar, 🚗=parqueos, 📦=baulera, 🏢=piso, 📅=plan pagos, 💱=TC paralelo, 📉=descuento, 🤝=negociable
 
 ## Deuda Técnica (20 Ene 2026)
 
