@@ -120,10 +120,12 @@ sici/
 - **Auditoría Baños:** 14 propiedades corregidas con `campos_bloqueados`, 17 pendientes de revisión manual
 - **Sistema Broker B2B (Fases 1-4):** Tablas broker, propiedades_broker, buscar_unidades_broker(), UI integrada (migraciones 070-074)
 - **Piso + Forma de Pago:** 6 columnas directas + buscar_unidades_reales() v2.25 + editor admin (migraciones 081-082)
+- **Parqueo/Baulera Precio:** 4 columnas (incluido + precio_adicional) + buscar_unidades_reales() v2.26 (migraciones 083-084)
+- **Admin Dashboard Propiedades:** Editor visual completo con validaciones de seguridad, indicadores precio sospechoso, sistema candados (migración 077)
+- **Iconos Resultados:** Símbolos mejorados en resultsV2 (🛏️🚿📐🏢🚗📦) + leyenda colapsable + badges forma pago
 
 ### ⏳ En Progreso
 - **Sistema Broker Fase 5-7:** Portal broker, sistema leads, CMA (pendiente)
-- **Admin Dashboard Propiedades:** Editor visual de propiedades_v2 con auditoría (migración 077)
 
 ### ❌ Pendiente
 - **FASE 3:** Enriquecimiento IA de proyectos (15 sin desarrollador asignado)
