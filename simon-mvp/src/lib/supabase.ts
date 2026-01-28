@@ -68,6 +68,18 @@ export interface UnidadReal {
   // v2.24: Campos para propiedades de broker
   fuente_tipo?: 'scraping' | 'broker'
   codigo_sim?: string  // Solo para broker (SIM-XXXXX)
+  // v2.25: Piso y forma de pago
+  piso: number | null
+  plan_pagos_desarrollador: boolean | null
+  acepta_permuta: boolean | null
+  solo_tc_paralelo: boolean | null
+  precio_negociable: boolean | null
+  descuento_contado_pct: number | null
+  // v2.26: Parqueo y baulera con precios
+  parqueo_incluido: boolean | null
+  parqueo_precio_adicional: number | null
+  baulera_incluido: boolean | null
+  baulera_precio_adicional: number | null
 }
 
 // Filtros para búsqueda

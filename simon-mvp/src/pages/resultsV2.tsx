@@ -291,6 +291,27 @@ export default function ResultsV2Page() {
               {level === 1 ? 'Opciones disponibles' : 'Opciones coherentes con tu vida'}
             </h2>
 
+            {/* Leyenda de símbolos - colapsable */}
+            <details className="mb-4 bg-slate-50 rounded-lg border border-slate-200">
+              <summary className="px-4 py-2 cursor-pointer text-sm text-slate-600 hover:bg-slate-100 rounded-lg">
+                💡 Guía de símbolos
+              </summary>
+              <div className="px-4 pb-3 pt-1 text-xs text-slate-500 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <span>🛏️ = Dormitorios</span>
+                <span>🚿 = Baños</span>
+                <span>📐 = Área m²</span>
+                <span>🏢 = Piso</span>
+                <span>🚗 = Parqueos</span>
+                <span>📦 = Baulera</span>
+                <span className="text-green-600">✓ = Incluido</span>
+                <span className="text-neutral-400">? = Sin confirmar</span>
+                <span>📅 = Plan pagos</span>
+                <span>💱 = TC Paralelo</span>
+                <span>📉 = Descuento</span>
+                <span>🤝 = Negociable</span>
+              </div>
+            </details>
+
             <div className="space-y-6">
               {properties.map((property, index) => (
                 <motion.div
@@ -341,14 +362,67 @@ export default function ResultsV2Page() {
                       </div>
                     </div>
 
-                    {/* Features */}
-                    <div className="flex gap-4 mb-4 text-neutral-600">
-                      <span>{property.dormitorios} dorm</span>
-                      <span>{property.cantidad_fotos} fotos</span>
-                      {property.score_calidad && (
-                        <span className="text-green-600">Score: {property.score_calidad}</span>
+                    {/* Features - Línea principal */}
+                    <div className="flex flex-wrap gap-3 mb-2 text-neutral-600 text-sm">
+                      <span title="Dormitorios">🛏️ {property.dormitorios}d</span>
+                      {property.banos !== null && (
+                        <span title="Baños">🚿 {property.banos}b</span>
+                      )}
+                      <span title="Área">📐 {property.area_m2}m²</span>
+                      {property.piso !== null && (
+                        <span title="Piso">🏢 P{property.piso}</span>
+                      )}
+                      {/* Parqueo */}
+                      {property.estacionamientos !== null ? (
+                        <span title={property.parqueo_incluido === true ? 'Parqueo incluido' : property.parqueo_incluido === false ? 'Parqueo no incluido' : 'Parqueo sin confirmar'}>
+                          🚗 {property.estacionamientos}
+                          {property.parqueo_incluido === true && <span className="text-green-500 ml-0.5">✓</span>}
+                          {property.parqueo_incluido === false && property.parqueo_precio_adicional && (
+                            <span className="text-amber-500 ml-0.5">+${property.parqueo_precio_adicional.toLocaleString()}</span>
+                          )}
+                        </span>
+                      ) : (
+                        <span title="Parqueo sin confirmar" className="text-neutral-400">🚗 ?</span>
+                      )}
+                      {/* Baulera */}
+                      {property.baulera === true ? (
+                        <span title={property.baulera_incluido === true ? 'Baulera incluida' : property.baulera_incluido === false ? 'Baulera no incluida' : 'Baulera sin confirmar inclusión'}>
+                          📦 {property.baulera_incluido === true ? <span className="text-green-500">✓</span> : property.baulera_incluido === false && property.baulera_precio_adicional ? (
+                            <span className="text-amber-500">+${property.baulera_precio_adicional.toLocaleString()}</span>
+                          ) : '?'}
+                        </span>
+                      ) : property.baulera === false ? (
+                        <span title="Sin baulera" className="text-neutral-400">📦 ✗</span>
+                      ) : (
+                        <span title="Baulera sin confirmar" className="text-neutral-400">📦 ?</span>
                       )}
                     </div>
+
+                    {/* Features - Línea de forma de pago (solo si hay info) */}
+                    {(property.plan_pagos_desarrollador || property.solo_tc_paralelo || property.descuento_contado_pct) && (
+                      <div className="flex flex-wrap gap-2 mb-3 text-xs">
+                        {property.plan_pagos_desarrollador && (
+                          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded" title="Acepta plan de pagos con desarrollador">
+                            📅 Plan pagos
+                          </span>
+                        )}
+                        {property.solo_tc_paralelo && (
+                          <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded" title="Solo acepta USD a tipo de cambio paralelo">
+                            💱 TC Paralelo
+                          </span>
+                        )}
+                        {property.descuento_contado_pct && property.descuento_contado_pct > 0 && (
+                          <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded" title="Descuento por pago al contado">
+                            📉 {property.descuento_contado_pct}% desc. contado
+                          </span>
+                        )}
+                        {property.precio_negociable && (
+                          <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded" title="Precio negociable">
+                            🤝 Negociable
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     {/* Amenities */}
                     {property.amenities_lista && property.amenities_lista.length > 0 && (
