@@ -103,6 +103,12 @@ interface ProyectoMaster {
   zona: string | null
 }
 
+interface ProyectoOption {
+  id: number
+  nombre: string
+  desarrollador: string | null
+}
+
 interface HistorialEntry {
   id: number
   campo: string
@@ -171,6 +177,11 @@ export default function EditarPropiedad() {
 
   const [originalData, setOriginalData] = useState<PropiedadOriginal | null>(null)
   const [proyectoMaster, setProyectoMaster] = useState<ProyectoMaster | null>(null)
+
+  // Selector de proyecto
+  const [proyectosList, setProyectosList] = useState<ProyectoOption[]>([])
+  const [showProyectoSuggestions, setShowProyectoSuggestions] = useState(false)
+  const [selectedProyectoId, setSelectedProyectoId] = useState<number | null>(null)
   const [historial, setHistorial] = useState<HistorialEntry[]>([])
   const [showHistorial, setShowHistorial] = useState(false)
   const [showMicrozonaCustom, setShowMicrozonaCustom] = useState(false)
@@ -182,6 +193,7 @@ export default function EditarPropiedad() {
   // Galería de fotos
   const [fotos, setFotos] = useState<string[]>([])
   const [fotoActual, setFotoActual] = useState(0)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   const [nuevoAmenidad, setNuevoAmenidad] = useState('')
   const [nuevoEquipamiento, setNuevoEquipamiento] = useState('')
@@ -228,6 +240,39 @@ export default function EditarPropiedad() {
       fetchHistorial()
     }
   }, [id])
+
+  // Cargar lista de proyectos para el selector
+  useEffect(() => {
+    const fetchProyectos = async () => {
+      if (!supabase) return
+      const { data, error } = await supabase
+        .from('proyectos_master')
+        .select('id_proyecto_master, nombre_oficial, desarrollador')
+        .eq('activo', true)
+        .order('nombre_oficial')
+
+      if (!error && data) {
+        setProyectosList(data.map(p => ({
+          id: p.id_proyecto_master,
+          nombre: p.nombre_oficial,
+          desarrollador: p.desarrollador
+        })))
+      }
+    }
+    fetchProyectos()
+  }, [])
+
+  // Cerrar sugerencias al hacer click afuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.proyecto-selector')) {
+        setShowProyectoSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const extraerFotos = (data: PropiedadOriginal): string[] => {
     if (data.datos_json?.contenido?.fotos_urls && Array.isArray(data.datos_json.contenido.fotos_urls)) {
@@ -287,7 +332,10 @@ export default function EditarPropiedad() {
         if (pmResult) {
           pmData = pmResult
           setProyectoMaster(pmResult)
+          setSelectedProyectoId(data.id_proyecto_master)
         }
+      } else {
+        setSelectedProyectoId(null)
       }
 
       // Extraer fotos
@@ -959,6 +1007,7 @@ export default function EditarPropiedad() {
       // Preparar campos de actualización
       const updateData: Record<string, any> = {
         nombre_edificio: formData.proyecto_nombre || null,
+        id_proyecto_master: selectedProyectoId,  // Vincular/desvincular proyecto
         zona: microzonaLabel,
         precio_usd: precioNormalizado, // Siempre guardar el precio normalizado
         area_total_m2: formData.area_m2 ? parseFloat(formData.area_m2) : null,
@@ -1159,6 +1208,24 @@ export default function EditarPropiedad() {
         </header>
 
         <main className="max-w-4xl mx-auto py-8 px-6">
+          {/* Banner para propiedades huérfanas */}
+          {!selectedProyectoId && (
+            <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6 rounded-r-lg">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">⚠️</span>
+                <div>
+                  <p className="font-semibold text-orange-800">
+                    Propiedad sin proyecto asignado
+                  </p>
+                  <p className="text-sm text-orange-700 mt-1">
+                    Esta propiedad no está vinculada a ningún proyecto de proyectos_master.
+                    Usa el selector de "Proyecto" para vincularla a un proyecto existente.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Info Header con Galería */}
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <div className="flex items-start gap-6">
@@ -1170,7 +1237,9 @@ export default function EditarPropiedad() {
                       <img
                         src={fotos[fotoActual]}
                         alt={`Foto ${fotoActual + 1}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => setLightboxIndex(fotoActual)}
+                        title="Click para ver en pantalla completa"
                       />
                       {fotos.length > 1 && (
                         <>
@@ -1208,18 +1277,23 @@ export default function EditarPropiedad() {
                     {fotos.slice(0, 6).map((foto, idx) => (
                       <button
                         key={idx}
-                        onClick={() => setFotoActual(idx)}
-                        className={`w-12 h-12 flex-shrink-0 rounded overflow-hidden border-2 ${
+                        onClick={() => setLightboxIndex(idx)}
+                        className={`w-12 h-12 flex-shrink-0 rounded overflow-hidden border-2 cursor-pointer hover:opacity-80 transition-opacity ${
                           idx === fotoActual ? 'border-amber-500' : 'border-transparent'
                         }`}
+                        title="Click para ver en pantalla completa"
                       >
                         <img src={foto} alt={`Mini ${idx + 1}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
                     {fotos.length > 6 && (
-                      <div className="w-12 h-12 flex-shrink-0 rounded bg-slate-200 flex items-center justify-center text-xs text-slate-500">
+                      <button
+                        onClick={() => setLightboxIndex(6)}
+                        className="w-12 h-12 flex-shrink-0 rounded bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-xs text-slate-500 cursor-pointer transition-colors"
+                        title="Ver más fotos"
+                      >
                         +{fotos.length - 6}
-                      </div>
+                      </button>
                     )}
                   </div>
                 )}
@@ -1252,6 +1326,23 @@ export default function EditarPropiedad() {
                     Ver publicación original →
                   </a>
                 )}
+
+                {/* Fecha publicación y días en mercado (solo lectura) */}
+                <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
+                  {originalData.fecha_publicacion && (
+                    <span title="Fecha de publicación">
+                      📅 {new Date(originalData.fecha_publicacion).toLocaleDateString('es-BO', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  )}
+                  {originalData.fecha_publicacion && (() => {
+                    const dias = Math.floor((Date.now() - new Date(originalData.fecha_publicacion).getTime()) / (1000 * 60 * 60 * 24))
+                    return (
+                      <span className={`${dias > 180 ? 'text-red-500' : dias > 90 ? 'text-amber-500' : 'text-slate-500'}`}>
+                        ⏱️ {dias} días en mercado
+                      </span>
+                    )
+                  })()}
+                </div>
 
                 {/* Precio - Reactivo al formulario */}
                 <div className={`mt-3 p-3 rounded-lg ${
@@ -1365,17 +1456,90 @@ export default function EditarPropiedad() {
               <h2 className="text-lg font-semibold text-slate-900 mb-4">Información Básica</h2>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
+                  <div className="relative proyecto-selector">
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Nombre del Edificio *
+                      Proyecto *
                     </label>
-                    <input
-                      type="text"
-                      value={formData.proyecto_nombre}
-                      onChange={(e) => updateField('proyecto_nombre', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                      placeholder="Ej: Torre Skyline"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formData.proyecto_nombre}
+                        onChange={(e) => {
+                          const nuevoValor = e.target.value
+                          updateField('proyecto_nombre', nuevoValor)
+                          setShowProyectoSuggestions(true)
+                          // Si el texto cambió y ya no coincide con el proyecto vinculado, desvincular
+                          const proyectoActual = proyectosList.find(p => p.id === selectedProyectoId)
+                          if (proyectoActual && nuevoValor !== proyectoActual.nombre) {
+                            setSelectedProyectoId(null)
+                            setProyectoMaster(null)
+                          }
+                        }}
+                        onFocus={() => setShowProyectoSuggestions(true)}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                          selectedProyectoId ? 'border-green-300 bg-green-50' : 'border-slate-300'
+                        }`}
+                        placeholder="Buscar proyecto..."
+                      />
+                      {selectedProyectoId && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-sm">
+                          ✓ Vinculado
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Sugerencias dropdown */}
+                    {showProyectoSuggestions && formData.proyecto_nombre.length > 0 && (
+                      <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {proyectosList
+                          .filter(p => p.nombre.toLowerCase().includes(formData.proyecto_nombre.toLowerCase()))
+                          .slice(0, 10)
+                          .map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => {
+                                updateField('proyecto_nombre', p.nombre)
+                                setSelectedProyectoId(p.id)
+                                setProyectoMaster({
+                                  nombre_oficial: p.nombre,
+                                  desarrollador: p.desarrollador,
+                                  zona: null
+                                })
+                                setShowProyectoSuggestions(false)
+                              }}
+                              className={`w-full px-4 py-2 text-left hover:bg-amber-50 border-b border-slate-100 last:border-0 ${
+                                p.id === selectedProyectoId ? 'bg-green-50' : ''
+                              }`}
+                            >
+                              <span className="font-medium text-slate-900">{p.nombre}</span>
+                              {p.desarrollador && (
+                                <span className="block text-xs text-slate-500">{p.desarrollador}</span>
+                              )}
+                            </button>
+                          ))
+                        }
+                        {proyectosList.filter(p => p.nombre.toLowerCase().includes(formData.proyecto_nombre.toLowerCase())).length === 0 && (
+                          <div className="px-4 py-3 text-sm text-slate-500">
+                            No se encontró "{formData.proyecto_nombre}"
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Botón desvincular */}
+                    {selectedProyectoId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedProyectoId(null)
+                          setProyectoMaster(null)
+                        }}
+                        className="text-xs text-red-500 hover:text-red-700 mt-1"
+                      >
+                        Desvincular proyecto
+                      </button>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -1387,7 +1551,9 @@ export default function EditarPropiedad() {
                       disabled
                       className="w-full px-4 py-3 border border-slate-200 rounded-lg bg-slate-50 text-slate-500"
                     />
-                    <p className="text-xs text-slate-400 mt-1">Viene del proyecto master</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {selectedProyectoId ? 'Viene del proyecto master' : 'Selecciona un proyecto para vincular'}
+                    </p>
                   </div>
                 </div>
 
@@ -2358,6 +2524,83 @@ export default function EditarPropiedad() {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Lightbox de Fotos */}
+      {lightboxIndex !== null && fotos.length > 0 && (
+        <div
+          className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center"
+          onClick={() => setLightboxIndex(null)}
+        >
+          {/* Botón cerrar */}
+          <button
+            onClick={() => setLightboxIndex(null)}
+            className="absolute top-4 right-4 text-white/80 hover:text-white text-4xl font-light z-10"
+          >
+            ×
+          </button>
+
+          {/* Navegación izquierda */}
+          {fotos.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setLightboxIndex(prev => prev === 0 ? fotos.length - 1 : (prev ?? 0) - 1)
+              }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white text-5xl font-light z-10 w-16 h-16 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
+            >
+              ‹
+            </button>
+          )}
+
+          {/* Imagen principal */}
+          <img
+            src={fotos[lightboxIndex]}
+            alt={`Foto ${lightboxIndex + 1} de ${fotos.length}`}
+            className="max-h-[90vh] max-w-[90vw] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Navegación derecha */}
+          {fotos.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setLightboxIndex(prev => prev === fotos.length - 1 ? 0 : (prev ?? 0) + 1)
+              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white text-5xl font-light z-10 w-16 h-16 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
+            >
+              ›
+            </button>
+          )}
+
+          {/* Contador */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm">
+            {lightboxIndex + 1} / {fotos.length}
+          </div>
+
+          {/* Miniaturas en la parte inferior */}
+          {fotos.length > 1 && (
+            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-2 max-w-[90vw] overflow-x-auto pb-2">
+              {fotos.map((foto, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setLightboxIndex(idx)
+                  }}
+                  className={`w-14 h-14 flex-shrink-0 rounded overflow-hidden border-2 transition-all ${
+                    idx === lightboxIndex
+                      ? 'border-white opacity-100'
+                      : 'border-transparent opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <img src={foto} alt={`Mini ${idx + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </>

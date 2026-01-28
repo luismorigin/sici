@@ -29,6 +29,7 @@ interface Propiedad {
   longitud: number | null
   estacionamientos: number | null
   baulera: boolean | null
+  dias_en_mercado: number | null
 }
 
 interface CamposBloqueados {
@@ -43,6 +44,8 @@ interface CamposBloqueados {
 interface PropiedadConCandados extends Propiedad {
   campos_bloqueados?: CamposBloqueados
   fuente?: string
+  id_proyecto_master?: number | null
+  fecha_publicacion?: string | null
   // Campos de normalización
   precio_usd_original?: number | null
   moneda_original?: string | null
@@ -50,13 +53,15 @@ interface PropiedadConCandados extends Propiedad {
   tipo_cambio_usado?: number | null
 }
 
+// IDs = valores exactos de proyectos_master.zona (para filtrar en RPC)
+// Labels = nombres amigables para mostrar al usuario
 const ZONAS = [
   { id: '', label: 'Todas las zonas' },
   { id: 'Equipetrol', label: 'Equipetrol Centro' },
   { id: 'Sirari', label: 'Sirari' },
-  { id: 'Equipetrol Norte', label: 'Equipetrol Norte' },
-  { id: 'Villa Brígida', label: 'Villa Brígida' },
-  { id: 'Equipetrol Oeste', label: 'Equipetrol Oeste (Busch)' }
+  { id: 'Equipetrol Norte', label: 'Equipetrol Norte' },  // ILIKE encuentra ambas subzonas
+  { id: 'Villa Brigida', label: 'Villa Brígida' },        // Sin acento en BD
+  { id: 'Faremafu', label: 'Equipetrol Oeste (Busch)' }   // Faremafu en BD
 ]
 
 export default function AdminPropiedades() {
@@ -71,10 +76,11 @@ export default function AdminPropiedades() {
   const [limite, setLimite] = useState(50)
   const [soloConCandados, setSoloConCandados] = useState(false)
   const [soloPreciosSospechosos, setSoloPreciosSospechosos] = useState(false)
+  const [soloHuerfanas, setSoloHuerfanas] = useState(false)
 
   useEffect(() => {
     fetchPropiedades()
-  }, [zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos])
+  }, [zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas])
 
   const fetchPropiedades = async () => {
     if (!supabase) return
@@ -112,7 +118,7 @@ export default function AdminPropiedades() {
       if (ids.length > 0) {
         const { data: propiedadesData, error: propsError } = await supabase
           .from('propiedades_v2')
-          .select('id, campos_bloqueados, fuente, precio_usd_original, moneda_original, tipo_cambio_detectado, tipo_cambio_usado')
+          .select('id, campos_bloqueados, fuente, precio_usd_original, moneda_original, tipo_cambio_detectado, tipo_cambio_usado, id_proyecto_master, fecha_publicacion')
           .in('id', ids)
 
         if (propsError) {
@@ -130,6 +136,8 @@ export default function AdminPropiedades() {
             ...u,
             campos_bloqueados: extra?.campos_bloqueados || {},
             fuente: extra?.fuente || '',
+            id_proyecto_master: extra?.id_proyecto_master ?? null,
+            fecha_publicacion: extra?.fecha_publicacion ?? null,
             precio_usd_original: extra?.precio_usd_original,
             moneda_original: extra?.moneda_original,
             tipo_cambio_detectado: extra?.tipo_cambio_detectado,
@@ -153,6 +161,11 @@ export default function AdminPropiedades() {
             const precioM2 = p.precio_m2 || 0
             return precioM2 < 1200 || precioM2 > 3200
           })
+        }
+
+        // Filtrar por huérfanas (sin proyecto asignado)
+        if (soloHuerfanas) {
+          resultado = resultado.filter((p: PropiedadConCandados) => !p.id_proyecto_master)
         }
 
         // Filtrar por búsqueda
@@ -194,6 +207,12 @@ export default function AdminPropiedades() {
     }).format(precio)
   }
 
+  const formatFechaCorta = (fecha: string | null | undefined): string => {
+    if (!fecha) return '-'
+    const date = new Date(fecha)
+    return date.toLocaleDateString('es-BO', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+
   // Detectar precio sospechoso basado en precio/m²
   const getPrecioAlerta = (precioM2: number): { tipo: 'error' | 'warning' | null; mensaje: string } => {
     if (precioM2 < 800) {
@@ -213,6 +232,10 @@ export default function AdminPropiedades() {
 
   const contarSospechosos = (): number => {
     return propiedades.filter(p => getPrecioAlerta(p.precio_m2).tipo !== null).length
+  }
+
+  const contarHuerfanas = (): number => {
+    return propiedades.filter(p => !p.id_proyecto_master).length
   }
 
   const getFuenteBadge = (fuente: string | undefined) => {
@@ -252,7 +275,7 @@ export default function AdminPropiedades() {
 
         <main className="max-w-7xl mx-auto py-8 px-6">
           {/* Stats rápidos */}
-          <div className="grid grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-6 gap-4 mb-8">
             <div className="bg-white rounded-xl p-4 shadow-sm">
               <p className="text-slate-500 text-sm">Mostrando</p>
               <p className="text-2xl font-bold text-slate-900">{propiedades.length}</p>
@@ -279,6 +302,12 @@ export default function AdminPropiedades() {
               <p className="text-slate-500 text-sm">⚠️ Precio Sospechoso</p>
               <p className="text-2xl font-bold text-red-600">
                 {contarSospechosos()}
+              </p>
+            </div>
+            <div className="bg-orange-50 rounded-xl p-4 shadow-sm border border-orange-200">
+              <p className="text-orange-600 text-sm">Sin Proyecto</p>
+              <p className="text-2xl font-bold text-orange-700">
+                {contarHuerfanas()}
               </p>
             </div>
           </div>
@@ -351,6 +380,16 @@ export default function AdminPropiedades() {
                 <span className="text-sm text-red-600">⚠️ Precios sospechosos</span>
               </label>
 
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={soloHuerfanas}
+                  onChange={(e) => setSoloHuerfanas(e.target.checked)}
+                  className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500"
+                />
+                <span className="text-sm text-orange-600">Sin proyecto</span>
+              </label>
+
               <button
                 onClick={fetchPropiedades}
                 className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors"
@@ -411,9 +450,14 @@ export default function AdminPropiedades() {
                     <div className="flex-1 p-4">
                       <div className="flex items-start justify-between">
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold text-slate-900">{prop.proyecto}</h3>
                             {getFuenteBadge(prop.fuente)}
+                            {!prop.id_proyecto_master && (
+                              <span className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded">
+                                Sin proyecto
+                              </span>
+                            )}
                             <span className="text-xs text-slate-400">ID: {prop.id}</span>
                           </div>
                           <p className="text-sm text-slate-500">
@@ -501,6 +545,18 @@ export default function AdminPropiedades() {
                         {prop.equipamiento_detectado && prop.equipamiento_detectado.length > 0 && (
                           <span className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded">
                             {prop.equipamiento_detectado.length} equipamientos
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Fecha publicación y días en mercado */}
+                      <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
+                        <span title="Fecha de publicación">
+                          📅 {formatFechaCorta(prop.fecha_publicacion)}
+                        </span>
+                        {prop.dias_en_mercado !== null && prop.dias_en_mercado !== undefined && (
+                          <span className={`${prop.dias_en_mercado > 180 ? 'text-red-500' : prop.dias_en_mercado > 90 ? 'text-amber-500' : 'text-slate-500'}`}>
+                            ⏱️ {prop.dias_en_mercado} días en mercado
                           </span>
                         )}
                       </div>
