@@ -30,6 +30,18 @@ interface Propiedad {
   estacionamientos: number | null
   baulera: boolean | null
   dias_en_mercado: number | null
+  // Forma de pago
+  piso: number | null
+  plan_pagos_desarrollador: boolean | null
+  acepta_permuta: boolean | null
+  solo_tc_paralelo: boolean | null
+  precio_negociable: boolean | null
+  descuento_contado_pct: number | null
+  // Parqueo/baulera con precios
+  parqueo_incluido: boolean | null
+  parqueo_precio_adicional: number | null
+  baulera_incluido: boolean | null
+  baulera_precio_adicional: number | null
 }
 
 interface CamposBloqueados {
@@ -100,6 +112,10 @@ export default function AdminPropiedades() {
   const [brokersList, setBrokersList] = useState<BrokerOption[]>([])
   const [showBrokerSuggestions, setShowBrokerSuggestions] = useState(false)
   const [brokerSeleccionado, setBrokerSeleccionado] = useState<string | null>(null)
+
+  // Toggle para expandir amenities/equipamiento por propiedad
+  const [amenitiesExpandidos, setAmenitiesExpandidos] = useState<Set<number>>(new Set())
+  const [equipamientoExpandido, setEquipamientoExpandido] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     fetchPropiedades()
@@ -763,10 +779,26 @@ export default function AdminPropiedades() {
                             )}
                             <span className="text-xs text-slate-400">ID: {prop.id}</span>
                           </div>
-                          <p className="text-sm text-slate-500">
-                            {prop.zona}
-                            {prop.desarrollador && ` - ${prop.desarrollador}`}
-                          </p>
+                          <div className="flex items-center gap-2 text-sm text-slate-500">
+                            <span>{prop.zona}</span>
+                            {prop.desarrollador && <span>• {prop.desarrollador}</span>}
+                            {prop.piso && <span>• Piso {prop.piso}</span>}
+                            {/* Estado construcción */}
+                            {prop.estado_construccion && prop.estado_construccion !== 'no_especificado' && (
+                              <span className={`text-xs px-2 py-0.5 rounded ${
+                                prop.estado_construccion === 'entrega_inmediata' ? 'bg-green-100 text-green-700' :
+                                prop.estado_construccion === 'preventa' ? 'bg-blue-100 text-blue-700' :
+                                prop.estado_construccion === 'en_construccion' ? 'bg-amber-100 text-amber-700' :
+                                'bg-slate-100 text-slate-600'
+                              }`}>
+                                {prop.estado_construccion === 'entrega_inmediata' ? '✓ Entrega inmediata' :
+                                 prop.estado_construccion === 'preventa' ? '📋 Preventa' :
+                                 prop.estado_construccion === 'en_construccion' ? '🏗️ En construcción' :
+                                 prop.estado_construccion === 'nuevo_a_estrenar' ? '✨ A estrenar' :
+                                 prop.estado_construccion}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="text-right">
                           <p className="font-bold text-lg text-slate-900">{formatPrecio(prop.precio_usd)}</p>
@@ -833,24 +865,134 @@ export default function AdminPropiedades() {
                         </p>
                       )}
 
-                      {/* Amenities */}
-                      <div className="flex flex-wrap items-center gap-2 mt-3">
-                        {prop.amenities_confirmados?.slice(0, 4).map(a => (
-                          <span key={a} className="bg-green-50 text-green-700 text-xs px-2 py-1 rounded">
-                            {a}
-                          </span>
-                        ))}
-                        {prop.amenities_por_verificar && prop.amenities_por_verificar.length > 0 && (
-                          <span className="bg-amber-50 text-amber-700 text-xs px-2 py-1 rounded">
-                            +{prop.amenities_por_verificar.length} por verificar
-                          </span>
-                        )}
-                        {prop.equipamiento_detectado && prop.equipamiento_detectado.length > 0 && (
-                          <span className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded">
-                            {prop.equipamiento_detectado.length} equipamientos
-                          </span>
-                        )}
-                      </div>
+                      {/* Forma de pago */}
+                      {(prop.plan_pagos_desarrollador || prop.solo_tc_paralelo || prop.descuento_contado_pct || prop.precio_negociable || prop.acepta_permuta) && (
+                        <div className="flex flex-wrap gap-2 mt-2 text-xs">
+                          {prop.plan_pagos_desarrollador && (
+                            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded" title="Acepta plan de pagos con desarrollador">
+                              📅 Plan pagos
+                            </span>
+                          )}
+                          {prop.solo_tc_paralelo && (
+                            <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded" title="Solo acepta USD a tipo de cambio paralelo">
+                              💱 TC Paralelo
+                            </span>
+                          )}
+                          {prop.descuento_contado_pct && prop.descuento_contado_pct > 0 && (
+                            <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded" title="Descuento por pago al contado">
+                              📉 {prop.descuento_contado_pct}% desc. contado
+                            </span>
+                          )}
+                          {prop.precio_negociable && (
+                            <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded" title="Precio negociable">
+                              🤝 Negociable
+                            </span>
+                          )}
+                          {prop.acepta_permuta && (
+                            <span className="px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded" title="Acepta permuta">
+                              🔄 Permuta
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Parqueo/Baulera con precios */}
+                      {(prop.parqueo_incluido !== null || prop.baulera_incluido !== null) && (
+                        <div className="flex flex-wrap gap-2 mt-2 text-xs">
+                          {prop.parqueo_incluido === true && (
+                            <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded">
+                              🚗 Parqueo incluido
+                            </span>
+                          )}
+                          {prop.parqueo_incluido === false && prop.parqueo_precio_adicional && (
+                            <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded">
+                              🚗 +${prop.parqueo_precio_adicional.toLocaleString()}
+                            </span>
+                          )}
+                          {prop.baulera_incluido === true && (
+                            <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded">
+                              📦 Baulera incluida
+                            </span>
+                          )}
+                          {prop.baulera_incluido === false && prop.baulera_precio_adicional && (
+                            <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded">
+                              📦 +${prop.baulera_precio_adicional.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Amenities del Edificio (de proyectos_master) */}
+                      {((prop.amenities_confirmados && prop.amenities_confirmados.length > 0) ||
+                        (prop.amenities_por_verificar && prop.amenities_por_verificar.length > 0)) && (
+                        <div className="mt-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs text-slate-500 font-medium">Edificio:</span>
+                            {/* Confirmados */}
+                            {prop.amenities_confirmados?.slice(0, amenitiesExpandidos.has(prop.id) ? undefined : 3).map(a => (
+                              <span key={`c-${a}`} className="bg-green-50 text-green-700 text-xs px-2 py-1 rounded">
+                                ✓ {a}
+                              </span>
+                            ))}
+                            {/* Por verificar (solo si expandido) */}
+                            {amenitiesExpandidos.has(prop.id) && prop.amenities_por_verificar?.map(a => (
+                              <span key={`v-${a}`} className="bg-amber-50 text-amber-700 text-xs px-2 py-1 rounded" title="Amenity del proyecto, pendiente verificar en esta unidad">
+                                ? {a}
+                              </span>
+                            ))}
+                            {/* Toggle */}
+                            {(() => {
+                              const totalAmenities = (prop.amenities_confirmados?.length || 0) + (prop.amenities_por_verificar?.length || 0)
+                              const visible = Math.min(3, prop.amenities_confirmados?.length || 0)
+                              const restantes = totalAmenities - visible
+                              if (restantes > 0) {
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => setAmenitiesExpandidos(prev => {
+                                      const next = new Set(prev)
+                                      next.has(prop.id) ? next.delete(prop.id) : next.add(prop.id)
+                                      return next
+                                    })}
+                                    className="text-xs text-slate-500 hover:text-slate-700 underline"
+                                  >
+                                    {amenitiesExpandidos.has(prop.id) ? '− Menos' : `+${restantes} más`}
+                                  </button>
+                                )
+                              }
+                              return null
+                            })()}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Equipamiento de la Unidad (detectado en descripción) */}
+                      {prop.equipamiento_detectado && prop.equipamiento_detectado.length > 0 && (
+                        <div className="mt-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs text-slate-500 font-medium">Unidad:</span>
+                            {prop.equipamiento_detectado.slice(0, equipamientoExpandido.has(prop.id) ? undefined : 3).map(e => (
+                              <span key={`e-${e}`} className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded">
+                                {e}
+                              </span>
+                            ))}
+                            {/* Toggle */}
+                            {prop.equipamiento_detectado.length > 3 && (
+                              <button
+                                type="button"
+                                onClick={() => setEquipamientoExpandido(prev => {
+                                  const next = new Set(prev)
+                                  next.has(prop.id) ? next.delete(prop.id) : next.add(prop.id)
+                                  return next
+                                })}
+                                className="text-xs text-slate-500 hover:text-slate-700 underline"
+                              >
+                                {equipamientoExpandido.has(prop.id) ? '− Menos' : `+${prop.equipamiento_detectado.length - 3} más`}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Fecha publicación y días en mercado */}
                       <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
