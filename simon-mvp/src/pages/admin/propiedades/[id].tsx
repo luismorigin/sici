@@ -519,6 +519,28 @@ export default function EditarPropiedad() {
     }
   }
 
+  // Indicador visual de precio sospechoso
+  const getPrecioAlerta = (): { tipo: 'error' | 'warning' | null; mensaje: string; color: string } => {
+    const precio = calcularPrecioNormalizado()
+    const area = parseFloat(formData.area_m2) || 0
+    if (precio <= 0 || area <= 0) return { tipo: null, mensaje: '', color: '' }
+
+    const precioM2 = precio / area
+    if (precioM2 < 800) {
+      return { tipo: 'error', mensaje: `⚠️ $${Math.round(precioM2)}/m² muy bajo`, color: 'bg-red-100 text-red-700 border-red-300' }
+    }
+    if (precioM2 < 1200) {
+      return { tipo: 'warning', mensaje: `⚠️ $${Math.round(precioM2)}/m² bajo`, color: 'bg-amber-100 text-amber-700 border-amber-300' }
+    }
+    if (precioM2 > 4000) {
+      return { tipo: 'error', mensaje: `⚠️ $${Math.round(precioM2)}/m² muy alto`, color: 'bg-red-100 text-red-700 border-red-300' }
+    }
+    if (precioM2 > 3200) {
+      return { tipo: 'warning', mensaje: `⚠️ $${Math.round(precioM2)}/m² alto`, color: 'bg-amber-100 text-amber-700 border-amber-300' }
+    }
+    return { tipo: null, mensaje: '', color: '' }
+  }
+
   const detectarCambios = (): { campo: string; anterior: any; nuevo: any }[] => {
     if (!originalData) return []
 
@@ -1242,7 +1264,14 @@ export default function EditarPropiedad() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-2xl font-bold text-slate-900">{formatPrecio(precioInfo.precio)}</p>
-                      <p className="text-sm text-slate-500">{precioM2 > 0 && `$${precioM2}/m²`}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-slate-500">{precioM2 > 0 && `$${precioM2}/m²`}</p>
+                        {getPrecioAlerta().tipo && (
+                          <span className={`text-xs px-2 py-0.5 rounded ${getPrecioAlerta().color}`}>
+                            {getPrecioAlerta().tipo === 'error' ? '⚠️ Revisar' : '⚠️'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className={`px-3 py-1 rounded-full text-sm font-medium ${
                       formData.tipo_precio === 'usd_paralelo'
@@ -1572,9 +1601,16 @@ export default function EditarPropiedad() {
                 </div>
 
                 {precioM2 > 0 && (
-                  <p className="text-sm text-slate-500">
-                    Precio/m²: <strong className="text-slate-900">${precioM2}</strong>
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-slate-500">
+                      Precio/m²: <strong className="text-slate-900">${precioM2}</strong>
+                    </p>
+                    {getPrecioAlerta().tipo && (
+                      <span className={`text-xs px-2 py-1 rounded border ${getPrecioAlerta().color}`}>
+                        {getPrecioAlerta().mensaje}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             </section>

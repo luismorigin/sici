@@ -70,10 +70,11 @@ export default function AdminPropiedades() {
   const [busqueda, setBusqueda] = useState('')
   const [limite, setLimite] = useState(50)
   const [soloConCandados, setSoloConCandados] = useState(false)
+  const [soloPreciosSospechosos, setSoloPreciosSospechosos] = useState(false)
 
   useEffect(() => {
     fetchPropiedades()
-  }, [zona, dormitorios, limite, soloConCandados])
+  }, [zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos])
 
   const fetchPropiedades = async () => {
     if (!supabase) return
@@ -146,6 +147,14 @@ export default function AdminPropiedades() {
           })
         }
 
+        // Filtrar por precios sospechosos si está activo
+        if (soloPreciosSospechosos) {
+          resultado = resultado.filter((p: PropiedadConCandados) => {
+            const precioM2 = p.precio_m2 || 0
+            return precioM2 < 1200 || precioM2 > 3200
+          })
+        }
+
         // Filtrar por búsqueda
         if (busqueda.trim()) {
           const termino = busqueda.toLowerCase()
@@ -185,6 +194,27 @@ export default function AdminPropiedades() {
     }).format(precio)
   }
 
+  // Detectar precio sospechoso basado en precio/m²
+  const getPrecioAlerta = (precioM2: number): { tipo: 'error' | 'warning' | null; mensaje: string } => {
+    if (precioM2 < 800) {
+      return { tipo: 'error', mensaje: `$${precioM2}/m² muy bajo` }
+    }
+    if (precioM2 < 1200) {
+      return { tipo: 'warning', mensaje: `$${precioM2}/m² bajo` }
+    }
+    if (precioM2 > 4000) {
+      return { tipo: 'error', mensaje: `$${precioM2}/m² muy alto` }
+    }
+    if (precioM2 > 3200) {
+      return { tipo: 'warning', mensaje: `$${precioM2}/m² alto` }
+    }
+    return { tipo: null, mensaje: '' }
+  }
+
+  const contarSospechosos = (): number => {
+    return propiedades.filter(p => getPrecioAlerta(p.precio_m2).tipo !== null).length
+  }
+
   const getFuenteBadge = (fuente: string | undefined) => {
     if (fuente === 'century21') {
       return <span className="bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded">C21</span>
@@ -222,7 +252,7 @@ export default function AdminPropiedades() {
 
         <main className="max-w-7xl mx-auto py-8 px-6">
           {/* Stats rápidos */}
-          <div className="grid grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-5 gap-4 mb-8">
             <div className="bg-white rounded-xl p-4 shadow-sm">
               <p className="text-slate-500 text-sm">Mostrando</p>
               <p className="text-2xl font-bold text-slate-900">{propiedades.length}</p>
@@ -243,6 +273,12 @@ export default function AdminPropiedades() {
               <p className="text-slate-500 text-sm">Con Fotos</p>
               <p className="text-2xl font-bold text-purple-600">
                 {propiedades.filter(p => p.cantidad_fotos > 0).length}
+              </p>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-slate-500 text-sm">⚠️ Precio Sospechoso</p>
+              <p className="text-2xl font-bold text-red-600">
+                {contarSospechosos()}
               </p>
             </div>
           </div>
@@ -303,6 +339,16 @@ export default function AdminPropiedades() {
                   className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500"
                 />
                 <span className="text-sm text-slate-700">Solo editadas</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={soloPreciosSospechosos}
+                  onChange={(e) => setSoloPreciosSospechosos(e.target.checked)}
+                  className="w-4 h-4 rounded text-red-500 focus:ring-red-500"
+                />
+                <span className="text-sm text-red-600">⚠️ Precios sospechosos</span>
               </label>
 
               <button
@@ -377,7 +423,19 @@ export default function AdminPropiedades() {
                         </div>
                         <div className="text-right">
                           <p className="font-bold text-lg text-slate-900">{formatPrecio(prop.precio_usd)}</p>
-                          <p className="text-sm text-slate-500">${prop.precio_m2}/m²</p>
+                          <div className="flex items-center justify-end gap-2">
+                            <p className="text-sm text-slate-500">${prop.precio_m2}/m²</p>
+                            {getPrecioAlerta(prop.precio_m2).tipo === 'error' && (
+                              <span className="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded" title={getPrecioAlerta(prop.precio_m2).mensaje}>
+                                ⚠️ {getPrecioAlerta(prop.precio_m2).mensaje}
+                              </span>
+                            )}
+                            {getPrecioAlerta(prop.precio_m2).tipo === 'warning' && (
+                              <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded" title={getPrecioAlerta(prop.precio_m2).mensaje}>
+                                ⚠️ {getPrecioAlerta(prop.precio_m2).mensaje}
+                              </span>
+                            )}
+                          </div>
                           {/* Solo mostrar normalización si hay certeza (paralelo/oficial detectado) */}
                           {prop.moneda_original === 'BOB' &&
                            prop.tipo_cambio_usado &&
