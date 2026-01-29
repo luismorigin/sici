@@ -4,9 +4,14 @@
 -- =====================================================================================
 -- Archivo: merge_discovery_enrichment.sql
 -- Propósito: Unificar datos de Discovery + Enrichment respetando candados
--- Versión: 2.2.0
--- Fecha: 2026-01-14
+-- Versión: 2.3.0
+-- Fecha: 2026-01-29
 -- =====================================================================================
+-- CAMBIOS v2.3.0 (29 Ene 2026):
+--   - FIX: Soportar nuevo formato de candados del admin panel
+--     Usa helper _is_campo_bloqueado() para detectar ambos formatos
+--   - FIX: Validación banos < 100 (evita overflow NUMERIC(3,1))
+--
 -- CAMBIOS v2.2.0 (14 Ene 2026):
 --   - FIX: Escribir tipo_cambio_detectado a columna (antes solo quedaba en JSON)
 --   - FIX: Escribir tipo_cambio_usado a columna
@@ -225,12 +230,22 @@ BEGIN
     
     v_enr_precio_usd := (v_enrichment->>'precio_usd')::NUMERIC(12,2);
     v_enr_area := (v_enrichment->>'area_total_m2')::NUMERIC(10,2);
-    v_enr_dormitorios := (v_enrichment->>'dormitorios')::INTEGER;
-    v_enr_banos := (v_enrichment->>'banos')::NUMERIC(3,1);
-    v_enr_estacionamientos := CASE 
-        WHEN v_enrichment->>'estacionamientos' ~ '^[0-9]+$' 
-        THEN (v_enrichment->>'estacionamientos')::INTEGER 
-        ELSE NULL 
+    v_enr_dormitorios := CASE
+        WHEN v_enrichment->>'dormitorios' ~ '^[0-9]+$'
+        THEN (v_enrichment->>'dormitorios')::INTEGER
+        ELSE NULL
+    END;
+    -- FIX v2.3.0: Validar banos < 100 para evitar overflow NUMERIC(3,1)
+    v_enr_banos := CASE
+        WHEN v_enrichment->>'banos' ~ '^[0-9]+\.?[0-9]*$'
+             AND (v_enrichment->>'banos')::NUMERIC < 100
+        THEN (v_enrichment->>'banos')::NUMERIC(3,1)
+        ELSE NULL
+    END;
+    v_enr_estacionamientos := CASE
+        WHEN v_enrichment->>'estacionamientos' ~ '^[0-9]+$'
+        THEN (v_enrichment->>'estacionamientos')::INTEGER
+        ELSE NULL
     END;
     v_enr_latitud := (v_enrichment->>'latitud')::NUMERIC(10,8);
     v_enr_longitud := (v_enrichment->>'longitud')::NUMERIC(11,8);
@@ -247,7 +262,7 @@ BEGIN
     -- -----------------------------------------------------------------
     -- PRECIO USD (Regla especial con fallback)
     -- -----------------------------------------------------------------
-    IF COALESCE((v_candados->>'precio_usd')::BOOLEAN, false) THEN
+    IF _is_campo_bloqueado(v_candados, 'precio_usd') THEN
         -- Candado: mantener valor actual
         v_precio_final := v_prop.precio_usd;
         v_fuente_precio := 'blocked';
@@ -290,7 +305,7 @@ BEGIN
     -- ÁREA (Discovery > Enrichment)
     -- FIX v2.0.1: Tratar área=0 como NULL para fallback a enrichment
     -- -----------------------------------------------------------------
-    IF COALESCE((v_candados->>'area_total_m2')::BOOLEAN, false) THEN
+    IF _is_campo_bloqueado(v_candados, 'area_total_m2') THEN
         v_area_final := v_prop.area_total_m2;
         v_fuente_area := 'blocked';
         v_campos_blocked := array_append(v_campos_blocked, 'area_total_m2');
@@ -313,7 +328,7 @@ BEGIN
     -- -----------------------------------------------------------------
     -- DORMITORIOS (Discovery > Enrichment)
     -- -----------------------------------------------------------------
-    IF COALESCE((v_candados->>'dormitorios')::BOOLEAN, false) THEN
+    IF _is_campo_bloqueado(v_candados, 'dormitorios') THEN
         v_dormitorios_final := v_prop.dormitorios;
         v_fuente_dormitorios := 'blocked';
         v_campos_blocked := array_append(v_campos_blocked, 'dormitorios');
@@ -334,7 +349,7 @@ BEGIN
     -- -----------------------------------------------------------------
     -- BAÑOS (Discovery > Enrichment)
     -- -----------------------------------------------------------------
-    IF COALESCE((v_candados->>'banos')::BOOLEAN, false) THEN
+    IF _is_campo_bloqueado(v_candados, 'banos') THEN
         v_banos_final := v_prop.banos;
         v_fuente_banos := 'blocked';
         v_campos_blocked := array_append(v_campos_blocked, 'banos');
@@ -355,7 +370,7 @@ BEGIN
     -- -----------------------------------------------------------------
     -- ESTACIONAMIENTOS (Discovery > Enrichment)
     -- -----------------------------------------------------------------
-    IF COALESCE((v_candados->>'estacionamientos')::BOOLEAN, false) THEN
+    IF _is_campo_bloqueado(v_candados, 'estacionamientos') THEN
         v_estacionamientos_final := v_prop.estacionamientos;
         v_fuente_estacionamientos := 'blocked';
         v_campos_blocked := array_append(v_campos_blocked, 'estacionamientos');
@@ -376,7 +391,7 @@ BEGIN
     -- -----------------------------------------------------------------
     -- GPS - LATITUD (Discovery > Enrichment)
     -- -----------------------------------------------------------------
-    IF COALESCE((v_candados->>'latitud')::BOOLEAN, false) THEN
+    IF _is_campo_bloqueado(v_candados, 'latitud') THEN
         v_latitud_final := v_prop.latitud;
         v_fuente_gps := 'blocked';
         v_campos_blocked := array_append(v_campos_blocked, 'latitud');
@@ -395,7 +410,7 @@ BEGIN
     -- -----------------------------------------------------------------
     -- GPS - LONGITUD (Discovery > Enrichment)
     -- -----------------------------------------------------------------
-    IF COALESCE((v_candados->>'longitud')::BOOLEAN, false) THEN
+    IF _is_campo_bloqueado(v_candados, 'longitud') THEN
         v_longitud_final := v_prop.longitud;
         v_campos_blocked := array_append(v_campos_blocked, 'longitud');
     ELSIF v_disc_longitud IS NOT NULL THEN
@@ -411,7 +426,7 @@ BEGIN
     -- -----------------------------------------------------------------
     -- NOMBRE EDIFICIO (Discovery > Enrichment) - v2.1.0
     -- -----------------------------------------------------------------
-    IF COALESCE((v_candados->>'nombre_edificio')::BOOLEAN, false) THEN
+    IF _is_campo_bloqueado(v_candados, 'nombre_edificio') THEN
         v_nombre_edificio_final := v_prop.nombre_edificio;
         v_fuente_nombre_edificio := 'blocked';
         v_campos_blocked := array_append(v_campos_blocked, 'nombre_edificio');
@@ -432,7 +447,7 @@ BEGIN
     -- -----------------------------------------------------------------
     -- ZONA (Discovery > Enrichment) - v2.1.0
     -- -----------------------------------------------------------------
-    IF COALESCE((v_candados->>'zona')::BOOLEAN, false) THEN
+    IF _is_campo_bloqueado(v_candados, 'zona') THEN
         v_zona_final := v_prop.zona;
         v_fuente_zona := 'blocked';
         v_campos_blocked := array_append(v_campos_blocked, 'zona');
@@ -632,7 +647,7 @@ BEGIN
     
     v_datos_json_final := jsonb_build_object(
         -- METADATA MERGE
-        'version_merge', '2.1.0',
+        'version_merge', '2.3.0',
         'timestamp_merge', NOW(),
         'fuente', v_fuente,
         
@@ -845,7 +860,7 @@ BEGIN
     v_result := jsonb_build_object(
         'success', true,
         'operation', 'merge',
-        'version', '2.1.0',
+        'version', '2.3.0',
         'property_id', v_prop.codigo_propiedad,
         'internal_id', v_prop.id,
         'url', v_prop.url,
@@ -904,10 +919,11 @@ $$;
 -- =====================================================================================
 
 COMMENT ON FUNCTION merge_discovery_enrichment(TEXT) IS
-'SICI Merge v2.1.0: Unifica Discovery + Enrichment con reglas de prioridad.
+'SICI Merge v2.3.0: Unifica Discovery + Enrichment con reglas de prioridad.
+- FIX v2.3.0: Soportar formato candados admin {bloqueado:true} + validación banos<100
 - NEW v2.1.0: Soporte para columnas nombre_edificio y zona
 - FIX v2.0.1: área=0 hace fallback a enrichment
-- Candados SIEMPRE respetados
+- Candados SIEMPRE respetados (usa helper _is_campo_bloqueado)
 - Discovery > Enrichment para: área, dorms, baños, GPS, nombre_edificio, zona
 - Precio: Discovery si USD puro, fallback Enrichment si discrepancia >10%
 - Status final SIEMPRE es completado
