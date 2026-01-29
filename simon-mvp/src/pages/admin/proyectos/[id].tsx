@@ -172,11 +172,13 @@ export default function EditarProyecto() {
     if (!supabase || !id) return
 
     try {
+      // Solo departamentos (área >= 20m²), excluir parqueos/bauleras
       const { data, error } = await supabase
         .from('propiedades_v2')
         .select('id, precio_usd, dormitorios, area_total_m2, estado_construccion')
         .eq('id_proyecto_master', id)
         .eq('status', 'completado')
+        .gte('area_total_m2', 20)
         .order('precio_usd')
 
       if (!error && data) {

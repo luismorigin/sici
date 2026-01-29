@@ -199,7 +199,7 @@ export default function AdminProyectos() {
 
       if (fetchError) throw fetchError
 
-      // Obtener conteo de propiedades por proyecto
+      // Obtener conteo de propiedades por proyecto (solo departamentos, no parqueos/bauleras)
       const proyectosConConteo = await Promise.all(
         (data || []).map(async (proyecto) => {
           const { count } = await supabase
@@ -207,6 +207,7 @@ export default function AdminProyectos() {
             .select('id', { count: 'exact', head: true })
             .eq('id_proyecto_master', proyecto.id_proyecto_master)
             .eq('status', 'completado')
+            .gte('area_total_m2', 20) // Excluir parqueos/bauleras (< 20m²)
 
           return {
             ...proyecto,
