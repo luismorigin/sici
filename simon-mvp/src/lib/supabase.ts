@@ -576,6 +576,35 @@ export async function obtenerSnapshot24h(): Promise<Snapshot24h | null> {
       .select('id')
       .eq('activo', true)
 
+    // 6. Bajadas de precio (comparar últimas 2 fechas en precios_historial)
+    let bajadasPrecio = 0
+    const { data: fechasHistorial } = await supabase
+      .from('precios_historial')
+      .select('fecha')
+      .order('fecha', { ascending: false })
+      .limit(1)
+
+    if (fechasHistorial?.[0]?.fecha) {
+      const fechaHoy = fechasHistorial[0].fecha
+      // Buscar fecha anterior
+      const { data: fechaAnteriorData } = await supabase
+        .from('precios_historial')
+        .select('fecha')
+        .lt('fecha', fechaHoy)
+        .order('fecha', { ascending: false })
+        .limit(1)
+
+      if (fechaAnteriorData?.[0]?.fecha) {
+        const fechaAyer = fechaAnteriorData[0].fecha
+        // Contar bajadas (excluir cambios >50% que son datos corruptos)
+        const { data: bajadas } = await supabase.rpc('contar_bajadas_precio', {
+          p_fecha_hoy: fechaHoy,
+          p_fecha_ayer: fechaAyer
+        })
+        bajadasPrecio = bajadas || 0
+      }
+    }
+
     if (errSnap || errTc) {
       console.warn('Error obteniendo snapshot:', errSnap?.message, errTc?.message)
       return null
@@ -599,7 +628,7 @@ export async function obtenerSnapshot24h(): Promise<Snapshot24h | null> {
     return {
       nuevos: snapHoy?.props_creadas_24h || 0,
       retirados,
-      bajadas_precio: 0, // TODO: calcular desde precios_historial cuando haya data
+      bajadas_precio: bajadasPrecio,
       tc_actual: tcActual,
       tc_variacion: Math.round(variacion * 100) / 100,
       precio_m2_promedio: metricas?.precio_promedio_m2 || 2022,
