@@ -82,7 +82,7 @@ sici/
 │   ├── enrichment/    # registrar_enrichment.sql
 │   ├── merge/         # merge_discovery_enrichment.sql v2.2.0
 │   └── matching/      # Funciones v3.1 (propiedades_v2)
-├── sql/migrations/    # 001-077 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Broker B2B, Admin)
+├── sql/migrations/    # 001-090 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Broker B2B, Admin, Landing)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
@@ -125,6 +125,8 @@ sici/
 - **Iconos Resultados:** Símbolos mejorados en resultsV2 (🛏️🚿📐🏢🚗📦) + leyenda colapsable + badges forma pago
 - **Admin Proyectos Master:** Listado + editor con estado construcción, fecha entrega, amenidades edificio, propagación a propiedades (migraciones 085-086)
 - **Inferir Datos Proyecto:** Función inferir_datos_proyecto() con amenidades frecuentes (≥50%) y opcionales (<50%), adoptar fotos (migración 086-087)
+- **Landing Market Lens en Vivo:** Permisos anon para datos reales (TC, snapshots, métricas) + detección bajadas precio desde precios_historial (migraciones 089-090)
+- **Fix Discovery Candados Admin:** registrar_discovery() ahora soporta formato nuevo de candados `{"campo": {"bloqueado": true, ...}}`
 
 ### ⏳ En Progreso
 - **Sistema Broker Fase 5-7:** Portal broker, sistema leads, CMA (pendiente)
@@ -153,7 +155,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-077)
+## Migraciones SQL (001-090)
 
 | # | Archivo | Propósito | Estado |
 |---|---------|-----------|--------|
@@ -211,6 +213,9 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 085 | proyectos_master_campos_admin | **Admin Proyectos: estado_construccion, fecha_entrega, amenidades_edificio, pisos, unidades + propagación** | ✅ |
 | 086 | inferir_datos_proyecto | **Función para inferir amenidades, estado, pisos y fotos desde propiedades vinculadas** | ✅ |
 | 087 | fotos_proyecto_amenidades_opcionales | **Columna fotos_proyecto + inferir amenidades frecuentes/opcionales separadas** | ⏳ |
+| 088 | desarrolladores_master | **Tabla desarrolladores_master + FK desde proyectos** | ✅ |
+| 089 | permisos_anon_landing | **Permisos SELECT anon para Market Lens en vivo (snapshots, TC, métricas, precios_historial)** | ✅ |
+| 090 | contar_bajadas_precio | **Función RPC para detectar bajadas de precio entre snapshots** | ✅ |
 
 ## Repo Legacy
 
