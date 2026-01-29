@@ -413,7 +413,10 @@ export default function AdminPropiedades() {
               <Link href="/admin/brokers" className="text-slate-300 hover:text-white text-sm">
                 Brokers
               </Link>
-              <Link href="/" className="text-amber-400 hover:text-amber-300 text-sm">
+              <Link href="/admin/supervisor" className="text-amber-400 hover:text-amber-300 text-sm font-medium">
+                Supervisor HITL
+              </Link>
+              <Link href="/" className="text-slate-300 hover:text-white text-sm">
                 Ir a Buscar
               </Link>
             </div>

@@ -98,6 +98,25 @@ export default function AdminProyectos() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [seleccionado, setSeleccionado] = useState<{ tipo: 'proyecto' | 'desarrollador'; valor: string; id?: number } | null>(null)
 
+  // Modal crear proyecto
+  const [showCrearModal, setShowCrearModal] = useState(false)
+  const [creando, setCreando] = useState(false)
+  const [nuevoProyecto, setNuevoProyecto] = useState({
+    nombre_oficial: '',
+    zona: 'Equipetrol',
+    latitud: '',
+    longitud: ''
+  })
+
+  // Desarrolladores (autocomplete)
+  const [desarrolladoresList, setDesarrolladoresList] = useState<{id: number, nombre: string, proyectos_count: number}[]>([])
+  const [busquedaDesarrollador, setBusquedaDesarrollador] = useState('')
+  const [desarrolladorSeleccionado, setDesarrolladorSeleccionado] = useState<{id: number, nombre: string} | null>(null)
+  const [showDesarrolladorDropdown, setShowDesarrolladorDropdown] = useState(false)
+
+  // Zona detectada por GPS
+  const [zonaDetectada, setZonaDetectada] = useState<{zona: string, microzona: string} | null>(null)
+
   useEffect(() => {
     fetchProyectos()
     fetchStats()
@@ -123,6 +142,21 @@ export default function AdminProyectos() {
       }
     }
     fetchAll()
+  }, [])
+
+  // Cargar desarrolladores para autocomplete
+  useEffect(() => {
+    const fetchDesarrolladores = async () => {
+      if (!supabase) return
+      const { data } = await supabase.rpc('buscar_desarrolladores', {
+        p_busqueda: null,
+        p_limite: 100
+      })
+      if (data) {
+        setDesarrolladoresList(data)
+      }
+    }
+    fetchDesarrolladores()
   }, [])
 
   // Cerrar sugerencias al hacer click afuera
@@ -202,7 +236,7 @@ export default function AdminProyectos() {
       // Obtener conteo de propiedades por proyecto (solo departamentos, no parqueos/bauleras)
       const proyectosConConteo = await Promise.all(
         (data || []).map(async (proyecto) => {
-          const { count } = await supabase
+          const { count } = await supabase!
             .from('propiedades_v2')
             .select('id', { count: 'exact', head: true })
             .eq('id_proyecto_master', proyecto.id_proyecto_master)
@@ -301,6 +335,138 @@ export default function AdminProyectos() {
     setBusqueda('')
   }
 
+  // Detectar zona por GPS
+  const detectarZonaPorGPS = async (lat: string, lng: string) => {
+    if (!supabase || !lat || !lng) {
+      setZonaDetectada(null)
+      return
+    }
+
+    try {
+      const latNum = parseFloat(lat)
+      const lngNum = parseFloat(lng)
+
+      if (isNaN(latNum) || isNaN(lngNum)) {
+        setZonaDetectada(null)
+        return
+      }
+
+      const { data } = await supabase.rpc('get_zona_by_gps', {
+        p_lat: latNum,
+        p_lon: lngNum
+      })
+
+      if (data && data.length > 0 && data[0].zona) {
+        setZonaDetectada({
+          zona: data[0].zona,
+          microzona: data[0].microzona || ''
+        })
+        // Auto-asignar zona si está vacía o es genérica
+        if (!nuevoProyecto.zona || nuevoProyecto.zona === 'Equipetrol') {
+          setNuevoProyecto(prev => ({ ...prev, zona: data[0].zona }))
+        }
+      } else {
+        setZonaDetectada(null)
+      }
+    } catch (err) {
+      console.error('Error detectando zona:', err)
+      setZonaDetectada(null)
+    }
+  }
+
+  // Crear desarrollador nuevo
+  const crearNuevoDesarrollador = async (nombre: string) => {
+    if (!supabase || !nombre.trim()) return
+
+    try {
+      const { data, error } = await supabase.rpc('crear_desarrollador', {
+        p_nombre: nombre.trim()
+      })
+
+      if (error) throw error
+
+      if (data && data[0]?.success) {
+        const nuevoId = data[0].id
+        // Refetch lista
+        const { data: nuevaLista } = await supabase.rpc('buscar_desarrolladores', {
+          p_busqueda: null,
+          p_limite: 100
+        })
+        if (nuevaLista) setDesarrolladoresList(nuevaLista)
+
+        // Seleccionar el nuevo
+        setDesarrolladorSeleccionado({ id: nuevoId, nombre: nombre.trim() })
+        setBusquedaDesarrollador(nombre.trim())
+        setShowDesarrolladorDropdown(false)
+      }
+    } catch (err: any) {
+      alert('Error al crear desarrollador: ' + err.message)
+    }
+  }
+
+  const handleCrearProyecto = async () => {
+    if (!supabase || !nuevoProyecto.nombre_oficial.trim()) return
+    setCreando(true)
+
+    try {
+      const insertData: any = {
+        nombre_oficial: nuevoProyecto.nombre_oficial.trim(),
+        zona: zonaDetectada?.zona || nuevoProyecto.zona || null,
+        activo: true
+      }
+
+      // Usar FK de desarrollador si está seleccionado
+      if (desarrolladorSeleccionado) {
+        insertData.id_desarrollador = desarrolladorSeleccionado.id
+        insertData.desarrollador = desarrolladorSeleccionado.nombre // Mantener TEXT para compatibilidad
+      }
+
+      // Parsear GPS si se proporcionó
+      if (nuevoProyecto.latitud && nuevoProyecto.longitud) {
+        insertData.latitud = parseFloat(nuevoProyecto.latitud)
+        insertData.longitud = parseFloat(nuevoProyecto.longitud)
+      }
+
+      // Microzona si detectada
+      if (zonaDetectada?.microzona) {
+        insertData.microzona = zonaDetectada.microzona
+      }
+
+      const { data, error } = await supabase
+        .from('proyectos_master')
+        .insert(insertData)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Resetear form y cerrar modal
+      setNuevoProyecto({
+        nombre_oficial: '',
+        zona: 'Equipetrol',
+        latitud: '',
+        longitud: ''
+      })
+      setDesarrolladorSeleccionado(null)
+      setBusquedaDesarrollador('')
+      setZonaDetectada(null)
+      setShowCrearModal(false)
+
+      // Recargar lista y navegar al nuevo proyecto
+      await fetchProyectos()
+      await fetchStats()
+
+      // Redirigir al editor del proyecto
+      if (data?.id_proyecto_master) {
+        window.location.href = `/admin/proyectos/${data.id_proyecto_master}`
+      }
+    } catch (err: any) {
+      alert('Error al crear proyecto: ' + err.message)
+    } finally {
+      setCreando(false)
+    }
+  }
+
   const formatFecha = (fecha: string | null): string => {
     if (!fecha) return '-'
     const date = new Date(fecha)
@@ -336,9 +502,17 @@ export default function AdminProyectos() {
         {/* Header */}
         <header className="bg-slate-900 text-white py-4 px-6">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold">Panel Admin</h1>
-              <p className="text-slate-400 text-sm">Proyectos Master</p>
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-xl font-bold">Panel Admin</h1>
+                <p className="text-slate-400 text-sm">Proyectos Master</p>
+              </div>
+              <button
+                onClick={() => setShowCrearModal(true)}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                + Crear Proyecto
+              </button>
             </div>
             <div className="flex items-center gap-4">
               <Link href="/admin/propiedades" className="text-slate-300 hover:text-white text-sm">
@@ -347,7 +521,10 @@ export default function AdminProyectos() {
               <Link href="/admin/brokers" className="text-slate-300 hover:text-white text-sm">
                 Brokers
               </Link>
-              <Link href="/" className="text-amber-400 hover:text-amber-300 text-sm">
+              <Link href="/admin/supervisor" className="text-amber-400 hover:text-amber-300 text-sm font-medium">
+                Supervisor HITL
+              </Link>
+              <Link href="/" className="text-slate-300 hover:text-white text-sm">
                 Ir a Buscar
               </Link>
             </div>
@@ -628,6 +805,192 @@ export default function AdminProyectos() {
             </div>
           )}
         </main>
+
+        {/* Modal Crear Proyecto */}
+        {showCrearModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-slate-900">Crear Nuevo Proyecto</h2>
+                <button
+                  onClick={() => setShowCrearModal(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Nombre */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Nombre del Proyecto *
+                  </label>
+                  <input
+                    type="text"
+                    value={nuevoProyecto.nombre_oficial}
+                    onChange={(e) => setNuevoProyecto({ ...nuevoProyecto, nombre_oficial: e.target.value })}
+                    placeholder="Ej: Torre Santorini"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Desarrollador (Autocomplete) */}
+                <div className="relative">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Desarrollador
+                  </label>
+                  {desarrolladorSeleccionado ? (
+                    <div className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg bg-slate-50">
+                      <span className="text-slate-900 flex-1">{desarrolladorSeleccionado.nombre}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDesarrolladorSeleccionado(null)
+                          setBusquedaDesarrollador('')
+                        }}
+                        className="text-slate-400 hover:text-red-500"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="text"
+                        value={busquedaDesarrollador}
+                        onChange={(e) => {
+                          setBusquedaDesarrollador(e.target.value)
+                          setShowDesarrolladorDropdown(true)
+                        }}
+                        onFocus={() => setShowDesarrolladorDropdown(true)}
+                        placeholder="Buscar o crear desarrollador..."
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      />
+                      {showDesarrolladorDropdown && (
+                        <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                          {desarrolladoresList
+                            .filter(d => !busquedaDesarrollador || d.nombre.toLowerCase().includes(busquedaDesarrollador.toLowerCase()))
+                            .slice(0, 8)
+                            .map(d => (
+                              <button
+                                key={d.id}
+                                type="button"
+                                onClick={() => {
+                                  setDesarrolladorSeleccionado({ id: d.id, nombre: d.nombre })
+                                  setBusquedaDesarrollador(d.nombre)
+                                  setShowDesarrolladorDropdown(false)
+                                }}
+                                className="w-full px-3 py-2 text-left hover:bg-amber-50 border-b border-slate-100 last:border-0"
+                              >
+                                <span className="font-medium text-slate-900">{d.nombre}</span>
+                                <span className="text-xs text-slate-500 ml-2">({d.proyectos_count} proyectos)</span>
+                              </button>
+                            ))}
+                          {busquedaDesarrollador && !desarrolladoresList.some(d => d.nombre.toLowerCase() === busquedaDesarrollador.toLowerCase()) && (
+                            <button
+                              type="button"
+                              onClick={() => crearNuevoDesarrollador(busquedaDesarrollador)}
+                              className="w-full px-3 py-2 text-left hover:bg-green-50 text-green-700 font-medium"
+                            >
+                              + Crear "{busquedaDesarrollador}"
+                            </button>
+                          )}
+                          {!busquedaDesarrollador && (
+                            <div className="px-3 py-2 text-xs text-slate-400">
+                              Escribe para buscar o crear nuevo
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Zona */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Zona
+                  </label>
+                  <select
+                    value={nuevoProyecto.zona}
+                    onChange={(e) => setNuevoProyecto({ ...nuevoProyecto, zona: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                  >
+                    {ZONAS.filter(z => z.id).map((z) => (
+                      <option key={z.id} value={z.id}>{z.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* GPS */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Latitud
+                    </label>
+                    <input
+                      type="text"
+                      value={nuevoProyecto.latitud}
+                      onChange={(e) => {
+                        setNuevoProyecto({ ...nuevoProyecto, latitud: e.target.value })
+                        detectarZonaPorGPS(e.target.value, nuevoProyecto.longitud)
+                      }}
+                      placeholder="-17.7654321"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Longitud
+                    </label>
+                    <input
+                      type="text"
+                      value={nuevoProyecto.longitud}
+                      onChange={(e) => {
+                        setNuevoProyecto({ ...nuevoProyecto, longitud: e.target.value })
+                        detectarZonaPorGPS(nuevoProyecto.latitud, e.target.value)
+                      }}
+                      placeholder="-63.1234567"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm"
+                    />
+                  </div>
+                </div>
+                {zonaDetectada ? (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-sm">
+                    <span className="text-green-700">Zona detectada: </span>
+                    <strong className="text-green-800">{zonaDetectada.zona}</strong>
+                    {zonaDetectada.microzona && (
+                      <span className="text-green-600 ml-1">({zonaDetectada.microzona})</span>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    GPS opcional. Al ingresar coordenadas se detectará la zona automáticamente.
+                  </p>
+                )}
+              </div>
+
+              {/* Botones */}
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowCrearModal(false)}
+                  className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleCrearProyecto}
+                  disabled={!nuevoProyecto.nombre_oficial.trim() || creando}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {creando ? 'Creando...' : 'Crear Proyecto'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )

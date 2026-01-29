@@ -134,6 +134,15 @@ export default function EditarProyecto() {
   const [nuevoAmenidad, setNuevoAmenidad] = useState('')
   const [nuevaFotoUrl, setNuevaFotoUrl] = useState('')
 
+  // Desarrolladores (autocomplete)
+  const [desarrolladoresList, setDesarrolladoresList] = useState<{id: number, nombre: string, proyectos_count: number}[]>([])
+  const [busquedaDesarrollador, setBusquedaDesarrollador] = useState('')
+  const [desarrolladorSeleccionado, setDesarrolladorSeleccionado] = useState<{id: number, nombre: string} | null>(null)
+  const [showDesarrolladorDropdown, setShowDesarrolladorDropdown] = useState(false)
+
+  // Zona detectada por GPS
+  const [zonaDetectada, setZonaDetectada] = useState<{zona: string, microzona: string} | null>(null)
+
   const [formData, setFormData] = useState<FormData>({
     nombre_oficial: '',
     desarrollador: '',
@@ -155,6 +164,99 @@ export default function EditarProyecto() {
       fetchPropiedades()
     }
   }, [id])
+
+  // Cargar desarrolladores para autocomplete
+  useEffect(() => {
+    const fetchDesarrolladores = async () => {
+      if (!supabase) return
+      const { data } = await supabase.rpc('buscar_desarrolladores', {
+        p_busqueda: null,
+        p_limite: 100
+      })
+      if (data) {
+        setDesarrolladoresList(data)
+      }
+    }
+    fetchDesarrolladores()
+  }, [])
+
+  // Sincronizar desarrollador seleccionado cuando se carga formData
+  useEffect(() => {
+    if (formData.desarrollador && desarrolladoresList.length > 0 && !desarrolladorSeleccionado) {
+      const match = desarrolladoresList.find(d => d.nombre === formData.desarrollador)
+      if (match) {
+        setDesarrolladorSeleccionado({ id: match.id, nombre: match.nombre })
+        setBusquedaDesarrollador(match.nombre)
+      }
+    }
+  }, [formData.desarrollador, desarrolladoresList])
+
+  // Detectar zona por GPS
+  const detectarZonaPorGPS = async (lat: string, lng: string) => {
+    if (!supabase || !lat || !lng) {
+      setZonaDetectada(null)
+      return
+    }
+
+    try {
+      const latNum = parseFloat(lat)
+      const lngNum = parseFloat(lng)
+
+      if (isNaN(latNum) || isNaN(lngNum)) {
+        setZonaDetectada(null)
+        return
+      }
+
+      const { data } = await supabase.rpc('get_zona_by_gps', {
+        p_lat: latNum,
+        p_lon: lngNum
+      })
+
+      if (data && data.length > 0 && data[0].zona) {
+        setZonaDetectada({
+          zona: data[0].zona,
+          microzona: data[0].microzona || ''
+        })
+      } else {
+        setZonaDetectada(null)
+      }
+    } catch (err) {
+      console.error('Error detectando zona:', err)
+      setZonaDetectada(null)
+    }
+  }
+
+  // Crear desarrollador nuevo
+  const crearNuevoDesarrollador = async (nombre: string) => {
+    if (!supabase || !nombre.trim()) return
+
+    try {
+      const { data, error } = await supabase.rpc('crear_desarrollador', {
+        p_nombre: nombre.trim()
+      })
+
+      if (error) throw error
+
+      if (data && data[0]?.success) {
+        const nuevoId = data[0].id
+        // Refetch lista
+        const { data: nuevaLista } = await supabase.rpc('buscar_desarrolladores', {
+          p_busqueda: null,
+          p_limite: 100
+        })
+        if (nuevaLista) setDesarrolladoresList(nuevaLista)
+
+        // Seleccionar el nuevo
+        setDesarrolladorSeleccionado({ id: nuevoId, nombre: nombre.trim() })
+        setBusquedaDesarrollador(nombre.trim())
+        setShowDesarrolladorDropdown(false)
+        // Update formData
+        setFormData(prev => ({ ...prev, desarrollador: nombre.trim() }))
+      }
+    } catch (err: any) {
+      alert('Error al crear desarrollador: ' + err.message)
+    }
+  }
 
   const fetchProyecto = async () => {
     if (!supabase || !id) return
@@ -600,7 +702,10 @@ export default function EditarProyecto() {
               <Link href="/admin/propiedades" className="text-slate-300 hover:text-white text-sm">
                 Propiedades
               </Link>
-              <Link href="/" className="text-amber-400 hover:text-amber-300 text-sm">
+              <Link href="/admin/supervisor" className="text-amber-400 hover:text-amber-300 text-sm font-medium">
+                Supervisor HITL
+              </Link>
+              <Link href="/" className="text-slate-300 hover:text-white text-sm">
                 Ir a Buscar
               </Link>
             </div>
@@ -658,17 +763,78 @@ export default function EditarProyecto() {
                       />
                     </div>
 
-                    <div>
+                    {/* Desarrollador (Autocomplete) */}
+                    <div className="relative">
                       <label className="block text-sm font-medium text-slate-700 mb-1">
                         Desarrollador
                       </label>
-                      <input
-                        type="text"
-                        value={formData.desarrollador}
-                        onChange={(e) => updateField('desarrollador', e.target.value)}
-                        placeholder="Ej: Sky Properties"
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                      />
+                      {desarrolladorSeleccionado ? (
+                        <div className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg bg-slate-50">
+                          <span className="text-slate-900 flex-1">{desarrolladorSeleccionado.nombre}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDesarrolladorSeleccionado(null)
+                              setBusquedaDesarrollador('')
+                              updateField('desarrollador', '')
+                            }}
+                            className="text-slate-400 hover:text-red-500"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <input
+                            type="text"
+                            value={busquedaDesarrollador}
+                            onChange={(e) => {
+                              setBusquedaDesarrollador(e.target.value)
+                              setShowDesarrolladorDropdown(true)
+                            }}
+                            onFocus={() => setShowDesarrolladorDropdown(true)}
+                            placeholder="Buscar o crear desarrollador..."
+                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                          />
+                          {showDesarrolladorDropdown && (
+                            <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                              {desarrolladoresList
+                                .filter(d => !busquedaDesarrollador || d.nombre.toLowerCase().includes(busquedaDesarrollador.toLowerCase()))
+                                .slice(0, 8)
+                                .map(d => (
+                                  <button
+                                    key={d.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setDesarrolladorSeleccionado({ id: d.id, nombre: d.nombre })
+                                      setBusquedaDesarrollador(d.nombre)
+                                      setShowDesarrolladorDropdown(false)
+                                      updateField('desarrollador', d.nombre)
+                                    }}
+                                    className="w-full px-4 py-2 text-left hover:bg-amber-50 border-b border-slate-100 last:border-0"
+                                  >
+                                    <span className="font-medium text-slate-900">{d.nombre}</span>
+                                    <span className="text-xs text-slate-500 ml-2">({d.proyectos_count} proyectos)</span>
+                                  </button>
+                                ))}
+                              {busquedaDesarrollador && !desarrolladoresList.some(d => d.nombre.toLowerCase() === busquedaDesarrollador.toLowerCase()) && (
+                                <button
+                                  type="button"
+                                  onClick={() => crearNuevoDesarrollador(busquedaDesarrollador)}
+                                  className="w-full px-4 py-2 text-left hover:bg-green-50 text-green-700 font-medium"
+                                >
+                                  + Crear "{busquedaDesarrollador}"
+                                </button>
+                              )}
+                              {!busquedaDesarrollador && (
+                                <div className="px-4 py-2 text-xs text-slate-400">
+                                  Escribe para buscar o crear nuevo
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
 
                     <div>
@@ -771,7 +937,10 @@ export default function EditarProyecto() {
                       <input
                         type="text"
                         value={formData.latitud}
-                        onChange={(e) => updateField('latitud', e.target.value)}
+                        onChange={(e) => {
+                          updateField('latitud', e.target.value)
+                          detectarZonaPorGPS(e.target.value, formData.longitud)
+                        }}
                         placeholder="-17.7654321"
                         className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                       />
@@ -784,12 +953,39 @@ export default function EditarProyecto() {
                       <input
                         type="text"
                         value={formData.longitud}
-                        onChange={(e) => updateField('longitud', e.target.value)}
+                        onChange={(e) => {
+                          updateField('longitud', e.target.value)
+                          detectarZonaPorGPS(formData.latitud, e.target.value)
+                        }}
                         placeholder="-63.1234567"
                         className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                       />
                     </div>
                   </div>
+
+                  {/* Zona detectada por GPS */}
+                  {zonaDetectada && (
+                    <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-green-700 text-sm">Zona detectada: </span>
+                          <strong className="text-green-800">{zonaDetectada.zona}</strong>
+                          {zonaDetectada.microzona && (
+                            <span className="text-green-600 ml-1">({zonaDetectada.microzona})</span>
+                          )}
+                        </div>
+                        {zonaDetectada.zona !== formData.zona && (
+                          <button
+                            type="button"
+                            onClick={() => updateField('zona', zonaDetectada.zona)}
+                            className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+                          >
+                            Usar esta zona
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {formData.latitud && formData.longitud && (
                     <div className="mt-3">
