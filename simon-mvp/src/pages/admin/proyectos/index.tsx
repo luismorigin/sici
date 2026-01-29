@@ -31,6 +31,15 @@ interface ProyectoStats {
   con_amenidades: number
 }
 
+// Para autocompletado
+interface ProyectoSuggestion {
+  id: number
+  nombre: string
+  desarrollador: string | null
+  tipo: 'proyecto' | 'desarrollador'
+  count?: number
+}
+
 const ZONAS = [
   { id: '', label: 'Todas las zonas' },
   { id: 'Equipetrol', label: 'Equipetrol Centro' },
@@ -50,6 +59,27 @@ const ESTADOS_CONSTRUCCION = [
   { id: 'no_especificado', label: 'No Especificado' }
 ]
 
+const ORDEN_OPCIONES = [
+  { id: 'propiedades_desc', label: 'Más propiedades' },
+  { id: 'propiedades_asc', label: 'Menos propiedades' },
+  { id: 'nombre_asc', label: 'Nombre A-Z' },
+  { id: 'nombre_desc', label: 'Nombre Z-A' }
+]
+
+// Mapear zona de BD a label consistente
+const getZonaLabel = (zona: string | null): string => {
+  if (!zona) return 'Sin zona'
+  // Buscar coincidencia exacta o parcial
+  const found = ZONAS.find(z =>
+    z.id && (
+      z.id.toLowerCase() === zona.toLowerCase() ||
+      zona.toLowerCase().includes(z.id.toLowerCase()) ||
+      z.label.toLowerCase() === zona.toLowerCase()
+    )
+  )
+  return found?.label || zona
+}
+
 export default function AdminProyectos() {
   const [proyectos, setProyectos] = useState<Proyecto[]>([])
   const [stats, setStats] = useState<ProyectoStats | null>(null)
@@ -61,17 +91,56 @@ export default function AdminProyectos() {
   const [estado, setEstado] = useState('')
   const [busqueda, setBusqueda] = useState('')
   const [soloSinDesarrollador, setSoloSinDesarrollador] = useState(false)
+  const [ordenarPor, setOrdenarPor] = useState('propiedades_desc')
+
+  // Autocompletado
+  const [allProyectos, setAllProyectos] = useState<Proyecto[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [seleccionado, setSeleccionado] = useState<{ tipo: 'proyecto' | 'desarrollador'; valor: string; id?: number } | null>(null)
 
   useEffect(() => {
     fetchProyectos()
     fetchStats()
-  }, [zona, estado, soloSinDesarrollador])
+  }, [zona, estado, soloSinDesarrollador, ordenarPor, seleccionado])
+
+  // Cargar todos los proyectos para autocompletado
+  useEffect(() => {
+    const fetchAll = async () => {
+      if (!supabase) return
+      const { data } = await supabase
+        .from('proyectos_master')
+        .select('id_proyecto_master, nombre_oficial, desarrollador')
+        .eq('activo', true)
+        .order('nombre_oficial')
+
+      if (data) {
+        setAllProyectos(data.map(p => ({
+          ...p,
+          id_proyecto_master: p.id_proyecto_master,
+          nombre_oficial: p.nombre_oficial,
+          desarrollador: p.desarrollador
+        } as Proyecto)))
+      }
+    }
+    fetchAll()
+  }, [])
+
+  // Cerrar sugerencias al hacer click afuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.search-container')) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const fetchStats = async () => {
     if (!supabase) return
 
     try {
-      // Obtener stats desde la vista o calcular manualmente
       const { data, error } = await supabase
         .from('proyectos_master')
         .select('estado_construccion, desarrollador, latitud, longitud, amenidades_edificio, activo')
@@ -104,7 +173,6 @@ export default function AdminProyectos() {
         .from('proyectos_master')
         .select('*')
         .eq('activo', true)
-        .order('nombre_oficial')
 
       if (zona) {
         query = query.ilike('zona', `%${zona}%`)
@@ -116,6 +184,15 @@ export default function AdminProyectos() {
 
       if (soloSinDesarrollador) {
         query = query.is('desarrollador', null)
+      }
+
+      // Filtrar por selección de autocompletado
+      if (seleccionado) {
+        if (seleccionado.tipo === 'proyecto' && seleccionado.id) {
+          query = query.eq('id_proyecto_master', seleccionado.id)
+        } else if (seleccionado.tipo === 'desarrollador') {
+          query = query.eq('desarrollador', seleccionado.valor)
+        }
       }
 
       const { data, error: fetchError } = await query
@@ -138,14 +215,21 @@ export default function AdminProyectos() {
         })
       )
 
-      // Filtrar por búsqueda en frontend
-      let resultado = proyectosConConteo
-      if (busqueda.trim()) {
-        const termino = busqueda.toLowerCase()
-        resultado = resultado.filter(p =>
-          p.nombre_oficial.toLowerCase().includes(termino) ||
-          p.desarrollador?.toLowerCase().includes(termino)
-        )
+      // Ordenar según criterio seleccionado
+      let resultado = [...proyectosConConteo]
+      switch (ordenarPor) {
+        case 'propiedades_desc':
+          resultado.sort((a, b) => (b.propiedades_count || 0) - (a.propiedades_count || 0))
+          break
+        case 'propiedades_asc':
+          resultado.sort((a, b) => (a.propiedades_count || 0) - (b.propiedades_count || 0))
+          break
+        case 'nombre_asc':
+          resultado.sort((a, b) => a.nombre_oficial.localeCompare(b.nombre_oficial))
+          break
+        case 'nombre_desc':
+          resultado.sort((a, b) => b.nombre_oficial.localeCompare(a.nombre_oficial))
+          break
       }
 
       setProyectos(resultado)
@@ -155,6 +239,65 @@ export default function AdminProyectos() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Generar sugerencias de autocompletado
+  const getSuggestions = (): ProyectoSuggestion[] => {
+    if (!busqueda.trim() || busqueda.length < 2) return []
+
+    const termino = busqueda.toLowerCase()
+    const suggestions: ProyectoSuggestion[] = []
+
+    // Buscar proyectos por nombre
+    const proyectoMatches = allProyectos
+      .filter(p => p.nombre_oficial.toLowerCase().includes(termino))
+      .slice(0, 5)
+      .map(p => ({
+        id: p.id_proyecto_master,
+        nombre: p.nombre_oficial,
+        desarrollador: p.desarrollador,
+        tipo: 'proyecto' as const
+      }))
+
+    suggestions.push(...proyectoMatches)
+
+    // Buscar desarrolladores únicos
+    const desarrolladores = new Map<string, number>()
+    allProyectos.forEach(p => {
+      if (p.desarrollador && p.desarrollador.toLowerCase().includes(termino)) {
+        desarrolladores.set(p.desarrollador, (desarrolladores.get(p.desarrollador) || 0) + 1)
+      }
+    })
+
+    const desarrolladorMatches = Array.from(desarrolladores.entries())
+      .slice(0, 3)
+      .map(([nombre, count]) => ({
+        id: 0,
+        nombre: nombre,
+        desarrollador: null,
+        tipo: 'desarrollador' as const,
+        count
+      }))
+
+    suggestions.push(...desarrolladorMatches)
+
+    return suggestions
+  }
+
+  const handleSelectSuggestion = (suggestion: ProyectoSuggestion) => {
+    if (suggestion.tipo === 'proyecto') {
+      setSeleccionado({ tipo: 'proyecto', valor: suggestion.nombre, id: suggestion.id })
+      setBusqueda(suggestion.nombre)
+    } else {
+      setSeleccionado({ tipo: 'desarrollador', valor: suggestion.nombre })
+      setBusqueda(suggestion.nombre)
+    }
+    setShowSuggestions(false)
+  }
+
+  const clearSelection = () => {
+    setSeleccionado(null)
+    setBusqueda('')
   }
 
   const formatFecha = (fecha: string | null): string => {
@@ -179,6 +322,8 @@ export default function AdminProyectos() {
         return <span className="bg-slate-100 text-slate-500 text-xs px-2 py-0.5 rounded">Sin especificar</span>
     }
   }
+
+  const suggestions = getSuggestions()
 
   return (
     <>
@@ -246,15 +391,69 @@ export default function AdminProyectos() {
           {/* Filtros */}
           <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
             <div className="flex flex-wrap items-center gap-4">
-              <div className="flex-1 min-w-[200px]">
-                <input
-                  type="text"
-                  placeholder="Buscar proyecto o desarrollador..."
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && fetchProyectos()}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                />
+              {/* Búsqueda con autocompletado */}
+              <div className="flex-1 min-w-[250px] relative search-container">
+                {seleccionado ? (
+                  <div className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg bg-slate-50">
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      seleccionado.tipo === 'proyecto' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {seleccionado.tipo === 'proyecto' ? 'Proyecto' : 'Desarrollador'}
+                    </span>
+                    <span className="font-medium text-slate-900">{seleccionado.valor}</span>
+                    <button
+                      type="button"
+                      onClick={clearSelection}
+                      className="ml-auto text-slate-400 hover:text-red-500"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Buscar proyecto o desarrollador..."
+                      value={busqueda}
+                      onChange={(e) => {
+                        setBusqueda(e.target.value)
+                        setShowSuggestions(true)
+                      }}
+                      onFocus={() => setShowSuggestions(true)}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                    />
+
+                    {/* Sugerencias */}
+                    {showSuggestions && suggestions.length > 0 && (
+                      <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-72 overflow-y-auto">
+                        {suggestions.map((s, idx) => (
+                          <button
+                            key={`${s.tipo}-${s.id || s.nombre}-${idx}`}
+                            type="button"
+                            onClick={() => handleSelectSuggestion(s)}
+                            className="w-full px-4 py-2 text-left hover:bg-amber-50 border-b border-slate-100 last:border-0"
+                          >
+                            {s.tipo === 'proyecto' ? (
+                              <>
+                                <span className="font-medium text-slate-900">{s.nombre}</span>
+                                {s.desarrollador && (
+                                  <span className="block text-xs text-slate-500">{s.desarrollador}</span>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <span className="font-medium text-blue-700">{s.nombre}</span>
+                                <span className="block text-xs text-slate-500">
+                                  Desarrollador • {s.count} {s.count === 1 ? 'proyecto' : 'proyectos'}
+                                </span>
+                              </>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               <select
@@ -277,6 +476,16 @@ export default function AdminProyectos() {
                 ))}
               </select>
 
+              <select
+                value={ordenarPor}
+                onChange={(e) => setOrdenarPor(e.target.value)}
+                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+              >
+                {ORDEN_OPCIONES.map(o => (
+                  <option key={o.id} value={o.id}>{o.label}</option>
+                ))}
+              </select>
+
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -286,13 +495,6 @@ export default function AdminProyectos() {
                 />
                 <span className="text-sm text-orange-600">Sin desarrollador</span>
               </label>
-
-              <button
-                onClick={fetchProyectos}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors"
-              >
-                Buscar
-              </button>
             </div>
           </div>
 
@@ -327,6 +529,16 @@ export default function AdminProyectos() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-lg text-slate-900">{proyecto.nombre_oficial}</h3>
                           <span className="text-xs text-slate-400">ID: {proyecto.id_proyecto_master}</span>
+                          {/* Badge de propiedades destacado */}
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            (proyecto.propiedades_count || 0) > 5
+                              ? 'bg-green-100 text-green-700'
+                              : (proyecto.propiedades_count || 0) > 0
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            {proyecto.propiedades_count} props
+                          </span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
                           {proyecto.desarrollador ? (
@@ -334,7 +546,8 @@ export default function AdminProyectos() {
                           ) : (
                             <span className="text-orange-500 italic">Sin desarrollador</span>
                           )}
-                          {proyecto.zona && <span>• {proyecto.zona}</span>}
+                          <span>•</span>
+                          <span>{getZonaLabel(proyecto.zona)}</span>
                         </div>
                       </div>
                       <Link
@@ -380,11 +593,6 @@ export default function AdminProyectos() {
                             {proyecto.total_unidades} unidades
                           </span>
                         )}
-
-                        {/* Propiedades vinculadas */}
-                        <span className="text-slate-600">
-                          {proyecto.propiedades_count} propiedades vinculadas
-                        </span>
                       </div>
 
                       {/* Amenidades */}
