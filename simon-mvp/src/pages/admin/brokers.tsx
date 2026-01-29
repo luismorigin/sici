@@ -152,6 +152,9 @@ export default function AdminBrokers() {
               <a href="/admin/supervisor" className="text-amber-400 hover:text-amber-300 text-sm font-medium">
                 Supervisor HITL
               </a>
+              <a href="/admin/salud" className="text-teal-400 hover:text-teal-300 text-sm font-medium">
+                Salud
+              </a>
               <a href="/broker/login" className="text-slate-300 hover:text-white text-sm">
                 Portal Broker →
               </a>

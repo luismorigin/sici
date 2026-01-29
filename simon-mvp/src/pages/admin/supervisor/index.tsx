@@ -69,6 +69,9 @@ export default function SupervisorIndex() {
               <Link href="/admin/proyectos" className="text-slate-300 hover:text-white text-sm">
                 Proyectos
               </Link>
+              <Link href="/admin/salud" className="text-teal-400 hover:text-teal-300 text-sm font-medium">
+                Salud
+              </Link>
               <Link href="/" className="text-amber-400 hover:text-amber-300 text-sm">
                 Ir a Buscar
               </Link>
