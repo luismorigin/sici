@@ -142,9 +142,17 @@ export default function AdminBrokers() {
               <h1 className="text-xl font-bold">Panel Admin</h1>
               <p className="text-slate-400 text-sm">Gestión de Brokers</p>
             </div>
-            <a href="/broker/login" className="text-amber-400 hover:text-amber-300 text-sm">
-              Ir a Portal Broker →
-            </a>
+            <div className="flex items-center gap-4">
+              <a href="/admin/propiedades" className="text-slate-300 hover:text-white text-sm">
+                Propiedades
+              </a>
+              <a href="/admin/proyectos" className="text-slate-300 hover:text-white text-sm">
+                Proyectos
+              </a>
+              <a href="/broker/login" className="text-amber-400 hover:text-amber-300 text-sm">
+                Ir a Portal Broker →
+              </a>
+            </div>
           </div>
         </header>
 

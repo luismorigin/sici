@@ -1200,6 +1200,9 @@ export default function EditarPropiedad() {
               >
                 Ver como resultado
               </button>
+              <Link href="/admin/proyectos" className="text-slate-300 hover:text-white text-sm">
+                Proyectos
+              </Link>
               <Link href="/admin/propiedades" className="text-amber-400 hover:text-amber-300 text-sm">
                 Volver a lista
               </Link>

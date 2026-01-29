@@ -407,6 +407,9 @@ export default function AdminPropiedades() {
               <p className="text-slate-400 text-sm">Editor de Propiedades v2</p>
             </div>
             <div className="flex items-center gap-4">
+              <Link href="/admin/proyectos" className="text-slate-300 hover:text-white text-sm">
+                Proyectos
+              </Link>
               <Link href="/admin/brokers" className="text-slate-300 hover:text-white text-sm">
                 Brokers
               </Link>

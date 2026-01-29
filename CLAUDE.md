@@ -123,6 +123,7 @@ sici/
 - **Parqueo/Baulera Precio:** 4 columnas (incluido + precio_adicional) + buscar_unidades_reales() v2.26 (migraciones 083-084)
 - **Admin Dashboard Propiedades:** Editor visual completo con validaciones de seguridad, indicadores precio sospechoso, sistema candados (migración 077)
 - **Iconos Resultados:** Símbolos mejorados en resultsV2 (🛏️🚿📐🏢🚗📦) + leyenda colapsable + badges forma pago
+- **Admin Proyectos Master:** Listado + editor con estado construcción, fecha entrega, amenidades edificio, propagación a propiedades (migración 085)
 
 ### ⏳ En Progreso
 - **Sistema Broker Fase 5-7:** Portal broker, sistema leads, CMA (pendiente)
@@ -206,6 +207,8 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 082 | buscar_unidades_forma_pago | **buscar_unidades_reales() v2.25 + filtros forma de pago** | ✅ |
 | 083 | parqueo_baulera_precio | **Columnas parqueo/baulera incluido + precio adicional** | ⏳ |
 | 084 | buscar_unidades_parqueo_baulera | **buscar_unidades_reales() v2.26 + filtros parqueo/baulera** | ⏳ |
+| 085 | proyectos_master_campos_admin | **Admin Proyectos: estado_construccion, fecha_entrega, amenidades_edificio, pisos, unidades + propagación** | ✅ |
+| 086 | inferir_datos_proyecto | **Función para inferir amenidades, estado, pisos y fotos desde propiedades vinculadas** | ✅ |
 
 ## Repo Legacy
 
