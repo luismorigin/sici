@@ -52,13 +52,16 @@ DECLARE
     v_status_nuevo estado_propiedad;
     v_campos_bloqueados JSONB;
     v_discrepancias JSONB := '[]'::JSONB;
-    
+
     -- Valores actuales (para comparación)
     v_precio_actual NUMERIC;
     v_area_actual NUMERIC;
     v_dormitorios_actual INTEGER;
     v_banos_actual NUMERIC;
 BEGIN
+    -- Usa _is_campo_bloqueado() que soporta ambos formatos de candados:
+    -- Formato viejo: {"campo": true}
+    -- Formato nuevo: {"campo": {"bloqueado": true, "por": "admin", ...}}
     
     -- ========================================================================
     -- PASO 1: Verificar si existe (por url + fuente)
@@ -177,7 +180,7 @@ BEGIN
     -- ========================================================================
     ELSE
         -- 3.1 Detectar cambios críticos (solo si no están bloqueados)
-        IF (v_campos_bloqueados->>'precio_usd')::BOOLEAN IS NOT TRUE THEN
+        IF NOT _is_campo_bloqueado(v_campos_bloqueados, 'precio_usd') THEN
             IF v_precio_actual IS DISTINCT FROM p_precio_usd THEN
                 v_cambio_detectado := TRUE;
                 v_discrepancias := v_discrepancias || jsonb_build_array(
@@ -189,8 +192,8 @@ BEGIN
                 );
             END IF;
         END IF;
-        
-        IF (v_campos_bloqueados->>'area_total_m2')::BOOLEAN IS NOT TRUE THEN
+
+        IF NOT _is_campo_bloqueado(v_campos_bloqueados, 'area_total_m2') THEN
             IF v_area_actual IS DISTINCT FROM p_area_total_m2 THEN
                 v_cambio_detectado := TRUE;
                 v_discrepancias := v_discrepancias || jsonb_build_array(
@@ -202,8 +205,8 @@ BEGIN
                 );
             END IF;
         END IF;
-        
-        IF (v_campos_bloqueados->>'dormitorios')::BOOLEAN IS NOT TRUE THEN
+
+        IF NOT _is_campo_bloqueado(v_campos_bloqueados, 'dormitorios') THEN
             IF v_dormitorios_actual IS DISTINCT FROM p_dormitorios THEN
                 v_cambio_detectado := TRUE;
                 v_discrepancias := v_discrepancias || jsonb_build_array(
@@ -223,80 +226,80 @@ BEGIN
             v_cambio_detectado
         );
         
-        -- 3.3 UPDATE respetando candados
+        -- 3.3 UPDATE respetando candados (soporta formato viejo y nuevo)
         UPDATE propiedades_v2
         SET
             -- Actualizar solo si NO están bloqueados
-            codigo_propiedad = CASE 
-                WHEN (campos_bloqueados->>'codigo_propiedad')::BOOLEAN = TRUE 
-                THEN codigo_propiedad 
-                ELSE COALESCE(p_codigo_propiedad, codigo_propiedad) 
+            codigo_propiedad = CASE
+                WHEN _is_campo_bloqueado(campos_bloqueados, 'codigo_propiedad')
+                THEN codigo_propiedad
+                ELSE COALESCE(p_codigo_propiedad, codigo_propiedad)
             END,
-            
-            tipo_operacion = CASE 
-                WHEN (campos_bloqueados->>'tipo_operacion')::BOOLEAN = TRUE 
-                THEN tipo_operacion 
-                ELSE COALESCE(p_tipo_operacion::tipo_operacion_enum, tipo_operacion) 
+
+            tipo_operacion = CASE
+                WHEN _is_campo_bloqueado(campos_bloqueados, 'tipo_operacion')
+                THEN tipo_operacion
+                ELSE COALESCE(p_tipo_operacion::tipo_operacion_enum, tipo_operacion)
             END,
-            
-            tipo_propiedad_original = CASE 
-                WHEN (campos_bloqueados->>'tipo_propiedad_original')::BOOLEAN = TRUE 
-                THEN tipo_propiedad_original 
-                ELSE COALESCE(p_tipo_propiedad_original, tipo_propiedad_original) 
+
+            tipo_propiedad_original = CASE
+                WHEN _is_campo_bloqueado(campos_bloqueados, 'tipo_propiedad_original')
+                THEN tipo_propiedad_original
+                ELSE COALESCE(p_tipo_propiedad_original, tipo_propiedad_original)
             END,
-            
-            estado_construccion = CASE 
-                WHEN (campos_bloqueados->>'estado_construccion')::BOOLEAN = TRUE 
-                THEN estado_construccion 
-                ELSE COALESCE(p_estado_construccion::estado_construccion_enum, estado_construccion) 
+
+            estado_construccion = CASE
+                WHEN _is_campo_bloqueado(campos_bloqueados, 'estado_construccion')
+                THEN estado_construccion
+                ELSE COALESCE(p_estado_construccion::estado_construccion_enum, estado_construccion)
             END,
-            
+
             -- Financiero
-            precio_usd = CASE 
-                WHEN (campos_bloqueados->>'precio_usd')::BOOLEAN = TRUE 
-                THEN precio_usd 
-                ELSE COALESCE(p_precio_usd, precio_usd) 
+            precio_usd = CASE
+                WHEN _is_campo_bloqueado(campos_bloqueados, 'precio_usd')
+                THEN precio_usd
+                ELSE COALESCE(p_precio_usd, precio_usd)
             END,
-            
+
             precio_usd_original = COALESCE(p_precio_usd_original, precio_usd_original),
             moneda_original = COALESCE(p_moneda_original, moneda_original),
-            
+
             -- Físico
-            area_total_m2 = CASE 
-                WHEN (campos_bloqueados->>'area_total_m2')::BOOLEAN = TRUE 
-                THEN area_total_m2 
-                ELSE COALESCE(p_area_total_m2, area_total_m2) 
+            area_total_m2 = CASE
+                WHEN _is_campo_bloqueado(campos_bloqueados, 'area_total_m2')
+                THEN area_total_m2
+                ELSE COALESCE(p_area_total_m2, area_total_m2)
             END,
-            
-            dormitorios = CASE 
-                WHEN (campos_bloqueados->>'dormitorios')::BOOLEAN = TRUE 
-                THEN dormitorios 
-                ELSE COALESCE(p_dormitorios, dormitorios) 
+
+            dormitorios = CASE
+                WHEN _is_campo_bloqueado(campos_bloqueados, 'dormitorios')
+                THEN dormitorios
+                ELSE COALESCE(p_dormitorios, dormitorios)
             END,
-            
-            banos = CASE 
-                WHEN (campos_bloqueados->>'banos')::BOOLEAN = TRUE 
-                THEN banos 
-                ELSE COALESCE(p_banos, banos) 
+
+            banos = CASE
+                WHEN _is_campo_bloqueado(campos_bloqueados, 'banos')
+                THEN banos
+                ELSE COALESCE(p_banos, banos)
             END,
-            
-            estacionamientos = CASE 
-                WHEN (campos_bloqueados->>'estacionamientos')::BOOLEAN = TRUE 
-                THEN estacionamientos 
-                ELSE COALESCE(p_estacionamientos, estacionamientos) 
+
+            estacionamientos = CASE
+                WHEN _is_campo_bloqueado(campos_bloqueados, 'estacionamientos')
+                THEN estacionamientos
+                ELSE COALESCE(p_estacionamientos, estacionamientos)
             END,
-            
+
             -- GPS
-            latitud = CASE 
-                WHEN (campos_bloqueados->>'latitud')::BOOLEAN = TRUE 
-                THEN latitud 
-                ELSE COALESCE(p_latitud, latitud) 
+            latitud = CASE
+                WHEN _is_campo_bloqueado(campos_bloqueados, 'latitud')
+                THEN latitud
+                ELSE COALESCE(p_latitud, latitud)
             END,
-            
-            longitud = CASE 
-                WHEN (campos_bloqueados->>'longitud')::BOOLEAN = TRUE 
-                THEN longitud 
-                ELSE COALESCE(p_longitud, longitud) 
+
+            longitud = CASE
+                WHEN _is_campo_bloqueado(campos_bloqueados, 'longitud')
+                THEN longitud
+                ELSE COALESCE(p_longitud, longitud)
             END,
             
             -- Discovery
