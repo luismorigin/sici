@@ -16,6 +16,7 @@ interface FormData {
   longitud: string
   amenidades: string[]
   amenidades_custom: string[]
+  fotos_proyecto: FotoProyecto[]
 }
 
 interface ProyectoOriginal {
@@ -33,6 +34,7 @@ interface ProyectoOriginal {
   total_unidades: number | null
   aliases: string[] | null
   updated_at: string | null
+  fotos_proyecto: FotoProyecto[] | null
 }
 
 interface PropiedadVinculada {
@@ -41,17 +43,37 @@ interface PropiedadVinculada {
   dormitorios: number
   area_total_m2: number
   estado_construccion: string | null
+  fecha_publicacion: string | null
+  fecha_discovery: string | null
+  fuente: string | null
+  datos_json: {
+    agente?: {
+      nombre?: string
+      oficina_nombre?: string
+    }
+  } | null
+}
+
+interface AmenidadInferida {
+  amenidad: string
+  porcentaje: number
 }
 
 interface DatosInferidos {
   success: boolean
   error?: string
   total_propiedades: number
-  amenidades_sugeridas: string[]
+  amenidades_frecuentes: AmenidadInferida[]
+  amenidades_opcionales: AmenidadInferida[]
   frecuencia_amenidades: { [key: string]: { cantidad: number; porcentaje: number } }
   estado_sugerido: { estado: string | null; porcentaje: number | null }
   pisos_max: number | null
   fotos_proyecto: { propiedad_id: number; url: string }[]
+}
+
+interface FotoProyecto {
+  url: string
+  orden: number
 }
 
 const ZONAS = [
@@ -101,7 +123,16 @@ export default function EditarProyecto() {
   const [datosInferidos, setDatosInferidos] = useState<DatosInferidos | null>(null)
   const [lightboxFoto, setLightboxFoto] = useState<string | null>(null)
 
+  // Selección de amenidades opcionales para aplicar
+  const [amenidadesOpcionalesSeleccionadas, setAmenidadesOpcionalesSeleccionadas] = useState<string[]>([])
+
+  // Filtros y visualización de propiedades
+  const [filtroDorms, setFiltroDorms] = useState<number | null>(null)
+  const [ordenarPor, setOrdenarPor] = useState<'precio' | 'precio_m2' | 'area' | 'dias'>('precio')
+  const [mostrarTodas, setMostrarTodas] = useState(false)
+
   const [nuevoAmenidad, setNuevoAmenidad] = useState('')
+  const [nuevaFotoUrl, setNuevaFotoUrl] = useState('')
 
   const [formData, setFormData] = useState<FormData>({
     nombre_oficial: '',
@@ -114,7 +145,8 @@ export default function EditarProyecto() {
     latitud: '',
     longitud: '',
     amenidades: [],
-    amenidades_custom: []
+    amenidades_custom: [],
+    fotos_proyecto: []
   })
 
   useEffect(() => {
@@ -158,7 +190,8 @@ export default function EditarProyecto() {
         latitud: data.latitud?.toString() || '',
         longitud: data.longitud?.toString() || '',
         amenidades: standardAmenidades,
-        amenidades_custom: customAmenidades
+        amenidades_custom: customAmenidades,
+        fotos_proyecto: data.fotos_proyecto || []
       })
     } catch (err) {
       console.error('Error fetching proyecto:', err)
@@ -175,7 +208,7 @@ export default function EditarProyecto() {
       // Solo departamentos (área >= 20m²), excluir parqueos/bauleras
       const { data, error } = await supabase
         .from('propiedades_v2')
-        .select('id, precio_usd, dormitorios, area_total_m2, estado_construccion')
+        .select('id, precio_usd, dormitorios, area_total_m2, estado_construccion, fecha_publicacion, fecha_discovery, fuente, datos_json')
         .eq('id_proyecto_master', id)
         .eq('status', 'completado')
         .gte('area_total_m2', 20)
@@ -224,6 +257,54 @@ export default function EditarProyecto() {
     }))
   }
 
+  // Gestión de fotos del proyecto
+  const agregarFoto = () => {
+    if (!nuevaFotoUrl.trim()) return
+    const url = nuevaFotoUrl.trim()
+    // Verificar que no exista ya
+    if (formData.fotos_proyecto.some(f => f.url === url)) return
+
+    const nuevaFoto: FotoProyecto = {
+      url,
+      orden: formData.fotos_proyecto.length + 1
+    }
+    setFormData(prev => ({
+      ...prev,
+      fotos_proyecto: [...prev.fotos_proyecto, nuevaFoto]
+    }))
+    setNuevaFotoUrl('')
+  }
+
+  const eliminarFoto = (url: string) => {
+    setFormData(prev => ({
+      ...prev,
+      fotos_proyecto: prev.fotos_proyecto
+        .filter(f => f.url !== url)
+        .map((f, idx) => ({ ...f, orden: idx + 1 }))
+    }))
+  }
+
+  const adoptarFotoInferida = (url: string) => {
+    if (formData.fotos_proyecto.some(f => f.url === url)) return
+    const nuevaFoto: FotoProyecto = {
+      url,
+      orden: formData.fotos_proyecto.length + 1
+    }
+    setFormData(prev => ({
+      ...prev,
+      fotos_proyecto: [...prev.fotos_proyecto, nuevaFoto]
+    }))
+  }
+
+  // Toggle amenidad opcional para selección
+  const toggleAmenidadOpcional = (amenidad: string) => {
+    setAmenidadesOpcionalesSeleccionadas(prev =>
+      prev.includes(amenidad)
+        ? prev.filter(a => a !== amenidad)
+        : [...prev, amenidad]
+    )
+  }
+
   // Inferir datos desde propiedades vinculadas
   const handleInferir = async () => {
     if (!supabase || !id) return
@@ -250,11 +331,11 @@ export default function EditarProyecto() {
     }
   }
 
-  // Aplicar amenidades inferidas al formulario
-  const aplicarAmenidadesInferidas = () => {
-    if (!datosInferidos?.amenidades_sugeridas) return
+  // Aplicar amenidades frecuentes (≥50%) al formulario
+  const aplicarAmenidadesFrecuentes = () => {
+    if (!datosInferidos?.amenidades_frecuentes) return
 
-    const nuevasAmenidades = datosInferidos.amenidades_sugeridas
+    const nuevasAmenidades = datosInferidos.amenidades_frecuentes.map(a => a.amenidad)
     const standard = nuevasAmenidades.filter(a => AMENIDADES_OPCIONES.includes(a))
     const custom = nuevasAmenidades.filter(a => !AMENIDADES_OPCIONES.includes(a))
 
@@ -263,6 +344,22 @@ export default function EditarProyecto() {
       amenidades: [...new Set([...prev.amenidades, ...standard])],
       amenidades_custom: [...new Set([...prev.amenidades_custom, ...custom])]
     }))
+    setSuccess(false)
+  }
+
+  // Aplicar amenidades opcionales seleccionadas al formulario
+  const aplicarAmenidadesOpcionales = () => {
+    if (amenidadesOpcionalesSeleccionadas.length === 0) return
+
+    const standard = amenidadesOpcionalesSeleccionadas.filter(a => AMENIDADES_OPCIONES.includes(a))
+    const custom = amenidadesOpcionalesSeleccionadas.filter(a => !AMENIDADES_OPCIONES.includes(a))
+
+    setFormData(prev => ({
+      ...prev,
+      amenidades: [...new Set([...prev.amenidades, ...standard])],
+      amenidades_custom: [...new Set([...prev.amenidades_custom, ...custom])]
+    }))
+    setAmenidadesOpcionalesSeleccionadas([])
     setSuccess(false)
   }
 
@@ -306,7 +403,8 @@ export default function EditarProyecto() {
         total_unidades: formData.total_unidades ? parseInt(formData.total_unidades) : null,
         latitud: formData.latitud ? parseFloat(formData.latitud) : null,
         longitud: formData.longitud ? parseFloat(formData.longitud) : null,
-        amenidades_edificio: todasAmenidades.length > 0 ? todasAmenidades : null
+        amenidades_edificio: todasAmenidades.length > 0 ? todasAmenidades : null,
+        fotos_proyecto: formData.fotos_proyecto.length > 0 ? formData.fotos_proyecto : null
       }
 
       const { error: updateError } = await supabase
@@ -386,6 +484,85 @@ export default function EditarProyecto() {
       maximumFractionDigits: 0
     }).format(precio)
   }
+
+  const formatPrecioM2 = (precio: number, area: number): string => {
+    if (!area || area === 0) return '-'
+    const precioM2 = precio / area
+    return `$${Math.round(precioM2).toLocaleString()}`
+  }
+
+  const formatFecha = (fecha: string | null): string => {
+    if (!fecha) return '-'
+    const date = new Date(fecha)
+    return date.toLocaleDateString('es-BO', { day: '2-digit', month: 'short', year: '2-digit' })
+  }
+
+  const calcularDiasEnMercado = (prop: PropiedadVinculada): number => {
+    const fecha = prop.fecha_publicacion || prop.fecha_discovery
+    if (!fecha) return 0
+    const diff = new Date().getTime() - new Date(fecha).getTime()
+    return Math.floor(diff / (1000 * 60 * 60 * 24))
+  }
+
+  // Calcular estadísticas del proyecto
+  const calcularEstadisticas = () => {
+    if (propiedades.length === 0) return null
+
+    const precios = propiedades.map(p => p.precio_usd).filter(p => p > 0)
+    const areas = propiedades.map(p => p.area_total_m2).filter(a => a > 0)
+    const preciosM2 = propiedades
+      .filter(p => p.precio_usd > 0 && p.area_total_m2 > 0)
+      .map(p => p.precio_usd / p.area_total_m2)
+    const diasMercado = propiedades.map(p => calcularDiasEnMercado(p))
+
+    // Distribución por dormitorios
+    const porDorms: { [key: number]: number } = {}
+    propiedades.forEach(p => {
+      const d = p.dormitorios || 0
+      porDorms[d] = (porDorms[d] || 0) + 1
+    })
+
+    // Brokers/Inmobiliarias
+    const porBroker: { [key: string]: number } = {}
+    propiedades.forEach(p => {
+      const broker = p.datos_json?.agente?.oficina_nombre || p.fuente || 'Desconocido'
+      porBroker[broker] = (porBroker[broker] || 0) + 1
+    })
+    const topBrokers = Object.entries(porBroker)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+
+    return {
+      total: propiedades.length,
+      precioMin: Math.min(...precios),
+      precioMax: Math.max(...precios),
+      precioM2Prom: preciosM2.length > 0 ? Math.round(preciosM2.reduce((a, b) => a + b, 0) / preciosM2.length) : 0,
+      areaProm: areas.length > 0 ? Math.round(areas.reduce((a, b) => a + b, 0) / areas.length) : 0,
+      diasProm: diasMercado.length > 0 ? Math.round(diasMercado.reduce((a, b) => a + b, 0) / diasMercado.length) : 0,
+      porDorms,
+      topBrokers
+    }
+  }
+
+  const stats = calcularEstadisticas()
+
+  // Filtrar y ordenar propiedades
+  const propiedadesFiltradas = propiedades
+    .filter(p => filtroDorms === null || p.dormitorios === filtroDorms || (filtroDorms === 3 && p.dormitorios >= 3))
+    .sort((a, b) => {
+      switch (ordenarPor) {
+        case 'precio_m2':
+          return (a.precio_usd / a.area_total_m2) - (b.precio_usd / b.area_total_m2)
+        case 'area':
+          return b.area_total_m2 - a.area_total_m2
+        case 'dias':
+          return calcularDiasEnMercado(b) - calcularDiasEnMercado(a)
+        default:
+          return a.precio_usd - b.precio_usd
+      }
+    })
+
+  const propiedadesVisibles = mostrarTodas ? propiedadesFiltradas : propiedadesFiltradas.slice(0, 15)
 
   const mostrarFechaEntrega = formData.estado_construccion === 'preventa' ||
     formData.estado_construccion === 'en_construccion' ||
@@ -693,6 +870,252 @@ export default function EditarProyecto() {
                     </button>
                   </div>
                 </div>
+
+                {/* Fotos del Proyecto */}
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h2 className="text-lg font-semibold text-slate-900 mb-4">Fotos del Proyecto</h2>
+
+                  {/* Galería de fotos actuales */}
+                  {formData.fotos_proyecto.length > 0 && (
+                    <div className="flex flex-wrap gap-3 mb-4">
+                      {formData.fotos_proyecto.map((foto, idx) => (
+                        <div key={foto.url} className="relative group">
+                          <button
+                            type="button"
+                            onClick={() => setLightboxFoto(foto.url)}
+                            className="w-24 h-24 rounded-lg overflow-hidden bg-slate-200 hover:ring-2 hover:ring-amber-500 transition-all"
+                          >
+                            <img
+                              src={foto.url}
+                              alt={`Foto ${idx + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => eliminarFoto(foto.url)}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            ×
+                          </button>
+                          <span className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1 rounded">
+                            {foto.orden}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Agregar foto por URL */}
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={nuevaFotoUrl}
+                      onChange={(e) => setNuevaFotoUrl(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarFoto())}
+                      placeholder="URL de imagen (https://...)..."
+                      className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={agregarFoto}
+                      disabled={!nuevaFotoUrl.trim()}
+                      className="px-4 py-2 bg-slate-200 hover:bg-slate-300 disabled:bg-slate-100 disabled:text-slate-400 text-slate-700 rounded-lg transition-colors"
+                    >
+                      + Agregar
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-slate-500 mt-2">
+                    También puedes adoptar fotos desde "Inferir desde Propiedades"
+                  </p>
+                </div>
+
+                {/* Propiedades Vinculadas - Con Dashboard y Filtros */}
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h2 className="text-lg font-semibold text-slate-900 mb-4">
+                    Propiedades del Proyecto ({propiedades.length})
+                  </h2>
+
+                  {propiedades.length === 0 ? (
+                    <p className="text-sm text-slate-500">No hay propiedades vinculadas</p>
+                  ) : (
+                    <>
+                      {/* Dashboard de Estadísticas */}
+                      {stats && (
+                        <div className="mb-6 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg p-4">
+                          {/* Métricas principales */}
+                          <div className="grid grid-cols-5 gap-4 mb-4">
+                            <div className="text-center">
+                              <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
+                              <p className="text-xs text-slate-500">Unidades</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-lg font-semibold text-slate-800">
+                                ${Math.round(stats.precioMin / 1000)}k - ${Math.round(stats.precioMax / 1000)}k
+                              </p>
+                              <p className="text-xs text-slate-500">Rango precios</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-lg font-semibold text-emerald-600">${stats.precioM2Prom.toLocaleString()}</p>
+                              <p className="text-xs text-slate-500">$/m² prom</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-lg font-semibold text-slate-800">{stats.areaProm}m²</p>
+                              <p className="text-xs text-slate-500">Área prom</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-lg font-semibold text-amber-600">{stats.diasProm}</p>
+                              <p className="text-xs text-slate-500">Días prom</p>
+                            </div>
+                          </div>
+
+                          {/* Distribución por dormitorios */}
+                          <div className="flex items-center gap-4 mb-3">
+                            <span className="text-xs text-slate-500 w-16">Tipología:</span>
+                            <div className="flex-1 flex items-center gap-3">
+                              {Object.entries(stats.porDorms)
+                                .sort((a, b) => Number(a[0]) - Number(b[0]))
+                                .map(([dorms, count]) => {
+                                  const pct = Math.round((count / stats.total) * 100)
+                                  return (
+                                    <div key={dorms} className="flex items-center gap-1">
+                                      <span className="text-xs font-medium">{dorms}🛏️</span>
+                                      <div className="w-20 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                        <div
+                                          className="h-full bg-blue-500 rounded-full"
+                                          style={{ width: `${pct}%` }}
+                                        />
+                                      </div>
+                                      <span className="text-xs text-slate-500">{pct}%</span>
+                                    </div>
+                                  )
+                                })}
+                            </div>
+                          </div>
+
+                          {/* Top Brokers */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-slate-500 w-16">Brokers:</span>
+                            <div className="flex flex-wrap gap-2">
+                              {stats.topBrokers.map(([broker, count]) => (
+                                <span key={broker} className="text-xs bg-white px-2 py-1 rounded border border-slate-200">
+                                  {broker} <span className="font-semibold">({count})</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Filtros */}
+                      <div className="flex flex-wrap items-center gap-4 mb-4 pb-4 border-b border-slate-200">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-slate-600">Filtrar:</span>
+                          <div className="flex gap-1">
+                            {[null, 1, 2, 3].map(d => (
+                              <button
+                                key={d ?? 'all'}
+                                type="button"
+                                onClick={() => setFiltroDorms(d)}
+                                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                                  filtroDorms === d
+                                    ? 'bg-blue-500 text-white'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                              >
+                                {d === null ? 'Todos' : d === 3 ? '3+🛏️' : `${d}🛏️`}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-slate-600">Ordenar:</span>
+                          <select
+                            value={ordenarPor}
+                            onChange={(e) => setOrdenarPor(e.target.value as any)}
+                            className="text-sm border border-slate-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 outline-none"
+                          >
+                            <option value="precio">Precio</option>
+                            <option value="precio_m2">$/m²</option>
+                            <option value="area">Área</option>
+                            <option value="dias">Días en mercado</option>
+                          </select>
+                        </div>
+
+                        {propiedadesFiltradas.length !== propiedades.length && (
+                          <span className="text-xs text-slate-500">
+                            Mostrando {propiedadesFiltradas.length} de {propiedades.length}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Tabla */}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left text-xs text-slate-500 border-b border-slate-200">
+                              <th className="pb-2 pr-3 font-medium">ID</th>
+                              <th className="pb-2 pr-3 font-medium">Precio</th>
+                              <th className="pb-2 pr-3 font-medium">$/m²</th>
+                              <th className="pb-2 pr-3 font-medium">Dorms</th>
+                              <th className="pb-2 pr-3 font-medium">Área</th>
+                              <th className="pb-2 pr-3 font-medium">Publicado</th>
+                              <th className="pb-2 pr-3 font-medium">Días</th>
+                              <th className="pb-2 font-medium text-right">Acción</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {propiedadesVisibles.map(prop => (
+                              <tr key={prop.id} className="hover:bg-slate-50">
+                                <td className="py-2 pr-3 text-slate-500 text-xs">#{prop.id}</td>
+                                <td className="py-2 pr-3 font-medium text-slate-900">
+                                  {formatPrecio(prop.precio_usd)}
+                                </td>
+                                <td className="py-2 pr-3 text-slate-600">
+                                  {formatPrecioM2(prop.precio_usd, prop.area_total_m2)}
+                                </td>
+                                <td className="py-2 pr-3 text-slate-600">{prop.dormitorios}</td>
+                                <td className="py-2 pr-3 text-slate-600">{prop.area_total_m2}m²</td>
+                                <td className="py-2 pr-3 text-slate-500 text-xs">
+                                  {formatFecha(prop.fecha_publicacion || prop.fecha_discovery)}
+                                </td>
+                                <td className="py-2 pr-3 text-slate-500 text-xs">
+                                  {calcularDiasEnMercado(prop)}d
+                                </td>
+                                <td className="py-2 text-right">
+                                  <Link
+                                    href={`/admin/propiedades/${prop.id}`}
+                                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                  >
+                                    Ver →
+                                  </Link>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Toggle ver más/menos */}
+                      {propiedadesFiltradas.length > 15 && (
+                        <div className="text-center pt-3 border-t border-slate-100 mt-2">
+                          <button
+                            type="button"
+                            onClick={() => setMostrarTodas(!mostrarTodas)}
+                            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                          >
+                            {mostrarTodas
+                              ? '▲ Mostrar menos'
+                              : `▼ Ver todas (${propiedadesFiltradas.length - 15} más)`
+                            }
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Columna lateral */}
@@ -741,38 +1164,69 @@ export default function EditarProyecto() {
 
                     {datosInferidos?.success && (
                       <div className="space-y-4">
-                        {/* Amenidades detectadas */}
-                        <div>
-                          <p className="text-sm font-medium text-slate-700 mb-2">
-                            Amenidades detectadas ({Object.keys(datosInferidos.frecuencia_amenidades).length}):
-                          </p>
-                          <div className="flex flex-wrap gap-2 mb-2">
-                            {Object.entries(datosInferidos.frecuencia_amenidades)
-                              .sort((a, b) => b[1].porcentaje - a[1].porcentaje)
-                              .slice(0, 10)
-                              .map(([amenidad, info]) => (
+                        {/* Amenidades Frecuentes (≥50%) */}
+                        {datosInferidos.amenidades_frecuentes.length > 0 && (
+                          <div className="bg-green-50 rounded-lg p-3">
+                            <p className="text-sm font-medium text-green-800 mb-2">
+                              ✅ Frecuentes (≥50%):
+                            </p>
+                            <div className="flex flex-wrap gap-2 mb-2">
+                              {datosInferidos.amenidades_frecuentes.map(({ amenidad, porcentaje }) => (
                                 <span
                                   key={amenidad}
-                                  className={`text-xs px-2 py-1 rounded ${
-                                    info.porcentaje >= 50
-                                      ? 'bg-green-100 text-green-700'
-                                      : 'bg-slate-100 text-slate-600'
-                                  }`}
+                                  className="text-xs px-2 py-1 rounded bg-green-100 text-green-700"
                                 >
-                                  {amenidad} ({info.porcentaje}%)
+                                  {amenidad} ({porcentaje}%)
                                 </span>
                               ))}
-                          </div>
-                          {datosInferidos.amenidades_sugeridas.length > 0 && (
+                            </div>
                             <button
                               type="button"
-                              onClick={aplicarAmenidadesInferidas}
-                              className="text-xs text-emerald-700 hover:text-emerald-900 underline"
+                              onClick={aplicarAmenidadesFrecuentes}
+                              className="text-xs text-green-700 hover:text-green-900 underline font-medium"
                             >
-                              + Aplicar {datosInferidos.amenidades_sugeridas.length} amenidades frecuentes (≥50%)
+                              + Aplicar {datosInferidos.amenidades_frecuentes.length} amenidades
                             </button>
-                          )}
-                        </div>
+                          </div>
+                        )}
+
+                        {/* Amenidades Opcionales (<50%) */}
+                        {datosInferidos.amenidades_opcionales.length > 0 && (
+                          <div className="bg-slate-50 rounded-lg p-3">
+                            <p className="text-sm font-medium text-slate-700 mb-2">
+                              ⚡ Opcionales (&lt;50%):
+                            </p>
+                            <div className="flex flex-wrap gap-2 mb-2">
+                              {datosInferidos.amenidades_opcionales.map(({ amenidad, porcentaje }) => (
+                                <label
+                                  key={amenidad}
+                                  className={`text-xs px-2 py-1 rounded cursor-pointer transition-colors ${
+                                    amenidadesOpcionalesSeleccionadas.includes(amenidad)
+                                      ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-400'
+                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={amenidadesOpcionalesSeleccionadas.includes(amenidad)}
+                                    onChange={() => toggleAmenidadOpcional(amenidad)}
+                                    className="sr-only"
+                                  />
+                                  {amenidad} ({porcentaje}%)
+                                </label>
+                              ))}
+                            </div>
+                            {amenidadesOpcionalesSeleccionadas.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={aplicarAmenidadesOpcionales}
+                                className="text-xs text-amber-700 hover:text-amber-900 underline font-medium"
+                              >
+                                + Aplicar {amenidadesOpcionalesSeleccionadas.length} seleccionadas
+                              </button>
+                            )}
+                          </div>
+                        )}
 
                         {/* Estado sugerido */}
                         {datosInferidos.estado_sugerido?.estado && (
@@ -806,33 +1260,57 @@ export default function EditarProyecto() {
                           </div>
                         )}
 
-                        {/* Galería de fotos */}
+                        {/* Galería de fotos inferidas */}
                         {datosInferidos.fotos_proyecto.length > 0 && (
                           <div>
                             <p className="text-sm font-medium text-slate-700 mb-2">
-                              Fotos del proyecto ({datosInferidos.fotos_proyecto.length}):
+                              Fotos de propiedades ({datosInferidos.fotos_proyecto.length}):
                             </p>
                             <div className="flex flex-wrap gap-2">
-                              {datosInferidos.fotos_proyecto.slice(0, 8).map((foto, idx) => (
-                                <button
-                                  key={idx}
-                                  type="button"
-                                  onClick={() => setLightboxFoto(foto.url)}
-                                  className="w-16 h-16 rounded-lg overflow-hidden bg-slate-200 hover:ring-2 hover:ring-emerald-500 transition-all"
-                                >
-                                  <img
-                                    src={foto.url}
-                                    alt={`Foto ${idx + 1}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </button>
-                              ))}
+                              {datosInferidos.fotos_proyecto.slice(0, 8).map((foto, idx) => {
+                                const yaAdoptada = formData.fotos_proyecto.some(f => f.url === foto.url)
+                                return (
+                                  <div key={idx} className="relative group">
+                                    <button
+                                      type="button"
+                                      onClick={() => setLightboxFoto(foto.url)}
+                                      className={`w-16 h-16 rounded-lg overflow-hidden bg-slate-200 transition-all ${
+                                        yaAdoptada ? 'ring-2 ring-green-500' : 'hover:ring-2 hover:ring-emerald-500'
+                                      }`}
+                                    >
+                                      <img
+                                        src={foto.url}
+                                        alt={`Foto ${idx + 1}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </button>
+                                    {!yaAdoptada && (
+                                      <button
+                                        type="button"
+                                        onClick={() => adoptarFotoInferida(foto.url)}
+                                        className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 text-white rounded-full text-xs hover:bg-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                        title="Adoptar foto"
+                                      >
+                                        +
+                                      </button>
+                                    )}
+                                    {yaAdoptada && (
+                                      <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 text-white rounded-full text-xs flex items-center justify-center">
+                                        ✓
+                                      </span>
+                                    )}
+                                  </div>
+                                )
+                              })}
                               {datosInferidos.fotos_proyecto.length > 8 && (
                                 <span className="text-xs text-slate-500 self-center">
                                   +{datosInferidos.fotos_proyecto.length - 8} más
                                 </span>
                               )}
                             </div>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Click en + para adoptar foto al proyecto
+                            </p>
                           </div>
                         )}
 
@@ -849,46 +1327,6 @@ export default function EditarProyecto() {
                     )}
                   </div>
                 )}
-
-                {/* Propiedades Vinculadas */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <h2 className="text-lg font-semibold text-slate-900 mb-4">
-                    Propiedades del Proyecto ({propiedades.length})
-                  </h2>
-
-                  {propiedades.length === 0 ? (
-                    <p className="text-sm text-slate-500">No hay propiedades vinculadas</p>
-                  ) : (
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {propiedades.slice(0, 10).map(prop => (
-                        <div
-                          key={prop.id}
-                          className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0"
-                        >
-                          <div>
-                            <p className="text-sm font-medium text-slate-900">
-                              {formatPrecio(prop.precio_usd)}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {prop.dormitorios} dorm • {prop.area_total_m2}m²
-                            </p>
-                          </div>
-                          <Link
-                            href={`/admin/propiedades/${prop.id}`}
-                            className="text-xs text-blue-600 hover:text-blue-800"
-                          >
-                            Ver →
-                          </Link>
-                        </div>
-                      ))}
-                      {propiedades.length > 10 && (
-                        <p className="text-xs text-slate-500 text-center pt-2">
-                          +{propiedades.length - 10} más
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
 
                 {/* Propagación */}
                 {propiedades.length > 0 && (

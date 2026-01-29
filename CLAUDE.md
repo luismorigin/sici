@@ -95,7 +95,7 @@ sici/
     └── modulo_2/      # Specs matching pipeline
 ```
 
-## Estado Actual (28 Ene 2026)
+## Estado Actual (29 Ene 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
@@ -123,7 +123,8 @@ sici/
 - **Parqueo/Baulera Precio:** 4 columnas (incluido + precio_adicional) + buscar_unidades_reales() v2.26 (migraciones 083-084)
 - **Admin Dashboard Propiedades:** Editor visual completo con validaciones de seguridad, indicadores precio sospechoso, sistema candados (migración 077)
 - **Iconos Resultados:** Símbolos mejorados en resultsV2 (🛏️🚿📐🏢🚗📦) + leyenda colapsable + badges forma pago
-- **Admin Proyectos Master:** Listado + editor con estado construcción, fecha entrega, amenidades edificio, propagación a propiedades (migración 085)
+- **Admin Proyectos Master:** Listado + editor con estado construcción, fecha entrega, amenidades edificio, propagación a propiedades (migraciones 085-086)
+- **Inferir Datos Proyecto:** Función inferir_datos_proyecto() con amenidades frecuentes (≥50%) y opcionales (<50%), adoptar fotos (migración 086-087)
 
 ### ⏳ En Progreso
 - **Sistema Broker Fase 5-7:** Portal broker, sistema leads, CMA (pendiente)
@@ -209,6 +210,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 084 | buscar_unidades_parqueo_baulera | **buscar_unidades_reales() v2.26 + filtros parqueo/baulera** | ⏳ |
 | 085 | proyectos_master_campos_admin | **Admin Proyectos: estado_construccion, fecha_entrega, amenidades_edificio, pisos, unidades + propagación** | ✅ |
 | 086 | inferir_datos_proyecto | **Función para inferir amenidades, estado, pisos y fotos desde propiedades vinculadas** | ✅ |
+| 087 | fotos_proyecto_amenidades_opcionales | **Columna fotos_proyecto + inferir amenidades frecuentes/opcionales separadas** | ⏳ |
 
 ## Repo Legacy
 
