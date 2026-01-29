@@ -4,10 +4,18 @@
 -- =====================================================================================
 -- Archivo: registrar_enrichment.sql
 -- Propósito: Registrar datos del extractor HTML (Flujo B) respetando candados
--- Versión: 1.4.5
--- Fecha: 2025-12-24
+-- Versión: 1.4.8
+-- Fecha: 2026-01-29
 -- =====================================================================================
 -- CHANGELOG:
+--   v1.4.8 (29 Ene 2026):
+--     - Fix: soportar nuevo formato de candados del admin panel
+--       Antes: {"campo": true}
+--       Ahora: {"campo": {"bloqueado": true, "por": "admin", ...}}
+--   v1.4.7 (29 Ene 2026):
+--     - Fix: validación tipo_cambio_usado < 100 (evita overflow en NUMERIC(6,4))
+--   v1.4.6 (29 Ene 2026):
+--     - Fix: validación regex para dormitorios y banos (evita "sin_confirmar" → INTEGER)
 --   v1.4.5 (24 Dic 2025):
 --     - Fix estado_construccion: solo mapear valores inválidos
 --     - 'sin_informacion', 'no_definido' → 'no_especificado'
@@ -29,6 +37,22 @@
 --   entrega_inmediata, preventa, construccion, planos, no_especificado,
 --   usado, nuevo_a_estrenar
 -- =====================================================================================
+
+-- Helper function para verificar candados (soporta ambos formatos)
+CREATE OR REPLACE FUNCTION _is_campo_bloqueado(p_candados JSONB, p_campo TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+IMMUTABLE
+AS $helper$
+BEGIN
+    -- Nuevo formato del admin: {"campo": {"bloqueado": true, ...}}
+    IF jsonb_typeof(p_candados->p_campo) = 'object' THEN
+        RETURN COALESCE((p_candados->p_campo->>'bloqueado')::boolean, false);
+    END IF;
+    -- Formato antiguo: {"campo": true}
+    RETURN COALESCE((p_candados->>p_campo)::boolean, false);
+END;
+$helper$;
 
 CREATE OR REPLACE FUNCTION registrar_enrichment(p_data JSONB)
 RETURNS JSONB
@@ -88,7 +112,7 @@ BEGIN
     -- =========================================================================
     -- FASE 2: CALCULAR CAMBIOS (simplificado)
     -- =========================================================================
-    IF p_data->>'precio_usd' IS NOT NULL AND NOT COALESCE((v_candados->>'precio_usd')::boolean, false) THEN
+    IF p_data->>'precio_usd' IS NOT NULL AND NOT _is_campo_bloqueado(v_candados, 'precio_usd') THEN
         IF (p_data->>'precio_usd')::NUMERIC(12,2) IS DISTINCT FROM v_existing.precio_usd THEN
             v_campos_updated := array_append(v_campos_updated, 'precio_usd');
         END IF;
@@ -105,20 +129,20 @@ BEGIN
     -- FASE 3: UPDATE
     -- =========================================================================
     UPDATE propiedades_v2 SET
-        precio_usd = CASE 
-            WHEN COALESCE((v_candados->>'precio_usd')::boolean, false) THEN propiedades_v2.precio_usd
+        precio_usd = CASE
+            WHEN _is_campo_bloqueado(v_candados, 'precio_usd') THEN propiedades_v2.precio_usd
             WHEN p_data->>'precio_usd' IS NOT NULL THEN (p_data->>'precio_usd')::NUMERIC(12,2)
             ELSE propiedades_v2.precio_usd
         END,
-        
-        precio_min_usd = CASE 
-            WHEN COALESCE((v_candados->>'precio_min_usd')::boolean, false) THEN propiedades_v2.precio_min_usd
+
+        precio_min_usd = CASE
+            WHEN _is_campo_bloqueado(v_candados, 'precio_min_usd') THEN propiedades_v2.precio_min_usd
             WHEN p_data->>'precio_min_usd' IS NOT NULL THEN (p_data->>'precio_min_usd')::NUMERIC(12,2)
             ELSE propiedades_v2.precio_min_usd
         END,
-        
-        precio_max_usd = CASE 
-            WHEN COALESCE((v_candados->>'precio_max_usd')::boolean, false) THEN propiedades_v2.precio_max_usd
+
+        precio_max_usd = CASE
+            WHEN _is_campo_bloqueado(v_candados, 'precio_max_usd') THEN propiedades_v2.precio_max_usd
             WHEN p_data->>'precio_max_usd' IS NOT NULL THEN (p_data->>'precio_max_usd')::NUMERIC(12,2)
             ELSE propiedades_v2.precio_max_usd
         END,
@@ -144,50 +168,54 @@ BEGIN
             ELSE propiedades_v2.moneda_original
         END,
         
-        tipo_cambio_usado = CASE 
-            WHEN p_data->>'tipo_cambio_usado' IS NOT NULL THEN (p_data->>'tipo_cambio_usado')::NUMERIC(6,4)
+        tipo_cambio_usado = CASE
+            WHEN p_data->>'tipo_cambio_usado' IS NOT NULL
+                 AND (p_data->>'tipo_cambio_usado')::NUMERIC < 100
+            THEN (p_data->>'tipo_cambio_usado')::NUMERIC(6,4)
             ELSE propiedades_v2.tipo_cambio_usado
         END,
         
-        area_total_m2 = CASE 
-            WHEN COALESCE((v_candados->>'area_total_m2')::boolean, false) THEN propiedades_v2.area_total_m2
+        area_total_m2 = CASE
+            WHEN _is_campo_bloqueado(v_candados, 'area_total_m2') THEN propiedades_v2.area_total_m2
             WHEN p_data->>'area_total_m2' IS NOT NULL THEN (p_data->>'area_total_m2')::NUMERIC(10,2)
             ELSE propiedades_v2.area_total_m2
         END,
-        
-        dormitorios = CASE 
-            WHEN COALESCE((v_candados->>'dormitorios')::boolean, false) THEN propiedades_v2.dormitorios
-            WHEN p_data->>'dormitorios' IS NOT NULL THEN (p_data->>'dormitorios')::INTEGER
+
+        dormitorios = CASE
+            WHEN _is_campo_bloqueado(v_candados, 'dormitorios') THEN propiedades_v2.dormitorios
+            WHEN p_data->>'dormitorios' ~ '^[0-9]+$' THEN (p_data->>'dormitorios')::INTEGER
             ELSE propiedades_v2.dormitorios
         END,
-        
-        banos = CASE 
-            WHEN COALESCE((v_candados->>'banos')::boolean, false) THEN propiedades_v2.banos
-            WHEN p_data->>'banos' IS NOT NULL THEN (p_data->>'banos')::NUMERIC(3,1)
+
+        banos = CASE
+            WHEN _is_campo_bloqueado(v_candados, 'banos') THEN propiedades_v2.banos
+            WHEN p_data->>'banos' ~ '^[0-9]+\.?[0-9]*$'
+                 AND (p_data->>'banos')::NUMERIC < 100
+            THEN (p_data->>'banos')::NUMERIC(3,1)
             ELSE propiedades_v2.banos
         END,
-        
-        estacionamientos = CASE 
-            WHEN COALESCE((v_candados->>'estacionamientos')::boolean, false) THEN propiedades_v2.estacionamientos
+
+        estacionamientos = CASE
+            WHEN _is_campo_bloqueado(v_candados, 'estacionamientos') THEN propiedades_v2.estacionamientos
             WHEN p_data->>'estacionamientos' ~ '^[0-9]+$' THEN (p_data->>'estacionamientos')::INTEGER
             ELSE propiedades_v2.estacionamientos
         END,
-        
-        latitud = CASE 
-            WHEN COALESCE((v_candados->>'latitud')::boolean, false) THEN propiedades_v2.latitud
+
+        latitud = CASE
+            WHEN _is_campo_bloqueado(v_candados, 'latitud') THEN propiedades_v2.latitud
             WHEN p_data->>'latitud' IS NOT NULL THEN (p_data->>'latitud')::NUMERIC(10,8)
             ELSE propiedades_v2.latitud
         END,
-        
-        longitud = CASE 
-            WHEN COALESCE((v_candados->>'longitud')::boolean, false) THEN propiedades_v2.longitud
+
+        longitud = CASE
+            WHEN _is_campo_bloqueado(v_candados, 'longitud') THEN propiedades_v2.longitud
             WHEN p_data->>'longitud' IS NOT NULL THEN (p_data->>'longitud')::NUMERIC(11,8)
             ELSE propiedades_v2.longitud
         END,
-        
+
         -- FIX v1.4.5: estado_construccion - solo mapear valores inválidos
-        estado_construccion = CASE 
-            WHEN COALESCE((v_candados->>'estado_construccion')::boolean, false) THEN propiedades_v2.estado_construccion
+        estado_construccion = CASE
+            WHEN _is_campo_bloqueado(v_candados, 'estado_construccion') THEN propiedades_v2.estado_construccion
             -- Solo estos se mapean (no son estados válidos, son "sin info")
             WHEN p_data->>'estado_construccion' IN ('sin_informacion', 'no_definido') THEN 'no_especificado'::estado_construccion_enum
             -- El resto pasa directo (usado, nuevo_a_estrenar, entrega_inmediata, preventa, etc.)
@@ -225,7 +253,7 @@ BEGIN
     RETURN jsonb_build_object(
         'success', true,
         'operation', 'enrichment',
-        'version', '1.4.5',
+        'version', '1.4.8',
         'property_id', v_existing.codigo_propiedad,
         'internal_id', v_existing.id,
         'status_nuevo', 'actualizado',
@@ -246,15 +274,20 @@ $$;
 -- COMENTARIOS Y GRANTS
 -- =====================================================================================
 
-COMMENT ON FUNCTION registrar_enrichment(JSONB) IS 
-'SICI Enrichment v1.4.5: Registra datos de extractor HTML respetando candados.
+COMMENT ON FUNCTION registrar_enrichment(JSONB) IS
+'SICI Enrichment v1.4.8: Registra datos de extractor HTML respetando candados.
 - Búsqueda priorizada: _internal_id > property_id > url
-- Candados SIEMPRE respetados
+- Candados SIEMPRE respetados (formato admin: {bloqueado:true} o legacy: true)
 - estado_construccion: mapea valores inválidos a no_especificado
 - Campos multiproyecto: area_min_m2, area_max_m2, dormitorios_opciones
 - Status final SIEMPRE es actualizado
 Uso: SELECT registrar_enrichment(''{"property_id":"12345", ...}''::JSONB)';
 
+COMMENT ON FUNCTION _is_campo_bloqueado(JSONB, TEXT) IS
+'Helper para verificar candados en ambos formatos: {"campo": true} y {"campo": {"bloqueado": true}}';
+
+GRANT EXECUTE ON FUNCTION _is_campo_bloqueado(JSONB, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION _is_campo_bloqueado(JSONB, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION registrar_enrichment(JSONB) TO authenticated;
 GRANT EXECUTE ON FUNCTION registrar_enrichment(JSONB) TO service_role;
 
