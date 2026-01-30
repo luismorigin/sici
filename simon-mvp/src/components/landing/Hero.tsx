@@ -56,7 +56,7 @@ export default function Hero() {
           </p>
 
           {/* MAIN CTA - Big Button */}
-          <Link href="/formV2" className="group inline-block">
+          <Link href="/filtros" className="group inline-block">
             <motion.div
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
