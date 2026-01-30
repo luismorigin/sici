@@ -77,6 +77,24 @@ const ZONAS = [
   { id: 'Faremafu', label: 'Equipetrol Oeste (Busch)' }   // Faremafu en BD
 ]
 
+// Mapeo de valores de BD a nombres amigables para mostrar en cards
+const getZonaLabel = (zonaBD: string | null): string => {
+  if (!zonaBD) return 'Sin zona'
+
+  const mapeo: Record<string, string> = {
+    'Equipetrol': 'Equipetrol Centro',
+    'Faremafu': 'Equipetrol Oeste',
+    'Villa Brigida': 'Villa Brígida',
+    'Equipetrol Norte/Norte': 'Equipetrol Norte',
+    'Equipetrol Norte/Sur': 'Equipetrol Norte',
+    'Equipetrol Franja': 'Equipetrol Centro',
+    'Equipetrol Centro': 'Equipetrol Centro',
+    'Sin zona': 'Sin zona'
+  }
+
+  return mapeo[zonaBD] || zonaBD
+}
+
 interface ProyectoOption {
   id: number
   nombre: string
@@ -811,7 +829,7 @@ export default function AdminPropiedades() {
                             <span className="text-xs text-slate-400">ID: {prop.id}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-slate-500">
-                            <span>{prop.zona}</span>
+                            <span>{getZonaLabel(prop.zona)}</span>
                             {prop.desarrollador && <span>• {prop.desarrollador}</span>}
                             {prop.piso && <span>• Piso {prop.piso}</span>}
                             {/* Estado construcción */}
