@@ -62,11 +62,27 @@ interface TCHistoricoData {
 
 interface OportunidadData {
   proyecto: string
+  desarrollador: string | null
   dormitorios: number
   precio_usd: number
   area_m2: number
   precio_m2: number
+  estado: string
+  amenidades: number
   diff_porcentaje: number
+}
+
+interface AmenidadData {
+  nombre: string
+  cantidad: number
+  porcentaje: number
+}
+
+interface ProyectoAmenidadesData {
+  proyecto: string
+  desarrollador: string | null
+  amenidades: number
+  precio_m2: number
 }
 
 // ============================================================================
@@ -85,7 +101,8 @@ export default function MarketPulseDashboard() {
   const [snapshots, setSnapshots] = useState<SnapshotData[]>([])
   const [tcHistorico, setTcHistorico] = useState<TCHistoricoData[]>([])
   const [oportunidades, setOportunidades] = useState<OportunidadData[]>([])
-  const [premium, setPremium] = useState<OportunidadData[]>([])
+  const [rankingAmenidades, setRankingAmenidades] = useState<AmenidadData[]>([])
+  const [topProyectosAmenidades, setTopProyectosAmenidades] = useState<ProyectoAmenidadesData[]>([])
 
   // ============================================================================
   // FETCH FUNCTIONS
@@ -103,7 +120,8 @@ export default function MarketPulseDashboard() {
         fetchEstados(),
         fetchSnapshots(),
         fetchTCHistorico(),
-        fetchOportunidades()
+        fetchOportunidades(),
+        fetchRankingAmenidades()
       ])
       setLastUpdate(new Date())
     } catch (err) {
@@ -375,10 +393,10 @@ export default function MarketPulseDashboard() {
   const fetchOportunidades = async () => {
     if (!supabase) return
 
-    // Fetch all valid properties with projects
+    // Fetch all valid properties with projects, estado and amenidades
     const { data: props } = await supabase
       .from('propiedades_v2')
-      .select('id_proyecto_master, dormitorios, precio_usd, area_total_m2')
+      .select('id_proyecto_master, dormitorios, precio_usd, area_total_m2, estado_construccion, datos_json')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
@@ -386,69 +404,208 @@ export default function MarketPulseDashboard() {
 
     if (!props) return
 
-    // Get project names
+    // Get project names and developers
     const projectIds = [...new Set(props.map(p => p.id_proyecto_master).filter(Boolean))]
     const { data: projects } = await supabase
       .from('proyectos_master')
-      .select('id_proyecto_master, nombre_oficial')
+      .select('id_proyecto_master, nombre_oficial, desarrollador')
       .in('id_proyecto_master', projectIds)
 
     if (!projects) return
 
-    const projectMap = new Map(projects.map(p => [p.id_proyecto_master, p.nombre_oficial]))
+    const projectMap = new Map(projects.map(p => [p.id_proyecto_master, { nombre: p.nombre_oficial, desarrollador: p.desarrollador }]))
 
-    // Calculate average price/m2
+    // Calculate average price/m2 for reference
     const validProps = props.filter(p => {
       const precio = parseFloat(p.precio_usd)
       const area = parseFloat(p.area_total_m2)
-      return precio > 10000 && area >= 20 // Filter out corrupt data
+      return precio > 10000 && area >= 20
     })
 
     const avgPrecioM2 = validProps.reduce((acc, p) => {
       return acc + parseFloat(p.precio_usd) / parseFloat(p.area_total_m2)
     }, 0) / validProps.length
 
-    // Map all properties with price/m2
-    const allOportunidades: OportunidadData[] = validProps.map(p => {
+    // Helper to count amenidades
+    const contarAmenidades = (datosJson: any): number => {
+      try {
+        const lista = datosJson?.amenities?.lista
+        if (Array.isArray(lista)) return lista.length
+        return 0
+      } catch {
+        return 0
+      }
+    }
+
+    // Helper to check if precio_sospechoso
+    const esPrecioSospechoso = (datosJson: any): boolean => {
+      try {
+        return datosJson?.calidad?.precio_sospechoso === true
+      } catch {
+        return false
+      }
+    }
+
+    // Filter for REAL opportunities based on system criteria:
+    // - $/m² between $800-$1,500 (not too low = data error, not too high = not opportunity)
+    // - Estado: entrega_inmediata or preventa (known delivery status)
+    // - Amenidades ≥ 5 (real value)
+    // - NOT precio_sospechoso (exclude data errors)
+    const oportunidadesReales = props.filter(p => {
+      const precio = parseFloat(p.precio_usd)
+      const area = parseFloat(p.area_total_m2)
+      if (!precio || !area) return false
+
+      const precioM2 = precio / area
+      const amenidades = contarAmenidades(p.datos_json)
+      const estadosValidos = ['entrega_inmediata', 'preventa', 'nuevo_a_estrenar']
+
+      return (
+        precioM2 >= 800 &&
+        precioM2 <= 1500 &&
+        estadosValidos.includes(p.estado_construccion || '') &&
+        amenidades >= 5 &&
+        !esPrecioSospechoso(p.datos_json)
+      )
+    })
+
+    // Map to OportunidadData
+    const mappedOportunidades: OportunidadData[] = oportunidadesReales.map(p => {
       const precio = parseFloat(p.precio_usd)
       const area = parseFloat(p.area_total_m2)
       const precioM2 = precio / area
+      const projData = projectMap.get(p.id_proyecto_master)
+
       return {
-        proyecto: projectMap.get(p.id_proyecto_master) || 'Desconocido',
+        proyecto: projData?.nombre || 'Desconocido',
+        desarrollador: projData?.desarrollador || null,
         dormitorios: p.dormitorios || 0,
         precio_usd: precio,
         area_m2: area,
         precio_m2: Math.round(precioM2),
+        estado: p.estado_construccion || 'no_especificado',
+        amenidades: contarAmenidades(p.datos_json),
         diff_porcentaje: Math.round(((precioM2 - avgPrecioM2) / avgPrecioM2) * 100)
       }
     })
 
-    // Get best deals (lowest price/m2)
-    const sortedByLow = [...allOportunidades].sort((a, b) => a.precio_m2 - b.precio_m2)
-    // Group by project and get unique
+    // Sort by lowest price/m2 and get unique projects
+    const sortedByLow = [...mappedOportunidades].sort((a, b) => a.precio_m2 - b.precio_m2)
     const seenProjects = new Set<string>()
     const uniqueOportunidades: OportunidadData[] = []
+
     for (const op of sortedByLow) {
       if (!seenProjects.has(op.proyecto)) {
         seenProjects.add(op.proyecto)
         uniqueOportunidades.push(op)
       }
-      if (uniqueOportunidades.length >= 5) break
+      if (uniqueOportunidades.length >= 8) break
     }
-    setOportunidades(uniqueOportunidades)
 
-    // Get premium (highest price/m2)
-    const sortedByHigh = [...allOportunidades].sort((a, b) => b.precio_m2 - a.precio_m2)
-    const seenPremium = new Set<string>()
-    const uniquePremium: OportunidadData[] = []
-    for (const op of sortedByHigh) {
-      if (!seenPremium.has(op.proyecto)) {
-        seenPremium.add(op.proyecto)
-        uniquePremium.push(op)
+    setOportunidades(uniqueOportunidades)
+  }
+
+  const fetchRankingAmenidades = async () => {
+    if (!supabase) return
+
+    // Fetch properties with amenidades
+    const { data: props } = await supabase
+      .from('propiedades_v2')
+      .select('id_proyecto_master, datos_json, precio_usd, area_total_m2')
+      .eq('status', 'completado')
+      .eq('tipo_operacion', 'venta')
+      .gte('area_total_m2', 20)
+
+    if (!props) return
+
+    const totalProps = props.length
+
+    // Count amenidades frequency
+    const amenidadCount: Record<string, number> = {}
+
+    props.forEach(p => {
+      try {
+        const lista = p.datos_json?.amenities?.lista
+        if (Array.isArray(lista)) {
+          lista.forEach((amenidad: string) => {
+            amenidadCount[amenidad] = (amenidadCount[amenidad] || 0) + 1
+          })
+        }
+      } catch {
+        // Skip invalid data
       }
-      if (uniquePremium.length >= 5) break
-    }
-    setPremium(uniquePremium)
+    })
+
+    // Convert to sorted array
+    const ranking: AmenidadData[] = Object.entries(amenidadCount)
+      .map(([nombre, cantidad]) => ({
+        nombre,
+        cantidad,
+        porcentaje: Math.round((cantidad / totalProps) * 100)
+      }))
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 10)
+
+    setRankingAmenidades(ranking)
+
+    // Get projects with most amenidades
+    const projectIds = [...new Set(props.map(p => p.id_proyecto_master).filter(Boolean))]
+    const { data: projects } = await supabase
+      .from('proyectos_master')
+      .select('id_proyecto_master, nombre_oficial, desarrollador')
+      .in('id_proyecto_master', projectIds)
+
+    if (!projects) return
+
+    const projectMap = new Map(projects.map(p => [p.id_proyecto_master, { nombre: p.nombre_oficial, desarrollador: p.desarrollador }]))
+
+    // Group by project and calculate avg amenidades
+    const projectAmenidades: Record<number, { amenidades: number[], preciosM2: number[] }> = {}
+
+    props.forEach(p => {
+      if (!p.id_proyecto_master) return
+
+      if (!projectAmenidades[p.id_proyecto_master]) {
+        projectAmenidades[p.id_proyecto_master] = { amenidades: [], preciosM2: [] }
+      }
+
+      try {
+        const lista = p.datos_json?.amenities?.lista
+        if (Array.isArray(lista)) {
+          projectAmenidades[p.id_proyecto_master].amenidades.push(lista.length)
+        }
+
+        const precio = parseFloat(p.precio_usd)
+        const area = parseFloat(p.area_total_m2)
+        if (precio && area) {
+          projectAmenidades[p.id_proyecto_master].preciosM2.push(precio / area)
+        }
+      } catch {
+        // Skip
+      }
+    })
+
+    // Calculate averages and sort
+    const topProyectos: ProyectoAmenidadesData[] = Object.entries(projectAmenidades)
+      .filter(([_, data]) => data.amenidades.length > 0)
+      .map(([projectId, data]) => {
+        const projData = projectMap.get(parseInt(projectId))
+        const avgAmenidades = data.amenidades.reduce((a, b) => a + b, 0) / data.amenidades.length
+        const avgPrecioM2 = data.preciosM2.length > 0
+          ? data.preciosM2.reduce((a, b) => a + b, 0) / data.preciosM2.length
+          : 0
+
+        return {
+          proyecto: projData?.nombre || 'Desconocido',
+          desarrollador: projData?.desarrollador || null,
+          amenidades: Math.round(avgAmenidades * 10) / 10,
+          precio_m2: Math.round(avgPrecioM2)
+        }
+      })
+      .sort((a, b) => b.amenidades - a.amenidades)
+      .slice(0, 5)
+
+    setTopProyectosAmenidades(topProyectos)
   }
 
   useEffect(() => {
@@ -867,65 +1024,160 @@ export default function MarketPulseDashboard() {
             </div>
           </div>
 
-          {/* Oportunidades Row */}
-          <div className="grid grid-cols-2 gap-6 mb-8">
-            {/* Best Deals */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 shadow-lg border border-green-200">
-              <h3 className="text-lg font-bold text-green-800 mb-4">🟢 Mejores Oportunidades (Menor $/m²)</h3>
-              <div className="space-y-3">
+          {/* Oportunidades Reales */}
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 shadow-lg border border-green-200 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-green-800">🎯 Oportunidades Reales de Inversión</h3>
+              <div className="flex gap-2 text-xs">
+                <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full">$800-1,500/m²</span>
+                <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full">≥5 amenidades</span>
+                <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-full">Entrega conocida</span>
+              </div>
+            </div>
+
+            {oportunidades.length > 0 ? (
+              <div className="grid grid-cols-4 gap-4">
                 {oportunidades.map((o, i) => {
-                  const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣']
+                  const medals = ['🥇', '🥈', '🥉']
+                  const estadoLabels: Record<string, string> = {
+                    'entrega_inmediata': '🏠 Entrega Ya',
+                    'preventa': '📋 Preventa',
+                    'nuevo_a_estrenar': '✨ Nuevo'
+                  }
                   return (
-                    <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">{medals[i]}</span>
+                    <div key={i} className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">{medals[i] || `${i + 1}.`}</span>
+                        <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">
+                          {estadoLabels[o.estado] || o.estado}
+                        </span>
+                      </div>
+                      <p className="font-bold text-slate-900 text-sm line-clamp-1">{o.proyecto}</p>
+                      <p className="text-xs text-slate-500 mb-2">{o.desarrollador || 'Sin desarrollador'}</p>
+                      <div className="flex justify-between items-end">
                         <div>
-                          <p className="font-semibold text-slate-900">{o.proyecto}</p>
-                          <p className="text-xs text-slate-500">{o.dormitorios}D • {o.area_m2.toFixed(0)}m²</p>
+                          <p className="text-2xl font-bold text-green-600">${formatNumber(o.precio_m2)}</p>
+                          <p className="text-xs text-slate-500">/m²</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-slate-600">{o.dormitorios}D • {Math.round(o.area_m2)}m²</p>
+                          <p className="text-xs text-slate-500">{o.amenidades} amenidades</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-green-600">${formatNumber(o.precio_m2)}/m²</p>
-                        <p className="text-xs text-green-700">{o.diff_porcentaje}% vs prom</p>
+                      <div className="mt-2 pt-2 border-t border-slate-100">
+                        <p className="text-xs text-green-700 font-medium">
+                          {o.diff_porcentaje}% vs promedio • Ahorro: ${formatNumber(Math.abs(o.diff_porcentaje) * o.area_m2 * 0.01 * (kpis?.precio_m2_promedio || 2000))}
+                        </p>
                       </div>
                     </div>
                   )
                 })}
               </div>
-              {oportunidades[0] && kpis && (
-                <div className="mt-4 p-3 bg-green-100 rounded-lg">
-                  <p className="text-green-800 text-sm">
-                    💡 En 80m² de <strong>{oportunidades[0].proyecto}</strong> ahorras{' '}
-                    <strong>${formatNumber((kpis.precio_m2_promedio - oportunidades[0].precio_m2) * 80)}</strong>{' '}
-                    vs promedio de mercado
-                  </p>
-                </div>
+            ) : (
+              <div className="text-center py-8 text-slate-500">
+                <p>No hay oportunidades que cumplan todos los criterios</p>
+                <p className="text-xs mt-1">Criterios: $/m² $800-1,500 • ≥5 amenidades • Estado conocido • Sin precio sospechoso</p>
+              </div>
+            )}
+
+            {oportunidades.length > 0 && kpis && (
+              <div className="mt-4 p-3 bg-green-100 rounded-lg">
+                <p className="text-green-800 text-sm">
+                  💡 <strong>Criterios de filtro:</strong> $/m² entre $800-$1,500 (excluye errores de datos) •
+                  Estado de entrega conocido • Mínimo 5 amenidades • Sin alertas de precio sospechoso
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Ranking de Amenidades */}
+          <div className="grid grid-cols-2 gap-6 mb-8">
+            {/* Top Amenidades del Mercado */}
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">🏊 Ranking de Amenidades del Mercado</h3>
+              {rankingAmenidades.length > 0 ? (
+                <>
+                  <div className="space-y-2">
+                    {rankingAmenidades.map((a, i) => {
+                      const maxCantidad = rankingAmenidades[0]?.cantidad || 1
+                      const barWidth = (a.cantidad / maxCantidad) * 100
+                      const iconos: Record<string, string> = {
+                        'Piscina': '🏊',
+                        'Seguridad 24/7': '🔒',
+                        'Churrasquera': '🍖',
+                        'Terraza/Balcón': '🌅',
+                        'Sauna/Jacuzzi': '🧖',
+                        'Gimnasio': '🏋️',
+                        'Ascensor': '🛗',
+                        'Área Social': '👥',
+                        'Pet Friendly': '🐕',
+                        'Recepción': '🛎️',
+                        'Salón de Eventos': '🎉',
+                        'Cowork': '💻',
+                        'Co-working': '💻',
+                        'Sala TV/Cine': '🎬',
+                        'Estacionamiento para Visitas': '🅿️'
+                      }
+                      return (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className="text-lg w-6">{iconos[a.nombre] || '✨'}</span>
+                          <div className="flex-1">
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="text-slate-700">{a.nombre}</span>
+                              <span className="text-slate-500 font-medium">{a.porcentaje}%</span>
+                            </div>
+                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all"
+                                style={{ width: `${barWidth}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="mt-4 p-3 bg-slate-50 rounded-lg">
+                    <p className="text-slate-600 text-xs">
+                      📊 Porcentaje = % de propiedades que incluyen esta amenidad
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <p className="text-slate-500 text-center py-8">Cargando amenidades...</p>
               )}
             </div>
 
-            {/* Premium */}
-            <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-6 shadow-lg border border-red-200">
-              <h3 className="text-lg font-bold text-red-800 mb-4">🔴 Precios Premium (Mayor $/m²)</h3>
-              <div className="space-y-3">
-                {premium.map((o, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">⚠️</span>
-                      <div>
-                        <p className="font-semibold text-slate-900">{o.proyecto}</p>
-                        <p className="text-xs text-slate-500">{o.dormitorios}D • {o.area_m2.toFixed(0)}m²</p>
+            {/* Top Proyectos con Más Amenidades */}
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">⭐ Proyectos con Más Amenidades</h3>
+              {topProyectosAmenidades.length > 0 ? (
+                <div className="space-y-3">
+                  {topProyectosAmenidades.map((p, i) => {
+                    const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣']
+                    return (
+                      <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">{medals[i]}</span>
+                          <div>
+                            <p className="font-semibold text-slate-900">{p.proyecto}</p>
+                            <p className="text-xs text-slate-500">{p.desarrollador || 'Sin desarrollador'}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-indigo-600">{p.amenidades}</p>
+                          <p className="text-xs text-slate-500">amenidades</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-red-600">${formatNumber(o.precio_m2)}/m²</p>
-                      <p className="text-xs text-red-700">+{o.diff_porcentaje}% vs prom</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 p-3 bg-red-100 rounded-lg">
-                <p className="text-red-800 text-sm">
-                  ⚠️ Precios premium pueden justificarse por ubicación, amenities o calidad de acabados
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-slate-500 text-center py-8">Cargando proyectos...</p>
+              )}
+              <div className="mt-4 p-3 bg-indigo-50 rounded-lg">
+                <p className="text-indigo-800 text-xs">
+                  💡 Más amenidades = mayor valor percibido y diferenciación competitiva
                 </p>
               </div>
             </div>
