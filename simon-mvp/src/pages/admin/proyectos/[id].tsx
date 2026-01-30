@@ -708,6 +708,9 @@ export default function EditarProyecto() {
               <Link href="/admin/salud" className="text-teal-400 hover:text-teal-300 text-sm font-medium">
                 Salud
               </Link>
+              <Link href="/admin/market" className="text-purple-400 hover:text-purple-300 text-sm font-medium">
+                Market
+              </Link>
               <Link href="/" className="text-slate-300 hover:text-white text-sm">
                 Ir a Buscar
               </Link>
