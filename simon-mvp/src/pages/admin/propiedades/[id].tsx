@@ -215,8 +215,11 @@ export default function EditarPropiedad() {
   const CAMPOS_BLOQUEABLES = [
     'dormitorios', 'banos', 'area_total_m2', 'precio_usd', 'estacionamientos',
     'estado_construccion', 'fecha_entrega', 'amenities', 'equipamiento',
-    'piso', 'gps', 'parqueo_incluido', 'baulera', 'zona'
+    'piso', 'gps', 'parqueo_incluido', 'baulera', 'zona', 'forma_pago'
   ]
+
+  // Opción para bloquear campos al guardar
+  const [autoBloquearAlGuardar, setAutoBloquearAlGuardar] = useState(false)
 
   const [formData, setFormData] = useState<FormData>({
     proyecto_nombre: '',
@@ -970,18 +973,22 @@ export default function EditarPropiedad() {
         console.error('Error guardando historial:', historialError)
       }
 
+      // Solo crear nuevos candados si el usuario marcó la opción
       const nuevosCandados: CamposBloqueados = {}
-      cambios.forEach(c => {
-        nuevosCandados[c.campo] = {
-          bloqueado: true,
-          por: usuarioInfo.tipo,
-          usuario_id: usuarioInfo.id,
-          usuario_nombre: usuarioInfo.nombre,
-          fecha: ahora,
-          valor_original: c.anterior
-        }
-      })
+      if (autoBloquearAlGuardar) {
+        cambios.forEach(c => {
+          nuevosCandados[c.campo] = {
+            bloqueado: true,
+            por: usuarioInfo.tipo,
+            usuario_id: usuarioInfo.id,
+            usuario_nombre: usuarioInfo.nombre,
+            fecha: ahora,
+            valor_original: c.anterior
+          }
+        })
+      }
 
+      // Mantener candados existentes + nuevos (si aplica)
       const candadosFinales = {
         ...(originalData.campos_bloqueados || {}),
         ...nuevosCandados
@@ -2515,10 +2522,13 @@ export default function EditarPropiedad() {
 
             {/* Forma de Pago */}
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">Forma de Pago</h2>
+              <h2 className="flex items-center text-lg font-semibold text-slate-900 mb-4">
+                Forma de Pago
+                <LockIcon campo="forma_pago" />
+              </h2>
 
               {/* Financiamiento vs Solo Contado */}
-              <div className="mb-4">
+              <div className={`mb-4 ${estaCampoBloqueado('forma_pago') ? 'bg-amber-50/50 rounded-lg p-3 -mx-3' : ''}`}>
                 <p className="text-sm font-medium text-slate-700 mb-2">Opciones de financiamiento</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
@@ -2611,8 +2621,11 @@ export default function EditarPropiedad() {
             </section>
 
             {/* Amenidades */}
-            <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">Amenidades del Edificio</h2>
+            <section className={estaCampoBloqueado('amenities') ? 'bg-amber-50/30 rounded-lg p-4 -mx-4' : ''}>
+              <h2 className="flex items-center text-lg font-semibold text-slate-900 mb-4">
+                Amenidades del Edificio
+                <LockIcon campo="amenities" />
+              </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                 {AMENIDADES_OPCIONES.map((amenidad) => (
                   <button
@@ -2673,8 +2686,11 @@ export default function EditarPropiedad() {
             </section>
 
             {/* Equipamiento */}
-            <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">Equipamiento del Departamento</h2>
+            <section className={estaCampoBloqueado('equipamiento') ? 'bg-amber-50/30 rounded-lg p-4 -mx-4' : ''}>
+              <h2 className="flex items-center text-lg font-semibold text-slate-900 mb-4">
+                Equipamiento del Departamento
+                <LockIcon campo="equipamiento" />
+              </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                 {EQUIPAMIENTO_OPCIONES.map((equip) => (
                   <button
@@ -2817,11 +2833,20 @@ export default function EditarPropiedad() {
               >
                 Cancelar
               </Link>
-              <div className="flex gap-3">
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer" title="Si marcas esta opción, los campos que cambies se bloquearán automáticamente (protegidos del merge nocturno)">
+                  <input
+                    type="checkbox"
+                    checked={autoBloquearAlGuardar}
+                    onChange={(e) => setAutoBloquearAlGuardar(e.target.checked)}
+                    className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500"
+                  />
+                  <span className="text-sm text-slate-600">🔒 Bloquear campos editados</span>
+                </label>
                 <button
                   type="button"
                   onClick={() => setShowHistorial(!showHistorial)}
-                  className="px-6 py-3 border border-slate-300 text-slate-600 font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                  className="px-4 py-2 border border-slate-300 text-slate-600 font-medium rounded-lg hover:bg-slate-50 transition-colors text-sm"
                 >
                   {showHistorial ? 'Ocultar' : 'Ver'} Historial ({historial.length})
                 </button>
