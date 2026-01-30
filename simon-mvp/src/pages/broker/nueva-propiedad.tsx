@@ -220,7 +220,8 @@ export default function NuevaPropiedad() {
           dormitorios: parseInt(formData.dormitorios),
           banos: parseFloat(formData.banos),
           estado_construccion: formData.estado_construccion,
-          fecha_entrega: formData.fecha_entrega || null,
+          // Convertir "2026-03" a "2026-03-01" para formato date
+          fecha_entrega: formData.fecha_entrega ? `${formData.fecha_entrega}-01` : null,
           plan_pagos: formData.plan_pagos || null,
           descripcion: formData.descripcion || null,
           // Parqueo
