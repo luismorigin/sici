@@ -25,6 +25,7 @@ interface FiltrosUsuario {
   deseables?: string[]
   ubicacion_vs_metros?: number
   calidad_vs_precio?: number
+  amenidades_vs_metros?: number
 }
 
 // Síntesis fiduciaria generada en resultados
