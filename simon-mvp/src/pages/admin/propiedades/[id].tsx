@@ -1563,20 +1563,22 @@ export default function EditarPropiedad() {
               </div>
             </div>
 
-            {/* Campos bloqueados y sincronización */}
-            <div className="mt-4 pt-4 border-t border-slate-200 flex flex-wrap items-center gap-4">
+          </div>
+
+          {/* Barra de acciones: Candados y Sincronización */}
+          {(camposBloqueados.length > 0 || selectedProyectoId) && (
+            <div className="bg-white rounded-xl shadow-sm p-4 flex flex-wrap items-center gap-4">
               {/* Botón de candados */}
               {camposBloqueados.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setShowCandadosPanel(!showCandadosPanel)}
-                  className="flex items-center gap-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm px-3 py-2 rounded-lg transition-colors"
+                  className="flex items-center gap-2 bg-purple-100 hover:bg-purple-200 text-purple-700 px-4 py-2 rounded-lg transition-colors font-medium"
                 >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                   </svg>
-                  {camposBloqueados.length} campos bloqueados
-                  <span className="text-xs">▼</span>
+                  🔒 {camposBloqueados.length} campos bloqueados
                 </button>
               )}
 
@@ -1585,122 +1587,122 @@ export default function EditarPropiedad() {
                 <button
                   type="button"
                   onClick={() => setShowSincronizar(!showSincronizar)}
-                  className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm px-3 py-2 rounded-lg transition-colors"
+                  className="flex items-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg transition-colors font-medium"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  Sincronizar desde Proyecto
+                  🔄 Sincronizar desde Proyecto
                 </button>
               )}
-            </div>
 
-            {/* Panel expandible de candados */}
-            {showCandadosPanel && camposBloqueados.length > 0 && (
-              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-purple-800">Campos Bloqueados</h4>
-                  <button
-                    type="button"
-                    onClick={desbloquearTodos}
-                    className="text-xs text-red-600 hover:text-red-800 underline"
-                  >
-                    🔓 Desbloquear todos
-                  </button>
-                </div>
-                <p className="text-xs text-purple-600 mb-3">
-                  Los campos bloqueados están protegidos del merge nocturno. Al desbloquear, el merge podrá sobrescribirlos.
-                </p>
-                <div className="space-y-2">
-                  {camposBloqueados.map(campo => {
-                    const info = originalData?.campos_bloqueados?.[campo]
-                    const esObjeto = typeof info === 'object' && info !== null
-                    const fecha = esObjeto && info?.fecha ? formatFecha(info.fecha) : null
-                    const por = esObjeto ? info?.usuario_nombre || info?.por : 'Sistema'
+              {/* Panel expandible de candados */}
+              {showCandadosPanel && camposBloqueados.length > 0 && (
+                <div className="w-full mt-2 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-purple-800">🔒 Campos Bloqueados</h4>
+                    <button
+                      type="button"
+                      onClick={desbloquearTodos}
+                      className="text-sm bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded transition-colors"
+                    >
+                      🔓 Desbloquear todos
+                    </button>
+                  </div>
+                  <p className="text-sm text-purple-600 mb-3">
+                    Los campos bloqueados están protegidos del merge nocturno. Al desbloquear, el merge podrá sobrescribirlos.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {camposBloqueados.map(campo => {
+                      const info = originalData?.campos_bloqueados?.[campo]
+                      const esObjeto = typeof info === 'object' && info !== null
+                      const fecha = esObjeto && info?.fecha ? formatFecha(info.fecha) : null
+                      const por = esObjeto ? info?.usuario_nombre || info?.por : 'Sistema'
 
-                    return (
-                      <div key={campo} className="flex items-center justify-between bg-white p-2 rounded border border-purple-100">
-                        <div>
-                          <span className="font-medium text-slate-700">{campo}</span>
-                          <span className="text-xs text-slate-500 ml-2">
-                            {por && `por ${por}`} {fecha && `• ${fecha}`}
-                          </span>
+                      return (
+                        <div key={campo} className="flex items-center justify-between bg-white p-3 rounded-lg border border-purple-100">
+                          <div>
+                            <span className="font-medium text-slate-800">{campo}</span>
+                            <span className="text-xs text-slate-500 block">
+                              {por && `por ${por}`} {fecha && `• ${fecha}`}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => desbloquearCampo(campo)}
+                            className="text-sm bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded transition-colors"
+                          >
+                            🔓
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => desbloquearCampo(campo)}
-                          className="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded transition-colors"
-                        >
-                          🔓 Desbloquear
-                        </button>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Panel de sincronización desde proyecto */}
-            {showSincronizar && selectedProyectoId && (
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="font-medium text-blue-800 mb-2">Sincronizar desde Proyecto Master</h4>
-                <p className="text-xs text-blue-600 mb-3">
-                  Esto traerá los datos del proyecto "{proyectoMaster?.nombre_oficial}" a esta propiedad.
-                  Los campos bloqueados serán desbloqueados automáticamente para permitir la sincronización.
-                </p>
+              {/* Panel de sincronización desde proyecto */}
+              {showSincronizar && selectedProyectoId && (
+                <div className="w-full mt-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="font-semibold text-blue-800 mb-2">🔄 Sincronizar desde Proyecto Master</h4>
+                  <p className="text-sm text-blue-600 mb-4">
+                    Traerá los datos del proyecto <strong>"{proyectoMaster?.nombre_oficial}"</strong> a esta propiedad.
+                    Los campos bloqueados serán desbloqueados automáticamente.
+                  </p>
 
-                <div className="space-y-2 mb-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={sincEstado}
-                      onChange={(e) => setSincEstado(e.target.checked)}
-                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-slate-700">Estado de construcción</span>
-                  </label>
+                  <div className="flex flex-wrap gap-4 mb-4">
+                    <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-lg">
+                      <input
+                        type="checkbox"
+                        checked={sincEstado}
+                        onChange={(e) => setSincEstado(e.target.checked)}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-slate-700">Estado de construcción</span>
+                    </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={sincFecha}
-                      onChange={(e) => setSincFecha(e.target.checked)}
-                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-slate-700">Fecha de entrega</span>
-                  </label>
+                    <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-lg">
+                      <input
+                        type="checkbox"
+                        checked={sincFecha}
+                        onChange={(e) => setSincFecha(e.target.checked)}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-slate-700">Fecha de entrega</span>
+                    </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={sincAmenidades}
-                      onChange={(e) => setSincAmenidades(e.target.checked)}
-                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-slate-700">Amenidades del edificio</span>
-                  </label>
+                    <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-lg">
+                      <input
+                        type="checkbox"
+                        checked={sincAmenidades}
+                        onChange={(e) => setSincAmenidades(e.target.checked)}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-slate-700">Amenidades del edificio</span>
+                    </label>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={sincronizarDesdeProyecto}
+                      disabled={sincronizando || (!sincEstado && !sincFecha && !sincAmenidades)}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                    >
+                      {sincronizando ? '⏳ Sincronizando...' : '✓ Sincronizar ahora'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowSincronizar(false)}
+                      className="px-4 py-2 text-slate-600 hover:text-slate-800"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={sincronizarDesdeProyecto}
-                    disabled={sincronizando || (!sincEstado && !sincFecha && !sincAmenidades)}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    {sincronizando ? 'Sincronizando...' : '🔄 Sincronizar ahora'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowSincronizar(false)}
-                    className="px-4 py-2 text-slate-600 hover:text-slate-800 text-sm"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Formulario */}
           <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 space-y-8">
