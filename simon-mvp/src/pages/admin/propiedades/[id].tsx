@@ -1010,6 +1010,7 @@ export default function EditarPropiedad() {
         id_proyecto_master: selectedProyectoId,  // Vincular/desvincular proyecto
         zona: microzonaLabel,
         precio_usd: precioNormalizado, // Siempre guardar el precio normalizado
+        precio_usd_actualizado: null, // Limpiar para que RPC use precio_usd
         area_total_m2: formData.area_m2 ? parseFloat(formData.area_m2) : null,
         dormitorios: formData.dormitorios ? parseInt(formData.dormitorios) : null,
         banos: formData.banos ? parseFloat(formData.banos) : null,
