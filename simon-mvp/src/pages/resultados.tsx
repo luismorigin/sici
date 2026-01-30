@@ -2904,71 +2904,39 @@ ${top3Texto}
                       <div
                         key={prop.id}
                         id={`propiedad-${prop.id}`}
-                        className={`bg-white rounded-lg p-4 transition-all duration-300 ${
+                        className={`bg-white rounded-xl overflow-hidden transition-all duration-300 ${
                           isSelected(prop.id)
                             ? 'ring-2 ring-red-400 shadow-[0_0_15px_rgba(239,68,68,0.25)]'
                             : 'shadow'
                         }`}
                       >
-                        <div className="flex items-start gap-4">
-                          {/* Carrusel de fotos - alternativas (click para fullscreen) */}
+                        {/* Layout vertical - Mobile first */}
+                        <div className="flex flex-col">
+                          {/* Galería de fotos - Amplia en mobile */}
                           <div
-                            className="w-24 h-20 bg-gray-200 rounded flex-shrink-0 relative group cursor-pointer"
+                            className="w-full h-44 bg-gray-200 relative cursor-pointer"
                             onClick={() => openLightbox(prop)}
+                            onTouchStart={handleTouchStart}
+                            onTouchEnd={(e) => handleTouchEnd(e, prop.id, prop.fotos_urls?.length || 0)}
                           >
                             {prop.fotos_urls && prop.fotos_urls.length > 0 ? (
                               <>
                                 <img
                                   src={prop.fotos_urls[getPhotoIndex(prop.id)]}
                                   alt={`${prop.proyecto} - Foto ${getPhotoIndex(prop.id) + 1}`}
-                                  className="w-full h-full object-cover rounded"
+                                  className="w-full h-full object-cover"
                                 />
 
-                                {/* Contador de fotos */}
-                                {prop.fotos_urls.length > 1 && (
-                                  <div className="absolute bottom-0.5 right-0.5 bg-black/60 text-white text-[10px] px-1 rounded">
-                                    {prop.fotos_urls.length} 📷
-                                  </div>
-                                )}
-
-                                {/* Navegación - solo si hay más de 1 foto */}
-                                {prop.fotos_urls.length > 1 && (
-                                  <>
-                                    {/* Flechas */}
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); prevPhoto(prop.id, prop.fotos_urls!.length) }}
-                                      className="absolute left-0.5 top-1/2 -translate-y-1/2 w-5 h-5 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                      ‹
-                                    </button>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); nextPhoto(prop.id, prop.fotos_urls!.length) }}
-                                      className="absolute right-0.5 top-1/2 -translate-y-1/2 w-5 h-5 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                      ›
-                                    </button>
-                                  </>
-                                )}
-                              </>
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                                Sin foto
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-start gap-2">
-                                {/* Botón guardar */}
+                                {/* Botón guardar - sobre la foto */}
                                 <button
                                   onClick={(e) => { e.stopPropagation(); toggleSelected(prop.id) }}
-                                  className="flex-shrink-0 p-1 transition-all"
+                                  className="absolute top-3 left-3 p-2 transition-all"
                                 >
                                   <svg
-                                    className={`w-5 h-5 transition-all ${
+                                    className={`w-6 h-6 transition-all ${
                                       isSelected(prop.id)
                                         ? 'fill-red-500 stroke-red-500'
-                                        : 'fill-transparent stroke-gray-300 hover:stroke-red-400'
+                                        : 'fill-transparent stroke-white drop-shadow-md hover:stroke-red-400'
                                     }`}
                                     viewBox="0 0 24 24"
                                     strokeWidth={2}
@@ -2976,19 +2944,49 @@ ${top3Texto}
                                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                                   </svg>
                                 </button>
-                                <div>
-                                  <h3 className="font-medium text-gray-900">{prop.proyecto}</h3>
-                                  <p className="text-xs text-gray-500">{zonaDisplay(prop.zona)}</p>
-                                </div>
+
+                                {/* Navegación fotos - Siempre visible */}
+                                {prop.fotos_urls.length > 1 && (
+                                  <>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); prevPhoto(prop.id, prop.fotos_urls!.length) }}
+                                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center text-base"
+                                    >
+                                      ‹
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); nextPhoto(prop.id, prop.fotos_urls!.length) }}
+                                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center text-base"
+                                    >
+                                      ›
+                                    </button>
+                                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
+                                      {getPhotoIndex(prop.id) + 1} / {prop.fotos_urls.length}
+                                    </div>
+                                  </>
+                                )}
+                              </>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                                📷 Sin foto
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Info - debajo de la foto */}
+                          <div className="flex-1 p-4">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <h3 className="font-bold text-gray-900">{prop.proyecto}</h3>
                               </div>
                               <div className="text-right flex-shrink-0">
-                                <p className="font-bold text-gray-900">${formatNum(prop.precio_usd)}</p>
-                                <p className="text-xs text-gray-500">${formatNum(prop.precio_m2)}/m²</p>
+                                <p className="text-lg font-bold text-gray-900">${formatNum(prop.precio_usd)}</p>
+                                <p className="text-sm text-gray-500">${formatNum(prop.precio_m2)}/m²</p>
                               </div>
                             </div>
 
                             {/* Info línea unificada - mismo formato que TOP 3 */}
-                            <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-2 text-xs text-gray-600">
+                            <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mt-3 text-sm text-gray-600">
                               <span className="font-semibold text-gray-700">Departamento</span>
                               <span>·</span>
                               <span>🛏️ {formatDorms(prop.dormitorios)}</span>
@@ -3043,7 +3041,7 @@ ${top3Texto}
                               if (!hasAmenities && !hasEquipamiento) return null
 
                               return (
-                                <div className="mt-1.5 space-y-1 text-xs">
+                                <div className="mt-2 space-y-1.5 text-sm">
                                   {hasAmenities && (
                                     <div className="flex items-center flex-wrap gap-1">
                                       <span className="text-gray-500">🏢</span>
@@ -3056,14 +3054,14 @@ ${top3Texto}
                                         return (
                                           <>
                                             {displayItems.map((a, i) => (
-                                              <span key={i} className="inline-flex items-center px-1.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-[10px]">
+                                              <span key={i} className="inline-flex items-center px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-xs">
                                                 {a} ✓
                                               </span>
                                             ))}
                                             {hasMore && (
                                               <button
                                                 onClick={(e) => { e.stopPropagation(); toggleAmenityExpand(prop.id, 'alt-amenities') }}
-                                                className="inline-flex items-center px-1.5 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-[10px] transition-colors"
+                                                className="inline-flex items-center px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-xs transition-colors"
                                               >
                                                 {isExpanded ? '▲' : `+${allAmenities.length - visibleCount} ▼`}
                                               </button>
@@ -3085,14 +3083,14 @@ ${top3Texto}
                                         return (
                                           <>
                                             {displayItems.map((item, i) => (
-                                              <span key={i} className="inline-flex items-center px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px]">
+                                              <span key={i} className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs">
                                                 {item}
                                               </span>
                                             ))}
                                             {hasMore && (
                                               <button
                                                 onClick={(e) => { e.stopPropagation(); toggleAmenityExpand(prop.id, 'alt-equipamiento') }}
-                                                className="inline-flex items-center px-1.5 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-[10px] transition-colors"
+                                                className="inline-flex items-center px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-xs transition-colors"
                                               >
                                                 {isExpanded ? '▲' : `+${equipamientoReal.length - visibleCount} ▼`}
                                               </button>
@@ -3107,7 +3105,7 @@ ${top3Texto}
                             })()}
 
                             {/* Badges en orden: tiempo primero, síntesis al final */}
-                            <div className="mt-2 space-y-1">
+                            <div className="mt-3 space-y-1.5">
                               {/* Línea 1: Badge tiempo inteligente */}
                               {prop.dias_en_mercado != null && (() => {
                                 const medianaZona = metricas?.dias_mediana || 74
