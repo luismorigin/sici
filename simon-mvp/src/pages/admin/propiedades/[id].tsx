@@ -101,6 +101,9 @@ interface ProyectoMaster {
   nombre_oficial: string
   desarrollador: string | null
   zona: string | null
+  estado_construccion?: string | null
+  fecha_entrega?: string | null
+  amenidades_edificio?: string[] | null
 }
 
 interface ProyectoOption {
@@ -207,6 +210,13 @@ export default function EditarPropiedad() {
   const [sincEstado, setSincEstado] = useState(true)
   const [sincFecha, setSincFecha] = useState(true)
   const [sincAmenidades, setSincAmenidades] = useState(true)
+
+  // Campos que pueden bloquearse
+  const CAMPOS_BLOQUEABLES = [
+    'dormitorios', 'banos', 'area_total_m2', 'precio_usd', 'estacionamientos',
+    'estado_construccion', 'fecha_entrega', 'amenities', 'equipamiento',
+    'piso', 'gps', 'parqueo_incluido', 'baulera', 'zona'
+  ]
 
   const [formData, setFormData] = useState<FormData>({
     proyecto_nombre: '',
@@ -343,12 +353,12 @@ export default function EditarPropiedad() {
 
       setOriginalData(data)
 
-      // Fetch proyecto master para obtener desarrollador y nombre oficial
+      // Fetch proyecto master para obtener desarrollador, nombre oficial y datos para sincronización
       let pmData: ProyectoMaster | null = null
       if (data.id_proyecto_master) {
         const { data: pmResult } = await supabase
           .from('proyectos_master')
-          .select('nombre_oficial, desarrollador, zona')
+          .select('nombre_oficial, desarrollador, zona, estado_construccion, fecha_entrega, amenidades_edificio')
           .eq('id_proyecto_master', data.id_proyecto_master)
           .single()
 
@@ -1131,6 +1141,87 @@ export default function EditarPropiedad() {
     })
   }
 
+  // Verificar si un campo específico está bloqueado
+  const estaCampoBloqueado = (campo: string): boolean => {
+    if (!originalData?.campos_bloqueados) return false
+    const v = originalData.campos_bloqueados[campo]
+    return v === true || (typeof v === 'object' && v?.bloqueado === true)
+  }
+
+  // Toggle bloqueo de un campo
+  const toggleBloqueo = async (campo: string) => {
+    if (!supabase || !id || !originalData) return
+
+    try {
+      const estaBloqueado = estaCampoBloqueado(campo)
+      const nuevosCandados = { ...(originalData.campos_bloqueados || {}) }
+
+      if (estaBloqueado) {
+        // Desbloquear
+        delete nuevosCandados[campo]
+      } else {
+        // Bloquear
+        nuevosCandados[campo] = {
+          bloqueado: true,
+          por: 'admin',
+          usuario_id: 'admin-panel',
+          usuario_nombre: 'Administrador',
+          fecha: new Date().toISOString()
+        }
+      }
+
+      const { error } = await supabase
+        .from('propiedades_v2')
+        .update({ campos_bloqueados: Object.keys(nuevosCandados).length > 0 ? nuevosCandados : null })
+        .eq('id', id)
+
+      if (error) throw error
+
+      // Registrar en historial
+      await supabase.from('propiedades_v2_historial').insert({
+        propiedad_id: parseInt(id as string),
+        usuario_tipo: 'admin',
+        usuario_id: 'admin-panel',
+        usuario_nombre: 'Administrador',
+        campo: 'campos_bloqueados',
+        valor_anterior: originalData.campos_bloqueados,
+        valor_nuevo: nuevosCandados,
+        motivo: estaBloqueado ? `Desbloqueado: ${campo}` : `Bloqueado: ${campo}`
+      })
+
+      // Refrescar datos
+      await fetchPropiedad()
+    } catch (err: any) {
+      alert('Error al cambiar bloqueo: ' + err.message)
+    }
+  }
+
+  // Componente LockIcon para mostrar junto a campos
+  const LockIcon = ({ campo, label }: { campo: string; label?: string }) => {
+    const bloqueado = estaCampoBloqueado(campo)
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          toggleBloqueo(campo)
+        }}
+        className={`ml-2 text-sm transition-colors ${
+          bloqueado
+            ? 'text-amber-600 hover:text-amber-800'
+            : 'text-slate-300 hover:text-slate-500'
+        }`}
+        title={bloqueado
+          ? `🔒 Campo bloqueado - Click para desbloquear`
+          : `🔓 Campo desbloqueado - Click para bloquear (proteger del merge)`
+        }
+      >
+        {bloqueado ? '🔒' : '🔓'}
+      </button>
+    )
+  }
+
   // Desbloquear un campo específico
   const desbloquearCampo = async (campo: string) => {
     if (!supabase || !id || !originalData) return
@@ -1642,54 +1733,133 @@ export default function EditarPropiedad() {
               )}
 
               {/* Panel de sincronización desde proyecto */}
-              {showSincronizar && selectedProyectoId && (
+              {showSincronizar && selectedProyectoId && proyectoMaster && (
                 <div className="w-full mt-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <h4 className="font-semibold text-blue-800 mb-2">🔄 Sincronizar desde Proyecto Master</h4>
                   <p className="text-sm text-blue-600 mb-4">
-                    Traerá los datos del proyecto <strong>"{proyectoMaster?.nombre_oficial}"</strong> a esta propiedad.
-                    Los campos bloqueados serán desbloqueados automáticamente.
+                    Comparación de datos: <strong>Propiedad actual</strong> vs <strong>{proyectoMaster.nombre_oficial}</strong>
                   </p>
 
-                  <div className="flex flex-wrap gap-4 mb-4">
-                    <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-lg">
-                      <input
-                        type="checkbox"
-                        checked={sincEstado}
-                        onChange={(e) => setSincEstado(e.target.checked)}
-                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-slate-700">Estado de construcción</span>
-                    </label>
-
-                    <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-lg">
-                      <input
-                        type="checkbox"
-                        checked={sincFecha}
-                        onChange={(e) => setSincFecha(e.target.checked)}
-                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-slate-700">Fecha de entrega</span>
-                    </label>
-
-                    <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-lg">
-                      <input
-                        type="checkbox"
-                        checked={sincAmenidades}
-                        onChange={(e) => setSincAmenidades(e.target.checked)}
-                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-slate-700">Amenidades del edificio</span>
-                    </label>
+                  {/* Tabla comparativa */}
+                  <div className="bg-white rounded-lg border border-blue-200 overflow-hidden mb-4">
+                    <table className="w-full text-sm">
+                      <thead className="bg-blue-100">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-medium text-blue-800">Sincronizar</th>
+                          <th className="text-left px-3 py-2 font-medium text-blue-800">Actual</th>
+                          <th className="text-left px-3 py-2 font-medium text-blue-800">→</th>
+                          <th className="text-left px-3 py-2 font-medium text-blue-800">Proyecto</th>
+                          <th className="text-center px-3 py-2 font-medium text-blue-800">Candado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-blue-100">
+                        {/* Estado de construcción */}
+                        <tr className={sincEstado ? 'bg-blue-50' : ''}>
+                          <td className="px-3 py-2">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={sincEstado}
+                                onChange={(e) => setSincEstado(e.target.checked)}
+                                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="font-medium">Estado construcción</span>
+                            </label>
+                          </td>
+                          <td className="px-3 py-2 text-slate-600">
+                            {ESTADO_CONSTRUCCION.find(e => e.id === formData.estado_construccion)?.label || formData.estado_construccion || '-'}
+                          </td>
+                          <td className="px-3 py-2 text-blue-500">→</td>
+                          <td className="px-3 py-2 font-medium text-blue-700">
+                            {proyectoMaster.estado_construccion
+                              ? ESTADO_CONSTRUCCION.find(e => e.id === proyectoMaster.estado_construccion)?.label || proyectoMaster.estado_construccion
+                              : <span className="text-slate-400 italic">No definido</span>
+                            }
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {estaCampoBloqueado('estado_construccion') && <span title="Será desbloqueado">🔒</span>}
+                          </td>
+                        </tr>
+                        {/* Fecha de entrega */}
+                        <tr className={sincFecha ? 'bg-blue-50' : ''}>
+                          <td className="px-3 py-2">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={sincFecha}
+                                onChange={(e) => setSincFecha(e.target.checked)}
+                                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="font-medium">Fecha entrega</span>
+                            </label>
+                          </td>
+                          <td className="px-3 py-2 text-slate-600">
+                            {formData.fecha_entrega || '-'}
+                          </td>
+                          <td className="px-3 py-2 text-blue-500">→</td>
+                          <td className="px-3 py-2 font-medium text-blue-700">
+                            {proyectoMaster.fecha_entrega
+                              ? proyectoMaster.fecha_entrega.substring(0, 7)
+                              : <span className="text-slate-400 italic">No definido</span>
+                            }
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {estaCampoBloqueado('fecha_entrega') && <span title="Será desbloqueado">🔒</span>}
+                          </td>
+                        </tr>
+                        {/* Amenidades */}
+                        <tr className={sincAmenidades ? 'bg-blue-50' : ''}>
+                          <td className="px-3 py-2">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={sincAmenidades}
+                                onChange={(e) => setSincAmenidades(e.target.checked)}
+                                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="font-medium">Amenidades edificio</span>
+                            </label>
+                          </td>
+                          <td className="px-3 py-2 text-slate-600">
+                            {formData.amenidades.length + formData.amenidades_custom.length} items
+                          </td>
+                          <td className="px-3 py-2 text-blue-500">→</td>
+                          <td className="px-3 py-2 font-medium text-blue-700">
+                            {proyectoMaster.amenidades_edificio?.length
+                              ? `${proyectoMaster.amenidades_edificio.length} items`
+                              : <span className="text-slate-400 italic">No definido</span>
+                            }
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {estaCampoBloqueado('amenities') && <span title="Será desbloqueado">🔒</span>}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
 
-                  <div className="flex gap-2">
+                  {/* Lista de amenidades del proyecto si hay */}
+                  {sincAmenidades && proyectoMaster.amenidades_edificio && proyectoMaster.amenidades_edificio.length > 0 && (
+                    <div className="bg-white rounded-lg p-3 mb-4 border border-blue-200">
+                      <p className="text-xs text-blue-700 font-medium mb-2">Amenidades que se sincronizarán:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {proyectoMaster.amenidades_edificio.map(a => (
+                          <span key={a} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                            {a}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={sincronizarDesdeProyecto}
                       disabled={sincronizando || (!sincEstado && !sincFecha && !sincAmenidades)}
                       className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-6 py-2 rounded-lg font-medium transition-colors"
                     >
-                      {sincronizando ? '⏳ Sincronizando...' : '✓ Sincronizar ahora'}
+                      {sincronizando ? '⏳ Sincronizando...' : '✓ Sincronizar seleccionados'}
                     </button>
                     <button
                       type="button"
@@ -1698,6 +1868,11 @@ export default function EditarPropiedad() {
                     >
                       Cancelar
                     </button>
+                    {(estaCampoBloqueado('estado_construccion') || estaCampoBloqueado('fecha_entrega') || estaCampoBloqueado('amenities')) && (
+                      <span className="text-xs text-amber-600">
+                        ⚠️ Los campos bloqueados se desbloquearán automáticamente
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -1838,11 +2013,16 @@ export default function EditarPropiedad() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                    <label className="flex items-center text-sm font-medium text-slate-700 mb-1">
+                      Estado
+                      <LockIcon campo="estado_construccion" />
+                    </label>
                     <select
                       value={formData.estado_construccion}
                       onChange={(e) => updateField('estado_construccion', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                        estaCampoBloqueado('estado_construccion') ? 'border-amber-300 bg-amber-50' : 'border-slate-300'
+                      }`}
                     >
                       {ESTADO_CONSTRUCCION.map(e => (
                         <option key={e.id} value={e.id}>{e.label}</option>
@@ -1868,14 +2048,17 @@ export default function EditarPropiedad() {
 
                 {esPreventa && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="flex items-center text-sm font-medium text-slate-700 mb-1">
                       Fecha estimada de entrega
+                      <LockIcon campo="fecha_entrega" />
                     </label>
                     <input
                       type="month"
                       value={formData.fecha_entrega}
                       onChange={(e) => updateField('fecha_entrega', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                        estaCampoBloqueado('fecha_entrega') ? 'border-amber-300 bg-amber-50' : 'border-slate-300'
+                      }`}
                     />
                   </div>
                 )}
@@ -1940,14 +2123,17 @@ export default function EditarPropiedad() {
                 {/* Precio publicado y cálculo */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="flex items-center text-sm font-medium text-slate-700 mb-1">
                       Precio publicado * {formData.tipo_precio === 'bob' ? '(Bs.)' : '(USD)'}
+                      <LockIcon campo="precio_usd" />
                     </label>
                     <input
                       type="number"
                       value={formData.precio_publicado}
                       onChange={(e) => updateField('precio_publicado', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                        estaCampoBloqueado('precio_usd') ? 'border-amber-300 bg-amber-50' : 'border-slate-300'
+                      }`}
                       placeholder={formData.tipo_precio === 'bob' ? 'Ej: 750000' : 'Ej: 99536'}
                     />
                   </div>
@@ -2001,12 +2187,17 @@ export default function EditarPropiedad() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Área m² *</label>
+                    <label className="flex items-center text-sm font-medium text-slate-700 mb-1">
+                      Área m² *
+                      <LockIcon campo="area_total_m2" />
+                    </label>
                     <input
                       type="number"
                       value={formData.area_m2}
                       onChange={(e) => updateField('area_m2', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                        estaCampoBloqueado('area_total_m2') ? 'border-amber-300 bg-amber-50' : 'border-slate-300'
+                      }`}
                     />
                   </div>
                   <div>
@@ -2041,11 +2232,16 @@ export default function EditarPropiedad() {
               <h2 className="text-lg font-semibold text-slate-900 mb-4">Características</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Dormitorios</label>
+                  <label className="flex items-center text-sm font-medium text-slate-700 mb-1">
+                    Dormitorios
+                    <LockIcon campo="dormitorios" />
+                  </label>
                   <select
                     value={formData.dormitorios}
                     onChange={(e) => updateField('dormitorios', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                      estaCampoBloqueado('dormitorios') ? 'border-amber-300 bg-amber-50' : 'border-slate-300'
+                    }`}
                   >
                     {DORMITORIOS_OPCIONES.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -2053,11 +2249,16 @@ export default function EditarPropiedad() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Baños</label>
+                  <label className="flex items-center text-sm font-medium text-slate-700 mb-1">
+                    Baños
+                    <LockIcon campo="banos" />
+                  </label>
                   <select
                     value={formData.banos}
                     onChange={(e) => updateField('banos', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                      estaCampoBloqueado('banos') ? 'border-amber-300 bg-amber-50' : 'border-slate-300'
+                    }`}
                   >
                     {['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'].map(n => (
                       <option key={n} value={n}>{n}</option>
@@ -2065,12 +2266,17 @@ export default function EditarPropiedad() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Piso</label>
+                  <label className="flex items-center text-sm font-medium text-slate-700 mb-1">
+                    Piso
+                    <LockIcon campo="piso" />
+                  </label>
                   <input
                     type="number"
                     value={formData.piso}
                     onChange={(e) => updateField('piso', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                      estaCampoBloqueado('piso') ? 'border-amber-300 bg-amber-50' : 'border-slate-300'
+                    }`}
                     min="1"
                     max="50"
                     placeholder="Ej: 5"
@@ -2081,8 +2287,11 @@ export default function EditarPropiedad() {
               {/* Parqueo y Baulera - 4 opciones cada uno */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* 🚗 Parqueo */}
-                <div className="p-4 border border-slate-200 rounded-lg">
-                  <p className="text-sm font-medium text-slate-700 mb-3">🚗 Parqueo</p>
+                <div className={`p-4 border rounded-lg ${estaCampoBloqueado('parqueo_incluido') || estaCampoBloqueado('estacionamientos') ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200'}`}>
+                  <p className="flex items-center text-sm font-medium text-slate-700 mb-3">
+                    🚗 Parqueo
+                    <LockIcon campo="parqueo_incluido" />
+                  </p>
                   <div className="space-y-2">
                     <label className={`flex items-center gap-2 p-2 rounded cursor-pointer text-sm ${formData.parqueo_opcion === 'incluido' ? 'bg-green-100' : 'hover:bg-slate-50'}`}>
                       <input
@@ -2148,8 +2357,11 @@ export default function EditarPropiedad() {
                 </div>
 
                 {/* 📦 Baulera - misma estructura */}
-                <div className="p-4 border border-slate-200 rounded-lg">
-                  <p className="text-sm font-medium text-slate-700 mb-3">📦 Baulera</p>
+                <div className={`p-4 border rounded-lg ${estaCampoBloqueado('baulera') ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200'}`}>
+                  <p className="flex items-center text-sm font-medium text-slate-700 mb-3">
+                    📦 Baulera
+                    <LockIcon campo="baulera" />
+                  </p>
                   <div className="space-y-2">
                     <label className={`flex items-center gap-2 p-2 rounded cursor-pointer text-sm ${formData.baulera_opcion === 'incluido' ? 'bg-green-100' : 'hover:bg-slate-50'}`}>
                       <input
@@ -2225,7 +2437,10 @@ export default function EditarPropiedad() {
 
             {/* GPS */}
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">Ubicación GPS</h2>
+              <h2 className="flex items-center text-lg font-semibold text-slate-900 mb-4">
+                Ubicación GPS
+                <LockIcon campo="gps" />
+              </h2>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Latitud</label>
@@ -2233,7 +2448,9 @@ export default function EditarPropiedad() {
                     type="text"
                     value={formData.latitud}
                     onChange={(e) => updateField('latitud', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                      estaCampoBloqueado('gps') ? 'border-amber-300 bg-amber-50' : 'border-slate-300'
+                    }`}
                     placeholder="-17.xxxxx"
                   />
                 </div>
@@ -2243,7 +2460,9 @@ export default function EditarPropiedad() {
                     type="text"
                     value={formData.longitud}
                     onChange={(e) => updateField('longitud', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                      estaCampoBloqueado('gps') ? 'border-amber-300 bg-amber-50' : 'border-slate-300'
+                    }`}
                     placeholder="-63.xxxxx"
                   />
                 </div>
