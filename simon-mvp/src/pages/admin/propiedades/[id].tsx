@@ -198,6 +198,16 @@ export default function EditarPropiedad() {
   const [nuevoAmenidad, setNuevoAmenidad] = useState('')
   const [nuevoEquipamiento, setNuevoEquipamiento] = useState('')
 
+  // Panel de candados
+  const [showCandadosPanel, setShowCandadosPanel] = useState(false)
+
+  // Sincronizar desde proyecto
+  const [showSincronizar, setShowSincronizar] = useState(false)
+  const [sincronizando, setSincronizando] = useState(false)
+  const [sincEstado, setSincEstado] = useState(true)
+  const [sincFecha, setSincFecha] = useState(true)
+  const [sincAmenidades, setSincAmenidades] = useState(true)
+
   const [formData, setFormData] = useState<FormData>({
     proyecto_nombre: '',
     desarrollador: '',
@@ -1121,6 +1131,121 @@ export default function EditarPropiedad() {
     })
   }
 
+  // Desbloquear un campo específico
+  const desbloquearCampo = async (campo: string) => {
+    if (!supabase || !id || !originalData) return
+
+    try {
+      const nuevosCandados = { ...originalData.campos_bloqueados }
+      delete nuevosCandados[campo]
+
+      const { error } = await supabase
+        .from('propiedades_v2')
+        .update({ campos_bloqueados: Object.keys(nuevosCandados).length > 0 ? nuevosCandados : null })
+        .eq('id', id)
+
+      if (error) throw error
+
+      // Registrar en historial
+      await supabase.from('propiedades_v2_historial').insert({
+        propiedad_id: parseInt(id as string),
+        usuario_tipo: 'admin',
+        usuario_id: 'admin-panel',
+        usuario_nombre: 'Administrador',
+        campo: 'campos_bloqueados',
+        valor_anterior: originalData.campos_bloqueados,
+        valor_nuevo: nuevosCandados,
+        motivo: `Desbloqueado campo: ${campo}`
+      })
+
+      // Refrescar datos
+      await fetchPropiedad()
+    } catch (err: any) {
+      alert('Error al desbloquear: ' + err.message)
+    }
+  }
+
+  // Desbloquear todos los campos
+  const desbloquearTodos = async () => {
+    if (!supabase || !id || !originalData) return
+    if (!confirm('¿Desbloquear todos los campos? Esto permitirá que el merge nocturno los sobrescriba.')) return
+
+    try {
+      const { error } = await supabase
+        .from('propiedades_v2')
+        .update({ campos_bloqueados: null })
+        .eq('id', id)
+
+      if (error) throw error
+
+      await supabase.from('propiedades_v2_historial').insert({
+        propiedad_id: parseInt(id as string),
+        usuario_tipo: 'admin',
+        usuario_id: 'admin-panel',
+        usuario_nombre: 'Administrador',
+        campo: 'campos_bloqueados',
+        valor_anterior: originalData.campos_bloqueados,
+        valor_nuevo: null,
+        motivo: 'Desbloqueados todos los campos'
+      })
+
+      await fetchPropiedad()
+      setShowCandadosPanel(false)
+    } catch (err: any) {
+      alert('Error al desbloquear: ' + err.message)
+    }
+  }
+
+  // Sincronizar datos desde el proyecto master
+  const sincronizarDesdeProyecto = async () => {
+    if (!supabase || !id || !selectedProyectoId) return
+    if (!sincEstado && !sincFecha && !sincAmenidades) {
+      alert('Selecciona al menos una opción para sincronizar')
+      return
+    }
+
+    setSincronizando(true)
+    try {
+      // Primero desbloquear los campos que vamos a sincronizar
+      const camposADesbloquear: string[] = []
+      if (sincEstado) camposADesbloquear.push('estado_construccion')
+      if (sincFecha) camposADesbloquear.push('fecha_entrega')
+      if (sincAmenidades) camposADesbloquear.push('amenities')
+
+      // Desbloquear campos seleccionados
+      if (originalData?.campos_bloqueados) {
+        const nuevosCandados = { ...originalData.campos_bloqueados }
+        camposADesbloquear.forEach(campo => delete nuevosCandados[campo])
+
+        await supabase
+          .from('propiedades_v2')
+          .update({ campos_bloqueados: Object.keys(nuevosCandados).length > 0 ? nuevosCandados : null })
+          .eq('id', id)
+      }
+
+      // Llamar a la función de propagación para solo esta propiedad
+      // Usamos la RPC pero solo afectará a esta propiedad porque desbloqueamos sus campos
+      const { data, error } = await supabase.rpc('propagar_proyecto_a_propiedades', {
+        p_id_proyecto: selectedProyectoId,
+        p_propagar_estado: sincEstado,
+        p_propagar_fecha: sincFecha,
+        p_propagar_amenidades: sincAmenidades
+      })
+
+      if (error) throw error
+
+      // Refrescar datos
+      await fetchPropiedad()
+      setShowSincronizar(false)
+
+      alert(`Sincronización completada: ${JSON.stringify(data?.detalle || {})}`)
+    } catch (err: any) {
+      alert('Error al sincronizar: ' + err.message)
+    } finally {
+      setSincronizando(false)
+    }
+  }
+
   const formatFecha = (fecha: string): string => {
     return new Date(fecha).toLocaleDateString('es-BO', {
       day: '2-digit',
@@ -1438,29 +1563,140 @@ export default function EditarPropiedad() {
               </div>
             </div>
 
-            {/* Campos bloqueados */}
-            {camposBloqueados.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-slate-200">
-                <p className="text-sm font-medium text-slate-700 mb-2">Campos bloqueados (protegidos del merge nocturno):</p>
-                <div className="flex flex-wrap gap-2">
+            {/* Campos bloqueados y sincronización */}
+            <div className="mt-4 pt-4 border-t border-slate-200 flex flex-wrap items-center gap-4">
+              {/* Botón de candados */}
+              {camposBloqueados.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowCandadosPanel(!showCandadosPanel)}
+                  className="flex items-center gap-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm px-3 py-2 rounded-lg transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                  {camposBloqueados.length} campos bloqueados
+                  <span className="text-xs">▼</span>
+                </button>
+              )}
+
+              {/* Botón de sincronizar desde proyecto */}
+              {selectedProyectoId && (
+                <button
+                  type="button"
+                  onClick={() => setShowSincronizar(!showSincronizar)}
+                  className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm px-3 py-2 rounded-lg transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Sincronizar desde Proyecto
+                </button>
+              )}
+            </div>
+
+            {/* Panel expandible de candados */}
+            {showCandadosPanel && camposBloqueados.length > 0 && (
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-purple-800">Campos Bloqueados</h4>
+                  <button
+                    type="button"
+                    onClick={desbloquearTodos}
+                    className="text-xs text-red-600 hover:text-red-800 underline"
+                  >
+                    🔓 Desbloquear todos
+                  </button>
+                </div>
+                <p className="text-xs text-purple-600 mb-3">
+                  Los campos bloqueados están protegidos del merge nocturno. Al desbloquear, el merge podrá sobrescribirlos.
+                </p>
+                <div className="space-y-2">
                   {camposBloqueados.map(campo => {
-                    const info = originalData.campos_bloqueados?.[campo]
-                    const fecha = typeof info === 'object' && info?.fecha
-                      ? formatFecha(info.fecha)
-                      : ''
+                    const info = originalData?.campos_bloqueados?.[campo]
+                    const esObjeto = typeof info === 'object' && info !== null
+                    const fecha = esObjeto && info?.fecha ? formatFecha(info.fecha) : null
+                    const por = esObjeto ? info?.usuario_nombre || info?.por : 'Sistema'
+
                     return (
-                      <span
-                        key={campo}
-                        className="bg-purple-50 text-purple-700 text-xs px-2 py-1 rounded flex items-center gap-1"
-                        title={fecha ? `Bloqueado el ${fecha}` : ''}
-                      >
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                        </svg>
-                        {campo}
-                      </span>
+                      <div key={campo} className="flex items-center justify-between bg-white p-2 rounded border border-purple-100">
+                        <div>
+                          <span className="font-medium text-slate-700">{campo}</span>
+                          <span className="text-xs text-slate-500 ml-2">
+                            {por && `por ${por}`} {fecha && `• ${fecha}`}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => desbloquearCampo(campo)}
+                          className="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded transition-colors"
+                        >
+                          🔓 Desbloquear
+                        </button>
+                      </div>
                     )
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* Panel de sincronización desde proyecto */}
+            {showSincronizar && selectedProyectoId && (
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-blue-800 mb-2">Sincronizar desde Proyecto Master</h4>
+                <p className="text-xs text-blue-600 mb-3">
+                  Esto traerá los datos del proyecto "{proyectoMaster?.nombre_oficial}" a esta propiedad.
+                  Los campos bloqueados serán desbloqueados automáticamente para permitir la sincronización.
+                </p>
+
+                <div className="space-y-2 mb-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sincEstado}
+                      onChange={(e) => setSincEstado(e.target.checked)}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-slate-700">Estado de construcción</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sincFecha}
+                      onChange={(e) => setSincFecha(e.target.checked)}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-slate-700">Fecha de entrega</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sincAmenidades}
+                      onChange={(e) => setSincAmenidades(e.target.checked)}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-slate-700">Amenidades del edificio</span>
+                  </label>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={sincronizarDesdeProyecto}
+                    disabled={sincronizando || (!sincEstado && !sincFecha && !sincAmenidades)}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    {sincronizando ? 'Sincronizando...' : '🔄 Sincronizar ahora'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSincronizar(false)}
+                    className="px-4 py-2 text-slate-600 hover:text-slate-800 text-sm"
+                  >
+                    Cancelar
+                  </button>
                 </div>
               </div>
             )}

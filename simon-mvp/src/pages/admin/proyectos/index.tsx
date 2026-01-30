@@ -469,8 +469,12 @@ export default function AdminProyectos() {
 
   const formatFecha = (fecha: string | null): string => {
     if (!fecha) return '-'
-    const date = new Date(fecha)
-    return date.toLocaleDateString('es-BO', { month: 'short', year: 'numeric' })
+    // Extraer YYYY-MM directamente para evitar problemas de timezone
+    const match = fecha.match(/^(\d{4})-(\d{2})/)
+    if (!match) return '-'
+    const [, year, month] = match
+    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+    return `${meses[parseInt(month) - 1]} ${year}`
   }
 
   const getEstadoBadge = (estado: string | null) => {
