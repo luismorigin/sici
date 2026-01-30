@@ -86,6 +86,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 | `/admin/supervisor/sin-match` | Asignar proyectos huérfanas |
 | `/admin/supervisor/excluidas` | Gestionar excluidas |
 | `/admin/salud` | **Health dashboard sistema** |
+| `/admin/market` | **Market Pulse Dashboard** - inteligencia mercado |
 
 ## Estructura Clave
 
@@ -151,6 +152,12 @@ sici/
   - Inventario, calidad datos, matching, colas HITL
   - TC Dinámico (paralelo/oficial)
   - Health check workflows con horarios programados
+- **Market Pulse Dashboard:** `/admin/market` - inteligencia de mercado inmobiliario
+  - KPIs: unidades, proyectos, precio/m², ticket, área, TC
+  - Gráficos: distribución dormitorios, preventa vs entrega, zonas
+  - Históricos: evolución inventario 28d, TC paralelo
+  - Top 10 proyectos, oportunidades $/m²
+  - Stack: Recharts ^3.7.0
 
 ### ⏳ En Progreso
 - **Sistema Broker Fase 5-7:** Portal broker, sistema leads, CMA (pendiente)
