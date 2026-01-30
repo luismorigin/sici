@@ -46,7 +46,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 2. **Discovery > Enrichment** - Para campos físicos (area, dorms, GPS)
 3. **propiedades_v2** - ÚNICA tabla activa. `propiedades` es LEGACY
 4. **SQL > Regex** - Potenciar matching en BD, no extractores
-5. **Human-in-the-Loop** - Sistema HITL completo operativo (Sheets + Supervisores)
+5. **Human-in-the-Loop** - Sistema HITL migrado a Admin Dashboard (ya no usa Google Sheets)
 
 ## Documentación Principal
 
@@ -72,6 +72,20 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 | Spec TC Dinámico | `docs/modulo_2/TC_DINAMICO_BINANCE_SPEC.md` |
 | Knowledge Graph Plan | `docs/planning/KNOWLEDGE_GRAPH_VALIDATED_PLAN.md` |
 | Knowledge Graph Design | `docs/planning/SICI_KNOWLEDGE_GRAPH_DESIGN.md` |
+
+## Admin Pages (simon-mvp)
+
+| Ruta | Propósito |
+|------|-----------|
+| `/admin/propiedades` | Editor propiedades con candados |
+| `/admin/proyectos` | Listado + crear proyectos |
+| `/admin/proyectos/[id]` | Editor proyecto individual |
+| `/admin/brokers` | Gestión brokers B2B |
+| `/admin/supervisor` | Dashboard HITL (contadores) |
+| `/admin/supervisor/matching` | Revisar matches pendientes |
+| `/admin/supervisor/sin-match` | Asignar proyectos huérfanas |
+| `/admin/supervisor/excluidas` | Gestionar excluidas |
+| `/admin/salud` | **Health dashboard sistema** |
 
 ## Estructura Clave
 
@@ -127,6 +141,16 @@ sici/
 - **Inferir Datos Proyecto:** Función inferir_datos_proyecto() con amenidades frecuentes (≥50%) y opcionales (<50%), adoptar fotos (migración 086-087)
 - **Landing Market Lens en Vivo:** Permisos anon para datos reales (TC, snapshots, métricas) + detección bajadas precio desde precios_historial (migraciones 089-090)
 - **Fix Discovery Candados Admin:** registrar_discovery() ahora soporta formato nuevo de candados `{"campo": {"bloqueado": true, ...}}`
+- **Supervisor HITL Admin:** Migración completa de Google Sheets a admin dashboard
+  - `/admin/supervisor/matching` - Aprobar, rechazar, corregir matches
+  - `/admin/supervisor/sin-match` - Asignar proyectos a huérfanas
+  - `/admin/supervisor/excluidas` - Gestionar propiedades excluidas
+- **Desarrolladores Master:** Tabla normalizada `desarrolladores` + FK desde proyectos_master + autocomplete en UI (migración 088)
+- **GPS → Zona Auto-detección:** Al crear/editar proyectos, detecta zona automáticamente desde coordenadas GPS
+- **Dashboard Salud Sistema:** `/admin/salud` con métricas en tiempo real:
+  - Inventario, calidad datos, matching, colas HITL
+  - TC Dinámico (paralelo/oficial)
+  - Health check workflows con horarios programados
 
 ### ⏳ En Progreso
 - **Sistema Broker Fase 5-7:** Portal broker, sistema leads, CMA (pendiente)
@@ -213,7 +237,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 085 | proyectos_master_campos_admin | **Admin Proyectos: estado_construccion, fecha_entrega, amenidades_edificio, pisos, unidades + propagación** | ✅ |
 | 086 | inferir_datos_proyecto | **Función para inferir amenidades, estado, pisos y fotos desde propiedades vinculadas** | ✅ |
 | 087 | fotos_proyecto_amenidades_opcionales | **Columna fotos_proyecto + inferir amenidades frecuentes/opcionales separadas** | ⏳ |
-| 088 | desarrolladores_master | **Tabla desarrolladores_master + FK desde proyectos** | ✅ |
+| 088 | desarrolladores_master | **Tabla desarrolladores + FK id_desarrollador + buscar_desarrolladores() + crear_desarrollador()** | ✅ |
 | 089 | permisos_anon_landing | **Permisos SELECT anon para Market Lens en vivo (snapshots, TC, métricas, precios_historial)** | ✅ |
 | 090 | contar_bajadas_precio | **Función RPC para detectar bajadas de precio entre snapshots** | ✅ |
 
