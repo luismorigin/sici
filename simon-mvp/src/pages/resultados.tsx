@@ -409,8 +409,9 @@ const MEDIANA_PRECIO_M2_POR_ZONA: Record<string, number> = {
 interface DatosUsuarioMOAT {
   innegociables: string[]
   deseables: string[]
-  ubicacion_vs_metros: number // 1-5
-  calidad_vs_precio: number   // 1-5
+  ubicacion_vs_metros: number // 1-5 (legacy, no se usa)
+  calidad_vs_precio: number   // 1-5 (amenidades vs precio)
+  amenidades_vs_metros: number // 1-5 (amenidades vs metros)
 }
 
 function calcularScoreMOAT(
@@ -489,36 +490,57 @@ function calcularScoreMOAT(
   debugScores.modoOportunidad = datosUsuario.calidad_vs_precio <= 2 ? 1 :
                                  datosUsuario.calidad_vs_precio >= 4 ? 3 : 2
 
-  // 3. TRADE-OFFS (0 a 20)
+  // 3. TRADE-OFFS (0 a 35)
   const medianaArea = MEDIANA_AREA_POR_DORMS[prop.dormitorios || 1] || 52
   const medianaPrecioM2 = MEDIANA_PRECIO_M2_POR_ZONA[prop.zona || ''] || MEDIANA_PRECIO_M2_POR_ZONA['default']
   const precioM2 = prop.precio_m2 || (prop.precio_usd / (prop.area_m2 || 1))
-
-  // Trade-off: ubicacion_vs_metros
-  // 1-2 = prioriza ubicación (sin boost en MVP)
-  // 4-5 = prioriza metros: boost si área > mediana
-  if (datosUsuario.ubicacion_vs_metros >= 4) {
-    if ((prop.area_m2 || 0) > medianaArea) {
-      score += 10
-    }
-  }
-
-  // Trade-off: calidad_vs_precio (SOLO AMENIDADES - precio ya está en OPORTUNIDAD)
-  // 1-2 = prioriza calidad: boost si muchas amenidades
-  // 4-5 = prioriza precio: sin boost adicional (ya cubierto en OPORTUNIDAD)
-  let calidadBoost = 0
   const totalAmenidades = (prop.amenities_confirmados?.length || 0)
+
   debugScores.calidad_vs_precio_slider = datosUsuario.calidad_vs_precio
+  debugScores.amenidades_vs_metros_slider = datosUsuario.amenidades_vs_metros
   debugScores.precioM2 = precioM2
   debugScores.medianaPrecioM2 = medianaPrecioM2
   debugScores.totalAmenidades = totalAmenidades
+  debugScores.area_m2 = prop.area_m2 || 0
+  debugScores.medianaArea = medianaArea
 
+  // Trade-off 1: amenidades_vs_precio (SOLO en sección OPORTUNIDAD - ya cubierto arriba)
+  // El slider calidad_vs_precio ya afecta la sección OPORTUNIDAD (0-40 pts)
+  // Aquí solo agregamos boost extra por muchas amenidades si prioriza amenidades
+  let amenidadesPrecioBoost = 0
   if (datosUsuario.calidad_vs_precio <= 2 && totalAmenidades >= 5) {
-    // Prioriza calidad: bonus por muchas amenidades
-    calidadBoost = 10
+    // Prioriza amenidades sobre precio: bonus por muchas amenidades
+    amenidadesPrecioBoost = 10
   }
-  score += calidadBoost
-  debugScores.calidadBoost = calidadBoost
+  score += amenidadesPrecioBoost
+  debugScores.amenidadesPrecioBoost = amenidadesPrecioBoost
+
+  // Trade-off 2: amenidades_vs_metros (NUEVO)
+  // 1-2 = prioriza amenidades: boost si tiene >= 5 amenidades
+  // 3   = balance: boost parcial para ambos
+  // 4-5 = prioriza metros: boost si área > mediana
+  let amenidadesMetrosBoost = 0
+  if (datosUsuario.amenidades_vs_metros <= 2) {
+    // Prioriza amenidades sobre metros
+    if (totalAmenidades >= 5) {
+      amenidadesMetrosBoost = 15
+    } else if (totalAmenidades >= 3) {
+      amenidadesMetrosBoost = 7
+    }
+  } else if (datosUsuario.amenidades_vs_metros >= 4) {
+    // Prioriza metros sobre amenidades
+    if ((prop.area_m2 || 0) > medianaArea) {
+      amenidadesMetrosBoost = 15
+    } else if ((prop.area_m2 || 0) > medianaArea * 0.9) {
+      amenidadesMetrosBoost = 7
+    }
+  } else {
+    // Balance (slider = 3): boost parcial para ambos
+    if (totalAmenidades >= 5) amenidadesMetrosBoost += 7
+    if ((prop.area_m2 || 0) > medianaArea) amenidadesMetrosBoost += 7
+  }
+  score += amenidadesMetrosBoost
+  debugScores.amenidadesMetrosBoost = amenidadesMetrosBoost
 
   // 4. DESEABLES (0 a 15) - max 3 deseables, 5 pts cada uno
   if (datosUsuario.deseables.length > 0) {
@@ -762,6 +784,7 @@ export default function ResultadosPage() {
         deseables: deseables ? (deseables as string).split(',').filter(Boolean) : [],
         ubicacion_vs_metros: ubicacion_vs_metros ? parseInt(ubicacion_vs_metros as string) : 3,
         calidad_vs_precio: calidad_vs_precio ? parseInt(calidad_vs_precio as string) : 3,
+        amenidades_vs_metros: amenidades_vs_metros ? parseInt(amenidades_vs_metros as string) : 3,
         quienes_viven: 'No especificado',
         // Nuevos campos Level 2 para personalización
         necesita_parqueo: usuarioNecesitaParqueo,
@@ -1056,6 +1079,7 @@ export default function ResultadosPage() {
     pareja_alineados,
     ubicacion_vs_metros,
     calidad_vs_precio,
+    amenidades_vs_metros,
     necesita_parqueo,
     necesita_baulera,
   } = router.query
@@ -1268,6 +1292,7 @@ export default function ResultadosPage() {
     if (pareja_alineados) params.set('pareja_alineados', pareja_alineados as string)
     if (ubicacion_vs_metros) params.set('ubicacion_vs_metros', ubicacion_vs_metros as string)
     if (calidad_vs_precio) params.set('calidad_vs_precio', calidad_vs_precio as string)
+    if (amenidades_vs_metros) params.set('amenidades_vs_metros', amenidades_vs_metros as string)
 
     setEditingFilter(null)
     // Cerrar modal premium si está abierto (para que muestre datos frescos al reabrir)
@@ -1283,7 +1308,8 @@ export default function ResultadosPage() {
     deseables: deseables ? (deseables as string).split(',').filter(Boolean) : [],
     ubicacion_vs_metros: parseInt(ubicacion_vs_metros as string) || 3,
     calidad_vs_precio: parseInt(calidad_vs_precio as string) || 3,
-  }), [innegociables, deseables, ubicacion_vs_metros, calidad_vs_precio])
+    amenidades_vs_metros: parseInt(amenidades_vs_metros as string) || 3,
+  }), [innegociables, deseables, ubicacion_vs_metros, calidad_vs_precio, amenidades_vs_metros])
 
   // Ordenar propiedades por MOAT score
   const propiedadesOrdenadas = useMemo(() => {
@@ -3842,7 +3868,8 @@ ${top3Texto}
             innegociables: innegociables ? (innegociables as string).split(',').filter(Boolean) : undefined,
             deseables: deseables ? (deseables as string).split(',').filter(Boolean) : undefined,
             ubicacion_vs_metros: ubicacion_vs_metros ? parseInt(ubicacion_vs_metros as string) : undefined,
-            calidad_vs_precio: calidad_vs_precio ? parseInt(calidad_vs_precio as string) : undefined
+            calidad_vs_precio: calidad_vs_precio ? parseInt(calidad_vs_precio as string) : undefined,
+            amenidades_vs_metros: amenidades_vs_metros ? parseInt(amenidades_vs_metros as string) : undefined
           }}
           propiedadesSeleccionadas={orderedProps.length > 0 ? getOrderedSelectedProperties().map(p => ({
             id: p.id,
