@@ -629,7 +629,7 @@ export default function DashboardSalud() {
                   </div>
                   <div className="flex justify-between pt-3 border-t">
                     <span className="text-slate-600">Última consulta</span>
-                    <span className="text-slate-500">{formatHace(tcStats.ultima_actualizacion)}</span>
+                    <span className="text-slate-500">{tcStats.ultima_actualizacion ? formatHace(tcStats.ultima_actualizacion) : 'N/A'}</span>
                   </div>
                 </div>
               ) : (
