@@ -40,7 +40,7 @@ interface ColasHITL {
 interface TCStats {
   tc_paralelo: string
   tc_oficial: string
-  ultima_actualizacion: string
+  ultima_actualizacion: string | null
 }
 
 interface WorkflowHealth {
@@ -207,17 +207,25 @@ export default function DashboardSalud() {
   const fetchTCStats = async () => {
     if (!supabase) return
 
-    const { data } = await supabase
+    // TC Paralelo (lowercase, actualizado por Binance)
+    const { data: paralelo } = await supabase
       .from('config_global')
-      .select('valor, updated_at')
-      .eq('clave', 'tipo_cambio')
+      .select('valor, fecha_actualizacion')
+      .eq('clave', 'tipo_cambio_paralelo')
       .single()
 
-    if (data?.valor) {
+    // TC Oficial (lowercase)
+    const { data: oficial } = await supabase
+      .from('config_global')
+      .select('valor')
+      .eq('clave', 'tipo_cambio_oficial')
+      .single()
+
+    if (paralelo || oficial) {
       setTCStats({
-        tc_paralelo: data.valor.tipo_cambio_paralelo || '-',
-        tc_oficial: data.valor.tipo_cambio_oficial || '-',
-        ultima_actualizacion: data.updated_at
+        tc_paralelo: paralelo?.valor || '-',
+        tc_oficial: oficial?.valor || '-',
+        ultima_actualizacion: paralelo?.fecha_actualizacion || null
       })
     }
   }
@@ -225,11 +233,11 @@ export default function DashboardSalud() {
   const fetchWorkflowHealth = async () => {
     if (!supabase) return
 
-    // Workflows recurrentes que queremos monitorear (excluir migraciones one-time)
+    // Workflows recurrentes que queremos monitorear
     const workflowsRecurrentes = [
-      'discovery', 'enrichment', 'merge', 'matching_nocturno',
-      'tc_dinamico_binance', 'auditoria_diaria', 'matching_supervisor',
-      'supervisor_sin_match', 'flujo_a', 'flujo_b', 'flujo_c'
+      'discovery', 'discovery_remax', 'discovery_century21',
+      'enrichment', 'merge', 'matching_nocturno',
+      'tc_dinamico_binance', 'auditoria_diaria'
     ]
 
     const { data } = await supabase
@@ -243,11 +251,17 @@ export default function DashboardSalud() {
       const workflowMap = new Map<string, WorkflowHealth>()
       const now = new Date()
 
+      // Workflows deprecados (reemplazados por admin dashboard)
+      const workflowsDeprecados = [
+        'matching_supervisor', 'supervisor_sin_match', 'exportar_sin_match'
+      ]
+
       for (const row of data) {
-        // Excluir migraciones y scripts one-time
+        // Excluir migraciones, scripts one-time, y workflows deprecados
         const nombreLower = row.workflow_name.toLowerCase()
         if (nombreLower.includes('migracion') || nombreLower.includes('migration') ||
-            nombreLower.includes('fix_') || nombreLower.includes('script_')) {
+            nombreLower.includes('fix_') || nombreLower.includes('script_') ||
+            workflowsDeprecados.includes(row.workflow_name)) {
           continue
         }
 
@@ -264,7 +278,24 @@ export default function DashboardSalud() {
         }
       }
 
-      setWorkflows(Array.from(workflowMap.values()))
+      // Ordenar por horario programado
+      const ordenWorkflows: Record<string, number> = {
+        'discovery_remax': 1,
+        'discovery_century21': 2,
+        'enrichment': 3,
+        'merge': 4,
+        'matching_nocturno': 5,
+        'auditoria_diaria': 6,
+        'tc_dinamico_binance': 7
+      }
+
+      const workflowsSorted = Array.from(workflowMap.values()).sort((a, b) => {
+        const ordenA = ordenWorkflows[a.workflow_name] ?? 99
+        const ordenB = ordenWorkflows[b.workflow_name] ?? 99
+        return ordenA - ordenB
+      })
+
+      setWorkflows(workflowsSorted)
     }
   }
 
@@ -323,6 +354,21 @@ export default function DashboardSalud() {
     if (wf.horas_desde_run > 26) return '🔴'
     if (wf.horas_desde_run > 12) return '🟡'
     return '✅'
+  }
+
+  // Horarios programados de cada workflow (hora Bolivia)
+  const workflowSchedule: Record<string, string> = {
+    'discovery_remax': '02:00 AM',
+    'discovery_century21': '02:30 AM',
+    'enrichment': '03:00 AM',
+    'merge': '03:30 AM',
+    'matching_nocturno': '04:00 AM',
+    'auditoria_diaria': '08:00 AM',
+    'tc_dinamico_binance': 'cada 1h'
+  }
+
+  const getSchedule = (workflowName: string): string => {
+    return workflowSchedule[workflowName] || '-'
   }
 
   return (
@@ -615,6 +661,9 @@ export default function DashboardSalud() {
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
                       hace {formatHace(wf.ultimo_run)}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      🕐 {getSchedule(wf.workflow_name)}
                     </p>
                   </div>
                 ))}
