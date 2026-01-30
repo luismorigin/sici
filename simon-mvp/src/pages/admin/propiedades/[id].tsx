@@ -241,6 +241,19 @@ export default function EditarPropiedad() {
     }
   }, [id])
 
+  // Refrescar datos cuando el usuario vuelve de otra página (ej: después de propagar desde proyecto)
+  useEffect(() => {
+    const handleRouteChange = (url: string) => {
+      // Si el usuario vuelve a esta misma página de edición, refrescar datos
+      if (url.startsWith('/admin/propiedades/') && id) {
+        fetchPropiedad()
+        fetchHistorial()
+      }
+    }
+    router.events.on('routeChangeComplete', handleRouteChange)
+    return () => router.events.off('routeChangeComplete', handleRouteChange)
+  }, [router.events, id])
+
   // Cargar lista de proyectos para el selector
   useEffect(() => {
     const fetchProyectos = async () => {
