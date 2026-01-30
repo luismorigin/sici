@@ -35,10 +35,10 @@ export default function Hero() {
           transition={{ duration: 0.6 }}
         >
           {/* Badge */}
-          <span className="inline-flex items-center gap-2 bg-amber-100 text-amber-800 text-sm font-medium px-4 py-2 rounded-full mb-6">
+          <span className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 text-sm font-medium px-4 py-2 rounded-full mb-6">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-600"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
             </span>
             Datos actualizados hoy
           </span>
@@ -60,10 +60,11 @@ export default function Hero() {
             <motion.div
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="relative bg-gradient-to-r from-brand-primary to-amber-500 text-white rounded-2xl px-8 py-6 md:px-12 md:py-8 shadow-xl hover:shadow-2xl transition-all duration-300"
+              className="relative bg-brand-primary hover:bg-brand-primary-hover text-white rounded-2xl px-8 py-6 md:px-12 md:py-8 shadow-xl hover:shadow-2xl transition-all duration-300"
+              style={{ boxShadow: '0 8px 30px rgba(59, 130, 246, 0.35)' }}
             >
               {/* Shine effect */}
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
               <div className="relative flex flex-col items-center gap-3">
                 <div className="flex items-center gap-3 text-xl md:text-2xl font-bold">
