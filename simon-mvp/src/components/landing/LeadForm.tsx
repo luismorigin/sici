@@ -1,9 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/router'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { guardarLead, type LeadResult } from '@/lib/supabase'
 
 export type LeadTipo = 'comprador' | 'vendedor' | 'broker' | 'avaluador'
 
@@ -11,223 +9,32 @@ interface LeadFormProps {
   tipo?: LeadTipo
 }
 
-// Copy adaptado por tipo
-const copyPorTipo = {
-  comprador: {
-    titulo: 'Obten este analisis para ti.',
-    subtitulo: 'Genera tu propio informe personalizado en menos de 2 minutos. Gratis y sin compromiso.',
-    cta: 'Generar Mi Informe Gratis',
-    exito: 'Redirigiendo a tu busqueda personalizada...',
-    redireccion: '/filtros',
-    mostrarDisclaimer: true
-  },
-  vendedor: {
-    titulo: 'Solicitar Avaluo Comercial',
-    subtitulo: 'Un asesor te contactara para darte un analisis personalizado de tu propiedad.',
-    cta: 'Solicitar Avaluo',
-    exito: 'Te contactaremos pronto con tu analisis.',
-    redireccion: null,
-    mostrarDisclaimer: false
-  },
-  broker: {
-    titulo: 'Descargar CMA Profesional',
-    subtitulo: 'Genera un PDF profesional para presentar a tu cliente.',
-    cta: 'Generar CMA en PDF',
-    exito: 'Te enviaremos el CMA a tu email.',
-    redireccion: null,
-    mostrarDisclaimer: false
-  },
-  avaluador: {
-    titulo: 'Exportar Referencias',
-    subtitulo: 'Exporta los datos en formato compatible con tu sistema de avaluos.',
-    cta: 'Exportar Datos',
-    exito: 'Te enviaremos las referencias a tu email.',
-    redireccion: null,
-    mostrarDisclaimer: false
-  }
-}
-
 export default function LeadForm({ tipo = 'comprador' }: LeadFormProps) {
-  const router = useRouter()
-  const config = copyPorTipo[tipo]
-
-  const [form, setForm] = useState({
-    nombre: '',
-    email: '',
-    whatsapp: ''
-  })
-  const [loading, setLoading] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-  const [error, setError] = useState('')
-  const [leadId, setLeadId] = useState<number | null>(null)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-
-    try {
-      // Agregar tipo al lead para tracking
-      const leadData = { ...form, tipo }
-      const result: LeadResult = await guardarLead(leadData)
-
-      if (result.success) {
-        setSubmitted(true)
-        if (result.leadId) {
-          setLeadId(result.leadId)
-          console.log('Lead guardado con ID:', result.leadId, 'tipo:', tipo)
-        }
-        // Redirect solo si hay redireccion configurada
-        if (config.redireccion) {
-          setTimeout(() => {
-            router.push(config.redireccion!)
-          }, 2000)
-        }
-      } else {
-        // Si falla Supabase, igual mostrar éxito para UX (pero logear)
-        console.warn('Lead no guardado en BD:', result.error)
-        setSubmitted(true)
-        if (config.redireccion) {
-          setTimeout(() => {
-            router.push(config.redireccion!)
-          }, 2000)
-        }
-      }
-    } catch (err) {
-      console.error('Error en formulario:', err)
-      setError('Hubo un error. Por favor intenta de nuevo.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (submitted) {
-    return (
-      <motion.div
-        className="bg-white border-t border-slate-200 p-8 text-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <div className="max-w-md mx-auto">
-          <div className="w-16 h-16 bg-state-success-bg rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-state-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h3 className="font-display text-2xl font-bold text-brand-dark mb-2">
-            ¡Gracias, {form.nombre.split(' ')[0]}!
-          </h3>
-          <p className="text-slate-500">
-            {config.exito}
-          </p>
-          <p className="text-xs text-slate-400 mt-2">
-            También te enviaremos resultados a <strong>{form.email}</strong>
-          </p>
-        </div>
-      </motion.div>
-    )
-  }
-
   return (
-    <div className={`bg-white ${tipo === 'comprador' ? 'border-t border-slate-200' : ''} p-8`} id="cta-form">
+    <div className="bg-white border-t border-slate-200 p-8" id="cta-form">
       <div className="max-w-md mx-auto text-center">
         <h3 className="font-display text-2xl font-bold text-brand-dark mb-2">
-          {config.titulo}
+          Obtené tu análisis personalizado
         </h3>
         <p className="text-slate-500 mb-6">
-          {config.subtitulo}
+          Compará precios, descubrí oportunidades y encontrá el depto ideal para vos.
         </p>
 
-        {/* Disclaimer con opción de saltar - solo para compradores */}
-        {config.mostrarDisclaimer && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
-            <p className="text-sm text-slate-600">
-              <strong>Esto es un test.</strong> Podes explorar sin dejar tus datos,
-              pero si los dejas te avisamos cuando haya propiedades nuevas que encajen.
-            </p>
-            <button
-              type="button"
-              onClick={() => router.push('/filtros')}
-              className="text-brand-primary text-sm font-medium mt-2 hover:underline"
-            >
-              → Saltar y explorar directamente
-            </button>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4 text-left">
-          <div>
-            <label className="block text-sm font-semibold text-brand-dark mb-1">
-              Tu Nombre Completo
-            </label>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="Ej. Juan Pérez"
-              value={form.nombre}
-              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-brand-dark mb-1">
-              Correo Electrónico
-            </label>
-            <input
-              type="email"
-              className="form-input"
-              placeholder="juan@ejemplo.com"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-brand-dark mb-1">
-              Número de WhatsApp
-            </label>
-            <input
-              type="tel"
-              className="form-input"
-              placeholder="+591 70000000"
-              value={form.whatsapp}
-              onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-              required
-            />
-          </div>
-
-          {error && (
-            <p className="text-sm text-state-danger">{error}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn btn-primary w-full py-4 text-base mt-2"
+        <Link href="/filtros">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="btn btn-primary w-full py-4 text-base"
           >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Procesando...
-              </span>
-            ) : (
-              <>
-                {config.cta}
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </>
-            )}
-          </button>
-        </form>
+            🔍 Empezar Búsqueda Gratis
+            <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </motion.button>
+        </Link>
 
         <p className="text-xs text-slate-400 mt-4">
-          Tus datos están seguros. No hacemos spam.
+          Sin registro. 100% gratis. Resultados inmediatos.
         </p>
       </div>
     </div>

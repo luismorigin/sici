@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 
 export default function Hero() {
   const [propertyCount, setPropertyCount] = useState<number | null>(null)
+  const [showTooltip, setShowTooltip] = useState(false)
 
   // Fetch real property count from database
   useEffect(() => {
@@ -34,25 +35,42 @@ export default function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          {/* Badge */}
-          <span className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 text-sm font-medium px-4 py-2 rounded-full mb-6">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
+          {/* Badge con tooltip */}
+          <div className="relative inline-block mb-6">
+            <span
+              className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 text-sm font-medium px-4 py-2 rounded-full cursor-help"
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+              onClick={() => setShowTooltip(!showTooltip)}
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
+              </span>
+              Datos y precios normalizados hoy a TC oficial
+              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </span>
-            Datos actualizados hoy
-          </span>
+            {/* Tooltip */}
+            {showTooltip && (
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-72 md:w-80 p-3 bg-slate-800 text-white text-sm rounded-lg shadow-lg z-10">
+                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-slate-800"></div>
+                Actualizamos el TC cada hora desde Binance P2P. Si la oferta está en paralelo, lo convertimos al oficial para que puedas comparar manzanas con manzanas.
+              </div>
+            )}
+          </div>
 
           {/* Title */}
           <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-dark leading-tight mb-6">
-            Tu departamento en Equipetrol,
-            <span className="text-brand-primary"> sin perder tiempo.</span>
+            ¿El precio por ese departamento en Equipetrol
+            <span className="text-brand-primary"> es justo?</span>
           </h1>
 
           {/* Subtitle */}
           <p className="text-lg md:text-xl text-slate-500 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Precio real por m², comparativas por zona, y solo opciones que valen la pena.
-            <strong className="text-slate-700"> Sin publicidad pagada. Sin agentes.</strong>
+            Compará con todos los similares de la zona.
+            <strong className="text-slate-700"> La respuesta que nadie más te da.</strong>
           </p>
 
           {/* MAIN CTA - Big Button */}
@@ -68,10 +86,8 @@ export default function Hero() {
 
               <div className="relative flex flex-col items-center gap-3">
                 <div className="flex items-center gap-3 text-xl md:text-2xl font-bold">
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  EXPLORAR PROPIEDADES EN EQUIPETROL
+                  <span className="text-2xl">🔍</span>
+                  DESCUBRÍ SI ES JUSTO
                 </div>
 
                 <div className="flex items-center gap-2 text-white/90 text-base md:text-lg">
