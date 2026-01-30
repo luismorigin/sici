@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import { supabase } from '@/lib/supabase'
 
 interface Propiedad {
@@ -89,6 +90,7 @@ interface BrokerOption {
 }
 
 export default function AdminPropiedades() {
+  const router = useRouter()
   const [propiedades, setPropiedades] = useState<PropiedadConCandados[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -117,6 +119,22 @@ export default function AdminPropiedades() {
   const [amenitiesExpandidos, setAmenitiesExpandidos] = useState<Set<number>>(new Set())
   const [equipamientoExpandido, setEquipamientoExpandido] = useState<Set<number>>(new Set())
 
+  // Refrescar datos cuando se navega de vuelta a esta página
+  useEffect(() => {
+    const handleRouteChange = (url: string) => {
+      // Si navegamos a esta página (propiedades index), refrescar datos
+      if (url === '/admin/propiedades' || url.startsWith('/admin/propiedades?')) {
+        fetchPropiedades()
+      }
+    }
+
+    router.events.on('routeChangeComplete', handleRouteChange)
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange)
+    }
+  }, [router.events, zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado])
+
+  // Fetch inicial y cuando cambian filtros
   useEffect(() => {
     fetchPropiedades()
   }, [zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado])
