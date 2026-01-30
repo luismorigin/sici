@@ -20,9 +20,18 @@ interface FormData {
   fecha_entrega: string
   plan_pagos: string
   descripcion: string
-  parqueo_incluido: boolean
+  // Parqueo
+  parqueo_incluido: boolean | null  // null = no tiene
   cantidad_parqueos: string
-  baulera_incluida: boolean
+  parqueo_precio_adicional: string
+  // Baulera
+  baulera_incluida: boolean | null  // null = no tiene
+  baulera_precio_adicional: string
+  // Forma de pago
+  precio_negociable: boolean
+  acepta_permuta: boolean
+  descuento_contado_pct: string
+  // Otros
   expensas_usd: string
   amenidades: string[]
   amenidades_custom: string[]
@@ -92,9 +101,18 @@ export default function NuevaPropiedad() {
     fecha_entrega: '',
     plan_pagos: '',
     descripcion: '',
+    // Parqueo
     parqueo_incluido: true,
     cantidad_parqueos: '1',
-    baulera_incluida: false,
+    parqueo_precio_adicional: '',
+    // Baulera
+    baulera_incluida: null,  // null = no especificado aún
+    baulera_precio_adicional: '',
+    // Forma de pago
+    precio_negociable: false,
+    acepta_permuta: false,
+    descuento_contado_pct: '',
+    // Otros
     expensas_usd: '',
     amenidades: [],
     amenidades_custom: [],
@@ -205,9 +223,25 @@ export default function NuevaPropiedad() {
           fecha_entrega: formData.fecha_entrega || null,
           plan_pagos: formData.plan_pagos || null,
           descripcion: formData.descripcion || null,
+          // Parqueo
           parqueo_incluido: formData.parqueo_incluido,
-          cantidad_parqueos: formData.parqueo_incluido ? parseInt(formData.cantidad_parqueos) : 0,
+          cantidad_parqueos: formData.parqueo_incluido === true ? parseInt(formData.cantidad_parqueos) : 0,
+          precio_parqueo_extra: formData.parqueo_incluido === false && formData.parqueo_precio_adicional
+            ? parseFloat(formData.parqueo_precio_adicional)
+            : null,
+          // Baulera
           baulera_incluida: formData.baulera_incluida,
+          precio_baulera_extra: formData.baulera_incluida === false && formData.baulera_precio_adicional
+            ? parseFloat(formData.baulera_precio_adicional)
+            : null,
+          // Forma de pago
+          precio_negociable: formData.precio_negociable,
+          acepta_permuta: formData.acepta_permuta,
+          // solo_tc_paralelo se infiere del campo tipo_cambio si es 'paralelo'
+          descuento_contado: formData.descuento_contado_pct
+            ? parseFloat(formData.descuento_contado_pct)
+            : null,
+          // Otros
           expensas_usd: formData.expensas_usd ? parseFloat(formData.expensas_usd) : null,
           amenidades: {
             lista: [...formData.amenidades, ...formData.amenidades_custom],
@@ -549,42 +583,171 @@ export default function NuevaPropiedad() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="parqueo"
-                      checked={formData.parqueo_incluido}
-                      onChange={(e) => updateField('parqueo_incluido', e.target.checked)}
-                      className="w-5 h-5 rounded text-amber-500 focus:ring-amber-500"
-                    />
-                    <label htmlFor="parqueo" className="text-sm font-medium text-slate-700">
-                      Parqueo incluido
+                {/* Sección Parqueo */}
+                <div className="border-t border-slate-200 pt-4">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                    <span>🚗</span> Parqueo
+                  </h3>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="parqueo"
+                        checked={formData.parqueo_incluido === true}
+                        onChange={() => {
+                          updateField('parqueo_incluido', true)
+                          updateField('parqueo_precio_adicional', '')
+                        }}
+                        className="w-4 h-4 text-amber-500 focus:ring-amber-500"
+                      />
+                      <span className="text-sm text-slate-700">Incluido en precio</span>
+                      {formData.parqueo_incluido === true && (
+                        <select
+                          value={formData.cantidad_parqueos}
+                          onChange={(e) => updateField('cantidad_parqueos', e.target.value)}
+                          className="w-20 px-2 py-1 border border-slate-300 rounded text-sm ml-2"
+                        >
+                          {[1, 2, 3, 4].map(n => (
+                            <option key={n} value={n}>{n} parqueo{n > 1 ? 's' : ''}</option>
+                          ))}
+                        </select>
+                      )}
                     </label>
-                    {formData.parqueo_incluido && (
-                      <select
-                        value={formData.cantidad_parqueos}
-                        onChange={(e) => updateField('cantidad_parqueos', e.target.value)}
-                        className="w-20 px-2 py-1 border border-slate-300 rounded text-sm"
-                      >
-                        {[1, 2, 3, 4].map(n => (
-                          <option key={n} value={n}>{n}</option>
-                        ))}
-                      </select>
-                    )}
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="parqueo"
+                        checked={formData.parqueo_incluido === false}
+                        onChange={() => updateField('parqueo_incluido', false)}
+                        className="w-4 h-4 text-amber-500 focus:ring-amber-500"
+                      />
+                      <span className="text-sm text-slate-700">Precio adicional</span>
+                      {formData.parqueo_incluido === false && (
+                        <div className="flex items-center gap-2 ml-2">
+                          <span className="text-slate-500">$</span>
+                          <input
+                            type="number"
+                            value={formData.parqueo_precio_adicional}
+                            onChange={(e) => updateField('parqueo_precio_adicional', e.target.value)}
+                            className="w-24 px-3 py-1 border border-slate-300 rounded text-sm"
+                            placeholder="15000"
+                          />
+                          <span className="text-xs text-slate-500">por parqueo</span>
+                        </div>
+                      )}
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="parqueo"
+                        checked={formData.parqueo_incluido === null}
+                        onChange={() => {
+                          updateField('parqueo_incluido', null)
+                          updateField('parqueo_precio_adicional', '')
+                          updateField('cantidad_parqueos', '0')
+                        }}
+                        className="w-4 h-4 text-amber-500 focus:ring-amber-500"
+                      />
+                      <span className="text-sm text-slate-500">No tiene parqueo</span>
+                    </label>
                   </div>
+                </div>
 
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="baulera"
-                      checked={formData.baulera_incluida}
-                      onChange={(e) => updateField('baulera_incluida', e.target.checked)}
-                      className="w-5 h-5 rounded text-amber-500 focus:ring-amber-500"
-                    />
-                    <label htmlFor="baulera" className="text-sm font-medium text-slate-700">
-                      Baulera incluida
+                {/* Sección Baulera */}
+                <div className="border-t border-slate-200 pt-4">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                    <span>📦</span> Baulera
+                  </h3>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="baulera"
+                        checked={formData.baulera_incluida === true}
+                        onChange={() => {
+                          updateField('baulera_incluida', true)
+                          updateField('baulera_precio_adicional', '')
+                        }}
+                        className="w-4 h-4 text-amber-500 focus:ring-amber-500"
+                      />
+                      <span className="text-sm text-slate-700">Incluida en precio</span>
                     </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="baulera"
+                        checked={formData.baulera_incluida === false}
+                        onChange={() => updateField('baulera_incluida', false)}
+                        className="w-4 h-4 text-amber-500 focus:ring-amber-500"
+                      />
+                      <span className="text-sm text-slate-700">Precio adicional</span>
+                      {formData.baulera_incluida === false && (
+                        <div className="flex items-center gap-2 ml-2">
+                          <span className="text-slate-500">$</span>
+                          <input
+                            type="number"
+                            value={formData.baulera_precio_adicional}
+                            onChange={(e) => updateField('baulera_precio_adicional', e.target.value)}
+                            className="w-24 px-3 py-1 border border-slate-300 rounded text-sm"
+                            placeholder="3000"
+                          />
+                        </div>
+                      )}
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="baulera"
+                        checked={formData.baulera_incluida === null}
+                        onChange={() => {
+                          updateField('baulera_incluida', null)
+                          updateField('baulera_precio_adicional', '')
+                        }}
+                        className="w-4 h-4 text-amber-500 focus:ring-amber-500"
+                      />
+                      <span className="text-sm text-slate-500">No tiene baulera</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Sección Forma de Pago */}
+                <div className="border-t border-slate-200 pt-4">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                    <span>💳</span> Forma de Pago
+                  </h3>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.precio_negociable}
+                        onChange={(e) => updateField('precio_negociable', e.target.checked)}
+                        className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500"
+                      />
+                      <span className="text-sm text-slate-700">Precio negociable</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.acepta_permuta}
+                        onChange={(e) => updateField('acepta_permuta', e.target.checked)}
+                        className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500"
+                      />
+                      <span className="text-sm text-slate-700">Acepta permuta</span>
+                      <span className="text-xs text-slate-400">(vehículo, otro inmueble)</span>
+                    </label>
+                    <div className="flex items-center gap-3 pt-2">
+                      <span className="text-sm text-slate-700">Descuento por pago al contado:</span>
+                      <input
+                        type="number"
+                        value={formData.descuento_contado_pct}
+                        onChange={(e) => updateField('descuento_contado_pct', e.target.value)}
+                        className="w-20 px-3 py-1 border border-slate-300 rounded text-sm"
+                        placeholder="5"
+                        min="0"
+                        max="30"
+                      />
+                      <span className="text-slate-500">%</span>
+                    </div>
                   </div>
                 </div>
 
