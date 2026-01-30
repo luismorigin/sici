@@ -1,9 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  LineChart, Line, AreaChart, Area, ScatterChart, Scatter, ZAxis,
+  PieChart, Pie, Legend
+} from 'recharts'
 
-// Interfaces
+// ============================================================================
+// INTERFACES
+// ============================================================================
+
 interface KPIData {
   total_unidades: number
   proyectos_activos: number
@@ -14,18 +22,15 @@ interface KPIData {
   tc_oficial: number
 }
 
-interface DormitoriosData {
+interface TipologiaData {
   dormitorios: number | null
   cantidad: number
+  porcentaje: number
   precio_promedio: number
+  area_promedio: number
   precio_m2: number
-}
-
-interface EstadoConstruccionData {
-  estado: string
-  cantidad: number
-  precio_promedio: number
-  precio_m2: number
+  precio_min: number
+  precio_max: number
 }
 
 interface ProyectoData {
@@ -37,9 +42,9 @@ interface ProyectoData {
   precio_m2: number
 }
 
-interface ZonaData {
-  zona: string
-  unidades: number
+interface EstadoData {
+  estado: string
+  cantidad: number
   precio_m2: number
 }
 
@@ -47,9 +52,7 @@ interface SnapshotData {
   fecha: string
   props_total: number
   props_completadas: number
-  props_matcheadas: number
   pct_match_completadas: number
-  props_creadas_24h: number
 }
 
 interface TCHistoricoData {
@@ -57,20 +60,37 @@ interface TCHistoricoData {
   tc_promedio: number
 }
 
+interface OportunidadData {
+  proyecto: string
+  dormitorios: number
+  precio_usd: number
+  area_m2: number
+  precio_m2: number
+  diff_porcentaje: number
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
 export default function MarketPulseDashboard() {
   const [loading, setLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
 
   // Data states
   const [kpis, setKpis] = useState<KPIData | null>(null)
-  const [dormitorios, setDormitorios] = useState<DormitoriosData[]>([])
-  const [estadoConstruccion, setEstadoConstruccion] = useState<EstadoConstruccionData[]>([])
+  const [tipologias, setTipologias] = useState<TipologiaData[]>([])
   const [topProyectos, setTopProyectos] = useState<ProyectoData[]>([])
-  const [zonas, setZonas] = useState<ZonaData[]>([])
+  const [estados, setEstados] = useState<EstadoData[]>([])
   const [snapshots, setSnapshots] = useState<SnapshotData[]>([])
   const [tcHistorico, setTcHistorico] = useState<TCHistoricoData[]>([])
+  const [oportunidades, setOportunidades] = useState<OportunidadData[]>([])
+  const [premium, setPremium] = useState<OportunidadData[]>([])
 
-  // Fetch all data
+  // ============================================================================
+  // FETCH FUNCTIONS
+  // ============================================================================
+
   const fetchAllData = async () => {
     if (!supabase) return
     setLoading(true)
@@ -78,12 +98,12 @@ export default function MarketPulseDashboard() {
     try {
       await Promise.all([
         fetchKPIs(),
-        fetchDormitorios(),
-        fetchEstadoConstruccion(),
+        fetchTipologias(),
         fetchTopProyectos(),
-        fetchZonas(),
+        fetchEstados(),
         fetchSnapshots(),
-        fetchTCHistorico()
+        fetchTCHistorico(),
+        fetchOportunidades()
       ])
       setLastUpdate(new Date())
     } catch (err) {
@@ -93,17 +113,18 @@ export default function MarketPulseDashboard() {
     }
   }
 
-  // Individual fetch functions
   const fetchKPIs = async () => {
     if (!supabase) return
 
-    const { data: propStats } = await supabase
+    // Fetch properties
+    const { data: props } = await supabase
       .from('propiedades_v2')
       .select('precio_usd, area_total_m2, id_proyecto_master')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
 
+    // Fetch TC
     const { data: tcParalelo } = await supabase
       .from('config_global')
       .select('valor')
@@ -116,18 +137,22 @@ export default function MarketPulseDashboard() {
       .eq('clave', 'tipo_cambio_oficial')
       .single()
 
-    if (propStats) {
-      const validProps = propStats.filter(p => p.precio_usd && p.area_total_m2)
+    if (props) {
+      const validProps = props.filter(p => p.precio_usd && p.area_total_m2 && parseFloat(p.precio_usd) > 0)
       const totalUnidades = validProps.length
       const proyectosSet = new Set(validProps.map(p => p.id_proyecto_master).filter(Boolean))
 
-      const sumPrecio = validProps.reduce((acc, p) => acc + (parseFloat(p.precio_usd) || 0), 0)
-      const sumArea = validProps.reduce((acc, p) => acc + (parseFloat(p.area_total_m2) || 0), 0)
-      const sumPrecioM2 = validProps.reduce((acc, p) => {
+      let sumPrecio = 0
+      let sumArea = 0
+      let sumPrecioM2 = 0
+
+      validProps.forEach(p => {
         const precio = parseFloat(p.precio_usd) || 0
         const area = parseFloat(p.area_total_m2) || 1
-        return acc + (precio / area)
-      }, 0)
+        sumPrecio += precio
+        sumArea += area
+        sumPrecioM2 += precio / area
+      })
 
       setKpis({
         total_unidades: totalUnidades,
@@ -141,7 +166,7 @@ export default function MarketPulseDashboard() {
     }
   }
 
-  const fetchDormitorios = async () => {
+  const fetchTipologias = async () => {
     if (!supabase) return
 
     const { data } = await supabase
@@ -152,35 +177,121 @@ export default function MarketPulseDashboard() {
       .gte('area_total_m2', 20)
 
     if (data) {
-      const grouped = data.reduce((acc: Record<string, any>, p) => {
-        const key = p.dormitorios ?? 'null'
-        if (!acc[key]) {
-          acc[key] = { dormitorios: p.dormitorios, precios: [], preciosM2: [] }
-        }
-        if (p.precio_usd) {
-          acc[key].precios.push(parseFloat(p.precio_usd))
-          if (p.area_total_m2) {
-            acc[key].preciosM2.push(parseFloat(p.precio_usd) / parseFloat(p.area_total_m2))
-          }
-        }
-        return acc
-      }, {})
+      const validData = data.filter(p => p.precio_usd && parseFloat(p.precio_usd) > 1000)
+      const totalCount = validData.length
 
-      const result: DormitoriosData[] = Object.values(grouped)
-        .map((g: any) => ({
+      const grouped: Record<string, {
+        dormitorios: number | null
+        precios: number[]
+        areas: number[]
+        preciosM2: number[]
+      }> = {}
+
+      validData.forEach(p => {
+        const key = String(p.dormitorios ?? 'null')
+        if (!grouped[key]) {
+          grouped[key] = { dormitorios: p.dormitorios, precios: [], areas: [], preciosM2: [] }
+        }
+        const precio = parseFloat(p.precio_usd)
+        const area = parseFloat(p.area_total_m2) || 1
+        grouped[key].precios.push(precio)
+        grouped[key].areas.push(area)
+        grouped[key].preciosM2.push(precio / area)
+      })
+
+      const result: TipologiaData[] = Object.values(grouped)
+        .filter(g => g.precios.length > 0)
+        .map(g => ({
           dormitorios: g.dormitorios,
           cantidad: g.precios.length,
-          precio_promedio: Math.round(g.precios.reduce((a: number, b: number) => a + b, 0) / g.precios.length),
-          precio_m2: Math.round(g.preciosM2.reduce((a: number, b: number) => a + b, 0) / g.preciosM2.length)
+          porcentaje: Math.round((g.precios.length / totalCount) * 100),
+          precio_promedio: Math.round(g.precios.reduce((a, b) => a + b, 0) / g.precios.length),
+          area_promedio: Math.round((g.areas.reduce((a, b) => a + b, 0) / g.areas.length) * 10) / 10,
+          precio_m2: Math.round(g.preciosM2.reduce((a, b) => a + b, 0) / g.preciosM2.length),
+          precio_min: Math.round(Math.min(...g.precios)),
+          precio_max: Math.round(Math.max(...g.precios))
         }))
-        .filter(d => d.cantidad > 0)
-        .sort((a, b) => (a.dormitorios ?? -1) - (b.dormitorios ?? -1))
+        .sort((a, b) => b.cantidad - a.cantidad)
 
-      setDormitorios(result)
+      setTipologias(result)
     }
   }
 
-  const fetchEstadoConstruccion = async () => {
+  const fetchTopProyectos = async () => {
+    if (!supabase) return
+
+    // Fetch all properties with project IDs
+    const { data: props } = await supabase
+      .from('propiedades_v2')
+      .select('id_proyecto_master, precio_usd, area_total_m2')
+      .eq('status', 'completado')
+      .eq('tipo_operacion', 'venta')
+      .gte('area_total_m2', 20)
+      .not('id_proyecto_master', 'is', null)
+
+    if (!props || props.length === 0) return
+
+    // Get unique project IDs
+    const projectIds = [...new Set(props.map(p => p.id_proyecto_master).filter(Boolean))]
+
+    // Fetch project details
+    const { data: projects } = await supabase
+      .from('proyectos_master')
+      .select('id_proyecto_master, nombre_oficial, desarrollador')
+      .in('id_proyecto_master', projectIds)
+
+    if (!projects) return
+
+    // Create project lookup
+    const projectMap = new Map(projects.map(p => [p.id_proyecto_master, p]))
+
+    // Group properties by project
+    const grouped: Record<string, {
+      proyecto: string
+      desarrollador: string | null
+      precios: number[]
+      preciosM2: number[]
+    }> = {}
+
+    props.forEach(p => {
+      const proj = projectMap.get(p.id_proyecto_master)
+      if (!proj) return
+
+      const key = proj.nombre_oficial
+      if (!grouped[key]) {
+        grouped[key] = {
+          proyecto: proj.nombre_oficial,
+          desarrollador: proj.desarrollador,
+          precios: [],
+          preciosM2: []
+        }
+      }
+
+      const precio = parseFloat(p.precio_usd)
+      const area = parseFloat(p.area_total_m2) || 1
+      if (precio > 1000) {
+        grouped[key].precios.push(precio)
+        grouped[key].preciosM2.push(precio / area)
+      }
+    })
+
+    const result: ProyectoData[] = Object.values(grouped)
+      .filter(g => g.precios.length > 0)
+      .map(g => ({
+        proyecto: g.proyecto,
+        desarrollador: g.desarrollador,
+        unidades: g.precios.length,
+        desde: Math.round(Math.min(...g.precios)),
+        hasta: Math.round(Math.max(...g.precios)),
+        precio_m2: Math.round(g.preciosM2.reduce((a, b) => a + b, 0) / g.preciosM2.length)
+      }))
+      .sort((a, b) => b.unidades - a.unidades)
+      .slice(0, 15)
+
+    setTopProyectos(result)
+  }
+
+  const fetchEstados = async () => {
     if (!supabase) return
 
     const { data } = await supabase
@@ -192,122 +303,30 @@ export default function MarketPulseDashboard() {
       .not('estado_construccion', 'is', null)
 
     if (data) {
-      const grouped = data.reduce((acc: Record<string, any>, p) => {
-        const key = p.estado_construccion || 'no_especificado'
-        if (!acc[key]) {
-          acc[key] = { estado: key, precios: [], preciosM2: [] }
-        }
-        if (p.precio_usd) {
-          acc[key].precios.push(parseFloat(p.precio_usd))
-          if (p.area_total_m2) {
-            acc[key].preciosM2.push(parseFloat(p.precio_usd) / parseFloat(p.area_total_m2))
-          }
-        }
-        return acc
-      }, {})
+      const grouped: Record<string, { estado: string; preciosM2: number[] }> = {}
 
-      const result: EstadoConstruccionData[] = Object.values(grouped)
-        .map((g: any) => ({
+      data.forEach(p => {
+        const key = p.estado_construccion || 'no_especificado'
+        if (!grouped[key]) {
+          grouped[key] = { estado: key, preciosM2: [] }
+        }
+        const precio = parseFloat(p.precio_usd)
+        const area = parseFloat(p.area_total_m2) || 1
+        if (precio > 1000) {
+          grouped[key].preciosM2.push(precio / area)
+        }
+      })
+
+      const result: EstadoData[] = Object.values(grouped)
+        .filter(g => g.preciosM2.length > 0)
+        .map(g => ({
           estado: g.estado,
-          cantidad: g.precios.length,
-          precio_promedio: Math.round(g.precios.reduce((a: number, b: number) => a + b, 0) / g.precios.length),
-          precio_m2: Math.round(g.preciosM2.reduce((a: number, b: number) => a + b, 0) / g.preciosM2.length)
+          cantidad: g.preciosM2.length,
+          precio_m2: Math.round(g.preciosM2.reduce((a, b) => a + b, 0) / g.preciosM2.length)
         }))
-        .filter(d => d.cantidad > 0)
         .sort((a, b) => b.cantidad - a.cantidad)
 
-      setEstadoConstruccion(result)
-    }
-  }
-
-  const fetchTopProyectos = async () => {
-    if (!supabase) return
-
-    const { data } = await supabase
-      .from('propiedades_v2')
-      .select(`
-        precio_usd,
-        area_total_m2,
-        proyectos_master!inner (
-          nombre_oficial,
-          desarrollador
-        )
-      `)
-      .eq('status', 'completado')
-      .eq('tipo_operacion', 'venta')
-      .gte('area_total_m2', 20)
-      .not('id_proyecto_master', 'is', null)
-
-    if (data) {
-      const grouped = data.reduce((acc: Record<string, any>, p: any) => {
-        const proyecto = p.proyectos_master?.nombre_oficial || 'Sin nombre'
-        if (!acc[proyecto]) {
-          acc[proyecto] = {
-            proyecto,
-            desarrollador: p.proyectos_master?.desarrollador,
-            precios: [],
-            preciosM2: []
-          }
-        }
-        if (p.precio_usd) {
-          acc[proyecto].precios.push(parseFloat(p.precio_usd))
-          if (p.area_total_m2) {
-            acc[proyecto].preciosM2.push(parseFloat(p.precio_usd) / parseFloat(p.area_total_m2))
-          }
-        }
-        return acc
-      }, {})
-
-      const result: ProyectoData[] = Object.values(grouped)
-        .map((g: any) => ({
-          proyecto: g.proyecto,
-          desarrollador: g.desarrollador,
-          unidades: g.precios.length,
-          desde: Math.round(Math.min(...g.precios)),
-          hasta: Math.round(Math.max(...g.precios)),
-          precio_m2: Math.round(g.preciosM2.reduce((a: number, b: number) => a + b, 0) / g.preciosM2.length)
-        }))
-        .filter(d => d.unidades > 0)
-        .sort((a, b) => b.unidades - a.unidades)
-        .slice(0, 10)
-
-      setTopProyectos(result)
-    }
-  }
-
-  const fetchZonas = async () => {
-    if (!supabase) return
-
-    const { data } = await supabase
-      .from('propiedades_v2')
-      .select('zona, precio_usd, area_total_m2')
-      .eq('status', 'completado')
-      .eq('tipo_operacion', 'venta')
-      .gte('area_total_m2', 20)
-      .not('zona', 'is', null)
-
-    if (data) {
-      const grouped = data.reduce((acc: Record<string, any>, p) => {
-        const key = p.zona || 'Sin zona'
-        if (!acc[key]) {
-          acc[key] = { zona: key, preciosM2: [] }
-        }
-        if (p.precio_usd && p.area_total_m2) {
-          acc[key].preciosM2.push(parseFloat(p.precio_usd) / parseFloat(p.area_total_m2))
-        }
-        return acc
-      }, {})
-
-      const result: ZonaData[] = Object.values(grouped)
-        .map((g: any) => ({
-          zona: g.zona,
-          unidades: g.preciosM2.length,
-          precio_m2: Math.round(g.preciosM2.reduce((a: number, b: number) => a + b, 0) / g.preciosM2.length)
-        }))
-        .filter(d => d.unidades > 0)
-        .sort((a, b) => b.unidades - a.unidades)
-
-      setZonas(result)
+      setEstados(result)
     }
   }
 
@@ -316,7 +335,7 @@ export default function MarketPulseDashboard() {
 
     const { data } = await supabase
       .from('auditoria_snapshots')
-      .select('fecha, props_total, props_completadas, props_matcheadas, pct_match_completadas, props_creadas_24h')
+      .select('fecha, props_total, props_completadas, pct_match_completadas')
       .order('fecha', { ascending: true })
       .limit(30)
 
@@ -332,16 +351,15 @@ export default function MarketPulseDashboard() {
       .from('tc_binance_historial')
       .select('timestamp, tc_sell')
       .order('timestamp', { ascending: true })
-      .limit(100)
+      .limit(200)
 
     if (data) {
-      // Agrupar por día
-      const grouped = data.reduce((acc: Record<string, number[]>, row) => {
+      const grouped: Record<string, number[]> = {}
+      data.forEach(row => {
         const fecha = new Date(row.timestamp).toISOString().split('T')[0]
-        if (!acc[fecha]) acc[fecha] = []
-        if (row.tc_sell) acc[fecha].push(parseFloat(row.tc_sell))
-        return acc
-      }, {})
+        if (!grouped[fecha]) grouped[fecha] = []
+        if (row.tc_sell) grouped[fecha].push(parseFloat(row.tc_sell))
+      })
 
       const result: TCHistoricoData[] = Object.entries(grouped)
         .map(([fecha, valores]) => ({
@@ -354,11 +372,93 @@ export default function MarketPulseDashboard() {
     }
   }
 
+  const fetchOportunidades = async () => {
+    if (!supabase) return
+
+    // Fetch all valid properties with projects
+    const { data: props } = await supabase
+      .from('propiedades_v2')
+      .select('id_proyecto_master, dormitorios, precio_usd, area_total_m2')
+      .eq('status', 'completado')
+      .eq('tipo_operacion', 'venta')
+      .gte('area_total_m2', 20)
+      .not('id_proyecto_master', 'is', null)
+
+    if (!props) return
+
+    // Get project names
+    const projectIds = [...new Set(props.map(p => p.id_proyecto_master).filter(Boolean))]
+    const { data: projects } = await supabase
+      .from('proyectos_master')
+      .select('id_proyecto_master, nombre_oficial')
+      .in('id_proyecto_master', projectIds)
+
+    if (!projects) return
+
+    const projectMap = new Map(projects.map(p => [p.id_proyecto_master, p.nombre_oficial]))
+
+    // Calculate average price/m2
+    const validProps = props.filter(p => {
+      const precio = parseFloat(p.precio_usd)
+      const area = parseFloat(p.area_total_m2)
+      return precio > 10000 && area >= 20 // Filter out corrupt data
+    })
+
+    const avgPrecioM2 = validProps.reduce((acc, p) => {
+      return acc + parseFloat(p.precio_usd) / parseFloat(p.area_total_m2)
+    }, 0) / validProps.length
+
+    // Map all properties with price/m2
+    const allOportunidades: OportunidadData[] = validProps.map(p => {
+      const precio = parseFloat(p.precio_usd)
+      const area = parseFloat(p.area_total_m2)
+      const precioM2 = precio / area
+      return {
+        proyecto: projectMap.get(p.id_proyecto_master) || 'Desconocido',
+        dormitorios: p.dormitorios || 0,
+        precio_usd: precio,
+        area_m2: area,
+        precio_m2: Math.round(precioM2),
+        diff_porcentaje: Math.round(((precioM2 - avgPrecioM2) / avgPrecioM2) * 100)
+      }
+    })
+
+    // Get best deals (lowest price/m2)
+    const sortedByLow = [...allOportunidades].sort((a, b) => a.precio_m2 - b.precio_m2)
+    // Group by project and get unique
+    const seenProjects = new Set<string>()
+    const uniqueOportunidades: OportunidadData[] = []
+    for (const op of sortedByLow) {
+      if (!seenProjects.has(op.proyecto)) {
+        seenProjects.add(op.proyecto)
+        uniqueOportunidades.push(op)
+      }
+      if (uniqueOportunidades.length >= 5) break
+    }
+    setOportunidades(uniqueOportunidades)
+
+    // Get premium (highest price/m2)
+    const sortedByHigh = [...allOportunidades].sort((a, b) => b.precio_m2 - a.precio_m2)
+    const seenPremium = new Set<string>()
+    const uniquePremium: OportunidadData[] = []
+    for (const op of sortedByHigh) {
+      if (!seenPremium.has(op.proyecto)) {
+        seenPremium.add(op.proyecto)
+        uniquePremium.push(op)
+      }
+      if (uniquePremium.length >= 5) break
+    }
+    setPremium(uniquePremium)
+  }
+
   useEffect(() => {
     fetchAllData()
   }, [])
 
-  // Format helpers
+  // ============================================================================
+  // HELPERS
+  // ============================================================================
+
   const formatCurrency = (value: number) => {
     if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`
     if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`
@@ -369,22 +469,111 @@ export default function MarketPulseDashboard() {
     return new Intl.NumberFormat('es-BO').format(value)
   }
 
+  const getDormLabel = (dorm: number | null) => {
+    if (dorm === null) return 'N/A'
+    if (dorm === 0) return 'Studio'
+    return `${dorm}D`
+  }
+
   const getEstadoLabel = (estado: string) => {
     const labels: Record<string, string> = {
       'preventa': 'Preventa',
       'entrega_inmediata': 'Entrega Inmediata',
-      'nuevo_a_estrenar': 'Nuevo a Estrenar',
-      'no_especificado': 'No Especificado',
-      'usado': 'Usado'
+      'nuevo_a_estrenar': 'Nuevo',
+      'no_especificado': 'No Especificado'
     }
     return labels[estado] || estado
   }
 
-  const getPrecioM2Color = (precioM2: number) => {
-    if (precioM2 < 1800) return 'text-green-600 bg-green-50'
-    if (precioM2 > 2100) return 'text-red-600 bg-red-50'
-    return 'text-amber-600 bg-amber-50'
+  const getPrecioM2Color = (precioM2: number): string => {
+    if (precioM2 < 1800) return '#10b981' // green
+    if (precioM2 > 2100) return '#ef4444' // red
+    return '#f59e0b' // amber
   }
+
+  const getPrecioM2Badge = (precioM2: number) => {
+    if (precioM2 < 1800) return 'bg-green-100 text-green-700'
+    if (precioM2 > 2100) return 'bg-red-100 text-red-700'
+    return 'bg-amber-100 text-amber-700'
+  }
+
+  // Computed insights
+  const insights = useMemo(() => {
+    if (tipologias.length === 0 || !kpis) return []
+
+    const insights: string[] = []
+
+    // Most common typology
+    const mostCommon = tipologias[0]
+    if (mostCommon) {
+      insights.push(`${getDormLabel(mostCommon.dormitorios)} domina el mercado (${mostCommon.porcentaje}%)`)
+    }
+
+    // Best value typology
+    const bestValue = [...tipologias].sort((a, b) => a.precio_m2 - b.precio_m2)[0]
+    if (bestValue && bestValue.dormitorios !== mostCommon?.dormitorios) {
+      insights.push(`${getDormLabel(bestValue.dormitorios)} mejor valor: $${formatNumber(bestValue.precio_m2)}/m²`)
+    }
+
+    // Preventa vs Entrega
+    const preventa = estados.find(e => e.estado === 'preventa')
+    const entrega = estados.find(e => e.estado === 'entrega_inmediata')
+    if (preventa && entrega && preventa.precio_m2 < entrega.precio_m2) {
+      const ahorro = Math.round(((entrega.precio_m2 - preventa.precio_m2) / entrega.precio_m2) * 100)
+      insights.push(`Ahorro preventa: ${ahorro}% vs entrega inmediata`)
+    }
+
+    return insights
+  }, [tipologias, estados, kpis])
+
+  // Scatter data for chart
+  const scatterData = useMemo(() => {
+    return topProyectos.slice(0, 10).map(p => ({
+      x: p.unidades,
+      y: p.precio_m2,
+      z: p.desde,
+      name: p.proyecto
+    }))
+  }, [topProyectos])
+
+  // ============================================================================
+  // CUSTOM TOOLTIP COMPONENTS
+  // ============================================================================
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-slate-900 text-white px-3 py-2 rounded-lg shadow-xl text-sm">
+          <p className="font-medium">{label}</p>
+          {payload.map((p: any, i: number) => (
+            <p key={i} style={{ color: p.color }}>
+              {p.name}: {typeof p.value === 'number' ? formatNumber(p.value) : p.value}
+            </p>
+          ))}
+        </div>
+      )
+    }
+    return null
+  }
+
+  const ScatterTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      return (
+        <div className="bg-slate-900 text-white px-3 py-2 rounded-lg shadow-xl text-sm">
+          <p className="font-bold">{data.name}</p>
+          <p>Stock: {data.x} unidades</p>
+          <p>$/m²: ${formatNumber(data.y)}</p>
+          <p>Desde: {formatCurrency(data.z)}</p>
+        </div>
+      )
+    }
+    return null
+  }
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   return (
     <>
@@ -392,28 +581,31 @@ export default function MarketPulseDashboard() {
         <title>Market Pulse | SICI Admin</title>
       </Head>
 
-      <div className="min-h-screen bg-slate-100">
+      <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200">
         {/* Header */}
-        <header className="bg-slate-900 text-white py-4 px-6">
+        <header className="bg-gradient-to-r from-slate-900 to-slate-800 text-white py-4 px-6 shadow-lg">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold">Equipetrol Market Pulse</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Equipetrol Market Pulse</h1>
               <p className="text-slate-400 text-sm" suppressHydrationWarning>
-                Última actualización: {lastUpdate.toLocaleTimeString('es-BO')}
+                Última actualización: {lastUpdate.toLocaleTimeString('es-BO')} • Fuente: SICI Real Estate Intelligence
               </p>
             </div>
             <div className="flex items-center gap-4">
               <button
                 onClick={fetchAllData}
                 disabled={loading}
-                className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-medium shadow-lg transition-all"
               >
-                {loading ? 'Cargando...' : 'Actualizar'}
+                {loading ? 'Cargando...' : '🔄 Actualizar'}
               </button>
-              <Link href="/admin/propiedades" className="text-slate-300 hover:text-white text-sm">
+              <Link href="/admin/propiedades" className="text-slate-300 hover:text-white text-sm transition-colors">
                 Propiedades
               </Link>
-              <Link href="/admin/salud" className="text-teal-400 hover:text-teal-300 text-sm font-medium">
+              <Link href="/admin/proyectos" className="text-slate-300 hover:text-white text-sm transition-colors">
+                Proyectos
+              </Link>
+              <Link href="/admin/salud" className="text-teal-400 hover:text-teal-300 text-sm font-medium transition-colors">
                 Salud
               </Link>
             </div>
@@ -424,338 +616,430 @@ export default function MarketPulseDashboard() {
           {/* KPIs Row */}
           {kpis && (
             <div className="grid grid-cols-6 gap-4 mb-8">
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <p className="text-slate-500 text-xs uppercase tracking-wide">Unidades</p>
-                <p className="text-3xl font-bold text-slate-900">{kpis.total_unidades}</p>
-                <p className="text-slate-400 text-xs">en venta</p>
+              <div className="bg-white rounded-xl p-5 shadow-lg border border-slate-200 hover:shadow-xl transition-shadow">
+                <p className="text-slate-500 text-xs uppercase tracking-wide font-medium">Unidades</p>
+                <p className="text-4xl font-bold text-slate-900 mt-1">{kpis.total_unidades}</p>
+                <p className="text-slate-400 text-sm mt-1">en venta activas</p>
               </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <p className="text-slate-500 text-xs uppercase tracking-wide">Proyectos</p>
-                <p className="text-3xl font-bold text-slate-900">{kpis.proyectos_activos}</p>
-                <p className="text-slate-400 text-xs">activos</p>
+              <div className="bg-white rounded-xl p-5 shadow-lg border border-slate-200 hover:shadow-xl transition-shadow">
+                <p className="text-slate-500 text-xs uppercase tracking-wide font-medium">Proyectos</p>
+                <p className="text-4xl font-bold text-slate-900 mt-1">{kpis.proyectos_activos}</p>
+                <p className="text-slate-400 text-sm mt-1">con inventario</p>
               </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <p className="text-slate-500 text-xs uppercase tracking-wide">$/m²</p>
-                <p className="text-3xl font-bold text-blue-600">${formatNumber(kpis.precio_m2_promedio)}</p>
-                <p className="text-slate-400 text-xs">promedio</p>
+              <div className="bg-white rounded-xl p-5 shadow-lg border border-slate-200 hover:shadow-xl transition-shadow">
+                <p className="text-slate-500 text-xs uppercase tracking-wide font-medium">$/m² Promedio</p>
+                <p className="text-4xl font-bold text-blue-600 mt-1">${formatNumber(kpis.precio_m2_promedio)}</p>
+                <p className="text-slate-400 text-sm mt-1">mercado</p>
               </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <p className="text-slate-500 text-xs uppercase tracking-wide">Ticket</p>
-                <p className="text-3xl font-bold text-slate-900">{formatCurrency(kpis.ticket_promedio)}</p>
-                <p className="text-slate-400 text-xs">promedio</p>
+              <div className="bg-white rounded-xl p-5 shadow-lg border border-slate-200 hover:shadow-xl transition-shadow">
+                <p className="text-slate-500 text-xs uppercase tracking-wide font-medium">Ticket Promedio</p>
+                <p className="text-4xl font-bold text-slate-900 mt-1">{formatCurrency(kpis.ticket_promedio)}</p>
+                <p className="text-slate-400 text-sm mt-1">por unidad</p>
               </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <p className="text-slate-500 text-xs uppercase tracking-wide">Área</p>
-                <p className="text-3xl font-bold text-slate-900">{kpis.area_promedio}</p>
-                <p className="text-slate-400 text-xs">m² promedio</p>
+              <div className="bg-white rounded-xl p-5 shadow-lg border border-slate-200 hover:shadow-xl transition-shadow">
+                <p className="text-slate-500 text-xs uppercase tracking-wide font-medium">Área Promedio</p>
+                <p className="text-4xl font-bold text-slate-900 mt-1">{kpis.area_promedio}</p>
+                <p className="text-slate-400 text-sm mt-1">m² construidos</p>
               </div>
-              <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl p-4 shadow-sm text-white">
-                <p className="text-amber-100 text-xs uppercase tracking-wide">TC Paralelo</p>
-                <p className="text-3xl font-bold">{kpis.tc_paralelo.toFixed(2)}</p>
-                <p className="text-amber-200 text-xs">Bs/$ (Oficial: {kpis.tc_oficial})</p>
+              <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl p-5 shadow-lg text-white hover:shadow-xl transition-shadow">
+                <p className="text-amber-100 text-xs uppercase tracking-wide font-medium">TC Paralelo</p>
+                <p className="text-4xl font-bold mt-1">{kpis.tc_paralelo.toFixed(2)}</p>
+                <p className="text-amber-200 text-sm mt-1">Bs/$ (Oficial: {kpis.tc_oficial})</p>
               </div>
             </div>
           )}
 
-          {/* Charts Grid */}
-          <div className="grid grid-cols-2 gap-6 mb-8">
-            {/* Distribución por Dormitorios */}
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Distribución por Dormitorios</h3>
-              <div className="space-y-3">
-                {dormitorios.map((d, i) => {
-                  const maxCantidad = Math.max(...dormitorios.map(x => x.cantidad))
-                  const width = (d.cantidad / maxCantidad) * 100
-                  const minPrecioM2 = Math.min(...dormitorios.filter(x => x.precio_m2).map(x => x.precio_m2))
-                  const isBest = d.precio_m2 === minPrecioM2
-                  const isMax = d.cantidad === maxCantidad
-
-                  return (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="w-16 text-sm font-medium text-slate-700">
-                        {d.dormitorios === null ? 'N/A' : d.dormitorios === 0 ? 'Studio' : `${d.dormitorios}D`}
-                      </div>
-                      <div className="flex-1 h-8 bg-slate-100 rounded-lg overflow-hidden relative">
-                        <div
-                          className={`h-full rounded-lg transition-all ${
-                            isMax ? 'bg-amber-500' : isBest ? 'bg-green-500' : 'bg-blue-500'
-                          }`}
-                          style={{ width: `${width}%` }}
-                        />
-                        <span className="absolute inset-0 flex items-center justify-center text-xs font-medium">
-                          {d.cantidad} uds
-                        </span>
-                      </div>
-                      <div className={`w-24 text-right text-sm font-medium px-2 py-1 rounded ${getPrecioM2Color(d.precio_m2)}`}>
-                        ${formatNumber(d.precio_m2)}/m²
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="mt-4 flex gap-4 text-xs text-slate-500">
-                <span className="flex items-center gap-1">
-                  <span className="w-3 h-3 bg-amber-500 rounded"></span> Más stock
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-3 h-3 bg-green-500 rounded"></span> Mejor $/m²
-                </span>
+          {/* Insights Bar */}
+          {insights.length > 0 && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-8">
+              <div className="flex items-center gap-6">
+                <span className="text-blue-600 font-semibold text-sm">💡 Insights:</span>
+                {insights.map((insight, i) => (
+                  <span key={i} className="text-blue-800 text-sm">
+                    • {insight}
+                  </span>
+                ))}
               </div>
             </div>
+          )}
 
-            {/* Comparativa Preventa vs Entrega */}
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Preventa vs Entrega Inmediata</h3>
-              {estadoConstruccion.length > 0 && (
-                <>
-                  <div className="space-y-4">
-                    {estadoConstruccion.slice(0, 4).map((e, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                        <div>
-                          <p className="font-medium text-slate-900">{getEstadoLabel(e.estado)}</p>
-                          <p className="text-sm text-slate-500">{e.cantidad} unidades</p>
-                        </div>
-                        <div className="text-right">
-                          <p className={`text-lg font-bold ${getPrecioM2Color(e.precio_m2).split(' ')[0]}`}>
-                            ${formatNumber(e.precio_m2)}/m²
-                          </p>
-                          <p className="text-sm text-slate-500">{formatCurrency(e.precio_promedio)} prom.</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {(() => {
-                    const preventa = estadoConstruccion.find(e => e.estado === 'preventa')
-                    const entrega = estadoConstruccion.find(e => e.estado === 'entrega_inmediata')
-                    if (preventa && entrega) {
-                      const ahorro = ((entrega.precio_m2 - preventa.precio_m2) / entrega.precio_m2) * 100
-                      return (
-                        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <p className="text-green-800 font-medium">
-                            Ahorro Preventa: {ahorro.toFixed(1)}% (${formatNumber(entrega.precio_m2 - preventa.precio_m2)}/m²)
-                          </p>
-                          <p className="text-green-600 text-sm">
-                            En 80m² ahorras ~${formatNumber((entrega.precio_m2 - preventa.precio_m2) * 80)}
-                          </p>
-                        </div>
-                      )
-                    }
-                    return null
-                  })()}
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Second Row */}
+          {/* Main Grid */}
           <div className="grid grid-cols-3 gap-6 mb-8">
-            {/* Top Proyectos */}
-            <div className="col-span-2 bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Top 10 Proyectos por Inventario</h3>
+            {/* Tipologías - Full width table */}
+            <div className="col-span-2 bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                📊 Análisis por Tipología
+              </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200">
-                      <th className="text-left py-2 px-2 font-medium text-slate-500">#</th>
-                      <th className="text-left py-2 px-2 font-medium text-slate-500">Proyecto</th>
-                      <th className="text-left py-2 px-2 font-medium text-slate-500">Desarrollador</th>
-                      <th className="text-center py-2 px-2 font-medium text-slate-500">Uds</th>
-                      <th className="text-right py-2 px-2 font-medium text-slate-500">Desde</th>
-                      <th className="text-right py-2 px-2 font-medium text-slate-500">$/m²</th>
+                    <tr className="border-b-2 border-slate-200">
+                      <th className="text-left py-3 px-2 font-semibold text-slate-600">Tipo</th>
+                      <th className="text-center py-3 px-2 font-semibold text-slate-600">Stock</th>
+                      <th className="text-left py-3 px-2 font-semibold text-slate-600">% Mercado</th>
+                      <th className="text-right py-3 px-2 font-semibold text-slate-600">Precio Prom</th>
+                      <th className="text-right py-3 px-2 font-semibold text-slate-600">$/m²</th>
+                      <th className="text-right py-3 px-2 font-semibold text-slate-600">Área Prom</th>
+                      <th className="text-right py-3 px-2 font-semibold text-slate-600">Rango</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {topProyectos.map((p, i) => (
-                      <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="py-2 px-2 text-slate-400">{i + 1}</td>
-                        <td className="py-2 px-2 font-medium text-slate-900">{p.proyecto}</td>
-                        <td className="py-2 px-2 text-slate-600 truncate max-w-[150px]" title={p.desarrollador || ''}>
-                          {p.desarrollador || '-'}
-                        </td>
-                        <td className="py-2 px-2 text-center">
-                          <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium">
-                            {p.unidades}
-                          </span>
-                        </td>
-                        <td className="py-2 px-2 text-right text-slate-700">{formatCurrency(p.desde)}</td>
-                        <td className="py-2 px-2 text-right">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${getPrecioM2Color(p.precio_m2)}`}>
-                            ${formatNumber(p.precio_m2)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {tipologias.map((t, i) => {
+                      const maxCantidad = Math.max(...tipologias.map(x => x.cantidad))
+                      const barWidth = (t.cantidad / maxCantidad) * 100
+                      const isTopStock = t.cantidad === maxCantidad
+                      const isBestValue = t.precio_m2 === Math.min(...tipologias.map(x => x.precio_m2))
+
+                      return (
+                        <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="py-3 px-2">
+                            <span className="font-bold text-slate-900 flex items-center gap-1">
+                              {getDormLabel(t.dormitorios)}
+                              {isTopStock && <span title="Más stock">⭐</span>}
+                              {isBestValue && <span title="Mejor $/m²">💎</span>}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 text-center">
+                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-bold">
+                              {t.cantidad}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all bg-gradient-to-r from-blue-500 to-blue-600"
+                                  style={{ width: `${barWidth}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-slate-500 w-8">{t.porcentaje}%</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-2 text-right font-medium text-slate-700">
+                            {formatCurrency(t.precio_promedio)}
+                          </td>
+                          <td className="py-3 px-2 text-right">
+                            <span className={`px-2 py-1 rounded-lg text-xs font-bold ${getPrecioM2Badge(t.precio_m2)}`}>
+                              ${formatNumber(t.precio_m2)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 text-right text-slate-600">
+                            {t.area_promedio} m²
+                          </td>
+                          <td className="py-3 px-2 text-right text-slate-500 text-xs">
+                            {formatCurrency(t.precio_min)} - {formatCurrency(t.precio_max)}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
-            </div>
-
-            {/* Distribución por Zona */}
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Distribución por Zona</h3>
-              <div className="space-y-3">
-                {zonas.map((z, i) => {
-                  const total = zonas.reduce((acc, x) => acc + x.unidades, 0)
-                  const pct = ((z.unidades / total) * 100).toFixed(0)
-                  return (
-                    <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                      <div>
-                        <p className="font-medium text-slate-900">{z.zona}</p>
-                        <p className="text-sm text-slate-500">{z.unidades} uds ({pct}%)</p>
-                      </div>
-                      <div className={`px-2 py-1 rounded text-sm font-medium ${getPrecioM2Color(z.precio_m2)}`}>
-                        ${formatNumber(z.precio_m2)}/m²
-                      </div>
-                    </div>
-                  )
-                })}
+              <div className="mt-4 flex gap-4 text-xs text-slate-500">
+                <span className="flex items-center gap-1">⭐ Más stock</span>
+                <span className="flex items-center gap-1">💎 Mejor $/m²</span>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 bg-green-500 rounded"></span> &lt;$1,800/m²
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 bg-amber-500 rounded"></span> $1,800-2,100
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 bg-red-500 rounded"></span> &gt;$2,100/m²
+                </span>
               </div>
             </div>
+
+            {/* Preventa vs Entrega */}
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">🏗️ Preventa vs Entrega</h3>
+              {estados.length > 0 && (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={estados.slice(0, 4)} layout="vertical">
+                    <XAxis type="number" hide />
+                    <YAxis
+                      type="category"
+                      dataKey="estado"
+                      tickFormatter={getEstadoLabel}
+                      width={100}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="precio_m2" name="$/m²" radius={[0, 4, 4, 0]}>
+                      {estados.slice(0, 4).map((entry, index) => (
+                        <Cell key={index} fill={getPrecioM2Color(entry.precio_m2)} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+              {(() => {
+                const preventa = estados.find(e => e.estado === 'preventa')
+                const entrega = estados.find(e => e.estado === 'entrega_inmediata')
+                if (preventa && entrega && preventa.precio_m2 < entrega.precio_m2) {
+                  const ahorro = ((entrega.precio_m2 - preventa.precio_m2) / entrega.precio_m2) * 100
+                  const ahorroM2 = entrega.precio_m2 - preventa.precio_m2
+                  return (
+                    <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                      <p className="text-green-800 font-bold text-lg">
+                        💰 Ahorro Preventa: {ahorro.toFixed(1)}%
+                      </p>
+                      <p className="text-green-700 text-sm mt-1">
+                        ${formatNumber(ahorroM2)}/m² menos • En 80m² = ${formatNumber(ahorroM2 * 80)} de ahorro
+                      </p>
+                    </div>
+                  )
+                }
+                return null
+              })()}
+            </div>
           </div>
 
-          {/* Historical Charts Placeholder */}
+          {/* Second Row: Top Projects & Scatter */}
           <div className="grid grid-cols-2 gap-6 mb-8">
-            {/* Evolución Histórica */}
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Evolución del Inventario</h3>
-              {snapshots.length > 0 ? (
-                <div className="h-64 flex items-end gap-1">
-                  {snapshots.slice(-15).map((s, i) => {
-                    const maxTotal = Math.max(...snapshots.map(x => x.props_total))
-                    const height = (s.props_total / maxTotal) * 100
-                    const fecha = new Date(s.fecha).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center">
-                        <div className="w-full flex flex-col justify-end" style={{ height: '200px' }}>
-                          <div
-                            className="w-full bg-blue-500 rounded-t transition-all hover:bg-blue-600"
-                            style={{ height: `${height}%` }}
-                            title={`${s.props_total} propiedades`}
-                          />
-                        </div>
-                        <span className="text-[10px] text-slate-500 mt-1 rotate-45 origin-left">{fecha}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <p className="text-slate-500 text-center py-8">No hay datos históricos</p>
-              )}
-              {snapshots.length > 0 && (
-                <div className="mt-4 flex justify-between text-sm text-slate-600">
-                  <span>Inicio: {snapshots[0]?.props_total || 0}</span>
-                  <span className="font-medium text-blue-600">
-                    Actual: {snapshots[snapshots.length - 1]?.props_total || 0}
-                    {(() => {
-                      const first = snapshots[0]?.props_total || 0
-                      const last = snapshots[snapshots.length - 1]?.props_total || 0
-                      const change = ((last - first) / first * 100).toFixed(1)
-                      return ` (+${change}%)`
-                    })()}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* TC Histórico */}
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Evolución TC Paralelo</h3>
-              {tcHistorico.length > 0 ? (
-                <div className="h-64 flex items-end gap-1">
-                  {tcHistorico.slice(-15).map((t, i) => {
-                    const minTC = Math.min(...tcHistorico.map(x => x.tc_promedio))
-                    const maxTC = Math.max(...tcHistorico.map(x => x.tc_promedio))
-                    const range = maxTC - minTC || 1
-                    const height = ((t.tc_promedio - minTC) / range) * 80 + 20
-                    const fecha = new Date(t.fecha).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center">
-                        <div className="w-full flex flex-col justify-end" style={{ height: '200px' }}>
-                          <div
-                            className="w-full bg-amber-500 rounded-t transition-all hover:bg-amber-600"
-                            style={{ height: `${height}%` }}
-                            title={`${t.tc_promedio} Bs/$`}
-                          />
-                        </div>
-                        <span className="text-[10px] text-slate-500 mt-1 rotate-45 origin-left">{fecha}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <p className="text-slate-500 text-center py-8">No hay datos de TC</p>
-              )}
-              {tcHistorico.length > 0 && (
-                <div className="mt-4 flex justify-between text-sm text-slate-600">
-                  <span>Min: {Math.min(...tcHistorico.map(t => t.tc_promedio)).toFixed(2)} Bs/$</span>
-                  <span className="font-medium text-amber-600">
-                    Max: {Math.max(...tcHistorico.map(t => t.tc_promedio)).toFixed(2)} Bs/$
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Oportunidades */}
-          <div className="bg-white rounded-xl p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Mejores Oportunidades (Menor $/m²)</h3>
-            <div className="grid grid-cols-3 gap-4">
-              {topProyectos
-                .filter(p => p.precio_m2 > 0)
-                .sort((a, b) => a.precio_m2 - b.precio_m2)
-                .slice(0, 3)
-                .map((p, i) => {
-                  const avgPrecioM2 = kpis?.precio_m2_promedio || 2000
-                  const diff = ((p.precio_m2 - avgPrecioM2) / avgPrecioM2 * 100).toFixed(0)
+            {/* Top Proyectos */}
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">🏆 Top 10 Proyectos por Inventario</h3>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {topProyectos.slice(0, 10).map((p, i) => {
                   const medals = ['🥇', '🥈', '🥉']
                   return (
-                    <div key={i} className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-2xl">{medals[i]}</span>
+                    <div
+                      key={i}
+                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{medals[i] || `${i + 1}.`}</span>
                         <div>
                           <p className="font-semibold text-slate-900">{p.proyecto}</p>
-                          <p className="text-xs text-slate-500">{p.desarrollador || 'Desarrollador no especificado'}</p>
+                          <p className="text-xs text-slate-500">{p.desarrollador || 'Sin desarrollador'}</p>
                         </div>
                       </div>
-                      <div className="flex justify-between items-end mt-3">
-                        <div>
-                          <p className="text-2xl font-bold text-green-600">${formatNumber(p.precio_m2)}/m²</p>
-                          <p className="text-sm text-green-700">{diff}% vs promedio</p>
-                        </div>
+                      <div className="flex items-center gap-4">
+                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-bold">
+                          {p.unidades} uds
+                        </span>
                         <div className="text-right">
-                          <p className="text-sm text-slate-600">Desde {formatCurrency(p.desde)}</p>
-                          <p className="text-xs text-slate-500">{p.unidades} unidades</p>
+                          <p className="text-sm font-medium text-slate-700">{formatCurrency(p.desde)}+</p>
+                          <p className={`text-xs font-bold ${p.precio_m2 < 1800 ? 'text-green-600' : p.precio_m2 > 2100 ? 'text-red-600' : 'text-amber-600'}`}>
+                            ${formatNumber(p.precio_m2)}/m²
+                          </p>
                         </div>
                       </div>
                     </div>
                   )
                 })}
+              </div>
             </div>
 
-            {/* Alertas de precio alto */}
-            <div className="mt-6 pt-4 border-t border-slate-200">
-              <p className="text-sm font-medium text-slate-700 mb-3">Precios Premium (sobre promedio)</p>
-              <div className="flex flex-wrap gap-2">
-                {topProyectos
-                  .filter(p => p.precio_m2 > (kpis?.precio_m2_promedio || 2000) * 1.1)
-                  .slice(0, 5)
-                  .map((p, i) => {
-                    const avgPrecioM2 = kpis?.precio_m2_promedio || 2000
-                    const diff = ((p.precio_m2 - avgPrecioM2) / avgPrecioM2 * 100).toFixed(0)
-                    return (
-                      <span key={i} className="px-3 py-1 bg-red-50 text-red-700 rounded-full text-sm">
-                        {p.proyecto}: ${formatNumber(p.precio_m2)}/m² (+{diff}%)
-                      </span>
-                    )
-                  })}
+            {/* Scatter Chart: Stock vs Price */}
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">📈 Posicionamiento: Stock vs Precio</h3>
+              <ResponsiveContainer width="100%" height={350}>
+                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                  <XAxis
+                    type="number"
+                    dataKey="x"
+                    name="Stock"
+                    label={{ value: 'Unidades en stock →', position: 'bottom', fontSize: 11 }}
+                    tick={{ fontSize: 10 }}
+                  />
+                  <YAxis
+                    type="number"
+                    dataKey="y"
+                    name="$/m²"
+                    label={{ value: '$/m² →', angle: -90, position: 'left', fontSize: 11 }}
+                    tick={{ fontSize: 10 }}
+                    domain={['dataMin - 200', 'dataMax + 200']}
+                  />
+                  <ZAxis type="number" dataKey="z" range={[100, 500]} />
+                  <Tooltip content={<ScatterTooltip />} />
+                  <Scatter name="Proyectos" data={scatterData}>
+                    {scatterData.map((entry, index) => (
+                      <Cell key={index} fill={getPrecioM2Color(entry.y)} />
+                    ))}
+                  </Scatter>
+                </ScatterChart>
+              </ResponsiveContainer>
+              <div className="mt-2 text-xs text-slate-500 text-center">
+                Tamaño del punto = precio de entrada • Color = posición $/m²
               </div>
+            </div>
+          </div>
+
+          {/* Oportunidades Row */}
+          <div className="grid grid-cols-2 gap-6 mb-8">
+            {/* Best Deals */}
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 shadow-lg border border-green-200">
+              <h3 className="text-lg font-bold text-green-800 mb-4">🟢 Mejores Oportunidades (Menor $/m²)</h3>
+              <div className="space-y-3">
+                {oportunidades.map((o, i) => {
+                  const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣']
+                  return (
+                    <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{medals[i]}</span>
+                        <div>
+                          <p className="font-semibold text-slate-900">{o.proyecto}</p>
+                          <p className="text-xs text-slate-500">{o.dormitorios}D • {o.area_m2.toFixed(0)}m²</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-green-600">${formatNumber(o.precio_m2)}/m²</p>
+                        <p className="text-xs text-green-700">{o.diff_porcentaje}% vs prom</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              {oportunidades[0] && kpis && (
+                <div className="mt-4 p-3 bg-green-100 rounded-lg">
+                  <p className="text-green-800 text-sm">
+                    💡 En 80m² de <strong>{oportunidades[0].proyecto}</strong> ahorras{' '}
+                    <strong>${formatNumber((kpis.precio_m2_promedio - oportunidades[0].precio_m2) * 80)}</strong>{' '}
+                    vs promedio de mercado
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Premium */}
+            <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-6 shadow-lg border border-red-200">
+              <h3 className="text-lg font-bold text-red-800 mb-4">🔴 Precios Premium (Mayor $/m²)</h3>
+              <div className="space-y-3">
+                {premium.map((o, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">⚠️</span>
+                      <div>
+                        <p className="font-semibold text-slate-900">{o.proyecto}</p>
+                        <p className="text-xs text-slate-500">{o.dormitorios}D • {o.area_m2.toFixed(0)}m²</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-red-600">${formatNumber(o.precio_m2)}/m²</p>
+                      <p className="text-xs text-red-700">+{o.diff_porcentaje}% vs prom</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 p-3 bg-red-100 rounded-lg">
+                <p className="text-red-800 text-sm">
+                  ⚠️ Precios premium pueden justificarse por ubicación, amenities o calidad de acabados
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Historical Charts */}
+          <div className="grid grid-cols-2 gap-6 mb-8">
+            {/* Inventory Evolution */}
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">📈 Evolución del Inventario (28 días)</h3>
+              {snapshots.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <AreaChart data={snapshots.slice(-15)}>
+                      <defs>
+                        <linearGradient id="colorInventario" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="fecha"
+                        tickFormatter={(v) => new Date(v).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })}
+                        tick={{ fontSize: 10 }}
+                      />
+                      <YAxis tick={{ fontSize: 10 }} domain={['dataMin - 10', 'dataMax + 10']} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Area
+                        type="monotone"
+                        dataKey="props_total"
+                        name="Propiedades"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        fill="url(#colorInventario)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  <div className="mt-4 flex justify-between text-sm text-slate-600">
+                    <span>Inicio: {snapshots[0]?.props_total || 0}</span>
+                    <span className="font-medium text-blue-600">
+                      Actual: {snapshots[snapshots.length - 1]?.props_total || 0}
+                      {(() => {
+                        const first = snapshots[0]?.props_total || 1
+                        const last = snapshots[snapshots.length - 1]?.props_total || 0
+                        const change = ((last - first) / first * 100).toFixed(1)
+                        return ` (${parseFloat(change) >= 0 ? '+' : ''}${change}%)`
+                      })()}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-slate-500 text-center py-12">No hay datos históricos</p>
+              )}
+            </div>
+
+            {/* TC Evolution */}
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">💱 Evolución TC Paralelo</h3>
+              {tcHistorico.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <AreaChart data={tcHistorico.slice(-15)}>
+                      <defs>
+                        <linearGradient id="colorTC" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="fecha"
+                        tickFormatter={(v) => new Date(v).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })}
+                        tick={{ fontSize: 10 }}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 10 }}
+                        domain={[
+                          (dataMin: number) => Math.floor(dataMin * 10) / 10,
+                          (dataMax: number) => Math.ceil(dataMax * 10) / 10
+                        ]}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Area
+                        type="monotone"
+                        dataKey="tc_promedio"
+                        name="TC"
+                        stroke="#f59e0b"
+                        strokeWidth={2}
+                        fill="url(#colorTC)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  <div className="mt-4 flex justify-between text-sm text-slate-600">
+                    <span>Min: {Math.min(...tcHistorico.map(t => t.tc_promedio)).toFixed(2)} Bs/$</span>
+                    <span className="font-medium text-amber-600">
+                      Max: {Math.max(...tcHistorico.map(t => t.tc_promedio)).toFixed(2)} Bs/$
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-slate-500 text-center py-12">No hay datos de TC</p>
+              )}
             </div>
           </div>
 
           {/* Footer */}
-          <div className="mt-8 text-center text-sm text-slate-500">
-            <p>Fuente: SICI Real Estate Intelligence • Datos de {kpis?.total_unidades || 0} unidades activas</p>
-            <p className="mt-1">Solo se muestran propiedades en venta con área ≥ 20m²</p>
+          <div className="mt-8 text-center text-sm text-slate-500 bg-white rounded-xl p-4 shadow-sm">
+            <p>
+              <strong>Fuente:</strong> SICI Real Estate Intelligence •{' '}
+              <strong>{kpis?.total_unidades || 0}</strong> unidades activas •{' '}
+              <strong>{kpis?.proyectos_activos || 0}</strong> proyectos
+            </p>
+            <p className="mt-1 text-xs">
+              Solo propiedades en venta con área ≥ 20m² • Datos actualizados en tiempo real
+            </p>
           </div>
         </main>
       </div>
