@@ -28,8 +28,6 @@ export default function FeedbackPremiumModal({
 
   // Feedback
   const [feedbackRecomendaria, setFeedbackRecomendaria] = useState('')
-  const [feedbackAlineadas, setFeedbackAlineadas] = useState('')
-  const [feedbackHonestidad, setFeedbackHonestidad] = useState('')
   const [feedbackMasUtil, setFeedbackMasUtil] = useState('')
   const [feedbackMejoras, setFeedbackMejoras] = useState('')
 
@@ -37,8 +35,8 @@ export default function FeedbackPremiumModal({
 
   const handleSubmit = async () => {
     // Validar feedback
-    if (!feedbackRecomendaria || !feedbackAlineadas || !feedbackHonestidad || !feedbackMasUtil) {
-      setError('Por favor respondé las 4 preguntas')
+    if (!feedbackRecomendaria || !feedbackMasUtil) {
+      setError('Por favor respondé las 2 preguntas')
       return
     }
 
@@ -54,8 +52,6 @@ export default function FeedbackPremiumModal({
           whatsapp: whatsapp.trim(),
           email: email.trim() || undefined,
           feedbackRecomendaria,
-          feedbackAlineadas,
-          feedbackHonestidad,
           feedbackMasUtil,
           feedbackMejoras: feedbackMejoras.trim() || undefined,
           formularioRaw
@@ -97,13 +93,13 @@ export default function FeedbackPremiumModal({
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-5 rounded-t-2xl">
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-5 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <div className="text-white">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 Tu Informe Premium
               </h2>
-              <p className="text-emerald-100 text-sm mt-1">
+              <p className="text-blue-100 text-sm mt-1">
                 Valorado en $49.99
               </p>
             </div>
@@ -138,12 +134,11 @@ export default function FeedbackPremiumModal({
                     'Ranking de tus 3 mejores opciones',
                     'Comparación de precios por m²',
                     'Posición de cada propiedad vs el mercado',
-                    'Información del desarrollador',
                     'Razones personalizadas según tu perfil',
                     'Contacto directo con el broker'
                   ].map((item, i) => (
                     <div key={i} className="flex items-start gap-2">
-                      <span className="text-emerald-500 mt-0.5">&#10003;</span>
+                      <span className="text-blue-500 mt-0.5">&#10003;</span>
                       <span className="text-gray-700 text-sm">{item}</span>
                     </div>
                   ))}
@@ -152,7 +147,7 @@ export default function FeedbackPremiumModal({
 
               <button
                 onClick={() => setPaso('datos')}
-                className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-colors"
+                className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition-colors"
               >
                 Quiero mi informe gratis
               </button>
@@ -177,7 +172,7 @@ export default function FeedbackPremiumModal({
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   placeholder="Ej: Maria Garcia"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -190,7 +185,7 @@ export default function FeedbackPremiumModal({
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
                   placeholder="Ej: 76543210"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -203,7 +198,7 @@ export default function FeedbackPremiumModal({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Ej: maria@email.com"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -222,7 +217,7 @@ export default function FeedbackPremiumModal({
                   onClick={() => {
                     if (validarDatos()) setPaso('feedback')
                   }}
-                  className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-colors"
+                  className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition-colors"
                 >
                   Continuar
                 </button>
@@ -256,7 +251,7 @@ export default function FeedbackPremiumModal({
                       onClick={() => setFeedbackRecomendaria(opt.value)}
                       className={`py-2 px-3 text-sm rounded-lg border transition-colors ${
                         feedbackRecomendaria === opt.value
-                          ? 'bg-emerald-100 border-emerald-500 text-emerald-700'
+                          ? 'bg-blue-100 border-blue-500 text-blue-700'
                           : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
                       }`}
                     >
@@ -266,64 +261,10 @@ export default function FeedbackPremiumModal({
                 </div>
               </div>
 
-              {/* Q2: Alineadas */}
+              {/* Q2: Mas util */}
               <div>
                 <p className="font-medium text-gray-800 mb-2">
-                  2. Las propiedades que viste estaban alineadas con lo que buscas?
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { value: 'perfectamente', label: 'Perfectamente' },
-                    { value: 'bastante', label: 'Bastante bien' },
-                    { value: 'poco', label: 'Poco alineadas' },
-                    { value: 'nada', label: 'Para nada' }
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setFeedbackAlineadas(opt.value)}
-                      className={`py-2 px-3 text-sm rounded-lg border transition-colors ${
-                        feedbackAlineadas === opt.value
-                          ? 'bg-emerald-100 border-emerald-500 text-emerald-700'
-                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Q3: Honestidad */}
-              <div>
-                <p className="font-medium text-gray-800 mb-2">
-                  3. Sentiste que Simon te mostro informacion honesta, sin tratar de venderte?
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { value: 'totalmente', label: 'Totalmente' },
-                    { value: 'mayormente', label: 'Mayormente si' },
-                    { value: 'algo', label: 'Algo' },
-                    { value: 'no', label: 'No' }
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setFeedbackHonestidad(opt.value)}
-                      className={`py-2 px-3 text-sm rounded-lg border transition-colors ${
-                        feedbackHonestidad === opt.value
-                          ? 'bg-emerald-100 border-emerald-500 text-emerald-700'
-                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Q4: Mas util */}
-              <div>
-                <p className="font-medium text-gray-800 mb-2">
-                  4. Que te parecio mas util?
+                  2. Que te parecio mas util?
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
@@ -337,7 +278,7 @@ export default function FeedbackPremiumModal({
                       onClick={() => setFeedbackMasUtil(opt.value)}
                       className={`py-2 px-3 text-sm rounded-lg border transition-colors ${
                         feedbackMasUtil === opt.value
-                          ? 'bg-emerald-100 border-emerald-500 text-emerald-700'
+                          ? 'bg-blue-100 border-blue-500 text-blue-700'
                           : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
                       }`}
                     >
@@ -347,17 +288,17 @@ export default function FeedbackPremiumModal({
                 </div>
               </div>
 
-              {/* Q5: Mejoras (opcional) */}
+              {/* Q3: Mejoras (opcional) */}
               <div>
                 <p className="font-medium text-gray-800 mb-2">
-                  5. Que mejorarias de Simon? <span className="text-gray-400 font-normal">(opcional)</span>
+                  3. Que mejorarias de Simon? <span className="text-gray-400 font-normal">(opcional)</span>
                 </p>
                 <textarea
                   value={feedbackMejoras}
                   onChange={(e) => setFeedbackMejoras(e.target.value)}
                   placeholder="Ej: Me gustaria ver mas fotos, filtrar por amenidades..."
                   rows={2}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
                 />
               </div>
 
@@ -374,7 +315,7 @@ export default function FeedbackPremiumModal({
                 </button>
                 <button
                   onClick={handleSubmit}
-                  className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl transition-colors"
+                  className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition-colors"
                 >
                   Desbloquear informe
                 </button>
@@ -385,7 +326,7 @@ export default function FeedbackPremiumModal({
           {/* Estado: Enviando */}
           {paso === 'enviando' && (
             <div className="text-center py-8">
-              <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
               <p className="text-gray-600">Preparando tu informe...</p>
             </div>
           )}

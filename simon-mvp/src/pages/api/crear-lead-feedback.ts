@@ -17,10 +17,8 @@ interface CrearLeadFeedbackRequest {
   nombre: string
   whatsapp: string
   email?: string
-  // Feedback (4 obligatorios + 1 opcional)
+  // Feedback (2 obligatorios + 1 opcional)
   feedbackRecomendaria: string    // definitivamente | probablemente | no_seguro | no
-  feedbackAlineadas: string       // perfectamente | bastante | poco | nada
-  feedbackHonestidad: string      // totalmente | mayormente | algo | no
   feedbackMasUtil: string         // comparacion_precios | posicion_mercado | info_proyectos | todo
   feedbackMejoras?: string        // texto libre (opcional)
   // Contexto de la búsqueda
@@ -70,12 +68,11 @@ export default async function handler(
       })
     }
 
-    // Validar feedback obligatorio
-    if (!data.feedbackRecomendaria || !data.feedbackAlineadas ||
-        !data.feedbackHonestidad || !data.feedbackMasUtil) {
+    // Validar feedback obligatorio (2 preguntas)
+    if (!data.feedbackRecomendaria || !data.feedbackMasUtil) {
       return res.status(400).json({
         success: false,
-        error: 'Completá las 4 preguntas de feedback'
+        error: 'Completá las 2 preguntas de feedback'
       })
     }
 
@@ -87,8 +84,8 @@ export default async function handler(
         p_email: data.email?.trim() || null,
         p_formulario_raw: data.formularioRaw || {},
         p_feedback_recomendaria: data.feedbackRecomendaria,
-        p_feedback_alineadas: data.feedbackAlineadas,
-        p_feedback_honestidad: data.feedbackHonestidad,
+        p_feedback_alineadas: null,  // Removido del formulario
+        p_feedback_honestidad: null, // Removido del formulario
         p_feedback_mas_util: data.feedbackMasUtil,
         p_feedback_mejoras: data.feedbackMejoras?.trim() || null
       })
@@ -113,8 +110,6 @@ export default async function handler(
       email: data.email?.trim(),
       feedback: {
         recomendaria: data.feedbackRecomendaria,
-        alineadas: data.feedbackAlineadas,
-        honestidad: data.feedbackHonestidad,
         masUtil: data.feedbackMasUtil,
         mejoras: data.feedbackMejoras
       }
@@ -146,8 +141,6 @@ interface SlackFeedbackParams {
   email?: string
   feedback: {
     recomendaria: string
-    alineadas: string
-    honestidad: string
     masUtil: string
     mejoras?: string
   }
@@ -165,20 +158,6 @@ async function enviarSlackFeedback(params: SlackFeedbackParams): Promise<void> {
     'probablemente': '7-8 Probablemente',
     'no_seguro': '4-6 No estoy seguro',
     'no': '1-3 No'
-  }
-
-  const alineadasLabel: Record<string, string> = {
-    'perfectamente': 'Perfectamente alineadas',
-    'bastante': 'Bastante bien',
-    'poco': 'Poco alineadas',
-    'nada': 'Para nada'
-  }
-
-  const honestidadLabel: Record<string, string> = {
-    'totalmente': 'Totalmente',
-    'mayormente': 'Mayormente sí',
-    'algo': 'Algo',
-    'no': 'No'
   }
 
   const utilLabel: Record<string, string> = {
@@ -212,8 +191,6 @@ async function enviarSlackFeedback(params: SlackFeedbackParams): Promise<void> {
         type: 'section',
         fields: [
           { type: 'mrkdwn', text: `*¿Recomendarías?*\n${recomendariaLabel[params.feedback.recomendaria] || params.feedback.recomendaria}` },
-          { type: 'mrkdwn', text: `*¿Props alineadas?*\n${alineadasLabel[params.feedback.alineadas] || params.feedback.alineadas}` },
-          { type: 'mrkdwn', text: `*¿Info honesta?*\n${honestidadLabel[params.feedback.honestidad] || params.feedback.honestidad}` },
           { type: 'mrkdwn', text: `*¿Más útil?*\n${utilLabel[params.feedback.masUtil] || params.feedback.masUtil}` }
         ]
       },
