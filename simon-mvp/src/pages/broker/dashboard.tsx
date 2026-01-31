@@ -136,6 +136,44 @@ export default function BrokerDashboard() {
     }).format(price)
   }
 
+  const handleDelete = async (propId: number, codigo: string) => {
+    if (!confirm(`¿Estás seguro de eliminar la propiedad ${codigo}? Esta acción no se puede deshacer.`)) {
+      return
+    }
+
+    if (!supabase || !broker) return
+
+    try {
+      // Primero borrar fotos asociadas
+      await supabase
+        .from('propiedad_fotos')
+        .delete()
+        .eq('propiedad_id', propId)
+
+      // Luego borrar la propiedad
+      const { error } = await supabase
+        .from('propiedades_broker')
+        .delete()
+        .eq('id', propId)
+        .eq('broker_id', broker.id)
+
+      if (error) {
+        alert('Error al eliminar: ' + error.message)
+        return
+      }
+
+      // Actualizar lista
+      setPropiedades(prev => prev.filter(p => p.id !== propId))
+      setStats(prev => ({
+        ...prev,
+        total_propiedades: prev.total_propiedades - 1
+      }))
+    } catch (err) {
+      console.error('Error eliminando:', err)
+      alert('Error al eliminar la propiedad')
+    }
+  }
+
   return (
     <>
       <Head>
@@ -354,6 +392,12 @@ export default function BrokerDashboard() {
                           >
                             Fotos
                           </Link>
+                          <button
+                            onClick={() => handleDelete(prop.id, prop.codigo)}
+                            className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            Eliminar
+                          </button>
                         </>
                       ) : (
                         <>
