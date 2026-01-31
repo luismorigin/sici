@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import BrokerLayout from '@/components/BrokerLayout'
 import { useBrokerAuth } from '@/hooks/useBrokerAuth'
 import { supabase, convertirZona, obtenerTCActuales } from '@/lib/supabase'
+import ProyectoAutocomplete, { ProyectoSugerencia } from '@/components/broker/ProyectoAutocomplete'
 
 interface FormData {
   proyecto_nombre: string
@@ -28,6 +29,11 @@ interface FormData {
   amenidades_custom: string[]
   equipamiento: string[]
   equipamiento_custom: string[]
+  // Herencia de proyecto
+  id_proyecto_master: number | null
+  latitud: number | null
+  longitud: number | null
+  amenidades_heredadas: string[]
 }
 
 interface CamposBloqueados {
@@ -54,6 +60,27 @@ const ZONAS = [
   { id: 'villa_brigida', label: 'Villa Brígida' },
   { id: 'faremafu', label: 'Equipetrol Oeste (Busch)' }
 ]
+
+// Mapear zona desde proyectos_master al formato del formulario
+function mapearZonaDesdeProyecto(zonaProyecto: string): string | null {
+  const zonaNormalizada = zonaProyecto.toLowerCase().trim()
+  const mapeo: Record<string, string> = {
+    'equipetrol': 'equipetrol',
+    'equipetrol centro': 'equipetrol',
+    'sirari': 'sirari',
+    'equipetrol norte': 'equipetrol_norte',
+    'villa brigida': 'villa_brigida',
+    'villa brígida': 'villa_brigida',
+    'equipetrol oeste': 'faremafu',
+    'equipetrol oeste (busch)': 'faremafu',
+    'faremafu': 'faremafu',
+  }
+  if (mapeo[zonaNormalizada]) return mapeo[zonaNormalizada]
+  for (const [key, value] of Object.entries(mapeo)) {
+    if (zonaNormalizada.includes(key) || key.includes(zonaNormalizada)) return value
+  }
+  return null
+}
 
 const AMENIDADES_OPCIONES = [
   'Piscina',
@@ -139,7 +166,12 @@ export default function EditarPropiedad() {
     amenidades: [],
     amenidades_custom: [],
     equipamiento: [],
-    equipamiento_custom: []
+    equipamiento_custom: [],
+    // Herencia de proyecto
+    id_proyecto_master: null,
+    latitud: null,
+    longitud: null,
+    amenidades_heredadas: []
   })
 
   useEffect(() => {
@@ -228,7 +260,12 @@ export default function EditarPropiedad() {
         amenidades: standardAmenidades,
         amenidades_custom: customAmenidades,
         equipamiento: standardEquipamiento,
-        equipamiento_custom: customEquipamiento
+        equipamiento_custom: customEquipamiento,
+        // Herencia de proyecto
+        id_proyecto_master: data.id_proyecto_master || null,
+        latitud: data.latitud || null,
+        longitud: data.longitud || null,
+        amenidades_heredadas: [] // Se calculará si hay proyecto vinculado
       })
     } catch (err) {
       console.error('Error fetching propiedad:', err)
@@ -350,7 +387,11 @@ export default function EditarPropiedad() {
         parqueo_incluido: formData.parqueo_incluido,
         cantidad_parqueos: formData.parqueo_incluido ? parseInt(formData.cantidad_parqueos) : 0,
         baulera_incluida: formData.baulera_incluida,
-        expensas_usd: formData.expensas_usd ? parseFloat(formData.expensas_usd) : null
+        expensas_usd: formData.expensas_usd ? parseFloat(formData.expensas_usd) : null,
+        // Herencia de proyecto master
+        id_proyecto_master: formData.id_proyecto_master,
+        latitud: formData.latitud,
+        longitud: formData.longitud
       }
 
       // Detectar campos cambiados y crear historial
@@ -505,35 +546,92 @@ export default function EditarPropiedad() {
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Nombre del Proyecto *
                   </label>
-                  <input
-                    type="text"
+                  <ProyectoAutocomplete
                     value={formData.proyecto_nombre}
-                    onChange={(e) => updateField('proyecto_nombre', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                    linkedProjectId={formData.id_proyecto_master}
+                    placeholder="Buscar proyecto..."
+                    onSelect={(proyecto: ProyectoSugerencia) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        proyecto_nombre: proyecto.nombre_oficial,
+                        id_proyecto_master: proyecto.id_proyecto_master,
+                        desarrollador: proyecto.desarrollador || prev.desarrollador,
+                        zona: proyecto.zona ? mapearZonaDesdeProyecto(proyecto.zona) || prev.zona : prev.zona,
+                        estado_construccion: (proyecto.estado_construccion as any) || prev.estado_construccion,
+                        fecha_entrega: proyecto.fecha_entrega_estimada
+                          ? proyecto.fecha_entrega_estimada.substring(0, 7)
+                          : prev.fecha_entrega,
+                        latitud: proyecto.latitud,
+                        longitud: proyecto.longitud,
+                        amenidades_heredadas: proyecto.amenidades_edificio || [],
+                        amenidades: [
+                          ...prev.amenidades.filter(a => !proyecto.amenidades_edificio?.includes(a)),
+                          ...(proyecto.amenidades_edificio || []).filter(a =>
+                            AMENIDADES_OPCIONES.includes(a)
+                          )
+                        ]
+                      }))
+                    }}
+                    onManualEntry={(nombre: string) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        proyecto_nombre: nombre,
+                        id_proyecto_master: null,
+                        latitud: null,
+                        longitud: null,
+                        amenidades_heredadas: []
+                      }))
+                    }}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Desarrollador
+                    Desarrollador {formData.id_proyecto_master && <span className="text-green-600 text-xs">(heredado)</span>}
                   </label>
                   <input
                     type="text"
                     value={formData.desarrollador}
                     onChange={(e) => updateField('desarrollador', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                      formData.id_proyecto_master && formData.desarrollador ? 'border-green-300 bg-green-50' : 'border-slate-300'
+                    }`}
+                    readOnly={!!formData.id_proyecto_master && !!formData.desarrollador}
                   />
                 </div>
+
+                {/* Banner de datos heredados */}
+                {formData.id_proyecto_master && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="text-green-600 mt-0.5">
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-green-800">Proyecto vinculado - Datos heredados</p>
+                        <p className="text-xs text-green-700 mt-1">
+                          Se pre-llenaron: desarrollador{formData.zona && ', zona'}, estado
+                          {formData.latitud && ', GPS'}
+                          {formData.amenidades_heredadas.length > 0 && `, ${formData.amenidades_heredadas.length} amenidades`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Zona *
+                      Zona * {formData.id_proyecto_master && formData.zona && <span className="text-green-600 text-xs">(heredado)</span>}
                     </label>
                     <select
                       value={formData.zona}
                       onChange={(e) => updateField('zona', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                        formData.id_proyecto_master && formData.zona ? 'border-green-300 bg-green-50' : 'border-slate-300'
+                      }`}
                     >
                       <option value="">Seleccionar...</option>
                       {ZONAS.map(z => (
@@ -544,12 +642,14 @@ export default function EditarPropiedad() {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Estado
+                      Estado {formData.id_proyecto_master && <span className="text-green-600 text-xs">(heredado)</span>}
                     </label>
                     <select
                       value={formData.estado_construccion}
                       onChange={(e) => updateField('estado_construccion', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                        formData.id_proyecto_master ? 'border-green-300 bg-green-50' : 'border-slate-300'
+                      }`}
                     >
                       <option value="entrega_inmediata">Entrega Inmediata</option>
                       <option value="construccion">En Construcción</option>
