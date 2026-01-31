@@ -61,6 +61,8 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 | **Metodología Fiduciaria** | `docs/canonical/METODOLOGIA_FIDUCIARIA_PARTE_*.md` |
 | **Beta Feedback System** | `docs/simon/BETA_FEEDBACK_SYSTEM_PLAN.md` |
 | **Sistema Broker B2B** | `docs/simon/SIMON_BROKER_SYSTEM.md` |
+| **Broker Handoff Original** | `docs/simon/broker/BROKER_HANDOFF_ORIGINAL.md` |
+| **Broker Roadmap Refinado** | `docs/simon/broker/BROKER_ROADMAP_REFINADO.md` |
 | Plan activo | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
