@@ -68,6 +68,181 @@ Pulir estados de `propiedades_broker` sin dañar `propiedades_v2`
 
 ---
 
+## FASE 1.5: Herencia de Datos de Proyecto
+
+### Objetivo
+Cuando broker escribe nombre de edificio/proyecto, mostrar autocomplete y permitir "jalar" datos verificados de `proyectos_master`.
+
+### Valor
+- Broker sube propiedades con mejor información
+- Datos consistentes con el censo
+- Menos errores de tipeo en nombres de proyectos
+- GPS verificado desde el inicio
+- Prepara terreno para sincronización futura
+
+### Flujo Propuesto
+
+```
+1. Broker escribe "Santa" en campo proyecto_nombre
+2. Sistema muestra dropdown con sugerencias:
+   ├── SANTORINI VENTURA (Equipetrol Norte) ⭐ Verificado
+   ├── SANTA CRUZ TOWERS (Equipetrol)
+   └── SANTA MARIA RESIDENCE (Sirari)
+3. Broker selecciona "SANTORINI VENTURA"
+4. Sistema pre-llena automáticamente:
+   ├── Estado construcción: "entrega_inmediata"
+   ├── Fecha entrega: null (ya entregado)
+   ├── GPS: -17.7634, -63.1856 ✓
+   └── Amenidades edificio: [Piscina, Gimnasio, Seguridad 24/7, ...]
+5. Broker puede modificar datos de SU unidad
+```
+
+### Datos a Heredar de proyectos_master
+
+| Campo PM | Campo Broker | Editable |
+|----------|--------------|----------|
+| `nombre_oficial` | `proyecto_nombre` | NO (vinculado) |
+| `estado_construccion` | `estado_construccion` | SÍ (puede diferir) |
+| `fecha_entrega_estimada` | `fecha_entrega` | SÍ |
+| `latitud` | `latitud` | SÍ (ajustar pin) |
+| `longitud` | `longitud` | SÍ (ajustar pin) |
+| `amenidades_edificio` | `amenidades.lista` (merge) | SÍ (agregar más) |
+| `desarrollador` | `desarrollador` | NO |
+| `id_proyecto_master` | `id_proyecto_master` | NO (FK) |
+
+### Implementación Técnica
+
+#### 1. Endpoint de Búsqueda
+```typescript
+// /api/broker/buscar-proyectos.ts
+GET /api/broker/buscar-proyectos?q=santa&limit=5
+
+Response: [
+  {
+    id_proyecto_master: 45,
+    nombre_oficial: "SANTORINI VENTURA",
+    desarrollador: "Grupo Santorini",
+    zona: "Equipetrol Norte",
+    estado_construccion: "entrega_inmediata",
+    fecha_entrega_estimada: null,
+    latitud: -17.7634,
+    longitud: -63.1856,
+    amenidades_edificio: ["Piscina", "Gimnasio", "Seguridad 24/7"],
+    total_unidades: 18,
+    verificado: true
+  }
+]
+```
+
+#### 2. Componente Autocomplete
+```typescript
+// components/broker/ProyectoAutocomplete.tsx
+<ProyectoAutocomplete
+  value={formData.proyecto_nombre}
+  onSelect={(proyecto) => {
+    setFormData({
+      ...formData,
+      proyecto_nombre: proyecto.nombre_oficial,
+      id_proyecto_master: proyecto.id_proyecto_master,
+      desarrollador: proyecto.desarrollador,
+      estado_construccion: proyecto.estado_construccion,
+      fecha_entrega: proyecto.fecha_entrega_estimada,
+      latitud: proyecto.latitud,
+      longitud: proyecto.longitud,
+      // Merge amenidades (edificio + las que broker agregue)
+      amenidades_heredadas: proyecto.amenidades_edificio
+    })
+  }}
+  onManualEntry={(nombre) => {
+    // Broker escribe proyecto que no existe en PM
+    setFormData({
+      ...formData,
+      proyecto_nombre: nombre,
+      id_proyecto_master: null  // Sin vincular
+    })
+  }}
+/>
+```
+
+#### 3. Modificar nueva-propiedad.tsx
+
+**Paso 1 - Cambiar input de proyecto:**
+```diff
+- <input
+-   name="proyecto_nombre"
+-   value={formData.proyecto_nombre}
+-   onChange={handleChange}
+- />
++ <ProyectoAutocomplete
++   value={formData.proyecto_nombre}
++   onSelect={handleProyectoSelect}
++   onManualEntry={handleManualProyecto}
++ />
+```
+
+**Mostrar badge si está vinculado:**
+```tsx
+{formData.id_proyecto_master && (
+  <span className="text-green-600 text-sm">
+    ✓ Vinculado a proyecto verificado
+  </span>
+)}
+```
+
+### UI/UX Consideraciones
+
+1. **Autocomplete con debounce** (300ms)
+2. **Mostrar info del proyecto** al seleccionar (zona, desarrollador, unidades)
+3. **Permitir entrada manual** si proyecto no existe
+4. **Badge "Datos heredados"** en campos pre-llenados
+5. **Broker puede editar** datos heredados (su unidad puede diferir)
+6. **Guardar `id_proyecto_master`** como FK para tracking
+
+### Beneficios para Score de Calidad
+
+| Dato Heredado | Puntos que Aporta |
+|---------------|-------------------|
+| GPS verificado | +10 pts (precisión) |
+| Amenidades edificio | +4 pts (campo completo) |
+| Estado construcción | +4 pts (campo completo) |
+| Desarrollador | Consistencia de datos |
+
+**Resultado:** Broker que vincula proyecto empieza con +18 pts de ventaja
+
+### Casos Edge
+
+1. **Proyecto no existe en PM:**
+   - Broker escribe manualmente
+   - `id_proyecto_master = NULL`
+   - No hereda datos
+   - Posible flag para admin: "Nuevo proyecto detectado"
+
+2. **Broker modifica GPS heredado:**
+   - Se guarda su versión
+   - Campo `gps_fuente = 'broker'` vs `'proyecto_master'`
+   - No afecta al proyecto_master original
+
+3. **Proyecto tiene múltiples nombres:**
+   - Búsqueda fuzzy con `pg_trgm` (ya implementado)
+   - Mostrar aliases si existen
+
+### Dependencias
+- `proyectos_master` con datos completos (✅ 187 activos)
+- `buscar_proyecto_fuzzy()` (✅ migración 022)
+- Ninguna dependencia de otras fases
+
+### Riesgos
+- Broker podría vincular a proyecto incorrecto
+- Mitigación: Mostrar info clara antes de confirmar
+
+### Entregables
+- `BROKER_HERENCIA_PROYECTO_SPEC.md`
+- `/api/broker/buscar-proyectos.ts`
+- `components/broker/ProyectoAutocomplete.tsx`
+- Modificar `nueva-propiedad.tsx` y `editar/[id].tsx`
+
+---
+
 ## FASE 2: Sistema de Calidad (100 pts)
 
 ### Objetivo
@@ -398,11 +573,12 @@ Broker puede "reclamar" propiedad scrapeada
 
 ### Prerequisitos
 1. ✅ Estados equivalentes (FASE 1)
-2. ✅ Score calidad (FASE 2)
-3. ✅ PDF/CMA funcionando (FASE 3)
-4. ✅ Anti-duplicados (FASE 4)
-5. ⏳ Protocolo de baja listo (FASE 5)
-6. ⏳ Verificación por link (FASE 6)
+2. ✅ Herencia datos proyecto (FASE 1.5) - Ya vincula a proyectos_master
+3. ✅ Score calidad (FASE 2)
+4. ✅ PDF/CMA funcionando (FASE 3)
+5. ✅ Anti-duplicados (FASE 4)
+6. ⏳ Protocolo de baja listo (FASE 5)
+7. ⏳ Verificación por link (FASE 6)
 
 ### Opciones de Merge
 
@@ -434,12 +610,15 @@ ADD COLUMN scrapeada_vinculada INTEGER REFERENCES propiedades_v2(id);
 | Fase | Nombre | Prioridad | Bloqueado por |
 |------|--------|-----------|---------------|
 | 1 | Estados | ALTA | - |
+| **1.5** | **Herencia Datos Proyecto** | **ALTA** | - |
 | 2 | Calidad 100pts | ALTA | Fase 1 |
 | 3 | PDF/CMA | ALTA | Fase 2 |
 | 4 | Anti-duplicados | MEDIA | - |
 | 5 | Protocolo Baja | BAJA | Fase 7 |
 | 6 | Verificación Link | BAJA | - |
 | 7 | Sincronización | FUTURA | Fases 1-6 |
+
+**Nota:** FASE 1.5 puede implementarse en paralelo con FASE 1, no tiene dependencias.
 
 ---
 
@@ -448,6 +627,7 @@ ADD COLUMN scrapeada_vinculada INTEGER REFERENCES propiedades_v2(id);
 | Archivo | Estado | Prioridad |
 |---------|--------|-----------|
 | `BROKER_ESTADOS_SPEC.md` | Por crear | Alta |
+| `BROKER_HERENCIA_PROYECTO_SPEC.md` | Por crear | Alta |
 | `BROKER_CALIDAD_SPEC.md` | Por crear | Alta |
 | `BROKER_PDF_SPEC.md` | Por crear | Alta |
 | `BROKER_CMA_SPEC.md` | Por crear | Alta |
@@ -459,4 +639,5 @@ ADD COLUMN scrapeada_vinculada INTEGER REFERENCES propiedades_v2(id);
 
 | Fecha | Cambio |
 |-------|--------|
+| 2026-01-31 | Agregada FASE 1.5: Herencia de Datos de Proyecto (autocomplete + jalar amenidades/GPS) |
 | 2026-01-30 | Documento inicial basado en handoff + criterios usuario |
