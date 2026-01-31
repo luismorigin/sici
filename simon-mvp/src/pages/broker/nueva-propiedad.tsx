@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import BrokerLayout from '@/components/BrokerLayout'
 import { useBrokerAuth } from '@/hooks/useBrokerAuth'
 import { supabase, convertirZona, obtenerTCActuales } from '@/lib/supabase'
+import ProyectoAutocomplete, { ProyectoSugerencia } from '@/components/broker/ProyectoAutocomplete'
 
 interface FormData {
   proyecto_nombre: string
@@ -37,6 +38,11 @@ interface FormData {
   amenidades_custom: string[]
   equipamiento: string[]
   equipamiento_custom: string[]
+  // Herencia de proyecto
+  id_proyecto_master: number | null
+  latitud: number | null
+  longitud: number | null
+  amenidades_heredadas: string[]
 }
 
 // Zonas iguales a FilterBar.tsx para consistencia
@@ -117,7 +123,12 @@ export default function NuevaPropiedad() {
     amenidades: [],
     amenidades_custom: [],
     equipamiento: [],
-    equipamiento_custom: []
+    equipamiento_custom: [],
+    // Herencia de proyecto
+    id_proyecto_master: null,
+    latitud: null,
+    longitud: null,
+    amenidades_heredadas: []
   })
 
   const [nuevoAmenidad, setNuevoAmenidad] = useState('')
@@ -220,6 +231,10 @@ export default function NuevaPropiedad() {
           zona: convertirZona(formData.zona) || formData.zona,
           direccion: formData.direccion || null,
           piso: formData.piso ? parseInt(formData.piso) : null,
+          // Vinculación a proyecto master (herencia de datos)
+          id_proyecto_master: formData.id_proyecto_master,
+          latitud: formData.latitud,
+          longitud: formData.longitud,
           precio_usd: precioUsd,
           precio_usd_original: precioUsd,
           tipo_cambio: formData.tipo_cambio,
@@ -362,28 +377,88 @@ export default function NuevaPropiedad() {
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Nombre del Proyecto *
                   </label>
-                  <input
-                    type="text"
+                  <ProyectoAutocomplete
                     value={formData.proyecto_nombre}
-                    onChange={(e) => updateField('proyecto_nombre', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                    placeholder="Ej: Vienna Residences"
-                    required
+                    linkedProjectId={formData.id_proyecto_master}
+                    placeholder="Buscar proyecto... Ej: Vienna, Santorini"
+                    onSelect={(proyecto: ProyectoSugerencia) => {
+                      // Heredar datos del proyecto
+                      setFormData(prev => ({
+                        ...prev,
+                        proyecto_nombre: proyecto.nombre_oficial,
+                        id_proyecto_master: proyecto.id_proyecto_master,
+                        desarrollador: proyecto.desarrollador || prev.desarrollador,
+                        estado_construccion: (proyecto.estado_construccion as any) || prev.estado_construccion,
+                        fecha_entrega: proyecto.fecha_entrega_estimada
+                          ? proyecto.fecha_entrega_estimada.substring(0, 7) // YYYY-MM
+                          : prev.fecha_entrega,
+                        latitud: proyecto.latitud,
+                        longitud: proyecto.longitud,
+                        amenidades_heredadas: proyecto.amenidades_edificio || [],
+                        // Auto-seleccionar amenidades heredadas
+                        amenidades: [
+                          ...prev.amenidades.filter(a => !proyecto.amenidades_edificio?.includes(a)),
+                          ...(proyecto.amenidades_edificio || []).filter(a =>
+                            AMENIDADES_OPCIONES.includes(a)
+                          )
+                        ]
+                      }))
+                    }}
+                    onManualEntry={(nombre: string) => {
+                      // Sin vincular a proyecto
+                      setFormData(prev => ({
+                        ...prev,
+                        proyecto_nombre: nombre,
+                        id_proyecto_master: null,
+                        latitud: null,
+                        longitud: null,
+                        amenidades_heredadas: []
+                      }))
+                    }}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Desarrollador
+                    Desarrollador {formData.id_proyecto_master && <span className="text-green-600 text-xs">(heredado)</span>}
                   </label>
                   <input
                     type="text"
                     value={formData.desarrollador}
                     onChange={(e) => updateField('desarrollador', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                      formData.id_proyecto_master && formData.desarrollador ? 'border-green-300 bg-green-50' : 'border-slate-300'
+                    }`}
                     placeholder="Ej: Grupo Jenecheru"
+                    readOnly={!!formData.id_proyecto_master && !!formData.desarrollador}
                   />
                 </div>
+
+                {/* Banner de datos heredados */}
+                {formData.id_proyecto_master && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="text-green-600 mt-0.5">
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-green-800">
+                          Proyecto vinculado - Datos heredados
+                        </p>
+                        <p className="text-xs text-green-700 mt-1">
+                          Se pre-llenaron: desarrollador, estado de construcción
+                          {formData.latitud && ', ubicación GPS'}
+                          {formData.amenidades_heredadas.length > 0 && `, ${formData.amenidades_heredadas.length} amenidades del edificio`}
+                        </p>
+                        <p className="text-xs text-green-600 mt-1">
+                          Puedes modificar estos datos si tu unidad difiere del edificio.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -405,12 +480,14 @@ export default function NuevaPropiedad() {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Estado
+                      Estado {formData.id_proyecto_master && <span className="text-green-600 text-xs">(heredado)</span>}
                     </label>
                     <select
                       value={formData.estado_construccion}
                       onChange={(e) => updateField('estado_construccion', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                        formData.id_proyecto_master ? 'border-green-300 bg-green-50' : 'border-slate-300'
+                      }`}
                     >
                       <option value="entrega_inmediata">Entrega Inmediata</option>
                       <option value="construccion">En Construcción</option>
@@ -816,25 +893,43 @@ export default function NuevaPropiedad() {
               <div className="space-y-6">
                 <h2 className="text-lg font-semibold text-slate-900 mb-4">Amenidades del Edificio</h2>
 
+                {formData.amenidades_heredadas.length > 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-green-700">
+                      <span className="font-medium">{formData.amenidades_heredadas.length} amenidades heredadas</span> del proyecto {formData.proyecto_nombre}
+                    </p>
+                  </div>
+                )}
+
                 <p className="text-sm text-slate-500 mb-4">
                   Selecciona las amenidades que tiene el edificio/condominio
                 </p>
 
                 <div className="grid grid-cols-2 gap-3 mb-4">
-                  {AMENIDADES_OPCIONES.map((amenidad) => (
-                    <button
-                      key={amenidad}
-                      type="button"
-                      onClick={() => toggleAmenidad(amenidad)}
-                      className={`px-4 py-3 rounded-lg border-2 text-left transition-colors ${
-                        formData.amenidades.includes(amenidad)
-                          ? 'border-amber-500 bg-amber-50 text-amber-700'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
-                      }`}
-                    >
-                      <span className="text-sm font-medium">{amenidad}</span>
-                    </button>
-                  ))}
+                  {AMENIDADES_OPCIONES.map((amenidad) => {
+                    const isSelected = formData.amenidades.includes(amenidad)
+                    const isHeredado = formData.amenidades_heredadas.includes(amenidad)
+
+                    return (
+                      <button
+                        key={amenidad}
+                        type="button"
+                        onClick={() => toggleAmenidad(amenidad)}
+                        className={`px-4 py-3 rounded-lg border-2 text-left transition-colors relative ${
+                          isSelected
+                            ? isHeredado
+                              ? 'border-green-500 bg-green-50 text-green-700'
+                              : 'border-amber-500 bg-amber-50 text-amber-700'
+                            : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                        }`}
+                      >
+                        <span className="text-sm font-medium">{amenidad}</span>
+                        {isSelected && isHeredado && (
+                          <span className="absolute top-1 right-1 text-xs text-green-600"></span>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
 
                 {/* Amenidades Custom */}
