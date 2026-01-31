@@ -54,6 +54,38 @@ const ZONAS = [
   { id: 'faremafu', label: 'Equipetrol Oeste (Busch)' }
 ]
 
+// Mapear zona desde proyectos_master al formato del formulario
+function mapearZonaDesdeProyecto(zonaProyecto: string): string | null {
+  const zonaNormalizada = zonaProyecto.toLowerCase().trim()
+
+  // Mapeo directo
+  const mapeo: Record<string, string> = {
+    'equipetrol': 'equipetrol',
+    'equipetrol centro': 'equipetrol',
+    'sirari': 'sirari',
+    'equipetrol norte': 'equipetrol_norte',
+    'villa brigida': 'villa_brigida',
+    'villa brígida': 'villa_brigida',
+    'equipetrol oeste': 'faremafu',
+    'equipetrol oeste (busch)': 'faremafu',
+    'faremafu': 'faremafu',
+  }
+
+  // Buscar coincidencia directa
+  if (mapeo[zonaNormalizada]) {
+    return mapeo[zonaNormalizada]
+  }
+
+  // Buscar coincidencia parcial
+  for (const [key, value] of Object.entries(mapeo)) {
+    if (zonaNormalizada.includes(key) || key.includes(zonaNormalizada)) {
+      return value
+    }
+  }
+
+  return null
+}
+
 const AMENIDADES_OPCIONES = [
   'Piscina',
   'Gimnasio',
@@ -388,6 +420,8 @@ export default function NuevaPropiedad() {
                         proyecto_nombre: proyecto.nombre_oficial,
                         id_proyecto_master: proyecto.id_proyecto_master,
                         desarrollador: proyecto.desarrollador || prev.desarrollador,
+                        // Mapear zona del proyecto a nuestro formato
+                        zona: proyecto.zona ? mapearZonaDesdeProyecto(proyecto.zona) || prev.zona : prev.zona,
                         estado_construccion: (proyecto.estado_construccion as any) || prev.estado_construccion,
                         fecha_entrega: proyecto.fecha_entrega_estimada
                           ? proyecto.fecha_entrega_estimada.substring(0, 7) // YYYY-MM
@@ -448,7 +482,7 @@ export default function NuevaPropiedad() {
                           Proyecto vinculado - Datos heredados
                         </p>
                         <p className="text-xs text-green-700 mt-1">
-                          Se pre-llenaron: desarrollador, estado de construcción
+                          Se pre-llenaron: desarrollador{formData.zona && ', zona'}, estado de construcción
                           {formData.latitud && ', ubicación GPS'}
                           {formData.amenidades_heredadas.length > 0 && `, ${formData.amenidades_heredadas.length} amenidades del edificio`}
                         </p>
@@ -463,12 +497,14 @@ export default function NuevaPropiedad() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Zona *
+                      Zona * {formData.id_proyecto_master && formData.zona && <span className="text-green-600 text-xs">(heredado)</span>}
                     </label>
                     <select
                       value={formData.zona}
                       onChange={(e) => updateField('zona', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                        formData.id_proyecto_master && formData.zona ? 'border-green-300 bg-green-50' : 'border-slate-300'
+                      }`}
                       required
                     >
                       <option value="">Seleccionar...</option>
