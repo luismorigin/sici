@@ -30,6 +30,22 @@ interface FormData {
   equipamiento_custom: string[]
 }
 
+interface CamposBloqueados {
+  [campo: string]: {
+    bloqueado: boolean
+    por: string
+    fecha: string
+  }
+}
+
+interface HistorialCambio {
+  fecha: string
+  campo: string
+  valor_anterior: any
+  valor_nuevo: any
+  por: string
+}
+
 // Zonas iguales a FilterBar.tsx para consistencia
 const ZONAS = [
   { id: 'equipetrol', label: 'Equipetrol Centro' },
@@ -96,6 +112,11 @@ export default function EditarPropiedad() {
   const [nuevoAmenidad, setNuevoAmenidad] = useState('')
   const [nuevoEquipamiento, setNuevoEquipamiento] = useState('')
 
+  // Datos originales para detectar cambios
+  const [datosOriginales, setDatosOriginales] = useState<Record<string, any>>({})
+  const [camposBloqueados, setCamposBloqueados] = useState<CamposBloqueados>({})
+  const [historialCambios, setHistorialCambios] = useState<HistorialCambio[]>([])
+
   const [formData, setFormData] = useState<FormData>({
     proyecto_nombre: '',
     desarrollador: '',
@@ -144,6 +165,33 @@ export default function EditarPropiedad() {
       }
 
       setPropiedadCodigo(data.codigo)
+
+      // Guardar datos originales para comparar después
+      setDatosOriginales({
+        proyecto_nombre: data.proyecto_nombre,
+        desarrollador: data.desarrollador,
+        zona: data.zona,
+        direccion: data.direccion,
+        piso: data.piso,
+        precio_usd: data.precio_usd,
+        tipo_cambio: data.tipo_cambio,
+        area_m2: data.area_m2,
+        dormitorios: data.dormitorios,
+        banos: data.banos,
+        estado_construccion: data.estado_construccion,
+        fecha_entrega: data.fecha_entrega,
+        plan_pagos: data.plan_pagos,
+        descripcion: data.descripcion,
+        parqueo_incluido: data.parqueo_incluido,
+        cantidad_parqueos: data.cantidad_parqueos,
+        baulera_incluida: data.baulera_incluida,
+        expensas_usd: data.expensas_usd,
+        amenidades: data.amenidades
+      })
+
+      // Cargar campos bloqueados e historial
+      setCamposBloqueados(data.campos_bloqueados || {})
+      setHistorialCambios(data.historial_cambios || [])
 
       // Parsear amenidades y equipamiento
       const amenidadesData = data.amenidades || { lista: [], equipamiento: [] }
@@ -267,27 +315,77 @@ export default function EditarPropiedad() {
       const todasAmenidades = [...formData.amenidades, ...formData.amenidades_custom]
       const todoEquipamiento = [...formData.equipamiento, ...formData.equipamiento_custom]
 
+      // Preparar nuevos valores
+      const nuevosValores: Record<string, any> = {
+        proyecto_nombre: formData.proyecto_nombre,
+        desarrollador: formData.desarrollador || null,
+        zona: convertirZona(formData.zona) || formData.zona,
+        direccion: formData.direccion || null,
+        piso: formData.piso ? parseInt(formData.piso) : null,
+        precio_usd: parseFloat(formData.precio_usd),
+        tipo_cambio: formData.tipo_cambio,
+        area_m2: parseFloat(formData.area_m2),
+        dormitorios: parseInt(formData.dormitorios),
+        banos: parseFloat(formData.banos),
+        estado_construccion: formData.estado_construccion,
+        fecha_entrega: formData.fecha_entrega || null,
+        plan_pagos: formData.plan_pagos || null,
+        descripcion: formData.descripcion || null,
+        parqueo_incluido: formData.parqueo_incluido,
+        cantidad_parqueos: formData.parqueo_incluido ? parseInt(formData.cantidad_parqueos) : 0,
+        baulera_incluida: formData.baulera_incluida,
+        expensas_usd: formData.expensas_usd ? parseFloat(formData.expensas_usd) : null
+      }
+
+      // Detectar campos cambiados y crear historial
+      const nuevoHistorial: HistorialCambio[] = [...historialCambios]
+      const nuevosCandados: CamposBloqueados = { ...camposBloqueados }
+      const ahora = new Date().toISOString()
+
+      // Campos a comparar (excluir amenidades que se manejan diferente)
+      const camposComparar = [
+        'proyecto_nombre', 'desarrollador', 'zona', 'direccion', 'piso',
+        'precio_usd', 'tipo_cambio', 'area_m2', 'dormitorios', 'banos',
+        'estado_construccion', 'fecha_entrega', 'plan_pagos', 'descripcion',
+        'parqueo_incluido', 'cantidad_parqueos', 'baulera_incluida', 'expensas_usd'
+      ]
+
+      for (const campo of camposComparar) {
+        const valorOriginal = datosOriginales[campo]
+        const valorNuevo = nuevosValores[campo]
+
+        // Comparar valores (convertir a string para comparación consistente)
+        const original = valorOriginal?.toString() ?? ''
+        const nuevo = valorNuevo?.toString() ?? ''
+
+        if (original !== nuevo) {
+          // Registrar en historial
+          nuevoHistorial.push({
+            fecha: ahora,
+            campo,
+            valor_anterior: valorOriginal,
+            valor_nuevo: valorNuevo,
+            por: broker.nombre || broker.email
+          })
+
+          // Bloquear campo EXCEPTO precio cuando TC es paralelo
+          // (precio en paralelo puede cambiar con el tipo de cambio)
+          const esPrecioParalelo = campo === 'precio_usd' && formData.tipo_cambio === 'paralelo'
+
+          if (!esPrecioParalelo) {
+            nuevosCandados[campo] = {
+              bloqueado: true,
+              por: broker.nombre || broker.email,
+              fecha: ahora
+            }
+          }
+        }
+      }
+
       const { error: updateError } = await supabase
         .from('propiedades_broker')
         .update({
-          proyecto_nombre: formData.proyecto_nombre,
-          desarrollador: formData.desarrollador || null,
-          zona: convertirZona(formData.zona) || formData.zona,
-          direccion: formData.direccion || null,
-          piso: formData.piso ? parseInt(formData.piso) : null,
-          precio_usd: parseFloat(formData.precio_usd),
-          tipo_cambio: formData.tipo_cambio,
-          area_m2: parseFloat(formData.area_m2),
-          dormitorios: parseInt(formData.dormitorios),
-          banos: parseFloat(formData.banos),
-          estado_construccion: formData.estado_construccion,
-          fecha_entrega: formData.fecha_entrega || null,
-          plan_pagos: formData.plan_pagos || null,
-          descripcion: formData.descripcion || null,
-          parqueo_incluido: formData.parqueo_incluido,
-          cantidad_parqueos: formData.parqueo_incluido ? parseInt(formData.cantidad_parqueos) : 0,
-          baulera_incluida: formData.baulera_incluida,
-          expensas_usd: formData.expensas_usd ? parseFloat(formData.expensas_usd) : null,
+          ...nuevosValores,
           amenidades: {
             lista: todasAmenidades,
             equipamiento: todoEquipamiento,
@@ -308,7 +406,9 @@ export default function EditarPropiedad() {
               }
             }), {})
           },
-          updated_at: new Date().toISOString()
+          campos_bloqueados: nuevosCandados,
+          historial_cambios: nuevoHistorial,
+          updated_at: ahora
         })
         .eq('id', id)
         .eq('broker_id', broker.id)
@@ -316,6 +416,11 @@ export default function EditarPropiedad() {
       if (updateError) {
         throw new Error(updateError.message)
       }
+
+      // Actualizar estado local
+      setCamposBloqueados(nuevosCandados)
+      setHistorialCambios(nuevoHistorial)
+      setDatosOriginales(nuevosValores)
 
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
