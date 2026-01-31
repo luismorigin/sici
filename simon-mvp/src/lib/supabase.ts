@@ -6,6 +6,36 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 export const supabase = supabaseUrl ? createClient(supabaseUrl, supabaseAnonKey) : null
 
+// Obtener tipos de cambio actuales de config_global
+export interface TCActuales {
+  paralelo: number
+  oficial: number
+}
+
+export async function obtenerTCActuales(): Promise<TCActuales> {
+  if (!supabase) {
+    return { paralelo: 9.09, oficial: 6.96 } // Fallback
+  }
+
+  const { data, error } = await supabase
+    .from('config_global')
+    .select('clave, valor')
+    .in('clave', ['tipo_cambio_paralelo', 'tipo_cambio_oficial'])
+
+  if (error || !data) {
+    console.error('Error obteniendo TC:', error)
+    return { paralelo: 9.09, oficial: 6.96 } // Fallback
+  }
+
+  const tcParalelo = data.find(d => d.clave === 'tipo_cambio_paralelo')?.valor || 9.09
+  const tcOficial = data.find(d => d.clave === 'tipo_cambio_oficial')?.valor || 6.96
+
+  return {
+    paralelo: Number(tcParalelo),
+    oficial: Number(tcOficial)
+  }
+}
+
 // Tipos para las respuestas (match con RPC buscar_unidades_reales v2.2)
 export interface UnidadReal {
   id: number

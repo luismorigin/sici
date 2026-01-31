@@ -3,7 +3,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import BrokerLayout from '@/components/BrokerLayout'
 import { useBrokerAuth } from '@/hooks/useBrokerAuth'
-import { supabase, convertirZona } from '@/lib/supabase'
+import { supabase, convertirZona, obtenerTCActuales } from '@/lib/supabase'
 
 interface FormData {
   proyecto_nombre: string
@@ -203,6 +203,12 @@ export default function NuevaPropiedad() {
 
       const codigo = codigoData as string
 
+      // Obtener TC actual para guardar referencia
+      const tcActuales = await obtenerTCActuales()
+      const precioUsd = parseFloat(formData.precio_usd)
+      const esParalelo = formData.tipo_cambio === 'paralelo'
+      const tcUsado = esParalelo ? tcActuales.paralelo : tcActuales.oficial
+
       // Crear propiedad
       const { data, error: insertError } = await supabase
         .from('propiedades_broker')
@@ -214,8 +220,11 @@ export default function NuevaPropiedad() {
           zona: convertirZona(formData.zona) || formData.zona,
           direccion: formData.direccion || null,
           piso: formData.piso ? parseInt(formData.piso) : null,
-          precio_usd: parseFloat(formData.precio_usd),
+          precio_usd: precioUsd,
+          precio_usd_original: precioUsd,
           tipo_cambio: formData.tipo_cambio,
+          tipo_cambio_usado: tcUsado,
+          depende_de_tc: esParalelo,
           area_m2: parseFloat(formData.area_m2),
           dormitorios: parseInt(formData.dormitorios),
           banos: parseFloat(formData.banos),

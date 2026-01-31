@@ -3,7 +3,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import BrokerLayout from '@/components/BrokerLayout'
 import { useBrokerAuth } from '@/hooks/useBrokerAuth'
-import { supabase, convertirZona } from '@/lib/supabase'
+import { supabase, convertirZona, obtenerTCActuales } from '@/lib/supabase'
 
 interface FormData {
   proyecto_nombre: string
@@ -315,6 +315,16 @@ export default function EditarPropiedad() {
       const todasAmenidades = [...formData.amenidades, ...formData.amenidades_custom]
       const todoEquipamiento = [...formData.equipamiento, ...formData.equipamiento_custom]
 
+      // Obtener TC actual
+      const tcActuales = await obtenerTCActuales()
+      const esParalelo = formData.tipo_cambio === 'paralelo'
+      const tcUsado = esParalelo ? tcActuales.paralelo : tcActuales.oficial
+      const precioUsd = parseFloat(formData.precio_usd)
+
+      // Si cambió el precio, actualizar precio_usd_original y tipo_cambio_usado
+      const precioOriginalAnterior = datosOriginales.precio_usd
+      const precioCambio = precioOriginalAnterior?.toString() !== precioUsd.toString()
+
       // Preparar nuevos valores
       const nuevosValores: Record<string, any> = {
         proyecto_nombre: formData.proyecto_nombre,
@@ -322,8 +332,14 @@ export default function EditarPropiedad() {
         zona: convertirZona(formData.zona) || formData.zona,
         direccion: formData.direccion || null,
         piso: formData.piso ? parseInt(formData.piso) : null,
-        precio_usd: parseFloat(formData.precio_usd),
+        precio_usd: precioUsd,
+        // Si cambió el precio, actualizar referencia de TC
+        ...(precioCambio ? {
+          precio_usd_original: precioUsd,
+          tipo_cambio_usado: tcUsado
+        } : {}),
         tipo_cambio: formData.tipo_cambio,
+        depende_de_tc: esParalelo,
         area_m2: parseFloat(formData.area_m2),
         dormitorios: parseInt(formData.dormitorios),
         banos: parseFloat(formData.banos),
