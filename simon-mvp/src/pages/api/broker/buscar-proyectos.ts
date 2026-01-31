@@ -55,12 +55,12 @@ export default async function handler(
         desarrollador,
         zona,
         estado_construccion,
-        fecha_entrega_estimada,
+        fecha_entrega,
         latitud,
         longitud,
         amenidades_edificio,
-        pisos,
-        unidades_totales
+        cantidad_pisos,
+        total_unidades
       `)
       .eq('activo', true)
       .or(`nombre_oficial.ilike.%${searchTerm}%,desarrollador.ilike.%${searchTerm}%`)
@@ -103,11 +103,11 @@ export default async function handler(
           desarrollador: pm.desarrollador,
           zona: pm.zona,
           estado_construccion: pm.estado_construccion,
-          fecha_entrega_estimada: pm.fecha_entrega_estimada,
+          fecha_entrega_estimada: pm.fecha_entrega,
           latitud: pm.latitud,
           longitud: pm.longitud,
           amenidades_edificio: amenidades,
-          total_unidades: count || pm.unidades_totales || 0,
+          total_unidades: count || pm.total_unidades || 0,
           verificado: !!(pm.latitud && pm.longitud) // Tiene GPS = verificado
         }
       })
