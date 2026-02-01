@@ -28,6 +28,8 @@ interface FormData {
   expensas_usd: string
   // Forma de pago
   acepta_financiamiento: boolean  // Plan de pagos con desarrollador
+  plan_pagos_cuotas: CuotaPago[]  // v2.27: Estructura de cuotas
+  plan_pagos_texto: string        // v2.27: Texto legible del plan
   solo_tc_paralelo: boolean       // Solo contado en TC paralelo
   acepta_permuta: boolean
   precio_negociable: boolean
@@ -78,6 +80,8 @@ interface PropiedadOriginal {
   piso: number | null
   // Forma de pago (columnas directas v2.25)
   plan_pagos_desarrollador: boolean | null
+  plan_pagos_cuotas: CuotaPago[] | null  // v2.27
+  plan_pagos_texto: string | null         // v2.27
   acepta_permuta: boolean | null
   solo_tc_paralelo: boolean | null
   precio_negociable: boolean | null
@@ -164,6 +168,23 @@ const DORMITORIOS_OPCIONES = [
   { value: '6', label: '6+ dormitorios' }
 ]
 
+// v2.27: Plan de pagos detallado
+interface CuotaPago {
+  id: string
+  porcentaje: string
+  momento: 'reserva' | 'firma_contrato' | 'durante_obra' | 'cuotas_mensuales' | 'entrega' | 'personalizado'
+  descripcion: string
+}
+
+const MOMENTOS_PAGO = [
+  { id: 'reserva', label: 'Al reservar', emoji: '🔖' },
+  { id: 'firma_contrato', label: 'Firma de contrato', emoji: '✍️' },
+  { id: 'durante_obra', label: 'Durante construcción', emoji: '🏗️' },
+  { id: 'cuotas_mensuales', label: 'Cuotas mensuales', emoji: '📅' },
+  { id: 'entrega', label: 'Contra entrega', emoji: '🔑' },
+  { id: 'personalizado', label: 'Otro momento', emoji: '📝' }
+]
+
 export default function EditarPropiedad() {
   const router = useRouter()
   const { id } = router.query
@@ -241,6 +262,8 @@ export default function EditarPropiedad() {
     fecha_entrega: '',
     expensas_usd: '',
     acepta_financiamiento: false,
+    plan_pagos_cuotas: [],
+    plan_pagos_texto: '',
     solo_tc_paralelo: false,
     acepta_permuta: false,
     precio_negociable: false,
@@ -455,6 +478,8 @@ export default function EditarPropiedad() {
         expensas_usd: data.datos_json?.expensas_usd?.toString() || '',
         // Forma de pago: columnas directas con fallback a legacy
         acepta_financiamiento: data.plan_pagos_desarrollador ?? formaPagoLegacy.acepta_financiamiento ?? false,
+        plan_pagos_cuotas: data.plan_pagos_cuotas || [],
+        plan_pagos_texto: data.plan_pagos_texto || '',
         solo_tc_paralelo: data.solo_tc_paralelo ?? false,
         acepta_permuta: data.acepta_permuta ?? formaPagoLegacy.acepta_permuta ?? false,
         precio_negociable: data.precio_negociable ?? formaPagoLegacy.precio_negociable ?? false,
@@ -564,6 +589,56 @@ export default function EditarPropiedad() {
       ...prev,
       equipamiento_custom: prev.equipamiento_custom.filter(e => e !== equip)
     }))
+  }
+
+  // v2.27: Funciones para manejar plan de pagos
+  const agregarCuota = () => {
+    const nuevaCuota: CuotaPago = {
+      id: `cuota-${Date.now()}`,
+      porcentaje: '',
+      momento: 'reserva',
+      descripcion: ''
+    }
+    const cuotasActualizadas = [...formData.plan_pagos_cuotas, nuevaCuota]
+    setFormData(prev => ({
+      ...prev,
+      plan_pagos_cuotas: cuotasActualizadas,
+      plan_pagos_texto: generarTextoPlanPagos(cuotasActualizadas)
+    }))
+  }
+
+  const eliminarCuota = (cuotaId: string) => {
+    const cuotasActualizadas = formData.plan_pagos_cuotas.filter(c => c.id !== cuotaId)
+    setFormData(prev => ({
+      ...prev,
+      plan_pagos_cuotas: cuotasActualizadas,
+      plan_pagos_texto: generarTextoPlanPagos(cuotasActualizadas)
+    }))
+  }
+
+  const actualizarCuota = (cuotaId: string, campo: keyof CuotaPago, valor: string) => {
+    const cuotasActualizadas = formData.plan_pagos_cuotas.map(c =>
+      c.id === cuotaId ? { ...c, [campo]: valor } : c
+    )
+    setFormData(prev => ({
+      ...prev,
+      plan_pagos_cuotas: cuotasActualizadas,
+      plan_pagos_texto: generarTextoPlanPagos(cuotasActualizadas)
+    }))
+  }
+
+  const generarTextoPlanPagos = (cuotas: CuotaPago[]): string => {
+    if (cuotas.length === 0) return ''
+
+    const partes = cuotas
+      .filter(c => c.porcentaje)
+      .map(c => {
+        const momentoLabel = MOMENTOS_PAGO.find(m => m.id === c.momento)?.label || 'Otro'
+        const desc = c.descripcion ? ` (${c.descripcion})` : ''
+        return `${c.porcentaje}% ${momentoLabel}${desc}`
+      })
+
+    return partes.join(', ')
   }
 
   // Precio ya está normalizado en la BD - no necesita recalcular
@@ -780,6 +855,19 @@ export default function EditarPropiedad() {
     const descuentoNuevo = formData.descuento_contado ? parseFloat(formData.descuento_contado) : null
     if (descuentoOriginal !== descuentoNuevo) {
       cambios.push({ campo: 'descuento_contado_pct', anterior: descuentoOriginal, nuevo: descuentoNuevo })
+    }
+
+    // v2.27: Plan de pagos cuotas
+    const cuotasOriginal = JSON.stringify(originalData.plan_pagos_cuotas || [])
+    const cuotasNuevo = JSON.stringify(formData.plan_pagos_cuotas || [])
+    if (cuotasOriginal !== cuotasNuevo) {
+      cambios.push({ campo: 'plan_pagos_cuotas', anterior: originalData.plan_pagos_cuotas, nuevo: formData.plan_pagos_cuotas })
+    }
+
+    const textoOriginal = originalData.plan_pagos_texto ?? null
+    const textoNuevo = formData.plan_pagos_texto || null
+    if (textoOriginal !== textoNuevo) {
+      cambios.push({ campo: 'plan_pagos_texto', anterior: textoOriginal, nuevo: textoNuevo })
     }
 
     return cambios
@@ -1068,6 +1156,8 @@ export default function EditarPropiedad() {
         // v2.25: Piso y forma de pago como columnas directas
         piso: formData.piso ? parseInt(formData.piso) : null,
         plan_pagos_desarrollador: formData.acepta_financiamiento,
+        plan_pagos_cuotas: formData.plan_pagos_cuotas.length > 0 ? formData.plan_pagos_cuotas : null,
+        plan_pagos_texto: formData.plan_pagos_texto || null,
         solo_tc_paralelo: formData.solo_tc_paralelo,
         acepta_permuta: formData.acepta_permuta,
         precio_negociable: formData.precio_negociable,
@@ -2577,6 +2667,111 @@ export default function EditarPropiedad() {
                   </p>
                 )}
               </div>
+
+              {/* v2.27: Constructor de cuotas - solo si acepta plan de pagos */}
+              {formData.acepta_financiamiento && (
+                <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium text-green-800">📋 Detalle del plan de pagos</p>
+                    <button
+                      type="button"
+                      onClick={agregarCuota}
+                      className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                    >
+                      + Agregar cuota
+                    </button>
+                  </div>
+
+                  {formData.plan_pagos_cuotas.length === 0 ? (
+                    <p className="text-sm text-green-700 italic">
+                      Sin cuotas detalladas. Haz clic en &quot;+ Agregar cuota&quot; para especificar el plan.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {formData.plan_pagos_cuotas.map((cuota, idx) => (
+                        <div key={cuota.id} className="flex items-start gap-2 p-3 bg-white rounded-lg border border-green-200">
+                          <span className="text-sm font-medium text-green-600 mt-2 w-6">{idx + 1}.</span>
+                          <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2">
+                            <div>
+                              <label className="block text-xs text-slate-500 mb-1">Porcentaje</label>
+                              <div className="flex items-center">
+                                <input
+                                  type="number"
+                                  value={cuota.porcentaje}
+                                  onChange={(e) => actualizarCuota(cuota.id, 'porcentaje', e.target.value)}
+                                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm"
+                                  placeholder="30"
+                                  min="0"
+                                  max="100"
+                                />
+                                <span className="ml-1 text-sm text-slate-500">%</span>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-slate-500 mb-1">Momento</label>
+                              <select
+                                value={cuota.momento}
+                                onChange={(e) => actualizarCuota(cuota.id, 'momento', e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm"
+                              >
+                                {MOMENTOS_PAGO.map(m => (
+                                  <option key={m.id} value={m.id}>{m.emoji} {m.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-xs text-slate-500 mb-1">Descripción (opcional)</label>
+                              <input
+                                type="text"
+                                value={cuota.descripcion}
+                                onChange={(e) => actualizarCuota(cuota.id, 'descripcion', e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm"
+                                placeholder="Ej: 12 cuotas sin interés"
+                              />
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => eliminarCuota(cuota.id)}
+                            className="mt-6 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                            title="Eliminar cuota"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+
+                      {/* Preview del texto generado */}
+                      {formData.plan_pagos_texto && (
+                        <div className="mt-3 p-3 bg-green-100 rounded-lg">
+                          <p className="text-xs text-green-700 mb-1">Vista previa del plan:</p>
+                          <p className="text-sm font-medium text-green-800">{formData.plan_pagos_texto}</p>
+                        </div>
+                      )}
+
+                      {/* Validación de porcentajes */}
+                      {(() => {
+                        const total = formData.plan_pagos_cuotas.reduce((sum, c) => sum + (parseFloat(c.porcentaje) || 0), 0)
+                        if (total > 0 && total !== 100) {
+                          return (
+                            <p className={`text-xs mt-2 ${total > 100 ? 'text-red-600' : 'text-amber-600'}`}>
+                              ⚠️ Los porcentajes suman {total}% {total > 100 ? '(excede 100%)' : '(incompleto)'}
+                            </p>
+                          )
+                        }
+                        if (total === 100) {
+                          return (
+                            <p className="text-xs mt-2 text-green-600">
+                              ✓ Plan completo: 100%
+                            </p>
+                          )
+                        }
+                        return null
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Otras opciones */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

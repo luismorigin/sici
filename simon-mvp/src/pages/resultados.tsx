@@ -8,7 +8,8 @@ import {
   FiltrosBusqueda,
   obtenerAnalisisFiduciario,
   AnalisisMercadoFiduciario,
-  OpcionExcluida
+  OpcionExcluida,
+  CuotaPago
 } from '@/lib/supabase'
 import {
   getCostosOcultosEstimados,
@@ -564,6 +565,15 @@ function calcularScoreMOAT(
   return score
 }
 
+// Constantes para momentos de pago
+const MOMENTOS_PAGO_LABELS: Record<string, string> = {
+  'reserva': '🔒 Reserva',
+  'firma_contrato': '📝 Firma',
+  'durante_obra': '🏗️ Obra',
+  'cuotas_mensuales': '📅 Cuotas',
+  'entrega': '🔑 Entrega',
+  'personalizado': '📋 Otro'
+}
 
 export default function ResultadosPage() {
   const router = useRouter()
@@ -613,6 +623,7 @@ export default function ResultadosPage() {
   const [selectedProps, setSelectedProps] = useState<Set<number>>(new Set())
   const [showLimitToast, setShowLimitToast] = useState(false)
   const [showMapa, setShowMapa] = useState(false)
+  const [showLeyenda, setShowLeyenda] = useState(false)
   const MAX_SELECTED = 3
 
   // Modal de ordenar favoritas (paso previo al premium)
@@ -1990,6 +2001,31 @@ ${top3Texto}
               </div>
             </section>
 
+            {/* Leyenda de símbolos colapsable */}
+            <div className="mb-4">
+              <button
+                onClick={() => setShowLeyenda(!showLeyenda)}
+                className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
+              >
+                <span>{showLeyenda ? '▼' : '▶'}</span>
+                <span>ℹ️ Leyenda de símbolos</span>
+              </button>
+              {showLeyenda && (
+                <div className="mt-2 p-3 bg-gray-50 rounded-lg text-xs text-gray-600 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <span>🛏️ = Dormitorios</span>
+                  <span>🚿 = Baños</span>
+                  <span>📐 = Área m²</span>
+                  <span>🚗 = Parqueos (✓=incluido, ?=sin confirmar)</span>
+                  <span>📦 = Baulera (✓=incluido, ?=sin confirmar)</span>
+                  <span>🏢 = Amenidades edificio</span>
+                  <span>📅 = Plan de pagos con desarrollador</span>
+                  <span>💱 = Solo TC paralelo</span>
+                  <span>🤝 = Precio negociable</span>
+                  <span>📉 = Descuento por contado</span>
+                </div>
+              )}
+            </div>
+
             {/* TOP 3 */}
             <section className="mb-8">
               <div className="flex items-center gap-2 mb-4">
@@ -2090,7 +2126,10 @@ ${top3Texto}
                       <div className="flex-1 p-4">
                         <div className="flex items-start justify-between">
                           <div>
-                            <h3 className="font-bold text-lg text-gray-900">{prop.proyecto}</h3>
+                            <h3 className="font-bold text-lg text-gray-900">
+                              {prop.proyecto}
+                              <span className="ml-2 text-xs text-gray-400 font-normal">#{prop.id}</span>
+                            </h3>
                             {prop.desarrollador && (
                               <p className="text-sm text-gray-500">{prop.desarrollador}</p>
                             )}
@@ -2137,6 +2176,45 @@ ${top3Texto}
                             </>
                           )}
                         </div>
+
+                        {/* Badges Forma de Pago */}
+                        {(prop.plan_pagos_desarrollador || prop.solo_tc_paralelo || prop.precio_negociable || prop.descuento_contado_pct) && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {prop.plan_pagos_desarrollador && (
+                              <div className="relative group">
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs cursor-help">
+                                  📅 Plan pagos
+                                </span>
+                                {prop.plan_pagos_cuotas && prop.plan_pagos_cuotas.length > 0 && (
+                                  <div className="absolute hidden group-hover:block z-20 bg-white border shadow-lg rounded-lg p-3 w-56 -left-2 top-6">
+                                    <p className="text-xs font-semibold text-blue-800 mb-2">📋 Detalle del plan:</p>
+                                    {(prop.plan_pagos_cuotas as CuotaPago[]).map((cuota, i) => (
+                                      <p key={i} className="text-xs text-slate-600 mb-1">
+                                        • {cuota.porcentaje}% {MOMENTOS_PAGO_LABELS[cuota.momento] || cuota.momento}
+                                        {cuota.descripcion && <span className="text-slate-400"> ({cuota.descripcion})</span>}
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {prop.solo_tc_paralelo && (
+                              <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-xs" title="Solo acepta pago en dólares paralelo">
+                                💱 TC Paralelo
+                              </span>
+                            )}
+                            {prop.precio_negociable && (
+                              <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-xs" title="Precio negociable">
+                                🤝 Negociable
+                              </span>
+                            )}
+                            {prop.descuento_contado_pct && prop.descuento_contado_pct > 0 && (
+                              <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-xs" title={`${prop.descuento_contado_pct}% descuento pago contado`}>
+                                📉 -{prop.descuento_contado_pct}% contado
+                              </span>
+                            )}
+                          </div>
+                        )}
 
                         {/* Amenities y Equipamiento - Chips colapsables inline */}
                         {(() => {
@@ -2977,7 +3055,10 @@ ${top3Texto}
                           <div className="flex-1 p-4">
                             <div className="flex items-start justify-between gap-2">
                               <div>
-                                <h3 className="font-bold text-gray-900">{prop.proyecto}</h3>
+                                <h3 className="font-bold text-gray-900">
+                                  {prop.proyecto}
+                                  <span className="ml-2 text-xs text-gray-400 font-normal">#{prop.id}</span>
+                                </h3>
                               </div>
                               <div className="text-right flex-shrink-0">
                                 <p className="text-lg font-bold text-gray-900">${formatNum(prop.precio_usd)}</p>
@@ -3017,6 +3098,45 @@ ${top3Texto}
                                 </>
                               )}
                             </div>
+
+                            {/* Badges Forma de Pago */}
+                            {(prop.plan_pagos_desarrollador || prop.solo_tc_paralelo || prop.precio_negociable || prop.descuento_contado_pct) && (
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                {prop.plan_pagos_desarrollador && (
+                                  <div className="relative group">
+                                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs cursor-help">
+                                      📅 Plan pagos
+                                    </span>
+                                    {prop.plan_pagos_cuotas && prop.plan_pagos_cuotas.length > 0 && (
+                                      <div className="absolute hidden group-hover:block z-20 bg-white border shadow-lg rounded-lg p-3 w-56 -left-2 top-6">
+                                        <p className="text-xs font-semibold text-blue-800 mb-2">📋 Detalle del plan:</p>
+                                        {(prop.plan_pagos_cuotas as CuotaPago[]).map((cuota, i) => (
+                                          <p key={i} className="text-xs text-slate-600 mb-1">
+                                            • {cuota.porcentaje}% {MOMENTOS_PAGO_LABELS[cuota.momento] || cuota.momento}
+                                            {cuota.descripcion && <span className="text-slate-400"> ({cuota.descripcion})</span>}
+                                          </p>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                {prop.solo_tc_paralelo && (
+                                  <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-xs" title="Solo acepta pago en dólares paralelo">
+                                    💱 TC Paralelo
+                                  </span>
+                                )}
+                                {prop.precio_negociable && (
+                                  <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-xs" title="Precio negociable">
+                                    🤝 Negociable
+                                  </span>
+                                )}
+                                {prop.descuento_contado_pct && prop.descuento_contado_pct > 0 && (
+                                  <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-xs" title={`${prop.descuento_contado_pct}% descuento pago contado`}>
+                                    📉 -{prop.descuento_contado_pct}% contado
+                                  </span>
+                                )}
+                              </div>
+                            )}
 
                             {/* Amenities y Equipamiento compacto - igual que TOP 3 */}
                             {(() => {

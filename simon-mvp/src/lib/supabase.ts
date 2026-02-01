@@ -12,6 +12,14 @@ export interface TCActuales {
   oficial: number
 }
 
+// v2.27: Plan de pagos detallado
+export interface CuotaPago {
+  id: string
+  porcentaje: string
+  momento: 'reserva' | 'firma_contrato' | 'durante_obra' | 'cuotas_mensuales' | 'entrega' | 'personalizado'
+  descripcion: string
+}
+
 export async function obtenerTCActuales(): Promise<TCActuales> {
   if (!supabase) {
     return { paralelo: 9.09, oficial: 6.96 } // Fallback
@@ -110,6 +118,9 @@ export interface UnidadReal {
   parqueo_precio_adicional: number | null
   baulera_incluido: boolean | null
   baulera_precio_adicional: number | null
+  // v2.27: Plan de pagos detallado
+  plan_pagos_cuotas: CuotaPago[] | null
+  plan_pagos_texto: string | null
 }
 
 // Filtros para búsqueda
@@ -160,8 +171,29 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
     if (filtros.area_min) rpcFiltros.area_min = filtros.area_min
     if (filtros.zona) rpcFiltros.zona = filtros.zona
     if (filtros.estado_entrega) rpcFiltros.estado_entrega = filtros.estado_entrega
+    // v2.28: Pasar zonas_permitidas al RPC para filtrar ANTES del límite
+    // Convertir IDs del formulario a nombres de BD
+    if (filtros.zonas_permitidas && filtros.zonas_permitidas.length > 0) {
+      const zonasConvertidas: string[] = []
+      for (const z of filtros.zonas_permitidas) {
+        if (microzonaToZona[z] !== undefined) {
+          const valor = microzonaToZona[z]
+          if (Array.isArray(valor)) {
+            zonasConvertidas.push(...valor)
+          } else if (valor) {
+            zonasConvertidas.push(valor)
+          }
+        } else {
+          // Si no está en el mapeo, asumir que ya es nombre de BD
+          zonasConvertidas.push(z)
+        }
+      }
+      if (zonasConvertidas.length > 0) {
+        rpcFiltros.zonas_permitidas = zonasConvertidas
+      }
+    }
 
-    // Llamar RPC buscar_unidades_reales v2.2
+    // Llamar RPC buscar_unidades_reales v2.27
     const { data, error } = await supabase.rpc('buscar_unidades_reales', {
       p_filtros: rpcFiltros
     })
@@ -219,7 +251,22 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       longitud: p.longitud ? parseFloat(p.longitud) : null,
       estacionamientos: p.estacionamientos || null,
       // v2.23: Baulera
-      baulera: p.baulera ?? null
+      baulera: p.baulera ?? null,
+      // v2.25: Piso y forma de pago
+      piso: p.piso || null,
+      plan_pagos_desarrollador: p.plan_pagos_desarrollador ?? null,
+      acepta_permuta: p.acepta_permuta ?? null,
+      solo_tc_paralelo: p.solo_tc_paralelo ?? null,
+      precio_negociable: p.precio_negociable ?? null,
+      descuento_contado_pct: p.descuento_contado_pct || null,
+      // v2.26: Parqueo y baulera con precios
+      parqueo_incluido: p.parqueo_incluido ?? null,
+      parqueo_precio_adicional: p.parqueo_precio_adicional || null,
+      baulera_incluido: p.baulera_incluido ?? null,
+      baulera_precio_adicional: p.baulera_precio_adicional || null,
+      // v2.27: Plan de pagos detallado
+      plan_pagos_cuotas: p.plan_pagos_cuotas || null,
+      plan_pagos_texto: p.plan_pagos_texto || null
     }))
 
     // Filtrar por zonas permitidas si se especificaron
@@ -342,6 +389,21 @@ export async function buscarUnidadesBroker(filtros: FiltrosBusqueda): Promise<Un
       longitud: p.longitud ? parseFloat(p.longitud) : null,
       estacionamientos: p.estacionamientos || null,
       baulera: p.baulera ?? null,
+      // v2.25: Piso y forma de pago
+      piso: p.piso || null,
+      plan_pagos_desarrollador: p.acepta_plan_pagos ?? null,  // Broker usa acepta_plan_pagos
+      acepta_permuta: p.acepta_permuta ?? null,
+      solo_tc_paralelo: p.solo_contado_paralelo ?? null,  // Broker usa solo_contado_paralelo
+      precio_negociable: p.precio_negociable ?? null,
+      descuento_contado_pct: p.descuento_contado ?? null,  // Broker usa descuento_contado
+      // v2.26: Parqueo y baulera con precios
+      parqueo_incluido: p.parqueo_incluido ?? null,
+      parqueo_precio_adicional: p.parqueo_precio_adicional || null,
+      baulera_incluido: p.baulera_incluido ?? null,
+      baulera_precio_adicional: p.baulera_precio_adicional || null,
+      // v2.27: Plan de pagos detallado
+      plan_pagos_cuotas: p.plan_pagos_cuotas || null,
+      plan_pagos_texto: p.plan_pagos || null,  // Broker usa plan_pagos (texto)
       // Campos broker
       fuente_tipo: 'broker' as const,
       codigo_sim: p.codigo_sim
