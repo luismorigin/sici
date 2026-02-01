@@ -40,6 +40,7 @@ export default function BrokerLayout({ children, title }: BrokerLayoutProps) {
     { name: 'Dashboard', href: '/broker/dashboard', icon: '📊' },
     { name: 'Nueva Propiedad', href: '/broker/nueva-propiedad', icon: '➕' },
     { name: 'Mis Leads', href: '/broker/leads', icon: '👥' },
+    { name: 'Mi Perfil', href: '/broker/perfil', icon: '👤' },
   ]
 
   return (
