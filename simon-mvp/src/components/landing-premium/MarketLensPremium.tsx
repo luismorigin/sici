@@ -121,7 +121,7 @@ export default function MarketLensPremium() {
               </div>
             </div>
 
-            <Link href="/filtros">
+            <Link href="/filtros-v2">
               <button className="bg-[#0a0a0a] text-white px-10 py-4 text-xs tracking-[3px] uppercase hover:bg-[#c9a959] transition-all duration-300 flex items-center gap-4">
                 Ver datos del mercado
                 <IconArrowRight />

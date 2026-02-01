@@ -66,7 +66,7 @@ export default function HeroPremium() {
         </p>
 
         {/* CTA */}
-        <Link href="/filtros" className="group inline-block">
+        <Link href="/filtros-v2" className="group inline-block">
           <button className="bg-white text-[#0a0a0a] px-12 py-5 text-xs tracking-[3px] uppercase hover:bg-[#c9a959] hover:text-white transition-all duration-300 flex items-center gap-4 mx-auto">
             Comenzar busqueda
             <IconArrowRight />

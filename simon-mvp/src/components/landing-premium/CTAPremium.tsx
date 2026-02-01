@@ -23,7 +23,7 @@ export default function CTAPremium() {
           tu informe personalizado con las mejores opciones del mercado.
         </p>
 
-        <Link href="/filtros">
+        <Link href="/filtros-v2">
           <button className="bg-white text-[#0a0a0a] px-16 py-6 text-sm tracking-[3px] uppercase hover:bg-[#c9a959] hover:text-white transition-all duration-300">
             Solicitar informe gratuito
           </button>
