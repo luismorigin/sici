@@ -90,6 +90,33 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 | `/admin/salud` | **Health dashboard sistema** |
 | `/admin/market` | **Market Pulse Dashboard** - inteligencia mercado |
 
+## Landing Pages (simon-mvp)
+
+| Ruta | Propósito |
+|------|-----------|
+| `/` | Landing original (colores azul/blanco, emojis) |
+| `/landing-v2` | **Alternativa premium** (negro/crema/oro, minimalista) |
+| `/landing-premium` | Página de prueba del diseño premium |
+
+### Landing Premium (`/landing-v2`)
+
+Diseño luxury alternativo con:
+- **Fonts:** Cormorant Garamond (display) + Manrope (body)
+- **Colores:** Negro (#0a0a0a), Crema (#f8f6f3), Oro (#c9a959)
+- **Componentes:** `/components/landing-premium/`
+- **Datos en vivo:** Propiedades, proyectos, TC paralelo, microzonas desde Supabase
+
+## Broker Pages (simon-mvp)
+
+| Ruta | Propósito |
+|------|-----------|
+| `/broker/login` | Login broker (email + código) |
+| `/broker/dashboard` | Listado propiedades + botón PDF |
+| `/broker/nueva-propiedad` | Crear nueva propiedad |
+| `/broker/editar/[id]` | Editar propiedad |
+| `/broker/leads` | Listado leads recibidos |
+| `/broker/perfil` | **Subir foto/logo + datos contacto** |
+
 ## Estructura Clave
 
 ```
@@ -99,7 +126,7 @@ sici/
 │   ├── enrichment/    # registrar_enrichment.sql
 │   ├── merge/         # merge_discovery_enrichment.sql v2.2.0
 │   └── matching/      # Funciones v3.1 (propiedades_v2)
-├── sql/migrations/    # 001-090 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Broker B2B, Admin, Landing)
+├── sql/migrations/    # 001-103 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Broker B2B, Admin, Landing, PDF)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
@@ -112,7 +139,7 @@ sici/
     └── modulo_2/      # Specs matching pipeline
 ```
 
-## Estado Actual (29 Ene 2026)
+## Estado Actual (31 Ene 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
@@ -160,6 +187,12 @@ sici/
   - Históricos: evolución inventario 28d, TC paralelo
   - Top 10 proyectos, oportunidades $/m²
   - Stack: Recharts ^3.7.0
+- **PDF Profesional Broker:** Sistema auto-generación PDFs 2 páginas (FASE 3A)
+  - Template @react-pdf/renderer con foto broker, logo inmobiliaria, galería, QR
+  - API `/api/broker/generate-pdf` + storage `pdfs-broker`
+  - Página perfil `/broker/perfil` para subir foto/logo
+  - Botón "📄 PDF" en dashboard con modal compartir (WhatsApp, copiar link)
+  - Score calidad 100pts para propiedades broker (migración 092)
 
 ### ⏳ En Progreso
 - **Sistema Broker Fase 5-7:** Portal broker, sistema leads, CMA (pendiente)
@@ -188,7 +221,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-090)
+## Migraciones SQL (001-103)
 
 | # | Archivo | Propósito | Estado |
 |---|---------|-----------|--------|
@@ -211,7 +244,8 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 017 | mejoras_matching_system | FK formal, blacklist, detección duplicados | ⏳ |
 | 018 | asignar_proyecto_existente | RPC asignar proyecto existente | ⏳ |
 | 019 | knowledge_graph_mvp | Query Layer: buscar_unidades_reales(), v_amenities_proyecto | ⏳ |
-| 020 | limpieza_datos_vistas | v_metricas_mercado, v_alternativas_proyecto, v_salud_datos | ✅ |
+| 020 | leads_mvp | Sistema leads inicial | ✅ |
+| 021 | leads_flow_refactor | Refactor flujo leads | ✅ |
 | 022 | fuzzy_matching_infraestructura | pg_trgm, normalize_nombre(), buscar_proyecto_fuzzy() | ✅ |
 | 023 | supervisor_excluidas | HITL excluidas: exportar, procesar_accion, detectar_razon | ✅ |
 | 024 | matching_trigram_integration | generar_matches_trigram(), matching_completo v3.2 | ⏳ |
@@ -219,13 +253,38 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 026 | buscar_unidades_reales_v2 | v2.1: fotos, precio_m2, score, desarrollador, filtro área>=20m² | ✅ |
 | 027 | fix_tipo_propiedad_santorini | Reclasificar 22 parqueos/bauleras SANTORINI VENTURA | ✅ |
 | 028 | calcular_posicion_mercado | Comparar precio vs promedio zona (oportunidad/premium) | ✅ |
+| 029 | fix_dato_corrupto_380 | Fix dato corrupto ID 380 | ✅ |
+| 030 | analisis_mercado_fiduciario | Análisis de mercado fiduciario | ✅ |
+| 031 | ficha_coherencia_fiduciaria | Ficha coherencia fiduciaria | ✅ |
+| 032 | filtro_estado_construccion | Filtro estado construcción | ✅ |
 | 033 | fix_solo_con_fotos | Fix jsonb_array_length() en fotos NULL | ✅ |
+| 034 | fix_fotos_remax | Fix fotos Remax | ✅ |
+| 035 | fix_zona_proyecto_265 | Fix zona proyecto 265 | ✅ |
+| 036 | recalcular_zonas_por_gps | Recalcular zonas por GPS | ✅ |
+| 037 | filtro_precio_outlier | Filtro precio outlier | ✅ |
+| 038 | curar_datos_usuario | Curar datos usuario | ✅ |
+| 039 | dias_en_mercado | Días en mercado | ✅ |
+| 040 | comparacion_edificio | Comparación edificio | ✅ |
+| 041 | comparacion_tipologia | Comparación tipología | ✅ |
+| 042 | amenities_fiduciarias | Amenities fiduciarias | ✅ |
+| 043 | equipamiento_deteccion | Equipamiento detección | ✅ |
+| 044 | agregar_banos | Agregar baños | ✅ |
+| 046 | agregar_descripcion | Agregar descripción | ✅ |
+| 047 | agregar_posicion_mercado | Agregar posición mercado | ✅ |
 | 048 | fix_jsonb_each_null | Fix jsonb_each crash en amenities NULL, excluir Sin zona | ✅ |
 | 049 | deduplicar_santorini | Columna duplicado_de, marcar 28 duplicados SANTORINI | ✅ |
 | 050 | fix_santorini_gps_fotos | Corregir GPS y fotos rotas SANTORINI VENTURA | ✅ |
 | 051 | deduplicar_exactos | Marcar duplicados exactos (Avanti, Spazios, etc.) | ✅ |
 | 052 | fix_estado_entrega_solo_preventa | Filtro MOAT 3 opciones: entrega_inmediata, solo_preventa, no_importa | ✅ |
+| 053 | fix_posicion_mercado_usar_precio_m2 | Fix posición mercado usar precio/m² | ✅ |
+| 054 | buscar_unidades_pasar_precio_m2 | Buscar unidades pasar precio/m² | ✅ |
+| 056 | fix_jsonb_each_null | Fix jsonb_each null adicional | ✅ |
+| 057 | fix_estado_entrega_moat | Fix estado entrega MOAT | ✅ |
 | 059 | fix_tc_paralelo_retroactivo | Fix bug merge TC + 13 props corregidas + vista monitoreo | ✅ |
+| 060 | fix_multiproyecto_completo | Fix multiproyecto completo | ✅ |
+| 061 | agregar_dias_en_mercado | Agregar días en mercado | ✅ |
+| 062 | filtro_dias_en_mercado | Filtro días en mercado | ✅ |
+| 063 | buscar_unidades_reales_completa | buscar_unidades_reales completa | ✅ |
 | 064 | enriquecer_amenities_equipamiento | Extracción 69 campos (45 equip + 24 amenities) de descripciones a JSONB | ✅ |
 | 065 | agregar_gps_estacionamientos | Añadir estacionamientos al retorno de buscar_unidades_reales() | ✅ |
 | 066 | enriquecer_estacionamientos | Extraer cantidad de parqueos desde descripciones (11.6% → 18%) | ✅ |
@@ -233,22 +292,39 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 068 | agregar_baulera_funcion | Añadir baulera al retorno de buscar_unidades_reales() v2.23 | ✅ |
 | 069 | expandir_equipamiento_detectado | Detección tiempo real ~60 amenities (v2.24), promedio 9.4/prop | ✅ |
 | 070 | leads_contacto_broker | Sistema contacto lead-broker con código REF (SIM-XXXXX) | ✅ |
+| 071 | beta_feedback | Sistema beta feedback | ✅ |
 | 072 | broker_system_tables | 7 tablas sistema broker: brokers, propiedades_broker, fotos, leads, CMA | ✅ |
 | 073 | buscar_unidades_broker | Función búsqueda propiedades broker compatible con buscar_unidades_reales | ✅ |
 | 074 | broker_datos_prueba | Datos test: 1 broker + 3 propiedades (SIM-TEST1/2/3) + 25 fotos | ✅ |
 | 075 | brokers_verificacion_preregistro | Sistema verificación brokers + pre-registro scraping | ✅ |
 | 076 | propiedades_broker_campos_adicionales | Campos adicionales propiedades broker | ✅ |
-| 077 | propiedades_historial_auditoria | **Tabla auditoría cambios + vistas + funciones historial** | ⏳ |
-| 081 | columnas_piso_forma_pago | **Columnas piso + forma de pago (6 campos) en propiedades_v2** | ✅ |
-| 082 | buscar_unidades_forma_pago | **buscar_unidades_reales() v2.25 + filtros forma de pago** | ✅ |
-| 083 | parqueo_baulera_precio | **Columnas parqueo/baulera incluido + precio adicional** | ⏳ |
-| 084 | buscar_unidades_parqueo_baulera | **buscar_unidades_reales() v2.26 + filtros parqueo/baulera** | ⏳ |
-| 085 | proyectos_master_campos_admin | **Admin Proyectos: estado_construccion, fecha_entrega, amenidades_edificio, pisos, unidades + propagación** | ✅ |
-| 086 | inferir_datos_proyecto | **Función para inferir amenidades, estado, pisos y fotos desde propiedades vinculadas** | ✅ |
-| 087 | fotos_proyecto_amenidades_opcionales | **Columna fotos_proyecto + inferir amenidades frecuentes/opcionales separadas** | ⏳ |
-| 088 | desarrolladores_master | **Tabla desarrolladores + FK id_desarrollador + buscar_desarrolladores() + crear_desarrollador()** | ✅ |
-| 089 | permisos_anon_landing | **Permisos SELECT anon para Market Lens en vivo (snapshots, TC, métricas, precios_historial)** | ✅ |
-| 090 | contar_bajadas_precio | **Función RPC para detectar bajadas de precio entre snapshots** | ✅ |
+| 077 | propiedades_historial_auditoria | Tabla auditoría cambios + vistas + funciones historial | ⏳ |
+| 078 | fix_cron_tc_dinamico | Fix cron TC dinámico | ✅ |
+| 079 | buscar_unidades_precio_actualizado | Buscar unidades precio actualizado | ✅ |
+| 080 | fix_auditoria_tc_batch | Fix auditoría TC batch | ✅ |
+| 081 | columnas_piso_forma_pago | Columnas piso + forma de pago (6 campos) en propiedades_v2 | ✅ |
+| 082 | buscar_unidades_forma_pago | buscar_unidades_reales() v2.25 + filtros forma de pago | ✅ |
+| 083 | parqueo_baulera_precio | Columnas parqueo/baulera incluido + precio adicional | ⏳ |
+| 084 | buscar_unidades_parqueo_baulera | buscar_unidades_reales() v2.26 + filtros parqueo/baulera | ⏳ |
+| 085 | proyectos_master_campos_admin | Admin Proyectos: estado_construccion, fecha_entrega, amenidades_edificio | ✅ |
+| 086 | inferir_datos_proyecto | Función para inferir amenidades, estado, pisos y fotos | ✅ |
+| 087 | fotos_proyecto_amenidades_opcionales | Columna fotos_proyecto + inferir amenidades frecuentes/opcionales | ⏳ |
+| 088 | desarrolladores_master | Tabla desarrolladores + FK id_desarrollador + autocomplete | ✅ |
+| 089 | permisos_anon_landing | Permisos SELECT anon para Market Lens en vivo | ✅ |
+| 090 | contar_bajadas_precio | Función RPC para detectar bajadas de precio entre snapshots | ✅ |
+| 091 | fix_propagar_amenidades_estructura | Fix propagar amenidades estructura | ✅ |
+| 092 | score_calidad_broker_100pts | **Sistema calidad 100pts para propiedades broker + vista stats** | ✅ |
+| 093 | storage_buckets_broker | **Buckets Storage: pdfs-broker, broker-profile + políticas RLS** | ✅ |
+| 094 | fix_leads_mvp_permissions | Fix permisos leads MVP | ✅ |
+| 095 | limpieza_datos_vistas | v_metricas_mercado, v_alternativas_proyecto, v_salud_datos | ✅ |
+| 096 | calcular_confianza_datos | Calcular confianza datos | ✅ |
+| 097 | metricas_dias_mercado | Métricas días en mercado | ✅ |
+| 098 | fix_metricas_zona_dias | Fix métricas zona días | ✅ |
+| 099 | excluir_duplicados_buscar_unidades | Excluir duplicados buscar unidades | ✅ |
+| 100 | fix_posicion_mercado_precio_m2 | Fix posición mercado precio/m² | ✅ |
+| 101 | buscar_unidades_broker_tc_dinamico | buscar_unidades_broker con TC dinámico | ✅ |
+| 102 | permisos_anon_salud | Permisos anon para dashboard salud | ✅ |
+| 103 | fix_propagar_verificacion_bloqueo | Fix propagar verificación bloqueo | ✅ |
 
 ## Repo Legacy
 
