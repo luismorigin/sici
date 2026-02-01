@@ -33,12 +33,7 @@ DECLARE
     v_tiene_estado_definido BOOLEAN := FALSE;
 BEGIN
     -- Obtener datos de la propiedad
-    SELECT
-        pb.*,
-        COALESCE(
-            (SELECT COUNT(*) FROM fotos_propiedad_broker WHERE propiedad_id = pb.id),
-            pb.cantidad_fotos
-        ) as fotos_count
+    SELECT pb.*
     INTO v_prop
     FROM propiedades_broker pb
     WHERE pb.id = p_id;
@@ -50,7 +45,8 @@ BEGIN
         );
     END IF;
 
-    v_cantidad_fotos := COALESCE(v_prop.fotos_count, 0);
+    -- Usar cantidad_fotos de la tabla directamente
+    v_cantidad_fotos := COALESCE(v_prop.cantidad_fotos, 0);
 
     -- ========================================
     -- FOTOS: 30 pts máximo
