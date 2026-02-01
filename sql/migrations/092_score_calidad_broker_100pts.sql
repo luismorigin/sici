@@ -365,28 +365,34 @@ END $$;
 -- ============================================
 
 CREATE OR REPLACE VIEW v_broker_calidad_stats AS
+WITH categorizado AS (
+    SELECT
+        score_calidad,
+        CASE
+            WHEN score_calidad >= 100 THEN 'Perfecta (100)'
+            WHEN score_calidad >= 80 THEN 'Alta (80-99)'
+            WHEN score_calidad >= 60 THEN 'Media (60-79)'
+            WHEN score_calidad >= 40 THEN 'Baja (40-59)'
+            ELSE 'Muy Baja (<40)'
+        END as rango_calidad,
+        CASE
+            WHEN score_calidad >= 100 THEN 1
+            WHEN score_calidad >= 80 THEN 2
+            WHEN score_calidad >= 60 THEN 3
+            WHEN score_calidad >= 40 THEN 4
+            ELSE 5
+        END as orden
+    FROM propiedades_broker
+    WHERE estado = 'publicada'
+)
 SELECT
-    CASE
-        WHEN score_calidad >= 100 THEN 'Perfecta (100)'
-        WHEN score_calidad >= 80 THEN 'Alta (80-99)'
-        WHEN score_calidad >= 60 THEN 'Media (60-79)'
-        WHEN score_calidad >= 40 THEN 'Baja (40-59)'
-        ELSE 'Muy Baja (<40)'
-    END as rango_calidad,
+    rango_calidad,
     COUNT(*) as cantidad,
     ROUND(AVG(score_calidad), 1) as score_promedio,
     ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 1) as porcentaje
-FROM propiedades_broker
-WHERE estado = 'publicada'
-GROUP BY 1
-ORDER BY
-    CASE
-        WHEN score_calidad >= 100 THEN 1
-        WHEN score_calidad >= 80 THEN 2
-        WHEN score_calidad >= 60 THEN 3
-        WHEN score_calidad >= 40 THEN 4
-        ELSE 5
-    END;
+FROM categorizado
+GROUP BY rango_calidad, orden
+ORDER BY orden;
 
 -- ============================================
 -- FIN MIGRACIÓN 092
