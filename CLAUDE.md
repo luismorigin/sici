@@ -96,7 +96,15 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 |------|-----------|
 | `/` | Landing original (colores azul/blanco, emojis) |
 | `/landing-v2` | **Alternativa premium** (negro/crema/oro, minimalista) |
+| `/filtros-v2` | **Filtros premium** (fondo negro, controles elegantes) |
+| `/resultados-v2` | **Resultados premium** (fondo crema, cards blancos) |
 | `/landing-premium` | Página de prueba del diseño premium |
+
+### Flujo Premium Completo
+
+```
+/landing-v2 → /filtros-v2 → /resultados-v2
+```
 
 ### Landing Premium (`/landing-v2`)
 
