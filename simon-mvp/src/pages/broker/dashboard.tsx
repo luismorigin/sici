@@ -29,6 +29,15 @@ interface DashboardStats {
   total_leads: number
 }
 
+interface PDFModalState {
+  isOpen: boolean
+  isLoading: boolean
+  pdfUrl: string | null
+  shortLink: string | null
+  error: string | null
+  propiedadCodigo: string
+}
+
 export default function BrokerDashboard() {
   const { broker, isVerified, isImpersonating, exitImpersonation } = useBrokerAuth(true)
   const [propiedades, setPropiedades] = useState<PropiedadBroker[]>([])
@@ -39,6 +48,14 @@ export default function BrokerDashboard() {
     total_leads: 0
   })
   const [loading, setLoading] = useState(true)
+  const [pdfModal, setPdfModal] = useState<PDFModalState>({
+    isOpen: false,
+    isLoading: false,
+    pdfUrl: null,
+    shortLink: null,
+    error: null,
+    propiedadCodigo: ''
+  })
 
   useEffect(() => {
     if (broker) {
@@ -171,6 +188,75 @@ export default function BrokerDashboard() {
     } catch (err) {
       console.error('Error eliminando:', err)
       alert('Error al eliminar la propiedad')
+    }
+  }
+
+  const handleGeneratePDF = async (propId: number, codigo: string) => {
+    if (!broker) return
+
+    setPdfModal({
+      isOpen: true,
+      isLoading: true,
+      pdfUrl: null,
+      shortLink: null,
+      error: null,
+      propiedadCodigo: codigo
+    })
+
+    try {
+      const response = await fetch('/api/broker/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-broker-id': broker.id // Para autenticación
+        },
+        body: JSON.stringify({ propiedad_id: propId })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Error generando PDF')
+      }
+
+      setPdfModal(prev => ({
+        ...prev,
+        isLoading: false,
+        pdfUrl: data.pdf_url,
+        shortLink: data.short_link
+      }))
+    } catch (err) {
+      console.error('Error generando PDF:', err)
+      setPdfModal(prev => ({
+        ...prev,
+        isLoading: false,
+        error: err instanceof Error ? err.message : 'Error desconocido'
+      }))
+    }
+  }
+
+  const closePdfModal = () => {
+    setPdfModal({
+      isOpen: false,
+      isLoading: false,
+      pdfUrl: null,
+      shortLink: null,
+      error: null,
+      propiedadCodigo: ''
+    })
+  }
+
+  const shareViaWhatsApp = (pdfUrl: string, codigo: string) => {
+    const message = `Mira esta propiedad: ${codigo}\n${pdfUrl}`
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank')
+  }
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      alert('Link copiado al portapapeles')
+    } catch (err) {
+      console.error('Error copiando:', err)
     }
   }
 
@@ -377,7 +463,7 @@ export default function BrokerDashboard() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {(isVerified || isImpersonating) ? (
                         <>
                           <Link
@@ -392,6 +478,13 @@ export default function BrokerDashboard() {
                           >
                             Fotos
                           </Link>
+                          <button
+                            onClick={() => handleGeneratePDF(prop.id, prop.codigo)}
+                            className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Generar PDF profesional"
+                          >
+                            📄 PDF
+                          </button>
                           <button
                             onClick={() => handleDelete(prop.id, prop.codigo)}
                             className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -434,6 +527,91 @@ export default function BrokerDashboard() {
             </div>
           )}
         </div>
+
+        {/* PDF Modal */}
+        {pdfModal.isOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">
+                  PDF Profesional
+                </h3>
+                <button
+                  onClick={closePdfModal}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {pdfModal.isLoading && (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                  <p className="text-slate-600">Generando PDF para {pdfModal.propiedadCodigo}...</p>
+                  <p className="text-sm text-slate-400 mt-2">Esto puede tomar unos segundos</p>
+                </div>
+              )}
+
+              {pdfModal.error && (
+                <div className="text-center py-6">
+                  <div className="text-4xl mb-4">❌</div>
+                  <p className="text-red-600 font-medium mb-2">Error al generar PDF</p>
+                  <p className="text-sm text-slate-500">{pdfModal.error}</p>
+                  <button
+                    onClick={closePdfModal}
+                    className="mt-4 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              )}
+
+              {pdfModal.pdfUrl && (
+                <div className="text-center py-4">
+                  <div className="text-4xl mb-4">✅</div>
+                  <p className="text-green-600 font-medium mb-4">PDF generado exitosamente</p>
+
+                  <div className="bg-slate-50 rounded-lg p-4 mb-4">
+                    <p className="text-xs text-slate-500 mb-1">Código</p>
+                    <p className="font-mono text-sm text-slate-700">{pdfModal.propiedadCodigo}</p>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <a
+                      href={pdfModal.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      📥 Descargar PDF
+                    </a>
+
+                    <button
+                      onClick={() => shareViaWhatsApp(pdfModal.pdfUrl!, pdfModal.propiedadCodigo)}
+                      className="flex items-center justify-center gap-2 bg-green-600 text-white font-semibold px-4 py-3 rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      📱 Compartir por WhatsApp
+                    </button>
+
+                    <button
+                      onClick={() => copyToClipboard(pdfModal.pdfUrl!)}
+                      className="flex items-center justify-center gap-2 bg-slate-100 text-slate-700 font-semibold px-4 py-3 rounded-lg hover:bg-slate-200 transition-colors"
+                    >
+                      📋 Copiar Link
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={closePdfModal}
+                    className="mt-4 text-sm text-slate-500 hover:text-slate-700"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </BrokerLayout>
     </>
   )
