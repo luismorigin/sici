@@ -1,7 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { FilterBarPremium } from '@/components/filters-premium'
-import { premiumFonts } from '@/styles/premium-theme'
 
 export default function FiltrosV2() {
   return (
@@ -15,7 +14,21 @@ export default function FiltrosV2() {
       </Head>
 
       {/* Premium Fonts */}
-      <style jsx global>{premiumFonts}</style>
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Manrope:wght@300;400;500;600&display=swap');
+
+        .font-display {
+          font-family: 'Cormorant Garamond', Georgia, serif;
+        }
+
+        .font-body {
+          font-family: 'Manrope', -apple-system, sans-serif;
+        }
+
+        body {
+          font-family: 'Manrope', -apple-system, sans-serif;
+        }
+      `}</style>
 
       <div className="min-h-screen bg-[#0a0a0a]">
         {/* Header minimalista */}

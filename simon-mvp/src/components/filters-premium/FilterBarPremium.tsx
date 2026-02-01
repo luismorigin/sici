@@ -1,5 +1,3 @@
-'use client'
-
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import { buscarUnidadesReales, FiltrosBusqueda } from '@/lib/supabase'
@@ -113,7 +111,7 @@ export default function FilterBarPremium({ onFiltrosChange, className = '' }: Fi
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, initialized])
 
-  // Navegar a resultados
+  // Navegar a formulario nivel 2
   const handleBuscar = () => {
     const params = new URLSearchParams({
       presupuesto: filtros.presupuesto_max.toString(),
@@ -124,7 +122,7 @@ export default function FilterBarPremium({ onFiltrosChange, className = '' }: Fi
       count: count?.toString() || '0',
     })
 
-    router.push(`/resultados-v2?${params.toString()}`)
+    router.push(`/formulario-v2?${params.toString()}`)
   }
 
   // Convertir filtros UI a filtros de BD
@@ -384,7 +382,7 @@ export default function FilterBarPremium({ onFiltrosChange, className = '' }: Fi
         >
           {count !== null && count > 0 ? (
             <>
-              Ver {count} opciones
+              Personalizar busqueda
               <IconArrowRight />
             </>
           ) : (
