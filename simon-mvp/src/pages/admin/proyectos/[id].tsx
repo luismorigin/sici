@@ -718,11 +718,10 @@ export default function EditarProyecto() {
     return Math.floor(diff / (1000 * 60 * 60 * 24))
   }
 
-  // Filtro consistente con buscar_unidades_reales(): preventa=730d, otros=300d
+  // v2.30: Límite unificado 300 días para TODOS los estados
   const esPropiedadVieja = (prop: PropiedadVinculada): boolean => {
     const dias = calcularDiasEnMercado(prop)
-    const limiteDias = prop.estado_construccion === 'preventa' ? 730 : 300
-    return dias > limiteDias
+    return dias > 300
   }
 
   // Calcular estadísticas del proyecto

@@ -10,23 +10,21 @@ Este documento describe los filtros aplicados en `buscar_unidades_reales()` para
 
 ## Filtros Activos
 
-### 1. Días en Mercado (NUEVO - v2.8)
+### 1. Días en Mercado (v2.30 - Unificado)
 
 **Problema:** Los portales inmobiliarios en Bolivia no siempre bajan anuncios cuando una propiedad se vende. Esto genera "anuncios zombies" que distorsionan el análisis.
 
-**Solución:** Aplicar cortes máximos según estado de construcción.
+**Solución:** Aplicar corte único de **300 días (10 meses)** para TODOS los estados de construcción.
 
 | Estado | Corte Máximo | Justificación |
 |--------|--------------|---------------|
-| `preventa` | 24 meses (730 días) | Proyectos pueden tener retrasos legítimos |
-| `entrega_inmediata` | 10 meses (300 días) | Si está listo y no se vendió, hay problema |
-| `nuevo_a_estrenar` | 10 meses (300 días) | Igual que entrega inmediata |
-| `usado` | 10 meses (300 días) | Igual que entrega inmediata |
-| `no_especificado` | 10 meses (300 días) | Dato poco confiable, ser conservador |
+| **TODOS** | 10 meses (300 días) | Con la variación de precios actual en Bolivia (~33% TC paralelo vs oficial), datos de más de 300 días ya no son confiables |
+
+> **Nota histórica:** Antes de v2.30 (Feb 2026), se usaba 730 días para preventa y 300 para otros estados. Se unificó porque la volatilidad del mercado hace que datos antiguos sean poco representativos sin importar el estado de construcción.
 
 **Parámetro para desactivar:** `{"incluir_datos_viejos": true}`
 
-**Caso específico resuelto:** Condominio Las Dalias (7 unidades con 753 días en mercado, entrega_inmediata) - claramente anuncios no actualizados.
+**Caso específico resuelto:** Condominio Las Dalias (19 unidades con 700+ días en mercado) - ahora correctamente excluidas de resultados.
 
 ---
 
@@ -95,7 +93,7 @@ buscarUnidadesReales({
   zona: "Equipetrol",
   incluir_outliers: true,      // Incluir precios atípicos
   incluir_multiproyecto: true, // Incluir anuncios multiproyecto
-  incluir_datos_viejos: true   // Incluir anuncios >10/24 meses
+  incluir_datos_viejos: true   // Incluir anuncios >300 días
 })
 ```
 
@@ -118,6 +116,7 @@ buscarUnidadesReales({
 
 | Fecha | Cambio | Migración |
 |-------|--------|-----------|
+| 02 Feb 2026 | **Unificar límite a 300 días para TODOS** (antes 730 preventa) | 105 |
 | 19 Ene 2026 | Agregar filtro días en mercado (10m/24m) | 062 |
 | 19 Ene 2026 | Agregar campo dias_en_mercado | 061 |
 | 18 Ene 2026 | Excluir duplicados | 059 |

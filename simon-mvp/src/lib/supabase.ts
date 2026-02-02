@@ -540,20 +540,37 @@ export async function obtenerMetricasMercado(): Promise<MetricasMercado | null> 
   if (!supabase) return null
 
   try {
-    // Usar la vista v_metricas_mercado si existe, o query directo
+    // v2.29: Consistente con buscar_unidades_reales() - mismos filtros
+    // Incluye: status=completado, duplicado_de IS NULL, filtro días en mercado
     const { data, error } = await supabase
       .from('propiedades_v2')
-      .select('precio_usd, area_total_m2, dormitorios')
+      .select('precio_usd, area_total_m2, dormitorios, estado_construccion, fecha_publicacion, fecha_discovery')
       .eq('es_activa', true)
+      .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
+      .is('duplicado_de', null)
       .gte('precio_usd', 30000)
 
     if (error || !data) return null
 
-    // Calcular métricas
-    const propiedadesValidas = data.filter((p: any) =>
-      p.area_total_m2 > 20 && p.precio_usd / p.area_total_m2 >= 800
-    )
+    // Calcular días en mercado y filtrar datos viejos
+    // v2.30: Límite unificado 300 días para TODOS los estados
+    const hoy = new Date()
+    const propiedadesValidas = data.filter((p: any) => {
+      // Filtros básicos
+      if (p.area_total_m2 <= 20) return false
+      if (p.precio_usd / p.area_total_m2 < 800) return false
+
+      // Filtro días en mercado: 300 días para todos
+      const fechaRef = p.fecha_publicacion || p.fecha_discovery
+      if (fechaRef) {
+        const fechaPub = new Date(fechaRef)
+        const diasEnMercado = Math.floor((hoy.getTime() - fechaPub.getTime()) / (1000 * 60 * 60 * 24))
+        if (diasEnMercado > 300) return false
+      }
+
+      return true
+    })
 
     if (propiedadesValidas.length === 0) return null
 
