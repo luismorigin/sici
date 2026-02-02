@@ -67,16 +67,16 @@ function formatPrecioCompacto(precio: number): string {
   return `$${Math.round(precio / 1000)}k`
 }
 
-// Colores MOAT alineados con landing
+// Colores MOAT alineados con tema premium
 function getColorMOAT(diferencia_pct: number | null, categoria: string | null): { bg: string, text: string, name: string } {
-  if (diferencia_pct === null) return { bg: '#64748B', text: '#FFFFFF', name: 'gray' }
+  if (diferencia_pct === null) return { bg: '#666666', text: '#f8f6f3', name: 'gray' }
   if (diferencia_pct <= -10 || categoria === 'oportunidad' || categoria === 'bajo_promedio') {
     return { bg: '#10B981', text: '#FFFFFF', name: 'emerald' }
   }
   if (diferencia_pct >= 10 || categoria === 'premium' || categoria === 'sobre_promedio') {
-    return { bg: '#3B82F6', text: '#FFFFFF', name: 'blue' }
+    return { bg: '#c9a959', text: '#0a0a0a', name: 'gold' }
   }
-  return { bg: '#64748B', text: '#FFFFFF', name: 'slate' }
+  return { bg: '#666666', text: '#f8f6f3', name: 'slate' }
 }
 
 // Obtener categoría MOAT de una propiedad
@@ -468,34 +468,34 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
   const isSelected = selectedProp ? selectedIds.has(selectedProp.id) : false
   const rangoActivo = RANGOS_PRECIO.find(r => r.id === filtroPrecio)
 
-  // Colores para síntesis
+  // Colores para síntesis - Premium Style
   const getColoresSintesis = (tipo: string) => {
     switch (tipo) {
       case 'oportunidad':
-        return { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', action: 'text-emerald-700' }
+        return { bg: 'bg-emerald-900/30', border: 'border-emerald-500/50', text: 'text-emerald-300', action: 'text-emerald-400' }
       case 'sospechoso':
-        return { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', action: 'text-amber-700' }
+        return { bg: 'bg-amber-900/30', border: 'border-amber-500/50', text: 'text-amber-300', action: 'text-amber-400' }
       case 'premium':
-        return { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', action: 'text-blue-700' }
+        return { bg: 'bg-[#c9a959]/20', border: 'border-[#c9a959]/50', text: 'text-[#c9a959]', action: 'text-[#c9a959]' }
       default:
-        return { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-800', action: 'text-slate-700' }
+        return { bg: 'bg-[#333333]', border: 'border-[#c9a959]/30', text: 'text-[#f8f6f3]', action: 'text-[#c9a959]' }
     }
   }
 
   return (
     <div className="fixed inset-0 z-50 bg-black">
-      {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-[1000] bg-white/95 backdrop-blur-sm border-b">
+      {/* Header - Premium Style */}
+      <div className="absolute top-0 left-0 right-0 z-[1000] bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-[#c9a959]/30">
         <div className="px-4 py-3 flex items-center justify-between">
           <div>
-            <h2 className="font-bold text-gray-900">Mapa de Resultados</h2>
-            <p className="text-xs text-gray-500">
+            <h2 className="font-bold text-[#f8f6f3]">Mapa de Resultados</h2>
+            <p className="text-xs text-[#c9a959]">
               {propsFiltradas.length} de {totalConjuntoBase} props · {selectedIds.size}/{maxSelected} elegidas
             </p>
           </div>
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 active:bg-gray-200"
+            className="w-10 h-10 rounded-full bg-[#333333] flex items-center justify-center text-[#f8f6f3] hover:bg-[#c9a959] hover:text-[#0a0a0a] transition-colors"
           >
             ✕
           </button>
@@ -505,13 +505,13 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
         <div className="px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
           {/* Toggle Conjunto Base: Top X / Todas - oculto si modoExploracion */}
           {!modoExploracion && (
-            <div className="flex-shrink-0 flex rounded-full border border-gray-300 overflow-hidden">
+            <div className="flex-shrink-0 flex border border-[#c9a959]/50 overflow-hidden">
               <button
                 onClick={() => setConjuntoBase('top13')}
                 className={`px-3 py-2 text-sm font-medium transition-all ${
                   conjuntoBase === 'top13'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-white text-gray-600'
+                    ? 'bg-[#c9a959] text-[#0a0a0a]'
+                    : 'bg-[#0a0a0a] text-[#f8f6f3]'
                 }`}
               >
                 Top {destacadasConGPS}
@@ -520,8 +520,8 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
                 onClick={() => setConjuntoBase('todas')}
                 className={`px-3 py-2 text-sm font-medium transition-all ${
                   conjuntoBase === 'todas'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-white text-gray-600'
+                    ? 'bg-[#c9a959] text-[#0a0a0a]'
+                    : 'bg-[#0a0a0a] text-[#f8f6f3]'
                 }`}
               >
                 Todas {totalConGPS}
@@ -530,21 +530,21 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
           )}
           {/* Indicador modo exploración */}
           {modoExploracion && (
-            <div className="flex-shrink-0 px-3 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
-              🔍 Explorando {totalConGPS} propiedades
+            <div className="flex-shrink-0 px-3 py-2 bg-[#c9a959]/20 text-[#c9a959] text-sm font-medium">
+              Explorando {totalConGPS} propiedades
             </div>
           )}
 
           {/* Separador visual */}
-          <div className="flex-shrink-0 w-px bg-gray-300 my-1"></div>
+          <div className="flex-shrink-0 w-px bg-[#c9a959]/30 my-1"></div>
 
           {/* Chip Oportunidad */}
           <button
             onClick={() => toggleCategoria('oportunidad')}
-            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-all ${
               filtrosCategorias.has('oportunidad')
                 ? 'bg-emerald-500 text-white'
-                : 'bg-white border border-gray-300 text-gray-700'
+                : 'bg-[#0a0a0a] border border-[#c9a959]/50 text-[#f8f6f3]'
             }`}
           >
             <span className={`w-2.5 h-2.5 rounded-full ${filtrosCategorias.has('oportunidad') ? 'bg-white' : 'bg-emerald-500'}`}></span>
@@ -554,43 +554,43 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
           {/* Chip Justo */}
           <button
             onClick={() => toggleCategoria('justo')}
-            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-all ${
               filtrosCategorias.has('justo')
-                ? 'bg-slate-500 text-white'
-                : 'bg-white border border-gray-300 text-gray-700'
+                ? 'bg-[#666666] text-white'
+                : 'bg-[#0a0a0a] border border-[#c9a959]/50 text-[#f8f6f3]'
             }`}
           >
-            <span className={`w-2.5 h-2.5 rounded-full ${filtrosCategorias.has('justo') ? 'bg-white' : 'bg-slate-500'}`}></span>
+            <span className={`w-2.5 h-2.5 rounded-full ${filtrosCategorias.has('justo') ? 'bg-white' : 'bg-[#666666]'}`}></span>
             Justo
           </button>
 
           {/* Chip Premium */}
           <button
             onClick={() => toggleCategoria('premium')}
-            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-all ${
               filtrosCategorias.has('premium')
-                ? 'bg-blue-500 text-white'
-                : 'bg-white border border-gray-300 text-gray-700'
+                ? 'bg-[#c9a959] text-[#0a0a0a]'
+                : 'bg-[#0a0a0a] border border-[#c9a959]/50 text-[#f8f6f3]'
             }`}
           >
-            <span className={`w-2.5 h-2.5 rounded-full ${filtrosCategorias.has('premium') ? 'bg-white' : 'bg-blue-500'}`}></span>
+            <span className={`w-2.5 h-2.5 rounded-full ${filtrosCategorias.has('premium') ? 'bg-[#0a0a0a]' : 'bg-[#c9a959]'}`}></span>
             Prem.
           </button>
 
           {/* Chip Precio */}
           <button
             onClick={() => setShowPrecioSheet(true)}
-            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-all ${
               filtroPrecio !== 'cualquiera'
-                ? 'bg-amber-500 text-white'
-                : 'bg-white border border-gray-300 text-gray-700'
+                ? 'bg-[#c9a959] text-[#0a0a0a]'
+                : 'bg-[#0a0a0a] border border-[#c9a959]/50 text-[#f8f6f3]'
             }`}
           >
-            💰 {filtroPrecio !== 'cualquiera' ? rangoActivo?.label : 'Precio'}
+            $ {filtroPrecio !== 'cualquiera' ? rangoActivo?.label : 'Precio'}
             {filtroPrecio !== 'cualquiera' && (
               <span
                 onClick={(e) => { e.stopPropagation(); setFiltroPrecio('cualquiera') }}
-                className="ml-1 text-white/80 hover:text-white"
+                className="ml-1 text-[#0a0a0a]/80 hover:text-[#0a0a0a]"
               >
                 ✕
               </span>
@@ -601,7 +601,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
           {hayFiltrosActivos && (
             <button
               onClick={limpiarFiltros}
-              className="flex-shrink-0 px-3 py-2 rounded-full text-sm font-medium text-red-600 bg-red-50 border border-red-200"
+              className="flex-shrink-0 px-3 py-2 text-sm font-medium text-[#c9a959] bg-[#c9a959]/10 border border-[#c9a959]/30"
             >
               Limpiar
             </button>
@@ -609,23 +609,23 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
         </div>
       </div>
 
-      {/* Leyenda MOAT */}
-      <div className="absolute top-36 left-4 z-[1000] bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 text-xs shadow">
+      {/* Leyenda MOAT - Premium Style */}
+      <div className="absolute top-36 left-4 z-[1000] bg-[#0a0a0a]/95 backdrop-blur-sm px-3 py-2 text-xs border border-[#c9a959]/30">
         {/* Colores MOAT */}
         <div className="flex items-center gap-2 mb-1">
           <span className="w-2.5 h-2.5 rounded bg-emerald-500"></span>
-          <span>Oportunidad</span>
+          <span className="text-[#f8f6f3]">Oportunidad</span>
         </div>
         <div className="flex items-center gap-2 mb-1">
-          <span className="w-2.5 h-2.5 rounded bg-slate-500"></span>
-          <span>Justo</span>
+          <span className="w-2.5 h-2.5 rounded bg-[#666666]"></span>
+          <span className="text-[#f8f6f3]">Justo</span>
         </div>
         <div className="flex items-center gap-2 mb-1">
-          <span className="w-2.5 h-2.5 rounded bg-blue-500"></span>
-          <span>Premium</span>
+          <span className="w-2.5 h-2.5 rounded bg-[#c9a959]"></span>
+          <span className="text-[#f8f6f3]">Premium</span>
         </div>
         {/* Separador */}
-        <div className="border-t border-gray-200 my-1.5"></div>
+        <div className="border-t border-[#c9a959]/30 my-1.5"></div>
         {/* Top 3 */}
         <div className="flex items-center gap-2 mb-1">
           <span className="text-[10px] font-bold">①②③</span>
@@ -637,11 +637,11 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
           return (
             <div className="flex items-center gap-2">
               {leyenda.showPill ? (
-                <span className="px-1.5 py-0.5 text-[10px] bg-amber-400 text-white rounded font-bold whitespace-nowrap">
+                <span className="px-1.5 py-0.5 text-[10px] bg-[#c9a959] text-[#0a0a0a] rounded font-bold whitespace-nowrap">
                   {leyenda.texto}
                 </span>
               ) : (
-                <span className="text-amber-600 font-medium">{leyenda.texto}</span>
+                <span className="text-[#c9a959] font-medium">{leyenda.texto}</span>
               )}
             </div>
           )
@@ -651,16 +651,16 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
       {/* Mapa */}
       <div ref={mapRef} className="w-full h-full pt-28" />
 
-      {/* Card de propiedad seleccionada */}
+      {/* Card de propiedad seleccionada - Premium Style */}
       {selectedProp && !lightboxOpen && (
-        <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-white rounded-t-2xl shadow-2xl animate-slide-up max-h-[70vh] overflow-y-auto">
+        <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-[#0a0a0a] rounded-t-2xl shadow-2xl animate-slide-up max-h-[70vh] overflow-y-auto border-t border-[#c9a959]/30">
           {/* Header del card */}
-          <div className="p-4 border-b border-gray-100">
+          <div className="p-4 border-b border-[#c9a959]/20">
             <div className="flex gap-3">
               {/* Foto clickeable */}
               <div
                 onClick={openLightbox}
-                className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 relative cursor-pointer active:opacity-80"
+                className="w-20 h-20 bg-[#333333] rounded-lg overflow-hidden flex-shrink-0 relative cursor-pointer active:opacity-80"
               >
                 {selectedProp.fotos_urls.length > 0 ? (
                   <>
@@ -677,7 +677,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
                     )}
                   </>
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-2xl">
+                  <div className="w-full h-full flex items-center justify-center text-[#c9a959]/50 text-2xl">
                     🏢
                   </div>
                 )}
@@ -685,11 +685,11 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
 
               {/* Info básica */}
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-gray-900 truncate">{selectedProp.proyecto}</h3>
-                <p className="text-xl font-bold text-gray-900">
+                <h3 className="font-bold text-[#f8f6f3] truncate">{selectedProp.proyecto}</h3>
+                <p className="text-xl font-bold text-[#c9a959]">
                   ${formatNum(selectedProp.precio_usd)}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-[#f8f6f3]/60">
                   {selectedProp.dormitorios}d · {selectedProp.area_m2}m² · ${Math.round(selectedProp.precio_usd / selectedProp.area_m2)}/m²
                 </p>
               </div>
@@ -699,15 +699,15 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
                 onClick={() => handleToggleSelected(selectedProp.id)}
                 className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
                   isSelected
-                    ? 'bg-red-50'
-                    : 'bg-gray-100 active:bg-gray-200'
+                    ? 'bg-[#c9a959]/20'
+                    : 'bg-[#333333] active:bg-[#444444]'
                 }`}
               >
                 <svg
                   className={`w-6 h-6 transition-all ${
                     isSelected
-                      ? 'fill-red-500 stroke-red-500'
-                      : 'fill-transparent stroke-gray-400'
+                      ? 'fill-[#c9a959] stroke-[#c9a959]'
+                      : 'fill-transparent stroke-[#f8f6f3]/50'
                   }`}
                   viewBox="0 0 24 24"
                   strokeWidth={2}
@@ -721,7 +721,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
           {/* Síntesis Fiduciaria */}
           {selectedProp.sintesisFiduciaria && (
             <div className="p-4">
-              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Síntesis Fiduciaria</h4>
+              <h4 className="text-xs font-semibold text-[#c9a959] uppercase tracking-wide mb-2">Síntesis Fiduciaria</h4>
               {(() => {
                 const sintesis = selectedProp.sintesisFiduciaria!
                 const colores = getColoresSintesis(sintesis.tipo)
@@ -731,7 +731,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
                       {sintesis.headline}
                     </p>
                     {sintesis.detalles && (
-                      <div className="text-xs text-gray-600 space-y-1 mb-2">
+                      <div className="text-xs text-[#f8f6f3]/60 space-y-1 mb-2">
                         {sintesis.detalles.split('\n').map((linea, i) => (
                           <p key={i}>{linea}</p>
                         ))}
@@ -750,7 +750,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
           <div className="p-4 pt-0">
             <button
               onClick={() => setSelectedProp(null)}
-              className="w-full py-2.5 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium active:bg-gray-50"
+              className="w-full py-2.5 rounded-lg border border-[#c9a959]/30 text-[#f8f6f3] text-sm font-medium active:bg-[#333333]"
             >
               Cerrar
             </button>
@@ -824,22 +824,22 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
         </div>
       )}
 
-      {/* Bottom sheet de precio */}
+      {/* Bottom sheet de precio - Premium Style */}
       {showPrecioSheet && (
         <div
           className="fixed inset-0 z-[1050] bg-black/50"
           onClick={() => setShowPrecioSheet(false)}
         >
           <div
-            className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl animate-slide-up"
+            className="absolute bottom-0 left-0 right-0 bg-[#0a0a0a] rounded-t-2xl animate-slide-up border-t border-[#c9a959]/30"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 border-b border-gray-100">
+            <div className="p-4 border-b border-[#c9a959]/20">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-gray-900">Rango de precio</h3>
+                <h3 className="font-bold text-[#f8f6f3]">Rango de precio</h3>
                 <button
                   onClick={() => setShowPrecioSheet(false)}
-                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"
+                  className="w-8 h-8 rounded-full bg-[#333333] flex items-center justify-center text-[#f8f6f3] hover:bg-[#c9a959] hover:text-[#0a0a0a] transition-colors"
                 >
                   ✕
                 </button>
@@ -856,8 +856,8 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
                   }}
                   className={`w-full p-3 rounded-lg text-left font-medium transition-all ${
                     filtroPrecio === rango.id
-                      ? 'bg-amber-500 text-white'
-                      : 'bg-gray-100 text-gray-700 active:bg-gray-200'
+                      ? 'bg-[#c9a959] text-[#0a0a0a]'
+                      : 'bg-[#333333] text-[#f8f6f3] active:bg-[#444444]'
                   }`}
                 >
                   {rango.label}
@@ -868,7 +868,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
             <div className="p-4 pt-0">
               <button
                 onClick={() => setShowPrecioSheet(false)}
-                className="w-full py-3 rounded-lg bg-gray-900 text-white font-medium active:bg-gray-800"
+                className="w-full py-3 rounded-lg bg-[#c9a959] text-[#0a0a0a] font-medium active:bg-[#b5935a]"
               >
                 Aplicar
               </button>
@@ -877,15 +877,15 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
         </div>
       )}
 
-      {/* Mensaje si no hay GPS */}
+      {/* Mensaje si no hay GPS - Premium Style */}
       {propsConGPS.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+        <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0a]">
           <div className="text-center p-6">
             <span className="text-4xl mb-4 block">📍</span>
-            <p className="text-gray-600">No hay propiedades con ubicación GPS disponible</p>
+            <p className="text-[#f8f6f3]/70">No hay propiedades con ubicación GPS disponible</p>
             <button
               onClick={onClose}
-              className="mt-4 px-4 py-2 bg-gray-800 text-white rounded-lg"
+              className="mt-4 px-4 py-2 bg-[#c9a959] text-[#0a0a0a] rounded-lg font-medium"
             >
               Volver a resultados
             </button>
@@ -893,24 +893,24 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
         </div>
       )}
 
-      {/* Toast MOAT */}
+      {/* Toast MOAT - Premium Style */}
       {showLimitToast && (
         <div className="fixed top-40 left-1/2 -translate-x-1/2 z-[1001] animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="bg-gray-900 text-white px-5 py-4 rounded-xl shadow-xl max-w-sm relative">
+          <div className="bg-[#0a0a0a] text-[#f8f6f3] px-5 py-4 rounded-xl shadow-xl max-w-sm relative border border-[#c9a959]/30">
             <button
               onClick={() => setShowLimitToast(false)}
-              className="absolute top-2 right-2 text-gray-400 active:text-white p-1"
+              className="absolute top-2 right-2 text-[#f8f6f3]/50 active:text-[#f8f6f3] p-1"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <p className="font-semibold text-sm mb-1 pr-6">¿Por qué solo {maxSelected}?</p>
-            <p className="text-xs text-gray-300 leading-relaxed">
+            <p className="font-semibold text-sm mb-1 pr-6 text-[#c9a959]">¿Por qué solo {maxSelected}?</p>
+            <p className="text-xs text-[#f8f6f3]/70 leading-relaxed">
               Más opciones = peores decisiones. Con {maxSelected} propiedades analizamos cada detalle a fondo.
-              <span className="block mt-2 text-purple-300">El premium incluye +10 alternativas como contexto.</span>
+              <span className="block mt-2 text-[#c9a959]">El premium incluye +10 alternativas como contexto.</span>
             </p>
-            <p className="text-xs text-gray-400 mt-2">Quitá una para agregar esta →</p>
+            <p className="text-xs text-[#f8f6f3]/50 mt-2">Quitá una para agregar esta →</p>
           </div>
         </div>
       )}
@@ -959,9 +959,9 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
           border-top: 8px solid currentColor;
         }
         :global(.pin-selected) {
-          background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%) !important;
-          border: 3px solid #FCD34D !important;
-          box-shadow: 0 0 12px rgba(245, 158, 11, 0.5), 0 4px 12px rgba(0,0,0,0.3);
+          background: linear-gradient(135deg, #c9a959 0%, #b5935a 100%) !important;
+          border: 3px solid #e8d59e !important;
+          box-shadow: 0 0 16px rgba(201, 169, 89, 0.6), 0 4px 12px rgba(0,0,0,0.3);
           font-size: 14px;
           padding: 8px 14px;
         }
@@ -991,13 +991,13 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
         :global(.cluster-icon) {
           width: 40px;
           height: 40px;
-          background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
-          border: 3px solid white;
+          background: linear-gradient(135deg, #c9a959 0%, #b5935a 100%);
+          border: 3px solid #f8f6f3;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: white;
+          color: #0a0a0a;
           font-weight: bold;
           font-size: 14px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.3);

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { UnidadReal } from '@/lib/supabase'
+import { formatDorms } from '@/lib/format-utils'
 
 interface PropertyCardPremiumProps {
   propiedad: UnidadReal
@@ -11,6 +12,9 @@ interface PropertyCardPremiumProps {
   innegociablesUsuario?: string[]
   usuarioNecesitaParqueo?: boolean
   usuarioNecesitaBaulera?: boolean
+  isSelected?: boolean
+  onToggleSelected?: (id: number) => void
+  onOpenLightbox?: (propiedad: UnidadReal, index: number) => void
 }
 
 // Constantes para costos estimados (de estimados-mercado.ts)
@@ -265,7 +269,10 @@ export default function PropertyCardPremium({
   datosContexto,
   innegociablesUsuario = [],
   usuarioNecesitaParqueo = false,
-  usuarioNecesitaBaulera = false
+  usuarioNecesitaBaulera = false,
+  isSelected = false,
+  onToggleSelected,
+  onOpenLightbox
 }: PropertyCardPremiumProps) {
   const [fotoIndex, setFotoIndex] = useState(0)
   const [expanded, setExpanded] = useState(false)
@@ -363,12 +370,41 @@ export default function PropertyCardPremium({
     : null
 
   return (
-    <div className="bg-white border border-[#0a0a0a]/10 hover:border-[#c9a959]/30 transition-colors">
+    <div className={`bg-white border transition-all duration-300 ${
+      isSelected
+        ? 'border-[#c9a959] ring-2 ring-[#c9a959] shadow-[0_0_20px_rgba(201,169,89,0.4)]'
+        : 'border-[#0a0a0a]/10 hover:border-[#c9a959]/30'
+    }`}>
       {/* Image Section */}
       <div className="relative aspect-[16/10] bg-[#f8f6f3] overflow-hidden">
+        {/* Heart button for favorites */}
+        {onToggleSelected && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleSelected(propiedad.id) }}
+            className="absolute top-3 right-3 z-10 p-2 transition-all"
+            aria-label={isSelected ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+          >
+            <svg
+              className={`w-7 h-7 transition-all drop-shadow-md ${
+                isSelected
+                  ? 'fill-[#c9a959] stroke-[#c9a959]'
+                  : 'fill-transparent stroke-white hover:stroke-[#c9a959]'
+              }`}
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+            >
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </button>
+        )}
         {hasFotos ? (
           <>
-            <img src={fotos[fotoIndex]} alt={propiedad.proyecto} className="w-full h-full object-cover" />
+            <img
+              src={fotos[fotoIndex]}
+              alt={propiedad.proyecto}
+              className="w-full h-full object-cover cursor-pointer"
+              onClick={() => onOpenLightbox?.(propiedad, fotoIndex)}
+            />
             {fotos.length > 1 && (
               <>
                 <button onClick={prevFoto} className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors">
@@ -405,7 +441,7 @@ export default function PropertyCardPremium({
 
         {/* Specs */}
         <div className="flex items-center gap-4 text-[#666666] text-sm mb-4">
-          <span className="flex items-center gap-1.5"><IconBed /> {propiedad.dormitorios}</span>
+          <span className="flex items-center gap-1.5"><IconBed /> {formatDorms(propiedad.dormitorios)}</span>
           {propiedad.banos && <span className="flex items-center gap-1.5"><IconBath /> {Math.floor(Number(propiedad.banos))}</span>}
           <span className="flex items-center gap-1.5"><IconArea /> {propiedad.area_m2}m2</span>
           {tieneParqueo && <span className="flex items-center gap-1.5"><IconCar /> {propiedad.estacionamientos}</span>}
