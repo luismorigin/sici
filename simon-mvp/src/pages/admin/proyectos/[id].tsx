@@ -152,6 +152,8 @@ export default function EditarProyecto() {
   const [filtroDorms, setFiltroDorms] = useState<number | null>(null)
   const [ordenarPor, setOrdenarPor] = useState<'precio' | 'precio_m2' | 'area' | 'dias'>('precio')
   const [mostrarTodas, setMostrarTodas] = useState(false)
+  // Filtro consistente con buscar_unidades_reales(): preventa=730d, otros=300d
+  const [ocultarViejas, setOcultarViejas] = useState(true)
 
   const [nuevoAmenidad, setNuevoAmenidad] = useState('')
   const [nuevoEquipamientoBase, setNuevoEquipamientoBase] = useState('')
@@ -716,6 +718,13 @@ export default function EditarProyecto() {
     return Math.floor(diff / (1000 * 60 * 60 * 24))
   }
 
+  // Filtro consistente con buscar_unidades_reales(): preventa=730d, otros=300d
+  const esPropiedadVieja = (prop: PropiedadVinculada): boolean => {
+    const dias = calcularDiasEnMercado(prop)
+    const limiteDias = prop.estado_construccion === 'preventa' ? 730 : 300
+    return dias > limiteDias
+  }
+
   // Calcular estadísticas del proyecto
   const calcularEstadisticas = () => {
     if (propiedades.length === 0) return null
@@ -761,6 +770,7 @@ export default function EditarProyecto() {
   // Filtrar y ordenar propiedades
   const propiedadesFiltradas = propiedades
     .filter(p => filtroDorms === null || p.dormitorios === filtroDorms || (filtroDorms === 3 && p.dormitorios >= 3))
+    .filter(p => !ocultarViejas || !esPropiedadVieja(p))
     .sort((a, b) => {
       switch (ordenarPor) {
         case 'precio_m2':
@@ -1422,6 +1432,16 @@ export default function EditarProyecto() {
                             <option value="dias">Días en mercado</option>
                           </select>
                         </div>
+
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={ocultarViejas}
+                            onChange={(e) => setOcultarViejas(e.target.checked)}
+                            className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-xs text-slate-600">Ocultar viejas</span>
+                        </label>
 
                         {propiedadesFiltradas.length !== propiedades.length && (
                           <span className="text-xs text-slate-500">
