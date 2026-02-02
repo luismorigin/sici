@@ -237,7 +237,7 @@ export default function AdminProyectos() {
       // Filtros consistentes con buscar_unidades_reales(): duplicados, área, días en mercado
       const fechaLimite = new Date()
       fechaLimite.setDate(fechaLimite.getDate() - 300) // 300 días máximo
-      const fechaLimiteStr = fechaLimite.toISOString()
+      const fechaLimiteStr = fechaLimite.toISOString().split('T')[0] // Solo fecha YYYY-MM-DD
 
       const proyectosConConteo = await Promise.all(
         (data || []).map(async (proyecto) => {
@@ -248,7 +248,7 @@ export default function AdminProyectos() {
             .eq('status', 'completado')
             .is('duplicado_de', null)  // Excluir duplicados
             .gte('area_total_m2', 20)  // Excluir parqueos/bauleras
-            .or(`fecha_publicacion.gte.${fechaLimiteStr},fecha_discovery.gte.${fechaLimiteStr}`)  // Excluir viejas >300d
+            .gte('fecha_publicacion', fechaLimiteStr)  // Excluir viejas >300d (usa fecha real del anuncio)
 
           return {
             ...proyecto,
