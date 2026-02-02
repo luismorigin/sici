@@ -157,6 +157,10 @@ export default function ResultadosV2() {
             baulera: p.baulera,
             amenities_lista: p.amenities_lista,
             razon_fiduciaria: p.razon_fiduciaria,
+            // Datos del asesor para contacto
+            asesor_nombre: p.asesor_nombre,
+            asesor_wsp: p.asesor_wsp,
+            asesor_inmobiliaria: p.asesor_inmobiliaria,
           })),
           datosUsuario: {
             presupuesto: filtrosActivos.presupuesto,

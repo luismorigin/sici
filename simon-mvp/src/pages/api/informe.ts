@@ -933,8 +933,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     <!-- Tu Búsqueda -->
     <div class="container">
         <div class="search-summary">
-            <h3 style="color: var(--primary); margin-bottom: 5px;">Tu Búsqueda</h3>
-            <p style="color: var(--gray-600); font-size: 0.9rem;">Los filtros que usaste para encontrar estas propiedades</p>
+            <h3 style="color: var(--cream); margin-bottom: 5px;">Tu Búsqueda</h3>
+            <p style="color: rgba(248,246,243,0.6); font-size: 0.9rem;">Los filtros que usaste para encontrar estas propiedades</p>
             <div class="search-grid">
                 <div class="search-item">
                     <div class="value">$${fmt(datosUsuario.presupuesto)}</div>
@@ -980,8 +980,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 <div class="profile-grid">
                     <div class="profile-card">
                         <h4>Quiénes Vivirán</h4>
-                        <p style="font-size: 1.05rem; font-weight: 600; color: var(--primary);">${datosUsuario.quienes_viven || 'No especificado'}</p>
-                        <p style="color: var(--gray-600); font-size: 0.85rem; margin-top: 6px;">Buscás espacio adecuado para tu situación.</p>
+                        <p style="font-size: 1.05rem; font-weight: 600; color: var(--cream);">${datosUsuario.quienes_viven || 'No especificado'}</p>
+                        <p style="color: rgba(248,246,243,0.6); font-size: 0.85rem; margin-top: 6px;">Buscás espacio adecuado para tu situación.</p>
                     </div>
                     <div class="profile-card">
                         <h4>Ubicación vs Metros</h4>
@@ -1011,8 +1011,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     </div>
                     <div class="profile-card">
                         <h4>¿Por qué ${fav.proyecto} es tu #1?</h4>
-                        <p style="font-size: 1.05rem; font-weight: 600; color: var(--primary);">${favCat.clase === 'good' ? 'Mejor relación precio/valor' : favCat.clase === 'high' ? 'Mejor ubicación/calidad' : 'Mejor balance general'}</p>
-                        <p style="color: var(--gray-600); font-size: 0.85rem; margin-top: 6px;">Basado en tus preferencias y el análisis de mercado.</p>
+                        <p style="font-size: 1.05rem; font-weight: 600; color: var(--cream);">${favCat.clase === 'good' ? 'Mejor relación precio/valor' : favCat.clase === 'high' ? 'Mejor ubicación/calidad' : 'Mejor balance general'}</p>
+                        <p style="color: rgba(248,246,243,0.6); font-size: 0.85rem; margin-top: 6px;">Basado en tus preferencias y el análisis de mercado.</p>
                     </div>
                 </div>
             </div>
@@ -1065,7 +1065,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </div>
 
                 ${equipFav.allAmenities.length > 0 ? `
-                <h4 style="margin-top: 30px; margin-bottom: 15px; color: var(--gray-700);">🏢 Amenidades del Edificio</h4>
+                <h4 style="margin-top: 30px; margin-bottom: 15px; color: var(--cream);">🏢 Amenidades del Edificio</h4>
                 <div class="amenities-grid">
                     ${equipFav.allAmenities.slice(0, 8).map(a => `
                     <div class="amenity-item">
@@ -1078,16 +1078,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </div>` : ''}
 
                 ${equipFav.equipamientoReal.length > 0 ? `
-                <h4 style="margin-top: 25px; margin-bottom: 15px; color: var(--gray-700);">🏠 Equipamiento del Departamento</h4>
-                <div style="background: var(--gray-50); border-radius: 10px; padding: 15px;">
+                <h4 style="margin-top: 25px; margin-bottom: 15px; color: var(--cream);">🏠 Equipamiento del Departamento</h4>
+                <div style="background: #0a0a0a; border-radius: 10px; padding: 15px; border: 1px solid rgba(201,169,89,0.2);">
                     <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
                         ${equipFav.equipamientoReal.map(item => `
-                        <span style="background: white; border: 1px solid var(--gray-200); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;">
+                        <span style="background: #1a1a1a; border: 1px solid rgba(201,169,89,0.3); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; color: var(--cream);">
                             ${item}
                         </span>`).join('')}
                     </div>
-                    <div style="font-size: 0.85rem; color: var(--gray-600); border-top: 1px solid var(--gray-200); padding-top: 10px;">
-                        <strong>Valor estimado:</strong> ~$${fmt(calcularValorEquipamiento(equipFav.equipamientoReal))} USD
+                    <div style="font-size: 0.85rem; color: rgba(248,246,243,0.7); border-top: 1px solid rgba(201,169,89,0.2); padding-top: 10px;">
+                        <strong style="color: var(--cream);">Valor estimado:</strong> ~$${fmt(calcularValorEquipamiento(equipFav.equipamientoReal))} USD
                         <span style="margin-left: 10px; color: var(--oportunidad);">✓ Incluido en el precio</span>
                     </div>
                 </div>` : `
@@ -1118,7 +1118,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </div>` : ''}
 
                 ${(fav.fotos_urls || []).length > 1 ? `
-                <h4 style="margin-top: 25px; margin-bottom: 12px; color: var(--gray-700);">Fotos de la Propiedad</h4>
+                <h4 style="margin-top: 25px; margin-bottom: 12px; color: var(--cream);">Fotos de la Propiedad</h4>
                 <div class="photos-grid">
                     ${fav.fotos_urls.slice(0, 4).map(f => `<img src="${f}" alt="${fav.proyecto}">`).join('')}
                 </div>` : ''}
@@ -1388,7 +1388,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     </div>
                 </div>
 
-                <h4 style="color: var(--primary); margin-bottom: 15px;">💰 Sobre el Precio</h4>
+                <h4 style="color: var(--gold); margin-bottom: 15px;">💰 Sobre el Precio</h4>
                 <ul class="checklist">
                     ${necesitaParqueo && !datosFav.tieneParqueo ? `
                     <li>
@@ -1409,7 +1409,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </ul>
 
                 ${fav.estado_construccion === 'preventa' ? `
-                <h4 style="color: var(--primary); margin: 25px 0 15px;">🏗️ Sobre la Preventa</h4>
+                <h4 style="color: var(--gold); margin: 25px 0 15px;">🏗️ Sobre la Preventa</h4>
                 <ul class="checklist">
                     <li>
                         <div class="checkbox"></div>
@@ -1427,7 +1427,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     </li>
                 </ul>` : ''}
 
-                <h4 style="color: var(--primary); margin: 25px 0 15px;">🏠 Sobre la Propiedad</h4>
+                <h4 style="color: var(--gold); margin: 25px 0 15px;">🏠 Sobre la Propiedad</h4>
                 <ul class="checklist">
                     <li>
                         <div class="checkbox"></div>
@@ -1467,7 +1467,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </ul>
 
                 ${(datosUsuario.innegociables || []).length > 0 ? `
-                <h4 style="color: var(--primary); margin: 25px 0 15px;">✨ Tus Innegociables</h4>
+                <h4 style="color: var(--gold); margin: 25px 0 15px;">✨ Tus Innegociables</h4>
                 <ul class="checklist">
                     <li>
                         <div class="checkbox"></div>
@@ -1518,8 +1518,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                           ? `Vi que la propiedad lleva más de ${Math.floor((fav.dias_en_mercado || 0) / 30)} meses publicada. Entiendo que quieren vender - yo puedo cerrar rápido si llegamos a un acuerdo. ¿Qué flexibilidad tienen en el precio?`
                           : `Noté que llevan más de un mes con la propiedad publicada. ¿Hay margen para negociar si cierro esta semana?`}"
                     </blockquote>
-                    <p style="font-size: 0.85rem; color: var(--gray-600); margin-top: 10px;">
-                        <strong>Tip:</strong> ${(fav.dias_en_mercado || 0) > 90 ? 'Mucho tiempo = vendedor ansioso. Podés pedir 10-15% de descuento.' : 'Tiempo moderado. Apuntá a 5-8% de descuento.'}
+                    <p style="font-size: 0.85rem; color: rgba(248,246,243,0.6); margin-top: 10px;">
+                        <strong style="color: var(--gold);">Tip:</strong> ${(fav.dias_en_mercado || 0) > 90 ? 'Mucho tiempo = vendedor ansioso. Podés pedir 10-15% de descuento.' : 'Tiempo moderado. Apuntá a 5-8% de descuento.'}
                     </p>
                 </div>` : `
                 <div class="negotiation-card">
@@ -1527,8 +1527,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     <blockquote>
                         "Vi que la propiedad es nueva en el mercado. Estoy listo para avanzar rápido si el precio es el correcto. ¿Tienen algún incentivo por cierre rápido?"
                     </blockquote>
-                    <p style="font-size: 0.85rem; color: var(--gray-600); margin-top: 10px;">
-                        <strong>Tip:</strong> Propiedad reciente = vendedor con expectativas altas. Poco margen, pero podés pedir 2-4%.
+                    <p style="font-size: 0.85rem; color: rgba(248,246,243,0.6); margin-top: 10px;">
+                        <strong style="color: var(--gold);">Tip:</strong> Propiedad reciente = vendedor con expectativas altas. Poco margen, pero podés pedir 2-4%.
                     </p>
                 </div>`}
 
@@ -1538,8 +1538,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     <blockquote>
                         "Estoy evaluando también ${comp1 ? `${comp1.proyecto} por $${fmt(comp1.precio_usd)}` : ''}${comp1 && comp2 ? ' y ' : ''}${comp2 ? `${comp2.proyecto} por $${fmt(comp2.precio_usd)}` : ''}. Me gusta ${fav.proyecto} pero necesito que el precio sea competitivo."
                     </blockquote>
-                    <p style="font-size: 0.85rem; color: var(--gray-600); margin-top: 10px;">
-                        <strong>Tip:</strong> Mostrar que tenés opciones reales te da poder. No inventes - usá datos reales.
+                    <p style="font-size: 0.85rem; color: rgba(248,246,243,0.6); margin-top: 10px;">
+                        <strong style="color: var(--gold);">Tip:</strong> Mostrar que tenés opciones reales te da poder. No inventes - usá datos reales.
                     </p>
                 </div>` : ''}
 
@@ -1549,49 +1549,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     <blockquote>
                         "Mi presupuesto es $${fmt(datosUsuario.presupuesto)} TODO INCLUIDO. Si el parqueo no está en ese precio, necesito que lo incluyan o ajusten para que entre en mi número."
                     </blockquote>
-                    <p style="font-size: 0.85rem; color: var(--gray-600); margin-top: 10px;">
-                        <strong>Tip:</strong> El parqueo vale $12-18k. Usá esto para negociar: "sin parqueo, mi oferta sería $${fmt(fav.precio_usd - 15000)}".
+                    <p style="font-size: 0.85rem; color: rgba(248,246,243,0.6); margin-top: 10px;">
+                        <strong style="color: var(--gold);">Tip:</strong> El parqueo vale $12-18k. Usá esto para negociar: "sin parqueo, mi oferta sería $${fmt(fav.precio_usd - 15000)}".
                     </p>
                 </div>` : ''}
 
                 ${datosUsuario.calidad_vs_precio >= 4 ? `
                 <div class="negotiation-card" style="border-left: 4px solid var(--oportunidad);">
                     <h4>💡 Estrategia para vos (priorizás precio)</h4>
-                    <p>Indicaste que priorizás precio sobre calidad. <strong>Negociá firme:</strong></p>
-                    <ul style="margin: 10px 0 0 20px; font-size: 0.9rem;">
+                    <p style="color: var(--cream);">Indicaste que priorizás precio sobre calidad. <strong>Negociá firme:</strong></p>
+                    <ul style="margin: 10px 0 0 20px; font-size: 0.9rem; color: rgba(248,246,243,0.8);">
                         <li>Empezá oferando 15% menos del publicado</li>
                         <li>No muestres entusiasmo - mantené opciones abiertas</li>
                         <li>Pedí tiempo para "pensarlo" incluso si te gusta</li>
                     </ul>
                 </div>` : datosUsuario.calidad_vs_precio <= 2 ? `
-                <div class="negotiation-card" style="border-left: 4px solid var(--primary);">
+                <div class="negotiation-card" style="border-left: 4px solid var(--gold);">
                     <h4>💡 Estrategia para vos (priorizás calidad)</h4>
-                    <p>Indicaste que priorizás calidad sobre precio. <strong>No arriesgues perderlo:</strong></p>
-                    <ul style="margin: 10px 0 0 20px; font-size: 0.9rem;">
+                    <p style="color: var(--cream);">Indicaste que priorizás calidad sobre precio. <strong>No arriesgues perderlo:</strong></p>
+                    <ul style="margin: 10px 0 0 20px; font-size: 0.9rem; color: rgba(248,246,243,0.8);">
                         <li>Ofertá cerca del precio (5-8% menos máximo)</li>
                         <li>Mostrá interés genuino para que te tomen en serio</li>
                         <li>Si te gusta mucho, mejor asegurar que seguir regateando</li>
                     </ul>
                 </div>` : ''}
 
-                <h4 style="color: var(--gray-700); margin: 25px 0 15px;">📊 Números para tu Negociación</h4>
-                <div style="background: var(--gray-50); border-radius: 10px; padding: 20px;">
+                <h4 style="color: var(--cream); margin: 25px 0 15px;">📊 Números para tu Negociación</h4>
+                <div style="background: #0a0a0a; border-radius: 10px; padding: 20px; border: 1px solid rgba(201,169,89,0.2);">
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; text-align: center;">
                         <div>
-                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">$${fmt(fav.precio_usd)}</div>
-                            <div style="font-size: 0.85rem; color: var(--gray-600);">Precio publicado</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--cream);">$${fmt(fav.precio_usd)}</div>
+                            <div style="font-size: 0.85rem; color: rgba(248,246,243,0.6);">Precio publicado</div>
                         </div>
                         <div>
                             <div style="font-size: 1.5rem; font-weight: 700; color: var(--oportunidad);">$${fmt(Math.round(fav.precio_usd * 0.92))}</div>
-                            <div style="font-size: 0.85rem; color: var(--gray-600);">Oferta inicial sugerida (-8%)</div>
+                            <div style="font-size: 0.85rem; color: rgba(248,246,243,0.6);">Oferta inicial sugerida (-8%)</div>
                         </div>
                         <div>
-                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--warning);">$${fmt(Math.round(fav.precio_usd * 0.95))}</div>
-                            <div style="font-size: 0.85rem; color: var(--gray-600);">Precio objetivo (-5%)</div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--gold);">$${fmt(Math.round(fav.precio_usd * 0.95))}</div>
+                            <div style="font-size: 0.85rem; color: rgba(248,246,243,0.6);">Precio objetivo (-5%)</div>
                         </div>
                         <div>
                             <div style="font-size: 1.5rem; font-weight: 700; color: var(--danger);">$${fmt(datosFav.precioReal)}</div>
-                            <div style="font-size: 0.85rem; color: var(--gray-600);">Tu precio real (con extras)</div>
+                            <div style="font-size: 0.85rem; color: rgba(248,246,243,0.6);">Tu precio real (con extras)</div>
                         </div>
                     </div>
                 </div>
@@ -1607,7 +1607,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 <div class="section-title">Conclusión y Recomendación Personalizada</div>
             </div>
             <div class="section-content">
-                <h4 style="color: var(--gray-700); margin-bottom: 15px;">🎯 Veredicto Basado en TU Perfil</h4>
+                <h4 style="color: var(--cream); margin-bottom: 15px;">🎯 Veredicto Basado en TU Perfil</h4>
 
                 ${(() => {
                   // Análisis personalizado según preferencias
@@ -1629,16 +1629,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   const mejorEquipada = opciones.reduce((a, b) => a.datos.valorEquipamiento > b.datos.valorEquipamiento ? a : b)
 
                   return `
-                <div style="background: var(--gray-50); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-                    <p style="margin-bottom: 15px;">
-                        <strong>${fav.proyecto}</strong> es tu #1. Analizando tus preferencias:
+                <div style="background: #0a0a0a; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(201,169,89,0.2);">
+                    <p style="margin-bottom: 15px; color: var(--cream);">
+                        <strong style="color: var(--gold);">${fav.proyecto}</strong> es tu #1. Analizando tus preferencias:
                     </p>
-                    <ul style="margin: 0 0 0 20px; line-height: 1.8;">
-                        ${priorizaUbicacion ? `<li>Priorizás <strong>ubicación</strong> → ${fav.proyecto} está en ${zonaDisplay(fav.zona)} ✓</li>` : ''}
-                        ${priorizaMetros ? `<li>Priorizás <strong>metros</strong> → ${mejorMetros.nombre} tiene más m² (${Math.round(mejorMetros.p.area_m2)}m²) ${mejorMetros.num === 1 ? '✓' : '- considerá #' + mejorMetros.num}</li>` : ''}
-                        ${priorizaCalidad ? `<li>Priorizás <strong>calidad</strong> → ${mejorEquipada.nombre} tiene mejor equipamiento (~$${fmt(mejorEquipada.datos.valorEquipamiento)}) ${mejorEquipada.num === 1 ? '✓' : '- considerá #' + mejorEquipada.num}</li>` : ''}
-                        ${priorizaPrecio ? `<li>Priorizás <strong>precio</strong> → ${mejorPrecioReal.nombre} tiene mejor precio real ($${fmt(mejorPrecioReal.datos.precioReal)}) ${mejorPrecioReal.num === 1 ? '✓' : '- considerá #' + mejorPrecioReal.num}</li>` : ''}
-                        <li>Más <strong>negociable</strong>: ${masNegociable.nombre} (${masNegociable.datos.diasMercado} días) ${masNegociable.num === 1 ? '✓' : ''}</li>
+                    <ul style="margin: 0 0 0 20px; line-height: 1.8; color: rgba(248,246,243,0.8);">
+                        ${priorizaUbicacion ? `<li>Priorizás <strong style="color: var(--cream);">ubicación</strong> → ${fav.proyecto} está en ${zonaDisplay(fav.zona)} ✓</li>` : ''}
+                        ${priorizaMetros ? `<li>Priorizás <strong style="color: var(--cream);">metros</strong> → ${mejorMetros.nombre} tiene más m² (${Math.round(mejorMetros.p.area_m2)}m²) ${mejorMetros.num === 1 ? '✓' : '- considerá #' + mejorMetros.num}</li>` : ''}
+                        ${priorizaCalidad ? `<li>Priorizás <strong style="color: var(--cream);">calidad</strong> → ${mejorEquipada.nombre} tiene mejor equipamiento (~$${fmt(mejorEquipada.datos.valorEquipamiento)}) ${mejorEquipada.num === 1 ? '✓' : '- considerá #' + mejorEquipada.num}</li>` : ''}
+                        ${priorizaPrecio ? `<li>Priorizás <strong style="color: var(--cream);">precio</strong> → ${mejorPrecioReal.nombre} tiene mejor precio real ($${fmt(mejorPrecioReal.datos.precioReal)}) ${mejorPrecioReal.num === 1 ? '✓' : '- considerá #' + mejorPrecioReal.num}</li>` : ''}
+                        <li>Más <strong style="color: var(--cream);">negociable</strong>: ${masNegociable.nombre} (${masNegociable.datos.diasMercado} días) ${masNegociable.num === 1 ? '✓' : ''}</li>
                     </ul>
                 </div>`
                 })()}
@@ -1685,9 +1685,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </div>
 
                 ${(comp1 || comp2) ? `
-                <h4 style="color: var(--gray-700); margin: 25px 0 15px;">🏆 ¿Cuál elegir según tus prioridades?</h4>
+                <h4 style="color: var(--cream); margin: 25px 0 15px;">🏆 ¿Cuál elegir según tus prioridades?</h4>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                    <div style="background: ${datosUsuario.calidad_vs_precio >= 4 ? 'var(--oportunidad)' : 'var(--gray-100)'}; color: ${datosUsuario.calidad_vs_precio >= 4 ? 'white' : 'inherit'}; padding: 15px; border-radius: 10px; text-align: center;">
+                    <div style="background: ${datosUsuario.calidad_vs_precio >= 4 ? 'var(--oportunidad)' : '#1a1a1a'}; color: ${datosUsuario.calidad_vs_precio >= 4 ? 'white' : 'var(--cream)'}; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid ${datosUsuario.calidad_vs_precio >= 4 ? 'transparent' : 'rgba(201,169,89,0.2)'};">
                         <div style="font-size: 0.8rem; opacity: 0.9;">Si priorizás PRECIO</div>
                         <div style="font-size: 1.1rem; font-weight: 700; margin-top: 5px;">${(() => {
                           const opciones = [
@@ -1698,7 +1698,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                           return opciones.reduce((a, b) => a.precioReal < b.precioReal ? a : b).nombre
                         })()}</div>
                     </div>
-                    <div style="background: ${datosUsuario.ubicacion_vs_metros >= 4 ? 'var(--primary)' : 'var(--gray-100)'}; color: ${datosUsuario.ubicacion_vs_metros >= 4 ? 'white' : 'inherit'}; padding: 15px; border-radius: 10px; text-align: center;">
+                    <div style="background: ${datosUsuario.ubicacion_vs_metros >= 4 ? 'var(--gold)' : '#1a1a1a'}; color: ${datosUsuario.ubicacion_vs_metros >= 4 ? '#0a0a0a' : 'var(--cream)'}; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid ${datosUsuario.ubicacion_vs_metros >= 4 ? 'transparent' : 'rgba(201,169,89,0.2)'};">
                         <div style="font-size: 0.8rem; opacity: 0.9;">Si priorizás METROS</div>
                         <div style="font-size: 1.1rem; font-weight: 700; margin-top: 5px;">${(() => {
                           const opciones = [
@@ -1709,9 +1709,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                           return opciones.reduce((a, b) => a.area > b.area ? a : b).nombre
                         })()}</div>
                     </div>
-                    <div style="background: var(--gray-100); padding: 15px; border-radius: 10px; text-align: center;">
-                        <div style="font-size: 0.8rem; opacity: 0.9;">Más NEGOCIABLE</div>
-                        <div style="font-size: 1.1rem; font-weight: 700; margin-top: 5px;">${(() => {
+                    <div style="background: #1a1a1a; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(201,169,89,0.2);">
+                        <div style="font-size: 0.8rem; opacity: 0.9; color: rgba(248,246,243,0.8);">Más NEGOCIABLE</div>
+                        <div style="font-size: 1.1rem; font-weight: 700; margin-top: 5px; color: var(--gold);">${(() => {
                           const opciones = [
                             { nombre: fav.proyecto, dias: datosFav.diasMercado },
                             ...(datosComp1 ? [{ nombre: comp1!.proyecto, dias: datosComp1.diasMercado }] : []),
