@@ -406,10 +406,21 @@ export default function EditarPropiedad() {
       const listaAmenidades = amenitiesData.lista || []
       const listaEquipamiento = amenitiesData.equipamiento || []
 
-      const standardAmenidades = listaAmenidades.filter((a: string) => AMENIDADES_OPCIONES.includes(a))
-      const customAmenidades = listaAmenidades.filter((a: string) => !AMENIDADES_OPCIONES.includes(a))
-      const standardEquipamiento = listaEquipamiento.filter((e: string) => EQUIPAMIENTO_OPCIONES.includes(e))
-      const customEquipamiento = listaEquipamiento.filter((e: string) => !EQUIPAMIENTO_OPCIONES.includes(e))
+      // Comparación case-insensitive para amenidades
+      const amenidadesLower = AMENIDADES_OPCIONES.map(a => a.toLowerCase())
+      const standardAmenidades = listaAmenidades
+        .filter((a: string) => amenidadesLower.includes(a.toLowerCase()))
+        .map((a: string) => AMENIDADES_OPCIONES.find(opt => opt.toLowerCase() === a.toLowerCase()) || a)
+      const customAmenidades = listaAmenidades
+        .filter((a: string) => !amenidadesLower.includes(a.toLowerCase()))
+
+      // Comparación case-insensitive para equipamiento
+      const equipamientoLower = EQUIPAMIENTO_OPCIONES.map(e => e.toLowerCase())
+      const standardEquipamiento = listaEquipamiento
+        .filter((e: string) => equipamientoLower.includes(e.toLowerCase()))
+        .map((e: string) => EQUIPAMIENTO_OPCIONES.find(opt => opt.toLowerCase() === e.toLowerCase()) || e)
+      const customEquipamiento = listaEquipamiento
+        .filter((e: string) => !equipamientoLower.includes(e.toLowerCase()))
 
       // Determinar tipo de precio y precio publicado
       let tipoPrecio: 'usd_oficial' | 'usd_paralelo' | 'bob' = 'usd_oficial'
