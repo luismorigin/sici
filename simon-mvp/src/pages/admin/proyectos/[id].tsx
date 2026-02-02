@@ -347,6 +347,7 @@ export default function EditarProyecto() {
         .select('id, precio_usd, dormitorios, area_total_m2, estado_construccion, fecha_publicacion, fecha_discovery, fuente, datos_json')
         .eq('id_proyecto_master', id)
         .eq('status', 'completado')
+        .is('duplicado_de', null)  // Excluir duplicados
         .gte('area_total_m2', 20)
         .order('precio_usd')
 
