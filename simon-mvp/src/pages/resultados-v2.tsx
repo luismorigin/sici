@@ -6,6 +6,19 @@ import { buscarUnidadesReales, UnidadReal, FiltrosBusqueda } from '@/lib/supabas
 import { PropertyCardPremium, ResultsHeaderPremium } from '@/components/results-premium'
 import { premiumFonts } from '@/styles/premium-theme'
 
+// Mapeo de IDs de innegociables a nombres de amenidades
+const INNEGOCIABLE_TO_AMENIDAD: Record<string, string> = {
+  'pet_friendly': 'Pet friendly',
+  'piscina': 'Piscina',
+  'gimnasio': 'Gimnasio',
+  'terraza_comun': 'Terraza comun',
+  'sauna_jacuzzi': 'Sauna',
+  'cowork': 'Cowork',
+  'sum': 'Salon de eventos',
+  'churrasquera': 'Churrasquera',
+  'area_ninos': 'Area ninos',
+}
+
 export default function ResultadosV2() {
   const router = useRouter()
   const [propiedades, setPropiedades] = useState<UnidadReal[]>([])
@@ -22,17 +35,46 @@ export default function ResultadosV2() {
     estado_entrega: 'no_importa',
   })
 
+  // Datos del formulario nivel 2
+  const [datosFormulario, setDatosFormulario] = useState<{
+    innegociables: string[]
+    necesitaParqueo: boolean
+    necesitaBaulera: boolean
+  }>({
+    innegociables: [],
+    necesitaParqueo: true,
+    necesitaBaulera: false,
+  })
+
   // Parse URL params
   useEffect(() => {
     if (!router.isReady) return
 
-    const { presupuesto, zonas, dormitorios, estado_entrega } = router.query
+    const {
+      presupuesto,
+      zonas,
+      dormitorios,
+      estado_entrega,
+      innegociables,
+      necesita_parqueo,
+      necesita_baulera,
+    } = router.query
 
     setFiltrosActivos({
       presupuesto: presupuesto ? parseInt(presupuesto as string) : 150000,
       zonas: zonas ? (zonas as string).split(',').filter(Boolean) : [],
       dormitorios: dormitorios ? parseInt(dormitorios as string) : null,
       estado_entrega: (estado_entrega as string) || 'no_importa',
+    })
+
+    // Parsear datos del formulario nivel 2
+    const innegociablesIds = innegociables ? (innegociables as string).split(',').filter(Boolean) : []
+    const innegociablesNombres = innegociablesIds.map(id => INNEGOCIABLE_TO_AMENIDAD[id] || id)
+
+    setDatosFormulario({
+      innegociables: innegociablesNombres,
+      necesitaParqueo: necesita_parqueo === 'true',
+      necesitaBaulera: necesita_baulera === 'true',
     })
   }, [router.isReady, router.query])
 
@@ -128,7 +170,7 @@ export default function ResultadosV2() {
     const newFiltros = { ...filtrosActivos, [key]: value }
     setFiltrosActivos(newFiltros)
 
-    // Update URL
+    // Update URL preservando params del formulario
     const params = new URLSearchParams({
       presupuesto: newFiltros.presupuesto.toString(),
       zonas: Array.isArray(newFiltros.zonas) ? newFiltros.zonas.join(',') : '',
@@ -217,10 +259,9 @@ export default function ResultadosV2() {
                         key={prop.id}
                         propiedad={prop}
                         rank={i + 1}
-                        onContactar={() => {
-                          // TODO: Open contact modal
-                          console.log('Contactar:', prop.proyecto)
-                        }}
+                        innegociablesUsuario={datosFormulario.innegociables}
+                        usuarioNecesitaParqueo={datosFormulario.necesitaParqueo}
+                        usuarioNecesitaBaulera={datosFormulario.necesitaBaulera}
                       />
                     ))}
                   </div>
@@ -242,9 +283,9 @@ export default function ResultadosV2() {
                       <PropertyCardPremium
                         key={prop.id}
                         propiedad={prop}
-                        onContactar={() => {
-                          console.log('Contactar:', prop.proyecto)
-                        }}
+                        innegociablesUsuario={datosFormulario.innegociables}
+                        usuarioNecesitaParqueo={datosFormulario.necesitaParqueo}
+                        usuarioNecesitaBaulera={datosFormulario.necesitaBaulera}
                       />
                     ))}
                   </div>
