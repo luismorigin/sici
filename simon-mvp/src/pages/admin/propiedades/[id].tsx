@@ -711,6 +711,11 @@ export default function EditarPropiedad() {
       cambios.push({ campo: 'nombre_edificio', anterior: originalData.nombre_edificio, nuevo: formData.proyecto_nombre })
     }
 
+    // Proyecto vinculado (id_proyecto_master)
+    if (originalData.id_proyecto_master !== selectedProyectoId) {
+      cambios.push({ campo: 'id_proyecto_master', anterior: originalData.id_proyecto_master, nuevo: selectedProyectoId })
+    }
+
     // Microzona
     const microzonaLabel = MICROZONAS.find(m => m.id === formData.microzona)?.label || formData.microzona
     if (originalData.zona !== microzonaLabel) {
