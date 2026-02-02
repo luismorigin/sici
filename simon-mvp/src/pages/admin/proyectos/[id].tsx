@@ -16,6 +16,8 @@ interface FormData {
   longitud: string
   amenidades: string[]
   amenidades_custom: string[]
+  equipamiento_base: string[]
+  equipamiento_base_custom: string[]
   fotos_proyecto: FotoProyecto[]
 }
 
@@ -30,6 +32,7 @@ interface ProyectoOriginal {
   estado_construccion: string | null
   fecha_entrega: string | null
   amenidades_edificio: string[] | null
+  equipamiento_base: string[] | null
   cantidad_pisos: number | null
   total_unidades: number | null
   aliases: string[] | null
@@ -59,6 +62,11 @@ interface AmenidadInferida {
   porcentaje: number
 }
 
+interface EquipamientoInferido {
+  equipamiento: string
+  porcentaje: number
+}
+
 interface DatosInferidos {
   success: boolean
   error?: string
@@ -66,6 +74,10 @@ interface DatosInferidos {
   amenidades_frecuentes: AmenidadInferida[]
   amenidades_opcionales: AmenidadInferida[]
   frecuencia_amenidades: { [key: string]: { cantidad: number; porcentaje: number } }
+  // Equipamiento inferido
+  equipamiento_frecuente: EquipamientoInferido[]
+  equipamiento_opcional: EquipamientoInferido[]
+  frecuencia_equipamiento: { [key: string]: { cantidad: number; porcentaje: number } }
   estado_sugerido: { estado: string | null; porcentaje: number | null }
   pisos_max: number | null
   fotos_proyecto: { propiedad_id: number; url: string }[]
@@ -99,6 +111,13 @@ const AMENIDADES_OPCIONES = [
   'Roof garden', 'Bar/Lounge', 'Canchas deportivas', 'Sala yoga', 'Jardín'
 ]
 
+// MISMAS opciones que propiedades/[id].tsx para consistencia
+const EQUIPAMIENTO_OPCIONES = [
+  'Aire acondicionado', 'Cocina equipada', 'Closets', 'Calefón/Termotanque',
+  'Cortinas/Blackouts', 'Amoblado', 'Lavadora', 'Secadora', 'Heladera',
+  'Microondas', 'Horno empotrado', 'Lavavajillas', 'Balcón', 'Vista panorámica'
+]
+
 export default function EditarProyecto() {
   const router = useRouter()
   const { id } = router.query
@@ -117,6 +136,7 @@ export default function EditarProyecto() {
   const [propagarEstado, setPropagarEstado] = useState(false)
   const [propagarFecha, setPropagarFecha] = useState(false)
   const [propagarAmenidades, setPropagarAmenidades] = useState(false)
+  const [propagarEquipamiento, setPropagarEquipamiento] = useState(false)
 
   // Inferencia desde propiedades
   const [infiriendo, setInfiriendo] = useState(false)
@@ -125,6 +145,8 @@ export default function EditarProyecto() {
 
   // Selección de amenidades opcionales para aplicar
   const [amenidadesOpcionalesSeleccionadas, setAmenidadesOpcionalesSeleccionadas] = useState<string[]>([])
+  // Selección de equipamiento opcional para aplicar
+  const [equipamientoOpcionalSeleccionado, setEquipamientoOpcionalSeleccionado] = useState<string[]>([])
 
   // Filtros y visualización de propiedades
   const [filtroDorms, setFiltroDorms] = useState<number | null>(null)
@@ -132,6 +154,7 @@ export default function EditarProyecto() {
   const [mostrarTodas, setMostrarTodas] = useState(false)
 
   const [nuevoAmenidad, setNuevoAmenidad] = useState('')
+  const [nuevoEquipamientoBase, setNuevoEquipamientoBase] = useState('')
   const [nuevaFotoUrl, setNuevaFotoUrl] = useState('')
 
   // Desarrolladores (autocomplete)
@@ -155,6 +178,8 @@ export default function EditarProyecto() {
     longitud: '',
     amenidades: [],
     amenidades_custom: [],
+    equipamiento_base: [],
+    equipamiento_base_custom: [],
     fotos_proyecto: []
   })
 
@@ -281,6 +306,11 @@ export default function EditarProyecto() {
       const standardAmenidades = amenidadesActuales.filter((a: string) => AMENIDADES_OPCIONES.includes(a))
       const customAmenidades = amenidadesActuales.filter((a: string) => !AMENIDADES_OPCIONES.includes(a))
 
+      // Separar equipamiento base standard de custom
+      const equipamientoActual = data.equipamiento_base || []
+      const standardEquipamiento = equipamientoActual.filter((e: string) => EQUIPAMIENTO_OPCIONES.includes(e))
+      const customEquipamiento = equipamientoActual.filter((e: string) => !EQUIPAMIENTO_OPCIONES.includes(e))
+
       setFormData({
         nombre_oficial: data.nombre_oficial || '',
         desarrollador: data.desarrollador || '',
@@ -293,6 +323,8 @@ export default function EditarProyecto() {
         longitud: data.longitud?.toString() || '',
         amenidades: standardAmenidades,
         amenidades_custom: customAmenidades,
+        equipamiento_base: standardEquipamiento,
+        equipamiento_base_custom: customEquipamiento,
         fotos_proyecto: data.fotos_proyecto || []
       })
     } catch (err) {
@@ -357,6 +389,39 @@ export default function EditarProyecto() {
       ...prev,
       amenidades_custom: prev.amenidades_custom.filter(a => a !== amenidad)
     }))
+  }
+
+  // Equipamiento base del edificio
+  const toggleEquipamientoBase = (equip: string) => {
+    setFormData(prev => ({
+      ...prev,
+      equipamiento_base: prev.equipamiento_base.includes(equip)
+        ? prev.equipamiento_base.filter(e => e !== equip)
+        : [...prev.equipamiento_base, equip]
+    }))
+    setSuccess(false)
+  }
+
+  const agregarEquipamientoBaseCustom = () => {
+    if (!nuevoEquipamientoBase.trim()) return
+    const equip = nuevoEquipamientoBase.trim()
+    if (formData.equipamiento_base_custom.includes(equip) || formData.equipamiento_base.includes(equip)) {
+      return
+    }
+    setFormData(prev => ({
+      ...prev,
+      equipamiento_base_custom: [...prev.equipamiento_base_custom, equip]
+    }))
+    setNuevoEquipamientoBase('')
+    setSuccess(false)
+  }
+
+  const eliminarEquipamientoBaseCustom = (equip: string) => {
+    setFormData(prev => ({
+      ...prev,
+      equipamiento_base_custom: prev.equipamiento_base_custom.filter(e => e !== equip)
+    }))
+    setSuccess(false)
   }
 
   // Gestión de fotos del proyecto
@@ -465,6 +530,45 @@ export default function EditarProyecto() {
     setSuccess(false)
   }
 
+  // Aplicar equipamiento frecuente al formulario (≥50%)
+  const aplicarEquipamientoFrecuente = () => {
+    if (!datosInferidos?.equipamiento_frecuente) return
+
+    const nuevosEquipos = datosInferidos.equipamiento_frecuente.map(e => e.equipamiento)
+    const standard = nuevosEquipos.filter(e => EQUIPAMIENTO_OPCIONES.includes(e))
+    const custom = nuevosEquipos.filter(e => !EQUIPAMIENTO_OPCIONES.includes(e))
+
+    setFormData(prev => ({
+      ...prev,
+      equipamiento_base: [...new Set([...prev.equipamiento_base, ...standard])],
+      equipamiento_base_custom: [...new Set([...prev.equipamiento_base_custom, ...custom])]
+    }))
+    setSuccess(false)
+  }
+
+  // Toggle equipamiento opcional para selección
+  const toggleEquipamientoOpcional = (equip: string) => {
+    setEquipamientoOpcionalSeleccionado(prev =>
+      prev.includes(equip) ? prev.filter(e => e !== equip) : [...prev, equip]
+    )
+  }
+
+  // Aplicar equipamiento opcional seleccionado al formulario
+  const aplicarEquipamientoOpcional = () => {
+    if (equipamientoOpcionalSeleccionado.length === 0) return
+
+    const standard = equipamientoOpcionalSeleccionado.filter(e => EQUIPAMIENTO_OPCIONES.includes(e))
+    const custom = equipamientoOpcionalSeleccionado.filter(e => !EQUIPAMIENTO_OPCIONES.includes(e))
+
+    setFormData(prev => ({
+      ...prev,
+      equipamiento_base: [...new Set([...prev.equipamiento_base, ...standard])],
+      equipamiento_base_custom: [...new Set([...prev.equipamiento_base_custom, ...custom])]
+    }))
+    setEquipamientoOpcionalSeleccionado([])
+    setSuccess(false)
+  }
+
   // Aplicar estado inferido
   const aplicarEstadoInferido = () => {
     if (!datosInferidos?.estado_sugerido?.estado) return
@@ -494,6 +598,8 @@ export default function EditarProyecto() {
     try {
       // Combinar amenidades
       const todasAmenidades = [...formData.amenidades, ...formData.amenidades_custom]
+      // Combinar equipamiento base
+      const todosEquipamiento = [...formData.equipamiento_base, ...formData.equipamiento_base_custom]
 
       const updateData: any = {
         nombre_oficial: formData.nombre_oficial,
@@ -506,6 +612,7 @@ export default function EditarProyecto() {
         latitud: formData.latitud ? parseFloat(formData.latitud) : null,
         longitud: formData.longitud ? parseFloat(formData.longitud) : null,
         amenidades_edificio: todasAmenidades.length > 0 ? todasAmenidades : null,
+        equipamiento_base: todosEquipamiento.length > 0 ? todosEquipamiento : null,
         fotos_proyecto: formData.fotos_proyecto.length > 0 ? formData.fotos_proyecto : null
       }
 
@@ -528,7 +635,7 @@ export default function EditarProyecto() {
 
   const handlePropagar = async () => {
     if (!supabase || !id) return
-    if (!propagarEstado && !propagarFecha && !propagarAmenidades) {
+    if (!propagarEstado && !propagarFecha && !propagarAmenidades && !propagarEquipamiento) {
       setError('Selecciona al menos una opción para propagar')
       return
     }
@@ -543,7 +650,8 @@ export default function EditarProyecto() {
           p_id_proyecto: parseInt(id as string),
           p_propagar_estado: propagarEstado,
           p_propagar_fecha: propagarFecha,
-          p_propagar_amenidades: propagarAmenidades
+          p_propagar_amenidades: propagarAmenidades,
+          p_propagar_equipamiento: propagarEquipamiento
         })
 
       if (error) throw error
@@ -554,6 +662,7 @@ export default function EditarProyecto() {
         if (detalle.estado_propagado > 0) mensajes.push(`${detalle.estado_propagado} estados`)
         if (detalle.fecha_propagada > 0) mensajes.push(`${detalle.fecha_propagada} fechas`)
         if (detalle.amenidades_propagadas > 0) mensajes.push(`${detalle.amenidades_propagadas} amenidades`)
+        if (detalle.equipamiento_propagado > 0) mensajes.push(`${detalle.equipamiento_propagado} equipamiento`)
 
         setPropagateSuccess(
           mensajes.length > 0
@@ -565,6 +674,7 @@ export default function EditarProyecto() {
         setPropagarEstado(false)
         setPropagarFecha(false)
         setPropagarAmenidades(false)
+        setPropagarEquipamiento(false)
 
         // Refrescar propiedades
         fetchPropiedades()
@@ -1073,6 +1183,73 @@ export default function EditarProyecto() {
                   </div>
                 </div>
 
+                {/* Equipamiento Base del Edificio */}
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <h2 className="text-lg font-semibold text-slate-900 mb-1">🔧 Equipamiento Base del Edificio</h2>
+                  <p className="text-sm text-slate-500 mb-4">Equipamiento incluido de fábrica en todas las unidades</p>
+
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    {EQUIPAMIENTO_OPCIONES.map(equip => (
+                      <label
+                        key={equip}
+                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
+                          formData.equipamiento_base.includes(equip)
+                            ? 'bg-blue-50 border-blue-300'
+                            : 'bg-white border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.equipamiento_base.includes(equip)}
+                          onChange={() => toggleEquipamientoBase(equip)}
+                          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-slate-700">{equip}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  {/* Equipamiento custom */}
+                  {formData.equipamiento_base_custom.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {formData.equipamiento_base_custom.map(equip => (
+                        <span
+                          key={equip}
+                          className="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full flex items-center gap-2"
+                        >
+                          {equip}
+                          <button
+                            type="button"
+                            onClick={() => eliminarEquipamientoBaseCustom(equip)}
+                            className="text-blue-500 hover:text-blue-700"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Agregar custom */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={nuevoEquipamientoBase}
+                      onChange={(e) => setNuevoEquipamientoBase(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarEquipamientoBaseCustom())}
+                      placeholder="Agregar equipamiento personalizado..."
+                      className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={agregarEquipamientoBaseCustom}
+                      className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-colors"
+                    >
+                      + Agregar
+                    </button>
+                  </div>
+                </div>
+
                 {/* Fotos del Proyecto */}
                 <div className="bg-white rounded-xl shadow-sm p-6">
                   <h2 className="text-lg font-semibold text-slate-900 mb-4">Fotos del Proyecto</h2>
@@ -1367,7 +1544,7 @@ export default function EditarProyecto() {
                     {datosInferidos?.success && (
                       <div className="space-y-4">
                         {/* Amenidades Frecuentes (≥50%) */}
-                        {datosInferidos.amenidades_frecuentes.length > 0 && (
+                        {datosInferidos.amenidades_frecuentes?.length > 0 && (
                           <div className="bg-green-50 rounded-lg p-3">
                             <p className="text-sm font-medium text-green-800 mb-2">
                               ✅ Frecuentes (≥50%):
@@ -1393,7 +1570,7 @@ export default function EditarProyecto() {
                         )}
 
                         {/* Amenidades Opcionales (<50%) */}
-                        {datosInferidos.amenidades_opcionales.length > 0 && (
+                        {datosInferidos.amenidades_opcionales?.length > 0 && (
                           <div className="bg-slate-50 rounded-lg p-3">
                             <p className="text-sm font-medium text-slate-700 mb-2">
                               ⚡ Opcionales (&lt;50%):
@@ -1426,6 +1603,70 @@ export default function EditarProyecto() {
                               >
                                 + Aplicar {amenidadesOpcionalesSeleccionadas.length} seleccionadas
                               </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Equipamiento Inferido */}
+                        {(datosInferidos.equipamiento_frecuente?.length > 0 || datosInferidos.equipamiento_opcional?.length > 0) && (
+                          <div className="mt-3 pt-3 border-t border-slate-200">
+                            <p className="text-sm font-medium text-slate-700 mb-2">🔧 Equipamiento Detectado</p>
+
+                            {/* Equipamiento frecuente (≥50%) */}
+                            {datosInferidos.equipamiento_frecuente?.length > 0 && (
+                              <div className="mb-3">
+                                <p className="text-xs text-blue-600 mb-1">✅ Frecuente (≥50%):</p>
+                                <div className="bg-blue-50 rounded p-2 mb-2">
+                                  {datosInferidos.equipamiento_frecuente.map(e => (
+                                    <div key={e.equipamiento} className="text-xs text-blue-700">
+                                      {e.equipamiento} ({e.porcentaje}%)
+                                    </div>
+                                  ))}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={aplicarEquipamientoFrecuente}
+                                  className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                                >
+                                  Aplicar {datosInferidos.equipamiento_frecuente.length} equipamientos
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Equipamiento opcional (<50%) */}
+                            {datosInferidos.equipamiento_opcional?.length > 0 && (
+                              <div>
+                                <p className="text-xs text-slate-500 mb-1">⚡ Opcional (&lt;50%):</p>
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                  {datosInferidos.equipamiento_opcional.map(e => (
+                                    <label
+                                      key={e.equipamiento}
+                                      className={`text-xs px-2 py-1 rounded cursor-pointer transition-colors ${
+                                        equipamientoOpcionalSeleccionado.includes(e.equipamiento)
+                                          ? 'bg-blue-100 text-blue-800 ring-1 ring-blue-400'
+                                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                      }`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={equipamientoOpcionalSeleccionado.includes(e.equipamiento)}
+                                        onChange={() => toggleEquipamientoOpcional(e.equipamiento)}
+                                        className="sr-only"
+                                      />
+                                      {e.equipamiento} ({e.porcentaje}%)
+                                    </label>
+                                  ))}
+                                </div>
+                                {equipamientoOpcionalSeleccionado.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={aplicarEquipamientoOpcional}
+                                    className="text-xs text-blue-700 hover:text-blue-900 underline font-medium"
+                                  >
+                                    + Aplicar {equipamientoOpcionalSeleccionado.length} seleccionados
+                                  </button>
+                                )}
+                              </div>
                             )}
                           </div>
                         )}
@@ -1567,6 +1808,15 @@ export default function EditarProyecto() {
                         />
                         <span className="text-sm text-slate-700">Propagar amenidades del edificio</span>
                       </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={propagarEquipamiento}
+                          onChange={(e) => setPropagarEquipamiento(e.target.checked)}
+                          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-slate-700">Propagar equipamiento base</span>
+                      </label>
                     </div>
 
                     <p className="text-xs text-blue-700 mb-4">
@@ -1576,7 +1826,7 @@ export default function EditarProyecto() {
                     <button
                       type="button"
                       onClick={handlePropagar}
-                      disabled={propagando || (!propagarEstado && !propagarFecha && !propagarAmenidades)}
+                      disabled={propagando || (!propagarEstado && !propagarFecha && !propagarAmenidades && !propagarEquipamiento)}
                       className="w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
                       {propagando ? (
