@@ -1,28 +1,16 @@
 -- =============================================================================
--- Migración 104: Equipamiento Base a Nivel Proyecto
+-- Migración 107: Fix Amenidades - Reemplazar en lugar de Merge
 -- =============================================================================
--- Agrega campo equipamiento_base en proyectos_master que puede propagarse
--- a todas las propiedades vinculadas mediante la función propagar_proyecto_a_propiedades()
+-- Corrige la función propagar_proyecto_a_propiedades() para que las amenidades
+-- sean REEMPLAZADAS completamente por las del proyecto en lugar de hacer merge.
 -- =============================================================================
 
--- 1. Agregar columna equipamiento_base a proyectos_master
-ALTER TABLE proyectos_master
-ADD COLUMN IF NOT EXISTS equipamiento_base JSONB DEFAULT '[]'::jsonb;
-
-COMMENT ON COLUMN proyectos_master.equipamiento_base IS
-  'Array de equipamiento base incluido de fábrica en todas las unidades del edificio.
-   Ejemplo: ["Aire acondicionado", "Cocina equipada", "Closets"]';
-
--- 2. Eliminar versión anterior de la función (4 parámetros)
-DROP FUNCTION IF EXISTS propagar_proyecto_a_propiedades(INTEGER, BOOLEAN, BOOLEAN, BOOLEAN);
-
--- 3. Crear función con nuevo parámetro (5 parámetros)
 CREATE OR REPLACE FUNCTION propagar_proyecto_a_propiedades(
   p_id_proyecto INTEGER,
   p_propagar_estado BOOLEAN DEFAULT FALSE,
   p_propagar_fecha BOOLEAN DEFAULT FALSE,
   p_propagar_amenidades BOOLEAN DEFAULT FALSE,
-  p_propagar_equipamiento BOOLEAN DEFAULT FALSE  -- NUEVO
+  p_propagar_equipamiento BOOLEAN DEFAULT FALSE
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -35,12 +23,12 @@ DECLARE
   v_estado_count INTEGER := 0;
   v_fecha_count INTEGER := 0;
   v_amenidades_count INTEGER := 0;
-  v_equipamiento_count INTEGER := 0;  -- NUEVO
+  v_equipamiento_count INTEGER := 0;
   v_estado_enum estado_construccion_enum;
   v_proyecto_nombre TEXT;
   v_nuevas_amenidades JSONB;
   v_amenidad TEXT;
-  v_estado_amenities_actual JSONB;
+  v_estado_amenities_nuevo JSONB;
   v_amenidades_anteriores JSONB;
   v_nuevo_equipamiento JSONB;
   v_equipamiento_existente JSONB;
@@ -51,7 +39,7 @@ BEGIN
     estado_construccion,
     fecha_entrega,
     amenidades_edificio,
-    equipamiento_base  -- NUEVO
+    equipamiento_base
   INTO v_proyecto
   FROM proyectos_master
   WHERE id_proyecto_master = p_id_proyecto;
@@ -75,7 +63,6 @@ BEGIN
         AND (
           campos_bloqueados IS NULL
           OR campos_bloqueados->'estado_construccion' IS NULL
-          -- Verificar ambos formatos: true o {"bloqueado": true}
           OR (
             jsonb_typeof(campos_bloqueados->'estado_construccion') = 'boolean'
             AND (campos_bloqueados->'estado_construccion')::text != 'true'
@@ -122,7 +109,6 @@ BEGIN
         AND (
           campos_bloqueados IS NULL
           OR campos_bloqueados->'fecha_entrega' IS NULL
-          -- Verificar ambos formatos
           OR (
             jsonb_typeof(campos_bloqueados->'fecha_entrega') = 'boolean'
             AND (campos_bloqueados->'fecha_entrega')::text != 'true'
@@ -163,6 +149,7 @@ BEGIN
 
   -- =========================================================================
   -- PROPAGAR AMENIDADES
+  -- REEMPLAZA completamente datos_json->'amenities'->'lista'
   -- =========================================================================
   IF p_propagar_amenidades AND v_proyecto.amenidades_edificio IS NOT NULL
      AND jsonb_typeof(v_proyecto.amenidades_edificio) = 'array'
@@ -171,14 +158,12 @@ BEGIN
     FOR v_prop IN
       SELECT id,
              datos_json->'amenities'->'lista' as amenidades_anteriores,
-             datos_json->'amenities'->'estado_amenities' as estado_amenities_anterior,
              datos_json
       FROM propiedades_v2
       WHERE id_proyecto_master = p_id_proyecto
         AND (
           campos_bloqueados IS NULL
           OR campos_bloqueados->'amenities' IS NULL
-          -- Verificar ambos formatos: true o {"bloqueado": true}
           OR (
             jsonb_typeof(campos_bloqueados->'amenities') = 'boolean'
             AND (campos_bloqueados->'amenities')::text != 'true'
@@ -189,40 +174,29 @@ BEGIN
           )
         )
     LOOP
-      -- Obtener estado_amenities actual o crear objeto vacío
-      v_estado_amenities_actual := COALESCE(v_prop.estado_amenities_anterior, '{}'::jsonb);
-
-      -- Agregar cada amenidad del proyecto con valor "por_confirmar"
-      FOR v_amenidad IN SELECT jsonb_array_elements_text(v_proyecto.amenidades_edificio)
-      LOOP
-        -- Solo agregar si no existe ya en estado_amenities
-        IF NOT v_estado_amenities_actual ? v_amenidad THEN
-          v_estado_amenities_actual := v_estado_amenities_actual || jsonb_build_object(
-            v_amenidad,
-            jsonb_build_object(
-              'valor', 'por_confirmar',
-              'fuente', 'proyecto_master',
-              'confianza', 'media'
-            )
-          );
-        END IF;
-      END LOOP;
-
-      -- Verificar que amenidades_anteriores sea un array válido
+      -- Guardar amenidades anteriores para historial
       IF jsonb_typeof(v_prop.amenidades_anteriores) = 'array' THEN
         v_amenidades_anteriores := v_prop.amenidades_anteriores;
       ELSE
         v_amenidades_anteriores := '[]'::jsonb;
       END IF;
 
-      -- Calcular nueva lista (unión de existentes + proyecto)
-      SELECT COALESCE(jsonb_agg(DISTINCT value ORDER BY value), '[]'::jsonb)
-      INTO v_nuevas_amenidades
-      FROM (
-        SELECT jsonb_array_elements_text(v_amenidades_anteriores) as value
-        UNION
-        SELECT jsonb_array_elements_text(v_proyecto.amenidades_edificio) as value
-      ) combined;
+      -- REEMPLAZAR con amenidades del proyecto (no merge)
+      v_nuevas_amenidades := v_proyecto.amenidades_edificio;
+
+      -- Crear estado_amenities nuevo con todas las amenidades del proyecto
+      v_estado_amenities_nuevo := '{}'::jsonb;
+      FOR v_amenidad IN SELECT jsonb_array_elements_text(v_proyecto.amenidades_edificio)
+      LOOP
+        v_estado_amenities_nuevo := v_estado_amenities_nuevo || jsonb_build_object(
+          v_amenidad,
+          jsonb_build_object(
+            'valor', 'por_confirmar',
+            'fuente', 'proyecto_master',
+            'confianza', 'media'
+          )
+        );
+      END LOOP;
 
       -- Actualizar propiedad con ambos: lista y estado_amenities
       UPDATE propiedades_v2
@@ -233,7 +207,7 @@ BEGIN
           v_nuevas_amenidades
         ),
         '{amenities,estado_amenities}',
-        v_estado_amenities_actual
+        v_estado_amenities_nuevo
       )
       WHERE id = v_prop.id;
 
@@ -247,9 +221,9 @@ BEGIN
         'proyecto_' || p_id_proyecto,
         'Propagación desde Proyecto',
         'amenities',
-        COALESCE(v_prop.estado_amenities_anterior, '[]'::jsonb),
-        v_estado_amenities_actual,
-        'Propagado desde proyecto: ' || v_proyecto_nombre
+        COALESCE(v_amenidades_anteriores, '[]'::jsonb),
+        v_nuevas_amenidades,
+        'Reemplazado amenidades con las del proyecto: ' || v_proyecto_nombre
       );
 
       v_amenidades_count := v_amenidades_count + 1;
@@ -259,7 +233,7 @@ BEGIN
   END IF;
 
   -- =========================================================================
-  -- PROPAGAR EQUIPAMIENTO BASE (NUEVO)
+  -- PROPAGAR EQUIPAMIENTO BASE
   -- REEMPLAZA completamente datos_json->'amenities'->'equipamiento'
   -- =========================================================================
   IF p_propagar_equipamiento AND v_proyecto.equipamiento_base IS NOT NULL
@@ -275,7 +249,6 @@ BEGIN
         AND (
           campos_bloqueados IS NULL
           OR campos_bloqueados->'equipamiento' IS NULL
-          -- Verificar ambos formatos: true o {"bloqueado": true}
           OR (
             jsonb_typeof(campos_bloqueados->'equipamiento') = 'boolean'
             AND (campos_bloqueados->'equipamiento')::text != 'true'
@@ -339,29 +312,16 @@ BEGIN
       'estado_propagado', v_estado_count,
       'fecha_propagada', v_fecha_count,
       'amenidades_propagadas', v_amenidades_count,
-      'equipamiento_propagado', v_equipamiento_count  -- NUEVO
+      'equipamiento_propagado', v_equipamiento_count
     )
   );
 END;
 $$;
 
--- Otorgar permisos (con nueva firma de 5 parámetros)
-GRANT EXECUTE ON FUNCTION propagar_proyecto_a_propiedades(INTEGER, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN) TO authenticated;
-GRANT EXECUTE ON FUNCTION propagar_proyecto_a_propiedades(INTEGER, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN) TO anon;
-
 COMMENT ON FUNCTION propagar_proyecto_a_propiedades IS
 'Propaga datos del proyecto master a sus propiedades vinculadas.
-v3.1: Equipamiento ahora REEMPLAZA en lugar de hacer merge.
+v3.2: Tanto amenidades como equipamiento ahora REEMPLAZAN en lugar de hacer merge.
 - estado_construccion: Se propaga directamente a la columna
 - fecha_entrega: Se guarda en datos_json->fecha_entrega
-- amenidades: Se actualiza tanto lista como estado_amenities (merge)
+- amenidades: REEMPLAZA datos_json->amenities->lista con amenidades_edificio del proyecto
 - equipamiento: REEMPLAZA datos_json->amenities->equipamiento con equipamiento_base del proyecto';
-
--- =============================================================================
--- VERIFICACIÓN
--- =============================================================================
--- SELECT column_name, data_type, column_default
--- FROM information_schema.columns
--- WHERE table_name = 'proyectos_master' AND column_name = 'equipamiento_base';
---
--- Debe mostrar: equipamiento_base | jsonb | '[]'::jsonb
