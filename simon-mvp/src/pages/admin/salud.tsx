@@ -68,6 +68,13 @@ export default function DashboardSalud() {
 
   useEffect(() => {
     fetchAllStats()
+
+    // Auto-refresh cada 5 minutos
+    const interval = setInterval(() => {
+      fetchAllStats()
+    }, 5 * 60 * 1000)
+
+    return () => clearInterval(interval)
   }, [])
 
   const fetchAllStats = async () => {
@@ -249,6 +256,7 @@ export default function DashboardSalud() {
       .from('workflow_executions')
       .select('workflow_name, finished_at, status')
       .order('finished_at', { ascending: false })
+      .limit(200) // Solo los últimos 200 para mejor rendimiento
 
     if (data) {
       // Agrupar por workflow, quedarse con el más reciente
@@ -390,6 +398,7 @@ export default function DashboardSalud() {
               <h1 className="text-xl font-bold">Salud del Sistema SICI</h1>
               <p className="text-slate-400 text-sm" suppressHydrationWarning>
                 Última actualización: {lastUpdate.toLocaleTimeString('es-BO')}
+                <span className="text-slate-500 ml-2">(auto-refresh cada 5 min)</span>
               </p>
             </div>
             <div className="flex items-center gap-4">
