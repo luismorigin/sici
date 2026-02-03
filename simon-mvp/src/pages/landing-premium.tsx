@@ -295,13 +295,34 @@ export default function LandingPremium() {
             </h2>
 
             <p className="text-white/50 text-lg font-light max-w-2xl mx-auto mb-12">
-              Completá el formulario y en menos de 24 horas recibís
-              tu informe personalizado con las mejores opciones del mercado.
+              Analizá el mercado en segundos con datos verificados en tiempo real.
             </p>
 
             <button className="bg-white text-[#0a0a0a] px-16 py-6 text-sm tracking-[3px] uppercase hover:bg-[#c9a959] hover:text-white transition-all duration-300">
-              Solicitar informe gratuito
+              Descubrí las mejores opciones
             </button>
+
+            {/* Trust indicators */}
+            <div className="flex flex-wrap justify-center gap-8 mt-16 pt-12 border-t border-white/10">
+              <div className="flex items-center gap-2 text-white/40 text-sm">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Sin cuenta</span>
+              </div>
+              <div className="flex items-center gap-2 text-white/40 text-sm">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Datos verificados</span>
+              </div>
+              <div className="flex items-center gap-2 text-white/40 text-sm">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>100% gratis</span>
+              </div>
+            </div>
           </div>
         </section>
 
