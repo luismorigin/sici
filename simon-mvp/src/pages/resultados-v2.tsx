@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -188,73 +188,77 @@ export default function ResultadosV2() {
     }
   }
 
-  // Parse URL params
+  // FIX: Unificar búsqueda y parseo en UN SOLO useEffect
+  // Esto evita la condición de carrera donde fetchPropiedades usaba el estado inicial
+  // antes de que se actualizara con los valores de la URL
   useEffect(() => {
-    if (!router.isReady) return
+    const cargarYBuscar = async () => {
+      if (!router.isReady) return
+      setLoading(true)
 
-    const {
-      presupuesto,
-      zonas,
-      dormitorios,
-      estado_entrega,
-      innegociables,
-      necesita_parqueo,
-      necesita_baulera,
-    } = router.query
+      // 1. Leer DIRECTAMENTE de router.query (no del estado)
+      const {
+        presupuesto,
+        zonas,
+        dormitorios,
+        estado_entrega,
+        innegociables,
+        necesita_parqueo,
+        necesita_baulera,
+      } = router.query
 
-    setFiltrosActivos({
-      presupuesto: presupuesto ? parseInt(presupuesto as string) : 150000,
-      zonas: zonas ? (zonas as string).split(',').filter(Boolean) : [],
-      dormitorios: dormitorios ? parseInt(dormitorios as string) : null,
-      estado_entrega: (estado_entrega as string) || 'no_importa',
-    })
-
-    // Parsear datos del formulario nivel 2
-    const innegociablesIds = innegociables ? (innegociables as string).split(',').filter(Boolean) : []
-    const innegociablesNombres = innegociablesIds.map(id => INNEGOCIABLE_TO_AMENIDAD[id] || id)
-
-    setDatosFormulario({
-      innegociables: innegociablesNombres,
-      necesitaParqueo: necesita_parqueo === 'true',
-      necesitaBaulera: necesita_baulera === 'true',
-    })
-  }, [router.isReady, router.query])
-
-  // Fetch properties
-  const fetchPropiedades = useCallback(async () => {
-    setLoading(true)
-    try {
+      // 2. Construir filtros desde query params
       const filtros: FiltrosBusqueda = {
-        precio_max: filtrosActivos.presupuesto,
+        precio_max: presupuesto ? parseInt(presupuesto as string) : 150000,
         limite: 50,
       }
 
-      if (filtrosActivos.dormitorios !== null) {
-        filtros.dormitorios = filtrosActivos.dormitorios
+      // Leer dormitorios DIRECTAMENTE de la URL (fix del bug)
+      if (dormitorios) {
+        filtros.dormitorios = parseInt(dormitorios as string)
       }
 
-      if (filtrosActivos.zonas.length > 0) {
-        filtros.zonas_permitidas = filtrosActivos.zonas
+      const zonasArray = zonas ? (zonas as string).split(',').filter(Boolean) : []
+      if (zonasArray.length > 0) {
+        filtros.zonas_permitidas = zonasArray
       }
 
-      if (filtrosActivos.estado_entrega !== 'no_importa') {
-        filtros.estado_entrega = filtrosActivos.estado_entrega as 'entrega_inmediata' | 'solo_preventa'
+      const estadoEntregaValue = (estado_entrega as string) || 'no_importa'
+      if (estadoEntregaValue !== 'no_importa') {
+        filtros.estado_entrega = estadoEntregaValue as 'entrega_inmediata' | 'solo_preventa'
       }
 
-      const resultados = await buscarUnidadesReales(filtros)
-      setPropiedades(resultados)
-    } catch (err) {
-      console.error('Error fetching propiedades:', err)
-    } finally {
-      setLoading(false)
+      try {
+        // 3. Buscar con los filtros de la URL
+        const resultados = await buscarUnidadesReales(filtros)
+        setPropiedades(resultados)
+      } catch (err) {
+        console.error('Error fetching propiedades:', err)
+      } finally {
+        setLoading(false)
+      }
+
+      // 4. DESPUÉS de buscar, actualizar el estado para la UI (chips, etc.)
+      setFiltrosActivos({
+        presupuesto: presupuesto ? parseInt(presupuesto as string) : 150000,
+        zonas: zonasArray,
+        dormitorios: dormitorios ? parseInt(dormitorios as string) : null,
+        estado_entrega: estadoEntregaValue,
+      })
+
+      // 5. Parsear datos del formulario nivel 2
+      const innegociablesIds = innegociables ? (innegociables as string).split(',').filter(Boolean) : []
+      const innegociablesNombres = innegociablesIds.map(id => INNEGOCIABLE_TO_AMENIDAD[id] || id)
+
+      setDatosFormulario({
+        innegociables: innegociablesNombres,
+        necesitaParqueo: necesita_parqueo === 'true',
+        necesitaBaulera: necesita_baulera === 'true',
+      })
     }
-  }, [filtrosActivos])
 
-  useEffect(() => {
-    if (router.isReady) {
-      fetchPropiedades()
-    }
-  }, [router.isReady, fetchPropiedades])
+    cargarYBuscar()
+  }, [router.isReady, router.query])
 
   // Build filter chips
   const buildFilterChips = () => {
