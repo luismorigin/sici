@@ -198,13 +198,16 @@ function calcularPoderNegociacion(
   if (prop.posicion_en_tipologia && prop.posicion_en_tipologia > 1 &&
       prop.unidades_misma_tipologia && prop.unidades_misma_tipologia >= 2) {
     score += 1
-    factores.push(`${prop.posicion_en_tipologia - 1} opción(es) más barata(s) de ${tipologia} en edificio`)
+    const opcionesMasBaratas = prop.posicion_en_tipologia - 1
+    factores.push(opcionesMasBaratas === 1
+      ? `1 opción más barata de ${tipologia} en edificio`
+      : `${opcionesMasBaratas} opciones más baratas de ${tipologia} en edificio`)
   }
 
-  // Factor 4: Alto inventario (peso: 1)
-  if (prop.unidades_en_edificio && prop.unidades_en_edificio >= 5) {
+  // Factor 4: Alto inventario de misma tipología (peso: 1)
+  if (prop.unidades_misma_tipologia && prop.unidades_misma_tipologia >= 3) {
     score += 1
-    factores.push(`${prop.unidades_en_edificio} unidades disponibles`)
+    factores.push(`${prop.unidades_misma_tipologia} unidades de ${tipologia} disponibles`)
   }
 
   // Factor 5: Entrega inmediata con tiempo (peso: 1)
@@ -2690,6 +2693,9 @@ ${top3Texto}
                         {(() => {
                           const medianaZona = contextoMercado?.metricas_zona?.dias_mediana || 74
                           const negociacion = calcularPoderNegociacion(prop, medianaZona)
+                          const badgeTiempo = prop.dias_en_mercado != null
+                            ? getBadgeTiempo(prop.dias_en_mercado, medianaZona)
+                            : null
 
                           const colorPoder = negociacion.poder === 'alto'
                             ? 'bg-green-100 text-green-700'
@@ -2708,6 +2714,18 @@ ${top3Texto}
                                   {negociacion.poder.toUpperCase()} {negociacion.estrellas}
                                 </span>
                               </div>
+
+                              {/* Badge tiempo en mercado */}
+                              {badgeTiempo && (
+                                <div className={`flex items-center justify-between rounded-lg p-2 mb-2 ${badgeTiempo.color}`}>
+                                  <span className="text-sm">
+                                    {badgeTiempo.emoji} {badgeTiempo.label} ({prop.dias_en_mercado} días)
+                                  </span>
+                                  {badgeTiempo.accion && (
+                                    <span className="text-xs opacity-75">→ {badgeTiempo.accion}</span>
+                                  )}
+                                </div>
+                              )}
 
                               {/* Factores a favor */}
                               {negociacion.factores.length > 0 ? (
@@ -2743,113 +2761,7 @@ ${top3Texto}
                           )
                         })()}
 
-                        {/* 4. RANKING EDIFICIO - ¿Es buen precio? */}
-                        {prop.unidades_en_edificio != null && prop.unidades_en_edificio > 1 && (() => {
-                          const tieneComparables = prop.unidades_misma_tipologia != null && prop.unidades_misma_tipologia >= 2
-                          const tipologia = prop.dormitorios === 0 ? 'Mono' : `${prop.dormitorios}D`
-                          const posicion = prop.posicion_en_tipologia || 1
-                          const total = prop.unidades_misma_tipologia || 1
-                          const precioMin = prop.precio_min_tipologia || prop.precio_usd
-                          const precioMax = prop.precio_max_tipologia || prop.precio_usd
-
-                          // Determinar tipo de posición
-                          const esMasBarata = posicion === 1 && total > 1
-                          const esMasCara = posicion === total && total > 1
-                          const esBalanceada = !esMasBarata && !esMasCara
-
-                          // Colores según posición
-                          const colorFondo = esMasBarata
-                            ? 'bg-green-50 border-green-200'
-                            : esMasCara
-                            ? 'bg-purple-50 border-purple-200'
-                            : 'bg-blue-50 border-blue-200'
-
-                          const colorBadge = esMasBarata
-                            ? 'bg-green-200 text-green-700'
-                            : esMasCara
-                            ? 'bg-purple-200 text-purple-700'
-                            : 'bg-blue-200 text-blue-700'
-
-                          // Calcular posición en la barra (0-100%)
-                          const rango = precioMax - precioMin
-                          const posicionBarra = rango > 0
-                            ? ((prop.precio_usd - precioMin) / rango) * 100
-                            : 50
-
-                          return (
-                            <div className={`rounded-lg border p-3 ${colorFondo}`}>
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-gray-700">🏢 Ranking {tipologia} en edificio</span>
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${colorBadge}`}>
-                                  {esMasBarata ? 'Más económica' : esMasCara ? 'Premium' : 'Balanceada'}
-                                </span>
-                              </div>
-
-                              {tieneComparables ? (
-                                <>
-                                  {/* Barra de rango con posición */}
-                                  <div className="relative mb-2">
-                                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                      <span>${formatNum(precioMin)}</span>
-                                      <span>${formatNum(precioMax)}</span>
-                                    </div>
-                                    <div className="relative h-3 bg-gray-200 rounded-full">
-                                      {/* Marcador de posición actual */}
-                                      <div
-                                        className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow ${
-                                          esMasBarata ? 'bg-green-500' : esMasCara ? 'bg-purple-500' : 'bg-blue-500'
-                                        }`}
-                                        style={{ left: `calc(${Math.min(Math.max(posicionBarra, 5), 95)}% - 8px)` }}
-                                        title={`$${formatNum(prop.precio_usd)}`}
-                                      />
-                                      {/* Puntos de otras unidades */}
-                                      {Array.from({ length: total }).map((_, i) => {
-                                        if (i + 1 === posicion) return null
-                                        const pos = total > 1 ? (i / (total - 1)) * 100 : 50
-                                        return (
-                                          <div
-                                            key={i}
-                                            className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gray-400"
-                                            style={{ left: `calc(${pos}% - 4px)` }}
-                                          />
-                                        )
-                                      })}
-                                    </div>
-                                  </div>
-
-                                  {/* Posición y mensaje */}
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-700">
-                                      Posición <span className="font-semibold">{posicion}</span> de {total}
-                                    </span>
-                                  </div>
-
-                                  {/* Insight accionable */}
-                                  <div className={`text-xs mt-2 ${
-                                    esMasBarata ? 'text-green-700' : esMasCara ? 'text-purple-700' : 'text-blue-700'
-                                  }`}>
-                                    {esMasBarata ? (
-                                      <p>💡 ¿Ganga real? Preguntá qué la diferencia (piso, vista, orientación)</p>
-                                    ) : esMasCara ? (
-                                      <p>💡 ¿Vale el premium? Verificá qué la hace especial antes de decidir</p>
-                                    ) : (
-                                      <p>💡 Opción equilibrada, menor riesgo de sorpresas</p>
-                                    )}
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="text-sm text-gray-600">
-                                  <p>Única unidad {tipologia} disponible en este edificio</p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Rango edificio (todas): ${formatNum(prop.precio_min_edificio)} - ${formatNum(prop.precio_max_edificio)}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })()}
-
-                        {/* 5. AMENIDADES - ¿Tiene lo que pedí? */}
+                        {/* 4. AMENIDADES - ¿Tiene lo que pedí? */}
                         {(() => {
                           const innegociablesArray = innegociables
                             ? (innegociables as string).split(',').filter(Boolean)
