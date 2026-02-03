@@ -242,7 +242,7 @@ export default function EditarPropiedad() {
   ]
 
   // Opción para bloquear campos al guardar
-  const [autoBloquearAlGuardar, setAutoBloquearAlGuardar] = useState(false)
+  const [autoBloquearAlGuardar, setAutoBloquearAlGuardar] = useState(true) // Candados automáticos por defecto
 
   const [formData, setFormData] = useState<FormData>({
     proyecto_nombre: '',
@@ -1205,8 +1205,9 @@ export default function EditarPropiedad() {
           updateData.precio_usd_original = precioPublicado // Guardar precio publicado en USD paralelo
           updateData.tipo_cambio_detectado = 'paralelo'
           updateData.tipo_cambio_usado = tcOficial
+          updateData.tipo_cambio_paralelo_usado = tcParalelo // TC paralelo en columna directa para batch nocturno
           updateData.depende_de_tc = true
-          // Guardar en datos_json_enrichment para referencia
+          // Guardar en datos_json_enrichment para referencia (retrocompatibilidad)
           updateData.datos_json_enrichment = {
             ...originalData.datos_json_enrichment,
             precio_usd_original: precioPublicado,

@@ -138,6 +138,13 @@ export default function EditarProyecto() {
   const [propagarAmenidades, setPropagarAmenidades] = useState(false)
   const [propagarEquipamiento, setPropagarEquipamiento] = useState(false)
 
+  // Modal de candados en propagación
+  const [showModalCandados, setShowModalCandados] = useState(false)
+  const [propiedadesConCandados, setPropiedadesConCandados] = useState<{id: number, codigo: string, campos: string[]}[]>([])
+  const [accionCandados, setAccionCandados] = useState<'mantener' | 'abrir_temporal' | 'abrir_permanente' | null>(null)
+  // Guardar candados originales para restaurar en caso de error (Bug fix: usar estado en lugar de window)
+  const [candadosOriginalesBackup, setCandadosOriginalesBackup] = useState<Record<number, any>>({})
+
   // Inferencia desde propiedades
   const [infiriendo, setInfiriendo] = useState(false)
   const [datosInferidos, setDatosInferidos] = useState<DatosInferidos | null>(null)
@@ -637,18 +644,107 @@ export default function EditarProyecto() {
     }
   }
 
-  const handlePropagar = async () => {
-    if (!supabase || !id) return
-    if (!propagarEstado && !propagarFecha && !propagarAmenidades && !propagarEquipamiento) {
-      setError('Selecciona al menos una opción para propagar')
-      return
+  // Verificar candados antes de propagar
+  const verificarCandadosAntesPropagar = async (): Promise<boolean> => {
+    if (!supabase || !id) return false
+
+    // Determinar qué campos vamos a propagar
+    const camposAPropagar: string[] = []
+    if (propagarEstado) camposAPropagar.push('estado_construccion')
+    if (propagarFecha) camposAPropagar.push('fecha_entrega')
+    if (propagarAmenidades) camposAPropagar.push('amenities')
+    if (propagarEquipamiento) camposAPropagar.push('equipamiento')
+
+    if (camposAPropagar.length === 0) return true
+
+    // Buscar propiedades con candados en esos campos
+    const { data: propsConCandados, error } = await supabase
+      .from('propiedades_v2')
+      .select('id, codigo_propiedad, campos_bloqueados')
+      .eq('id_proyecto_master', parseInt(id as string))
+      .eq('es_activa', true)
+      .not('campos_bloqueados', 'is', null)
+
+    if (error) {
+      console.error('Error verificando candados:', error)
+      return true // Continuar si hay error
     }
+
+    // Filtrar las que tienen candados en los campos que vamos a propagar
+    const propiedadesAfectadas = (propsConCandados || [])
+      .map(p => {
+        const candados = p.campos_bloqueados || {}
+        const camposBloqueados = camposAPropagar.filter(campo => {
+          const candado = candados[campo]
+          return candado === true || (typeof candado === 'object' && candado?.bloqueado === true)
+        })
+        return {
+          id: p.id,
+          codigo: p.codigo_propiedad,
+          campos: camposBloqueados
+        }
+      })
+      .filter(p => p.campos.length > 0)
+
+    if (propiedadesAfectadas.length > 0) {
+      setPropiedadesConCandados(propiedadesAfectadas)
+      setShowModalCandados(true)
+      return false // No continuar, esperar decisión del usuario
+    }
+
+    return true // No hay candados, continuar
+  }
+
+  // Ejecutar propagación con la acción de candados seleccionada
+  const ejecutarPropagacion = async (accion: 'mantener' | 'abrir_temporal' | 'abrir_permanente') => {
+    if (!supabase || !id) return
 
     setPropagando(true)
     setError(null)
     setPropagateSuccess(null)
+    setShowModalCandados(false)
+
+    // Variables para tracking de candados abiertos (para restaurar si hay error)
+    let candadosBackup: Record<number, any> = {}
+    let candadosFueronAbiertos = false
 
     try {
+      // Si hay que abrir candados, hacerlo primero
+      if (accion !== 'mantener' && propiedadesConCandados.length > 0) {
+        const idsAbrir = propiedadesConCandados.map(p => p.id)
+        const camposAbrir = [...new Set(propiedadesConCandados.flatMap(p => p.campos))]
+
+        // Abrir candados y guardar backup
+        for (const propId of idsAbrir) {
+          const { data: prop } = await supabase
+            .from('propiedades_v2')
+            .select('campos_bloqueados')
+            .eq('id', propId)
+            .single()
+
+          if (prop) {
+            const candadosActuales = { ...(prop.campos_bloqueados || {}) }
+            // Guardar backup SIEMPRE (para restaurar en caso de error o si es temporal)
+            candadosBackup[propId] = { ...candadosActuales }
+
+            // Remover candados de los campos a propagar
+            camposAbrir.forEach(campo => {
+              delete candadosActuales[campo]
+            })
+
+            await supabase
+              .from('propiedades_v2')
+              .update({
+                campos_bloqueados: Object.keys(candadosActuales).length > 0 ? candadosActuales : null
+              })
+              .eq('id', propId)
+          }
+        }
+        candadosFueronAbiertos = true
+        setCandadosOriginalesBackup(candadosBackup) // Guardar en estado React
+      }
+
+      // Ejecutar la propagación
       const { data, error } = await supabase
         .rpc('propagar_proyecto_a_propiedades', {
           p_id_proyecto: parseInt(id as string),
@@ -660,6 +756,16 @@ export default function EditarProyecto() {
 
       if (error) throw error
 
+      // Si fue temporal Y la propagación fue exitosa, restaurar candados
+      if (accion === 'abrir_temporal' && candadosFueronAbiertos) {
+        for (const propId of Object.keys(candadosBackup)) {
+          await supabase
+            .from('propiedades_v2')
+            .update({ campos_bloqueados: candadosBackup[parseInt(propId)] })
+            .eq('id', parseInt(propId))
+        }
+      }
+
       if (data?.success) {
         const detalle = data.detalle
         const mensajes = []
@@ -668,19 +774,25 @@ export default function EditarProyecto() {
         if (detalle.amenidades_propagadas > 0) mensajes.push(`${detalle.amenidades_propagadas} amenidades`)
         if (detalle.equipamiento_propagado > 0) mensajes.push(`${detalle.equipamiento_propagado} equipamiento`)
 
-        setPropagateSuccess(
-          mensajes.length > 0
-            ? `Propagado: ${mensajes.join(', ')} a ${data.propiedades_afectadas} propiedades`
-            : 'No se encontraron propiedades para actualizar'
-        )
+        let mensajeFinal = mensajes.length > 0
+          ? `Propagado: ${mensajes.join(', ')} a ${data.propiedades_afectadas} propiedades`
+          : 'No se encontraron propiedades para actualizar'
 
-        // Resetear checkboxes
+        if (propiedadesConCandados.length > 0) {
+          if (accion === 'mantener') {
+            mensajeFinal += ` (${propiedadesConCandados.length} protegidas por candados)`
+          } else if (accion === 'abrir_temporal') {
+            mensajeFinal += ` (candados restaurados en ${propiedadesConCandados.length} propiedades)`
+          } else {
+            mensajeFinal += ` (candados removidos de ${propiedadesConCandados.length} propiedades)`
+          }
+        }
+
+        setPropagateSuccess(mensajeFinal)
         setPropagarEstado(false)
         setPropagarFecha(false)
         setPropagarAmenidades(false)
         setPropagarEquipamiento(false)
-
-        // Refrescar propiedades
         fetchPropiedades()
       } else {
         setError(data?.error || 'Error en propagación')
@@ -688,9 +800,43 @@ export default function EditarProyecto() {
     } catch (err: any) {
       console.error('Error propagando:', err)
       setError(err.message || 'Error propagando características')
+
+      // BUG FIX: Si hubo error Y abrimos candados, restaurarlos
+      if (candadosFueronAbiertos && Object.keys(candadosBackup).length > 0) {
+        console.log('Restaurando candados debido a error...')
+        try {
+          for (const propId of Object.keys(candadosBackup)) {
+            await supabase
+              .from('propiedades_v2')
+              .update({ campos_bloqueados: candadosBackup[parseInt(propId)] })
+              .eq('id', parseInt(propId))
+          }
+          setError((err.message || 'Error propagando') + ' (candados restaurados)')
+        } catch (restoreErr) {
+          console.error('Error restaurando candados:', restoreErr)
+          setError((err.message || 'Error propagando') + ' (ERROR: no se pudieron restaurar candados)')
+        }
+      }
     } finally {
       setPropagando(false)
+      setPropiedadesConCandados([])
+      setCandadosOriginalesBackup({})
     }
+  }
+
+  const handlePropagar = async () => {
+    if (!supabase || !id) return
+    if (!propagarEstado && !propagarFecha && !propagarAmenidades && !propagarEquipamiento) {
+      setError('Selecciona al menos una opción para propagar')
+      return
+    }
+
+    // Verificar candados primero
+    const puedeContinuar = await verificarCandadosAntesPropagar()
+    if (!puedeContinuar) return // Se mostrará el modal
+
+    // Si no hay candados, ejecutar directamente
+    await ejecutarPropagacion('mantener')
   }
 
   const formatPrecio = (precio: number): string => {
@@ -807,6 +953,78 @@ export default function EditarProyecto() {
       <Head>
         <title>Editar {originalData?.nombre_oficial || 'Proyecto'} | Admin SICI</title>
       </Head>
+
+      {/* Modal de candados en propagación */}
+      {showModalCandados && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
+            <div className="bg-amber-500 px-6 py-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <span className="text-2xl">🔒</span> Propiedades con Candados
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="text-slate-700 mb-4">
+                <strong>{propiedadesConCandados.length} propiedad(es)</strong> tienen candados en los campos que quieres propagar:
+              </p>
+              <div className="bg-slate-50 rounded-lg p-3 mb-4 max-h-32 overflow-y-auto">
+                {propiedadesConCandados.slice(0, 5).map(p => (
+                  <div key={p.id} className="text-sm text-slate-600 py-1 border-b border-slate-200 last:border-0">
+                    <span className="font-mono">{p.codigo}</span>
+                    <span className="text-slate-400 ml-2">({p.campos.join(', ')})</span>
+                  </div>
+                ))}
+                {propiedadesConCandados.length > 5 && (
+                  <div className="text-sm text-slate-500 pt-2">
+                    ... y {propiedadesConCandados.length - 5} más
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-slate-500 mb-4">
+                ¿Qué deseas hacer con estas propiedades?
+              </p>
+              <div className="space-y-2">
+                <button
+                  onClick={() => ejecutarPropagacion('mantener')}
+                  disabled={propagando}
+                  className="w-full px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-left transition-colors disabled:opacity-50"
+                >
+                  <span className="font-medium">🔒 Mantener candados</span>
+                  <p className="text-sm text-slate-500">No propagar a estas propiedades (respeta candados)</p>
+                </button>
+                <button
+                  onClick={() => ejecutarPropagacion('abrir_temporal')}
+                  disabled={propagando}
+                  className="w-full px-4 py-3 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-left transition-colors disabled:opacity-50"
+                >
+                  <span className="font-medium">🔓 Abrir temporal</span>
+                  <p className="text-sm text-amber-600">Propagar y volver a cerrar candados después</p>
+                </button>
+                <button
+                  onClick={() => ejecutarPropagacion('abrir_permanente')}
+                  disabled={propagando}
+                  className="w-full px-4 py-3 bg-red-50 hover:bg-red-100 text-red-800 rounded-lg text-left transition-colors disabled:opacity-50"
+                >
+                  <span className="font-medium">🔓 Abrir permanente</span>
+                  <p className="text-sm text-red-600">Propagar y quitar candados definitivamente</p>
+                </button>
+              </div>
+            </div>
+            <div className="bg-slate-50 px-6 py-3 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowModalCandados(false)
+                  setPropiedadesConCandados([])
+                }}
+                disabled={propagando}
+                className="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="min-h-screen bg-slate-100">
         {/* Header */}
