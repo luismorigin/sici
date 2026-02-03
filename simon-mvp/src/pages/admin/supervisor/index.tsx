@@ -7,13 +7,15 @@ interface Contadores {
   matching: number
   sinMatch: number
   excluidas: number
+  autoAprobados: number
 }
 
 export default function SupervisorIndex() {
   const [contadores, setContadores] = useState<Contadores>({
     matching: 0,
     sinMatch: 0,
-    excluidas: 0
+    excluidas: 0,
+    autoAprobados: 0
   })
   const [loading, setLoading] = useState(true)
 
@@ -34,10 +36,14 @@ export default function SupervisorIndex() {
       // Excluidas
       const { data: excluidasData } = await supabase.rpc('exportar_propiedades_excluidas')
 
+      // Auto-aprobados sin validar
+      const { data: autoAprobadosData } = await supabase.rpc('contar_auto_aprobados_sin_validar')
+
       setContadores({
         matching: matchingData?.length || 0,
         sinMatch: sinMatchData?.length || 0,
-        excluidas: excluidasData?.length || 0
+        excluidas: excluidasData?.length || 0,
+        autoAprobados: autoAprobadosData || 0
       })
     } catch (err) {
       console.error('Error fetching contadores:', err)
@@ -46,7 +52,7 @@ export default function SupervisorIndex() {
     }
   }
 
-  const totalPendientes = contadores.matching + contadores.sinMatch + contadores.excluidas
+  const totalPendientes = contadores.matching + contadores.sinMatch + contadores.excluidas + contadores.autoAprobados
 
   return (
     <>
@@ -101,7 +107,7 @@ export default function SupervisorIndex() {
           </div>
 
           {/* Cards de secciones */}
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-4 gap-4">
             {/* Matching */}
             <Link
               href="/admin/supervisor/matching"
@@ -162,6 +168,27 @@ export default function SupervisorIndex() {
               </h3>
               <p className="text-gray-500 text-sm">
                 Revisar y corregir propiedades con datos problemáticos
+              </p>
+            </Link>
+
+            {/* Auto-Aprobados */}
+            <Link
+              href="/admin/supervisor/auto-aprobados"
+              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow border-l-4 border-green-500"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="text-4xl">&#9989;</div>
+                {contadores.autoAprobados > 0 && (
+                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                    {contadores.autoAprobados}
+                  </span>
+                )}
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                Auto-Aprobados
+              </h3>
+              <p className="text-gray-500 text-sm">
+                Validar matches automáticos de alta confianza
               </p>
             </Link>
           </div>

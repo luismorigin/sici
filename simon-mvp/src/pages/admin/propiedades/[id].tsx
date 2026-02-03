@@ -108,6 +108,7 @@ interface ProyectoMaster {
   estado_construccion?: string | null
   fecha_entrega?: string | null
   amenidades_edificio?: string[] | null
+  equipamiento_base?: string[] | null
 }
 
 interface ProyectoOption {
@@ -231,6 +232,7 @@ export default function EditarPropiedad() {
   const [sincEstado, setSincEstado] = useState(true)
   const [sincFecha, setSincFecha] = useState(true)
   const [sincAmenidades, setSincAmenidades] = useState(true)
+  const [sincEquipamiento, setSincEquipamiento] = useState(true)
 
   // Campos que pueden bloquearse
   const CAMPOS_BLOQUEABLES = [
@@ -384,7 +386,7 @@ export default function EditarPropiedad() {
       if (data.id_proyecto_master) {
         const { data: pmResult } = await supabase
           .from('proyectos_master')
-          .select('nombre_oficial, desarrollador, zona, estado_construccion, fecha_entrega, amenidades_edificio')
+          .select('nombre_oficial, desarrollador, zona, estado_construccion, fecha_entrega, amenidades_edificio, equipamiento_base')
           .eq('id_proyecto_master', data.id_proyecto_master)
           .single()
 
@@ -1400,10 +1402,10 @@ export default function EditarPropiedad() {
     }
   }
 
-  // Sincronizar datos desde el proyecto master
+  // Sincronizar datos desde el proyecto master (solo esta propiedad)
   const sincronizarDesdeProyecto = async () => {
     if (!supabase || !id || !selectedProyectoId) return
-    if (!sincEstado && !sincFecha && !sincAmenidades) {
+    if (!sincEstado && !sincFecha && !sincAmenidades && !sincEquipamiento) {
       alert('Selecciona al menos una opción para sincronizar')
       return
     }
@@ -1415,6 +1417,7 @@ export default function EditarPropiedad() {
       if (sincEstado) camposADesbloquear.push('estado_construccion')
       if (sincFecha) camposADesbloquear.push('fecha_entrega')
       if (sincAmenidades) camposADesbloquear.push('amenities')
+      if (sincEquipamiento) camposADesbloquear.push('equipamiento')
 
       // Desbloquear campos seleccionados
       if (originalData?.campos_bloqueados) {
@@ -1427,22 +1430,35 @@ export default function EditarPropiedad() {
           .eq('id', id)
       }
 
-      // Llamar a la función de propagación para solo esta propiedad
-      // Usamos la RPC pero solo afectará a esta propiedad porque desbloqueamos sus campos
-      const { data, error } = await supabase.rpc('propagar_proyecto_a_propiedades', {
+      // Llamar a la función de sincronización individual (solo afecta a ESTA propiedad)
+      const { data, error } = await supabase.rpc('sincronizar_propiedad_desde_proyecto', {
+        p_id_propiedad: parseInt(id as string),
         p_id_proyecto: selectedProyectoId,
-        p_propagar_estado: sincEstado,
-        p_propagar_fecha: sincFecha,
-        p_propagar_amenidades: sincAmenidades
+        p_sincronizar_estado: sincEstado,
+        p_sincronizar_fecha: sincFecha,
+        p_sincronizar_amenidades: sincAmenidades,
+        p_sincronizar_equipamiento: sincEquipamiento
       })
 
       if (error) throw error
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Error en sincronización')
+      }
 
       // Refrescar datos
       await fetchPropiedad()
       setShowSincronizar(false)
 
-      alert(`Sincronización completada: ${JSON.stringify(data?.detalle || {})}`)
+      // Mensaje de éxito con detalle
+      const detalle = data.detalle
+      const cambios = []
+      if (detalle.estado_sincronizado) cambios.push('estado')
+      if (detalle.fecha_sincronizada) cambios.push('fecha')
+      if (detalle.amenidades_sincronizadas) cambios.push('amenidades')
+      if (detalle.equipamiento_sincronizado) cambios.push('equipamiento')
+
+      alert(`Sincronización completada: ${cambios.join(', ')}`)
     } catch (err: any) {
       alert('Error al sincronizar: ' + err.message)
     } finally {
@@ -1947,6 +1963,33 @@ export default function EditarPropiedad() {
                             {estaCampoBloqueado('amenities') && <span title="Será desbloqueado">🔒</span>}
                           </td>
                         </tr>
+                        {/* Equipamiento */}
+                        <tr className={sincEquipamiento ? 'bg-blue-50' : ''}>
+                          <td className="px-3 py-2">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={sincEquipamiento}
+                                onChange={(e) => setSincEquipamiento(e.target.checked)}
+                                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="font-medium">Equipamiento base</span>
+                            </label>
+                          </td>
+                          <td className="px-3 py-2 text-slate-600">
+                            {formData.equipamiento.length + formData.equipamiento_custom.length} items
+                          </td>
+                          <td className="px-3 py-2 text-blue-500">→</td>
+                          <td className="px-3 py-2 font-medium text-blue-700">
+                            {proyectoMaster.equipamiento_base?.length
+                              ? `${proyectoMaster.equipamiento_base.length} items`
+                              : <span className="text-slate-400 italic">No definido</span>
+                            }
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {estaCampoBloqueado('equipamiento') && <span title="Será desbloqueado">🔒</span>}
+                          </td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
@@ -1965,11 +2008,25 @@ export default function EditarPropiedad() {
                     </div>
                   )}
 
+                  {/* Lista de equipamiento del proyecto si hay */}
+                  {sincEquipamiento && proyectoMaster.equipamiento_base && proyectoMaster.equipamiento_base.length > 0 && (
+                    <div className="bg-white rounded-lg p-3 mb-4 border border-green-200">
+                      <p className="text-xs text-green-700 font-medium mb-2">Equipamiento que se sincronizará:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {proyectoMaster.equipamiento_base.map(e => (
+                          <span key={e} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                            {e}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={sincronizarDesdeProyecto}
-                      disabled={sincronizando || (!sincEstado && !sincFecha && !sincAmenidades)}
+                      disabled={sincronizando || (!sincEstado && !sincFecha && !sincAmenidades && !sincEquipamiento)}
                       className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-6 py-2 rounded-lg font-medium transition-colors"
                     >
                       {sincronizando ? '⏳ Sincronizando...' : '✓ Sincronizar seleccionados'}
@@ -1981,7 +2038,7 @@ export default function EditarPropiedad() {
                     >
                       Cancelar
                     </button>
-                    {(estaCampoBloqueado('estado_construccion') || estaCampoBloqueado('fecha_entrega') || estaCampoBloqueado('amenities')) && (
+                    {(estaCampoBloqueado('estado_construccion') || estaCampoBloqueado('fecha_entrega') || estaCampoBloqueado('amenities') || estaCampoBloqueado('equipamiento')) && (
                       <span className="text-xs text-amber-600">
                         ⚠️ Los campos bloqueados se desbloquearán automáticamente
                       </span>

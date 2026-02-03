@@ -35,6 +35,7 @@ interface ColasHITL {
   cola_matching: number
   cola_sin_match: number
   cola_excluidas: number
+  cola_auto_aprobados: number
 }
 
 interface TCStats {
@@ -197,10 +198,14 @@ export default function DashboardSalud() {
     // Cola excluidas - usar RPC
     const { data: excluidas } = await supabase.rpc('exportar_propiedades_excluidas')
 
+    // Cola auto-aprobados sin validar
+    const { data: autoAprobados } = await supabase.rpc('contar_auto_aprobados_sin_validar')
+
     setColas({
       cola_matching: matching?.length || 0,
       cola_sin_match: sinMatch?.length || 0,
-      cola_excluidas: excluidas?.length || 0
+      cola_excluidas: excluidas?.length || 0,
+      cola_auto_aprobados: autoAprobados || 0
     })
   }
 
@@ -576,6 +581,15 @@ export default function DashboardSalud() {
                     <span className="text-slate-700">Excluidas por revisar</span>
                     <span className="font-bold text-slate-600">
                       {colas.cola_excluidas} →
+                    </span>
+                  </Link>
+                  <Link
+                    href="/admin/supervisor/auto-aprobados"
+                    className="flex justify-between items-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100"
+                  >
+                    <span className="text-slate-700">Auto-aprobados sin validar</span>
+                    <span className={`font-bold ${colas.cola_auto_aprobados > 50 ? 'text-amber-600' : 'text-green-600'}`}>
+                      {colas.cola_auto_aprobados} →
                     </span>
                   </Link>
                 </div>
