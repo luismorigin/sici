@@ -182,12 +182,14 @@ function calcularPoderNegociacion(
   const factores: string[] = []
 
   // Factor 1: Tiempo en mercado (peso: 2)
-  if (propiedad.dias_en_mercado > medianaZona * 1.5) {
-    score += 2
-    factores.push(`${propiedad.dias_en_mercado} días publicada (promedio: ${medianaZona}d)`)
-  } else if (propiedad.dias_en_mercado > medianaZona) {
-    score += 1
-    factores.push(`Sobre promedio de tiempo en mercado`)
+  if (propiedad.dias_en_mercado != null) {
+    if (propiedad.dias_en_mercado > medianaZona * 1.5) {
+      score += 2
+      factores.push(`${propiedad.dias_en_mercado} días publicada (promedio: ${medianaZona}d)`)
+    } else if (propiedad.dias_en_mercado > medianaZona) {
+      score += 1
+      factores.push(`Sobre promedio de tiempo en mercado`)
+    }
   }
 
   // Factor 2: Precio vs promedio zona (peso: 2)
@@ -215,7 +217,9 @@ function calcularPoderNegociacion(
   }
 
   // Factor 5: Entrega inmediata con tiempo (peso: 1)
-  if (propiedad.estado_construccion !== 'preventa' && propiedad.dias_en_mercado > 60) {
+  if (propiedad.estado_construccion !== 'preventa' &&
+      propiedad.dias_en_mercado != null &&
+      propiedad.dias_en_mercado > 60) {
     score += 1
     factores.push(`Entrega inmediata con tiempo en mercado`)
   }

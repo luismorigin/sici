@@ -140,6 +140,98 @@ function getBadgeTiempo(diasEnMercado: number, diasMedianaZona: number): {
   }
 }
 
+/**
+ * Calcula poder de negociación basado en datos objetivos
+ * Score de 0-7 puntos que se mapea a ALTO/MODERADO/BAJO
+ */
+interface DatosNegociacion {
+  dias_en_mercado: number | null
+  unidades_en_edificio: number | null
+  unidades_misma_tipologia: number | null
+  posicion_en_tipologia: number | null
+  estado_construccion: string
+  dormitorios: number
+  posicion_mercado?: {
+    diferencia_pct: number
+  } | null
+}
+
+interface ResultadoNegociacion {
+  poder: 'alto' | 'moderado' | 'bajo'
+  score: number
+  estrellas: string
+  factores: string[]
+  sinComparablesTipologia: boolean
+  tipologia: string
+}
+
+function calcularPoderNegociacion(
+  prop: DatosNegociacion,
+  medianaZona: number
+): ResultadoNegociacion {
+  let score = 0
+  const factores: string[] = []
+  const tipologia = prop.dormitorios === 0 ? 'monoambiente' : `${prop.dormitorios}D`
+
+  // Factor 1: Tiempo en mercado (peso: 2)
+  if (prop.dias_en_mercado != null) {
+    if (prop.dias_en_mercado > medianaZona * 1.5) {
+      score += 2
+      factores.push(`${prop.dias_en_mercado} días publicada (promedio: ${medianaZona}d)`)
+    } else if (prop.dias_en_mercado > medianaZona) {
+      score += 1
+      factores.push(`Sobre promedio de tiempo en mercado`)
+    }
+  }
+
+  // Factor 2: Precio vs promedio zona (peso: 2)
+  const diffPct = prop.posicion_mercado?.diferencia_pct
+  if (diffPct && diffPct > 5) {
+    score += 2
+    factores.push(`${Math.round(diffPct)}% sobre promedio de zona`)
+  } else if (diffPct && diffPct > 0) {
+    score += 1
+    factores.push(`Ligeramente sobre promedio de zona`)
+  }
+
+  // Factor 3: Posición en tipología (peso: 1) - solo si hay comparables
+  if (prop.posicion_en_tipologia && prop.posicion_en_tipologia > 1 &&
+      prop.unidades_misma_tipologia && prop.unidades_misma_tipologia >= 2) {
+    score += 1
+    factores.push(`${prop.posicion_en_tipologia - 1} opción(es) más barata(s) de ${tipologia} en edificio`)
+  }
+
+  // Factor 4: Alto inventario (peso: 1)
+  if (prop.unidades_en_edificio && prop.unidades_en_edificio >= 5) {
+    score += 1
+    factores.push(`${prop.unidades_en_edificio} unidades disponibles`)
+  }
+
+  // Factor 5: Entrega inmediata con tiempo (peso: 1)
+  if (prop.estado_construccion !== 'preventa' &&
+      prop.dias_en_mercado != null &&
+      prop.dias_en_mercado > 60) {
+    score += 1
+    factores.push(`Entrega inmediata con tiempo en mercado`)
+  }
+
+  // Determinar si hay comparables de la misma tipología
+  const sinComparablesTipologia = !prop.unidades_misma_tipologia || prop.unidades_misma_tipologia < 2
+
+  // Calcular estrellas (1-5)
+  const estrellasNum = Math.max(1, Math.min(5, score))
+  const estrellas = '★'.repeat(estrellasNum) + '☆'.repeat(5 - estrellasNum)
+
+  return {
+    poder: score >= 4 ? 'alto' : score >= 2 ? 'moderado' : 'bajo',
+    score: Math.min(score, 5),
+    estrellas,
+    factores,
+    sinComparablesTipologia,
+    tipologia
+  }
+}
+
 function generarSintesisFiduciaria(datos: DatosSintesis): SintesisFiduciaria {
   const {
     diferenciaPct,
@@ -2594,29 +2686,59 @@ ${top3Texto}
                           )
                         })()}
 
-                        {/* 3. DÍAS EN MERCADO - Badge inteligente */}
-                        {prop.dias_en_mercado != null && (() => {
+                        {/* 3. ¿PUEDO NEGOCIAR? - Análisis multi-factor */}
+                        {(() => {
                           const medianaZona = contextoMercado?.metricas_zona?.dias_mediana || 74
-                          const badge = getBadgeTiempo(prop.dias_en_mercado, medianaZona)
+                          const negociacion = calcularPoderNegociacion(prop, medianaZona)
+
+                          const colorPoder = negociacion.poder === 'alto'
+                            ? 'bg-green-100 text-green-700'
+                            : negociacion.poder === 'moderado'
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-gray-100 text-gray-600'
 
                           return (
                             <div className="bg-white rounded-lg border p-3 shadow-sm">
-                              <div className={`flex items-center justify-between ${badge.accion ? 'mb-1' : ''}`}>
+                              {/* Header con score */}
+                              <div className="flex items-center justify-between mb-2">
                                 <span className="text-xs font-semibold text-gray-500 uppercase">
                                   ¿Puedo negociar?
                                 </span>
-                                <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}
-                                  title={badge.tooltip}
-                                >
-                                  {badge.emoji} {badge.label}
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorPoder}`}>
+                                  {negociacion.poder.toUpperCase()} {negociacion.estrellas}
                                 </span>
                               </div>
-                              {badge.accion && (
-                                <p className="text-sm text-gray-600">
-                                  → {badge.accion}
+
+                              {/* Factores a favor */}
+                              {negociacion.factores.length > 0 ? (
+                                <div className="mb-2">
+                                  <p className="text-xs text-gray-500 mb-1">Factores a tu favor:</p>
+                                  <ul className="space-y-0.5">
+                                    {negociacion.factores.map((factor, i) => (
+                                      <li key={i} className="text-sm text-gray-700 flex items-start gap-1">
+                                        <span className="text-green-600">•</span>
+                                        {factor}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : (
+                                <p className="text-sm text-gray-500 mb-2">
+                                  Sin factores detectados a tu favor.
                                 </p>
                               )}
+
+                              {/* Disclaimer si no hay comparables de tipología */}
+                              {negociacion.sinComparablesTipologia && (
+                                <div className="text-xs text-amber-600 bg-amber-50 rounded p-2 mb-2">
+                                  ⚠️ Único {negociacion.tipologia} en edificio. No se puede comparar precio con otras de la misma tipología.
+                                </div>
+                              )}
+
+                              {/* Disclaimer legal */}
+                              <p className="text-xs text-gray-400 italic">
+                                ℹ️ Orientación basada en datos públicos. No constituye asesoría financiera.
+                              </p>
                             </div>
                           )
                         })()}
