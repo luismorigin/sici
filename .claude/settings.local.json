@@ -18,7 +18,11 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(npm run build:*)",
-      "WebFetch(domain:c21.com.bo)"
+      "WebFetch(domain:c21.com.bo)",
+      "Bash(npm install:*)",
+      "mcp__postgres-sici__pg_execute_sql",
+      "mcp__postgres-sici__pg_manage_functions",
+      "Bash(curl:*)"
     ]
   }
 }
