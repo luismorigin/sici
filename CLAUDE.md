@@ -135,7 +135,7 @@ sici/
 │   ├── enrichment/    # registrar_enrichment.sql
 │   ├── merge/         # merge_discovery_enrichment.sql v2.2.0
 │   └── matching/      # Funciones v3.1 (propiedades_v2)
-├── sql/migrations/    # 001-103 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Broker B2B, Admin, Landing, PDF)
+├── sql/migrations/    # 001-114 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Broker B2B, Admin, Landing, PDF, CMA)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
@@ -230,7 +230,7 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-103)
+## Migraciones SQL (001-114)
 
 | # | Archivo | Propósito | Estado |
 |---|---------|-----------|--------|
@@ -330,10 +330,21 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 097 | metricas_dias_mercado | Métricas días en mercado | ✅ |
 | 098 | fix_metricas_zona_dias | Fix métricas zona días | ✅ |
 | 099 | excluir_duplicados_buscar_unidades | Excluir duplicados buscar unidades | ✅ |
-| 100 | fix_posicion_mercado_precio_m2 | Fix posición mercado precio/m² | ✅ |
+| 100 | broker_forma_pago_campos | Campos forma de pago broker | ✅ |
 | 101 | buscar_unidades_broker_tc_dinamico | buscar_unidades_broker con TC dinámico | ✅ |
 | 102 | permisos_anon_salud | Permisos anon para dashboard salud | ✅ |
 | 103 | fix_propagar_verificacion_bloqueo | Fix propagar verificación bloqueo | ✅ |
+| 104 | equipamiento_base_proyecto | Equipamiento base proyecto | ✅ |
+| 105 | inferir_equipamiento_proyecto | Inferir equipamiento proyecto | ✅ |
+| 106 | fix_equipamiento_reemplazar | Fix equipamiento reemplazar | ✅ |
+| 107 | fix_amenidades_reemplazar | Fix amenidades reemplazar | ✅ |
+| 108 | sincronizar_propiedad_individual | Sincronizar propiedad individual | ✅ |
+| 109 | equipamiento_leer_guardados | Leer equipamiento guardado | ✅ |
+| 110 | fix_posicion_mercado_precio_m2 | Fix posición mercado precio/m² | ✅ |
+| 111 | plan_pagos_cuotas_v2 | Plan de pagos y cuotas v2 | ✅ |
+| 112 | trigger_creditos_cma | Trigger créditos CMA | ✅ |
+| 113 | validacion_humana_auto_aprobados | Validación humana auto-aprobados (HITL) | ✅ |
+| 114 | unificar_dias_mercado_300 | Unificar días en mercado (300 días máx) | ✅ |
 
 ## Repo Legacy
 
