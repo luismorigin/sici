@@ -38,6 +38,14 @@ interface RazonPersonalizada {
   alerta?: string | null
 }
 
+// Amenities de edificio (separar de equipamiento de unidad)
+const AMENITIES_EDIFICIO = [
+  'Piscina', 'Piscina infinita', 'Gimnasio', 'Cowork', 'Sala TV/Cine',
+  'Jacuzzi', 'Sauna', 'Seguridad 24h', 'Camaras seguridad', 'Sala de juegos',
+  'Parrillero comun', 'BBQ', 'Terraza comun', 'Rooftop', 'Lavanderia',
+  'Pet friendly', 'Ascensor', 'Salón de eventos', 'Area verde', 'Parque infantil'
+]
+
 export default function ResultsV2Page() {
   const router = useRouter()
   const { level: queryLevel } = router.query
@@ -450,19 +458,52 @@ export default function ResultsV2Page() {
                       </div>
                     )}
 
-                    {/* Amenities */}
-                    {property.amenities_lista && property.amenities_lista.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {property.amenities_lista.slice(0, 4).map((amenity, i) => (
-                          <span
-                            key={i}
-                            className="px-3 py-1 bg-neutral-100 text-neutral-700 rounded-full text-sm"
-                          >
-                            {amenity}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    {/* Amenities y Equipamiento */}
+                    {(() => {
+                      const equipamientoRaw = property.equipamiento_detectado || []
+                      const amenitiesFromEquip = equipamientoRaw.filter(item => AMENITIES_EDIFICIO.includes(item))
+                      const equipamientoReal = equipamientoRaw.filter(item => !AMENITIES_EDIFICIO.includes(item))
+                      const amenitiesConfirmados = property.amenities_confirmados || []
+                      const allAmenities = [...new Set([...amenitiesConfirmados, ...amenitiesFromEquip])]
+
+                      const hasAmenities = allAmenities.length > 0
+                      const hasEquipamiento = equipamientoReal.length > 0
+
+                      if (!hasAmenities && !hasEquipamiento) return null
+
+                      return (
+                        <div className="space-y-2 mb-4">
+                          {/* Amenities de edificio */}
+                          {hasAmenities && (
+                            <div className="flex flex-wrap gap-2">
+                              <span className="text-neutral-500">🏢</span>
+                              {allAmenities.slice(0, 4).map((amenity, i) => (
+                                <span key={i} className="px-2 py-1 bg-neutral-100 text-neutral-600 rounded text-xs">
+                                  {amenity}
+                                </span>
+                              ))}
+                              {allAmenities.length > 4 && (
+                                <span className="px-2 py-1 text-neutral-400 text-xs">+{allAmenities.length - 4}</span>
+                              )}
+                            </div>
+                          )}
+                          {/* Equipamiento de unidad */}
+                          {hasEquipamiento && (
+                            <div className="flex flex-wrap gap-2">
+                              <span className="text-neutral-500">🏠</span>
+                              {equipamientoReal.slice(0, 4).map((item, i) => (
+                                <span key={i} className="px-2 py-1 bg-amber-50 text-amber-700 rounded text-xs">
+                                  {item}
+                                </span>
+                              ))}
+                              {equipamientoReal.length > 4 && (
+                                <span className="px-2 py-1 text-neutral-400 text-xs">+{equipamientoReal.length - 4}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
 
                     {/* Razon fiduciaria PERSONALIZADA (nivel 2 con Claude) */}
                     {level === 2 && razonesPersonalizadas[property.id] && (

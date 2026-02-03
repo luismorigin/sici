@@ -483,7 +483,10 @@ export default function PropertyCardPremium({
       <div className="p-6">
         {/* Header */}
         <div className="mb-4">
-          <h3 className="font-display text-2xl text-[#0a0a0a] font-light">{propiedad.proyecto}</h3>
+          <h3 className="font-display text-2xl text-[#0a0a0a] font-light">
+            {propiedad.proyecto}
+            <span className="ml-2 text-sm text-[#999999] font-normal">#{propiedad.id}</span>
+          </h3>
           {propiedad.desarrollador && <p className="text-[#999999] text-sm mt-1">por {propiedad.desarrollador}</p>}
         </div>
 
