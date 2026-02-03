@@ -200,11 +200,12 @@ function calcularPoderNegociacion(
     factores.push(`Ligeramente sobre promedio de zona`)
   }
 
-  // Factor 3: Posición en edificio (peso: 1)
-  if (propiedad.posicion_precio_edificio && propiedad.posicion_precio_edificio > 1 &&
-      propiedad.unidades_en_edificio && propiedad.unidades_en_edificio > 2) {
+  // Factor 3: Posición en tipología (peso: 1) - solo si hay comparables de misma tipología
+  const tipologia = propiedad.dormitorios === 0 ? 'monoambientes' : `${propiedad.dormitorios}D`
+  if (propiedad.posicion_en_tipologia && propiedad.posicion_en_tipologia > 1 &&
+      propiedad.unidades_misma_tipologia && propiedad.unidades_misma_tipologia >= 2) {
     score += 1
-    factores.push(`${propiedad.posicion_precio_edificio - 1} opción(es) más barata(s) en edificio`)
+    factores.push(`${propiedad.posicion_en_tipologia - 1} opción(es) más barata(s) de ${tipologia} en edificio`)
   }
 
   // Factor 4: Alto inventario (peso: 1)
