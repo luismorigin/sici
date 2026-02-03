@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
-import { buscarUnidadesReales, UnidadReal } from '@/lib/supabase'
+import { buscarUnidadesReales, UnidadReal, CuotaPago } from '@/lib/supabase'
 
 interface FormData {
   nivel_completado: 1 | 2
@@ -81,7 +81,7 @@ export default function ResultsV2Page() {
         dormitorios: filtros.dormitorios,
         area_min: filtros.area_min || undefined,
         zonas_permitidas: filtros.zonas_permitidas,
-        limite: 5,
+        limite: 50,
       })
       setProperties(results)
 
@@ -402,9 +402,35 @@ export default function ResultsV2Page() {
                     {(property.plan_pagos_desarrollador || property.solo_tc_paralelo || property.descuento_contado_pct) && (
                       <div className="flex flex-wrap gap-2 mb-3 text-xs">
                         {property.plan_pagos_desarrollador && (
-                          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded" title="Acepta plan de pagos con desarrollador">
-                            📅 Plan pagos
-                          </span>
+                          <div className="relative group">
+                            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded cursor-help" title="Acepta plan de pagos con desarrollador">
+                              📅 Plan pagos
+                            </span>
+                            {/* Tooltip con detalle de cuotas v2.27 */}
+                            {property.plan_pagos_cuotas && property.plan_pagos_cuotas.length > 0 && (
+                              <div className="absolute hidden group-hover:block z-20 bg-white border border-blue-200 shadow-lg rounded-lg p-3 w-64 -left-2 top-6 text-left">
+                                <p className="text-xs font-semibold text-blue-800 mb-2">📋 Detalle del plan:</p>
+                                {property.plan_pagos_cuotas.map((cuota, i) => (
+                                  <p key={i} className="text-xs text-slate-600 mb-1">
+                                    • {cuota.porcentaje}% {
+                                      cuota.momento === 'reserva' ? '🔖 Al reservar' :
+                                      cuota.momento === 'firma_contrato' ? '✍️ Firma contrato' :
+                                      cuota.momento === 'durante_obra' ? '🏗️ Durante obra' :
+                                      cuota.momento === 'cuotas_mensuales' ? '📅 Cuotas' :
+                                      cuota.momento === 'entrega' ? '🔑 Entrega' :
+                                      '📝 Otro'
+                                    }
+                                    {cuota.descripcion && <span className="text-slate-400"> ({cuota.descripcion})</span>}
+                                  </p>
+                                ))}
+                                {property.plan_pagos_texto && (
+                                  <p className="text-xs text-blue-600 mt-2 pt-2 border-t border-blue-100 italic">
+                                    {property.plan_pagos_texto}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         )}
                         {property.solo_tc_paralelo && (
                           <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded" title="Solo acepta USD a tipo de cambio paralelo">

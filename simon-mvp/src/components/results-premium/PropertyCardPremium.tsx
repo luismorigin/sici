@@ -173,6 +173,59 @@ function generarSintesisFiduciaria(datos: {
   return { headline, detalles: lineas.join('\n'), accion, tipo }
 }
 
+// Calcular poder de negociación basado en datos objetivos
+function calcularPoderNegociacion(
+  propiedad: UnidadReal,
+  medianaZona: number
+): { poder: 'alto' | 'moderado' | 'bajo'; score: number; factores: string[] } {
+  let score = 0
+  const factores: string[] = []
+
+  // Factor 1: Tiempo en mercado (peso: 2)
+  if (propiedad.dias_en_mercado > medianaZona * 1.5) {
+    score += 2
+    factores.push(`${propiedad.dias_en_mercado} días publicada (promedio: ${medianaZona}d)`)
+  } else if (propiedad.dias_en_mercado > medianaZona) {
+    score += 1
+    factores.push(`Sobre promedio de tiempo en mercado`)
+  }
+
+  // Factor 2: Precio vs promedio zona (peso: 2)
+  const diffPct = propiedad.posicion_mercado?.diferencia_pct
+  if (diffPct && diffPct > 5) {
+    score += 2
+    factores.push(`${Math.round(diffPct)}% sobre promedio de zona`)
+  } else if (diffPct && diffPct > 0) {
+    score += 1
+    factores.push(`Ligeramente sobre promedio de zona`)
+  }
+
+  // Factor 3: Posición en edificio (peso: 1)
+  if (propiedad.posicion_precio_edificio && propiedad.posicion_precio_edificio > 1 &&
+      propiedad.unidades_en_edificio && propiedad.unidades_en_edificio > 2) {
+    score += 1
+    factores.push(`${propiedad.posicion_precio_edificio - 1} opción(es) más barata(s) en edificio`)
+  }
+
+  // Factor 4: Alto inventario (peso: 1)
+  if (propiedad.unidades_en_edificio && propiedad.unidades_en_edificio >= 5) {
+    score += 1
+    factores.push(`${propiedad.unidades_en_edificio} unidades disponibles`)
+  }
+
+  // Factor 5: Entrega inmediata con tiempo (peso: 1)
+  if (propiedad.estado_construccion !== 'preventa' && propiedad.dias_en_mercado > 60) {
+    score += 1
+    factores.push(`Entrega inmediata con tiempo en mercado`)
+  }
+
+  return {
+    poder: score >= 4 ? 'alto' : score >= 2 ? 'moderado' : 'bajo',
+    score: Math.min(score, 5), // Max 5
+    factores
+  }
+}
+
 // Iconos SVG premium
 const IconBed = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -583,19 +636,49 @@ export default function PropertyCardPremium({
               </div>
             </div>
 
-            {/* 3. PUEDO NEGOCIAR? */}
-            {badgeTiempo && (
-              <div className="p-4 border border-[#0a0a0a]/10 bg-white">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs tracking-[2px] uppercase text-[#999999]">Puedo negociar?</span>
-                  <span className={`text-xs px-3 py-1 ${badgeTiempo.color}`}>{badgeTiempo.label}</span>
+            {/* 3. PUEDO NEGOCIAR? - Con análisis de factores */}
+            {(() => {
+              const negociacion = calcularPoderNegociacion(propiedad, medianaZona)
+              const estrellas = '★'.repeat(negociacion.score) + '☆'.repeat(5 - negociacion.score)
+              const colorPoder = negociacion.poder === 'alto' ? 'bg-[#c9a959]/20 text-[#0a0a0a]' :
+                                 negociacion.poder === 'moderado' ? 'bg-[#f8f6f3] text-[#666666]' :
+                                 'bg-[#0a0a0a]/5 text-[#999999]'
+
+              return (
+                <div className="p-4 border border-[#0a0a0a]/10 bg-white">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs tracking-[2px] uppercase text-[#999999]">Puedo negociar?</span>
+                    <span className={`text-xs px-3 py-1 ${colorPoder}`}>
+                      {negociacion.poder.toUpperCase()} {estrellas}
+                    </span>
+                  </div>
+
+                  {negociacion.factores.length > 0 ? (
+                    <div className="mb-3">
+                      <p className="text-xs text-[#999999] mb-2">Factores a tu favor:</p>
+                      <ul className="space-y-1">
+                        {negociacion.factores.map((factor, i) => (
+                          <li key={i} className="text-sm text-[#666666] flex items-start gap-2">
+                            <span className="text-[#c9a959]">•</span>
+                            {factor}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[#666666] mb-3">
+                      Pocos factores de negociación detectados. El vendedor tiene posición fuerte.
+                    </p>
+                  )}
+
+                  {/* Disclaimer obligatorio */}
+                  <div className="p-2 bg-[#f8f6f3] rounded text-xs text-[#999999] mt-3">
+                    <span className="font-medium">ℹ️</span> Orientación basada en datos públicos.
+                    No constituye asesoría financiera.
+                  </div>
                 </div>
-                {badgeTiempo.accion && (
-                  <p className="text-sm text-[#666666]">{badgeTiempo.accion}</p>
-                )}
-                <p className="text-xs text-[#999999] mt-2">{propiedad.dias_en_mercado} dias publicado (mediana zona: {medianaZona}d)</p>
-              </div>
-            )}
+              )
+            })()}
 
             {/* 4. RANKING EDIFICIO */}
             {tieneRanking && tieneComparables && (
