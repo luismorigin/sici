@@ -27,6 +27,23 @@ const supabaseAuth = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+// Función para convertir imagen URL a base64
+async function imageUrlToBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return null
+
+    const arrayBuffer = await response.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    const contentType = response.headers.get('content-type') || 'image/jpeg'
+    const base64 = buffer.toString('base64')
+    return `data:${contentType};base64,${base64}`
+  } catch (error) {
+    console.error('Error converting image to base64:', url, error)
+    return null
+  }
+}
+
 interface GeneratePDFResponse {
   success: boolean
   pdf_url?: string
@@ -113,25 +130,51 @@ export default async function handler(
       return res.status(403).json({ success: false, error: 'No tienes permiso para esta propiedad' })
     }
 
-    // 4. Obtener fotos ordenadas
-    const { data: fotosData } = await supabase
+    // 4. Obtener fotos ordenadas y convertir a base64
+    const { data: fotosData, error: fotosError } = await supabase
       .from('propiedad_fotos')
       .select('url')
       .eq('propiedad_id', propiedad_id)
       .order('orden', { ascending: true })
       .limit(10)
 
-    const fotos = (fotosData || []).map(f => f.url)
+    console.log('Fotos encontradas:', fotosData?.length || 0, 'Error:', fotosError)
 
-    // 5. Generar QR code
+    // Convertir URLs a base64 en paralelo (para evitar CORS en @react-pdf/renderer)
+    const fotosUrls = (fotosData || []).map(f => f.url)
+    console.log('URLs de fotos:', fotosUrls.slice(0, 3))
+
+    const fotosBase64 = await Promise.all(
+      fotosUrls.map(async (url, idx) => {
+        const result = await imageUrlToBase64(url)
+        console.log(`Foto ${idx}: ${result ? 'OK' : 'FAILED'} - ${url.substring(0, 50)}...`)
+        return result
+      })
+    )
+    const fotos = fotosBase64.filter((f): f is string => f !== null)
+    console.log('Fotos convertidas a base64:', fotos.length)
+
+    // 5. Convertir foto/logo del broker a base64
+    const [brokerFotoBase64, brokerLogoBase64] = await Promise.all([
+      broker.foto_url ? imageUrlToBase64(broker.foto_url) : null,
+      broker.logo_url ? imageUrlToBase64(broker.logo_url) : null,
+    ])
+
+    const brokerWithBase64 = {
+      ...broker,
+      foto_url: brokerFotoBase64 || undefined,
+      logo_url: brokerLogoBase64 || undefined,
+    }
+
+    // 6. Generar QR code
     const shortUrl = getShortUrl(propiedad.codigo)
     const qrDataUrl = await generateQRCode(shortUrl)
 
-    // 6. Renderizar PDF
+    // 7. Renderizar PDF
     const pdfElement = React.createElement(PropertyPDFDocument, {
       propiedad: propiedad as PropiedadBroker,
       fotos,
-      broker: broker as Broker,
+      broker: brokerWithBase64 as Broker,
       qrDataUrl,
     }) as any // Cast needed due to strict @react-pdf/renderer types
     const pdfDoc = pdf(pdfElement)

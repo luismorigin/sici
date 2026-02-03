@@ -252,11 +252,11 @@ export default function NuevaPropiedad() {
       const esParalelo = formData.tipo_cambio === 'paralelo'
       const tcUsado = esParalelo ? tcActuales.paralelo : tcActuales.oficial
 
-      // Crear propiedad
-      const { data, error: insertError } = await supabase
-        .from('propiedades_broker')
-        .insert({
-          broker_id: broker.id,
+      // Crear propiedad via API (bypass RLS)
+      const response = await fetch('/api/broker/create-propiedad', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-broker-id': broker.id },
+        body: JSON.stringify({
           codigo,
           proyecto_nombre: formData.proyecto_nombre,
           desarrollador: formData.desarrollador || null,
@@ -324,12 +324,14 @@ export default function NuevaPropiedad() {
           cantidad_fotos: 0,
           score_calidad: 0
         })
-        .select()
-        .single()
+      })
 
-      if (insertError) {
-        throw new Error(insertError.message)
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Error al crear propiedad')
       }
+
+      const data = result.data
 
       // Redirigir a subir fotos
       router.push(`/broker/fotos/${data.id}`)

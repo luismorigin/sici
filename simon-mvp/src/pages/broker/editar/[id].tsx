@@ -12,18 +12,32 @@ interface FormData {
   zona: string
   direccion: string
   piso: string
+  // Precio y moneda
   precio_usd: string
   tipo_cambio: 'paralelo' | 'oficial'
+  moneda_publicacion: 'usd_oficial' | 'usd_paralelo' | 'bolivianos'
   area_m2: string
   dormitorios: string
   banos: string
   estado_construccion: 'entrega_inmediata' | 'construccion' | 'preventa' | 'planos' | 'no_especificado'
   fecha_entrega: string
-  plan_pagos: string
   descripcion: string
-  parqueo_incluido: boolean
+  // Parqueo
+  parqueo_estado: 'incluido' | 'no_incluido' | 'sin_confirmar'
   cantidad_parqueos: string
-  baulera_incluida: boolean
+  parqueo_precio_adicional: string
+  // Baulera
+  baulera_estado: 'incluida' | 'no_incluida' | 'sin_confirmar'
+  baulera_precio_adicional: string
+  // Forma de pago
+  acepta_plan_pagos: boolean
+  plan_pagos_cuotas: CuotaPago[]
+  plan_pagos_texto: string
+  solo_contado_paralelo: boolean
+  acepta_permuta: boolean
+  precio_negociable: boolean
+  descuento_contado: string
+  // Otros
   expensas_usd: string
   amenidades: string[]
   amenidades_custom: string[]
@@ -35,6 +49,22 @@ interface FormData {
   longitud: number | null
   amenidades_heredadas: string[]
 }
+
+interface CuotaPago {
+  id: string
+  porcentaje: string
+  momento: 'reserva' | 'firma_contrato' | 'durante_obra' | 'cuotas_mensuales' | 'entrega' | 'personalizado'
+  descripcion: string
+}
+
+const MOMENTOS_PAGO = [
+  { id: 'reserva', label: 'Al reservar' },
+  { id: 'firma_contrato', label: 'Firma de contrato' },
+  { id: 'durante_obra', label: 'Durante construcción' },
+  { id: 'cuotas_mensuales', label: 'Cuotas mensuales' },
+  { id: 'entrega', label: 'Contra entrega' },
+  { id: 'personalizado', label: 'Otro momento' },
+]
 
 interface CamposBloqueados {
   [campo: string]: {
@@ -139,6 +169,12 @@ export default function EditarPropiedad() {
   const [nuevoAmenidad, setNuevoAmenidad] = useState('')
   const [nuevoEquipamiento, setNuevoEquipamiento] = useState('')
 
+  // Estado separado para GPS (string) para preservar entrada mientras escribes
+  const [gpsLatStr, setGpsLatStr] = useState('')
+  const [gpsLonStr, setGpsLonStr] = useState('')
+  const [gpsPasteStr, setGpsPasteStr] = useState('')
+  const [gpsPasteError, setGpsPasteError] = useState('')
+
   // Datos originales para detectar cambios
   const [datosOriginales, setDatosOriginales] = useState<Record<string, any>>({})
   const [camposBloqueados, setCamposBloqueados] = useState<CamposBloqueados>({})
@@ -152,16 +188,29 @@ export default function EditarPropiedad() {
     piso: '',
     precio_usd: '',
     tipo_cambio: 'paralelo',
+    moneda_publicacion: 'usd_paralelo',
     area_m2: '',
     dormitorios: '2',
     banos: '2',
     estado_construccion: 'entrega_inmediata',
     fecha_entrega: '',
-    plan_pagos: '',
     descripcion: '',
-    parqueo_incluido: true,
+    // Parqueo
+    parqueo_estado: 'incluido',
     cantidad_parqueos: '1',
-    baulera_incluida: false,
+    parqueo_precio_adicional: '',
+    // Baulera
+    baulera_estado: 'sin_confirmar',
+    baulera_precio_adicional: '',
+    // Forma de pago
+    acepta_plan_pagos: false,
+    plan_pagos_cuotas: [],
+    plan_pagos_texto: '',
+    solo_contado_paralelo: false,
+    acepta_permuta: false,
+    precio_negociable: false,
+    descuento_contado: '',
+    // Otros
     expensas_usd: '',
     amenidades: [],
     amenidades_custom: [],
@@ -173,6 +222,14 @@ export default function EditarPropiedad() {
     longitud: null,
     amenidades_heredadas: []
   })
+
+  // Estado para TC actuales
+  const [tcActuales, setTcActuales] = useState({ paralelo: 9.25, oficial: 6.96 })
+
+  // Cargar TC al inicio
+  useEffect(() => {
+    obtenerTCActuales().then(tc => setTcActuales(tc))
+  }, [])
 
   useEffect(() => {
     if (id && broker) {
@@ -238,6 +295,13 @@ export default function EditarPropiedad() {
       const standardEquipamiento = listaEquipamiento.filter((e: string) => EQUIPAMIENTO_OPCIONES.includes(e))
       const customEquipamiento = listaEquipamiento.filter((e: string) => !EQUIPAMIENTO_OPCIONES.includes(e))
 
+      // Migrar campos legacy parqueo/baulera a nuevo formato
+      const parqueoEstado = data.parqueo_estado || (data.parqueo_incluido ? 'incluido' : 'sin_confirmar')
+      const bauleraEstado = data.baulera_estado || (data.baulera_incluida ? 'incluida' : 'sin_confirmar')
+
+      // Parsear cuotas de plan de pagos si existe
+      const cuotasPago = data.plan_pagos_cuotas || []
+
       setFormData({
         proyecto_nombre: data.proyecto_nombre || '',
         desarrollador: data.desarrollador || '',
@@ -246,16 +310,29 @@ export default function EditarPropiedad() {
         piso: data.piso?.toString() || '',
         precio_usd: data.precio_usd?.toString() || '',
         tipo_cambio: data.tipo_cambio || 'paralelo',
+        moneda_publicacion: data.moneda_publicacion || 'usd_paralelo',
         area_m2: data.area_m2?.toString() || '',
         dormitorios: data.dormitorios?.toString() || '2',
         banos: data.banos?.toString() || '2',
         estado_construccion: data.estado_construccion || 'entrega_inmediata',
         fecha_entrega: data.fecha_entrega || '',
-        plan_pagos: data.plan_pagos || '',
         descripcion: data.descripcion || '',
-        parqueo_incluido: data.parqueo_incluido ?? true,
+        // Parqueo - leer de columnas nuevas o existentes
+        parqueo_estado: parqueoEstado,
         cantidad_parqueos: data.cantidad_parqueos?.toString() || '1',
-        baulera_incluida: data.baulera_incluida ?? false,
+        parqueo_precio_adicional: (data.parqueo_precio_adicional || data.precio_parqueo_extra)?.toString() || '',
+        // Baulera - leer de columnas nuevas o existentes
+        baulera_estado: bauleraEstado,
+        baulera_precio_adicional: (data.baulera_precio_adicional || data.precio_baulera_extra)?.toString() || '',
+        // Forma de pago
+        acepta_plan_pagos: data.acepta_plan_pagos ?? false,
+        plan_pagos_cuotas: cuotasPago,
+        plan_pagos_texto: data.plan_pagos || '',
+        solo_contado_paralelo: data.solo_contado_paralelo ?? false,
+        acepta_permuta: data.acepta_permuta ?? false,
+        precio_negociable: data.precio_negociable ?? false,
+        descuento_contado: data.descuento_contado?.toString() || '',
+        // Otros
         expensas_usd: data.expensas_usd?.toString() || '',
         amenidades: standardAmenidades,
         amenidades_custom: customAmenidades,
@@ -265,8 +342,12 @@ export default function EditarPropiedad() {
         id_proyecto_master: data.id_proyecto_master || null,
         latitud: data.latitud || null,
         longitud: data.longitud || null,
-        amenidades_heredadas: [] // Se calculará si hay proyecto vinculado
+        amenidades_heredadas: []
       })
+
+      // Inicializar strings de GPS
+      setGpsLatStr(data.latitud ? String(data.latitud) : '')
+      setGpsLonStr(data.longitud ? String(data.longitud) : '')
     } catch (err) {
       console.error('Error fetching propiedad:', err)
     } finally {
@@ -276,6 +357,101 @@ export default function EditarPropiedad() {
 
   const updateField = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Parsear coordenadas pegadas de Google Maps (formato: "-17.857, -63.248" o "-17.857,-63.248")
+  const parseGoogleMapsCoords = (input: string) => {
+    setGpsPasteError('')
+    const trimmed = input.trim()
+    if (!trimmed) return
+
+    // Intentar separar por coma (con o sin espacio)
+    const parts = trimmed.split(/[,\s]+/).filter(p => p.length > 0)
+
+    if (parts.length >= 2) {
+      const lat = parseFloat(parts[0])
+      const lon = parseFloat(parts[1])
+
+      // Validar que son números válidos y están en rango razonable
+      if (!isNaN(lat) && !isNaN(lon) &&
+          lat >= -90 && lat <= 90 &&
+          lon >= -180 && lon <= 180) {
+        // Éxito - actualizar los campos
+        setGpsLatStr(String(lat))
+        setGpsLonStr(String(lon))
+        updateField('latitud', lat)
+        updateField('longitud', lon)
+        setGpsPasteStr('') // Limpiar el campo de pegado
+      } else {
+        setGpsPasteError('Coordenadas fuera de rango válido')
+      }
+    } else {
+      setGpsPasteError('Formato no reconocido. Usa: -17.857, -63.248')
+    }
+  }
+
+  // === Funciones para Plan de Pagos ===
+  const agregarCuota = () => {
+    const nuevaCuota: CuotaPago = {
+      id: `cuota_${Date.now()}`,
+      porcentaje: '',
+      momento: 'reserva',
+      descripcion: ''
+    }
+    setFormData(prev => ({
+      ...prev,
+      plan_pagos_cuotas: [...prev.plan_pagos_cuotas, nuevaCuota]
+    }))
+  }
+
+  const eliminarCuota = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      plan_pagos_cuotas: prev.plan_pagos_cuotas.filter(c => c.id !== id)
+    }))
+  }
+
+  const actualizarCuota = (id: string, campo: keyof CuotaPago, valor: string) => {
+    setFormData(prev => ({
+      ...prev,
+      plan_pagos_cuotas: prev.plan_pagos_cuotas.map(c =>
+        c.id === id ? { ...c, [campo]: valor } : c
+      )
+    }))
+  }
+
+  const generarTextoPlanPagos = () => {
+    if (formData.plan_pagos_cuotas.length === 0) return ''
+    return formData.plan_pagos_cuotas
+      .filter(c => c.porcentaje)
+      .map(c => {
+        const momento = MOMENTOS_PAGO.find(m => m.id === c.momento)?.label || c.momento
+        return `${c.porcentaje}% ${momento}${c.descripcion ? ` (${c.descripcion})` : ''}`
+      })
+      .join(', ')
+  }
+
+  // Calcular precio normalizado
+  const calcularPrecioNormalizado = () => {
+    const precio = parseFloat(formData.precio_usd)
+    if (isNaN(precio)) return null
+
+    if (formData.moneda_publicacion === 'usd_oficial') {
+      return { normalizado: precio, formula: null }
+    } else if (formData.moneda_publicacion === 'usd_paralelo') {
+      const normalizado = precio * (tcActuales.paralelo / tcActuales.oficial)
+      return {
+        normalizado: Math.round(normalizado),
+        formula: `$${precio.toLocaleString()} × (${tcActuales.paralelo} / ${tcActuales.oficial})`
+      }
+    } else if (formData.moneda_publicacion === 'bolivianos') {
+      const normalizado = precio / tcActuales.oficial
+      return {
+        normalizado: Math.round(normalizado),
+        formula: `Bs ${precio.toLocaleString()} ÷ ${tcActuales.oficial}`
+      }
+    }
+    return null
   }
 
   const toggleAmenidad = (amenidad: string) => {
@@ -341,7 +517,7 @@ export default function EditarPropiedad() {
   }
 
   const handleSubmit = async () => {
-    if (!supabase || !broker || !id) return
+    if (!broker || !id) return
 
     setSaving(true)
     setError(null)
@@ -362,6 +538,11 @@ export default function EditarPropiedad() {
       const precioOriginalAnterior = datosOriginales.precio_usd
       const precioCambio = precioOriginalAnterior?.toString() !== precioUsd.toString()
 
+      // Preparar texto de plan de pagos (combinar cuotas + texto libre)
+      const planPagosTexto = formData.plan_pagos_cuotas.length > 0
+        ? generarTextoPlanPagos()
+        : formData.plan_pagos_texto
+
       // Preparar nuevos valores
       const nuevosValores: Record<string, any> = {
         proyecto_nombre: formData.proyecto_nombre,
@@ -376,17 +557,34 @@ export default function EditarPropiedad() {
           tipo_cambio_usado: tcUsado
         } : {}),
         tipo_cambio: formData.tipo_cambio,
+        moneda_publicacion: formData.moneda_publicacion,
         depende_de_tc: esParalelo,
         area_m2: parseFloat(formData.area_m2),
         dormitorios: parseInt(formData.dormitorios),
         banos: parseFloat(formData.banos),
         estado_construccion: formData.estado_construccion,
         fecha_entrega: formData.fecha_entrega || null,
-        plan_pagos: formData.plan_pagos || null,
         descripcion: formData.descripcion || null,
-        parqueo_incluido: formData.parqueo_incluido,
-        cantidad_parqueos: formData.parqueo_incluido ? parseInt(formData.cantidad_parqueos) : 0,
-        baulera_incluida: formData.baulera_incluida,
+        // Parqueo - usar columnas existentes + nuevas
+        parqueo_estado: formData.parqueo_estado,
+        parqueo_incluido: formData.parqueo_estado === 'incluido', // legacy compatibility
+        cantidad_parqueos: parseInt(formData.cantidad_parqueos) || 0,
+        precio_parqueo_extra: formData.parqueo_precio_adicional ? parseFloat(formData.parqueo_precio_adicional) : null, // columna existente
+        parqueo_precio_adicional: formData.parqueo_precio_adicional ? parseFloat(formData.parqueo_precio_adicional) : null, // nueva columna
+        // Baulera - usar columnas existentes + nuevas
+        baulera_estado: formData.baulera_estado,
+        baulera_incluida: formData.baulera_estado === 'incluida', // legacy compatibility
+        precio_baulera_extra: formData.baulera_precio_adicional ? parseFloat(formData.baulera_precio_adicional) : null, // columna existente
+        baulera_precio_adicional: formData.baulera_precio_adicional ? parseFloat(formData.baulera_precio_adicional) : null, // nueva columna
+        // Forma de pago - nuevas columnas (funcionarán después de migración 100)
+        acepta_plan_pagos: formData.acepta_plan_pagos,
+        plan_pagos_cuotas: formData.plan_pagos_cuotas,
+        plan_pagos: planPagosTexto || null, // columna existente
+        solo_contado_paralelo: formData.solo_contado_paralelo,
+        acepta_permuta: formData.acepta_permuta,
+        precio_negociable: formData.precio_negociable,
+        descuento_contado: formData.descuento_contado ? parseFloat(formData.descuento_contado) : null,
+        // Otros
         expensas_usd: formData.expensas_usd ? parseFloat(formData.expensas_usd) : null,
         // Herencia de proyecto master
         id_proyecto_master: formData.id_proyecto_master,
@@ -439,9 +637,15 @@ export default function EditarPropiedad() {
         }
       }
 
-      const { error: updateError } = await supabase
-        .from('propiedades_broker')
-        .update({
+      // Usar API endpoint para bypass RLS (soporta impersonación admin)
+      const response = await fetch('/api/broker/update-propiedad', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-broker-id': broker.id
+        },
+        body: JSON.stringify({
+          propiedad_id: id,
           ...nuevosValores,
           amenidades: {
             lista: todasAmenidades,
@@ -467,11 +671,12 @@ export default function EditarPropiedad() {
           historial_cambios: nuevoHistorial,
           updated_at: ahora
         })
-        .eq('id', id)
-        .eq('broker_id', broker.id)
+      })
 
-      if (updateError) {
-        throw new Error(updateError.message)
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Error al guardar')
       }
 
       // Actualizar estado local
@@ -571,14 +776,17 @@ export default function EditarPropiedad() {
                           )
                         ]
                       }))
+                      // Actualizar GPS strings cuando se hereda de proyecto
+                      if (proyecto.latitud) setGpsLatStr(String(proyecto.latitud))
+                      if (proyecto.longitud) setGpsLonStr(String(proyecto.longitud))
                     }}
                     onManualEntry={(nombre: string) => {
+                      // Al escribir manualmente, NO limpiar GPS - el usuario puede haberlo ingresado
                       setFormData(prev => ({
                         ...prev,
                         proyecto_nombre: nombre,
                         id_proyecto_master: null,
-                        latitud: null,
-                        longitud: null,
+                        // Mantener GPS existente (no limpiar)
                         amenidades_heredadas: []
                       }))
                     }}
@@ -659,6 +867,21 @@ export default function EditarPropiedad() {
                   </div>
                 </div>
 
+                {/* Fecha de entrega - inmediatamente después de Estado */}
+                {formData.estado_construccion !== 'entrega_inmediata' && formData.estado_construccion !== 'no_especificado' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Fecha estimada de entrega
+                    </label>
+                    <input
+                      type="month"
+                      value={formData.fecha_entrega}
+                      onChange={(e) => updateField('fecha_entrega', e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                    />
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -687,73 +910,170 @@ export default function EditarPropiedad() {
                   </div>
                 </div>
 
-                {/* Fecha de entrega - solo si NO es entrega inmediata */}
-                {formData.estado_construccion !== 'entrega_inmediata' && formData.estado_construccion !== 'no_especificado' && (
+                {/* GPS - Coordenadas */}
+                <div className="bg-slate-50 rounded-lg p-4 space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Fecha estimada de entrega
+                      📍 Pegar desde Google Maps
                     </label>
                     <input
-                      type="month"
-                      value={formData.fecha_entrega}
-                      onChange={(e) => updateField('fecha_entrega', e.target.value)}
+                      type="text"
+                      value={gpsPasteStr}
+                      onChange={(e) => setGpsPasteStr(e.target.value)}
+                      onBlur={() => parseGoogleMapsCoords(gpsPasteStr)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          parseGoogleMapsCoords(gpsPasteStr)
+                        }
+                      }}
+                      onPaste={(e) => {
+                        // Parsear inmediatamente al pegar
+                        setTimeout(() => parseGoogleMapsCoords(e.currentTarget.value), 0)
+                      }}
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      placeholder="-17.85763, -63.24845"
+                    />
+                    {gpsPasteError ? (
+                      <p className="text-xs text-red-500 mt-1">{gpsPasteError}</p>
+                    ) : (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Copia las coordenadas de Google Maps (clic derecho → "¿Qué hay aquí?")
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-slate-300"></div>
+                    <span className="text-xs text-slate-400">o ingresa manualmente</span>
+                    <div className="flex-1 h-px bg-slate-300"></div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Latitud
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={gpsLatStr}
+                        onChange={(e) => setGpsLatStr(e.target.value)}
+                        onBlur={() => {
+                          const num = gpsLatStr ? parseFloat(gpsLatStr) : null
+                          updateField('latitud', num !== null && !isNaN(num) ? num : null)
+                        }}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                          gpsLatStr && !isNaN(parseFloat(gpsLatStr)) ? 'border-green-300 bg-green-50' : 'border-slate-300 bg-white'
+                        }`}
+                        placeholder="-17.7833"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Longitud
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={gpsLonStr}
+                        onChange={(e) => setGpsLonStr(e.target.value)}
+                        onBlur={() => {
+                          const num = gpsLonStr ? parseFloat(gpsLonStr) : null
+                          updateField('longitud', num !== null && !isNaN(num) ? num : null)
+                        }}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none ${
+                          gpsLonStr && !isNaN(parseFloat(gpsLonStr)) ? 'border-green-300 bg-green-50' : 'border-slate-300 bg-white'
+                        }`}
+                      placeholder="-63.1821"
                     />
                   </div>
-                )}
+                  </div>
+
+                  {/* Indicador de coordenadas válidas */}
+                  {gpsLatStr && gpsLonStr && !isNaN(parseFloat(gpsLatStr)) && !isNaN(parseFloat(gpsLonStr)) && (
+                    <div className="flex items-center gap-2 text-green-600 text-sm">
+                      <span>✅</span>
+                      <span>Coordenadas válidas</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Detalles */}
+            {/* Precio y Moneda */}
             <div>
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">Detalles de la Propiedad</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">💰 Precio y Moneda</h2>
 
               <div className="space-y-4">
+                {/* Tipo de moneda publicada */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Tipo de precio publicado *
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateField('moneda_publicacion', 'usd_oficial')
+                        updateField('tipo_cambio', 'oficial')
+                      }}
+                      className={`py-3 px-3 rounded-lg border-2 text-center transition-colors ${
+                        formData.moneda_publicacion === 'usd_oficial'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700'
+                          : 'border-slate-300 text-slate-600 hover:border-slate-400'
+                      }`}
+                    >
+                      <div className="text-sm font-medium">USD Oficial</div>
+                      <div className="text-xs text-slate-500">Sin conversión</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateField('moneda_publicacion', 'usd_paralelo')
+                        updateField('tipo_cambio', 'paralelo')
+                      }}
+                      className={`py-3 px-3 rounded-lg border-2 text-center transition-colors ${
+                        formData.moneda_publicacion === 'usd_paralelo'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700'
+                          : 'border-slate-300 text-slate-600 hover:border-slate-400'
+                      }`}
+                    >
+                      <div className="text-sm font-medium">USD Paralelo</div>
+                      <div className="text-xs text-slate-500">TC {tcActuales.paralelo}</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateField('moneda_publicacion', 'bolivianos')
+                        updateField('tipo_cambio', 'oficial')
+                      }}
+                      className={`py-3 px-3 rounded-lg border-2 text-center transition-colors ${
+                        formData.moneda_publicacion === 'bolivianos'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700'
+                          : 'border-slate-300 text-slate-600 hover:border-slate-400'
+                      }`}
+                    >
+                      <div className="text-sm font-medium">Bolivianos</div>
+                      <div className="text-xs text-slate-500">TC {tcActuales.oficial}</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Precio */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Precio USD *
+                      Precio publicado * ({formData.moneda_publicacion === 'bolivianos' ? 'Bs' : 'USD'})
                     </label>
                     <input
                       type="number"
                       value={formData.precio_usd}
                       onChange={(e) => updateField('precio_usd', e.target.value)}
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      placeholder={formData.moneda_publicacion === 'bolivianos' ? 'Ej: 350000' : 'Ej: 95000'}
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Tipo de cambio *
-                    </label>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => updateField('tipo_cambio', 'paralelo')}
-                        className={`flex-1 py-3 px-4 rounded-lg border-2 text-sm font-medium transition-colors ${
-                          formData.tipo_cambio === 'paralelo'
-                            ? 'border-amber-500 bg-amber-50 text-amber-700'
-                            : 'border-slate-300 text-slate-600 hover:border-slate-400'
-                        }`}
-                      >
-                        Paralelo
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateField('tipo_cambio', 'oficial')}
-                        className={`flex-1 py-3 px-4 rounded-lg border-2 text-sm font-medium transition-colors ${
-                          formData.tipo_cambio === 'oficial'
-                            ? 'border-amber-500 bg-amber-50 text-amber-700'
-                            : 'border-slate-300 text-slate-600 hover:border-slate-400'
-                        }`}
-                      >
-                        Oficial
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       Área m² *
@@ -765,7 +1085,36 @@ export default function EditarPropiedad() {
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                     />
                   </div>
+                </div>
 
+                {/* Precio normalizado */}
+                {formData.moneda_publicacion !== 'usd_oficial' && formData.precio_usd && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-blue-700">
+                      <span>💱</span>
+                      <span className="font-medium">
+                        Precio normalizado: ${calcularPrecioNormalizado()?.normalizado?.toLocaleString()} USD oficial
+                      </span>
+                    </div>
+                    {calcularPrecioNormalizado()?.formula && (
+                      <div className="text-xs text-blue-600 mt-1">
+                        {calcularPrecioNormalizado()?.formula} = ${calcularPrecioNormalizado()?.normalizado?.toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Precio/m2 */}
+                {formData.precio_usd && formData.area_m2 && (
+                  <div className="text-sm text-slate-500">
+                    Precio/m²: <span className="font-medium text-slate-700">
+                      ${Math.round(parseFloat(formData.precio_usd) / parseFloat(formData.area_m2)).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+
+                {/* Expensas */}
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       Expensas (USD/mes)
@@ -775,10 +1124,18 @@ export default function EditarPropiedad() {
                       value={formData.expensas_usd}
                       onChange={(e) => updateField('expensas_usd', e.target.value)}
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      placeholder="Ej: 85"
                     />
                   </div>
                 </div>
+              </div>
+            </div>
 
+            {/* Características */}
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">🏠 Características</h2>
+
+              <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -789,6 +1146,7 @@ export default function EditarPropiedad() {
                       onChange={(e) => updateField('dormitorios', e.target.value)}
                       className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                     >
+                      <option value="0">Monoambiente</option>
                       {[1, 2, 3, 4, 5].map(n => (
                         <option key={n} value={n}>{n}</option>
                       ))}
@@ -811,73 +1169,265 @@ export default function EditarPropiedad() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="parqueo"
-                      checked={formData.parqueo_incluido}
-                      onChange={(e) => updateField('parqueo_incluido', e.target.checked)}
-                      className="w-5 h-5 rounded text-amber-500 focus:ring-amber-500"
-                    />
-                    <label htmlFor="parqueo" className="text-sm font-medium text-slate-700">
-                      Parqueo incluido
-                    </label>
-                    {formData.parqueo_incluido && (
+                {/* Parqueo */}
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-3">
+                    🚗 Parqueo
+                  </label>
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    {[
+                      { id: 'incluido', label: 'Incluido', desc: 'En el precio' },
+                      { id: 'no_incluido', label: 'No incluido', desc: 'Precio aparte' },
+                      { id: 'sin_confirmar', label: 'Sin confirmar', desc: 'Por verificar' }
+                    ].map(opt => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => updateField('parqueo_estado', opt.id)}
+                        className={`py-2 px-3 rounded-lg border-2 text-center transition-colors ${
+                          formData.parqueo_estado === opt.id
+                            ? 'border-amber-500 bg-amber-50 text-amber-700'
+                            : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
+                        }`}
+                      >
+                        <div className="text-sm font-medium">{opt.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Cantidad</label>
                       <select
                         value={formData.cantidad_parqueos}
                         onChange={(e) => updateField('cantidad_parqueos', e.target.value)}
-                        className="w-20 px-2 py-1 border border-slate-300 rounded text-sm"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                       >
-                        {[1, 2, 3, 4].map(n => (
+                        {[0, 1, 2, 3, 4].map(n => (
                           <option key={n} value={n}>{n}</option>
                         ))}
                       </select>
+                    </div>
+                    {formData.parqueo_estado === 'no_incluido' && (
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">Precio adicional (USD)</label>
+                        <input
+                          type="number"
+                          value={formData.parqueo_precio_adicional}
+                          onChange={(e) => updateField('parqueo_precio_adicional', e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          placeholder="Ej: 8000"
+                        />
+                      </div>
                     )}
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="baulera"
-                      checked={formData.baulera_incluida}
-                      onChange={(e) => updateField('baulera_incluida', e.target.checked)}
-                      className="w-5 h-5 rounded text-amber-500 focus:ring-amber-500"
-                    />
-                    <label htmlFor="baulera" className="text-sm font-medium text-slate-700">
-                      Baulera incluida
-                    </label>
-                  </div>
                 </div>
 
-                {/* Plan de pagos - solo si NO es entrega inmediata */}
-                {formData.estado_construccion !== 'entrega_inmediata' && formData.estado_construccion !== 'no_especificado' && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Plan de Pagos
-                    </label>
-                    <textarea
-                      value={formData.plan_pagos}
-                      onChange={(e) => updateField('plan_pagos', e.target.value)}
-                      rows={3}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none resize-none"
-                      placeholder="Ej: 30% reserva, 40% durante construcción, 30% contra entrega"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Descripción
+                {/* Baulera */}
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-3">
+                    📦 Baulera
                   </label>
-                  <textarea
-                    value={formData.descripcion}
-                    onChange={(e) => updateField('descripcion', e.target.value)}
-                    rows={4}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none resize-none"
-                  />
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    {[
+                      { id: 'incluida', label: 'Incluida', desc: 'En el precio' },
+                      { id: 'no_incluida', label: 'No incluida', desc: 'Precio aparte' },
+                      { id: 'sin_confirmar', label: 'Sin confirmar', desc: 'Por verificar' }
+                    ].map(opt => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => updateField('baulera_estado', opt.id)}
+                        className={`py-2 px-3 rounded-lg border-2 text-center transition-colors ${
+                          formData.baulera_estado === opt.id
+                            ? 'border-amber-500 bg-amber-50 text-amber-700'
+                            : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
+                        }`}
+                      >
+                        <div className="text-sm font-medium">{opt.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                  {formData.baulera_estado === 'no_incluida' && (
+                    <div className="w-1/2">
+                      <label className="block text-xs text-slate-500 mb-1">Precio adicional (USD)</label>
+                      <input
+                        type="number"
+                        value={formData.baulera_precio_adicional}
+                        onChange={(e) => updateField('baulera_precio_adicional', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        placeholder="Ej: 3000"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
+            </div>
+
+            {/* Forma de Pago */}
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">💳 Forma de Pago</h2>
+
+              <div className="space-y-4">
+                {/* Opciones de pago */}
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formData.acepta_plan_pagos}
+                      onChange={(e) => updateField('acepta_plan_pagos', e.target.checked)}
+                      className="w-5 h-5 rounded text-amber-500 focus:ring-amber-500"
+                    />
+                    <div>
+                      <div className="font-medium text-slate-700">📅 Plan de pagos con desarrollador</div>
+                      <div className="text-xs text-slate-500">Acepta cuotas directas con el desarrollador</div>
+                    </div>
+                  </label>
+
+                  {/* Constructor de Plan de Pagos */}
+                  {formData.acepta_plan_pagos && (
+                    <div className="ml-8 p-4 border border-amber-200 bg-amber-50 rounded-lg space-y-4">
+                      <div className="text-sm font-medium text-amber-800">Detalle del plan de pagos:</div>
+
+                      {/* Cuotas */}
+                      {formData.plan_pagos_cuotas.map((cuota, index) => (
+                        <div key={cuota.id} className="flex items-center gap-2 bg-white p-2 rounded-lg">
+                          <input
+                            type="number"
+                            value={cuota.porcentaje}
+                            onChange={(e) => actualizarCuota(cuota.id, 'porcentaje', e.target.value)}
+                            className="w-20 px-2 py-1 border border-slate-300 rounded text-sm text-center"
+                            placeholder="%"
+                          />
+                          <span className="text-slate-500">%</span>
+                          <select
+                            value={cuota.momento}
+                            onChange={(e) => actualizarCuota(cuota.id, 'momento', e.target.value)}
+                            className="flex-1 px-2 py-1 border border-slate-300 rounded text-sm"
+                          >
+                            {MOMENTOS_PAGO.map(m => (
+                              <option key={m.id} value={m.id}>{m.label}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            value={cuota.descripcion}
+                            onChange={(e) => actualizarCuota(cuota.id, 'descripcion', e.target.value)}
+                            className="w-32 px-2 py-1 border border-slate-300 rounded text-sm"
+                            placeholder="Nota opcional"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => eliminarCuota(cuota.id)}
+                            className="p-1 text-red-500 hover:text-red-700"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={agregarCuota}
+                        className="text-sm text-amber-700 hover:text-amber-800 font-medium"
+                      >
+                        + Agregar cuota
+                      </button>
+
+                      {/* Separador */}
+                      <div className="flex items-center gap-2 text-xs text-amber-600">
+                        <div className="flex-1 h-px bg-amber-300"></div>
+                        <span>o describir libremente</span>
+                        <div className="flex-1 h-px bg-amber-300"></div>
+                      </div>
+
+                      {/* Texto libre */}
+                      <textarea
+                        value={formData.plan_pagos_texto}
+                        onChange={(e) => updateField('plan_pagos_texto', e.target.value)}
+                        rows={2}
+                        className="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm resize-none"
+                        placeholder="Ej: 30% reserva, 40% en 12 cuotas durante construcción, 30% contra entrega"
+                      />
+
+                      {/* Preview del texto generado */}
+                      {formData.plan_pagos_cuotas.length > 0 && generarTextoPlanPagos() && (
+                        <div className="text-xs text-amber-700 bg-amber-100 p-2 rounded">
+                          <span className="font-medium">Vista previa:</span> {generarTextoPlanPagos()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <label className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formData.solo_contado_paralelo}
+                      onChange={(e) => updateField('solo_contado_paralelo', e.target.checked)}
+                      className="w-5 h-5 rounded text-amber-500 focus:ring-amber-500"
+                    />
+                    <div>
+                      <div className="font-medium text-slate-700">💱 Solo contado TC paralelo</div>
+                      <div className="text-xs text-slate-500">Solo acepta pago al contado en USD paralelo</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formData.acepta_permuta}
+                      onChange={(e) => updateField('acepta_permuta', e.target.checked)}
+                      className="w-5 h-5 rounded text-amber-500 focus:ring-amber-500"
+                    />
+                    <div>
+                      <div className="font-medium text-slate-700">🔄 Acepta Permuta</div>
+                      <div className="text-xs text-slate-500">Vehículo o propiedad como parte de pago</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formData.precio_negociable}
+                      onChange={(e) => updateField('precio_negociable', e.target.checked)}
+                      className="w-5 h-5 rounded text-amber-500 focus:ring-amber-500"
+                    />
+                    <div>
+                      <div className="font-medium text-slate-700">🤝 Precio Negociable</div>
+                      <div className="text-xs text-slate-500">Acepta ofertas</div>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Descuento contado */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      📉 Descuento por pago contado (%)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.descuento_contado}
+                      onChange={(e) => updateField('descuento_contado', e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                      placeholder="Ej: 5"
+                      min="0"
+                      max="50"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Descripción */}
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">📝 Descripción</h2>
+              <textarea
+                value={formData.descripcion}
+                onChange={(e) => updateField('descripcion', e.target.value)}
+                rows={4}
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none resize-none"
+                placeholder="Describe las características especiales de esta propiedad..."
+              />
             </div>
 
             {/* Amenidades */}

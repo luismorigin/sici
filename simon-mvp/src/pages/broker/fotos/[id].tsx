@@ -189,12 +189,20 @@ export default function GestionarFotos() {
   const removeFoto = async (index: number) => {
     const foto = fotos[index]
 
-    // Si ya está en BD, eliminar
-    if (foto.id && supabase) {
-      await supabase
-        .from('propiedad_fotos')
-        .delete()
-        .eq('id', foto.id)
+    // Si ya está en BD, eliminar via API (soporta impersonación admin)
+    if (foto.id && broker) {
+      await fetch('/api/broker/manage-fotos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-broker-id': broker.id
+        },
+        body: JSON.stringify({
+          action: 'delete',
+          propiedad_id: propiedad?.id,
+          foto_id: foto.id
+        })
+      })
     }
 
     setFotos(prev => prev.filter((_, i) => i !== index))
@@ -219,49 +227,56 @@ export default function GestionarFotos() {
   }
 
   const guardarFotos = async () => {
-    if (!supabase || !propiedad) return
+    if (!propiedad || !broker) return
 
     setSaving(true)
     setError(null)
     setSuccess(false)
 
     try {
-      // Guardar fotos nuevas
+      // Guardar fotos nuevas via API (soporta impersonación admin)
       for (const foto of fotos) {
         if (foto.isNew) {
-          const { error: insertError } = await supabase
-            .from('propiedad_fotos')
-            .insert({
+          const response = await fetch('/api/broker/manage-fotos', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-broker-id': broker.id
+            },
+            body: JSON.stringify({
+              action: 'add',
               propiedad_id: propiedad.id,
               url: foto.url,
-              thumbnail_url: foto.url,
               orden: foto.orden,
-              tipo: foto.tipo,
-              es_principal: foto.es_principal,
               hash: `${propiedad.codigo}-${Date.now()}-${foto.orden}`
             })
+          })
 
-          if (insertError) throw insertError
-        } else if (foto.id) {
-          // Actualizar fotos existentes
-          const { error: updateError } = await supabase
-            .from('propiedad_fotos')
-            .update({
-              orden: foto.orden,
-              tipo: foto.tipo,
-              es_principal: foto.es_principal
-            })
-            .eq('id', foto.id)
-
-          if (updateError) throw updateError
+          const data = await response.json()
+          if (!data.success) throw new Error(data.error)
         }
       }
 
-      // Actualizar cantidad_fotos en propiedad
-      await supabase
-        .from('propiedades_broker')
-        .update({ cantidad_fotos: fotos.length })
-        .eq('id', propiedad.id)
+      // Reordenar todas las fotos
+      const fotosParaReordenar = fotos.filter(f => f.id).map(f => ({
+        id: f.id,
+        orden: f.orden
+      }))
+
+      if (fotosParaReordenar.length > 0) {
+        await fetch('/api/broker/manage-fotos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-broker-id': broker.id
+          },
+          body: JSON.stringify({
+            action: 'reorder',
+            propiedad_id: propiedad.id,
+            fotos: fotosParaReordenar
+          })
+        })
+      }
 
       // Recargar para obtener IDs
       await fetchPropiedad()
@@ -276,7 +291,7 @@ export default function GestionarFotos() {
   }
 
   const publicarPropiedad = async () => {
-    if (!supabase || !propiedad) return
+    if (!propiedad || !broker) return
 
     if (fotos.length < 3) {
       setError('Necesitas al menos 3 fotos para publicar')
@@ -290,17 +305,25 @@ export default function GestionarFotos() {
       // Calcular score de calidad
       const score = Math.min(100, fotos.length * 10 + 20)
 
-      // Actualizar estado
-      await supabase
-        .from('propiedades_broker')
-        .update({
+      // Actualizar estado via API (soporta impersonación admin)
+      const response = await fetch('/api/broker/update-propiedad', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-broker-id': broker.id
+        },
+        body: JSON.stringify({
+          propiedad_id: propiedad.id,
           estado: 'publicada',
           cantidad_fotos: fotos.length,
           score_calidad: score,
           es_calidad_perfecta: score >= 95,
           fecha_publicacion: new Date().toISOString()
         })
-        .eq('id', propiedad.id)
+      })
+
+      const data = await response.json()
+      if (!data.success) throw new Error(data.error)
 
       router.push('/broker/dashboard')
     } catch (err: any) {

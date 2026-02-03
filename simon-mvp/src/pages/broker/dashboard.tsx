@@ -27,6 +27,7 @@ interface DashboardStats {
   propiedades_publicadas: number
   total_vistas: number
   total_leads: number
+  cma_creditos: number
 }
 
 interface PDFModalState {
@@ -38,6 +39,15 @@ interface PDFModalState {
   propiedadCodigo: string
 }
 
+interface CMAModalState {
+  isOpen: boolean
+  isLoading: boolean
+  pdfUrl: string | null
+  error: string | null
+  propiedadCodigo: string
+  creditosRestantes: number | null
+}
+
 export default function BrokerDashboard() {
   const { broker, isVerified, isImpersonating, exitImpersonation } = useBrokerAuth(true)
   const [propiedades, setPropiedades] = useState<PropiedadBroker[]>([])
@@ -45,7 +55,8 @@ export default function BrokerDashboard() {
     total_propiedades: 0,
     propiedades_publicadas: 0,
     total_vistas: 0,
-    total_leads: 0
+    total_leads: 0,
+    cma_creditos: 0
   })
   const [loading, setLoading] = useState(true)
   const [pdfModal, setPdfModal] = useState<PDFModalState>({
@@ -55,6 +66,14 @@ export default function BrokerDashboard() {
     shortLink: null,
     error: null,
     propiedadCodigo: ''
+  })
+  const [cmaModal, setCmaModal] = useState<CMAModalState>({
+    isOpen: false,
+    isLoading: false,
+    pdfUrl: null,
+    error: null,
+    propiedadCodigo: '',
+    creditosRestantes: null
   })
 
   useEffect(() => {
@@ -116,12 +135,20 @@ export default function BrokerDashboard() {
 
       setPropiedades(props)
 
+      // Obtener créditos CMA del broker
+      const { data: brokerCredits } = await supabase
+        .from('brokers')
+        .select('cma_creditos')
+        .eq('id', broker.id)
+        .single()
+
       // Calcular stats
       setStats({
         total_propiedades: props.length,
         propiedades_publicadas: props.filter(p => p.estado === 'publicada').length,
         total_vistas: props.reduce((sum, p) => sum + (p.vistas || 0), 0),
-        total_leads: 0 // TODO: contar desde broker_leads
+        total_leads: 0, // TODO: contar desde broker_leads
+        cma_creditos: brokerCredits?.cma_creditos || 0
       })
     } catch (err) {
       console.error('Error:', err)
@@ -158,24 +185,18 @@ export default function BrokerDashboard() {
       return
     }
 
-    if (!supabase || !broker) return
+    if (!broker) return
 
     try {
-      // Primero borrar fotos asociadas
-      await supabase
-        .from('propiedad_fotos')
-        .delete()
-        .eq('propiedad_id', propId)
+      const response = await fetch('/api/broker/delete-propiedad', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-broker-id': broker.id },
+        body: JSON.stringify({ propiedad_id: propId })
+      })
 
-      // Luego borrar la propiedad
-      const { error } = await supabase
-        .from('propiedades_broker')
-        .delete()
-        .eq('id', propId)
-        .eq('broker_id', broker.id)
-
-      if (error) {
-        alert('Error al eliminar: ' + error.message)
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        alert('Error al eliminar: ' + (result.error || 'Error desconocido'))
         return
       }
 
@@ -188,6 +209,47 @@ export default function BrokerDashboard() {
     } catch (err) {
       console.error('Error eliminando:', err)
       alert('Error al eliminar la propiedad')
+    }
+  }
+
+  const handleToggleEstado = async (propId: number, estadoActual: string) => {
+    if (!broker) return
+
+    const nuevoEstado = estadoActual === 'publicada' ? 'pausada' : 'publicada'
+    const accion = nuevoEstado === 'publicada' ? 'publicar' : 'pausar'
+
+    if (!confirm(`¿${accion.charAt(0).toUpperCase() + accion.slice(1)} esta propiedad?`)) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/broker/update-propiedad', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-broker-id': broker.id },
+        body: JSON.stringify({ propiedad_id: propId, estado: nuevoEstado })
+      })
+
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        alert('Error al cambiar estado: ' + (result.error || 'Error desconocido'))
+        return
+      }
+
+      // Actualizar lista local
+      setPropiedades(prev => prev.map(p =>
+        p.id === propId ? { ...p, estado: nuevoEstado as any } : p
+      ))
+
+      // Actualizar stats
+      setStats(prev => ({
+        ...prev,
+        propiedades_publicadas: nuevoEstado === 'publicada'
+          ? prev.propiedades_publicadas + 1
+          : prev.propiedades_publicadas - 1
+      }))
+    } catch (err) {
+      console.error('Error cambiando estado:', err)
+      alert('Error al cambiar el estado')
     }
   }
 
@@ -258,6 +320,77 @@ export default function BrokerDashboard() {
     } catch (err) {
       console.error('Error copiando:', err)
     }
+  }
+
+  const handleGenerateCMA = async (propId: number, codigo: string) => {
+    if (!broker) return
+
+    // Verificar créditos antes de abrir modal
+    if (stats.cma_creditos <= 0) {
+      alert('No tienes créditos CMA disponibles. Completa 5 propiedades con 100% de calidad para obtener 1 crédito gratis.')
+      return
+    }
+
+    if (!confirm(`Generar CMA para ${codigo}? Esto usará 1 crédito CMA (tienes ${stats.cma_creditos}).`)) {
+      return
+    }
+
+    setCmaModal({
+      isOpen: true,
+      isLoading: true,
+      pdfUrl: null,
+      error: null,
+      propiedadCodigo: codigo,
+      creditosRestantes: null
+    })
+
+    try {
+      const response = await fetch('/api/broker/generate-cma', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-broker-id': broker.id
+        },
+        body: JSON.stringify({ propiedad_id: propId })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Error generando CMA')
+      }
+
+      setCmaModal(prev => ({
+        ...prev,
+        isLoading: false,
+        pdfUrl: data.pdf_url,
+        creditosRestantes: data.creditos_restantes
+      }))
+
+      // Actualizar stats con créditos restantes
+      setStats(prev => ({
+        ...prev,
+        cma_creditos: data.creditos_restantes
+      }))
+    } catch (err) {
+      console.error('Error generando CMA:', err)
+      setCmaModal(prev => ({
+        ...prev,
+        isLoading: false,
+        error: err instanceof Error ? err.message : 'Error desconocido'
+      }))
+    }
+  }
+
+  const closeCmaModal = () => {
+    setCmaModal({
+      isOpen: false,
+      isLoading: false,
+      pdfUrl: null,
+      error: null,
+      propiedadCodigo: '',
+      creditosRestantes: null
+    })
   }
 
   return (
@@ -351,7 +484,7 @@ export default function BrokerDashboard() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-white rounded-xl p-4 shadow-sm">
             <p className="text-slate-500 text-sm">Propiedades</p>
             <p className="text-2xl font-bold text-slate-900">{stats.total_propiedades}</p>
@@ -367,6 +500,11 @@ export default function BrokerDashboard() {
           <div className="bg-white rounded-xl p-4 shadow-sm">
             <p className="text-slate-500 text-sm">Leads</p>
             <p className="text-2xl font-bold text-amber-600">{stats.total_leads}</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 shadow-sm border-2 border-purple-200">
+            <p className="text-slate-500 text-sm">Créditos CMA</p>
+            <p className="text-2xl font-bold text-purple-600">{stats.cma_creditos}</p>
+            <p className="text-xs text-slate-400 mt-1">5 props perfectas = 1 crédito</p>
           </div>
         </div>
 
@@ -466,6 +604,17 @@ export default function BrokerDashboard() {
                     <div className="flex items-center gap-2 flex-wrap">
                       {(isVerified || isImpersonating) ? (
                         <>
+                          <button
+                            onClick={() => handleToggleEstado(prop.id, prop.estado)}
+                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                              prop.estado === 'publicada'
+                                ? 'text-yellow-600 hover:bg-yellow-50'
+                                : 'text-green-600 hover:bg-green-50'
+                            }`}
+                            title={prop.estado === 'publicada' ? 'Pausar publicación' : 'Publicar propiedad'}
+                          >
+                            {prop.estado === 'publicada' ? '⏸️ Pausar' : '🚀 Publicar'}
+                          </button>
                           <Link
                             href={`/broker/editar/${prop.id}`}
                             className="px-4 py-2 text-sm font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
@@ -484,6 +633,18 @@ export default function BrokerDashboard() {
                             title="Generar PDF profesional"
                           >
                             📄 PDF
+                          </button>
+                          <button
+                            onClick={() => handleGenerateCMA(prop.id, prop.codigo)}
+                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                              stats.cma_creditos > 0
+                                ? 'text-purple-600 hover:bg-purple-50'
+                                : 'text-slate-400 cursor-not-allowed'
+                            }`}
+                            title={stats.cma_creditos > 0 ? 'Generar Análisis de Mercado' : 'Sin créditos CMA'}
+                            disabled={stats.cma_creditos <= 0}
+                          >
+                            📊 CMA
                           </button>
                           <button
                             onClick={() => handleDelete(prop.id, prop.codigo)}
@@ -603,6 +764,89 @@ export default function BrokerDashboard() {
 
                   <button
                     onClick={closePdfModal}
+                    className="mt-4 text-sm text-slate-500 hover:text-slate-700"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* CMA Modal */}
+        {cmaModal.isOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">
+                  📊 Análisis de Mercado (CMA)
+                </h3>
+                <button
+                  onClick={closeCmaModal}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {cmaModal.isLoading && (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+                  <p className="text-slate-600">Generando CMA para {cmaModal.propiedadCodigo}...</p>
+                  <p className="text-sm text-slate-400 mt-2">Analizando comparables del mercado</p>
+                </div>
+              )}
+
+              {cmaModal.error && (
+                <div className="text-center py-6">
+                  <div className="text-4xl mb-4">❌</div>
+                  <p className="text-red-600 font-medium mb-2">Error al generar CMA</p>
+                  <p className="text-sm text-slate-500">{cmaModal.error}</p>
+                  <button
+                    onClick={closeCmaModal}
+                    className="mt-4 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              )}
+
+              {cmaModal.pdfUrl && (
+                <div className="text-center py-4">
+                  <div className="text-4xl mb-4">📊</div>
+                  <p className="text-purple-600 font-medium mb-4">CMA generado exitosamente</p>
+
+                  <div className="bg-purple-50 rounded-lg p-4 mb-4">
+                    <p className="text-xs text-purple-500 mb-1">Propiedad Analizada</p>
+                    <p className="font-mono text-sm text-purple-700">{cmaModal.propiedadCodigo}</p>
+                    {cmaModal.creditosRestantes !== null && (
+                      <p className="text-xs text-purple-500 mt-2">
+                        Créditos restantes: <strong>{cmaModal.creditosRestantes}</strong>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <a
+                      href={cmaModal.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 bg-purple-600 text-white font-semibold px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      📥 Descargar CMA
+                    </a>
+
+                    <button
+                      onClick={() => copyToClipboard(cmaModal.pdfUrl!)}
+                      className="flex items-center justify-center gap-2 bg-slate-100 text-slate-700 font-semibold px-4 py-3 rounded-lg hover:bg-slate-200 transition-colors"
+                    >
+                      📋 Copiar Link
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={closeCmaModal}
                     className="mt-4 text-sm text-slate-500 hover:text-slate-700"
                   >
                     Cerrar

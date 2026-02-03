@@ -156,13 +156,17 @@ export default function BrokerPerfil() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!supabase || !broker) return
+    if (!broker) return
 
     setSaving(true)
     try {
-      const { error } = await supabase
-        .from('brokers')
-        .update({
+      const response = await fetch('/api/broker/update-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-broker-id': broker.id, // Para impersonación admin
+        },
+        body: JSON.stringify({
           nombre: profile.nombre,
           telefono: profile.telefono,
           whatsapp: profile.whatsapp || null,
@@ -170,11 +174,13 @@ export default function BrokerPerfil() {
           empresa: profile.empresa || null,
           foto_url: profile.foto_url || null,
           logo_url: profile.logo_url || null,
-        })
-        .eq('id', broker.id)
+        }),
+      })
 
-      if (error) {
-        throw error
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Error al guardar')
       }
 
       showMessage('success', 'Perfil actualizado correctamente')
