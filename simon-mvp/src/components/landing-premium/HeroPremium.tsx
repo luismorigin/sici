@@ -106,7 +106,7 @@ export default function HeroPremium() {
         <div className="flex items-center justify-center flex-wrap gap-3 md:gap-6 mt-6">
           <span className="text-white/40 text-sm">Sin cuenta</span>
           <span className="text-white/20 hidden md:inline">·</span>
-          <span className="text-white/40 text-sm">Datos verificados</span>
+          <span className="text-[#c9a959]/70 text-sm">Datos actualizados diariamente</span>
           <span className="text-white/20 hidden md:inline">·</span>
           <span className="text-white/40 text-sm">100% gratis</span>
         </div>
