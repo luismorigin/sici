@@ -843,6 +843,66 @@ export default function PropertyCardPremium({
               </div>
             )}
 
+            {/* 6. DESEABLES PEDIDOS */}
+            {deseablesUsuario.length > 0 && (
+              <div className="p-4 border border-[#0a0a0a]/10 bg-white">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs tracking-[2px] uppercase text-[#999999]">Tus deseables</span>
+                  {(() => {
+                    const confirmadas = deseablesUsuario.filter(a =>
+                      amenitiesConfirmados.some(c => c.toLowerCase().includes(a.toLowerCase()))
+                    ).length
+                    const porVerificar = deseablesUsuario.filter(a =>
+                      !amenitiesConfirmados.some(c => c.toLowerCase().includes(a.toLowerCase())) &&
+                      (propiedad.amenities_por_verificar || []).some(c => c.toLowerCase().includes(a.toLowerCase()))
+                    ).length
+                    const total = confirmadas + porVerificar
+                    return total > 0 ? (
+                      <span className={`text-xs px-3 py-1 ${
+                        confirmadas === deseablesUsuario.length ? 'bg-[#c9a959]/20 text-[#0a0a0a]' : 'bg-[#f8f6f3] text-[#666666]'
+                      }`}>
+                        {total}/{deseablesUsuario.length}
+                      </span>
+                    ) : (
+                      <span className="text-xs px-3 py-1 bg-[#f8f6f3] text-[#666666]">
+                        0/{deseablesUsuario.length}
+                      </span>
+                    )
+                  })()}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {deseablesUsuario.map((amenidad, i) => {
+                    const confirmada = amenitiesConfirmados.some(c => c.toLowerCase().includes(amenidad.toLowerCase()))
+                    const porVerificar = (propiedad.amenities_por_verificar || []).some(c => c.toLowerCase().includes(amenidad.toLowerCase()))
+
+                    // Solo mostrar si está confirmada o por verificar
+                    if (!confirmada && !porVerificar) return null
+
+                    return (
+                      <span key={i} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs ${
+                        confirmada ? 'bg-[#c9a959]/20 text-[#0a0a0a]' :
+                        'bg-[#f8f6f3] text-[#666666] border border-[#0a0a0a]/10'
+                      }`}>
+                        {confirmada ? <IconCheck /> : <IconQuestion />}
+                        {amenidad}
+                      </span>
+                    )
+                  })}
+                </div>
+
+                {deseablesUsuario.some(a =>
+                  (propiedad.amenities_por_verificar || []).some(c => c.toLowerCase().includes(a.toLowerCase()))
+                ) && (
+                  <p className="text-xs text-[#999999] mt-3">
+                    Pregunta por: {deseablesUsuario.filter(a =>
+                      (propiedad.amenities_por_verificar || []).some(c => c.toLowerCase().includes(a.toLowerCase()))
+                    ).join(', ')}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Ubicacion */}
             {(propiedad.microzona || propiedad.zona) && (
               <div className="flex items-center justify-between text-sm">
