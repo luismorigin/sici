@@ -61,6 +61,45 @@ const ESTADO_ENTREGA_PREMIUM = [
   { value: 'solo_preventa', label: 'Solo preventa' },
 ]
 
+// Iconos SVG minimalistas premium
+const IconDollar = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#c9a959]">
+    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+  </svg>
+)
+
+const IconBed = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#c9a959]">
+    <path d="M3 18v-6a2 2 0 012-2h14a2 2 0 012 2v6M3 18v2M21 18v2M6 10V7a2 2 0 012-2h8a2 2 0 012 2v3" />
+  </svg>
+)
+
+const IconPin = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#c9a959]">
+    <path d="M12 21c-4-4-8-7.5-8-12a8 8 0 1116 0c0 4.5-4 8-8 12z" />
+    <circle cx="12" cy="9" r="2.5" />
+  </svg>
+)
+
+const IconBuilding = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#c9a959]">
+    <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4M9 9h.01M15 9h.01M9 13h.01M15 13h.01" />
+  </svg>
+)
+
+const IconEdit = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#c9a959]">
+    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </svg>
+)
+
+const IconClose = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/40 hover:text-white">
+    <path d="M18 6L6 18M6 6l12 12" />
+  </svg>
+)
+
 export default function ResultadosV2() {
   const router = useRouter()
   const [propiedades, setPropiedades] = useState<UnidadReal[]>([])
@@ -538,8 +577,8 @@ export default function ResultadosV2() {
               {editingFilter === 'presupuesto' ? (
                 <div className="w-full bg-[#1a1a1a] border border-[#c9a959] rounded-lg p-4">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-white font-medium">💰 Presupuesto</span>
-                    <button onClick={() => setEditingFilter(null)} className="text-white/40 hover:text-white">✕</button>
+                    <span className="text-white font-medium flex items-center gap-2"><IconDollar /> Presupuesto</span>
+                    <button onClick={() => setEditingFilter(null)}><IconClose /></button>
                   </div>
                   <div className="flex items-center justify-between text-white/40 text-xs mb-2">
                     <span>$50k</span>
@@ -597,9 +636,9 @@ export default function ResultadosV2() {
                   onClick={() => startEditing('presupuesto')}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-[#c9a959]/20 border border-white/10 hover:border-[#c9a959] rounded-full transition-all"
                 >
-                  <span>💰</span>
+                  <IconDollar />
                   <span className="text-white">Hasta ${(filtrosActivos.presupuesto/1000).toFixed(0)}k</span>
-                  <span className="text-[#c9a959] text-xs">✎</span>
+                  <IconEdit />
                 </button>
               )}
 
@@ -607,8 +646,8 @@ export default function ResultadosV2() {
               {editingFilter === 'dormitorios' ? (
                 <div className="w-full bg-[#1a1a1a] border border-[#c9a959] rounded-lg p-4">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-white font-medium">🛏️ Dormitorios</span>
-                    <button onClick={() => setEditingFilter(null)} className="text-white/40 hover:text-white">✕</button>
+                    <span className="text-white font-medium flex items-center gap-2"><IconBed /> Dormitorios</span>
+                    <button onClick={() => setEditingFilter(null)}><IconClose /></button>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-4">
                     {DORMITORIOS_PREMIUM.map(d => (
@@ -651,9 +690,9 @@ export default function ResultadosV2() {
                   onClick={() => startEditing('dormitorios')}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-[#c9a959]/20 border border-white/10 hover:border-[#c9a959] rounded-full transition-all"
                 >
-                  <span>🛏️</span>
+                  <IconBed />
                   <span className="text-white">{formatDorms(filtrosActivos.dormitorios)}</span>
-                  <span className="text-[#c9a959] text-xs">✎</span>
+                  <IconEdit />
                 </button>
               )}
 
@@ -661,8 +700,8 @@ export default function ResultadosV2() {
               {editingFilter === 'zonas' ? (
                 <div className="w-full bg-[#1a1a1a] border border-[#c9a959] rounded-lg p-4">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-white font-medium">📍 Zonas</span>
-                    <button onClick={() => setEditingFilter(null)} className="text-white/40 hover:text-white">✕</button>
+                    <span className="text-white font-medium flex items-center gap-2"><IconPin /> Zonas</span>
+                    <button onClick={() => setEditingFilter(null)}><IconClose /></button>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
                     {ZONAS_PREMIUM.map(z => (
@@ -712,7 +751,7 @@ export default function ResultadosV2() {
                   onClick={() => startEditing('zonas')}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-[#c9a959]/20 border border-white/10 hover:border-[#c9a959] rounded-full transition-all"
                 >
-                  <span>📍</span>
+                  <IconPin />
                   <span className="text-white">
                     {filtrosActivos.zonas.length === 0
                       ? 'Todas las zonas'
@@ -720,7 +759,7 @@ export default function ResultadosV2() {
                         ? ZONAS_PREMIUM.find(z => z.id === filtrosActivos.zonas[0])?.label || filtrosActivos.zonas[0]
                         : `${filtrosActivos.zonas.length} zonas`}
                   </span>
-                  <span className="text-[#c9a959] text-xs">✎</span>
+                  <IconEdit />
                 </button>
               )}
 
@@ -728,8 +767,8 @@ export default function ResultadosV2() {
               {editingFilter === 'estado_entrega' ? (
                 <div className="w-full bg-[#1a1a1a] border border-[#c9a959] rounded-lg p-4">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-white font-medium">🏗️ Entrega</span>
-                    <button onClick={() => setEditingFilter(null)} className="text-white/40 hover:text-white">✕</button>
+                    <span className="text-white font-medium flex items-center gap-2"><IconBuilding /> Entrega</span>
+                    <button onClick={() => setEditingFilter(null)}><IconClose /></button>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-4">
                     {ESTADO_ENTREGA_PREMIUM.map(e => (
@@ -772,13 +811,13 @@ export default function ResultadosV2() {
                   onClick={() => startEditing('estado_entrega')}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-[#c9a959]/20 border border-white/10 hover:border-[#c9a959] rounded-full transition-all"
                 >
-                  <span>🏗️</span>
+                  <IconBuilding />
                   <span className="text-white">
                     {filtrosActivos.estado_entrega === 'entrega_inmediata' ? 'Entrega inmediata' :
                      filtrosActivos.estado_entrega === 'solo_preventa' ? 'Solo preventa' :
                      'Todo el mercado'}
                   </span>
-                  <span className="text-[#c9a959] text-xs">✎</span>
+                  <IconEdit />
                 </button>
               )}
             </div>
