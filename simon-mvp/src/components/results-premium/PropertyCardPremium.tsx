@@ -110,6 +110,7 @@ function generarSintesisFiduciaria(datos: {
   diasPromedioZona: number | null
   escasez: number | null
   estadoConstruccion: string
+  fechaEntrega: string | null  // formato 'YYYY-MM' o null
   // Datos del usuario
   innegociablesUsuario: string[]
   deseablesUsuario: string[]
@@ -121,7 +122,7 @@ function generarSintesisFiduciaria(datos: {
   tieneBauleraConfirmada: boolean
 }): SintesisFiduciaria {
   const {
-    diferenciaPct, diasEnMercado, diasMedianaZona, diasPromedioZona, escasez, estadoConstruccion,
+    diferenciaPct, diasEnMercado, diasMedianaZona, diasPromedioZona, escasez, estadoConstruccion, fechaEntrega,
     innegociablesUsuario, deseablesUsuario, amenitiesPropiedad, amenitiesPorVerificar,
     usuarioNecesitaParqueo, usuarioNecesitaBaulera, tieneParqueoConfirmado, tieneBauleraConfirmada
   } = datos
@@ -206,7 +207,15 @@ function generarSintesisFiduciaria(datos: {
 
   // Preventa
   if (estadoConstruccion === 'preventa') {
-    lineas.push(`Preventa - verificar fecha entrega`)
+    if (fechaEntrega) {
+      // Formatear 'YYYY-MM' a 'Mes YYYY' (ej: '2025-12' → 'Dic 2025')
+      const [anio, mes] = fechaEntrega.split('-')
+      const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+      const mesNombre = meses[parseInt(mes, 10) - 1] || mes
+      lineas.push(`Preventa - entrega ${mesNombre} ${anio}`)
+    } else {
+      lineas.push(`Preventa - verificar fecha entrega`)
+    }
   }
 
   let accion: string
@@ -422,6 +431,9 @@ export default function PropertyCardPremium({
   // Generar sintesis fiduciaria
   const diferenciaPctValida = propiedad.posicion_mercado?.success ? propiedad.posicion_mercado.diferencia_pct : null
 
+  // Fecha de entrega para preventa (desde SQL v2.28)
+  const fechaEntrega = propiedad.fecha_entrega || null
+
   const sintesis = generarSintesisFiduciaria({
     diferenciaPct: diferenciaPctValida,
     diasEnMercado: propiedad.dias_en_mercado,
@@ -429,6 +441,7 @@ export default function PropertyCardPremium({
     diasPromedioZona: datosContexto?.diasPromedioZona ?? 104,
     escasez: parseEscasezDeRazon(propiedad.razon_fiduciaria),
     estadoConstruccion: propiedad.estado_construccion || '',
+    fechaEntrega,
     // Datos del usuario
     innegociablesUsuario,
     deseablesUsuario,

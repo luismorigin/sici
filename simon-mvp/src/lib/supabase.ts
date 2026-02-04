@@ -121,6 +121,8 @@ export interface UnidadReal {
   // v2.27: Plan de pagos detallado
   plan_pagos_cuotas: CuotaPago[] | null
   plan_pagos_texto: string | null
+  // v2.28: Fecha de entrega para preventa
+  fecha_entrega: string | null  // formato 'YYYY-MM' o null
 }
 
 // Filtros para búsqueda
@@ -266,7 +268,9 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       baulera_precio_adicional: p.baulera_precio_adicional || null,
       // v2.27: Plan de pagos detallado
       plan_pagos_cuotas: p.plan_pagos_cuotas || null,
-      plan_pagos_texto: p.plan_pagos_texto || null
+      plan_pagos_texto: p.plan_pagos_texto || null,
+      // v2.28: Fecha de entrega para preventa
+      fecha_entrega: p.fecha_entrega || null
     }))
 
     // Filtrar por zonas permitidas si se especificaron
@@ -404,6 +408,8 @@ export async function buscarUnidadesBroker(filtros: FiltrosBusqueda): Promise<Un
       // v2.27: Plan de pagos detallado
       plan_pagos_cuotas: p.plan_pagos_cuotas || null,
       plan_pagos_texto: p.plan_pagos || null,  // Broker usa plan_pagos (texto)
+      // v2.28: Fecha de entrega para preventa
+      fecha_entrega: p.fecha_entrega || null,
       // Campos broker
       fuente_tipo: 'broker' as const,
       codigo_sim: p.codigo_sim
