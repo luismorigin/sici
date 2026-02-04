@@ -1099,6 +1099,7 @@ export default function ResultadosV2() {
                         rank={i + 1}
                         datosContexto={datosContexto}
                         innegociablesUsuario={datosFormulario.innegociables}
+                        deseablesUsuario={datosFormulario.deseables}
                         usuarioNecesitaParqueo={datosFormulario.necesitaParqueo}
                         usuarioNecesitaBaulera={datosFormulario.necesitaBaulera}
                         isSelected={isSelected(prop.id)}
@@ -1127,6 +1128,7 @@ export default function ResultadosV2() {
                         propiedad={prop}
                         datosContexto={datosContexto}
                         innegociablesUsuario={datosFormulario.innegociables}
+                        deseablesUsuario={datosFormulario.deseables}
                         usuarioNecesitaParqueo={datosFormulario.necesitaParqueo}
                         usuarioNecesitaBaulera={datosFormulario.necesitaBaulera}
                         isSelected={isSelected(prop.id)}

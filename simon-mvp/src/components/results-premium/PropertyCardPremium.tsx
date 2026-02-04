@@ -10,6 +10,7 @@ interface PropertyCardPremiumProps {
     diasPromedioZona: number | null
   }
   innegociablesUsuario?: string[]
+  deseablesUsuario?: string[]
   usuarioNecesitaParqueo?: boolean
   usuarioNecesitaBaulera?: boolean
   isSelected?: boolean
@@ -109,8 +110,21 @@ function generarSintesisFiduciaria(datos: {
   diasPromedioZona: number | null
   escasez: number | null
   estadoConstruccion: string
+  // Datos del usuario
+  innegociablesUsuario: string[]
+  deseablesUsuario: string[]
+  amenitiesPropiedad: string[]
+  amenitiesPorVerificar: string[]
+  usuarioNecesitaParqueo: boolean
+  usuarioNecesitaBaulera: boolean
+  tieneParqueoConfirmado: boolean
+  tieneBauleraConfirmada: boolean
 }): SintesisFiduciaria {
-  const { diferenciaPct, diasEnMercado, diasMedianaZona, diasPromedioZona, escasez, estadoConstruccion } = datos
+  const {
+    diferenciaPct, diasEnMercado, diasMedianaZona, diasPromedioZona, escasez, estadoConstruccion,
+    innegociablesUsuario, deseablesUsuario, amenitiesPropiedad, amenitiesPorVerificar,
+    usuarioNecesitaParqueo, usuarioNecesitaBaulera, tieneParqueoConfirmado, tieneBauleraConfirmada
+  } = datos
 
   const umbralReciente = 30
   const umbralMedio = diasMedianaZona ?? 74
@@ -148,9 +162,49 @@ function generarSintesisFiduciaria(datos: {
   }
 
   const lineas: string[] = []
+
+  // Innegociables del usuario
+  if (innegociablesUsuario.length > 0) {
+    const cumple = innegociablesUsuario.filter(inn =>
+      amenitiesPropiedad.some(a => a.toLowerCase().includes(inn.toLowerCase())) ||
+      amenitiesPorVerificar.some(a => a.toLowerCase().includes(inn.toLowerCase()))
+    ).length
+
+    if (cumple === innegociablesUsuario.length) {
+      lineas.push(`✓ Cumple tus ${innegociablesUsuario.length} innegociables`)
+    } else if (cumple > 0) {
+      lineas.push(`! Cumple ${cumple}/${innegociablesUsuario.length} innegociables`)
+    } else {
+      lineas.push(`✗ No cumple tus innegociables`)
+    }
+  }
+
+  // Deseables del usuario
+  if (deseablesUsuario.length > 0) {
+    const tieneDeseables = deseablesUsuario.filter(des =>
+      amenitiesPropiedad.some(a => a.toLowerCase().includes(des.toLowerCase())) ||
+      amenitiesPorVerificar.some(a => a.toLowerCase().includes(des.toLowerCase()))
+    ).length
+
+    if (tieneDeseables > 0) {
+      lineas.push(`★ Tiene ${tieneDeseables} de tus deseables`)
+    }
+  }
+
+  // Parqueo/Baulera
+  if (usuarioNecesitaParqueo && !tieneParqueoConfirmado) {
+    lineas.push(`! Parqueo no confirmado`)
+  }
+  if (usuarioNecesitaBaulera && !tieneBauleraConfirmada) {
+    lineas.push(`! Baulera no confirmada`)
+  }
+
+  // Escasez
   if (escasez && escasez <= 3) {
     lineas.push(`Solo ${escasez} similar${escasez > 1 ? 'es' : ''} disponible${escasez > 1 ? 's' : ''}`)
   }
+
+  // Preventa
   if (estadoConstruccion === 'preventa') {
     lineas.push(`Preventa - verificar fecha entrega`)
   }
@@ -326,6 +380,7 @@ export default function PropertyCardPremium({
   rank,
   datosContexto,
   innegociablesUsuario = [],
+  deseablesUsuario = [],
   usuarioNecesitaParqueo = false,
   usuarioNecesitaBaulera = false,
   isSelected = false,
@@ -373,7 +428,16 @@ export default function PropertyCardPremium({
     diasMedianaZona: datosContexto?.diasMedianaZona ?? 74,
     diasPromedioZona: datosContexto?.diasPromedioZona ?? 104,
     escasez: parseEscasezDeRazon(propiedad.razon_fiduciaria),
-    estadoConstruccion: propiedad.estado_construccion || ''
+    estadoConstruccion: propiedad.estado_construccion || '',
+    // Datos del usuario
+    innegociablesUsuario,
+    deseablesUsuario,
+    amenitiesPropiedad: amenitiesConfirmados,
+    amenitiesPorVerificar: propiedad.amenities_por_verificar || [],
+    usuarioNecesitaParqueo,
+    usuarioNecesitaBaulera,
+    tieneParqueoConfirmado: tieneParqueo,
+    tieneBauleraConfirmada: tieneBaulera,
   })
 
   // Colores sintesis premium
