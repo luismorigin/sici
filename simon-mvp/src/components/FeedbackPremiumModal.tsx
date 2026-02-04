@@ -20,16 +20,19 @@ export default function FeedbackPremiumModal({
   onSuccess,
   formularioRaw
 }: FeedbackPremiumModalProps) {
-  const [paso, setPaso] = useState<Paso>('valor')
+  // DEV: Pre-llenar campos para testing (detecta localhost)
+  const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost'
 
-  // Datos del usuario
-  const [nombre, setNombre] = useState('')
-  const [whatsapp, setWhatsapp] = useState('')
+  const [paso, setPaso] = useState<Paso>(isDev ? 'datos' : 'valor')
+
+  // Datos del usuario (pre-llenados en dev)
+  const [nombre, setNombre] = useState(isDev ? 'Test User' : '')
+  const [whatsapp, setWhatsapp] = useState(isDev ? '76543210' : '')
   const [email, setEmail] = useState('')
 
-  // Feedback
-  const [feedbackRecomendaria, setFeedbackRecomendaria] = useState('')
-  const [feedbackMasUtil, setFeedbackMasUtil] = useState('')
+  // Feedback (pre-seleccionados en dev)
+  const [feedbackRecomendaria, setFeedbackRecomendaria] = useState(isDev ? 'definitivamente' : '')
+  const [feedbackMasUtil, setFeedbackMasUtil] = useState(isDev ? 'todo' : '')
   const [feedbackMejoras, setFeedbackMejoras] = useState('')
 
   const [error, setError] = useState('')
