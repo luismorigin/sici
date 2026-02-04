@@ -375,6 +375,11 @@ export default function ResultadosV2() {
   ) => {
     setLoadingInforme(true)
     try {
+      // Calcular métricas del mercado filtrado
+      const precioM2Promedio = props.length > 0
+        ? Math.round(props.reduce((sum, p) => sum + (p.precio_m2 || 0), 0) / props.length)
+        : 2000
+
       const response = await fetch('/api/informe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -395,8 +400,11 @@ export default function ResultadosV2() {
             estado_construccion: p.estado_construccion,
             estacionamientos: p.estacionamientos,
             baulera: p.baulera,
-            amenities_lista: p.amenities_lista,
             razon_fiduciaria: p.razon_fiduciaria,
+            // Keys correctas para la API del informe
+            amenities_confirmados: p.amenities_confirmados || p.amenities_lista || [],
+            amenities_por_verificar: p.amenities_por_verificar || [],
+            equipamiento_detectado: p.equipamiento_detectado || [],
             // Datos del asesor para contacto
             asesor_nombre: p.asesor_nombre,
             asesor_wsp: p.asesor_wsp,
@@ -406,11 +414,22 @@ export default function ResultadosV2() {
             presupuesto: filtrosActivos.presupuesto,
             dormitorios: filtrosActivos.dormitorios,
             zonas: filtrosActivos.zonas,
+            estado_entrega: filtrosActivos.estado_entrega,
             innegociables: datosFormulario.innegociables,
-            necesitaParqueo: datosFormulario.necesitaParqueo,
-            necesitaBaulera: datosFormulario.necesitaBaulera,
+            deseables: datosFormulario.deseables,
+            ubicacion_vs_metros: 3,
+            calidad_vs_precio: datosFormulario.calidadVsPrecio,
+            quienes_viven: 'No especificado',
+            necesita_parqueo: datosFormulario.necesitaParqueo,
+            necesita_baulera: datosFormulario.necesitaBaulera,
+            mascotas: false,
           },
-          lead: lead || leadData,
+          analisis: {
+            precio_m2_promedio: precioM2Promedio,
+            dias_mediana: datosContexto.diasMedianaZona || 45,
+            total_analizadas: propiedades.length,
+          },
+          leadData: lead || leadData,
         }),
       })
 
