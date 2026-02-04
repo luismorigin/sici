@@ -892,10 +892,12 @@ export default function PropertyCardPremium({
                 </div>
 
                 {deseablesUsuario.some(a =>
+                  !amenitiesConfirmados.some(c => c.toLowerCase().includes(a.toLowerCase())) &&
                   (propiedad.amenities_por_verificar || []).some(c => c.toLowerCase().includes(a.toLowerCase()))
                 ) && (
                   <p className="text-xs text-[#999999] mt-3">
                     Pregunta por: {deseablesUsuario.filter(a =>
+                      !amenitiesConfirmados.some(c => c.toLowerCase().includes(a.toLowerCase())) &&
                       (propiedad.amenities_por_verificar || []).some(c => c.toLowerCase().includes(a.toLowerCase()))
                     ).join(', ')}
                   </p>
