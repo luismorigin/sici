@@ -440,7 +440,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             --accent: #c9a959;
             --accent-light: #d4b96a;
             --warning: #c9a959;
-            --danger: #ef4444;
+            --danger: #8b4557;
             --heart: #c9a959;
             --oportunidad: #c9a959;
             --justo: #666666;
