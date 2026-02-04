@@ -39,7 +39,17 @@ const DESEABLES = [
 
 export default function FormularioV2() {
   const router = useRouter()
-  const { presupuesto, zonas, dormitorios, estado_entrega, forma_pago, count } = router.query
+  const {
+    presupuesto, zonas, dormitorios, estado_entrega, forma_pago, count,
+    // Params nivel 2 (vienen de "Editar todo")
+    innegociables: innegociablesParam,
+    deseables: deseablesParam,
+    necesita_parqueo: necesitaParqueoParam,
+    necesita_baulera: necesitaBauleraParam,
+    calidad_vs_precio: calidadVsPrecioParam,
+    amenidades_vs_metros: amenidadesVsMetrosParam,
+    cantidad_resultados: cantidadResultadosParam,
+  } = router.query
 
   const filtrosNivel1: FiltrosNivel1 = {
     presupuesto: parseInt(presupuesto as string) || 150000,
@@ -61,6 +71,71 @@ export default function FormularioV2() {
   })
 
   const [submitting, setSubmitting] = useState(false)
+  const [initialized, setInitialized] = useState(false)
+
+  // Pre-cargar selecciones desde URL (cuando vienen de "Editar todo")
+  useEffect(() => {
+    if (!router.isReady || initialized) return
+
+    const newForm: FormularioNivel2 = { ...form }
+    let hasChanges = false
+
+    if (innegociablesParam && (innegociablesParam as string).length > 0) {
+      newForm.innegociables = (innegociablesParam as string).split(',').filter(Boolean)
+      hasChanges = true
+    }
+
+    if (deseablesParam && (deseablesParam as string).length > 0) {
+      newForm.deseables = (deseablesParam as string).split(',').filter(Boolean)
+      hasChanges = true
+    }
+
+    if (necesitaParqueoParam !== undefined) {
+      newForm.necesita_parqueo = necesitaParqueoParam === 'true'
+      hasChanges = true
+    }
+
+    if (necesitaBauleraParam !== undefined) {
+      newForm.necesita_baulera = necesitaBauleraParam === 'true'
+      hasChanges = true
+    }
+
+    if (calidadVsPrecioParam) {
+      const parsed = parseInt(calidadVsPrecioParam as string)
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 5) {
+        newForm.calidad_vs_precio = parsed
+        hasChanges = true
+      }
+    }
+
+    if (amenidadesVsMetrosParam) {
+      const parsed = parseInt(amenidadesVsMetrosParam as string)
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 5) {
+        newForm.amenidades_vs_metros = parsed
+        hasChanges = true
+      }
+    }
+
+    if (cantidadResultadosParam) {
+      if (cantidadResultadosParam === 'todas') {
+        newForm.cantidad_resultados = 'todas'
+        hasChanges = true
+      } else {
+        const parsed = parseInt(cantidadResultadosParam as string)
+        if (!isNaN(parsed) && [3, 5, 10].includes(parsed)) {
+          newForm.cantidad_resultados = parsed as 3 | 5 | 10
+          hasChanges = true
+        }
+      }
+    }
+
+    if (hasChanges) {
+      setForm(newForm)
+    }
+
+    setInitialized(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, initialized])
 
   const handleInnegociable = (id: string) => {
     setForm(prev => {

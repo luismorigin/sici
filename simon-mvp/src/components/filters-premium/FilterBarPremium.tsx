@@ -61,11 +61,27 @@ export default function FilterBarPremium({ onFiltrosChange, className = '' }: Fi
   const [loading, setLoading] = useState(false)
   const [initialized, setInitialized] = useState(false)
 
+  // Estado para preservar params del nivel 2 (cuando vienen de "Editar todo")
+  const [paramsNivel2, setParamsNivel2] = useState<{
+    innegociables: string
+    deseables: string
+    necesita_parqueo: string
+    necesita_baulera: string
+    calidad_vs_precio: string
+    amenidades_vs_metros: string
+    cantidad_resultados: string
+  } | null>(null)
+
   // Restaurar filtros desde URL query params
   useEffect(() => {
     if (!router.isReady || initialized) return
 
-    const { presupuesto, dormitorios, zonas, estado_entrega, forma_pago } = router.query
+    const {
+      presupuesto, dormitorios, zonas, estado_entrega, forma_pago,
+      // Params nivel 2 (vienen de "Editar todo")
+      innegociables, deseables, necesita_parqueo, necesita_baulera,
+      calidad_vs_precio, amenidades_vs_metros, cantidad_resultados
+    } = router.query
 
     const newFiltros: FiltrosNivel1 = { ...filtros }
     let hasChanges = false
@@ -108,6 +124,19 @@ export default function FilterBarPremium({ onFiltrosChange, className = '' }: Fi
       setFiltros(newFiltros)
     }
 
+    // Guardar params nivel 2 si vienen (para pasarlos a formulario-v2)
+    if (innegociables || deseables || necesita_parqueo || cantidad_resultados) {
+      setParamsNivel2({
+        innegociables: (innegociables as string) || '',
+        deseables: (deseables as string) || '',
+        necesita_parqueo: (necesita_parqueo as string) || 'true',
+        necesita_baulera: (necesita_baulera as string) || 'false',
+        calidad_vs_precio: (calidad_vs_precio as string) || '3',
+        amenidades_vs_metros: (amenidades_vs_metros as string) || '3',
+        cantidad_resultados: (cantidad_resultados as string) || '',
+      })
+    }
+
     setInitialized(true)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, initialized])
@@ -122,6 +151,17 @@ export default function FilterBarPremium({ onFiltrosChange, className = '' }: Fi
       forma_pago: filtros.forma_pago,
       count: count?.toString() || '0',
     })
+
+    // Pasar params nivel 2 si existen (vienen de "Editar todo")
+    if (paramsNivel2) {
+      params.set('innegociables', paramsNivel2.innegociables)
+      params.set('deseables', paramsNivel2.deseables)
+      params.set('necesita_parqueo', paramsNivel2.necesita_parqueo)
+      params.set('necesita_baulera', paramsNivel2.necesita_baulera)
+      params.set('calidad_vs_precio', paramsNivel2.calidad_vs_precio)
+      params.set('amenidades_vs_metros', paramsNivel2.amenidades_vs_metros)
+      params.set('cantidad_resultados', paramsNivel2.cantidad_resultados)
+    }
 
     router.push(`/formulario-v2?${params.toString()}`)
   }

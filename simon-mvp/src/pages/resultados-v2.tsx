@@ -686,7 +686,7 @@ export default function ResultadosV2() {
             <div className="flex items-center justify-between mb-4">
               <span className="text-[#c9a959] text-sm tracking-[2px] uppercase">Tu Busqueda</span>
               <Link
-                href={`/filtros-v2?presupuesto=${filtrosActivos.presupuesto}&zonas=${filtrosActivos.zonas.join(',')}&dormitorios=${filtrosActivos.dormitorios ?? ''}&estado_entrega=${filtrosActivos.estado_entrega}`}
+                href={`/filtros-v2?presupuesto=${filtrosActivos.presupuesto}&zonas=${filtrosActivos.zonas.join(',')}&dormitorios=${filtrosActivos.dormitorios ?? ''}&estado_entrega=${filtrosActivos.estado_entrega}&innegociables=${datosFormulario.innegociablesIds.join(',')}&deseables=${datosFormulario.deseables.join(',')}&necesita_parqueo=${datosFormulario.necesitaParqueo}&necesita_baulera=${datosFormulario.necesitaBaulera}&calidad_vs_precio=${datosFormulario.calidadVsPrecio}&amenidades_vs_metros=${datosFormulario.amenidadesVsMetros}&cantidad_resultados=${datosFormulario.cantidadResultados}`}
                 className="text-white/40 hover:text-[#c9a959] text-sm transition-colors"
               >
                 Editar todo →
