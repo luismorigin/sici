@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { buscarUnidadesReales, UnidadReal, CuotaPago } from '@/lib/supabase'
+import { innegociablesToAmenidades } from '@/config/amenidades-mercado'
 
 interface FormData {
   nivel_completado: 1 | 2
@@ -46,6 +47,72 @@ const AMENITIES_EDIFICIO = [
   'Pet friendly', 'Ascensor', 'Salón de eventos', 'Area verde', 'Parque infantil'
 ]
 
+// ============================================================================
+// SCORE MOAT - Ranking inteligente basado en preferencias del usuario
+// Fórmula: INNEGOCIABLES (0-100) + OPORTUNIDAD (0-40) + DESEABLES (0-15)
+// Máximo: 155 puntos (simplificado para Premium)
+// ============================================================================
+
+const MEDIANA_AREA_POR_DORMS: Record<number, number> = {
+  0: 36, 1: 52, 2: 88, 3: 165, 4: 200, 5: 250
+}
+
+interface DatosUsuarioMOAT {
+  innegociables: string[]
+  deseables: string[]
+}
+
+function calcularScoreMOAT(
+  prop: UnidadReal,
+  datosUsuario: DatosUsuarioMOAT
+): number {
+  let score = 0
+
+  // 1. INNEGOCIABLES (0 a 100) - Score gradual
+  if (datosUsuario.innegociables.length === 0) {
+    score += 100
+  } else {
+    const amenidadesRequeridas = innegociablesToAmenidades(datosUsuario.innegociables)
+    const confirmados = prop.amenities_confirmados || []
+    const porVerificar = prop.amenities_por_verificar || []
+
+    let puntosInnegociables = 0
+    const maxPuntosPorInnegociable = 100 / Math.max(amenidadesRequeridas.length, 1)
+
+    for (const amenidad of amenidadesRequeridas) {
+      if (confirmados.includes(amenidad)) {
+        puntosInnegociables += maxPuntosPorInnegociable
+      } else if (porVerificar.includes(amenidad)) {
+        puntosInnegociables += maxPuntosPorInnegociable * 0.5
+      }
+    }
+    score += Math.round(puntosInnegociables)
+  }
+
+  // 2. OPORTUNIDAD (0 a 40) - basado en posicion_mercado
+  const posicionMercado = prop.posicion_mercado as { diferencia_pct?: number } | null
+  const difPct = posicionMercado?.diferencia_pct ?? 0
+
+  if (difPct <= -20) score += 40      // Oportunidad clara
+  else if (difPct <= -10) score += 30 // Buena oportunidad
+  else if (difPct <= 5) score += 20   // Precio justo
+  else if (difPct <= 15) score += 10  // Ligeramente caro
+
+  // 3. DESEABLES (0 a 15) - max 3 deseables, 5 pts cada uno
+  if (datosUsuario.deseables.length > 0) {
+    const amenidadesDeseadas = innegociablesToAmenidades(datosUsuario.deseables)
+    const confirmados = prop.amenities_confirmados || []
+
+    for (const amenidad of amenidadesDeseadas.slice(0, 3)) {
+      if (confirmados.includes(amenidad)) {
+        score += 5
+      }
+    }
+  }
+
+  return score
+}
+
 export default function ResultsV2Page() {
   const router = useRouter()
   const { level: queryLevel } = router.query
@@ -58,6 +125,36 @@ export default function ResultsV2Page() {
   const [selectedProperty, setSelectedProperty] = useState<number | null>(null)
   const [contactoEnviado, setContactoEnviado] = useState(false)
   const [enviandoContacto, setEnviandoContacto] = useState(false)
+
+  // Ordenar propiedades por MOAT score
+  const propiedadesOrdenadas = useMemo(() => {
+    if (properties.length === 0) return []
+
+    // Obtener innegociables y deseables del contexto fiduciario
+    const datosUsuario: DatosUsuarioMOAT = {
+      innegociables: formData?.contexto_fiduciario?.innegociables || [],
+      deseables: formData?.contexto_fiduciario?.deseables || []
+    }
+
+    // Calcular score para cada propiedad
+    const conScore = properties.map(p => ({
+      ...p,
+      score_moat: calcularScoreMOAT(p, datosUsuario)
+    }))
+
+    // Ordenar por score MOAT descendente
+    // Desempate: mejor oportunidad de precio (diferencia_pct más negativa)
+    conScore.sort((a, b) => {
+      if (b.score_moat !== a.score_moat) {
+        return b.score_moat - a.score_moat
+      }
+      const difA = (a.posicion_mercado as { diferencia_pct?: number } | null)?.diferencia_pct ?? 0
+      const difB = (b.posicion_mercado as { diferencia_pct?: number } | null)?.diferencia_pct ?? 0
+      return difA - difB
+    })
+
+    return conScore
+  }, [properties, formData])
 
   // Cargar datos
   useEffect(() => {
@@ -233,7 +330,7 @@ export default function ResultsV2Page() {
             className="mb-8"
           >
             <h1 className="text-3xl font-bold mb-2">
-              {getNombre() ? `${getNombre()}, encontramos` : 'Encontramos'} {properties.length} opciones
+              {getNombre() ? `${getNombre()}, encontramos` : 'Encontramos'} {propiedadesOrdenadas.length} opciones
             </h1>
             <p className="text-neutral-600">
               {level === 1
@@ -321,7 +418,7 @@ export default function ResultsV2Page() {
             </details>
 
             <div className="space-y-6">
-              {properties.map((property, index) => (
+              {propiedadesOrdenadas.map((property, index) => (
                 <motion.div
                   key={property.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -565,7 +662,7 @@ export default function ResultsV2Page() {
             </div>
 
             {/* Sin resultados */}
-            {properties.length === 0 && (
+            {propiedadesOrdenadas.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-xl text-neutral-600 mb-4">
                   No encontramos propiedades con esos filtros
@@ -581,7 +678,7 @@ export default function ResultsV2Page() {
           </motion.section>
 
           {/* CTA contacto */}
-          {properties.length > 0 && (
+          {propiedadesOrdenadas.length > 0 && (
             <motion.section
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
