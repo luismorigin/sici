@@ -144,6 +144,9 @@ export default function EditarProyecto() {
   const [accionCandados, setAccionCandados] = useState<'mantener' | 'abrir_temporal' | 'abrir_permanente' | null>(null)
   // Guardar candados originales para restaurar en caso de error (Bug fix: usar estado en lugar de window)
   const [candadosOriginalesBackup, setCandadosOriginalesBackup] = useState<Record<number, any>>({})
+  // Modal de confirmación (cuando no hay candados)
+  const [showModalConfirmacion, setShowModalConfirmacion] = useState(false)
+  const [totalPropiedadesAPropagar, setTotalPropiedadesAPropagar] = useState(0)
 
   // Inferencia desde propiedades
   const [infiriendo, setInfiriendo] = useState(false)
@@ -696,6 +699,7 @@ export default function EditarProyecto() {
   }
 
   // Ejecutar propagación con la acción de candados seleccionada
+  // NUEVA VERSIÓN: Usa función atómica que maneja candados internamente
   const ejecutarPropagacion = async (accion: 'mantener' | 'abrir_temporal' | 'abrir_permanente') => {
     if (!supabase || !id) return
 
@@ -704,67 +708,19 @@ export default function EditarProyecto() {
     setPropagateSuccess(null)
     setShowModalCandados(false)
 
-    // Variables para tracking de candados abiertos (para restaurar si hay error)
-    let candadosBackup: Record<number, any> = {}
-    let candadosFueronAbiertos = false
-
     try {
-      // Si hay que abrir candados, hacerlo primero
-      if (accion !== 'mantener' && propiedadesConCandados.length > 0) {
-        const idsAbrir = propiedadesConCandados.map(p => p.id)
-        const camposAbrir = [...new Set(propiedadesConCandados.flatMap(p => p.campos))]
-
-        // Abrir candados y guardar backup
-        for (const propId of idsAbrir) {
-          const { data: prop } = await supabase
-            .from('propiedades_v2')
-            .select('campos_bloqueados')
-            .eq('id', propId)
-            .single()
-
-          if (prop) {
-            const candadosActuales = { ...(prop.campos_bloqueados || {}) }
-            // Guardar backup SIEMPRE (para restaurar en caso de error o si es temporal)
-            candadosBackup[propId] = { ...candadosActuales }
-
-            // Remover candados de los campos a propagar
-            camposAbrir.forEach(campo => {
-              delete candadosActuales[campo]
-            })
-
-            await supabase
-              .from('propiedades_v2')
-              .update({
-                campos_bloqueados: Object.keys(candadosActuales).length > 0 ? candadosActuales : null
-              })
-              .eq('id', propId)
-          }
-        }
-        candadosFueronAbiertos = true
-        setCandadosOriginalesBackup(candadosBackup) // Guardar en estado React
-      }
-
-      // Ejecutar la propagación
+      // Usar la nueva función atómica que maneja candados internamente
       const { data, error } = await supabase
-        .rpc('propagar_proyecto_a_propiedades', {
+        .rpc('propagar_proyecto_con_apertura_temporal', {
           p_id_proyecto: parseInt(id as string),
           p_propagar_estado: propagarEstado,
           p_propagar_fecha: propagarFecha,
           p_propagar_amenidades: propagarAmenidades,
-          p_propagar_equipamiento: propagarEquipamiento
+          p_propagar_equipamiento: propagarEquipamiento,
+          p_modo_candados: accion
         })
 
       if (error) throw error
-
-      // Si fue temporal Y la propagación fue exitosa, restaurar candados
-      if (accion === 'abrir_temporal' && candadosFueronAbiertos) {
-        for (const propId of Object.keys(candadosBackup)) {
-          await supabase
-            .from('propiedades_v2')
-            .update({ campos_bloqueados: candadosBackup[parseInt(propId)] })
-            .eq('id', parseInt(propId))
-        }
-      }
 
       if (data?.success) {
         const detalle = data.detalle
@@ -775,17 +731,16 @@ export default function EditarProyecto() {
         if (detalle.equipamiento_propagado > 0) mensajes.push(`${detalle.equipamiento_propagado} equipamiento`)
 
         let mensajeFinal = mensajes.length > 0
-          ? `Propagado: ${mensajes.join(', ')} a ${data.propiedades_afectadas} propiedades`
-          : 'No se encontraron propiedades para actualizar'
+          ? `✅ Propagado: ${mensajes.join(', ')} a ${data.propiedades_afectadas} propiedades`
+          : 'No se encontraron cambios para aplicar'
 
-        if (propiedadesConCandados.length > 0) {
-          if (accion === 'mantener') {
-            mensajeFinal += ` (${propiedadesConCandados.length} protegidas por candados)`
-          } else if (accion === 'abrir_temporal') {
-            mensajeFinal += ` (candados restaurados en ${propiedadesConCandados.length} propiedades)`
-          } else {
-            mensajeFinal += ` (candados removidos de ${propiedadesConCandados.length} propiedades)`
-          }
+        // Agregar info sobre modo de candados
+        if (data.saltadas_por_candado > 0 && accion === 'mantener') {
+          mensajeFinal += ` (${data.saltadas_por_candado} protegidas por candados)`
+        } else if (accion === 'abrir_temporal') {
+          mensajeFinal += ' (candados originales restaurados)'
+        } else if (accion === 'abrir_permanente') {
+          mensajeFinal += ' (nuevos candados aplicados)'
         }
 
         setPropagateSuccess(mensajeFinal)
@@ -800,23 +755,6 @@ export default function EditarProyecto() {
     } catch (err: any) {
       console.error('Error propagando:', err)
       setError(err.message || 'Error propagando características')
-
-      // BUG FIX: Si hubo error Y abrimos candados, restaurarlos
-      if (candadosFueronAbiertos && Object.keys(candadosBackup).length > 0) {
-        console.log('Restaurando candados debido a error...')
-        try {
-          for (const propId of Object.keys(candadosBackup)) {
-            await supabase
-              .from('propiedades_v2')
-              .update({ campos_bloqueados: candadosBackup[parseInt(propId)] })
-              .eq('id', parseInt(propId))
-          }
-          setError((err.message || 'Error propagando') + ' (candados restaurados)')
-        } catch (restoreErr) {
-          console.error('Error restaurando candados:', restoreErr)
-          setError((err.message || 'Error propagando') + ' (ERROR: no se pudieron restaurar candados)')
-        }
-      }
     } finally {
       setPropagando(false)
       setPropiedadesConCandados([])
@@ -831,11 +769,26 @@ export default function EditarProyecto() {
       return
     }
 
+    // Contar total de propiedades que serán afectadas
+    const { count } = await supabase
+      .from('propiedades_v2')
+      .select('id', { count: 'exact', head: true })
+      .eq('id_proyecto_master', parseInt(id as string))
+      .eq('es_activa', true)
+
+    setTotalPropiedadesAPropagar(count || 0)
+
     // Verificar candados primero
     const puedeContinuar = await verificarCandadosAntesPropagar()
-    if (!puedeContinuar) return // Se mostrará el modal
+    if (!puedeContinuar) return // Se mostrará el modal de candados
 
-    // Si no hay candados, ejecutar directamente
+    // Si no hay candados, mostrar modal de confirmación con precaución
+    setShowModalConfirmacion(true)
+  }
+
+  // Confirmar propagación desde modal de confirmación
+  const confirmarPropagacion = async () => {
+    setShowModalConfirmacion(false)
     await ejecutarPropagacion('mantener')
   }
 
@@ -980,6 +933,23 @@ export default function EditarProyecto() {
                   </div>
                 )}
               </div>
+
+              {/* Mensaje de precaución para equipamiento especial */}
+              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg mb-4">
+                <p className="font-medium text-yellow-800 flex items-center gap-2">
+                  <span>⚠️</span> Precaución - Unidades Especiales
+                </p>
+                <p className="text-yellow-700 text-xs mt-1">
+                  Algunas unidades pueden tener <strong>condiciones especiales</strong> (equipamiento
+                  diferente al estándar del edificio, ej: sin A/C, con jacuzzi propio, etc.).
+                  Las propiedades con candado mantienen sus datos originales.
+                </p>
+                <p className="text-yellow-600 text-xs mt-2 italic">
+                  Si una unidad es especial y no tiene candado, considera cancelar y agregarle
+                  candado primero desde la página de la propiedad.
+                </p>
+              </div>
+
               <p className="text-sm text-slate-500 mb-4">
                 ¿Qué deseas hacer con estas propiedades?
               </p>
@@ -1021,6 +991,58 @@ export default function EditarProyecto() {
               >
                 Cancelar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación (cuando no hay candados) */}
+      {showModalConfirmacion && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+            <div className="bg-blue-600 px-6 py-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <span className="text-2xl">📋</span> Confirmar Propagación
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="text-slate-700 mb-4">
+                Se propagará a <strong>{totalPropiedadesAPropagar} propiedad(es)</strong> activas
+                de este proyecto.
+              </p>
+
+              {/* Mensaje de precaución */}
+              <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg mb-4">
+                <p className="font-medium text-yellow-800 flex items-center gap-2">
+                  <span>⚠️</span> Precaución - Unidades Especiales
+                </p>
+                <p className="text-yellow-700 text-sm mt-2">
+                  Algunas unidades pueden tener <strong>condiciones especiales</strong> diferentes
+                  al estándar del edificio (ej: departamento sin A/C, con jacuzzi propio,
+                  equipamiento premium, etc.).
+                </p>
+                <p className="text-yellow-600 text-sm mt-2">
+                  Si una unidad es especial, considera <strong>agregarle candado primero</strong>
+                  desde la página de la propiedad antes de propagar.
+                </p>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowModalConfirmacion(false)}
+                  disabled={propagando}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-medium disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarPropagacion}
+                  disabled={propagando}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                >
+                  {propagando ? 'Propagando...' : `Propagar (${totalPropiedadesAPropagar})`}
+                </button>
+              </div>
             </div>
           </div>
         </div>
