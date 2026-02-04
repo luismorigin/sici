@@ -219,34 +219,10 @@ const getDescuento = (dias: number | null): string => {
   return '10-15%'
 }
 
-const amenityEmojis: Record<string, string> = {
-  'piscina': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M2 12h2a2 2 0 0 1 2 2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 1 2-2 2 2 0 0 1 2 2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 1 2-2h2"/><path d="M2 20h2a2 2 0 0 1 2 2"/><path d="M22 20h-2a2 2 0 0 0-2 2"/></svg>',
-  'gimnasio': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M6.5 6.5a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0-5 0"/><path d="M3 21v-2a4 4 0 0 1 4-4h4"/><path d="M15 11l5 5-5 5"/><path d="M20 16H10"/></svg>',
-  'gym': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M6.5 6.5a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0-5 0"/><path d="M3 21v-2a4 4 0 0 1 4-4h4"/><path d="M15 11l5 5-5 5"/><path d="M20 16H10"/></svg>',
-  'churrasquera': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M12 12c2-2.5 0-5-2-6.5C8.5 4 8 2 8 2s-2 2-2 6c0 4 3 4 3 4"/><rect x="3" y="14" width="18" height="8" rx="2"/></svg>',
-  'quincho': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M12 12c2-2.5 0-5-2-6.5C8.5 4 8 2 8 2s-2 2-2 6c0 4 3 4 3 4"/><rect x="3" y="14" width="18" height="8" rx="2"/></svg>',
-  'ascensor': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 6v4M9 8l3-2 3 2"/><path d="M12 14v4M9 16l3 2 3-2"/></svg>',
-  'seguridad': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
-  'parqueo': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>',
-  'estacionamiento': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>',
-  'área social': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-  'salon': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-  'baulera': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
-  'deposito': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
-  'roof garden': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M12 22v-7l-2-2"/><path d="M17 8v.8A6 6 0 0 1 13.8 20v0H10v0A6.5 6.5 0 0 1 7 8h0a5 5 0 0 1 10 0z"/><path d="M10 7a5 5 0 1 1 0 10"/></svg>',
-  'terraza': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
-  'balcon': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>',
-  'lavandería': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="13" r="5"/><circle cx="12" cy="13" r="2"/><path d="M7 6h2"/></svg>',
-  'default': '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>'
-}
+// Icono universal para todas las amenidades - checkmark dorado simple
+const amenityIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>'
 
-const getAmenityEmoji = (amenity: string): string => {
-  const lower = amenity.toLowerCase()
-  for (const [key, emoji] of Object.entries(amenityEmojis)) {
-    if (lower.includes(key)) return emoji
-  }
-  return amenityEmojis.default
-}
+const getAmenityEmoji = (): string => amenityIcon
 
 const getTradeOffLabel = (value: number, left: string, right: string): string => {
   if (value <= 2) return `Priorizás ${left} (${value * 20}%)`
@@ -461,12 +437,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         :root {
             --primary: #0a0a0a;
             --primary-light: #1a1a1a;
-            --accent: #10B981;
-            --accent-light: #34D399;
+            --accent: #c9a959;
+            --accent-light: #d4b96a;
             --warning: #c9a959;
             --danger: #ef4444;
             --heart: #c9a959;
-            --oportunidad: #10B981;
+            --oportunidad: #c9a959;
             --justo: #666666;
             --premium: #c9a959;
             --gold: #c9a959;
@@ -554,7 +530,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         /* Amenities - Premium */
         .amenities-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 20px; }
         .amenity-item { display: flex; align-items: center; gap: 12px; padding: 14px; background: rgba(201,169,89,0.1); border-radius: 8px; border: 1px solid rgba(201,169,89,0.2); }
-        .amenity-icon { width: 36px; height: 36px; background: var(--gold); color: #0a0a0a; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+        .amenity-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
         .amenity-details .name { font-weight: 600; color: var(--cream); font-size: 0.9rem; }
         .amenity-details .vs-market { font-size: 0.75rem; color: var(--gold); font-weight: 500; }
         .amenity-details .vs-market.standard { color: rgba(248,246,243,0.6); }
@@ -562,7 +538,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         /* Alert - Premium */
         .alert { padding: 18px; border-radius: 8px; margin-top: 20px; display: flex; gap: 12px; align-items: flex-start; }
-        .alert.success { background: rgba(16,185,129,0.1); border-left: 4px solid var(--oportunidad); color: var(--oportunidad); }
+        .alert.success { background: rgba(201,169,89,0.1); border-left: 4px solid var(--oportunidad); color: var(--oportunidad); }
         .alert.warning { background: rgba(201,169,89,0.1); border-left: 4px solid var(--gold); color: var(--gold); }
         .alert.info { background: rgba(201,169,89,0.05); border-left: 4px solid var(--gold); color: var(--cream); }
         .alert-icon { font-size: 1.3rem; }
@@ -654,7 +630,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .summary-table tr.highlighted { background: rgba(201,169,89,0.15); }
         .table-heart { color: var(--gold); margin-right: 4px; }
         .position-badge { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; }
-        .position-badge.good { background: rgba(16,185,129,0.2); color: var(--oportunidad); }
+        .position-badge.good { background: rgba(201,169,89,0.2); color: var(--oportunidad); }
         .position-badge.fair { background: rgba(102,102,102,0.3); color: rgba(248,246,243,0.8); }
         .position-badge.high { background: rgba(201,169,89,0.2); color: var(--gold); }
 
@@ -672,12 +648,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .negotiation-card blockquote { background: #1a1a1a; border-left: 4px solid var(--gold); padding: 12px 18px; margin: 12px 0; font-style: italic; color: rgba(248,246,243,0.8); border-radius: 0 8px 8px 0; font-size: 0.9rem; }
 
         /* Recommendation - Premium */
-        .recommendation-box { background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%); color: #0a0a0a; border-radius: 12px; padding: 30px; margin-top: 25px; }
-        .recommendation-box h3 { font-size: 1.3rem; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+        .recommendation-box { background: #0a0a0a; color: var(--cream); border-radius: 12px; padding: 30px; margin-top: 25px; border: 1px solid rgba(201,169,89,0.3); }
+        .recommendation-box h3 { font-size: 1.3rem; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; color: var(--gold); }
         .recommendation-table { width: 100%; border-collapse: collapse; }
-        .recommendation-table th { text-align: left; padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.2); font-weight: 500; opacity: 0.9; }
-        .recommendation-table td { padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.1); }
-        .recommendation-table td:last-child { font-weight: 600; }
+        .recommendation-table th { text-align: left; padding: 10px; border-bottom: 1px solid rgba(201,169,89,0.2); font-weight: 500; color: var(--gold); }
+        .recommendation-table td { padding: 10px; border-bottom: 1px solid rgba(201,169,89,0.1); color: rgba(248,246,243,0.9); }
+        .recommendation-table td:last-child { font-weight: 600; color: var(--cream); }
 
         /* Disclaimer - Premium */
         .disclaimer-box { background: rgba(201,169,89,0.1); border: 1px solid rgba(201,169,89,0.3); border-radius: 10px; padding: 18px 20px; margin-top: 20px; display: flex; gap: 12px; align-items: flex-start; }
@@ -726,7 +702,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             /* Amenities mobile */
             .amenities-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
             .amenity-item { padding: 10px; gap: 8px; }
-            .amenity-icon { width: 28px; height: 28px; font-size: 0.85rem; }
+            .amenity-icon { width: 20px; height: 20px; }
             .amenity-details .name { font-size: 0.8rem; }
 
             /* Photos mobile */
@@ -911,13 +887,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                 btn.innerHTML = originalText;
                 btn.disabled = false;
-                showToast('PDF descargado', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>');
+                showToast('PDF descargado', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a959" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>');
             } catch (err) {
                 console.error('Error generando PDF:', err);
                 btn.style.display = 'flex';
                 btn.innerHTML = originalText;
                 btn.disabled = false;
-                showToast('Error al generar PDF', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>');
+                showToast('Error al generar PDF', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b4557" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>');
             }
         }
     </script>
@@ -1210,19 +1186,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             ${comp1 ? `<td style="text-align: center;">$${fmt(comp1.precio_usd)}</td>` : ''}
                             ${comp2 ? `<td style="text-align: center;">$${fmt(comp2.precio_usd)}</td>` : ''}
                         </tr>
-                        <tr style="background: #fef3c7;">
-                            <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Precio REAL</strong><br><small style="color: #92400e;">(con extras que necesitás)</small></td>
-                            <td style="text-align: center; font-weight: 700; color: ${datosFav.costoExtras > 0 ? '#92400e' : '#166534'};">
+                        <tr style="background: rgba(201,169,89,0.12);">
+                            <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Precio REAL</strong><br><small style="color: #b87333;">(con extras que necesitás)</small></td>
+                            <td style="text-align: center; font-weight: 700; color: ${datosFav.costoExtras > 0 ? '#b87333' : '#c9a959'};">
                                 $${fmt(datosFav.precioReal)}
-                                ${datosFav.costoExtras > 0 ? `<br><small>+$${fmt(datosFav.costoExtras)} (${datosFav.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #166534;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Todo incluido</small>'}
+                                ${datosFav.costoExtras > 0 ? `<br><small>+$${fmt(datosFav.costoExtras)} (${datosFav.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #c9a959;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#c9a959" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Todo incluido</small>'}
                             </td>
-                            ${datosComp1 ? `<td style="text-align: center; font-weight: 700; color: ${datosComp1.costoExtras > 0 ? '#92400e' : '#166534'};">
+                            ${datosComp1 ? `<td style="text-align: center; font-weight: 700; color: ${datosComp1.costoExtras > 0 ? '#b87333' : '#c9a959'};">
                                 $${fmt(datosComp1.precioReal)}
-                                ${datosComp1.costoExtras > 0 ? `<br><small>+$${fmt(datosComp1.costoExtras)} (${datosComp1.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #166534;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Todo incluido</small>'}
+                                ${datosComp1.costoExtras > 0 ? `<br><small>+$${fmt(datosComp1.costoExtras)} (${datosComp1.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #c9a959;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#c9a959" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Todo incluido</small>'}
                             </td>` : ''}
-                            ${datosComp2 ? `<td style="text-align: center; font-weight: 700; color: ${datosComp2.costoExtras > 0 ? '#92400e' : '#166534'};">
+                            ${datosComp2 ? `<td style="text-align: center; font-weight: 700; color: ${datosComp2.costoExtras > 0 ? '#b87333' : '#c9a959'};">
                                 $${fmt(datosComp2.precioReal)}
-                                ${datosComp2.costoExtras > 0 ? `<br><small>+$${fmt(datosComp2.costoExtras)} (${datosComp2.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #166534;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Todo incluido</small>'}
+                                ${datosComp2.costoExtras > 0 ? `<br><small>+$${fmt(datosComp2.costoExtras)} (${datosComp2.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #c9a959;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#c9a959" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Todo incluido</small>'}
                             </td>` : ''}
                         </tr>
                         <tr>
@@ -1245,17 +1221,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         </tr>
                         <tr>
                             <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Días en mercado</strong></td>
-                            <td style="text-align: center; color: ${datosFav.diasMercado > 90 ? '#d97706' : datosFav.diasMercado < 30 ? '#166534' : 'inherit'};">
+                            <td style="text-align: center; color: ${datosFav.diasMercado > 90 ? '#b87333' : datosFav.diasMercado < 30 ? '#c9a959' : 'inherit'};">
                                 ${datosFav.diasMercado || '?'} días
-                                ${datosFav.diasMercado > 90 ? '<br><small style="color: #d97706;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#d97706" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Negociable</small>' : datosFav.diasMercado < 30 ? '<br><small style="color: #166534;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#166534" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Reciente</small>' : ''}
+                                ${datosFav.diasMercado > 90 ? '<br><small style="color: #b87333;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#b87333" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Negociable</small>' : datosFav.diasMercado < 30 ? '<br><small style="color: #c9a959;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#c9a959" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Reciente</small>' : ''}
                             </td>
-                            ${datosComp1 ? `<td style="text-align: center; color: ${datosComp1.diasMercado > 90 ? '#d97706' : datosComp1.diasMercado < 30 ? '#166534' : 'inherit'};">
+                            ${datosComp1 ? `<td style="text-align: center; color: ${datosComp1.diasMercado > 90 ? '#b87333' : datosComp1.diasMercado < 30 ? '#c9a959' : 'inherit'};">
                                 ${datosComp1.diasMercado || '?'} días
-                                ${datosComp1.diasMercado > 90 ? '<br><small style="color: #d97706;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#d97706" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Negociable</small>' : datosComp1.diasMercado < 30 ? '<br><small style="color: #166534;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#166534" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Reciente</small>' : ''}
+                                ${datosComp1.diasMercado > 90 ? '<br><small style="color: #b87333;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#b87333" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Negociable</small>' : datosComp1.diasMercado < 30 ? '<br><small style="color: #c9a959;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#c9a959" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Reciente</small>' : ''}
                             </td>` : ''}
-                            ${datosComp2 ? `<td style="text-align: center; color: ${datosComp2.diasMercado > 90 ? '#d97706' : datosComp2.diasMercado < 30 ? '#166534' : 'inherit'};">
+                            ${datosComp2 ? `<td style="text-align: center; color: ${datosComp2.diasMercado > 90 ? '#b87333' : datosComp2.diasMercado < 30 ? '#c9a959' : 'inherit'};">
                                 ${datosComp2.diasMercado || '?'} días
-                                ${datosComp2.diasMercado > 90 ? '<br><small style="color: #d97706;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#d97706" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Negociable</small>' : datosComp2.diasMercado < 30 ? '<br><small style="color: #166534;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#166534" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Reciente</small>' : ''}
+                                ${datosComp2.diasMercado > 90 ? '<br><small style="color: #b87333;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#b87333" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Negociable</small>' : datosComp2.diasMercado < 30 ? '<br><small style="color: #c9a959;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#c9a959" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Reciente</small>' : ''}
                             </td>` : ''}
                         </tr>
                         ${datosFav.rankingEdificio ? `<tr>
@@ -1266,47 +1242,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         </tr>` : ''}
                         ${datosFav.amenidadesPedidas > 0 ? `<tr>
                             <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Amenidades pedidas</strong></td>
-                            <td style="text-align: center; color: ${datosFav.amenidadesTiene === datosFav.amenidadesPedidas ? '#166534' : '#d97706'};">
+                            <td style="text-align: center; color: ${datosFav.amenidadesTiene === datosFav.amenidadesPedidas ? '#c9a959' : '#b87333'};">
                                 ${datosFav.amenidadesTiene}/${datosFav.amenidadesPedidas}
-                                ${datosFav.amenidadesTiene === datosFav.amenidadesPedidas ? ' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                                ${datosFav.amenidadesTiene === datosFav.amenidadesPedidas ? ' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#c9a959" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
                             </td>
-                            ${datosComp1 ? `<td style="text-align: center; color: ${datosComp1.amenidadesTiene === datosComp1.amenidadesPedidas ? '#166534' : '#d97706'};">
+                            ${datosComp1 ? `<td style="text-align: center; color: ${datosComp1.amenidadesTiene === datosComp1.amenidadesPedidas ? '#c9a959' : '#b87333'};">
                                 ${datosComp1.amenidadesTiene}/${datosComp1.amenidadesPedidas}
-                                ${datosComp1.amenidadesTiene === datosComp1.amenidadesPedidas ? ' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                                ${datosComp1.amenidadesTiene === datosComp1.amenidadesPedidas ? ' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#c9a959" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
                             </td>` : ''}
-                            ${datosComp2 ? `<td style="text-align: center; color: ${datosComp2.amenidadesTiene === datosComp2.amenidadesPedidas ? '#166534' : '#d97706'};">
+                            ${datosComp2 ? `<td style="text-align: center; color: ${datosComp2.amenidadesTiene === datosComp2.amenidadesPedidas ? '#c9a959' : '#b87333'};">
                                 ${datosComp2.amenidadesTiene}/${datosComp2.amenidadesPedidas}
-                                ${datosComp2.amenidadesTiene === datosComp2.amenidadesPedidas ? ' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                                ${datosComp2.amenidadesTiene === datosComp2.amenidadesPedidas ? ' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#c9a959" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
                             </td>` : ''}
                         </tr>` : ''}
                         <tr>
                             <td><strong>Equipamiento</strong><br><small style="color: var(--gold);">(del depto)</small></td>
                             <td style="text-align: center; font-size: 0.85rem;">
                                 ${equipFav.equipamientoReal.length > 0
-                                  ? `${equipFav.equipamientoReal.slice(0, 3).join(', ')}${equipFav.equipamientoReal.length > 3 ? '...' : ''}<br><small style="color: #166534;">~$${fmt(calcularValorEquipamiento(equipFav.equipamientoReal))}</small>`
-                                  : '<span style="color: #d97706;">Sin info</span>'}
+                                  ? `${equipFav.equipamientoReal.slice(0, 3).join(', ')}${equipFav.equipamientoReal.length > 3 ? '...' : ''}<br><small style="color: #c9a959;">~$${fmt(calcularValorEquipamiento(equipFav.equipamientoReal))}</small>`
+                                  : '<span style="color: #b87333;">Sin info</span>'}
                             </td>
                             ${datosComp1 && equipComp1 ? `<td style="text-align: center; font-size: 0.85rem;">
                                 ${equipComp1.equipamientoReal.length > 0
-                                  ? `${equipComp1.equipamientoReal.slice(0, 3).join(', ')}${equipComp1.equipamientoReal.length > 3 ? '...' : ''}<br><small style="color: #166534;">~$${fmt(calcularValorEquipamiento(equipComp1.equipamientoReal))}</small>`
-                                  : '<span style="color: #d97706;">Sin info</span>'}
+                                  ? `${equipComp1.equipamientoReal.slice(0, 3).join(', ')}${equipComp1.equipamientoReal.length > 3 ? '...' : ''}<br><small style="color: #c9a959;">~$${fmt(calcularValorEquipamiento(equipComp1.equipamientoReal))}</small>`
+                                  : '<span style="color: #b87333;">Sin info</span>'}
                             </td>` : ''}
                             ${datosComp2 && equipComp2 ? `<td style="text-align: center; font-size: 0.85rem;">
                                 ${equipComp2.equipamientoReal.length > 0
-                                  ? `${equipComp2.equipamientoReal.slice(0, 3).join(', ')}${equipComp2.equipamientoReal.length > 3 ? '...' : ''}<br><small style="color: #166534;">~$${fmt(calcularValorEquipamiento(equipComp2.equipamientoReal))}</small>`
-                                  : '<span style="color: #d97706;">Sin info</span>'}
+                                  ? `${equipComp2.equipamientoReal.slice(0, 3).join(', ')}${equipComp2.equipamientoReal.length > 3 ? '...' : ''}<br><small style="color: #c9a959;">~$${fmt(calcularValorEquipamiento(equipComp2.equipamientoReal))}</small>`
+                                  : '<span style="color: #b87333;">Sin info</span>'}
                             </td>` : ''}
                         </tr>
                         <tr>
                             <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M19 17h2l-2-6h-8l-2 6h2M7 17h10M5 17h2M17 17v2a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-2M9 17v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-2"/><circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/></svg> Parqueo</strong></td>
-                            <td style="text-align: center; color: ${datosFav.tieneParqueo ? '#166534' : '#d97706'};">
-                                ${datosFav.tieneParqueo ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Incluido (${fav.estacionamientos}p)` : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" style="display: inline; vertical-align: middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Preguntar'}
+                            <td style="text-align: center; color: ${datosFav.tieneParqueo ? '#c9a959' : '#b87333'};">
+                                ${datosFav.tieneParqueo ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#c9a959" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Incluido (${fav.estacionamientos}p)` : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#b87333" stroke-width="2" style="display: inline; vertical-align: middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Preguntar'}
                             </td>
-                            ${datosComp1 ? `<td style="text-align: center; color: ${datosComp1.tieneParqueo ? '#166534' : '#d97706'};">
-                                ${datosComp1.tieneParqueo ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Incluido (${comp1?.estacionamientos}p)` : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" style="display: inline; vertical-align: middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Preguntar'}
+                            ${datosComp1 ? `<td style="text-align: center; color: ${datosComp1.tieneParqueo ? '#c9a959' : '#b87333'};">
+                                ${datosComp1.tieneParqueo ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#c9a959" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Incluido (${comp1?.estacionamientos}p)` : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#b87333" stroke-width="2" style="display: inline; vertical-align: middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Preguntar'}
                             </td>` : ''}
-                            ${datosComp2 ? `<td style="text-align: center; color: ${datosComp2.tieneParqueo ? '#166534' : '#d97706'};">
-                                ${datosComp2.tieneParqueo ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Incluido (${comp2?.estacionamientos}p)` : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" style="display: inline; vertical-align: middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Preguntar'}
+                            ${datosComp2 ? `<td style="text-align: center; color: ${datosComp2.tieneParqueo ? '#c9a959' : '#b87333'};">
+                                ${datosComp2.tieneParqueo ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#c9a959" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Incluido (${comp2?.estacionamientos}p)` : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#b87333" stroke-width="2" style="display: inline; vertical-align: middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Preguntar'}
                             </td>` : ''}
                         </tr>
                     </tbody>
@@ -1761,27 +1737,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     <!-- Section 9: Contactar Broker - Premium -->
     <div class="container">
-        <div class="section" style="background: linear-gradient(135deg, #c9a959 0%, #b5935a 100%); color: #0a0a0a;">
-            <div class="section-header" style="border-bottom-color: rgba(0,0,0,0.2); background: transparent;">
-                <div class="section-number" style="background: rgba(0,0,0,0.2); color: #0a0a0a;">9</div>
-                <div class="section-title" style="color: #0a0a0a;">¿Listo para dar el siguiente paso?</div>
+        <div class="section" style="background: #0a0a0a; border: 1px solid rgba(201,169,89,0.3);">
+            <div class="section-header">
+                <div class="section-number">9</div>
+                <div class="section-title">¿Listo para dar el siguiente paso?</div>
             </div>
             <div class="section-content">
-                <p style="text-align: center; opacity: 0.9; margin-bottom: 30px; font-size: 1.1rem; color: #0a0a0a;">
+                <p style="text-align: center; opacity: 0.9; margin-bottom: 30px; font-size: 1.1rem; color: var(--cream);">
                     Contactá directamente al asesor de las propiedades que te interesan
                 </p>
 
                 <div style="display: grid; gap: 20px; ${comp1 || comp2 ? 'grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));' : ''}">
                     ${/* Favorita (#1) */ ''}
-                    <div style="background: rgba(0,0,0,0.15); border-radius: 16px; padding: 20px;">
+                    <div style="background: rgba(201,169,89,0.1); border: 1px solid rgba(201,169,89,0.3); border-radius: 16px; padding: 20px;">
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                            <span style="background: #0a0a0a; color: #c9a959; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="#c9a959" stroke="#c9a959" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> #1 FAVORITA</span>
+                            <span style="background: var(--gold); color: #0a0a0a; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="#0a0a0a" stroke="#0a0a0a" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> #1 FAVORITA</span>
                         </div>
-                        <h4 style="font-size: 1.1rem; margin-bottom: 5px; color: #0a0a0a;">${fav.proyecto}</h4>
-                        <p style="opacity: 0.8; font-size: 0.9rem; margin-bottom: 15px; color: #0a0a0a;">$${fmt(fav.precio_usd)} · ${Math.round(fav.area_m2)}m²</p>
+                        <h4 style="font-size: 1.1rem; margin-bottom: 5px; color: var(--cream);">${fav.proyecto}</h4>
+                        <p style="opacity: 0.8; font-size: 0.9rem; margin-bottom: 15px; color: var(--cream);">$${fmt(fav.precio_usd)} · ${Math.round(fav.area_m2)}m²</p>
                         ${fav.asesor_wsp ? `
-                            <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px; color: #0a0a0a;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${fav.asesor_nombre || 'Asesor'}${fav.asesor_inmobiliaria ? ` · ${fav.asesor_inmobiliaria}` : ''}
+                            <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px; color: var(--cream);">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${fav.asesor_nombre || 'Asesor'}${fav.asesor_inmobiliaria ? ` · ${fav.asesor_inmobiliaria}` : ''}
                             </p>
                             <a
                                 href="${buildContactarUrl(baseHost, {
@@ -1800,26 +1776,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                                   preguntas: generarPreguntasPersonalizadas(fav, datosUsuario, necesitaParqueo, necesitaBaulera)
                                 })}"
                                 target="_blank"
-                                style="display: block; width: 100%; padding: 12px; background: #0a0a0a; color: #c9a959; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
+                                style="display: block; width: 100%; padding: 12px; background: var(--gold); color: #0a0a0a; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
                             >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> CONTACTAR
                             </a>
                         ` : `
-                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: #0a0a0a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Contacto no disponible</p>
+                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: rgba(248,246,243,0.6);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Contacto no disponible</p>
                         `}
                     </div>
 
                     ${comp1 ? `
                     ${/* Segunda opción (#2) */ ''}
-                    <div style="background: rgba(0,0,0,0.1); border-radius: 16px; padding: 20px;">
+                    <div style="background: rgba(201,169,89,0.05); border: 1px solid rgba(201,169,89,0.2); border-radius: 16px; padding: 20px;">
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                            <span style="background: rgba(0,0,0,0.2); color: #0a0a0a; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M12 14v8M8 22h8"/></svg> #2</span>
+                            <span style="background: rgba(201,169,89,0.2); color: var(--cream); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M12 14v8M8 22h8"/></svg> #2</span>
                         </div>
-                        <h4 style="font-size: 1.1rem; margin-bottom: 5px; color: #0a0a0a;">${comp1.proyecto}</h4>
-                        <p style="opacity: 0.8; font-size: 0.9rem; margin-bottom: 15px; color: #0a0a0a;">$${fmt(comp1.precio_usd)} · ${Math.round(comp1.area_m2)}m²</p>
+                        <h4 style="font-size: 1.1rem; margin-bottom: 5px; color: var(--cream);">${comp1.proyecto}</h4>
+                        <p style="opacity: 0.8; font-size: 0.9rem; margin-bottom: 15px; color: var(--cream);">$${fmt(comp1.precio_usd)} · ${Math.round(comp1.area_m2)}m²</p>
                         ${comp1.asesor_wsp ? `
-                            <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px; color: #0a0a0a;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${comp1.asesor_nombre || 'Asesor'}${comp1.asesor_inmobiliaria ? ` · ${comp1.asesor_inmobiliaria}` : ''}
+                            <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px; color: var(--cream);">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${comp1.asesor_nombre || 'Asesor'}${comp1.asesor_inmobiliaria ? ` · ${comp1.asesor_inmobiliaria}` : ''}
                             </p>
                             <a
                                 href="${buildContactarUrl(baseHost, {
@@ -1838,27 +1814,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                                   preguntas: generarPreguntasPersonalizadas(comp1, datosUsuario, necesitaParqueo, necesitaBaulera)
                                 })}"
                                 target="_blank"
-                                style="display: block; width: 100%; padding: 12px; background: #0a0a0a; color: #c9a959; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
+                                style="display: block; width: 100%; padding: 12px; background: var(--gold); color: #0a0a0a; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
                             >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> CONTACTAR
                             </a>
                         ` : `
-                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: #0a0a0a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Contacto no disponible</p>
+                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: rgba(248,246,243,0.6);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Contacto no disponible</p>
                         `}
                     </div>
                     ` : ''}
 
                     ${comp2 ? `
                     ${/* Tercera opción (#3) */ ''}
-                    <div style="background: rgba(0,0,0,0.1); border-radius: 16px; padding: 20px;">
+                    <div style="background: rgba(201,169,89,0.05); border: 1px solid rgba(201,169,89,0.2); border-radius: 16px; padding: 20px;">
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                            <span style="background: rgba(0,0,0,0.2); color: #0a0a0a; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#cd7f32" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M12 14v8M8 22h8"/></svg> #3</span>
+                            <span style="background: rgba(201,169,89,0.2); color: var(--cream); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#cd7f32" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M12 14v8M8 22h8"/></svg> #3</span>
                         </div>
-                        <h4 style="font-size: 1.1rem; margin-bottom: 5px; color: #0a0a0a;">${comp2.proyecto}</h4>
-                        <p style="opacity: 0.8; font-size: 0.9rem; margin-bottom: 15px; color: #0a0a0a;">$${fmt(comp2.precio_usd)} · ${Math.round(comp2.area_m2)}m²</p>
+                        <h4 style="font-size: 1.1rem; margin-bottom: 5px; color: var(--cream);">${comp2.proyecto}</h4>
+                        <p style="opacity: 0.8; font-size: 0.9rem; margin-bottom: 15px; color: var(--cream);">$${fmt(comp2.precio_usd)} · ${Math.round(comp2.area_m2)}m²</p>
                         ${comp2.asesor_wsp ? `
-                            <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px; color: #0a0a0a;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${comp2.asesor_nombre || 'Asesor'}${comp2.asesor_inmobiliaria ? ` · ${comp2.asesor_inmobiliaria}` : ''}
+                            <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px; color: var(--cream);">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${comp2.asesor_nombre || 'Asesor'}${comp2.asesor_inmobiliaria ? ` · ${comp2.asesor_inmobiliaria}` : ''}
                             </p>
                             <a
                                 href="${buildContactarUrl(baseHost, {
@@ -1877,19 +1853,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                                   preguntas: generarPreguntasPersonalizadas(comp2, datosUsuario, necesitaParqueo, necesitaBaulera)
                                 })}"
                                 target="_blank"
-                                style="display: block; width: 100%; padding: 12px; background: #0a0a0a; color: #c9a959; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
+                                style="display: block; width: 100%; padding: 12px; background: var(--gold); color: #0a0a0a; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
                             >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> CONTACTAR
                             </a>
                         ` : `
-                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: #0a0a0a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Contacto no disponible</p>
+                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: rgba(248,246,243,0.6);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Contacto no disponible</p>
                         `}
                     </div>
                     ` : ''}
                 </div>
 
-                <p style="text-align: center; opacity: 0.7; margin-top: 25px; font-size: 0.85rem; color: #0a0a0a;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M9 18h6M10 22h4M12 2v1M12 6a5 5 0 0 1 3.54 8.46L14 16h-4l-1.54-1.54A5 5 0 0 1 12 6z"/></svg> Al contactar se generará un código de referencia único para tu seguimiento
+                <p style="text-align: center; opacity: 0.7; margin-top: 25px; font-size: 0.85rem; color: rgba(248,246,243,0.7);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M9 18h6M10 22h4M12 2v1M12 6a5 5 0 0 1 3.54 8.46L14 16h-4l-1.54-1.54A5 5 0 0 1 12 6z"/></svg> Al contactar se generará un código de referencia único para tu seguimiento
                 </p>
             </div>
         </div>
