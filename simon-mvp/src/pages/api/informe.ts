@@ -2214,7 +2214,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 <div class="footer-meta">
                     <p><strong>Análisis basado en:</strong></p>
                     <p>${analisis?.total_analizadas || todas.length} propiedades analizadas</p>
-                    <p>Datos de mercado: ${fechaHoy}</p>
+                    <p>Precios normalizados a TC oficial (Bs 6.96) | Datos de mercado: ${fechaHoy}</p>
                     <div class="confidence-badge">
                         <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg></span>
                         <span>Actualizado diariamente</span>
