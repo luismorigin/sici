@@ -1532,16 +1532,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     </p>
                 </div>` : ''}
 
-                ${necesitaParqueo && !datosFav.tieneParqueo ? `
-                <div class="negotiation-card">
-                    <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Argumento 3: El parqueo</h4>
+                ${necesitaParqueo && !datosFav.tieneParqueo ? (
+                  datosFav.precioReal > datosUsuario.presupuesto
+                    ? `<div class="negotiation-card">
+                    <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Argumento: El parqueo excede tu presupuesto</h4>
                     <blockquote>
-                        "Mi presupuesto es $${fmt(datosUsuario.presupuesto)} TODO INCLUIDO. Si el parqueo no está en ese precio, necesito que lo incluyan o ajusten para que entre en mi número."
+                        "El precio con parqueo ($${fmt(datosFav.precioReal)}) se pasa de mi presupuesto ($${fmt(datosUsuario.presupuesto)}). Necesito que incluyan el parqueo en ese precio o no puedo avanzar."
                     </blockquote>
                     <p style="font-size: 0.85rem; color: rgba(248,246,243,0.6); margin-top: 10px;">
-                        <strong style="color: var(--gold);">Tip:</strong> El parqueo vale $12-18k. Usá esto para negociar: "sin parqueo, mi oferta sería $${fmt(fav.precio_usd - 15000)}".
+                        <strong style="color: var(--gold);">Tip:</strong> El parqueo vale $12-18k. Tu límite real es $${fmt(datosUsuario.presupuesto)}, usá eso como ancla firme.
                     </p>
-                </div>` : ''}
+                </div>`
+                    : `<div class="negotiation-card" style="border-left: 4px solid rgba(201,169,89,0.4);">
+                    <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M9 18h6M10 22h4M12 2v1M12 6a5 5 0 0 1 3.54 8.46L14 16h-4l-1.54-1.54A5 5 0 0 1 12 6z"/></svg> Tip: Podrías ahorrarte el parqueo</h4>
+                    <p style="color: var(--cream); font-size: 0.9rem;">
+                        Aunque el parqueo (~$${fmt(datosFav.costoExtras)}) cabe en tu presupuesto, podrías intentar que lo incluyan y ahorrarte ese monto. No es crítico, pero no perdés nada intentando.
+                    </p>
+                </div>`
+                ) : ''}
 
                 ${datosUsuario.calidad_vs_precio >= 4 ? `
                 <div class="negotiation-card" style="border-left: 4px solid var(--oportunidad);">
