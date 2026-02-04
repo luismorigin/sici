@@ -38,6 +38,15 @@ const INNEGOCIABLE_TO_AMENIDAD: Record<string, string> = {
   'area_ninos': 'Area ninos',
 }
 
+// Interfaz extendida con campos de precio real
+interface UnidadRealConPrecioReal extends UnidadReal {
+  precioReal: number
+  ajusteParqueo: number
+  ajusteBaulera: number
+  scoreTotal: number
+  cumpleInnegociables: boolean
+}
+
 // Constantes para edición inline
 const ZONAS_PREMIUM = [
   { id: 'equipetrol', label: 'Eq. Centro' },
@@ -102,7 +111,7 @@ const IconClose = () => (
 
 export default function ResultadosV2() {
   const router = useRouter()
-  const [propiedades, setPropiedades] = useState<UnidadReal[]>([])
+  const [propiedades, setPropiedades] = useState<UnidadRealConPrecioReal[]>([])
   const [loading, setLoading] = useState(true)
   const [datosContexto, setDatosContexto] = useState<{
     diasMedianaZona: number | null
@@ -120,15 +129,25 @@ export default function ResultadosV2() {
     estado_entrega: 'no_importa',
   })
 
-  // Datos del formulario nivel 2
+  // Datos del formulario nivel 2 (completo)
   const [datosFormulario, setDatosFormulario] = useState<{
     innegociables: string[]
+    innegociablesIds: string[]  // IDs originales para matching
+    deseables: string[]
     necesitaParqueo: boolean
     necesitaBaulera: boolean
+    calidadVsPrecio: number
+    amenidadesVsMetros: number
+    cantidadResultados: number | 'todas'
   }>({
     innegociables: [],
+    innegociablesIds: [],
+    deseables: [],
     necesitaParqueo: true,
     necesitaBaulera: false,
+    calidadVsPrecio: 3,
+    amenidadesVsMetros: 3,
+    cantidadResultados: 'todas',
   })
 
   // Estado de favoritos
@@ -137,10 +156,10 @@ export default function ResultadosV2() {
 
   // Estados de modales
   const [showMapa, setShowMapa] = useState(false)
-  const [lightboxProp, setLightboxProp] = useState<{ prop: UnidadReal; index: number } | null>(null)
+  const [lightboxProp, setLightboxProp] = useState<{ prop: UnidadRealConPrecioReal; index: number } | null>(null)
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
-  const [propsParaInforme, setPropsParaInforme] = useState<UnidadReal[]>([])
+  const [propsParaInforme, setPropsParaInforme] = useState<UnidadRealConPrecioReal[]>([])
   const [showInformeModal, setShowInformeModal] = useState(false)
   const [informeHtml, setInformeHtml] = useState<string>('')
   const [loadingInforme, setLoadingInforme] = useState(false)
@@ -181,7 +200,7 @@ export default function ResultadosV2() {
 
   const isSelected = (propId: number) => selectedProps.has(propId)
 
-  const getSelectedProperties = (): UnidadReal[] => {
+  const getSelectedProperties = (): UnidadRealConPrecioReal[] => {
     return propiedades.filter(p => selectedProps.has(p.id))
   }
 
@@ -189,14 +208,18 @@ export default function ResultadosV2() {
 
   // Funcion para abrir lightbox
   const openLightbox = (prop: UnidadReal, index: number) => {
-    setLightboxProp({ prop, index })
+    // Buscar en propiedades para obtener la versión con precio real
+    const propExtendida = propiedades.find(p => p.id === prop.id)
+    if (propExtendida) {
+      setLightboxProp({ prop: propExtendida, index })
+    }
   }
 
   // Funcion para manejar ordenamiento completado
   const handleOrderComplete = (orderedIds: number[], reason: string) => {
     const ordenadas = orderedIds
       .map(id => propiedades.find(p => p.id === id))
-      .filter((p): p is UnidadReal => p !== undefined)
+      .filter((p): p is UnidadRealConPrecioReal => p !== undefined)
     setPropsParaInforme(ordenadas)
     setShowOrderModal(false)
     setShowFeedbackModal(true)
@@ -211,7 +234,7 @@ export default function ResultadosV2() {
 
   // Generar y mostrar informe
   const verInforme = async (
-    props: UnidadReal[],
+    props: UnidadRealConPrecioReal[],
     lead?: { leadId: number; codigoRef: string; nombre: string; whatsapp: string }
   ) => {
     setLoadingInforme(true)
@@ -284,8 +307,12 @@ export default function ResultadosV2() {
         dormitorios,
         estado_entrega,
         innegociables,
+        deseables,
         necesita_parqueo,
         necesita_baulera,
+        calidad_vs_precio,
+        amenidades_vs_metros,
+        cantidad_resultados,
       } = router.query
 
       // 2. Construir filtros desde query params
@@ -309,13 +336,102 @@ export default function ResultadosV2() {
         filtros.estado_entrega = estadoEntregaValue as 'entrega_inmediata' | 'solo_preventa'
       }
 
+      // Parsear preferencias del formulario nivel 2
+      const innegociablesIds = innegociables ? (innegociables as string).split(',').filter(Boolean) : []
+      const deseablesIds = deseables ? (deseables as string).split(',').filter(Boolean) : []
+      const necesitaParqueoVal = necesita_parqueo === 'true'
+      const necesitaBauleraVal = necesita_baulera === 'true'
+      const calidadVsPrecioVal = calidad_vs_precio ? parseInt(calidad_vs_precio as string) : 3
+      const amenidadesVsMetrosVal = amenidades_vs_metros ? parseInt(amenidades_vs_metros as string) : 3
+      const cantidadResultadosVal = cantidad_resultados === 'todas' ? 'todas' : (cantidad_resultados ? parseInt(cantidad_resultados as string) : 'todas')
+
+      // Costos estimados si no incluidos
+      const COSTO_PARQUEO_ESTIMADO = 6000
+      const COSTO_BAULERA_ESTIMADO = 3000
+
       try {
         // 3. Buscar con los filtros de la URL
         const resultados = await buscarUnidadesReales(filtros)
-        setPropiedades(resultados)
 
-        // 4. Calcular mediana y promedio de días desde los resultados
-        const diasValidos = resultados
+        // 4. Procesar resultados: calcular precio real y score
+        const resultadosProcesados = resultados.map(prop => {
+          // Calcular precio real ajustado por parqueo/baulera
+          let precioReal = prop.precio_usd
+          let ajusteParqueo = 0
+          let ajusteBaulera = 0
+
+          if (necesitaParqueoVal && prop.parqueo_incluido === false) {
+            ajusteParqueo = prop.parqueo_precio_adicional || COSTO_PARQUEO_ESTIMADO
+            precioReal += ajusteParqueo
+          }
+          if (necesitaBauleraVal && prop.baulera_incluido === false) {
+            ajusteBaulera = prop.baulera_precio_adicional || COSTO_BAULERA_ESTIMADO
+            precioReal += ajusteBaulera
+          }
+
+          // Calcular score según innegociables
+          let scoreInnegociables = 0
+          const amenitiesProp = [...(prop.amenities_lista || []), ...(prop.amenities_confirmados || [])]
+            .map(a => a.toLowerCase())
+
+          innegociablesIds.forEach(id => {
+            const nombreAmenidad = INNEGOCIABLE_TO_AMENIDAD[id]?.toLowerCase() || id.toLowerCase()
+            if (amenitiesProp.some(a => a.includes(nombreAmenidad) || nombreAmenidad.includes(a))) {
+              scoreInnegociables += 100  // Bonus grande por cada innegociable
+            }
+          })
+
+          // Bonus por deseables
+          let scoreDeseables = 0
+          deseablesIds.forEach(id => {
+            const nombreAmenidad = INNEGOCIABLE_TO_AMENIDAD[id]?.toLowerCase() || id.toLowerCase()
+            if (amenitiesProp.some(a => a.includes(nombreAmenidad) || nombreAmenidad.includes(a))) {
+              scoreDeseables += 25  // Bonus menor por deseable
+            }
+          })
+
+          // Score por preferencias de trade-off
+          let scorePreferencias = 0
+          // Si prefiere precio (calidadVsPrecio > 3), beneficia precios más bajos
+          if (calidadVsPrecioVal > 3) {
+            const precioNormalizado = 1 - (precioReal / (filtros.precio_max || 150000))
+            scorePreferencias += precioNormalizado * (calidadVsPrecioVal - 3) * 20
+          }
+          // Si prefiere metros (amenidadesVsMetros > 3), beneficia áreas más grandes
+          if (amenidadesVsMetrosVal > 3) {
+            const areaBonus = Math.min(prop.area_m2 / 100, 1.5) // Normalizado
+            scorePreferencias += areaBonus * (amenidadesVsMetrosVal - 3) * 15
+          }
+
+          const scoreTotal = scoreInnegociables + scoreDeseables + scorePreferencias + (prop.score_calidad || 0)
+
+          return {
+            ...prop,
+            precioReal,
+            ajusteParqueo,
+            ajusteBaulera,
+            scoreTotal,
+            cumpleInnegociables: innegociablesIds.length === 0 || scoreInnegociables >= innegociablesIds.length * 100
+          }
+        })
+
+        // 5. Ordenar: primero los que cumplen innegociables, luego por score
+        resultadosProcesados.sort((a, b) => {
+          // Primero: los que cumplen innegociables
+          if (a.cumpleInnegociables && !b.cumpleInnegociables) return -1
+          if (!a.cumpleInnegociables && b.cumpleInnegociables) return 1
+          // Segundo: por score total
+          return b.scoreTotal - a.scoreTotal
+        })
+
+        // 6. Limitar por cantidad_resultados
+        const limite = cantidadResultadosVal === 'todas' ? resultadosProcesados.length : cantidadResultadosVal
+        const resultadosLimitados = resultadosProcesados.slice(0, limite)
+
+        setPropiedades(resultadosLimitados)
+
+        // 7. Calcular mediana y promedio de días desde los resultados
+        const diasValidos = resultadosLimitados
           .map(r => r.dias_en_mercado)
           .filter((d): d is number => d !== null && d !== undefined)
 
@@ -339,14 +455,19 @@ export default function ResultadosV2() {
         estado_entrega: estadoEntregaValue,
       })
 
-      // 5. Parsear datos del formulario nivel 2
-      const innegociablesIds = innegociables ? (innegociables as string).split(',').filter(Boolean) : []
+      // 8. Actualizar estado de datosFormulario para la UI
       const innegociablesNombres = innegociablesIds.map(id => INNEGOCIABLE_TO_AMENIDAD[id] || id)
+      const deseablesNombres = deseablesIds.map(id => INNEGOCIABLE_TO_AMENIDAD[id] || id)
 
       setDatosFormulario({
         innegociables: innegociablesNombres,
-        necesitaParqueo: necesita_parqueo === 'true',
-        necesitaBaulera: necesita_baulera === 'true',
+        innegociablesIds,
+        deseables: deseablesNombres,
+        necesitaParqueo: necesitaParqueoVal,
+        necesitaBaulera: necesitaBauleraVal,
+        calidadVsPrecio: calidadVsPrecioVal,
+        amenidadesVsMetros: amenidadesVsMetrosVal,
+        cantidadResultados: cantidadResultadosVal,
       })
     }
 
