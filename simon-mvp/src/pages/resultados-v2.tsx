@@ -501,51 +501,47 @@ export default function ResultadosV2() {
             <Link href="/landing-v2" className="font-display text-2xl text-white tracking-tight">
               Simon
             </Link>
-            <div className="flex items-center gap-6">
-              <button
-                onClick={() => editingFilter ? setEditingFilter(null) : startEditing('presupuesto')}
-                className="text-white/50 hover:text-white text-sm transition-colors"
-              >
-                {editingFilter ? 'Cerrar filtros' : 'Editar filtros'}
-              </button>
-              <Link
-                href="/landing-v2"
-                className="bg-white text-[#0a0a0a] px-6 py-2 text-xs tracking-[2px] uppercase hover:bg-[#c9a959] hover:text-white transition-all"
-              >
-                Nueva busqueda
-              </Link>
-            </div>
+            <Link
+              href="/landing-v2"
+              className="bg-white text-[#0a0a0a] px-6 py-2 text-xs tracking-[2px] uppercase hover:bg-[#c9a959] hover:text-white transition-all"
+            >
+              Nueva busqueda
+            </Link>
           </div>
         </nav>
 
-        {/* Panel de edición inline de filtros */}
-        {editingFilter && (
-          <div className="fixed top-[73px] left-0 right-0 z-40 bg-[#0a0a0a] border-b border-[#c9a959]/30 py-6">
-            <div className="max-w-4xl mx-auto px-8">
-              {/* Tabs de filtros */}
-              <div className="flex gap-2 mb-6 flex-wrap">
-                {(['presupuesto', 'dormitorios', 'zonas', 'estado_entrega'] as const).map(f => (
-                  <button
-                    key={f}
-                    onClick={() => startEditing(f)}
-                    className={`px-4 py-2 text-sm transition-all ${
-                      editingFilter === f
-                        ? 'bg-[#c9a959]/20 border-[#c9a959] text-white'
-                        : 'border-white/10 text-white/50 hover:text-white'
-                    } border`}
-                  >
-                    {f === 'presupuesto' && '💰 Presupuesto'}
-                    {f === 'dormitorios' && '🛏️ Dormitorios'}
-                    {f === 'zonas' && '📍 Zonas'}
-                    {f === 'estado_entrega' && '🏗️ Entrega'}
-                  </button>
-                ))}
-              </div>
+        {/* Results Header */}
+        <div className="pt-20">
+          <ResultsHeaderPremium
+            count={propiedades.length}
+            filtros={buildFilterChips()}
+            onEditarFiltros={() => startEditing('presupuesto')}
+          />
+        </div>
 
-              {/* Contenido según filtro activo */}
-              {editingFilter === 'presupuesto' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between text-white/40 text-sm mb-2">
+        {/* Main content */}
+        <main className="max-w-6xl mx-auto px-8 py-12">
+          {/* Sección Tu Búsqueda - Edición Inline */}
+          <div className="bg-[#0a0a0a] rounded-lg border border-white/10 p-4 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[#c9a959] text-sm tracking-[2px] uppercase">Tu Busqueda</span>
+              <Link
+                href={`/filtros-v2?presupuesto=${filtrosActivos.presupuesto}&zonas=${filtrosActivos.zonas.join(',')}&dormitorios=${filtrosActivos.dormitorios ?? ''}&estado_entrega=${filtrosActivos.estado_entrega}`}
+                className="text-white/40 hover:text-[#c9a959] text-sm transition-colors"
+              >
+                Editar todo →
+              </Link>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {/* Chip PRESUPUESTO */}
+              {editingFilter === 'presupuesto' ? (
+                <div className="w-full bg-[#1a1a1a] border border-[#c9a959] rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-white font-medium">💰 Presupuesto</span>
+                    <button onClick={() => setEditingFilter(null)} className="text-white/40 hover:text-white">✕</button>
+                  </div>
+                  <div className="flex items-center justify-between text-white/40 text-xs mb-2">
                     <span>$50k</span>
                     <span>$500k</span>
                   </div>
@@ -556,7 +552,7 @@ export default function ResultadosV2() {
                     step={10000}
                     value={tempPresupuesto}
                     onChange={(e) => setTempPresupuesto(Number(e.target.value))}
-                    className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer
+                    className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer mb-3
                                [&::-webkit-slider-thumb]:appearance-none
                                [&::-webkit-slider-thumb]:w-4
                                [&::-webkit-slider-thumb]:h-4
@@ -566,115 +562,228 @@ export default function ResultadosV2() {
                                [&::-webkit-slider-thumb]:border-2
                                [&::-webkit-slider-thumb]:border-[#c9a959]"
                   />
-                  <div className="text-center">
-                    <span className="font-display text-4xl text-white">
-                      Hasta ${(tempPresupuesto/1000).toFixed(0)}k
-                    </span>
+                  <div className="text-center mb-4">
+                    <span className="font-display text-2xl text-white">Hasta ${(tempPresupuesto/1000).toFixed(0)}k</span>
                   </div>
+                  {/* Impacto MOAT */}
+                  <div className="text-white/60 text-sm mb-4">
+                    {calculandoImpacto ? (
+                      <span className="flex items-center gap-2">
+                        <div className="w-3 h-3 border-2 border-[#c9a959] border-t-transparent rounded-full animate-spin" />
+                        Calculando...
+                      </span>
+                    ) : impactoMOAT ? (
+                      <span>
+                        <span className="text-[#c9a959] font-semibold">{impactoMOAT.totalNuevo}</span> propiedades
+                        {impactoMOAT.diferencia !== 0 && (
+                          <span className={impactoMOAT.diferencia > 0 ? 'text-green-400' : 'text-amber-400'}>
+                            {' '}({impactoMOAT.diferencia > 0 ? '+' : ''}{impactoMOAT.diferencia})
+                          </span>
+                        )}
+                        <span className="ml-2 text-white/40">· {impactoMOAT.interpretacion}</span>
+                      </span>
+                    ) : null}
+                  </div>
+                  <button
+                    onClick={aplicarFiltros}
+                    disabled={calculandoImpacto}
+                    className="w-full py-2 bg-white text-[#0a0a0a] text-sm tracking-[1px] uppercase hover:bg-[#c9a959] hover:text-white transition-all disabled:opacity-50"
+                  >
+                    Aplicar cambio
+                  </button>
                 </div>
-              )}
-
-              {editingFilter === 'dormitorios' && (
-                <div className="flex justify-center gap-3 flex-wrap">
-                  {DORMITORIOS_PREMIUM.map(d => (
-                    <button
-                      key={d.value ?? 'todos'}
-                      onClick={() => setTempDormitorios(d.value)}
-                      className={`px-6 py-3 border transition-all ${
-                        tempDormitorios === d.value
-                          ? 'border-[#c9a959] bg-[#c9a959]/10 text-white'
-                          : 'border-white/10 text-white/60 hover:border-[#c9a959]/50'
-                      }`}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {editingFilter === 'zonas' && (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  {ZONAS_PREMIUM.map(z => (
-                    <button
-                      key={z.id}
-                      onClick={() => setTempZonas(prev =>
-                        prev.includes(z.id)
-                          ? prev.filter(x => x !== z.id)
-                          : [...prev, z.id]
-                      )}
-                      className={`p-3 border transition-all ${
-                        tempZonas.includes(z.id)
-                          ? 'border-[#c9a959] bg-[#c9a959]/10'
-                          : 'border-white/10 hover:border-[#c9a959]/50'
-                      }`}
-                    >
-                      <span className="text-white text-sm">{z.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {editingFilter === 'estado_entrega' && (
-                <div className="flex justify-center gap-3 flex-wrap">
-                  {ESTADO_ENTREGA_PREMIUM.map(e => (
-                    <button
-                      key={e.value}
-                      onClick={() => setTempEstadoEntrega(e.value)}
-                      className={`px-6 py-3 border transition-all ${
-                        tempEstadoEntrega === e.value
-                          ? 'border-[#c9a959] bg-[#c9a959]/10 text-white'
-                          : 'border-white/10 text-white/60 hover:border-[#c9a959]/50'
-                      }`}
-                    >
-                      {e.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Impacto MOAT + Botón Aplicar */}
-              <div className="mt-6 flex items-center justify-between flex-wrap gap-4">
-                <div className="text-white/60 text-sm">
-                  {calculandoImpacto ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-[#c9a959] border-t-transparent rounded-full animate-spin" />
-                      Calculando...
-                    </span>
-                  ) : impactoMOAT ? (
-                    <span>
-                      <span className="text-[#c9a959] font-semibold">{impactoMOAT.totalNuevo}</span> propiedades
-                      {impactoMOAT.diferencia !== 0 && (
-                        <span className={impactoMOAT.diferencia > 0 ? 'text-green-400' : 'text-amber-400'}>
-                          {' '}({impactoMOAT.diferencia > 0 ? '+' : ''}{impactoMOAT.diferencia})
-                        </span>
-                      )}
-                      <span className="ml-2 text-white/40">· {impactoMOAT.interpretacion}</span>
-                    </span>
-                  ) : null}
-                </div>
+              ) : (
                 <button
-                  onClick={aplicarFiltros}
-                  disabled={calculandoImpacto}
-                  className="bg-white text-[#0a0a0a] px-8 py-3 text-xs tracking-[2px] uppercase hover:bg-[#c9a959] hover:text-white transition-all disabled:opacity-50"
+                  onClick={() => startEditing('presupuesto')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-[#c9a959]/20 border border-white/10 hover:border-[#c9a959] rounded-full transition-all"
                 >
-                  Aplicar
+                  <span>💰</span>
+                  <span className="text-white">Hasta ${(filtrosActivos.presupuesto/1000).toFixed(0)}k</span>
+                  <span className="text-[#c9a959] text-xs">✎</span>
                 </button>
-              </div>
+              )}
+
+              {/* Chip DORMITORIOS */}
+              {editingFilter === 'dormitorios' ? (
+                <div className="w-full bg-[#1a1a1a] border border-[#c9a959] rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-white font-medium">🛏️ Dormitorios</span>
+                    <button onClick={() => setEditingFilter(null)} className="text-white/40 hover:text-white">✕</button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {DORMITORIOS_PREMIUM.map(d => (
+                      <button
+                        key={d.value ?? 'todos'}
+                        onClick={() => setTempDormitorios(d.value)}
+                        className={`px-4 py-2 border transition-all ${
+                          tempDormitorios === d.value
+                            ? 'border-[#c9a959] bg-[#c9a959]/10 text-white'
+                            : 'border-white/10 text-white/60 hover:border-[#c9a959]/50'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Impacto MOAT */}
+                  <div className="text-white/60 text-sm mb-4">
+                    {calculandoImpacto ? (
+                      <span className="flex items-center gap-2">
+                        <div className="w-3 h-3 border-2 border-[#c9a959] border-t-transparent rounded-full animate-spin" />
+                        Calculando...
+                      </span>
+                    ) : impactoMOAT ? (
+                      <span>
+                        <span className="text-[#c9a959] font-semibold">{impactoMOAT.totalNuevo}</span> propiedades · {impactoMOAT.interpretacion}
+                      </span>
+                    ) : null}
+                  </div>
+                  <button
+                    onClick={aplicarFiltros}
+                    disabled={calculandoImpacto}
+                    className="w-full py-2 bg-white text-[#0a0a0a] text-sm tracking-[1px] uppercase hover:bg-[#c9a959] hover:text-white transition-all disabled:opacity-50"
+                  >
+                    Aplicar cambio
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => startEditing('dormitorios')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-[#c9a959]/20 border border-white/10 hover:border-[#c9a959] rounded-full transition-all"
+                >
+                  <span>🛏️</span>
+                  <span className="text-white">{formatDorms(filtrosActivos.dormitorios)}</span>
+                  <span className="text-[#c9a959] text-xs">✎</span>
+                </button>
+              )}
+
+              {/* Chip ZONAS */}
+              {editingFilter === 'zonas' ? (
+                <div className="w-full bg-[#1a1a1a] border border-[#c9a959] rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-white font-medium">📍 Zonas</span>
+                    <button onClick={() => setEditingFilter(null)} className="text-white/40 hover:text-white">✕</button>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+                    {ZONAS_PREMIUM.map(z => (
+                      <button
+                        key={z.id}
+                        onClick={() => setTempZonas(prev =>
+                          prev.includes(z.id)
+                            ? prev.filter(x => x !== z.id)
+                            : [...prev, z.id]
+                        )}
+                        className={`p-2 border transition-all text-sm ${
+                          tempZonas.includes(z.id)
+                            ? 'border-[#c9a959] bg-[#c9a959]/10 text-white'
+                            : 'border-white/10 text-white/60 hover:border-[#c9a959]/50'
+                        }`}
+                      >
+                        {z.label}
+                      </button>
+                    ))}
+                  </div>
+                  {tempZonas.length === 0 && (
+                    <p className="text-white/30 text-xs mb-4">Sin seleccion = todas las zonas</p>
+                  )}
+                  {/* Impacto MOAT */}
+                  <div className="text-white/60 text-sm mb-4">
+                    {calculandoImpacto ? (
+                      <span className="flex items-center gap-2">
+                        <div className="w-3 h-3 border-2 border-[#c9a959] border-t-transparent rounded-full animate-spin" />
+                        Calculando...
+                      </span>
+                    ) : impactoMOAT ? (
+                      <span>
+                        <span className="text-[#c9a959] font-semibold">{impactoMOAT.totalNuevo}</span> propiedades · {impactoMOAT.interpretacion}
+                      </span>
+                    ) : null}
+                  </div>
+                  <button
+                    onClick={aplicarFiltros}
+                    disabled={calculandoImpacto}
+                    className="w-full py-2 bg-white text-[#0a0a0a] text-sm tracking-[1px] uppercase hover:bg-[#c9a959] hover:text-white transition-all disabled:opacity-50"
+                  >
+                    Aplicar cambio
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => startEditing('zonas')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-[#c9a959]/20 border border-white/10 hover:border-[#c9a959] rounded-full transition-all"
+                >
+                  <span>📍</span>
+                  <span className="text-white">
+                    {filtrosActivos.zonas.length === 0
+                      ? 'Todas las zonas'
+                      : filtrosActivos.zonas.length === 1
+                        ? ZONAS_PREMIUM.find(z => z.id === filtrosActivos.zonas[0])?.label || filtrosActivos.zonas[0]
+                        : `${filtrosActivos.zonas.length} zonas`}
+                  </span>
+                  <span className="text-[#c9a959] text-xs">✎</span>
+                </button>
+              )}
+
+              {/* Chip ESTADO ENTREGA */}
+              {editingFilter === 'estado_entrega' ? (
+                <div className="w-full bg-[#1a1a1a] border border-[#c9a959] rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-white font-medium">🏗️ Entrega</span>
+                    <button onClick={() => setEditingFilter(null)} className="text-white/40 hover:text-white">✕</button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {ESTADO_ENTREGA_PREMIUM.map(e => (
+                      <button
+                        key={e.value}
+                        onClick={() => setTempEstadoEntrega(e.value)}
+                        className={`px-4 py-2 border transition-all ${
+                          tempEstadoEntrega === e.value
+                            ? 'border-[#c9a959] bg-[#c9a959]/10 text-white'
+                            : 'border-white/10 text-white/60 hover:border-[#c9a959]/50'
+                        }`}
+                      >
+                        {e.label}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Impacto MOAT */}
+                  <div className="text-white/60 text-sm mb-4">
+                    {calculandoImpacto ? (
+                      <span className="flex items-center gap-2">
+                        <div className="w-3 h-3 border-2 border-[#c9a959] border-t-transparent rounded-full animate-spin" />
+                        Calculando...
+                      </span>
+                    ) : impactoMOAT ? (
+                      <span>
+                        <span className="text-[#c9a959] font-semibold">{impactoMOAT.totalNuevo}</span> propiedades · {impactoMOAT.interpretacion}
+                      </span>
+                    ) : null}
+                  </div>
+                  <button
+                    onClick={aplicarFiltros}
+                    disabled={calculandoImpacto}
+                    className="w-full py-2 bg-white text-[#0a0a0a] text-sm tracking-[1px] uppercase hover:bg-[#c9a959] hover:text-white transition-all disabled:opacity-50"
+                  >
+                    Aplicar cambio
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => startEditing('estado_entrega')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-[#c9a959]/20 border border-white/10 hover:border-[#c9a959] rounded-full transition-all"
+                >
+                  <span>🏗️</span>
+                  <span className="text-white">
+                    {filtrosActivos.estado_entrega === 'entrega_inmediata' ? 'Entrega inmediata' :
+                     filtrosActivos.estado_entrega === 'solo_preventa' ? 'Solo preventa' :
+                     'Todo el mercado'}
+                  </span>
+                  <span className="text-[#c9a959] text-xs">✎</span>
+                </button>
+              )}
             </div>
           </div>
-        )}
 
-        {/* Results Header */}
-        <div className={editingFilter ? 'pt-64' : 'pt-20'}>
-          <ResultsHeaderPremium
-            count={propiedades.length}
-            filtros={buildFilterChips()}
-            onEditarFiltros={() => startEditing('presupuesto')}
-          />
-        </div>
-
-        {/* Main content */}
-        <main className="max-w-6xl mx-auto px-8 py-12">
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <div className="w-8 h-8 border-2 border-[#c9a959] border-t-transparent rounded-full animate-spin" />
