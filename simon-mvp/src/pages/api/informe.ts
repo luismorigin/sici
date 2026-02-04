@@ -658,8 +658,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         /* Disclaimer - Premium */
         .disclaimer-box { background: rgba(201,169,89,0.1); border: 1px solid rgba(201,169,89,0.3); border-radius: 10px; padding: 18px 20px; margin-top: 20px; display: flex; gap: 12px; align-items: flex-start; }
         .disclaimer-box .icon { font-size: 1.3rem; }
-        .disclaimer-box strong { color: var(--gold); display: block; margin-bottom: 4px; }
+        .disclaimer-box > div > strong { color: var(--gold); display: block; margin-bottom: 4px; }
         .disclaimer-box p { font-size: 0.9rem; color: rgba(248,246,243,0.7); margin: 0; }
+        .disclaimer-box p strong { color: var(--gold); display: inline; }
 
         /* Footer - Premium */
         .footer { background: #0a0a0a; color: var(--cream); padding: 40px 0; margin-top: 50px; border-top: 1px solid var(--gold); }
