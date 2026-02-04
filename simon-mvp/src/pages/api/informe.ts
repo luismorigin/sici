@@ -1058,7 +1058,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 <div class="amenities-grid">
                     ${equipFav.allAmenities.slice(0, 8).map(a => `
                     <div class="amenity-item">
-                        <div class="amenity-icon">${getAmenityEmoji(a)}</div>
+                        <div class="amenity-icon">${getAmenityEmoji()}</div>
                         <div class="amenity-details">
                             <div class="name">${a}</div>
                             <div class="vs-market standard">Confirmado</div>
@@ -1659,82 +1659,197 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </div>`
                 })()}
 
+                ${(() => {
+                  // === ANÁLISIS VS MERCADO (no vs presupuesto) ===
+                  const diferenciaMercado = fav.posicion_mercado?.diferencia_pct ?? 0
+                  const categoriaMercado = fav.posicion_mercado?.categoria || 'justo'
+                  const esBuenPrecio = diferenciaMercado <= 0
+                  const esPremium = diferenciaMercado > 10
+
+                  // Solo mostrar excede presupuesto si realmente excede (con extras)
+                  const excedePresupuesto = datosFav.precioReal > datosUsuario.presupuesto
+                  const montoExcede = excedePresupuesto ? datosFav.precioReal - datosUsuario.presupuesto : 0
+
+                  // === CÁLCULO INTELIGENTE DE DESCUENTO ===
+                  const dias = datosFav.diasMercado || 0
+                  const posicion = fav.posicion_mercado?.categoria || 'justo'
+                  const alternativasMasBaratas = todas.filter(p => p.id !== fav.id && p.precio_usd < fav.precio_usd * 0.98)
+                  const hayAlternativas = alternativasMasBaratas.length > 0
+
+                  // Calcular descuento base según datos
+                  let descuentoBase = 5 // Base 5%
+                  if (dias > 90) descuentoBase += 3
+                  if (dias > 180) descuentoBase += 2
+                  if (hayAlternativas) descuentoBase += 2
+                  if (posicion === 'premium') descuentoBase -= 2
+                  if (posicion === 'oportunidad') descuentoBase -= 1
+                  descuentoBase = Math.max(3, Math.min(descuentoBase, 15)) // Entre 3% y 15%
+
+                  const ofertaInicial = Math.round(fav.precio_usd * (1 - descuentoBase / 100))
+                  const ofertaObjetivo = Math.round(fav.precio_usd * (1 - descuentoBase * 0.6 / 100))
+
+                  // === MEJOR ALTERNATIVA ===
+                  const mejorAlternativa = alternativasMasBaratas.length > 0
+                    ? alternativasMasBaratas.reduce((a, b) => a.precio_usd < b.precio_usd ? a : b)
+                    : null
+                  const diferenciaAlternativa = mejorAlternativa
+                    ? Math.round((1 - mejorAlternativa.precio_usd / fav.precio_usd) * 100)
+                    : 0
+
+                  // === FACTORES DE NEGOCIACIÓN ===
+                  const factores = []
+                  if (dias > 90) factores.push(`${dias} días en mercado`)
+                  if (hayAlternativas) factores.push(`${alternativasMasBaratas.length} alternativa${alternativasMasBaratas.length > 1 ? 's' : ''} más barata${alternativasMasBaratas.length > 1 ? 's' : ''}`)
+                  if (posicion === 'premium') factores.push('precio sobre mercado')
+                  if (posicion === 'oportunidad') factores.push('ya es buena oportunidad')
+
+                  // === VEREDICTO BASADO EN MERCADO ===
+                  let veredictoTexto = ''
+                  let veredictoColor = 'var(--gold)'
+                  if (excedePresupuesto) {
+                    veredictoTexto = `ALERTA: Te excede $${fmt(montoExcede)}. Negociá fuerte o considerá alternativas.`
+                    veredictoColor = '#8b4557'
+                  } else if (esBuenPrecio && dias > 60) {
+                    veredictoTexto = `OPORTUNIDAD: Buen precio (${Math.abs(Math.round(diferenciaMercado))}% bajo mercado) + ${dias} días publicada. Margen para negociar.`
+                  } else if (esBuenPrecio) {
+                    veredictoTexto = `BUEN PRECIO: ${Math.abs(Math.round(diferenciaMercado))}% bajo promedio de zona. Poco margen pero vale la pena.`
+                  } else if (esPremium && dias > 90) {
+                    veredictoTexto = `NEGOCIABLE: Precio premium (+${Math.round(diferenciaMercado)}%) pero ${dias} días sin venderse. Hay margen.`
+                  } else if (esPremium) {
+                    veredictoTexto = `PREMIUM: +${Math.round(diferenciaMercado)}% sobre mercado. Intentá negociar 5-10%.`
+                  } else {
+                    veredictoTexto = `PRECIO JUSTO: Alineado con el mercado. Intentá 3-5% de descuento.`
+                  }
+
+                  return `
+                <!-- Tu Situación Real -->
                 <div class="recommendation-box">
-                    <h3 style="display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Recomendación según tu situación</h3>
-                    <table class="recommendation-table">
-                        <thead>
-                            <tr>
-                                <th>Si...</th>
-                                <th>Entonces...</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${necesitaParqueo && !datosFav.tieneParqueo ? `
-                            <tr>
-                                <td>${fav.proyecto} incluye parqueo</td>
-                                <td><strong>Excelente.</strong> Ofertá $${fmt(Math.round(fav.precio_usd * 0.95))} (-5%)</td>
-                            </tr>
-                            <tr>
-                                <td>${fav.proyecto} NO incluye parqueo</td>
-                                <td>Precio real = $${fmt(datosFav.precioReal)}. Ofertá $${fmt(Math.round(fav.precio_usd * 0.88))} pidiendo incluir parqueo.</td>
-                            </tr>` : `
-                            <tr>
-                                <td>Querés asegurar ${fav.proyecto}</td>
-                                <td><strong>Ofertá $${fmt(Math.round(fav.precio_usd * 0.95))}</strong> (-5%) para cerrar rápido</td>
-                            </tr>
-                            <tr>
-                                <td>Querés negociar más</td>
-                                <td>Empezá con $${fmt(Math.round(fav.precio_usd * 0.90))} (-10%) y subí gradualmente</td>
-                            </tr>`}
-                            ${comp1 && datosComp1 ? `
-                            <tr>
-                                <td>${fav.proyecto} no da flexibilidad</td>
-                                <td>Considerá ${comp1.proyecto}: $${fmt(datosComp1.precioReal)} precio real${datosComp1.diasMercado > 60 ? ' + más negociable' : ''}</td>
-                            </tr>` : ''}
-                            ${datosUsuario.pareja_alineados === false ? `
-                            <tr style="background: rgba(255,193,7,0.1);">
-                                <td>No están 100% alineados</td>
-                                <td><strong>Visiten juntos ANTES de ofertar.</strong> No comprometan sin consenso.</td>
-                            </tr>` : ''}
-                        </tbody>
-                    </table>
+                    <h3 style="display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Tu Situación Real con ${fav.proyecto}</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+                        <div style="background: #1a1a1a; padding: 15px; border-radius: 10px; border: 1px solid rgba(201,169,89,0.2);">
+                            <div style="font-size: 0.85rem; color: rgba(248,246,243,0.6); margin-bottom: 10px;">Desglose de precio</div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="color: rgba(248,246,243,0.8);">Precio publicado</span>
+                                <span style="color: var(--cream); font-weight: 600;">$${fmt(fav.precio_usd)}</span>
+                            </div>
+                            ${datosFav.costoExtras > 0 ? `
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="color: rgba(248,246,243,0.8);">+ Extras necesarios</span>
+                                <span style="color: #b87333; font-weight: 600;">$${fmt(datosFav.costoExtras)}</span>
+                            </div>` : ''}
+                            <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid rgba(201,169,89,0.2);">
+                                <span style="color: var(--gold); font-weight: 600;">Tu precio real</span>
+                                <span style="color: var(--gold); font-weight: 700; font-size: 1.1rem;">$${fmt(datosFav.precioReal)}</span>
+                            </div>
+                        </div>
+                        <div style="background: #1a1a1a; padding: 15px; border-radius: 10px; border: 1px solid rgba(201,169,89,0.2);">
+                            <div style="font-size: 0.85rem; color: rgba(248,246,243,0.6); margin-bottom: 10px;">Precio vs Mercado</div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="color: rgba(248,246,243,0.8);">Promedio zona ($/m²)</span>
+                                <span style="color: var(--cream); font-weight: 600;">$${fmt(Math.round(analisis.precio_m2_promedio))}/m²</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid rgba(201,169,89,0.2);">
+                                <span style="color: ${esBuenPrecio ? 'var(--gold)' : '#b87333'}; font-weight: 600;">${esBuenPrecio ? 'Bajo mercado' : 'Sobre mercado'}</span>
+                                <span style="color: ${esBuenPrecio ? 'var(--gold)' : '#b87333'}; font-weight: 700; font-size: 1.1rem;">${diferenciaMercado > 0 ? '+' : ''}${Math.round(diferenciaMercado)}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="background: ${excedePresupuesto ? 'rgba(139,69,87,0.1)' : 'rgba(201,169,89,0.1)'}; border: 1px solid ${excedePresupuesto ? 'rgba(139,69,87,0.3)' : 'rgba(201,169,89,0.3)'}; border-radius: 8px; padding: 12px 15px; text-align: center;">
+                        <strong style="color: ${veredictoColor};">
+                            ${veredictoTexto}
+                        </strong>
+                    </div>
                 </div>
 
-                ${(comp1 || comp2) ? `
-                <h4 style="color: var(--cream); margin: 25px 0 15px; display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> ¿Cuál elegir según tus prioridades?</h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                    <div style="background: ${datosUsuario.calidad_vs_precio >= 4 ? 'var(--oportunidad)' : '#1a1a1a'}; color: ${datosUsuario.calidad_vs_precio >= 4 ? 'white' : 'var(--cream)'}; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid ${datosUsuario.calidad_vs_precio >= 4 ? 'transparent' : 'rgba(201,169,89,0.2)'};">
-                        <div style="font-size: 0.8rem; opacity: 0.9;">Si priorizás PRECIO</div>
-                        <div style="font-size: 1.1rem; font-weight: 700; margin-top: 5px;">${(() => {
-                          const opciones = [
-                            { nombre: fav.proyecto, precioReal: datosFav.precioReal },
-                            ...(datosComp1 ? [{ nombre: comp1!.proyecto, precioReal: datosComp1.precioReal }] : []),
-                            ...(datosComp2 ? [{ nombre: comp2!.proyecto, precioReal: datosComp2.precioReal }] : [])
-                          ]
-                          return opciones.reduce((a, b) => a.precioReal < b.precioReal ? a : b).nombre
+                <!-- Oferta Inteligente -->
+                <h4 style="color: var(--cream); margin: 25px 0 15px; display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Oferta Inteligente</h4>
+                <div style="background: #0a0a0a; border-radius: 12px; padding: 20px; border: 1px solid rgba(201,169,89,0.3);">
+                    <div style="font-size: 0.85rem; color: rgba(248,246,243,0.6); margin-bottom: 15px;">
+                        Calculado en base a: ${factores.length > 0 ? factores.join(' • ') : 'datos del mercado'}
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                        <div style="text-align: center; padding: 15px; background: #1a1a1a; border-radius: 10px; border: 1px solid rgba(201,169,89,0.2);">
+                            <div style="font-size: 0.8rem; color: rgba(248,246,243,0.6);">Oferta inicial</div>
+                            <div style="font-size: 1.4rem; font-weight: 700; color: var(--gold); margin: 5px 0;">$${fmt(ofertaInicial)}</div>
+                            <div style="font-size: 0.8rem; color: rgba(248,246,243,0.5);">-${descuentoBase}%</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: #1a1a1a; border-radius: 10px; border: 1px solid rgba(201,169,89,0.2);">
+                            <div style="font-size: 0.8rem; color: rgba(248,246,243,0.6);">Objetivo realista</div>
+                            <div style="font-size: 1.4rem; font-weight: 700; color: var(--cream); margin: 5px 0;">$${fmt(ofertaObjetivo)}</div>
+                            <div style="font-size: 0.8rem; color: rgba(248,246,243,0.5);">-${Math.round(descuentoBase * 0.6)}%</div>
+                        </div>
+                    </div>
+                    ${hayAlternativas && mejorAlternativa ? `
+                    <div style="margin-top: 15px; padding: 12px 15px; background: rgba(201,169,89,0.1); border-radius: 8px; border: 1px solid rgba(201,169,89,0.2);">
+                        <strong style="color: var(--gold);">Tu argumento:</strong>
+                        <span style="color: var(--cream);"> "${mejorAlternativa.proyecto} está en $${fmt(mejorAlternativa.precio_usd)} (-${diferenciaAlternativa}%). Necesito que ${fav.proyecto} sea competitivo."</span>
+                    </div>` : ''}
+                </div>
+
+                ${mejorAlternativa ? `
+                <!-- Tu Mejor Alternativa -->
+                <h4 style="color: var(--cream); margin: 25px 0 15px; display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg> Si ${fav.proyecto} no da flexibilidad</h4>
+                <div style="background: #1a1a1a; border-radius: 12px; padding: 20px; border: 1px solid rgba(201,169,89,0.2);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div>
+                            <div style="font-size: 0.85rem; color: rgba(248,246,243,0.6);">Tu mejor alternativa</div>
+                            <div style="font-size: 1.2rem; font-weight: 700; color: var(--gold);">${mejorAlternativa.proyecto}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 1.3rem; font-weight: 700; color: var(--cream);">$${fmt(mejorAlternativa.precio_usd)}</div>
+                            <div style="font-size: 0.85rem; color: var(--gold);">-${diferenciaAlternativa}% vs tu favorita</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                        <span style="background: rgba(201,169,89,0.1); color: var(--gold); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem;">
+                            ${mejorAlternativa.zona ? zonaDisplay(mejorAlternativa.zona) : 'Misma zona'}
+                        </span>
+                        <span style="background: rgba(201,169,89,0.1); color: var(--gold); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem;">
+                            ${mejorAlternativa.dormitorios} dorm
+                        </span>
+                        <span style="background: rgba(201,169,89,0.1); color: var(--gold); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem;">
+                            ${Math.round(mejorAlternativa.area_m2)}m²
+                        </span>
+                        ${mejorAlternativa.dias_en_mercado && mejorAlternativa.dias_en_mercado > 60 ? `
+                        <span style="background: rgba(201,169,89,0.1); color: var(--gold); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem;">
+                            ${mejorAlternativa.dias_en_mercado} días (negociable)
+                        </span>` : ''}
+                    </div>
+                </div>` : ''}
+
+                <!-- Resumen de Prioridades -->
+                ${(comp1 || comp2 || todas.length > 1) ? `
+                <h4 style="color: var(--cream); margin: 25px 0 15px; display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> Según tus prioridades, elegí</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+                    <div style="background: ${datosUsuario.calidad_vs_precio >= 4 ? 'var(--gold)' : '#1a1a1a'}; color: ${datosUsuario.calidad_vs_precio >= 4 ? '#0a0a0a' : 'var(--cream)'}; padding: 12px; border-radius: 10px; text-align: center; border: 1px solid ${datosUsuario.calidad_vs_precio >= 4 ? 'transparent' : 'rgba(201,169,89,0.2)'};">
+                        <div style="font-size: 0.75rem; opacity: 0.8;">MEJOR PRECIO</div>
+                        <div style="font-size: 1rem; font-weight: 700; margin-top: 3px;">${(() => {
+                          const opts = [{ n: fav.proyecto, p: datosFav.precioReal }, ...(todas.slice(1).map(t => ({ n: t.proyecto, p: t.precio_usd })))]
+                          return opts.reduce((a, b) => a.p < b.p ? a : b).n
                         })()}</div>
                     </div>
-                    <div style="background: ${datosUsuario.ubicacion_vs_metros >= 4 ? 'var(--gold)' : '#1a1a1a'}; color: ${datosUsuario.ubicacion_vs_metros >= 4 ? '#0a0a0a' : 'var(--cream)'}; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid ${datosUsuario.ubicacion_vs_metros >= 4 ? 'transparent' : 'rgba(201,169,89,0.2)'};">
-                        <div style="font-size: 0.8rem; opacity: 0.9;">Si priorizás METROS</div>
-                        <div style="font-size: 1.1rem; font-weight: 700; margin-top: 5px;">${(() => {
-                          const opciones = [
-                            { nombre: fav.proyecto, area: fav.area_m2 },
-                            ...(comp1 ? [{ nombre: comp1.proyecto, area: comp1.area_m2 }] : []),
-                            ...(comp2 ? [{ nombre: comp2.proyecto, area: comp2.area_m2 }] : [])
-                          ]
-                          return opciones.reduce((a, b) => a.area > b.area ? a : b).nombre
+                    <div style="background: ${datosUsuario.ubicacion_vs_metros >= 4 ? 'var(--gold)' : '#1a1a1a'}; color: ${datosUsuario.ubicacion_vs_metros >= 4 ? '#0a0a0a' : 'var(--cream)'}; padding: 12px; border-radius: 10px; text-align: center; border: 1px solid ${datosUsuario.ubicacion_vs_metros >= 4 ? 'transparent' : 'rgba(201,169,89,0.2)'};">
+                        <div style="font-size: 0.75rem; opacity: 0.8;">MÁS METROS</div>
+                        <div style="font-size: 1rem; font-weight: 700; margin-top: 3px;">${(() => {
+                          const opts = [{ n: fav.proyecto, a: fav.area_m2 }, ...(todas.slice(1).map(t => ({ n: t.proyecto, a: t.area_m2 })))]
+                          return opts.reduce((a, b) => a.a > b.a ? a : b).n
                         })()}</div>
                     </div>
-                    <div style="background: #1a1a1a; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(201,169,89,0.2);">
-                        <div style="font-size: 0.8rem; opacity: 0.9; color: rgba(248,246,243,0.8);">Más NEGOCIABLE</div>
-                        <div style="font-size: 1.1rem; font-weight: 700; margin-top: 5px; color: var(--gold);">${(() => {
-                          const opciones = [
-                            { nombre: fav.proyecto, dias: datosFav.diasMercado },
-                            ...(datosComp1 ? [{ nombre: comp1!.proyecto, dias: datosComp1.diasMercado }] : []),
-                            ...(datosComp2 ? [{ nombre: comp2!.proyecto, dias: datosComp2.diasMercado }] : [])
-                          ]
-                          return opciones.reduce((a, b) => a.dias > b.dias ? a : b).nombre
+                    <div style="background: #1a1a1a; padding: 12px; border-radius: 10px; text-align: center; border: 1px solid rgba(201,169,89,0.2);">
+                        <div style="font-size: 0.75rem; opacity: 0.8; color: rgba(248,246,243,0.8);">MÁS NEGOCIABLE</div>
+                        <div style="font-size: 1rem; font-weight: 700; margin-top: 3px; color: var(--gold);">${(() => {
+                          const opts = [{ n: fav.proyecto, d: datosFav.diasMercado }, ...(todas.slice(1).map(t => ({ n: t.proyecto, d: t.dias_en_mercado || 0 })))]
+                          return opts.reduce((a, b) => a.d > b.d ? a : b).n
                         })()}</div>
+                    </div>
+                </div>` : ''}
+
+                ${datosUsuario.pareja_alineados === false ? `
+                <div class="alert" style="margin-top: 25px; background: rgba(184,115,51,0.1); border: 1px solid rgba(184,115,51,0.3);">
+                    <div class="alert-icon" style="color: #b87333;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                    <div class="alert-content">
+                        <h4 style="color: #b87333;">Importante: No están 100% alineados</h4>
+                        <p style="color: var(--cream);">Antes de ofertar: 1) Alinear prioridades con tu pareja. 2) Visitar ${fav.proyecto} juntos. 3) Usar el checklist de este informe.</p>
                     </div>
                 </div>` : ''}
 
@@ -1743,13 +1858,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     <div class="alert-content">
                         <h4>Tu Próximo Paso</h4>
                         <p>
-                            ${datosUsuario.pareja_alineados === false
-                              ? `1. Alinear con tu pareja sobre prioridades. 2. Visitar ${fav.proyecto} juntos. 3. Usar el checklist de este informe.`
-                              : `Agendar visita a ${fav.proyecto} esta semana. Llevá este informe impreso y confirmá los puntos del checklist antes de ofertar.`
+                            ${excedePresupuesto
+                              ? `Revisá las alternativas más baratas o negociá fuerte. ${mejorAlternativa ? `${mejorAlternativa.proyecto} podría ser tu mejor opción.` : ''}`
+                              : `Agendar visita a ${fav.proyecto} esta semana. Llevá este informe y usá el argumento de negociación con los datos concretos.`
                             }
                         </p>
                     </div>
-                </div>
+                </div>`
+                })()}
 
                 <div class="disclaimer-box">
                     <span class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M9 18h6M10 22h4M12 2v1M4.93 4.93l.7.7M2 12h1M19.07 4.93l-.7.7M22 12h-1M15.54 8.46a5 5 0 1 0-7.08 7.08L10 17h4l1.54-1.46a5 5 0 0 0 0-7.08Z"/></svg></span>
