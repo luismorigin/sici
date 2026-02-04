@@ -14,6 +14,7 @@ import {
 import { premiumFonts } from '@/styles/premium-theme'
 import { formatDorms } from '@/lib/format-utils'
 import FeedbackPremiumModal from '@/components/FeedbackPremiumModal'
+import { innegociablesToAmenidades } from '@/config/amenidades-mercado'
 
 // Dynamic import para mapa (sin SSR)
 const MapaResultados = dynamic(() => import('@/components/MapaResultados'), {
@@ -108,6 +109,139 @@ const IconClose = () => (
     <path d="M18 6L6 18M6 6l12 12" />
   </svg>
 )
+
+// ============================================================================
+// SCORE MOAT - Ranking inteligente basado en preferencias del usuario
+// Fórmula: INNEGOCIABLES (0-100) + OPORTUNIDAD (0-40) + TRADE_OFFS (0-35) + DESEABLES (0-15)
+// Máximo: ~175 puntos
+// ============================================================================
+
+// Medianas por tipología (Enero 2026)
+const MEDIANA_AREA_POR_DORMS: Record<number, number> = {
+  0: 36, 1: 52, 2: 88, 3: 165, 4: 200, 5: 250
+}
+
+// Medianas precio/m² por zona (Enero 2026)
+const MEDIANA_PRECIO_M2_POR_ZONA: Record<string, number> = {
+  'Equipetrol Norte/Norte': 2362,
+  'Equipetrol Norte/Sur': 2362,
+  'Faremafu': 2299,
+  'Equipetrol': 2055,
+  'Sirari': 2002,
+  'Villa Brigida': 1538,
+  'default': 2000
+}
+
+interface DatosUsuarioMOAT {
+  innegociables: string[]
+  deseables: string[]
+  calidad_vs_precio: number   // 1-5 (amenidades vs precio)
+  amenidades_vs_metros: number // 1-5 (amenidades vs metros)
+}
+
+function calcularScoreMOAT(
+  prop: UnidadReal,
+  datosUsuario: DatosUsuarioMOAT
+): number {
+  let score = 0
+
+  // 1. INNEGOCIABLES (0 a 100) - Score gradual
+  // Confirmado = 100%, Por verificar = 50%, No tiene = 0%
+  if (datosUsuario.innegociables.length === 0) {
+    score += 100
+  } else {
+    const amenidadesRequeridas = innegociablesToAmenidades(datosUsuario.innegociables)
+    const confirmados = prop.amenities_confirmados || []
+    const porVerificar = prop.amenities_por_verificar || []
+
+    let puntosInnegociables = 0
+    const maxPuntosPorInnegociable = 100 / amenidadesRequeridas.length
+
+    for (const amenidad of amenidadesRequeridas) {
+      if (confirmados.includes(amenidad)) {
+        puntosInnegociables += maxPuntosPorInnegociable
+      } else if (porVerificar.includes(amenidad)) {
+        puntosInnegociables += maxPuntosPorInnegociable * 0.5
+      }
+    }
+
+    score += Math.round(puntosInnegociables)
+  }
+
+  // 2. OPORTUNIDAD (0 a 40) - basado en posicion_mercado
+  // IMPORTANTE: La escala se INVIERTE según preferencia calidad_vs_precio
+  const posicionMercado = prop.posicion_mercado as { diferencia_pct?: number } | null
+  const difPct = posicionMercado?.diferencia_pct ?? 0
+
+  let oportunidadScore = 0
+
+  if (datosUsuario.calidad_vs_precio <= 2) {
+    // PRIORIZA CALIDAD: Premium/caro = más puntos
+    if (difPct >= 15) oportunidadScore = 40
+    else if (difPct >= 5) oportunidadScore = 30
+    else if (difPct >= -10) oportunidadScore = 20
+    else if (difPct >= -20) oportunidadScore = 10
+  } else if (datosUsuario.calidad_vs_precio >= 4) {
+    // PRIORIZA PRECIO: Barato = más puntos
+    if (difPct <= -20) oportunidadScore = 40
+    else if (difPct <= -10) oportunidadScore = 30
+    else if (difPct <= 5) oportunidadScore = 20
+    else if (difPct <= 15) oportunidadScore = 10
+  } else {
+    // NEUTRAL (slider=3): Escala balanceada
+    if (difPct <= -20) oportunidadScore = 35
+    else if (difPct <= -10) oportunidadScore = 30
+    else if (difPct <= 10) oportunidadScore = 25
+    else if (difPct <= 20) oportunidadScore = 15
+    else oportunidadScore = 10
+  }
+
+  score += oportunidadScore
+
+  // 3. TRADE-OFFS (0 a 35)
+  const medianaArea = MEDIANA_AREA_POR_DORMS[prop.dormitorios || 1] || 52
+  const totalAmenidades = (prop.amenities_confirmados?.length || 0)
+
+  // Trade-off 1: amenidades + precio
+  let amenidadesPrecioBoost = 0
+  if (datosUsuario.calidad_vs_precio <= 2 && totalAmenidades >= 5) {
+    amenidadesPrecioBoost = 10
+  }
+  score += amenidadesPrecioBoost
+
+  // Trade-off 2: amenidades vs metros
+  let amenidadesMetrosBoost = 0
+  if (datosUsuario.amenidades_vs_metros <= 2) {
+    // Prioriza amenidades
+    if (totalAmenidades >= 5) amenidadesMetrosBoost = 15
+    else if (totalAmenidades >= 3) amenidadesMetrosBoost = 7
+  } else if (datosUsuario.amenidades_vs_metros >= 4) {
+    // Prioriza metros
+    if ((prop.area_m2 || 0) > medianaArea) amenidadesMetrosBoost = 15
+    else if ((prop.area_m2 || 0) > medianaArea * 0.9) amenidadesMetrosBoost = 7
+  } else {
+    // Balance (slider = 3)
+    if (totalAmenidades >= 5) amenidadesMetrosBoost += 7
+    if ((prop.area_m2 || 0) > medianaArea) amenidadesMetrosBoost += 7
+  }
+  score += amenidadesMetrosBoost
+
+  // 4. DESEABLES (0 a 15) - max 3 deseables, 5 pts cada uno
+  if (datosUsuario.deseables.length > 0) {
+    const amenidadesDeseadas = innegociablesToAmenidades(datosUsuario.deseables)
+    let deseablesScore = 0
+    const confirmados = prop.amenities_confirmados || []
+
+    for (const amenidad of amenidadesDeseadas.slice(0, 3)) {
+      if (confirmados.includes(amenidad)) {
+        deseablesScore += 5
+      }
+    }
+    score += deseablesScore
+  }
+
+  return score
+}
 
 export default function ResultadosV2() {
   const router = useRouter()
@@ -369,63 +503,35 @@ export default function ResultadosV2() {
             precioReal += ajusteBaulera
           }
 
-          // Calcular score según innegociables
-          let scoreInnegociables = 0
-          const amenitiesProp = [...(prop.amenities_lista || []), ...(prop.amenities_confirmados || [])]
-            .map(a => a.toLowerCase())
-
-          innegociablesIds.forEach(id => {
-            const nombreAmenidad = INNEGOCIABLE_TO_AMENIDAD[id]?.toLowerCase() || id.toLowerCase()
-            if (amenitiesProp.some(a => a.includes(nombreAmenidad) || nombreAmenidad.includes(a))) {
-              scoreInnegociables += 100  // Bonus grande por cada innegociable
-            }
-          })
-
-          // Bonus por deseables
-          let scoreDeseables = 0
-          deseablesIds.forEach(id => {
-            const nombreAmenidad = INNEGOCIABLE_TO_AMENIDAD[id]?.toLowerCase() || id.toLowerCase()
-            if (amenitiesProp.some(a => a.includes(nombreAmenidad) || nombreAmenidad.includes(a))) {
-              scoreDeseables += 25  // Bonus menor por deseable
-            }
-          })
-
-          // Score por preferencias de trade-off (CORREGIDO)
-          let scorePreferencias = 0
-
-          // Mediana de área por tipología (datos reales del mercado)
-          const medianaPorTipologia: Record<number, number> = {
-            0: 36,   // Mono
-            1: 52,   // 1 dorm
-            2: 88,   // 2 dorm
-            3: 165,  // 3+ dorm
+          // Calcular score MOAT completo (4 componentes)
+          const datosUsuarioMOAT: DatosUsuarioMOAT = {
+            innegociables: innegociablesIds,
+            deseables: deseablesIds,
+            calidad_vs_precio: calidadVsPrecioVal,
+            amenidades_vs_metros: amenidadesVsMetrosVal,
           }
 
-          // Si prefiere precio (calidadVsPrecio > 3), beneficia precios más bajos
-          // Peso aumentado: máximo ~100 pts para que compita con innegociables
-          if (calidadVsPrecioVal > 3) {
-            // Clamp para evitar valores negativos si precio > presupuesto
-            const precioNormalizado = Math.max(0, 1 - (precioReal / (filtros.precio_max || 150000)))
-            scorePreferencias += precioNormalizado * (calidadVsPrecioVal - 3) * 50
-          }
+          const scoreMOAT = calcularScoreMOAT(prop, datosUsuarioMOAT)
 
-          // Si prefiere metros (amenidadesVsMetros > 3), beneficia áreas más grandes
-          // Normalizado por tipología: un mono de 50m² es tan "grande" como un 2-dorm de 120m²
-          if (amenidadesVsMetrosVal > 3) {
-            const medianaArea = medianaPorTipologia[prop.dormitorios] || 88
-            const areaNormalizada = Math.min(prop.area_m2 / medianaArea, 2.0)
-            scorePreferencias += areaNormalizada * (amenidadesVsMetrosVal - 3) * 40
+          // Determinar si cumple innegociables (para ordenamiento)
+          let cumpleInnegociables = true
+          if (innegociablesIds.length > 0) {
+            const amenidadesRequeridas = innegociablesToAmenidades(innegociablesIds)
+            const confirmados = prop.amenities_confirmados || []
+            const porVerificar = prop.amenities_por_verificar || []
+            // Cumple si al menos tiene todos "por verificar" o confirmados
+            cumpleInnegociables = amenidadesRequeridas.every(
+              a => confirmados.includes(a) || porVerificar.includes(a)
+            )
           }
-
-          const scoreTotal = scoreInnegociables + scoreDeseables + scorePreferencias + (prop.score_calidad || 0)
 
           return {
             ...prop,
             precioReal,
             ajusteParqueo,
             ajusteBaulera,
-            scoreTotal,
-            cumpleInnegociables: innegociablesIds.length === 0 || scoreInnegociables >= innegociablesIds.length * 100
+            scoreTotal: scoreMOAT,
+            cumpleInnegociables,
           }
         })
 
