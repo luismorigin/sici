@@ -489,6 +489,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .hero-badge.justo { background: var(--justo); color: white; border: none; }
         .hero-badge.premium { background: var(--gold); color: #0a0a0a; border: none; }
 
+        /* === RESUMEN 30 SEGUNDOS === */
+        .quick-summary { background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); margin: -30px 20px 20px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); padding: 28px 32px; position: relative; z-index: 15; border: 2px solid var(--gold); }
+        .quick-summary-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid rgba(201,169,89,0.3); }
+        .quick-summary-icon { width: 40px; height: 40px; background: var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .quick-summary-icon svg { width: 22px; height: 22px; stroke: #0a0a0a; }
+        .quick-summary-title { font-size: 1.3rem; font-weight: 700; color: var(--cream); margin: 0; }
+        .quick-summary-subtitle { font-size: 0.85rem; color: rgba(248,246,243,0.6); margin: 0; }
+        .quick-summary-proyecto { font-size: 1.4rem; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .quick-summary-proyecto svg { width: 20px; height: 20px; }
+        .quick-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+        .quick-metric { background: #0a0a0a; border-radius: 10px; padding: 14px 12px; text-align: center; border: 1px solid rgba(201,169,89,0.2); }
+        .quick-metric-icon { margin-bottom: 8px; }
+        .quick-metric-icon svg { width: 20px; height: 20px; stroke: var(--gold); }
+        .quick-metric-value { font-size: 1.1rem; font-weight: 700; color: var(--cream); margin-bottom: 2px; }
+        .quick-metric-value.highlight { color: var(--gold); }
+        .quick-metric-value.oportunidad { color: #22c55e; }
+        .quick-metric-value.premium { color: var(--danger); }
+        .quick-metric-label { font-size: 0.7rem; color: rgba(248,246,243,0.5); text-transform: uppercase; letter-spacing: 0.5px; }
+        .quick-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding-top: 16px; border-top: 1px solid rgba(201,169,89,0.2); }
+        .quick-alt { background: rgba(201,169,89,0.1); border-radius: 10px; padding: 14px; border: 1px solid rgba(201,169,89,0.3); }
+        .quick-alt-label { font-size: 0.75rem; color: rgba(248,246,243,0.6); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+        .quick-alt-label svg { width: 14px; height: 14px; stroke: var(--gold); }
+        .quick-alt-name { font-size: 1rem; font-weight: 600; color: var(--cream); margin-bottom: 4px; }
+        .quick-alt-details { font-size: 0.85rem; color: var(--gold); }
+        .quick-question { background: rgba(184,115,51,0.1); border-radius: 10px; padding: 14px; border: 1px solid rgba(184,115,51,0.3); }
+        .quick-question-label { font-size: 0.75rem; color: rgba(248,246,243,0.6); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+        .quick-question-label svg { width: 14px; height: 14px; stroke: var(--copper); }
+        .quick-question-text { font-size: 0.95rem; font-weight: 500; color: var(--cream); font-style: italic; }
+
         /* Search Summary - Premium */
         .search-summary { background: #1a1a1a; margin: -30px 20px 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); padding: 25px 30px; position: relative; z-index: 10; border: 1px solid rgba(201,169,89,0.2); }
         .search-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; margin-top: 15px; }
@@ -692,6 +721,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .hero-title { font-size: 1.4rem; }
             .hero-subtitle { font-size: 0.9rem; }
             .hero-badge { padding: 4px 10px; font-size: 0.75rem; }
+
+            /* Quick summary mobile */
+            .quick-summary { margin: -20px 10px 15px; padding: 18px 16px; }
+            .quick-summary-header { gap: 10px; margin-bottom: 14px; padding-bottom: 12px; }
+            .quick-summary-icon { width: 34px; height: 34px; }
+            .quick-summary-icon svg { width: 18px; height: 18px; }
+            .quick-summary-title { font-size: 1.1rem; }
+            .quick-summary-proyecto { font-size: 1.15rem; margin-bottom: 14px; }
+            .quick-metrics { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
+            .quick-metric { padding: 10px 8px; }
+            .quick-metric-value { font-size: 0.95rem; }
+            .quick-metric-label { font-size: 0.65rem; }
+            .quick-bottom { grid-template-columns: 1fr; gap: 10px; padding-top: 12px; }
+            .quick-alt, .quick-question { padding: 12px; }
+            .quick-alt-name { font-size: 0.9rem; }
+            .quick-alt-details { font-size: 0.8rem; }
+            .quick-question-text { font-size: 0.85rem; }
 
             /* Search summary mobile */
             .search-summary { margin: -20px 10px 20px; padding: 15px; }
@@ -930,6 +976,124 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             </div>
         </div>
     </section>
+
+    <!-- RESUMEN 30 SEGUNDOS -->
+    <div class="container">
+        <div class="quick-summary">
+            <div class="quick-summary-header">
+                <div class="quick-summary-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                </div>
+                <div>
+                    <h3 class="quick-summary-title">Resumen en 30 Segundos</h3>
+                    <p class="quick-summary-subtitle">Lo esencial de tu búsqueda</p>
+                </div>
+            </div>
+
+            <div class="quick-summary-proyecto">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                ${fav.proyecto}
+            </div>
+
+            <div class="quick-metrics">
+                <div class="quick-metric">
+                    <div class="quick-metric-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    </div>
+                    <div class="quick-metric-value">$${fmt(fav.precio_usd)}</div>
+                    <div class="quick-metric-label">Precio Publicado</div>
+                </div>
+                <div class="quick-metric">
+                    <div class="quick-metric-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    </div>
+                    <div class="quick-metric-value highlight">$${fmt(datosFav.precioReal)}</div>
+                    <div class="quick-metric-label">Precio Real${datosFav.extrasNecesarios.length > 0 ? ` (+${datosFav.extrasNecesarios.join(', ')})` : ''}</div>
+                </div>
+                <div class="quick-metric">
+                    <div class="quick-metric-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    </div>
+                    <div class="quick-metric-value ${favCat.clase === 'good' ? 'oportunidad' : favCat.clase === 'high' ? 'premium' : ''}">${favCat.pct > 0 ? '+' : ''}${Math.round(favCat.pct)}%</div>
+                    <div class="quick-metric-label">vs Mercado Zona</div>
+                </div>
+                <div class="quick-metric">
+                    <div class="quick-metric-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </div>
+                    <div class="quick-metric-value">${formatFechaEntrega(fav.fecha_entrega)}</div>
+                    <div class="quick-metric-label">Entrega</div>
+                </div>
+                <div class="quick-metric">
+                    <div class="quick-metric-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </div>
+                    <div class="quick-metric-value">${getNegociacion(fav.dias_en_mercado).texto}</div>
+                    <div class="quick-metric-label">Negociación</div>
+                </div>
+                <div class="quick-metric">
+                    <div class="quick-metric-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+                    </div>
+                    <div class="quick-metric-value highlight">-${getDescuento(fav.dias_en_mercado)}</div>
+                    <div class="quick-metric-label">Descuento Posible</div>
+                </div>
+            </div>
+
+            <div class="quick-bottom">
+                ${(() => {
+                  // Buscar alternativa más barata
+                  const alternativaMasBarata = todas
+                    .filter(p => p.id !== fav.id && p.precio_usd < fav.precio_usd)
+                    .sort((a, b) => a.precio_usd - b.precio_usd)[0]
+
+                  if (alternativaMasBarata) {
+                    const ahorro = fav.precio_usd - alternativaMasBarata.precio_usd
+                    return `
+                    <div class="quick-alt">
+                        <div class="quick-alt-label">
+                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            Alternativa más económica
+                        </div>
+                        <div class="quick-alt-name">${alternativaMasBarata.proyecto}</div>
+                        <div class="quick-alt-details">$${fmt(alternativaMasBarata.precio_usd)} | Entrega: ${formatFechaEntrega(alternativaMasBarata.fecha_entrega)} | Ahorrás $${fmt(ahorro)}</div>
+                    </div>`
+                  }
+                  return `
+                    <div class="quick-alt">
+                        <div class="quick-alt-label">
+                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            Tu selección
+                        </div>
+                        <div class="quick-alt-name">La más económica del grupo</div>
+                        <div class="quick-alt-details">Ya elegiste la opción con mejor precio</div>
+                    </div>`
+                })()}
+
+                <div class="quick-question">
+                    <div class="quick-question-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        Pregunta clave para el broker
+                    </div>
+                    <div class="quick-question-text">${(() => {
+                      const tieneParqueo = (fav.estacionamientos || 0) > 0
+                      const tieneBaulera = fav.baulera === true
+                      const tieneMascotas = datosUsuario.mascotas === true
+                      const petConfirmado = (fav.amenities_confirmados || []).some((a: string) =>
+                        a.toLowerCase().includes('pet') || a.toLowerCase().includes('mascota')
+                      )
+
+                      if (necesitaParqueo && !tieneParqueo) return '¿El parqueo está incluido en el precio o es adicional?'
+                      if (necesitaBaulera && !tieneBaulera) return '¿Incluye baulera o tiene costo adicional?'
+                      if (fav.estado_construccion === 'preventa') return '¿Cuál es el plan de pagos y fecha de entrega garantizada?'
+                      if (tieneMascotas && !petConfirmado) return '¿El edificio permite mascotas?'
+                      if (fav.dias_en_mercado && fav.dias_en_mercado > 60) return '¿Cuál es el mejor precio que pueden ofrecer?'
+                      return '¿Qué facilidades de pago tienen disponibles?'
+                    })()}</div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Tu Búsqueda -->
     <div class="container">
