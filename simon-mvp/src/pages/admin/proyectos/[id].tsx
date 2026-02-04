@@ -787,9 +787,10 @@ export default function EditarProyecto() {
   }
 
   // Confirmar propagación desde modal de confirmación
+  // Usa 'abrir_permanente' para que siempre agregue candados de protección
   const confirmarPropagacion = async () => {
     setShowModalConfirmacion(false)
-    await ejecutarPropagacion('mantener')
+    await ejecutarPropagacion('abrir_permanente')
   }
 
   const formatPrecio = (precio: number): string => {
