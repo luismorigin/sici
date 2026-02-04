@@ -206,7 +206,7 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
     // Mapear respuesta RPC a interfaz UnidadReal (v2.2)
     const resultados: UnidadReal[] = (data || []).map((p: any) => ({
       id: p.id,
-      proyecto: p.proyecto || 'Sin proyecto',
+      proyecto: p.nombre_proyecto || p.proyecto || 'Sin proyecto',
       desarrollador: p.desarrollador,
       zona: p.zona || 'Sin zona',
       microzona: p.microzona,
@@ -349,7 +349,7 @@ export async function buscarUnidadesBroker(filtros: FiltrosBusqueda): Promise<Un
     // Mapear respuesta RPC a interfaz UnidadReal
     return (data || []).map((p: any) => ({
       id: p.id,
-      proyecto: p.proyecto || 'Sin proyecto',
+      proyecto: p.nombre_proyecto || p.proyecto || 'Sin proyecto',
       desarrollador: p.desarrollador,
       zona: p.zona || 'Sin zona',
       microzona: p.microzona,
@@ -1322,10 +1322,19 @@ export async function construirAnalisisDesdeBusqueda(
     const precios = resultadosConScore.map(r => r.precio_usd)
     const preciosM2 = resultadosConScore.map(r => r.precio_m2)
     const areas = resultadosConScore.map(r => r.area_m2)
+    const diasEnMercado = resultadosConScore
+      .map(r => r.dias_en_mercado)
+      .filter((d): d is number => d !== null && d !== undefined)
 
     const precioPromedio = precios.reduce((a, b) => a + b, 0) / precios.length
     const precioM2Promedio = preciosM2.reduce((a, b) => a + b, 0) / preciosM2.length
     const areaPromedio = areas.reduce((a, b) => a + b, 0) / areas.length
+    const diasPromedio = diasEnMercado.length > 0
+      ? Math.round(diasEnMercado.reduce((a, b) => a + b, 0) / diasEnMercado.length)
+      : null
+    const diasMediana = diasEnMercado.length > 0
+      ? Math.round(diasEnMercado.sort((a, b) => a - b)[Math.floor(diasEnMercado.length / 2)])
+      : null
 
     // Convertir UnidadReal[] a OpcionValida[] (YA ORDENADOS POR MOAT)
     const opciones: OpcionValida[] = resultadosConScore.map((r, idx) => ({
@@ -1399,8 +1408,8 @@ export async function construirAnalisisDesdeBusqueda(
           precio_max: Math.max(...precios),
           precio_m2_promedio: Math.round(precioM2Promedio),
           area_promedio: Math.round(areaPromedio),
-          dias_promedio: null,
-          dias_mediana: null
+          dias_promedio: diasPromedio,
+          dias_mediana: diasMediana
         }
       },
       bloque_4_alertas: {

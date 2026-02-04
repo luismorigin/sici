@@ -1222,6 +1222,19 @@ export default function ResultadosPage() {
       const data = await buscarUnidadesUnificadas(filtros)
       setPropiedades(data)
 
+      // Calcular mediana y promedio de días desde los resultados reales
+      const diasValidos = data
+        .map(r => r.dias_en_mercado)
+        .filter((d): d is number => d !== null && d !== undefined)
+
+      let diasPromedioCalculado: number | null = null
+      let diasMedianaCalculada: number | null = null
+      if (diasValidos.length > 0) {
+        diasPromedioCalculado = Math.round(diasValidos.reduce((a, b) => a + b, 0) / diasValidos.length)
+        const diasOrdenados = [...diasValidos].sort((a, b) => a - b)
+        diasMedianaCalculada = Math.round(diasOrdenados[Math.floor(diasOrdenados.length / 2)])
+      }
+
       // Llamar análisis fiduciario con contexto del usuario
       const innegociablesArray = innegociables
         ? (innegociables as string).split(',').filter(Boolean)
@@ -1240,6 +1253,12 @@ export default function ResultadosPage() {
           quienes_viven: quienes_viven as string || undefined,
         }
       })
+
+      // Sobreescribir días con valores calculados desde propiedades reales
+      if (analisis?.bloque_3_contexto_mercado?.metricas_zona) {
+        analisis.bloque_3_contexto_mercado.metricas_zona.dias_promedio = diasPromedioCalculado
+        analisis.bloque_3_contexto_mercado.metricas_zona.dias_mediana = diasMedianaCalculada
+      }
 
       setAnalisisFiduciario(analisis)
       setLoading(false)
@@ -3258,127 +3277,445 @@ ${top3Texto}
                               )
                             })()}
 
-                            {/* Badges en orden: tiempo primero, síntesis al final */}
-                            <div className="mt-3 space-y-1.5">
-                              {/* Línea 1: Badge tiempo inteligente */}
-                              {prop.dias_en_mercado != null && (() => {
-                                const medianaZona = metricas?.dias_mediana || 74
-                                const badge = getBadgeTiempo(prop.dias_en_mercado, medianaZona)
-
-                                return (
-                                  <p className="text-xs text-gray-500">
-                                    <span
-                                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs ${badge.color}`}
-                                      title={badge.tooltip}
-                                    >
-                                      {badge.emoji} {badge.label}
-                                    </span>
-                                    {badge.accion && (
-                                      <span className="ml-1 text-gray-600">· {badge.accion}</span>
-                                    )}
-                                  </p>
-                                )
-                              })()}
-
-                              {/* Línea 2: Badge síntesis clickeable + posición edificio */}
-                              <div className="flex items-center flex-wrap gap-1.5">
-                                <button
-                                  onClick={() => toggleCardExpanded(prop.id)}
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border cursor-pointer hover:opacity-80 transition-opacity ${badgeColores[sintesisAlt.tipo]}`}
+                            {/* Ubicación con link a Maps - igual que TOP 3 */}
+                            <div className="flex items-center justify-between mt-3 py-2 border-t border-gray-100">
+                              <span className="text-sm text-gray-600">
+                                📍 {prop.microzona || prop.zona}
+                              </span>
+                              {prop.latitud && prop.longitud && (
+                                <a
+                                  href={`https://maps.google.com/?q=${prop.latitud},${prop.longitud}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-blue-600 hover:underline"
                                 >
-                                  {badgeIconos[sintesisAlt.tipo]} {badgeTextos[sintesisAlt.tipo]}
-                                  {posicion?.success && posicion.diferencia_pct != null && (
-                                    <span className="opacity-80">
-                                      ({posicion.diferencia_pct > 0 ? '+' : ''}{Math.round(posicion.diferencia_pct)}%)
-                                    </span>
-                                  )}
-                                  <svg className={`w-3 h-3 ml-0.5 transition-transform ${expandedCards.has(prop.id) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  Ver en Maps →
+                                </a>
+                              )}
+                            </div>
+
+                            {/* Badge tiempo inteligente - igual que TOP 3 */}
+                            {prop.dias_en_mercado != null && (() => {
+                              const medianaZonaAltBadge = metricas?.dias_mediana || 74
+                              const badgeAlt = getBadgeTiempo(prop.dias_en_mercado, medianaZonaAltBadge)
+
+                              return (
+                                <div className="mt-2">
+                                  <span
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-sm ${badgeAlt.color}`}
+                                    title={badgeAlt.tooltip}
+                                  >
+                                    {badgeAlt.emoji} {badgeAlt.label}
+                                    {badgeAlt.accion && (
+                                      <span className="ml-1 opacity-80">· {badgeAlt.accion}</span>
+                                    )}
+                                  </span>
+                                </div>
+                              )
+                            })()}
+
+                            {/* SÍNTESIS FIDUCIARIA - igual que TOP 3 */}
+                            <div className={`mt-3 px-3 py-2 rounded-lg border ${badgeColores[sintesisAlt.tipo]}`}>
+                              <p className="text-sm font-medium">
+                                {badgeIconos[sintesisAlt.tipo]} {sintesisAlt.headline}
+                              </p>
+                              {sintesisAlt.detalles && (
+                                <div className="text-xs mt-1 opacity-80 space-y-0.5">
+                                  {sintesisAlt.detalles.split('\n').map((linea, i) => (
+                                    <p key={i}>{linea}</p>
+                                  ))}
+                                </div>
+                              )}
+                              <p className="text-xs mt-2 font-medium border-t border-current/20 pt-1">
+                                → {sintesisAlt.accion}
+                              </p>
+                            </div>
+
+                            {/* Botón toggle detalles - igual que TOP 3 */}
+                            <button
+                              onClick={() => toggleCardExpanded(prop.id)}
+                              className="mt-3 w-full py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center gap-2 transition-colors"
+                            >
+                              {expandedCards.has(prop.id) ? (
+                                <>
+                                  <span>Ocultar detalles</span>
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                  </svg>
+                                </>
+                              ) : (
+                                <>
+                                  <span>Ver detalles</span>
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                   </svg>
-                                </button>
-                                {prop.unidades_en_edificio != null && prop.unidades_en_edificio > 1 && prop.posicion_precio_edificio != null && (
-                                  <span className="text-xs text-gray-500">
-                                    · #{prop.posicion_precio_edificio} de {prop.unidades_en_edificio} en edificio
-                                  </span>
-                                )}
-                              </div>
+                                </>
+                              )}
+                            </button>
 
-                              {/* Síntesis fiduciaria expandida - aparece al click en badge */}
-                              {expandedCards.has(prop.id) && (() => {
-                                // Generar síntesis completa con costos
-                                const costosAltExp = getCostosOcultosEstimados(prop.dormitorios, null, null)
-                                const costoParqueoAltExp = Math.round((costosAltExp.estacionamiento.compra.min + costosAltExp.estacionamiento.compra.max) / 2)
-                                const costoBauleraAltExp = Math.round((costosAltExp.baulera.compra.min + costosAltExp.baulera.compra.max) / 2)
+                            {/* Sección colapsable de detalles - igual que TOP 3 */}
+                            {expandedCards.has(prop.id) && (
+                            <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
 
-                                // Parsear innegociables del usuario
-                                const innegociablesAltExp = innegociables
-                                  ? (innegociables as string).split(',').filter(Boolean)
-                                  : []
+                            {/* 1. PRECIO REAL DE COMPRA */}
+                            {(() => {
+                              const costosAlt = getCostosOcultosEstimados(prop.dormitorios, null, null)
+                              const tieneParqueoAlt = prop.estacionamientos != null && prop.estacionamientos > 0
+                              const tieneBauleraAlt = prop.baulera === true
+                              const parqueoDesconocidoAlt = prop.estacionamientos == null
+                              const bauleraDesconocidaAlt = prop.baulera == null
+                              let costoAdicionalMinAlt = 0
+                              let costoAdicionalMaxAlt = 0
+                              const itemsPendientesAlt: string[] = []
 
-                                // Combinar amenidades
-                                const amenidadesAltExp = [
-                                  ...(prop.amenities_confirmados || []),
-                                  ...(prop.equipamiento_detectado || [])
-                                ]
+                              if (usuarioNecesitaParqueo && !tieneParqueoAlt && parqueoDesconocidoAlt) {
+                                costoAdicionalMinAlt += costosAlt.estacionamiento.compra.min
+                                costoAdicionalMaxAlt += costosAlt.estacionamiento.compra.max
+                                itemsPendientesAlt.push('parqueo')
+                              }
+                              if (usuarioNecesitaBaulera && !tieneBauleraAlt && bauleraDesconocidaAlt) {
+                                costoAdicionalMinAlt += costosAlt.baulera.compra.min
+                                costoAdicionalMaxAlt += costosAlt.baulera.compra.max
+                                itemsPendientesAlt.push('baulera')
+                              }
 
-                                // Estado parqueo/baulera
-                                const tieneParqueoAltExp = prop.estacionamientos == null
-                                  ? null
-                                  : prop.estacionamientos > 0
-                                const tieneBauleraAltExp = prop.baulera == null
-                                  ? null
-                                  : prop.baulera === true
+                              const parqueoOkAlt = !usuarioNecesitaParqueo || tieneParqueoAlt
+                              const bauleraOkAlt = !usuarioNecesitaBaulera || tieneBauleraAlt
+                              const todoConfirmadoAlt = parqueoOkAlt && bauleraOkAlt
 
-                                const sintesisCompleta = generarSintesisFiduciaria({
-                                  diferenciaPct: posicion?.success ? posicion.diferencia_pct : null,
-                                  diasEnMercado: prop.dias_en_mercado,
-                                  diasMedianaZona: contextoMercado?.metricas_zona?.dias_mediana ?? null,
-                                  diasPromedioZona: contextoMercado?.metricas_zona?.dias_promedio ?? null,
-                                  escasez: parseEscasezDeRazon(prop.razon_fiduciaria),
-                                  estadoConstruccion: prop.estado_construccion || '',
-                                  innegociablesUsuario: innegociablesAltExp,
-                                  amenidadesPropiedad: amenidadesAltExp,
-                                  usuarioNecesitaParqueo,
-                                  usuarioNecesitaBaulera,
-                                  tieneParqueoConfirmado: tieneParqueoAltExp,
-                                  tieneBauleraConfirmada: tieneBauleraAltExp,
-                                  costoExtraParqueo: costoParqueoAltExp,
-                                  costoExtraBaulera: costoBauleraAltExp
-                                })
-
-                                const coloresSintesis = {
-                                  oportunidad: 'bg-green-50 border-green-200 text-green-800',
-                                  premium: 'bg-purple-50 border-purple-200 text-purple-800',
-                                  justo: 'bg-blue-50 border-blue-200 text-blue-800',
-                                  sospechoso: 'bg-orange-50 border-orange-200 text-orange-800'
-                                }
-
-                                const iconosSintesis = {
-                                  oportunidad: '🎯',
-                                  premium: '⭐',
-                                  justo: '✓',
-                                  sospechoso: '⚠️'
-                                }
-
+                              if (!usuarioNecesitaParqueo && !usuarioNecesitaBaulera) {
                                 return (
-                                  <div className={`mt-2 px-3 py-2 rounded-lg border ${coloresSintesis[sintesisCompleta.tipo]}`}>
-                                    <p className="text-sm font-medium">
-                                      {iconosSintesis[sintesisCompleta.tipo]} {sintesisCompleta.headline}
-                                    </p>
-                                    {sintesisCompleta.detalles && (
-                                      <div className="text-xs mt-1 opacity-80 space-y-0.5">
-                                        {sintesisCompleta.detalles.split('\n').map((linea, i) => (
-                                          <p key={i}>{linea}</p>
-                                        ))}
-                                      </div>
-                                    )}
-                                    <p className="text-xs mt-2 font-medium border-t border-current/20 pt-1">
-                                      → {sintesisCompleta.accion}
-                                    </p>
+                                  <div className="rounded-lg border p-3 bg-green-50 border-green-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className="text-sm font-semibold text-green-800">✅ Precio completo</span>
+                                      <span className="text-xs px-1.5 py-0.5 rounded bg-green-200 text-green-700">costo único</span>
+                                    </div>
+                                    <div className="flex items-start gap-2 text-sm">
+                                      <span className="text-green-600 w-4">✓</span>
+                                      <span className="text-green-700 font-medium">${formatNum(prop.precio_usd)} = Precio final (no necesitás parqueo ni baulera)</span>
+                                    </div>
                                   </div>
                                 )
-                              })()}
+                              }
+
+                              return (
+                                <div className={`rounded-lg border p-3 ${todoConfirmadoAlt ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className={`text-sm font-semibold ${todoConfirmadoAlt ? 'text-green-800' : 'text-amber-800'}`}>
+                                      {todoConfirmadoAlt ? '✅ Precio completo' : '💰 Precio real de compra'}
+                                    </span>
+                                    <span className={`text-xs px-1.5 py-0.5 rounded ${todoConfirmadoAlt ? 'bg-green-200 text-green-700' : 'bg-amber-200 text-amber-700'}`}>
+                                      costo único
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1.5 text-sm">
+                                    {usuarioNecesitaParqueo && (
+                                      <div className="flex items-start gap-2">
+                                        <span className={`w-4 ${tieneParqueoAlt ? 'text-green-500' : 'text-amber-500'}`}>🚗</span>
+                                        <div>
+                                          {tieneParqueoAlt ? (
+                                            <span className="text-green-700 font-medium">Parqueo: ✓ Incluido ({prop.estacionamientos}p)</span>
+                                          ) : (
+                                            <>
+                                              <span className="text-gray-700">Parqueo: ${formatNum(costosAlt.estacionamiento.compra.min)}-{formatNum(costosAlt.estacionamiento.compra.max)}</span>
+                                              <p className="text-xs text-amber-700">{parqueoDesconocidoAlt ? 'Preguntá si está incluido' : 'No incluido - costo adicional'}</p>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {usuarioNecesitaBaulera && (
+                                      <div className="flex items-start gap-2">
+                                        <span className={`w-4 ${tieneBauleraAlt ? 'text-green-500' : 'text-amber-500'}`}>📦</span>
+                                        <div>
+                                          {tieneBauleraAlt ? (
+                                            <span className="text-green-700 font-medium">Baulera: ✓ Incluida</span>
+                                          ) : (
+                                            <>
+                                              <span className="text-gray-700">Baulera: ${formatNum(costosAlt.baulera.compra.min)}-{formatNum(costosAlt.baulera.compra.max)}</span>
+                                              <p className="text-xs text-amber-700">{bauleraDesconocidaAlt ? 'Preguntá si está incluida' : 'No incluida - costo adicional'}</p>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {itemsPendientesAlt.length > 0 ? (
+                                      <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-amber-200">
+                                        <span className="text-amber-600 w-4">💡</span>
+                                        <span className="text-amber-700 text-xs font-medium">
+                                          Precio real: ${formatNum(prop.precio_usd + costoAdicionalMinAlt)}-{formatNum(prop.precio_usd + costoAdicionalMaxAlt)} si no incluye {itemsPendientesAlt.join(' ni ')}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-green-200">
+                                        <span className="text-green-600 w-4">✓</span>
+                                        <span className="text-green-700 text-xs font-medium">${formatNum(prop.precio_usd)} = Precio real (todo lo que necesitás incluido)</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })()}
+
+                            {/* 2. COSTO MENSUAL DE VIVIR */}
+                            {(() => {
+                              const costosAltMensual = getCostosOcultosEstimados(prop.dormitorios, null, null)
+                              const expensasMinAlt = costosAltMensual.expensas.rango_completo.min
+                              const expensasMaxAlt = costosAltMensual.expensas.rango_completo.max
+                              const expensasPromedioAlt = Math.round((expensasMinAlt + expensasMaxAlt) / 2)
+                              const impactoAnualAlt = expensasPromedioAlt * 12
+                              const impacto5AnosAlt = impactoAnualAlt * 5
+                              return (
+                                <div className="rounded-lg border p-3 bg-blue-50 border-blue-200">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-sm font-semibold text-blue-800">📋 Costo mensual de vivir</span>
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-200 text-blue-700">recurrente</span>
+                                  </div>
+                                  <div className="space-y-1.5 text-sm">
+                                    <div className="flex items-start gap-2">
+                                      <span className="text-blue-500 w-4">💵</span>
+                                      <div>
+                                        <span className="text-gray-700 font-medium">Expensas: ${expensasMinAlt}-{expensasMaxAlt}/mes</span>
+                                        <p className="text-xs text-blue-700">Preguntá monto exacto al vendedor</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-start gap-2 pt-1.5 mt-1 border-t border-blue-200">
+                                      <span className="text-blue-600 w-4">📊</span>
+                                      <div className="text-xs text-blue-700">
+                                        <p className="font-medium">Impacto financiero estimado:</p>
+                                        <p>~${formatNum(impactoAnualAlt)}/año • ~${formatNum(impacto5AnosAlt)} en 5 años</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })()}
+
+                            {/* 3. ¿PUEDO NEGOCIAR? */}
+                            {(() => {
+                              const medianaZonaAlt = contextoMercado?.metricas_zona?.dias_mediana || 74
+                              const negociacionAlt = calcularPoderNegociacion(prop, medianaZonaAlt)
+                              const badgeTiempoAlt = prop.dias_en_mercado != null
+                                ? getBadgeTiempo(prop.dias_en_mercado, medianaZonaAlt)
+                                : null
+
+                              const colorPoderAlt = negociacionAlt.poder === 'alto'
+                                ? 'bg-green-100 text-green-700'
+                                : negociacionAlt.poder === 'moderado'
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-gray-100 text-gray-600'
+
+                              return (
+                                <div className="bg-white rounded-lg border p-3 shadow-sm">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs font-semibold text-gray-500 uppercase">
+                                      ¿Puedo negociar?
+                                    </span>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorPoderAlt}`}>
+                                      {negociacionAlt.poder.toUpperCase()} {negociacionAlt.estrellas}
+                                    </span>
+                                  </div>
+
+                                  {badgeTiempoAlt && (
+                                    <div className={`flex items-center justify-between rounded-lg p-2 mb-2 ${badgeTiempoAlt.color}`}>
+                                      <span className="text-sm">
+                                        {badgeTiempoAlt.emoji} {badgeTiempoAlt.label} ({prop.dias_en_mercado} días)
+                                      </span>
+                                      {badgeTiempoAlt.accion && (
+                                        <span className="text-xs opacity-75">→ {badgeTiempoAlt.accion}</span>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {negociacionAlt.factores.length > 0 ? (
+                                    <div className="mb-2">
+                                      <p className="text-xs text-gray-500 mb-1">Factores a tu favor:</p>
+                                      <ul className="space-y-0.5">
+                                        {negociacionAlt.factores.map((factor, i) => (
+                                          <li key={i} className="text-sm text-gray-700 flex items-start gap-1">
+                                            <span className="text-green-600">•</span>
+                                            {factor}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-gray-500 mb-2">
+                                      Sin factores detectados a tu favor.
+                                    </p>
+                                  )}
+
+                                  {negociacionAlt.sinComparablesTipologia && (
+                                    <div className="text-xs text-amber-600 bg-amber-50 rounded p-2 mb-2">
+                                      ⚠️ Único {negociacionAlt.tipologia} en edificio.
+                                    </div>
+                                  )}
+
+                                  <p className="text-xs text-gray-400 italic">
+                                    ℹ️ Orientación basada en datos públicos.
+                                  </p>
+                                </div>
+                              )
+                            })()}
+
+                            {/* 4. AMENIDADES - ¿Tiene lo que pedí? */}
+                            {(() => {
+                              const innegociablesArrayAlt = innegociables
+                                ? (innegociables as string).split(',').filter(Boolean)
+                                : []
+                              const amenidadesPedidasAlt = innegociablesToAmenidades(innegociablesArrayAlt)
+                              const usuarioEligioAmenidadesAlt = amenidadesPedidasAlt.length > 0
+
+                              const amenidadesDiferenciadorasAlt = (prop.amenities_confirmados || [])
+                                .filter(a => !esAmenidadEstandar(a))
+                              const otrasAmenidadesAlt = amenidadesDiferenciadorasAlt
+                                .filter(a => !amenidadesPedidasAlt.includes(a))
+                                .slice(0, 4)
+
+                              if (!amenidadesDiferenciadorasAlt.length && !amenidadesPedidasAlt.length) {
+                                return null
+                              }
+
+                              const totalPedidasAlt = amenidadesPedidasAlt.length
+                              const confirmadasAlt = amenidadesPedidasAlt.filter(a => prop.amenities_confirmados?.includes(a)).length
+                              const matchPctAlt = totalPedidasAlt > 0 ? Math.round((confirmadasAlt / totalPedidasAlt) * 100) : 0
+
+                              return (
+                                <div className="rounded-lg border p-3 bg-gray-50 border-gray-200">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium text-gray-700">✨ Amenidades</span>
+                                    {usuarioEligioAmenidadesAlt && (
+                                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                        matchPctAlt === 100
+                                          ? 'bg-green-200 text-green-700'
+                                          : matchPctAlt >= 50
+                                          ? 'bg-blue-200 text-blue-700'
+                                          : 'bg-amber-200 text-amber-700'
+                                      }`}>
+                                        {confirmadasAlt}/{totalPedidasAlt} pedidas
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {usuarioEligioAmenidadesAlt && (
+                                    <div className="mb-3">
+                                      <p className="text-xs text-gray-500 mb-1.5">Lo que pediste:</p>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {amenidadesPedidasAlt.map((amenidad, i) => {
+                                          const confirmadaAlt = prop.amenities_confirmados?.includes(amenidad)
+                                          const porVerificarAlt = prop.amenities_por_verificar?.includes(amenidad)
+                                          const estadoAlt = confirmadaAlt ? 'confirmada' : porVerificarAlt ? 'verificar' : 'no_detectado'
+                                          return (
+                                            <span key={i} className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                                              estadoAlt === 'confirmada'
+                                                ? 'bg-green-100 text-green-700'
+                                                : estadoAlt === 'verificar'
+                                                ? 'bg-amber-100 text-amber-700'
+                                                : 'bg-red-100 text-red-600'
+                                            }`}>
+                                              {estadoAlt === 'confirmada' ? '✓' : estadoAlt === 'verificar' ? '?' : '✗'} {amenidad}
+                                            </span>
+                                          )
+                                        })}
+                                      </div>
+                                      {amenidadesPedidasAlt.some(a => prop.amenities_por_verificar?.includes(a)) && (
+                                        <p className="text-xs text-amber-700 mt-1.5">
+                                          💡 Preguntá por {amenidadesPedidasAlt.filter(a => prop.amenities_por_verificar?.includes(a)).join(' y ')}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {(otrasAmenidadesAlt.length > 0 || (!usuarioEligioAmenidadesAlt && amenidadesDiferenciadorasAlt.length > 0)) && (
+                                    <div>
+                                      <p className="text-xs text-gray-500 mb-1.5">
+                                        {usuarioEligioAmenidadesAlt ? 'Bonus que tiene:' : 'Amenidades destacadas:'}
+                                      </p>
+                                      <div className="space-y-1">
+                                        {(usuarioEligioAmenidadesAlt ? otrasAmenidadesAlt : amenidadesDiferenciadorasAlt.slice(0, 4)).map((a, i) => {
+                                          const pctAlt = getPorcentajeMercado(a)
+                                          const esRaroAlt = pctAlt && pctAlt < 20
+                                          const esPocoComAlt = pctAlt && pctAlt < 40
+                                          return (
+                                            <div key={i} className="flex items-center justify-between text-xs">
+                                              <span className={`${esPocoComAlt ? 'text-purple-700 font-medium' : 'text-gray-700'}`}>
+                                                ✓ {a}
+                                              </span>
+                                              {pctAlt && (
+                                                <div className="inline-flex items-center gap-1 ml-1">
+                                                  <div className="w-8 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div
+                                                      className={`h-full rounded-full ${esPocoComAlt ? 'bg-purple-400' : 'bg-gray-400'}`}
+                                                      style={{ width: `${pctAlt}%` }}
+                                                    />
+                                                  </div>
+                                                  <span className={`text-[10px] ${esPocoComAlt ? 'text-purple-500' : 'text-gray-400'}`}>
+                                                    {pctAlt}%{esRaroAlt && ' ⭐'}
+                                                  </span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          )
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })()}
+
+                            {/* 5. EQUIPAMIENTO - ¿Qué incluye el precio? */}
+                            {(() => {
+                              const mensajeAlt = getMensajeEquipamiento(
+                                prop.dormitorios,
+                                prop.equipamiento_detectado || []
+                              )
+
+                              const colorFondoAlt = {
+                                'equipado': 'bg-green-50 border-green-200',
+                                'basico': 'bg-amber-50 border-amber-200',
+                                'sin_info': 'bg-gray-50 border-gray-200'
+                              }[mensajeAlt.tipo]
+
+                              const colorTextoAlt = {
+                                'equipado': 'text-green-800',
+                                'basico': 'text-amber-800',
+                                'sin_info': 'text-gray-700'
+                              }[mensajeAlt.tipo]
+
+                              const iconoAlt = {
+                                'equipado': '✅',
+                                'basico': '⚠️',
+                                'sin_info': '❓'
+                              }[mensajeAlt.tipo]
+
+                              return (
+                                <div className={`rounded-lg border p-3 ${colorFondoAlt}`}>
+                                  <div className="flex items-start gap-2">
+                                    <span>{iconoAlt}</span>
+                                    <div className="flex-1">
+                                      <p className={`font-medium ${colorTextoAlt}`}>
+                                        {mensajeAlt.mensaje}
+                                      </p>
+                                      {mensajeAlt.costoFaltante.max > 0 && (
+                                        <p className="text-sm text-gray-600 mt-1">
+                                          💰 Equipar faltante: ~${mensajeAlt.costoFaltante.min.toLocaleString()}-{mensajeAlt.costoFaltante.max.toLocaleString()}
+                                        </p>
+                                      )}
+                                      <p className="text-xs text-amber-700 mt-1">
+                                        → {mensajeAlt.accion}
+                                      </p>
+                                      <p className="text-xs text-gray-400 mt-2 italic">
+                                        * Valores orientativos basados en precios Santa Cruz 2026
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })()}
+
                             </div>
+                            )}
                           </div>
                         </div>
                       </div>

@@ -42,6 +42,10 @@ export default function ResultadosV2() {
   const router = useRouter()
   const [propiedades, setPropiedades] = useState<UnidadReal[]>([])
   const [loading, setLoading] = useState(true)
+  const [datosContexto, setDatosContexto] = useState<{
+    diasMedianaZona: number | null
+    diasPromedioZona: number | null
+  }>({ diasMedianaZona: null, diasPromedioZona: null })
   const [filtrosActivos, setFiltrosActivos] = useState<{
     presupuesto: number
     zonas: string[]
@@ -232,6 +236,18 @@ export default function ResultadosV2() {
         // 3. Buscar con los filtros de la URL
         const resultados = await buscarUnidadesReales(filtros)
         setPropiedades(resultados)
+
+        // 4. Calcular mediana y promedio de días desde los resultados
+        const diasValidos = resultados
+          .map(r => r.dias_en_mercado)
+          .filter((d): d is number => d !== null && d !== undefined)
+
+        if (diasValidos.length > 0) {
+          const diasPromedio = Math.round(diasValidos.reduce((a, b) => a + b, 0) / diasValidos.length)
+          const diasOrdenados = [...diasValidos].sort((a, b) => a - b)
+          const diasMediana = Math.round(diasOrdenados[Math.floor(diasOrdenados.length / 2)])
+          setDatosContexto({ diasMedianaZona: diasMediana, diasPromedioZona: diasPromedio })
+        }
       } catch (err) {
         console.error('Error fetching propiedades:', err)
       } finally {
@@ -405,6 +421,7 @@ export default function ResultadosV2() {
                         key={prop.id}
                         propiedad={prop}
                         rank={i + 1}
+                        datosContexto={datosContexto}
                         innegociablesUsuario={datosFormulario.innegociables}
                         usuarioNecesitaParqueo={datosFormulario.necesitaParqueo}
                         usuarioNecesitaBaulera={datosFormulario.necesitaBaulera}
@@ -432,6 +449,7 @@ export default function ResultadosV2() {
                       <PropertyCardPremium
                         key={prop.id}
                         propiedad={prop}
+                        datosContexto={datosContexto}
                         innegociablesUsuario={datosFormulario.innegociables}
                         usuarioNecesitaParqueo={datosFormulario.necesitaParqueo}
                         usuarioNecesitaBaulera={datosFormulario.necesitaBaulera}
