@@ -62,7 +62,7 @@ export default function MarketLensPremium() {
 
   return (
     <section id="mercado" className="bg-[#f8f6f3] py-32">
-      <div className="max-w-6xl mx-auto px-8">
+      <div className="max-w-6xl mx-auto px-4 md:px-8">
         <div className="grid md:grid-cols-2 gap-12 md:gap-24 items-center">
           <div>
             {/* Label */}

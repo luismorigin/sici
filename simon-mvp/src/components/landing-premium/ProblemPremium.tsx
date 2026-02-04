@@ -1,7 +1,7 @@
 export default function ProblemPremium() {
   return (
     <section className="bg-[#f8f6f3] py-32">
-      <div className="max-w-6xl mx-auto px-8">
+      <div className="max-w-6xl mx-auto px-4 md:px-8">
         {/* Label */}
         <div className="flex items-center gap-4 mb-8">
           <span className="w-8 h-px bg-[#c9a959]" />

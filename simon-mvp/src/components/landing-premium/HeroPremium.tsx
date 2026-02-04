@@ -64,7 +64,7 @@ export default function HeroPremium() {
       {/* Linea decorativa superior */}
       <div className="absolute top-0 left-1/2 w-px h-32 bg-gradient-to-b from-transparent to-[#c9a959]/30" />
 
-      <div className="max-w-5xl mx-auto px-8 text-center pt-20">
+      <div className="max-w-5xl mx-auto px-4 md:px-8 text-center pt-20">
         {/* Pre-headline */}
         <div className="flex items-center justify-center gap-4 mb-12">
           <span className="w-12 h-px bg-[#c9a959]" />
@@ -95,32 +95,32 @@ export default function HeroPremium() {
         </Link>
 
         {/* Badges */}
-        <div className="flex items-center justify-center gap-6 mt-8">
+        <div className="flex items-center justify-center flex-wrap gap-3 md:gap-6 mt-8">
           <span className="text-white/40 text-sm">Sin cuenta</span>
-          <span className="text-white/20">·</span>
+          <span className="text-white/20 hidden md:inline">·</span>
           <span className="text-white/40 text-sm">Datos verificados</span>
-          <span className="text-white/20">·</span>
+          <span className="text-white/20 hidden md:inline">·</span>
           <span className="text-white/40 text-sm">100% gratis</span>
         </div>
 
         {/* Metricas */}
-        <div className="flex items-center justify-center gap-8 md:gap-16 mt-20 pt-16 border-t border-white/10">
+        <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-16 mt-20 pt-16 border-t border-white/10">
           <div className="text-center">
-            <div className="font-display text-4xl text-[#c9a959] font-light">
+            <div className="font-display text-3xl md:text-4xl text-[#c9a959] font-light">
               ${avgPriceM2?.toLocaleString() ?? '...'}
             </div>
             <div className="text-white/40 text-xs tracking-[2px] uppercase mt-2">Precio promedio /m²</div>
           </div>
-          <div className="w-px h-12 bg-white/10" />
+          <div className="hidden md:block w-px h-12 bg-white/10" />
           <div className="text-center">
-            <div className="font-display text-4xl text-white font-light">
+            <div className="font-display text-3xl md:text-4xl text-white font-light">
               {projectCount ?? '...'}+
             </div>
             <div className="text-white/40 text-xs tracking-[2px] uppercase mt-2">Proyectos activos</div>
           </div>
-          <div className="w-px h-12 bg-white/10" />
+          <div className="hidden md:block w-px h-12 bg-white/10" />
           <div className="text-center">
-            <div className="font-display text-4xl text-white font-light">24h</div>
+            <div className="font-display text-3xl md:text-4xl text-white font-light">24h</div>
             <div className="text-white/40 text-xs tracking-[2px] uppercase mt-2">Actualización diaria</div>
           </div>
         </div>
