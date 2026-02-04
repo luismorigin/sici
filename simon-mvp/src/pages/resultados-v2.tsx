@@ -268,6 +268,7 @@ export default function ResultadosV2() {
     innegociables: string[]
     innegociablesIds: string[]  // IDs originales para matching
     deseables: string[]
+    deseablesIds: string[]  // IDs originales para matching
     necesitaParqueo: boolean
     necesitaBaulera: boolean
     calidadVsPrecio: number
@@ -277,6 +278,7 @@ export default function ResultadosV2() {
     innegociables: [],
     innegociablesIds: [],
     deseables: [],
+    deseablesIds: [],
     necesitaParqueo: true,
     necesitaBaulera: false,
     calidadVsPrecio: 3,
@@ -583,6 +585,7 @@ export default function ResultadosV2() {
         innegociables: innegociablesNombres,
         innegociablesIds,
         deseables: deseablesNombres,
+        deseablesIds,
         necesitaParqueo: necesitaParqueoVal,
         necesitaBaulera: necesitaBauleraVal,
         calidadVsPrecio: calidadVsPrecioVal,
@@ -806,7 +809,7 @@ export default function ResultadosV2() {
             <div className="flex items-center justify-between mb-4">
               <span className="text-[#c9a959] text-sm tracking-[2px] uppercase">Tu Busqueda</span>
               <Link
-                href={`/filtros-v2?presupuesto=${filtrosActivos.presupuesto}&zonas=${filtrosActivos.zonas.join(',')}&dormitorios=${filtrosActivos.dormitorios ?? ''}&estado_entrega=${filtrosActivos.estado_entrega}&innegociables=${datosFormulario.innegociablesIds.join(',')}&deseables=${datosFormulario.deseables.join(',')}&necesita_parqueo=${datosFormulario.necesitaParqueo}&necesita_baulera=${datosFormulario.necesitaBaulera}&calidad_vs_precio=${datosFormulario.calidadVsPrecio}&amenidades_vs_metros=${datosFormulario.amenidadesVsMetros}&cantidad_resultados=${datosFormulario.cantidadResultados}`}
+                href={`/filtros-v2?presupuesto=${filtrosActivos.presupuesto}&zonas=${filtrosActivos.zonas.join(',')}&dormitorios=${filtrosActivos.dormitorios ?? ''}&estado_entrega=${filtrosActivos.estado_entrega}&innegociables=${datosFormulario.innegociablesIds.join(',')}&deseables=${datosFormulario.deseablesIds.join(',')}&necesita_parqueo=${datosFormulario.necesitaParqueo}&necesita_baulera=${datosFormulario.necesitaBaulera}&calidad_vs_precio=${datosFormulario.calidadVsPrecio}&amenidades_vs_metros=${datosFormulario.amenidadesVsMetros}&cantidad_resultados=${datosFormulario.cantidadResultados}`}
                 className="text-white/40 hover:text-[#c9a959] text-sm transition-colors"
               >
                 Editar todo →
