@@ -520,10 +520,10 @@ export default function PropertyCardPremium({
             aria-label={isSelected ? 'Quitar de favoritos' : 'Agregar a favoritos'}
           >
             <svg
-              className={`w-7 h-7 transition-all drop-shadow-md ${
+              className={`w-7 h-7 transition-all ${
                 isSelected
-                  ? 'fill-[#c9a959] stroke-[#c9a959]'
-                  : 'fill-transparent stroke-white hover:stroke-[#c9a959]'
+                  ? 'fill-[#c9a959] stroke-[#c9a959] drop-shadow-[0_2px_4px_rgba(201,169,89,0.6)]'
+                  : 'fill-transparent stroke-white drop-shadow-[0_1px_3px_rgba(201,169,89,0.4)] hover:stroke-[#c9a959] hover:drop-shadow-[0_2px_4px_rgba(201,169,89,0.6)]'
               }`}
               viewBox="0 0 24 24"
               strokeWidth={1.5}
