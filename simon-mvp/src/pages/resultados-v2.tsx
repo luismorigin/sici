@@ -38,6 +38,29 @@ const INNEGOCIABLE_TO_AMENIDAD: Record<string, string> = {
   'area_ninos': 'Area ninos',
 }
 
+// Constantes para edición inline
+const ZONAS_PREMIUM = [
+  { id: 'equipetrol', label: 'Eq. Centro' },
+  { id: 'sirari', label: 'Sirari' },
+  { id: 'equipetrol_norte', label: 'Eq. Norte' },
+  { id: 'villa_brigida', label: 'Villa Brigida' },
+  { id: 'faremafu', label: 'Eq. Oeste' },
+]
+
+const DORMITORIOS_PREMIUM = [
+  { value: null, label: 'Todos' },
+  { value: 0, label: 'Mono' },
+  { value: 1, label: '1' },
+  { value: 2, label: '2' },
+  { value: 3, label: '3+' },
+]
+
+const ESTADO_ENTREGA_PREMIUM = [
+  { value: 'no_importa', label: 'Todo' },
+  { value: 'entrega_inmediata', label: 'Entrega inmediata' },
+  { value: 'solo_preventa', label: 'Solo preventa' },
+]
+
 export default function ResultadosV2() {
   const router = useRouter()
   const [propiedades, setPropiedades] = useState<UnidadReal[]>([])
@@ -88,6 +111,21 @@ export default function ResultadosV2() {
     nombre: string
     whatsapp: string
   } | null>(null)
+
+  // Estados para edición inline de filtros
+  const [editingFilter, setEditingFilter] = useState<'presupuesto' | 'dormitorios' | 'zonas' | 'estado_entrega' | null>(null)
+  const [tempPresupuesto, setTempPresupuesto] = useState<number>(150000)
+  const [tempDormitorios, setTempDormitorios] = useState<number | null>(null)
+  const [tempZonas, setTempZonas] = useState<string[]>([])
+  const [tempEstadoEntrega, setTempEstadoEntrega] = useState<string>('no_importa')
+
+  // Para cálculo de impacto MOAT
+  const [impactoMOAT, setImpactoMOAT] = useState<{
+    totalNuevo: number
+    diferencia: number
+    interpretacion: string
+  } | null>(null)
+  const [calculandoImpacto, setCalculandoImpacto] = useState(false)
 
   // Funciones de favoritos
   const toggleSelected = (propId: number) => {
@@ -343,6 +381,106 @@ export default function ResultadosV2() {
     router.replace(`/resultados-v2?${params.toString()}`, undefined, { shallow: true })
   }
 
+  // Iniciar edición de un filtro
+  const startEditing = (filter: 'presupuesto' | 'dormitorios' | 'zonas' | 'estado_entrega') => {
+    // Copiar valores actuales a temporales
+    if (filter === 'presupuesto') {
+      setTempPresupuesto(filtrosActivos.presupuesto)
+    } else if (filter === 'dormitorios') {
+      setTempDormitorios(filtrosActivos.dormitorios)
+    } else if (filter === 'zonas') {
+      setTempZonas([...filtrosActivos.zonas])
+    } else if (filter === 'estado_entrega') {
+      setTempEstadoEntrega(filtrosActivos.estado_entrega)
+    }
+    setEditingFilter(filter)
+    setImpactoMOAT(null)
+  }
+
+  // Aplicar filtros editados
+  const aplicarFiltros = () => {
+    const params = new URLSearchParams()
+
+    // Usar temporal si editando, sino valor actual
+    params.set('presupuesto', editingFilter === 'presupuesto'
+      ? tempPresupuesto.toString()
+      : filtrosActivos.presupuesto.toString())
+
+    const newDorms = editingFilter === 'dormitorios' ? tempDormitorios : filtrosActivos.dormitorios
+    if (newDorms !== null) params.set('dormitorios', newDorms.toString())
+
+    const newZonas = editingFilter === 'zonas' ? tempZonas : filtrosActivos.zonas
+    if (newZonas.length > 0) params.set('zonas', newZonas.join(','))
+
+    const newEstado = editingFilter === 'estado_entrega' ? tempEstadoEntrega : filtrosActivos.estado_entrega
+    if (newEstado !== 'no_importa') params.set('estado_entrega', newEstado)
+
+    // CRÍTICO: Preservar params del formulario nivel 2
+    const { innegociables, necesita_parqueo, necesita_baulera } = router.query
+    if (innegociables) params.set('innegociables', innegociables as string)
+    if (necesita_parqueo) params.set('necesita_parqueo', necesita_parqueo as string)
+    if (necesita_baulera) params.set('necesita_baulera', necesita_baulera as string)
+
+    setEditingFilter(null)
+    router.push(`/resultados-v2?${params.toString()}`)
+  }
+
+  // Calcular impacto MOAT cuando cambian valores temporales
+  useEffect(() => {
+    if (!editingFilter) return
+
+    const calcular = async () => {
+      setCalculandoImpacto(true)
+      try {
+        const filtros: FiltrosBusqueda = {
+          precio_max: editingFilter === 'presupuesto' ? tempPresupuesto : filtrosActivos.presupuesto,
+          limite: 50,
+        }
+
+        const dorms = editingFilter === 'dormitorios' ? tempDormitorios : filtrosActivos.dormitorios
+        if (dorms !== null) filtros.dormitorios = dorms
+
+        const zonas = editingFilter === 'zonas' ? tempZonas : filtrosActivos.zonas
+        if (zonas.length > 0) filtros.zonas_permitidas = zonas
+
+        const estado = editingFilter === 'estado_entrega' ? tempEstadoEntrega : filtrosActivos.estado_entrega
+        if (estado !== 'no_importa') filtros.estado_entrega = estado as 'entrega_inmediata' | 'solo_preventa'
+
+        const resultado = await buscarUnidadesReales(filtros)
+
+        // Interpretación según filtro
+        let interpretacion = ''
+        if (editingFilter === 'presupuesto') {
+          if (resultado.length >= 30) interpretacion = 'Accedes a buena parte del mercado'
+          else if (resultado.length >= 15) interpretacion = 'Rango competitivo'
+          else interpretacion = 'Opciones limitadas'
+        } else if (editingFilter === 'dormitorios') {
+          if (resultado.length >= 15) interpretacion = 'Buena oferta'
+          else if (resultado.length >= 5) interpretacion = 'Stock moderado'
+          else interpretacion = 'Pocas opciones'
+        } else if (editingFilter === 'zonas') {
+          interpretacion = tempZonas.length === 0 ? 'Todas las zonas' : `${tempZonas.length} zona(s)`
+        } else if (editingFilter === 'estado_entrega') {
+          if (tempEstadoEntrega === 'no_importa') interpretacion = 'Todo el mercado'
+          else if (tempEstadoEntrega === 'solo_preventa') interpretacion = 'Mejores precios, esperar entrega'
+          else interpretacion = 'Listo para mudarte'
+        }
+
+        setImpactoMOAT({
+          totalNuevo: resultado.length,
+          diferencia: resultado.length - propiedades.length,
+          interpretacion
+        })
+      } catch (e) {
+        setImpactoMOAT(null)
+      }
+      setCalculandoImpacto(false)
+    }
+
+    const timer = setTimeout(calcular, 300)
+    return () => clearTimeout(timer)
+  }, [editingFilter, tempPresupuesto, tempDormitorios, tempZonas, tempEstadoEntrega, filtrosActivos, propiedades.length])
+
   // TOP 3 and rest
   const top3 = propiedades.slice(0, 3)
   const alternativas = propiedades.slice(3)
@@ -364,9 +502,12 @@ export default function ResultadosV2() {
               Simon
             </Link>
             <div className="flex items-center gap-6">
-              <Link href="/filtros-v2" className="text-white/50 hover:text-white text-sm transition-colors">
-                Editar filtros
-              </Link>
+              <button
+                onClick={() => editingFilter ? setEditingFilter(null) : startEditing('presupuesto')}
+                className="text-white/50 hover:text-white text-sm transition-colors"
+              >
+                {editingFilter ? 'Cerrar filtros' : 'Editar filtros'}
+              </button>
               <Link
                 href="/landing-v2"
                 className="bg-white text-[#0a0a0a] px-6 py-2 text-xs tracking-[2px] uppercase hover:bg-[#c9a959] hover:text-white transition-all"
@@ -377,12 +518,158 @@ export default function ResultadosV2() {
           </div>
         </nav>
 
+        {/* Panel de edición inline de filtros */}
+        {editingFilter && (
+          <div className="fixed top-[73px] left-0 right-0 z-40 bg-[#0a0a0a] border-b border-[#c9a959]/30 py-6">
+            <div className="max-w-4xl mx-auto px-8">
+              {/* Tabs de filtros */}
+              <div className="flex gap-2 mb-6 flex-wrap">
+                {(['presupuesto', 'dormitorios', 'zonas', 'estado_entrega'] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => startEditing(f)}
+                    className={`px-4 py-2 text-sm transition-all ${
+                      editingFilter === f
+                        ? 'bg-[#c9a959]/20 border-[#c9a959] text-white'
+                        : 'border-white/10 text-white/50 hover:text-white'
+                    } border`}
+                  >
+                    {f === 'presupuesto' && '💰 Presupuesto'}
+                    {f === 'dormitorios' && '🛏️ Dormitorios'}
+                    {f === 'zonas' && '📍 Zonas'}
+                    {f === 'estado_entrega' && '🏗️ Entrega'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Contenido según filtro activo */}
+              {editingFilter === 'presupuesto' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between text-white/40 text-sm mb-2">
+                    <span>$50k</span>
+                    <span>$500k</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={50000}
+                    max={500000}
+                    step={10000}
+                    value={tempPresupuesto}
+                    onChange={(e) => setTempPresupuesto(Number(e.target.value))}
+                    className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer
+                               [&::-webkit-slider-thumb]:appearance-none
+                               [&::-webkit-slider-thumb]:w-4
+                               [&::-webkit-slider-thumb]:h-4
+                               [&::-webkit-slider-thumb]:rounded-full
+                               [&::-webkit-slider-thumb]:bg-white
+                               [&::-webkit-slider-thumb]:cursor-pointer
+                               [&::-webkit-slider-thumb]:border-2
+                               [&::-webkit-slider-thumb]:border-[#c9a959]"
+                  />
+                  <div className="text-center">
+                    <span className="font-display text-4xl text-white">
+                      Hasta ${(tempPresupuesto/1000).toFixed(0)}k
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {editingFilter === 'dormitorios' && (
+                <div className="flex justify-center gap-3 flex-wrap">
+                  {DORMITORIOS_PREMIUM.map(d => (
+                    <button
+                      key={d.value ?? 'todos'}
+                      onClick={() => setTempDormitorios(d.value)}
+                      className={`px-6 py-3 border transition-all ${
+                        tempDormitorios === d.value
+                          ? 'border-[#c9a959] bg-[#c9a959]/10 text-white'
+                          : 'border-white/10 text-white/60 hover:border-[#c9a959]/50'
+                      }`}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {editingFilter === 'zonas' && (
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {ZONAS_PREMIUM.map(z => (
+                    <button
+                      key={z.id}
+                      onClick={() => setTempZonas(prev =>
+                        prev.includes(z.id)
+                          ? prev.filter(x => x !== z.id)
+                          : [...prev, z.id]
+                      )}
+                      className={`p-3 border transition-all ${
+                        tempZonas.includes(z.id)
+                          ? 'border-[#c9a959] bg-[#c9a959]/10'
+                          : 'border-white/10 hover:border-[#c9a959]/50'
+                      }`}
+                    >
+                      <span className="text-white text-sm">{z.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {editingFilter === 'estado_entrega' && (
+                <div className="flex justify-center gap-3 flex-wrap">
+                  {ESTADO_ENTREGA_PREMIUM.map(e => (
+                    <button
+                      key={e.value}
+                      onClick={() => setTempEstadoEntrega(e.value)}
+                      className={`px-6 py-3 border transition-all ${
+                        tempEstadoEntrega === e.value
+                          ? 'border-[#c9a959] bg-[#c9a959]/10 text-white'
+                          : 'border-white/10 text-white/60 hover:border-[#c9a959]/50'
+                      }`}
+                    >
+                      {e.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Impacto MOAT + Botón Aplicar */}
+              <div className="mt-6 flex items-center justify-between flex-wrap gap-4">
+                <div className="text-white/60 text-sm">
+                  {calculandoImpacto ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-[#c9a959] border-t-transparent rounded-full animate-spin" />
+                      Calculando...
+                    </span>
+                  ) : impactoMOAT ? (
+                    <span>
+                      <span className="text-[#c9a959] font-semibold">{impactoMOAT.totalNuevo}</span> propiedades
+                      {impactoMOAT.diferencia !== 0 && (
+                        <span className={impactoMOAT.diferencia > 0 ? 'text-green-400' : 'text-amber-400'}>
+                          {' '}({impactoMOAT.diferencia > 0 ? '+' : ''}{impactoMOAT.diferencia})
+                        </span>
+                      )}
+                      <span className="ml-2 text-white/40">· {impactoMOAT.interpretacion}</span>
+                    </span>
+                  ) : null}
+                </div>
+                <button
+                  onClick={aplicarFiltros}
+                  disabled={calculandoImpacto}
+                  className="bg-white text-[#0a0a0a] px-8 py-3 text-xs tracking-[2px] uppercase hover:bg-[#c9a959] hover:text-white transition-all disabled:opacity-50"
+                >
+                  Aplicar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Results Header */}
-        <div className="pt-20">
+        <div className={editingFilter ? 'pt-64' : 'pt-20'}>
           <ResultsHeaderPremium
             count={propiedades.length}
             filtros={buildFilterChips()}
-            onEditarFiltros={() => router.push('/filtros-v2')}
+            onEditarFiltros={() => startEditing('presupuesto')}
           />
         </div>
 
@@ -396,12 +683,12 @@ export default function ResultadosV2() {
             <div className="text-center py-20">
               <p className="font-display text-3xl text-[#0a0a0a] mb-4">Sin resultados</p>
               <p className="text-[#666666] mb-8">Intenta ampliar tus filtros para ver mas opciones</p>
-              <Link
-                href="/filtros-v2"
+              <button
+                onClick={() => startEditing('presupuesto')}
                 className="inline-block bg-[#0a0a0a] text-white px-8 py-4 text-xs tracking-[2px] uppercase hover:bg-[#c9a959] transition-colors"
               >
                 Editar filtros
-              </Link>
+              </button>
             </div>
           ) : (
             <>
