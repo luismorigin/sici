@@ -1447,10 +1447,6 @@ export default function EditarPropiedad() {
         throw new Error(data?.error || 'Error en sincronización')
       }
 
-      // Refrescar datos
-      await fetchPropiedad()
-      setShowSincronizar(false)
-
       // Mensaje de éxito con detalle
       const detalle = data.detalle
       const cambios = []
@@ -1458,6 +1454,42 @@ export default function EditarPropiedad() {
       if (detalle.fecha_sincronizada) cambios.push('fecha')
       if (detalle.amenidades_sincronizadas) cambios.push('amenidades')
       if (detalle.equipamiento_sincronizado) cambios.push('equipamiento')
+
+      // Re-bloquear los campos que fueron sincronizados exitosamente
+      if (cambios.length > 0) {
+        const camposABloquear: string[] = []
+        if (detalle.estado_sincronizado) camposABloquear.push('estado_construccion')
+        if (detalle.fecha_sincronizada) camposABloquear.push('fecha_entrega')
+        if (detalle.amenidades_sincronizadas) camposABloquear.push('amenities')
+        if (detalle.equipamiento_sincronizado) camposABloquear.push('equipamiento')
+
+        // Obtener candados actuales (pueden haber sido modificados)
+        const { data: propActual } = await supabase
+          .from('propiedades_v2')
+          .select('campos_bloqueados')
+          .eq('id', id)
+          .single()
+
+        const candadosActuales = propActual?.campos_bloqueados || {}
+        const nuevosCandadosPost = { ...candadosActuales }
+
+        camposABloquear.forEach(campo => {
+          nuevosCandadosPost[campo] = {
+            bloqueado: true,
+            fecha: new Date().toISOString(),
+            fuente: 'sync_proyecto_master'
+          }
+        })
+
+        await supabase
+          .from('propiedades_v2')
+          .update({ campos_bloqueados: nuevosCandadosPost })
+          .eq('id', id)
+      }
+
+      // Refrescar datos
+      await fetchPropiedad()
+      setShowSincronizar(false)
 
       alert(`Sincronización completada: ${cambios.join(', ')}`)
     } catch (err: any) {
