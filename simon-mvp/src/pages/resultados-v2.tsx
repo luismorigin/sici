@@ -400,6 +400,7 @@ export default function ResultadosV2() {
               posicion_mercado: p.posicion_mercado,
               dias_en_mercado: p.dias_en_mercado,
               estado_construccion: p.estado_construccion,
+              fecha_entrega: p.fecha_entrega,
               estacionamientos: p.estacionamientos,
               baulera: p.baulera,
               razon_fiduciaria: p.razon_fiduciaria,

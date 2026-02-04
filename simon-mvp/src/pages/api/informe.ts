@@ -33,6 +33,7 @@ interface Propiedad {
   posicion_precio_edificio: number | null
   unidades_en_edificio: number | null
   estado_construccion: string
+  fecha_entrega?: string | null  // formato 'YYYY-MM'
   lat?: number
   lng?: number
   // Nuevos campos para informe premium v3
@@ -247,6 +248,16 @@ const formatDormitorios = (dorms: number | null | undefined, capitalize = true):
   if (num === 0) return capitalize ? 'Monoambiente' : 'monoambiente'
   if (num === 1) return capitalize ? '1 Dormitorio' : '1 dormitorio'
   return `${num} ${capitalize ? 'Dormitorios' : 'dormitorios'}`
+}
+
+// Formatear fecha de entrega: '2026-03' → 'Mar 2026'
+const formatFechaEntrega = (fecha: string | null | undefined): string => {
+  if (!fecha) return 'Inmediata'
+  const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+  const [anio, mes] = fecha.split('-')
+  const mesNum = parseInt(mes, 10)
+  if (isNaN(mesNum) || mesNum < 1 || mesNum > 12) return fecha
+  return `${meses[mesNum - 1]} ${anio}`
 }
 
 // Costos estimados por dormitorios
@@ -1026,7 +1037,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             <li><span class="label">Dormitorios</span><span class="value">${formatDormitorios(fav.dormitorios)}</span></li>
                             <li><span class="label">Baños</span><span class="value">${fav.banos || '?'}</span></li>
                             <li><span class="label">Zona</span><span class="value">${zonaDisplay(fav.zona)}</span></li>
-                            <li><span class="label">Estado</span><span class="value">${fav.estado_construccion === 'preventa' ? 'Preventa' : 'Entrega Inmediata'}</span></li>
+                            <li><span class="label">Estado</span><span class="value">${fav.estado_construccion === 'preventa' ? 'Preventa' : 'Entrega Inmediata'}${fav.fecha_entrega ? ` (${formatFechaEntrega(fav.fecha_entrega)})` : ''}</span></li>
                             ${fav.desarrollador ? `<li><span class="label">Desarrollador</span><span class="value">${fav.desarrollador}</span></li>` : ''}
                         </ul>
                     </div>
@@ -1234,6 +1245,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                                 ${datosComp2.diasMercado || '?'} días
                                 ${datosComp2.diasMercado > 90 ? '<br><small style="color: #b87333;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#b87333" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Negociable</small>' : datosComp2.diasMercado < 30 ? '<br><small style="color: #c9a959;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#c9a959" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Reciente</small>' : ''}
                             </td>` : ''}
+                        </tr>
+                        <tr>
+                            <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Fecha entrega</strong></td>
+                            <td style="text-align: center;">${formatFechaEntrega(fav.fecha_entrega)}</td>
+                            ${comp1 ? `<td style="text-align: center;">${formatFechaEntrega(comp1.fecha_entrega)}</td>` : ''}
+                            ${comp2 ? `<td style="text-align: center;">${formatFechaEntrega(comp2.fecha_entrega)}</td>` : ''}
                         </tr>
                         ${datosFav.rankingEdificio ? `<tr>
                             <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="9" y1="6" x2="9" y2="6.01"/><line x1="15" y1="6" x2="15" y2="6.01"/><line x1="9" y1="10" x2="9" y2="10.01"/><line x1="15" y1="10" x2="15" y2="10.01"/><line x1="9" y1="14" x2="9" y2="14.01"/><line x1="15" y1="14" x2="15" y2="14.01"/></svg> Ranking edificio</strong></td>
@@ -1815,6 +1832,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         <span style="background: rgba(201,169,89,0.1); color: var(--gold); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem;">
                             ${mejorAlternativa.dias_en_mercado} días (negociable)
                         </span>` : ''}
+                        <span style="background: rgba(201,169,89,0.1); color: var(--gold); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem;">
+                            Entrega: ${formatFechaEntrega(mejorAlternativa.fecha_entrega)}
+                        </span>
                     </div>
                 </div>` : ''}
 
@@ -1841,6 +1861,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         <div style="font-size: 1rem; font-weight: 700; margin-top: 3px; color: var(--gold);">${(() => {
                           const opts = [{ n: fav.proyecto, d: datosFav.diasMercado }, ...(todas.slice(1).map(t => ({ n: t.proyecto, d: t.dias_en_mercado || 0 })))]
                           return opts.reduce((a, b) => a.d > b.d ? a : b).n
+                        })()}</div>
+                    </div>
+                    <div style="background: #1a1a1a; padding: 12px; border-radius: 10px; text-align: center; border: 1px solid rgba(201,169,89,0.2);">
+                        <div style="font-size: 0.75rem; opacity: 0.8; color: rgba(248,246,243,0.8);">ENTREGA MÁS PRONTO</div>
+                        <div style="font-size: 1rem; font-weight: 700; margin-top: 3px; color: var(--gold);">${(() => {
+                          // Ordenar por fecha_entrega (null = inmediata = primero)
+                          const opts = [
+                            { n: fav.proyecto, f: fav.fecha_entrega },
+                            ...(todas.slice(1).map(t => ({ n: t.proyecto, f: t.fecha_entrega })))
+                          ]
+                          // null (inmediata) va primero, luego por fecha ascendente
+                          opts.sort((a, b) => {
+                            if (!a.f && !b.f) return 0
+                            if (!a.f) return -1
+                            if (!b.f) return 1
+                            return a.f.localeCompare(b.f)
+                          })
+                          return opts[0].n
                         })()}</div>
                     </div>
                 </div>` : ''}
