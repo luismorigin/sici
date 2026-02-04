@@ -1144,11 +1144,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             <div class="section-content">
                 <div class="profile-grid">
                     <div class="profile-card">
-                        <h4>Quiénes Vivirán</h4>
-                        <p style="font-size: 1.05rem; font-weight: 600; color: var(--cream);">${datosUsuario.quienes_viven || 'No especificado'}</p>
-                        <p style="color: rgba(248,246,243,0.6); font-size: 0.85rem; margin-top: 6px;">Buscás espacio adecuado para tu situación.</p>
-                    </div>
-                    <div class="profile-card">
                         <h4>Ubicación vs Metros</h4>
                         <div class="slider-visual">
                             <div class="slider-labels">
@@ -1263,15 +1258,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         <p>La publicación no detalla qué equipamiento incluye. <strong>Preguntá específicamente</strong> por: aire acondicionado, cocina equipada, closets, calefón.</p>
                     </div>
                 </div>`}
-
-                ${fav.razon_fiduciaria ? `
-                <div class="alert success">
-                    <div class="alert-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
-                    <div class="alert-content">
-                        <h4>Síntesis Fiduciaria</h4>
-                        <p>${fav.razon_fiduciaria}</p>
-                    </div>
-                </div>` : ''}
 
                 ${(fav.amenities_por_verificar || []).some(a => a.toLowerCase().includes('parqueo')) ? `
                 <div class="alert warning">
