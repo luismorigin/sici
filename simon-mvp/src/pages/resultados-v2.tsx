@@ -390,17 +390,31 @@ export default function ResultadosV2() {
             }
           })
 
-          // Score por preferencias de trade-off
+          // Score por preferencias de trade-off (CORREGIDO)
           let scorePreferencias = 0
-          // Si prefiere precio (calidadVsPrecio > 3), beneficia precios más bajos
-          if (calidadVsPrecioVal > 3) {
-            const precioNormalizado = 1 - (precioReal / (filtros.precio_max || 150000))
-            scorePreferencias += precioNormalizado * (calidadVsPrecioVal - 3) * 20
+
+          // Mediana de área por tipología (datos reales del mercado)
+          const medianaPorTipologia: Record<number, number> = {
+            0: 36,   // Mono
+            1: 52,   // 1 dorm
+            2: 88,   // 2 dorm
+            3: 165,  // 3+ dorm
           }
+
+          // Si prefiere precio (calidadVsPrecio > 3), beneficia precios más bajos
+          // Peso aumentado: máximo ~100 pts para que compita con innegociables
+          if (calidadVsPrecioVal > 3) {
+            // Clamp para evitar valores negativos si precio > presupuesto
+            const precioNormalizado = Math.max(0, 1 - (precioReal / (filtros.precio_max || 150000)))
+            scorePreferencias += precioNormalizado * (calidadVsPrecioVal - 3) * 50
+          }
+
           // Si prefiere metros (amenidadesVsMetros > 3), beneficia áreas más grandes
+          // Normalizado por tipología: un mono de 50m² es tan "grande" como un 2-dorm de 120m²
           if (amenidadesVsMetrosVal > 3) {
-            const areaBonus = Math.min(prop.area_m2 / 100, 1.5) // Normalizado
-            scorePreferencias += areaBonus * (amenidadesVsMetrosVal - 3) * 15
+            const medianaArea = medianaPorTipologia[prop.dormitorios] || 88
+            const areaNormalizada = Math.min(prop.area_m2 / medianaArea, 2.0)
+            scorePreferencias += areaNormalizada * (amenidadesVsMetrosVal - 3) * 40
           }
 
           const scoreTotal = scoreInnegociables + scoreDeseables + scorePreferencias + (prop.score_calidad || 0)
