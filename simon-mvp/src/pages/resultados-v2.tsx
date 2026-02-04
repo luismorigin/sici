@@ -384,32 +384,49 @@ export default function ResultadosV2() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          propiedades: props.map(p => ({
-            id: p.id,
-            proyecto: p.proyecto,
-            precio_usd: p.precio_usd,
-            precio_m2: p.precio_m2,
-            area_m2: p.area_m2,
-            dormitorios: p.dormitorios,
-            banos: p.banos,
-            desarrollador: p.desarrollador,
-            zona: p.zona,
-            fotos_urls: p.fotos_urls,
-            posicion_mercado: p.posicion_mercado,
-            dias_en_mercado: p.dias_en_mercado,
-            estado_construccion: p.estado_construccion,
-            estacionamientos: p.estacionamientos,
-            baulera: p.baulera,
-            razon_fiduciaria: p.razon_fiduciaria,
-            // Keys correctas para la API del informe
-            amenities_confirmados: p.amenities_confirmados || p.amenities_lista || [],
-            amenities_por_verificar: p.amenities_por_verificar || [],
-            equipamiento_detectado: p.equipamiento_detectado || [],
-            // Datos del asesor para contacto
-            asesor_nombre: p.asesor_nombre,
-            asesor_wsp: p.asesor_wsp,
-            asesor_inmobiliaria: p.asesor_inmobiliaria,
-          })),
+          propiedades: (() => {
+            // Función para mapear propiedad al formato del informe
+            const mapProp = (p: UnidadRealConPrecioReal) => ({
+              id: p.id,
+              proyecto: p.proyecto,
+              precio_usd: p.precio_usd,
+              precio_m2: p.precio_m2,
+              area_m2: p.area_m2,
+              dormitorios: p.dormitorios,
+              banos: p.banos,
+              desarrollador: p.desarrollador,
+              zona: p.zona,
+              fotos_urls: p.fotos_urls,
+              posicion_mercado: p.posicion_mercado,
+              dias_en_mercado: p.dias_en_mercado,
+              estado_construccion: p.estado_construccion,
+              estacionamientos: p.estacionamientos,
+              baulera: p.baulera,
+              razon_fiduciaria: p.razon_fiduciaria,
+              amenities_confirmados: p.amenities_confirmados || p.amenities_lista || [],
+              amenities_por_verificar: p.amenities_por_verificar || [],
+              equipamiento_detectado: p.equipamiento_detectado || [],
+              asesor_nombre: p.asesor_nombre,
+              asesor_wsp: p.asesor_wsp,
+              asesor_inmobiliaria: p.asesor_inmobiliaria,
+            })
+
+            // Las 3 elegidas
+            const elegidas = props.map(mapProp)
+
+            // Alternativas: misma zona y dormitorios, no incluidas en elegidas
+            const idsElegidas = new Set(props.map(p => p.id))
+            const alternativas = propiedades
+              .filter(p =>
+                !idsElegidas.has(p.id) &&
+                p.zona === props[0]?.zona &&
+                p.dormitorios === props[0]?.dormitorios
+              )
+              .slice(0, 7)  // Hasta 7 para llegar a 10 total
+              .map(mapProp)
+
+            return [...elegidas, ...alternativas]
+          })(),
           datosUsuario: {
             presupuesto: filtrosActivos.presupuesto,
             dormitorios: filtrosActivos.dormitorios,

@@ -1521,16 +1521,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     </p>
                 </div>`}
 
-                ${comp1 || comp2 ? `
-                <div class="negotiation-card">
-                    <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Argumento 2: Tenés alternativas</h4>
+                ${(() => {
+                  // Buscar alternativas más baratas (de las elegidas comp1/comp2 O de las otras alternativas)
+                  const todasMasBaratas = todas
+                    .filter(p => p.id !== fav.id && p.precio_usd < fav.precio_usd * 0.98)
+                    .slice(0, 2)
+
+                  if (todasMasBaratas.length > 0) {
+                    // Hay alternativas más baratas - argumento FUERTE
+                    return `<div class="negotiation-card">
+                    <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Argumento: Tenés alternativas más baratas</h4>
                     <blockquote>
-                        "Estoy evaluando también ${comp1 ? `${comp1.proyecto} por $${fmt(comp1.precio_usd)}` : ''}${comp1 && comp2 ? ' y ' : ''}${comp2 ? `${comp2.proyecto} por $${fmt(comp2.precio_usd)}` : ''}. Me gusta ${fav.proyecto} pero necesito que el precio sea competitivo."
+                        "Estoy evaluando también ${todasMasBaratas.map(p => `${p.proyecto} por $${fmt(p.precio_usd)}`).join(' y ')}. Me gusta ${fav.proyecto} pero necesito que el precio sea competitivo."
                     </blockquote>
                     <p style="font-size: 0.85rem; color: rgba(248,246,243,0.6); margin-top: 10px;">
-                        <strong style="color: var(--gold);">Tip:</strong> Mostrar que tenés opciones reales te da poder. No inventes - usá datos reales.
+                        <strong style="color: var(--gold);">Tip:</strong> Estas alternativas son reales y más baratas. Usá estos datos concretos para negociar.
                     </p>
-                </div>` : ''}
+                </div>`
+                  } else if (todas.length > 1) {
+                    // Tu elegida ya es la más económica
+                    return `<div class="negotiation-card" style="border-left: 4px solid rgba(201,169,89,0.4);">
+                    <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Tu elegida es la más económica</h4>
+                    <p style="color: var(--cream); font-size: 0.9rem;">
+                        ${fav.proyecto} ($${fmt(fav.precio_usd)}) ya es la opción más barata entre las ${todas.length} propiedades similares. El vendedor lo sabe - tu argumento de negociación debería enfocarse en días en mercado o extras, no en precio.
+                    </p>
+                </div>`
+                  } else {
+                    return ''
+                  }
+                })()}
 
                 ${necesitaParqueo && !datosFav.tieneParqueo ? (
                   datosFav.precioReal > datosUsuario.presupuesto
