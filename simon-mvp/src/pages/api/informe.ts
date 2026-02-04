@@ -220,11 +220,24 @@ const getDescuento = (dias: number | null): string => {
 }
 
 const amenityEmojis: Record<string, string> = {
-  'piscina': '🏊', 'gimnasio': '💪', 'gym': '💪', 'churrasquera': '🍖', 'quincho': '🍖',
-  'ascensor': '🛗', 'seguridad': '👮', 'parqueo': '🅿️', 'estacionamiento': '🅿️',
-  'área social': '🎉', 'salon': '🎉', 'baulera': '📦', 'deposito': '📦',
-  'roof garden': '🌳', 'terraza': '☀️', 'balcon': '☀️', 'lavandería': '🧺',
-  'default': '✓'
+  'piscina': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M2 12h2a2 2 0 0 1 2 2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 1 2-2 2 2 0 0 1 2 2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 1 2-2h2"/><path d="M2 20h2a2 2 0 0 1 2 2"/><path d="M22 20h-2a2 2 0 0 0-2 2"/></svg>',
+  'gimnasio': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M6.5 6.5a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0-5 0"/><path d="M3 21v-2a4 4 0 0 1 4-4h4"/><path d="M15 11l5 5-5 5"/><path d="M20 16H10"/></svg>',
+  'gym': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M6.5 6.5a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0-5 0"/><path d="M3 21v-2a4 4 0 0 1 4-4h4"/><path d="M15 11l5 5-5 5"/><path d="M20 16H10"/></svg>',
+  'churrasquera': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M12 12c2-2.5 0-5-2-6.5C8.5 4 8 2 8 2s-2 2-2 6c0 4 3 4 3 4"/><rect x="3" y="14" width="18" height="8" rx="2"/></svg>',
+  'quincho': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M12 12c2-2.5 0-5-2-6.5C8.5 4 8 2 8 2s-2 2-2 6c0 4 3 4 3 4"/><rect x="3" y="14" width="18" height="8" rx="2"/></svg>',
+  'ascensor': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 6v4M9 8l3-2 3 2"/><path d="M12 14v4M9 16l3 2 3-2"/></svg>',
+  'seguridad': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  'parqueo': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>',
+  'estacionamiento': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>',
+  'área social': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  'salon': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  'baulera': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
+  'deposito': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
+  'roof garden': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M12 22v-7l-2-2"/><path d="M17 8v.8A6 6 0 0 1 13.8 20v0H10v0A6.5 6.5 0 0 1 7 8h0a5 5 0 0 1 10 0z"/><path d="M10 7a5 5 0 1 1 0 10"/></svg>',
+  'terraza': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
+  'balcon': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>',
+  'lavandería': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="13" r="5"/><circle cx="12" cy="13" r="2"/><path d="M7 6h2"/></svg>',
+  'default': '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>'
 }
 
 const getAmenityEmoji = (amenity: string): string => {
@@ -425,7 +438,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const nameClass = isElegida ? 'selected' : ''
         const label = originalIndex === 0 ? ' (tuya)' : originalIndex < 3 ? ' (#' + (originalIndex + 1) + ')' : ''
         return {
-          html: '<div class="chart-bar"><div class="bar ' + barClass + '" style="height: ' + height + 'px;"><span class="bar-label">$' + fmt(p.precio_m2) + '</span></div><div class="bar-name ' + nameClass + '">' + p.proyecto.substring(0, 10) + label + '</div></div>',
+          html: '<div class="chart-bar"><div class="bar ' + barClass + '" style="height: ' + height + 'px;"><span class="bar-label">$' + fmt(p.precio_m2) + '</span></div><div class="bar-name ' + nameClass + '">' + (p.proyecto.length > 18 ? p.proyecto.substring(0, 16) + '...' : p.proyecto) + label + '</div></div>',
           precio_m2: p.precio_m2
         }
       })
@@ -580,7 +593,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .bar.selected { background: var(--gold); }
         .bar.warning { background: var(--oportunidad); }
         .bar-label { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; font-weight: 700; color: var(--cream); white-space: nowrap; }
-        .bar-name { margin-top: 8px; font-size: 0.6rem; color: rgba(248,246,243,0.6); text-align: center; max-width: 70px; height: 30px; }
+        .bar-name { margin-top: 8px; font-size: 0.55rem; color: rgba(248,246,243,0.6); text-align: center; max-width: 90px; min-height: 32px; line-height: 1.2; word-wrap: break-word; }
         .bar-name.selected { font-weight: 700; color: var(--gold); }
         .chart-legend { display: flex; justify-content: center; gap: 20px; margin-top: 15px; flex-wrap: wrap; }
         .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: rgba(248,246,243,0.7); }
@@ -898,13 +911,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                 btn.innerHTML = originalText;
                 btn.disabled = false;
-                showToast('PDF descargado', '✅');
+                showToast('PDF descargado', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>');
             } catch (err) {
                 console.error('Error generando PDF:', err);
                 btn.style.display = 'flex';
                 btn.innerHTML = originalText;
                 btn.disabled = false;
-                showToast('Error al generar PDF', '❌');
+                showToast('Error al generar PDF', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>');
             }
         }
     </script>
@@ -914,14 +927,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     <section class="hero">
         ${fav.fotos_urls?.[0]
           ? `<img src="${fav.fotos_urls[0]}" alt="${fav.proyecto}">`
-          : '<div class="hero-placeholder">🏠</div>'}
+          : '<div class="hero-placeholder"><svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>'}
         <div class="hero-overlay">
             <div class="container">
                 <div class="logo">Simón<span>.</span></div>
                 <h1 class="hero-title">Tu Favorita: ${fav.proyecto.toUpperCase()}</h1>
                 <p class="hero-subtitle">Informe Fiduciario Premium | ${zonaDisplay(fav.zona)}, ${Math.round(fav.area_m2)} m², ${formatDormitorios(fav.dormitorios)}</p>
                 <div class="hero-badges">
-                    <span class="hero-badge heart">❤️ Tu #1</span>
+                    <span class="hero-badge heart"><svg width="14" height="14" viewBox="0 0 24 24" fill="#c9a959" stroke="#c9a959" stroke-width="1" style="display: inline; vertical-align: middle;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Tu #1</span>
                     <span class="hero-badge ${favCat.badgeClass}">${favCat.texto}</span>
                     ${fav.dias_en_mercado ? `<span class="hero-badge">${fav.dias_en_mercado} días publicado</span>` : ''}
                     <span class="hero-badge">${fechaHoy}</span>
@@ -1065,7 +1078,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </div>
 
                 ${equipFav.allAmenities.length > 0 ? `
-                <h4 style="margin-top: 30px; margin-bottom: 15px; color: var(--cream);">🏢 Amenidades del Edificio</h4>
+                <h4 style="margin-top: 30px; margin-bottom: 15px; color: var(--cream); display: flex; align-items: center; gap: 10px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--gold);"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg> Amenidades del Edificio</h4>
                 <div class="amenities-grid">
                     ${equipFav.allAmenities.slice(0, 8).map(a => `
                     <div class="amenity-item">
@@ -1078,7 +1091,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </div>` : ''}
 
                 ${equipFav.equipamientoReal.length > 0 ? `
-                <h4 style="margin-top: 25px; margin-bottom: 15px; color: var(--cream);">🏠 Equipamiento del Departamento</h4>
+                <h4 style="margin-top: 25px; margin-bottom: 15px; color: var(--cream); display: flex; align-items: center; gap: 10px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--gold);"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Equipamiento del Departamento</h4>
                 <div style="background: #0a0a0a; border-radius: 10px; padding: 15px; border: 1px solid rgba(201,169,89,0.2);">
                     <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
                         ${equipFav.equipamientoReal.map(item => `
@@ -1088,11 +1101,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     </div>
                     <div style="font-size: 0.85rem; color: rgba(248,246,243,0.7); border-top: 1px solid rgba(201,169,89,0.2); padding-top: 10px;">
                         <strong style="color: var(--cream);">Valor estimado:</strong> ~$${fmt(calcularValorEquipamiento(equipFav.equipamientoReal))} USD
-                        <span style="margin-left: 10px; color: var(--oportunidad);">✓ Incluido en el precio</span>
+                        <span style="margin-left: 10px; color: var(--oportunidad);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Incluido en el precio</span>
                     </div>
                 </div>` : `
                 <div class="alert warning" style="margin-top: 25px;">
-                    <div class="alert-icon">⚠️</div>
+                    <div class="alert-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
                     <div class="alert-content">
                         <h4>Equipamiento no especificado</h4>
                         <p>La publicación no detalla qué equipamiento incluye. <strong>Preguntá específicamente</strong> por: aire acondicionado, cocina equipada, closets, calefón.</p>
@@ -1101,7 +1114,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                 ${fav.razon_fiduciaria ? `
                 <div class="alert success">
-                    <div class="alert-icon">✅</div>
+                    <div class="alert-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
                     <div class="alert-content">
                         <h4>Síntesis Fiduciaria</h4>
                         <p>${fav.razon_fiduciaria}</p>
@@ -1110,7 +1123,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                 ${(fav.amenities_por_verificar || []).some(a => a.toLowerCase().includes('parqueo')) ? `
                 <div class="alert warning">
-                    <div class="alert-icon">⚠️</div>
+                    <div class="alert-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
                     <div class="alert-content">
                         <h4>Verificar Antes de Ofertar</h4>
                         <p>Confirmar si el <strong>parqueo está incluido</strong>. En esta zona suele venderse aparte (+$12,000 - $18,000).</p>
@@ -1185,89 +1198,89 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     <thead>
                         <tr>
                             <th style="text-align: left;">Criterio</th>
-                            <th style="text-align: center;">❤️ #1 ${fav.proyecto.substring(0, 12)}</th>
+                            <th style="text-align: center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="#c9a959" stroke="#c9a959" stroke-width="1" style="display: inline; vertical-align: middle;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> #1 ${fav.proyecto.substring(0, 12)}</th>
                             ${comp1 ? `<th style="text-align: center;">#2 ${comp1.proyecto.substring(0, 12)}</th>` : ''}
                             ${comp2 ? `<th style="text-align: center;">#3 ${comp2.proyecto.substring(0, 12)}</th>` : ''}
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td><strong>💰 Precio publicado</strong></td>
+                            <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M9 10h6M9 14h6"/></svg> Precio publicado</strong></td>
                             <td style="text-align: center;">$${fmt(fav.precio_usd)}</td>
                             ${comp1 ? `<td style="text-align: center;">$${fmt(comp1.precio_usd)}</td>` : ''}
                             ${comp2 ? `<td style="text-align: center;">$${fmt(comp2.precio_usd)}</td>` : ''}
                         </tr>
                         <tr style="background: #fef3c7;">
-                            <td><strong>💵 Precio REAL</strong><br><small style="color: #92400e;">(con extras que necesitás)</small></td>
+                            <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Precio REAL</strong><br><small style="color: #92400e;">(con extras que necesitás)</small></td>
                             <td style="text-align: center; font-weight: 700; color: ${datosFav.costoExtras > 0 ? '#92400e' : '#166534'};">
                                 $${fmt(datosFav.precioReal)}
-                                ${datosFav.costoExtras > 0 ? `<br><small>+$${fmt(datosFav.costoExtras)} (${datosFav.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #166534;">✓ Todo incluido</small>'}
+                                ${datosFav.costoExtras > 0 ? `<br><small>+$${fmt(datosFav.costoExtras)} (${datosFav.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #166534;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Todo incluido</small>'}
                             </td>
                             ${datosComp1 ? `<td style="text-align: center; font-weight: 700; color: ${datosComp1.costoExtras > 0 ? '#92400e' : '#166534'};">
                                 $${fmt(datosComp1.precioReal)}
-                                ${datosComp1.costoExtras > 0 ? `<br><small>+$${fmt(datosComp1.costoExtras)} (${datosComp1.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #166534;">✓ Todo incluido</small>'}
+                                ${datosComp1.costoExtras > 0 ? `<br><small>+$${fmt(datosComp1.costoExtras)} (${datosComp1.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #166534;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Todo incluido</small>'}
                             </td>` : ''}
                             ${datosComp2 ? `<td style="text-align: center; font-weight: 700; color: ${datosComp2.costoExtras > 0 ? '#92400e' : '#166534'};">
                                 $${fmt(datosComp2.precioReal)}
-                                ${datosComp2.costoExtras > 0 ? `<br><small>+$${fmt(datosComp2.costoExtras)} (${datosComp2.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #166534;">✓ Todo incluido</small>'}
+                                ${datosComp2.costoExtras > 0 ? `<br><small>+$${fmt(datosComp2.costoExtras)} (${datosComp2.extrasNecesarios.join('+')})</small>` : '<br><small style="color: #166534;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Todo incluido</small>'}
                             </td>` : ''}
                         </tr>
                         <tr>
-                            <td><strong>📐 Superficie</strong></td>
+                            <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M21 21H3V3"/><rect x="7" y="11" width="6" height="10" fill="none"/></svg> Superficie</strong></td>
                             <td style="text-align: center;">${Math.round(fav.area_m2)} m²</td>
                             ${comp1 ? `<td style="text-align: center;">${Math.round(comp1.area_m2)} m²</td>` : ''}
                             ${comp2 ? `<td style="text-align: center;">${Math.round(comp2.area_m2)} m²</td>` : ''}
                         </tr>
                         <tr>
-                            <td><strong>📋 Costo mensual</strong><br><small>(expensas estimadas)</small></td>
+                            <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> Costo mensual</strong><br><small>(expensas estimadas)</small></td>
                             <td style="text-align: center;">$${datosFav.expensasMin}-${datosFav.expensasMax}/mes</td>
                             ${datosComp1 ? `<td style="text-align: center;">$${datosComp1.expensasMin}-${datosComp1.expensasMax}/mes</td>` : ''}
                             ${datosComp2 ? `<td style="text-align: center;">$${datosComp2.expensasMin}-${datosComp2.expensasMax}/mes</td>` : ''}
                         </tr>
                         <tr>
-                            <td><strong>📊 Impacto 5 años</strong><br><small>(expensas acumuladas)</small></td>
+                            <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M18 20V10M12 20V4M6 20v-6"/></svg> Impacto 5 años</strong><br><small>(expensas acumuladas)</small></td>
                             <td style="text-align: center;">~$${fmt(datosFav.impacto5Anos)}</td>
                             ${datosComp1 ? `<td style="text-align: center;">~$${fmt(datosComp1.impacto5Anos)}</td>` : ''}
                             ${datosComp2 ? `<td style="text-align: center;">~$${fmt(datosComp2.impacto5Anos)}</td>` : ''}
                         </tr>
                         <tr>
-                            <td><strong>📅 Días en mercado</strong></td>
+                            <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Días en mercado</strong></td>
                             <td style="text-align: center; color: ${datosFav.diasMercado > 90 ? '#d97706' : datosFav.diasMercado < 30 ? '#166534' : 'inherit'};">
                                 ${datosFav.diasMercado || '?'} días
-                                ${datosFav.diasMercado > 90 ? '<br><small style="color: #d97706;">🟡 Negociable</small>' : datosFav.diasMercado < 30 ? '<br><small style="color: #166534;">🟢 Reciente</small>' : ''}
+                                ${datosFav.diasMercado > 90 ? '<br><small style="color: #d97706;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#d97706" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Negociable</small>' : datosFav.diasMercado < 30 ? '<br><small style="color: #166534;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#166534" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Reciente</small>' : ''}
                             </td>
                             ${datosComp1 ? `<td style="text-align: center; color: ${datosComp1.diasMercado > 90 ? '#d97706' : datosComp1.diasMercado < 30 ? '#166534' : 'inherit'};">
                                 ${datosComp1.diasMercado || '?'} días
-                                ${datosComp1.diasMercado > 90 ? '<br><small style="color: #d97706;">🟡 Negociable</small>' : datosComp1.diasMercado < 30 ? '<br><small style="color: #166534;">🟢 Reciente</small>' : ''}
+                                ${datosComp1.diasMercado > 90 ? '<br><small style="color: #d97706;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#d97706" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Negociable</small>' : datosComp1.diasMercado < 30 ? '<br><small style="color: #166534;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#166534" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Reciente</small>' : ''}
                             </td>` : ''}
                             ${datosComp2 ? `<td style="text-align: center; color: ${datosComp2.diasMercado > 90 ? '#d97706' : datosComp2.diasMercado < 30 ? '#166534' : 'inherit'};">
                                 ${datosComp2.diasMercado || '?'} días
-                                ${datosComp2.diasMercado > 90 ? '<br><small style="color: #d97706;">🟡 Negociable</small>' : datosComp2.diasMercado < 30 ? '<br><small style="color: #166534;">🟢 Reciente</small>' : ''}
+                                ${datosComp2.diasMercado > 90 ? '<br><small style="color: #d97706;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#d97706" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Negociable</small>' : datosComp2.diasMercado < 30 ? '<br><small style="color: #166534;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#166534" stroke="none" style="display: inline; vertical-align: middle;"><circle cx="12" cy="12" r="10"/></svg> Reciente</small>' : ''}
                             </td>` : ''}
                         </tr>
                         ${datosFav.rankingEdificio ? `<tr>
-                            <td><strong>🏢 Ranking edificio</strong></td>
+                            <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="9" y1="6" x2="9" y2="6.01"/><line x1="15" y1="6" x2="15" y2="6.01"/><line x1="9" y1="10" x2="9" y2="10.01"/><line x1="15" y1="10" x2="15" y2="10.01"/><line x1="9" y1="14" x2="9" y2="14.01"/><line x1="15" y1="14" x2="15" y2="14.01"/></svg> Ranking edificio</strong></td>
                             <td style="text-align: center;">${datosFav.rankingEdificio}º de ${datosFav.unidadesEdificio || '?'}</td>
                             ${datosComp1 ? `<td style="text-align: center;">${datosComp1.rankingEdificio ? `${datosComp1.rankingEdificio}º de ${datosComp1.unidadesEdificio || '?'}` : '-'}</td>` : ''}
                             ${datosComp2 ? `<td style="text-align: center;">${datosComp2.rankingEdificio ? `${datosComp2.rankingEdificio}º de ${datosComp2.unidadesEdificio || '?'}` : '-'}</td>` : ''}
                         </tr>` : ''}
                         ${datosFav.amenidadesPedidas > 0 ? `<tr>
-                            <td><strong>✨ Amenidades pedidas</strong></td>
+                            <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Amenidades pedidas</strong></td>
                             <td style="text-align: center; color: ${datosFav.amenidadesTiene === datosFav.amenidadesPedidas ? '#166534' : '#d97706'};">
                                 ${datosFav.amenidadesTiene}/${datosFav.amenidadesPedidas}
-                                ${datosFav.amenidadesTiene === datosFav.amenidadesPedidas ? ' ✓' : ''}
+                                ${datosFav.amenidadesTiene === datosFav.amenidadesPedidas ? ' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
                             </td>
                             ${datosComp1 ? `<td style="text-align: center; color: ${datosComp1.amenidadesTiene === datosComp1.amenidadesPedidas ? '#166534' : '#d97706'};">
                                 ${datosComp1.amenidadesTiene}/${datosComp1.amenidadesPedidas}
-                                ${datosComp1.amenidadesTiene === datosComp1.amenidadesPedidas ? ' ✓' : ''}
+                                ${datosComp1.amenidadesTiene === datosComp1.amenidadesPedidas ? ' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
                             </td>` : ''}
                             ${datosComp2 ? `<td style="text-align: center; color: ${datosComp2.amenidadesTiene === datosComp2.amenidadesPedidas ? '#166534' : '#d97706'};">
                                 ${datosComp2.amenidadesTiene}/${datosComp2.amenidadesPedidas}
-                                ${datosComp2.amenidadesTiene === datosComp2.amenidadesPedidas ? ' ✓' : ''}
+                                ${datosComp2.amenidadesTiene === datosComp2.amenidadesPedidas ? ' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
                             </td>` : ''}
                         </tr>` : ''}
                         <tr>
-                            <td><strong>🏠 Equipamiento</strong><br><small>(del depto)</small></td>
+                            <td><strong>Equipamiento</strong><br><small style="color: var(--gold);">(del depto)</small></td>
                             <td style="text-align: center; font-size: 0.85rem;">
                                 ${equipFav.equipamientoReal.length > 0
                                   ? `${equipFav.equipamientoReal.slice(0, 3).join(', ')}${equipFav.equipamientoReal.length > 3 ? '...' : ''}<br><small style="color: #166534;">~$${fmt(calcularValorEquipamiento(equipFav.equipamientoReal))}</small>`
@@ -1285,15 +1298,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             </td>` : ''}
                         </tr>
                         <tr>
-                            <td><strong>🚗 Parqueo</strong></td>
+                            <td><strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M19 17h2l-2-6h-8l-2 6h2M7 17h10M5 17h2M17 17v2a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-2M9 17v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-2"/><circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/></svg> Parqueo</strong></td>
                             <td style="text-align: center; color: ${datosFav.tieneParqueo ? '#166534' : '#d97706'};">
-                                ${datosFav.tieneParqueo ? `✓ Incluido (${fav.estacionamientos}p)` : '⚠️ Preguntar'}
+                                ${datosFav.tieneParqueo ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Incluido (${fav.estacionamientos}p)` : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" style="display: inline; vertical-align: middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Preguntar'}
                             </td>
                             ${datosComp1 ? `<td style="text-align: center; color: ${datosComp1.tieneParqueo ? '#166534' : '#d97706'};">
-                                ${datosComp1.tieneParqueo ? `✓ Incluido (${comp1?.estacionamientos}p)` : '⚠️ Preguntar'}
+                                ${datosComp1.tieneParqueo ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Incluido (${comp1?.estacionamientos}p)` : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" style="display: inline; vertical-align: middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Preguntar'}
                             </td>` : ''}
                             ${datosComp2 ? `<td style="text-align: center; color: ${datosComp2.tieneParqueo ? '#166534' : '#d97706'};">
-                                ${datosComp2.tieneParqueo ? `✓ Incluido (${comp2?.estacionamientos}p)` : '⚠️ Preguntar'}
+                                ${datosComp2.tieneParqueo ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg> Incluido (${comp2?.estacionamientos}p)` : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" style="display: inline; vertical-align: middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Preguntar'}
                             </td>` : ''}
                         </tr>
                     </tbody>
@@ -1301,7 +1314,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </div>
 
                 <div class="alert info" style="margin-top: 20px;">
-                    <div class="alert-icon">💡</div>
+                    <div class="alert-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18h6M10 22h4M12 2v1M12 6a5 5 0 0 1 3.54 8.46L14 16h-4l-1.54-1.54A5 5 0 0 1 12 6z"/></svg></div>
                     <div class="alert-content">
                         <h4>Lectura rápida</h4>
                         <p>
@@ -1350,7 +1363,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                               const cat = getCategoria(p)
                               return `
                             <tr ${i < 3 ? 'class="highlighted"' : ''}>
-                                <td>${i < 3 ? `<span class="table-heart">❤️${i+1}</span>` : ''}<strong>${p.proyecto}</strong></td>
+                                <td>${i < 3 ? `<span class="table-heart"><svg width="12" height="12" viewBox="0 0 24 24" fill="#c9a959" stroke="#c9a959" stroke-width="1" style="display: inline; vertical-align: middle;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>${i+1}</span>` : ''}<strong>${p.proyecto}</strong></td>
                                 <td>$${fmt(p.precio_usd)}</td>
                                 <td>${Math.round(p.area_m2)}</td>
                                 <td>$${fmt(p.precio_m2)}</td>
@@ -1362,7 +1375,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     </table>
                 </div>
                 <div class="alert info" style="margin-top: 20px;">
-                    <div class="alert-icon">📊</div>
+                    <div class="alert-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg></div>
                     <div class="alert-content">
                         <h4>Resumen del Mercado</h4>
                         <p>Promedio tus resultados: <strong>$${fmt(precioM2Promedio)}/m²</strong> | Tus elegidas promedian: <strong>$${fmt(Math.round(top3.reduce((s, p) => s + p.precio_m2, 0) / top3.length))}/m²</strong></p>
@@ -1381,14 +1394,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             </div>
             <div class="section-content">
                 <div class="alert info" style="margin-bottom: 20px;">
-                    <div class="alert-icon">📋</div>
+                    <div class="alert-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></div>
                     <div class="alert-content">
                         <h4>Checklist basado en TU búsqueda</h4>
                         <p>Estas preguntas están personalizadas según lo que indicaste que necesitás.</p>
                     </div>
                 </div>
 
-                <h4 style="color: var(--gold); margin-bottom: 15px;">💰 Sobre el Precio</h4>
+                <h4 style="color: var(--gold); margin-bottom: 15px; display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M9 9h6M9 15h6"/></svg> Sobre el Precio</h4>
                 <ul class="checklist">
                     ${necesitaParqueo && !datosFav.tieneParqueo ? `
                     <li>
@@ -1409,7 +1422,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </ul>
 
                 ${fav.estado_construccion === 'preventa' ? `
-                <h4 style="color: var(--gold); margin: 25px 0 15px;">🏗️ Sobre la Preventa</h4>
+                <h4 style="color: var(--gold); margin: 25px 0 15px; display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 20h20M5 20V8l7-5 7 5v12M9 20v-6h6v6"/></svg> Sobre la Preventa</h4>
                 <ul class="checklist">
                     <li>
                         <div class="checkbox"></div>
@@ -1427,7 +1440,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     </li>
                 </ul>` : ''}
 
-                <h4 style="color: var(--gold); margin: 25px 0 15px;">🏠 Sobre la Propiedad</h4>
+                <h4 style="color: var(--gold); margin: 25px 0 15px; display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Sobre la Propiedad</h4>
                 <ul class="checklist">
                     <li>
                         <div class="checkbox"></div>
@@ -1467,7 +1480,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </ul>
 
                 ${(datosUsuario.innegociables || []).length > 0 ? `
-                <h4 style="color: var(--gold); margin: 25px 0 15px;">✨ Tus Innegociables</h4>
+                <h4 style="color: var(--gold); margin: 25px 0 15px; display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Tus Innegociables</h4>
                 <ul class="checklist">
                     <li>
                         <div class="checkbox"></div>
@@ -1502,7 +1515,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                   return `
                 <div class="alert ${diasAlto ? 'success' : diasMedio ? 'warning' : 'info'}" style="margin-bottom: 20px;">
-                    <div class="alert-icon">${diasAlto ? '💪' : diasMedio ? '🤝' : '⚡'}</div>
+                    <div class="alert-icon">${diasAlto ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18.5 3A2.5 2.5 0 0 1 21 5.5v5.5a9 9 0 1 1-18 0V5.5A2.5 2.5 0 0 1 5.5 3h13Z"/><path d="M12 10v5"/><path d="M9 14h6"/></svg>' : diasMedio ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 17a4 4 0 0 0 8 0c0-3-8-5-8-10a4 4 0 1 1 8 0"/><line x1="15" y1="22" x2="15" y2="22.01"/></svg>' : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'}</div>
                     <div class="alert-content">
                         <h4 style="color: ${colorNivel};">${textoNivel}</h4>
                         <p>${fav.dias_en_mercado || '?'} días en mercado + precio ${favCat.texto}. ${priorizaPrecio ? 'Priorizás precio → negociá firme.' : priorizaCalidad ? 'Priorizás calidad → no arriesgues perderlo por regatear mucho.' : ''}</p>
@@ -1512,7 +1525,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                 ${(fav.dias_en_mercado || 0) > 30 ? `
                 <div class="negotiation-card">
-                    <h4>💬 Argumento 1: Tiempo en mercado</h4>
+                    <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Argumento 1: Tiempo en mercado</h4>
                     <blockquote>
                         "${(fav.dias_en_mercado || 0) > 90
                           ? `Vi que la propiedad lleva más de ${Math.floor((fav.dias_en_mercado || 0) / 30)} meses publicada. Entiendo que quieren vender - yo puedo cerrar rápido si llegamos a un acuerdo. ¿Qué flexibilidad tienen en el precio?`
@@ -1523,7 +1536,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     </p>
                 </div>` : `
                 <div class="negotiation-card">
-                    <h4>💬 Argumento 1: Interés serio</h4>
+                    <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Argumento 1: Interés serio</h4>
                     <blockquote>
                         "Vi que la propiedad es nueva en el mercado. Estoy listo para avanzar rápido si el precio es el correcto. ¿Tienen algún incentivo por cierre rápido?"
                     </blockquote>
@@ -1534,7 +1547,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                 ${comp1 || comp2 ? `
                 <div class="negotiation-card">
-                    <h4>💬 Argumento 2: Tenés alternativas</h4>
+                    <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Argumento 2: Tenés alternativas</h4>
                     <blockquote>
                         "Estoy evaluando también ${comp1 ? `${comp1.proyecto} por $${fmt(comp1.precio_usd)}` : ''}${comp1 && comp2 ? ' y ' : ''}${comp2 ? `${comp2.proyecto} por $${fmt(comp2.precio_usd)}` : ''}. Me gusta ${fav.proyecto} pero necesito que el precio sea competitivo."
                     </blockquote>
@@ -1545,7 +1558,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                 ${necesitaParqueo && !datosFav.tieneParqueo ? `
                 <div class="negotiation-card">
-                    <h4>💬 Argumento 3: El parqueo</h4>
+                    <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Argumento 3: El parqueo</h4>
                     <blockquote>
                         "Mi presupuesto es $${fmt(datosUsuario.presupuesto)} TODO INCLUIDO. Si el parqueo no está en ese precio, necesito que lo incluyan o ajusten para que entre en mi número."
                     </blockquote>
@@ -1556,7 +1569,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                 ${datosUsuario.calidad_vs_precio >= 4 ? `
                 <div class="negotiation-card" style="border-left: 4px solid var(--oportunidad);">
-                    <h4>💡 Estrategia para vos (priorizás precio)</h4>
+                    <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M9 18h6M10 22h4M12 2v1M12 6a5 5 0 0 1 3.54 8.46L14 16h-4l-1.54-1.54A5 5 0 0 1 12 6z"/></svg> Estrategia para vos (priorizás precio)</h4>
                     <p style="color: var(--cream);">Indicaste que priorizás precio sobre calidad. <strong>Negociá firme:</strong></p>
                     <ul style="margin: 10px 0 0 20px; font-size: 0.9rem; color: rgba(248,246,243,0.8);">
                         <li>Empezá oferando 15% menos del publicado</li>
@@ -1565,7 +1578,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     </ul>
                 </div>` : datosUsuario.calidad_vs_precio <= 2 ? `
                 <div class="negotiation-card" style="border-left: 4px solid var(--gold);">
-                    <h4>💡 Estrategia para vos (priorizás calidad)</h4>
+                    <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M9 18h6M10 22h4M12 2v1M12 6a5 5 0 0 1 3.54 8.46L14 16h-4l-1.54-1.54A5 5 0 0 1 12 6z"/></svg> Estrategia para vos (priorizás calidad)</h4>
                     <p style="color: var(--cream);">Indicaste que priorizás calidad sobre precio. <strong>No arriesgues perderlo:</strong></p>
                     <ul style="margin: 10px 0 0 20px; font-size: 0.9rem; color: rgba(248,246,243,0.8);">
                         <li>Ofertá cerca del precio (5-8% menos máximo)</li>
@@ -1574,7 +1587,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     </ul>
                 </div>` : ''}
 
-                <h4 style="color: var(--cream); margin: 25px 0 15px;">📊 Números para tu Negociación</h4>
+                <h4 style="color: var(--cream); margin: 25px 0 15px; display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg> Números para tu Negociación</h4>
                 <div style="background: #0a0a0a; border-radius: 10px; padding: 20px; border: 1px solid rgba(201,169,89,0.2);">
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; text-align: center;">
                         <div>
@@ -1607,7 +1620,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 <div class="section-title">Conclusión y Recomendación Personalizada</div>
             </div>
             <div class="section-content">
-                <h4 style="color: var(--cream); margin-bottom: 15px;">🎯 Veredicto Basado en TU Perfil</h4>
+                <h4 style="color: var(--cream); margin-bottom: 15px; display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Veredicto Basado en TU Perfil</h4>
 
                 ${(() => {
                   // Análisis personalizado según preferencias
@@ -1634,17 +1647,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         <strong style="color: var(--gold);">${fav.proyecto}</strong> es tu #1. Analizando tus preferencias:
                     </p>
                     <ul style="margin: 0 0 0 20px; line-height: 1.8; color: rgba(248,246,243,0.8);">
-                        ${priorizaUbicacion ? `<li>Priorizás <strong style="color: var(--cream);">ubicación</strong> → ${fav.proyecto} está en ${zonaDisplay(fav.zona)} ✓</li>` : ''}
-                        ${priorizaMetros ? `<li>Priorizás <strong style="color: var(--cream);">metros</strong> → ${mejorMetros.nombre} tiene más m² (${Math.round(mejorMetros.p.area_m2)}m²) ${mejorMetros.num === 1 ? '✓' : '- considerá #' + mejorMetros.num}</li>` : ''}
-                        ${priorizaCalidad ? `<li>Priorizás <strong style="color: var(--cream);">calidad</strong> → ${mejorEquipada.nombre} tiene mejor equipamiento (~$${fmt(mejorEquipada.datos.valorEquipamiento)}) ${mejorEquipada.num === 1 ? '✓' : '- considerá #' + mejorEquipada.num}</li>` : ''}
-                        ${priorizaPrecio ? `<li>Priorizás <strong style="color: var(--cream);">precio</strong> → ${mejorPrecioReal.nombre} tiene mejor precio real ($${fmt(mejorPrecioReal.datos.precioReal)}) ${mejorPrecioReal.num === 1 ? '✓' : '- considerá #' + mejorPrecioReal.num}</li>` : ''}
-                        <li>Más <strong style="color: var(--cream);">negociable</strong>: ${masNegociable.nombre} (${masNegociable.datos.diasMercado} días) ${masNegociable.num === 1 ? '✓' : ''}</li>
+                        ${priorizaUbicacion ? `<li>Priorizás <strong style="color: var(--cream);">ubicación</strong> → ${fav.proyecto} está en ${zonaDisplay(fav.zona)} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg></li>` : ''}
+                        ${priorizaMetros ? `<li>Priorizás <strong style="color: var(--cream);">metros</strong> → ${mejorMetros.nombre} tiene más m² (${Math.round(mejorMetros.p.area_m2)}m²) ${mejorMetros.num === 1 ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>' : '- considerá #' + mejorMetros.num}</li>` : ''}
+                        ${priorizaCalidad ? `<li>Priorizás <strong style="color: var(--cream);">calidad</strong> → ${mejorEquipada.nombre} tiene mejor equipamiento (~$${fmt(mejorEquipada.datos.valorEquipamiento)}) ${mejorEquipada.num === 1 ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>' : '- considerá #' + mejorEquipada.num}</li>` : ''}
+                        ${priorizaPrecio ? `<li>Priorizás <strong style="color: var(--cream);">precio</strong> → ${mejorPrecioReal.nombre} tiene mejor precio real ($${fmt(mejorPrecioReal.datos.precioReal)}) ${mejorPrecioReal.num === 1 ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>' : '- considerá #' + mejorPrecioReal.num}</li>` : ''}
+                        <li>Más <strong style="color: var(--cream);">negociable</strong>: ${masNegociable.nombre} (${masNegociable.datos.diasMercado} días) ${masNegociable.num === 1 ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="3" style="display: inline; vertical-align: middle;"><polyline points="20 6 9 17 4 12"/></svg>' : ''}</li>
                     </ul>
                 </div>`
                 })()}
 
                 <div class="recommendation-box">
-                    <h3>✅ Recomendación según tu situación</h3>
+                    <h3 style="display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Recomendación según tu situación</h3>
                     <table class="recommendation-table">
                         <thead>
                             <tr>
@@ -1685,7 +1698,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </div>
 
                 ${(comp1 || comp2) ? `
-                <h4 style="color: var(--cream); margin: 25px 0 15px;">🏆 ¿Cuál elegir según tus prioridades?</h4>
+                <h4 style="color: var(--cream); margin: 25px 0 15px; display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> ¿Cuál elegir según tus prioridades?</h4>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                     <div style="background: ${datosUsuario.calidad_vs_precio >= 4 ? 'var(--oportunidad)' : '#1a1a1a'}; color: ${datosUsuario.calidad_vs_precio >= 4 ? 'white' : 'var(--cream)'}; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid ${datosUsuario.calidad_vs_precio >= 4 ? 'transparent' : 'rgba(201,169,89,0.2)'};">
                         <div style="font-size: 0.8rem; opacity: 0.9;">Si priorizás PRECIO</div>
@@ -1723,7 +1736,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </div>` : ''}
 
                 <div class="alert success" style="margin-top: 25px;">
-                    <div class="alert-icon">📱</div>
+                    <div class="alert-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
                     <div class="alert-content">
                         <h4>Tu Próximo Paso</h4>
                         <p>
@@ -1736,7 +1749,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </div>
 
                 <div class="disclaimer-box">
-                    <span class="icon">💡</span>
+                    <span class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M9 18h6M10 22h4M12 2v1M4.93 4.93l.7.7M2 12h1M19.07 4.93l-.7.7M22 12h-1M15.54 8.46a5 5 0 1 0-7.08 7.08L10 17h4l1.54-1.46a5 5 0 0 0 0-7.08Z"/></svg></span>
                     <div>
                         <strong>Los números son una guía, no una regla</strong>
                         <p>Este informe está personalizado según <strong>tus preferencias</strong>, pero vos conocés tu situación mejor que nadie. Confiá en tu instinto: si sentís urgencia del vendedor, negociá más fuerte. Si hay competencia, quizás convenga cerrar rápido. Simón te da el contexto, <strong>vos tomás la decisión</strong>.</p>
@@ -1762,13 +1775,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     ${/* Favorita (#1) */ ''}
                     <div style="background: rgba(0,0,0,0.15); border-radius: 16px; padding: 20px;">
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                            <span style="background: #0a0a0a; color: #c9a959; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">⭐ #1 FAVORITA</span>
+                            <span style="background: #0a0a0a; color: #c9a959; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="#c9a959" stroke="#c9a959" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> #1 FAVORITA</span>
                         </div>
                         <h4 style="font-size: 1.1rem; margin-bottom: 5px; color: #0a0a0a;">${fav.proyecto}</h4>
                         <p style="opacity: 0.8; font-size: 0.9rem; margin-bottom: 15px; color: #0a0a0a;">$${fmt(fav.precio_usd)} · ${Math.round(fav.area_m2)}m²</p>
                         ${fav.asesor_wsp ? `
                             <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px; color: #0a0a0a;">
-                                👔 ${fav.asesor_nombre || 'Asesor'}${fav.asesor_inmobiliaria ? ` · ${fav.asesor_inmobiliaria}` : ''}
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${fav.asesor_nombre || 'Asesor'}${fav.asesor_inmobiliaria ? ` · ${fav.asesor_inmobiliaria}` : ''}
                             </p>
                             <a
                                 href="${buildContactarUrl(baseHost, {
@@ -1789,10 +1802,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                                 target="_blank"
                                 style="display: block; width: 100%; padding: 12px; background: #0a0a0a; color: #c9a959; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
                             >
-                                📱 CONTACTAR
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> CONTACTAR
                             </a>
                         ` : `
-                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: #0a0a0a;">📞 Contacto no disponible</p>
+                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: #0a0a0a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Contacto no disponible</p>
                         `}
                     </div>
 
@@ -1800,13 +1813,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     ${/* Segunda opción (#2) */ ''}
                     <div style="background: rgba(0,0,0,0.1); border-radius: 16px; padding: 20px;">
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                            <span style="background: rgba(0,0,0,0.2); color: #0a0a0a; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">🥈 #2</span>
+                            <span style="background: rgba(0,0,0,0.2); color: #0a0a0a; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M12 14v8M8 22h8"/></svg> #2</span>
                         </div>
                         <h4 style="font-size: 1.1rem; margin-bottom: 5px; color: #0a0a0a;">${comp1.proyecto}</h4>
                         <p style="opacity: 0.8; font-size: 0.9rem; margin-bottom: 15px; color: #0a0a0a;">$${fmt(comp1.precio_usd)} · ${Math.round(comp1.area_m2)}m²</p>
                         ${comp1.asesor_wsp ? `
                             <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px; color: #0a0a0a;">
-                                👔 ${comp1.asesor_nombre || 'Asesor'}${comp1.asesor_inmobiliaria ? ` · ${comp1.asesor_inmobiliaria}` : ''}
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${comp1.asesor_nombre || 'Asesor'}${comp1.asesor_inmobiliaria ? ` · ${comp1.asesor_inmobiliaria}` : ''}
                             </p>
                             <a
                                 href="${buildContactarUrl(baseHost, {
@@ -1827,10 +1840,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                                 target="_blank"
                                 style="display: block; width: 100%; padding: 12px; background: #0a0a0a; color: #c9a959; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
                             >
-                                📱 CONTACTAR
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> CONTACTAR
                             </a>
                         ` : `
-                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: #0a0a0a;">📞 Contacto no disponible</p>
+                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: #0a0a0a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Contacto no disponible</p>
                         `}
                     </div>
                     ` : ''}
@@ -1839,13 +1852,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     ${/* Tercera opción (#3) */ ''}
                     <div style="background: rgba(0,0,0,0.1); border-radius: 16px; padding: 20px;">
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                            <span style="background: rgba(0,0,0,0.2); color: #0a0a0a; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">🥉 #3</span>
+                            <span style="background: rgba(0,0,0,0.2); color: #0a0a0a; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#cd7f32" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M12 14v8M8 22h8"/></svg> #3</span>
                         </div>
                         <h4 style="font-size: 1.1rem; margin-bottom: 5px; color: #0a0a0a;">${comp2.proyecto}</h4>
                         <p style="opacity: 0.8; font-size: 0.9rem; margin-bottom: 15px; color: #0a0a0a;">$${fmt(comp2.precio_usd)} · ${Math.round(comp2.area_m2)}m²</p>
                         ${comp2.asesor_wsp ? `
                             <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px; color: #0a0a0a;">
-                                👔 ${comp2.asesor_nombre || 'Asesor'}${comp2.asesor_inmobiliaria ? ` · ${comp2.asesor_inmobiliaria}` : ''}
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${comp2.asesor_nombre || 'Asesor'}${comp2.asesor_inmobiliaria ? ` · ${comp2.asesor_inmobiliaria}` : ''}
                             </p>
                             <a
                                 href="${buildContactarUrl(baseHost, {
@@ -1866,17 +1879,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                                 target="_blank"
                                 style="display: block; width: 100%; padding: 12px; background: #0a0a0a; color: #c9a959; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
                             >
-                                📱 CONTACTAR
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> CONTACTAR
                             </a>
                         ` : `
-                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: #0a0a0a;">📞 Contacto no disponible</p>
+                            <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: #0a0a0a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Contacto no disponible</p>
                         `}
                     </div>
                     ` : ''}
                 </div>
 
                 <p style="text-align: center; opacity: 0.7; margin-top: 25px; font-size: 0.85rem; color: #0a0a0a;">
-                    💡 Al contactar se generará un código de referencia único para tu seguimiento
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M9 18h6M10 22h4M12 2v1M12 6a5 5 0 0 1 3.54 8.46L14 16h-4l-1.54-1.54A5 5 0 0 1 12 6z"/></svg> Al contactar se generará un código de referencia único para tu seguimiento
                 </p>
             </div>
         </div>
@@ -1895,7 +1908,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     <p>${analisis?.total_analizadas || todas.length} propiedades analizadas</p>
                     <p>Datos de mercado: ${fechaHoy}</p>
                     <div class="confidence-badge">
-                        <span>📊</span>
+                        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg></span>
                         <span>Actualizado diariamente</span>
                     </div>
                 </div>
