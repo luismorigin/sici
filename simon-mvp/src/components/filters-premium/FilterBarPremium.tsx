@@ -346,12 +346,12 @@ export default function FilterBarPremium({ onFiltrosChange, className = '' }: Fi
           <span className="text-[#c9a959] text-[0.7rem] tracking-[3px] uppercase">Dormitorios</span>
         </div>
 
-        <div className="flex justify-center gap-3">
+        <div className="flex justify-center gap-2 md:gap-3 flex-wrap">
           {DORMITORIOS.map((d) => (
             <button
               key={d.value ?? 'todos'}
               onClick={() => handleDormitorios(d.value)}
-              className={`px-8 py-3 border transition-all duration-300 ${
+              className={`px-4 md:px-8 py-3 border transition-all duration-300 text-sm md:text-base ${
                 filtros.dormitorios === d.value
                   ? 'border-[#c9a959] bg-[#c9a959]/10 text-white'
                   : 'border-white/10 text-white/60 hover:border-[#c9a959]/50'
