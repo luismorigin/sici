@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import { useEffect } from 'react'
 import {
   NavbarPremium,
   HeroPremium,
@@ -8,8 +9,13 @@ import {
   CTAPremium,
   FooterPremium
 } from '@/components/landing-premium'
+import { trackEvent } from '@/lib/analytics'
 
 export default function LandingV2() {
+  useEffect(() => {
+    trackEvent('landing_view')
+  }, [])
+
   return (
     <>
       <Head>

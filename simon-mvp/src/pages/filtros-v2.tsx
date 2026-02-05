@@ -1,8 +1,14 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import { useEffect } from 'react'
 import { FilterBarPremium } from '@/components/filters-premium'
+import { trackEvent } from '@/lib/analytics'
 
 export default function FiltrosV2() {
+  useEffect(() => {
+    trackEvent('filtros_started')
+  }, [])
+
   return (
     <>
       <Head>

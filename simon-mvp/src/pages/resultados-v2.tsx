@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -15,6 +15,7 @@ import { premiumFonts } from '@/styles/premium-theme'
 import { formatDorms } from '@/lib/format-utils'
 import FeedbackPremiumModal from '@/components/FeedbackPremiumModal'
 import { innegociablesToAmenidades } from '@/config/amenidades-mercado'
+import { trackEvent } from '@/lib/analytics'
 
 // Dynamic import para mapa (sin SSR)
 const MapaResultados = dynamic(() => import('@/components/MapaResultados'), {
@@ -321,6 +322,11 @@ export default function ResultadosV2() {
   } | null>(null)
   const [calculandoImpacto, setCalculandoImpacto] = useState(false)
 
+  // Trackear visualización de resultados
+  useEffect(() => {
+    trackEvent('resultados_view')
+  }, [])
+
   // Funciones de favoritos
   const toggleSelected = (propId: number) => {
     setSelectedProps(prev => {
@@ -358,6 +364,7 @@ export default function ResultadosV2() {
       .filter((p): p is UnidadRealConPrecioReal => p !== undefined)
     setPropsParaInforme(ordenadas)
     setShowOrderModal(false)
+    trackEvent('premium_requested')
     setShowFeedbackModal(true)
   }
 

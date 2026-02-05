@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
+import { trackEvent } from '@/lib/analytics'
 
 interface FiltrosNivel1 {
   presupuesto: number
@@ -175,6 +176,7 @@ export default function FormularioV2() {
       cantidad_resultados: form.cantidad_resultados?.toString() || '',
     })
 
+    trackEvent('formulario_completed')
     router.push(`/resultados-v2?${params.toString()}`)
   }
 
