@@ -94,13 +94,13 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 
 | Ruta | Propósito |
 |------|-----------|
-| `/` | **Landing Premium** (rewrite a `/landing-v2` via next.config.js) |
+| `/` | **Landing Premium** (re-exporta `landing-v2` desde index.tsx) |
 | `/landing-v2` | Landing premium directa (negro/crema/oro, minimalista) |
 | `/filtros-v2` | **Filtros premium** (fondo negro, controles elegantes) |
 | `/formulario-v2` | **Formulario Nivel 2** (innegociables, deseables, trade-offs) |
 | `/resultados-v2` | **Resultados premium** (fondo crema, cards blancos) |
 
-> **Nota:** `simonbo.com` muestra la landing premium. El rewrite está en `next.config.js`.
+> **Nota:** `simonbo.com` muestra la landing premium. `index.tsx` re-exporta `landing-v2`.
 
 ### Flujo Premium Completo (Producción)
 
