@@ -252,14 +252,14 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 014 | tc_binance_historial | TC Binance + historial precios | ✅ |
 | 015 | excluido_operacion | Status para alquiler/anticrético | ✅ |
 | 016 | limpieza_sky_properties | Auditoría Sky + corrección GPS/duplicados | ✅ |
-| 017 | mejoras_matching_system | FK formal, blacklist, detección duplicados | ⏳ |
-| 018 | asignar_proyecto_existente | RPC asignar proyecto existente | ⏳ |
-| 019 | knowledge_graph_mvp | Query Layer: buscar_unidades_reales(), v_amenities_proyecto | ⏳ |
+| 017 | mejoras_matching_system | FK formal, detección duplicados (blacklist no implementada) | ✅ |
+| 018 | asignar_proyecto_existente | RPC asignar proyecto existente | ✅ |
+| 019 | knowledge_graph_mvp | Query Layer: buscar_unidades_reales() | ✅ |
 | 020 | leads_mvp | Sistema leads inicial | ✅ |
 | 021 | leads_flow_refactor | Refactor flujo leads | ✅ |
 | 022 | fuzzy_matching_infraestructura | pg_trgm, normalize_nombre(), buscar_proyecto_fuzzy() | ✅ |
 | 023 | supervisor_excluidas | HITL excluidas: exportar, procesar_accion, detectar_razon | ✅ |
-| 024 | matching_trigram_integration | generar_matches_trigram(), matching_completo v3.2 | ⏳ |
+| 024 | matching_trigram_integration | generar_matches_trigram(), matching_completo_automatizado | ✅ |
 | 025 | generar_razon_fiduciaria | EL MOAT: razones contextuales con DATA real | ✅ |
 | 026 | buscar_unidades_reales_v2 | v2.1: fotos, precio_m2, score, desarrollador, filtro área>=20m² | ✅ |
 | 027 | fix_tipo_propiedad_santorini | Reclasificar 22 parqueos/bauleras SANTORINI VENTURA | ✅ |
@@ -312,7 +312,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 074 | broker_datos_prueba | Datos test broker | ✅ |
 | 075 | brokers_verificacion_preregistro | Verificación brokers + pre-registro | ✅ |
 | 076 | propiedades_broker_campos_adicionales | Campos adicionales propiedades broker | ✅ |
-| 077 | propiedades_historial_auditoria | Tabla auditoría cambios | ⏳ |
+| 077 | propiedades_historial_auditoria | Tabla auditoría cambios (2,938 registros) | ✅ |
 | 078 | fix_cron_tc_dinamico | Fix cron TC dinámico | ✅ |
 | 079 | buscar_unidades_precio_actualizado | Precio actualizado | ✅ |
 | 080 | fix_auditoria_tc_batch | Fix auditoría TC batch | ✅ |
