@@ -230,7 +230,9 @@ FROM propiedades_v2;
 SELECT COUNT(*) FROM proyectos_master WHERE activo;
 ```
 
-## Migraciones SQL (001-114)
+## Migraciones SQL (001-129)
+
+> **Nota de Auditoría (5 Feb 2026):** Números duplicados en 115 y 116 (2 archivos c/u). Saltos en 045, 055, 058.
 
 | # | Archivo | Propósito | Estado |
 |---|---------|-----------|--------|
@@ -278,61 +280,64 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 042 | amenities_fiduciarias | Amenities fiduciarias | ✅ |
 | 043 | equipamiento_deteccion | Equipamiento detección | ✅ |
 | 044 | agregar_banos | Agregar baños | ✅ |
+| 045 | - | *(salto en numeración)* | - |
 | 046 | agregar_descripcion | Agregar descripción | ✅ |
 | 047 | agregar_posicion_mercado | Agregar posición mercado | ✅ |
 | 048 | fix_jsonb_each_null | Fix jsonb_each crash en amenities NULL, excluir Sin zona | ✅ |
 | 049 | deduplicar_santorini | Columna duplicado_de, marcar 28 duplicados SANTORINI | ✅ |
 | 050 | fix_santorini_gps_fotos | Corregir GPS y fotos rotas SANTORINI VENTURA | ✅ |
 | 051 | deduplicar_exactos | Marcar duplicados exactos (Avanti, Spazios, etc.) | ✅ |
-| 052 | fix_estado_entrega_solo_preventa | Filtro MOAT 3 opciones: entrega_inmediata, solo_preventa, no_importa | ✅ |
+| 052 | fix_estado_entrega_solo_preventa | Filtro MOAT 3 opciones | ✅ |
 | 053 | fix_posicion_mercado_usar_precio_m2 | Fix posición mercado usar precio/m² | ✅ |
 | 054 | buscar_unidades_pasar_precio_m2 | Buscar unidades pasar precio/m² | ✅ |
+| 055 | - | *(salto en numeración)* | - |
 | 056 | fix_jsonb_each_null | Fix jsonb_each null adicional | ✅ |
 | 057 | fix_estado_entrega_moat | Fix estado entrega MOAT | ✅ |
-| 059 | fix_tc_paralelo_retroactivo | Fix bug merge TC + 13 props corregidas + vista monitoreo | ✅ |
+| 058 | - | *(salto en numeración)* | - |
+| 059 | fix_tc_paralelo_retroactivo | Fix bug merge TC + 13 props + vista monitoreo | ✅ |
 | 060 | fix_multiproyecto_completo | Fix multiproyecto completo | ✅ |
 | 061 | agregar_dias_en_mercado | Agregar días en mercado | ✅ |
 | 062 | filtro_dias_en_mercado | Filtro días en mercado | ✅ |
 | 063 | buscar_unidades_reales_completa | buscar_unidades_reales completa | ✅ |
-| 064 | enriquecer_amenities_equipamiento | Extracción 69 campos (45 equip + 24 amenities) de descripciones a JSONB | ✅ |
-| 065 | agregar_gps_estacionamientos | Añadir estacionamientos al retorno de buscar_unidades_reales() | ✅ |
-| 066 | enriquecer_estacionamientos | Extraer cantidad de parqueos desde descripciones (11.6% → 18%) | ✅ |
-| 067 | enriquecer_baulera | Crear columna baulera + extraer desde descripciones (14 props, 4.3%) | ✅ |
-| 068 | agregar_baulera_funcion | Añadir baulera al retorno de buscar_unidades_reales() v2.23 | ✅ |
-| 069 | expandir_equipamiento_detectado | Detección tiempo real ~60 amenities (v2.24), promedio 9.4/prop | ✅ |
-| 070 | leads_contacto_broker | Sistema contacto lead-broker con código REF (SIM-XXXXX) | ✅ |
+| 064 | enriquecer_amenities_equipamiento | Extracción 69 campos de descripciones a JSONB | ✅ |
+| 065 | agregar_gps_estacionamientos | Añadir estacionamientos al retorno | ✅ |
+| 066 | enriquecer_estacionamientos | Extraer parqueos desde descripciones | ✅ |
+| 067 | enriquecer_baulera | Columna baulera + extracción | ✅ |
+| 068 | agregar_baulera_funcion | Añadir baulera a buscar_unidades v2.23 | ✅ |
+| 069 | expandir_equipamiento_detectado | Detección tiempo real ~60 amenities v2.24 | ✅ |
+| 070 | leads_contacto_broker | Sistema contacto lead-broker (SIM-XXXXX) | ✅ |
 | 071 | beta_feedback | Sistema beta feedback | ✅ |
-| 072 | broker_system_tables | 7 tablas sistema broker: brokers, propiedades_broker, fotos, leads, CMA | ✅ |
-| 073 | buscar_unidades_broker | Función búsqueda propiedades broker compatible con buscar_unidades_reales | ✅ |
-| 074 | broker_datos_prueba | Datos test: 1 broker + 3 propiedades (SIM-TEST1/2/3) + 25 fotos | ✅ |
-| 075 | brokers_verificacion_preregistro | Sistema verificación brokers + pre-registro scraping | ✅ |
+| 072 | broker_system_tables | 7 tablas sistema broker | ✅ |
+| 073 | buscar_unidades_broker | Función búsqueda propiedades broker | ✅ |
+| 074 | broker_datos_prueba | Datos test broker | ✅ |
+| 075 | brokers_verificacion_preregistro | Verificación brokers + pre-registro | ✅ |
 | 076 | propiedades_broker_campos_adicionales | Campos adicionales propiedades broker | ✅ |
-| 077 | propiedades_historial_auditoria | Tabla auditoría cambios + vistas + funciones historial | ⏳ |
+| 077 | propiedades_historial_auditoria | Tabla auditoría cambios | ⏳ |
 | 078 | fix_cron_tc_dinamico | Fix cron TC dinámico | ✅ |
-| 079 | buscar_unidades_precio_actualizado | Buscar unidades precio actualizado | ✅ |
+| 079 | buscar_unidades_precio_actualizado | Precio actualizado | ✅ |
 | 080 | fix_auditoria_tc_batch | Fix auditoría TC batch | ✅ |
-| 081 | columnas_piso_forma_pago | Columnas piso + forma de pago (6 campos) en propiedades_v2 | ✅ |
-| 082 | buscar_unidades_forma_pago | buscar_unidades_reales() v2.25 + filtros forma de pago | ✅ |
-| 083 | parqueo_baulera_precio | Columnas parqueo/baulera incluido + precio adicional | ⏳ |
-| 084 | buscar_unidades_parqueo_baulera | buscar_unidades_reales() v2.26 + filtros parqueo/baulera | ⏳ |
-| 085 | proyectos_master_campos_admin | Admin Proyectos: estado_construccion, fecha_entrega, amenidades_edificio | ✅ |
-| 086 | inferir_datos_proyecto | Función para inferir amenidades, estado, pisos y fotos | ✅ |
-| 087 | fotos_proyecto_amenidades_opcionales | Columna fotos_proyecto + inferir amenidades frecuentes/opcionales | ⏳ |
-| 088 | desarrolladores_master | Tabla desarrolladores + FK id_desarrollador + autocomplete | ✅ |
-| 089 | permisos_anon_landing | Permisos SELECT anon para Market Lens en vivo | ✅ |
-| 090 | contar_bajadas_precio | Función RPC para detectar bajadas de precio entre snapshots | ✅ |
-| 091 | fix_propagar_amenidades_estructura | Fix propagar amenidades estructura | ✅ |
-| 092 | score_calidad_broker_100pts | **Sistema calidad 100pts para propiedades broker + vista stats** | ✅ |
-| 093 | storage_buckets_broker | **Buckets Storage: pdfs-broker, broker-profile + políticas RLS** | ✅ |
+| 081 | columnas_piso_forma_pago | Columnas piso + forma de pago | ✅ |
+| 082 | buscar_unidades_forma_pago | buscar_unidades v2.25 + forma pago | ✅ |
+| 083 | parqueo_baulera_precio | Columnas parqueo/baulera precio | ✅ |
+| 084 | buscar_unidades_parqueo_baulera | buscar_unidades v2.26 + parqueo/baulera | ✅ |
+| 085 | proyectos_master_campos_admin | Admin Proyectos campos | ✅ |
+| 086 | inferir_datos_proyecto | Función inferir amenidades/estado/pisos | ✅ |
+| 087 | fotos_proyecto_amenidades_opcionales | Fotos proyecto + amenidades opcionales | ✅ |
+| 088 | desarrolladores_master | Tabla desarrolladores + FK | ✅ |
+| 089 | permisos_anon_landing | Permisos SELECT anon Market Lens | ✅ |
+| 090 | contar_bajadas_precio | RPC bajadas de precio snapshots | ✅ |
+| 091 | fix_propagar_amenidades_estructura | Fix propagar amenidades | ✅ |
+| 092 | score_calidad_broker_100pts | Sistema calidad 100pts broker | ✅ |
+| 093 | storage_buckets_broker | Buckets Storage: pdfs-broker | ✅ |
 | 094 | fix_leads_mvp_permissions | Fix permisos leads MVP | ✅ |
-| 095 | limpieza_datos_vistas | v_metricas_mercado, v_alternativas_proyecto, v_salud_datos | ✅ |
+| 095 | limpieza_datos_vistas | Vistas métricas mercado | ✅ |
 | 096 | calcular_confianza_datos | Calcular confianza datos | ✅ |
 | 097 | metricas_dias_mercado | Métricas días en mercado | ✅ |
 | 098 | fix_metricas_zona_dias | Fix métricas zona días | ✅ |
-| 099 | excluir_duplicados_buscar_unidades | Excluir duplicados buscar unidades | ✅ |
+| 099 | excluir_duplicados_buscar_unidades | Excluir duplicados | ✅ |
 | 100 | broker_forma_pago_campos | Campos forma de pago broker | ✅ |
-| 101 | buscar_unidades_broker_tc_dinamico | buscar_unidades_broker con TC dinámico | ✅ |
-| 102 | permisos_anon_salud | Permisos anon para dashboard salud | ✅ |
+| 101 | buscar_unidades_broker_tc_dinamico | broker con TC dinámico | ✅ |
+| 102 | permisos_anon_salud | Permisos anon dashboard salud | ✅ |
 | 103 | fix_propagar_verificacion_bloqueo | Fix propagar verificación bloqueo | ✅ |
 | 104 | equipamiento_base_proyecto | Equipamiento base proyecto | ✅ |
 | 105 | inferir_equipamiento_proyecto | Inferir equipamiento proyecto | ✅ |
@@ -343,8 +348,25 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 110 | fix_posicion_mercado_precio_m2 | Fix posición mercado precio/m² | ✅ |
 | 111 | plan_pagos_cuotas_v2 | Plan de pagos y cuotas v2 | ✅ |
 | 112 | trigger_creditos_cma | Trigger créditos CMA | ✅ |
-| 113 | validacion_humana_auto_aprobados | Validación humana auto-aprobados (HITL) | ✅ |
-| 114 | unificar_dias_mercado_300 | Unificar días en mercado (300 días máx) | ✅ |
+| 113 | validacion_humana_auto_aprobados | Validación humana auto-aprobados | ✅ |
+| 114 | unificar_dias_mercado_300 | Unificar días en mercado (300 máx) | ✅ |
+| 115a | candados_ediciones_manuales | Candados para ediciones manuales | ✅ |
+| 115b | fix_amenities_confirmados_usar_lista | Fix amenities usar lista | ✅ |
+| 116a | trigger_proteger_amenities | Trigger proteger amenities | ✅ |
+| 116b | fix_equipamiento_usar_lista | Fix equipamiento usar lista | ✅ |
+| 117 | fix_tc_paralelo_columna | Fix TC paralelo columna | ✅ |
+| 118 | candados_nombres_proyecto | Candados nombres proyecto | ✅ |
+| 119 | fix_ctes_filtro_antiguedad | Fix CTEs filtro antigüedad | ✅ |
+| 120 | fix_metricas_mercado_antiguedad | Fix métricas mercado antigüedad | ✅ |
+| 121 | fix_razon_fiduciaria_antiguedad | Fix razón fiduciaria antigüedad | ✅ |
+| 122 | fix_tipos_buscar_unidades | Fix tipos buscar unidades | ✅ |
+| 123 | fix_300_dias_todos | Fix 300 días todos | ✅ |
+| 124 | fix_where_300_dias | Fix WHERE 300 días | ✅ |
+| 125 | agregar_fecha_entrega | Agregar fecha_entrega a buscar_unidades | ✅ |
+| 126 | propagar_con_candados | Propagar datos respetando candados | ✅ |
+| 127 | fix_campos_bloqueados_corruptos | Fix campos_bloqueados corruptos | ✅ |
+| 128 | fix_propagacion_update_consolidado | Fix propagación UPDATE consolidado | ✅ |
+| 129 | propagar_con_apertura_temporal | Propagar con apertura temporal candados | ✅ |
 
 ## Repo Legacy
 
