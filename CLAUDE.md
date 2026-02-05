@@ -94,20 +94,21 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 
 | Ruta | Propósito |
 |------|-----------|
-| `/` | Landing original (colores azul/blanco, emojis) |
-| `/landing-v2` | **Alternativa premium** (negro/crema/oro, minimalista) |
+| `/` | **Landing Premium** (rewrite a `/landing-v2` via next.config.js) |
+| `/landing-v2` | Landing premium directa (negro/crema/oro, minimalista) |
 | `/filtros-v2` | **Filtros premium** (fondo negro, controles elegantes) |
 | `/formulario-v2` | **Formulario Nivel 2** (innegociables, deseables, trade-offs) |
 | `/resultados-v2` | **Resultados premium** (fondo crema, cards blancos) |
-| `/landing-premium` | Página de prueba del diseño premium |
 
-### Flujo Premium Completo
+> **Nota:** `simonbo.com` muestra la landing premium. El rewrite está en `next.config.js`.
+
+### Flujo Premium Completo (Producción)
 
 ```
-/landing-v2 → /filtros-v2 → /formulario-v2 → /resultados-v2
+simonbo.com (/) → /filtros-v2 → /formulario-v2 → /resultados-v2
 ```
 
-### Landing Premium (`/landing-v2`)
+### Landing Premium
 
 Diseño luxury alternativo con:
 - **Fonts:** Cormorant Garamond (display) + Manrope (body)
