@@ -116,6 +116,12 @@ Diseño luxury alternativo con:
 - **Componentes:** `/components/landing-premium/`
 - **Datos en vivo:** Propiedades, proyectos, TC paralelo, microzonas desde Supabase
 
+### Analytics
+
+- **Google Analytics:** `G-Q8CRRJD6SL`
+- **Configurado en:** `_app.tsx` (todas las páginas)
+- **Dashboard:** [analytics.google.com](https://analytics.google.com)
+
 ## Broker Pages (simon-mvp)
 
 | Ruta | Propósito |
