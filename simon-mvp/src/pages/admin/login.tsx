@@ -9,64 +9,44 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [checkingSession, setCheckingSession] = useState(true)
+  const [redirecting, setRedirecting] = useState(false)
 
   const validateAndRedirect = useCallback(async (userEmail: string) => {
-    if (!supabase) {
-      setCheckingSession(false)
-      return
-    }
+    if (!supabase) return
 
     try {
-      const { data, error: queryError } = await supabase
+      const { data } = await supabase
         .from('admin_users')
         .select('id')
         .eq('email', userEmail)
         .eq('activo', true)
         .single()
 
-      if (queryError || !data) {
+      if (data) {
+        setRedirecting(true)
+        document.cookie = 'sici_admin=1; path=/admin; max-age=86400; SameSite=Strict'
+        window.location.href = '/admin/salud'
+      } else {
         setError('Tu email no tiene acceso al panel de administración')
-        setCheckingSession(false)
         await supabase.auth.signOut()
-        return
       }
-
-      // Setear cookie para que middleware permita acceso
-      document.cookie = 'sici_admin=1; path=/admin; max-age=86400; SameSite=Strict'
-      router.push('/admin/salud')
     } catch (err) {
       console.error('Error validando admin:', err)
       setError('Error al verificar acceso')
-      setCheckingSession(false)
     }
-  }, [router])
+  }, [])
 
   useEffect(() => {
-    if (!supabase) {
-      setCheckingSession(false)
-      return
-    }
+    if (!supabase) return
 
     // Escuchar cambios de auth (para cuando llega el Magic Link)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user?.email) {
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user?.email) {
           validateAndRedirect(session.user.email)
         }
       }
     )
-
-    // Verificar sesión existente
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user?.email) {
-        validateAndRedirect(session.user.email)
-      } else {
-        setCheckingSession(false)
-      }
-    }).catch(() => {
-      setCheckingSession(false)
-    })
 
     return () => { subscription.unsubscribe() }
   }, [validateAndRedirect])
@@ -106,10 +86,10 @@ export default function AdminLogin() {
     }
   }
 
-  if (checkingSession) {
+  if (redirecting) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-white/40 text-sm">Verificando sesión...</div>
+        <div className="text-white/40 text-sm">Acceso verificado, redirigiendo...</div>
       </div>
     )
   }
