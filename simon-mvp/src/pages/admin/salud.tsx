@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -65,20 +65,21 @@ export default function DashboardSalud() {
   const [tcStats, setTCStats] = useState<TCStats | null>(null)
   const [workflows, setWorkflows] = useState<WorkflowHealth[]>([])
 
-  // Alertas
-  const [alertas, setAlertas] = useState<string[]>([])
+  const fetchInitiated = useRef(false)
 
   useEffect(() => {
     if (authLoading || !admin) return
+    if (fetchInitiated.current) return
+    fetchInitiated.current = true
+
     fetchAllStats()
 
-    // Auto-refresh cada 5 minutos
     const interval = setInterval(() => {
       fetchAllStats()
     }, 5 * 60 * 1000)
 
     return () => clearInterval(interval)
-  }, [authLoading])
+  }, [authLoading, admin])
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
   if (!admin) return null
@@ -318,8 +319,8 @@ export default function DashboardSalud() {
     }
   }
 
-  // Calcular alertas
-  useEffect(() => {
+  // Calcular alertas (useMemo en vez de useEffect+setState para evitar re-renders extra)
+  const alertas = useMemo(() => {
     const nuevasAlertas: string[] = []
 
     if (colas) {
@@ -355,7 +356,7 @@ export default function DashboardSalud() {
       }
     }
 
-    setAlertas(nuevasAlertas)
+    return nuevasAlertas
   }, [colas, propStats, workflows])
 
   const formatHace = (isoDate: string) => {
