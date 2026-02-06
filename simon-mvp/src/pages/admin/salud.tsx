@@ -81,6 +81,45 @@ export default function DashboardSalud() {
     return () => clearInterval(interval)
   }, [authLoading, admin])
 
+  // Calcular alertas (useMemo ANTES de early returns — regla de hooks)
+  const alertas = useMemo(() => {
+    const nuevasAlertas: string[] = []
+
+    if (colas) {
+      if (colas.cola_matching > 10) {
+        nuevasAlertas.push(`${colas.cola_matching} matches pendientes de revisión`)
+      }
+      if (colas.cola_sin_match > 20) {
+        nuevasAlertas.push(`${colas.cola_sin_match} propiedades sin proyecto`)
+      }
+      if (colas.cola_excluidas > 30) {
+        nuevasAlertas.push(`${colas.cola_excluidas} excluidas por revisar`)
+      }
+    }
+
+    if (propStats) {
+      const pctMatch = propStats.completadas > 0 ? (propStats.matcheadas / propStats.completadas) * 100 : 0
+      if (pctMatch < 85) {
+        nuevasAlertas.push(`Cobertura matching baja: ${pctMatch.toFixed(1)}%`)
+      }
+
+      const pctBajo = propStats.completadas > 0 ? (propStats.score_bajo / propStats.completadas) * 100 : 0
+      if (pctBajo > 10) {
+        nuevasAlertas.push(`${pctBajo.toFixed(1)}% con calidad baja`)
+      }
+    }
+
+    const workflowsRequeridos = ['discovery', 'enrichment', 'merge']
+    for (const wf of workflowsRequeridos) {
+      const found = workflows.find(w => w.workflow_name === wf)
+      if (found && found.horas_desde_run > 26) {
+        nuevasAlertas.push(`${wf} no corrió en ${found.horas_desde_run.toFixed(0)}h`)
+      }
+    }
+
+    return nuevasAlertas
+  }, [colas, propStats, workflows])
+
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
   if (!admin) return null
 
@@ -318,46 +357,6 @@ export default function DashboardSalud() {
       setWorkflows(workflowsSorted)
     }
   }
-
-  // Calcular alertas (useMemo en vez de useEffect+setState para evitar re-renders extra)
-  const alertas = useMemo(() => {
-    const nuevasAlertas: string[] = []
-
-    if (colas) {
-      if (colas.cola_matching > 10) {
-        nuevasAlertas.push(`${colas.cola_matching} matches pendientes de revisión`)
-      }
-      if (colas.cola_sin_match > 20) {
-        nuevasAlertas.push(`${colas.cola_sin_match} propiedades sin proyecto`)
-      }
-      if (colas.cola_excluidas > 30) {
-        nuevasAlertas.push(`${colas.cola_excluidas} excluidas por revisar`)
-      }
-    }
-
-    if (propStats) {
-      const pctMatch = propStats.completadas > 0 ? (propStats.matcheadas / propStats.completadas) * 100 : 0
-      if (pctMatch < 85) {
-        nuevasAlertas.push(`Cobertura matching baja: ${pctMatch.toFixed(1)}%`)
-      }
-
-      const pctBajo = propStats.completadas > 0 ? (propStats.score_bajo / propStats.completadas) * 100 : 0
-      if (pctBajo > 10) {
-        nuevasAlertas.push(`${pctBajo.toFixed(1)}% con calidad baja`)
-      }
-    }
-
-    // Verificar workflows críticos
-    const workflowsRequeridos = ['discovery', 'enrichment', 'merge']
-    for (const wf of workflowsRequeridos) {
-      const found = workflows.find(w => w.workflow_name === wf)
-      if (found && found.horas_desde_run > 26) {
-        nuevasAlertas.push(`${wf} no corrió en ${found.horas_desde_run.toFixed(0)}h`)
-      }
-    }
-
-    return nuevasAlertas
-  }, [colas, propStats, workflows])
 
   const formatHace = (isoDate: string) => {
     if (!isoDate) return '-'
