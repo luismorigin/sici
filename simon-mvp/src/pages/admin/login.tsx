@@ -11,6 +11,26 @@ export default function AdminLogin() {
   const [success, setSuccess] = useState(false)
   const [checkingSession, setCheckingSession] = useState(true)
 
+  const validateAndRedirect = async (userEmail: string) => {
+    if (!supabase) return
+    const { data } = await supabase
+      .from('admin_users')
+      .select('id')
+      .eq('email', userEmail)
+      .eq('activo', true)
+      .single()
+
+    if (data) {
+      // Setear cookie para que middleware permita acceso
+      document.cookie = 'sici_admin=1; path=/admin; max-age=86400; SameSite=Strict'
+      router.push('/admin/salud')
+    } else {
+      setCheckingSession(false)
+      setError('Tu email no tiene acceso al panel de administración')
+      await supabase.auth.signOut()
+    }
+  }
+
   // Si ya tiene sesión válida, redirigir al admin
   useEffect(() => {
     const checkExistingSession = async () => {
@@ -19,22 +39,23 @@ export default function AdminLogin() {
         return
       }
 
+      // Escuchar cambios de auth (para cuando llega el Magic Link)
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          if (event === 'SIGNED_IN' && session) {
+            await validateAndRedirect(session.user.email!)
+          }
+        }
+      )
+
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
-        // Verificar si es admin
-        const { data } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('email', session.user.email!)
-          .eq('activo', true)
-          .single()
-
-        if (data) {
-          router.push('/admin/salud')
-          return
-        }
+        await validateAndRedirect(session.user.email!)
+      } else {
+        setCheckingSession(false)
       }
-      setCheckingSession(false)
+
+      return () => { subscription.unsubscribe() }
     }
 
     checkExistingSession()
@@ -58,7 +79,7 @@ export default function AdminLogin() {
       const { error: authError } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo: `${window.location.origin}/admin/salud`,
+          emailRedirectTo: `${window.location.origin}/admin/login`,
         }
       })
 
