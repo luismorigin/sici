@@ -2,7 +2,10 @@
 // Flujo: Ver valor → Datos personales → Feedback → Desbloquear informe
 // Estilo Premium: Negro #0a0a0a, Crema #f8f6f3, Oro #c9a959
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
+
+const TOTAL_BETA_SPOTS = 50
 
 interface FeedbackPremiumModalProps {
   isOpen: boolean
@@ -36,6 +39,29 @@ export default function FeedbackPremiumModal({
   const [feedbackMejoras, setFeedbackMejoras] = useState('')
 
   const [error, setError] = useState('')
+
+  // Contador de beta testers (lugares restantes)
+  const [betaCount, setBetaCount] = useState<number | null>(null)
+  const lugaresRestantes = betaCount !== null ? Math.max(0, TOTAL_BETA_SPOTS - betaCount) : null
+
+  useEffect(() => {
+    const fetchBetaCount = async () => {
+      if (!supabase) return
+
+      const { count } = await supabase
+        .from('leads_mvp')
+        .select('*', { count: 'exact', head: true })
+        .eq('es_beta_tester', true)
+
+      if (count !== null) {
+        setBetaCount(count)
+      }
+    }
+
+    if (isOpen) {
+      fetchBetaCount()
+    }
+  }, [isOpen])
 
   const handleSubmit = async () => {
     // Validar feedback
@@ -104,7 +130,7 @@ export default function FeedbackPremiumModal({
                 Tu Informe Premium
               </h2>
               <p className="text-[#c9a959] text-sm mt-1">
-                Valorado en $49.99
+                Valorado en Bs. 299
               </p>
             </div>
             <button
@@ -122,11 +148,25 @@ export default function FeedbackPremiumModal({
           {/* PASO 1: Mostrar valor */}
           {paso === 'valor' && (
             <div className="space-y-5">
-              {/* Badge GRATIS */}
+              {/* Badge GRATIS con contador dinámico */}
               <div className="bg-[#c9a959]/10 border-2 border-[#c9a959] rounded-xl p-4 text-center">
-                <span className="text-2xl font-bold text-[#c9a959]">
-                  GRATIS para los primeros 50
-                </span>
+                {lugaresRestantes === null ? (
+                  <span className="text-2xl font-bold text-[#c9a959]">
+                    GRATIS por tiempo limitado
+                  </span>
+                ) : lugaresRestantes === 0 ? (
+                  <span className="text-2xl font-bold text-[#c9a959]">
+                    Lista de espera
+                  </span>
+                ) : lugaresRestantes <= 5 ? (
+                  <span className="text-2xl font-bold text-[#c9a959]">
+                    GRATIS — ¡Últimos {lugaresRestantes} lugares!
+                  </span>
+                ) : (
+                  <span className="text-2xl font-bold text-[#c9a959]">
+                    GRATIS — Quedan {lugaresRestantes} lugares
+                  </span>
+                )}
                 <p className="text-[#f8f6f3]/70 text-sm mt-1">
                   Ayudanos con tu feedback y recibilo sin costo
                 </p>
