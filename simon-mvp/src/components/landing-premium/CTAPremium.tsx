@@ -22,7 +22,7 @@ export default function CTAPremium() {
           Analizá el mercado en segundos con datos verificados en tiempo real.
         </p>
 
-        <Link href="/filtros-v2">
+        <Link href="/filtros-v2" prefetch={false}>
           <button className="bg-white text-[#0a0a0a] px-8 md:px-16 py-5 md:py-6 text-xs md:text-sm tracking-[2px] md:tracking-[3px] uppercase hover:bg-[#c9a959] hover:text-white transition-all duration-300">
             Descubrí las mejores opciones
           </button>
