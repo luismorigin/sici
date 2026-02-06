@@ -16,6 +16,12 @@ interface PropertyCardPremiumProps {
   isSelected?: boolean
   onToggleSelected?: (id: number) => void
   onOpenLightbox?: (propiedad: UnidadReal, index: number) => void
+  /** Pulse animation on the heart to draw attention */
+  pulseHeart?: boolean
+  /** Show tooltip below the heart on first visit */
+  showHeartTooltip?: boolean
+  /** Called when tooltip is dismissed */
+  onDismissTooltip?: () => void
 }
 
 // Constantes para costos estimados (de estimados-mercado.ts)
@@ -394,7 +400,10 @@ export default function PropertyCardPremium({
   usuarioNecesitaBaulera = false,
   isSelected = false,
   onToggleSelected,
-  onOpenLightbox
+  onOpenLightbox,
+  pulseHeart = false,
+  showHeartTooltip = false,
+  onDismissTooltip
 }: PropertyCardPremiumProps) {
   const [fotoIndex, setFotoIndex] = useState(0)
   const [expanded, setExpanded] = useState(false)
@@ -514,23 +523,41 @@ export default function PropertyCardPremium({
       <div className="relative aspect-[16/10] bg-[#f8f6f3] overflow-hidden">
         {/* Heart button for favorites */}
         {onToggleSelected && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleSelected(propiedad.id) }}
-            className="absolute top-3 right-3 z-10 p-2 transition-all"
-            aria-label={isSelected ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-          >
-            <svg
-              className={`w-7 h-7 transition-all ${
-                isSelected
-                  ? 'fill-[#c9a959] stroke-[#c9a959] drop-shadow-[0_2px_4px_rgba(201,169,89,0.6)]'
-                  : 'fill-transparent stroke-white drop-shadow-[0_2px_6px_rgba(201,169,89,0.7)] hover:stroke-[#c9a959]'
-              }`}
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
+          <div className="absolute top-3 right-3 z-10">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleSelected(propiedad.id)
+                if (showHeartTooltip) onDismissTooltip?.()
+              }}
+              className="p-2 transition-all"
+              aria-label={isSelected ? 'Quitar de favoritos' : 'Agregar a favoritos'}
             >
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
-          </button>
+              <svg
+                className={`w-7 h-7 transition-all ${
+                  isSelected
+                    ? 'fill-[#c9a959] stroke-[#c9a959] drop-shadow-[0_2px_4px_rgba(201,169,89,0.6)]'
+                    : 'fill-transparent stroke-white drop-shadow-[0_2px_6px_rgba(201,169,89,0.7)] hover:stroke-[#c9a959]'
+                } ${pulseHeart && !isSelected ? 'animate-[heartPulse_2s_ease-in-out_infinite]' : ''}`}
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+              >
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            </button>
+            {/* First-visit tooltip */}
+            {showHeartTooltip && (
+              <div
+                className="absolute top-full right-0 mt-1 animate-[fadeInBounce_0.4s_ease-out]"
+                onClick={(e) => { e.stopPropagation(); onDismissTooltip?.() }}
+              >
+                <div className="relative bg-[#0a0a0a] border border-[#c9a959]/30 px-3 py-2 whitespace-nowrap">
+                  <div className="absolute -top-1.5 right-4 w-3 h-3 bg-[#0a0a0a] border-l border-t border-[#c9a959]/30 rotate-45" />
+                  <span className="text-[#c9a959] text-xs tracking-wide">Elegi tus favoritos</span>
+                </div>
+              </div>
+            )}
+          </div>
         )}
         {hasFotos ? (
           <>

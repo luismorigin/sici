@@ -79,6 +79,15 @@ module.exports = {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-10px)' },
         },
+        heartPulse: {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.7' },
+          '50%': { transform: 'scale(1.25)', opacity: '1' },
+        },
+        fadeInBounce: {
+          '0%': { opacity: '0', transform: 'translateY(-4px)' },
+          '60%': { opacity: '1', transform: 'translateY(2px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       boxShadow: {
         'card': '0 20px 40px -5px rgba(59, 130, 246, 0.15)',

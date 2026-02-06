@@ -291,6 +291,40 @@ export default function ResultadosV2() {
   const [selectedProps, setSelectedProps] = useState<Set<number>>(new Set())
   const MAX_SELECTED = 3
 
+  // Onboarding: tooltip primera visita
+  const [showTooltip, setShowTooltip] = useState(false)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('sici_heart_tooltip_seen') !== '1') {
+      setShowTooltip(true)
+      // Auto-dismiss after 6 seconds
+      const timer = setTimeout(() => setShowTooltip(false), 6000)
+      return () => clearTimeout(timer)
+    }
+  }, [])
+
+  const dismissTooltip = () => {
+    setShowTooltip(false)
+    localStorage.setItem('sici_heart_tooltip_seen', '1')
+  }
+
+  // Onboarding: scroll detection for floating bar
+  const [hasScrolled, setHasScrolled] = useState(false)
+  const cardsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (cardsRef.current) {
+        const rect = cardsRef.current.getBoundingClientRect()
+        // Trigger when user has scrolled past the top of the cards section
+        if (rect.top < window.innerHeight * 0.5) {
+          setHasScrolled(true)
+        }
+      }
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   // Estados de modales
   const [showMapa, setShowMapa] = useState(false)
   const [lightboxProp, setLightboxProp] = useState<{ prop: UnidadRealConPrecioReal; index: number } | null>(null)
@@ -338,6 +372,8 @@ export default function ResultadosV2() {
       }
       return next
     })
+    // Dismiss tooltip on first selection
+    if (showTooltip) dismissTooltip()
   }
 
   const isSelected = (propId: number) => selectedProps.has(propId)
@@ -1130,7 +1166,7 @@ export default function ResultadosV2() {
             <>
               {/* TOP 3 */}
               {top3.length > 0 && (
-                <section className="mb-16">
+                <section className="mb-16" ref={cardsRef}>
                   <div className="flex items-center gap-4 mb-8">
                     <span className="w-8 h-px bg-[#c9a959]" />
                     <span className="text-[#c9a959] text-[0.7rem] tracking-[3px] uppercase">
@@ -1152,6 +1188,9 @@ export default function ResultadosV2() {
                         isSelected={isSelected(prop.id)}
                         onToggleSelected={toggleSelected}
                         onOpenLightbox={openLightbox}
+                        pulseHeart={i === 0 && selectedProps.size === 0}
+                        showHeartTooltip={showTooltip && i === 0}
+                        onDismissTooltip={dismissTooltip}
                       />
                     ))}
                   </div>
@@ -1186,12 +1225,25 @@ export default function ResultadosV2() {
                   </div>
                 </section>
               )}
+
+              {/* Empty state banner — when no favorites selected */}
+              {selectedProps.size === 0 && (
+                <div className="mt-12 border border-dashed border-[#c9a959]/30 bg-[#0a0a0a]/5 px-6 py-8 text-center">
+                  <div className="flex items-center justify-center gap-3 mb-2">
+                    <svg className="w-6 h-6 text-[#c9a959] animate-[heartPulse_2s_ease-in-out_infinite]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                    <span className="text-[#666666] text-sm">Toca el corazon en los que te interesen</span>
+                  </div>
+                  <p className="text-[#999999] text-xs">Te armamos la comparacion gratis</p>
+                </div>
+              )}
             </>
           )}
         </main>
 
         {/* Footer */}
-        <footer className={`bg-[#0a0a0a] border-t border-white/10 py-12 mt-20 ${selectedProps.size > 0 ? 'pb-32' : ''}`}>
+        <footer className={`bg-[#0a0a0a] border-t border-white/10 py-12 mt-20 ${selectedProps.size > 0 || hasScrolled ? 'pb-32' : ''}`}>
           <div className="max-w-6xl mx-auto px-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <Link href="/landing-v2" className="font-display text-2xl text-white tracking-tight">
               Simon
@@ -1230,6 +1282,7 @@ export default function ResultadosV2() {
           selectedProperties={getSelectedProperties()}
           onViewAnalysis={() => setShowOrderModal(true)}
           onClearSelection={clearSelection}
+          hasScrolled={hasScrolled}
         />
       </div>
 

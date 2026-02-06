@@ -6,6 +6,7 @@ interface FavoritesProgressBarPremiumProps {
   selectedProperties: UnidadReal[]
   onViewAnalysis: () => void
   onClearSelection: () => void
+  hasScrolled?: boolean
 }
 
 export default function FavoritesProgressBarPremium({
@@ -13,12 +14,33 @@ export default function FavoritesProgressBarPremium({
   maxSelected,
   selectedProperties,
   onViewAnalysis,
-  onClearSelection
+  onClearSelection,
+  hasScrolled = false
 }: FavoritesProgressBarPremiumProps) {
   const isComplete = selectedCount >= maxSelected
 
-  // No mostrar si no hay seleccion
-  if (selectedCount === 0) return null
+  // Estado vacío: mostrar CTA solo después de scroll
+  if (selectedCount === 0) {
+    if (!hasScrolled) return null
+
+    return (
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a0a] border-t border-[#c9a959]/30 animate-[fadeInBounce_0.4s_ease-out]">
+        <div className="max-w-6xl mx-auto px-8 py-4">
+          <div className="flex items-center justify-center gap-3">
+            <svg className="w-5 h-5 text-[#c9a959]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+            <span className="text-white/70 text-sm">
+              Selecciona 2+ departamentos para comparar gratis
+            </span>
+            <svg className="w-4 h-4 text-[#c9a959] animate-bounce" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a0a] border-t border-white/10">
