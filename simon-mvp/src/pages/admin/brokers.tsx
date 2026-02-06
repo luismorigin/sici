@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import { supabase } from '@/lib/supabase'
 import { startImpersonation } from '@/hooks/useBrokerAuth'
+import { useAdminAuth } from '@/hooks/useAdminAuth'
 
 interface BrokerPendiente {
   id: string
@@ -19,6 +20,7 @@ interface BrokerPendiente {
 }
 
 export default function AdminBrokers() {
+  const { admin, loading: authLoading, error: authError } = useAdminAuth(['super_admin'])
   const router = useRouter()
   const [brokers, setBrokers] = useState<BrokerPendiente[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,6 +37,9 @@ export default function AdminBrokers() {
   useEffect(() => {
     fetchBrokers()
   }, [filtro, orden])
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
+  if (!admin) return null
 
   const fetchBrokers = async () => {
     if (!supabase) return

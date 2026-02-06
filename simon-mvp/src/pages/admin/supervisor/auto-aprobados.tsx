@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { useAdminAuth } from '@/hooks/useAdminAuth'
 
 interface AutoAprobado {
   id_sugerencia: number
@@ -33,6 +34,7 @@ interface Stats {
 }
 
 export default function SupervisorAutoAprobados() {
+  const { admin, loading: authLoading, error: authError } = useAdminAuth(['super_admin', 'supervisor'])
   const [items, setItems] = useState<AutoAprobado[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -59,6 +61,9 @@ export default function SupervisorAutoAprobados() {
     fetchAutoAprobados()
     fetchProyectos()
   }, [filtroMetodo, filtroConfianza, filtroPeriodo])
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
+  if (!admin) return null
 
   const fetchAutoAprobados = async () => {
     if (!supabase) return

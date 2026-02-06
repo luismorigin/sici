@@ -3,6 +3,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { useAdminAuth } from '@/hooks/useAdminAuth'
 
 // Opciones de estado para parqueo/baulera
 type EstadoInclusion = 'incluido' | 'no_incluido' | 'sin_confirmar' | 'precio_adicional'
@@ -187,6 +188,7 @@ const MOMENTOS_PAGO = [
 ]
 
 export default function EditarPropiedad() {
+  const { admin, loading: authLoading, error: authError } = useAdminAuth(['super_admin'])
   const router = useRouter()
   const { id } = router.query
 
@@ -334,6 +336,9 @@ export default function EditarPropiedad() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
+  if (!admin) return null
 
   const extraerFotos = (data: PropiedadOriginal): string[] => {
     if (data.datos_json?.contenido?.fotos_urls && Array.isArray(data.datos_json.contenido.fotos_urls)) {

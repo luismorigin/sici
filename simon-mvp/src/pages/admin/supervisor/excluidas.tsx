@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { useAdminAuth } from '@/hooks/useAdminAuth'
 
 interface PropiedadExcluida {
   propiedad_id: number
@@ -31,6 +32,7 @@ interface Resumen {
 type FiltroRazon = 'todas' | 'sin_precio' | 'sin_dormitorios' | 'dorms_anomalos' | 'score_bajo' | 'precio_m2'
 
 export default function SupervisorExcluidas() {
+  const { admin, loading: authLoading, error: authError } = useAdminAuth(['super_admin', 'supervisor'])
   const [propiedades, setPropiedades] = useState<PropiedadExcluida[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -57,6 +59,9 @@ export default function SupervisorExcluidas() {
     fetchPropiedades()
     fetchResumen()
   }, [])
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
+  if (!admin) return null
 
   const fetchPropiedades = async () => {
     if (!supabase) return

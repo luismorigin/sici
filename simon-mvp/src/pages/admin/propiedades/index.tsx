@@ -3,6 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { supabase } from '@/lib/supabase'
+import { useAdminAuth } from '@/hooks/useAdminAuth'
 
 interface Propiedad {
   id: number
@@ -108,6 +109,7 @@ interface BrokerOption {
 }
 
 export default function AdminPropiedades() {
+  const { admin, loading: authLoading, error: authError } = useAdminAuth(['super_admin'])
   const router = useRouter()
   const [propiedades, setPropiedades] = useState<PropiedadConCandados[]>([])
   const [loading, setLoading] = useState(true)
@@ -237,6 +239,9 @@ export default function AdminPropiedades() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
+  if (!admin) return null
 
   const fetchPropiedades = async () => {
     if (!supabase) return

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { useAdminAuth } from '@/hooks/useAdminAuth'
 
 interface Contadores {
   matching: number
@@ -11,6 +12,7 @@ interface Contadores {
 }
 
 export default function SupervisorIndex() {
+  const { admin, loading: authLoading, error: authError } = useAdminAuth(['super_admin', 'supervisor'])
   const [contadores, setContadores] = useState<Contadores>({
     matching: 0,
     sinMatch: 0,
@@ -22,6 +24,9 @@ export default function SupervisorIndex() {
   useEffect(() => {
     fetchContadores()
   }, [])
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
+  if (!admin) return null
 
   const fetchContadores = async () => {
     if (!supabase) return

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { useAdminAuth } from '@/hooks/useAdminAuth'
 
 interface StatsProps {
   completadas: number
@@ -52,6 +53,7 @@ interface WorkflowHealth {
 }
 
 export default function DashboardSalud() {
+  const { admin, loading: authLoading, error: authError } = useAdminAuth(['super_admin', 'supervisor', 'viewer'])
   const [loading, setLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
 
@@ -76,6 +78,9 @@ export default function DashboardSalud() {
 
     return () => clearInterval(interval)
   }, [])
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
+  if (!admin) return null
 
   const fetchAllStats = async () => {
     if (!supabase) return

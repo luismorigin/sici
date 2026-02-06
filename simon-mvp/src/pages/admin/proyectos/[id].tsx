@@ -3,6 +3,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { useAdminAuth } from '@/hooks/useAdminAuth'
 
 interface FormData {
   nombre_oficial: string
@@ -119,6 +120,7 @@ const EQUIPAMIENTO_OPCIONES = [
 ]
 
 export default function EditarProyecto() {
+  const { admin, loading: authLoading, error: authError } = useAdminAuth(['super_admin'])
   const router = useRouter()
   const { id } = router.query
 
@@ -227,6 +229,9 @@ export default function EditarProyecto() {
       }
     }
   }, [formData.desarrollador, desarrolladoresList])
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
+  if (!admin) return null
 
   // Detectar zona por GPS
   const detectarZonaPorGPS = async (lat: string, lng: string) => {

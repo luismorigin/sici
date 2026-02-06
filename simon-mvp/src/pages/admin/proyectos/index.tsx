@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { useAdminAuth } from '@/hooks/useAdminAuth'
 
 interface Proyecto {
   id_proyecto_master: number
@@ -81,6 +82,7 @@ const getZonaLabel = (zona: string | null): string => {
 }
 
 export default function AdminProyectos() {
+  const { admin, loading: authLoading, error: authError } = useAdminAuth(['super_admin'])
   const [proyectos, setProyectos] = useState<Proyecto[]>([])
   const [stats, setStats] = useState<ProyectoStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -170,6 +172,9 @@ export default function AdminProyectos() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
+  if (!admin) return null
 
   const fetchStats = async () => {
     if (!supabase) return

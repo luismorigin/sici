@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { useAdminAuth } from '@/hooks/useAdminAuth'
 
 interface MatchPendiente {
   id_sugerencia: number
@@ -24,6 +25,7 @@ interface ProyectoOption {
 }
 
 export default function SupervisorMatching() {
+  const { admin, loading: authLoading, error: authError } = useAdminAuth(['super_admin', 'supervisor'])
   const [pendientes, setPendientes] = useState<MatchPendiente[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -49,6 +51,9 @@ export default function SupervisorMatching() {
     fetchPendientes()
     fetchProyectos()
   }, [])
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
+  if (!admin) return null
 
   const fetchPendientes = async () => {
     if (!supabase) return

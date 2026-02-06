@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { useAdminAuth } from '@/hooks/useAdminAuth'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   LineChart, Line, AreaChart, Area, ScatterChart, Scatter, ZAxis,
@@ -90,6 +91,7 @@ interface ProyectoAmenidadesData {
 // ============================================================================
 
 export default function MarketPulseDashboard() {
+  const { admin, loading: authLoading, error: authError } = useAdminAuth(['super_admin', 'supervisor', 'viewer'])
   const [loading, setLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
 
@@ -611,6 +613,9 @@ export default function MarketPulseDashboard() {
   useEffect(() => {
     fetchAllData()
   }, [])
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
+  if (!admin) return null
 
   // ============================================================================
   // HELPERS
