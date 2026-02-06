@@ -1,62 +1,71 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/router'
+import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import { supabase } from '@/lib/supabase'
 
 export default function AdminLogin() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [redirecting, setRedirecting] = useState(false)
 
-  const validateAndRedirect = useCallback(async (userEmail: string) => {
+  useEffect(() => {
     if (!supabase) return
 
-    try {
-      const { data } = await supabase
-        .from('admin_users')
-        .select('id')
-        .eq('email', userEmail)
-        .eq('activo', true)
-        .single()
+    let cancelled = false
 
-      if (data) {
-        setRedirecting(true)
-        document.cookie = 'sici_admin=1; path=/admin; max-age=86400; SameSite=Strict'
-        window.location.href = '/admin/salud'
-      } else {
-        setError('Tu email no tiene acceso al panel de administración')
-        await supabase.auth.signOut()
+    const handleSession = async (userEmail: string) => {
+      if (cancelled) return
+      try {
+        const { data } = await supabase!
+          .from('admin_users')
+          .select('id')
+          .eq('email', userEmail)
+          .eq('activo', true)
+          .single()
+
+        if (cancelled) return
+
+        if (data) {
+          setRedirecting(true)
+          document.cookie = 'sici_admin=1; path=/admin; max-age=86400; SameSite=Strict'
+          window.location.href = '/admin/salud'
+        } else {
+          setError('Tu email no tiene acceso al panel de administración')
+          supabase!.auth.signOut()
+        }
+      } catch (err) {
+        if (!cancelled) setError('Error al verificar acceso')
       }
-    } catch (err) {
-      console.error('Error validando admin:', err)
-      setError('Error al verificar acceso')
+    }
+
+    // Verificar si ya hay sesión
+    supabase.auth.getSession().then(({ data }) => {
+      if (data?.session?.user?.email) {
+        handleSession(data.session.user.email)
+      }
+    }).catch(() => {})
+
+    // Escuchar Magic Link callback
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user?.email && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+        handleSession(session.user.email)
+      }
+    })
+
+    return () => {
+      cancelled = true
+      listener?.subscription?.unsubscribe()
     }
   }, [])
 
+  // Error de URL params
   useEffect(() => {
-    if (!supabase) return
-
-    // Escuchar cambios de auth (para cuando llega el Magic Link)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user?.email) {
-          validateAndRedirect(session.user.email)
-        }
-      }
-    )
-
-    return () => { subscription.unsubscribe() }
-  }, [validateAndRedirect])
-
-  // Mostrar error de URL params
-  useEffect(() => {
-    if (router.query.error === 'no_autorizado') {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('error') === 'no_autorizado') {
       setError('Tu email no tiene acceso al panel de administración')
     }
-  }, [router.query])
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -79,7 +88,7 @@ export default function AdminLogin() {
       }
 
       setSuccess(true)
-    } catch {
+    } catch (err) {
       setError('Error al enviar el link de acceso')
     } finally {
       setLoading(false)
@@ -103,7 +112,6 @@ export default function AdminLogin() {
 
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
         <div className="w-full max-w-sm">
-          {/* Logo */}
           <div className="text-center mb-12">
             <h1 className="text-white text-3xl font-light tracking-tight">Simon</h1>
             <div className="flex items-center justify-center gap-3 mt-3">
