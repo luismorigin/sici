@@ -120,10 +120,10 @@ export default function AdminProyectos() {
   const [zonaDetectada, setZonaDetectada] = useState<{zona: string, microzona: string} | null>(null)
 
   useEffect(() => {
-    if (!admin) return
+    if (authLoading || !admin) return
     fetchProyectos()
     fetchStats()
-  }, [admin, zona, estado, soloSinDesarrollador, ordenarPor, seleccionado])
+  }, [authLoading, zona, estado, soloSinDesarrollador, ordenarPor, seleccionado])
 
   // Cargar todos los proyectos para autocompletado
   useEffect(() => {
@@ -177,7 +177,7 @@ export default function AdminProyectos() {
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
   if (!admin) return null
 
-  const fetchStats = async () => {
+  async function fetchStats() {
     if (!supabase) return
 
     try {
@@ -202,7 +202,7 @@ export default function AdminProyectos() {
     }
   }
 
-  const fetchProyectos = async () => {
+  async function fetchProyectos() {
     if (!supabase) return
 
     setLoading(true)

@@ -51,15 +51,15 @@ export default function SupervisorSinMatch() {
   })
 
   useEffect(() => {
-    if (!admin) return
+    if (authLoading || !admin) return
     fetchPropiedades()
     fetchProyectos()
-  }, [admin])
+  }, [authLoading])
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
   if (!admin) return null
 
-  const fetchPropiedades = async () => {
+  async function fetchPropiedades() {
     if (!supabase) return
     setLoading(true)
     setError(null)
@@ -80,7 +80,7 @@ export default function SupervisorSinMatch() {
     }
   }
 
-  const fetchProyectos = async () => {
+  async function fetchProyectos() {
     if (!supabase) return
 
     const { data } = await supabase

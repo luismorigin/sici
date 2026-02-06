@@ -141,7 +141,7 @@ export default function AdminPropiedades() {
 
   // Refrescar datos cuando se navega de vuelta a esta página
   useEffect(() => {
-    if (!admin) return
+    if (authLoading || !admin) return
     const handleRouteChange = (url: string) => {
       // Si navegamos a esta página (propiedades index), refrescar datos
       if (url === '/admin/propiedades' || url.startsWith('/admin/propiedades?')) {
@@ -153,13 +153,13 @@ export default function AdminPropiedades() {
     return () => {
       router.events.off('routeChangeComplete', handleRouteChange)
     }
-  }, [admin, router.events, zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado])
+  }, [authLoading, router.events, zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado])
 
   // Fetch inicial y cuando cambian filtros
   useEffect(() => {
-    if (!admin) return
+    if (authLoading || !admin) return
     fetchPropiedades()
-  }, [admin, zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado])
+  }, [authLoading, zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado])
 
   // Cargar lista de proyectos para autocompletado
   useEffect(() => {
@@ -245,7 +245,7 @@ export default function AdminPropiedades() {
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
   if (!admin) return null
 
-  const fetchPropiedades = async () => {
+  async function fetchPropiedades() {
     if (!supabase) return
 
     setLoading(true)

@@ -198,10 +198,10 @@ export default function EditarProyecto() {
   })
 
   useEffect(() => {
-    if (!admin || !id) return
+    if (authLoading || !admin || !id) return
     fetchProyecto()
     fetchPropiedades()
-  }, [admin, id])
+  }, [authLoading, id])
 
   // Cargar desarrolladores para autocomplete
   useEffect(() => {
@@ -299,7 +299,7 @@ export default function EditarProyecto() {
     }
   }
 
-  const fetchProyecto = async () => {
+  async function fetchProyecto() {
     if (!supabase || !id) return
 
     setLoading(true)
@@ -351,7 +351,7 @@ export default function EditarProyecto() {
     }
   }
 
-  const fetchPropiedades = async () => {
+  async function fetchPropiedades() {
     if (!supabase || !id) return
 
     try {

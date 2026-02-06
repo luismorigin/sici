@@ -69,7 +69,7 @@ export default function DashboardSalud() {
   const [alertas, setAlertas] = useState<string[]>([])
 
   useEffect(() => {
-    if (!admin) return
+    if (authLoading || !admin) return
     fetchAllStats()
 
     // Auto-refresh cada 5 minutos
@@ -78,12 +78,12 @@ export default function DashboardSalud() {
     }, 5 * 60 * 1000)
 
     return () => clearInterval(interval)
-  }, [admin])
+  }, [authLoading])
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
   if (!admin) return null
 
-  const fetchAllStats = async () => {
+  async function fetchAllStats() {
     if (!supabase) return
     setLoading(true)
 
@@ -106,7 +106,7 @@ export default function DashboardSalud() {
     }
   }
 
-  const fetchPropiedadesStats = async () => {
+  async function fetchPropiedadesStats() {
     if (!supabase) return
 
     const { data, error } = await supabase.rpc('pg_execute_query' as any, {
@@ -159,7 +159,7 @@ export default function DashboardSalud() {
     }
   }
 
-  const fetchMatchingStats = async () => {
+  async function fetchMatchingStats() {
     if (!supabase) return
 
     const { data } = await supabase
@@ -179,7 +179,7 @@ export default function DashboardSalud() {
     }
   }
 
-  const fetchProyectosStats = async () => {
+  async function fetchProyectosStats() {
     if (!supabase) return
 
     const { data } = await supabase
@@ -196,7 +196,7 @@ export default function DashboardSalud() {
     }
   }
 
-  const fetchColasHITL = async () => {
+  async function fetchColasHITL() {
     if (!supabase) return
 
     // Cola matching
@@ -222,7 +222,7 @@ export default function DashboardSalud() {
     })
   }
 
-  const fetchTCStats = async () => {
+  async function fetchTCStats() {
     if (!supabase) return
 
     // TC Paralelo (lowercase, actualizado por Binance)
@@ -248,7 +248,7 @@ export default function DashboardSalud() {
     }
   }
 
-  const fetchWorkflowHealth = async () => {
+  async function fetchWorkflowHealth() {
     if (!supabase) return
 
     // Workflows recurrentes que queremos monitorear

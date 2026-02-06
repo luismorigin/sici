@@ -56,15 +56,15 @@ export default function SupervisorExcluidas() {
   })
 
   useEffect(() => {
-    if (!admin) return
+    if (authLoading || !admin) return
     fetchPropiedades()
     fetchResumen()
-  }, [admin])
+  }, [authLoading])
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
   if (!admin) return null
 
-  const fetchPropiedades = async () => {
+  async function fetchPropiedades() {
     if (!supabase) return
     setLoading(true)
     setError(null)
@@ -82,7 +82,7 @@ export default function SupervisorExcluidas() {
     }
   }
 
-  const fetchResumen = async () => {
+  async function fetchResumen() {
     if (!supabase) return
 
     try {

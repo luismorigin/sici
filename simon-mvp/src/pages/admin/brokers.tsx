@@ -35,14 +35,14 @@ export default function AdminBrokers() {
   }
 
   useEffect(() => {
-    if (!admin) return
+    if (authLoading || !admin) return
     fetchBrokers()
-  }, [admin, filtro, orden])
+  }, [authLoading, filtro, orden])
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
   if (!admin) return null
 
-  const fetchBrokers = async () => {
+  async function fetchBrokers() {
     if (!supabase) return
 
     setLoading(true)
