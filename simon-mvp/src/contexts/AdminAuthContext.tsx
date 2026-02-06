@@ -86,8 +86,8 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
         setAdmin(adminUser)
         setLoading(false)
 
-        // Refresh the middleware cookie
-        document.cookie = 'sici_admin=1; path=/admin; max-age=86400; SameSite=Strict'
+        // Refresh the middleware cookie (kept for potential future use)
+        document.cookie = 'sici_admin=1; path=/; max-age=86400; SameSite=Lax'
 
         // Update last_login (fire-and-forget)
         supabase!
@@ -157,7 +157,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     if (!supabase) return
     verifiedRef.current = false
-    document.cookie = 'sici_admin=; path=/admin; max-age=0'
+    document.cookie = 'sici_admin=; path=/; max-age=0'
     await supabase.auth.signOut()
     setAdmin(null)
     router.push('/admin/login')

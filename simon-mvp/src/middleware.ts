@@ -1,24 +1,17 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Supabase JS v2 almacena sesiones en localStorage (no cookies),
-// así que el middleware no puede verificar el token real.
-// Usamos una cookie simple como gate: 'sici_admin' se setea en
-// useAdminAuth tras verificar sesión + rol, y se borra en logout.
-// La seguridad real está en useAdminAuth (verifica sesión Supabase +
-// email en admin_users + rol + activo).
+// Auth is now handled by AdminAuthProvider in _app.tsx which verifies
+// Supabase session + admin_users + rol ONCE and shares via context.
+//
+// The old cookie-gate middleware was causing flash-to-login on client-side
+// navigation because Next.js runs middleware on internal /_next/data requests
+// and the cookie (path=/admin, SameSite=Strict) wasn't always sent.
+//
+// Security: AdminAuthProvider redirects unauthenticated users to /admin/login.
+// Pages show "Verificando acceso..." during the check — no admin UI is exposed.
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-
-  if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
-    const adminCookie = request.cookies.get('sici_admin')?.value
-
-    if (!adminCookie) {
-      return NextResponse.redirect(new URL('/admin/login', request.url))
-    }
-  }
-
   return NextResponse.next()
 }
 

@@ -70,7 +70,7 @@ export default function HeroPremium({ metrics }: HeroPremiumProps) {
         <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-16 mt-20 pt-16 border-t border-white/10">
           <div className="text-center">
             <div className="font-display text-3xl md:text-4xl text-[#c9a959] font-light">
-              ${avgPriceM2.toLocaleString()}
+              ${new Intl.NumberFormat('en-US').format(avgPriceM2)}
             </div>
             <div className="text-white/40 text-xs tracking-[2px] uppercase mt-2">Precio promedio /m²</div>
           </div>
