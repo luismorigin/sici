@@ -29,7 +29,10 @@ export default function AdminLogin() {
         if (data) {
           setRedirecting(true)
           document.cookie = 'sici_admin=1; path=/admin; max-age=86400; SameSite=Strict'
-          window.location.href = '/admin/salud'
+          // Redirigir a la página original si viene de return_to, sino a salud
+          const params = new URLSearchParams(window.location.search)
+          const returnTo = params.get('return_to')
+          window.location.href = returnTo && returnTo.startsWith('/admin/') ? returnTo : '/admin/salud'
         } else {
           setError('Tu email no tiene acceso al panel de administración')
           supabase!.auth.signOut()
@@ -39,16 +42,10 @@ export default function AdminLogin() {
       }
     }
 
-    // Verificar si ya hay sesión
-    supabase.auth.getSession().then(({ data }) => {
-      if (data?.session?.user?.email) {
-        handleSession(data.session.user.email)
-      }
-    }).catch(() => {})
-
-    // Escuchar Magic Link callback
+    // Usar onAuthStateChange con INITIAL_SESSION para detección confiable
+    // INITIAL_SESSION se emite cuando el auth state se carga de localStorage
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user?.email && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+      if (session?.user?.email && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
         handleSession(session.user.email)
       }
     })

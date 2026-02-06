@@ -25,41 +25,36 @@ export function useAdminAuth(requiredRoles?: AdminRole[]): UseAdminAuthReturn {
   const [admin, setAdmin] = useState<AdminUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const authChecked = useRef(false)
   const requiredRolesRef = useRef(requiredRoles)
 
   useEffect(() => {
-    if (authChecked.current) return
-    authChecked.current = true
+    if (!supabase) {
+      setError('Error de configuración')
+      setLoading(false)
+      return
+    }
 
-    async function checkAuth() {
-      if (!supabase) {
-        setError('Error de configuración')
-        setLoading(false)
-        return
-      }
+    let cancelled = false
+    let verified = false
+
+    async function verifyAdmin(email: string) {
+      if (verified || cancelled) return
+      verified = true
 
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-
-        if (!session) {
-          document.cookie = 'sici_admin=; path=/admin; max-age=0'
-          router.push('/admin/login')
-          return
-        }
-
-        // Verificar que el email esté en admin_users
-        const { data, error: queryError } = await supabase
+        const { data, error: queryError } = await supabase!
           .from('admin_users')
           .select('id, email, nombre, rol, activo')
-          .eq('email', session.user.email!)
+          .eq('email', email)
           .eq('activo', true)
           .single()
+
+        if (cancelled) return
 
         if (queryError || !data) {
           setError('No autorizado')
           document.cookie = 'sici_admin=; path=/admin; max-age=0'
-          await supabase.auth.signOut()
+          await supabase!.auth.signOut()
           router.push('/admin/login?error=no_autorizado')
           return
         }
@@ -80,21 +75,64 @@ export function useAdminAuth(requiredRoles?: AdminRole[]): UseAdminAuthReturn {
         document.cookie = 'sici_admin=1; path=/admin; max-age=86400; SameSite=Strict'
 
         // Actualizar last_login (fire-and-forget)
-        supabase
+        supabase!
           .from('admin_users')
           .update({ last_login: new Date().toISOString() })
           .eq('id', adminUser.id)
           .then()
 
       } catch (err) {
-        setError('Error al verificar sesión')
-        router.push('/admin/login')
+        if (!cancelled) {
+          setError('Error al verificar sesión')
+          router.push('/admin/login')
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
-    checkAuth()
+    function redirectToLogin() {
+      if (verified || cancelled) return
+      verified = true
+      document.cookie = 'sici_admin=; path=/admin; max-age=0'
+      const returnTo = router.asPath !== '/admin/login' ? router.asPath : ''
+      router.push(returnTo ? `/admin/login?return_to=${encodeURIComponent(returnTo)}` : '/admin/login')
+      setLoading(false)
+    }
+
+    // onAuthStateChange con INITIAL_SESSION (Supabase v2.39+)
+    // Esto es más confiable que getSession() porque espera a que el
+    // auth state se cargue completamente de localStorage antes de emitir.
+    // Resuelve el bug de navegación client-side donde getSession() retorna
+    // null momentáneamente porque GoTrueClient no terminó de inicializar.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled || verified) return
+
+      if (event === 'INITIAL_SESSION') {
+        // Auth state cargado de localStorage — decisión definitiva
+        if (session?.user?.email) {
+          verifyAdmin(session.user.email)
+        } else {
+          redirectToLogin()
+        }
+      } else if (event === 'SIGNED_IN' && session?.user?.email) {
+        // Fallback: si INITIAL_SESSION no tenía sesión pero luego llega SIGNED_IN
+        verifyAdmin(session.user.email)
+      }
+    })
+
+    // Safety timeout: si en 5 segundos no hay evento de auth, redirigir a login
+    const timeout = setTimeout(() => {
+      if (!verified && !cancelled) {
+        redirectToLogin()
+      }
+    }, 5000)
+
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+      clearTimeout(timeout)
+    }
   }, [router])
 
   const logout = useCallback(async () => {
