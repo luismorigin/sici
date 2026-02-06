@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import type { HeroMetrics } from '@/lib/landing-data'
 
 const IconArrowRight = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -8,56 +7,12 @@ const IconArrowRight = () => (
   </svg>
 )
 
-export default function HeroPremium() {
-  const [propertyCount, setPropertyCount] = useState<number | null>(null)
-  const [projectCount, setProjectCount] = useState<number | null>(null)
-  const [avgPriceM2, setAvgPriceM2] = useState<number | null>(null)
+interface HeroPremiumProps {
+  metrics: HeroMetrics
+}
 
-  useEffect(() => {
-    const fetchCounts = async () => {
-      if (!supabase) return
-
-      // Propiedades activas
-      const { count: propCount } = await supabase
-        .from('propiedades_v2')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'completado')
-        .eq('tipo_operacion', 'venta')
-        .gte('area_total_m2', 20)
-
-      // Proyectos activos
-      const { count: projCount } = await supabase
-        .from('proyectos_master')
-        .select('*', { count: 'exact', head: true })
-        .eq('activo', true)
-
-      // Precio promedio /m2
-      const { data: priceData } = await supabase
-        .from('propiedades_v2')
-        .select('precio_usd, area_total_m2')
-        .eq('status', 'completado')
-        .eq('tipo_operacion', 'venta')
-        .gte('area_total_m2', 20)
-        .gte('precio_usd', 30000)
-
-      if (propCount !== null) setPropertyCount(propCount)
-      if (projCount !== null) setProjectCount(projCount)
-
-      if (priceData && priceData.length > 0) {
-        const validPrices = priceData
-          .filter((p: any) => p.precio_usd > 0 && p.area_total_m2 > 0)
-          .map((p: any) => p.precio_usd / p.area_total_m2)
-          .filter((pm2: number) => pm2 >= 800 && pm2 <= 5000)
-
-        if (validPrices.length > 0) {
-          const avg = validPrices.reduce((a: number, b: number) => a + b, 0) / validPrices.length
-          setAvgPriceM2(Math.round(avg))
-        }
-      }
-    }
-
-    fetchCounts()
-  }, [])
+export default function HeroPremium({ metrics }: HeroPremiumProps) {
+  const { propertyCount, projectCount, avgPriceM2 } = metrics
 
   return (
     <section className="min-h-screen bg-[#0a0a0a] flex items-center justify-center relative overflow-hidden">
@@ -115,14 +70,14 @@ export default function HeroPremium() {
         <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-16 mt-20 pt-16 border-t border-white/10">
           <div className="text-center">
             <div className="font-display text-3xl md:text-4xl text-[#c9a959] font-light">
-              ${avgPriceM2?.toLocaleString() ?? '...'}
+              ${avgPriceM2.toLocaleString()}
             </div>
             <div className="text-white/40 text-xs tracking-[2px] uppercase mt-2">Precio promedio /m²</div>
           </div>
           <div className="hidden md:block w-px h-12 bg-white/10" />
           <div className="text-center">
             <div className="font-display text-3xl md:text-4xl text-white font-light">
-              {projectCount ?? '...'}+
+              {projectCount}+
             </div>
             <div className="text-white/40 text-xs tracking-[2px] uppercase mt-2">Proyectos activos</div>
           </div>
@@ -135,7 +90,7 @@ export default function HeroPremium() {
 
         {/* Contador de opciones */}
         <div className="mt-8 text-white/30 text-sm">
-          {propertyCount ?? '...'} opciones disponibles hoy
+          {propertyCount} opciones disponibles hoy
         </div>
       </div>
 

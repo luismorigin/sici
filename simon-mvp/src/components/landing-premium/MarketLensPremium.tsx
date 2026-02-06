@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { obtenerSnapshot24h, obtenerMicrozonas, type Snapshot24h, type MicrozonaData } from '@/lib/supabase'
+import type { Snapshot24h, MicrozonaData } from '@/lib/supabase'
 
 const IconArrowRight = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -8,53 +7,12 @@ const IconArrowRight = () => (
   </svg>
 )
 
-// Fallback con datos REALES de Enero 2026
-const demoSnapshot: Snapshot24h = {
-  nuevos: 8,
-  retirados: 1,
-  bajadas_precio: 0,
-  tc_actual: 9.72,
-  tc_variacion: 0.52,
-  precio_m2_promedio: 2022,
-  score_bajo: 18,
-  props_tc_paralelo: 42,
-  dias_mediana_equipetrol: 51,
-  unidades_equipetrol_2d: 31,
-  total_activas: 370,
-  proyectos_monitoreados: 189
+interface MarketLensPremiumProps {
+  snapshot: Snapshot24h
+  microzonas: MicrozonaData[]
 }
 
-const demoMicrozonas: MicrozonaData[] = [
-  { zona: 'Eq. Centro', total: 98, precio_promedio: 156709, precio_m2: 2098, proyectos: 41, categoria: 'standard' },
-  { zona: 'Villa Brigida', total: 67, precio_promedio: 71838, precio_m2: 1495, proyectos: 16, categoria: 'value' },
-  { zona: 'Sirari', total: 47, precio_promedio: 199536, precio_m2: 2258, proyectos: 13, categoria: 'premium' },
-  { zona: 'Eq. Norte/Norte', total: 19, precio_promedio: 153354, precio_m2: 2340, proyectos: 11, categoria: 'premium' },
-  { zona: 'Eq. Oeste (Busch)', total: 16, precio_promedio: 277350, precio_m2: 2122, proyectos: 9, categoria: 'premium' }
-]
-
-export default function MarketLensPremium() {
-  const [snapshot, setSnapshot] = useState<Snapshot24h>(demoSnapshot)
-  const [microzonas, setMicrozonas] = useState<MicrozonaData[]>(demoMicrozonas)
-  const [usingRealData, setUsingRealData] = useState(false)
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const [snapshotData, microzonasData] = await Promise.all([
-        obtenerSnapshot24h(),
-        obtenerMicrozonas()
-      ])
-
-      if (snapshotData) {
-        setSnapshot(snapshotData)
-        setUsingRealData(true)
-      }
-      if (microzonasData.length > 0) {
-        setMicrozonas(microzonasData)
-      }
-    }
-    fetchData()
-  }, [])
-
+export default function MarketLensPremium({ snapshot, microzonas }: MarketLensPremiumProps) {
   // Mejor valor (precio_m2 mas bajo)
   const mejorValor = [...microzonas].sort((a, b) => a.precio_m2 - b.precio_m2)[0]
   // Mayor stock
@@ -70,9 +28,7 @@ export default function MarketLensPremium() {
               <span className="w-8 h-px bg-[#c9a959]" />
               <span className="text-[#c9a959] text-[0.7rem] tracking-[3px] uppercase flex items-center gap-2">
                 Market Lens
-                {usingRealData && (
-                  <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                )}
+                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
               </span>
             </div>
 

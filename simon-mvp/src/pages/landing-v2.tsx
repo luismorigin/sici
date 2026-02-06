@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import { useEffect } from 'react'
+import type { GetStaticProps, InferGetStaticPropsType } from 'next'
 import {
   NavbarPremium,
   HeroPremium,
@@ -10,8 +11,27 @@ import {
   FooterPremium
 } from '@/components/landing-premium'
 import { trackEvent } from '@/lib/analytics'
+import { fetchLandingData, type LandingData } from '@/lib/landing-data'
+import { Cormorant_Garamond, Manrope } from 'next/font/google'
 
-export default function LandingV2() {
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['300', '400', '500'],
+  style: ['normal', 'italic'],
+  variable: '--font-cormorant',
+  display: 'optional',
+  adjustFontFallback: true,
+})
+
+const manrope = Manrope({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
+  variable: '--font-manrope',
+  display: 'optional',
+  adjustFontFallback: true,
+})
+
+export default function LandingV2({ heroMetrics, snapshot, microzonas }: InferGetStaticPropsType<typeof getStaticProps>) {
   useEffect(() => {
     trackEvent('landing_view')
   }, [])
@@ -28,10 +48,7 @@ export default function LandingV2() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      {/* Premium Fonts */}
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Manrope:wght@300;400;500;600&display=swap');
-
         :root {
           --color-black: #0a0a0a;
           --color-white: #ffffff;
@@ -43,36 +60,26 @@ export default function LandingV2() {
         }
 
         .font-display {
-          font-family: 'Cormorant Garamond', Georgia, serif;
+          font-family: var(--font-cormorant), Georgia, serif;
         }
 
         .font-body {
-          font-family: 'Manrope', -apple-system, sans-serif;
+          font-family: var(--font-manrope), -apple-system, sans-serif;
         }
 
-        /* Apply Manrope as default body font */
         body {
-          font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-family: var(--font-manrope), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
       `}</style>
 
-      <div className="antialiased">
+      <div className={`${cormorant.variable} ${manrope.variable} antialiased`}>
         <NavbarPremium />
 
         <main>
-          {/* Hero - Full screen with property count */}
-          <HeroPremium />
-
-          {/* Problem - Why current search is broken */}
+          <HeroPremium metrics={heroMetrics} />
           <ProblemPremium />
-
-          {/* Steps - How Simon works */}
           <StepsPremium />
-
-          {/* Market Lens - Real-time data MOAT */}
-          <MarketLensPremium />
-
-          {/* Final CTA */}
+          <MarketLensPremium snapshot={snapshot} microzonas={microzonas} />
           <CTAPremium />
         </main>
 
@@ -80,4 +87,12 @@ export default function LandingV2() {
       </div>
     </>
   )
+}
+
+export const getStaticProps: GetStaticProps<LandingData> = async () => {
+  const data = await fetchLandingData()
+  return {
+    props: data,
+    revalidate: 21600, // 6 horas
+  }
 }
