@@ -48,31 +48,10 @@ export default function LandingV2({ heroMetrics, snapshot, microzonas }: InferGe
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <style jsx global>{`
-        :root {
-          --color-black: #0a0a0a;
-          --color-white: #ffffff;
-          --color-cream: #f8f6f3;
-          --color-gold: #c9a959;
-          --color-gold-light: #d4b978;
-          --color-gray: #666666;
-          --color-muted: #999999;
-        }
-
-        .font-display {
-          font-family: var(--font-cormorant), Georgia, serif;
-        }
-
-        .font-body {
-          font-family: var(--font-manrope), -apple-system, sans-serif;
-        }
-
-        body {
-          font-family: var(--font-manrope), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-      `}</style>
-
-      <div className={`${cormorant.variable} ${manrope.variable} antialiased`}>
+      <div
+        className={`${cormorant.variable} ${manrope.variable} antialiased`}
+        style={{ fontFamily: 'var(--font-manrope), -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif' }}
+      >
         <NavbarPremium />
 
         <main>

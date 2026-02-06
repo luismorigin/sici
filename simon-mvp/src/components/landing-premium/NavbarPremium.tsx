@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 export default function NavbarPremium() {
   return (
-    <nav className="fixed top-0 w-full z-50 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-white/10">
+    <nav className="fixed top-0 w-full z-50 bg-[#0a0a0a] border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-5 flex items-center justify-between">
         <Link href="/landing-v2" prefetch={false} className="font-display text-2xl text-white tracking-tight">
           Simon
