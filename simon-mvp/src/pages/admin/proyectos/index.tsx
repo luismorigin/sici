@@ -120,9 +120,10 @@ export default function AdminProyectos() {
   const [zonaDetectada, setZonaDetectada] = useState<{zona: string, microzona: string} | null>(null)
 
   useEffect(() => {
+    if (!admin) return
     fetchProyectos()
     fetchStats()
-  }, [zona, estado, soloSinDesarrollador, ordenarPor, seleccionado])
+  }, [admin, zona, estado, soloSinDesarrollador, ordenarPor, seleccionado])
 
   // Cargar todos los proyectos para autocompletado
   useEffect(() => {

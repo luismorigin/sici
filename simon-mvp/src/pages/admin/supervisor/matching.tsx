@@ -48,9 +48,10 @@ export default function SupervisorMatching() {
   })
 
   useEffect(() => {
+    if (!admin) return
     fetchPendientes()
     fetchProyectos()
-  }, [])
+  }, [admin])
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
   if (!admin) return null

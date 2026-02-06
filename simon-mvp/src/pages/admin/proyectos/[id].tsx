@@ -198,11 +198,10 @@ export default function EditarProyecto() {
   })
 
   useEffect(() => {
-    if (id) {
-      fetchProyecto()
-      fetchPropiedades()
-    }
-  }, [id])
+    if (!admin || !id) return
+    fetchProyecto()
+    fetchPropiedades()
+  }, [admin, id])
 
   // Cargar desarrolladores para autocomplete
   useEffect(() => {

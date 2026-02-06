@@ -22,8 +22,9 @@ export default function SupervisorIndex() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!admin) return
     fetchContadores()
-  }, [])
+  }, [admin])
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
   if (!admin) return null

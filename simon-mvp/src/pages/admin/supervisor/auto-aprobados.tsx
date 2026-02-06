@@ -58,9 +58,10 @@ export default function SupervisorAutoAprobados() {
   const [stats, setStats] = useState<Stats>({ confirmados: 0, corregidos: 0 })
 
   useEffect(() => {
+    if (!admin) return
     fetchAutoAprobados()
     fetchProyectos()
-  }, [filtroMetodo, filtroConfianza, filtroPeriodo])
+  }, [admin, filtroMetodo, filtroConfianza, filtroPeriodo])
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
   if (!admin) return null

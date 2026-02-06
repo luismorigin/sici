@@ -69,6 +69,7 @@ export default function DashboardSalud() {
   const [alertas, setAlertas] = useState<string[]>([])
 
   useEffect(() => {
+    if (!admin) return
     fetchAllStats()
 
     // Auto-refresh cada 5 minutos
@@ -77,7 +78,7 @@ export default function DashboardSalud() {
     }, 5 * 60 * 1000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [admin])
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
   if (!admin) return null

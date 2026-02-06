@@ -285,14 +285,14 @@ export default function EditarPropiedad() {
   })
 
   useEffect(() => {
-    if (id) {
-      fetchPropiedad()
-      fetchHistorial()
-    }
-  }, [id])
+    if (!admin || !id) return
+    fetchPropiedad()
+    fetchHistorial()
+  }, [admin, id])
 
   // Refrescar datos cuando el usuario vuelve de otra página (ej: después de propagar desde proyecto)
   useEffect(() => {
+    if (!admin) return
     const handleRouteChange = (url: string) => {
       // Si el usuario vuelve a esta misma página de edición, refrescar datos
       if (url.startsWith('/admin/propiedades/') && id) {
@@ -302,7 +302,7 @@ export default function EditarPropiedad() {
     }
     router.events.on('routeChangeComplete', handleRouteChange)
     return () => router.events.off('routeChangeComplete', handleRouteChange)
-  }, [router.events, id])
+  }, [admin, router.events, id])
 
   // Cargar lista de proyectos para el selector
   useEffect(() => {
