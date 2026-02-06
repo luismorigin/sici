@@ -3,6 +3,7 @@ import type { AppProps } from 'next/app'
 import dynamic from 'next/dynamic'
 import Script from 'next/script'
 import { Inter, Outfit } from 'next/font/google'
+import { AdminAuthProvider } from '@/contexts/AdminAuthContext'
 
 const AnimatePresenceWrapper = dynamic(
   () => import('framer-motion').then(mod => {
@@ -43,6 +44,17 @@ const GA_ID = 'G-Q8CRRJD6SL'
 export default function App({ Component, pageProps, router }: AppProps) {
   const needsAnimation = ANIMATED_ROUTES.some(r => router.asPath.startsWith(r))
   const isPremiumRoute = PREMIUM_ROUTES.includes(router.pathname)
+  // Admin pages (except login) get wrapped with AuthProvider so auth
+  // is verified ONCE and shared — no more flash-to-login on navigation.
+  const isAdminRoute = router.pathname.startsWith('/admin') && router.pathname !== '/admin/login'
+
+  const page = needsAnimation ? (
+    <AnimatePresenceWrapper routerKey={router.asPath}>
+      <Component {...pageProps} />
+    </AnimatePresenceWrapper>
+  ) : (
+    <Component {...pageProps} />
+  )
 
   return (
     <div className={isPremiumRoute ? '' : `${inter.variable} ${outfit.variable}`}>
@@ -60,12 +72,10 @@ export default function App({ Component, pageProps, router }: AppProps) {
         `}
       </Script>
 
-      {needsAnimation ? (
-        <AnimatePresenceWrapper routerKey={router.asPath}>
-          <Component {...pageProps} />
-        </AnimatePresenceWrapper>
+      {isAdminRoute ? (
+        <AdminAuthProvider>{page}</AdminAuthProvider>
       ) : (
-        <Component {...pageProps} />
+        page
       )}
     </div>
   )
