@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import { supabase } from '@/lib/supabase'
@@ -11,55 +11,65 @@ export default function AdminLogin() {
   const [success, setSuccess] = useState(false)
   const [checkingSession, setCheckingSession] = useState(true)
 
-  const validateAndRedirect = async (userEmail: string) => {
-    if (!supabase) return
-    const { data } = await supabase
-      .from('admin_users')
-      .select('id')
-      .eq('email', userEmail)
-      .eq('activo', true)
-      .single()
-
-    if (data) {
-      // Setear cookie para que middleware permita acceso
-      document.cookie = 'sici_admin=1; path=/admin; max-age=86400; SameSite=Strict'
-      router.push('/admin/salud')
-    } else {
+  const validateAndRedirect = useCallback(async (userEmail: string) => {
+    if (!supabase) {
       setCheckingSession(false)
-      setError('Tu email no tiene acceso al panel de administración')
-      await supabase.auth.signOut()
+      return
     }
-  }
 
-  // Si ya tiene sesión válida, redirigir al admin
-  useEffect(() => {
-    const checkExistingSession = async () => {
-      if (!supabase) {
+    try {
+      const { data, error: queryError } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('email', userEmail)
+        .eq('activo', true)
+        .single()
+
+      if (queryError || !data) {
+        setError('Tu email no tiene acceso al panel de administración')
         setCheckingSession(false)
+        await supabase.auth.signOut()
         return
       }
 
-      // Escuchar cambios de auth (para cuando llega el Magic Link)
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          if (event === 'SIGNED_IN' && session) {
-            await validateAndRedirect(session.user.email!)
-          }
-        }
-      )
+      // Setear cookie para que middleware permita acceso
+      document.cookie = 'sici_admin=1; path=/admin; max-age=86400; SameSite=Strict'
+      router.push('/admin/salud')
+    } catch (err) {
+      console.error('Error validando admin:', err)
+      setError('Error al verificar acceso')
+      setCheckingSession(false)
+    }
+  }, [router])
 
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        await validateAndRedirect(session.user.email!)
+  useEffect(() => {
+    if (!supabase) {
+      setCheckingSession(false)
+      return
+    }
+
+    // Escuchar cambios de auth (para cuando llega el Magic Link)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user?.email) {
+          validateAndRedirect(session.user.email)
+        }
+      }
+    )
+
+    // Verificar sesión existente
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) {
+        validateAndRedirect(session.user.email)
       } else {
         setCheckingSession(false)
       }
+    }).catch(() => {
+      setCheckingSession(false)
+    })
 
-      return () => { subscription.unsubscribe() }
-    }
-
-    checkExistingSession()
-  }, [])
+    return () => { subscription.unsubscribe() }
+  }, [validateAndRedirect])
 
   // Mostrar error de URL params
   useEffect(() => {
@@ -126,7 +136,6 @@ export default function AdminLogin() {
           </div>
 
           {success ? (
-            /* Mensaje de éxito */
             <div className="text-center">
               <div className="w-16 h-16 rounded-full border border-[#c9a959]/30 flex items-center justify-center mx-auto mb-6">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c9a959" strokeWidth="1.5">
@@ -145,7 +154,6 @@ export default function AdminLogin() {
               </button>
             </div>
           ) : (
-            /* Formulario */
             <form onSubmit={handleSubmit}>
               <div className="mb-6">
                 <label className="block text-white/40 text-xs tracking-[2px] uppercase mb-3">
