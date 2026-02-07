@@ -58,19 +58,23 @@ export default function App({ Component, pageProps, router }: AppProps) {
 
   return (
     <div className={isPremiumRoute ? '' : `${inter.variable} ${outfit.variable}`}>
-      {/* Google Analytics */}
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-        strategy="lazyOnload"
-      />
-      <Script id="google-analytics" strategy="lazyOnload">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', '${GA_ID}');
-        `}
-      </Script>
+      {/* Google Analytics — solo en rutas públicas, no admin/broker */}
+      {!router.pathname.startsWith('/admin') && !router.pathname.startsWith('/broker') && (
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+            strategy="lazyOnload"
+          />
+          <Script id="google-analytics" strategy="lazyOnload">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GA_ID}');
+            `}
+          </Script>
+        </>
+      )}
 
       {isAdminRoute ? (
         <AdminAuthProvider>{page}</AdminAuthProvider>
