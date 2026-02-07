@@ -10,6 +10,8 @@ type EventName =
   | 'formulario_completed'
   | 'resultados_view'
   | 'premium_requested'
+  | 'favorite_toggle'
+  | 'favorite_complete'
 
 interface EventParams {
   [key: string]: string | number | boolean | undefined

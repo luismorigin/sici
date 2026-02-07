@@ -363,6 +363,7 @@ export default function ResultadosV2() {
 
   // Funciones de favoritos
   const toggleSelected = (propId: number) => {
+    const wasSelected = selectedProps.has(propId)
     setSelectedProps(prev => {
       const next = new Set(prev)
       if (next.has(propId)) {
@@ -370,7 +371,16 @@ export default function ResultadosV2() {
       } else if (next.size < MAX_SELECTED) {
         next.add(propId)
       }
+      // Track when 3 favorites reached
+      if (!wasSelected && next.size === MAX_SELECTED) {
+        trackEvent('favorite_complete', { count: MAX_SELECTED })
+      }
       return next
+    })
+    trackEvent('favorite_toggle', {
+      property_id: propId,
+      action: wasSelected ? 'remove' : 'add',
+      count: wasSelected ? selectedProps.size - 1 : selectedProps.size + 1,
     })
     // Dismiss tooltip on first selection
     if (showTooltip) dismissTooltip()
