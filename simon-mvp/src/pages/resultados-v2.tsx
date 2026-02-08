@@ -340,6 +340,8 @@ export default function ResultadosV2() {
     nombre: string
     whatsapp: string
   } | null>(null)
+  const [pendingAction, setPendingAction] = useState<'pdf' | 'whatsapp' | null>(null)
+  const [pendingWhatsappData, setPendingWhatsappData] = useState<Record<string, string> | null>(null)
 
   // Estados para edición inline de filtros
   const [editingFilter, setEditingFilter] = useState<'presupuesto' | 'dormitorios' | 'zonas' | 'estado_entrega' | null>(null)
@@ -362,8 +364,16 @@ export default function ResultadosV2() {
   }, [])
 
   // Funciones de favoritos
+  const [maxFavWarning, setMaxFavWarning] = useState(false)
+
   const toggleSelected = (propId: number) => {
     const wasSelected = selectedProps.has(propId)
+    // Si ya tiene 3 y quiere agregar otra, mostrar aviso
+    if (!wasSelected && selectedProps.size >= MAX_SELECTED) {
+      setMaxFavWarning(true)
+      setTimeout(() => setMaxFavWarning(false), 3000)
+      return
+    }
     setSelectedProps(prev => {
       const next = new Set(prev)
       if (next.has(propId)) {
@@ -411,14 +421,86 @@ export default function ResultadosV2() {
     setPropsParaInforme(ordenadas)
     setShowOrderModal(false)
     trackEvent('premium_requested')
-    setShowFeedbackModal(true)
+    // Mostrar informe directamente sin pedir datos
+    console.log('[Simon] handleOrderComplete — abriendo informe SIN modal')
+    verInforme(ordenadas)
+  }
+
+  // Ref para leadData (accesible desde callbacks sin stale closures)
+  const leadDataRef = useRef(leadData)
+  useEffect(() => { leadDataRef.current = leadData }, [leadData])
+
+  // Escuchar postMessage del iframe (CONTACTAR broker)
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      // Solo aceptar mensajes con firma exacta de Simon
+      if (typeof e.data !== 'object' || !e.data || e.data.source !== 'simon-informe') return
+      if (e.data.type === 'whatsapp-request' && e.data.data) {
+        console.log('[Simon] WhatsApp request from iframe:', e.data.data)
+        const data = e.data.data as Record<string, string>
+        if (leadDataRef.current) {
+          const ld = leadDataRef.current
+          const params = new URLSearchParams(data)
+          params.set('leadId', String(ld.leadId))
+          params.set('nombre', ld.nombre)
+          params.set('whatsapp', ld.whatsapp)
+          params.set('codigoRef', ld.codigoRef)
+          window.open(`/api/abrir-whatsapp?${params.toString()}`, '_blank')
+        } else {
+          setPendingAction('whatsapp')
+          setPendingWhatsappData(data)
+          setShowFeedbackModal(true)
+        }
+      }
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [])
+
+  // Gate para PDF: pedir datos si no los tiene
+  const handlePdfClick = () => {
+    if (leadDataRef.current) {
+      // Ya tiene datos → descargar PDF directo
+      const iframe = document.querySelector('iframe[title="Informe Premium"]') as HTMLIFrameElement
+      if (iframe?.contentWindow) {
+        (iframe.contentWindow as Window & { descargarPDF?: () => void }).descargarPDF?.()
+      }
+    } else {
+      setPendingAction('pdf')
+      setShowFeedbackModal(true)
+    }
   }
 
   // Callback de exito del feedback
   const handleFeedbackSuccess = (newLeadId: number, newCodigoRef: string, nombre: string, whatsapp: string) => {
-    setLeadData({ leadId: newLeadId, codigoRef: newCodigoRef, nombre, whatsapp })
+    const newLead = { leadId: newLeadId, codigoRef: newCodigoRef, nombre, whatsapp }
+    setLeadData(newLead)
     setShowFeedbackModal(false)
-    verInforme(propsParaInforme, { leadId: newLeadId, codigoRef: newCodigoRef, nombre, whatsapp })
+
+    // Ejecutar acción pendiente
+    if (pendingAction === 'pdf') {
+      // Re-generar informe con leadData y luego descargar PDF
+      verInforme(propsParaInforme, newLead).then(() => {
+        setTimeout(() => {
+          const iframe = document.querySelector('iframe[title="Informe Premium"]') as HTMLIFrameElement
+          if (iframe?.contentWindow) {
+            (iframe.contentWindow as Window & { descargarPDF?: () => void }).descargarPDF?.()
+          }
+        }, 1000)
+      })
+    } else if (pendingAction === 'whatsapp' && pendingWhatsappData) {
+      // Re-generar informe con leadData y abrir WhatsApp
+      verInforme(propsParaInforme, newLead)
+      const params = new URLSearchParams(pendingWhatsappData)
+      params.set('leadId', String(newLeadId))
+      params.set('nombre', nombre)
+      params.set('whatsapp', whatsapp)
+      params.set('codigoRef', newCodigoRef)
+      window.open(`/api/abrir-whatsapp?${params.toString()}`, '_blank')
+    }
+
+    setPendingAction(null)
+    setPendingWhatsappData(null)
   }
 
   // Generar y mostrar informe
@@ -1285,6 +1367,14 @@ export default function ResultadosV2() {
           </button>
         )}
 
+        {/* Aviso máximo de favoritos */}
+        {maxFavWarning && (
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-[#1a1a1a] border border-[#c9a959]/40 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-fade-in">
+            <span className="text-[#c9a959] text-lg">3</span>
+            <span className="text-sm">Ya elegiste 3. Quitá una para agregar otra.</span>
+          </div>
+        )}
+
         {/* Favorites progress bar */}
         <FavoritesProgressBarPremium
           selectedCount={selectedProps.size}
@@ -1394,6 +1484,27 @@ export default function ResultadosV2() {
               />
             )}
           </div>
+          {/* Botón flotante PDF — fuera del iframe */}
+          {!loadingInforme && (
+            <button
+              onClick={() => {
+                console.log('[Simon] PDF click, leadData:', leadDataRef.current)
+                handlePdfClick()
+              }}
+              className="fixed bottom-5 right-5 z-[9999] flex items-center gap-2 px-6 py-3 rounded-full font-semibold text-[#0a0a0a] transition-transform hover:scale-105"
+              style={{
+                background: 'linear-gradient(135deg, #c9a959 0%, #b5935a 100%)',
+                boxShadow: '0 4px 15px rgba(201, 169, 89, 0.4)',
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Descargar PDF
+            </button>
+          )}
         </div>
       )}
     </>

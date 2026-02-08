@@ -895,21 +895,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             container.appendChild(toast);
             setTimeout(function() { toast.remove(); }, 4000);
         }
+        function contactarBroker(el) {
+            var data = JSON.parse(el.getAttribute('data-broker'));
+            window.parent.postMessage({source:'simon-informe', type:'whatsapp-request', data:data}, '*');
+        }
     </script>
     <!-- html2canvas + jsPDF para descarga PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
         async function descargarPDF() {
-            var btn = document.getElementById('btn-pdf');
-            var originalText = btn.innerHTML;
-            btn.innerHTML = 'Generando PDF...';
-            btn.disabled = true;
-
             try {
-                // Ocultar botón PDF y botones de contactar durante captura
-                btn.style.display = 'none';
-                var contactBtns = document.querySelectorAll('a[href*="abrir-whatsapp"]');
+                // Ocultar botones de contactar durante captura
+                var contactBtns = document.querySelectorAll('button[onclick*="contactarBroker"]');
                 contactBtns.forEach(function(b) { b.style.visibility = 'hidden'; });
 
                 // Capturar todo el body
@@ -923,7 +921,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 });
 
                 // Restaurar botones
-                btn.style.display = 'flex';
                 contactBtns.forEach(function(b) { b.style.visibility = 'visible'; });
 
                 // Crear PDF - Una sola página larga (scroll continuo)
@@ -943,14 +940,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 // Descargar
                 pdf.save('Informe-Simon-${fav.proyecto.replace(/[^a-zA-Z0-9]/g, '_')}.pdf');
 
-                btn.innerHTML = originalText;
-                btn.disabled = false;
                 showToast('PDF descargado', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a959" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>');
             } catch (err) {
                 console.error('Error generando PDF:', err);
-                btn.style.display = 'flex';
-                btn.innerHTML = originalText;
-                btn.disabled = false;
                 showToast('Error al generar PDF', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b4557" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>');
             }
         }
@@ -2091,27 +2083,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px; color: var(--cream);">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${fav.asesor_nombre || 'Asesor'}${fav.asesor_inmobiliaria ? ` · ${fav.asesor_inmobiliaria}` : ''}
                             </p>
-                            <a
-                                href="${buildContactarUrl(baseHost, {
-                                  leadId: leadData?.leadId,
-                                  nombre: leadData?.nombre,
-                                  whatsapp: leadData?.whatsapp,
-                                  propId: fav.id,
-                                  posicion: 1,
-                                  proyecto: fav.proyecto,
-                                  precio: fav.precio_usd,
-                                  dormitorios: fav.dormitorios,
-                                  broker: fav.asesor_nombre || 'Asesor',
-                                  brokerWsp: fav.asesor_wsp || '',
-                                  inmobiliaria: fav.asesor_inmobiliaria || undefined,
-                                  codigoRef: leadData?.codigoRef,
-                                  preguntas: generarPreguntasPersonalizadas(fav, datosUsuario, necesitaParqueo, necesitaBaulera)
-                                })}"
-                                target="_blank"
+                            <button
+                                data-broker='${JSON.stringify({propId:String(fav.id), posicion:'1', proyecto:fav.proyecto, precio:String(fav.precio_usd), dormitorios:String(fav.dormitorios), broker:fav.asesor_nombre||'Asesor', brokerWsp:fav.asesor_wsp||'', inmobiliaria:fav.asesor_inmobiliaria||'', preguntas:JSON.stringify(generarPreguntasPersonalizadas(fav, datosUsuario, necesitaParqueo, necesitaBaulera))}).replace(/'/g, '&#39;')}'
+                                onclick="contactarBroker(this)"
                                 style="display: block; width: 100%; padding: 12px; background: var(--gold); color: #0a0a0a; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
                             >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> CONTACTAR
-                            </a>
+                            </button>
                         ` : `
                             <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: rgba(248,246,243,0.6);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Contacto no disponible</p>
                         `}
@@ -2129,27 +2107,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px; color: var(--cream);">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${comp1.asesor_nombre || 'Asesor'}${comp1.asesor_inmobiliaria ? ` · ${comp1.asesor_inmobiliaria}` : ''}
                             </p>
-                            <a
-                                href="${buildContactarUrl(baseHost, {
-                                  leadId: leadData?.leadId,
-                                  nombre: leadData?.nombre,
-                                  whatsapp: leadData?.whatsapp,
-                                  propId: comp1.id,
-                                  posicion: 2,
-                                  proyecto: comp1.proyecto,
-                                  precio: comp1.precio_usd,
-                                  dormitorios: comp1.dormitorios,
-                                  broker: comp1.asesor_nombre || 'Asesor',
-                                  brokerWsp: comp1.asesor_wsp || '',
-                                  inmobiliaria: comp1.asesor_inmobiliaria || undefined,
-                                  codigoRef: leadData?.codigoRef,
-                                  preguntas: generarPreguntasPersonalizadas(comp1, datosUsuario, necesitaParqueo, necesitaBaulera)
-                                })}"
-                                target="_blank"
+                            <button
+                                data-broker='${JSON.stringify({propId:String(comp1.id), posicion:'2', proyecto:comp1.proyecto, precio:String(comp1.precio_usd), dormitorios:String(comp1.dormitorios), broker:comp1.asesor_nombre||'Asesor', brokerWsp:comp1.asesor_wsp||'', inmobiliaria:comp1.asesor_inmobiliaria||'', preguntas:JSON.stringify(generarPreguntasPersonalizadas(comp1, datosUsuario, necesitaParqueo, necesitaBaulera))}).replace(/'/g, '&#39;')}'
+                                onclick="contactarBroker(this)"
                                 style="display: block; width: 100%; padding: 12px; background: var(--gold); color: #0a0a0a; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
                             >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> CONTACTAR
-                            </a>
+                            </button>
                         ` : `
                             <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: rgba(248,246,243,0.6);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Contacto no disponible</p>
                         `}
@@ -2168,27 +2132,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             <p style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 10px; color: var(--cream);">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${comp2.asesor_nombre || 'Asesor'}${comp2.asesor_inmobiliaria ? ` · ${comp2.asesor_inmobiliaria}` : ''}
                             </p>
-                            <a
-                                href="${buildContactarUrl(baseHost, {
-                                  leadId: leadData?.leadId,
-                                  nombre: leadData?.nombre,
-                                  whatsapp: leadData?.whatsapp,
-                                  propId: comp2.id,
-                                  posicion: 3,
-                                  proyecto: comp2.proyecto,
-                                  precio: comp2.precio_usd,
-                                  dormitorios: comp2.dormitorios,
-                                  broker: comp2.asesor_nombre || 'Asesor',
-                                  brokerWsp: comp2.asesor_wsp || '',
-                                  inmobiliaria: comp2.asesor_inmobiliaria || undefined,
-                                  codigoRef: leadData?.codigoRef,
-                                  preguntas: generarPreguntasPersonalizadas(comp2, datosUsuario, necesitaParqueo, necesitaBaulera)
-                                })}"
-                                target="_blank"
+                            <button
+                                data-broker='${JSON.stringify({propId:String(comp2.id), posicion:'3', proyecto:comp2.proyecto, precio:String(comp2.precio_usd), dormitorios:String(comp2.dormitorios), broker:comp2.asesor_nombre||'Asesor', brokerWsp:comp2.asesor_wsp||'', inmobiliaria:comp2.asesor_inmobiliaria||'', preguntas:JSON.stringify(generarPreguntasPersonalizadas(comp2, datosUsuario, necesitaParqueo, necesitaBaulera))}).replace(/'/g, '&#39;')}'
+                                onclick="contactarBroker(this)"
                                 style="display: block; width: 100%; padding: 12px; background: var(--gold); color: #0a0a0a; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-align: center; text-decoration: none;"
                             >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> CONTACTAR
-                            </a>
+                            </button>
                         ` : `
                             <p style="opacity: 0.7; font-size: 0.85rem; text-align: center; color: rgba(248,246,243,0.6);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Contacto no disponible</p>
                         `}
@@ -2197,7 +2147,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 </div>
 
                 <p style="text-align: center; opacity: 0.7; margin-top: 25px; font-size: 0.85rem; color: rgba(248,246,243,0.7);">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M9 18h6M10 22h4M12 2v1M12 6a5 5 0 0 1 3.54 8.46L14 16h-4l-1.54-1.54A5 5 0 0 1 12 6z"/></svg> Al contactar se generará un código de referencia único para tu seguimiento
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display: inline; vertical-align: middle;"><path d="M9 18h6M10 22h4M12 2v1M12 6a5 5 0 0 1 3.54 8.46L14 16h-4l-1.54-1.54A5 5 0 0 1 12 6z"/></svg> Al contactar te pediremos tus datos para generar un código de seguimiento
                 </p>
             </div>
         </div>
@@ -2224,35 +2174,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         </div>
     </footer>
 
-    <!-- Botón flotante Descargar PDF - Premium -->
-    <button
-        id="btn-pdf"
-        onclick="descargarPDF()"
-        style="
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #c9a959 0%, #b5935a 100%);
-            color: #0a0a0a;
-            border: none;
-            padding: 15px 25px;
-            border-radius: 50px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(201, 169, 89, 0.4);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            z-index: 1000;
-            transition: transform 0.2s, box-shadow 0.2s;
-        "
-        onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 20px rgba(201, 169, 89, 0.5)';"
-        onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(201, 169, 89, 0.4)';"
-    >
-        <span style="font-size: 1.2rem;">📥</span>
-        Descargar PDF
-    </button>
+    <!-- Botón PDF movido al componente React padre -->
 
 </body>
 </html>`

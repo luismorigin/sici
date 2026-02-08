@@ -120,7 +120,7 @@ export default function FeedbackPremiumModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4">
       <div className="bg-[#0a0a0a] border border-[#c9a959]/30 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         {/* Header - Premium Style */}
         <div className="bg-gradient-to-r from-[#0a0a0a] to-[#1a1a1a] p-5 rounded-t-2xl border-b border-[#c9a959]/30">
