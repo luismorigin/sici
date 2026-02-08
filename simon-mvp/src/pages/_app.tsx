@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import Script from 'next/script'
 import { Inter, Outfit } from 'next/font/google'
 import { AdminAuthProvider } from '@/contexts/AdminAuthContext'
+import { useEffect, useState } from 'react'
 
 const AnimatePresenceWrapper = dynamic(
   () => import('framer-motion').then(mod => {
@@ -48,6 +49,19 @@ export default function App({ Component, pageProps, router }: AppProps) {
   // is verified ONCE and shared — no more flash-to-login on navigation.
   const isAdminRoute = router.pathname.startsWith('/admin') && router.pathname !== '/admin/login'
 
+  // Debug mode: ?debug=1 desactiva GA y persiste en localStorage
+  const [isDebug, setIsDebug] = useState(false)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('debug')) {
+      const val = params.get('debug') === '1'
+      localStorage.setItem('simon_debug', val ? '1' : '0')
+      setIsDebug(val)
+    } else {
+      setIsDebug(localStorage.getItem('simon_debug') === '1')
+    }
+  }, [])
+
   const page = needsAnimation ? (
     <AnimatePresenceWrapper routerKey={router.asPath}>
       <Component {...pageProps} />
@@ -58,8 +72,8 @@ export default function App({ Component, pageProps, router }: AppProps) {
 
   return (
     <div className={isPremiumRoute ? '' : `${inter.variable} ${outfit.variable}`}>
-      {/* Google Analytics — solo en rutas públicas, no admin/broker */}
-      {!router.pathname.startsWith('/admin') && !router.pathname.startsWith('/broker') && (
+      {/* Google Analytics — solo en rutas públicas, no admin/broker, no debug */}
+      {!isDebug && !router.pathname.startsWith('/admin') && !router.pathname.startsWith('/broker') && (
         <>
           <Script
             src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
