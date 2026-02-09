@@ -715,10 +715,13 @@ export default function MarketPulseDashboard() {
 
     const validData = data.filter(p => p.precio_usd && parseFloat(p.precio_usd) > 1000)
 
+    // Helper: mapear microzona BD → zona canónica display (combina Norte/Norte + Norte/Sur)
+    const toZona = (mz: string): string => MICROZONA_DISPLAY[mz] || mz
+
     // --- 1. Zona KPIs ---
     const zonaGroups: Record<string, { precios: number[]; areas: number[]; preciosM2: number[] }> = {}
     validData.forEach(p => {
-      const z = p.microzona || 'Sin zona'
+      const z = toZona(p.microzona || 'Sin zona')
       if (!zonaGroups[z]) zonaGroups[z] = { precios: [], areas: [], preciosM2: [] }
       const precio = parseFloat(p.precio_usd)
       const area = parseFloat(p.area_total_m2) || 1
@@ -743,7 +746,7 @@ export default function MarketPulseDashboard() {
     const ztGroups: Record<string, { preciosM2: number[] }> = {}
     validData.forEach(p => {
       if (p.dormitorios === null || p.dormitorios === undefined) return
-      const key = `${p.microzona}|${p.dormitorios}`
+      const key = `${toZona(p.microzona)}|${p.dormitorios}`
       if (!ztGroups[key]) ztGroups[key] = { preciosM2: [] }
       const precio = parseFloat(p.precio_usd)
       const area = parseFloat(p.area_total_m2) || 1
@@ -784,7 +787,7 @@ export default function MarketPulseDashboard() {
     const statsGroups: Record<string, { preciosM2: number[]; items: typeof validData }> = {}
     validData.forEach(p => {
       if (p.dormitorios === null || p.dormitorios === undefined) return
-      const key = `${p.microzona}|${p.dormitorios}`
+      const key = `${toZona(p.microzona)}|${p.dormitorios}`
       if (!statsGroups[key]) statsGroups[key] = { preciosM2: [], items: [] }
       const precio = parseFloat(p.precio_usd)
       const area = parseFloat(p.area_total_m2) || 1
@@ -807,7 +810,7 @@ export default function MarketPulseDashboard() {
           outlierResults.push({
             id: item.id,
             proyecto: projectMap.get(item.id_proyecto_master) || 'Desconocido',
-            zona: item.microzona,
+            zona: toZona(item.microzona),
             dormitorios: item.dormitorios,
             precio_m2: Math.round(pm2),
             avg_zona: Math.round(avg),
@@ -849,7 +852,7 @@ export default function MarketPulseDashboard() {
     const zeGroups: Record<string, { preciosM2: number[] }> = {}
     validData.forEach(p => {
       if (!p.estado_construccion) return
-      const key = `${p.microzona}|${p.estado_construccion}`
+      const key = `${toZona(p.microzona)}|${p.estado_construccion}`
       if (!zeGroups[key]) zeGroups[key] = { preciosM2: [] }
       const precio = parseFloat(p.precio_usd)
       const area = parseFloat(p.area_total_m2) || 1
