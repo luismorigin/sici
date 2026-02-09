@@ -86,6 +86,64 @@ interface ProyectoAmenidadesData {
   precio_m2: number
 }
 
+interface ZonaKPI {
+  zona: string
+  unidades: number
+  pm2_avg: number
+  ticket_avg: number
+  area_avg: number
+}
+
+interface ZonaTipologia {
+  zona: string
+  dormitorios: number
+  unidades: number
+  pm2_avg: number
+  pm2_min: number
+  pm2_max: number
+}
+
+interface DataQuality {
+  total: number
+  con_zona: number
+  con_proyecto: number
+  con_precio: number
+  con_fotos: number
+}
+
+interface OutlierData {
+  id: number
+  proyecto: string
+  zona: string
+  dormitorios: number
+  precio_m2: number
+  avg_zona: number
+  z_score: number
+  tipo: 'caro' | 'barato'
+}
+
+interface EdificioDispersion {
+  proyecto: string
+  pm2_min: number
+  pm2_max: number
+  rango: number
+  unidades: number
+}
+
+interface AntiguedadBucket {
+  label: string
+  cantidad: number
+  porcentaje: number
+  color: string
+}
+
+interface ZonaEstado {
+  zona: string
+  estado: string
+  cantidad: number
+  pm2: number
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -105,6 +163,13 @@ export default function MarketPulseDashboard() {
   const [oportunidades, setOportunidades] = useState<OportunidadData[]>([])
   const [rankingAmenidades, setRankingAmenidades] = useState<AmenidadData[]>([])
   const [topProyectosAmenidades, setTopProyectosAmenidades] = useState<ProyectoAmenidadesData[]>([])
+  const [zonaKpis, setZonaKpis] = useState<ZonaKPI[]>([])
+  const [zonaTipologias, setZonaTipologias] = useState<ZonaTipologia[]>([])
+  const [dataQuality, setDataQuality] = useState<DataQuality | null>(null)
+  const [outliers, setOutliers] = useState<OutlierData[]>([])
+  const [edificioDispersion, setEdificioDispersion] = useState<EdificioDispersion[]>([])
+  const [antiguedad, setAntiguedad] = useState<AntiguedadBucket[]>([])
+  const [zonaEstados, setZonaEstados] = useState<ZonaEstado[]>([])
 
   // ============================================================================
   // FETCH FUNCTIONS
@@ -123,7 +188,10 @@ export default function MarketPulseDashboard() {
         fetchSnapshots(),
         fetchTCHistorico(),
         fetchOportunidades(),
-        fetchRankingAmenidades()
+        fetchRankingAmenidades(),
+        fetchZonaAnalysis(),
+        fetchDataQuality(),
+        fetchAntiguedad()
       ])
       setLastUpdate(new Date())
     } catch (err) {
@@ -143,6 +211,9 @@ export default function MarketPulseDashboard() {
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
+      .is('duplicado_de', null)
+      .not('zona', 'is', null)
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
     // Fetch TC
     const { data: tcParalelo } = await supabase
@@ -195,6 +266,9 @@ export default function MarketPulseDashboard() {
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
+      .is('duplicado_de', null)
+      .not('zona', 'is', null)
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
     if (data) {
       const validData = data.filter(p => p.precio_usd && parseFloat(p.precio_usd) > 1000)
@@ -248,6 +322,9 @@ export default function MarketPulseDashboard() {
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
       .not('id_proyecto_master', 'is', null)
+      .is('duplicado_de', null)
+      .not('zona', 'is', null)
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
     if (!props || props.length === 0) return
 
@@ -321,6 +398,9 @@ export default function MarketPulseDashboard() {
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
       .not('estado_construccion', 'is', null)
+      .is('duplicado_de', null)
+      .not('zona', 'is', null)
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
     if (data) {
       const grouped: Record<string, { estado: string; preciosM2: number[] }> = {}
@@ -403,6 +483,9 @@ export default function MarketPulseDashboard() {
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
       .not('id_proyecto_master', 'is', null)
+      .is('duplicado_de', null)
+      .not('zona', 'is', null)
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
     if (!props) return
 
@@ -517,6 +600,9 @@ export default function MarketPulseDashboard() {
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
+      .is('duplicado_de', null)
+      .not('zona', 'is', null)
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
     if (!props) return
 
@@ -610,16 +696,272 @@ export default function MarketPulseDashboard() {
     setTopProyectosAmenidades(topProyectos)
   }
 
+  const fetchZonaAnalysis = async () => {
+    if (!supabase) return
+
+    // One big query for zona analysis, outliers, dispersion, and zona×estado
+    const { data } = await supabase
+      .from('propiedades_v2')
+      .select('id, zona, dormitorios, precio_usd, area_total_m2, estado_construccion, id_proyecto_master')
+      .eq('status', 'completado')
+      .eq('tipo_operacion', 'venta')
+      .gte('area_total_m2', 20)
+      .is('duplicado_de', null)
+      .not('zona', 'is', null)
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+
+    if (!data) return
+
+    const validData = data.filter(p => p.precio_usd && parseFloat(p.precio_usd) > 1000)
+
+    // --- 1. Zona KPIs ---
+    const zonaGroups: Record<string, { precios: number[]; areas: number[]; preciosM2: number[] }> = {}
+    validData.forEach(p => {
+      const z = p.zona || 'Sin zona'
+      if (!zonaGroups[z]) zonaGroups[z] = { precios: [], areas: [], preciosM2: [] }
+      const precio = parseFloat(p.precio_usd)
+      const area = parseFloat(p.area_total_m2) || 1
+      zonaGroups[z].precios.push(precio)
+      zonaGroups[z].areas.push(area)
+      zonaGroups[z].preciosM2.push(precio / area)
+    })
+
+    const zonaKpiResult: ZonaKPI[] = Object.entries(zonaGroups)
+      .map(([zona, g]) => ({
+        zona,
+        unidades: g.precios.length,
+        pm2_avg: Math.round(g.preciosM2.reduce((a, b) => a + b, 0) / g.preciosM2.length),
+        ticket_avg: Math.round(g.precios.reduce((a, b) => a + b, 0) / g.precios.length),
+        area_avg: Math.round((g.areas.reduce((a, b) => a + b, 0) / g.areas.length) * 10) / 10
+      }))
+      .sort((a, b) => b.unidades - a.unidades)
+
+    setZonaKpis(zonaKpiResult)
+
+    // --- 2. Zona × Tipología heatmap ---
+    const ztGroups: Record<string, { preciosM2: number[] }> = {}
+    validData.forEach(p => {
+      if (p.dormitorios === null || p.dormitorios === undefined) return
+      const key = `${p.zona}|${p.dormitorios}`
+      if (!ztGroups[key]) ztGroups[key] = { preciosM2: [] }
+      const precio = parseFloat(p.precio_usd)
+      const area = parseFloat(p.area_total_m2) || 1
+      ztGroups[key].preciosM2.push(precio / area)
+    })
+
+    const ztResult: ZonaTipologia[] = Object.entries(ztGroups)
+      .filter(([_, g]) => g.preciosM2.length >= 2)
+      .map(([key, g]) => {
+        const [zona, dorms] = key.split('|')
+        return {
+          zona,
+          dormitorios: parseInt(dorms),
+          unidades: g.preciosM2.length,
+          pm2_avg: Math.round(g.preciosM2.reduce((a, b) => a + b, 0) / g.preciosM2.length),
+          pm2_min: Math.round(Math.min(...g.preciosM2)),
+          pm2_max: Math.round(Math.max(...g.preciosM2))
+        }
+      })
+      .sort((a, b) => a.zona.localeCompare(b.zona) || a.dormitorios - b.dormitorios)
+
+    setZonaTipologias(ztResult)
+
+    // --- 3. Outliers (z-score > 1.8 por zona+dorms) ---
+    // Get project names
+    const projectIds = [...new Set(validData.map(p => p.id_proyecto_master).filter(Boolean))]
+    let projectMap = new Map<number, string>()
+    if (projectIds.length > 0) {
+      const { data: projects } = await supabase
+        .from('proyectos_master')
+        .select('id_proyecto_master, nombre_oficial')
+        .in('id_proyecto_master', projectIds)
+      if (projects) {
+        projectMap = new Map(projects.map(p => [p.id_proyecto_master, p.nombre_oficial]))
+      }
+    }
+
+    const statsGroups: Record<string, { preciosM2: number[]; items: typeof validData }> = {}
+    validData.forEach(p => {
+      if (p.dormitorios === null || p.dormitorios === undefined) return
+      const key = `${p.zona}|${p.dormitorios}`
+      if (!statsGroups[key]) statsGroups[key] = { preciosM2: [], items: [] }
+      const precio = parseFloat(p.precio_usd)
+      const area = parseFloat(p.area_total_m2) || 1
+      statsGroups[key].preciosM2.push(precio / area)
+      statsGroups[key].items.push(p)
+    })
+
+    const outlierResults: OutlierData[] = []
+    Object.entries(statsGroups).forEach(([key, group]) => {
+      if (group.preciosM2.length < 3) return
+      const avg = group.preciosM2.reduce((a, b) => a + b, 0) / group.preciosM2.length
+      const variance = group.preciosM2.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / group.preciosM2.length
+      const stddev = Math.sqrt(variance)
+      if (stddev === 0) return
+
+      group.items.forEach((item, i) => {
+        const pm2 = group.preciosM2[i]
+        const z = (pm2 - avg) / stddev
+        if (Math.abs(z) > 1.8) {
+          outlierResults.push({
+            id: item.id,
+            proyecto: projectMap.get(item.id_proyecto_master) || 'Desconocido',
+            zona: item.zona,
+            dormitorios: item.dormitorios,
+            precio_m2: Math.round(pm2),
+            avg_zona: Math.round(avg),
+            z_score: Math.round(z * 100) / 100,
+            tipo: z > 0 ? 'caro' : 'barato'
+          })
+        }
+      })
+    })
+
+    setOutliers(outlierResults.sort((a, b) => Math.abs(b.z_score) - Math.abs(a.z_score)).slice(0, 15))
+
+    // --- 4. Dispersión de precios por edificio ---
+    const edificioGroups: Record<string, { preciosM2: number[] }> = {}
+    validData.forEach(p => {
+      const projName = projectMap.get(p.id_proyecto_master)
+      if (!projName) return
+      if (!edificioGroups[projName]) edificioGroups[projName] = { preciosM2: [] }
+      const precio = parseFloat(p.precio_usd)
+      const area = parseFloat(p.area_total_m2) || 1
+      edificioGroups[projName].preciosM2.push(precio / area)
+    })
+
+    const dispersionResult: EdificioDispersion[] = Object.entries(edificioGroups)
+      .filter(([_, g]) => g.preciosM2.length >= 3)
+      .map(([proyecto, g]) => ({
+        proyecto,
+        pm2_min: Math.round(Math.min(...g.preciosM2)),
+        pm2_max: Math.round(Math.max(...g.preciosM2)),
+        rango: Math.round(Math.max(...g.preciosM2) - Math.min(...g.preciosM2)),
+        unidades: g.preciosM2.length
+      }))
+      .sort((a, b) => b.rango - a.rango)
+      .slice(0, 10)
+
+    setEdificioDispersion(dispersionResult)
+
+    // --- 5. Preventa vs Entrega por Zona ---
+    const zeGroups: Record<string, { preciosM2: number[] }> = {}
+    validData.forEach(p => {
+      if (!p.estado_construccion) return
+      const key = `${p.zona}|${p.estado_construccion}`
+      if (!zeGroups[key]) zeGroups[key] = { preciosM2: [] }
+      const precio = parseFloat(p.precio_usd)
+      const area = parseFloat(p.area_total_m2) || 1
+      zeGroups[key].preciosM2.push(precio / area)
+    })
+
+    const zeResult: ZonaEstado[] = Object.entries(zeGroups)
+      .filter(([_, g]) => g.preciosM2.length >= 2)
+      .map(([key, g]) => {
+        const [zona, estado] = key.split('|')
+        return {
+          zona,
+          estado,
+          cantidad: g.preciosM2.length,
+          pm2: Math.round(g.preciosM2.reduce((a, b) => a + b, 0) / g.preciosM2.length)
+        }
+      })
+      .sort((a, b) => a.zona.localeCompare(b.zona))
+
+    setZonaEstados(zeResult)
+  }
+
+  const fetchDataQuality = async () => {
+    if (!supabase) return
+
+    // Query WITHOUT zona filter to measure data quality
+    const { data } = await supabase
+      .from('propiedades_v2')
+      .select('zona, id_proyecto_master, precio_usd, datos_json')
+      .eq('status', 'completado')
+      .eq('tipo_operacion', 'venta')
+      .gte('area_total_m2', 20)
+      .is('duplicado_de', null)
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+
+    if (!data) return
+
+    const total = data.length
+    const con_zona = data.filter(p => p.zona).length
+    const con_proyecto = data.filter(p => p.id_proyecto_master).length
+    const con_precio = data.filter(p => p.precio_usd && parseFloat(p.precio_usd) > 1000).length
+    const con_fotos = data.filter(p => {
+      try {
+        const fotos = p.datos_json?.contenido?.fotos_urls
+        return Array.isArray(fotos) && fotos.length > 0
+      } catch { return false }
+    }).length
+
+    setDataQuality({ total, con_zona, con_proyecto, con_precio, con_fotos })
+  }
+
+  const fetchAntiguedad = async () => {
+    if (!supabase) return
+
+    const { data } = await supabase
+      .from('propiedades_v2')
+      .select('fecha_publicacion')
+      .eq('status', 'completado')
+      .eq('tipo_operacion', 'venta')
+      .gte('area_total_m2', 20)
+      .is('duplicado_de', null)
+      .not('zona', 'is', null)
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+
+    if (!data) return
+
+    const now = new Date()
+    const buckets = [
+      { label: '<30 días', min: 0, max: 30, cantidad: 0, color: '#10b981' },
+      { label: '30-90 días', min: 30, max: 90, cantidad: 0, color: '#3b82f6' },
+      { label: '90-180 días', min: 90, max: 180, cantidad: 0, color: '#f59e0b' },
+      { label: '180-300 días', min: 180, max: 300, cantidad: 0, color: '#ef4444' },
+      { label: 'Sin fecha', min: -1, max: -1, cantidad: 0, color: '#94a3b8' }
+    ]
+
+    data.forEach(p => {
+      if (!p.fecha_publicacion) {
+        buckets[4].cantidad++
+        return
+      }
+      const days = Math.floor((now.getTime() - new Date(p.fecha_publicacion).getTime()) / (1000 * 60 * 60 * 24))
+      if (days < 30) buckets[0].cantidad++
+      else if (days < 90) buckets[1].cantidad++
+      else if (days < 180) buckets[2].cantidad++
+      else buckets[3].cantidad++
+    })
+
+    const total = data.length
+    setAntiguedad(buckets.filter(b => b.cantidad > 0).map(b => ({
+      label: b.label,
+      cantidad: b.cantidad,
+      porcentaje: Math.round((b.cantidad / total) * 100),
+      color: b.color
+    })))
+  }
+
   useEffect(() => {
     fetchAllData()
   }, [])
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
-  if (!admin) return null
-
   // ============================================================================
   // HELPERS
   // ============================================================================
+
+  const getZonaLabel = (zona: string): string => {
+    const labels: Record<string, string> = {
+      'Equipetrol Centro': 'Eq. Centro',
+      'Equipetrol': 'Eq. Norte',
+      'Sirari': 'Sirari',
+      'Villa Brígida': 'Villa Brigida'
+    }
+    return labels[zona] || zona
+  }
 
   const formatCurrency = (value: number) => {
     if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`
@@ -697,6 +1039,10 @@ export default function MarketPulseDashboard() {
       name: p.proyecto
     }))
   }, [topProyectos])
+
+  // Early returns AFTER all hooks
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Verificando acceso...</p></div>
+  if (!admin) return null
 
   // ============================================================================
   // CUSTOM TOOLTIP COMPONENTS
@@ -811,6 +1157,56 @@ export default function MarketPulseDashboard() {
             </div>
           )}
 
+          {/* Análisis por Zona */}
+          {zonaKpis.length > 0 && (
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200 mb-8">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">📍 Análisis por Zona</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-slate-200">
+                      <th className="text-left py-3 px-2 font-semibold text-slate-600">Zona</th>
+                      <th className="text-center py-3 px-2 font-semibold text-slate-600">Unidades</th>
+                      <th className="text-right py-3 px-2 font-semibold text-slate-600">$/m² Avg</th>
+                      <th className="text-right py-3 px-2 font-semibold text-slate-600">Ticket Avg</th>
+                      <th className="text-right py-3 px-2 font-semibold text-slate-600">Área Avg</th>
+                      <th className="text-left py-3 px-2 font-semibold text-slate-600">Participación</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {zonaKpis.map((z, i) => {
+                      const totalUnidades = zonaKpis.reduce((a, b) => a + b.unidades, 0)
+                      const pct = Math.round((z.unidades / totalUnidades) * 100)
+                      return (
+                        <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="py-3 px-2 font-bold text-slate-900">{getZonaLabel(z.zona)}</td>
+                          <td className="py-3 px-2 text-center">
+                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-bold">{z.unidades}</span>
+                          </td>
+                          <td className="py-3 px-2 text-right">
+                            <span className={`px-2 py-1 rounded-lg text-xs font-bold ${getPrecioM2Badge(z.pm2_avg)}`}>
+                              ${formatNumber(z.pm2_avg)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 text-right font-medium text-slate-700">{formatCurrency(z.ticket_avg)}</td>
+                          <td className="py-3 px-2 text-right text-slate-600">{z.area_avg} m²</td>
+                          <td className="py-3 px-2">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs text-slate-500 w-8">{pct}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Insights Bar */}
           {insights.length > 0 && (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-8">
@@ -912,28 +1308,38 @@ export default function MarketPulseDashboard() {
               </div>
             </div>
 
-            {/* Preventa vs Entrega */}
+            {/* Preventa vs Entrega por Zona */}
             <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900 mb-4">🏗️ Preventa vs Entrega</h3>
-              {estados.length > 0 && (
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={estados.slice(0, 4)} layout="vertical">
-                    <XAxis type="number" hide />
-                    <YAxis
-                      type="category"
-                      dataKey="estado"
-                      tickFormatter={getEstadoLabel}
-                      width={100}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="precio_m2" name="$/m²" radius={[0, 4, 4, 0]}>
-                      {estados.slice(0, 4).map((entry, index) => (
-                        <Cell key={index} fill={getPrecioM2Color(entry.precio_m2)} />
+              <h3 className="text-lg font-bold text-slate-900 mb-4">🏗️ Preventa vs Entrega por Zona</h3>
+              {zonaEstados.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b-2 border-slate-200">
+                        <th className="text-left py-2 px-2 font-semibold text-slate-600">Zona</th>
+                        <th className="text-left py-2 px-2 font-semibold text-slate-600">Estado</th>
+                        <th className="text-center py-2 px-2 font-semibold text-slate-600">Uds</th>
+                        <th className="text-right py-2 px-2 font-semibold text-slate-600">$/m²</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {zonaEstados.map((ze, i) => (
+                        <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
+                          <td className="py-2 px-2 font-medium text-slate-900 text-xs">{getZonaLabel(ze.zona)}</td>
+                          <td className="py-2 px-2 text-xs">{getEstadoLabel(ze.estado)}</td>
+                          <td className="py-2 px-2 text-center text-xs">{ze.cantidad}</td>
+                          <td className="py-2 px-2 text-right">
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${getPrecioM2Badge(ze.pm2)}`}>
+                              ${formatNumber(ze.pm2)}
+                            </span>
+                          </td>
+                        </tr>
                       ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-slate-500 text-center py-8 text-sm">Cargando...</p>
               )}
               {(() => {
                 const preventa = estados.find(e => e.estado === 'preventa')
@@ -942,12 +1348,12 @@ export default function MarketPulseDashboard() {
                   const ahorro = ((entrega.precio_m2 - preventa.precio_m2) / entrega.precio_m2) * 100
                   const ahorroM2 = entrega.precio_m2 - preventa.precio_m2
                   return (
-                    <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-                      <p className="text-green-800 font-bold text-lg">
+                    <div className="mt-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                      <p className="text-green-800 font-bold text-sm">
                         💰 Ahorro Preventa: {ahorro.toFixed(1)}%
                       </p>
-                      <p className="text-green-700 text-sm mt-1">
-                        ${formatNumber(ahorroM2)}/m² menos • En 80m² = ${formatNumber(ahorroM2 * 80)} de ahorro
+                      <p className="text-green-700 text-xs mt-1">
+                        ${formatNumber(ahorroM2)}/m² menos • 80m² = ${formatNumber(ahorroM2 * 80)} ahorro
                       </p>
                     </div>
                   )
@@ -956,6 +1362,61 @@ export default function MarketPulseDashboard() {
               })()}
             </div>
           </div>
+
+          {/* Heat Map Zona × Tipología */}
+          {zonaTipologias.length > 0 && (
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200 mb-8">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">🗺️ Mapa de Calor: Zona × Tipología ($/m²)</h3>
+              <div className="overflow-x-auto">
+                {(() => {
+                  const zonas = [...new Set(zonaTipologias.map(zt => zt.zona))].sort()
+                  const dorms = [...new Set(zonaTipologias.map(zt => zt.dormitorios))].sort((a, b) => a - b)
+                  const lookup = new Map(zonaTipologias.map(zt => [`${zt.zona}|${zt.dormitorios}`, zt]))
+
+                  return (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b-2 border-slate-200">
+                          <th className="text-left py-3 px-2 font-semibold text-slate-600">Zona</th>
+                          {dorms.map(d => (
+                            <th key={d} className="text-center py-3 px-2 font-semibold text-slate-600">{getDormLabel(d)}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {zonas.map(zona => (
+                          <tr key={zona} className="border-b border-slate-100">
+                            <td className="py-3 px-2 font-bold text-slate-900 text-xs">{getZonaLabel(zona)}</td>
+                            {dorms.map(d => {
+                              const cell = lookup.get(`${zona}|${d}`)
+                              if (!cell) return <td key={d} className="py-3 px-2 text-center text-slate-300">-</td>
+                              const bg = cell.pm2_avg < 1800 ? 'bg-green-100 text-green-800'
+                                : cell.pm2_avg > 2100 ? 'bg-red-100 text-red-800'
+                                : 'bg-amber-100 text-amber-800'
+                              return (
+                                <td key={d} className="py-3 px-2 text-center">
+                                  <div className={`inline-block px-2 py-1 rounded-lg ${bg}`}>
+                                    <span className="font-bold text-xs">${formatNumber(cell.pm2_avg)}</span>
+                                    <span className="block text-[10px] opacity-70">{cell.unidades} uds</span>
+                                  </div>
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )
+                })()}
+              </div>
+              <div className="mt-3 flex gap-4 text-xs text-slate-500">
+                <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-200 rounded"></span> &lt;$1,800/m²</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 bg-amber-200 rounded"></span> $1,800-2,100</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-200 rounded"></span> &gt;$2,100/m²</span>
+                <span className="text-slate-400 ml-2">Mínimo 2 unidades por celda</span>
+              </div>
+            </div>
+          )}
 
           {/* Second Row: Top Projects & Scatter */}
           <div className="grid grid-cols-2 gap-6 mb-8">
@@ -994,38 +1455,81 @@ export default function MarketPulseDashboard() {
               </div>
             </div>
 
-            {/* Scatter Chart: Stock vs Price */}
+            {/* Dispersión de Precios por Edificio */}
             <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900 mb-4">📈 Posicionamiento: Stock vs Precio</h3>
-              <ResponsiveContainer width="100%" height={350}>
-                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                  <XAxis
-                    type="number"
-                    dataKey="x"
-                    name="Stock"
-                    label={{ value: 'Unidades en stock →', position: 'bottom', fontSize: 11 }}
-                    tick={{ fontSize: 10 }}
-                  />
-                  <YAxis
-                    type="number"
-                    dataKey="y"
-                    name="$/m²"
-                    label={{ value: '$/m² →', angle: -90, position: 'left', fontSize: 11 }}
-                    tick={{ fontSize: 10 }}
-                    domain={['dataMin - 200', 'dataMax + 200']}
-                  />
-                  <ZAxis type="number" dataKey="z" range={[100, 500]} />
-                  <Tooltip content={<ScatterTooltip />} />
-                  <Scatter name="Proyectos" data={scatterData}>
-                    {scatterData.map((entry, index) => (
-                      <Cell key={index} fill={getPrecioM2Color(entry.y)} />
-                    ))}
-                  </Scatter>
-                </ScatterChart>
-              </ResponsiveContainer>
-              <div className="mt-2 text-xs text-slate-500 text-center">
-                Tamaño del punto = precio de entrada • Color = posición $/m²
+              <h3 className="text-lg font-bold text-slate-900 mb-4">📊 Dispersión $/m² por Edificio</h3>
+              {edificioDispersion.length > 0 ? (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {edificioDispersion.map((e, i) => {
+                    const maxRange = edificioDispersion[0]?.rango || 1
+                    const globalMin = Math.min(...edificioDispersion.map(d => d.pm2_min))
+                    const globalMax = Math.max(...edificioDispersion.map(d => d.pm2_max))
+                    const range = globalMax - globalMin || 1
+                    const leftPct = ((e.pm2_min - globalMin) / range) * 100
+                    const widthPct = Math.max(((e.pm2_max - e.pm2_min) / range) * 100, 2)
+                    const barColor = e.rango > 500 ? '#ef4444' : e.rango > 300 ? '#f59e0b' : '#10b981'
+
+                    return (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="w-28 text-xs font-medium text-slate-700 truncate" title={e.proyecto}>{e.proyecto}</div>
+                        <div className="flex-1 h-6 bg-slate-100 rounded relative">
+                          <div
+                            className="absolute h-full rounded opacity-80"
+                            style={{ left: `${leftPct}%`, width: `${widthPct}%`, backgroundColor: barColor }}
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-700">
+                            ${formatNumber(e.pm2_min)} - ${formatNumber(e.pm2_max)}
+                          </div>
+                        </div>
+                        <div className="text-right w-16">
+                          <span className="text-xs text-slate-500">{e.unidades} uds</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-slate-500 text-center py-8 text-sm">Cargando...</p>
+              )}
+              <div className="mt-3 flex gap-4 text-xs text-slate-500">
+                <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-500 rounded"></span> Rango &lt;$300</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 bg-amber-500 rounded"></span> $300-500</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-500 rounded"></span> &gt;$500</span>
               </div>
+            </div>
+          </div>
+
+          {/* Scatter Chart: Stock vs Price */}
+          <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200 mb-8">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">📈 Posicionamiento: Stock vs Precio</h3>
+            <ResponsiveContainer width="100%" height={350}>
+              <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                <XAxis
+                  type="number"
+                  dataKey="x"
+                  name="Stock"
+                  label={{ value: 'Unidades en stock →', position: 'bottom', fontSize: 11 }}
+                  tick={{ fontSize: 10 }}
+                />
+                <YAxis
+                  type="number"
+                  dataKey="y"
+                  name="$/m²"
+                  label={{ value: '$/m² →', angle: -90, position: 'left', fontSize: 11 }}
+                  tick={{ fontSize: 10 }}
+                  domain={['dataMin - 200', 'dataMax + 200']}
+                />
+                <ZAxis type="number" dataKey="z" range={[100, 500]} />
+                <Tooltip content={<ScatterTooltip />} />
+                <Scatter name="Proyectos" data={scatterData}>
+                  {scatterData.map((entry, index) => (
+                    <Cell key={index} fill={getPrecioM2Color(entry.y)} />
+                  ))}
+                </Scatter>
+              </ScatterChart>
+            </ResponsiveContainer>
+            <div className="mt-2 text-xs text-slate-500 text-center">
+              Tamaño del punto = precio de entrada • Color = posición $/m²
             </div>
           </div>
 
@@ -1094,6 +1598,60 @@ export default function MarketPulseDashboard() {
               </div>
             )}
           </div>
+
+          {/* Detector de Outliers */}
+          {outliers.length > 0 && (
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-6 shadow-lg border border-orange-200 mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-orange-800">⚠️ Detector de Outliers en Vivo</h3>
+                <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Z-score &gt; 1.8</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-orange-200">
+                      <th className="text-left py-2 px-2 font-semibold text-orange-700">ID</th>
+                      <th className="text-left py-2 px-2 font-semibold text-orange-700">Proyecto</th>
+                      <th className="text-left py-2 px-2 font-semibold text-orange-700">Zona</th>
+                      <th className="text-center py-2 px-2 font-semibold text-orange-700">Dorms</th>
+                      <th className="text-right py-2 px-2 font-semibold text-orange-700">$/m²</th>
+                      <th className="text-right py-2 px-2 font-semibold text-orange-700">Avg Zona</th>
+                      <th className="text-center py-2 px-2 font-semibold text-orange-700">Z-Score</th>
+                      <th className="text-center py-2 px-2 font-semibold text-orange-700">Tipo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {outliers.map((o, i) => (
+                      <tr key={i} className="border-b border-orange-100 hover:bg-orange-50">
+                        <td className="py-2 px-2 text-xs font-mono text-slate-600">{o.id}</td>
+                        <td className="py-2 px-2 text-xs font-medium text-slate-900 max-w-[120px] truncate">{o.proyecto}</td>
+                        <td className="py-2 px-2 text-xs text-slate-600">{getZonaLabel(o.zona)}</td>
+                        <td className="py-2 px-2 text-center text-xs">{o.dormitorios}D</td>
+                        <td className="py-2 px-2 text-right text-xs font-bold">${formatNumber(o.precio_m2)}</td>
+                        <td className="py-2 px-2 text-right text-xs text-slate-500">${formatNumber(o.avg_zona)}</td>
+                        <td className="py-2 px-2 text-center">
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${Math.abs(o.z_score) > 2.5 ? 'bg-red-200 text-red-800' : 'bg-amber-200 text-amber-800'}`}>
+                            {o.z_score > 0 ? '+' : ''}{o.z_score}
+                          </span>
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${o.tipo === 'caro' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                            {o.tipo === 'caro' ? '🔴 CARO' : '🔵 BARATO'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-3 p-3 bg-orange-100 rounded-lg">
+                <p className="text-orange-800 text-xs">
+                  💡 Outliers calculados por zona + dormitorios. Z-score mide desviaciones estándar respecto al promedio del grupo.
+                  Revisar en <strong>/admin/propiedades</strong> para corregir datos erróneos.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Ranking de Amenidades */}
           <div className="grid grid-cols-2 gap-6 mb-8">
@@ -1187,6 +1745,54 @@ export default function MarketPulseDashboard() {
               </div>
             </div>
           </div>
+
+          {/* Antigüedad del Inventario */}
+          {antiguedad.length > 0 && (
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200 mb-8">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">📅 Antigüedad del Inventario</h3>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={antiguedad}
+                        dataKey="cantidad"
+                        nameKey="label"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={90}
+                        strokeWidth={2}
+                      >
+                        {antiguedad.map((entry, index) => (
+                          <Cell key={index} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend formatter={(value) => <span className="text-xs text-slate-600">{value}</span>} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex flex-col justify-center space-y-3">
+                  {antiguedad.map((b, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-4 h-4 rounded" style={{ backgroundColor: b.color }} />
+                      <div className="flex-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-700 font-medium">{b.label}</span>
+                          <span className="text-slate-900 font-bold">{b.cantidad}</span>
+                        </div>
+                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden mt-1">
+                          <div className="h-full rounded-full" style={{ width: `${b.porcentaje}%`, backgroundColor: b.color }} />
+                        </div>
+                      </div>
+                      <span className="text-xs text-slate-500 w-8">{b.porcentaje}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Historical Charts */}
           <div className="grid grid-cols-2 gap-6 mb-8">
@@ -1287,6 +1893,47 @@ export default function MarketPulseDashboard() {
             </div>
           </div>
 
+          {/* Calidad de Datos */}
+          {dataQuality && (
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200 mb-8">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">🔍 Indicador de Calidad de Datos</h3>
+              <p className="text-slate-500 text-xs mb-4">Base: {dataQuality.total} propiedades completadas (venta, área ≥20m², sin duplicados, sin parqueos/bauleras)</p>
+              <div className="grid grid-cols-4 gap-6">
+                {[
+                  { label: 'Con Zona', value: dataQuality.con_zona, color: '#10b981' },
+                  { label: 'Con Proyecto', value: dataQuality.con_proyecto, color: '#3b82f6' },
+                  { label: 'Con Precio Válido', value: dataQuality.con_precio, color: '#8b5cf6' },
+                  { label: 'Con Fotos', value: dataQuality.con_fotos, color: '#f59e0b' }
+                ].map((item, i) => {
+                  const pct = Math.round((item.value / dataQuality.total) * 100)
+                  const missing = dataQuality.total - item.value
+                  return (
+                    <div key={i}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-slate-700 font-medium">{item.label}</span>
+                        <span className="font-bold" style={{ color: item.color }}>{pct}%</span>
+                      </div>
+                      <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: item.color }} />
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">{item.value}/{dataQuality.total} • {missing > 0 ? `${missing} sin dato` : 'Completo'}</p>
+                    </div>
+                  )
+                })}
+              </div>
+              {(() => {
+                const avgQuality = Math.round(((dataQuality.con_zona + dataQuality.con_proyecto + dataQuality.con_precio + dataQuality.con_fotos) / (dataQuality.total * 4)) * 100)
+                const bg = avgQuality >= 90 ? 'bg-green-50 border-green-200 text-green-800' : avgQuality >= 75 ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-red-50 border-red-200 text-red-800'
+                return (
+                  <div className={`mt-4 p-3 border rounded-lg ${bg}`}>
+                    <p className="text-sm font-bold">Score General: {avgQuality}%</p>
+                    <p className="text-xs mt-1">Promedio de los 4 indicadores de completitud</p>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+
           {/* Footer */}
           <div className="mt-8 text-center text-sm text-slate-500 bg-white rounded-xl p-4 shadow-sm">
             <p>
@@ -1295,7 +1942,7 @@ export default function MarketPulseDashboard() {
               <strong>{kpis?.proyectos_activos || 0}</strong> proyectos
             </p>
             <p className="mt-1 text-xs">
-              Solo propiedades en venta con área ≥ 20m² • Datos actualizados en tiempo real
+              Solo venta • Área ≥ 20m² • Con zona • Sin duplicados • Sin parqueos/bauleras
             </p>
           </div>
         </main>

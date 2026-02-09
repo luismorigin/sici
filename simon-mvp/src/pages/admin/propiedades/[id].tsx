@@ -116,6 +116,8 @@ interface ProyectoOption {
   id: number
   nombre: string
   desarrollador: string | null
+  latitud: number | null
+  longitud: number | null
 }
 
 interface HistorialEntry {
@@ -310,7 +312,7 @@ export default function EditarPropiedad() {
       if (!supabase) return
       const { data, error } = await supabase
         .from('proyectos_master')
-        .select('id_proyecto_master, nombre_oficial, desarrollador')
+        .select('id_proyecto_master, nombre_oficial, desarrollador, latitud, longitud')
         .eq('activo', true)
         .order('nombre_oficial')
 
@@ -318,12 +320,38 @@ export default function EditarPropiedad() {
         setProyectosList(data.map(p => ({
           id: p.id_proyecto_master,
           nombre: p.nombre_oficial,
-          desarrollador: p.desarrollador
+          desarrollador: p.desarrollador,
+          latitud: p.latitud ? parseFloat(p.latitud) : null,
+          longitud: p.longitud ? parseFloat(p.longitud) : null
         })))
       }
     }
     fetchProyectos()
   }, [])
+
+  // Auto-detectar zona desde GPS del proyecto
+  const autoDetectZonaFromProject = async (proyecto: ProyectoOption) => {
+    if (!supabase || !proyecto.latitud || !proyecto.longitud) return
+
+    try {
+      const { data } = await supabase.rpc('get_zona_by_gps', {
+        p_lat: proyecto.latitud,
+        p_lon: proyecto.longitud
+      })
+
+      if (data && data.length > 0 && data[0].zona) {
+        const zonaDetectada = data[0].zona as string
+        // Buscar la microzona correspondiente
+        const microzona = MICROZONAS.find(m => m.label === zonaDetectada)
+        if (microzona) {
+          updateField('microzona', microzona.id)
+          setShowMicrozonaCustom(false)
+        }
+      }
+    } catch (err) {
+      console.error('Error auto-detectando zona:', err)
+    }
+  }
 
   // Cerrar sugerencias al hacer click afuera
   useEffect(() => {
@@ -2145,6 +2173,7 @@ export default function EditarPropiedad() {
                                   zona: null
                                 })
                                 setShowProyectoSuggestions(false)
+                                autoDetectZonaFromProject(p)
                               }}
                               className={`w-full px-4 py-2 text-left hover:bg-amber-50 border-b border-slate-100 last:border-0 ${
                                 p.id === selectedProyectoId ? 'bg-green-50' : ''
