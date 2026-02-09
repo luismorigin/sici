@@ -31,14 +31,14 @@ export default function HeroPremium({ metrics }: HeroPremiumProps) {
 
         {/* Headline */}
         <h1 className="font-display text-white text-5xl md:text-7xl font-light leading-[1.1] tracking-tight mb-8">
-          ¿El precio por ese<br />
-          <span className="italic text-[#c9a959]">departamento</span> en<br />
-          Equipetrol es justo?
+          {propertyCount} departamentos en<br />
+          <span className="italic text-[#c9a959]">Equipetrol,</span> analizados<br />
+          para vos
         </h1>
 
         {/* Subheadline */}
         <p className="text-white/60 text-lg font-light max-w-2xl mx-auto mb-12 leading-relaxed">
-          Análisis IA contra todo el mercado. Sin vendedores. Sin sesgos. Solo datos.
+          Precio justo, opciones reales, cero vendedores.
         </p>
 
         {/* CTA */}
@@ -49,20 +49,10 @@ export default function HeroPremium({ metrics }: HeroPremiumProps) {
           </button>
         </Link>
 
-        {/* TC Badge */}
-        <div className="mt-4 text-[#c9a959]/80 text-xs tracking-wide flex items-center justify-center gap-2">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          Precios en dólares reales (TC oficial)
-        </div>
-
-        {/* Badges */}
-        <div className="flex items-center justify-center flex-wrap gap-3 md:gap-6 mt-6">
-          <span className="text-white/40 text-sm">Sin cuenta</span>
-          <span className="text-white/20 hidden md:inline">·</span>
-          <span className="text-[#c9a959]/70 text-sm">Datos actualizados diariamente</span>
-          <span className="text-white/20 hidden md:inline">·</span>
+        {/* Trust badges */}
+        <div className="flex items-center justify-center gap-6 mt-6">
+          <span className="text-white/40 text-sm">Sin registro</span>
+          <span className="text-white/20">·</span>
           <span className="text-white/40 text-sm">100% gratis</span>
         </div>
 
@@ -79,18 +69,13 @@ export default function HeroPremium({ metrics }: HeroPremiumProps) {
             <div className="font-display text-3xl md:text-4xl text-white font-light">
               {projectCount}+
             </div>
-            <div className="text-white/40 text-xs tracking-[2px] uppercase mt-2">Proyectos activos</div>
+            <div className="text-white/40 text-xs tracking-[2px] uppercase mt-2">Proyectos monitoreados</div>
           </div>
           <div className="hidden md:block w-px h-12 bg-white/10" />
           <div className="text-center">
             <div className="font-display text-3xl md:text-4xl text-white font-light">24h</div>
-            <div className="text-white/40 text-xs tracking-[2px] uppercase mt-2">Actualización diaria</div>
+            <div className="text-white/40 text-xs tracking-[2px] uppercase mt-2">Actualización</div>
           </div>
-        </div>
-
-        {/* Contador de opciones */}
-        <div className="mt-8 text-white/30 text-sm">
-          {propertyCount} opciones disponibles hoy
         </div>
       </div>
 
