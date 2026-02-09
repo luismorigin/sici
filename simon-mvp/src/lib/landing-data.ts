@@ -7,21 +7,21 @@ const FALLBACK_SNAPSHOT: Snapshot24h = {
   bajadas_precio: 0,
   tc_actual: 9.72,
   tc_variacion: 0.52,
-  precio_m2_promedio: 2022,
+  precio_m2_promedio: 2100,
   score_bajo: 18,
   props_tc_paralelo: 42,
   dias_mediana_equipetrol: 51,
   unidades_equipetrol_2d: 31,
-  total_activas: 370,
+  total_activas: 317,
   proyectos_monitoreados: 189
 }
 
 const FALLBACK_MICROZONAS: MicrozonaData[] = [
-  { zona: 'Eq. Centro', total: 98, precio_promedio: 156709, precio_m2: 2098, proyectos: 41, categoria: 'standard' },
-  { zona: 'Villa Brigida', total: 67, precio_promedio: 71838, precio_m2: 1495, proyectos: 16, categoria: 'value' },
-  { zona: 'Sirari', total: 47, precio_promedio: 199536, precio_m2: 2258, proyectos: 13, categoria: 'premium' },
-  { zona: 'Eq. Norte/Norte', total: 19, precio_promedio: 153354, precio_m2: 2340, proyectos: 11, categoria: 'premium' },
-  { zona: 'Eq. Oeste (Busch)', total: 16, precio_promedio: 277350, precio_m2: 2122, proyectos: 9, categoria: 'premium' }
+  { zona: 'Eq. Centro', total: 83, precio_promedio: 152000, precio_m2: 2199, proyectos: 38, categoria: 'standard' },
+  { zona: 'Sirari', total: 31, precio_promedio: 175000, precio_m2: 2062, proyectos: 13, categoria: 'standard' },
+  { zona: 'Eq. Oeste', total: 18, precio_promedio: 160000, precio_m2: 1943, proyectos: 9, categoria: 'standard' },
+  { zona: 'Eq. Norte', total: 15, precio_promedio: 153000, precio_m2: 2333, proyectos: 10, categoria: 'premium' },
+  { zona: 'Villa Brigida', total: 13, precio_promedio: 115000, precio_m2: 1828, proyectos: 9, categoria: 'standard' }
 ]
 
 export interface HeroMetrics {
@@ -40,13 +40,15 @@ export async function fetchLandingData(): Promise<LandingData> {
   try {
     if (!supabase) throw new Error('Supabase not initialized')
 
-    // Query 1: Propiedades activas (mismos filtros que HeroPremium original)
+    // Query 1: Propiedades activas (filtros limpios, alineados con admin dashboard)
     const { count: propertyCount } = await supabase
       .from('propiedades_v2')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
+      .is('duplicado_de', null)
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
     // Query 2: Proyectos activos
     const { count: projectCount } = await supabase
@@ -54,7 +56,7 @@ export async function fetchLandingData(): Promise<LandingData> {
       .select('*', { count: 'exact', head: true })
       .eq('activo', true)
 
-    // Query 3: Precio promedio /m² (misma lógica que HeroPremium original)
+    // Query 3: Precio promedio /m² (filtros limpios)
     const { data: priceData } = await supabase
       .from('propiedades_v2')
       .select('precio_usd, area_total_m2')
@@ -62,6 +64,8 @@ export async function fetchLandingData(): Promise<LandingData> {
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
       .gte('precio_usd', 30000)
+      .is('duplicado_de', null)
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
     let avgPriceM2: number | null = null
     if (priceData && priceData.length > 0) {

@@ -140,6 +140,15 @@ const MICROZONAS = [
   { id: 'equipetrol_oeste', label: 'Equipetrol Oeste (Busch)' }
 ]
 
+// Mapeo de ID del formulario → valor en columna microzona de la BD
+const MICROZONA_ID_TO_DB: Record<string, string> = {
+  'equipetrol_centro': 'Equipetrol',
+  'sirari': 'Sirari',
+  'equipetrol_norte': 'Equipetrol Norte/Norte',
+  'villa_brigida': 'Villa Brigida',
+  'equipetrol_oeste': 'Faremafu'
+}
+
 const AMENIDADES_OPCIONES = [
   'Piscina', 'Gimnasio', 'Seguridad 24/7', 'Ascensor', 'Pet Friendly',
   'Co-working', 'Churrasquera', 'Sauna/Jacuzzi', 'Salón de eventos', 'Área de juegos',
@@ -1188,6 +1197,7 @@ export default function EditarPropiedad() {
         nombre_edificio: formData.proyecto_nombre || null,
         id_proyecto_master: selectedProyectoId,  // Vincular/desvincular proyecto
         zona: microzonaLabel,
+        microzona: MICROZONA_ID_TO_DB[formData.microzona] || formData.microzona,
         precio_usd: precioNormalizado, // Siempre guardar el precio normalizado
         precio_usd_actualizado: null, // Limpiar para que RPC use precio_usd
         area_total_m2: formData.area_m2 ? parseFloat(formData.area_m2) : null,

@@ -700,14 +700,15 @@ export default function MarketPulseDashboard() {
     if (!supabase) return
 
     // One big query for zona analysis, outliers, dispersion, and zona×estado
+    // Usa microzona (fuente de verdad por GPS, alineada con filtros)
     const { data } = await supabase
       .from('propiedades_v2')
-      .select('id, zona, dormitorios, precio_usd, area_total_m2, estado_construccion, id_proyecto_master')
+      .select('id, microzona, dormitorios, precio_usd, area_total_m2, estado_construccion, id_proyecto_master')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
       .is('duplicado_de', null)
-      .not('zona', 'is', null)
+      .not('microzona', 'is', null)
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
     if (!data) return
@@ -717,7 +718,7 @@ export default function MarketPulseDashboard() {
     // --- 1. Zona KPIs ---
     const zonaGroups: Record<string, { precios: number[]; areas: number[]; preciosM2: number[] }> = {}
     validData.forEach(p => {
-      const z = p.zona || 'Sin zona'
+      const z = p.microzona || 'Sin zona'
       if (!zonaGroups[z]) zonaGroups[z] = { precios: [], areas: [], preciosM2: [] }
       const precio = parseFloat(p.precio_usd)
       const area = parseFloat(p.area_total_m2) || 1
@@ -742,7 +743,7 @@ export default function MarketPulseDashboard() {
     const ztGroups: Record<string, { preciosM2: number[] }> = {}
     validData.forEach(p => {
       if (p.dormitorios === null || p.dormitorios === undefined) return
-      const key = `${p.zona}|${p.dormitorios}`
+      const key = `${p.microzona}|${p.dormitorios}`
       if (!ztGroups[key]) ztGroups[key] = { preciosM2: [] }
       const precio = parseFloat(p.precio_usd)
       const area = parseFloat(p.area_total_m2) || 1
@@ -783,7 +784,7 @@ export default function MarketPulseDashboard() {
     const statsGroups: Record<string, { preciosM2: number[]; items: typeof validData }> = {}
     validData.forEach(p => {
       if (p.dormitorios === null || p.dormitorios === undefined) return
-      const key = `${p.zona}|${p.dormitorios}`
+      const key = `${p.microzona}|${p.dormitorios}`
       if (!statsGroups[key]) statsGroups[key] = { preciosM2: [], items: [] }
       const precio = parseFloat(p.precio_usd)
       const area = parseFloat(p.area_total_m2) || 1
@@ -806,7 +807,7 @@ export default function MarketPulseDashboard() {
           outlierResults.push({
             id: item.id,
             proyecto: projectMap.get(item.id_proyecto_master) || 'Desconocido',
-            zona: item.zona,
+            zona: item.microzona,
             dormitorios: item.dormitorios,
             precio_m2: Math.round(pm2),
             avg_zona: Math.round(avg),
@@ -848,7 +849,7 @@ export default function MarketPulseDashboard() {
     const zeGroups: Record<string, { preciosM2: number[] }> = {}
     validData.forEach(p => {
       if (!p.estado_construccion) return
-      const key = `${p.zona}|${p.estado_construccion}`
+      const key = `${p.microzona}|${p.estado_construccion}`
       if (!zeGroups[key]) zeGroups[key] = { preciosM2: [] }
       const precio = parseFloat(p.precio_usd)
       const area = parseFloat(p.area_total_m2) || 1
@@ -953,14 +954,18 @@ export default function MarketPulseDashboard() {
   // HELPERS
   // ============================================================================
 
+  // Mapeo canónico: microzona BD → display (alineado con FilterBarPremium)
+  const MICROZONA_DISPLAY: Record<string, string> = {
+    'Equipetrol': 'Eq. Centro',
+    'Sirari': 'Sirari',
+    'Faremafu': 'Eq. Oeste',
+    'Equipetrol Norte/Norte': 'Eq. Norte',
+    'Equipetrol Norte/Sur': 'Eq. Norte',
+    'Villa Brigida': 'Villa Brigida'
+  }
+
   const getZonaLabel = (zona: string): string => {
-    const labels: Record<string, string> = {
-      'Equipetrol Centro': 'Eq. Centro',
-      'Equipetrol': 'Eq. Norte',
-      'Sirari': 'Sirari',
-      'Villa Brígida': 'Villa Brigida'
-    }
-    return labels[zona] || zona
+    return MICROZONA_DISPLAY[zona] || zona
   }
 
   const formatCurrency = (value: number) => {

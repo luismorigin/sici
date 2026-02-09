@@ -18,11 +18,11 @@ interface FilterBarPremiumProps {
 }
 
 const ZONAS = [
-  { id: 'equipetrol', label: 'Equipetrol Centro', precio: '$2,098/m2', unidades: 98 },
-  { id: 'sirari', label: 'Sirari', precio: '$2,258/m2', unidades: 47 },
-  { id: 'equipetrol_norte', label: 'Equipetrol Norte', precio: '$2,340/m2', unidades: 22 },
-  { id: 'villa_brigida', label: 'Villa Brigida', precio: '$1,495/m2', unidades: 67 },
-  { id: 'faremafu', label: 'Equipetrol Oeste', precio: '$2,122/m2', unidades: 16 },
+  { id: 'equipetrol', label: 'Equipetrol Centro', precio: '$2,199/m2', unidades: 83 },
+  { id: 'sirari', label: 'Sirari', precio: '$2,062/m2', unidades: 31 },
+  { id: 'faremafu', label: 'Equipetrol Oeste', precio: '$1,943/m2', unidades: 18 },
+  { id: 'equipetrol_norte', label: 'Equipetrol Norte', precio: '$2,333/m2', unidades: 15 },
+  { id: 'villa_brigida', label: 'Villa Brigida', precio: '$1,828/m2', unidades: 13 },
 ]
 
 const DORMITORIOS = [

@@ -1504,14 +1504,13 @@ export interface MicrozonaData {
 }
 
 export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
-  // Fallback con datos REALES de Enero 2026
+  // Fallback con datos de Feb 2026 (filtros limpios)
   const demoData: MicrozonaData[] = [
-    { zona: 'Eq. Centro', total: 98, precio_promedio: 156709, precio_m2: 2098, proyectos: 41, categoria: 'standard' },
-    { zona: 'Villa Brigida', total: 67, precio_promedio: 71838, precio_m2: 1495, proyectos: 16, categoria: 'value' },
-    { zona: 'Sirari', total: 47, precio_promedio: 199536, precio_m2: 2258, proyectos: 13, categoria: 'premium' },
-    { zona: 'Eq. Norte/Norte', total: 19, precio_promedio: 153354, precio_m2: 2340, proyectos: 11, categoria: 'premium' },
-    { zona: 'Eq. Oeste (Busch)', total: 16, precio_promedio: 277350, precio_m2: 2122, proyectos: 9, categoria: 'premium' },
-    { zona: 'Eq. Norte/Sur', total: 3, precio_promedio: 128006, precio_m2: 2145, proyectos: 3, categoria: 'standard' }
+    { zona: 'Eq. Centro', total: 83, precio_promedio: 152000, precio_m2: 2199, proyectos: 38, categoria: 'standard' },
+    { zona: 'Sirari', total: 31, precio_promedio: 175000, precio_m2: 2062, proyectos: 13, categoria: 'standard' },
+    { zona: 'Eq. Oeste', total: 18, precio_promedio: 160000, precio_m2: 1943, proyectos: 9, categoria: 'standard' },
+    { zona: 'Eq. Norte', total: 15, precio_promedio: 153000, precio_m2: 2333, proyectos: 10, categoria: 'premium' },
+    { zona: 'Villa Brigida', total: 13, precio_promedio: 115000, precio_m2: 1828, proyectos: 9, categoria: 'standard' }
   ]
 
   if (!supabase) {
@@ -1519,19 +1518,31 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
   }
 
   try {
-    // Direct query usando MICROZONA (no zona)
+    // Query con filtros limpios (mismos que admin dashboard)
     const { data, error } = await supabase
       .from('propiedades_v2')
       .select('microzona, precio_usd, area_total_m2, id_proyecto_master')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gt('precio_usd', 30000)
-      .gt('area_total_m2', 20)
+      .gte('area_total_m2', 20)
       .not('microzona', 'is', null)
+      .is('duplicado_de', null)
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
     if (error || !data || data.length === 0) {
       console.warn('Error o sin datos en microzonas, usando demo:', error?.message)
       return demoData
+    }
+
+    // Mapeo canónico: microzona BD → display (5 zonas, alineado con FilterBarPremium)
+    const microzonaDisplay: Record<string, string> = {
+      'Equipetrol': 'Eq. Centro',
+      'Sirari': 'Sirari',
+      'Faremafu': 'Eq. Oeste',
+      'Equipetrol Norte/Norte': 'Eq. Norte',
+      'Equipetrol Norte/Sur': 'Eq. Norte',
+      'Villa Brigida': 'Villa Brigida'
     }
 
     // Aggregate manually
@@ -1539,14 +1550,10 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
 
     data.forEach((p: any) => {
       const zona = p.microzona
-      if (!zona) return // Skip si no tiene microzona
+      if (!zona) return
 
-      // Acortar/renombrar nombres
-      let zonaDisplay = zona
-      if (zona === 'Equipetrol') zonaDisplay = 'Eq. Centro'
-      else if (zona === 'Equipetrol Norte/Norte') zonaDisplay = 'Eq. Norte/Norte'
-      else if (zona === 'Equipetrol Norte/Sur') zonaDisplay = 'Eq. Norte/Sur'
-      else if (zona === 'Faremafu') zonaDisplay = 'Eq. Oeste (Busch)'
+      const zonaDisplay = microzonaDisplay[zona]
+      if (!zonaDisplay) return // Skip zonas no canónicas
 
       if (!zonaMap[zonaDisplay]) {
         zonaMap[zonaDisplay] = { total: 0, precios: [], m2: [], proyectos: new Set() }
@@ -1562,7 +1569,7 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
     })
 
     const result = Object.entries(zonaMap)
-      .filter(([zona, v]) => v.total >= 3 && zona !== 'Sin zona')
+      .filter(([_, v]) => v.total >= 1)
       .map(([zona, v]) => {
         const precioM2 = v.m2.length > 0
           ? Math.round(v.m2.reduce((a, b) => a + b, 0) / v.m2.length)
