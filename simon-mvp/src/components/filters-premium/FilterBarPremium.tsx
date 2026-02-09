@@ -405,17 +405,6 @@ export default function FilterBarPremium({ onFiltrosChange, className = '' }: Fi
           )}
         </div>
 
-        {/* Progress bar */}
-        <div className="max-w-xs mx-auto mb-8">
-          <div className="flex items-center justify-between text-xs text-white/40 mb-2">
-            <span>Paso 1 de 2</span>
-            <span>50%</span>
-          </div>
-          <div className="w-full h-1 bg-white/10 rounded-full">
-            <div className="w-1/2 h-1 bg-[#c9a959] rounded-full" />
-          </div>
-        </div>
-
         <button
           onClick={handleBuscar}
           disabled={loading || count === null || count === 0}
@@ -423,7 +412,7 @@ export default function FilterBarPremium({ onFiltrosChange, className = '' }: Fi
         >
           {count !== null && count > 0 ? (
             <>
-              Personalizar busqueda
+              Ver {count} resultados
               <IconArrowRight />
             </>
           ) : (

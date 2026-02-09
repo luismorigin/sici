@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 // Iconos SVG minimalistas (linea fina)
 const IconSearch = () => (
   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -68,6 +70,17 @@ export default function StepsPremium() {
               </p>
             </div>
           ))}
+        </div>
+
+        {/* CTA inline */}
+        <div className="mt-20 text-center">
+          <p className="text-white/40 text-sm mb-6">Solo toma 30 segundos</p>
+          <Link href="/filtros-v2" prefetch={false} className="inline-flex items-center gap-3 bg-white text-[#0a0a0a] px-10 py-4 text-xs tracking-[3px] uppercase hover:bg-[#c9a959] hover:text-white transition-all duration-300">
+            Empezar ahora
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </Link>
         </div>
       </div>
     </section>

@@ -44,7 +44,7 @@ export default function HeroPremium({ metrics }: HeroPremiumProps) {
         {/* CTA */}
         <Link href="/filtros-v2" prefetch={false} className="group inline-block">
           <button className="bg-white text-[#0a0a0a] px-12 py-5 text-xs tracking-[3px] uppercase hover:bg-[#c9a959] hover:text-white transition-all duration-300 flex items-center gap-4 mx-auto">
-            Obtener analisis
+            Ver departamentos
             <IconArrowRight />
           </button>
         </Link>

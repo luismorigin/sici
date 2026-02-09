@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export default function ProblemPremium() {
   return (
     <section className="bg-[#f8f6f3] py-32">
@@ -21,10 +23,16 @@ export default function ProblemPremium() {
               Decenas de portales, cientos de publicaciones, informacion desactualizada,
               precios inflados, fotos repetidas de diferentes inmobiliarias.
             </p>
-            <p className="text-[#666666] text-lg font-light leading-relaxed">
+            <p className="text-[#666666] text-lg font-light leading-relaxed mb-8">
               El mercado inmobiliario de Santa Cruz es opaco y fragmentado.
               Nosotros lo hacemos transparente.
             </p>
+            <Link href="/filtros-v2" prefetch={false} className="inline-flex items-center gap-2 text-[#c9a959] hover:text-[#0a0a0a] transition-colors font-light tracking-wide">
+              Ver departamentos
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </Link>
           </div>
         </div>
       </div>
