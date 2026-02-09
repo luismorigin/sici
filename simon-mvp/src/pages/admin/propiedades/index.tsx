@@ -119,6 +119,7 @@ export default function AdminPropiedades() {
   const [zona, setZona] = useState('')
   const [dormitorios, setDormitorios] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const [busquedaId, setBusquedaId] = useState('')
   const [limite, setLimite] = useState(50)
   const [soloConCandados, setSoloConCandados] = useState(false)
   const [soloPreciosSospechosos, setSoloPreciosSospechosos] = useState(false)
@@ -155,7 +156,7 @@ export default function AdminPropiedades() {
     }
   }, [authLoading, router.events, zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado])
 
-  // Fetch inicial y cuando cambian filtros
+  // Fetch inicial y cuando cambian filtros (no incluir busquedaId - solo busca on Enter/click)
   useEffect(() => {
     if (authLoading || !admin) return
     fetchPropiedades()
@@ -252,6 +253,59 @@ export default function AdminPropiedades() {
     setError(null)
 
     try {
+      // Búsqueda por ID directo
+      if (busquedaId.trim()) {
+        const ids = busquedaId.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n))
+        if (ids.length > 0) {
+          const { data: propsData, error: propsErr } = await supabase
+            .from('propiedades_v2')
+            .select('id, nombre_edificio, zona, dormitorios, banos, precio_usd, area_total_m2, datos_json, url, fuente, campos_bloqueados, id_proyecto_master, fecha_publicacion, estado_construccion, estacionamientos, baulera, precio_usd_original, moneda_original, tipo_cambio_detectado, tipo_cambio_usado, piso, plan_pagos_desarrollador, acepta_permuta, solo_tc_paralelo, precio_negociable, descuento_contado_pct, parqueo_incluido, parqueo_precio_adicional, baulera_incluido, baulera_precio_adicional')
+            .in('id', ids)
+
+          if (propsErr) throw new Error(propsErr.message)
+
+          // También traer info de proyectos_master para nombre y desarrollador
+          const projIds = (propsData || []).map((p: any) => p.id_proyecto_master).filter(Boolean)
+          let projMap = new Map<number, any>()
+          if (projIds.length > 0) {
+            const { data: projData } = await supabase
+              .from('proyectos_master')
+              .select('id_proyecto_master, nombre_oficial, desarrollador')
+              .in('id_proyecto_master', projIds)
+            if (projData) {
+              projMap = new Map(projData.map((p: any) => [p.id_proyecto_master, p]))
+            }
+          }
+
+          const resultado = (propsData || []).map((p: any) => {
+            const proj = projMap.get(p.id_proyecto_master)
+            const fotosUrls = p.datos_json?.contenido?.fotos_urls || []
+            return {
+              ...p,
+              proyecto: proj?.nombre_oficial || p.nombre_edificio || 'Sin nombre',
+              desarrollador: proj?.desarrollador || null,
+              precio_m2: p.area_total_m2 > 0 ? Math.round(p.precio_usd / p.area_total_m2) : 0,
+              area_m2: p.area_total_m2,
+              score_calidad: 0,
+              asesor_nombre: p.datos_json?.agente?.nombre || null,
+              asesor_wsp: p.datos_json?.agente?.whatsapp || null,
+              asesor_inmobiliaria: p.datos_json?.agente?.inmobiliaria || null,
+              fotos_urls: fotosUrls,
+              cantidad_fotos: fotosUrls.length,
+              amenities_confirmados: null,
+              amenities_por_verificar: null,
+              equipamiento_detectado: null,
+              dias_en_mercado: null,
+              microzona: null,
+            }
+          })
+
+          setPropiedades(resultado)
+          setLoading(false)
+          return
+        }
+      }
+
       // Construir filtros para buscar_unidades_reales
       const filtros: Record<string, any> = {
         limite: limite,
@@ -514,6 +568,19 @@ export default function AdminPropiedades() {
           {/* Filtros */}
           <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
             <div className="flex flex-wrap items-center gap-4">
+              {/* Búsqueda por ID */}
+              <div className="w-[160px]">
+                <label className="text-xs text-slate-500 mb-1 block">Buscar por ID</label>
+                <input
+                  type="text"
+                  placeholder="338, 480, 251..."
+                  value={busquedaId}
+                  onChange={(e) => setBusquedaId(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && fetchPropiedades()}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none text-sm"
+                />
+              </div>
+
               <div className="flex-1 min-w-[280px] busqueda-container">
                 {/* Tabs Proyecto / Broker */}
                 <div className="flex mb-1">

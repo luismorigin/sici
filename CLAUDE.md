@@ -121,6 +121,10 @@ Diseño luxury alternativo con:
 - **Google Analytics:** `G-Q8CRRJD6SL`
 - **Configurado en:** `_app.tsx` (todas las páginas)
 - **Dashboard:** [analytics.google.com](https://analytics.google.com)
+- **Debug mode (no contaminar data):**
+  - `simonbo.com?debug=1` → desactiva GA, persiste en localStorage
+  - `simonbo.com?debug=0` → reactiva GA
+  - Funciona en todas las páginas una vez activado en ese navegador
 
 ## Broker Pages (simon-mvp)
 
