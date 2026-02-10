@@ -201,6 +201,9 @@ export default function MarketPulseDashboard() {
     }
   }
 
+  // Fecha límite: solo propiedades de los últimos 300 días
+  const cutoffDate = new Date(Date.now() - 300 * 24 * 60 * 60 * 1000).toISOString()
+
   const fetchKPIs = async () => {
     if (!supabase) return
 
@@ -214,6 +217,7 @@ export default function MarketPulseDashboard() {
       .is('duplicado_de', null)
       .not('zona', 'is', null)
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+      .gte('fecha_publicacion', cutoffDate)
 
     // Fetch TC
     const { data: tcParalelo } = await supabase
@@ -269,6 +273,7 @@ export default function MarketPulseDashboard() {
       .is('duplicado_de', null)
       .not('zona', 'is', null)
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+      .gte('fecha_publicacion', cutoffDate)
 
     if (data) {
       const validData = data.filter(p => p.precio_usd && parseFloat(p.precio_usd) > 1000)
@@ -325,6 +330,7 @@ export default function MarketPulseDashboard() {
       .is('duplicado_de', null)
       .not('zona', 'is', null)
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+      .gte('fecha_publicacion', cutoffDate)
 
     if (!props || props.length === 0) return
 
@@ -401,6 +407,7 @@ export default function MarketPulseDashboard() {
       .is('duplicado_de', null)
       .not('zona', 'is', null)
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+      .gte('fecha_publicacion', cutoffDate)
 
     if (data) {
       const grouped: Record<string, { estado: string; preciosM2: number[] }> = {}
@@ -486,6 +493,7 @@ export default function MarketPulseDashboard() {
       .is('duplicado_de', null)
       .not('zona', 'is', null)
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+      .gte('fecha_publicacion', cutoffDate)
 
     if (!props) return
 
@@ -603,6 +611,7 @@ export default function MarketPulseDashboard() {
       .is('duplicado_de', null)
       .not('zona', 'is', null)
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+      .gte('fecha_publicacion', cutoffDate)
 
     if (!props) return
 
@@ -710,6 +719,7 @@ export default function MarketPulseDashboard() {
       .is('duplicado_de', null)
       .not('microzona', 'is', null)
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+      .gte('fecha_publicacion', cutoffDate)
 
     if (!data) return
 
