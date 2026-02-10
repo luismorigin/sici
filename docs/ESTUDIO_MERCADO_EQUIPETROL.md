@@ -1,237 +1,216 @@
-# Estudio de Mercado Inmobiliario - Equipetrol, Santa Cruz
+# Informe Estrategico: Mercado Inmobiliario Equipetrol
 
-**Fecha de generación:** 7 de Enero de 2026
-**Fuente de datos:** SICI (Sistema Inteligente de Captura Inmobiliaria)
-**Muestra:** 349 propiedades en venta (filtradas por calidad)
+**Fecha:** Febrero 2026 | **Fuente:** SICI - 262 unidades verificadas con GPS | **TC Paralelo:** Bs 9.33/USD
+
+> Documento para toma de decisiones de compra de departamentos en la zona Equipetrol de Santa Cruz de la Sierra, Bolivia. Datos auditados manualmente con verificacion GPS via PostGIS.
 
 ---
 
-## Resumen Ejecutivo
-
-El mercado inmobiliario de Equipetrol presenta las siguientes características:
+## 1. Panorama General
 
 | Indicador | Valor |
 |-----------|-------|
-| Propiedades activas | 349 |
-| Precio promedio | **$160,142 USD** |
-| Area promedio | 80.9 m² |
-| Precio por m² | **$2,014 USD/m²** |
-| Rango precio/m² | $823 - $3,535 |
-
-### Hallazgos Clave
-
-1. **Escasez de 2D accesibles:** Solo 7 unidades de 2 dormitorios bajo $120k (2% del mercado)
-2. **Villa Brigida es 22% más barata:** $1,667/m² vs $2,129/m² en Equipetrol Centro
-3. **Preventa ahorra 32%:** $109k promedio vs $162k en entrega inmediata
-4. **Piscina es estándar:** 78% del mercado la incluye
+| Unidades activas en venta | 262 (con zona verificada) + 55 perifericas |
+| Proyectos monitoreados | 54+ edificios |
+| $/m2 promedio general | **$2,076** |
+| Ticket promedio | **$172,000 USD** |
+| Area promedio | 81 m2 |
+| Dormitorios promedio | 1.5 |
+| Cobertura de zonas | 5 microzonas con poligonos GPS |
+| Tasa de matching a proyecto | 98% (310/317) |
 
 ---
 
-## 1. Distribución por Tipología
+## 2. Comparativo por Zona
 
-| Tipo | Cantidad | % | Precio Promedio | Rango | Area Promedio | $/m² |
-|------|----------|---|-----------------|-------|---------------|------|
-| Monoambiente (0D) | 40 | 11% | $87,716 | $55k - $166k | 41.8 m² | $2,182 |
-| 1 Dormitorio | 154 | 44% | $106,173 | $43k - $345k | 53.9 m² | $2,003 |
-| 2 Dormitorios | 103 | 30% | $197,233 | $70k - $414k | 96.7 m² | $2,075 |
-| 3 Dormitorios | 34 | 10% | $352,637 | $130k - $927k | 188.3 m² | $1,909 |
+| Zona | Uds | Proy | $/m2 Avg | Mediana $/m2 | P25-P75 | Ticket Avg | Area |
+|------|-----|------|----------|-------------|---------|-----------|------|
+| **Eq. Norte** | 23 | 15 | $2,429 | $2,387 | $2,121-$2,750 | $171K | 71m2 |
+| **Eq. Centro** | 124 | 54 | $2,172 | $2,087 | $1,850-$2,449 | $166K | 81m2 |
+| **Sirari** | 46 | 17 | $2,135 | $2,063 | $1,929-$2,372 | $211K | 98m2 |
+| **Eq. Oeste** | 31 | 10 | $1,967 | $1,753 | $1,626-$2,188 | $209K | 96m2 |
+| **Villa Brigida** | 38 | 21 | $1,878 | $1,905 | $1,590-$2,120 | $132K | 73m2 |
 
-**Nota:** Tipologías de 4+ dormitorios excluidas por muestra insuficiente (3 registros).
-
-### Distribución Visual
-```
-1D  ████████████████████████████████████████████  44%
-2D  ██████████████████████████████              30%
-0D  ███████████                                  11%
-3D  ██████████                                   10%
-```
+**Lectura clave:**
+- Eq. Norte cobra un premium de +26% vs Villa Brigida
+- Eq. Oeste tiene la mayor dispersion (spread P25-P75 de $562), lo que indica mas oportunidades de negociacion
+- Sirari ofrece las areas mas generosas (98m2 avg) a un precio intermedio
+- Eq. Centro domina con 48% de la oferta total (124/262)
 
 ---
 
-## 2. Precios por Microzona
+## 3. Mapa de Calor: $/m2 por Zona x Dormitorios
 
-| Microzona | Propiedades | Precio Promedio | $/m² | Diferencia vs Centro |
-|-----------|-------------|-----------------|------|---------------------|
-| Equipetrol Centro | 135 | $162,845 | $2,129 | Referencia |
-| Sirari | 50 | $172,239 | $2,001 | -6% |
-| Villa Brigida | 47 | $107,982 | **$1,667** | **-22%** |
-| Faremafu | 29 | $217,217 | $1,990 | -7% |
-| Equipetrol Norte/Norte | 25 | $159,788 | **$2,482** | **+17%** |
+**Escala:** Verde (<$1,800) | Ambar ($1,800-$2,200) | Rojo (>$2,200)
 
-### Insight de Zonas
-- **Más accesible:** Villa Brigida ofrece el mejor precio/m² para presupuestos ajustados
-- **Premium:** Equipetrol Norte/Norte tiene el mayor costo por m², zona financiera/corporativa
-- **Balance:** Sirari y Faremafu ofrecen precios similares al centro con menos densidad
+| Zona | Mono (0D) | 1 Dorm | 2 Dorms | 3 Dorms | 4 Dorms |
+|------|-----------|--------|---------|---------|---------|
+| **Eq. Centro** | ROJO $2,663 (12) | AMBAR $2,177 (54) | AMBAR $2,092 (47) | AMBAR $2,017 (10) | VERDE $1,317 (1) |
+| **Eq. Norte** | ROJO $2,501 (5) | ROJO $2,304 (9) | ROJO $2,515 (9) | - | - |
+| **Sirari** | AMBAR $2,144 (5) | AMBAR $2,043 (21) | ROJO $2,227 (12) | ROJO $2,201 (7) | ROJO $2,475 (1) |
+| **Eq. Oeste** | ROJO $2,274 (2) | AMBAR $1,888 (14) | AMBAR $1,875 (13) | ROJO $2,311 (1) | ROJO $3,296 (1) |
+| **V. Brigida** | AMBAR $1,877 (4) | AMBAR $2,038 (15) | VERDE $1,755 (14) | VERDE $1,720 (4) | AMBAR $1,825 (1) |
 
----
-
-## 3. Estado de Construcción
-
-| Estado | Propiedades | Precio Promedio | $/m² | vs Entrega Inmediata |
-|--------|-------------|-----------------|------|---------------------|
-| Preventa | 96 | $109,262 | $1,886 | **-32%** |
-| Entrega Inmediata | 70 | $161,896 | $1,993 | Referencia |
-| Nuevo a Estrenar | 34 | $166,817 | $2,092 | +3% |
-
-### Consideraciones
-- **Preventa:** Ahorro significativo (32%) pero requiere esperar y asumir riesgo de constructor
-- **Entrega Inmediata:** Mayor precio pero certeza de producto final
-- **Nuevo a Estrenar:** Similar a entrega inmediata, premium mínimo
+**Insights:**
+- Los monoambientes son premium en TODAS las zonas (+20-30% vs 2D) por efecto de area chica
+- Villa Brigida es la unica zona con 2D y 3D en verde
+- Eq. Norte es rojo en todas las tipologias - zona mas cara consistentemente
+- El sweet spot de volumen esta en 1-2D de Eq. Centro (101 unidades = 39% del total)
 
 ---
 
-## 4. Matriz de Escasez (Disponibilidad por Precio)
+## 4. Rangos de Ticket por Tipologia (P25 - Mediana - P75)
 
-| Tipología | < $80k | $80k - $120k | $120k - $150k | $150k - $200k | > $200k |
-|-----------|--------|--------------|---------------|---------------|---------|
-| 0D (Mono) | 18 | 17 | 3 | 2 | 0 |
-| 1D | 48 | 63 | 26 | 14 | 3 |
-| **2D** | **1** | **6** | 16 | 37 | 43 |
-| 3D | 0 | 0 | 1 | 5 | 28 |
+| Zona | 1 Dorm | 2 Dorms | 3 Dorms |
+|------|--------|---------|---------|
+| **Eq. Centro** | $91K - **$106K** - $136K | $172K - **$193K** - $222K | $251K - **$335K** - $399K |
+| **Eq. Norte** | $123K - **$125K** - $159K | $231K - **$236K** - $241K | - |
+| **Sirari** | $97K - **$103K** - $139K | $173K - **$189K** - $271K | $477K - **$477K** - $504K |
+| **Eq. Oeste** | $110K - **$116K** - $150K | $136K - **$163K** - $168K | - |
+| **V. Brigida** | $85K - **$99K** - $104K | $132K - **$141K** - $158K | $231K - **$275K** - $283K |
 
-### Hallazgos de Escasez
-
-**CRÍTICO - 2 Dormitorios bajo $120k:**
-- Solo **7 unidades** disponibles (2% del mercado)
-- Demanda alta, oferta extremadamente limitada
-- Recomendación: Actuar rápido cuando aparezcan
-
-**Abundante - 1 Dormitorio bajo $120k:**
-- **111 unidades** disponibles (32% del mercado)
-- Mayor flexibilidad para negociar y comparar
+**Guia rapida por presupuesto:**
+- **$80-100K:** 1D en Villa Brigida o Sirari
+- **$100-150K:** 1D en cualquier zona, o 2D en Villa Brigida/Eq. Oeste
+- **$150-200K:** 2D en Eq. Centro o Sirari
+- **$200-250K:** 2D premium en Eq. Norte, o 3D en Villa Brigida
+- **$250K+:** 3D en Eq. Centro, o producto premium Sirari
 
 ---
 
-## 5. Amenities del Mercado
+## 5. Preventa vs Entrega Inmediata
 
-| Amenity | Frecuencia | % del Mercado | Precio Promedio |
-|---------|------------|---------------|-----------------|
-| Piscina | 272 | 78% | $157,352 |
-| Seguridad 24/7 | 235 | 67% | $164,983 |
-| Churrasquera | 209 | 60% | $162,251 |
-| Terraza/Balcón | 182 | 52% | $170,030 |
-| Sauna/Jacuzzi | 158 | 45% | $165,382 |
-| Gimnasio | 126 | 36% | $177,190 |
-| Área Social | 119 | 34% | $180,566 |
-| Ascensor | 110 | 32% | $157,393 |
-| Pet Friendly | 82 | 24% | $139,800 |
-| Salón de Eventos | 78 | 22% | $173,858 |
-| Recepción | 72 | 21% | $138,831 |
-| Co-working | 46 | 13% | $132,798 |
-| Parque Infantil | 20 | 6% | $235,547 |
+| Zona | Preventa $/m2 (uds) | Entrega $/m2 (uds) | Delta | Senal |
+|------|---------------------|-------------------|-------|-------|
+| **Eq. Centro** | $2,164 (47) | $2,190 (29) | +1.2% | Neutro |
+| **Eq. Norte** | $2,188 (6) | $2,579 (8) | +17.9% | **Preventa atractiva** |
+| **Eq. Oeste** | $1,715 (15) | $2,121 (5) | +23.7% | **Preventa MUY atractiva** |
+| **Sirari** | $2,154 (23) | $2,082 (16) | -3.3% | Entrega mas barata |
+| **V. Brigida** | $1,708 (7) | $1,826 (15) | +6.9% | Preventa atractiva |
 
-### Insights de Amenities
+**Lectura clave:**
+- Eq. Oeste tiene el mayor descuento en preventa (-24% vs entrega) - mayor plusvalia potencial
+- Sirari es la excepcion: entrega inmediata mas barata que preventa (posible sobreoferta en preventas nuevas)
+- Eq. Centro esta equilibrado - el mercado ya precio la diferencia
 
-- **Estándar (no pagar premium):** Piscina, Seguridad, Churrasquera - más del 50% los tiene
-- **Diferenciador accesible:** Pet Friendly y Co-working correlacionan con precios menores
-- **Premium:** Parque Infantil asociado a propiedades de mayor valor ($235k promedio)
-- **Escaso:** Gimnasio propio (36%) puede ser diferenciador real
+### Composicion del inventario
 
----
+| Zona | % Preventa | % Entrega | % Otro |
+|------|-----------|-----------|--------|
+| **Eq. Centro** | 38% | 26% | 36% |
+| **Eq. Norte** | 26% | 35% | 39% |
+| **Eq. Oeste** | 48% | 16% | 36% |
+| **Sirari** | 50% | 35% | 15% |
+| **V. Brigida** | 18% | 50% | 32% |
 
-## 6. Principales Desarrolladores
-
-| Desarrollador | Proyectos | Propiedades | Precio Promedio | $/m² |
-|---------------|-----------|-------------|-----------------|------|
-| Sky Properties | 15 | 47 | $157,598 | $2,435 |
-| Sommet S.R.L. | 2 | 26 | $153,643 | $2,257 |
-| Constructora Alessia Spazios | 2 | 18 | $159,285 | $1,911 |
-| Constructora Santorini Suites | 1 | 18 | $69,370 | $1,239 |
-| Alborada Group Bolivia | 2 | 12 | $92,602 | $1,766 |
-| Eurodesign | 4 | 12 | $158,744 | $2,053 |
-| Smart Studio | 8 | 10 | $123,426 | $1,893 |
-| Luxe Design | 2 | 8 | $189,145 | $2,596 |
-| Mariscal Construcciones | 1 | 8 | $203,240 | $2,234 |
-| HH Desarrollos | 2 | 8 | $119,368 | $1,745 |
-
-### Perfil de Desarrolladores
-
-- **Sky Properties:** Líder del mercado (13%), precio premium, múltiples proyectos
-- **Santorini Suites:** Entry-level ($69k promedio), ideal para primer departamento
-- **Luxe Design:** Segmento alto ($189k), menor volumen pero mayor $/m²
-- **Alborada Group:** Opción intermedia accesible ($92k promedio)
+Villa Brigida tiene mas entrega inmediata (50%) - mercado maduro. Sirari y Eq. Oeste son zonas en desarrollo con mucha preventa.
 
 ---
 
-## 7. Proyectos con Mayor Stock
+## 6. Segmentacion de Mercado por Zona
 
-| Proyecto | Desarrollador | Unidades | Precio Promedio | Rango | Tipologías |
-|----------|---------------|----------|-----------------|-------|------------|
-| Condominio Las Dalias | Sommet | 18 | $147,761 | $76k - $202k | 1D, 2D |
-| SANTORINI VENTURA | Santorini | 18 | $69,370 | $52k - $70k | 1D |
-| Edificio Spazios | Alessia | 13 | $176,242 | $57k - $454k | 1D, 2D, 3D |
-| Sky Tower | Sky Properties | 10 | $106,109 | $95k - $146k | 0D, 1D |
-| Domus Infinity | Alborada | 9 | $99,864 | $65k - $190k | 0D, 1D, 2D |
-| T-VEINTICINCO | - | 9 | $240,596 | $214k - $261k | 2D |
-| Stone 3 | - | 8 | $95,638 | $73k - $131k | 0D, 1D, 2D |
-| Atrium | Sommet | 8 | $166,876 | $110k - $216k | 1D, 2D |
-| Condominio MARE | Mariscal | 8 | $203,240 | $122k - $360k | 1D, 2D |
-| Sky Eclipse | Sky Properties | 7 | $176,767 | $103k - $308k | 1D, 2D |
+| Zona | Oportunidad (<$1,800/m2) | Mercado ($1,800-$2,200) | Premium (>$2,200) |
+|------|--------------------------|------------------------|-------------------|
+| **Eq. Centro** | 24 (19%) | 51 (41%) | 49 (40%) |
+| **Eq. Norte** | 3 (13%) | 6 (26%) | 14 (61%) |
+| **Sirari** | 8 (17%) | 18 (39%) | 20 (43%) |
+| **Eq. Oeste** | 16 (52%) | 8 (26%) | 7 (23%) |
+| **V. Brigida** | 14 (37%) | 19 (50%) | 5 (13%) |
 
----
-
-## 8. Recomendaciones para Simón
-
-### Para compradores de 1 Dormitorio ($80k - $120k)
-- **Zona recomendada:** Villa Brigida (22% ahorro) o Equipetrol Centro
-- **Proyectos a considerar:** Sky Tower, Stone 3, Domus Infinity
-- **Amenities esperables:** Piscina, Seguridad, Churrasquera (estándar)
-
-### Para compradores de 2 Dormitorios ($150k - $200k)
-- **Realidad:** Mercado escaso bajo $120k, ajustar expectativas
-- **Zona óptima:** Sirari o Faremafu para mejor relación precio/espacio
-- **Proyectos premium:** Las Dalias, Atrium, MARE
-
-### Para compradores de 3 Dormitorios ($300k+)
-- **Perfil:** Familias establecidas o inversores
-- **Zonas:** Faremafu (premium familiar), Equipetrol Norte/Norte (corporativo)
-- **Proyectos:** TERRAZO, Edificio Spazios
-
-### Estrategias de Ahorro
-1. **Preventa:** Hasta 32% de ahorro, pero asumir riesgo y espera
-2. **Villa Brigida:** 22% menos $/m² que centro, zona en desarrollo
-3. **1D en lugar de 2D:** Si es primera vivienda, considerar 1D amplio (>50m²)
+**Lectura:**
+- Eq. Oeste tiene 52% de unidades bajo $1,800/m2 (mayor concentracion de oportunidades)
+- Eq. Norte es 61% premium - zona consolidada de alto nivel
+- Villa Brigida es la mas equilibrada con 50% en rango de mercado
 
 ---
 
-## Metodología
+## 7. Top Proyectos por $/m2 (minimo 3 unidades)
 
-### Fuentes de Datos
-- Century21 Bolivia (263 propiedades, 75%)
-- RE/MAX Bolivia (86 propiedades, 25%)
+### Segmento Premium (>$2,200/m2)
 
-### Filtros de Calidad Aplicados
-```sql
-WHERE es_activa = true
-  AND tipo_operacion = 'venta'
-  AND precio_usd > 30000
-  AND area_total_m2 > 25
-  AND (precio_usd / area_total_m2) BETWEEN 800 AND 4000
-```
+| Proyecto | Zona | Uds | $/m2 | Rango Ticket |
+|----------|------|-----|------|-------------|
+| Sky Moon | Eq. Norte | 5 | **$2,979** | $110K-$386K |
+| Sky Tower | Eq. Centro | 6 | **$2,906** | $88K-$136K |
+| Cond. MARE | Sirari | 3 | **$2,722** | $108K-$320K |
+| Edif. Spazios | Eq. Centro | 4 | **$2,612** | $110K-$456K |
+| Luxe Suites | Eq. Centro | 4 | **$2,561** | $87K-$227K |
+| Sky Eclipse | Eq. Centro | 6 | **$2,520** | $103K-$241K |
+| Sky Eclipse | Eq. Oeste | 7 | **$2,493** | $105K-$308K |
+| Uptown NUU | Eq. Oeste | 3 | **$2,460** | $101K-$1.8M |
+| Luxe Tower | Eq. Centro | 4 | **$2,448** | $132K-$277K |
 
-### Registros Excluidos (19 total)
-| Motivo | Cantidad | Razón |
-|--------|----------|-------|
-| Precio <= $30k | 13 | Errores de datos o placeholders |
-| $/m² > $4,000 | 3 | Outliers extremos (penthouses) |
-| Area <= 25m² | 2 | Datos incompletos |
-| $/m² < $800 | 1 | Error de scraping |
+### Segmento Mercado ($1,800-$2,200/m2)
 
-### Limitaciones
-- Solo mercado de venta (excluye alquiler/anticrético)
-- Solo zona Equipetrol y aledañas
-- Datos de portales inmobiliarios (no incluye venta directa)
-- Snapshot de enero 2026 (mercado dinámico)
+| Proyecto | Zona | Uds | $/m2 | Rango Ticket |
+|----------|------|-----|------|-------------|
+| Condado VI | Eq. Centro | 3 | **$2,252** | $140K-$325K |
+| La Riviera | Sirari | 3 | **$2,251** | $352K-$750K |
+| Las Dalias | Sirari | 15 | **$2,231** | $98K-$189K |
+| ITAJU | Sirari | 5 | **$2,225** | $477K-$765K |
+| Eurodesign Le Blanc | Eq. Norte | 5 | **$2,157** | $85K-$240K |
+| Stone 3 | V. Brigida | 4 | **$2,106** | $73K-$105K |
+| Atrium | Eq. Centro | 11 | **$2,090** | $99K-$213K |
+| Sky Level | Eq. Centro | 5 | **$2,055** | $103K-$193K |
+| T-VEINTICINCO | Eq. Centro | 9 | **$1,894** | $188K-$272K |
+| HH Once | Eq. Centro | 8 | **$1,882** | $77K-$143K |
+| Spazios Eden | Eq. Centro | 6 | **$1,867** | $76K-$196K |
+
+### Segmento Oportunidad (<$1,800/m2)
+
+| Proyecto | Zona | Uds | $/m2 | Rango Ticket |
+|----------|------|-----|------|-------------|
+| SKY EQUINOX | Sirari | 6 | **$1,736** | $61K-$270K |
+| Lofty Island | Eq. Centro | 3 | **$1,708** | $116K-$180K |
+| Lofty Island | Eq. Oeste | 12 | **$1,650** | $110K-$168K |
+| HH Chuubi | Eq. Centro | 5 | **$1,600** | $90K-$193K |
+| Concret Equipetrol | V. Brigida | 3 | **$1,550** | $71K-$158K |
+| Aura Residences | V. Brigida | 4 | **$1,345** | $114K-$134K |
 
 ---
 
-## Próximas Actualizaciones
+## 8. Recomendaciones por Perfil de Comprador
 
-- [ ] Agregar tendencia de precios (histórico mensual)
-- [ ] Incluir tiempo promedio en mercado por tipología
-- [ ] Análisis de correlación amenities-precio más detallado
-- [ ] Expandir a zonas adicionales (Urbarí, Las Palmas)
+### Inversor (rentabilidad por alquiler)
+- **Mejor zona:** Eq. Oeste en preventa ($1,715/m2) - 24% de upside vs entrega
+- **Tipologia ideal:** 1D de 60-70m2 - mayor demanda de alquiler
+- **Proyecto destacado:** Lofty Island Eq. Oeste ($1,650/m2, 12 unidades disponibles)
+- **Riesgo:** Zona con mucha preventa (48%), verificar plazos de entrega
+
+### Primera vivienda ($100-150K)
+- **Mejor zona:** Villa Brigida - 2D a $141K mediana, 50% entrega inmediata
+- **Alternativa:** Eq. Oeste 1D a $116K mediana
+- **Proyectos:** Concret Equipetrol, Aura Residences, Stone 3
+- **Ventaja:** Zona madura con servicios establecidos
+
+### Comprador premium ($200K+)
+- **Mejor zona:** Sirari - 2D a $189K, areas generosas (98m2 avg), buen mix preventa/entrega
+- **Upgrade:** Eq. Norte 2D a $236K mediana - zona mas exclusiva
+- **Proyectos:** Las Dalias, La Riviera, ITAJU, Sky Moon
+- **Ventaja:** Sirari tiene 35% entrega inmediata - se puede mudar rapido
+
+### Especulador (plusvalia)
+- **Eq. Norte:** 61% del inventario es premium, zona en desarrollo con precios al alza
+- **Eq. Oeste preventa:** Descuento de 24% vs entrega - mayor gap del mercado
+- **Evitar:** Eq. Centro monoambientes - ya estan en $2,663/m2, poco margen de apreciacion
+- **Riesgo:** Eq. Oeste tiene pocos proyectos entregados (16%) - menor liquidez
 
 ---
 
-*Documento generado automáticamente por SICI para uso de Simón - Asistente Fiduciario*
+## 9. Datos de Calidad del Estudio
+
+| Metrica | Valor |
+|---------|-------|
+| Propiedades totales en BD | 317 completadas |
+| Con zona GPS verificada | 262 (82%) |
+| Con proyecto asignado | 310 (98%) |
+| Fuentes de datos | Century 21, Remax |
+| Verificacion GPS | PostGIS ST_Contains contra poligonos |
+| Ultima auditoria manual | Febrero 2026 |
+| Propiedades excluidas | Duplicados, parqueos, bauleras, alquiler, anticretico |
+| Filtros aplicados | area >= 20m2, precio > $1,000, venta, no duplicadas |
+
+---
+
+*Generado por SICI (Sistema Inteligente de Captura Inmobiliaria) - Febrero 2026*
+*Datos verificados con GPS y auditoria manual. Precios en USD al TC paralelo Bs 9.33.*
