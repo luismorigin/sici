@@ -47,6 +47,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 3. **propiedades_v2** - ÚNICA tabla activa. `propiedades` es LEGACY
 4. **SQL > Regex** - Potenciar matching en BD, no extractores
 5. **Human-in-the-Loop** - Sistema HITL migrado a Admin Dashboard (ya no usa Google Sheets)
+6. **Alquiler aislado** - Pipeline alquiler usa funciones PROPIAS (`_alquiler`), NUNCA modificar funciones de venta
 
 ## Documentación Principal
 
@@ -63,6 +64,10 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 | **Sistema Broker B2B** | `docs/simon/SIMON_BROKER_SYSTEM.md` |
 | **Broker Handoff Original** | `docs/simon/broker/BROKER_HANDOFF_ORIGINAL.md` |
 | **Broker Roadmap Refinado** | `docs/simon/broker/BROKER_ROADMAP_REFINADO.md` |
+| **Plan Alquileres** | `docs/planning/ALQUILERES_PLAN_IMPLEMENTACION.md` |
+| **Investigación Alquileres** | `docs/planning/ALQUILERES_INVESTIGACION.md` |
+| **Prompt LLM Alquiler** | `docs/alquiler/LLM_ENRICHMENT_PROMPT.md` |
+| **Roadmap Alquiler** | `docs/alquiler/ROADMAP_IMPLEMENTACION.md` |
 | Plan activo | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
@@ -146,7 +151,8 @@ sici/
 │   ├── enrichment/    # registrar_enrichment.sql
 │   ├── merge/         # merge_discovery_enrichment.sql v2.2.0
 │   └── matching/      # Funciones v3.1 (propiedades_v2)
-├── sql/migrations/    # 001-114 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Broker B2B, Admin, Landing, PDF, CMA)
+│   └── alquiler/      # registrar_discovery/enrichment_alquiler, merge_alquiler
+├── sql/migrations/    # 001-139 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Broker B2B, Admin, Landing, PDF, CMA, Alquiler)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
@@ -159,7 +165,7 @@ sici/
     └── modulo_2/      # Specs matching pipeline
 ```
 
-## Estado Actual (31 Ene 2026)
+## Estado Actual (11 Feb 2026)
 
 ### ✅ Completado
 - **Módulo 1:** Pipeline nocturno operativo (Discovery, Enrichment, Merge)
@@ -214,7 +220,16 @@ sici/
   - Botón "📄 PDF" en dashboard con modal compartir (WhatsApp, copiar link)
   - Score calidad 100pts para propiedades broker (migración 092)
 
+- **Pipeline Alquiler BD (Fase 1):** Infraestructura SQL completa (migraciones 135-139)
+  - 8 columnas nuevas en propiedades_v2 (precio_mensual_bob/usd, deposito, amoblado, mascotas, servicios, contrato, expensas)
+  - `registrar_discovery_alquiler()` — UPSERT independiente (NO toca registrar_discovery)
+  - `registrar_enrichment_alquiler()` — recibe JSON del LLM con candados
+  - `merge_alquiler()` — enrichment-first, sin TC paralelo, sin score fiduciario
+  - 13 tests unitarios en `sql/tests/test_alquiler_functions.sql`
+  - **Principio: CERO cambios a funciones del sistema vivo de venta**
+
 ### ⏳ En Progreso
+- **Pipeline Alquiler Fases 2-4:** Desplegar migraciones + workflows n8n + LLM enrichment
 - **Sistema Broker Fase 5-7:** Portal broker, sistema leads, CMA (pendiente)
 
 ### ❌ Pendiente
@@ -378,6 +393,16 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 127 | fix_campos_bloqueados_corruptos | Fix campos_bloqueados corruptos | ✅ |
 | 128 | fix_propagacion_update_consolidado | Fix propagación UPDATE consolidado | ✅ |
 | 129 | propagar_con_apertura_temporal | Propagar con apertura temporal candados | ✅ |
+| 130 | admin_users | Tabla admin_users + auth | ✅ |
+| 131 | alinear_zona | Alinear zona/microzona | ✅ |
+| 132 | fix_zona_sky_eclipse | Fix zona Sky Eclipse | ✅ |
+| 133 | filtrar_300_dias_market | Filtrar >300 días market | ✅ |
+| 134 | asignar_microzona_98_props | Asignar microzona 98 props | ✅ |
+| 135 | rental_columns | 8 columnas alquiler + 5 CHECK + 3 índices | Pendiente deploy |
+| 136 | registrar_discovery_alquiler | **NUEVA** función discovery alquiler | Pendiente deploy |
+| 137 | registrar_enrichment_alquiler | **NUEVA** función enrichment LLM alquiler | Pendiente deploy |
+| 138 | merge_alquiler | **NUEVA** merge enrichment-first, sin TC paralelo | Pendiente deploy |
+| 139 | reactivar_alquileres_existentes | Reactivar 61 alquileres existentes | Pendiente deploy |
 
 ## Repo Legacy
 
