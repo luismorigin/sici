@@ -1,0 +1,12 @@
+-- =====================================================
+-- Función canónica: registrar_enrichment_alquiler()
+-- Tabla: propiedades_v2 (misma que venta)
+-- Versión: 1.0.0 (migración 137)
+-- Fecha: 11 Feb 2026
+-- =====================================================
+-- Copia idéntica a sql/migrations/137_registrar_enrichment_alquiler.sql
+-- Este archivo es la referencia canónica. La migración es el deploy.
+-- =====================================================
+
+-- Ver sql/migrations/137_registrar_enrichment_alquiler.sql para el código completo
+-- Este archivo se mantiene sincronizado con la migración.
