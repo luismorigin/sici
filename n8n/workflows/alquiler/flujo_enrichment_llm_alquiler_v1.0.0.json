@@ -1,0 +1,344 @@
+{
+  "name": "Enrichment LLM Alquiler v1.0.0",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "e1-trigger",
+      "name": "Trigger 2:30 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-720, 288],
+      "notes": "Después de discovery (1:30 AM), antes de merge (3:30 AM)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, url, fuente, codigo_propiedad, precio_mensual_bob, precio_usd, area_total_m2, dormitorios, banos, zona, tipo_propiedad_original, datos_json_discovery FROM propiedades_v2 WHERE tipo_operacion = 'alquiler' AND status IN ('nueva', 'actualizado') AND fecha_enrichment IS NULL ORDER BY fecha_discovery ASC LIMIT 20",
+        "options": {}
+      },
+      "id": "e1-query",
+      "name": "Query Alquileres Sin Enrichment",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-480, 288],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "Máximo 20 por ejecución para control de costos"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-items",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e1-if",
+      "name": "Hay Pendientes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-240, 288]
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        },
+        "batchSize": 1
+      },
+      "id": "e1-batch",
+      "name": "Loop Propiedades",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [0, 176]
+    },
+    {
+      "parameters": {
+        "url": "https://api.firecrawl.dev/v1/scrape",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ url: $json.url, formats: ['markdown'], onlyMainContent: true, waitFor: 3000 }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.FIRECRAWL_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "e1-firecrawl",
+      "name": "Firecrawl Scrape",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 300],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "notes": "Scrape HTML → Markdown"
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "id": "e1-wait",
+      "name": "Wait 3s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [480, 300],
+      "webhookId": "e1-wait-webhook",
+      "notes": "Rate limit Firecrawl"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === CONSTRUIR PROMPT PARA HAIKU ===\nconst prop = $('Loop Propiedades').first().json;\nconst scrape = $('Firecrawl Scrape').first().json;\n\nconst markdown = scrape?.data?.markdown || scrape?.markdown || '';\n\nif (!markdown || markdown.length < 50) {\n  return [{ json: { skip: true, error: 'Firecrawl no devolvió contenido', prop_id: prop.id } }];\n}\n\n// Truncar a ~3000 chars para Haiku (optimizar tokens)\nconst contenido = markdown.substring(0, 3000);\n\nconst prompt = `Eres un extractor de datos inmobiliarios para Bolivia.\nExtraes datos de páginas web de propiedades en ALQUILER.\nNUNCA inventes datos. Si no aparece en el texto, usa null.\n\nDATOS YA CONOCIDOS (del discovery):\n- URL: ${prop.url}\n- Fuente: ${prop.fuente}\n- Precio discovery: ${prop.precio_mensual_bob ? 'Bs ' + prop.precio_mensual_bob : 'desconocido'}\n- Área: ${prop.area_total_m2 ? prop.area_total_m2 + ' m²' : 'desconocida'}\n- Dormitorios: ${prop.dormitorios || 'desconocido'}\n- Baños: ${prop.banos || 'desconocido'}\n- Zona: ${prop.zona || 'desconocida'}\n\nTEXTO DE LA PÁGINA:\n${contenido}\n\nDevuelve SOLO este JSON (sin explicaciones):\n{\n  \"precio_mensual_bob\": number | null,\n  \"precio_mensual_usd\": number | null,\n  \"expensas_bs\": number | null,\n  \"deposito_meses\": number | null,\n  \"contrato_minimo_meses\": number | null,\n  \"area_total_m2\": number | null,\n  \"dormitorios\": number | null,\n  \"banos\": number | null,\n  \"estacionamientos\": number | null,\n  \"baulera\": boolean | null,\n  \"piso\": number | null,\n  \"amoblado\": \"si\" | \"no\" | \"semi\" | null,\n  \"acepta_mascotas\": boolean | null,\n  \"servicios_incluidos\": string[] | null,\n  \"nombre_edificio\": string | null,\n  \"descripcion_limpia\": string | null,\n  \"amenities_confirmados\": string[] | null,\n  \"equipamiento_detectado\": string[] | null\n}`;\n\nreturn [{\n  json: {\n    prop_id: prop.id,\n    prop_url: prop.url,\n    prompt: prompt,\n    markdown_length: markdown.length\n  }\n}];"
+      },
+      "id": "e1-build-prompt",
+      "name": "Construir Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "notes": "Prompt optimizado para Haiku (~3500 tokens input)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e1-if-prompt",
+      "name": "IF Prompt OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [960, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, temperature: 0, messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "{{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "e1-llm",
+      "name": "Anthropic Haiku",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 176],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "notes": "Claude Haiku 4.5 - temperature 0"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PARSEAR RESPUESTA LLM + VALIDAR ===\nconst prop_id = $('Construir Prompt').first().json.prop_id;\nconst prop_url = $('Construir Prompt').first().json.prop_url;\nconst response = $input.first().json;\n\nconst text = response?.content?.[0]?.text || '';\nconst tokens = response?.usage?.input_tokens + (response?.usage?.output_tokens || 0);\n\n// Extraer JSON del texto (puede tener ```json wrapper)\nlet jsonStr = text;\nconst jsonMatch = text.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\nif (jsonMatch) {\n  jsonStr = jsonMatch[1].trim();\n} else {\n  // Intentar encontrar el primer { ... }\n  const braceMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (braceMatch) jsonStr = braceMatch[0];\n}\n\nlet datos_llm;\nlet errores = [];\nlet requiere_revision = false;\n\ntry {\n  datos_llm = JSON.parse(jsonStr);\n} catch (e) {\n  errores.push('json_parse_error: ' + e.message);\n  requiere_revision = true;\n  datos_llm = {};\n}\n\n// === VALIDACIONES ===\nif (datos_llm.precio_mensual_bob !== null && datos_llm.precio_mensual_bob !== undefined) {\n  if (datos_llm.precio_mensual_bob <= 0 || datos_llm.precio_mensual_bob > 50000) {\n    errores.push('precio_fuera_rango: ' + datos_llm.precio_mensual_bob);\n    datos_llm.precio_mensual_bob = null;\n  }\n}\n\nif (datos_llm.area_total_m2 !== null && datos_llm.area_total_m2 !== undefined) {\n  if (datos_llm.area_total_m2 < 15 || datos_llm.area_total_m2 > 500) {\n    errores.push('area_fuera_rango: ' + datos_llm.area_total_m2);\n    datos_llm.area_total_m2 = null;\n  }\n}\n\nif (datos_llm.dormitorios !== null && datos_llm.dormitorios !== undefined) {\n  if (datos_llm.dormitorios < 0 || datos_llm.dormitorios > 6) {\n    errores.push('dormitorios_fuera_rango: ' + datos_llm.dormitorios);\n    datos_llm.dormitorios = null;\n  }\n}\n\nif (datos_llm.banos !== null && datos_llm.banos !== undefined) {\n  if (datos_llm.banos < 0 || datos_llm.banos > 6) {\n    errores.push('banos_fuera_rango: ' + datos_llm.banos);\n    datos_llm.banos = null;\n  }\n}\n\nif (datos_llm.expensas_bs !== null && datos_llm.expensas_bs !== undefined) {\n  if (datos_llm.expensas_bs < 0 || (datos_llm.precio_mensual_bob && datos_llm.expensas_bs >= datos_llm.precio_mensual_bob)) {\n    errores.push('expensas_sospechosas: ' + datos_llm.expensas_bs);\n    datos_llm.expensas_bs = null;\n  }\n}\n\nif (errores.length > 2) {\n  requiere_revision = true;\n}\n\nreturn [{\n  json: {\n    prop_id: prop_id,\n    prop_url: prop_url,\n    datos_llm: datos_llm,\n    tokens_usados: tokens || 0,\n    errores: errores,\n    requiere_revision: requiere_revision\n  }\n}];"
+      },
+      "id": "e1-parse",
+      "name": "Parsear y Validar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 176],
+      "notes": "Validación post-LLM: precio, área, dorms, baños, expensas"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT registrar_enrichment_alquiler(\n  p_id := $1::INTEGER,\n  p_datos_llm := $2::JSONB,\n  p_modelo_usado := 'claude-haiku-4.5',\n  p_tokens_usados := $3::INTEGER,\n  p_requiere_revision := $4::BOOLEAN,\n  p_errores_validacion := $5::TEXT[]\n)",
+        "options": {
+          "queryReplacement": "={{ [$json.prop_id, JSON.stringify($json.datos_llm), $json.tokens_usados, $json.requiere_revision, $json.errores.length > 0 ? '{' + $json.errores.map(e => '\"' + e + '\"').join(',') + '}' : null] }}"
+        }
+      },
+      "id": "e1-register",
+      "name": "Registrar Enrichment",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1680, 176],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "registrar_enrichment_alquiler() - guarda LLM output"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "e1-wait-llm",
+      "name": "Wait 2s API",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1920, 176],
+      "webhookId": "e1-wait-llm-webhook",
+      "notes": "Rate limit entre propiedades"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === RESUMEN ENRICHMENT LLM ===\nconst items = $('Registrar Enrichment').all();\n\nlet success = 0;\nlet errors = 0;\nlet tokens_total = 0;\n\nfor (const item of items) {\n  const result = item.json;\n  if (result && !result.error) {\n    success++;\n  } else {\n    errors++;\n  }\n}\n\nconst parsedItems = $('Parsear y Validar').all();\nfor (const item of parsedItems) {\n  tokens_total += item.json?.tokens_usados || 0;\n}\n\nconst costo_estimado = (tokens_total / 1000000) * 1.0; // ~$1/M tokens Haiku\n\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  workflow: 'Enrichment LLM Alquiler',\n  version: '1.0.0',\n  modelo: 'claude-haiku-4.5',\n  total_procesadas: items.length,\n  success: success,\n  errors: errors,\n  tokens_total: tokens_total,\n  costo_estimado_usd: costo_estimado.toFixed(4),\n  status: errors === 0 ? 'completado' : 'completado_con_errores'\n};\n\nconsole.log('=== ENRICHMENT LLM ALQUILER COMPLETADO ===');\nconsole.log(JSON.stringify(resumen, null, 2));\n\nreturn [{ json: resumen }];"
+      },
+      "id": "e1-summary",
+      "name": "Resumen Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2160, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { timestamp: new Date().toISOString(), message: 'No hay alquileres pendientes de enrichment', status: 'sin_pendientes' } }];"
+      },
+      "id": "e1-empty",
+      "name": "Sin Pendientes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === FALLBACK: Firecrawl falló ===\nconst prop_id = $('Loop Propiedades').first().json.id;\nconsole.log(`WARN: Firecrawl falló para prop ${prop_id}, saltando enrichment`);\nreturn [{ json: { skip: true, prop_id: prop_id, error: 'firecrawl_failed' } }];"
+      },
+      "id": "e1-fallback",
+      "name": "Log Firecrawl Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 480],
+      "notes": "Fallback si Firecrawl o prompt falla"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger 2:30 AM": {
+      "main": [[{"node": "Query Alquileres Sin Enrichment", "type": "main", "index": 0}]]
+    },
+    "Query Alquileres Sin Enrichment": {
+      "main": [[{"node": "Hay Pendientes?", "type": "main", "index": 0}]]
+    },
+    "Hay Pendientes?": {
+      "main": [
+        [{"node": "Loop Propiedades", "type": "main", "index": 0}],
+        [{"node": "Sin Pendientes", "type": "main", "index": 0}]
+      ]
+    },
+    "Loop Propiedades": {
+      "main": [
+        [{"node": "Resumen Final", "type": "main", "index": 0}],
+        [{"node": "Firecrawl Scrape", "type": "main", "index": 0}]
+      ]
+    },
+    "Firecrawl Scrape": {
+      "main": [[{"node": "Wait 3s", "type": "main", "index": 0}]]
+    },
+    "Wait 3s": {
+      "main": [[{"node": "Construir Prompt", "type": "main", "index": 0}]]
+    },
+    "Construir Prompt": {
+      "main": [[{"node": "IF Prompt OK", "type": "main", "index": 0}]]
+    },
+    "IF Prompt OK": {
+      "main": [
+        [{"node": "Anthropic Haiku", "type": "main", "index": 0}],
+        [{"node": "Log Firecrawl Error", "type": "main", "index": 0}]
+      ]
+    },
+    "Anthropic Haiku": {
+      "main": [[{"node": "Parsear y Validar", "type": "main", "index": 0}]]
+    },
+    "Parsear y Validar": {
+      "main": [[{"node": "Registrar Enrichment", "type": "main", "index": 0}]]
+    },
+    "Registrar Enrichment": {
+      "main": [[{"node": "Wait 2s API", "type": "main", "index": 0}]]
+    },
+    "Wait 2s API": {
+      "main": [[{"node": "Loop Propiedades", "type": "main", "index": 0}]]
+    },
+    "Log Firecrawl Error": {
+      "main": [[{"node": "Loop Propiedades", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "America/La_Paz",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
