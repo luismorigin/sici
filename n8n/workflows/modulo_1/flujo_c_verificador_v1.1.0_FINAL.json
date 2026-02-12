@@ -24,7 +24,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT \n    id,\n    url,\n    fuente,\n    codigo_propiedad,\n    status,\n    primera_ausencia_at,\n    EXTRACT(DAY FROM NOW() - primera_ausencia_at)::INTEGER as dias_desde_ausencia\nFROM propiedades_v2\nWHERE status = 'inactivo_pending'::estado_propiedad\n  AND fuente = 'remax'  -- ✅ SOLO REMAX (C21 no confiable)\nORDER BY primera_ausencia_at ASC\nLIMIT 100;",
+        "query": "SELECT \n    id,\n    url,\n    fuente,\n    codigo_propiedad,\n    status,\n    primera_ausencia_at,\n    EXTRACT(DAY FROM NOW() - primera_ausencia_at)::INTEGER as dias_desde_ausencia\nFROM propiedades_v2\nWHERE status = 'inactivo_pending'::estado_propiedad\n  AND fuente = 'remax'  -- ✅ SOLO REMAX (C21 no confiable)\n  AND tipo_operacion = 'venta'  -- ✅ No tocar alquileres\nORDER BY primera_ausencia_at ASC\nLIMIT 100;",
         "options": {}
       },
       "id": "385545db-6f02-4069-bc42-cec17c6c5fc4",
