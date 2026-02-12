@@ -76,6 +76,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 | Spec Matching | `docs/modulo_2/MATCHING_NOCTURNO_SPEC.md` |
 | Spec Auditoría | `docs/modulo_2/AUDITORIA_DIARIA_SPEC.md` |
 | Spec Tracking | `docs/modulo_2/WORKFLOW_TRACKING_SPEC.md` |
+| **Investment Snapshots** | `docs/modulo_2/MARKET_INVESTMENT_SNAPSHOTS.md` |
 | Spec TC Dinámico | `docs/modulo_2/TC_DINAMICO_BINANCE_SPEC.md` |
 | Knowledge Graph Plan | `docs/planning/KNOWLEDGE_GRAPH_VALIDATED_PLAN.md` |
 | Knowledge Graph Design | `docs/planning/SICI_KNOWLEDGE_GRAPH_DESIGN.md` |
@@ -403,6 +404,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 137 | registrar_enrichment_alquiler | **NUEVA** función enrichment LLM alquiler | Pendiente deploy |
 | 138 | merge_alquiler | **NUEVA** merge enrichment-first, sin TC paralelo | Pendiente deploy |
 | 139 | reactivar_alquileres_existentes | Reactivar 61 alquileres existentes | Pendiente deploy |
+| 140 | market_absorption_snapshots | Tabla + función snapshot inversión mercado (absorción, precios, renta, ROI) | ✅ |
 
 ## Repo Legacy
 

@@ -198,6 +198,25 @@
         }
       },
       "notes": "Registrar ejecución del workflow de auditoría"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM snapshot_absorcion_mercado();",
+        "options": {}
+      },
+      "id": "pg-snapshot-absorcion",
+      "name": "PG: Snapshot Absorción Mercado",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1540, 600],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase SICI"
+        }
+      },
+      "notes": "Snapshot diario de absorción por tipología (migración 140)"
     }
   ],
   "connections": {
@@ -293,6 +312,11 @@
           },
           {
             "node": "PG: Registrar Ejecución",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PG: Snapshot Absorción Mercado",
             "type": "main",
             "index": 0
           }
