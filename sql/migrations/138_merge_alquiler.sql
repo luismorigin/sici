@@ -197,14 +197,14 @@ BEGIN
                 WHEN _is_campo_bloqueado(v_candados, 'deposito_meses') THEN v_rec.col_deposito
                 WHEN (v_enrichment->'llm_output'->>'deposito_meses') IS NOT NULL
                     AND (v_enrichment->'llm_output'->>'deposito_meses') != 'null'
-                    THEN (v_enrichment->'llm_output'->>'deposito_meses')::INTEGER
+                    THEN ROUND((v_enrichment->'llm_output'->>'deposito_meses')::NUMERIC)::INTEGER
                 ELSE v_rec.col_deposito
             END,
             contrato_minimo_meses = CASE
                 WHEN _is_campo_bloqueado(v_candados, 'contrato_minimo_meses') THEN v_rec.col_contrato
                 WHEN (v_enrichment->'llm_output'->>'contrato_minimo_meses') IS NOT NULL
                     AND (v_enrichment->'llm_output'->>'contrato_minimo_meses') != 'null'
-                    THEN (v_enrichment->'llm_output'->>'contrato_minimo_meses')::INTEGER
+                    THEN ROUND((v_enrichment->'llm_output'->>'contrato_minimo_meses')::NUMERIC)::INTEGER
                 ELSE v_rec.col_contrato
             END,
             monto_expensas_bob = CASE
@@ -218,7 +218,7 @@ BEGIN
                 WHEN _is_campo_bloqueado(v_candados, 'piso') THEN v_rec.col_piso
                 WHEN (v_enrichment->'llm_output'->>'piso') IS NOT NULL
                     AND (v_enrichment->'llm_output'->>'piso') != 'null'
-                    THEN (v_enrichment->'llm_output'->>'piso')::INTEGER
+                    THEN ROUND((v_enrichment->'llm_output'->>'piso')::NUMERIC)::INTEGER
                 ELSE v_rec.col_piso
             END,
             baulera = CASE
