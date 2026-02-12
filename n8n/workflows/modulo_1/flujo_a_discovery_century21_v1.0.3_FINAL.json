@@ -147,7 +147,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, url, status FROM propiedades_v2 WHERE fuente = 'century21' AND status NOT IN ('inactivo_confirmed')",
+        "query": "SELECT id, url, status FROM propiedades_v2 WHERE fuente = 'century21' AND status NOT IN ('inactivo_confirmed') AND tipo_operacion = 'venta'",
         "options": {}
       },
       "id": "fcac8a31-58a0-4008-a305-c4c974bfafc5",
