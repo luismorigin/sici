@@ -214,7 +214,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE propiedades_v2 SET status = 'inactivo_pending', fecha_discovery = NOW() WHERE id = $1 AND tipo_operacion = 'alquiler' AND status NOT IN ('inactivo_pending', 'inactivo_confirmed')",
+        "query": "UPDATE propiedades_v2 SET status = 'inactivo_pending', fecha_discovery = NOW(), primera_ausencia_at = COALESCE(primera_ausencia_at, NOW()) WHERE id = $1 AND tipo_operacion = 'alquiler' AND status NOT IN ('inactivo_pending', 'inactivo_confirmed')",
         "options": { "queryReplacement": "={{ [$json.id] }}" }
       },
       "id": "c1-mark-absent",
