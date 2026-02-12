@@ -170,7 +170,7 @@ BEGIN
         -- ===========================
         UPDATE propiedades_v2
         SET
-            -- Campos resueltos
+            -- Campos resueltos (columnas directas)
             precio_mensual_bob = v_precio_bob,
             precio_mensual_usd = v_precio_usd,
             precio_usd = v_precio_usd,  -- compatibilidad con columna legacy
@@ -180,14 +180,76 @@ BEGIN
             estacionamientos = v_estac,
             nombre_edificio = v_nombre_edificio,
 
-            -- Merge metadata en datos_json (FIX BUG-01: merge, no sobrescribir)
-            datos_json = COALESCE(datos_json, '{}'::jsonb) || jsonb_build_object(
-                'merge_alquiler', jsonb_build_object(
-                    'fuentes', v_fuentes,
-                    'timestamp', NOW(),
-                    'version', '1.0.0'
-                )
-            ),
+            -- Columnas directas desde enrichment LLM (si no bloqueadas)
+            amoblado = CASE
+                WHEN _is_campo_bloqueado(v_candados, 'amoblado') THEN v_rec.col_amoblado
+                WHEN (v_enrichment->'llm_output'->>'amoblado') IS NOT NULL THEN v_enrichment->'llm_output'->>'amoblado'
+                ELSE v_rec.col_amoblado
+            END,
+            acepta_mascotas = CASE
+                WHEN _is_campo_bloqueado(v_candados, 'acepta_mascotas') THEN v_rec.col_mascotas
+                WHEN (v_enrichment->'llm_output'->'acepta_mascotas') IS NOT NULL
+                    AND (v_enrichment->'llm_output'->>'acepta_mascotas') != 'null'
+                    THEN (v_enrichment->'llm_output'->>'acepta_mascotas')::BOOLEAN
+                ELSE v_rec.col_mascotas
+            END,
+            deposito_meses = CASE
+                WHEN _is_campo_bloqueado(v_candados, 'deposito_meses') THEN v_rec.col_deposito
+                WHEN (v_enrichment->'llm_output'->>'deposito_meses') IS NOT NULL
+                    AND (v_enrichment->'llm_output'->>'deposito_meses') != 'null'
+                    THEN (v_enrichment->'llm_output'->>'deposito_meses')::INTEGER
+                ELSE v_rec.col_deposito
+            END,
+            contrato_minimo_meses = CASE
+                WHEN _is_campo_bloqueado(v_candados, 'contrato_minimo_meses') THEN v_rec.col_contrato
+                WHEN (v_enrichment->'llm_output'->>'contrato_minimo_meses') IS NOT NULL
+                    AND (v_enrichment->'llm_output'->>'contrato_minimo_meses') != 'null'
+                    THEN (v_enrichment->'llm_output'->>'contrato_minimo_meses')::INTEGER
+                ELSE v_rec.col_contrato
+            END,
+            monto_expensas_bob = CASE
+                WHEN _is_campo_bloqueado(v_candados, 'monto_expensas_bob') THEN v_rec.col_expensas
+                WHEN (v_enrichment->'llm_output'->>'expensas_bs') IS NOT NULL
+                    AND (v_enrichment->'llm_output'->>'expensas_bs') != 'null'
+                    THEN (v_enrichment->'llm_output'->>'expensas_bs')::NUMERIC
+                ELSE v_rec.col_expensas
+            END,
+            piso = CASE
+                WHEN _is_campo_bloqueado(v_candados, 'piso') THEN v_rec.col_piso
+                WHEN (v_enrichment->'llm_output'->>'piso') IS NOT NULL
+                    AND (v_enrichment->'llm_output'->>'piso') != 'null'
+                    THEN (v_enrichment->'llm_output'->>'piso')::INTEGER
+                ELSE v_rec.col_piso
+            END,
+            baulera = CASE
+                WHEN _is_campo_bloqueado(v_candados, 'baulera') THEN v_rec.col_baulera
+                WHEN (v_enrichment->'llm_output'->>'baulera') IS NOT NULL
+                    AND (v_enrichment->'llm_output'->>'baulera') != 'null'
+                    THEN (v_enrichment->'llm_output'->>'baulera')::BOOLEAN
+                ELSE v_rec.col_baulera
+            END,
+
+            -- Campos LLM a datos_json (descripcion, amenities, equipamiento, servicios)
+            datos_json = COALESCE(datos_json, '{}'::jsonb)
+                || CASE WHEN (v_enrichment->'llm_output'->>'descripcion_limpia') IS NOT NULL
+                    THEN jsonb_build_object('descripcion_limpia', v_enrichment->'llm_output'->>'descripcion_limpia')
+                    ELSE '{}'::jsonb END
+                || CASE WHEN (v_enrichment->'llm_output'->'amenities_confirmados') IS NOT NULL
+                    THEN jsonb_build_object('amenities_confirmados', v_enrichment->'llm_output'->'amenities_confirmados')
+                    ELSE '{}'::jsonb END
+                || CASE WHEN (v_enrichment->'llm_output'->'equipamiento_detectado') IS NOT NULL
+                    THEN jsonb_build_object('equipamiento_detectado', v_enrichment->'llm_output'->'equipamiento_detectado')
+                    ELSE '{}'::jsonb END
+                || CASE WHEN (v_enrichment->'llm_output'->'servicios_incluidos') IS NOT NULL
+                    THEN jsonb_build_object('servicios_incluidos', v_enrichment->'llm_output'->'servicios_incluidos')
+                    ELSE '{}'::jsonb END
+                || jsonb_build_object(
+                    'merge_alquiler', jsonb_build_object(
+                        'fuentes', v_fuentes,
+                        'timestamp', NOW(),
+                        'version', '1.1.0'
+                    )
+                ),
 
             -- Merge audit trail
             cambios_merge = jsonb_build_object(

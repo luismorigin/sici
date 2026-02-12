@@ -22,7 +22,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, url, status, precio_mensual_bob, area_total_m2, dormitorios FROM propiedades_v2 WHERE tipo_operacion = 'alquiler' AND status IN ('nueva', 'actualizado') ORDER BY fecha_discovery ASC",
+        "query": "SELECT id, url, status, precio_mensual_bob, area_total_m2, dormitorios FROM propiedades_v2 WHERE tipo_operacion = 'alquiler' AND status IN ('nueva', 'actualizado') AND datos_json_enrichment IS NOT NULL ORDER BY fecha_discovery ASC",
         "options": {}
       },
       "id": "m1-query",
@@ -44,16 +44,16 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "loose"
           },
           "conditions": [
             {
               "id": "has-items",
               "leftValue": "={{ $json.id }}",
-              "rightValue": "",
+              "rightValue": "0",
               "operator": {
-                "type": "string",
-                "operation": "isNotEmpty"
+                "type": "number",
+                "operation": "gt"
               }
             }
           ],
@@ -103,7 +103,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// === RESUMEN MERGE ALQUILER ===\nconst items = $('Ejecutar Merge').all();\n\nlet merged = 0;\nlet errors = 0;\nconst resultados = [];\n\nfor (const item of items) {\n  const data = item.json;\n  if (data.accion === 'merged') {\n    merged++;\n  } else {\n    errors++;\n  }\n  resultados.push({\n    id: data.id,\n    accion: data.accion,\n    mensaje: data.mensaje\n  });\n}\n\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  workflow: 'Merge Alquiler',\n  version: '1.0.0',\n  total_procesadas: items.length,\n  merged: merged,\n  errors: errors,\n  resultados: resultados,\n  status: errors === 0 ? 'completado' : 'completado_con_errores'\n};\n\nconsole.log('=== MERGE ALQUILER COMPLETADO ===');\nconsole.log(JSON.stringify(resumen, null, 2));\n\nreturn [{ json: resumen }];"
+        "jsCode": "// === RESUMEN MERGE ALQUILER ===\n// Split In Batches no acumula items en la salida 'done'.\n// Solución: simplemente reportar que terminó.\n// Los resultados reales se verifican en la BD.\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  workflow: 'Merge Alquiler',\n  version: '1.0.2',\n  message: 'Merge completado. Verificar resultados en BD.',\n  status: 'completado'\n};\n\nreturn [{ json: resumen }];"
       },
       "id": "m1-summary",
       "name": "Resumen Final",

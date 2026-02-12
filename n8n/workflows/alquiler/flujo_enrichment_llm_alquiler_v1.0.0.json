@@ -22,7 +22,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, url, fuente, codigo_propiedad, precio_mensual_bob, precio_usd, area_total_m2, dormitorios, banos, zona, tipo_propiedad_original, datos_json_discovery FROM propiedades_v2 WHERE tipo_operacion = 'alquiler' AND status IN ('nueva', 'actualizado') AND fecha_enrichment IS NULL ORDER BY fecha_discovery ASC LIMIT 20",
+        "query": "SELECT id AS prop_id, url, fuente, codigo_propiedad, precio_mensual_bob, precio_usd, area_total_m2, dormitorios, banos, zona, tipo_propiedad_original FROM propiedades_v2 WHERE tipo_operacion = 'alquiler' AND status IN ('nueva', 'actualizado') AND fecha_enrichment IS NULL AND fuente = 'century21' ORDER BY fecha_discovery DESC LIMIT 20",
         "options": {}
       },
       "id": "e1-query",
@@ -45,16 +45,16 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "loose"
           },
           "conditions": [
             {
               "id": "has-items",
-              "leftValue": "={{ $json.id }}",
-              "rightValue": "",
+              "leftValue": "={{ $json.prop_id }}",
+              "rightValue": 0,
               "operator": {
-                "type": "string",
-                "operation": "isNotEmpty"
+                "type": "number",
+                "operation": "gt"
               }
             }
           ],
@@ -83,23 +83,13 @@
     },
     {
       "parameters": {
+        "method": "POST",
         "url": "https://api.firecrawl.dev/v1/scrape",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "firecrawlApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ url: $json.url, formats: ['markdown'], onlyMainContent: true, waitFor: 3000 }) }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer {{ $env.FIRECRAWL_API_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "jsonBody": "={{ JSON.stringify({ url: $json.url, formats: ['markdown', 'rawHtml'], onlyMainContent: true, waitFor: 3000 }) }}",
         "options": {
           "timeout": 30000
         }
@@ -109,10 +99,17 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [240, 300],
+      "alwaysOutputData": true,
+      "credentials": {
+        "firecrawlApi": {
+          "id": "1txYWUirJjoOvK41",
+          "name": "Firecrawl account"
+        }
+      },
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 5000,
-      "notes": "Scrape HTML → Markdown"
+      "notes": "Scrape HTML → Markdown (credencial n8n)"
     },
     {
       "parameters": {
@@ -128,7 +125,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// === CONSTRUIR PROMPT PARA HAIKU ===\nconst prop = $('Loop Propiedades').first().json;\nconst scrape = $('Firecrawl Scrape').first().json;\n\nconst markdown = scrape?.data?.markdown || scrape?.markdown || '';\n\nif (!markdown || markdown.length < 50) {\n  return [{ json: { skip: true, error: 'Firecrawl no devolvió contenido', prop_id: prop.id } }];\n}\n\n// Truncar a ~3000 chars para Haiku (optimizar tokens)\nconst contenido = markdown.substring(0, 3000);\n\nconst prompt = `Eres un extractor de datos inmobiliarios para Bolivia.\nExtraes datos de páginas web de propiedades en ALQUILER.\nNUNCA inventes datos. Si no aparece en el texto, usa null.\n\nDATOS YA CONOCIDOS (del discovery):\n- URL: ${prop.url}\n- Fuente: ${prop.fuente}\n- Precio discovery: ${prop.precio_mensual_bob ? 'Bs ' + prop.precio_mensual_bob : 'desconocido'}\n- Área: ${prop.area_total_m2 ? prop.area_total_m2 + ' m²' : 'desconocida'}\n- Dormitorios: ${prop.dormitorios || 'desconocido'}\n- Baños: ${prop.banos || 'desconocido'}\n- Zona: ${prop.zona || 'desconocida'}\n\nTEXTO DE LA PÁGINA:\n${contenido}\n\nDevuelve SOLO este JSON (sin explicaciones):\n{\n  \"precio_mensual_bob\": number | null,\n  \"precio_mensual_usd\": number | null,\n  \"expensas_bs\": number | null,\n  \"deposito_meses\": number | null,\n  \"contrato_minimo_meses\": number | null,\n  \"area_total_m2\": number | null,\n  \"dormitorios\": number | null,\n  \"banos\": number | null,\n  \"estacionamientos\": number | null,\n  \"baulera\": boolean | null,\n  \"piso\": number | null,\n  \"amoblado\": \"si\" | \"no\" | \"semi\" | null,\n  \"acepta_mascotas\": boolean | null,\n  \"servicios_incluidos\": string[] | null,\n  \"nombre_edificio\": string | null,\n  \"descripcion_limpia\": string | null,\n  \"amenities_confirmados\": string[] | null,\n  \"equipamiento_detectado\": string[] | null\n}`;\n\nreturn [{\n  json: {\n    prop_id: prop.id,\n    prop_url: prop.url,\n    prompt: prompt,\n    markdown_length: markdown.length\n  }\n}];"
+        "jsCode": "// === CONSTRUIR PROMPT PARA HAIKU ===\n// Híbrido: Remax usa data-page del HTML, C21 usa markdown\nconst prop = $('Loop Propiedades').first().json;\nconst scrape = $('Firecrawl Scrape').first().json;\n\nlet contenido = '';\nlet metodo = 'markdown';\n\nif (prop.fuente === 'remax') {\n  // === REMAX: parsear data-page del HTML ===\n  const html = scrape?.data?.rawHtml || scrape?.rawHtml || '';\n  let titulo = '';\n  let descripcion = '';\n  \n  if (html && html.length > 500) {\n    try {\n      const match = html.match(/data-page=\\\"([^\\\"]*?)\\\"/i);\n      if (match && match[1]) {\n        const jsonString = match[1]\n          .replace(/&quot;/g, '\"')\n          .replace(/&amp;/g, '&')\n          .replace(/&lt;/g, '<')\n          .replace(/&gt;/g, '>');\n        const data = JSON.parse(jsonString);\n        const listing = data.props?.listing || data.props?.property || null;\n        if (listing) {\n          titulo = listing.title || '';\n          descripcion = listing.description_website || listing.description || '';\n          metodo = 'data-page';\n        }\n      }\n    } catch (e) {\n      console.log('Error parseando data-page: ' + e.message);\n    }\n  }\n  \n  if (!descripcion || descripcion.length < 20) {\n    // Fallback a markdown si data-page falla\n    const md = scrape?.data?.markdown || scrape?.markdown || '';\n    if (md && md.length >= 50) {\n      contenido = md.substring(0, 3000);\n      metodo = 'markdown_fallback';\n    } else {\n      return [{ json: { skip: true, error: 'Remax: no data-page ni markdown', prop_id: prop.prop_id } }];\n    }\n  } else {\n    contenido = (titulo ? 'TÍTULO: ' + titulo + '\\n\\n' : '') + 'DESCRIPCIÓN:\\n' + descripcion.substring(0, 3000);\n  }\n} else {\n  // === C21: usar markdown como siempre ===\n  const markdown = scrape?.data?.markdown || scrape?.markdown || '';\n  if (!markdown || markdown.length < 50) {\n    return [{ json: { skip: true, error: 'Firecrawl no devolvió contenido', prop_id: prop.prop_id } }];\n  }\n  contenido = markdown.substring(0, 3000);\n}\n\nconst prompt = `Eres un extractor de datos inmobiliarios para Bolivia.\nExtraes datos de páginas web de propiedades en ALQUILER.\nNUNCA inventes datos. Si no aparece en el texto, usa null.\n\nDATOS YA CONOCIDOS (del discovery):\n- URL: ${prop.url}\n- Fuente: ${prop.fuente}\n- Precio discovery: ${prop.precio_mensual_bob ? 'Bs ' + prop.precio_mensual_bob : 'desconocido'}\n- Área: ${prop.area_total_m2 ? prop.area_total_m2 + ' m²' : 'desconocida'}\n- Dormitorios: ${prop.dormitorios || 'desconocido'}\n- Baños: ${prop.banos || 'desconocido'}\n- Zona: ${prop.zona || 'desconocida'}\n\nTEXTO DE LA PÁGINA:\n${contenido}\n\nDevuelve SOLO este JSON (sin explicaciones):\n{\n  \"precio_mensual_bob\": number | null,\n  \"precio_mensual_usd\": number | null,\n  \"expensas_bs\": number | null,\n  \"deposito_meses\": number | null,\n  \"contrato_minimo_meses\": number | null,\n  \"area_total_m2\": number | null,\n  \"dormitorios\": number | null,\n  \"banos\": number | null,\n  \"estacionamientos\": number | null,\n  \"baulera\": boolean | null,\n  \"piso\": number | null,\n  \"amoblado\": \"si\" | \"no\" | \"semi\" | null,\n  \"acepta_mascotas\": boolean | null,\n  \"servicios_incluidos\": string[] | null,\n  \"nombre_edificio\": string | null,\n  \"descripcion_limpia\": string | null,\n  \"amenities_confirmados\": string[] | null,\n  \"equipamiento_detectado\": string[] | null\n}`;\n\nreturn [{\n  json: {\n    prop_id: prop.prop_id,\n    prop_url: prop.url,\n    fuente: prop.fuente,\n    metodo_extraccion: metodo,\n    prompt: prompt,\n    contenido_length: contenido.length\n  }\n}];"
       },
       "id": "e1-build-prompt",
       "name": "Construir Prompt",
@@ -143,7 +140,7 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "loose"
           },
           "conditions": [
             {
@@ -168,6 +165,7 @@
     },
     {
       "parameters": {
+        "method": "POST",
         "url": "https://api.anthropic.com/v1/messages",
         "sendBody": true,
         "specifyBody": "json",
@@ -177,7 +175,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "{{ $env.ANTHROPIC_API_KEY }}"
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -249,13 +247,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// === RESUMEN ENRICHMENT LLM ===\nconst items = $('Registrar Enrichment').all();\n\nlet success = 0;\nlet errors = 0;\nlet tokens_total = 0;\n\nfor (const item of items) {\n  const result = item.json;\n  if (result && !result.error) {\n    success++;\n  } else {\n    errors++;\n  }\n}\n\nconst parsedItems = $('Parsear y Validar').all();\nfor (const item of parsedItems) {\n  tokens_total += item.json?.tokens_usados || 0;\n}\n\nconst costo_estimado = (tokens_total / 1000000) * 1.0; // ~$1/M tokens Haiku\n\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  workflow: 'Enrichment LLM Alquiler',\n  version: '1.0.0',\n  modelo: 'claude-haiku-4.5',\n  total_procesadas: items.length,\n  success: success,\n  errors: errors,\n  tokens_total: tokens_total,\n  costo_estimado_usd: costo_estimado.toFixed(4),\n  status: errors === 0 ? 'completado' : 'completado_con_errores'\n};\n\nconsole.log('=== ENRICHMENT LLM ALQUILER COMPLETADO ===');\nconsole.log(JSON.stringify(resumen, null, 2));\n\nreturn [{ json: resumen }];"
+        "jsCode": "// === RESUMEN ENRICHMENT LLM ===\nconst lote = $('Preparar IDs').first().json;\nconst stats = $('Stats desde BD').first().json;\n\nreturn [{ json: {\n  timestamp: new Date().toISOString(),\n  workflow: 'Enrichment LLM Alquiler',\n  version: '1.0.0',\n  modelo: 'claude-haiku-4.5',\n  total_lote: lote.total_lote,\n  total_enriquecidas: parseInt(stats.procesadas),\n  tokens_total: parseInt(stats.tokens_total),\n  costo_usd_haiku: parseFloat(stats.costo_usd_haiku),\n  calidad: {\n    con_edificio: parseInt(stats.con_edificio),\n    con_amoblado: parseInt(stats.con_amoblado),\n    con_amenities: parseInt(stats.con_amenities),\n    con_descripcion: parseInt(stats.con_descripcion)\n  },\n  status: 'completado'\n}}];"
       },
       "id": "e1-summary",
       "name": "Resumen Final",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2160, 288]
+      "position": [2400, 288]
     },
     {
       "parameters": {
@@ -269,7 +267,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// === FALLBACK: Firecrawl falló ===\nconst prop_id = $('Loop Propiedades').first().json.id;\nconsole.log(`WARN: Firecrawl falló para prop ${prop_id}, saltando enrichment`);\nreturn [{ json: { skip: true, prop_id: prop_id, error: 'firecrawl_failed' } }];"
+        "jsCode": "// === FALLBACK: Firecrawl falló ===\nconst prop_id = $('Loop Propiedades').first().json.prop_id;\nconsole.log(`WARN: Firecrawl falló para prop ${prop_id}, saltando enrichment`);\nreturn [{ json: { skip: true, prop_id: prop_id, error: 'firecrawl_failed' } }];"
       },
       "id": "e1-fallback",
       "name": "Log Firecrawl Error",
@@ -277,6 +275,34 @@
       "typeVersion": 2,
       "position": [1200, 480],
       "notes": "Fallback si Firecrawl o prompt falla"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PREPARAR QUERY DE STATS ===\nconst lote = $('Query Alquileres Sin Enrichment').all();\nconst ids = lote.map(item => item.json.prop_id).filter(id => id);\nreturn [{ json: { ids: ids, total_lote: ids.length } }];"
+      },
+      "id": "e1-prep-stats",
+      "name": "Preparar IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1920, 288]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COUNT(*) as procesadas, COUNT(*) FILTER (WHERE fecha_enrichment IS NOT NULL) as con_enrichment, COALESCE(SUM((datos_json_enrichment->'metadata'->>'tokens')::int), 0) as tokens_total, ROUND(COALESCE(SUM((datos_json_enrichment->'metadata'->>'tokens')::int), 0) / 1000000.0 * 1.0, 4) as costo_usd_haiku, COUNT(*) FILTER (WHERE datos_json_enrichment->'llm_output'->>'nombre_edificio' IS NOT NULL) as con_edificio, COUNT(*) FILTER (WHERE datos_json_enrichment->'llm_output'->>'amoblado' IS NOT NULL) as con_amoblado, COUNT(*) FILTER (WHERE datos_json_enrichment->'llm_output'->>'amenities_confirmados' IS NOT NULL) as con_amenities, COUNT(*) FILTER (WHERE datos_json_enrichment->'llm_output'->>'descripcion_limpia' IS NOT NULL) as con_descripcion FROM propiedades_v2 WHERE tipo_operacion = 'alquiler' AND fecha_enrichment IS NOT NULL",
+        "options": {}
+      },
+      "id": "e1-stats-bd",
+      "name": "Stats desde BD",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [2160, 288],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -295,9 +321,15 @@
     },
     "Loop Propiedades": {
       "main": [
-        [{"node": "Resumen Final", "type": "main", "index": 0}],
+        [{"node": "Preparar IDs", "type": "main", "index": 0}],
         [{"node": "Firecrawl Scrape", "type": "main", "index": 0}]
       ]
+    },
+    "Preparar IDs": {
+      "main": [[{"node": "Stats desde BD", "type": "main", "index": 0}]]
+    },
+    "Stats desde BD": {
+      "main": [[{"node": "Resumen Final", "type": "main", "index": 0}]]
     },
     "Firecrawl Scrape": {
       "main": [[{"node": "Wait 3s", "type": "main", "index": 0}]]
