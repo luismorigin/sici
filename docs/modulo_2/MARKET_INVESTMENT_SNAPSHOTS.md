@@ -125,11 +125,23 @@ Schedule 9 AM
 ## Supuestos y limitaciones
 
 1. **"Absorbida" ≠ vendida.** Significa que desapareció del portal. Puede ser: vendida, baja temporal, cambio de agente, expiración de anuncio.
-2. **Ventana de 30 días rolling.** Cada día recalcula los últimos 30 días. Las primeras semanas pueden tener datos del backlog retroactivo (primera_ausencia_at seteada manualmente el 12 Feb 2026).
+2. **Ventana de 30 días rolling.** Cada día recalcula los últimos 30 días.
 3. **Solo 2 fuentes.** Century 21 + Remax. No cubre el mercado total de Equipetrol.
 4. **Precios publicados.** No son precios de cierre de venta.
 5. **ROI bruto.** No descuenta vacancia, mantenimiento, comisiones ni impuestos.
 6. **Datos se normalizan solos.** A medida que pase el tiempo y se acumule historial limpio, los datos retroactivos salen de la ventana de 30 días.
+
+## Contaminación por backlog (Feb 2026)
+
+**Ver detalle completo:** `docs/modulo_2/BITACORA_SNAPSHOTS_FEB_2026.md`
+
+El 12 Feb 2026 se seteó `primera_ausencia_at` retroactivamente para ~215 propiedades (167 ventas + 48 alquileres). Esto infla las métricas de absorción en los primeros snapshots.
+
+| Métrica | Confiable desde |
+|---------|----------------|
+| Precios, inventario, ROI | 12 Feb 2026 (día 1) |
+| Absorción venta | ~17 Feb 2026 |
+| Absorción alquiler | ~14 Mar 2026 |
 
 ## Permisos
 

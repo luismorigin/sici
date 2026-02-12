@@ -3,8 +3,8 @@
 ## Quick Context
 
 **SICI** = Sistema Inteligente de Captura Inmobiliaria (Bolivia)
-- Pipeline nocturno: Discovery → Enrichment → Merge → Matching
-- Tabla principal: `propiedades_v2` (438 registros)
+- Pipeline nocturno: Discovery → Enrichment → Merge → Matching (venta + alquiler)
+- Tabla principal: `propiedades_v2` (775 registros: ~555 venta, ~220 alquiler)
 - Tabla proyectos: `proyectos_master` (187 activos, 98.9% con GPS)
 - Tracking: `workflow_executions` (health check)
 - Tasa de matching: **100%** (312/312 completadas) ✅
@@ -68,6 +68,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 | **Investigación Alquileres** | `docs/planning/ALQUILERES_INVESTIGACION.md` |
 | **Prompt LLM Alquiler** | `docs/alquiler/LLM_ENRICHMENT_PROMPT.md` |
 | **Roadmap Alquiler** | `docs/alquiler/ROADMAP_IMPLEMENTACION.md` |
+| **Pipeline Alquiler Canonical** | `docs/canonical/pipeline_alquiler_canonical.md` |
 | Plan activo | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
@@ -77,6 +78,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 | Spec Auditoría | `docs/modulo_2/AUDITORIA_DIARIA_SPEC.md` |
 | Spec Tracking | `docs/modulo_2/WORKFLOW_TRACKING_SPEC.md` |
 | **Investment Snapshots** | `docs/modulo_2/MARKET_INVESTMENT_SNAPSHOTS.md` |
+| **Bitácora Snapshots Feb 2026** | `docs/modulo_2/BITACORA_SNAPSHOTS_FEB_2026.md` |
 | Spec TC Dinámico | `docs/modulo_2/TC_DINAMICO_BINANCE_SPEC.md` |
 | Knowledge Graph Plan | `docs/planning/KNOWLEDGE_GRAPH_VALIDATED_PLAN.md` |
 | Knowledge Graph Design | `docs/planning/SICI_KNOWLEDGE_GRAPH_DESIGN.md` |
@@ -153,11 +155,12 @@ sici/
 │   ├── merge/         # merge_discovery_enrichment.sql v2.2.0
 │   └── matching/      # Funciones v3.1 (propiedades_v2)
 │   └── alquiler/      # registrar_discovery/enrichment_alquiler, merge_alquiler
-├── sql/migrations/    # 001-139 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Broker B2B, Admin, Landing, PDF, CMA, Alquiler)
+├── sql/migrations/    # 001-140 (FK, microzonas, HITL, tracking, TC, KG, MVP Simón, Amenities, Broker B2B, Admin, Landing, PDF, CMA, Alquiler, Snapshots)
 ├── geodata/           # microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
-│   ├── modulo_1/      # Flujos A, B, C, Merge (producción)
-│   └── modulo_2/      # Matching, Supervisores, Sin Match, Auditoría
+│   ├── modulo_1/      # Flujos A, B, C, Merge (producción - venta)
+│   ├── modulo_2/      # Matching, Supervisores, Sin Match, Auditoría
+│   └── alquiler/      # Discovery C21/Remax, Enrichment, Merge (producción - alquiler)
 └── docs/
     ├── arquitectura/  # SICI_ARQUITECTURA_MAESTRA.md
     ├── canonical/     # Metodología fiduciaria, merge, discovery
@@ -229,8 +232,23 @@ sici/
   - 13 tests unitarios en `sql/tests/test_alquiler_functions.sql`
   - **Principio: CERO cambios a funciones del sistema vivo de venta**
 
+- **Pipeline Alquiler Completo (Fases 1-4):** Publicado 12 Feb 2026
+  - Migraciones 135-139 desplegadas en Supabase
+  - 4 workflows n8n activos: Discovery C21 (2:00 AM), Discovery Remax (2:15 AM), Enrichment LLM (3:00 AM), Merge (4:00 AM)
+  - Flujo C Verificador: universal (venta + alquiler), LIMIT 200, sin filtro tipo_operacion
+  - `registrar_discovery_alquiler()`, `registrar_enrichment_alquiler()`, `merge_alquiler()`
+  - Primera corrida test: 168 completadas, 46 inactivo_confirmed, 6 actualizado
+  - **Nota:** absorción alquiler contaminada por backlog hasta ~14 Mar 2026 (ver bitácora)
+
+- **Market Investment Snapshots (migración 140):** Publicado 12 Feb 2026
+  - Tabla `market_absorption_snapshots` + función `snapshot_absorcion_mercado()`
+  - Cron: 9 AM diario via auditoría n8n
+  - Métricas: absorción, precios, renta, ROI por tipología (0-3 dorms)
+  - **Absorción venta:** limpia ~17 Feb 2026
+  - **Absorción alquiler:** limpia ~14 Mar 2026
+  - **Precios + ROI:** confiables desde día 1
+
 ### ⏳ En Progreso
-- **Pipeline Alquiler Fases 2-4:** Desplegar migraciones + workflows n8n + LLM enrichment
 - **Sistema Broker Fase 5-7:** Portal broker, sistema leads, CMA (pendiente)
 
 ### ❌ Pendiente
@@ -399,11 +417,11 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 132 | fix_zona_sky_eclipse | Fix zona Sky Eclipse | ✅ |
 | 133 | filtrar_300_dias_market | Filtrar >300 días market | ✅ |
 | 134 | asignar_microzona_98_props | Asignar microzona 98 props | ✅ |
-| 135 | rental_columns | 8 columnas alquiler + 5 CHECK + 3 índices | Pendiente deploy |
-| 136 | registrar_discovery_alquiler | **NUEVA** función discovery alquiler | Pendiente deploy |
-| 137 | registrar_enrichment_alquiler | **NUEVA** función enrichment LLM alquiler | Pendiente deploy |
-| 138 | merge_alquiler | **NUEVA** merge enrichment-first, sin TC paralelo | Pendiente deploy |
-| 139 | reactivar_alquileres_existentes | Reactivar 61 alquileres existentes | Pendiente deploy |
+| 135 | rental_columns | 8 columnas alquiler + 5 CHECK + 3 índices | ✅ |
+| 136 | registrar_discovery_alquiler | Función discovery alquiler (UPSERT independiente) | ✅ |
+| 137 | registrar_enrichment_alquiler | Función enrichment LLM alquiler con candados | ✅ |
+| 138 | merge_alquiler | Merge enrichment-first, sin TC paralelo | ✅ |
+| 139 | reactivar_alquileres_existentes | Reactivar 61 alquileres existentes → completado | ✅ |
 | 140 | market_absorption_snapshots | Tabla + función snapshot inversión mercado (absorción, precios, renta, ROI) | ✅ |
 
 ## Repo Legacy

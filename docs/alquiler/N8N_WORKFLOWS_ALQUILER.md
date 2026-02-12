@@ -1,5 +1,7 @@
 # n8n Workflows para Alquileres
 
+**Estado: PUBLICADO** — Activado 12 Feb 2026
+
 ## Arquitectura de Workflows
 
 ```
@@ -7,11 +9,13 @@
 │                   WORKFLOWS ALQUILER                        │
 └─────────────────────────────────────────────────────────────┘
 
-1. flujo_discovery_c21_alquiler.json       (Cron: 2:00 AM)
-2. flujo_discovery_remax_alquiler.json     (Cron: 2:15 AM)
-3. flujo_enrichment_llm_alquiler.json      (Cron: 3:00 AM)
-4. flujo_merge_alquiler.json               (Cron: 4:00 AM)
-5. flujo_validacion_manual_alquiler.json   (Manual)
+1. flujo_discovery_c21_alquiler.json       (Cron: 2:00 AM)    ✅ Activo
+2. flujo_discovery_remax_alquiler.json     (Cron: 2:15 AM)    ✅ Activo
+3. flujo_enrichment_llm_alquiler.json      (Cron: 3:00 AM)    ✅ Activo
+4. flujo_merge_alquiler.json               (Cron: 4:00 AM)    ✅ Activo
+5. Flujo C Verificador (universal)         (Cron existente)   ✅ Cubre alquiler
+
+Nota: Flujo C es UNIVERSAL (venta + alquiler). No hay flujo C separado para alquiler.
 ```
 
 ---
