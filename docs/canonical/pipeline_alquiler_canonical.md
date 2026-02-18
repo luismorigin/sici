@@ -23,8 +23,8 @@ El pipeline de alquiler usa funciones **completamente separadas** (`_alquiler`).
 │  2:00 AM    Discovery C21 ──→ registrar_discovery_alquiler()         │
 │  2:15 AM    Discovery Remax ──→ registrar_discovery_alquiler()       │
 │  3:00 AM    Enrichment LLM ──→ registrar_enrichment_alquiler()      │
-│  4:00 AM    Merge ──→ merge_alquiler()                               │
-│  (cron)     Verificador ──→ Flujo C universal (venta + alquiler)     │
+│  4:00 AM    Merge ──→ merge_alquiler() ──→ trigger matching         │
+│  cada 6h    Verificador ──→ Flujo C Alquiler (separado de venta)    │
 │  9:00 AM    Snapshot ──→ snapshot_absorcion_mercado()                │
 │                                                                       │
 │  Tabla: propiedades_v2 (WHERE tipo_operacion = 'alquiler')           │
@@ -41,7 +41,7 @@ El pipeline de alquiler usa funciones **completamente separadas** (`_alquiler`).
 | TC paralelo | Sí (Binance P2P) | No (alquileres en BOB fijo, TC oficial 6.96) |
 | Score fiduciario | Sí | No (no aplica a rentas) |
 | Precio/m² | Sí | No (irrelevante para alquiler) |
-| Matching a proyectos | Sí (nocturno + HITL) | No (futuro) |
+| Matching a proyectos | Sí (nocturno + HITL) | Sí (trigger en merge + HITL trigram) |
 | Verificación inactivas | Flujo C (universal) | Flujo C (universal) |
 | Tabla | `propiedades_v2` | `propiedades_v2` (misma) |
 
@@ -285,22 +285,26 @@ Para cada campo:
 
 ---
 
-## Fase 4: Verificación (Flujo C Universal)
+## Fase 4: Verificación (Flujo C Alquiler)
 
-El Flujo C es **compartido** entre venta y alquiler. No hay flujo C separado.
+El verificador de alquileres es un **workflow separado** del de ventas.
 
-**Query actual en producción:**
+- **Archivo:** `n8n/workflows/alquiler/flujo_c_verificador_alquiler_v1.0.0.json`
+- **Cron:** Periódico (cada 6h)
+- **Scope:** Solo `tipo_operacion = 'alquiler'`
+
+**Query:**
 ```sql
 SELECT id, url, fuente, codigo_propiedad, status, primera_ausencia_at,
   EXTRACT(DAY FROM NOW() - primera_ausencia_at)::INTEGER as dias_desde_ausencia
 FROM propiedades_v2
 WHERE status = 'inactivo_pending'::estado_propiedad
-  AND fuente = 'remax'
+  AND tipo_operacion = 'alquiler'
 ORDER BY primera_ausencia_at ASC
 LIMIT 200;
 ```
 
-**Nota:** Sin filtro de `tipo_operacion` — procesa venta y alquiler juntos.
+**Nota:** Separado del Flujo C de ventas para evitar que un fallo en uno afecte al otro. Misma lógica de decisión.
 
 ### Lógica de decisión
 
@@ -324,6 +328,58 @@ primera_ausencia_at = COALESCE(primera_ausencia_at, NOW())
 ```
 
 Sin esto, Flujo C no puede calcular `dias_desde_ausencia` y las propiedades quedan en limbo permanente.
+
+---
+
+## Fase 5: Matching a Proyectos
+
+### Sistema: Dictionary Lookup + Trigram (migraciones 141, 142, 146)
+
+El matching de alquileres es **independiente** del de ventas. Opera en 3 niveles:
+
+#### Tier 1 — Exact Lookup (auto-approve, score 98%)
+Busca `nombre_edificio` exacto en `mv_nombre_proyecto_lookup` (vista materializada con 512 variantes de 200 proyectos).
+
+#### Tier 2 — Normalized Lookup (auto-approve, score 90%)
+Normaliza el nombre (`normalizar_nombre_edificio()`: quita prefijos, acentos, sufijos de zona) y busca en la vista. Si encuentra match, agrega el nombre original como alias al proyecto.
+
+#### Tier 2.5 — Trigram Similarity (HITL, score variable)
+Usa `pg_trgm` con `similarity() >= 0.45` entre nombre normalizado y variantes del proyecto. Aplica bonus/penalty GPS:
+- GPS < 100m → +5 puntos
+- GPS 100-500m → neutral
+- GPS > 500m → -10 puntos
+
+**Nunca auto-aprueba.** Siempre va a cola HITL en `/admin/supervisor/matching`.
+
+#### Sin nombre → `sin_match`
+Propiedades sin `nombre_edificio` no generan sugerencias. Quedan para asignación manual.
+
+### Trigger automático
+
+```sql
+trg_alquiler_matching BEFORE UPDATE ON propiedades_v2
+  -- Se dispara cuando merge cambia status a 'completado'
+  -- Solo para tipo_operacion = 'alquiler'
+  -- Llama a matchear_alquiler(NEW.id)
+```
+
+El matching ocurre **automáticamente** durante el merge nocturno via trigger. No necesita workflow n8n separado.
+
+### Batch para backlog
+
+```sql
+SELECT * FROM matching_alquileres_batch();
+-- Procesa todas las propiedades completadas sin proyecto
+-- Solo necesario para backlog inicial o re-proceso
+```
+
+### Migraciones
+
+| # | Archivo | Propósito |
+|---|---------|-----------|
+| 141 | `matching_alquileres_lookup.sql` | Vista materializada, Tiers 1-2, trigger |
+| 142 | `matching_alquileres_ejecutar_batch.sql` | Ejecución batch inicial |
+| 146 | `matching_alquileres_trigram_v2.sql` | Tier 2.5 trigram + GPS bonus/penalty |
 
 ---
 
@@ -422,6 +478,9 @@ El TC usado es el **oficial** (6.96, fijo desde 2011). **No se usa** el TC paral
 | 137 | `registrar_enrichment_alquiler.sql` | Función enrichment LLM con candados |
 | 138 | `merge_alquiler.sql` | Merge enrichment-first, sin TC paralelo |
 | 139 | `reactivar_alquileres_existentes.sql` | Reactivar 61 alquileres previamente excluidos |
+| 141 | `matching_alquileres_lookup.sql` | Matching Tiers 1-2: dictionary lookup + trigger |
+| 142 | `matching_alquileres_ejecutar_batch.sql` | Ejecución batch inicial matching |
+| 146 | `matching_alquileres_trigram_v2.sql` | Tier 2.5: trigram + GPS bonus/penalty |
 
 ---
 
@@ -433,7 +492,7 @@ El TC usado es el **oficial** (6.96, fijo desde 2011). **No se usa** el TC paral
 | Discovery Remax Alquiler | 2:15 AM | ~10 min | `alquiler/flujo_discovery_remax_alquiler_v1.0.0.json` |
 | Enrichment LLM | 3:00 AM | ~30 min | `alquiler/flujo_enrichment_llm_alquiler_v1.0.0.json` |
 | Merge | 4:00 AM | ~2 min | `alquiler/flujo_merge_alquiler_v1.0.0.json` |
-| Verificador | Universal | — | `modulo_1/flujo_c_verificador_v1.1.0_FINAL.json` |
+| Verificador Alquiler | Cada 6h | ~5 min | `alquiler/flujo_c_verificador_alquiler_v1.0.0.json` |
 
 ### Variables de Entorno
 
