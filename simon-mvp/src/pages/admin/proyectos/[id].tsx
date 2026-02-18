@@ -44,6 +44,9 @@ interface ProyectoOriginal {
 interface PropiedadVinculada {
   id: number
   precio_usd: number
+  precio_mensual_usd: number | null
+  precio_mensual_bob: number | null
+  tipo_operacion: string
   dormitorios: number
   area_total_m2: number
   estado_construccion: string | null
@@ -358,13 +361,14 @@ export default function EditarProyecto() {
       // Solo departamentos (área >= 20m²), excluir parqueos/bauleras
       const { data, error } = await supabase
         .from('propiedades_v2')
-        .select('id, precio_usd, dormitorios, area_total_m2, estado_construccion, fecha_publicacion, fecha_discovery, fuente, datos_json')
+        .select('id, precio_usd, precio_mensual_usd, precio_mensual_bob, tipo_operacion, dormitorios, area_total_m2, estado_construccion, fecha_publicacion, fecha_discovery, fuente, datos_json')
         .eq('id_proyecto_master', id)
         .eq('status', 'completado')
         .eq('es_activa', true)  // Solo activas
         .is('duplicado_de', null)  // Excluir duplicados
         .gte('area_total_m2', 20)
-        .order('precio_usd')
+        .order('tipo_operacion', { ascending: true })
+        .order('precio_usd', { ascending: true, nullsFirst: false })
 
       if (!error && data) {
         setPropiedades(data)
@@ -830,15 +834,20 @@ export default function EditarProyecto() {
     return dias > 300
   }
 
+  // Separar propiedades por tipo
+  const propiedadesVenta = propiedades.filter(p => p.tipo_operacion === 'venta')
+  const propiedadesAlquiler = propiedades.filter(p => p.tipo_operacion === 'alquiler')
+
   // Calcular estadísticas del proyecto
   const calcularEstadisticas = () => {
     if (propiedades.length === 0) return null
 
-    const precios = propiedades.map(p => p.precio_usd).filter(p => p > 0)
+    const precios = propiedadesVenta.map(p => p.precio_usd).filter(p => p > 0)
     const areas = propiedades.map(p => p.area_total_m2).filter(a => a > 0)
-    const preciosM2 = propiedades
+    const preciosM2 = propiedadesVenta
       .filter(p => p.precio_usd > 0 && p.area_total_m2 > 0)
       .map(p => p.precio_usd / p.area_total_m2)
+    const preciosMensuales = propiedadesAlquiler.map(p => Number(p.precio_mensual_usd)).filter(p => p > 0)
     const diasMercado = propiedades.map(p => calcularDiasEnMercado(p))
 
     // Distribución por dormitorios
@@ -860,9 +869,14 @@ export default function EditarProyecto() {
 
     return {
       total: propiedades.length,
-      precioMin: Math.min(...precios),
-      precioMax: Math.max(...precios),
+      totalVenta: propiedadesVenta.length,
+      totalAlquiler: propiedadesAlquiler.length,
+      precioMin: precios.length > 0 ? Math.min(...precios) : 0,
+      precioMax: precios.length > 0 ? Math.max(...precios) : 0,
       precioM2Prom: preciosM2.length > 0 ? Math.round(preciosM2.reduce((a, b) => a + b, 0) / preciosM2.length) : 0,
+      alquilerMin: preciosMensuales.length > 0 ? Math.min(...preciosMensuales) : 0,
+      alquilerMax: preciosMensuales.length > 0 ? Math.max(...preciosMensuales) : 0,
+      alquilerProm: preciosMensuales.length > 0 ? Math.round(preciosMensuales.reduce((a, b) => a + b, 0) / preciosMensuales.length) : 0,
       areaProm: areas.length > 0 ? Math.round(areas.reduce((a, b) => a + b, 0) / areas.length) : 0,
       diasProm: diasMercado.length > 0 ? Math.round(diasMercado.reduce((a, b) => a + b, 0) / diasMercado.length) : 0,
       porDorms,
@@ -877,6 +891,8 @@ export default function EditarProyecto() {
     .filter(p => filtroDorms === null || p.dormitorios === filtroDorms || (filtroDorms === 3 && p.dormitorios >= 3))
     .filter(p => !ocultarViejas || !esPropiedadVieja(p))
     .sort((a, b) => {
+      const precioEfectivo = (p: PropiedadVinculada) =>
+        p.tipo_operacion === 'alquiler' ? Number(p.precio_mensual_usd || 0) : p.precio_usd
       switch (ordenarPor) {
         case 'precio_m2':
           return (a.precio_usd / a.area_total_m2) - (b.precio_usd / b.area_total_m2)
@@ -885,7 +901,7 @@ export default function EditarProyecto() {
         case 'dias':
           return calcularDiasEnMercado(b) - calcularDiasEnMercado(a)
         default:
-          return a.precio_usd - b.precio_usd
+          return precioEfectivo(a) - precioEfectivo(b)
       }
     })
 
@@ -1583,18 +1599,38 @@ export default function EditarProyecto() {
                           <div className="grid grid-cols-5 gap-4 mb-4">
                             <div className="text-center">
                               <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
-                              <p className="text-xs text-slate-500">Unidades</p>
-                            </div>
-                            <div className="text-center">
-                              <p className="text-lg font-semibold text-slate-800">
-                                ${Math.round(stats.precioMin / 1000)}k - ${Math.round(stats.precioMax / 1000)}k
+                              <p className="text-xs text-slate-500">
+                                Unidades
+                                {stats.totalVenta > 0 && stats.totalAlquiler > 0 && (
+                                  <span className="block text-slate-400">{stats.totalVenta}V / {stats.totalAlquiler}A</span>
+                                )}
                               </p>
-                              <p className="text-xs text-slate-500">Rango precios</p>
                             </div>
-                            <div className="text-center">
-                              <p className="text-lg font-semibold text-emerald-600">${stats.precioM2Prom.toLocaleString()}</p>
-                              <p className="text-xs text-slate-500">$/m² prom</p>
-                            </div>
+                            {stats.totalVenta > 0 && (
+                              <>
+                                <div className="text-center">
+                                  <p className="text-lg font-semibold text-slate-800">
+                                    ${Math.round(stats.precioMin / 1000)}k - ${Math.round(stats.precioMax / 1000)}k
+                                  </p>
+                                  <p className="text-xs text-slate-500">Rango venta</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-lg font-semibold text-emerald-600">${stats.precioM2Prom.toLocaleString()}</p>
+                                  <p className="text-xs text-slate-500">$/m² prom</p>
+                                </div>
+                              </>
+                            )}
+                            {stats.totalAlquiler > 0 && (
+                              <div className="text-center">
+                                <p className="text-lg font-semibold text-violet-600">
+                                  ${stats.alquilerMin === stats.alquilerMax
+                                    ? stats.alquilerProm.toLocaleString()
+                                    : `${stats.alquilerMin.toLocaleString()} - ${stats.alquilerMax.toLocaleString()}`
+                                  }
+                                </p>
+                                <p className="text-xs text-slate-500">$/mes alquiler</p>
+                              </div>
+                            )}
                             <div className="text-center">
                               <p className="text-lg font-semibold text-slate-800">{stats.areaProm}m²</p>
                               <p className="text-xs text-slate-500">Área prom</p>
@@ -1702,6 +1738,9 @@ export default function EditarProyecto() {
                           <thead>
                             <tr className="text-left text-xs text-slate-500 border-b border-slate-200">
                               <th className="pb-2 pr-3 font-medium">ID</th>
+                              {stats && stats.totalVenta > 0 && stats.totalAlquiler > 0 && (
+                                <th className="pb-2 pr-3 font-medium">Tipo</th>
+                              )}
                               <th className="pb-2 pr-3 font-medium">Precio</th>
                               <th className="pb-2 pr-3 font-medium">$/m²</th>
                               <th className="pb-2 pr-3 font-medium">Dorms</th>
@@ -1712,33 +1751,53 @@ export default function EditarProyecto() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {propiedadesVisibles.map(prop => (
-                              <tr key={prop.id} className="hover:bg-slate-50">
-                                <td className="py-2 pr-3 text-slate-500 text-xs">#{prop.id}</td>
-                                <td className="py-2 pr-3 font-medium text-slate-900">
-                                  {formatPrecio(prop.precio_usd)}
-                                </td>
-                                <td className="py-2 pr-3 text-slate-600">
-                                  {formatPrecioM2(prop.precio_usd, prop.area_total_m2)}
-                                </td>
-                                <td className="py-2 pr-3 text-slate-600">{prop.dormitorios}</td>
-                                <td className="py-2 pr-3 text-slate-600">{prop.area_total_m2}m²</td>
-                                <td className="py-2 pr-3 text-slate-500 text-xs">
-                                  {formatFecha(prop.fecha_publicacion || prop.fecha_discovery)}
-                                </td>
-                                <td className="py-2 pr-3 text-slate-500 text-xs">
-                                  {calcularDiasEnMercado(prop)}d
-                                </td>
-                                <td className="py-2 text-right">
-                                  <Link
-                                    href={`/admin/propiedades/${prop.id}`}
-                                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                                  >
-                                    Ver →
-                                  </Link>
-                                </td>
-                              </tr>
-                            ))}
+                            {propiedadesVisibles.map(prop => {
+                              const esAlquiler = prop.tipo_operacion === 'alquiler'
+                              return (
+                                <tr key={prop.id} className="hover:bg-slate-50">
+                                  <td className="py-2 pr-3 text-slate-500 text-xs">#{prop.id}</td>
+                                  {stats && stats.totalVenta > 0 && stats.totalAlquiler > 0 && (
+                                    <td className="py-2 pr-3">
+                                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                                        esAlquiler
+                                          ? 'bg-violet-100 text-violet-700'
+                                          : 'bg-emerald-100 text-emerald-700'
+                                      }`}>
+                                        {esAlquiler ? 'Alq' : 'Vta'}
+                                      </span>
+                                    </td>
+                                  )}
+                                  <td className="py-2 pr-3 font-medium text-slate-900">
+                                    {esAlquiler
+                                      ? <span className="text-violet-700">${Number(prop.precio_mensual_usd || 0).toLocaleString()}/mes</span>
+                                      : formatPrecio(prop.precio_usd)
+                                    }
+                                  </td>
+                                  <td className="py-2 pr-3 text-slate-600">
+                                    {esAlquiler
+                                      ? '-'
+                                      : formatPrecioM2(prop.precio_usd, prop.area_total_m2)
+                                    }
+                                  </td>
+                                  <td className="py-2 pr-3 text-slate-600">{prop.dormitorios}</td>
+                                  <td className="py-2 pr-3 text-slate-600">{prop.area_total_m2}m²</td>
+                                  <td className="py-2 pr-3 text-slate-500 text-xs">
+                                    {formatFecha(prop.fecha_publicacion || prop.fecha_discovery)}
+                                  </td>
+                                  <td className="py-2 pr-3 text-slate-500 text-xs">
+                                    {calcularDiasEnMercado(prop)}d
+                                  </td>
+                                  <td className="py-2 text-right">
+                                    <Link
+                                      href={`/admin/propiedades/${prop.id}`}
+                                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                    >
+                                      Ver →
+                                    </Link>
+                                  </td>
+                                </tr>
+                              )
+                            })}
                           </tbody>
                         </table>
                       </div>

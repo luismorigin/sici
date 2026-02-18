@@ -48,6 +48,15 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 4. **SQL > Regex** - Potenciar matching en BD, no extractores
 5. **Human-in-the-Loop** - Sistema HITL migrado a Admin Dashboard (ya no usa Google Sheets)
 6. **Alquiler aislado** - Pipeline alquiler usa funciones PROPIAS (`_alquiler`), NUNCA modificar funciones de venta
+7. **Filtros de calidad en estudios de mercado** - SIEMPRE aplicar al consultar propiedades para informes, análisis o comparativos:
+   - `duplicado_de IS NULL` (sin duplicados)
+   - `tipo_propiedad_original NOT IN ('baulera','parqueo','garaje','deposito')`
+   - `(es_multiproyecto = false OR es_multiproyecto IS NULL)`
+   - `area_total_m2 >= 20`
+   - `<= 300 días` en mercado (730 para preventa)
+   - Ver detalle completo en `docs/reports/FILTROS_CALIDAD_MERCADO.md`
+   - **Zona venta** usa nombres nuevos (`Equipetrol Centro`, `Villa Brígida`, etc.)
+   - **Zona alquiler** usa nombres viejos (`Equipetrol`, `Faremafu`, `Villa Brigida`, etc.)
 
 ## Documentación Principal
 
