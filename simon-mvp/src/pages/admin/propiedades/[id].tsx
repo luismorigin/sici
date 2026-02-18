@@ -9,6 +9,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth'
 type EstadoInclusion = 'incluido' | 'no_incluido' | 'sin_confirmar' | 'precio_adicional'
 
 interface FormData {
+  tipo_operacion: string
   proyecto_nombre: string
   desarrollador: string
   microzona: string
@@ -60,6 +61,7 @@ interface CamposBloqueados {
 
 interface PropiedadOriginal {
   id: number
+  tipo_operacion: string | null
   nombre_edificio: string | null
   zona: string | null
   microzona: string | null
@@ -161,6 +163,12 @@ const EQUIPAMIENTO_OPCIONES = [
   'Microondas', 'Horno empotrado', 'Lavavajillas', 'Balcón', 'Vista panorámica'
 ]
 
+const TIPO_OPERACION = [
+  { id: 'venta', label: 'Venta' },
+  { id: 'alquiler', label: 'Alquiler' },
+  { id: 'anticretico', label: 'Anticrético' }
+]
+
 const ESTADO_CONSTRUCCION = [
   { id: 'entrega_inmediata', label: 'Entrega Inmediata' },
   { id: 'en_construccion', label: 'En Construcción' },
@@ -258,6 +266,7 @@ export default function EditarPropiedad() {
   const [autoBloquearAlGuardar, setAutoBloquearAlGuardar] = useState(true) // Candados automáticos por defecto
 
   const [formData, setFormData] = useState<FormData>({
+    tipo_operacion: 'venta',
     proyecto_nombre: '',
     desarrollador: '',
     microzona: 'equipetrol_centro',
@@ -511,6 +520,7 @@ export default function EditarPropiedad() {
       }
 
       setFormData({
+        tipo_operacion: data.tipo_operacion || 'venta',
         // Usar nombre del proyecto_master si existe, sino el nombre_edificio original
         proyecto_nombre: pmData?.nombre_oficial || data.nombre_edificio || '',
         desarrollador: '',
@@ -740,11 +750,14 @@ export default function EditarPropiedad() {
     if (precio <= 0 || area <= 0) return { tipo: null, mensaje: '', color: '' }
 
     const precioM2 = precio / area
-    if (precioM2 < 800) {
-      return { tipo: 'error', mensaje: `⚠️ $${Math.round(precioM2)}/m² muy bajo`, color: 'bg-red-100 text-red-700 border-red-300' }
-    }
-    if (precioM2 < 1200) {
-      return { tipo: 'warning', mensaje: `⚠️ $${Math.round(precioM2)}/m² bajo`, color: 'bg-amber-100 text-amber-700 border-amber-300' }
+    // Validaciones de precio/m² solo aplican a venta
+    if (formData.tipo_operacion === 'venta') {
+      if (precioM2 < 800) {
+        return { tipo: 'error', mensaje: `⚠️ $${Math.round(precioM2)}/m² muy bajo`, color: 'bg-red-100 text-red-700 border-red-300' }
+      }
+      if (precioM2 < 1200) {
+        return { tipo: 'warning', mensaje: `⚠️ $${Math.round(precioM2)}/m² bajo`, color: 'bg-amber-100 text-amber-700 border-amber-300' }
+      }
     }
     if (precioM2 > 4000) {
       return { tipo: 'error', mensaje: `⚠️ $${Math.round(precioM2)}/m² muy alto`, color: 'bg-red-100 text-red-700 border-red-300' }
@@ -841,6 +854,9 @@ export default function EditarPropiedad() {
                                 parseFloat(formData.baulera_precio_adicional) : null
     if (originalData.baulera_precio_adicional !== bauleraPrecioNuevo) {
       cambios.push({ campo: 'baulera_precio_adicional', anterior: originalData.baulera_precio_adicional, nuevo: bauleraPrecioNuevo })
+    }
+    if (originalData.tipo_operacion !== formData.tipo_operacion) {
+      cambios.push({ campo: 'tipo_operacion', anterior: originalData.tipo_operacion, nuevo: formData.tipo_operacion })
     }
     if (originalData.estado_construccion !== formData.estado_construccion) {
       cambios.push({ campo: 'estado_construccion', anterior: originalData.estado_construccion, nuevo: formData.estado_construccion })
@@ -947,17 +963,19 @@ export default function EditarPropiedad() {
     const banos = parseFloat(formData.banos) || 0
 
     // -------------------------------------------------------------------------
-    // VALIDACIÓN 1: Precio por m²
+    // VALIDACIÓN 1: Precio por m² (solo venta — alquiler tiene rangos distintos)
     // -------------------------------------------------------------------------
     if (precio > 0 && area > 0) {
-      if (precioM2 < 800) {
-        errors.push(`Precio/m² muy bajo: $${Math.round(precioM2)}/m² (mínimo $800/m²)`)
-      } else if (precioM2 < 1200) {
-        warnings.push(`Precio/m² inusualmente bajo: $${Math.round(precioM2)}/m² (rango típico $1,200-$3,200)`)
-      } else if (precioM2 > 4000) {
-        errors.push(`Precio/m² muy alto: $${Math.round(precioM2)}/m² (máximo $4,000/m²)`)
-      } else if (precioM2 > 3200) {
-        warnings.push(`Precio/m² inusualmente alto: $${Math.round(precioM2)}/m² (rango típico $1,200-$3,200)`)
+      if (formData.tipo_operacion === 'venta') {
+        if (precioM2 < 800) {
+          errors.push(`Precio/m² muy bajo: $${Math.round(precioM2)}/m² (mínimo $800/m²)`)
+        } else if (precioM2 < 1200) {
+          warnings.push(`Precio/m² inusualmente bajo: $${Math.round(precioM2)}/m² (rango típico $1,200-$3,200)`)
+        } else if (precioM2 > 4000) {
+          errors.push(`Precio/m² muy alto: $${Math.round(precioM2)}/m² (máximo $4,000/m²)`)
+        } else if (precioM2 > 3200) {
+          warnings.push(`Precio/m² inusualmente alto: $${Math.round(precioM2)}/m² (rango típico $1,200-$3,200)`)
+        }
       }
     }
 
@@ -1194,6 +1212,7 @@ export default function EditarPropiedad() {
 
       // Preparar campos de actualización
       const updateData: Record<string, any> = {
+        tipo_operacion: formData.tipo_operacion || null,
         nombre_edificio: formData.proyecto_nombre || null,
         id_proyecto_master: selectedProyectoId,  // Vincular/desvincular proyecto
         zona: microzonaLabel,
@@ -1742,6 +1761,19 @@ export default function EditarPropiedad() {
                 <div className="flex items-center gap-3 mb-2">
                   {getFuenteBadge(originalData.fuente)}
                   <span className="text-sm text-slate-500">ID: {originalData.id}</span>
+                  <select
+                    value={formData.tipo_operacion}
+                    onChange={(e) => updateField('tipo_operacion', e.target.value)}
+                    className={`text-sm px-2 py-1 rounded-full border font-medium ${
+                      formData.tipo_operacion === 'venta' ? 'bg-green-50 text-green-700 border-green-300' :
+                      formData.tipo_operacion === 'alquiler' ? 'bg-blue-50 text-blue-700 border-blue-300' :
+                      'bg-purple-50 text-purple-700 border-purple-300'
+                    }`}
+                  >
+                    {TIPO_OPERACION.map(t => (
+                      <option key={t.id} value={t.id}>{t.label}</option>
+                    ))}
+                  </select>
                   {originalData.score_calidad_dato && (
                     <span className="text-sm text-slate-500">Score: {originalData.score_calidad_dato}</span>
                   )}
