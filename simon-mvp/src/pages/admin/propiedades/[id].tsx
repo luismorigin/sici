@@ -554,7 +554,7 @@ export default function EditarPropiedad() {
         asesor_nombre: data.datos_json?.agente?.nombre || '',
         asesor_telefono: data.datos_json?.agente?.telefono || '',
         asesor_inmobiliaria: data.datos_json?.agente?.oficina_nombre || '',
-        descripcion: data.datos_json?.contenido?.descripcion || '',
+        descripcion: data.datos_json?.contenido?.descripcion || data.datos_json_enrichment?.llm_output?.descripcion_limpia || data.datos_json_enrichment?.descripcion_original || '',
         amenidades: standardAmenidades,
         amenidades_custom: customAmenidades,
         equipamiento: standardEquipamiento,
