@@ -40,6 +40,8 @@ export default function SupervisorSinMatch() {
 
   // Mapa tipo_operacion por propiedad ID
   const [tipoOperacionMap, setTipoOperacionMap] = useState<Record<number, string>>({})
+  // Mapa descripción por propiedad ID
+  const [descripcionMap, setDescripcionMap] = useState<Record<number, string>>({})
 
   // Lista completa de proyectos para búsqueda
   const [proyectosList, setProyectosList] = useState<ProyectoOption[]>([])
@@ -85,12 +87,25 @@ export default function SupervisorSinMatch() {
         const ids = data.map((p: any) => p.id)
         const { data: tipoData } = await supabase
           .from('propiedades_v2')
-          .select('id, tipo_operacion')
+          .select('id, tipo_operacion, datos_json_enrichment')
           .in('id', ids)
         if (tipoData) {
-          const map: Record<number, string> = {}
-          tipoData.forEach((p: any) => { map[p.id] = p.tipo_operacion })
-          setTipoOperacionMap(map)
+          const tipoMap: Record<number, string> = {}
+          const descMap: Record<number, string> = {}
+          tipoData.forEach((p: any) => {
+            tipoMap[p.id] = p.tipo_operacion
+            // Alquiler: llm_output.descripcion_limpia | Venta: descripcion_original
+            const enrichment = p.datos_json_enrichment
+            if (enrichment) {
+              const desc =
+                enrichment?.llm_output?.descripcion_limpia ||
+                enrichment?.descripcion_original ||
+                ''
+              if (desc) descMap[p.id] = desc
+            }
+          })
+          setTipoOperacionMap(tipoMap)
+          setDescripcionMap(descMap)
         }
       }
     } catch (err: any) {
@@ -441,6 +456,13 @@ export default function SupervisorSinMatch() {
                           </Link>
                         </div>
                       </div>
+
+                      {/* Descripción */}
+                      {descripcionMap[prop.id] && (
+                        <p className="text-sm text-gray-500 mb-3 line-clamp-2">
+                          {descripcionMap[prop.id]}
+                        </p>
+                      )}
 
                       {/* Proyectos cercanos */}
                       <div className="bg-gray-50 rounded-lg p-3 mb-3">
