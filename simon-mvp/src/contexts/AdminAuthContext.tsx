@@ -59,6 +59,14 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
     let cancelled = false
 
+    // TODO: REMOVER - bypass temporal para preview localhost
+    if (process.env.NODE_ENV === 'development') {
+      setAdmin({ id: 'dev', email: 'dev@localhost', nombre: 'Dev Preview', rol: 'super_admin', activo: true })
+      setLoading(false)
+      verifiedRef.current = true
+      return
+    }
+
     async function verifyAdmin(email: string) {
       if (cancelled) return
 

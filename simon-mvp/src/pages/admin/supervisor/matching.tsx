@@ -40,6 +40,9 @@ export default function SupervisorMatching() {
   const [proyectosList, setProyectosList] = useState<ProyectoOption[]>([])
   const [busquedaProyecto, setBusquedaProyecto] = useState('')
 
+  // Tab Venta/Alquiler
+  const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'venta' | 'alquiler'>('todos')
+
   // Estadísticas
   const [stats, setStats] = useState({
     total: 0,
@@ -188,13 +191,26 @@ export default function SupervisorMatching() {
     }
   }
 
+  // Filtrar pendientes por tipo
+  const pendientesFiltrados = pendientes.filter(p => {
+    if (tipoFiltro === 'todos') return true
+    if (tipoFiltro === 'alquiler') return p.metodo.startsWith('alquiler_')
+    return !p.metodo.startsWith('alquiler_')
+  })
+
+  const countVenta = pendientes.filter(p => !p.metodo.startsWith('alquiler_')).length
+  const countAlquiler = pendientes.filter(p => p.metodo.startsWith('alquiler_')).length
+
   const getMetodoBadge = (metodo: string) => {
     const colores: Record<string, string> = {
       'fuzzy_nombre': 'bg-purple-100 text-purple-800',
       'gps_cercano': 'bg-blue-100 text-blue-800',
       'url_match': 'bg-green-100 text-green-800',
       'nombre_exacto': 'bg-emerald-100 text-emerald-800',
-      'trigram': 'bg-orange-100 text-orange-800'
+      'trigram': 'bg-orange-100 text-orange-800',
+      'alquiler_normalized_ambiguous': 'bg-pink-100 text-pink-800',
+      'alquiler_gps_con_nombre': 'bg-sky-100 text-sky-800',
+      'alquiler_gps_sin_nombre': 'bg-slate-100 text-slate-800'
     }
     return colores[metodo] || 'bg-gray-100 text-gray-800'
   }
@@ -228,7 +244,7 @@ export default function SupervisorMatching() {
                   Supervisor Matching
                 </h1>
                 <span className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">
-                  {pendientes.length} pendientes
+                  {pendientesFiltrados.length} pendientes
                 </span>
               </div>
 
@@ -249,6 +265,29 @@ export default function SupervisorMatching() {
             </div>
           </div>
         </header>
+
+        {/* Tabs filtro */}
+        <div className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex gap-0">
+              {(['todos', 'venta', 'alquiler'] as const).map(tipo => (
+                <button
+                  key={tipo}
+                  onClick={() => setTipoFiltro(tipo)}
+                  className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                    tipoFiltro === tipo
+                      ? tipo === 'alquiler' ? 'border-blue-500 text-blue-700' : 'border-amber-500 text-amber-700'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {tipo === 'todos' ? `Todos (${pendientes.length})` :
+                   tipo === 'venta' ? `Venta (${countVenta})` :
+                   `Alquiler (${countAlquiler})`}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
           {/* Acciones en lote */}
@@ -298,7 +337,7 @@ export default function SupervisorMatching() {
           )}
 
           {/* Sin pendientes */}
-          {!loading && !error && pendientes.length === 0 && (
+          {!loading && !error && pendientesFiltrados.length === 0 && (
             <div className="text-center py-12 bg-white rounded-lg shadow">
               <div className="text-5xl mb-4">&#127881;</div>
               <h2 className="text-xl font-medium text-gray-900">Sin pendientes</h2>
@@ -309,20 +348,26 @@ export default function SupervisorMatching() {
           )}
 
           {/* Lista de pendientes */}
-          {!loading && pendientes.length > 0 && (
+          {!loading && pendientesFiltrados.length > 0 && (
             <div className="space-y-4">
               {/* Header de selección */}
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <input
                   type="checkbox"
-                  checked={seleccionados.size === pendientes.length}
-                  onChange={seleccionarTodos}
+                  checked={seleccionados.size === pendientesFiltrados.length && pendientesFiltrados.length > 0}
+                  onChange={() => {
+                    if (seleccionados.size === pendientesFiltrados.length) {
+                      setSeleccionados(new Set())
+                    } else {
+                      setSeleccionados(new Set(pendientesFiltrados.map(p => p.id_sugerencia)))
+                    }
+                  }}
                   className="rounded"
                 />
                 <span>Seleccionar todos</span>
               </div>
 
-              {pendientes.map((match) => (
+              {pendientesFiltrados.map((match) => (
                 <div
                   key={match.id_sugerencia}
                   className={`bg-white rounded-lg shadow border-2 transition-colors ${

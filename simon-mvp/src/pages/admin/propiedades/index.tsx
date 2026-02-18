@@ -44,6 +44,8 @@ interface Propiedad {
   parqueo_precio_adicional: number | null
   baulera_incluido: boolean | null
   baulera_precio_adicional: number | null
+  // Alquileres
+  precio_mensual_bob: number | null
 }
 
 interface CamposBloqueados {
@@ -115,6 +117,9 @@ export default function AdminPropiedades() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Tab Venta/Alquiler
+  const [tipoOperacion, setTipoOperacion] = useState<'venta' | 'alquiler'>('venta')
+
   // Filtros
   const [zona, setZona] = useState('')
   const [dormitorios, setDormitorios] = useState('')
@@ -154,13 +159,13 @@ export default function AdminPropiedades() {
     return () => {
       router.events.off('routeChangeComplete', handleRouteChange)
     }
-  }, [authLoading, router.events, zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado])
+  }, [authLoading, router.events, zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado, tipoOperacion])
 
   // Fetch inicial y cuando cambian filtros (no incluir busquedaId - solo busca on Enter/click)
   useEffect(() => {
     if (authLoading || !admin) return
     fetchPropiedades()
-  }, [authLoading, zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado])
+  }, [authLoading, zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado, tipoOperacion])
 
   // Cargar lista de proyectos para autocompletado
   useEffect(() => {
@@ -306,12 +311,94 @@ export default function AdminPropiedades() {
         }
       }
 
+      // Path directo para alquileres sin proyecto (bypass RPC que usa INNER JOIN)
+      if (tipoOperacion === 'alquiler' && soloHuerfanas) {
+        let query = supabase
+          .from('propiedades_v2')
+          .select('id, nombre_edificio, zona, microzona, dormitorios, banos, precio_usd, precio_mensual_usd, precio_mensual_bob, area_total_m2, datos_json, datos_json_enrichment, datos_json_discovery, url, fuente, campos_bloqueados, id_proyecto_master, fecha_publicacion, estado_construccion, estacionamientos, baulera, score_calidad_dato, latitud, longitud, es_multiproyecto, tipo_propiedad_original')
+          .eq('tipo_operacion', 'alquiler')
+          .eq('status', 'completado')
+          .eq('es_activa', true)
+          .is('id_proyecto_master', null)
+          .is('duplicado_de', null)
+          .gte('area_total_m2', 20)
+          .order('id', { ascending: false })
+          .limit(limite)
+
+        if (zona) {
+          query = query.ilike('zona', `%${zona}%`)
+        }
+        if (dormitorios && dormitorios !== 'todos') {
+          query = query.eq('dormitorios', parseInt(dormitorios))
+        }
+
+        const { data: huerfanasData, error: huerfanasErr } = await query
+
+        if (huerfanasErr) throw new Error(huerfanasErr.message)
+
+        const resultado = (huerfanasData || []).map((p: any) => {
+          const fotosUrls = p.datos_json?.contenido?.fotos_urls || []
+          const precioMensual = p.precio_mensual_usd ? Number(p.precio_mensual_usd) : (p.precio_usd ? Number(p.precio_usd) : 0)
+          return {
+            id: p.id,
+            proyecto: p.nombre_edificio || 'Sin nombre',
+            desarrollador: null,
+            zona: p.zona || 'Sin zona',
+            microzona: p.microzona,
+            dormitorios: p.dormitorios,
+            banos: p.banos,
+            precio_usd: precioMensual,
+            precio_m2: p.area_total_m2 > 0 ? Math.round(precioMensual / p.area_total_m2 * 100) / 100 : 0,
+            area_m2: p.area_total_m2,
+            score_calidad: p.score_calidad_dato || 0,
+            asesor_nombre: p.datos_json?.agente?.nombre || null,
+            asesor_wsp: p.datos_json?.agente?.telefono || null,
+            asesor_inmobiliaria: p.datos_json?.agente?.oficina_nombre || null,
+            fotos_urls: fotosUrls,
+            cantidad_fotos: fotosUrls.length,
+            url: p.url,
+            amenities_confirmados: null,
+            amenities_por_verificar: null,
+            equipamiento_detectado: null,
+            estado_construccion: p.estado_construccion || 'no_especificado',
+            latitud: p.latitud,
+            longitud: p.longitud,
+            estacionamientos: p.estacionamientos,
+            baulera: p.baulera,
+            dias_en_mercado: p.fecha_publicacion
+              ? Math.floor((Date.now() - new Date(p.fecha_publicacion).getTime()) / 86400000)
+              : null,
+            piso: null,
+            plan_pagos_desarrollador: null,
+            acepta_permuta: null,
+            solo_tc_paralelo: null,
+            precio_negociable: null,
+            descuento_contado_pct: null,
+            parqueo_incluido: null,
+            parqueo_precio_adicional: null,
+            baulera_incluido: null,
+            baulera_precio_adicional: null,
+            precio_mensual_bob: p.precio_mensual_bob ? Number(p.precio_mensual_bob) : null,
+            // Extra fields
+            campos_bloqueados: p.campos_bloqueados || {},
+            fuente: p.fuente || '',
+            id_proyecto_master: null,
+            fecha_publicacion: p.fecha_publicacion,
+          } as PropiedadConCandados
+        })
+
+        setPropiedades(resultado)
+        setLoading(false)
+        return
+      }
+
       // Construir filtros para buscar_unidades_reales
       const filtros: Record<string, any> = {
         limite: limite,
         incluir_outliers: true,
         incluir_multiproyecto: true,
-        incluir_datos_viejos: true
+        incluir_datos_viejos: true,
+        tipo_operacion: tipoOperacion
       }
 
       if (zona) {
@@ -364,6 +451,8 @@ export default function AdminPropiedades() {
           const extra = candadosMap.get(u.id)
           return {
             ...u,
+            // RPC ya retorna precio correcto (mensual para alquileres, venta para ventas)
+            precio_mensual_bob: u.precio_mensual_bob ? Number(u.precio_mensual_bob) : (extra?.precio_mensual_bob ? Number(extra.precio_mensual_bob) : null),
             campos_bloqueados: extra?.campos_bloqueados || {},
             fuente: extra?.fuente || '',
             id_proyecto_master: extra?.id_proyecto_master ?? null,
@@ -371,7 +460,7 @@ export default function AdminPropiedades() {
             precio_usd_original: extra?.precio_usd_original,
             moneda_original: extra?.moneda_original,
             tipo_cambio_detectado: extra?.tipo_cambio_detectado,
-            tipo_cambio_usado: extra?.tipo_cambio_usado
+            tipo_cambio_usado: extra?.tipo_cambio_usado,
           }
         })
 
@@ -526,6 +615,34 @@ export default function AdminPropiedades() {
           </div>
         </header>
 
+        {/* Tabs Venta / Alquiler */}
+        <div className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex gap-0">
+              <button
+                onClick={() => setTipoOperacion('venta')}
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  tipoOperacion === 'venta'
+                    ? 'border-amber-500 text-amber-700 bg-amber-50/50'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                Venta
+              </button>
+              <button
+                onClick={() => setTipoOperacion('alquiler')}
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  tipoOperacion === 'alquiler'
+                    ? 'border-blue-500 text-blue-700 bg-blue-50/50'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                Alquiler
+              </button>
+            </div>
+          </div>
+        </div>
+
         <main className="max-w-7xl mx-auto py-8 px-6">
           {/* Stats rápidos */}
           <div className="grid grid-cols-6 gap-4 mb-8">
@@ -540,7 +657,9 @@ export default function AdminPropiedades() {
               </p>
             </div>
             <div className="bg-white rounded-xl p-4 shadow-sm">
-              <p className="text-slate-500 text-sm">Precio Promedio</p>
+              <p className="text-slate-500 text-sm">
+                {tipoOperacion === 'alquiler' ? 'Renta Prom./mes' : 'Precio Promedio'}
+              </p>
               <p className="text-2xl font-bold text-green-600">
                 {formatPrecio(propiedades.reduce((acc, p) => acc + (p.precio_usd || 0), 0) / (propiedades.length || 1))}
               </p>
@@ -551,12 +670,21 @@ export default function AdminPropiedades() {
                 {propiedades.filter(p => p.cantidad_fotos > 0).length}
               </p>
             </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <p className="text-slate-500 text-sm">⚠️ Precio Sospechoso</p>
-              <p className="text-2xl font-bold text-red-600">
-                {contarSospechosos()}
-              </p>
-            </div>
+            {tipoOperacion === 'venta' ? (
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <p className="text-slate-500 text-sm">⚠️ Precio Sospechoso</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {contarSospechosos()}
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <p className="text-slate-500 text-sm">Con Proyecto</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {propiedades.filter(p => p.id_proyecto_master).length}
+                </p>
+              </div>
+            )}
             <div className="bg-orange-50 rounded-xl p-4 shadow-sm border border-orange-200">
               <p className="text-orange-600 text-sm">Sin Proyecto</p>
               <p className="text-2xl font-bold text-orange-700">
@@ -812,15 +940,17 @@ export default function AdminPropiedades() {
                 <span className="text-sm text-slate-700">Solo editadas</span>
               </label>
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={soloPreciosSospechosos}
-                  onChange={(e) => setSoloPreciosSospechosos(e.target.checked)}
-                  className="w-4 h-4 rounded text-red-500 focus:ring-red-500"
-                />
-                <span className="text-sm text-red-600">⚠️ Precios sospechosos</span>
-              </label>
+              {tipoOperacion === 'venta' && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={soloPreciosSospechosos}
+                    onChange={(e) => setSoloPreciosSospechosos(e.target.checked)}
+                    className="w-4 h-4 rounded text-red-500 focus:ring-red-500"
+                  />
+                  <span className="text-sm text-red-600">⚠️ Precios sospechosos</span>
+                </label>
+              )}
 
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -924,20 +1054,31 @@ export default function AdminPropiedades() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-lg text-slate-900">{formatPrecio(prop.precio_usd)}</p>
-                          <div className="flex items-center justify-end gap-2">
-                            <p className="text-sm text-slate-500">${prop.precio_m2}/m²</p>
-                            {getPrecioAlerta(prop.precio_m2).tipo === 'error' && (
-                              <span className="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded" title={getPrecioAlerta(prop.precio_m2).mensaje}>
-                                ⚠️ {getPrecioAlerta(prop.precio_m2).mensaje}
-                              </span>
-                            )}
-                            {getPrecioAlerta(prop.precio_m2).tipo === 'warning' && (
-                              <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded" title={getPrecioAlerta(prop.precio_m2).mensaje}>
-                                ⚠️ {getPrecioAlerta(prop.precio_m2).mensaje}
-                              </span>
-                            )}
-                          </div>
+                          {tipoOperacion === 'alquiler' ? (
+                            <>
+                              <p className="font-bold text-lg text-blue-700">{formatPrecio(prop.precio_usd)}/mes</p>
+                              {prop.precio_mensual_bob && (
+                                <p className="text-sm text-slate-500">Bs. {Math.round(prop.precio_mensual_bob).toLocaleString()}/mes</p>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <p className="font-bold text-lg text-slate-900">{formatPrecio(prop.precio_usd)}</p>
+                              <div className="flex items-center justify-end gap-2">
+                                <p className="text-sm text-slate-500">${prop.precio_m2}/m²</p>
+                                {getPrecioAlerta(prop.precio_m2).tipo === 'error' && (
+                                  <span className="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded" title={getPrecioAlerta(prop.precio_m2).mensaje}>
+                                    ⚠️ {getPrecioAlerta(prop.precio_m2).mensaje}
+                                  </span>
+                                )}
+                                {getPrecioAlerta(prop.precio_m2).tipo === 'warning' && (
+                                  <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded" title={getPrecioAlerta(prop.precio_m2).mensaje}>
+                                    ⚠️ {getPrecioAlerta(prop.precio_m2).mensaje}
+                                  </span>
+                                )}
+                              </div>
+                            </>
+                          )}
                           {/* Solo mostrar normalización si hay certeza (paralelo/oficial detectado) */}
                           {prop.moneda_original === 'BOB' &&
                            prop.tipo_cambio_usado &&
@@ -988,8 +1129,8 @@ export default function AdminPropiedades() {
                         </p>
                       )}
 
-                      {/* Forma de pago */}
-                      {(prop.plan_pagos_desarrollador || prop.solo_tc_paralelo || prop.descuento_contado_pct || prop.precio_negociable || prop.acepta_permuta) && (
+                      {/* Forma de pago (solo venta) */}
+                      {tipoOperacion === 'venta' && (prop.plan_pagos_desarrollador || prop.solo_tc_paralelo || prop.descuento_contado_pct || prop.precio_negociable || prop.acepta_permuta) && (
                         <div className="flex flex-wrap gap-2 mt-2 text-xs">
                           {prop.plan_pagos_desarrollador && (
                             <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded" title="Acepta plan de pagos con desarrollador">
@@ -1019,8 +1160,8 @@ export default function AdminPropiedades() {
                         </div>
                       )}
 
-                      {/* Parqueo/Baulera con precios */}
-                      {(prop.parqueo_incluido !== null || prop.baulera_incluido !== null) && (
+                      {/* Parqueo/Baulera con precios (solo venta) */}
+                      {tipoOperacion === 'venta' && (prop.parqueo_incluido !== null || prop.baulera_incluido !== null) && (
                         <div className="flex flex-wrap gap-2 mt-2 text-xs">
                           {prop.parqueo_incluido === true && (
                             <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded">

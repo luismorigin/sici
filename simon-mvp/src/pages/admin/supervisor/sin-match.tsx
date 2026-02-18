@@ -38,9 +38,15 @@ export default function SupervisorSinMatch() {
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoGPS, setNuevoGPS] = useState('')
 
+  // Mapa tipo_operacion por propiedad ID
+  const [tipoOperacionMap, setTipoOperacionMap] = useState<Record<number, string>>({})
+
   // Lista completa de proyectos para búsqueda
   const [proyectosList, setProyectosList] = useState<ProyectoOption[]>([])
   const [busquedaProyecto, setBusquedaProyecto] = useState('')
+
+  // Tab Venta/Alquiler
+  const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'venta' | 'alquiler'>('todos')
 
   // Estadísticas
   const [stats, setStats] = useState({
@@ -73,6 +79,20 @@ export default function SupervisorSinMatch() {
 
       setPropiedades(data || [])
       setStats(prev => ({ ...prev, total: data?.length || 0 }))
+
+      // Fetch tipo_operacion for each property
+      if (data && data.length > 0) {
+        const ids = data.map((p: any) => p.id)
+        const { data: tipoData } = await supabase
+          .from('propiedades_v2')
+          .select('id, tipo_operacion')
+          .in('id', ids)
+        if (tipoData) {
+          const map: Record<number, string> = {}
+          tipoData.forEach((p: any) => { map[p.id] = p.tipo_operacion })
+          setTipoOperacionMap(map)
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Error al cargar propiedades')
     } finally {
@@ -248,6 +268,15 @@ export default function SupervisorSinMatch() {
     p.nombre.toLowerCase().includes(busquedaProyecto.toLowerCase())
   ).slice(0, 10)
 
+  // Filtrar por tipo_operacion
+  const propiedadesFiltradas = propiedades.filter(p => {
+    if (tipoFiltro === 'todos') return true
+    return (tipoOperacionMap[p.id] || 'venta') === tipoFiltro
+  })
+
+  const countVenta = propiedades.filter(p => (tipoOperacionMap[p.id] || 'venta') === 'venta').length
+  const countAlquiler = propiedades.filter(p => tipoOperacionMap[p.id] === 'alquiler').length
+
   return (
     <>
       <Head>
@@ -267,7 +296,7 @@ export default function SupervisorSinMatch() {
                   Propiedades Sin Proyecto
                 </h1>
                 <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
-                  {propiedades.length} huerfanas
+                  {propiedadesFiltradas.length} huerfanas
                 </span>
               </div>
 
@@ -291,6 +320,29 @@ export default function SupervisorSinMatch() {
             </div>
           </div>
         </header>
+
+        {/* Tabs filtro */}
+        <div className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex gap-0">
+              {(['todos', 'venta', 'alquiler'] as const).map(tipo => (
+                <button
+                  key={tipo}
+                  onClick={() => setTipoFiltro(tipo)}
+                  className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                    tipoFiltro === tipo
+                      ? tipo === 'alquiler' ? 'border-blue-500 text-blue-700' : 'border-amber-500 text-amber-700'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {tipo === 'todos' ? `Todos (${propiedades.length})` :
+                   tipo === 'venta' ? `Venta (${countVenta})` :
+                   `Alquiler (${countAlquiler})`}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
 
         <main className="max-w-7xl mx-auto px-4 py-6">
           {/* Leyenda */}
@@ -320,7 +372,7 @@ export default function SupervisorSinMatch() {
           )}
 
           {/* Sin pendientes */}
-          {!loading && !error && propiedades.length === 0 && (
+          {!loading && !error && propiedadesFiltradas.length === 0 && (
             <div className="text-center py-12 bg-white rounded-lg shadow">
               <div className="text-5xl mb-4">&#127881;</div>
               <h2 className="text-xl font-medium text-gray-900">Sin propiedades huerfanas</h2>
@@ -331,9 +383,9 @@ export default function SupervisorSinMatch() {
           )}
 
           {/* Lista de propiedades */}
-          {!loading && propiedades.length > 0 && (
+          {!loading && propiedadesFiltradas.length > 0 && (
             <div className="space-y-4">
-              {propiedades.map((prop) => {
+              {propiedadesFiltradas.map((prop) => {
                 const proyectosCercanos = parseProyectosCercanos(prop.proyectos_cercanos)
                 const enModoAccion = modoAccion?.id === prop.id
 
