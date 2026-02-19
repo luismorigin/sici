@@ -389,6 +389,7 @@ export default function AlquileresPage() {
                     <MobileFilterCard
                       key="filter"
                       totalCount={totalCount}
+                      filteredCount={properties.length}
                       currentFilters={filters}
                       isFiltered={isFiltered}
                       onApply={applyFilters}
@@ -927,8 +928,8 @@ function PhotoCarousel({ photos, isFirst }: { photos: string[]; isFirst: boolean
 }
 
 // ===== MOBILE FILTER CARD =====
-function MobileFilterCard({ totalCount, currentFilters, isFiltered, onApply, onReset }: {
-  totalCount: number; currentFilters: FiltrosAlquiler; isFiltered: boolean
+function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltered, onApply, onReset }: {
+  totalCount: number; filteredCount: number; currentFilters: FiltrosAlquiler; isFiltered: boolean
   onApply: (f: FiltrosAlquiler) => void; onReset: () => void
 }) {
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
@@ -952,10 +953,10 @@ function MobileFilterCard({ totalCount, currentFilters, isFiltered, onApply, onR
 
   return (
     <div className="alq-card mfc" id="filterCard">
-      {/* Compact header: count + label in one block */}
+      {/* Compact header: count + label */}
       <div className="mfc-header">
-        <span className="mfc-count">{totalCount}</span>
-        <span className="mfc-sub">alquileres en Equipetrol</span>
+        <span className="mfc-count">{isFiltered ? filteredCount : totalCount}</span>
+        <span className="mfc-sub">{isFiltered ? `de ${totalCount} alquileres` : 'alquileres en Equipetrol'}</span>
       </div>
       <div className="mfc-divider"><span className="mfc-line"/><span className="mfc-divider-text">Filtra</span><span className="mfc-line"/></div>
 
@@ -984,27 +985,27 @@ function MobileFilterCard({ totalCount, currentFilters, isFiltered, onApply, onR
       <style jsx>{`
         .mfc { display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;padding:60px 28px 20px;padding-bottom:max(20px,calc(env(safe-area-inset-bottom) + 8px));height:100vh;height:100dvh;scroll-snap-align:start;background:#0a0a0a; }
         .mfc-header { display:flex;align-items:baseline;gap:8px;margin-bottom:6px; }
-        .mfc-count { font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:300;color:#c9a959;line-height:1; }
-        .mfc-sub { font-size:14px;font-weight:300;color:rgba(255,255,255,0.6);font-family:'Manrope',sans-serif; }
+        .mfc-count { font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:300;color:#c9a959;line-height:1; }
+        .mfc-sub { font-size:15px;font-weight:400;color:rgba(255,255,255,0.65);font-family:'Manrope',sans-serif; }
         .mfc-divider { display:flex;align-items:center;gap:12px;margin-bottom:20px; }
         .mfc-line { flex:1;height:1px;background:rgba(201,169,89,0.3); }
-        .mfc-divider-text { font-size:11px;color:#c9a959;letter-spacing:3px;font-family:'Manrope',sans-serif;text-transform:uppercase; }
+        .mfc-divider-text { font-size:12px;color:#c9a959;letter-spacing:3px;font-family:'Manrope',sans-serif;text-transform:uppercase; }
         .mfc-filters { width:100%;max-width:320px;margin-bottom:16px; }
-        .mfc-group { margin-bottom:12px;text-align:left; }
-        .mfc-gl { font-size:10px;font-weight:600;color:rgba(255,255,255,0.6);letter-spacing:2px;margin-bottom:6px;font-family:'Manrope',sans-serif; }
-        .mfc-zonas { display:flex;flex-wrap:wrap;gap:6px; }
-        .mfc-zb { padding:6px 12px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.75);font-family:'Manrope',sans-serif;font-size:11px;cursor:pointer;border-radius:100px;transition:all 0.2s; }
+        .mfc-group { margin-bottom:14px;text-align:left; }
+        .mfc-gl { font-size:11px;font-weight:600;color:rgba(255,255,255,0.65);letter-spacing:2px;margin-bottom:7px;font-family:'Manrope',sans-serif; }
+        .mfc-zonas { display:flex;flex-wrap:wrap;gap:7px; }
+        .mfc-zb { padding:7px 14px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.8);font-family:'Manrope',sans-serif;font-size:13px;cursor:pointer;border-radius:100px;transition:all 0.2s; }
         .mfc-zb.active { border-color:#c9a959;color:#c9a959;background:rgba(201,169,89,0.1); }
         .mfc-dorms { display:flex;gap:8px; }
-        .mfc-db { flex:1;padding:9px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.75);font-family:'Manrope',sans-serif;font-size:12px;cursor:pointer;border-radius:4px;transition:all 0.2s; }
+        .mfc-db { flex:1;padding:10px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.8);font-family:'Manrope',sans-serif;font-size:13px;cursor:pointer;border-radius:4px;transition:all 0.2s; }
         .mfc-db.active { border-color:#c9a959;color:#c9a959;background:rgba(201,169,89,0.1); }
-        .mfc-slider { width:100%;-webkit-appearance:none;appearance:none;height:2px;background:rgba(255,255,255,0.25);border-radius:2px;outline:none; }
-        .mfc-slider::-webkit-slider-thumb { -webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#c9a959;cursor:pointer; }
-        .mfc-sv { text-align:right;font-size:13px;color:#c9a959;margin-top:4px;font-weight:500;font-family:'Manrope',sans-serif; }
-        .mfc-cta { display:block;width:100%;max-width:320px;padding:14px;background:#c9a959;border:none;color:#0a0a0a;font-family:'Manrope',sans-serif;font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-bottom:10px; }
+        .mfc-slider { width:100%;-webkit-appearance:none;appearance:none;height:3px;background:rgba(255,255,255,0.25);border-radius:2px;outline:none; }
+        .mfc-slider::-webkit-slider-thumb { -webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#c9a959;cursor:pointer; }
+        .mfc-sv { text-align:right;font-size:15px;color:#c9a959;margin-top:4px;font-weight:600;font-family:'Manrope',sans-serif; }
+        .mfc-cta { display:block;width:100%;max-width:320px;padding:15px;background:#c9a959;border:none;color:#0a0a0a;font-family:'Manrope',sans-serif;font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-bottom:10px; }
         .mfc-cta:active { transform:scale(0.97); }
-        .mfc-reset { display:block;width:100%;max-width:320px;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);font-family:'Manrope',sans-serif;font-size:12px;cursor:pointer;margin-bottom:8px;border-radius:4px; }
-        .mfc-skip { font-size:12px;color:rgba(255,255,255,0.35);font-weight:300;font-family:'Manrope',sans-serif; }
+        .mfc-reset { display:block;width:100%;max-width:320px;padding:11px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.75);font-family:'Manrope',sans-serif;font-size:13px;cursor:pointer;margin-bottom:8px;border-radius:4px; }
+        .mfc-skip { font-size:13px;color:rgba(255,255,255,0.4);font-weight:300;font-family:'Manrope',sans-serif; }
       `}</style>
     </div>
   )
