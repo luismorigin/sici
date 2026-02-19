@@ -142,7 +142,9 @@ export default function DashboardSalud() {
 
     const workflowsRequeridos = [
       'discovery_remax', 'discovery_century21', 'enrichment', 'merge',
-      'verificador', 'matching_nocturno', 'verificador_alquiler'
+      'verificador', 'matching_nocturno',
+      'discovery_remax_alquiler', 'discovery_c21_alquiler',
+      'enrichment_alquiler', 'merge_alquiler', 'verificador_alquiler'
     ]
     for (const wf of workflowsRequeridos) {
       const found = workflows.find(w => w.workflow_name === wf)
@@ -472,13 +474,20 @@ export default function DashboardSalud() {
 
   // Horarios programados de cada workflow (hora Bolivia)
   const workflowSchedule: Record<string, string> = {
-    'discovery_remax': '02:00 AM',
-    'discovery_century21': '02:30 AM',
-    'enrichment': '03:00 AM',
-    'merge': '03:30 AM',
+    // Venta
+    'discovery_remax': '01:00 AM',
+    'discovery_century21': '01:00 AM',
+    'enrichment': '02:00 AM',
+    'merge': '03:00 AM',
     'verificador': '04:00 AM',
     'matching_nocturno': '04:00 AM',
+    // Alquiler
+    'discovery_remax_alquiler': '02:00 AM',
+    'discovery_c21_alquiler': '02:15 AM',
+    'enrichment_alquiler': '03:00 AM',
+    'merge_alquiler': '04:00 AM',
     'verificador_alquiler': '11:00 AM',
+    // Global
     'auditoria_diaria': '09:00 AM',
     'tc_dinamico_binance': 'cada 1h'
   }
@@ -486,19 +495,14 @@ export default function DashboardSalud() {
   // Categorías de workflows
   const workflowCategories: { label: string; color: string; workflows: string[] }[] = [
     {
-      label: 'Pipeline Común (Venta + Alquiler)',
+      label: 'Pipeline Venta',
       color: 'text-slate-700',
-      workflows: ['discovery_remax', 'discovery_century21', 'enrichment', 'merge', 'verificador']
+      workflows: ['discovery_remax', 'discovery_century21', 'enrichment', 'merge', 'verificador', 'matching_nocturno']
     },
     {
-      label: 'Solo Venta',
-      color: 'text-slate-600',
-      workflows: ['matching_nocturno']
-    },
-    {
-      label: 'Solo Alquiler',
+      label: 'Pipeline Alquiler',
       color: 'text-blue-600',
-      workflows: ['verificador_alquiler']
+      workflows: ['discovery_remax_alquiler', 'discovery_c21_alquiler', 'enrichment_alquiler', 'merge_alquiler', 'verificador_alquiler']
     },
     {
       label: 'Servicios Globales',
@@ -866,46 +870,60 @@ export default function DashboardSalud() {
             </h2>
             {workflows.length > 0 ? (
               <div className="space-y-5">
-                {workflowCategories.map((cat) => {
-                  const catWorkflows = cat.workflows
-                    .map(name => workflows.find(w => w.workflow_name === name))
-                    .filter(Boolean) as WorkflowHealth[]
-                  if (catWorkflows.length === 0) return null
-                  return (
-                    <div key={cat.label}>
-                      <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${cat.color}`}>
-                        {cat.label}
-                      </p>
-                      <div className="grid grid-cols-5 gap-3">
-                        {catWorkflows.map((wf) => (
-                          <div
-                            key={wf.workflow_name}
-                            className={`p-3 rounded-lg border ${
-                              wf.horas_desde_run > 26
-                                ? 'bg-red-50 border-red-200'
-                                : wf.horas_desde_run > 12
-                                ? 'bg-amber-50 border-amber-200'
-                                : 'bg-green-50 border-green-200'
-                            }`}
-                          >
+                {workflowCategories.map((cat) => (
+                  <div key={cat.label}>
+                    <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${cat.color}`}>
+                      {cat.label}
+                    </p>
+                    <div className="grid grid-cols-6 gap-3">
+                      {cat.workflows.map((name) => {
+                        const wf = workflows.find(w => w.workflow_name === name)
+                        if (wf) {
+                          return (
+                            <div
+                              key={name}
+                              className={`p-3 rounded-lg border ${
+                                wf.horas_desde_run > 26
+                                  ? 'bg-red-50 border-red-200'
+                                  : wf.horas_desde_run > 12
+                                  ? 'bg-amber-50 border-amber-200'
+                                  : 'bg-green-50 border-green-200'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span>{getWorkflowIcon(wf)}</span>
+                                <span className="font-medium text-sm capitalize">
+                                  {name.replace(/_/g, ' ')}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500 mt-1">
+                                hace {formatHace(wf.ultimo_run)}
+                              </p>
+                              <p className="text-xs text-slate-400">
+                                🕐 {getSchedule(name)}
+                              </p>
+                            </div>
+                          )
+                        }
+                        // Workflow sin tracking todavía
+                        return (
+                          <div key={name} className="p-3 rounded-lg border bg-slate-50 border-slate-200 border-dashed">
                             <div className="flex items-center gap-2">
-                              <span>{getWorkflowIcon(wf)}</span>
-                              <span className="font-medium text-sm capitalize">
-                                {wf.workflow_name.replace(/_/g, ' ')}
+                              <span>⚪</span>
+                              <span className="font-medium text-sm capitalize text-slate-400">
+                                {name.replace(/_/g, ' ')}
                               </span>
                             </div>
-                            <p className="text-xs text-slate-500 mt-1">
-                              hace {formatHace(wf.ultimo_run)}
-                            </p>
-                            <p className="text-xs text-slate-400">
-                              🕐 {getSchedule(wf.workflow_name)}
+                            <p className="text-xs text-slate-400 mt-1">sin tracking</p>
+                            <p className="text-xs text-slate-300">
+                              🕐 {getSchedule(name)}
                             </p>
                           </div>
-                        ))}
-                      </div>
+                        )
+                      })}
                     </div>
-                  )
-                })}
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="text-slate-500 text-sm">No hay datos de ejecuciones</p>
