@@ -175,8 +175,12 @@ export default function AlquileresPage() {
       <Head>
         <title>Simon · Alquileres Equipetrol</title>
         <meta name="description" content="Alquileres en Equipetrol, Santa Cruz. Departamentos verificados con datos reales." />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="theme-color" content="#0a0a0a" />
+        {/* Preload first photo for faster LCP */}
+        {!loading && properties.length > 0 && properties[0].fotos_urls?.[0] && (
+          <link rel="preload" as="image" href={properties[0].fotos_urls[0]} />
+        )}
       </Head>
 
       <style jsx global>{`
@@ -342,6 +346,25 @@ export default function AlquileresPage() {
             </button>
           </div>
 
+          {/* Active filter chips */}
+          {isFiltered && (
+            <div className="alq-chips">
+              {filters.zonas_permitidas?.map(z => {
+                const zona = ZONAS_UI.find(zu => zu.id === z)
+                return zona ? <span key={z} className="alq-chip">{zona.label} <button onClick={() => {
+                  const newZonas = filters.zonas_permitidas!.filter(x => x !== z)
+                  applyFilters({ ...filters, zonas_permitidas: newZonas.length > 0 ? newZonas : undefined })
+                }}>&times;</button></span> : null
+              })}
+              {filters.precio_mensual_max && <span className="alq-chip">&le; {formatPrice(filters.precio_mensual_max)}</span>}
+              {filters.dormitorios !== undefined && <span className="alq-chip">{filters.dormitorios === 0 ? 'Estudio' : `${filters.dormitorios} dorm`}</span>}
+              {filters.dormitorios_min !== undefined && <span className="alq-chip">{filters.dormitorios_min}+ dorm</span>}
+              {filters.amoblado && <span className="alq-chip">Amoblado</span>}
+              {filters.acepta_mascotas && <span className="alq-chip">Mascotas</span>}
+              <button className="alq-chip alq-chip-clear" onClick={resetFilters}>&times; Todo</button>
+            </div>
+          )}
+
           {/* Floating fav button */}
           <div className="alq-fav-floating">
             <svg viewBox="0 0 24 24" fill="none" stroke="#c9a959" strokeWidth="1.5">
@@ -383,6 +406,15 @@ export default function AlquileresPage() {
                 <div style={{ textAlign: 'center' }}>
                   <div className="alq-logo" style={{ fontSize: 44, marginBottom: 8 }}>Simon</div>
                   <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Cargando alquileres...</div>
+                </div>
+              </div>
+            ) : !loading && properties.length === 0 ? (
+              <div className="alq-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ textAlign: 'center', padding: '0 32px' }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>🔍</div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: '#fff', marginBottom: 8 }}>Sin resultados</div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>No hay alquileres con estos filtros. Proba ampliando tu busqueda.</div>
+                  <button onClick={resetFilters} style={{ padding: '12px 28px', background: '#c9a959', border: 'none', color: '#0a0a0a', fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: 1, cursor: 'pointer', borderRadius: 4 }}>QUITAR FILTROS</button>
                 </div>
               </div>
             ) : (
@@ -501,6 +533,20 @@ export default function AlquileresPage() {
           border: 1px solid rgba(255,255,255,0.15); background: rgba(10,10,10,0.5); color: #fff;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
+        .alq-chips {
+          position: fixed; top: max(56px, calc(env(safe-area-inset-top) + 48px)); left: 0; right: 0; z-index: 49;
+          display: flex; gap: 6px; padding: 6px 16px; overflow-x: auto; scrollbar-width: none;
+          background: linear-gradient(rgba(10,10,10,0.85), rgba(10,10,10,0.6)); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+        }
+        .alq-chips::-webkit-scrollbar { display: none; }
+        .alq-chip {
+          flex-shrink: 0; display: flex; align-items: center; gap: 4px;
+          padding: 4px 10px; border-radius: 100px; font-size: 11px;
+          background: rgba(201,169,89,0.12); border: 1px solid rgba(201,169,89,0.25);
+          color: #c9a959; font-family: 'Manrope', sans-serif; white-space: nowrap;
+        }
+        .alq-chip button { background: none; border: none; color: #c9a959; font-size: 14px; cursor: pointer; padding: 0; line-height: 1; }
+        .alq-chip-clear { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15); color: rgba(255,255,255,0.6); cursor: pointer; }
         .alq-fav-floating {
           position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 8px)); right: 24px;
           z-index: 100; width: 48px; height: 48px; border-radius: 50%;
@@ -769,7 +815,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
         .dc-content { padding: 16px; }
         .dc-name { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 400; color: #fff; line-height: 1.2; margin-bottom: 2px; }
         .dc-zona { font-size: 11px; color: rgba(255,255,255,0.6); letter-spacing: 1px; margin-bottom: 10px; }
-        .dc-price { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; color: #c9a959; line-height: 1; margin-bottom: 4px; }
+        .dc-price { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; color: #c9a959; line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
         .dc-price span { font-size: 16px; color: rgba(201,169,89,0.6); }
         .dc-specs { font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 10px; font-family: 'Manrope', sans-serif; }
         .dc-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
@@ -853,11 +899,11 @@ function MobilePropertyCard({
       {isFirst && <div className="mc-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" style={{width:18,height:18}}><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>}
 
       <style jsx>{`
-        .alq-card { height: 100vh; height: 100dvh; scroll-snap-align: start; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #0a0a0a; }
+        .alq-card { height: 100vh; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #0a0a0a; }
         .mc-content { flex: 1; padding: 0 24px 20px; padding-bottom: max(20px, calc(env(safe-area-inset-bottom) + 8px)); display: flex; flex-direction: column; overflow: hidden; }
         .mc-name { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400; color: #fff; line-height: 1.1; margin-bottom: 3px; }
         .mc-zona { font-size: 12px; color: rgba(255,255,255,0.7); letter-spacing: 1px; margin-bottom: 12px; }
-        .mc-price { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 400; color: #c9a959; line-height: 1; margin-bottom: 4px; }
+        .mc-price { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 400; color: #c9a959; line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
         .mc-specs { font-size: 13px; font-weight: 300; color: rgba(255,255,255,0.7); margin-bottom: 12px; font-family: 'Manrope', sans-serif; }
         .mc-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
         .mc-badge { font-size: 10px; font-weight: 500; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.04); font-family: 'Manrope', sans-serif; }
