@@ -106,30 +106,34 @@ export default function MarketAlquileresDashboard() {
   const fetchRentalData = async () => {
     if (!supabase) return
 
-    const { data: props, error } = await supabase
+    // Minimal filters on PostgREST, do numeric filtering in JS
+    const { data: raw, error } = await supabase
       .from('propiedades_v2')
       .select('id, zona, dormitorios, precio_mensual_bob, area_total_m2, id_proyecto_master, fuente, amoblado, mascotas')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'alquiler')
       .is('duplicado_de', null)
-      .gt('precio_mensual_bob', 0)
-      .lt('precio_mensual_bob', 50000)
-      .gte('area_total_m2', 20)
 
     if (error) { console.error('fetchRentalData error:', error); return }
-    if (!props || props.length === 0) { console.warn('fetchRentalData: no data returned'); return }
+    if (!raw || raw.length === 0) { console.warn('fetchRentalData: no data returned'); return }
+    console.log(`fetchRentalData: ${raw.length} raw rows before JS filter`)
 
-    // Parse numeric strings from Supabase to actual numbers
-    const parsed: RentalProperty[] = props.map((p: any) => ({
-      ...p,
-      precio_mensual_bob: p.precio_mensual_bob ? parseFloat(p.precio_mensual_bob) : null,
-      area_total_m2: p.area_total_m2 ? parseFloat(p.area_total_m2) : null,
-    }))
-    console.log(`fetchRentalData: ${parsed.length} props loaded`)
+    // Parse + filter in JS (PostgREST .gt/.lt on numeric can be flaky)
+    const parsed: RentalProperty[] = raw
+      .map((p: any) => ({
+        ...p,
+        precio_mensual_bob: p.precio_mensual_bob ? parseFloat(p.precio_mensual_bob) : null,
+        area_total_m2: p.area_total_m2 ? parseFloat(p.area_total_m2) : null,
+      }))
+      .filter((p: RentalProperty) =>
+        p.precio_mensual_bob && p.precio_mensual_bob > 0 && p.precio_mensual_bob < 50000 &&
+        p.area_total_m2 && p.area_total_m2 >= 20
+      )
+    console.log(`fetchRentalData: ${parsed.length} props after filter`)
     setRentalProps(parsed)
 
     // Fetch project names for props that have projects
-    const projectIds = [...new Set(props.map(p => p.id_proyecto_master).filter(Boolean))] as number[]
+    const projectIds = [...new Set(parsed.map(p => p.id_proyecto_master).filter(Boolean))] as number[]
     if (projectIds.length > 0) {
       const { data: projects } = await supabase
         .from('proyectos_master')
