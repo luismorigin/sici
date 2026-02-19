@@ -501,6 +501,7 @@ export interface FiltrosAlquiler {
   precio_mensual_min?: number
   precio_mensual_max?: number
   dormitorios?: number
+  dormitorios_min?: number       // Para "3+": >= N dormitorios
   amoblado?: boolean
   acepta_mascotas?: boolean
   zonas_permitidas?: string[]   // IDs UI: 'equipetrol_centro', 'sirari', etc.
@@ -524,6 +525,7 @@ export async function buscarUnidadesAlquiler(filtros: FiltrosAlquiler): Promise<
     if (filtros.precio_mensual_max) rpcFiltros.precio_mensual_max = filtros.precio_mensual_max
     if (filtros.precio_mensual_min) rpcFiltros.precio_mensual_min = filtros.precio_mensual_min
     if (filtros.dormitorios !== undefined) rpcFiltros.dormitorios = filtros.dormitorios
+    if (filtros.dormitorios_min !== undefined) rpcFiltros.dormitorios_min = filtros.dormitorios_min
     if (filtros.amoblado) rpcFiltros.amoblado = true
     if (filtros.acepta_mascotas) rpcFiltros.acepta_mascotas = true
     if (filtros.orden) rpcFiltros.orden = filtros.orden

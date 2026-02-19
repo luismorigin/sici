@@ -554,7 +554,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
     const f: FiltrosAlquiler = { orden: ord || 'recientes', limite: 200, solo_con_fotos: true }
     // Issue 1: only send precio_mensual_max when slider is NOT at maximum
     if (price < MAX_SLIDER_PRICE) f.precio_mensual_max = price
-    if (dorms.size === 1) { const d = Array.from(dorms)[0]; if (d < 3) f.dormitorios = d }
+    if (dorms.size === 1) { const d = Array.from(dorms)[0]; if (d < 3) f.dormitorios = d; else f.dormitorios_min = d }
     if (amob) f.amoblado = true
     if (masc) f.acepta_mascotas = true
     if (zonas.size > 0) f.zonas_permitidas = Array.from(zonas)
