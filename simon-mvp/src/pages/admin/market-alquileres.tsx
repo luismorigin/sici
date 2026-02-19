@@ -467,7 +467,12 @@ export default function MarketAlquileresDashboard() {
         </header>
 
         <main className="max-w-7xl mx-auto py-8 px-6">
-          {loading && !kpis ? (
+          {/* Debug banner — remove after confirming data loads */}
+          <div className="mb-4 bg-yellow-50 border border-yellow-300 rounded-lg p-3 text-sm text-yellow-800">
+            Debug: loading={String(loading)} | rentalProps={rentalProps.length} | kpis={kpis ? 'OK' : 'null'} | supabase={supabase ? 'OK' : 'NULL'}
+          </div>
+
+          {loading && rentalProps.length === 0 ? (
             <div className="flex items-center justify-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-800" />
             </div>
