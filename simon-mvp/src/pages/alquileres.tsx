@@ -141,12 +141,22 @@ export default function AlquileresPage() {
   }
 
   function toggleFavorite(id: number) {
+    const isFav = favorites.has(id)
+    if (!isFav && favorites.size >= MAX_FAVORITES) {
+      showToast(`Maximo ${MAX_FAVORITES} favoritos`)
+      return
+    }
     setFavorites(prev => {
       const next = new Set(prev)
-      if (next.has(id)) { next.delete(id) }
-      else if (next.size < MAX_FAVORITES) { next.add(id) }
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
+    if (isFav) {
+      showToast('Eliminado de favoritos')
+    } else {
+      showToast(`Guardado · ${favorites.size + 1}/${MAX_FAVORITES} favoritos`)
+    }
   }
 
   // Mobile: feed items with filter card at position 3
@@ -487,7 +497,7 @@ export default function AlquileresPage() {
         .alq-logo { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400; color: #fff; }
         .alq-label { font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 3px; }
         .alq-filter-btn {
-          width: 38px; height: 38px; border-radius: 50%;
+          width: 44px; height: 44px; border-radius: 50%;
           border: 1px solid rgba(255,255,255,0.15); background: rgba(10,10,10,0.5); color: #fff;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
@@ -747,12 +757,13 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
       <style jsx>{`
         .dc-card { background: #111; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; overflow: hidden; transition: border-color 0.2s; }
         .dc-card:hover { border-color: rgba(201,169,89,0.2); }
-        .dc-photo { height: 220px; background-size: cover; background-position: center; background-color: #1a1a1a; position: relative; }
-        .dc-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; background: rgba(10,10,10,0.6); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .dc-photo { height: 220px; background-size: cover; background-position: center; background-color: #1a1a1a; position: relative; animation: dcShimmer 1.5s ease-in-out infinite; }
+        @keyframes dcShimmer { 0%,100%{background-color:#1a1a1a} 50%{background-color:#262626} }
+        .dc-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(10,10,10,0.6); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .dc-prev { left: 8px; }
         .dc-next { right: 8px; }
         .dc-photo-count { position: absolute; top: 10px; right: 10px; background: rgba(10,10,10,0.6); padding: 3px 10px; border-radius: 100px; font-size: 11px; color: rgba(255,255,255,0.7); font-family: 'Manrope', sans-serif; }
-        .dc-fav-btn { position: absolute; top: 10px; left: 10px; width: 36px; height: 36px; border-radius: 50%; background: rgba(10,10,10,0.5); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
+        .dc-fav-btn { position: absolute; top: 10px; left: 10px; width: 44px; height: 44px; border-radius: 50%; background: rgba(10,10,10,0.5); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
         .dc-fav-btn:hover { transform: scale(1.1); }
         .dc-fav-btn.active { background: rgba(201,169,89,0.15); }
         .dc-content { padding: 16px; }
@@ -823,13 +834,6 @@ function MobilePropertyCard({
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
-          {p.agente_whatsapp && (
-            <a href={`https://wa.me/${p.agente_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola, vi este alquiler en Simon y me interesa: ${p.nombre_edificio || p.nombre_proyecto || 'Departamento'} - ${formatPrice(p.precio_mensual_bob)}/mes`)}`} target="_blank" rel="noopener noreferrer" className="mc-btn mc-wsp">
-              <svg viewBox="0 0 24 24" fill="#25d366" style={{ width: 22, height: 22 }}>
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
-            </a>
-          )}
           <button className="mc-btn mc-info" onClick={onOpenInfo}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
@@ -837,6 +841,14 @@ function MobilePropertyCard({
           </button>
           <a href={p.url} target="_blank" rel="noopener noreferrer" className="mc-btn mc-ver">Ver &#8599;</a>
         </div>
+        {p.agente_whatsapp && (
+          <a href={`https://wa.me/${p.agente_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola, vi este alquiler en Simon y me interesa: ${p.nombre_edificio || p.nombre_proyecto || 'Departamento'} - ${formatPrice(p.precio_mensual_bob)}/mes`)}`} target="_blank" rel="noopener noreferrer" className="mc-wsp-cta">
+            <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 18, height: 18 }}>
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            Consultar por WhatsApp
+          </a>
+        )}
       </div>
       {isFirst && <div className="mc-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" style={{width:18,height:18}}><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>}
 
@@ -853,11 +865,12 @@ function MobilePropertyCard({
         .mc-badge.purple { border-color: rgba(168,85,247,0.25); color: #a855f7; background: rgba(168,85,247,0.06); }
         .mc-razon { font-size: 12px; font-weight: 300; color: rgba(255,255,255,0.6); line-height: 1.5; margin-bottom: auto; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .mc-actions { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 8px; }
-        .mc-btn { display: flex; align-items: center; gap: 5px; background: none; border: none; color: rgba(255,255,255,0.7); font-size: 12px; font-family: 'Manrope', sans-serif; cursor: pointer; padding: 6px 0; }
+        .mc-btn { display: flex; align-items: center; justify-content: center; gap: 5px; background: none; border: none; color: rgba(255,255,255,0.7); font-size: 12px; font-family: 'Manrope', sans-serif; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
         .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(201,169,89,0.5)); }
-        .mc-btn.mc-wsp { padding: 6px 4px; }
         .mc-btn.mc-info { color: rgba(255,255,255,0.7); font-size: 11px; letter-spacing: 0.5px; }
         .mc-btn.mc-ver { margin-left: auto; color: #c9a959; text-decoration: none; font-weight: 500; }
+        .mc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: #25d366; border: none; border-radius: 8px; color: #fff; font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: 8px; min-height: 44px; transition: opacity 0.2s; }
+        .mc-wsp-cta:active { opacity: 0.85; }
         .mc-btn.shake { animation: mcShake 0.3s ease; }
         @keyframes mcShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
         .mc-scroll-hint { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); z-index: 10; animation: mcBounce 2s infinite; opacity: 0.25; }
@@ -923,7 +936,8 @@ function PhotoCarousel({ photos, isFirst }: { photos: string[]; isFirst: boolean
         .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(transparent, #0a0a0a); pointer-events: none; z-index: 2; }
         .pc-scroll { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .pc-scroll::-webkit-scrollbar { display: none; }
-        .pc-slide { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #111; scroll-snap-align: start; }
+        .pc-slide { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #1a1a1a; scroll-snap-align: start; animation: imgShimmer 1.5s ease-in-out infinite; }
+        @keyframes imgShimmer { 0%,100%{background-color:#1a1a1a} 50%{background-color:#262626} }
         .pc-counter { position: absolute; top: 16px; right: 16px; z-index: 5; background: rgba(10,10,10,0.75); padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 5px; font-family: 'Manrope', sans-serif; }
         .pc-dots { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 5; }
         .pc-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.35); transition: all 0.25s; }
@@ -1107,7 +1121,7 @@ function BottomSheet({ open, property, onClose, isDesktop }: { open: boolean; pr
         .bs-handle{width:36px;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;margin:12px auto 0;}
         .bs-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px 12px;border-bottom:1px solid rgba(255,255,255,0.06);}
         .bs-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:#fff;}
-        .bs-close{width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;}
+        .bs-close{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;}
         .bs-section{padding:16px 24px;}
         .bs-sl{font-size:10px;font-weight:500;color:rgba(255,255,255,0.55);letter-spacing:2px;margin-bottom:12px;font-family:'Manrope',sans-serif;}
         .bs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
