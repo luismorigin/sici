@@ -140,11 +140,14 @@ export default function DashboardSalud() {
       }
     }
 
-    const workflowsRequeridos = ['discovery', 'enrichment', 'merge']
+    const workflowsRequeridos = [
+      'discovery_remax', 'discovery_century21', 'enrichment', 'merge',
+      'verificador', 'matching_nocturno', 'verificador_alquiler'
+    ]
     for (const wf of workflowsRequeridos) {
       const found = workflows.find(w => w.workflow_name === wf)
       if (found && found.horas_desde_run > 26) {
-        nuevasAlertas.push(`${wf} no corrió en ${found.horas_desde_run.toFixed(0)}h`)
+        nuevasAlertas.push(`${wf.replace(/_/g, ' ')} no corrió en ${found.horas_desde_run.toFixed(0)}h`)
       }
     }
 
@@ -473,10 +476,36 @@ export default function DashboardSalud() {
     'discovery_century21': '02:30 AM',
     'enrichment': '03:00 AM',
     'merge': '03:30 AM',
+    'verificador': '04:00 AM',
     'matching_nocturno': '04:00 AM',
-    'auditoria_diaria': '08:00 AM',
+    'verificador_alquiler': '11:00 AM',
+    'auditoria_diaria': '09:00 AM',
     'tc_dinamico_binance': 'cada 1h'
   }
+
+  // Categorías de workflows
+  const workflowCategories: { label: string; color: string; workflows: string[] }[] = [
+    {
+      label: 'Pipeline Común (Venta + Alquiler)',
+      color: 'text-slate-700',
+      workflows: ['discovery_remax', 'discovery_century21', 'enrichment', 'merge', 'verificador']
+    },
+    {
+      label: 'Solo Venta',
+      color: 'text-slate-600',
+      workflows: ['matching_nocturno']
+    },
+    {
+      label: 'Solo Alquiler',
+      color: 'text-blue-600',
+      workflows: ['verificador_alquiler']
+    },
+    {
+      label: 'Servicios Globales',
+      color: 'text-slate-500',
+      workflows: ['tc_dinamico_binance', 'auditoria_diaria']
+    }
+  ]
 
   const getSchedule = (workflowName: string): string => {
     return workflowSchedule[workflowName] || '-'
@@ -836,32 +865,47 @@ export default function DashboardSalud() {
               <span>⚙️</span> Health Check - Workflows
             </h2>
             {workflows.length > 0 ? (
-              <div className="grid grid-cols-4 gap-4">
-                {workflows.map((wf) => (
-                  <div
-                    key={wf.workflow_name}
-                    className={`p-3 rounded-lg border ${
-                      wf.horas_desde_run > 26
-                        ? 'bg-red-50 border-red-200'
-                        : wf.horas_desde_run > 12
-                        ? 'bg-amber-50 border-amber-200'
-                        : 'bg-green-50 border-green-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span>{getWorkflowIcon(wf)}</span>
-                      <span className="font-medium text-sm capitalize">
-                        {wf.workflow_name.replace(/_/g, ' ')}
-                      </span>
+              <div className="space-y-5">
+                {workflowCategories.map((cat) => {
+                  const catWorkflows = cat.workflows
+                    .map(name => workflows.find(w => w.workflow_name === name))
+                    .filter(Boolean) as WorkflowHealth[]
+                  if (catWorkflows.length === 0) return null
+                  return (
+                    <div key={cat.label}>
+                      <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${cat.color}`}>
+                        {cat.label}
+                      </p>
+                      <div className="grid grid-cols-5 gap-3">
+                        {catWorkflows.map((wf) => (
+                          <div
+                            key={wf.workflow_name}
+                            className={`p-3 rounded-lg border ${
+                              wf.horas_desde_run > 26
+                                ? 'bg-red-50 border-red-200'
+                                : wf.horas_desde_run > 12
+                                ? 'bg-amber-50 border-amber-200'
+                                : 'bg-green-50 border-green-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>{getWorkflowIcon(wf)}</span>
+                              <span className="font-medium text-sm capitalize">
+                                {wf.workflow_name.replace(/_/g, ' ')}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">
+                              hace {formatHace(wf.ultimo_run)}
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              🕐 {getSchedule(wf.workflow_name)}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">
-                      hace {formatHace(wf.ultimo_run)}
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      🕐 {getSchedule(wf.workflow_name)}
-                    </p>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <p className="text-slate-500 text-sm">No hay datos de ejecuciones</p>
