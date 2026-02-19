@@ -32,10 +32,14 @@ interface StatsProps {
 }
 
 interface MatchingStats {
-  sugerencias_24h: number
-  aprobadas_24h: number
-  rechazadas_24h: number
-  pendientes: number
+  sugerencias_24h_venta: number
+  aprobadas_24h_venta: number
+  rechazadas_24h_venta: number
+  pendientes_venta: number
+  sugerencias_24h_alquiler: number
+  aprobadas_24h_alquiler: number
+  rechazadas_24h_alquiler: number
+  pendientes_alquiler: number
 }
 
 interface ProyectosStats {
@@ -45,8 +49,10 @@ interface ProyectosStats {
 }
 
 interface ColasHITL {
-  cola_matching: number
-  cola_sin_match: number
+  cola_matching_venta: number
+  cola_matching_alquiler: number
+  cola_sin_match_venta: number
+  cola_sin_match_alquiler: number
   cola_excluidas: number
   cola_auto_aprobados: number
 }
@@ -98,11 +104,13 @@ export default function DashboardSalud() {
     const nuevasAlertas: string[] = []
 
     if (colas) {
-      if (colas.cola_matching > 10) {
-        nuevasAlertas.push(`${colas.cola_matching} matches pendientes de revisión`)
+      const totalMatching = colas.cola_matching_venta + colas.cola_matching_alquiler
+      if (totalMatching > 10) {
+        nuevasAlertas.push(`${totalMatching} matches pendientes de revisión`)
       }
-      if (colas.cola_sin_match > 20) {
-        nuevasAlertas.push(`${colas.cola_sin_match} propiedades sin proyecto`)
+      const totalSinMatch = colas.cola_sin_match_venta + colas.cola_sin_match_alquiler
+      if (totalSinMatch > 20) {
+        nuevasAlertas.push(`${totalSinMatch} propiedades sin proyecto`)
       }
       if (colas.cola_excluidas > 30) {
         nuevasAlertas.push(`${colas.cola_excluidas} excluidas por revisar`)
@@ -256,17 +264,38 @@ export default function DashboardSalud() {
 
     const { data } = await supabase
       .from('matching_sugerencias')
-      .select('estado, created_at, fecha_revision')
+      .select('estado, created_at, fecha_revision, propiedad_id, propiedades_v2!inner(tipo_operacion)')
 
     if (data) {
       const now = new Date()
       const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
+      const getTipo = (d: any) => {
+        const t = d.propiedades_v2?.tipo_operacion
+        return t === 'alquiler' ? 'alquiler' : 'venta'
+      }
+
+      const calc = (tipo: string) => {
+        const filtered = data.filter(d => getTipo(d) === tipo)
+        return {
+          sugerencias: filtered.filter(d => new Date(d.created_at) > yesterday).length,
+          aprobadas: filtered.filter(d => d.estado === 'aprobado' && d.fecha_revision && new Date(d.fecha_revision) > yesterday).length,
+          rechazadas: filtered.filter(d => d.estado === 'rechazado' && d.fecha_revision && new Date(d.fecha_revision) > yesterday).length,
+          pendientes: filtered.filter(d => d.estado === 'pendiente').length
+        }
+      }
+      const v = calc('venta')
+      const a = calc('alquiler')
+
       setMatchStats({
-        sugerencias_24h: data.filter(d => new Date(d.created_at) > yesterday).length,
-        aprobadas_24h: data.filter(d => d.estado === 'aprobado' && d.fecha_revision && new Date(d.fecha_revision) > yesterday).length,
-        rechazadas_24h: data.filter(d => d.estado === 'rechazado' && d.fecha_revision && new Date(d.fecha_revision) > yesterday).length,
-        pendientes: data.filter(d => d.estado === 'pendiente').length
+        sugerencias_24h_venta: v.sugerencias,
+        aprobadas_24h_venta: v.aprobadas,
+        rechazadas_24h_venta: v.rechazadas,
+        pendientes_venta: v.pendientes,
+        sugerencias_24h_alquiler: a.sugerencias,
+        aprobadas_24h_alquiler: a.aprobadas,
+        rechazadas_24h_alquiler: a.rechazadas,
+        pendientes_alquiler: a.pendientes,
       })
     }
   }
@@ -291,24 +320,35 @@ export default function DashboardSalud() {
   async function fetchColasHITL() {
     if (!supabase) return
 
-    // Cola matching
+    // Cola matching pendientes con tipo
     const { data: matching } = await supabase
       .from('matching_sugerencias')
-      .select('id', { count: 'exact', head: true })
+      .select('id, propiedades_v2!inner(tipo_operacion)')
       .eq('estado', 'pendiente')
 
-    // Cola sin match - usar RPC
-    const { data: sinMatch } = await supabase.rpc('obtener_sin_match_para_exportar', { p_limit: 1000 })
+    // Cola sin match con tipo (query directa en vez de RPC para tener tipo_operacion)
+    const { data: sinMatch } = await supabase
+      .from('propiedades_v2')
+      .select('id, tipo_operacion')
+      .eq('status', 'completado')
+      .is('id_proyecto_master', null)
 
-    // Cola excluidas - usar RPC
+    // Cola excluidas - usar RPC (global)
     const { data: excluidas } = await supabase.rpc('exportar_propiedades_excluidas')
 
-    // Cola auto-aprobados sin validar
+    // Cola auto-aprobados sin validar (global)
     const { data: autoAprobados } = await supabase.rpc('contar_auto_aprobados_sin_validar')
 
+    const matchVenta = matching?.filter((m: any) => (m.propiedades_v2?.tipo_operacion || 'venta') !== 'alquiler').length || 0
+    const matchAlq = matching?.filter((m: any) => m.propiedades_v2?.tipo_operacion === 'alquiler').length || 0
+    const smVenta = sinMatch?.filter((p: any) => (p.tipo_operacion || 'venta') !== 'alquiler').length || 0
+    const smAlq = sinMatch?.filter((p: any) => p.tipo_operacion === 'alquiler').length || 0
+
     setColas({
-      cola_matching: matching?.length || 0,
-      cola_sin_match: sinMatch?.length || 0,
+      cola_matching_venta: matchVenta,
+      cola_matching_alquiler: matchAlq,
+      cola_sin_match_venta: smVenta,
+      cola_sin_match_alquiler: smAlq,
       cola_excluidas: excluidas?.length || 0,
       cola_auto_aprobados: autoAprobados || 0
     })
@@ -635,32 +675,35 @@ export default function DashboardSalud() {
                 <span>🔗</span> Matching (24h)
               </h2>
               {matchStats && (
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Sugerencias</span>
-                    <span className="font-semibold">{matchStats.sugerencias_24h}</span>
+                <div className="text-sm">
+                  <div className="grid grid-cols-3 gap-2 mb-2 pb-2 border-b">
+                    <span className="text-slate-400 text-xs"></span>
+                    <span className="text-xs font-semibold text-slate-500 text-right">Venta</span>
+                    <span className="text-xs font-semibold text-blue-500 text-right">Alquiler</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Aprobadas</span>
-                    <span className="font-semibold text-green-600">{matchStats.aprobadas_24h}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Rechazadas</span>
-                    <span className="font-semibold text-red-600">{matchStats.rechazadas_24h}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Tasa aprobación</span>
-                    <span className="font-semibold">
-                      {matchStats.sugerencias_24h > 0
-                        ? ((matchStats.aprobadas_24h / matchStats.sugerencias_24h) * 100).toFixed(0)
-                        : '-'}%
-                    </span>
-                  </div>
-                  <div className="pt-3 border-t">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Pendientes revisión</span>
-                      <span className={`font-semibold ${matchStats.pendientes > 10 ? 'text-red-600' : 'text-amber-600'}`}>
-                        {matchStats.pendientes}
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="text-slate-600">Sugerencias</span>
+                      <span className="font-semibold text-right">{matchStats.sugerencias_24h_venta}</span>
+                      <span className="font-semibold text-right">{matchStats.sugerencias_24h_alquiler}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="text-slate-600">Aprobadas</span>
+                      <span className="font-semibold text-green-600 text-right">{matchStats.aprobadas_24h_venta}</span>
+                      <span className="font-semibold text-green-600 text-right">{matchStats.aprobadas_24h_alquiler}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="text-slate-600">Rechazadas</span>
+                      <span className="font-semibold text-red-600 text-right">{matchStats.rechazadas_24h_venta}</span>
+                      <span className="font-semibold text-red-600 text-right">{matchStats.rechazadas_24h_alquiler}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t">
+                      <span className="text-slate-600">Pendientes</span>
+                      <span className={`font-semibold text-right ${matchStats.pendientes_venta > 10 ? 'text-red-600' : 'text-amber-600'}`}>
+                        {matchStats.pendientes_venta}
+                      </span>
+                      <span className={`font-semibold text-right ${matchStats.pendientes_alquiler > 10 ? 'text-red-600' : 'text-amber-600'}`}>
+                        {matchStats.pendientes_alquiler}
                       </span>
                     </div>
                   </div>
@@ -677,21 +720,37 @@ export default function DashboardSalud() {
                 <div className="space-y-3">
                   <Link
                     href="/admin/supervisor/matching"
-                    className="flex justify-between items-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100"
+                    className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100"
                   >
-                    <span className="text-slate-700">Matching pendientes</span>
-                    <span className={`font-bold ${colas.cola_matching > 10 ? 'text-red-600' : 'text-amber-600'}`}>
-                      {colas.cola_matching} →
-                    </span>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-slate-700">Matching pendientes</span>
+                      <span className="text-slate-400">→</span>
+                    </div>
+                    <div className="flex gap-3 text-sm">
+                      <span className={`font-bold ${colas.cola_matching_venta > 10 ? 'text-red-600' : 'text-amber-600'}`}>
+                        V: {colas.cola_matching_venta}
+                      </span>
+                      <span className={`font-bold ${colas.cola_matching_alquiler > 10 ? 'text-red-600' : 'text-blue-600'}`}>
+                        A: {colas.cola_matching_alquiler}
+                      </span>
+                    </div>
                   </Link>
                   <Link
                     href="/admin/supervisor/sin-match"
-                    className="flex justify-between items-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100"
+                    className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100"
                   >
-                    <span className="text-slate-700">Sin proyecto (huérfanas)</span>
-                    <span className={`font-bold ${colas.cola_sin_match > 20 ? 'text-red-600' : 'text-orange-600'}`}>
-                      {colas.cola_sin_match} →
-                    </span>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-slate-700">Sin proyecto (huérfanas)</span>
+                      <span className="text-slate-400">→</span>
+                    </div>
+                    <div className="flex gap-3 text-sm">
+                      <span className={`font-bold ${colas.cola_sin_match_venta > 20 ? 'text-red-600' : 'text-orange-600'}`}>
+                        V: {colas.cola_sin_match_venta}
+                      </span>
+                      <span className={`font-bold ${colas.cola_sin_match_alquiler > 20 ? 'text-red-600' : 'text-blue-600'}`}>
+                        A: {colas.cola_sin_match_alquiler}
+                      </span>
+                    </div>
                   </Link>
                   <Link
                     href="/admin/supervisor/excluidas"
