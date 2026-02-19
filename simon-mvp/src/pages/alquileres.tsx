@@ -62,6 +62,25 @@ export default function AlquileresPage() {
 
   const feedRef = useRef<HTMLDivElement>(null)
 
+  // Track active card via scroll position (single listener, not per-card IntersectionObserver)
+  useEffect(() => {
+    const el = feedRef.current
+    if (!el || isDesktop) return
+    let ticking = false
+    function onScroll() {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        if (!el) { ticking = false; return }
+        const idx = Math.round(el.scrollTop / el.clientHeight)
+        setActiveCardIndex(idx)
+        ticking = false
+      })
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [isDesktop, loading])
+
   const fetchProperties = useCallback(async (f: FiltrosAlquiler) => {
     setLoading(true)
     const data = await buscarUnidadesAlquiler(f)
@@ -164,7 +183,7 @@ export default function AlquileresPage() {
         /* ==================== DESKTOP LAYOUT ==================== */
         <div className="desktop-layout">
           {/* Left sidebar - filters */}
-          <aside className="desktop-sidebar">
+          <aside className="desktop-sidebar" style={{ overscrollBehavior: 'contain' }}>
             <div className="desktop-sidebar-header">
               <Link href="/landing-v2" className="desktop-logo">Simon</Link>
               <div className="desktop-label">ALQUILERES</div>
@@ -331,7 +350,7 @@ export default function AlquileresPage() {
 
           <CardCounter total={feedItems.length} active={activeCardIndex} />
 
-          {/* Feed */}
+          {/* Feed — windowed: only render cards near viewport */}
           <div className="alq-feed" ref={feedRef}>
             {loading && properties.length === 0 ? (
               <div className="alq-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -342,6 +361,13 @@ export default function AlquileresPage() {
               </div>
             ) : (
               feedItems.map((item, idx) => {
+                // Virtualization: only render cards within ±3 of active
+                const WINDOW = 3
+                const isNearby = Math.abs(idx - activeCardIndex) <= WINDOW
+                if (!isNearby) {
+                  // Placeholder to preserve scroll position
+                  return <div key={item.type === 'filter' ? 'filter' : item.data.id} className="alq-card" style={{ background: '#0a0a0a' }} />
+                }
                 if (item.type === 'filter') {
                   return (
                     <MobileFilterCard
@@ -363,7 +389,6 @@ export default function AlquileresPage() {
                     favoritesCount={favorites.size}
                     onToggleFavorite={() => toggleFavorite(item.data.id)}
                     onOpenInfo={() => { setSheetProperty(item.data); setSheetOpen(true) }}
-                    onVisible={() => setActiveCardIndex(idx)}
                   />
                 )
               })
@@ -717,23 +742,13 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
 
 // ===== MOBILE PROPERTY CARD (full-screen) =====
 function MobilePropertyCard({
-  property: p, isFirst, isFavorite, favoritesCount, onToggleFavorite, onOpenInfo, onVisible,
+  property: p, isFirst, isFavorite, favoritesCount, onToggleFavorite, onOpenInfo,
 }: {
   property: UnidadAlquiler; isFirst: boolean; isFavorite: boolean; favoritesCount: number
-  onToggleFavorite: () => void; onOpenInfo: () => void; onVisible: () => void
+  onToggleFavorite: () => void; onOpenInfo: () => void
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [shakeBtn, setShakeBtn] = useState(false)
-
-  useEffect(() => {
-    const el = cardRef.current
-    if (!el) return
-    const obs = new IntersectionObserver(entries => {
-      if (entries[0]?.isIntersecting) onVisible()
-    }, { threshold: 0.6 })
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [onVisible])
 
   function handleFavorite() {
     if (!isFavorite && favoritesCount >= MAX_FAVORITES) {
@@ -866,7 +881,7 @@ function PhotoCarousel({ photos, isFirst }: { photos: string[]; isFirst: boolean
         .pc-scroll { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .pc-scroll::-webkit-scrollbar { display: none; }
         .pc-slide { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #111; scroll-snap-align: start; }
-        .pc-counter { position: absolute; top: 16px; right: 16px; z-index: 5; background: rgba(10,10,10,0.6); backdrop-filter: blur(8px); padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 5px; font-family: 'Manrope', sans-serif; }
+        .pc-counter { position: absolute; top: 16px; right: 16px; z-index: 5; background: rgba(10,10,10,0.75); padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 5px; font-family: 'Manrope', sans-serif; }
         .pc-dots { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 5; }
         .pc-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.35); transition: all 0.25s; }
         .pc-dot.active { background: #fff; width: 20px; border-radius: 3px; }
