@@ -119,9 +119,8 @@ export default function AlquileresPage() {
 
   useEffect(() => {
     async function init() {
-      const data = await buscarUnidadesAlquiler({ limite: 200, solo_con_fotos: false })
-      setTotalCount(data.length)
-      await fetchProperties(filters)
+      const count = await fetchProperties(filters)
+      setTotalCount(count)
     }
     init()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,6 +149,7 @@ export default function AlquileresPage() {
     setFilters(defaultFilters)
     setIsFiltered(false)
     const count = await fetchProperties(defaultFilters)
+    setTotalCount(count)
     showToast(`${count} alquileres · sin filtros`)
     feedRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -192,8 +192,9 @@ export default function AlquileresPage() {
     let c = 0
     if (filters.zonas_permitidas?.length) c += filters.zonas_permitidas.length
     if (filters.precio_mensual_max) c++
-    if (filters.dormitorios !== undefined) c++
-    if (filters.dormitorios_min !== undefined) c++
+    if (filters.dormitorios_lista?.length) c += filters.dormitorios_lista.length
+    else if (filters.dormitorios !== undefined) c++
+    if (filters.dormitorios_min !== undefined && !filters.dormitorios_lista?.length) c++
     if (filters.amoblado) c++
     if (filters.acepta_mascotas) c++
     return c
@@ -422,8 +423,11 @@ export default function AlquileresPage() {
               }}>&times;</button></span> : null
             })}
             {filters.precio_mensual_max && <span className="alq-chip">&le; {formatPrice(filters.precio_mensual_max)}</span>}
-            {filters.dormitorios !== undefined && <span className="alq-chip">{filters.dormitorios === 0 ? 'Estudio' : `${filters.dormitorios} dorm`}</span>}
-            {filters.dormitorios_min !== undefined && <span className="alq-chip">{filters.dormitorios_min}+ dorm</span>}
+            {filters.dormitorios_lista?.map(d => (
+              <span key={`dorm-${d}`} className="alq-chip">{d === 0 ? 'Estudio' : d === 3 ? '3+ dorm' : `${d} dorm`}</span>
+            ))}
+            {!filters.dormitorios_lista?.length && filters.dormitorios !== undefined && <span className="alq-chip">{filters.dormitorios === 0 ? 'Estudio' : `${filters.dormitorios} dorm`}</span>}
+            {!filters.dormitorios_lista?.length && filters.dormitorios_min !== undefined && <span className="alq-chip">{filters.dormitorios_min}+ dorm</span>}
             {filters.amoblado && <span className="alq-chip">Amoblado</span>}
             {filters.acepta_mascotas && <span className="alq-chip">Mascotas</span>}
             <button className="alq-chip alq-chip-clear" onClick={() => { resetFilters(); setChipsExpanded(false) }}>&times; Todo</button>
@@ -612,7 +616,7 @@ export default function AlquileresPage() {
         .alq-chips-panel {
           position: fixed; top: max(56px, calc(env(safe-area-inset-top) + 48px)); left: 0; right: 0; z-index: 49;
           display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px;
-          background: rgba(10,10,10,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+          background: rgba(10,10,10,0.95);
           transform: translateY(-100%); opacity: 0; transition: transform 0.25s ease-out, opacity 0.2s;
           pointer-events: none;
         }
@@ -694,7 +698,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
     const f: FiltrosAlquiler = { orden: ord || 'recientes', limite: 200, solo_con_fotos: true }
     // Issue 1: only send precio_mensual_max when slider is NOT at maximum
     if (price < MAX_SLIDER_PRICE) f.precio_mensual_max = price
-    if (dorms.size === 1) { const d = Array.from(dorms)[0]; if (d < 3) f.dormitorios = d; else f.dormitorios_min = d }
+    if (dorms.size > 0) f.dormitorios_lista = Array.from(dorms)
     if (amob) f.amoblado = true
     if (masc) f.acepta_mascotas = true
     if (zonas.size > 0) f.zonas_permitidas = Array.from(zonas)
@@ -1127,7 +1131,7 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
   const buildFilters = useCallback((): FiltrosAlquiler => {
     const f: FiltrosAlquiler = { orden: orden || 'recientes', limite: 200, solo_con_fotos: true }
     if (maxPrice < MAX_SLIDER_PRICE) f.precio_mensual_max = maxPrice
-    if (selectedDorms.size === 1) { const d = Array.from(selectedDorms)[0]; if (d < 3) f.dormitorios = d; else f.dormitorios_min = d }
+    if (selectedDorms.size > 0) f.dormitorios_lista = Array.from(selectedDorms)
     if (amoblado) f.amoblado = true
     if (mascotas) f.acepta_mascotas = true
     if (selectedZonas.size > 0) f.zonas_permitidas = Array.from(selectedZonas)
