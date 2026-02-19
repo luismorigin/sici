@@ -953,7 +953,7 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
   const buildFilters = useCallback((): FiltrosAlquiler => {
     const f: FiltrosAlquiler = { orden: orden || 'recientes', limite: 200, solo_con_fotos: true }
     if (maxPrice < MAX_SLIDER_PRICE) f.precio_mensual_max = maxPrice
-    if (selectedDorms.size === 1) { const d = Array.from(selectedDorms)[0]; if (d < 3) f.dormitorios = d }
+    if (selectedDorms.size === 1) { const d = Array.from(selectedDorms)[0]; if (d < 3) f.dormitorios = d; else f.dormitorios_min = d }
     if (amoblado) f.amoblado = true
     if (mascotas) f.acepta_mascotas = true
     if (selectedZonas.size > 0) f.zonas_permitidas = Array.from(selectedZonas)
