@@ -1131,7 +1131,10 @@ export default function MarketPulseDashboard() {
               <Link href="/admin/proyectos" className="text-slate-300 hover:text-white text-sm transition-colors">
                 Proyectos
               </Link>
-              <Link href="/admin/salud" className="text-teal-400 hover:text-teal-300 text-sm font-medium transition-colors">
+              <Link href="/admin/market-alquileres" className="text-teal-400 hover:text-teal-300 text-sm font-medium transition-colors">
+                Alquileres
+              </Link>
+              <Link href="/admin/salud" className="text-slate-300 hover:text-white text-sm transition-colors">
                 Salud
               </Link>
             </div>

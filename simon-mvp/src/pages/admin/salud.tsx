@@ -547,7 +547,10 @@ export default function DashboardSalud() {
                 Supervisor
               </Link>
               <Link href="/admin/market" className="text-purple-400 hover:text-purple-300 text-sm font-medium">
-                Market Pulse
+                Market Venta
+              </Link>
+              <Link href="/admin/market-alquileres" className="text-teal-400 hover:text-teal-300 text-sm font-medium">
+                Market Alquileres
               </Link>
             </div>
           </div>
