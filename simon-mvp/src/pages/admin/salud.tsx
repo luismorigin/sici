@@ -15,6 +15,7 @@ interface StatsProps {
   score_alto: number
   score_medio: number
   score_bajo: number
+  completadas_venta: number
   sin_zona: number
   sin_dormitorios: number
 }
@@ -103,7 +104,7 @@ export default function DashboardSalud() {
         nuevasAlertas.push(`Cobertura matching baja: ${pctMatch.toFixed(1)}%`)
       }
 
-      const pctBajo = propStats.completadas > 0 ? (propStats.score_bajo / propStats.completadas) * 100 : 0
+      const pctBajo = propStats.completadas_venta > 0 ? (propStats.score_bajo / propStats.completadas_venta) * 100 : 0
       if (pctBajo > 10) {
         nuevasAlertas.push(`${pctBajo.toFixed(1)}% con calidad baja`)
       }
@@ -159,9 +160,10 @@ export default function DashboardSalud() {
           COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL AND status = 'completado')::int as matcheadas,
           COUNT(*) FILTER (WHERE id_proyecto_master IS NULL AND status = 'completado')::int as sin_match,
           COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '24 hours')::int as ultimas_24h,
-          COUNT(*) FILTER (WHERE score_calidad_dato >= 95 AND status = 'completado')::int as score_alto,
-          COUNT(*) FILTER (WHERE score_calidad_dato >= 85 AND score_calidad_dato < 95 AND status = 'completado')::int as score_medio,
-          COUNT(*) FILTER (WHERE score_calidad_dato < 85 AND status = 'completado')::int as score_bajo,
+          COUNT(*) FILTER (WHERE score_calidad_dato >= 95 AND status = 'completado' AND COALESCE(tipo_operacion, 'venta') != 'alquiler')::int as score_alto,
+          COUNT(*) FILTER (WHERE score_calidad_dato >= 85 AND score_calidad_dato < 95 AND status = 'completado' AND COALESCE(tipo_operacion, 'venta') != 'alquiler')::int as score_medio,
+          COUNT(*) FILTER (WHERE score_calidad_dato < 85 AND status = 'completado' AND COALESCE(tipo_operacion, 'venta') != 'alquiler')::int as score_bajo,
+          COUNT(*) FILTER (WHERE status = 'completado' AND COALESCE(tipo_operacion, 'venta') != 'alquiler')::int as completadas_venta,
           COUNT(*) FILTER (WHERE (zona IS NULL OR zona = '') AND status = 'completado')::int as sin_zona,
           COUNT(*) FILTER (WHERE dormitorios IS NULL AND status = 'completado')::int as sin_dormitorios
         FROM propiedades_v2
@@ -172,10 +174,12 @@ export default function DashboardSalud() {
     if (error || !data) {
       const { data: props } = await supabase
         .from('propiedades_v2')
-        .select('status, id_proyecto_master, score_calidad_dato, zona, dormitorios, fecha_creacion')
+        .select('status, id_proyecto_master, score_calidad_dato, zona, dormitorios, fecha_creacion, tipo_operacion')
 
       if (props) {
         const completadas = props.filter(p => p.status === 'completado')
+        // Score calidad solo aplica a venta (alquileres usan score diferente)
+        const completadasVenta = completadas.filter((p: any) => p.tipo_operacion !== 'alquiler')
         setPropStats({
           completadas: completadas.length,
           nuevas: props.filter(p => p.status === 'nueva').length,
@@ -187,9 +191,10 @@ export default function DashboardSalud() {
             const created = new Date(p.fecha_creacion)
             return created > new Date(Date.now() - 24 * 60 * 60 * 1000)
           }).length,
-          score_alto: completadas.filter(p => (p.score_calidad_dato || 0) >= 95).length,
-          score_medio: completadas.filter(p => (p.score_calidad_dato || 0) >= 85 && (p.score_calidad_dato || 0) < 95).length,
-          score_bajo: completadas.filter(p => (p.score_calidad_dato || 0) < 85).length,
+          score_alto: completadasVenta.filter(p => (p.score_calidad_dato || 0) >= 95).length,
+          score_medio: completadasVenta.filter(p => (p.score_calidad_dato || 0) >= 85 && (p.score_calidad_dato || 0) < 95).length,
+          score_bajo: completadasVenta.filter(p => (p.score_calidad_dato || 0) < 85).length,
+          completadas_venta: completadasVenta.length,
           sin_zona: completadas.filter(p => !p.zona).length,
           sin_dormitorios: completadas.filter(p => p.dormitorios === null).length
         })
@@ -496,19 +501,19 @@ export default function DashboardSalud() {
                   <div className="flex justify-between">
                     <span className="text-slate-600">Score alto (≥95)</span>
                     <span className="font-semibold text-green-600">
-                      {propStats.score_alto} ({propStats.completadas > 0 ? ((propStats.score_alto / propStats.completadas) * 100).toFixed(0) : 0}%)
+                      {propStats.score_alto} ({propStats.completadas_venta > 0 ? ((propStats.score_alto / propStats.completadas_venta) * 100).toFixed(0) : 0}%)
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600">Score medio (85-94)</span>
                     <span className="font-semibold text-amber-600">
-                      {propStats.score_medio} ({propStats.completadas > 0 ? ((propStats.score_medio / propStats.completadas) * 100).toFixed(0) : 0}%)
+                      {propStats.score_medio} ({propStats.completadas_venta > 0 ? ((propStats.score_medio / propStats.completadas_venta) * 100).toFixed(0) : 0}%)
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Score bajo (&lt;85)</span>
+                    <span className="text-slate-600">Score bajo (&lt;85) — solo venta</span>
                     <span className="font-semibold text-red-600">
-                      {propStats.score_bajo} ({propStats.completadas > 0 ? ((propStats.score_bajo / propStats.completadas) * 100).toFixed(0) : 0}%)
+                      {propStats.score_bajo} ({propStats.completadas_venta > 0 ? ((propStats.score_bajo / propStats.completadas_venta) * 100).toFixed(0) : 0}%)
                     </span>
                   </div>
                   <div className="pt-3 border-t space-y-2">
