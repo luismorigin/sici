@@ -943,11 +943,13 @@ function MobileFilterCard({ totalCount, currentFilters, isFiltered, onApply, onR
 
   return (
     <div className="alq-card mfc" id="filterCard">
-      <div className="mfc-logo">Simon</div>
-      <div className="mfc-label-wrap"><span className="mfc-line"/><span className="mfc-label">Inteligencia Inmobiliaria</span><span className="mfc-line"/></div>
-      <div className="mfc-count">{totalCount}</div>
-      <div className="mfc-sub">alquileres en Equipetrol</div>
-      <div className="mfc-q">Queres ver solo<br/>lo que te sirve?</div>
+      {/* Compact header: count + label in one block */}
+      <div className="mfc-header">
+        <span className="mfc-count">{totalCount}</span>
+        <span className="mfc-sub">alquileres en Equipetrol</span>
+      </div>
+      <div className="mfc-divider"><span className="mfc-line"/><span className="mfc-divider-text">Filtra</span><span className="mfc-line"/></div>
+
       <div className="mfc-filters">
         <div className="mfc-group"><div className="mfc-gl">MICROZONA</div>
           <div className="mfc-zonas">{ZONAS_UI.map(z => <button key={z.id} className={`mfc-zb ${selectedZonas.has(z.id)?'active':''}`} onClick={()=>toggleZona(z.id)}>{z.label}</button>)}</div>
@@ -969,32 +971,31 @@ function MobileFilterCard({ totalCount, currentFilters, isFiltered, onApply, onR
       </div>
       <button className="mfc-cta" onClick={handleApply}>FILTRAR</button>
       {isFiltered && <button className="mfc-reset" onClick={onReset}>Quitar filtros · ver todas</button>}
-      <div className="mfc-skip">o segui explorando &darr;</div>
+      <div className="mfc-skip">segui explorando &darr;</div>
       <style jsx>{`
-        .mfc { display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 32px;height:100vh;height:100dvh;scroll-snap-align:start;background:#0a0a0a; }
-        .mfc-logo { font-family:'Cormorant Garamond',serif;font-size:44px;font-weight:400;color:#fff;margin-bottom:6px; }
-        .mfc-label-wrap { display:flex;align-items:center;gap:16px;margin-bottom:24px; }
-        .mfc-line { width:28px;height:1px;background:#c9a959; }
-        .mfc-label { font-size:10px;color:#c9a959;letter-spacing:4px;font-family:'Manrope',sans-serif; }
-        .mfc-count { font-family:'Cormorant Garamond',serif;font-size:56px;font-weight:300;color:#c9a959;line-height:1;margin-bottom:6px; }
-        .mfc-sub { font-size:15px;font-weight:300;color:rgba(255,255,255,0.45);margin-bottom:24px;font-family:'Manrope',sans-serif; }
-        .mfc-q { font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:400;color:#fff;margin-bottom:20px;line-height:1.3; }
-        .mfc-filters { width:100%;max-width:300px;margin-bottom:20px; }
-        .mfc-group { margin-bottom:14px;text-align:left; }
-        .mfc-gl { font-size:10px;font-weight:500;color:rgba(255,255,255,0.35);letter-spacing:2px;margin-bottom:8px;font-family:'Manrope',sans-serif; }
+        .mfc { display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;padding:60px 28px 20px;padding-bottom:max(20px,calc(env(safe-area-inset-bottom) + 8px));height:100vh;height:100dvh;scroll-snap-align:start;background:#0a0a0a; }
+        .mfc-header { display:flex;align-items:baseline;gap:8px;margin-bottom:6px; }
+        .mfc-count { font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:300;color:#c9a959;line-height:1; }
+        .mfc-sub { font-size:14px;font-weight:300;color:rgba(255,255,255,0.6);font-family:'Manrope',sans-serif; }
+        .mfc-divider { display:flex;align-items:center;gap:12px;margin-bottom:20px; }
+        .mfc-line { flex:1;height:1px;background:rgba(201,169,89,0.3); }
+        .mfc-divider-text { font-size:11px;color:#c9a959;letter-spacing:3px;font-family:'Manrope',sans-serif;text-transform:uppercase; }
+        .mfc-filters { width:100%;max-width:320px;margin-bottom:16px; }
+        .mfc-group { margin-bottom:12px;text-align:left; }
+        .mfc-gl { font-size:10px;font-weight:600;color:rgba(255,255,255,0.6);letter-spacing:2px;margin-bottom:6px;font-family:'Manrope',sans-serif; }
         .mfc-zonas { display:flex;flex-wrap:wrap;gap:6px; }
-        .mfc-zb { padding:6px 12px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.5);font-family:'Manrope',sans-serif;font-size:11px;cursor:pointer;border-radius:100px;transition:all 0.2s; }
-        .mfc-zb.active { border-color:#c9a959;color:#c9a959;background:rgba(201,169,89,0.06); }
+        .mfc-zb { padding:6px 12px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.75);font-family:'Manrope',sans-serif;font-size:11px;cursor:pointer;border-radius:100px;transition:all 0.2s; }
+        .mfc-zb.active { border-color:#c9a959;color:#c9a959;background:rgba(201,169,89,0.1); }
         .mfc-dorms { display:flex;gap:8px; }
-        .mfc-db { flex:1;padding:9px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.5);font-family:'Manrope',sans-serif;font-size:12px;cursor:pointer;border-radius:4px;transition:all 0.2s; }
-        .mfc-db.active { border-color:#c9a959;color:#c9a959;background:rgba(201,169,89,0.06); }
-        .mfc-slider { width:100%;-webkit-appearance:none;appearance:none;height:2px;background:rgba(255,255,255,0.12);border-radius:2px;outline:none; }
-        .mfc-slider::-webkit-slider-thumb { -webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#c9a959;cursor:pointer; }
-        .mfc-sv { text-align:right;font-size:13px;color:#c9a959;margin-top:6px;font-weight:500;font-family:'Manrope',sans-serif; }
-        .mfc-cta { display:block;width:100%;max-width:300px;padding:14px;background:#c9a959;border:none;color:#0a0a0a;font-family:'Manrope',sans-serif;font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-bottom:12px; }
+        .mfc-db { flex:1;padding:9px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.75);font-family:'Manrope',sans-serif;font-size:12px;cursor:pointer;border-radius:4px;transition:all 0.2s; }
+        .mfc-db.active { border-color:#c9a959;color:#c9a959;background:rgba(201,169,89,0.1); }
+        .mfc-slider { width:100%;-webkit-appearance:none;appearance:none;height:2px;background:rgba(255,255,255,0.25);border-radius:2px;outline:none; }
+        .mfc-slider::-webkit-slider-thumb { -webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#c9a959;cursor:pointer; }
+        .mfc-sv { text-align:right;font-size:13px;color:#c9a959;margin-top:4px;font-weight:500;font-family:'Manrope',sans-serif; }
+        .mfc-cta { display:block;width:100%;max-width:320px;padding:14px;background:#c9a959;border:none;color:#0a0a0a;font-family:'Manrope',sans-serif;font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-bottom:10px; }
         .mfc-cta:active { transform:scale(0.97); }
-        .mfc-reset { display:block;width:100%;max-width:300px;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.5);font-family:'Manrope',sans-serif;font-size:12px;cursor:pointer;margin-bottom:12px;border-radius:4px; }
-        .mfc-skip { font-size:12px;color:rgba(255,255,255,0.25);font-weight:300;font-family:'Manrope',sans-serif; }
+        .mfc-reset { display:block;width:100%;max-width:320px;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);font-family:'Manrope',sans-serif;font-size:12px;cursor:pointer;margin-bottom:8px;border-radius:4px; }
+        .mfc-skip { font-size:12px;color:rgba(255,255,255,0.35);font-weight:300;font-family:'Manrope',sans-serif; }
       `}</style>
     </div>
   )
