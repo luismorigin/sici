@@ -5,12 +5,10 @@ import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 
 interface StatsProps {
-  // Totales
-  completadas: number
-  nuevas: number
-  ultimas_24h: number
   // Venta
   completadas_venta: number
+  nuevas_venta: number
+  ultimas_24h_venta: number
   matcheadas_venta: number
   sin_match_venta: number
   inactivo_venta: number
@@ -19,6 +17,8 @@ interface StatsProps {
   score_bajo: number
   // Alquiler
   completadas_alquiler: number
+  nuevas_alquiler: number
+  ultimas_24h_alquiler: number
   matcheadas_alquiler: number
   sin_match_alquiler: number
   inactivo_alquiler: number
@@ -177,11 +177,10 @@ export default function DashboardSalud() {
     const { data, error } = await supabase.rpc('pg_execute_query' as any, {
       query: `
         SELECT
-          COUNT(*) FILTER (WHERE status = 'completado')::int as completadas,
-          COUNT(*) FILTER (WHERE status = 'nueva')::int as nuevas,
-          COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '24 hours')::int as ultimas_24h,
           -- Venta
           COUNT(*) FILTER (WHERE status = 'completado' AND ${esVenta})::int as completadas_venta,
+          COUNT(*) FILTER (WHERE status = 'nueva' AND ${esVenta})::int as nuevas_venta,
+          COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '24 hours' AND ${esVenta})::int as ultimas_24h_venta,
           COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL AND status = 'completado' AND ${esVenta})::int as matcheadas_venta,
           COUNT(*) FILTER (WHERE id_proyecto_master IS NULL AND status = 'completado' AND ${esVenta})::int as sin_match_venta,
           COUNT(*) FILTER (WHERE status IN ('inactivo_pending','inactivo_confirmed') AND ${esVenta})::int as inactivo_venta,
@@ -190,6 +189,8 @@ export default function DashboardSalud() {
           COUNT(*) FILTER (WHERE score_calidad_dato < 85 AND status = 'completado' AND ${esVenta})::int as score_bajo,
           -- Alquiler
           COUNT(*) FILTER (WHERE status = 'completado' AND ${esAlquiler})::int as completadas_alquiler,
+          COUNT(*) FILTER (WHERE status = 'nueva' AND ${esAlquiler})::int as nuevas_alquiler,
+          COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '24 hours' AND ${esAlquiler})::int as ultimas_24h_alquiler,
           COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL AND status = 'completado' AND ${esAlquiler})::int as matcheadas_alquiler,
           COUNT(*) FILTER (WHERE id_proyecto_master IS NULL AND status = 'completado' AND ${esAlquiler})::int as sin_match_alquiler,
           COUNT(*) FILTER (WHERE status IN ('inactivo_pending','inactivo_confirmed') AND ${esAlquiler})::int as inactivo_alquiler,
@@ -215,15 +216,16 @@ export default function DashboardSalud() {
         const venta = completadas.filter((p: any) => (p.tipo_operacion || 'venta') !== 'alquiler')
         const alquiler = completadas.filter((p: any) => p.tipo_operacion === 'alquiler')
         const inactivos = props.filter((p: any) => p.status === 'inactivo_pending' || p.status === 'inactivo_confirmed')
+        const nuevas = props.filter((p: any) => p.status === 'nueva')
+        const recientes = props.filter((p: any) => {
+          const created = new Date(p.fecha_creacion)
+          return created > new Date(Date.now() - 24 * 60 * 60 * 1000)
+        })
 
         setPropStats({
-          completadas: completadas.length,
-          nuevas: props.filter((p: any) => p.status === 'nueva').length,
-          ultimas_24h: props.filter((p: any) => {
-            const created = new Date(p.fecha_creacion)
-            return created > new Date(Date.now() - 24 * 60 * 60 * 1000)
-          }).length,
           completadas_venta: venta.length,
+          nuevas_venta: nuevas.filter((p: any) => (p.tipo_operacion || 'venta') !== 'alquiler').length,
+          ultimas_24h_venta: recientes.filter((p: any) => (p.tipo_operacion || 'venta') !== 'alquiler').length,
           matcheadas_venta: venta.filter((p: any) => p.id_proyecto_master).length,
           sin_match_venta: venta.filter((p: any) => !p.id_proyecto_master).length,
           inactivo_venta: inactivos.filter((p: any) => (p.tipo_operacion || 'venta') !== 'alquiler').length,
@@ -231,6 +233,8 @@ export default function DashboardSalud() {
           score_medio: venta.filter((p: any) => (p.score_calidad_dato || 0) >= 85 && (p.score_calidad_dato || 0) < 95).length,
           score_bajo: venta.filter((p: any) => (p.score_calidad_dato || 0) < 85).length,
           completadas_alquiler: alquiler.length,
+          nuevas_alquiler: nuevas.filter((p: any) => p.tipo_operacion === 'alquiler').length,
+          ultimas_24h_alquiler: recientes.filter((p: any) => p.tipo_operacion === 'alquiler').length,
           matcheadas_alquiler: alquiler.filter((p: any) => p.id_proyecto_master).length,
           sin_match_alquiler: alquiler.filter((p: any) => !p.id_proyecto_master).length,
           inactivo_alquiler: inactivos.filter((p: any) => p.tipo_operacion === 'alquiler').length,
@@ -527,23 +531,26 @@ export default function DashboardSalud() {
                       <span className="font-semibold text-orange-600 text-right">{propStats.sin_match_alquiler}</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
+                      <span className="text-slate-600">Nuevas</span>
+                      <span className="font-semibold text-blue-600 text-right">{propStats.nuevas_venta}</span>
+                      <span className="font-semibold text-blue-600 text-right">{propStats.nuevas_alquiler}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="text-slate-600">Últimas 24h</span>
+                      <span className="font-semibold text-purple-600 text-right">+{propStats.ultimas_24h_venta}</span>
+                      <span className="font-semibold text-purple-600 text-right">+{propStats.ultimas_24h_alquiler}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
                       <span className="text-slate-600">Inactivas</span>
                       <span className="text-slate-500 text-right">{propStats.inactivo_venta}</span>
                       <span className="text-slate-500 text-right">{propStats.inactivo_alquiler}</span>
                     </div>
                   </div>
-                  <div className="mt-3 pt-2 border-t space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Total completadas</span>
-                      <span className="font-bold">{propStats.completadas}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Nuevas (sin procesar)</span>
-                      <span className="font-semibold text-blue-600">{propStats.nuevas}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Últimas 24h</span>
-                      <span className="font-semibold text-purple-600">+{propStats.ultimas_24h}</span>
+                  {/* Totales */}
+                  <div className="mt-3 pt-2 border-t">
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="text-slate-600 font-semibold">Total activas</span>
+                      <span className="font-bold text-right col-span-2">{propStats.completadas_venta + propStats.completadas_alquiler}</span>
                     </div>
                   </div>
                 </div>
