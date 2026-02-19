@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -938,25 +938,43 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
   const [mascotas, setMascotas] = useState(currentFilters.acepta_mascotas || false)
   const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set(currentFilters.zonas_permitidas || []))
   const [orden, setOrden] = useState<FiltrosAlquiler['orden']>(currentFilters.orden || 'recientes')
+  const [previewCount, setPreviewCount] = useState<number | null>(null)
+  const previewRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); return n }) }
-  function toggleZona(id: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n }) }
-  function handleApply() {
+  // Build filters from current local state
+  const buildFilters = useCallback((): FiltrosAlquiler => {
     const f: FiltrosAlquiler = { orden: orden || 'recientes', limite: 200, solo_con_fotos: true }
     if (maxPrice < MAX_SLIDER_PRICE) f.precio_mensual_max = maxPrice
     if (selectedDorms.size === 1) { const d = Array.from(selectedDorms)[0]; if (d < 3) f.dormitorios = d }
     if (amoblado) f.amoblado = true
     if (mascotas) f.acepta_mascotas = true
     if (selectedZonas.size > 0) f.zonas_permitidas = Array.from(selectedZonas)
-    onApply(f)
+    return f
+  }, [maxPrice, selectedDorms, amoblado, mascotas, selectedZonas, orden])
+
+  // Preview count: debounced RPC call as filters change
+  useEffect(() => {
+    if (previewRef.current) clearTimeout(previewRef.current)
+    previewRef.current = setTimeout(async () => {
+      const f = buildFilters()
+      const data = await buscarUnidadesAlquiler(f)
+      setPreviewCount(data.length)
+    }, 300)
+    return () => { if (previewRef.current) clearTimeout(previewRef.current) }
+  }, [buildFilters])
+
+  function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); return n }) }
+  function toggleZona(id: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n }) }
+  function handleApply() {
+    onApply(buildFilters())
   }
 
   return (
     <div className="alq-card mfc" id="filterCard">
       {/* Compact header: count + label */}
       <div className="mfc-header">
-        <span className="mfc-count">{isFiltered ? filteredCount : totalCount}</span>
-        <span className="mfc-sub">{isFiltered ? `de ${totalCount} alquileres` : 'alquileres en Equipetrol'}</span>
+        <span className="mfc-count">{previewCount !== null ? previewCount : (isFiltered ? filteredCount : totalCount)}</span>
+        <span className="mfc-sub">{previewCount !== null || isFiltered ? `de ${totalCount} alquileres` : 'alquileres en Equipetrol'}</span>
       </div>
       <div className="mfc-divider"><span className="mfc-line"/><span className="mfc-divider-text">Filtra</span><span className="mfc-line"/></div>
 
@@ -979,7 +997,7 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
           <div className="mfc-dorms">{ORDEN_OPTIONS.map(o=><button key={o.value} className={`mfc-db ${orden===o.value?'active':''}`} onClick={()=>setOrden(o.value)}>{o.label}</button>)}</div>
         </div>
       </div>
-      <button className="mfc-cta" onClick={handleApply}>FILTRAR</button>
+      <button className="mfc-cta" onClick={handleApply}>FILTRAR{previewCount !== null ? ` · ${previewCount}` : ''}</button>
       {isFiltered && <button className="mfc-reset" onClick={onReset}>Quitar filtros · ver todas</button>}
       <div className="mfc-skip">segui explorando &darr;</div>
       <style jsx>{`
