@@ -317,7 +317,16 @@ export default function AlquileresPage() {
               <div className="alq-label">ALQUILERES</div>
             </div>
             <button className="alq-filter-btn" onClick={() => {
-              document.getElementById('filterCard')?.scrollIntoView({ behavior: 'smooth' })
+              // Scroll to filter card position (index = FILTER_CARD_POSITION)
+              // First update activeCardIndex so virtualization renders the real card
+              const filterIdx = Math.min(FILTER_CARD_POSITION, feedItems.length - 1)
+              setActiveCardIndex(filterIdx)
+              // Then scroll after a tick so the real card is rendered
+              setTimeout(() => {
+                if (feedRef.current) {
+                  feedRef.current.scrollTo({ top: filterIdx * feedRef.current.clientHeight, behavior: 'smooth' })
+                }
+              }, 50)
             }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
             </button>
