@@ -159,6 +159,12 @@ export default function PhotoViewer({ photos, initialIndex, buildingName, subtit
           max-width: 100%; max-height: 100%; width: auto; height: auto;
           object-fit: contain; user-select: none; -webkit-user-drag: none;
         }
+        @media (orientation: landscape) {
+          .pv-slide img {
+            width: 100%; height: 100%; max-width: none; max-height: none;
+            object-fit: cover;
+          }
+        }
         .pv-no-photo {
           color: rgba(255,255,255,0.3); font-size: 14px; font-family: 'Manrope', sans-serif;
         }
