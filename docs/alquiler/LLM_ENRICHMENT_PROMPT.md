@@ -122,12 +122,9 @@ SCHEMA DE SALIDA (JSON):
   "descripcion_limpia": string | null,        // Descripción sin promociones
   "estado_propiedad": "nuevo" | "excelente" | "bueno" | "regular" | null,
 
-  "contacto": {
-    "nombre": string | null,
-    "telefono": string | null,
-    "email": string | null,
-    "whatsapp": string | null
-  },
+  "agente_nombre": string | null,          // Nombre del agente/asesor
+  "agente_telefono": string | null,        // Teléfono (+591...)
+  "agente_oficina": string | null,         // Inmobiliaria (Century 21 X, RE/MAX Y)
 
   "fotos_urls": string[],                     // URLs de imágenes
 
@@ -231,12 +228,9 @@ Devuelve SOLO el JSON, sin explicaciones adicionales.
   "descripcion_limpia": "Hermoso departamento amoblado, 2 dormitorios, 2 baños, piso 8, con piscina y gimnasio.",
   "estado_propiedad": "excelente",
 
-  "contacto": {
-    "nombre": null,
-    "telefono": null,
-    "email": null,
-    "whatsapp": null
-  },
+  "agente_nombre": "María López",
+  "agente_telefono": "+591 70123456",
+  "agente_oficina": "Century 21 Select",
 
   "fotos_urls": [],
 

@@ -222,20 +222,24 @@ BEGIN
         END IF;
 
         -- ===========================
-        -- [148] AGENTE (desde discovery, por fuente)
+        -- [148] AGENTE (enrichment LLM > discovery, por fuente)
+        -- Enrichment tiene prioridad porque extrae del HTML individual
         -- ===========================
-        IF v_rec.fuente = 'century21' THEN
-            v_agente_nombre := COALESCE(v_rec.datos_json_discovery->>'asesorNombre', '');
-            v_agente_telefono := v_rec.datos_json_discovery->>'telefono';
-            v_agente_oficina := v_rec.datos_json_discovery->>'nombreAfiliado';
-        ELSIF v_rec.fuente = 'remax' THEN
-            v_agente_nombre := COALESCE(v_rec.datos_json_discovery->'agent'->'user'->>'name_to_show', '');
-            v_agente_telefono := NULL;
-            v_agente_oficina := v_rec.datos_json_discovery->'agent'->'office'->>'name';
-        ELSE
-            v_agente_nombre := NULL;
-            v_agente_telefono := NULL;
-            v_agente_oficina := NULL;
+        -- Primero: intentar desde enrichment LLM (agente_nombre/telefono/oficina)
+        v_agente_nombre := NULLIF(v_enrichment->'llm_output'->>'agente_nombre', '');
+        v_agente_telefono := NULLIF(v_enrichment->'llm_output'->>'agente_telefono', '');
+        v_agente_oficina := NULLIF(v_enrichment->'llm_output'->>'agente_oficina', '');
+
+        -- Fallback: discovery (estructura diferente por fuente)
+        IF v_agente_nombre IS NULL THEN
+            IF v_rec.fuente = 'century21' THEN
+                v_agente_nombre := NULLIF(v_rec.datos_json_discovery->>'asesorNombre', '');
+                v_agente_telefono := COALESCE(v_agente_telefono, v_rec.datos_json_discovery->>'telefono');
+                v_agente_oficina := COALESCE(v_agente_oficina, v_rec.datos_json_discovery->>'nombreAfiliado');
+            ELSIF v_rec.fuente = 'remax' THEN
+                v_agente_nombre := NULLIF(v_rec.datos_json_discovery->'agent'->'user'->>'name_to_show', '');
+                v_agente_oficina := COALESCE(v_agente_oficina, v_rec.datos_json_discovery->'agent'->'office'->>'name');
+            END IF;
         END IF;
 
         -- ===========================

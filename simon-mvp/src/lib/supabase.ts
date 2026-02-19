@@ -458,6 +458,132 @@ export function convertirZona(zonaForm: string): string {
   return Array.isArray(resultado) ? resultado[0] : resultado
 }
 
+// ========== BUSQUEDA ALQUILERES ==========
+
+export interface UnidadAlquiler {
+  id: number
+  nombre_edificio: string | null
+  nombre_proyecto: string | null
+  desarrollador: string | null
+  zona: string
+  dormitorios: number
+  banos: number | null
+  area_m2: number
+  precio_mensual_bob: number
+  precio_mensual_usd: number | null
+  amoblado: string | null        // 'si' | 'semi' | 'no' | null
+  acepta_mascotas: boolean | null
+  deposito_meses: number | null
+  servicios_incluidos: string[] | null
+  contrato_minimo_meses: number | null
+  monto_expensas_bob: number | null
+  piso: number | null
+  estacionamientos: number | null
+  baulera: boolean | null
+  latitud: number | null
+  longitud: number | null
+  fotos_urls: string[]
+  fotos_count: number
+  url: string
+  fuente: string
+  agente_nombre: string | null
+  agente_telefono: string | null
+  agente_whatsapp: string | null
+  dias_en_mercado: number | null
+  estado_construccion: string
+  id_proyecto_master: number | null
+  amenities_lista: string[] | null
+  equipamiento_lista: string[] | null
+  descripcion: string | null
+}
+
+export interface FiltrosAlquiler {
+  precio_mensual_min?: number
+  precio_mensual_max?: number
+  dormitorios?: number
+  amoblado?: boolean
+  acepta_mascotas?: boolean
+  zonas_permitidas?: string[]   // IDs UI: 'equipetrol_centro', 'sirari', etc.
+  solo_con_fotos?: boolean
+  orden?: 'precio_asc' | 'precio_desc' | 'recientes'
+  limite?: number
+}
+
+export async function buscarUnidadesAlquiler(filtros: FiltrosAlquiler): Promise<UnidadAlquiler[]> {
+  if (!supabase) {
+    console.warn('Supabase no configurado')
+    return []
+  }
+
+  try {
+    const rpcFiltros: Record<string, any> = {
+      limite: filtros.limite || 50,
+      solo_con_fotos: filtros.solo_con_fotos ?? true
+    }
+
+    if (filtros.precio_mensual_max) rpcFiltros.precio_mensual_max = filtros.precio_mensual_max
+    if (filtros.precio_mensual_min) rpcFiltros.precio_mensual_min = filtros.precio_mensual_min
+    if (filtros.dormitorios !== undefined) rpcFiltros.dormitorios = filtros.dormitorios
+    if (filtros.amoblado) rpcFiltros.amoblado = true
+    if (filtros.acepta_mascotas) rpcFiltros.acepta_mascotas = true
+    if (filtros.orden) rpcFiltros.orden = filtros.orden
+
+    // Pasar zonas_permitidas como IDs UI — el RPC hace la expansión internamente
+    if (filtros.zonas_permitidas && filtros.zonas_permitidas.length > 0) {
+      rpcFiltros.zonas_permitidas = filtros.zonas_permitidas
+    }
+
+    const { data, error } = await supabase.rpc('buscar_unidades_alquiler', {
+      p_filtros: rpcFiltros
+    })
+
+    if (error) {
+      console.error('Error en RPC buscar_unidades_alquiler:', error)
+      return []
+    }
+
+    return (data || []).map((p: any) => ({
+      id: p.id,
+      nombre_edificio: p.nombre_edificio || null,
+      nombre_proyecto: p.nombre_proyecto || null,
+      desarrollador: p.desarrollador || null,
+      zona: p.zona || 'Sin zona',
+      dormitorios: p.dormitorios ?? 0,
+      banos: p.banos ? parseFloat(p.banos) : null,
+      area_m2: parseFloat(p.area_m2) || 0,
+      precio_mensual_bob: parseFloat(p.precio_mensual_bob) || 0,
+      precio_mensual_usd: p.precio_mensual_usd ? parseFloat(p.precio_mensual_usd) : null,
+      amoblado: p.amoblado || null,
+      acepta_mascotas: p.acepta_mascotas ?? null,
+      deposito_meses: p.deposito_meses ? parseFloat(p.deposito_meses) : null,
+      servicios_incluidos: p.servicios_incluidos || null,
+      contrato_minimo_meses: p.contrato_minimo_meses || null,
+      monto_expensas_bob: p.monto_expensas_bob ? parseFloat(p.monto_expensas_bob) : null,
+      piso: p.piso || null,
+      estacionamientos: p.estacionamientos || null,
+      baulera: p.baulera ?? null,
+      latitud: p.latitud ? parseFloat(p.latitud) : null,
+      longitud: p.longitud ? parseFloat(p.longitud) : null,
+      fotos_urls: p.fotos_urls || [],
+      fotos_count: p.fotos_count || 0,
+      url: p.url || '',
+      fuente: p.fuente || '',
+      agente_nombre: p.agente_nombre || null,
+      agente_telefono: p.agente_telefono || null,
+      agente_whatsapp: p.agente_whatsapp || null,
+      dias_en_mercado: p.dias_en_mercado || null,
+      estado_construccion: p.estado_construccion || 'no_especificado',
+      id_proyecto_master: p.id_proyecto_master || null,
+      amenities_lista: p.amenities_lista || null,
+      equipamiento_lista: p.equipamiento_lista || null,
+      descripcion: p.descripcion || null
+    }))
+  } catch (err) {
+    console.error('Error en buscarUnidadesAlquiler:', err)
+    return []
+  }
+}
+
 // Buscar cuántas opciones hay en el siguiente rango de precio
 export interface SiguienteRangoInfo {
   precio_sugerido: number
