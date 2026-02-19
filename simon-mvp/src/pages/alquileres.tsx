@@ -16,7 +16,16 @@ const ZONAS_UI = [
   { id: 'villa_brigida', label: 'V. Brigida' },
   { id: 'faremafu', label: 'Faremafu' },
   { id: 'equipetrol_franja', label: 'Eq. Franja' },
+  { id: 'sin_zona', label: 'Otras' },
 ]
+
+const ORDEN_OPTIONS: Array<{ value: FiltrosAlquiler['orden']; label: string }> = [
+  { value: 'recientes', label: 'Recientes' },
+  { value: 'precio_asc', label: 'Precio ↑' },
+  { value: 'precio_desc', label: 'Precio ↓' },
+]
+
+const MAX_SLIDER_PRICE = 18000
 
 const MAX_FAVORITES = 3
 const FILTER_CARD_POSITION = 3
@@ -52,7 +61,6 @@ export default function AlquileresPage() {
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
 
   const [filters, setFilters] = useState<FiltrosAlquiler>({
-    precio_mensual_max: 18000,
     orden: 'recientes',
     limite: 200,
     solo_con_fotos: true,
@@ -115,7 +123,6 @@ export default function AlquileresPage() {
 
   async function resetFilters() {
     const defaultFilters: FiltrosAlquiler = {
-      precio_mensual_max: 18000,
       orden: 'recientes',
       limite: 200,
       solo_con_fotos: true,
@@ -524,16 +531,19 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
   currentFilters: FiltrosAlquiler; isFiltered: boolean
   onApply: (f: FiltrosAlquiler) => void; onReset: () => void
 }) {
-  const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || 18000)
+  const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set())
   const [amoblado, setAmoblado] = useState(currentFilters.amoblado || false)
   const [mascotas, setMascotas] = useState(currentFilters.acepta_mascotas || false)
   const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set(currentFilters.zonas_permitidas || []))
+  const [orden, setOrden] = useState<FiltrosAlquiler['orden']>(currentFilters.orden || 'recientes')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Build filters object from current state
-  const buildFilters = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, zonas: Set<string>) => {
-    const f: FiltrosAlquiler = { precio_mensual_max: price, orden: 'recientes', limite: 200, solo_con_fotos: true }
+  const buildFilters = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden']) => {
+    const f: FiltrosAlquiler = { orden: ord || 'recientes', limite: 200, solo_con_fotos: true }
+    // Issue 1: only send precio_mensual_max when slider is NOT at maximum
+    if (price < MAX_SLIDER_PRICE) f.precio_mensual_max = price
     if (dorms.size === 1) { const d = Array.from(dorms)[0]; if (d < 3) f.dormitorios = d }
     if (amob) f.amoblado = true
     if (masc) f.acepta_mascotas = true
@@ -542,40 +552,44 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
   }, [])
 
   // Auto-apply with debounce
-  const autoApply = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, zonas: Set<string>) => {
+  const autoApply = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden']) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      onApply(buildFilters(price, dorms, amob, masc, zonas))
+      onApply(buildFilters(price, dorms, amob, masc, zonas, ord))
     }, 400)
   }, [onApply, buildFilters])
 
   function toggleDorm(d: number) {
     setSelectedDorms(prev => {
       const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d)
-      autoApply(maxPrice, n, amoblado, mascotas, selectedZonas)
+      autoApply(maxPrice, n, amoblado, mascotas, selectedZonas, orden)
       return n
     })
   }
   function toggleZona(id: string) {
     setSelectedZonas(prev => {
       const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id)
-      autoApply(maxPrice, selectedDorms, amoblado, mascotas, n)
+      autoApply(maxPrice, selectedDorms, amoblado, mascotas, n, orden)
       return n
     })
   }
   function handlePriceChange(price: number) {
     setMaxPrice(price)
-    autoApply(price, selectedDorms, amoblado, mascotas, selectedZonas)
+    autoApply(price, selectedDorms, amoblado, mascotas, selectedZonas, orden)
   }
   function handleAmoblado() {
     const next = !amoblado
     setAmoblado(next)
-    autoApply(maxPrice, selectedDorms, next, mascotas, selectedZonas)
+    autoApply(maxPrice, selectedDorms, next, mascotas, selectedZonas, orden)
   }
   function handleMascotas() {
     const next = !mascotas
     setMascotas(next)
-    autoApply(maxPrice, selectedDorms, amoblado, next, selectedZonas)
+    autoApply(maxPrice, selectedDorms, amoblado, next, selectedZonas, orden)
+  }
+  function handleOrden(o: FiltrosAlquiler['orden']) {
+    setOrden(o)
+    autoApply(maxPrice, selectedDorms, amoblado, mascotas, selectedZonas, o)
   }
 
   return (
@@ -615,6 +629,17 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
         <div className="df-dorm-btns">
           <button className={`df-dorm-btn ${amoblado ? 'active' : ''}`} onClick={handleAmoblado}>Amoblado</button>
           <button className={`df-dorm-btn ${mascotas ? 'active' : ''}`} onClick={handleMascotas}>Mascotas</button>
+        </div>
+      </div>
+
+      {/* Orden */}
+      <div className="df-group">
+        <div className="df-label">ORDENAR POR</div>
+        <div className="df-dorm-btns">
+          {ORDEN_OPTIONS.map(o => (
+            <button key={o.value} className={`df-dorm-btn ${orden === o.value ? 'active' : ''}`}
+              onClick={() => handleOrden(o.value)}>{o.label}</button>
+          ))}
         </div>
       </div>
 
@@ -897,16 +922,18 @@ function MobileFilterCard({ totalCount, currentFilters, isFiltered, onApply, onR
   totalCount: number; currentFilters: FiltrosAlquiler; isFiltered: boolean
   onApply: (f: FiltrosAlquiler) => void; onReset: () => void
 }) {
-  const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || 18000)
+  const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set())
   const [amoblado, setAmoblado] = useState(currentFilters.amoblado || false)
   const [mascotas, setMascotas] = useState(currentFilters.acepta_mascotas || false)
   const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set(currentFilters.zonas_permitidas || []))
+  const [orden, setOrden] = useState<FiltrosAlquiler['orden']>(currentFilters.orden || 'recientes')
 
   function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); return n }) }
   function toggleZona(id: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n }) }
   function handleApply() {
-    const f: FiltrosAlquiler = { precio_mensual_max: maxPrice, orden: 'recientes', limite: 200, solo_con_fotos: true }
+    const f: FiltrosAlquiler = { orden: orden || 'recientes', limite: 200, solo_con_fotos: true }
+    if (maxPrice < MAX_SLIDER_PRICE) f.precio_mensual_max = maxPrice
     if (selectedDorms.size === 1) { const d = Array.from(selectedDorms)[0]; if (d < 3) f.dormitorios = d }
     if (amoblado) f.amoblado = true
     if (mascotas) f.acepta_mascotas = true
@@ -926,7 +953,7 @@ function MobileFilterCard({ totalCount, currentFilters, isFiltered, onApply, onR
           <div className="mfc-zonas">{ZONAS_UI.map(z => <button key={z.id} className={`mfc-zb ${selectedZonas.has(z.id)?'active':''}`} onClick={()=>toggleZona(z.id)}>{z.label}</button>)}</div>
         </div>
         <div className="mfc-group"><div className="mfc-gl">PRESUPUESTO MAXIMO</div>
-          <input type="range" className="mfc-slider" min={2000} max={18000} step={500} value={maxPrice} onChange={e=>setMaxPrice(parseInt(e.target.value))}/>
+          <input type="range" className="mfc-slider" min={2000} max={MAX_SLIDER_PRICE} step={500} value={maxPrice} onChange={e=>setMaxPrice(parseInt(e.target.value))}/>
           <div className="mfc-sv">{formatPrice(maxPrice)}/mes</div>
         </div>
         <div className="mfc-group"><div className="mfc-gl">DORMITORIOS</div>
@@ -936,6 +963,9 @@ function MobileFilterCard({ totalCount, currentFilters, isFiltered, onApply, onR
           <button className={`mfc-db ${amoblado?'active':''}`} onClick={()=>setAmoblado(!amoblado)}>Amoblado</button>
           <button className={`mfc-db ${mascotas?'active':''}`} onClick={()=>setMascotas(!mascotas)}>Mascotas</button>
         </div></div>
+        <div className="mfc-group"><div className="mfc-gl">ORDENAR POR</div>
+          <div className="mfc-dorms">{ORDEN_OPTIONS.map(o=><button key={o.value} className={`mfc-db ${orden===o.value?'active':''}`} onClick={()=>setOrden(o.value)}>{o.label}</button>)}</div>
+        </div>
       </div>
       <button className="mfc-cta" onClick={handleApply}>FILTRAR</button>
       {isFiltered && <button className="mfc-reset" onClick={onReset}>Quitar filtros · ver todas</button>}
