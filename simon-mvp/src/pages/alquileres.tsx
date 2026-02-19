@@ -809,53 +809,34 @@ function MobilePropertyCard({
   )
 }
 
-// ===== PHOTO CAROUSEL (mobile) =====
+// ===== PHOTO CAROUSEL (native scroll-snap) =====
 function PhotoCarousel({ photos, isFirst }: { photos: string[]; isFirst: boolean }) {
   const [currentIdx, setCurrentIdx] = useState(0)
-  const trackRef = useRef<HTMLDivElement>(null)
-  const touchStart = useRef({ x: 0, y: 0 })
-  const touchDelta = useRef(0)
-  const isDragging = useRef(false)
-  const isHorizontal = useRef<boolean | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const total = photos.length || 1
 
-  function goTo(idx: number) {
-    if (idx < 0 || idx >= total) return
-    setCurrentIdx(idx)
-    if (trackRef.current) {
-      trackRef.current.style.transition = 'transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94)'
-      trackRef.current.style.transform = `translateX(-${idx * 100}%)`
+  // Detect current slide via scroll position
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    let ticking = false
+    function onScroll() {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        if (!el) return
+        const idx = Math.round(el.scrollLeft / el.offsetWidth)
+        setCurrentIdx(idx)
+        ticking = false
+      })
     }
-  }
-  function onTouchStart(e: React.TouchEvent) {
-    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-    touchDelta.current = 0; isDragging.current = true; isHorizontal.current = null
-    if (trackRef.current) trackRef.current.style.transition = 'none'
-  }
-  function onTouchMove(e: React.TouchEvent) {
-    if (!isDragging.current) return
-    const dx = e.touches[0].clientX - touchStart.current.x
-    const dy = e.touches[0].clientY - touchStart.current.y
-    if (isHorizontal.current === null && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) isHorizontal.current = Math.abs(dx) > Math.abs(dy)
-    if (!isHorizontal.current) return
-    e.preventDefault(); touchDelta.current = dx
-    if (trackRef.current) {
-      const w = trackRef.current.parentElement?.offsetWidth || 1
-      trackRef.current.style.transform = `translateX(${-currentIdx * 100 + (dx / w) * 100}%)`
-    }
-  }
-  function onTouchEnd() {
-    if (!isDragging.current) return; isDragging.current = false
-    if (isHorizontal.current && Math.abs(touchDelta.current) > 30) {
-      if (touchDelta.current < 0 && currentIdx < total - 1) goTo(currentIdx + 1)
-      else if (touchDelta.current > 0 && currentIdx > 0) goTo(currentIdx - 1)
-      else goTo(currentIdx)
-    } else goTo(currentIdx)
-  }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
 
   return (
-    <div className="pc-zone" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-      <div className="pc-track" ref={trackRef}>
+    <div className="pc-zone">
+      <div className="pc-scroll" ref={scrollRef}>
         {(photos.length > 0 ? photos : ['']).map((url, i) => (
           <div key={i} className="pc-slide" style={url ? { backgroundImage: `url('${url}')` } : { background: '#1a1a1a' }} />
         ))}
@@ -866,16 +847,6 @@ function PhotoCarousel({ photos, isFirst }: { photos: string[]; isFirst: boolean
         </svg>
         {currentIdx + 1}/{total}
       </div>
-      {total > 1 && currentIdx > 0 && (
-        <div className="pc-nav pc-prev" onClick={() => goTo(currentIdx - 1)}>
-          <div className="pc-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{width:18,height:18}}><path d="M15 18l-6-6 6-6"/></svg></div>
-        </div>
-      )}
-      {total > 1 && currentIdx < total - 1 && (
-        <div className="pc-nav pc-next" onClick={() => goTo(currentIdx + 1)}>
-          <div className="pc-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{width:18,height:18}}><path d="M9 18l6-6-6-6"/></svg></div>
-        </div>
-      )}
       {total > 1 && (
         <div className="pc-dots">
           {Array.from({ length: Math.min(total, 8) }).map((_, i) => (
@@ -890,15 +861,12 @@ function PhotoCarousel({ photos, isFirst }: { photos: string[]; isFirst: boolean
         </div>
       )}
       <style jsx>{`
-        .pc-zone { flex: 0 0 55%; position: relative; overflow: hidden; touch-action: pan-y; }
+        .pc-zone { flex: 0 0 55%; position: relative; overflow: hidden; }
         .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(transparent, #0a0a0a); pointer-events: none; z-index: 2; }
-        .pc-track { display: flex; height: 100%; will-change: transform; }
-        .pc-slide { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #111; }
+        .pc-scroll { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .pc-scroll::-webkit-scrollbar { display: none; }
+        .pc-slide { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #111; scroll-snap-align: start; }
         .pc-counter { position: absolute; top: 16px; right: 16px; z-index: 5; background: rgba(10,10,10,0.6); backdrop-filter: blur(8px); padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 5px; font-family: 'Manrope', sans-serif; }
-        .pc-nav { position: absolute; top: 0; bottom: 80px; width: 52px; z-index: 4; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .pc-prev { left: 0; padding-left: 8px; }
-        .pc-next { right: 0; padding-right: 8px; }
-        .pc-arrow { width: 36px; height: 36px; border-radius: 50%; background: rgba(10,10,10,0.55); display: flex; align-items: center; justify-content: center; opacity: 0.85; }
         .pc-dots { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 5; }
         .pc-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.35); transition: all 0.25s; }
         .pc-dot.active { background: #fff; width: 20px; border-radius: 3px; }
