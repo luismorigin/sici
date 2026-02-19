@@ -7,6 +7,7 @@ import { buscarUnidadesAlquiler, type UnidadAlquiler, type FiltrosAlquiler } fro
 // Leaflet: dynamic import SSR-safe
 const MapComponent = dynamic(() => import('@/components/alquiler/AlquilerMap'), { ssr: false })
 const MapMultiComponent = dynamic(() => import('@/components/alquiler/AlquilerMapMulti'), { ssr: false })
+const PhotoViewer = dynamic(() => import('@/components/alquiler/PhotoViewer'), { ssr: false })
 
 // ===== CONSTANTS =====
 const ZONAS_UI = [
@@ -50,7 +51,15 @@ export default function AlquileresPage() {
   const isDesktop = useIsDesktop()
   const [properties, setProperties] = useState<UnidadAlquiler[]>([])
   const [loading, setLoading] = useState(true)
-  const [favorites, setFavorites] = useState<Set<number>>(new Set())
+  const [favorites, setFavorites] = useState<Set<number>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('alq_favorites')
+        if (saved) return new Set(JSON.parse(saved) as number[])
+      } catch {}
+    }
+    return new Set()
+  })
   const [activeCardIndex, setActiveCardIndex] = useState(0)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sheetProperty, setSheetProperty] = useState<UnidadAlquiler | null>(null)
@@ -59,6 +68,12 @@ export default function AlquileresPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
+  const [chipsExpanded, setChipsExpanded] = useState(false)
+  const [viewerOpen, setViewerOpen] = useState(false)
+  const [viewerPhotos, setViewerPhotos] = useState<string[]>([])
+  const [viewerIndex, setViewerIndex] = useState(0)
+  const [viewerName, setViewerName] = useState('')
+  const [viewerSubtitle, setViewerSubtitle] = useState('')
 
   const [filters, setFilters] = useState<FiltrosAlquiler>({
     orden: 'recientes',
@@ -67,6 +82,11 @@ export default function AlquileresPage() {
   })
   const [isFiltered, setIsFiltered] = useState(false)
   const [totalCount, setTotalCount] = useState(0)
+
+  // Persist favorites to localStorage
+  useEffect(() => {
+    try { localStorage.setItem('alq_favorites', JSON.stringify(Array.from(favorites))) } catch {}
+  }, [favorites])
 
   const feedRef = useRef<HTMLDivElement>(null)
 
@@ -159,6 +179,35 @@ export default function AlquileresPage() {
     }
   }
 
+  function openViewer(p: UnidadAlquiler, photoIndex: number) {
+    if (!p.fotos_urls?.length) return
+    setViewerPhotos(p.fotos_urls)
+    setViewerIndex(photoIndex)
+    setViewerName(p.nombre_edificio || p.nombre_proyecto || 'Departamento')
+    setViewerSubtitle(`${p.zona || 'Equipetrol'} · ${p.area_m2}m² · ${dormLabel(p.dormitorios)}`)
+    setViewerOpen(true)
+  }
+
+  const activeFilterCount = useMemo(() => {
+    let c = 0
+    if (filters.zonas_permitidas?.length) c += filters.zonas_permitidas.length
+    if (filters.precio_mensual_max) c++
+    if (filters.dormitorios !== undefined) c++
+    if (filters.dormitorios_min !== undefined) c++
+    if (filters.amoblado) c++
+    if (filters.acepta_mascotas) c++
+    return c
+  }, [filters])
+
+  // Auto-close chips on scroll
+  useEffect(() => {
+    const el = feedRef.current
+    if (!el || !chipsExpanded) return
+    const close = () => setChipsExpanded(false)
+    el.addEventListener('scroll', close, { passive: true, once: true })
+    return () => el.removeEventListener('scroll', close)
+  }, [chipsExpanded])
+
   // Mobile: feed items with filter card at position 3
   const feedItems: Array<{ type: 'property'; data: UnidadAlquiler } | { type: 'filter' }> = []
   let filterInserted = false
@@ -190,6 +239,17 @@ export default function AlquileresPage() {
 
       {/* Toast */}
       <div className={`alq-toast ${toastVisible ? 'show' : ''}`}>{toastMessage}</div>
+
+      {/* Photo viewer */}
+      {viewerOpen && (
+        <PhotoViewer
+          photos={viewerPhotos}
+          initialIndex={viewerIndex}
+          buildingName={viewerName}
+          subtitle={viewerSubtitle}
+          onClose={() => setViewerOpen(false)}
+        />
+      )}
 
       {/* Bottom sheet overlay */}
       {sheetOpen && <div className="alq-sheet-overlay" onClick={() => setSheetOpen(false)} />}
@@ -280,6 +340,7 @@ export default function AlquileresPage() {
                     favoritesCount={favorites.size}
                     onToggleFavorite={() => toggleFavorite(p.id)}
                     onOpenInfo={() => { setSheetProperty(p); setSheetOpen(true) }}
+                    onPhotoTap={(photoIdx) => openViewer(p, photoIdx)}
                   />
                 ))}
               </div>
@@ -328,53 +389,56 @@ export default function AlquileresPage() {
           <div className="alq-top-bar">
             <div>
               <div className="alq-logo">Simon</div>
-              <div className="alq-label">ALQUILERES</div>
+              <div className="alq-label">{isFiltered ? `${activeFilterCount} FILTRO${activeFilterCount > 1 ? 'S' : ''} ACTIVO${activeFilterCount > 1 ? 'S' : ''}` : 'ALQUILERES'}</div>
             </div>
-            <button className="alq-filter-btn" onClick={() => {
-              // Scroll to filter card position (index = FILTER_CARD_POSITION)
-              // First update activeCardIndex so virtualization renders the real card
-              const filterIdx = Math.min(FILTER_CARD_POSITION, feedItems.length - 1)
-              setActiveCardIndex(filterIdx)
-              // Then scroll after a tick so the real card is rendered
-              setTimeout(() => {
-                if (feedRef.current) {
-                  feedRef.current.scrollTo({ top: filterIdx * feedRef.current.clientHeight, behavior: 'smooth' })
-                }
-              }, 50)
-            }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {isFiltered && (
+                <button className="alq-filter-pill" onClick={() => setChipsExpanded(!chipsExpanded)}>
+                  {chipsExpanded ? 'Ocultar' : `${activeFilterCount} filtros`}
+                </button>
+              )}
+              <button className="alq-filter-btn" aria-label="Abrir filtros" onClick={() => {
+                const filterIdx = Math.min(FILTER_CARD_POSITION, feedItems.length - 1)
+                setActiveCardIndex(filterIdx)
+                setTimeout(() => {
+                  if (feedRef.current) {
+                    feedRef.current.scrollTo({ top: filterIdx * feedRef.current.clientHeight, behavior: 'smooth' })
+                  }
+                }, 50)
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
+                {isFiltered && <div className="alq-filter-dot" />}
+              </button>
+            </div>
           </div>
 
-          {/* Active filter chips */}
-          {isFiltered && (
-            <div className="alq-chips">
-              {filters.zonas_permitidas?.map(z => {
-                const zona = ZONAS_UI.find(zu => zu.id === z)
-                return zona ? <span key={z} className="alq-chip">{zona.label} <button onClick={() => {
-                  const newZonas = filters.zonas_permitidas!.filter(x => x !== z)
-                  applyFilters({ ...filters, zonas_permitidas: newZonas.length > 0 ? newZonas : undefined })
-                }}>&times;</button></span> : null
-              })}
-              {filters.precio_mensual_max && <span className="alq-chip">&le; {formatPrice(filters.precio_mensual_max)}</span>}
-              {filters.dormitorios !== undefined && <span className="alq-chip">{filters.dormitorios === 0 ? 'Estudio' : `${filters.dormitorios} dorm`}</span>}
-              {filters.dormitorios_min !== undefined && <span className="alq-chip">{filters.dormitorios_min}+ dorm</span>}
-              {filters.amoblado && <span className="alq-chip">Amoblado</span>}
-              {filters.acepta_mascotas && <span className="alq-chip">Mascotas</span>}
-              <button className="alq-chip alq-chip-clear" onClick={resetFilters}>&times; Todo</button>
-            </div>
-          )}
+          {/* Expandable filter chips panel */}
+          <div className={`alq-chips-panel ${chipsExpanded ? 'open' : ''}`}>
+            {filters.zonas_permitidas?.map(z => {
+              const zona = ZONAS_UI.find(zu => zu.id === z)
+              return zona ? <span key={z} className="alq-chip">{zona.label} <button onClick={() => {
+                const newZonas = filters.zonas_permitidas!.filter(x => x !== z)
+                applyFilters({ ...filters, zonas_permitidas: newZonas.length > 0 ? newZonas : undefined })
+              }}>&times;</button></span> : null
+            })}
+            {filters.precio_mensual_max && <span className="alq-chip">&le; {formatPrice(filters.precio_mensual_max)}</span>}
+            {filters.dormitorios !== undefined && <span className="alq-chip">{filters.dormitorios === 0 ? 'Estudio' : `${filters.dormitorios} dorm`}</span>}
+            {filters.dormitorios_min !== undefined && <span className="alq-chip">{filters.dormitorios_min}+ dorm</span>}
+            {filters.amoblado && <span className="alq-chip">Amoblado</span>}
+            {filters.acepta_mascotas && <span className="alq-chip">Mascotas</span>}
+            <button className="alq-chip alq-chip-clear" onClick={() => { resetFilters(); setChipsExpanded(false) }}>&times; Todo</button>
+          </div>
 
           {/* Floating fav button */}
-          <div className="alq-fav-floating">
+          <button className="alq-fav-floating" aria-label={`Favoritos: ${favorites.size} de ${MAX_FAVORITES}`}>
             <svg viewBox="0 0 24 24" fill="none" stroke="#c9a959" strokeWidth="1.5">
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
             <div className={`alq-fav-count ${favorites.size > 0 ? 'show' : ''}`}>{favorites.size}</div>
-          </div>
+          </button>
 
           {/* Floating map button */}
-          <button className="alq-map-floating" onClick={() => setMobileMapOpen(true)}>
+          <button className="alq-map-floating" aria-label="Ver mapa" onClick={() => setMobileMapOpen(true)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="#c9a959" strokeWidth="1.5" style={{width:22,height:22}}>
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
             </svg>
@@ -448,6 +512,7 @@ export default function AlquileresPage() {
                     favoritesCount={favorites.size}
                     onToggleFavorite={() => toggleFavorite(item.data.id)}
                     onOpenInfo={() => { setSheetProperty(item.data); setSheetOpen(true) }}
+                    onPhotoTap={(photoIdx) => openViewer(item.data, photoIdx)}
                   />
                 )
               })
@@ -533,15 +598,28 @@ export default function AlquileresPage() {
           border: 1px solid rgba(255,255,255,0.15); background: rgba(10,10,10,0.5); color: #fff;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
-        .alq-chips {
-          position: fixed; top: max(56px, calc(env(safe-area-inset-top) + 48px)); left: 0; right: 0; z-index: 49;
-          display: flex; gap: 6px; padding: 6px 16px; overflow-x: auto; scrollbar-width: none;
-          background: linear-gradient(rgba(10,10,10,0.85), rgba(10,10,10,0.6)); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+        .alq-filter-pill {
+          padding: 6px 14px; border-radius: 100px;
+          background: rgba(201,169,89,0.12); border: 1px solid rgba(201,169,89,0.3);
+          color: #c9a959; font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 600;
+          letter-spacing: 0.5px; cursor: pointer;
         }
-        .alq-chips::-webkit-scrollbar { display: none; }
+        .alq-filter-dot {
+          position: absolute; top: 6px; right: 6px; width: 8px; height: 8px;
+          border-radius: 50%; background: #c9a959;
+        }
+        .alq-filter-btn { position: relative; }
+        .alq-chips-panel {
+          position: fixed; top: max(56px, calc(env(safe-area-inset-top) + 48px)); left: 0; right: 0; z-index: 49;
+          display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px;
+          background: rgba(10,10,10,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+          transform: translateY(-100%); opacity: 0; transition: transform 0.25s ease-out, opacity 0.2s;
+          pointer-events: none;
+        }
+        .alq-chips-panel.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
         .alq-chip {
           flex-shrink: 0; display: flex; align-items: center; gap: 4px;
-          padding: 4px 10px; border-radius: 100px; font-size: 11px;
+          padding: 6px 12px; border-radius: 100px; font-size: 12px;
           background: rgba(201,169,89,0.12); border: 1px solid rgba(201,169,89,0.25);
           color: #c9a959; font-family: 'Manrope', sans-serif; white-space: nowrap;
         }
@@ -552,6 +630,7 @@ export default function AlquileresPage() {
           z-index: 100; width: 48px; height: 48px; border-radius: 50%;
           background: rgba(10,10,10,0.7); border: 1px solid rgba(201,169,89,0.25);
           display: flex; align-items: center; justify-content: center; cursor: pointer;
+          padding: 0;
         }
         .alq-fav-floating svg { width: 22px; height: 22px; }
         .alq-fav-count {
@@ -587,6 +666,11 @@ export default function AlquileresPage() {
           display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
         .alq-mobile-map-body { flex: 1; }
+        @media (prefers-reduced-motion: reduce) {
+          .alq-toast { transition: none; }
+          .alq-fav-count { transition: none; }
+          .cc-pip { transition: none; }
+        }
       `}</style>
     </>
   )
@@ -733,9 +817,9 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
 }
 
 // ===== DESKTOP CARD =====
-function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite, onOpenInfo }: {
+function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite, onOpenInfo, onPhotoTap }: {
   property: UnidadAlquiler; isFavorite: boolean; favoritesCount: number
-  onToggleFavorite: () => void; onOpenInfo: () => void
+  onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = (p.fotos_urls?.length ?? 0) > 0 ? p.fotos_urls : ['']
@@ -757,16 +841,16 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
   return (
     <div className="dc-card">
       {/* Photo */}
-      <div className="dc-photo" style={photos[photoIdx] ? { backgroundImage: `url('${photos[photoIdx]}')` } : { background: '#1a1a1a' }}>
+      <div className="dc-photo" style={{ ...(photos[photoIdx] ? { backgroundImage: `url('${photos[photoIdx]}')` } : { background: '#1a1a1a' }), cursor: photos[photoIdx] ? 'pointer' : undefined }} onClick={() => { if (photos[photoIdx] && onPhotoTap) onPhotoTap(photoIdx) }}>
         {photos.length > 1 && (
           <>
             {photoIdx > 0 && (
-              <button className="dc-nav dc-prev" onClick={() => setPhotoIdx(photoIdx - 1)}>
+              <button className="dc-nav dc-prev" aria-label="Foto anterior" onClick={() => setPhotoIdx(photoIdx - 1)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width: 16, height: 16 }}><path d="M15 18l-6-6 6-6"/></svg>
               </button>
             )}
             {photoIdx < photos.length - 1 && (
-              <button className="dc-nav dc-next" onClick={() => setPhotoIdx(photoIdx + 1)}>
+              <button className="dc-nav dc-next" aria-label="Foto siguiente" onClick={() => setPhotoIdx(photoIdx + 1)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width: 16, height: 16 }}><path d="M9 18l6-6-6-6"/></svg>
               </button>
             )}
@@ -774,7 +858,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
           </>
         )}
         {/* Fav button on photo */}
-        <button className={`dc-fav-btn ${isFavorite ? 'active' : ''}`} onClick={handleFav}>
+        <button className={`dc-fav-btn ${isFavorite ? 'active' : ''}`} aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'} onClick={handleFav}>
           <svg viewBox="0 0 24 24" fill={isFavorite ? '#c9a959' : 'none'} stroke={isFavorite ? '#c9a959' : '#fff'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
           </svg>
@@ -787,7 +871,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
         <div className="dc-zona">{p.zona || 'Equipetrol'}</div>
         <div className="dc-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
         <div className="dc-specs">
-          {p.area_m2}m2 · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} bano${p.banos > 1 ? 's' : ''}` : '—'}
+          {p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} bano${p.banos > 1 ? 's' : ''}` : '—'}
         </div>
         <div className="dc-badges">
           {badges.slice(0, 4).map((b, i) => (
@@ -798,6 +882,14 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
           <button className="dc-info-btn" onClick={onOpenInfo}>Info + Mapa</button>
           <a href={p.url} target="_blank" rel="noopener noreferrer" className="dc-ver-btn">Ver &#8599;</a>
         </div>
+        {p.agente_whatsapp && (
+          <a href={`https://wa.me/${p.agente_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola, vi este alquiler en Simon y me interesa: ${displayName} - ${formatPrice(p.precio_mensual_bob)}/mes`)}`} target="_blank" rel="noopener noreferrer" className="dc-wsp-cta">
+            <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 16, height: 16 }}>
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            WhatsApp
+          </a>
+        )}
       </div>
 
       <style jsx>{`
@@ -827,6 +919,13 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
         .dc-info-btn:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
         .dc-ver-btn { flex: 1; padding: 8px; background: rgba(201,169,89,0.1); border: 1px solid rgba(201,169,89,0.25); color: #c9a959; font-family: 'Manrope', sans-serif; font-size: 11px; text-align: center; text-decoration: none; border-radius: 6px; transition: all 0.2s; font-weight: 500; }
         .dc-ver-btn:hover { background: rgba(201,169,89,0.2); }
+        .dc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: #25d366; border: none; border-radius: 6px; color: #fff; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600; text-decoration: none; margin-top: 8px; transition: opacity 0.2s; }
+        .dc-wsp-cta:hover { opacity: 0.9; }
+        @media (prefers-reduced-motion: reduce) {
+          .dc-photo { animation: none; }
+          .dc-card { transition: none; }
+          .dc-fav-btn { transition: none; }
+        }
       `}</style>
     </div>
   )
@@ -834,10 +933,10 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
 
 // ===== MOBILE PROPERTY CARD (full-screen) =====
 function MobilePropertyCard({
-  property: p, isFirst, isFavorite, favoritesCount, onToggleFavorite, onOpenInfo,
+  property: p, isFirst, isFavorite, favoritesCount, onToggleFavorite, onOpenInfo, onPhotoTap,
 }: {
   property: UnidadAlquiler; isFirst: boolean; isFavorite: boolean; favoritesCount: number
-  onToggleFavorite: () => void; onOpenInfo: () => void
+  onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [shakeBtn, setShakeBtn] = useState(false)
@@ -862,12 +961,12 @@ function MobilePropertyCard({
 
   return (
     <div className="alq-card" ref={cardRef}>
-      <PhotoCarousel photos={p.fotos_urls || []} isFirst={isFirst} />
+      <PhotoCarousel photos={p.fotos_urls || []} isFirst={isFirst} onPhotoTap={onPhotoTap} />
       <div className="mc-content">
         <div className="mc-name">{displayName}</div>
         <div className="mc-zona">{p.zona || 'Equipetrol'}</div>
         <div className="mc-price">{formatPrice(p.precio_mensual_bob)}/mes</div>
-        <div className="mc-specs">{p.area_m2}m2 · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} bano${p.banos > 1 ? 's' : ''}` : '—'}</div>
+        <div className="mc-specs">{p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} bano${p.banos > 1 ? 's' : ''}` : '—'}</div>
         <div className="mc-badges">
           {badges.slice(0, 4).map((b, i) => <span key={i} className={`mc-badge ${b.color}`}>{b.text}</span>)}
         </div>
@@ -875,7 +974,7 @@ function MobilePropertyCard({
           <div className="mc-razon">&ldquo;{p.descripcion.slice(0, 120)}{p.descripcion.length > 120 ? '...' : ''}&rdquo;</div>
         )}
         <div className="mc-actions">
-          <button className={`mc-btn mc-fav ${isFavorite ? 'active' : ''} ${shakeBtn ? 'shake' : ''}`} onClick={handleFavorite}>
+          <button className={`mc-btn mc-fav ${isFavorite ? 'active' : ''} ${shakeBtn ? 'shake' : ''}`} aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'} onClick={handleFavorite}>
             <svg viewBox="0 0 24 24" fill={isFavorite ? '#c9a959' : 'none'} stroke={isFavorite ? '#c9a959' : 'currentColor'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
@@ -921,15 +1020,21 @@ function MobilePropertyCard({
         @keyframes mcShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
         .mc-scroll-hint { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); z-index: 10; animation: mcBounce 2s infinite; opacity: 0.25; }
         @keyframes mcBounce { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-5px)} }
+        @media (prefers-reduced-motion: reduce) {
+          .mc-btn.shake { animation: none; }
+          .mc-scroll-hint { animation: none; }
+          .mc-wsp-cta { transition: none; }
+        }
       `}</style>
     </div>
   )
 }
 
 // ===== PHOTO CAROUSEL (native scroll-snap) =====
-function PhotoCarousel({ photos, isFirst }: { photos: string[]; isFirst: boolean }) {
+function PhotoCarousel({ photos, isFirst, onPhotoTap }: { photos: string[]; isFirst: boolean; onPhotoTap?: (index: number) => void }) {
   const [currentIdx, setCurrentIdx] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
   const total = photos.length || 1
 
   // Detect current slide via scroll position
@@ -955,7 +1060,11 @@ function PhotoCarousel({ photos, isFirst }: { photos: string[]; isFirst: boolean
     <div className="pc-zone">
       <div className="pc-scroll" ref={scrollRef}>
         {(photos.length > 0 ? photos : ['']).map((url, i) => (
-          <div key={i} className="pc-slide" style={url ? { backgroundImage: `url('${url}')` } : { background: '#1a1a1a' }} />
+          <div key={i} className="pc-slide" style={url ? { backgroundImage: `url('${url}')` } : { background: '#1a1a1a' }}
+            onTouchStart={() => { isDragging.current = false }}
+            onTouchMove={() => { isDragging.current = true }}
+            onClick={() => { if (!isDragging.current && onPhotoTap && url) onPhotoTap(currentIdx) }}
+          />
         ))}
       </div>
       <div className="pc-counter">
@@ -990,6 +1099,11 @@ function PhotoCarousel({ photos, isFirst }: { photos: string[]; isFirst: boolean
         .pc-dot.active { background: #fff; width: 20px; border-radius: 3px; }
         .pc-swipe-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 10; display: flex; align-items: center; gap: 8px; background: rgba(10,10,10,0.65); padding: 10px 20px; border-radius: 100px; color: rgba(255,255,255,0.7); font-size: 13px; font-family: 'Manrope', sans-serif; pointer-events: none; animation: pcFade 3s ease-in-out forwards; }
         @keyframes pcFade { 0%{opacity:0} 15%{opacity:1} 70%{opacity:1} 100%{opacity:0} }
+        @media (prefers-reduced-motion: reduce) {
+          .pc-slide { animation: none; }
+          .pc-swipe-hint { animation: none; opacity: 0.7; }
+          .pc-dot { transition: none; }
+        }
       `}</style>
     </div>
   )
@@ -1103,7 +1217,7 @@ function BottomSheet({ open, property, onClose, isDesktop }: { open: boolean; pr
   const p = property
 
   const features: Array<{ icon: string; label: string; value: string; highlight?: boolean }> = []
-  features.push({ icon: '📐', label: 'Area', value: `${p.area_m2}m2` })
+  features.push({ icon: '📐', label: 'Area', value: `${p.area_m2}m²` })
   features.push({ icon: '🛏️', label: 'Tipo', value: dormLabel(p.dormitorios) })
   features.push({ icon: '🚿', label: 'Banos', value: p.banos ? `${p.banos} bano${p.banos > 1 ? 's' : ''}` : '—' })
   if (p.piso !== null) features.push({ icon: '🏢', label: 'Piso', value: p.piso === 0 ? 'PB' : `Piso ${p.piso}` })
@@ -1123,7 +1237,7 @@ function BottomSheet({ open, property, onClose, isDesktop }: { open: boolean; pr
       <div className="bs-handle" />
       <div className="bs-header">
         <div className="bs-title">{displayName}</div>
-        <button className="bs-close" onClick={onClose}>&times;</button>
+        <button className="bs-close" aria-label="Cerrar detalle" onClick={onClose}>&times;</button>
       </div>
       <div className="bs-section">
         <div className="bs-sl">CARACTERISTICAS</div>
