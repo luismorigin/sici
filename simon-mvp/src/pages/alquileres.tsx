@@ -221,7 +221,7 @@ export default function AlquileresPage() {
             style={viewMode === 'map' ? { overflow: 'hidden', display: 'flex', flexDirection: 'column' } : undefined}>
             {/* View toggle bar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>{properties.length} resultado{properties.length !== 1 ? 's' : ''}</span>
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{properties.length} resultado{properties.length !== 1 ? 's' : ''}</span>
               <div style={{ display: 'flex', gap: 2, background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: 3 }}>
                 <button
                   onClick={() => setViewMode('grid')}
@@ -295,9 +295,9 @@ export default function AlquileresPage() {
                         <div style={{ height: 100, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#1a1a1a', ...(p.fotos_urls?.[0] ? { backgroundImage: `url('${p.fotos_urls[0]}')` } : {}) }} />
                         <div style={{ padding: '10px 12px' }}>
                           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: '#fff', lineHeight: 1.2, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, marginBottom: 6 }}>{p.zona || 'Equipetrol'}</div>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', letterSpacing: 1, marginBottom: 6 }}>{p.zona || 'Equipetrol'}</div>
                           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: '#c9a959', lineHeight: 1 }}>{formatPrice(p.precio_mensual_bob)}/mes</div>
-                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 4, fontFamily: "'Manrope', sans-serif" }}>{p.area_m2}m² · {dormLabel(p.dormitorios)}</div>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 4, fontFamily: "'Manrope', sans-serif" }}>{p.area_m2}m² · {dormLabel(p.dormitorios)}</div>
                         </div>
                       </div>
                     )
@@ -372,7 +372,7 @@ export default function AlquileresPage() {
               <div className="alq-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div className="alq-logo" style={{ fontSize: 44, marginBottom: 8 }}>Simon</div>
-                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>Cargando alquileres...</div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Cargando alquileres...</div>
                 </div>
               </div>
             ) : (
@@ -441,13 +441,13 @@ export default function AlquileresPage() {
           font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 400;
           color: #fff; text-decoration: none; display: block;
         }
-        .desktop-label { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 3px; margin-top: 2px; }
+        .desktop-label { font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 3px; margin-top: 2px; }
         .desktop-sidebar-count { margin-bottom: 28px; }
         .desktop-count-num {
           font-family: 'Cormorant Garamond', serif; font-size: 48px; font-weight: 300;
           color: #c9a959; line-height: 1; display: block;
         }
-        .desktop-count-label { font-size: 13px; color: rgba(255,255,255,0.4); }
+        .desktop-count-label { font-size: 13px; color: rgba(255,255,255,0.6); }
         .desktop-fav-summary {
           margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06);
           display: flex; align-items: center; gap: 8px; color: #c9a959; font-size: 13px;
@@ -466,7 +466,7 @@ export default function AlquileresPage() {
         }
         .desktop-loading {
           display: flex; align-items: center; justify-content: center; height: 300px;
-          color: rgba(255,255,255,0.4); font-size: 15px;
+          color: rgba(255,255,255,0.6); font-size: 15px;
         }
 
 
@@ -485,7 +485,7 @@ export default function AlquileresPage() {
         }
         .alq-top-bar > * { pointer-events: auto; }
         .alq-logo { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400; color: #fff; }
-        .alq-label { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 3px; }
+        .alq-label { font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 3px; }
         .alq-filter-btn {
           width: 38px; height: 38px; border-radius: 50%;
           border: 1px solid rgba(255,255,255,0.15); background: rgba(10,10,10,0.5); color: #fff;
@@ -658,19 +658,19 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
       <style jsx>{`
         .df-wrap { flex: 1; }
         .df-group { margin-bottom: 18px; }
-        .df-label { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.35); letter-spacing: 2px; margin-bottom: 8px; }
+        .df-label { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.6); letter-spacing: 2px; margin-bottom: 8px; }
         .df-zona-btns { display: flex; flex-wrap: wrap; gap: 6px; }
-        .df-zona-btn { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.12); background: transparent; color: rgba(255,255,255,0.5); font-family: 'Manrope', sans-serif; font-size: 11px; cursor: pointer; border-radius: 100px; transition: all 0.2s; }
+        .df-zona-btn { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: rgba(255,255,255,0.7); font-family: 'Manrope', sans-serif; font-size: 11px; cursor: pointer; border-radius: 100px; transition: all 0.2s; }
         .df-zona-btn.active { border-color: #c9a959; color: #c9a959; background: rgba(201,169,89,0.06); }
         .df-dorm-btns { display: flex; gap: 8px; }
-        .df-dorm-btn { flex: 1; padding: 9px; border: 1px solid rgba(255,255,255,0.12); background: transparent; color: rgba(255,255,255,0.5); font-family: 'Manrope', sans-serif; font-size: 12px; cursor: pointer; border-radius: 4px; transition: all 0.2s; }
+        .df-dorm-btn { flex: 1; padding: 9px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: rgba(255,255,255,0.7); font-family: 'Manrope', sans-serif; font-size: 12px; cursor: pointer; border-radius: 4px; transition: all 0.2s; }
         .df-dorm-btn.active { border-color: #c9a959; color: #c9a959; background: rgba(201,169,89,0.06); }
         .df-slider { width: 100%; -webkit-appearance: none; appearance: none; height: 2px; background: rgba(255,255,255,0.12); border-radius: 2px; outline: none; }
         .df-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #c9a959; cursor: pointer; }
         .df-slider-val { text-align: right; font-size: 13px; color: #c9a959; margin-top: 6px; font-weight: 500; }
         .df-cta { display: block; width: 100%; padding: 12px; background: #c9a959; border: none; color: #0a0a0a; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; transition: opacity 0.2s; }
         .df-cta:hover { opacity: 0.9; }
-        .df-reset { display: block; width: 100%; padding: 10px; background: transparent; border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.5); font-family: 'Manrope', sans-serif; font-size: 12px; cursor: pointer; border-radius: 4px; }
+        .df-reset { display: block; width: 100%; padding: 10px; background: transparent; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); font-family: 'Manrope', sans-serif; font-size: 12px; cursor: pointer; border-radius: 4px; }
       `}</style>
     </div>
   )
@@ -757,16 +757,16 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
         .dc-fav-btn.active { background: rgba(201,169,89,0.15); }
         .dc-content { padding: 16px; }
         .dc-name { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 400; color: #fff; line-height: 1.2; margin-bottom: 2px; }
-        .dc-zona { font-size: 11px; color: rgba(255,255,255,0.4); letter-spacing: 1px; margin-bottom: 10px; }
+        .dc-zona { font-size: 11px; color: rgba(255,255,255,0.6); letter-spacing: 1px; margin-bottom: 10px; }
         .dc-price { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; color: #c9a959; line-height: 1; margin-bottom: 4px; }
         .dc-price span { font-size: 16px; color: rgba(201,169,89,0.6); }
-        .dc-specs { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 10px; font-family: 'Manrope', sans-serif; }
+        .dc-specs { font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 10px; font-family: 'Manrope', sans-serif; }
         .dc-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
-        .dc-badge { font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); font-family: 'Manrope', sans-serif; }
+        .dc-badge { font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.75); font-family: 'Manrope', sans-serif; }
         .dc-badge.gold { border-color: rgba(201,169,89,0.25); color: #c9a959; }
         .dc-badge.purple { border-color: rgba(168,85,247,0.25); color: #a855f7; }
         .dc-actions { display: flex; gap: 8px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; }
-        .dc-info-btn { flex: 1; padding: 8px; background: transparent; border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); font-family: 'Manrope', sans-serif; font-size: 11px; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
+        .dc-info-btn { flex: 1; padding: 8px; background: transparent; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); font-family: 'Manrope', sans-serif; font-size: 11px; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
         .dc-info-btn:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
         .dc-ver-btn { flex: 1; padding: 8px; background: rgba(201,169,89,0.1); border: 1px solid rgba(201,169,89,0.25); color: #c9a959; font-family: 'Manrope', sans-serif; font-size: 11px; text-align: center; text-decoration: none; border-radius: 6px; transition: all 0.2s; font-weight: 500; }
         .dc-ver-btn:hover { background: rgba(201,169,89,0.2); }
@@ -844,19 +844,19 @@ function MobilePropertyCard({
         .alq-card { height: 100vh; height: 100dvh; scroll-snap-align: start; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #0a0a0a; }
         .mc-content { flex: 1; padding: 0 24px 20px; padding-bottom: max(20px, calc(env(safe-area-inset-bottom) + 8px)); display: flex; flex-direction: column; overflow: hidden; }
         .mc-name { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400; color: #fff; line-height: 1.1; margin-bottom: 3px; }
-        .mc-zona { font-size: 12px; color: rgba(255,255,255,0.5); letter-spacing: 1px; margin-bottom: 12px; }
+        .mc-zona { font-size: 12px; color: rgba(255,255,255,0.7); letter-spacing: 1px; margin-bottom: 12px; }
         .mc-price { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 400; color: #c9a959; line-height: 1; margin-bottom: 4px; }
-        .mc-specs { font-size: 13px; font-weight: 300; color: rgba(255,255,255,0.55); margin-bottom: 12px; font-family: 'Manrope', sans-serif; }
+        .mc-specs { font-size: 13px; font-weight: 300; color: rgba(255,255,255,0.7); margin-bottom: 12px; font-family: 'Manrope', sans-serif; }
         .mc-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-        .mc-badge { font-size: 10px; font-weight: 500; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.04); font-family: 'Manrope', sans-serif; }
+        .mc-badge { font-size: 10px; font-weight: 500; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.04); font-family: 'Manrope', sans-serif; }
         .mc-badge.gold { border-color: rgba(201,169,89,0.25); color: #c9a959; background: rgba(201,169,89,0.06); }
         .mc-badge.purple { border-color: rgba(168,85,247,0.25); color: #a855f7; background: rgba(168,85,247,0.06); }
-        .mc-razon { font-size: 12px; font-weight: 300; color: rgba(255,255,255,0.45); line-height: 1.5; margin-bottom: auto; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .mc-razon { font-size: 12px; font-weight: 300; color: rgba(255,255,255,0.6); line-height: 1.5; margin-bottom: auto; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .mc-actions { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 8px; }
-        .mc-btn { display: flex; align-items: center; gap: 5px; background: none; border: none; color: rgba(255,255,255,0.6); font-size: 12px; font-family: 'Manrope', sans-serif; cursor: pointer; padding: 6px 0; }
+        .mc-btn { display: flex; align-items: center; gap: 5px; background: none; border: none; color: rgba(255,255,255,0.7); font-size: 12px; font-family: 'Manrope', sans-serif; cursor: pointer; padding: 6px 0; }
         .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(201,169,89,0.5)); }
         .mc-btn.mc-wsp { padding: 6px 4px; }
-        .mc-btn.mc-info { color: rgba(255,255,255,0.5); font-size: 11px; letter-spacing: 0.5px; }
+        .mc-btn.mc-info { color: rgba(255,255,255,0.7); font-size: 11px; letter-spacing: 0.5px; }
         .mc-btn.mc-ver { margin-left: auto; color: #c9a959; text-decoration: none; font-weight: 500; }
         .mc-btn.shake { animation: mcShake 0.3s ease; }
         @keyframes mcShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
@@ -1031,7 +1031,7 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
         .mfc-cta { display:block;width:100%;max-width:320px;padding:15px;background:#c9a959;border:none;color:#0a0a0a;font-family:'Manrope',sans-serif;font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-bottom:10px; }
         .mfc-cta:active { transform:scale(0.97); }
         .mfc-reset { display:block;width:100%;max-width:320px;padding:11px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.75);font-family:'Manrope',sans-serif;font-size:13px;cursor:pointer;margin-bottom:8px;border-radius:4px; }
-        .mfc-skip { font-size:13px;color:rgba(255,255,255,0.4);font-weight:300;font-family:'Manrope',sans-serif; }
+        .mfc-skip { font-size:13px;color:rgba(255,255,255,0.55);font-weight:300;font-family:'Manrope',sans-serif; }
       `}</style>
     </div>
   )
@@ -1107,19 +1107,19 @@ function BottomSheet({ open, property, onClose, isDesktop }: { open: boolean; pr
         .bs-handle{width:36px;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;margin:12px auto 0;}
         .bs-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px 12px;border-bottom:1px solid rgba(255,255,255,0.06);}
         .bs-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:#fff;}
-        .bs-close{width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;}
+        .bs-close{width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;}
         .bs-section{padding:16px 24px;}
-        .bs-sl{font-size:10px;font-weight:500;color:rgba(255,255,255,0.3);letter-spacing:2px;margin-bottom:12px;font-family:'Manrope',sans-serif;}
+        .bs-sl{font-size:10px;font-weight:500;color:rgba(255,255,255,0.55);letter-spacing:2px;margin-bottom:12px;font-family:'Manrope',sans-serif;}
         .bs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
         .bs-feat{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);}
         .bs-fi{font-size:20px;}
-        .bs-fl{font-size:10px;color:rgba(255,255,255,0.6);text-align:center;font-family:'Manrope',sans-serif;}
+        .bs-fl{font-size:10px;color:rgba(255,255,255,0.7);text-align:center;font-family:'Manrope',sans-serif;}
         .bs-fv{font-size:12px;font-weight:500;color:#fff;font-family:'Manrope',sans-serif;}
         .bs-feat.hl{border-color:rgba(201,169,89,0.2);background:rgba(201,169,89,0.04);}
         .bs-feat.hl .bs-fl{color:#c9a959;}
         .bs-feat.hl .bs-fv{color:#c9a959;}
         .bs-aw{display:flex;flex-wrap:wrap;gap:6px;}
-        .bs-at{font-size:11px;padding:4px 10px;border-radius:100px;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);font-family:'Manrope',sans-serif;}
+        .bs-at{font-size:11px;padding:4px 10px;border-radius:100px;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.75);font-family:'Manrope',sans-serif;}
         .bs-map{width:100%;height:200px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);}
       `}</style>
     </div>
