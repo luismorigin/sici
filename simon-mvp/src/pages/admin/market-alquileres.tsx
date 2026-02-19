@@ -106,7 +106,7 @@ export default function MarketAlquileresDashboard() {
   const fetchRentalData = async () => {
     if (!supabase) return
 
-    const { data: props } = await supabase
+    const { data: props, error } = await supabase
       .from('propiedades_v2')
       .select('id, zona, dormitorios, precio_mensual_bob, area_total_m2, id_proyecto_master, fuente, amoblado, mascotas')
       .eq('status', 'completado')
@@ -116,8 +116,17 @@ export default function MarketAlquileresDashboard() {
       .lt('precio_mensual_bob', 50000)
       .gte('area_total_m2', 20)
 
-    if (!props) return
-    setRentalProps(props)
+    if (error) { console.error('fetchRentalData error:', error); return }
+    if (!props || props.length === 0) { console.warn('fetchRentalData: no data returned'); return }
+
+    // Parse numeric strings from Supabase to actual numbers
+    const parsed: RentalProperty[] = props.map((p: any) => ({
+      ...p,
+      precio_mensual_bob: p.precio_mensual_bob ? parseFloat(p.precio_mensual_bob) : null,
+      area_total_m2: p.area_total_m2 ? parseFloat(p.area_total_m2) : null,
+    }))
+    console.log(`fetchRentalData: ${parsed.length} props loaded`)
+    setRentalProps(parsed)
 
     // Fetch project names for props that have projects
     const projectIds = [...new Set(props.map(p => p.id_proyecto_master).filter(Boolean))] as number[]
@@ -138,7 +147,7 @@ export default function MarketAlquileresDashboard() {
   const fetchVentaData = async () => {
     if (!supabase) return
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('propiedades_v2')
       .select('zona, precio_usd, area_total_m2')
       .eq('status', 'completado')
@@ -149,7 +158,9 @@ export default function MarketAlquileresDashboard() {
       .not('zona', 'is', null)
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
+    if (error) { console.error('fetchVentaData error:', error); return }
     if (!data) return
+    console.log(`fetchVentaData: ${data.length} venta props loaded`)
 
     // Group by zona and compute avg $/m²
     const grouped: Record<string, { sum: number; count: number }> = {}
