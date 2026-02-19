@@ -264,7 +264,7 @@ export default function AdminPropiedades() {
         if (ids.length > 0) {
           const { data: propsData, error: propsErr } = await supabase
             .from('propiedades_v2')
-            .select('id, nombre_edificio, zona, dormitorios, banos, precio_usd, area_total_m2, datos_json, url, fuente, campos_bloqueados, id_proyecto_master, fecha_publicacion, estado_construccion, estacionamientos, baulera, precio_usd_original, moneda_original, tipo_cambio_detectado, tipo_cambio_usado, piso, plan_pagos_desarrollador, acepta_permuta, solo_tc_paralelo, precio_negociable, descuento_contado_pct, parqueo_incluido, parqueo_precio_adicional, baulera_incluido, baulera_precio_adicional')
+            .select('id, nombre_edificio, zona, dormitorios, banos, precio_usd, precio_mensual_bob, precio_mensual_usd, tipo_operacion, area_total_m2, datos_json, url, fuente, campos_bloqueados, id_proyecto_master, fecha_publicacion, estado_construccion, estacionamientos, baulera, precio_usd_original, moneda_original, tipo_cambio_detectado, tipo_cambio_usado, piso, plan_pagos_desarrollador, acepta_permuta, solo_tc_paralelo, precio_negociable, descuento_contado_pct, parqueo_incluido, parqueo_precio_adicional, baulera_incluido, baulera_precio_adicional')
             .in('id', ids)
 
           if (propsErr) throw new Error(propsErr.message)
@@ -285,11 +285,15 @@ export default function AdminPropiedades() {
           const resultado = (propsData || []).map((p: any) => {
             const proj = projMap.get(p.id_proyecto_master)
             const fotosUrls = p.datos_json?.contenido?.fotos_urls || []
+            const esAlquiler = p.tipo_operacion === 'alquiler'
+            const precioDisplay = esAlquiler ? (Number(p.precio_mensual_usd) || 0) : (p.precio_usd || 0)
             return {
               ...p,
               proyecto: proj?.nombre_oficial || p.nombre_edificio || 'Sin nombre',
               desarrollador: proj?.desarrollador || null,
-              precio_m2: p.area_total_m2 > 0 ? Math.round(p.precio_usd / p.area_total_m2) : 0,
+              precio_usd: precioDisplay,
+              precio_m2: p.area_total_m2 > 0 ? Math.round(precioDisplay / p.area_total_m2) : 0,
+              precio_mensual_bob: p.precio_mensual_bob ? Number(p.precio_mensual_bob) : null,
               area_m2: p.area_total_m2,
               score_calidad: 0,
               asesor_nombre: p.datos_json?.agente?.nombre || null,
@@ -421,9 +425,10 @@ export default function AdminPropiedades() {
         filtros.proyecto = busqueda
       }
 
-      // Llamar a buscar_unidades_reales via RPC
+      // Llamar al RPC correcto según tipo de operación
+      const rpcName = tipoOperacion === 'alquiler' ? 'buscar_unidades_alquiler' : 'buscar_unidades_reales'
       const { data: unidades, error: rpcError } = await supabase
-        .rpc('buscar_unidades_reales', { p_filtros: filtros })
+        .rpc(rpcName, { p_filtros: filtros })
 
       if (rpcError) {
         throw new Error(rpcError.message)
@@ -449,12 +454,17 @@ export default function AdminPropiedades() {
 
         let resultado = (unidades || []).map((u: any) => {
           const extra = candadosMap.get(u.id)
+          // Para alquileres, usar precio_mensual_usd como precio_usd para display unificado
+          const precioUsd = tipoOperacion === 'alquiler'
+            ? (u.precio_mensual_usd ? Number(u.precio_mensual_usd) : 0)
+            : (u.precio_usd || 0)
           return {
             ...u,
-            // RPC ya retorna precio correcto (mensual para alquileres, venta para ventas)
-            precio_mensual_bob: u.precio_mensual_bob ? Number(u.precio_mensual_bob) : (extra?.precio_mensual_bob ? Number(extra.precio_mensual_bob) : null),
+            precio_usd: precioUsd,
+            precio_m2: u.area_m2 > 0 ? Math.round(precioUsd / Number(u.area_m2)) : 0,
+            precio_mensual_bob: u.precio_mensual_bob ? Number(u.precio_mensual_bob) : null,
             campos_bloqueados: extra?.campos_bloqueados || {},
-            fuente: extra?.fuente || '',
+            fuente: extra?.fuente || u.fuente || '',
             id_proyecto_master: extra?.id_proyecto_master ?? null,
             fecha_publicacion: extra?.fecha_publicacion ?? null,
             precio_usd_original: extra?.precio_usd_original,
@@ -1056,9 +1066,13 @@ export default function AdminPropiedades() {
                         <div className="text-right">
                           {tipoOperacion === 'alquiler' ? (
                             <>
-                              <p className="font-bold text-lg text-blue-700">{formatPrecio(prop.precio_usd)}/mes</p>
-                              {prop.precio_mensual_bob && (
-                                <p className="text-sm text-slate-500">Bs. {Math.round(prop.precio_mensual_bob).toLocaleString()}/mes</p>
+                              <p className="font-bold text-lg text-blue-700">
+                                {prop.precio_mensual_bob
+                                  ? `Bs ${Math.round(prop.precio_mensual_bob).toLocaleString()}/mes`
+                                  : formatPrecio(prop.precio_usd) + '/mes'}
+                              </p>
+                              {prop.precio_mensual_bob && prop.area_m2 > 0 && (
+                                <p className="text-sm text-slate-500">Bs {Math.round(prop.precio_mensual_bob / prop.area_m2)}/m²</p>
                               )}
                             </>
                           ) : (

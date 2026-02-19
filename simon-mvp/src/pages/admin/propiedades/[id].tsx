@@ -67,6 +67,8 @@ interface PropiedadOriginal {
   microzona: string | null
   precio_usd: number | null
   precio_usd_original: number | null
+  precio_mensual_bob: number | null
+  precio_mensual_usd: number | null
   moneda_original: string | null
   tipo_cambio_detectado: string | null
   tipo_cambio_usado: number | null
@@ -479,7 +481,11 @@ export default function EditarPropiedad() {
       let tipoPrecio: 'usd_oficial' | 'usd_paralelo' | 'bob' = 'usd_oficial'
       let precioPublicado = data.precio_usd?.toString() || ''
 
-      if (data.moneda_original === 'USD') {
+      if (data.tipo_operacion === 'alquiler') {
+        // Alquileres: precio en BOB (precio_mensual_bob)
+        tipoPrecio = 'bob'
+        precioPublicado = data.precio_mensual_bob?.toString() || ''
+      } else if (data.moneda_original === 'USD') {
         tipoPrecio = 'usd_oficial'
         precioPublicado = data.precio_usd?.toString() || ''
       } else if (data.tipo_cambio_detectado === 'paralelo') {
@@ -712,6 +718,11 @@ export default function EditarPropiedad() {
     const precioPublicado = parseFloat(formData.precio_publicado) || 0
     const tcOficial = 6.96
     const tcParalelo = tcParaleloActual || 10.5
+
+    // Alquileres: precio en BOB directo, sin conversión
+    if (formData.tipo_operacion === 'alquiler') {
+      return precioPublicado
+    }
 
     switch (formData.tipo_precio) {
       case 'usd_oficial':
@@ -1217,8 +1228,10 @@ export default function EditarPropiedad() {
         id_proyecto_master: selectedProyectoId,  // Vincular/desvincular proyecto
         zona: microzonaLabel,
         microzona: MICROZONA_ID_TO_DB[formData.microzona] || formData.microzona,
-        precio_usd: precioNormalizado, // Siempre guardar el precio normalizado
-        precio_usd_actualizado: null, // Limpiar para que RPC use precio_usd
+        // Precio: alquileres usan precio_mensual_bob, ventas usan precio_usd
+        ...(formData.tipo_operacion === 'alquiler'
+          ? { precio_mensual_bob: precioNormalizado, precio_mensual_usd: Math.round(precioNormalizado / 6.96 * 100) / 100 }
+          : { precio_usd: precioNormalizado, precio_usd_actualizado: null }),
         area_total_m2: formData.area_m2 ? parseFloat(formData.area_m2) : null,
         dormitorios: formData.dormitorios ? parseInt(formData.dormitorios) : null,
         banos: formData.banos ? parseFloat(formData.banos) : null,
@@ -1572,6 +1585,9 @@ export default function EditarPropiedad() {
   }
 
   const formatPrecio = (precio: number): string => {
+    if (formData.tipo_operacion === 'alquiler') {
+      return `Bs ${new Intl.NumberFormat('es-BO', { maximumFractionDigits: 0 }).format(precio)}`
+    }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -1826,7 +1842,7 @@ export default function EditarPropiedad() {
                     <div>
                       <p className="text-2xl font-bold text-slate-900">{formatPrecio(precioInfo.precio)}</p>
                       <div className="flex items-center gap-2">
-                        <p className="text-sm text-slate-500">{precioM2 > 0 && `$${precioM2}/m²`}</p>
+                        <p className="text-sm text-slate-500">{precioM2 > 0 && `${formData.tipo_operacion === 'alquiler' ? 'Bs' : '$'}${precioM2}/m²`}</p>
                         {getPrecioAlerta().tipo && (
                           <span className={`text-xs px-2 py-0.5 rounded ${getPrecioAlerta().color}`}>
                             {getPrecioAlerta().tipo === 'error' ? '⚠️ Revisar' : '⚠️'}
