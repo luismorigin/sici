@@ -365,8 +365,8 @@ export default function AlquileresPage() {
                 const WINDOW = 3
                 const isNearby = Math.abs(idx - activeCardIndex) <= WINDOW
                 if (!isNearby) {
-                  // Placeholder to preserve scroll position
-                  return <div key={item.type === 'filter' ? 'filter' : item.data.id} className="alq-card" style={{ background: '#0a0a0a' }} />
+                  // Placeholder preserves scroll position (must match card height + snap)
+                  return <div key={item.type === 'filter' ? 'filter' : item.data.id} style={{ height: '100dvh', scrollSnapAlign: 'start', background: '#0a0a0a' }} />
                 }
                 if (item.type === 'filter') {
                   return (
