@@ -5,17 +5,28 @@ import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 
 interface StatsProps {
+  // Totales
   completadas: number
   nuevas: number
-  inactivo_pending: number
-  excluido_operacion: number
-  matcheadas: number
-  sin_match: number
   ultimas_24h: number
+  // Venta
+  completadas_venta: number
+  matcheadas_venta: number
+  sin_match_venta: number
+  inactivo_venta: number
   score_alto: number
   score_medio: number
   score_bajo: number
-  completadas_venta: number
+  // Alquiler
+  completadas_alquiler: number
+  matcheadas_alquiler: number
+  sin_match_alquiler: number
+  inactivo_alquiler: number
+  alq_con_precio: number
+  alq_con_agente: number
+  alq_con_zona: number
+  alq_con_dormitorios: number
+  // Globales
   sin_zona: number
   sin_dormitorios: number
 }
@@ -99,14 +110,25 @@ export default function DashboardSalud() {
     }
 
     if (propStats) {
-      const pctMatch = propStats.completadas > 0 ? (propStats.matcheadas / propStats.completadas) * 100 : 0
-      if (pctMatch < 85) {
-        nuevasAlertas.push(`Cobertura matching baja: ${pctMatch.toFixed(1)}%`)
+      // Matching venta
+      const pctMatchVenta = propStats.completadas_venta > 0 ? (propStats.matcheadas_venta / propStats.completadas_venta) * 100 : 0
+      if (pctMatchVenta < 85) {
+        nuevasAlertas.push(`Matching venta bajo: ${pctMatchVenta.toFixed(1)}%`)
       }
-
+      // Matching alquiler
+      const pctMatchAlq = propStats.completadas_alquiler > 0 ? (propStats.matcheadas_alquiler / propStats.completadas_alquiler) * 100 : 0
+      if (pctMatchAlq < 75) {
+        nuevasAlertas.push(`Matching alquiler bajo: ${pctMatchAlq.toFixed(1)}%`)
+      }
+      // Score calidad venta
       const pctBajo = propStats.completadas_venta > 0 ? (propStats.score_bajo / propStats.completadas_venta) * 100 : 0
       if (pctBajo > 10) {
-        nuevasAlertas.push(`${pctBajo.toFixed(1)}% con calidad baja`)
+        nuevasAlertas.push(`${pctBajo.toFixed(1)}% ventas con calidad baja`)
+      }
+      // Alquileres sin precio
+      const sinPrecio = propStats.completadas_alquiler - propStats.alq_con_precio
+      if (sinPrecio > 10) {
+        nuevasAlertas.push(`${sinPrecio} alquileres sin precio`)
       }
     }
 
@@ -150,20 +172,32 @@ export default function DashboardSalud() {
   async function fetchPropiedadesStats() {
     if (!supabase) return
 
+    const esVenta = "COALESCE(tipo_operacion, 'venta') != 'alquiler'"
+    const esAlquiler = "tipo_operacion = 'alquiler'"
     const { data, error } = await supabase.rpc('pg_execute_query' as any, {
       query: `
         SELECT
           COUNT(*) FILTER (WHERE status = 'completado')::int as completadas,
           COUNT(*) FILTER (WHERE status = 'nueva')::int as nuevas,
-          COUNT(*) FILTER (WHERE status = 'inactivo_pending')::int as inactivo_pending,
-          COUNT(*) FILTER (WHERE status = 'excluido_operacion')::int as excluido_operacion,
-          COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL AND status = 'completado')::int as matcheadas,
-          COUNT(*) FILTER (WHERE id_proyecto_master IS NULL AND status = 'completado')::int as sin_match,
           COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '24 hours')::int as ultimas_24h,
-          COUNT(*) FILTER (WHERE score_calidad_dato >= 95 AND status = 'completado' AND COALESCE(tipo_operacion, 'venta') != 'alquiler')::int as score_alto,
-          COUNT(*) FILTER (WHERE score_calidad_dato >= 85 AND score_calidad_dato < 95 AND status = 'completado' AND COALESCE(tipo_operacion, 'venta') != 'alquiler')::int as score_medio,
-          COUNT(*) FILTER (WHERE score_calidad_dato < 85 AND status = 'completado' AND COALESCE(tipo_operacion, 'venta') != 'alquiler')::int as score_bajo,
-          COUNT(*) FILTER (WHERE status = 'completado' AND COALESCE(tipo_operacion, 'venta') != 'alquiler')::int as completadas_venta,
+          -- Venta
+          COUNT(*) FILTER (WHERE status = 'completado' AND ${esVenta})::int as completadas_venta,
+          COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL AND status = 'completado' AND ${esVenta})::int as matcheadas_venta,
+          COUNT(*) FILTER (WHERE id_proyecto_master IS NULL AND status = 'completado' AND ${esVenta})::int as sin_match_venta,
+          COUNT(*) FILTER (WHERE status IN ('inactivo_pending','inactivo_confirmed') AND ${esVenta})::int as inactivo_venta,
+          COUNT(*) FILTER (WHERE score_calidad_dato >= 95 AND status = 'completado' AND ${esVenta})::int as score_alto,
+          COUNT(*) FILTER (WHERE score_calidad_dato >= 85 AND score_calidad_dato < 95 AND status = 'completado' AND ${esVenta})::int as score_medio,
+          COUNT(*) FILTER (WHERE score_calidad_dato < 85 AND status = 'completado' AND ${esVenta})::int as score_bajo,
+          -- Alquiler
+          COUNT(*) FILTER (WHERE status = 'completado' AND ${esAlquiler})::int as completadas_alquiler,
+          COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL AND status = 'completado' AND ${esAlquiler})::int as matcheadas_alquiler,
+          COUNT(*) FILTER (WHERE id_proyecto_master IS NULL AND status = 'completado' AND ${esAlquiler})::int as sin_match_alquiler,
+          COUNT(*) FILTER (WHERE status IN ('inactivo_pending','inactivo_confirmed') AND ${esAlquiler})::int as inactivo_alquiler,
+          COUNT(*) FILTER (WHERE status = 'completado' AND ${esAlquiler} AND precio_mensual_bob IS NOT NULL AND precio_mensual_bob > 0)::int as alq_con_precio,
+          COUNT(*) FILTER (WHERE status = 'completado' AND ${esAlquiler} AND datos_json->>'agente_nombre' IS NOT NULL)::int as alq_con_agente,
+          COUNT(*) FILTER (WHERE status = 'completado' AND ${esAlquiler} AND zona IS NOT NULL AND zona != '')::int as alq_con_zona,
+          COUNT(*) FILTER (WHERE status = 'completado' AND ${esAlquiler} AND dormitorios IS NOT NULL)::int as alq_con_dormitorios,
+          -- Globales
           COUNT(*) FILTER (WHERE (zona IS NULL OR zona = '') AND status = 'completado')::int as sin_zona,
           COUNT(*) FILTER (WHERE dormitorios IS NULL AND status = 'completado')::int as sin_dormitorios
         FROM propiedades_v2
@@ -174,29 +208,38 @@ export default function DashboardSalud() {
     if (error || !data) {
       const { data: props } = await supabase
         .from('propiedades_v2')
-        .select('status, id_proyecto_master, score_calidad_dato, zona, dormitorios, fecha_creacion, tipo_operacion')
+        .select('status, id_proyecto_master, score_calidad_dato, zona, dormitorios, fecha_creacion, tipo_operacion, precio_mensual_bob, datos_json')
 
       if (props) {
-        const completadas = props.filter(p => p.status === 'completado')
-        // Score calidad solo aplica a venta (alquileres usan score diferente)
-        const completadasVenta = completadas.filter((p: any) => p.tipo_operacion !== 'alquiler')
+        const completadas = props.filter((p: any) => p.status === 'completado')
+        const venta = completadas.filter((p: any) => (p.tipo_operacion || 'venta') !== 'alquiler')
+        const alquiler = completadas.filter((p: any) => p.tipo_operacion === 'alquiler')
+        const inactivos = props.filter((p: any) => p.status === 'inactivo_pending' || p.status === 'inactivo_confirmed')
+
         setPropStats({
           completadas: completadas.length,
-          nuevas: props.filter(p => p.status === 'nueva').length,
-          inactivo_pending: props.filter(p => p.status === 'inactivo_pending').length,
-          excluido_operacion: props.filter(p => p.status === 'excluido_operacion').length,
-          matcheadas: completadas.filter(p => p.id_proyecto_master).length,
-          sin_match: completadas.filter(p => !p.id_proyecto_master).length,
-          ultimas_24h: props.filter(p => {
+          nuevas: props.filter((p: any) => p.status === 'nueva').length,
+          ultimas_24h: props.filter((p: any) => {
             const created = new Date(p.fecha_creacion)
             return created > new Date(Date.now() - 24 * 60 * 60 * 1000)
           }).length,
-          score_alto: completadasVenta.filter(p => (p.score_calidad_dato || 0) >= 95).length,
-          score_medio: completadasVenta.filter(p => (p.score_calidad_dato || 0) >= 85 && (p.score_calidad_dato || 0) < 95).length,
-          score_bajo: completadasVenta.filter(p => (p.score_calidad_dato || 0) < 85).length,
-          completadas_venta: completadasVenta.length,
-          sin_zona: completadas.filter(p => !p.zona).length,
-          sin_dormitorios: completadas.filter(p => p.dormitorios === null).length
+          completadas_venta: venta.length,
+          matcheadas_venta: venta.filter((p: any) => p.id_proyecto_master).length,
+          sin_match_venta: venta.filter((p: any) => !p.id_proyecto_master).length,
+          inactivo_venta: inactivos.filter((p: any) => (p.tipo_operacion || 'venta') !== 'alquiler').length,
+          score_alto: venta.filter((p: any) => (p.score_calidad_dato || 0) >= 95).length,
+          score_medio: venta.filter((p: any) => (p.score_calidad_dato || 0) >= 85 && (p.score_calidad_dato || 0) < 95).length,
+          score_bajo: venta.filter((p: any) => (p.score_calidad_dato || 0) < 85).length,
+          completadas_alquiler: alquiler.length,
+          matcheadas_alquiler: alquiler.filter((p: any) => p.id_proyecto_master).length,
+          sin_match_alquiler: alquiler.filter((p: any) => !p.id_proyecto_master).length,
+          inactivo_alquiler: inactivos.filter((p: any) => p.tipo_operacion === 'alquiler').length,
+          alq_con_precio: alquiler.filter((p: any) => p.precio_mensual_bob && p.precio_mensual_bob > 0).length,
+          alq_con_agente: alquiler.filter((p: any) => p.datos_json?.agente_nombre).length,
+          alq_con_zona: alquiler.filter((p: any) => p.zona).length,
+          alq_con_dormitorios: alquiler.filter((p: any) => p.dormitorios !== null).length,
+          sin_zona: completadas.filter((p: any) => !p.zona).length,
+          sin_dormitorios: completadas.filter((p: any) => p.dormitorios === null).length
         })
       }
     } else if (data?.[0]) {
@@ -456,36 +499,52 @@ export default function DashboardSalud() {
                 <span>📊</span> Inventario
               </h2>
               {propStats && (
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Completadas</span>
-                    <span className="font-semibold">{propStats.completadas}</span>
+                <div className="text-sm">
+                  {/* Header columnas */}
+                  <div className="grid grid-cols-3 gap-2 mb-2 pb-2 border-b">
+                    <span className="text-slate-400 text-xs"></span>
+                    <span className="text-xs font-semibold text-slate-500 text-right">Venta</span>
+                    <span className="text-xs font-semibold text-blue-500 text-right">Alquiler</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Nuevas (sin procesar)</span>
-                    <span className="font-semibold text-blue-600">{propStats.nuevas}</span>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="text-slate-600">Activas</span>
+                      <span className="font-semibold text-right">{propStats.completadas_venta}</span>
+                      <span className="font-semibold text-right">{propStats.completadas_alquiler}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="text-slate-600">Matcheadas</span>
+                      <span className="font-semibold text-green-600 text-right">
+                        {propStats.matcheadas_venta} <span className="text-xs text-slate-400">({propStats.completadas_venta > 0 ? ((propStats.matcheadas_venta / propStats.completadas_venta) * 100).toFixed(0) : 0}%)</span>
+                      </span>
+                      <span className="font-semibold text-green-600 text-right">
+                        {propStats.matcheadas_alquiler} <span className="text-xs text-slate-400">({propStats.completadas_alquiler > 0 ? ((propStats.matcheadas_alquiler / propStats.completadas_alquiler) * 100).toFixed(0) : 0}%)</span>
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="text-slate-600">Sin match</span>
+                      <span className="font-semibold text-orange-600 text-right">{propStats.sin_match_venta}</span>
+                      <span className="font-semibold text-orange-600 text-right">{propStats.sin_match_alquiler}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <span className="text-slate-600">Inactivas</span>
+                      <span className="text-slate-500 text-right">{propStats.inactivo_venta}</span>
+                      <span className="text-slate-500 text-right">{propStats.inactivo_alquiler}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Matcheadas</span>
-                    <span className="font-semibold text-green-600">
-                      {propStats.matcheadas} ({propStats.completadas > 0 ? ((propStats.matcheadas / propStats.completadas) * 100).toFixed(0) : 0}%)
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Sin match</span>
-                    <span className="font-semibold text-orange-600">{propStats.sin_match}</span>
-                  </div>
-                  <div className="flex justify-between pt-2 border-t">
-                    <span className="text-slate-600">Últimas 24h</span>
-                    <span className="font-semibold text-purple-600">+{propStats.ultimas_24h}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Inactivas pending</span>
-                    <span className="text-slate-500">{propStats.inactivo_pending}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Excluidas operación</span>
-                    <span className="text-slate-500">{propStats.excluido_operacion}</span>
+                  <div className="mt-3 pt-2 border-t space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Total completadas</span>
+                      <span className="font-bold">{propStats.completadas}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Nuevas (sin procesar)</span>
+                      <span className="font-semibold text-blue-600">{propStats.nuevas}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Últimas 24h</span>
+                      <span className="font-semibold text-purple-600">+{propStats.ultimas_24h}</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -497,32 +556,65 @@ export default function DashboardSalud() {
                 <span>📈</span> Calidad de Datos
               </h2>
               {propStats && (
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Score alto (≥95)</span>
-                    <span className="font-semibold text-green-600">
-                      {propStats.score_alto} ({propStats.completadas_venta > 0 ? ((propStats.score_alto / propStats.completadas_venta) * 100).toFixed(0) : 0}%)
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Score medio (85-94)</span>
-                    <span className="font-semibold text-amber-600">
-                      {propStats.score_medio} ({propStats.completadas_venta > 0 ? ((propStats.score_medio / propStats.completadas_venta) * 100).toFixed(0) : 0}%)
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Score bajo (&lt;85) — solo venta</span>
-                    <span className="font-semibold text-red-600">
-                      {propStats.score_bajo} ({propStats.completadas_venta > 0 ? ((propStats.score_bajo / propStats.completadas_venta) * 100).toFixed(0) : 0}%)
-                    </span>
-                  </div>
-                  <div className="pt-3 border-t space-y-2">
+                <div className="text-sm">
+                  {/* Venta - Score */}
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Venta — Score calidad</p>
+                  <div className="space-y-1.5 mb-4">
                     <div className="flex justify-between">
-                      <span className="text-slate-600">Sin zona</span>
+                      <span className="text-slate-600">Alto (≥95)</span>
+                      <span className="font-semibold text-green-600">
+                        {propStats.score_alto} ({propStats.completadas_venta > 0 ? ((propStats.score_alto / propStats.completadas_venta) * 100).toFixed(0) : 0}%)
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Medio (85-94)</span>
+                      <span className="font-semibold text-amber-600">
+                        {propStats.score_medio} ({propStats.completadas_venta > 0 ? ((propStats.score_medio / propStats.completadas_venta) * 100).toFixed(0) : 0}%)
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Bajo (&lt;85)</span>
+                      <span className="font-semibold text-red-600">
+                        {propStats.score_bajo} ({propStats.completadas_venta > 0 ? ((propStats.score_bajo / propStats.completadas_venta) * 100).toFixed(0) : 0}%)
+                      </span>
+                    </div>
+                  </div>
+                  {/* Alquiler - Cobertura */}
+                  <p className="text-xs font-semibold text-blue-400 uppercase tracking-wide mb-2 pt-3 border-t">Alquiler — Cobertura datos</p>
+                  <div className="space-y-1.5 mb-4">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Con precio</span>
+                      <span className={`font-semibold ${propStats.alq_con_precio < propStats.completadas_alquiler * 0.9 ? 'text-amber-600' : 'text-green-600'}`}>
+                        {propStats.alq_con_precio} ({propStats.completadas_alquiler > 0 ? ((propStats.alq_con_precio / propStats.completadas_alquiler) * 100).toFixed(0) : 0}%)
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Con agente</span>
+                      <span className={`font-semibold ${propStats.alq_con_agente < propStats.completadas_alquiler * 0.8 ? 'text-amber-600' : 'text-green-600'}`}>
+                        {propStats.alq_con_agente} ({propStats.completadas_alquiler > 0 ? ((propStats.alq_con_agente / propStats.completadas_alquiler) * 100).toFixed(0) : 0}%)
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Con zona</span>
+                      <span className={`font-semibold ${propStats.alq_con_zona < propStats.completadas_alquiler * 0.9 ? 'text-amber-600' : 'text-green-600'}`}>
+                        {propStats.alq_con_zona} ({propStats.completadas_alquiler > 0 ? ((propStats.alq_con_zona / propStats.completadas_alquiler) * 100).toFixed(0) : 0}%)
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Con dormitorios</span>
+                      <span className={`font-semibold ${propStats.alq_con_dormitorios < propStats.completadas_alquiler * 0.9 ? 'text-amber-600' : 'text-green-600'}`}>
+                        {propStats.alq_con_dormitorios} ({propStats.completadas_alquiler > 0 ? ((propStats.alq_con_dormitorios / propStats.completadas_alquiler) * 100).toFixed(0) : 0}%)
+                      </span>
+                    </div>
+                  </div>
+                  {/* Globales */}
+                  <div className="pt-3 border-t space-y-1.5">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Sin zona (total)</span>
                       <span className="text-orange-600">{propStats.sin_zona}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-600">Sin dormitorios</span>
+                      <span className="text-slate-600">Sin dormitorios (total)</span>
                       <span className="text-orange-600">{propStats.sin_dormitorios}</span>
                     </div>
                   </div>
