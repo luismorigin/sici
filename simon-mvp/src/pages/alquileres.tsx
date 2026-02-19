@@ -14,8 +14,8 @@ const ZONAS_UI = [
   { id: 'equipetrol_norte', label: 'Eq. Norte' },
   { id: 'sirari', label: 'Sirari' },
   { id: 'villa_brigida', label: 'V. Brigida' },
-  { id: 'faremafu', label: 'Faremafu' },
-  { id: 'equipetrol_franja', label: 'Eq. Franja' },
+  { id: 'equipetrol_oeste', label: 'Eq. Oeste' },
+  { id: 'equipetrol_3er_anillo', label: 'Eq. 3er Anillo' },
   { id: 'sin_zona', label: 'Otras' },
 ]
 
