@@ -349,6 +349,7 @@ export default function AlquileresPage() {
                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                   </svg>
                   {favorites.size} favorito{favorites.size > 1 ? 's' : ''}
+                  <button className="desktop-fav-clear" onClick={() => { setFavorites(new Set()); showToast('Favoritos limpiados') }} title="Limpiar favoritos">&times;</button>
                 </div>
                 {favorites.size >= 2 && (
                   <button className="desktop-compare-btn" onClick={() => setCompareOpen(true)}>
@@ -509,12 +510,15 @@ export default function AlquileresPage() {
             <button className="alq-chip alq-chip-clear" onClick={() => { resetFilters(); setChipsExpanded(false) }}>&times; Todo</button>
           </div>
 
-          {/* Compare banner — only shows with 2+ favorites */}
-          {favorites.size >= 2 && (
-            <button className="alq-compare-banner" onClick={() => setCompareOpen(true)}>
-              <span className="alq-compare-banner-text">{favorites.size} favoritos · Comparar</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M9 18l6-6-6-6"/></svg>
-            </button>
+          {/* Compare banner — only shows with 1+ favorites */}
+          {favorites.size >= 1 && (
+            <div className="alq-compare-banner-wrap">
+              <button className="alq-compare-banner" onClick={() => favorites.size >= 2 ? setCompareOpen(true) : showToast('Elegí al menos 2 para comparar')} style={{ flex: 1 }}>
+                <span className="alq-compare-banner-text">{favorites.size} favorito{favorites.size > 1 ? 's' : ''}{favorites.size >= 2 ? ' · Comparar' : ''}</span>
+                {favorites.size >= 2 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M9 18l6-6-6-6"/></svg>}
+              </button>
+              <button className="alq-compare-banner-clear" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Favoritos limpiados') }}>&times;</button>
+            </div>
           )}
 
           {/* Floating map button */}
@@ -649,6 +653,11 @@ export default function AlquileresPage() {
           color: #c9a959; font-size: 13px;
         }
         .desktop-fav-info { display: flex; align-items: center; gap: 8px; }
+        .desktop-fav-clear {
+          background: none; border: none; color: rgba(255,255,255,0.4); font-size: 16px;
+          cursor: pointer; padding: 0 4px; line-height: 1; transition: color 0.2s;
+        }
+        .desktop-fav-clear:hover { color: #fff; }
         .desktop-compare-btn {
           padding: 6px 14px; border-radius: 6px; border: 1px solid rgba(201,169,89,0.4);
           background: rgba(201,169,89,0.08); color: #c9a959; font-size: 11px; font-weight: 600;
@@ -722,14 +731,22 @@ export default function AlquileresPage() {
         }
         .alq-chip button { background: none; border: none; color: #c9a959; font-size: 14px; cursor: pointer; padding: 0; line-height: 1; }
         .alq-chip-clear { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15); color: rgba(255,255,255,0.6); cursor: pointer; }
-        .alq-compare-banner {
+        .alq-compare-banner-wrap {
           position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 8px)); left: 50%; transform: translateX(-50%);
-          z-index: 100; display: flex; align-items: center; gap: 8px;
-          background: #c9a959; color: #0a0a0a; border: none; border-radius: 100px;
-          padding: 12px 24px; cursor: pointer;
-          font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+          z-index: 100; display: flex; align-items: center; gap: 0;
+          border-radius: 100px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
           animation: alqBannerIn 0.3s ease-out;
+        }
+        .alq-compare-banner {
+          display: flex; align-items: center; gap: 8px;
+          background: #c9a959; color: #0a0a0a; border: none; border-radius: 100px 0 0 100px;
+          padding: 12px 16px 12px 24px; cursor: pointer;
+          font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+        }
+        .alq-compare-banner-clear {
+          background: rgba(160,130,60,1); color: #0a0a0a; border: none; border-radius: 0 100px 100px 0;
+          padding: 12px 16px 12px 12px; cursor: pointer; font-size: 18px; font-weight: 700; line-height: 1;
+          font-family: 'Manrope', sans-serif; border-left: 1px solid rgba(0,0,0,0.15);
         }
         @keyframes alqBannerIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
         .alq-compare-banner-text { white-space: nowrap; }
