@@ -1248,6 +1248,8 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
   const [orden, setOrden] = useState<FiltrosAlquiler['orden']>(currentFilters.orden || 'recientes')
   const [previewCount, setPreviewCount] = useState<number | null>(null)
   const previewRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isFirstRender = useRef(true)
+  const [isDirty, setIsDirty] = useState(false)
 
   // Build filters from current local state
   const buildFilters = useCallback((): FiltrosAlquiler => {
@@ -1263,18 +1265,21 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
 
   // Preview count: debounced RPC call as filters change
   useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return }
+    setIsDirty(true)
     if (previewRef.current) clearTimeout(previewRef.current)
     previewRef.current = setTimeout(async () => {
       const f = buildFilters()
       const data = await buscarUnidadesAlquiler(f)
       setPreviewCount(data.length)
-    }, 300)
+    }, 400)
     return () => { if (previewRef.current) clearTimeout(previewRef.current) }
   }, [buildFilters])
 
   function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); return n }) }
   function toggleZona(id: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n }) }
   function handleApply() {
+    setIsDirty(false)
     onApply(buildFilters())
   }
 
@@ -1307,7 +1312,12 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
           <div className="mfc-dorms">{ORDEN_OPTIONS.map(o=><button key={o.value} className={`mfc-db ${orden===o.value?'active':''}`} onClick={()=>setOrden(o.value)}>{o.label}</button>)}</div>
         </div>
       </div>
-      <button className="mfc-cta" onClick={handleApply}>FILTRAR{previewCount !== null ? ` · ${previewCount}` : ''}</button>
+      <button className={`mfc-cta ${isDirty ? 'mfc-cta-dirty' : ''}`} onClick={handleApply}>
+        {isDirty
+          ? `APLICAR FILTROS${previewCount !== null ? ` · ${previewCount}` : ''}`
+          : `FILTRAR${previewCount !== null ? ` · ${previewCount}` : ''}`
+        }
+      </button>
       {isFiltered && <button className="mfc-reset" onClick={onReset}>Quitar filtros · ver todas</button>}
       <div className="mfc-skip">segui explorando &darr;</div>
       <style jsx>{`
@@ -1330,8 +1340,10 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
         .mfc-slider { width:100%;-webkit-appearance:none;appearance:none;height:3px;background:rgba(255,255,255,0.25);border-radius:2px;outline:none; }
         .mfc-slider::-webkit-slider-thumb { -webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#c9a959;cursor:pointer; }
         .mfc-sv { text-align:right;font-size:15px;color:#c9a959;margin-top:4px;font-weight:600;font-family:'Manrope',sans-serif; }
-        .mfc-cta { display:block;width:100%;max-width:320px;padding:15px;background:#c9a959;border:none;color:#0a0a0a;font-family:'Manrope',sans-serif;font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-bottom:10px; }
+        .mfc-cta { display:block;width:100%;max-width:320px;padding:15px;background:rgba(201,169,89,0.25);border:1px solid rgba(201,169,89,0.4);color:rgba(255,255,255,0.6);font-family:'Manrope',sans-serif;font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-bottom:10px;transition:all 0.3s; }
         .mfc-cta:active { transform:scale(0.97); }
+        .mfc-cta-dirty { background:#c9a959;border-color:#c9a959;color:#0a0a0a;animation:mfc-pulse 1.5s ease-in-out infinite; }
+        @keyframes mfc-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(201,169,89,0.5)} 50%{box-shadow:0 0 16px 4px rgba(201,169,89,0.4)} }
         .mfc-reset { display:block;width:100%;max-width:320px;padding:11px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.75);font-family:'Manrope',sans-serif;font-size:13px;cursor:pointer;margin-bottom:8px;border-radius:4px; }
         .mfc-skip { font-size:13px;color:rgba(255,255,255,0.55);font-weight:300;font-family:'Manrope',sans-serif; }
       `}</style>
