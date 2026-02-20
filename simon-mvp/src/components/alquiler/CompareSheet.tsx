@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 
 interface UnidadAlquiler {
   id: number
@@ -35,9 +35,21 @@ function dormLabel(d: number) { return d === 0 ? 'Estudio' : `${d} dorm` }
 function fmt(n: number) { return n.toLocaleString('es-BO') }
 
 export default function CompareSheet({ open, properties, onClose }: CompareSheetProps) {
+  const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
+  const MAX_QS = 3
+
   if (!open || properties.length === 0) return null
 
   const props = properties.slice(0, 3)
+
+  function toggleQuestion(idx: number) {
+    setSelectedQs(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) { next.delete(idx) }
+      else if (next.size < MAX_QS) { next.add(idx) }
+      return next
+    })
+  }
 
   // Calculate precio/m²
   const precioM2 = props.map(p => p.area_m2 > 0 ? Math.round(p.precio_mensual_bob / p.area_m2) : 0)
@@ -299,16 +311,26 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
           </div>
         )}
 
-        {/* Questions for broker */}
+        {/* Questions for broker — selectable, max 3, included in WhatsApp */}
         <div className="cs-section">
-          <div className="cs-label">ANTES DE VISITAR, PREGUNTA</div>
+          <div className="cs-label-row">
+            <span className="cs-label">PREGUNTAS PARA EL BROKER</span>
+            <span className="cs-label-hint">{selectedQs.size > 0 ? `${selectedQs.size}/${MAX_QS} — se incluyen en WhatsApp` : `Selecciona hasta ${MAX_QS}`}</span>
+          </div>
           <div className="cs-questions">
-            {askQuestions.map((q, i) => (
-              <div key={i} className="cs-question">
-                <span className="cs-q-dot" />
-                <span className="cs-q-text">{q.text}</span>
-              </div>
-            ))}
+            {askQuestions.map((q, i) => {
+              const isSelected = selectedQs.has(i)
+              const isDisabled = !isSelected && selectedQs.size >= MAX_QS
+              return (
+                <button key={i} className={`cs-question cs-q-selectable ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
+                  onClick={() => toggleQuestion(i)} aria-pressed={isSelected}>
+                  <span className={`cs-q-check ${isSelected ? 'checked' : ''}`}>
+                    {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="3" style={{width:10,height:10}}><path d="M5 12l5 5L20 7"/></svg>}
+                  </span>
+                  <span className="cs-q-text">{q.text}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -330,7 +352,13 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
           <div className="cs-ctas">
             {props.map((p, i) => {
               const name = p.nombre_edificio || p.nombre_proyecto || `Depto ${i + 1}`
-              const msg = encodeURIComponent(`Hola, vi el departamento de ${dormLabel(p.dormitorios)} en ${name} por Bs ${fmt(p.precio_mensual_bob)}/mes en Simon (simonbo.com). Quisiera coordinar una visita. Gracias!`)
+              const selectedTexts = Array.from(selectedQs).sort().map(idx => askQuestions[idx]?.text).filter(Boolean)
+              let msgText = `Hola, vi el departamento de ${dormLabel(p.dormitorios)} en ${name} por Bs ${fmt(p.precio_mensual_bob)}/mes en Simon (simonbo.com). Quisiera coordinar una visita.`
+              if (selectedTexts.length > 0) {
+                msgText += `\n\nAntes, me gustaria saber:\n${selectedTexts.map(t => `— ${t}`).join('\n')}`
+              }
+              msgText += '\n\nGracias!'
+              const msg = encodeURIComponent(msgText)
               const phone = p.agente_whatsapp?.replace(/\D/g, '')
               return (
                 <div key={p.id} className="cs-cta-row">
@@ -442,11 +470,38 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
         }
 
         /* Questions */
+        .cs-label-row {
+          display: flex; align-items: baseline; justify-content: space-between;
+          margin-bottom: 14px; gap: 8px;
+        }
+        .cs-label-row .cs-label { margin-bottom: 0; }
+        .cs-label-hint {
+          font-size: 10px; color: rgba(201,169,89,0.6); font-family: 'Manrope', sans-serif;
+          letter-spacing: 0.3px; white-space: nowrap;
+        }
         .cs-questions { display: flex; flex-direction: column; gap: 6px; }
         .cs-question {
           display: flex; gap: 10px; align-items: center; padding: 10px 12px;
           border-radius: 8px; background: rgba(255,255,255,0.03);
           border: 1px solid rgba(255,255,255,0.06);
+        }
+        .cs-q-selectable {
+          cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .cs-q-selectable:hover { border-color: rgba(255,255,255,0.12); }
+        .cs-q-selectable.selected {
+          border-color: rgba(201,169,89,0.35); background: rgba(201,169,89,0.05);
+        }
+        .cs-q-selectable.disabled { opacity: 0.35; cursor: default; }
+        .cs-q-check {
+          width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
+          border: 1.5px solid rgba(255,255,255,0.2);
+          display: flex; align-items: center; justify-content: center;
+          transition: background 0.15s, border-color 0.15s;
+        }
+        .cs-q-check.checked {
+          background: #c9a959; border-color: #c9a959;
         }
         .cs-q-dot {
           width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.25);
