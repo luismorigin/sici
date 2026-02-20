@@ -105,6 +105,7 @@ export default function AlquileresPage() {
   })
   const [isFiltered, setIsFiltered] = useState(false)
   const [totalCount, setTotalCount] = useState(0)
+  const [loadError, setLoadError] = useState(false)
 
   // Persist favorites to localStorage
   useEffect(() => {
@@ -132,12 +133,31 @@ export default function AlquileresPage() {
     return () => el.removeEventListener('scroll', onScroll)
   }, [isDesktop, loading])
 
-  const fetchProperties = useCallback(async (f: FiltrosAlquiler) => {
+  const fetchProperties = useCallback(async (f: FiltrosAlquiler, retry = true): Promise<number> => {
     setLoading(true)
-    const data = await buscarUnidadesAlquiler(f)
-    setProperties(data)
-    setLoading(false)
-    return data.length
+    setLoadError(false)
+    try {
+      const data = await buscarUnidadesAlquiler(f)
+      if (data.length === 0 && retry) {
+        // Retry once after 1.5s (Supabase cold start)
+        await new Promise(r => setTimeout(r, 1500))
+        const data2 = await buscarUnidadesAlquiler(f)
+        setProperties(data2)
+        setLoading(false)
+        return data2.length
+      }
+      setProperties(data)
+      setLoading(false)
+      return data.length
+    } catch {
+      if (retry) {
+        await new Promise(r => setTimeout(r, 1500))
+        return fetchProperties(f, false)
+      }
+      setLoading(false)
+      setLoadError(true)
+      return 0
+    }
   }, [])
 
   useEffect(() => {
@@ -374,7 +394,14 @@ export default function AlquileresPage() {
               </div>
             </div>
 
-            {loading && properties.length === 0 ? (
+            {loadError ? (
+              <div className="desktop-loading">
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ marginBottom: 12, color: 'rgba(255,255,255,0.6)' }}>No se pudo cargar. Verifica tu conexion.</div>
+                  <button onClick={() => fetchProperties(filters)} style={{ background: '#c9a959', color: '#0a0a0a', border: 'none', padding: '10px 24px', borderRadius: 8, fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Reintentar</button>
+                </div>
+              </div>
+            ) : loading && properties.length === 0 ? (
               <div className="desktop-loading">Cargando alquileres...</div>
             ) : properties.length === 0 ? (
               <div className="desktop-loading">No se encontraron alquileres con estos filtros</div>
@@ -517,7 +544,15 @@ export default function AlquileresPage() {
 
           {/* Feed — windowed: only render cards near viewport */}
           <div className="alq-feed" ref={feedRef}>
-            {loading && properties.length === 0 ? (
+            {loadError ? (
+              <div className="alq-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ textAlign: 'center', padding: '0 32px' }}>
+                  <div className="alq-logo" style={{ fontSize: 44, marginBottom: 8 }}>Simon</div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, marginBottom: 20 }}>No se pudo cargar. Verifica tu conexion.</div>
+                  <button onClick={() => fetchProperties(filters)} style={{ padding: '12px 28px', background: '#c9a959', border: 'none', color: '#0a0a0a', fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: 1, cursor: 'pointer', borderRadius: 8 }}>REINTENTAR</button>
+                </div>
+              </div>
+            ) : loading && properties.length === 0 ? (
               <div className="alq-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div className="alq-logo" style={{ fontSize: 44, marginBottom: 8 }}>Simon</div>
