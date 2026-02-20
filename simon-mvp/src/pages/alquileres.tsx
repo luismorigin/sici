@@ -1353,6 +1353,7 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
 
 // ===== BOTTOM SHEET =====
 function BottomSheet({ open, property, onClose, isDesktop }: { open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean }) {
+  const [mapExpanded, setMapExpanded] = useState(false)
   if (!property) return null
   const p = property
 
@@ -1406,10 +1407,18 @@ function BottomSheet({ open, property, onClose, isDesktop }: { open: boolean; pr
           </div>
         </div>
       )}
+      {p.url && (
+        <div className="bs-section">
+          <a href={p.url} target="_blank" rel="noopener noreferrer" className="bs-ver-anuncio">Ver anuncio original &#8599;</a>
+        </div>
+      )}
       {hasGPS && (
         <div className="bs-section">
-          <div className="bs-sl">UBICACION</div>
-          <div className="bs-map">{open && <MapComponent lat={p.latitud!} lng={p.longitud!} />}</div>
+          <button className="bs-map-toggle" onClick={() => setMapExpanded(!mapExpanded)}>
+            <span className="bs-sl" style={{ margin: 0 }}>UBICACION</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{mapExpanded ? '▲ Ocultar' : '▼ Ver mapa'}</span>
+          </button>
+          {mapExpanded && <div className="bs-map">{open && <MapComponent lat={p.latitud!} lng={p.longitud!} />}</div>}
         </div>
       )}
       <style jsx>{`
@@ -1434,6 +1443,10 @@ function BottomSheet({ open, property, onClose, isDesktop }: { open: boolean; pr
         .bs-feat.hl .bs-fv{color:#c9a959;}
         .bs-aw{display:flex;flex-wrap:wrap;gap:6px;}
         .bs-at{font-size:11px;padding:4px 10px;border-radius:100px;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.75);font-family:'Manrope',sans-serif;}
+        .bs-ver-anuncio{display:block;text-align:center;padding:12px;background:rgba(201,169,89,0.1);border:1px solid rgba(201,169,89,0.25);color:#c9a959;font-family:'Manrope',sans-serif;font-size:13px;font-weight:600;text-decoration:none;border-radius:8px;transition:background 0.2s;}
+        .bs-ver-anuncio:hover{background:rgba(201,169,89,0.2);}
+        .bs-map-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;background:transparent;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;cursor:pointer;margin-bottom:10px;}
+        .bs-map-toggle:hover{border-color:rgba(255,255,255,0.15);}
         .bs-map{width:100%;height:200px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);}
       `}</style>
     </div>
