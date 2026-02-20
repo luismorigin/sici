@@ -434,6 +434,7 @@ export default function AlquileresPage() {
                   const sp = properties.find(x => x.id === mapSelectedId)
                   if (!sp) return null
                   const spName = sp.nombre_edificio || sp.nombre_proyecto || 'Departamento'
+                  const spIsFav = favorites.has(sp.id)
                   const spBadges: string[] = []
                   if (sp.amoblado === 'si' || sp.amoblado === 'semi') spBadges.push(sp.amoblado === 'si' ? 'Amoblado' : 'Semi')
                   if (sp.acepta_mascotas) spBadges.push('Mascotas')
@@ -441,6 +442,11 @@ export default function AlquileresPage() {
                   return (
                     <div className="map-float-card">
                       <button className="map-float-close" onClick={() => setMapSelectedId(null)}>&times;</button>
+                      <button className={`map-float-fav ${spIsFav ? 'active' : ''}`} onClick={() => toggleFavorite(sp.id)}>
+                        <svg viewBox="0 0 24 24" fill={spIsFav ? '#c9a959' : 'none'} stroke={spIsFav ? '#c9a959' : '#fff'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                      </button>
                       <div className="map-float-photo" style={sp.fotos_urls?.[0] ? { backgroundImage: `url('${sp.fotos_urls[0]}')` } : {}} />
                       <div className="map-float-body">
                         <div className="map-float-name">{spName}</div>
@@ -456,6 +462,38 @@ export default function AlquileresPage() {
                           )}
                         </div>
                       </div>
+                    </div>
+                  )
+                })()}
+                {/* Favorites strip at bottom of map */}
+                {favorites.size > 0 && (() => {
+                  const favProps = properties.filter(p => favorites.has(p.id))
+                  if (favProps.length === 0) return null
+                  return (
+                    <div className="map-fav-strip">
+                      <div className="map-fav-label">
+                        <svg viewBox="0 0 24 24" fill="#c9a959" stroke="#c9a959" strokeWidth="1.5" style={{ width: 14, height: 14 }}>
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                        {favProps.length}
+                      </div>
+                      {favProps.map(fp => {
+                        const fpName = fp.nombre_edificio || fp.nombre_proyecto || 'Depto'
+                        return (
+                          <div key={fp.id} className={`map-fav-chip ${fp.id === mapSelectedId ? 'selected' : ''}`}
+                            onClick={() => handleMapSelect(fp.id)}>
+                            {fp.fotos_urls?.[0] && <div className="map-fav-chip-img" style={{ backgroundImage: `url('${fp.fotos_urls[0]}')` }} />}
+                            <div className="map-fav-chip-info">
+                              <div className="map-fav-chip-name">{fpName}</div>
+                              <div className="map-fav-chip-price">{formatPrice(fp.precio_mensual_bob)}</div>
+                            </div>
+                            <button className="map-fav-chip-remove" onClick={(e) => { e.stopPropagation(); toggleFavorite(fp.id) }}>&times;</button>
+                          </div>
+                        )
+                      })}
+                      {favProps.length >= 2 && (
+                        <button className="map-fav-compare" onClick={() => setCompareOpen(true)}>Comparar</button>
+                      )}
                     </div>
                   )
                 })()}
@@ -700,6 +738,14 @@ export default function AlquileresPage() {
           border: none; color: rgba(255,255,255,0.7); font-size: 16px; cursor: pointer;
           display: flex; align-items: center; justify-content: center;
         }
+        .map-float-fav {
+          position: absolute; top: 8px; left: 8px; z-index: 2;
+          width: 36px; height: 36px; border-radius: 50%; background: rgba(10,10,10,0.6);
+          border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+          transition: transform 0.15s;
+        }
+        .map-float-fav:hover { transform: scale(1.1); }
+        .map-float-fav.active { background: rgba(201,169,89,0.15); }
         .map-float-photo {
           height: 140px; background-size: cover; background-position: center; background-color: #1a1a1a;
         }
@@ -737,6 +783,53 @@ export default function AlquileresPage() {
           text-decoration: none; text-align: center; transition: opacity 0.2s;
         }
         .map-float-btn-wsp:hover { opacity: 0.9; }
+
+        /* ========== MAP FAVORITES STRIP ========== */
+        .map-fav-strip {
+          position: absolute; bottom: 12px; right: 12px; z-index: 10;
+          display: flex; align-items: center; gap: 8px;
+          background: rgba(10,10,10,0.85); backdrop-filter: blur(8px);
+          padding: 8px 12px; border-radius: 12px;
+          border: 1px solid rgba(201,169,89,0.2);
+          max-width: calc(100% - 340px - 24px);
+        }
+        .map-fav-label {
+          display: flex; align-items: center; gap: 4px;
+          font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600; color: #c9a959;
+          flex-shrink: 0;
+        }
+        .map-fav-chip {
+          display: flex; align-items: center; gap: 8px;
+          background: #1a1a1a; border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 8px; padding: 4px 8px 4px 4px; cursor: pointer;
+          transition: border-color 0.2s; flex-shrink: 0;
+        }
+        .map-fav-chip:hover { border-color: rgba(201,169,89,0.3); }
+        .map-fav-chip.selected { border-color: #c9a959; }
+        .map-fav-chip-img {
+          width: 40px; height: 40px; border-radius: 6px; flex-shrink: 0;
+          background-size: cover; background-position: center; background-color: #222;
+        }
+        .map-fav-chip-info { min-width: 0; }
+        .map-fav-chip-name {
+          font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 500; color: #fff;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;
+        }
+        .map-fav-chip-price {
+          font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 600; color: #c9a959;
+        }
+        .map-fav-chip-remove {
+          flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+          background: rgba(255,255,255,0.08); border: none; color: rgba(255,255,255,0.5);
+          font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .map-fav-chip-remove:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .map-fav-compare {
+          flex-shrink: 0; padding: 6px 14px; background: #c9a959; border: none; border-radius: 6px;
+          color: #0a0a0a; font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 600;
+          cursor: pointer; transition: opacity 0.2s;
+        }
+        .map-fav-compare:hover { opacity: 0.85; }
 
         /* ========== MOBILE ========== */
         .alq-feed {
