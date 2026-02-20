@@ -220,7 +220,7 @@ export default function AlquileresPage() {
     } else {
       const newCount = favorites.size + 1
       if (newCount >= 2) {
-        showToast(`${newCount}/${MAX_FAVORITES} · Toca el corazon para comparar`)
+        showToast(`${newCount}/${MAX_FAVORITES} · Podes comparar abajo`)
       } else {
         showToast(`Guardado · ${newCount}/${MAX_FAVORITES} favoritos`)
       }
@@ -507,14 +507,13 @@ export default function AlquileresPage() {
             <button className="alq-chip alq-chip-clear" onClick={() => { resetFilters(); setChipsExpanded(false) }}>&times; Todo</button>
           </div>
 
-          {/* Floating fav button — opens compare when 2+ favs */}
-          <button className="alq-fav-floating" aria-label={`Favoritos: ${favorites.size} de ${MAX_FAVORITES}`}
-            onClick={() => { if (favorites.size >= 2) setCompareOpen(true) }}>
-            <svg viewBox="0 0 24 24" fill={favorites.size >= 2 ? '#c9a959' : 'none'} stroke="#c9a959" strokeWidth="1.5">
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
-            <div className={`alq-fav-count ${favorites.size > 0 ? 'show' : ''}`}>{favorites.size}</div>
-          </button>
+          {/* Compare banner — only shows with 2+ favorites */}
+          {favorites.size >= 2 && (
+            <button className="alq-compare-banner" onClick={() => setCompareOpen(true)}>
+              <span className="alq-compare-banner-text">{favorites.size} favoritos · Comparar</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          )}
 
           {/* Floating map button */}
           <button className="alq-map-floating" aria-label="Ver mapa" onClick={() => setMobileMapOpen(true)}>
@@ -721,14 +720,17 @@ export default function AlquileresPage() {
         }
         .alq-chip button { background: none; border: none; color: #c9a959; font-size: 14px; cursor: pointer; padding: 0; line-height: 1; }
         .alq-chip-clear { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15); color: rgba(255,255,255,0.6); cursor: pointer; }
-        .alq-fav-floating {
-          position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 8px)); right: 24px;
-          z-index: 100; width: 48px; height: 48px; border-radius: 50%;
-          background: rgba(10,10,10,0.7); border: 1px solid rgba(201,169,89,0.25);
-          display: flex; align-items: center; justify-content: center; cursor: pointer;
-          padding: 0;
+        .alq-compare-banner {
+          position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 8px)); left: 50%; transform: translateX(-50%);
+          z-index: 100; display: flex; align-items: center; gap: 8px;
+          background: #c9a959; color: #0a0a0a; border: none; border-radius: 100px;
+          padding: 12px 24px; cursor: pointer;
+          font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+          animation: alqBannerIn 0.3s ease-out;
         }
-        .alq-fav-floating svg { width: 22px; height: 22px; }
+        @keyframes alqBannerIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        .alq-compare-banner-text { white-space: nowrap; }
         .alq-fav-count {
           position: absolute; top: -4px; right: -4px;
           width: 18px; height: 18px; border-radius: 50%;
