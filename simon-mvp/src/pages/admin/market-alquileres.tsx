@@ -19,8 +19,6 @@ interface RentalProperty {
   area_total_m2: number | null
   id_proyecto_master: number | null
   fuente: string | null
-  amoblado: boolean | null
-  mascotas: boolean | null
 }
 
 interface KPIData {
@@ -121,7 +119,7 @@ export default function MarketAlquileresDashboard() {
     // Step 2: Full query
     const { data: raw, error } = await supabase
       .from('propiedades_v2')
-      .select('id, zona, dormitorios, precio_mensual_bob, area_total_m2, id_proyecto_master, fuente, amoblado, mascotas')
+      .select('id, zona, dormitorios, precio_mensual_bob, area_total_m2, id_proyecto_master, fuente')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'alquiler')
       .is('duplicado_de', null)
