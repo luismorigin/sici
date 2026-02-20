@@ -8,6 +8,7 @@ import { buscarUnidadesAlquiler, type UnidadAlquiler, type FiltrosAlquiler } fro
 const MapComponent = dynamic(() => import('@/components/alquiler/AlquilerMap'), { ssr: false })
 const MapMultiComponent = dynamic(() => import('@/components/alquiler/AlquilerMapMulti'), { ssr: false })
 const PhotoViewer = dynamic(() => import('@/components/alquiler/PhotoViewer'), { ssr: false })
+const CompareSheet = dynamic(() => import('@/components/alquiler/CompareSheet'), { ssr: false })
 
 // ===== CONSTANTS =====
 const ZONAS_UI = [
@@ -69,6 +70,7 @@ export default function AlquileresPage() {
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   const [chipsExpanded, setChipsExpanded] = useState(false)
+  const [compareOpen, setCompareOpen] = useState(false)
   const [viewerOpen, setViewerOpen] = useState(false)
   const [viewerPhotos, setViewerPhotos] = useState<string[]>([])
   const [viewerIndex, setViewerIndex] = useState(0)
@@ -175,7 +177,12 @@ export default function AlquileresPage() {
     if (isFav) {
       showToast('Eliminado de favoritos')
     } else {
-      showToast(`Guardado · ${favorites.size + 1}/${MAX_FAVORITES} favoritos`)
+      const newCount = favorites.size + 1
+      if (newCount >= 2) {
+        showToast(`${newCount}/${MAX_FAVORITES} · Toca el corazon para comparar`)
+      } else {
+        showToast(`Guardado · ${newCount}/${MAX_FAVORITES} favoritos`)
+      }
     }
   }
 
@@ -199,6 +206,11 @@ export default function AlquileresPage() {
     if (filters.acepta_mascotas) c++
     return c
   }, [filters])
+
+  // Resolve favorite properties from current data
+  const favoriteProperties = useMemo(() => {
+    return properties.filter(p => favorites.has(p.id))
+  }, [properties, favorites])
 
   // Auto-close chips on scroll
   useEffect(() => {
@@ -240,6 +252,13 @@ export default function AlquileresPage() {
 
       {/* Toast */}
       <div className={`alq-toast ${toastVisible ? 'show' : ''}`}>{toastMessage}</div>
+
+      {/* Compare sheet */}
+      <CompareSheet
+        open={compareOpen}
+        properties={favoriteProperties}
+        onClose={() => setCompareOpen(false)}
+      />
 
       {/* Photo viewer */}
       {viewerOpen && (
@@ -283,10 +302,17 @@ export default function AlquileresPage() {
             {/* Favorites summary */}
             {favorites.size > 0 && (
               <div className="desktop-fav-summary">
-                <svg viewBox="0 0 24 24" fill="#c9a959" stroke="#c9a959" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-                {favorites.size} favorito{favorites.size > 1 ? 's' : ''}
+                <div className="desktop-fav-info">
+                  <svg viewBox="0 0 24 24" fill="#c9a959" stroke="#c9a959" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                  {favorites.size} favorito{favorites.size > 1 ? 's' : ''}
+                </div>
+                {favorites.size >= 2 && (
+                  <button className="desktop-compare-btn" onClick={() => setCompareOpen(true)}>
+                    Comparar {favorites.size === MAX_FAVORITES ? '' : `(${favorites.size})`}
+                  </button>
+                )}
               </div>
             )}
           </aside>
@@ -433,9 +459,10 @@ export default function AlquileresPage() {
             <button className="alq-chip alq-chip-clear" onClick={() => { resetFilters(); setChipsExpanded(false) }}>&times; Todo</button>
           </div>
 
-          {/* Floating fav button */}
-          <button className="alq-fav-floating" aria-label={`Favoritos: ${favorites.size} de ${MAX_FAVORITES}`}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="#c9a959" strokeWidth="1.5">
+          {/* Floating fav button — opens compare when 2+ favs */}
+          <button className="alq-fav-floating" aria-label={`Favoritos: ${favorites.size} de ${MAX_FAVORITES}`}
+            onClick={() => { if (favorites.size >= 2) setCompareOpen(true) }}>
+            <svg viewBox="0 0 24 24" fill={favorites.size >= 2 ? '#c9a959' : 'none'} stroke="#c9a959" strokeWidth="1.5">
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
             <div className={`alq-fav-count ${favorites.size > 0 ? 'show' : ''}`}>{favorites.size}</div>
@@ -561,8 +588,17 @@ export default function AlquileresPage() {
         .desktop-count-label { font-size: 13px; color: rgba(255,255,255,0.6); }
         .desktop-fav-summary {
           margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06);
-          display: flex; align-items: center; gap: 8px; color: #c9a959; font-size: 13px;
+          display: flex; align-items: center; justify-content: space-between;
+          color: #c9a959; font-size: 13px;
         }
+        .desktop-fav-info { display: flex; align-items: center; gap: 8px; }
+        .desktop-compare-btn {
+          padding: 6px 14px; border-radius: 6px; border: 1px solid rgba(201,169,89,0.4);
+          background: rgba(201,169,89,0.08); color: #c9a959; font-size: 11px; font-weight: 600;
+          cursor: pointer; font-family: 'Manrope', sans-serif; letter-spacing: 0.5px;
+          transition: background 0.2s;
+        }
+        .desktop-compare-btn:hover { background: rgba(201,169,89,0.15); }
 
         .desktop-main {
           flex: 1; height: 100vh; overflow-y: auto; padding: 32px;
