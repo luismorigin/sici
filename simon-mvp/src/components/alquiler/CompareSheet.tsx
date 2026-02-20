@@ -38,29 +38,14 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
   const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
   const MAX_QS = 3
 
-  if (!open || properties.length === 0) return null
+  const props = useMemo(() => properties.slice(0, 3), [properties])
 
-  const props = properties.slice(0, 3)
-
-  function toggleQuestion(idx: number) {
-    setSelectedQs(prev => {
-      const next = new Set(prev)
-      if (next.has(idx)) { next.delete(idx) }
-      else if (next.size < MAX_QS) { next.add(idx) }
-      return next
-    })
-  }
-
-  // Calculate precio/m²
-  const precioM2 = props.map(p => p.area_m2 > 0 ? Math.round(p.precio_mensual_bob / p.area_m2) : 0)
-  const minPrecioM2 = Math.min(...precioM2.filter(v => v > 0))
-
-  // Calculate costo total estimado
-  const costoTotal = props.map(p => p.precio_mensual_bob + (p.monto_expensas_bob || 0))
-  const minCostoTotal = Math.min(...costoTotal)
-
-  // Calculate deposito entry cost
-  const depositos = props.map(p => p.precio_mensual_bob * (p.deposito_meses || 1))
+  // Calculate derived values
+  const precioM2 = useMemo(() => props.map(p => p.area_m2 > 0 ? Math.round(p.precio_mensual_bob / p.area_m2) : 0), [props])
+  const minPrecioM2 = useMemo(() => { const valid = precioM2.filter(v => v > 0); return valid.length ? Math.min(...valid) : 0 }, [precioM2])
+  const costoTotal = useMemo(() => props.map(p => p.precio_mensual_bob + (p.monto_expensas_bob || 0)), [props])
+  const minCostoTotal = useMemo(() => costoTotal.length ? Math.min(...costoTotal) : 0, [costoTotal])
+  const depositos = useMemo(() => props.map(p => p.precio_mensual_bob * (p.deposito_meses || 1)), [props])
 
   // Insights
   const insights = useMemo(() => {
@@ -69,7 +54,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
 
     // Best price per m²
     const bestM2Idx = precioM2.indexOf(minPrecioM2)
-    if (bestM2Idx >= 0 && precioM2.filter(v => v === minPrecioM2).length === 1) {
+    if (bestM2Idx >= 0 && minPrecioM2 > 0 && precioM2.filter(v => v === minPrecioM2).length === 1) {
       const name = props[bestM2Idx].nombre_edificio || props[bestM2Idx].nombre_proyecto || `Depto ${bestM2Idx + 1}`
       const worstM2 = Math.max(...precioM2.filter(v => v > 0))
       if (worstM2 > minPrecioM2) {
@@ -125,6 +110,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
   // Questions for broker based on missing data
   const questions = useMemo(() => {
     const qs: Array<{ text: string; category: 'preguntar' | 'verificar' }> = []
+    if (props.length === 0) return qs
 
     const anyMissingContract = props.some(p => !p.contrato_minimo_meses)
     const anyMissingDeposit = props.some(p => !p.deposito_meses)
@@ -157,8 +143,19 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
     return qs
   }, [props])
 
-  const askQuestions = questions.filter(q => q.category === 'preguntar')
-  const checkQuestions = questions.filter(q => q.category === 'verificar')
+  const askQuestions = useMemo(() => questions.filter(q => q.category === 'preguntar'), [questions])
+  const checkQuestions = useMemo(() => questions.filter(q => q.category === 'verificar'), [questions])
+
+  if (!open || properties.length === 0) return null
+
+  function toggleQuestion(idx: number) {
+    setSelectedQs(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) { next.delete(idx) }
+      else if (next.size < MAX_QS) { next.add(idx) }
+      return next
+    })
+  }
 
   return (
     <div className={`cs-overlay ${open ? 'open' : ''}`}>
