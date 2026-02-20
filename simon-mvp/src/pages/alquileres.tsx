@@ -424,7 +424,7 @@ export default function AlquileresPage() {
             ) : (
               /* Map view: map + scrollable list */
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                <div style={{ flex: 1, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)', minHeight: 300 }}>
+                <div style={{ flex: 1, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)', minHeight: 300, position: 'relative', zIndex: 0 }}>
                   <MapMultiComponent
                     properties={properties}
                     onSelectProperty={handleMapSelect}
