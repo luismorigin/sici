@@ -198,9 +198,7 @@ export default function AlquileresPage() {
   }
 
   function handleMapSelect(id: number) {
-    setMapSelectedId(id)
-    const p = properties.find(x => x.id === id)
-    if (p) { setSheetProperty(p); setSheetOpen(true) }
+    setMapSelectedId(prev => prev === id ? null : id)
   }
 
   function toggleFavorite(id: number) {
@@ -422,39 +420,45 @@ export default function AlquileresPage() {
                 ))}
               </div>
             ) : (
-              /* Map view: map + scrollable list */
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                <div style={{ flex: 1, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)', minHeight: 300, position: 'relative', zIndex: 0 }}>
+              /* Map view: full map + floating card on selection */
+              <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+                <div style={{ position: 'absolute', inset: 0, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)', zIndex: 0 }}>
                   <MapMultiComponent
                     properties={properties}
                     onSelectProperty={handleMapSelect}
                     selectedId={mapSelectedId}
                   />
                 </div>
-                <div style={{ height: 220, minHeight: 220, overflowX: 'auto', overflowY: 'hidden', display: 'flex', gap: 12, padding: '16px 0 8px' }}>
-                  {properties.map(p => {
-                    const isSelected = p.id === mapSelectedId
-                    const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
-                    return (
-                      <div key={p.id}
-                        onClick={() => handleMapSelect(p.id)}
-                        style={{
-                          flex: '0 0 240px', background: '#111',
-                          border: `1px solid ${isSelected ? '#c9a959' : 'rgba(255,255,255,0.06)'}`,
-                          borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
-                          display: 'flex', flexDirection: 'column',
-                        }}>
-                        <div style={{ height: 100, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#1a1a1a', ...(p.fotos_urls?.[0] ? { backgroundImage: `url('${p.fotos_urls[0]}')` } : {}) }} />
-                        <div style={{ padding: '10px 12px' }}>
-                          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: '#fff', lineHeight: 1.2, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', letterSpacing: 1, marginBottom: 6 }}>{p.zona || 'Equipetrol'}</div>
-                          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, color: '#c9a959', lineHeight: 1 }}>{formatPrice(p.precio_mensual_bob)}/mes</div>
-                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 4, fontFamily: "'Manrope', sans-serif" }}>{p.area_m2}m² · {dormLabel(p.dormitorios)}</div>
+                {/* Floating card when a pin is selected */}
+                {mapSelectedId && (() => {
+                  const sp = properties.find(x => x.id === mapSelectedId)
+                  if (!sp) return null
+                  const spName = sp.nombre_edificio || sp.nombre_proyecto || 'Departamento'
+                  const spBadges: string[] = []
+                  if (sp.amoblado === 'si' || sp.amoblado === 'semi') spBadges.push(sp.amoblado === 'si' ? 'Amoblado' : 'Semi')
+                  if (sp.acepta_mascotas) spBadges.push('Mascotas')
+                  if (sp.estacionamientos && sp.estacionamientos > 0) spBadges.push(`${sp.estacionamientos} parqueo`)
+                  return (
+                    <div className="map-float-card">
+                      <button className="map-float-close" onClick={() => setMapSelectedId(null)}>&times;</button>
+                      <div className="map-float-photo" style={sp.fotos_urls?.[0] ? { backgroundImage: `url('${sp.fotos_urls[0]}')` } : {}} />
+                      <div className="map-float-body">
+                        <div className="map-float-name">{spName}</div>
+                        <div className="map-float-zona">{sp.zona || 'Equipetrol'} · {sp.area_m2}m² · {dormLabel(sp.dormitorios)}</div>
+                        <div className="map-float-price">{formatPrice(sp.precio_mensual_bob)}<span>/mes</span></div>
+                        {spBadges.length > 0 && (
+                          <div className="map-float-badges">{spBadges.map((b, i) => <span key={i} className="map-float-badge">{b}</span>)}</div>
+                        )}
+                        <div className="map-float-actions">
+                          <button className="map-float-btn-detail" onClick={() => { setSheetProperty(sp); setSheetOpen(true) }}>Ver detalles</button>
+                          {sp.agente_whatsapp && (
+                            <a href={buildLeadWhatsAppUrl(sp, `Hola, vi ${spName} en Simon y me interesa${sp.url ? '\n' + sp.url : ''}`, 'map_card')} target="_blank" rel="noopener noreferrer" className="map-float-btn-wsp">WhatsApp</a>
+                          )}
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
+                    </div>
+                  )
+                })()}
               </div>
             )}
           </main>
@@ -538,7 +542,7 @@ export default function AlquileresPage() {
               <div className="alq-mobile-map-body">
                 <MapMultiComponent
                   properties={properties}
-                  onSelectProperty={(id) => { setMobileMapOpen(false); handleMapSelect(id) }}
+                  onSelectProperty={(id) => { setMobileMapOpen(false); setMapSelectedId(id); const p = properties.find(x => x.id === id); if (p) { setSheetProperty(p); setSheetOpen(true) } }}
                   selectedId={mapSelectedId}
                 />
               </div>
@@ -682,6 +686,57 @@ export default function AlquileresPage() {
           color: rgba(255,255,255,0.6); font-size: 15px;
         }
 
+        /* ========== MAP FLOATING CARD ========== */
+        .map-float-card {
+          position: absolute; bottom: 20px; left: 20px; z-index: 10;
+          width: 320px; background: #111; border: 1px solid rgba(201,169,89,0.25);
+          border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+          animation: mapFloatIn 0.25s ease-out;
+        }
+        @keyframes mapFloatIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .map-float-close {
+          position: absolute; top: 8px; right: 8px; z-index: 2;
+          width: 28px; height: 28px; border-radius: 50%; background: rgba(10,10,10,0.7);
+          border: none; color: rgba(255,255,255,0.7); font-size: 16px; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .map-float-photo {
+          height: 140px; background-size: cover; background-position: center; background-color: #1a1a1a;
+        }
+        .map-float-body { padding: 14px 16px; }
+        .map-float-name {
+          font-family: 'Cormorant Garamond', serif; font-size: 19px; font-weight: 400;
+          color: #fff; line-height: 1.2; margin-bottom: 2px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .map-float-zona {
+          font-size: 11px; color: rgba(255,255,255,0.6); letter-spacing: 0.5px;
+          margin-bottom: 8px; font-family: 'Manrope', sans-serif;
+        }
+        .map-float-price {
+          font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400;
+          color: #c9a959; line-height: 1; margin-bottom: 8px;
+        }
+        .map-float-price span { font-size: 14px; color: rgba(201,169,89,0.6); }
+        .map-float-badges { display: flex; gap: 5px; margin-bottom: 10px; }
+        .map-float-badge {
+          font-size: 10px; padding: 3px 8px; border-radius: 100px;
+          border: 1px solid rgba(201,169,89,0.25); color: #c9a959;
+          font-family: 'Manrope', sans-serif;
+        }
+        .map-float-actions { display: flex; gap: 8px; }
+        .map-float-btn-detail {
+          flex: 1; padding: 9px; background: transparent; border: 1px solid rgba(255,255,255,0.15);
+          color: rgba(255,255,255,0.8); font-family: 'Manrope', sans-serif; font-size: 12px;
+          font-weight: 500; cursor: pointer; border-radius: 6px; transition: all 0.2s;
+        }
+        .map-float-btn-detail:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
+        .map-float-btn-wsp {
+          flex: 1; padding: 9px; background: #25d366; border: none; border-radius: 6px;
+          color: #fff; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600;
+          text-decoration: none; text-align: center; transition: opacity 0.2s;
+        }
+        .map-float-btn-wsp:hover { opacity: 0.9; }
 
         /* ========== MOBILE ========== */
         .alq-feed {
