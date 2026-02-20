@@ -81,6 +81,7 @@ export default function MarketAlquileresDashboard() {
   const [ventaZonaData, setVentaZonaData] = useState<{ zona: string; usd_m2: number }[]>([])
   const [projectMap, setProjectMap] = useState<Map<number, { nombre: string; zona: string | null }>>(new Map())
   const [tcParalelo, setTcParalelo] = useState(0)
+  const [debugMsg, setDebugMsg] = useState('initializing...')
 
   // ============================================================================
   // FETCH
@@ -104,9 +105,20 @@ export default function MarketAlquileresDashboard() {
   }
 
   const fetchRentalData = async () => {
-    if (!supabase) return
+    if (!supabase) { setDebugMsg('supabase is null'); return }
 
-    // Minimal filters on PostgREST, do numeric filtering in JS
+    setDebugMsg('fetching...')
+
+    // Step 1: Try the simplest possible query
+    const { data: testData, error: testError } = await supabase
+      .from('propiedades_v2')
+      .select('id, tipo_operacion, status')
+      .eq('tipo_operacion', 'alquiler')
+      .limit(5)
+
+    setDebugMsg(`test query: ${testError ? `ERROR: ${JSON.stringify(testError)}` : `${testData?.length ?? 0} rows, first: ${JSON.stringify(testData?.[0])}`}`)
+
+    // Step 2: Full query
     const { data: raw, error } = await supabase
       .from('propiedades_v2')
       .select('id, zona, dormitorios, precio_mensual_bob, area_total_m2, id_proyecto_master, fuente, amoblado, mascotas')
@@ -114,9 +126,9 @@ export default function MarketAlquileresDashboard() {
       .eq('tipo_operacion', 'alquiler')
       .is('duplicado_de', null)
 
-    if (error) { console.error('fetchRentalData error:', error); return }
-    if (!raw || raw.length === 0) { console.warn('fetchRentalData: no data returned'); return }
-    console.log(`fetchRentalData: ${raw.length} raw rows before JS filter`)
+    if (error) { setDebugMsg(`full query ERROR: ${JSON.stringify(error)}`); return }
+    if (!raw || raw.length === 0) { setDebugMsg(`full query: 0 rows (test had ${testData?.length})`); return }
+    setDebugMsg(`raw: ${raw.length} rows`)
 
     // Parse + filter in JS (PostgREST .gt/.lt on numeric can be flaky)
     const parsed: RentalProperty[] = raw
@@ -474,6 +486,8 @@ export default function MarketAlquileresDashboard() {
           {/* Debug banner — remove after confirming data loads */}
           <div className="mb-4 bg-yellow-50 border border-yellow-300 rounded-lg p-3 text-sm text-yellow-800">
             Debug: loading={String(loading)} | rentalProps={rentalProps.length} | kpis={kpis ? 'OK' : 'null'} | supabase={supabase ? 'OK' : 'NULL'}
+            <br />
+            Fetch: {debugMsg}
           </div>
 
           {loading && rentalProps.length === 0 ? (
