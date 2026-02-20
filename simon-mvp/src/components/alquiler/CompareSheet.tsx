@@ -112,7 +112,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
 
   // Questions for broker based on missing data
   const questions = useMemo(() => {
-    const qs: Array<{ icon: string; text: string; category: 'preguntar' | 'verificar' }> = []
+    const qs: Array<{ text: string; category: 'preguntar' | 'verificar' }> = []
 
     const anyMissingContract = props.some(p => !p.contrato_minimo_meses)
     const anyMissingDeposit = props.some(p => !p.deposito_meses)
@@ -121,23 +121,25 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
     const anyMissingPets = props.some(p => p.acepta_mascotas === null)
 
     // Always relevant questions
-    qs.push({ icon: '💰', text: 'Se puede negociar el precio con contrato de 12+ meses?', category: 'preguntar' })
+    qs.push({ text: 'Condiciones de ingreso: adelanto, garantia y comision del broker', category: 'preguntar' })
+    qs.push({ text: 'La comision del broker la paga el inquilino, el propietario, o es compartida?', category: 'preguntar' })
+    qs.push({ text: 'La garantia se devuelve al finalizar el contrato? En que condiciones?', category: 'preguntar' })
+    qs.push({ text: 'Se puede negociar el precio con contrato de 12+ meses?', category: 'preguntar' })
 
-    if (anyMissingContract) qs.push({ icon: '📋', text: 'Cual es el contrato minimo?', category: 'preguntar' })
-    if (anyMissingExpensas) qs.push({ icon: '🏠', text: 'Expensas incluidas o aparte? Cuanto son?', category: 'preguntar' })
-    if (anyMissingServices) qs.push({ icon: '💡', text: 'Que servicios incluye? (agua, luz, wifi, gas)', category: 'preguntar' })
-    if (anyMissingDeposit) qs.push({ icon: '🔑', text: 'Cuantos meses de deposito requiere?', category: 'preguntar' })
-    if (anyMissingPets) qs.push({ icon: '🐾', text: 'Se aceptan mascotas?', category: 'preguntar' })
-    qs.push({ icon: '📅', text: 'Fecha de disponibilidad para mudarse?', category: 'preguntar' })
-    qs.push({ icon: '📝', text: 'Aceptan garantia bancaria o solo garante personal?', category: 'preguntar' })
+    if (anyMissingContract) qs.push({ text: 'Cual es el contrato minimo?', category: 'preguntar' })
+    if (anyMissingExpensas) qs.push({ text: 'Expensas incluidas o aparte? Cuanto son?', category: 'preguntar' })
+    if (anyMissingServices) qs.push({ text: 'Que servicios incluye? (agua, luz, wifi, gas)', category: 'preguntar' })
+    if (anyMissingDeposit) qs.push({ text: 'Cuantos meses de deposito requiere?', category: 'preguntar' })
+    if (anyMissingPets) qs.push({ text: 'Se aceptan mascotas?', category: 'preguntar' })
+    qs.push({ text: 'Fecha de disponibilidad para mudarse?', category: 'preguntar' })
 
     // Verification during visit
-    qs.push({ icon: '🚿', text: 'Presion de agua — abrir canillas y ducha', category: 'verificar' })
-    qs.push({ icon: '❄️', text: 'Estado de aires acondicionados (prenderlos)', category: 'verificar' })
-    qs.push({ icon: '🔊', text: 'Ruido de la calle (especialmente en Equipetrol Centro)', category: 'verificar' })
-    qs.push({ icon: '👁️', text: 'Manchas de humedad en techos y paredes', category: 'verificar' })
+    qs.push({ text: 'Presion de agua — abrir canillas y ducha', category: 'verificar' })
+    qs.push({ text: 'Estado de aires acondicionados (prenderlos)', category: 'verificar' })
+    qs.push({ text: 'Ruido de la calle (especialmente en Equipetrol Centro)', category: 'verificar' })
+    qs.push({ text: 'Manchas de humedad en techos y paredes', category: 'verificar' })
     if (props.some(p => p.amoblado === 'si' || p.amoblado === 'semi')) {
-      qs.push({ icon: '🪑', text: 'Estado real del amoblado (las fotos pueden enganar)', category: 'verificar' })
+      qs.push({ text: 'Estado real del amoblado (las fotos pueden enganar)', category: 'verificar' })
     }
 
     return qs
@@ -289,7 +291,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
             <div className="cs-insights">
               {insights.map((insight, i) => (
                 <div key={i} className="cs-insight">
-                  <span className="cs-insight-icon">💡</span>
+                  <span className="cs-insight-dot" />
                   <span className="cs-insight-text">{insight}</span>
                 </div>
               ))}
@@ -303,7 +305,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
           <div className="cs-questions">
             {askQuestions.map((q, i) => (
               <div key={i} className="cs-question">
-                <span className="cs-q-icon">{q.icon}</span>
+                <span className="cs-q-dot" />
                 <span className="cs-q-text">{q.text}</span>
               </div>
             ))}
@@ -315,7 +317,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
           <div className="cs-questions">
             {checkQuestions.map((q, i) => (
               <div key={i} className="cs-question">
-                <span className="cs-q-icon">{q.icon}</span>
+                <span className="cs-q-dot" />
                 <span className="cs-q-text">{q.text}</span>
               </div>
             ))}
@@ -430,7 +432,10 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
           padding: 12px 14px; border-radius: 10px;
           background: rgba(201,169,89,0.04); border: 1px solid rgba(201,169,89,0.12);
         }
-        .cs-insight-icon { font-size: 16px; flex-shrink: 0; line-height: 1.4; }
+        .cs-insight-dot {
+          width: 6px; height: 6px; border-radius: 50%; background: #c9a959;
+          flex-shrink: 0; margin-top: 6px;
+        }
         .cs-insight-text {
           font-family: 'Manrope', sans-serif; font-size: 13px; line-height: 1.5;
           color: rgba(255,255,255,0.85);
@@ -443,7 +448,10 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
           border-radius: 8px; background: rgba(255,255,255,0.03);
           border: 1px solid rgba(255,255,255,0.06);
         }
-        .cs-q-icon { font-size: 16px; flex-shrink: 0; }
+        .cs-q-dot {
+          width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.25);
+          flex-shrink: 0;
+        }
         .cs-q-text {
           font-family: 'Manrope', sans-serif; font-size: 12px; line-height: 1.4;
           color: rgba(255,255,255,0.75);
