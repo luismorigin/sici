@@ -447,7 +447,14 @@ export default function AlquileresPage() {
                           <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                         </svg>
                       </button>
-                      <div className="map-float-photo" style={sp.fotos_urls?.[0] ? { backgroundImage: `url('${sp.fotos_urls[0]}')` } : {}} />
+                      <div className="map-float-photo" style={{ cursor: sp.fotos_urls?.length ? 'pointer' : undefined, ...(sp.fotos_urls?.[0] ? { backgroundImage: `url('${sp.fotos_urls[0]}')` } : {}) }} onClick={() => openViewer(sp, 0)}>
+                        {(sp.fotos_urls?.length ?? 0) > 1 && (
+                          <div className="map-float-photo-count">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width: 12, height: 12 }}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                            {sp.fotos_urls!.length}
+                          </div>
+                        )}
+                      </div>
                       <div className="map-float-body">
                         <div className="map-float-name">{spName}</div>
                         <div className="map-float-zona">{sp.zona || 'Equipetrol'} · {sp.area_m2}m² · {dormLabel(sp.dormitorios)}</div>
@@ -748,6 +755,14 @@ export default function AlquileresPage() {
         .map-float-fav.active { background: rgba(201,169,89,0.15); }
         .map-float-photo {
           height: 140px; background-size: cover; background-position: center; background-color: #1a1a1a;
+          position: relative;
+        }
+        .map-float-photo-count {
+          position: absolute; bottom: 8px; right: 8px;
+          display: flex; align-items: center; gap: 4px;
+          background: rgba(10,10,10,0.7); padding: 4px 10px; border-radius: 100px;
+          font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.85);
+          font-family: 'Manrope', sans-serif;
         }
         .map-float-body { padding: 14px 16px; }
         .map-float-name {
