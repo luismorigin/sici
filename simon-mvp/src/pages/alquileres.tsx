@@ -616,13 +616,13 @@ export default function AlquileresPage() {
       <style jsx>{`
         /* ========== TOAST ========== */
         .alq-toast {
-          position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 300;
+          position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 600;
           background: #c9a959; color: #0a0a0a; padding: 10px 24px; border-radius: 100px;
           font-size: 13px; font-weight: 600; font-family: 'Manrope', sans-serif;
           opacity: 0; transition: opacity 0.3s; pointer-events: none;
         }
         .alq-toast.show { opacity: 1; }
-        .alq-sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; }
+        .alq-sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 500; }
 
         /* ========== DESKTOP ========== */
         .desktop-layout {
@@ -1422,7 +1422,7 @@ function BottomSheet({ open, property, onClose, isDesktop }: { open: boolean; pr
         </div>
       )}
       <style jsx>{`
-        .bs { position:fixed;bottom:0;left:0;right:0;z-index:201;background:#141414;border-radius:20px 20px 0 0;max-height:80vh;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:max(20px,env(safe-area-inset-bottom)); }
+        .bs { position:fixed;bottom:0;left:0;right:0;z-index:501;background:#141414;border-radius:20px 20px 0 0;max-height:80vh;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:max(20px,env(safe-area-inset-bottom)); }
         .bs::-webkit-scrollbar{display:none;}
         .bs.open{transform:translateY(0);}
         .bs-desktop{max-width:480px;left:auto;right:0;border-radius:20px 0 0 0;height:100vh;max-height:100vh;}
