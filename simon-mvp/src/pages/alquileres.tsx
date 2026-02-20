@@ -89,7 +89,6 @@ export default function AlquileresPage() {
   const [toastVisible, setToastVisible] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
-  const [mapPhotoIdx, setMapPhotoIdx] = useState(0)
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   const [chipsExpanded, setChipsExpanded] = useState(false)
   const [compareOpen, setCompareOpen] = useState(false)
@@ -200,7 +199,6 @@ export default function AlquileresPage() {
 
   function handleMapSelect(id: number) {
     setMapSelectedId(prev => prev === id ? null : id)
-    setMapPhotoIdx(0)
   }
 
   function toggleFavorite(id: number) {
@@ -435,52 +433,15 @@ export default function AlquileresPage() {
                 {mapSelectedId && (() => {
                   const sp = properties.find(x => x.id === mapSelectedId)
                   if (!sp) return null
-                  const spName = sp.nombre_edificio || sp.nombre_proyecto || 'Departamento'
-                  const spIsFav = favorites.has(sp.id)
-                  const spBadges: string[] = []
-                  if (sp.amoblado === 'si' || sp.amoblado === 'semi') spBadges.push(sp.amoblado === 'si' ? 'Amoblado' : 'Semi')
-                  if (sp.acepta_mascotas) spBadges.push('Mascotas')
-                  if (sp.estacionamientos && sp.estacionamientos > 0) spBadges.push(`${sp.estacionamientos} parqueo`)
                   return (
-                    <div className="map-float-card">
-                      <button className="map-float-close" onClick={() => setMapSelectedId(null)}>&times;</button>
-                      <button className={`map-float-fav ${spIsFav ? 'active' : ''}`} onClick={() => toggleFavorite(sp.id)}>
-                        <svg viewBox="0 0 24 24" fill={spIsFav ? '#c9a959' : 'none'} stroke={spIsFav ? '#c9a959' : '#fff'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
-                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                        </svg>
-                      </button>
-                      <div className="map-float-photo" style={{ ...(sp.fotos_urls?.[mapPhotoIdx] ? { backgroundImage: `url('${sp.fotos_urls[mapPhotoIdx]}')` } : sp.fotos_urls?.[0] ? { backgroundImage: `url('${sp.fotos_urls[0]}')` } : {}) }}>
-                        {(sp.fotos_urls?.length ?? 0) > 1 && (
-                          <>
-                            {mapPhotoIdx > 0 && (
-                              <button className="mfp-nav mfp-prev" onClick={(e) => { e.stopPropagation(); setMapPhotoIdx(mapPhotoIdx - 1) }}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width: 14, height: 14 }}><path d="M15 18l-6-6 6-6"/></svg>
-                              </button>
-                            )}
-                            {mapPhotoIdx < sp.fotos_urls!.length - 1 && (
-                              <button className="mfp-nav mfp-next" onClick={(e) => { e.stopPropagation(); setMapPhotoIdx(mapPhotoIdx + 1) }}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width: 14, height: 14 }}><path d="M9 18l6-6-6-6"/></svg>
-                              </button>
-                            )}
-                            <div className="map-float-photo-count">{mapPhotoIdx + 1}/{sp.fotos_urls!.length}</div>
-                          </>
-                        )}
-                      </div>
-                      <div className="map-float-body">
-                        <div className="map-float-name">{spName}</div>
-                        <div className="map-float-zona">{sp.zona || 'Equipetrol'} · {sp.area_m2}m² · {dormLabel(sp.dormitorios)}</div>
-                        <div className="map-float-price">{formatPrice(sp.precio_mensual_bob)}<span>/mes</span></div>
-                        {spBadges.length > 0 && (
-                          <div className="map-float-badges">{spBadges.map((b, i) => <span key={i} className="map-float-badge">{b}</span>)}</div>
-                        )}
-                        <div className="map-float-actions">
-                          <button className="map-float-btn-detail" onClick={() => { setSheetProperty(sp); setSheetOpen(true) }}>Ver detalles</button>
-                          {sp.agente_whatsapp && (
-                            <a href={buildLeadWhatsAppUrl(sp, `Hola, vi ${spName} en Simon y me interesa${sp.url ? '\n' + sp.url : ''}`, 'map_card')} target="_blank" rel="noopener noreferrer" className="map-float-btn-wsp">WhatsApp</a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    <MapFloatCard
+                      key={sp.id}
+                      property={sp}
+                      isFavorite={favorites.has(sp.id)}
+                      onClose={() => setMapSelectedId(null)}
+                      onToggleFavorite={() => toggleFavorite(sp.id)}
+                      onOpenDetail={() => { setSheetProperty(sp); setSheetOpen(true) }}
+                    />
                   )
                 })()}
                 {/* Favorites strip at bottom of map */}
@@ -1120,6 +1081,62 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
         .df-cta:hover { opacity: 0.9; }
         .df-reset { display: block; width: 100%; padding: 10px; background: transparent; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); font-family: 'Manrope', sans-serif; font-size: 12px; cursor: pointer; border-radius: 4px; }
       `}</style>
+    </div>
+  )
+}
+
+// ===== MAP FLOATING CARD (own state to avoid re-rendering the map) =====
+function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onOpenDetail }: {
+  property: UnidadAlquiler; isFavorite: boolean
+  onClose: () => void; onToggleFavorite: () => void; onOpenDetail: () => void
+}) {
+  const [photoIdx, setPhotoIdx] = useState(0)
+  const spName = sp.nombre_edificio || sp.nombre_proyecto || 'Departamento'
+  const photos = sp.fotos_urls ?? []
+  const spBadges: string[] = []
+  if (sp.amoblado === 'si' || sp.amoblado === 'semi') spBadges.push(sp.amoblado === 'si' ? 'Amoblado' : 'Semi')
+  if (sp.acepta_mascotas) spBadges.push('Mascotas')
+  if (sp.estacionamientos && sp.estacionamientos > 0) spBadges.push(`${sp.estacionamientos} parqueo`)
+
+  return (
+    <div className="map-float-card">
+      <button className="map-float-close" onClick={onClose}>&times;</button>
+      <button className={`map-float-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
+        <svg viewBox="0 0 24 24" fill={isFavorite ? '#c9a959' : 'none'} stroke={isFavorite ? '#c9a959' : '#fff'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        </svg>
+      </button>
+      <div className="map-float-photo" style={{ ...(photos[photoIdx] ? { backgroundImage: `url('${photos[photoIdx]}')` } : {}) }}>
+        {photos.length > 1 && (
+          <>
+            {photoIdx > 0 && (
+              <button className="mfp-nav mfp-prev" onClick={(e) => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width: 14, height: 14 }}><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+            )}
+            {photoIdx < photos.length - 1 && (
+              <button className="mfp-nav mfp-next" onClick={(e) => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width: 14, height: 14 }}><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+            )}
+            <div className="map-float-photo-count">{photoIdx + 1}/{photos.length}</div>
+          </>
+        )}
+      </div>
+      <div className="map-float-body">
+        <div className="map-float-name">{spName}</div>
+        <div className="map-float-zona">{sp.zona || 'Equipetrol'} · {sp.area_m2}m² · {dormLabel(sp.dormitorios)}</div>
+        <div className="map-float-price">{formatPrice(sp.precio_mensual_bob)}<span>/mes</span></div>
+        {spBadges.length > 0 && (
+          <div className="map-float-badges">{spBadges.map((b, i) => <span key={i} className="map-float-badge">{b}</span>)}</div>
+        )}
+        <div className="map-float-actions">
+          <button className="map-float-btn-detail" onClick={onOpenDetail}>Ver detalles</button>
+          {sp.agente_whatsapp && (
+            <a href={buildLeadWhatsAppUrl(sp, `Hola, vi ${spName} en Simon y me interesa${sp.url ? '\n' + sp.url : ''}`, 'map_card')} target="_blank" rel="noopener noreferrer" className="map-float-btn-wsp">WhatsApp</a>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
