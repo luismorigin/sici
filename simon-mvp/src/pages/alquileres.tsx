@@ -197,9 +197,9 @@ export default function AlquileresPage() {
     feedRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  function handleMapSelect(id: number) {
+  const handleMapSelect = useCallback((id: number) => {
     setMapSelectedId(prev => prev === id ? null : id)
-  }
+  }, [])
 
   function toggleFavorite(id: number) {
     const isFav = favorites.has(id)
