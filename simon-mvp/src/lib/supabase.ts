@@ -505,6 +505,7 @@ export interface FiltrosAlquiler {
   dormitorios_lista?: number[]   // Multi-select: [0,1], [1,3], etc. 3 = "3+"
   amoblado?: boolean
   acepta_mascotas?: boolean
+  con_parqueo?: boolean
   zonas_permitidas?: string[]   // IDs UI: 'equipetrol_centro', 'sirari', etc.
   solo_con_fotos?: boolean
   orden?: 'precio_asc' | 'precio_desc' | 'recientes'
@@ -530,6 +531,7 @@ export async function buscarUnidadesAlquiler(filtros: FiltrosAlquiler): Promise<
     if (filtros.dormitorios_min !== undefined && !filtros.dormitorios_lista?.length) rpcFiltros.dormitorios_min = filtros.dormitorios_min
     if (filtros.amoblado) rpcFiltros.amoblado = true
     if (filtros.acepta_mascotas) rpcFiltros.acepta_mascotas = true
+    if (filtros.con_parqueo) rpcFiltros.con_parqueo = true
     if (filtros.orden) rpcFiltros.orden = filtros.orden
 
     // Pasar zonas_permitidas como IDs UI — el RPC hace la expansión internamente

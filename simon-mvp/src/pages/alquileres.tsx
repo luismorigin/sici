@@ -245,6 +245,7 @@ export default function AlquileresPage() {
     if (filters.dormitorios_min !== undefined && !filters.dormitorios_lista?.length) c++
     if (filters.amoblado) c++
     if (filters.acepta_mascotas) c++
+    if (filters.con_parqueo) c++
     return c
   }, [filters])
 
@@ -504,6 +505,7 @@ export default function AlquileresPage() {
             {!filters.dormitorios_lista?.length && filters.dormitorios_min !== undefined && <span className="alq-chip">{filters.dormitorios_min}+ dorm</span>}
             {filters.amoblado && <span className="alq-chip">Amoblado</span>}
             {filters.acepta_mascotas && <span className="alq-chip">Mascotas</span>}
+            {filters.con_parqueo && <span className="alq-chip">Parqueo</span>}
             <button className="alq-chip alq-chip-clear" onClick={() => { resetFilters(); setChipsExpanded(false) }}>&times; Todo</button>
           </div>
 
@@ -783,61 +785,68 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set())
   const [amoblado, setAmoblado] = useState(currentFilters.amoblado || false)
   const [mascotas, setMascotas] = useState(currentFilters.acepta_mascotas || false)
+  const [conParqueo, setConParqueo] = useState(currentFilters.con_parqueo || false)
   const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set(currentFilters.zonas_permitidas || []))
   const [orden, setOrden] = useState<FiltrosAlquiler['orden']>(currentFilters.orden || 'recientes')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Build filters object from current state
-  const buildFilters = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden']) => {
+  const buildFilters = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, parq: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden']) => {
     const f: FiltrosAlquiler = { orden: ord || 'recientes', limite: 200, solo_con_fotos: true }
     // Issue 1: only send precio_mensual_max when slider is NOT at maximum
     if (price < MAX_SLIDER_PRICE) f.precio_mensual_max = price
     if (dorms.size > 0) f.dormitorios_lista = Array.from(dorms)
     if (amob) f.amoblado = true
     if (masc) f.acepta_mascotas = true
+    if (parq) f.con_parqueo = true
     if (zonas.size > 0) f.zonas_permitidas = Array.from(zonas)
     return f
   }, [])
 
   // Auto-apply with debounce
-  const autoApply = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden']) => {
+  const autoApply = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, parq: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden']) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      onApply(buildFilters(price, dorms, amob, masc, zonas, ord))
+      onApply(buildFilters(price, dorms, amob, masc, parq, zonas, ord))
     }, 400)
   }, [onApply, buildFilters])
 
   function toggleDorm(d: number) {
     setSelectedDorms(prev => {
       const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d)
-      autoApply(maxPrice, n, amoblado, mascotas, selectedZonas, orden)
+      autoApply(maxPrice, n, amoblado, mascotas, conParqueo, selectedZonas, orden)
       return n
     })
   }
   function toggleZona(id: string) {
     setSelectedZonas(prev => {
       const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id)
-      autoApply(maxPrice, selectedDorms, amoblado, mascotas, n, orden)
+      autoApply(maxPrice, selectedDorms, amoblado, mascotas, conParqueo, n, orden)
       return n
     })
   }
   function handlePriceChange(price: number) {
     setMaxPrice(price)
-    autoApply(price, selectedDorms, amoblado, mascotas, selectedZonas, orden)
+    autoApply(price, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden)
   }
   function handleAmoblado() {
     const next = !amoblado
     setAmoblado(next)
-    autoApply(maxPrice, selectedDorms, next, mascotas, selectedZonas, orden)
+    autoApply(maxPrice, selectedDorms, next, mascotas, conParqueo, selectedZonas, orden)
   }
   function handleMascotas() {
     const next = !mascotas
     setMascotas(next)
-    autoApply(maxPrice, selectedDorms, amoblado, next, selectedZonas, orden)
+    autoApply(maxPrice, selectedDorms, amoblado, next, conParqueo, selectedZonas, orden)
+  }
+  function handleParqueo() {
+    const next = !conParqueo
+    setConParqueo(next)
+    autoApply(maxPrice, selectedDorms, amoblado, mascotas, next, selectedZonas, orden)
   }
   function handleOrden(o: FiltrosAlquiler['orden']) {
     setOrden(o)
-    autoApply(maxPrice, selectedDorms, amoblado, mascotas, selectedZonas, o)
+    autoApply(maxPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, o)
   }
 
   return (
@@ -877,6 +886,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
         <div className="df-dorm-btns">
           <button className={`df-dorm-btn ${amoblado ? 'active' : ''}`} onClick={handleAmoblado}>Amoblado</button>
           <button className={`df-dorm-btn ${mascotas ? 'active' : ''}`} onClick={handleMascotas}>Mascotas</button>
+          <button className={`df-dorm-btn ${conParqueo ? 'active' : ''}`} onClick={handleParqueo}>Parqueo</button>
         </div>
       </div>
 
@@ -1216,6 +1226,7 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set())
   const [amoblado, setAmoblado] = useState(currentFilters.amoblado || false)
   const [mascotas, setMascotas] = useState(currentFilters.acepta_mascotas || false)
+  const [conParqueo, setConParqueo] = useState(currentFilters.con_parqueo || false)
   const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set(currentFilters.zonas_permitidas || []))
   const [orden, setOrden] = useState<FiltrosAlquiler['orden']>(currentFilters.orden || 'recientes')
   const [previewCount, setPreviewCount] = useState<number | null>(null)
@@ -1228,9 +1239,10 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
     if (selectedDorms.size > 0) f.dormitorios_lista = Array.from(selectedDorms)
     if (amoblado) f.amoblado = true
     if (mascotas) f.acepta_mascotas = true
+    if (conParqueo) f.con_parqueo = true
     if (selectedZonas.size > 0) f.zonas_permitidas = Array.from(selectedZonas)
     return f
-  }, [maxPrice, selectedDorms, amoblado, mascotas, selectedZonas, orden])
+  }, [maxPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden])
 
   // Preview count: debounced RPC call as filters change
   useEffect(() => {
@@ -1272,6 +1284,7 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
         <div className="mfc-group"><div className="mfc-dorms">
           <button className={`mfc-db ${amoblado?'active':''}`} onClick={()=>setAmoblado(!amoblado)}>Amoblado</button>
           <button className={`mfc-db ${mascotas?'active':''}`} onClick={()=>setMascotas(!mascotas)}>Mascotas</button>
+          <button className={`mfc-db ${conParqueo?'active':''}`} onClick={()=>setConParqueo(!conParqueo)}>Parqueo</button>
         </div></div>
         <div className="mfc-group"><div className="mfc-gl">ORDENAR POR</div>
           <div className="mfc-dorms">{ORDEN_OPTIONS.map(o=><button key={o.value} className={`mfc-db ${orden===o.value?'active':''}`} onClick={()=>setOrden(o.value)}>{o.label}</button>)}</div>
