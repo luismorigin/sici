@@ -979,7 +979,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
         <div className="dc-zona">{p.zona || 'Equipetrol'}</div>
         <div className="dc-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
         <div className="dc-specs">
-          {p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} bano${p.banos > 1 ? 's' : ''}` : '—'}
+          {p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · ${p.piso}° piso` : ''}
         </div>
         <div className="dc-badges">
           {badges.slice(0, 4).map((b, i) => (
@@ -1074,7 +1074,7 @@ function MobilePropertyCard({
         <div className="mc-name">{displayName}</div>
         <div className="mc-zona">{p.zona || 'Equipetrol'}</div>
         <div className="mc-price">{formatPrice(p.precio_mensual_bob)}/mes</div>
-        <div className="mc-specs">{p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} bano${p.banos > 1 ? 's' : ''}` : '—'}</div>
+        <div className="mc-specs">{p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · ${p.piso}°` : ''}</div>
         <div className="mc-badges">
           {badges.slice(0, 4).map((b, i) => <span key={i} className={`mc-badge ${b.color}`}>{b.text}</span>)}
         </div>
