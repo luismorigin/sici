@@ -89,6 +89,7 @@ export default function AlquileresPage() {
   const [toastVisible, setToastVisible] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
+  const [mapPhotoIdx, setMapPhotoIdx] = useState(0)
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   const [chipsExpanded, setChipsExpanded] = useState(false)
   const [compareOpen, setCompareOpen] = useState(false)
@@ -199,6 +200,7 @@ export default function AlquileresPage() {
 
   function handleMapSelect(id: number) {
     setMapSelectedId(prev => prev === id ? null : id)
+    setMapPhotoIdx(0)
   }
 
   function toggleFavorite(id: number) {
@@ -447,12 +449,21 @@ export default function AlquileresPage() {
                           <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                         </svg>
                       </button>
-                      <div className="map-float-photo" style={{ cursor: sp.fotos_urls?.length ? 'pointer' : undefined, ...(sp.fotos_urls?.[0] ? { backgroundImage: `url('${sp.fotos_urls[0]}')` } : {}) }} onClick={() => openViewer(sp, 0)}>
+                      <div className="map-float-photo" style={{ ...(sp.fotos_urls?.[mapPhotoIdx] ? { backgroundImage: `url('${sp.fotos_urls[mapPhotoIdx]}')` } : sp.fotos_urls?.[0] ? { backgroundImage: `url('${sp.fotos_urls[0]}')` } : {}) }}>
                         {(sp.fotos_urls?.length ?? 0) > 1 && (
-                          <div className="map-float-photo-count">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width: 12, height: 12 }}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                            {sp.fotos_urls!.length}
-                          </div>
+                          <>
+                            {mapPhotoIdx > 0 && (
+                              <button className="mfp-nav mfp-prev" onClick={(e) => { e.stopPropagation(); setMapPhotoIdx(mapPhotoIdx - 1) }}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width: 14, height: 14 }}><path d="M15 18l-6-6 6-6"/></svg>
+                              </button>
+                            )}
+                            {mapPhotoIdx < sp.fotos_urls!.length - 1 && (
+                              <button className="mfp-nav mfp-next" onClick={(e) => { e.stopPropagation(); setMapPhotoIdx(mapPhotoIdx + 1) }}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width: 14, height: 14 }}><path d="M9 18l6-6-6-6"/></svg>
+                              </button>
+                            )}
+                            <div className="map-float-photo-count">{mapPhotoIdx + 1}/{sp.fotos_urls!.length}</div>
+                          </>
                         )}
                       </div>
                       <div className="map-float-body">
@@ -764,6 +775,15 @@ export default function AlquileresPage() {
           font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.85);
           font-family: 'Manrope', sans-serif;
         }
+        .mfp-nav {
+          position: absolute; top: 50%; transform: translateY(-50%);
+          width: 32px; height: 32px; border-radius: 50%; background: rgba(10,10,10,0.6);
+          border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+          z-index: 2; transition: background 0.15s;
+        }
+        .mfp-nav:hover { background: rgba(10,10,10,0.85); }
+        .mfp-prev { left: 6px; }
+        .mfp-next { right: 6px; }
         .map-float-body { padding: 14px 16px; }
         .map-float-name {
           font-family: 'Cormorant Garamond', serif; font-size: 19px; font-weight: 400;
