@@ -3,7 +3,11 @@
 -- ============================================================================
 -- Parametro: con_parqueo (boolean) — si true, solo propiedades con estacionamientos > 0
 -- 88 de 181 alquileres tienen parqueo (49%)
+-- Fix: deposito_meses NUMERIC (no INTEGER) — columna en BD es numeric(2,1)
 -- ============================================================================
+
+-- Necesario para cambiar el tipo de retorno
+DROP FUNCTION IF EXISTS buscar_unidades_alquiler(jsonb);
 
 CREATE OR REPLACE FUNCTION buscar_unidades_alquiler(p_filtros jsonb DEFAULT '{}'::jsonb)
 RETURNS TABLE (
@@ -19,8 +23,8 @@ RETURNS TABLE (
     precio_mensual_usd NUMERIC,
     amoblado TEXT,
     acepta_mascotas BOOLEAN,
-    deposito_meses INTEGER,
-    servicios_incluidos TEXT[],
+    deposito_meses NUMERIC,
+    servicios_incluidos JSONB,
     contrato_minimo_meses INTEGER,
     monto_expensas_bob NUMERIC,
     piso INTEGER,
