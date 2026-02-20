@@ -987,7 +987,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
           ))}
         </div>
         <div className="dc-actions">
-          <button className="dc-info-btn" onClick={onOpenInfo}>Info + Mapa</button>
+          <button className="dc-info-btn" onClick={onOpenInfo}>Ver detalles</button>
           <a href={p.url} target="_blank" rel="noopener noreferrer" className="dc-ver-btn">Ver &#8599;</a>
         </div>
         {p.agente_whatsapp && (
@@ -1090,7 +1090,7 @@ function MobilePropertyCard({
           <button className="mc-btn mc-info" onClick={onOpenInfo}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
-            </svg> Info
+            </svg> Detalles
           </button>
           <a href={p.url} target="_blank" rel="noopener noreferrer" className="mc-btn mc-ver">Ver &#8599;</a>
         </div>
