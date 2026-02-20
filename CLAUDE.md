@@ -169,7 +169,7 @@ sici/
 ├── n8n/workflows/
 │   ├── modulo_1/      # Flujos A, B, C, Merge (producción - venta)
 │   ├── modulo_2/      # Matching, Supervisores, Sin Match, Auditoría
-│   └── alquiler/      # Discovery C21/Remax, Enrichment, Merge (producción - alquiler)
+│   └── alquiler/      # Discovery C21/Remax/BienInmuebles, Enrichment, Merge (producción - alquiler)
 └── docs/
     ├── arquitectura/  # SICI_ARQUITECTURA_MAESTRA.md
     ├── canonical/     # Metodología fiduciaria, merge, discovery
@@ -243,7 +243,7 @@ sici/
 
 - **Pipeline Alquiler Completo (Fases 1-4):** Publicado 12 Feb 2026
   - Migraciones 135-139 desplegadas en Supabase
-  - 4 workflows n8n activos: Discovery C21 (2:00 AM), Discovery Remax (2:15 AM), Enrichment LLM (3:00 AM), Merge (4:00 AM)
+  - 5 workflows n8n activos: Discovery C21 (2:00 AM), Discovery Remax (2:15 AM), Discovery Bien Inmuebles (2:30 AM), Enrichment LLM (3:00 AM), Merge (4:00 AM)
   - Flujo C Verificador: universal (venta + alquiler), LIMIT 200, sin filtro tipo_operacion
   - `registrar_discovery_alquiler()`, `registrar_enrichment_alquiler()`, `merge_alquiler()`
   - Primera corrida test: 168 completadas, 46 inactivo_confirmed, 6 actualizado
@@ -432,6 +432,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 138 | merge_alquiler | Merge enrichment-first, sin TC paralelo | ✅ |
 | 139 | reactivar_alquileres_existentes | Reactivar 61 alquileres existentes → completado | ✅ |
 | 140 | market_absorption_snapshots | Tabla + función snapshot inversión mercado (absorción, precios, renta, ROI) | ✅ |
+| 158 | bien_inmuebles_fotos_alquiler | Branch fotos + agente Bien Inmuebles en buscar_unidades_alquiler() | ✅ |
 
 ## Repo Legacy
 

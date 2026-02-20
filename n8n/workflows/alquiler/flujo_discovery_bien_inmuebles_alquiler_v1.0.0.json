@@ -1,0 +1,291 @@
+{
+  "name": "Discovery Bien Inmuebles Alquiler v1.0.0",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "bi-trigger",
+      "name": "Trigger 2:30 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-1488, 288],
+      "notes": "Ejecución diaria a las 2:30 AM (después de Remax 2:15)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.bieninmuebles.com.bo/common/php/procesos.php",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Requested-With",
+              "value": "XMLHttpRequest"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/x-www-form-urlencoded",
+        "body": "proceso=getCatalogo&search=&modalidad=2&id_fami=1&id_orig=0&id_habi=0&id_bano=0&id_gara=0&id_carac=&minprecio=100&maxprecio=10000000&page=1&filas=60",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "bi-http",
+      "name": "HTTP POST API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1264, 288],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "notes": "API Bien Inmuebles: contentType=raw con rawContentType form-urlencoded"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === EXTRAER + FILTRAR BIEN INMUEBLES ===\n// v1.3.0: La API devuelve un STRING JSON (no JSON parseado)\n// n8n lo wrappea en {data: \"[{...},{...}]\"}\n// Necesitamos JSON.parse() sobre el string\n\nconst raw = $input.first().json;\nlet allListings = [];\n\n// Caso principal: data es un string JSON\nif (typeof raw.data === 'string') {\n  allListings = JSON.parse(raw.data);\n} else if (Array.isArray(raw.data)) {\n  allListings = raw.data;\n} else if (Array.isArray(raw)) {\n  allListings = raw;\n} else if (raw.id_cata) {\n  allListings = [raw];\n} else {\n  // Fallback: intentar con todos los items\n  const items = $input.all();\n  if (items.length > 1) {\n    allListings = items.map(i => i.json);\n  } else {\n    console.log('DEBUG - tipo:', typeof raw.data, 'keys:', Object.keys(raw).slice(0, 5));\n    throw new Error('No se pudo parsear respuesta API. Tipo data: ' + typeof raw.data);\n  }\n}\n\nconsole.log(`API devolvió ${allListings.length} listings total`);\n\n// Filtrar solo Equipetrol\nconst listings = allListings.filter(item => {\n  const barrio = (item.nomb_barri || '').toLowerCase();\n  return barrio === 'equipetrol';\n});\n\nconsole.log(`Filtro Equipetrol: ${listings.length} de ${allListings.length}`);\n\nconst BASE_URL = 'https://www.bieninmuebles.com.bo';\n\nconst propiedades = listings.map(item => {\n  const precioRaw = String(item.precio_cata || '0').replace(/,/g, '');\n  const precio = parseFloat(precioRaw) || null;\n  const moneda = item.moneda_cata === '2' ? 'USD' : 'BOB';\n  const lat = item.latitud_cata && item.latitud_cata !== '' ? parseFloat(item.latitud_cata) : null;\n  const lng = item.longitud_cata && item.longitud_cata !== '' ? parseFloat(item.longitud_cata) : null;\n\n  return {\n    url: `${BASE_URL}/property.php?id=${item.id_cata}`,\n    fuente: 'bien_inmuebles',\n    codigo_propiedad: item.code_cata || String(item.id_cata),\n    precio_mensual_bob: moneda === 'BOB' ? precio : null,\n    precio_mensual_usd: moneda === 'USD' ? precio : null,\n    moneda_original: moneda,\n    area_total_m2: parseFloat(item.supterreno_cata) || null,\n    dormitorios: parseInt(item.habitacion_cata) || null,\n    banos: parseInt(item.banio_cata) || null,\n    estacionamientos: null,\n    tipo_propiedad_original: 'departamento',\n    latitud: lat,\n    longitud: lng,\n    fecha_publicacion: null,\n    metodo_discovery: 'api_post',\n    zona: item.nomb_barri || null,\n    datos_json_discovery: item\n  };\n});\n\nreturn [{\n  json: {\n    propiedades: propiedades,\n    stats_fuente: {\n      total_api: allListings.length,\n      equipetrol: listings.length,\n      fuente: 'bien_inmuebles'\n    }\n  }\n}];"
+      },
+      "id": "bi-extract",
+      "name": "Extraer Propiedades Equipetrol",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1040, 288],
+      "notes": "Detecta formato respuesta HTTP + filtra Equipetrol"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, url, status FROM propiedades_v2 WHERE fuente = 'bien_inmuebles' AND tipo_operacion = 'alquiler' AND status NOT IN ('inactivo_confirmed')",
+        "options": {}
+      },
+      "id": "bi-bd-urls",
+      "name": "Obtener Alquileres Activos BD",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-816, 288],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PREPARAR COMPARACIÓN ALQUILERES ===\nconst snapshot = $('Extraer Propiedades Equipetrol').first().json.propiedades;\nconst propiedadesBD = $('Obtener Alquileres Activos BD').all().map(item => item.json);\n\nconst snapshotDedup = new Map();\nfor (const prop of snapshot) {\n  snapshotDedup.set(prop.url, prop);\n}\n\nconst urlsSnapshot = new Set(snapshotDedup.keys());\nconst urlsBD = new Map(propiedadesBD.map(p => [p.url, { id: p.id, status: p.status }]));\n\nconst nuevas = [];\nconst existentes = [];\nconst ausentes = [];\n\nfor (const [url, prop] of snapshotDedup) {\n  if (!urlsBD.has(url)) {\n    nuevas.push(prop);\n  } else {\n    existentes.push({\n      ...prop,\n      _id_bd: urlsBD.get(url).id,\n      _status_bd: urlsBD.get(url).status\n    });\n  }\n}\n\nfor (const [url, info] of urlsBD) {\n  if (!urlsSnapshot.has(url)) {\n    if (!['inactivo_pending', 'inactivo_confirmed'].includes(info.status)) {\n      ausentes.push({ id: info.id, url: url, status_actual: info.status });\n    }\n  }\n}\n\nreturn [{\n  json: {\n    nuevas,\n    existentes,\n    ausentes,\n    stats: {\n      total_snapshot: snapshotDedup.size,\n      total_bd: urlsBD.size,\n      nuevas: nuevas.length,\n      existentes: existentes.length,\n      ausentes: ausentes.length\n    }\n  }\n}];"
+      },
+      "id": "bi-compare",
+      "name": "Preparar Comparación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-592, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === LOG STATS BIEN INMUEBLES ALQUILER ===\nconst stats = $input.first().json.stats;\nconst fuente = $('Extraer Propiedades Equipetrol').first().json.stats_fuente;\n\nconsole.log(`\n=== DISCOVERY BIEN INMUEBLES ALQUILER ===\nAPI total: ${fuente.total_api}\nEquipetrol: ${fuente.equipetrol}\n---\nBD activas: ${stats.total_bd}\nNuevas: ${stats.nuevas}\nExistentes: ${stats.existentes}\nAusentes: ${stats.ausentes}\n=========================================\n`);\n\nreturn $input.all();"
+      },
+      "id": "bi-log",
+      "name": "Log Stats",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-368, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PREPARAR PARA registrar_discovery_alquiler() ===\nconst data = $input.first().json;\nconst nuevas = data.nuevas || [];\nconst existentes = data.existentes || [];\nconst todas = [...nuevas, ...existentes];\n\nif (todas.length === 0) {\n  return [{ json: { skip: true, message: 'No hay alquileres para procesar' } }];\n}\n\nreturn todas.map(prop => ({\n  json: {\n    p_url: prop.url,\n    p_fuente: prop.fuente,\n    p_codigo_propiedad: String(prop.codigo_propiedad || ''),\n    p_precio_mensual_bob: prop.precio_mensual_bob,\n    p_precio_mensual_usd: prop.precio_mensual_usd,\n    p_moneda_original: prop.moneda_original || 'BOB',\n    p_area_total_m2: prop.area_total_m2,\n    p_dormitorios: prop.dormitorios,\n    p_banos: prop.banos,\n    p_estacionamientos: prop.estacionamientos,\n    p_tipo_propiedad_original: prop.tipo_propiedad_original,\n    p_latitud: prop.latitud,\n    p_longitud: prop.longitud,\n    p_fecha_publicacion: prop.fecha_publicacion,\n    p_metodo_discovery: prop.metodo_discovery,\n    p_zona: prop.zona,\n    p_datos_json_discovery: JSON.stringify(prop.datos_json_discovery)\n  }\n}));"
+      },
+      "id": "bi-process",
+      "name": "Procesar Alquileres",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-144, 176]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bi-if-props",
+      "name": "IF Alquileres",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [80, 176]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM registrar_discovery_alquiler(\n  p_url := $1,\n  p_fuente := $2,\n  p_codigo_propiedad := $3,\n  p_precio_mensual_bob := $4::NUMERIC,\n  p_precio_mensual_usd := $5::NUMERIC,\n  p_moneda_original := $6,\n  p_area_total_m2 := $7::NUMERIC,\n  p_dormitorios := $8::INTEGER,\n  p_banos := $9::NUMERIC,\n  p_estacionamientos := $10::INTEGER,\n  p_tipo_propiedad_original := $11,\n  p_latitud := $12::NUMERIC,\n  p_longitud := $13::NUMERIC,\n  p_fecha_publicacion := $14::DATE,\n  p_metodo_discovery := $15,\n  p_zona := $16,\n  p_datos_json_discovery := $17::jsonb\n)",
+        "options": {
+          "queryReplacement": "={{ [$json.p_url, $json.p_fuente, $json.p_codigo_propiedad, $json.p_precio_mensual_bob, $json.p_precio_mensual_usd, $json.p_moneda_original, $json.p_area_total_m2, $json.p_dormitorios, $json.p_banos, $json.p_estacionamientos, $json.p_tipo_propiedad_original, $json.p_latitud, $json.p_longitud, $json.p_fecha_publicacion, $json.p_metodo_discovery, $json.p_zona, $json.p_datos_json_discovery] }}"
+        }
+      },
+      "id": "bi-register",
+      "name": "Registrar Discovery Alquiler",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [304, 176],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "registrar_discovery_alquiler() - función independiente"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PROCESAR AUSENTES ALQUILER ===\nconst ausentes = $input.first().json.ausentes;\n\nif (ausentes.length === 0) {\n  return [{ json: { skip: true, message: 'No hay alquileres ausentes' } }];\n}\n\nreturn ausentes.map(prop => ({\n  json: {\n    id: prop.id,\n    url: prop.url,\n    status_actual: prop.status_actual\n  }\n}));"
+      },
+      "id": "bi-ausentes",
+      "name": "Procesar Ausentes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-144, 480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bi-if-ausentes",
+      "name": "IF Ausentes",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [80, 480]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE propiedades_v2 SET status = 'inactivo_pending', fecha_discovery = NOW(), primera_ausencia_at = COALESCE(primera_ausencia_at, NOW()) WHERE id = $1 AND tipo_operacion = 'alquiler' AND status NOT IN ('inactivo_pending', 'inactivo_confirmed')",
+        "options": {
+          "queryReplacement": "={{ [$json.id] }}"
+        }
+      },
+      "id": "bi-mark-absent",
+      "name": "Marcar Ausentes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [304, 480],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// === RESUMEN FINAL BIEN INMUEBLES ALQUILER ===\nconst stats = $('Log Stats').first().json.stats;\nconst fuente = $('Extraer Propiedades Equipetrol').first().json.stats_fuente;\n\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  fuente: 'bien_inmuebles',\n  workflow: 'Discovery Bien Inmuebles Alquiler',\n  version: '1.0.0',\n  resultados: {\n    api_total: fuente.total_api,\n    equipetrol_filtrados: fuente.equipetrol,\n    bd_activas: stats.total_bd,\n    nuevas_insertadas: stats.nuevas,\n    existentes_actualizadas: stats.existentes,\n    ausentes_marcadas: stats.ausentes\n  },\n  status: 'completado'\n};\n\nconsole.log('=== DISCOVERY BIEN INMUEBLES ALQUILER COMPLETADO ===');\nconsole.log(JSON.stringify(resumen, null, 2));\n\nreturn [{ json: resumen }];"
+      },
+      "id": "bi-summary",
+      "name": "Resumen Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [528, 288]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger 2:30 AM": {
+      "main": [[{"node": "HTTP POST API", "type": "main", "index": 0}]]
+    },
+    "HTTP POST API": {
+      "main": [[{"node": "Extraer Propiedades Equipetrol", "type": "main", "index": 0}]]
+    },
+    "Extraer Propiedades Equipetrol": {
+      "main": [[{"node": "Obtener Alquileres Activos BD", "type": "main", "index": 0}]]
+    },
+    "Obtener Alquileres Activos BD": {
+      "main": [[{"node": "Preparar Comparación", "type": "main", "index": 0}]]
+    },
+    "Preparar Comparación": {
+      "main": [[{"node": "Log Stats", "type": "main", "index": 0}]]
+    },
+    "Log Stats": {
+      "main": [
+        [{"node": "Procesar Alquileres", "type": "main", "index": 0}],
+        [{"node": "Procesar Ausentes", "type": "main", "index": 0}]
+      ]
+    },
+    "Procesar Alquileres": {
+      "main": [[{"node": "IF Alquileres", "type": "main", "index": 0}]]
+    },
+    "IF Alquileres": {
+      "main": [[{"node": "Registrar Discovery Alquiler", "type": "main", "index": 0}]]
+    },
+    "Registrar Discovery Alquiler": {
+      "main": [[{"node": "Resumen Final", "type": "main", "index": 0}]]
+    },
+    "Procesar Ausentes": {
+      "main": [[{"node": "IF Ausentes", "type": "main", "index": 0}]]
+    },
+    "IF Ausentes": {
+      "main": [[{"node": "Marcar Ausentes", "type": "main", "index": 0}]]
+    },
+    "Marcar Ausentes": {
+      "main": [[{"node": "Resumen Final", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "America/La_Paz",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
