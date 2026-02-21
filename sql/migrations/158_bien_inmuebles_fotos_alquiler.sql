@@ -1,12 +1,12 @@
 -- ============================================================================
--- Migración 158: Soporte fotos Bien Inmuebles en buscar_unidades_alquiler()
+-- Migración 158: buscar_unidades_alquiler() — fotos enrichment + Bien Inmuebles
 -- ============================================================================
--- Agrega branch para extraer foto de Bien Inmuebles desde datos_json_discovery.
--- La API de BI guarda nomb_img en el JSON de discovery. La URL de la foto es:
--- https://www.bieninmuebles.com.bo/admin/uploads/catalogo/pics/{nomb_img}
---
--- También agrega el branch en el filtro solo_con_fotos y en la resolución
--- del nombre del agente (campo amigo_clie de la API).
+-- v1: Branch fotos Bien Inmuebles desde datos_json_discovery (nomb_img).
+-- v2: Branch fotos desde datos_json_enrichment->'llm_output'->'fotos_urls'
+--     para Remax y Bien Inmuebles (el merge no copia fotos, el RPC lee directo).
+--     Cascade: contenido > enrichment > discovery (remax/c21/bi).
+--     También en fotos_count y solo_con_fotos.
+-- Agente: enrichment > datos_json > discovery (remax/bien_inmuebles amigo_clie).
 -- ============================================================================
 
 DROP FUNCTION IF EXISTS buscar_unidades_alquiler(jsonb);
@@ -120,11 +120,14 @@ BEGIN
         p.latitud,
         p.longitud,
 
-        -- Fotos (enrichment > remax discovery > century21 discovery > bien_inmuebles discovery)
+        -- Fotos (contenido > enrichment > remax discovery > century21 discovery > bien_inmuebles discovery)
         CASE
             WHEN jsonb_typeof(p.datos_json->'contenido'->'fotos_urls') = 'array'
                 AND jsonb_array_length(p.datos_json->'contenido'->'fotos_urls') > 0
             THEN ARRAY(SELECT jsonb_array_elements_text(p.datos_json->'contenido'->'fotos_urls'))
+            WHEN jsonb_typeof(p.datos_json_enrichment->'llm_output'->'fotos_urls') = 'array'
+                AND jsonb_array_length(p.datos_json_enrichment->'llm_output'->'fotos_urls') > 0
+            THEN ARRAY(SELECT jsonb_array_elements_text(p.datos_json_enrichment->'llm_output'->'fotos_urls'))
             WHEN p.fuente = 'remax'
                 AND p.datos_json_discovery->'default_imagen'->>'url' IS NOT NULL
             THEN ARRAY[p.datos_json_discovery->'default_imagen'->>'url']
@@ -144,6 +147,9 @@ BEGIN
             WHEN jsonb_typeof(p.datos_json->'contenido'->'fotos_urls') = 'array'
                 AND jsonb_array_length(p.datos_json->'contenido'->'fotos_urls') > 0
             THEN jsonb_array_length(p.datos_json->'contenido'->'fotos_urls')
+            WHEN jsonb_typeof(p.datos_json_enrichment->'llm_output'->'fotos_urls') = 'array'
+                AND jsonb_array_length(p.datos_json_enrichment->'llm_output'->'fotos_urls') > 0
+            THEN jsonb_array_length(p.datos_json_enrichment->'llm_output'->'fotos_urls')
             WHEN p.fuente = 'remax'
                 AND p.datos_json_discovery->'default_imagen'->>'url' IS NOT NULL
             THEN 1
@@ -274,12 +280,14 @@ BEGIN
           OR COALESCE(pm.zona, p.zona) = ANY(v_zonas_expandidas)
           OR (v_incluir_sin_zona AND COALESCE(pm.zona, p.zona) IS NULL)
       )
-      -- Filtro: solo con fotos (incluye bien_inmuebles)
+      -- Filtro: solo con fotos (contenido > enrichment > discovery)
       AND (
           (p_filtros->>'solo_con_fotos')::boolean IS NOT TRUE
           OR (
               (jsonb_typeof(p.datos_json->'contenido'->'fotos_urls') = 'array'
               AND jsonb_array_length(p.datos_json->'contenido'->'fotos_urls') > 0)
+              OR (jsonb_typeof(p.datos_json_enrichment->'llm_output'->'fotos_urls') = 'array'
+                  AND jsonb_array_length(p.datos_json_enrichment->'llm_output'->'fotos_urls') > 0)
               OR (p.fuente = 'remax'
                   AND p.datos_json_discovery->'default_imagen'->>'url' IS NOT NULL)
               OR (p.fuente = 'century21'
