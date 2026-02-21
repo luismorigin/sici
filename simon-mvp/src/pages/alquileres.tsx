@@ -64,6 +64,16 @@ function buildShareWhatsAppUrl(p: UnidadAlquiler) {
   const specs = `${dormLabel(p.dormitorios)} · ${p.area_m2}m² · ${formatPrice(p.precio_mensual_bob)}/mes`
   const url = `https://simonbo.com/alquileres?id=${p.id}`
   const text = `Mira este depto en alquiler:\n\n${name} — ${zone}\n${specs}\n\n${url}`
+  // Track share event in Google Analytics
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', 'share_alquiler', {
+      property_id: p.id,
+      property_name: name,
+      zone,
+      price: p.precio_mensual_bob,
+      dorms: p.dormitorios,
+    })
+  }
   return `https://wa.me/?text=${encodeURIComponent(text)}`
 }
 
@@ -279,7 +289,13 @@ export default function AlquileresPage() {
     const idParam = router.query.id
     if (idParam && typeof idParam === 'string') {
       const parsed = parseInt(idParam, 10)
-      if (!isNaN(parsed)) setSpotlightId(parsed)
+      if (!isNaN(parsed)) {
+        setSpotlightId(parsed)
+        // Track that someone opened a shared link
+        if ((window as any).gtag) {
+          (window as any).gtag('event', 'open_shared_alquiler', { property_id: parsed })
+        }
+      }
     }
   }, [router.query.id])
 
