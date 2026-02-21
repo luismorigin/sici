@@ -198,12 +198,7 @@ export default function AlquileresPage() {
   }
 
   const handleMapSelect = useCallback((id: number) => {
-    console.log('[MAP] handleMapSelect called with id:', id)
-    setMapSelectedId(prev => {
-      const next = prev === id ? null : id
-      console.log('[MAP] mapSelectedId:', prev, '→', next)
-      return next
-    })
+    setMapSelectedId(prev => prev === id ? null : id)
   }, [])
 
   function toggleFavorite(id: number) {
@@ -436,9 +431,8 @@ export default function AlquileresPage() {
                 </div>
                 {/* Floating card when a pin is selected */}
                 {mapSelectedId && (() => {
-                  console.log('[MAP] Rendering float card, mapSelectedId:', mapSelectedId)
                   const sp = properties.find(x => x.id === mapSelectedId)
-                  if (!sp) { console.log('[MAP] Property NOT found in properties array!'); return null }
+                  if (!sp) return null
                   return (
                     <MapFloatCard
                       key={sp.id}
@@ -710,82 +704,6 @@ export default function AlquileresPage() {
         }
 
         /* ========== MAP FLOATING CARD ========== */
-        .map-float-card {
-          position: absolute; bottom: 20px; left: 20px; z-index: 1000;
-          width: 320px; background: #111; border: 1px solid rgba(201,169,89,0.25);
-          border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-          animation: mapFloatIn 0.25s ease-out;
-        }
-        @keyframes mapFloatIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        .map-float-close {
-          position: absolute; top: 8px; right: 8px; z-index: 2;
-          width: 28px; height: 28px; border-radius: 50%; background: rgba(10,10,10,0.7);
-          border: none; color: rgba(255,255,255,0.7); font-size: 16px; cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .map-float-fav {
-          position: absolute; top: 8px; left: 8px; z-index: 2;
-          width: 36px; height: 36px; border-radius: 50%; background: rgba(10,10,10,0.6);
-          border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
-          transition: transform 0.15s;
-        }
-        .map-float-fav:hover { transform: scale(1.1); }
-        .map-float-fav.active { background: rgba(201,169,89,0.15); }
-        .map-float-photo {
-          height: 140px; background-size: cover; background-position: center; background-color: #1a1a1a;
-          position: relative;
-        }
-        .map-float-photo-count {
-          position: absolute; bottom: 8px; right: 8px;
-          display: flex; align-items: center; gap: 4px;
-          background: rgba(10,10,10,0.7); padding: 4px 10px; border-radius: 100px;
-          font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.85);
-          font-family: 'Manrope', sans-serif;
-        }
-        .mfp-nav {
-          position: absolute; top: 50%; transform: translateY(-50%);
-          width: 32px; height: 32px; border-radius: 50%; background: rgba(10,10,10,0.6);
-          border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
-          z-index: 2; transition: background 0.15s;
-        }
-        .mfp-nav:hover { background: rgba(10,10,10,0.85); }
-        .mfp-prev { left: 6px; }
-        .mfp-next { right: 6px; }
-        .map-float-body { padding: 14px 16px; }
-        .map-float-name {
-          font-family: 'Cormorant Garamond', serif; font-size: 19px; font-weight: 400;
-          color: #fff; line-height: 1.2; margin-bottom: 2px;
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .map-float-zona {
-          font-size: 11px; color: rgba(255,255,255,0.6); letter-spacing: 0.5px;
-          margin-bottom: 8px; font-family: 'Manrope', sans-serif;
-        }
-        .map-float-price {
-          font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400;
-          color: #c9a959; line-height: 1; margin-bottom: 8px;
-        }
-        .map-float-price span { font-size: 14px; color: rgba(201,169,89,0.6); }
-        .map-float-badges { display: flex; gap: 5px; margin-bottom: 10px; }
-        .map-float-badge {
-          font-size: 10px; padding: 3px 8px; border-radius: 100px;
-          border: 1px solid rgba(201,169,89,0.25); color: #c9a959;
-          font-family: 'Manrope', sans-serif;
-        }
-        .map-float-actions { display: flex; gap: 8px; }
-        .map-float-btn-detail {
-          flex: 1; padding: 9px; background: transparent; border: 1px solid rgba(255,255,255,0.15);
-          color: rgba(255,255,255,0.8); font-family: 'Manrope', sans-serif; font-size: 12px;
-          font-weight: 500; cursor: pointer; border-radius: 6px; transition: all 0.2s;
-        }
-        .map-float-btn-detail:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
-        .map-float-btn-wsp {
-          flex: 1; padding: 9px; background: #25d366; border: none; border-radius: 6px;
-          color: #fff; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600;
-          text-decoration: none; text-align: center; transition: opacity 0.2s;
-        }
-        .map-float-btn-wsp:hover { opacity: 0.9; }
-
         /* ========== MAP FAVORITES STRIP ========== */
         .map-fav-strip {
           position: absolute; bottom: 12px; right: 12px; z-index: 1000;
@@ -1143,6 +1061,83 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
           )}
         </div>
       </div>
+      <style jsx>{`
+        .map-float-card {
+          position: absolute; bottom: 20px; left: 20px; z-index: 1000;
+          width: 320px; background: #111; border: 1px solid rgba(201,169,89,0.25);
+          border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+          animation: mapFloatIn 0.25s ease-out;
+        }
+        @keyframes mapFloatIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .map-float-close {
+          position: absolute; top: 8px; right: 8px; z-index: 2;
+          width: 28px; height: 28px; border-radius: 50%; background: rgba(10,10,10,0.7);
+          border: none; color: rgba(255,255,255,0.7); font-size: 16px; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .map-float-fav {
+          position: absolute; top: 8px; left: 8px; z-index: 2;
+          width: 36px; height: 36px; border-radius: 50%; background: rgba(10,10,10,0.6);
+          border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+          transition: transform 0.15s;
+        }
+        .map-float-fav:hover { transform: scale(1.1); }
+        .map-float-fav.active { background: rgba(201,169,89,0.15); }
+        .map-float-photo {
+          height: 140px; background-size: cover; background-position: center; background-color: #1a1a1a;
+          position: relative;
+        }
+        .map-float-photo-count {
+          position: absolute; bottom: 8px; right: 8px;
+          display: flex; align-items: center; gap: 4px;
+          background: rgba(10,10,10,0.7); padding: 4px 10px; border-radius: 100px;
+          font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.85);
+          font-family: 'Manrope', sans-serif;
+        }
+        .mfp-nav {
+          position: absolute; top: 50%; transform: translateY(-50%);
+          width: 32px; height: 32px; border-radius: 50%; background: rgba(10,10,10,0.6);
+          border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+          z-index: 2; transition: background 0.15s;
+        }
+        .mfp-nav:hover { background: rgba(10,10,10,0.85); }
+        .mfp-prev { left: 6px; }
+        .mfp-next { right: 6px; }
+        .map-float-body { padding: 14px 16px; }
+        .map-float-name {
+          font-family: 'Cormorant Garamond', serif; font-size: 19px; font-weight: 400;
+          color: #fff; line-height: 1.2; margin-bottom: 2px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .map-float-zona {
+          font-size: 11px; color: rgba(255,255,255,0.6); letter-spacing: 0.5px;
+          margin-bottom: 8px; font-family: 'Manrope', sans-serif;
+        }
+        .map-float-price {
+          font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400;
+          color: #c9a959; line-height: 1; margin-bottom: 8px;
+        }
+        .map-float-price span { font-size: 14px; color: rgba(201,169,89,0.6); }
+        .map-float-badges { display: flex; gap: 5px; margin-bottom: 10px; }
+        .map-float-badge {
+          font-size: 10px; padding: 3px 8px; border-radius: 100px;
+          border: 1px solid rgba(201,169,89,0.25); color: #c9a959;
+          font-family: 'Manrope', sans-serif;
+        }
+        .map-float-actions { display: flex; gap: 8px; }
+        .map-float-btn-detail {
+          flex: 1; padding: 9px; background: transparent; border: 1px solid rgba(255,255,255,0.15);
+          color: rgba(255,255,255,0.8); font-family: 'Manrope', sans-serif; font-size: 12px;
+          font-weight: 500; cursor: pointer; border-radius: 6px; transition: all 0.2s;
+        }
+        .map-float-btn-detail:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
+        .map-float-btn-wsp {
+          flex: 1; padding: 9px; background: #25d366; border: none; border-radius: 6px;
+          color: #fff; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600;
+          text-decoration: none; text-align: center; transition: opacity 0.2s;
+        }
+        .map-float-btn-wsp:hover { opacity: 0.9; }
+      `}</style>
     </div>
   )
 }
