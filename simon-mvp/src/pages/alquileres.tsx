@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -56,6 +57,16 @@ function buildLeadWhatsAppUrl(p: UnidadAlquiler, msg: string, fuente: string, pr
   return `/api/lead-alquiler?${params.toString()}`
 }
 
+// Build WhatsApp share URL for sharing a property with friends (NOT lead tracking)
+function buildShareWhatsAppUrl(p: UnidadAlquiler) {
+  const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
+  const zone = p.zona || 'Equipetrol'
+  const specs = `${dormLabel(p.dormitorios)} · ${p.area_m2}m² · ${formatPrice(p.precio_mensual_bob)}/mes`
+  const url = `https://simonbo.com/alquileres?id=${p.id}`
+  const text = `Mira este depto en alquiler:\n\n${name} — ${zone}\n${specs}\n\n${url}`
+  return `https://wa.me/?text=${encodeURIComponent(text)}`
+}
+
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false)
   useEffect(() => {
@@ -70,9 +81,11 @@ function useIsDesktop() {
 
 // ===== MAIN PAGE =====
 export default function AlquileresPage() {
+  const router = useRouter()
   const isDesktop = useIsDesktop()
   const [properties, setProperties] = useState<UnidadAlquiler[]>([])
   const [loading, setLoading] = useState(true)
+  const [spotlightId, setSpotlightId] = useState<number | null>(null)
   const [favorites, setFavorites] = useState<Set<number>>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -261,14 +274,44 @@ export default function AlquileresPage() {
     return () => el.removeEventListener('scroll', close)
   }, [chipsExpanded])
 
-  // Mobile: feed items with filter card at position 3
-  const feedItems: Array<{ type: 'property'; data: UnidadAlquiler } | { type: 'filter' }> = []
+  // Parse ?id= query param for spotlight (shared property)
+  useEffect(() => {
+    const idParam = router.query.id
+    if (idParam && typeof idParam === 'string') {
+      const parsed = parseInt(idParam, 10)
+      if (!isNaN(parsed)) setSpotlightId(parsed)
+    }
+  }, [router.query.id])
+
+  // Resolve spotlight property from current data
+  const spotlightProperty = useMemo(() => {
+    if (!spotlightId) return null
+    return properties.find(p => p.id === spotlightId) || null
+  }, [spotlightId, properties])
+
+  function clearSpotlight() {
+    setSpotlightId(null)
+    router.replace('/alquileres', undefined, { shallow: true })
+  }
+
+  // Desktop grid: exclude spotlight property to avoid duplication
+  const gridProperties = useMemo(() => {
+    if (!spotlightProperty) return properties
+    return properties.filter(p => p.id !== spotlightId)
+  }, [properties, spotlightProperty, spotlightId])
+
+  // Mobile: feed items with filter card at position 3, spotlight first
+  const feedItems: Array<{ type: 'property'; data: UnidadAlquiler; isSpotlight?: boolean } | { type: 'filter' }> = []
   let filterInserted = false
-  properties.forEach((p, i) => {
-    feedItems.push({ type: 'property', data: p })
+  // If spotlight, put it first and exclude from normal list
+  const mobileProperties = spotlightProperty
+    ? [spotlightProperty, ...properties.filter(p => p.id !== spotlightId)]
+    : properties
+  mobileProperties.forEach((p, i) => {
+    feedItems.push({ type: 'property', data: p, isSpotlight: i === 0 && !!spotlightProperty })
     if (i === FILTER_CARD_POSITION - 1 && !filterInserted) { feedItems.push({ type: 'filter' }); filterInserted = true }
   })
-  if (properties.length > 0 && !filterInserted) {
+  if (mobileProperties.length > 0 && !filterInserted) {
     feedItems.push({ type: 'filter' })
   }
 
@@ -406,19 +449,54 @@ export default function AlquileresPage() {
             ) : properties.length === 0 ? (
               <div className="desktop-loading">No se encontraron alquileres con estos filtros</div>
             ) : viewMode === 'grid' ? (
-              <div className="desktop-grid">
-                {properties.map(p => (
-                  <DesktopCard
-                    key={p.id}
-                    property={p}
-                    isFavorite={favorites.has(p.id)}
-                    favoritesCount={favorites.size}
-                    onToggleFavorite={() => toggleFavorite(p.id)}
-                    onOpenInfo={() => { setSheetProperty(p); setSheetOpen(true) }}
-                    onPhotoTap={(photoIdx) => openViewer(p, photoIdx)}
-                  />
-                ))}
-              </div>
+              <>
+                {/* Spotlight: shared property */}
+                {spotlightProperty && (
+                  <div className="alq-spotlight">
+                    <div className="alq-spotlight-banner">
+                      <span>Te compartieron este departamento</span>
+                      <button onClick={clearSpotlight}>&times;</button>
+                    </div>
+                    <div className="alq-spotlight-content">
+                      <div className="alq-spotlight-card">
+                        <DesktopCard
+                          property={spotlightProperty}
+                          isFavorite={favorites.has(spotlightProperty.id)}
+                          favoritesCount={favorites.size}
+                          onToggleFavorite={() => toggleFavorite(spotlightProperty.id)}
+                          onOpenInfo={() => { setSheetProperty(spotlightProperty); setSheetOpen(true) }}
+                          onPhotoTap={(photoIdx) => openViewer(spotlightProperty, photoIdx)}
+                          onShare={() => window.open(buildShareWhatsAppUrl(spotlightProperty), '_blank')}
+                        />
+                      </div>
+                      {spotlightProperty.latitud && spotlightProperty.longitud && (
+                        <div className="alq-spotlight-map">
+                          <MapComponent lat={spotlightProperty.latitud} lng={spotlightProperty.longitud} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="alq-spotlight-separator">
+                      <span className="alq-spotlight-line" />
+                      <span className="alq-spotlight-text">Explorar mas alquileres</span>
+                      <span className="alq-spotlight-line" />
+                    </div>
+                  </div>
+                )}
+                <div className="desktop-grid">
+                  {gridProperties.map(p => (
+                    <DesktopCard
+                      key={p.id}
+                      property={p}
+                      isFavorite={favorites.has(p.id)}
+                      favoritesCount={favorites.size}
+                      onToggleFavorite={() => toggleFavorite(p.id)}
+                      onOpenInfo={() => { setSheetProperty(p); setSheetOpen(true) }}
+                      onPhotoTap={(photoIdx) => openViewer(p, photoIdx)}
+                      onShare={() => window.open(buildShareWhatsAppUrl(p), '_blank')}
+                    />
+                  ))}
+                </div>
+              </>
             ) : (
               /* Map view: full map + floating card on selection */
               <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
@@ -638,9 +716,11 @@ export default function AlquileresPage() {
                     isFirst={idx === 0}
                     isFavorite={favorites.has(item.data.id)}
                     favoritesCount={favorites.size}
+                    isSpotlight={item.isSpotlight || false}
                     onToggleFavorite={() => toggleFavorite(item.data.id)}
                     onOpenInfo={() => { setSheetProperty(item.data); setSheetOpen(true) }}
                     onPhotoTap={(photoIdx) => openViewer(item.data, photoIdx)}
+                    onShare={() => window.open(buildShareWhatsAppUrl(item.data), '_blank')}
                   />
                 )
               })
@@ -716,6 +796,34 @@ export default function AlquileresPage() {
         .desktop-loading {
           display: flex; align-items: center; justify-content: center; height: 300px;
           color: rgba(255,255,255,0.6); font-size: 15px;
+        }
+
+        /* ========== SPOTLIGHT (shared property) ========== */
+        .alq-spotlight { margin-bottom: 32px; }
+        .alq-spotlight-banner {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 12px 16px; margin-bottom: 16px;
+          background: #1a1714; border-left: 3px solid #c9a959;
+          border-radius: 0 8px 8px 0;
+          font-family: 'Manrope', sans-serif; font-size: 14px; color: #f8f6f3;
+        }
+        .alq-spotlight-banner button {
+          background: none; border: none; color: rgba(255,255,255,0.5);
+          font-size: 20px; cursor: pointer; padding: 4px 8px; line-height: 1;
+        }
+        .alq-spotlight-banner button:hover { color: #fff; }
+        .alq-spotlight-content { display: flex; gap: 24px; margin-bottom: 24px; }
+        .alq-spotlight-card { width: 400px; flex-shrink: 0; }
+        .alq-spotlight-map {
+          flex: 1; min-height: 280px; border-radius: 12px; overflow: hidden;
+          border: 1px solid rgba(255,255,255,0.06);
+        }
+        .alq-spotlight-separator { display: flex; align-items: center; gap: 16px; }
+        .alq-spotlight-line { flex: 1; height: 1px; background: rgba(255,255,255,0.1); }
+        .alq-spotlight-text {
+          font-family: 'Manrope', sans-serif; font-size: 12px;
+          color: rgba(255,255,255,0.4); letter-spacing: 2px; text-transform: uppercase;
+          white-space: nowrap;
         }
 
         /* ========== MAP FLOATING CARD ========== */
@@ -1279,9 +1387,9 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
 }
 
 // ===== DESKTOP CARD =====
-function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite, onOpenInfo, onPhotoTap }: {
+function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite, onOpenInfo, onPhotoTap, onShare }: {
   property: UnidadAlquiler; isFavorite: boolean; favoritesCount: number
-  onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void
+  onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = (p.fotos_urls?.length ?? 0) > 0 ? p.fotos_urls : ['']
@@ -1319,12 +1427,19 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
             <div className="dc-photo-count">{photoIdx + 1}/{photos.length}</div>
           </>
         )}
-        {/* Fav button on photo */}
+        {/* Fav + Share buttons on photo */}
         <button className={`dc-fav-btn ${isFavorite ? 'active' : ''}`} aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'} onClick={handleFav}>
           <svg viewBox="0 0 24 24" fill={isFavorite ? '#c9a959' : 'none'} stroke={isFavorite ? '#c9a959' : '#fff'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
           </svg>
         </button>
+        {onShare && (
+          <button className="dc-share-btn" aria-label="Compartir por WhatsApp" onClick={(e) => { e.stopPropagation(); onShare() }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Content */}
@@ -1366,6 +1481,8 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
         .dc-fav-btn { position: absolute; top: 10px; left: 10px; width: 44px; height: 44px; border-radius: 50%; background: rgba(10,10,10,0.5); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
         .dc-fav-btn:hover { transform: scale(1.1); }
         .dc-fav-btn.active { background: rgba(201,169,89,0.15); }
+        .dc-share-btn { position: absolute; top: 10px; left: 62px; width: 44px; height: 44px; border-radius: 50%; background: rgba(10,10,10,0.5); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
+        .dc-share-btn:hover { transform: scale(1.1); background: rgba(10,10,10,0.7); }
         .dc-content { padding: 16px; }
         .dc-name { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 400; color: #fff; line-height: 1.2; margin-bottom: 2px; }
         .dc-zona { font-size: 11px; color: rgba(255,255,255,0.6); letter-spacing: 1px; margin-bottom: 10px; }
@@ -1395,10 +1512,10 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
 
 // ===== MOBILE PROPERTY CARD (full-screen) =====
 function MobilePropertyCard({
-  property: p, isFirst, isFavorite, favoritesCount, onToggleFavorite, onOpenInfo, onPhotoTap,
+  property: p, isFirst, isFavorite, favoritesCount, isSpotlight, onToggleFavorite, onOpenInfo, onPhotoTap, onShare,
 }: {
-  property: UnidadAlquiler; isFirst: boolean; isFavorite: boolean; favoritesCount: number
-  onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void
+  property: UnidadAlquiler; isFirst: boolean; isFavorite: boolean; favoritesCount: number; isSpotlight: boolean
+  onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [shakeBtn, setShakeBtn] = useState(false)
@@ -1424,6 +1541,9 @@ function MobilePropertyCard({
   return (
     <div className="alq-card" ref={cardRef}>
       <PhotoCarousel photos={p.fotos_urls || []} isFirst={isFirst} onPhotoTap={onPhotoTap} />
+      {isSpotlight && (
+        <div className="mc-spotlight-badge">Te compartieron este depto</div>
+      )}
       <div className="mc-content">
         <div className="mc-name">{displayName}</div>
         <div className="mc-zona">{p.zona || 'Equipetrol'}</div>
@@ -1441,6 +1561,13 @@ function MobilePropertyCard({
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
+          {onShare && (
+            <button className="mc-btn mc-share" aria-label="Compartir por WhatsApp" onClick={onShare}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+              </svg>
+            </button>
+          )}
           <button className="mc-btn mc-info" onClick={onOpenInfo}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
@@ -1474,12 +1601,14 @@ function MobilePropertyCard({
         .mc-actions { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 8px; }
         .mc-btn { display: flex; align-items: center; justify-content: center; gap: 5px; background: none; border: none; color: rgba(255,255,255,0.7); font-size: 12px; font-family: 'Manrope', sans-serif; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
         .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(201,169,89,0.5)); }
+        .mc-btn.mc-share { color: rgba(255,255,255,0.7); }
         .mc-btn.mc-info { color: rgba(255,255,255,0.7); font-size: 11px; letter-spacing: 0.5px; }
         .mc-btn.mc-ver { margin-left: auto; color: #c9a959; text-decoration: none; font-weight: 500; }
         .mc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: #25d366; border: none; border-radius: 8px; color: #fff; font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: 8px; min-height: 44px; transition: opacity 0.2s; }
         .mc-wsp-cta:active { opacity: 0.85; }
         .mc-btn.shake { animation: mcShake 0.3s ease; }
         @keyframes mcShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+        .mc-spotlight-badge { position: absolute; top: max(56px, calc(env(safe-area-inset-top) + 50px)); left: 16px; z-index: 10; background: rgba(26,23,20,0.9); border-left: 3px solid #c9a959; padding: 8px 14px; border-radius: 0 8px 8px 0; font-family: 'Manrope', sans-serif; font-size: 12px; color: #f8f6f3; letter-spacing: 0.3px; }
         .mc-scroll-hint { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); z-index: 10; animation: mcBounce 2s infinite; opacity: 0.25; }
         @keyframes mcBounce { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-5px)} }
         @media (prefers-reduced-motion: reduce) {
