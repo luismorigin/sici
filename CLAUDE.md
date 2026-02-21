@@ -53,7 +53,8 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
    - `tipo_propiedad_original NOT IN ('baulera','parqueo','garaje','deposito')`
    - `(es_multiproyecto = false OR es_multiproyecto IS NULL)`
    - `area_total_m2 >= 20`
-   - `<= 300 días` en mercado (730 para preventa)
+   - `<= 300 días` en mercado para venta (730 para preventa)
+   - `<= 180 días` en mercado para alquiler (vida mediana: C21 34d, Remax 73d)
    - Ver detalle completo en `docs/reports/FILTROS_CALIDAD_MERCADO.md`
    - **Zona venta** usa nombres nuevos (`Equipetrol Centro`, `Villa Brígida`, etc.)
    - **Zona alquiler** usa nombres viejos (`Equipetrol`, `Faremafu`, `Villa Brigida`, etc.)

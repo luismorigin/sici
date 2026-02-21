@@ -6,6 +6,8 @@
 --     para Remax y Bien Inmuebles (el merge no copia fotos, el RPC lee directo).
 --     Cascade: contenido > enrichment > discovery (remax/c21/bi).
 --     También en fotos_count y solo_con_fotos.
+-- v3: Filtro antigüedad <= 180 días. Alquiler rota ~3x más rápido que venta
+--     (mediana vida C21=34d, Remax=73d). 180d da 2.5x margen.
 -- Agente: enrichment > datos_json > discovery (remax/bien_inmuebles amigo_clie).
 -- ============================================================================
 
@@ -298,6 +300,9 @@ BEGIN
                   AND p.datos_json_discovery->>'nomb_img' != '')
           )
       )
+      -- Filtro: antigüedad máxima 180 días (alquiler rota ~3x más rápido que venta)
+      -- Mediana vida real: C21 34d, Remax 73d. 180d = ~2.5x margen sobre Remax.
+      AND CURRENT_DATE - COALESCE(p.fecha_publicacion, p.fecha_discovery::date) <= 180
       -- Filtro: precio no nulo
       AND p.precio_mensual_bob IS NOT NULL
 
