@@ -1093,7 +1093,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
             display: flex; align-items: center; justify-content: center;
           }
           .mfc-m-photo {
-            width: 120px; min-height: 140px; flex-shrink: 0;
+            width: 140px; min-height: 150px; flex-shrink: 0;
             background-size: cover; background-position: center; background-color: #1a1a1a;
             position: relative;
           }
@@ -1119,23 +1119,23 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
           .mfp-prev { left: 4px; }
           .mfp-next { right: 4px; }
           .mfc-m-body {
-            flex: 1; padding: 10px 12px; display: flex; flex-direction: column; justify-content: center;
+            flex: 1; padding: 12px 14px; display: flex; flex-direction: column; justify-content: center;
             min-width: 0;
           }
           .mfc-m-name {
-            font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 400;
-            color: #fff; line-height: 1.2; margin-bottom: 2px;
+            font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 400;
+            color: #fff; line-height: 1.2; margin-bottom: 3px;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
           }
           .mfc-m-specs {
-            font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.3px;
+            font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 0.3px;
             margin-bottom: 4px; font-family: 'Manrope', sans-serif;
           }
           .mfc-m-price {
-            font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 400;
+            font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 400;
             color: #c9a959; line-height: 1; margin-bottom: 6px;
           }
-          .mfc-m-price span { font-size: 12px; color: rgba(201,169,89,0.6); }
+          .mfc-m-price span { font-size: 13px; color: rgba(201,169,89,0.6); }
           .mfc-m-badges { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
           .mfc-m-badge {
             font-size: 9px; padding: 2px 6px; border-radius: 100px;
