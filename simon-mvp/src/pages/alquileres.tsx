@@ -711,7 +711,7 @@ export default function AlquileresPage() {
 
         /* ========== MAP FLOATING CARD ========== */
         .map-float-card {
-          position: absolute; bottom: 20px; left: 20px; z-index: 10;
+          position: absolute; bottom: 20px; left: 20px; z-index: 1000;
           width: 320px; background: #111; border: 1px solid rgba(201,169,89,0.25);
           border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
           animation: mapFloatIn 0.25s ease-out;
@@ -788,7 +788,7 @@ export default function AlquileresPage() {
 
         /* ========== MAP FAVORITES STRIP ========== */
         .map-fav-strip {
-          position: absolute; bottom: 12px; right: 12px; z-index: 10;
+          position: absolute; bottom: 12px; right: 12px; z-index: 1000;
           display: flex; align-items: center; gap: 8px;
           background: rgba(10,10,10,0.85); backdrop-filter: blur(8px);
           padding: 8px 12px; border-radius: 12px;
