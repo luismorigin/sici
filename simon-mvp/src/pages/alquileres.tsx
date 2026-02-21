@@ -64,17 +64,15 @@ function buildShareWhatsAppUrl(p: UnidadAlquiler) {
   const specs = `${dormLabel(p.dormitorios)} · ${p.area_m2}m² · ${formatPrice(p.precio_mensual_bob)}/mes`
   const url = `https://simonbo.com/alquileres?id=${p.id}`
   const text = `Mira este depto en alquiler:\n\n${name} — ${zone}\n${specs}\n\n${url}`
-  // Track share event in Google Analytics
-  if (typeof window !== 'undefined' && (window as any).gtag) {
-    (window as any).gtag('event', 'share_alquiler', {
-      property_id: p.id,
-      property_name: name,
-      zone,
-      price: p.precio_mensual_bob,
-      dorms: p.dormitorios,
-    })
-  }
+  trackEvent('share_alquiler', { property_id: p.id, property_name: name, zone, price: p.precio_mensual_bob, dorms: p.dormitorios })
   return `https://wa.me/?text=${encodeURIComponent(text)}`
+}
+
+// GA event helper — fire and forget, never throws
+function trackEvent(name: string, params?: Record<string, any>) {
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', name, params)
+  }
 }
 
 function useIsDesktop() {
@@ -130,6 +128,9 @@ export default function AlquileresPage() {
   const [totalCount, setTotalCount] = useState(0)
   const [loadError, setLoadError] = useState(false)
 
+  // Analytics: session-level metrics
+  const analyticsRef = useRef({ startTime: Date.now(), maxCardIdx: 0, hasInteracted: false, viewedIds: new Set<number>() })
+
   // Persist favorites to localStorage
   useEffect(() => {
     try { localStorage.setItem('alq_favorites', JSON.stringify(Array.from(favorites))) } catch {}
@@ -149,12 +150,26 @@ export default function AlquileresPage() {
         if (!el) { ticking = false; return }
         const idx = Math.round(el.scrollTop / el.clientHeight)
         setActiveCardIndex(idx)
+        // Level 1+3: track view_property + scroll_depth
+        if (idx > analyticsRef.current.maxCardIdx) analyticsRef.current.maxCardIdx = idx
         ticking = false
       })
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
   }, [isDesktop, loading])
+
+  // Level 1: track view_property when mobile card snaps into view
+  useEffect(() => {
+    if (isDesktop || !mobileProperties.length) return
+    const item = feedItems[activeCardIndex]
+    if (item?.type === 'property' && !analyticsRef.current.viewedIds.has(item.data.id)) {
+      analyticsRef.current.viewedIds.add(item.data.id)
+      analyticsRef.current.hasInteracted = true
+      trackEvent('view_property', { property_id: item.data.id, property_name: item.data.nombre_edificio || item.data.nombre_proyecto || '', position: activeCardIndex })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCardIndex, isDesktop])
 
   const fetchProperties = useCallback(async (f: FiltrosAlquiler, retry = true): Promise<number> => {
     setLoading(true)
@@ -192,6 +207,27 @@ export default function AlquileresPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Level 3: session metrics on page hide/unload
+  useEffect(() => {
+    function sendSessionMetrics() {
+      const a = analyticsRef.current
+      const duration = Math.round((Date.now() - a.startTime) / 1000)
+      trackEvent('session_alquiler', {
+        duration_seconds: duration,
+        max_scroll_depth: a.maxCardIdx,
+        cards_viewed: a.viewedIds.size,
+        total_cards: properties.length,
+        had_interaction: a.hasInteracted,
+      })
+      if (!a.hasInteracted && duration > 3) {
+        trackEvent('bounce_no_action', { duration_seconds: duration })
+      }
+    }
+    function onVisChange() { if (document.visibilityState === 'hidden') sendSessionMetrics() }
+    document.addEventListener('visibilitychange', onVisChange)
+    return () => document.removeEventListener('visibilitychange', onVisChange)
+  }, [properties.length])
+
   function showToast(msg: string) {
     setToastMessage(msg)
     setToastVisible(true)
@@ -204,6 +240,23 @@ export default function AlquileresPage() {
     const count = await fetchProperties(newFilters)
     showToast(`${count} alquileres encontrados`)
     feedRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+    analyticsRef.current.hasInteracted = true
+    trackEvent('apply_filters', {
+      zonas: newFilters.zonas_permitidas?.join(',') || '',
+      precio_max: newFilters.precio_mensual_max || null,
+      dormitorios: newFilters.dormitorios_lista?.join(',') || '',
+      amoblado: newFilters.amoblado || false,
+      mascotas: newFilters.acepta_mascotas || false,
+      parqueo: newFilters.con_parqueo || false,
+      results_count: count,
+    })
+    if (count === 0) {
+      trackEvent('no_results', {
+        zonas: newFilters.zonas_permitidas?.join(',') || '',
+        precio_max: newFilters.precio_mensual_max || null,
+        dormitorios: newFilters.dormitorios_lista?.join(',') || '',
+      })
+    }
   }
 
   async function resetFilters() {
@@ -222,6 +275,8 @@ export default function AlquileresPage() {
 
   const handleMapSelect = useCallback((id: number) => {
     setMapSelectedId(prev => prev === id ? null : id)
+    trackEvent('select_map_pin', { property_id: id })
+    analyticsRef.current.hasInteracted = true
   }, [])
 
   function toggleFavorite(id: number) {
@@ -236,6 +291,8 @@ export default function AlquileresPage() {
       else next.add(id)
       return next
     })
+    analyticsRef.current.hasInteracted = true
+    trackEvent('toggle_favorite', { property_id: id, action: isFav ? 'remove' : 'add', total_favs: isFav ? favorites.size - 1 : favorites.size + 1 })
     if (isFav) {
       showToast('Eliminado de favoritos')
     } else {
@@ -248,6 +305,19 @@ export default function AlquileresPage() {
     }
   }
 
+  function openCompare() {
+    setCompareOpen(true)
+    analyticsRef.current.hasInteracted = true
+    trackEvent('open_compare', { property_ids: Array.from(favorites).join(','), count: favorites.size })
+  }
+
+  function openDetail(p: UnidadAlquiler) {
+    setSheetProperty(p)
+    setSheetOpen(true)
+    analyticsRef.current.hasInteracted = true
+    trackEvent('open_detail', { property_id: p.id, property_name: p.nombre_edificio || p.nombre_proyecto || '' })
+  }
+
   function openViewer(p: UnidadAlquiler, photoIndex: number) {
     if (!p.fotos_urls?.length) return
     setViewerPhotos(p.fotos_urls)
@@ -255,6 +325,8 @@ export default function AlquileresPage() {
     setViewerName(p.nombre_edificio || p.nombre_proyecto || 'Departamento')
     setViewerSubtitle(`${p.zona || 'Equipetrol'} · ${p.area_m2}m² · ${dormLabel(p.dormitorios)}`)
     setViewerOpen(true)
+    analyticsRef.current.hasInteracted = true
+    trackEvent('view_photos', { property_id: p.id, property_name: p.nombre_edificio || p.nombre_proyecto || '', fotos_count: p.fotos_urls.length })
   }
 
   const activeFilterCount = useMemo(() => {
@@ -291,10 +363,7 @@ export default function AlquileresPage() {
       const parsed = parseInt(idParam, 10)
       if (!isNaN(parsed)) {
         setSpotlightId(parsed)
-        // Track that someone opened a shared link
-        if ((window as any).gtag) {
-          (window as any).gtag('event', 'open_shared_alquiler', { property_id: parsed })
-        }
+        trackEvent('open_shared_alquiler', { property_id: parsed })
       }
     }
   }, [router.query.id])
@@ -409,7 +478,7 @@ export default function AlquileresPage() {
                   <button className="desktop-fav-clear" onClick={() => { setFavorites(new Set()); showToast('Favoritos limpiados') }} title="Limpiar favoritos">&times;</button>
                 </div>
                 {favorites.size >= 2 && (
-                  <button className="desktop-compare-btn" onClick={() => setCompareOpen(true)}>
+                  <button className="desktop-compare-btn" onClick={() => openCompare()}>
                     Comparar {favorites.size === MAX_FAVORITES ? '' : `(${favorites.size})`}
                   </button>
                 )}
@@ -425,7 +494,7 @@ export default function AlquileresPage() {
               <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{properties.length} resultado{properties.length !== 1 ? 's' : ''}</span>
               <div style={{ display: 'flex', gap: 2, background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: 3 }}>
                 <button
-                  onClick={() => setViewMode('grid')}
+                  onClick={() => { setViewMode('grid'); trackEvent('switch_view', { view_mode: 'grid' }) }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px',
                     background: viewMode === 'grid' ? '#c9a959' : '#1a1a1a',
@@ -438,7 +507,7 @@ export default function AlquileresPage() {
                   Grid
                 </button>
                 <button
-                  onClick={() => setViewMode('map')}
+                  onClick={() => { setViewMode('map'); trackEvent('switch_view', { view_mode: 'map' }) }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px',
                     background: viewMode === 'map' ? '#c9a959' : '#1a1a1a',
@@ -480,7 +549,7 @@ export default function AlquileresPage() {
                           isFavorite={favorites.has(spotlightProperty.id)}
                           favoritesCount={favorites.size}
                           onToggleFavorite={() => toggleFavorite(spotlightProperty.id)}
-                          onOpenInfo={() => { setSheetProperty(spotlightProperty); setSheetOpen(true) }}
+                          onOpenInfo={() => openDetail(spotlightProperty)}
                           onPhotoTap={(photoIdx) => openViewer(spotlightProperty, photoIdx)}
                           onShare={() => window.open(buildShareWhatsAppUrl(spotlightProperty), '_blank')}
                         />
@@ -506,7 +575,7 @@ export default function AlquileresPage() {
                       isFavorite={favorites.has(p.id)}
                       favoritesCount={favorites.size}
                       onToggleFavorite={() => toggleFavorite(p.id)}
-                      onOpenInfo={() => { setSheetProperty(p); setSheetOpen(true) }}
+                      onOpenInfo={() => openDetail(p)}
                       onPhotoTap={(photoIdx) => openViewer(p, photoIdx)}
                       onShare={() => window.open(buildShareWhatsAppUrl(p), '_blank')}
                     />
@@ -534,7 +603,7 @@ export default function AlquileresPage() {
                       isFavorite={favorites.has(sp.id)}
                       onClose={() => setMapSelectedId(null)}
                       onToggleFavorite={() => toggleFavorite(sp.id)}
-                      onOpenDetail={() => { setSheetProperty(sp); setSheetOpen(true) }}
+                      onOpenDetail={() => openDetail(sp)}
                     />
                   )
                 })()}
@@ -565,7 +634,7 @@ export default function AlquileresPage() {
                         )
                       })}
                       {favProps.length >= 2 && (
-                        <button className="map-fav-compare" onClick={() => setCompareOpen(true)}>Comparar</button>
+                        <button className="map-fav-compare" onClick={() => openCompare()}>Comparar</button>
                       )}
                     </div>
                   )
@@ -628,7 +697,7 @@ export default function AlquileresPage() {
           {/* Compare banner — only shows with 1+ favorites */}
           {favorites.size >= 1 && (
             <div className="alq-compare-banner-wrap">
-              <button className="alq-compare-banner" onClick={() => favorites.size >= 2 ? setCompareOpen(true) : showToast('Elegí al menos 2 para comparar')} style={{ flex: 1 }}>
+              <button className="alq-compare-banner" onClick={() => favorites.size >= 2 ? openCompare() : showToast('Elegí al menos 2 para comparar')} style={{ flex: 1 }}>
                 <span className="alq-compare-banner-text">{favorites.size} favorito{favorites.size > 1 ? 's' : ''}{favorites.size >= 2 ? ' · Comparar' : ''}</span>
                 {favorites.size >= 2 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M9 18l6-6-6-6"/></svg>}
               </button>
@@ -637,7 +706,7 @@ export default function AlquileresPage() {
           )}
 
           {/* Floating map button */}
-          <button className="alq-map-floating" aria-label="Ver mapa" onClick={() => setMobileMapOpen(true)}>
+          <button className="alq-map-floating" aria-label="Ver mapa" onClick={() => { setMobileMapOpen(true); trackEvent('open_map_mobile') }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="#c9a959" strokeWidth="1.5" style={{width:22,height:22}}>
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
             </svg>
@@ -667,7 +736,7 @@ export default function AlquileresPage() {
                       mobile
                       onClose={() => setMapSelectedId(null)}
                       onToggleFavorite={() => toggleFavorite(sp.id)}
-                      onOpenDetail={() => { setMobileMapOpen(false); setSheetProperty(sp); setSheetOpen(true) }}
+                      onOpenDetail={() => { setMobileMapOpen(false); openDetail(sp) }}
                     />
                   )
                 })()}
@@ -734,7 +803,7 @@ export default function AlquileresPage() {
                     favoritesCount={favorites.size}
                     isSpotlight={item.isSpotlight || false}
                     onToggleFavorite={() => toggleFavorite(item.data.id)}
-                    onOpenInfo={() => { setSheetProperty(item.data); setSheetOpen(true) }}
+                    onOpenInfo={() => openDetail(item.data)}
                     onPhotoTap={(photoIdx) => openViewer(item.data, photoIdx)}
                     onShare={() => window.open(buildShareWhatsAppUrl(item.data), '_blank')}
                   />
@@ -1473,7 +1542,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
         </div>
         <div className="dc-actions">
           <button className="dc-info-btn" onClick={onOpenInfo}>Ver detalles</button>
-          <a href={p.url} target="_blank" rel="noopener noreferrer" className="dc-ver-btn">Ver &#8599;</a>
+          <a href={p.url} target="_blank" rel="noopener noreferrer" className="dc-ver-btn" onClick={() => trackEvent('click_original', { property_id: p.id, property_name: p.nombre_edificio || p.nombre_proyecto || '', fuente: p.fuente })}>Ver &#8599;</a>
         </div>
         {p.agente_whatsapp && (
           <a href={buildLeadWhatsAppUrl(p, `Hola, vi este alquiler en Simon y me interesa: ${displayName} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_desktop')} target="_blank" rel="noopener noreferrer" className="dc-wsp-cta">
@@ -1589,7 +1658,7 @@ function MobilePropertyCard({
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
             </svg> Detalles
           </button>
-          <a href={p.url} target="_blank" rel="noopener noreferrer" className="mc-btn mc-ver">Ver &#8599;</a>
+          <a href={p.url} target="_blank" rel="noopener noreferrer" className="mc-btn mc-ver" onClick={() => trackEvent('click_original', { property_id: p.id, property_name: p.nombre_edificio || p.nombre_proyecto || '', fuente: p.fuente })}>Ver &#8599;</a>
         </div>
         {p.agente_whatsapp && (
           <a href={buildLeadWhatsAppUrl(p, `Hola, vi este alquiler en Simon y me interesa: ${p.nombre_edificio || p.nombre_proyecto || 'Departamento'} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_mobile')} target="_blank" rel="noopener noreferrer" className="mc-wsp-cta">
