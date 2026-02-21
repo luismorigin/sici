@@ -82,7 +82,7 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
 
       const marker = L.marker([p.latitud!, p.longitud!], { icon })
         .addTo(map)
-        .on('click', () => onSelectProperty(p.id))
+        .on('click', () => { console.log('[MAP-MULTI] marker clicked, id:', p.id); onSelectProperty(p.id) })
 
       marker.bindTooltip(`
         <div style="font-family:'Manrope',sans-serif;font-size:12px;line-height:1.4;">

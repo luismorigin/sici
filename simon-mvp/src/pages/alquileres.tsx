@@ -198,7 +198,12 @@ export default function AlquileresPage() {
   }
 
   const handleMapSelect = useCallback((id: number) => {
-    setMapSelectedId(prev => prev === id ? null : id)
+    console.log('[MAP] handleMapSelect called with id:', id)
+    setMapSelectedId(prev => {
+      const next = prev === id ? null : id
+      console.log('[MAP] mapSelectedId:', prev, '→', next)
+      return next
+    })
   }, [])
 
   function toggleFavorite(id: number) {
@@ -431,8 +436,9 @@ export default function AlquileresPage() {
                 </div>
                 {/* Floating card when a pin is selected */}
                 {mapSelectedId && (() => {
+                  console.log('[MAP] Rendering float card, mapSelectedId:', mapSelectedId)
                   const sp = properties.find(x => x.id === mapSelectedId)
-                  if (!sp) return null
+                  if (!sp) { console.log('[MAP] Property NOT found in properties array!'); return null }
                   return (
                     <MapFloatCard
                       key={sp.id}
