@@ -559,9 +559,24 @@ export default function AlquileresPage() {
               <div className="alq-mobile-map-body">
                 <MapMultiComponent
                   properties={properties}
-                  onSelectProperty={(id) => { setMobileMapOpen(false); setMapSelectedId(id); const p = properties.find(x => x.id === id); if (p) { setSheetProperty(p); setSheetOpen(true) } }}
+                  onSelectProperty={handleMapSelect}
                   selectedId={mapSelectedId}
                 />
+                {mapSelectedId && (() => {
+                  const sp = properties.find(x => x.id === mapSelectedId)
+                  if (!sp) return null
+                  return (
+                    <MapFloatCard
+                      key={sp.id}
+                      property={sp}
+                      isFavorite={favorites.has(sp.id)}
+                      mobile
+                      onClose={() => setMapSelectedId(null)}
+                      onToggleFavorite={() => toggleFavorite(sp.id)}
+                      onOpenDetail={() => { setMobileMapOpen(false); setSheetProperty(sp); setSheetOpen(true) }}
+                    />
+                  )
+                })()}
               </div>
             </div>
           )}
@@ -850,7 +865,7 @@ export default function AlquileresPage() {
           color: rgba(255,255,255,0.5); font-size: 20px;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
-        .alq-mobile-map-body { flex: 1; }
+        .alq-mobile-map-body { flex: 1; position: relative; }
         @media (prefers-reduced-motion: reduce) {
           .alq-toast { transition: none; }
           .alq-fav-count { transition: none; }
@@ -1010,8 +1025,8 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
 }
 
 // ===== MAP FLOATING CARD (own state to avoid re-rendering the map) =====
-function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onOpenDetail }: {
-  property: UnidadAlquiler; isFavorite: boolean
+function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onOpenDetail, mobile }: {
+  property: UnidadAlquiler; isFavorite: boolean; mobile?: boolean
   onClose: () => void; onToggleFavorite: () => void; onOpenDetail: () => void
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -1021,6 +1036,127 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
   if (sp.amoblado === 'si' || sp.amoblado === 'semi') spBadges.push(sp.amoblado === 'si' ? 'Amoblado' : 'Semi')
   if (sp.acepta_mascotas) spBadges.push('Mascotas')
   if (sp.estacionamientos && sp.estacionamientos > 0) spBadges.push(`${sp.estacionamientos} parqueo`)
+
+  if (mobile) {
+    return (
+      <div className="mfc-mobile">
+        <button className="mfc-m-close" onClick={onClose}>&times;</button>
+        <div className="mfc-m-photo" style={{ ...(photos[photoIdx] ? { backgroundImage: `url('${photos[photoIdx]}')` } : {}) }}>
+          {photos.length > 1 && (
+            <>
+              {photoIdx > 0 && (
+                <button className="mfp-nav mfp-prev" onClick={(e) => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width: 14, height: 14 }}><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+              )}
+              {photoIdx < photos.length - 1 && (
+                <button className="mfp-nav mfp-next" onClick={(e) => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width: 14, height: 14 }}><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+              )}
+              <div className="map-float-photo-count">{photoIdx + 1}/{photos.length}</div>
+            </>
+          )}
+          <button className={`mfc-m-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
+            <svg viewBox="0 0 24 24" fill={isFavorite ? '#c9a959' : 'none'} stroke={isFavorite ? '#c9a959' : '#fff'} strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </button>
+        </div>
+        <div className="mfc-m-body">
+          <div className="mfc-m-name">{spName}</div>
+          <div className="mfc-m-specs">{sp.zona || 'Equipetrol'} · {sp.area_m2}m² · {dormLabel(sp.dormitorios)}</div>
+          <div className="mfc-m-price">{formatPrice(sp.precio_mensual_bob)}<span>/mes</span></div>
+          {spBadges.length > 0 && (
+            <div className="mfc-m-badges">{spBadges.map((b, i) => <span key={i} className="mfc-m-badge">{b}</span>)}</div>
+          )}
+          <div className="mfc-m-actions">
+            <button className="mfc-m-btn-detail" onClick={onOpenDetail}>Ver detalles</button>
+            {sp.agente_whatsapp && (
+              <a href={buildLeadWhatsAppUrl(sp, `Hola, vi ${spName} en Simon y me interesa${sp.url ? '\n' + sp.url : ''}`, 'map_card_mobile')} target="_blank" rel="noopener noreferrer" className="mfc-m-btn-wsp">WhatsApp</a>
+            )}
+          </div>
+        </div>
+        <style jsx>{`
+          .mfc-mobile {
+            position: absolute; bottom: 12px; left: 12px; right: 12px; z-index: 1000;
+            background: #111; border: 1px solid rgba(201,169,89,0.25);
+            border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            display: flex; flex-direction: row;
+            animation: mfcSlideUp 0.25s ease-out;
+          }
+          @keyframes mfcSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+          .mfc-m-close {
+            position: absolute; top: 6px; right: 6px; z-index: 2;
+            width: 24px; height: 24px; border-radius: 50%; background: rgba(10,10,10,0.7);
+            border: none; color: rgba(255,255,255,0.7); font-size: 14px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+          }
+          .mfc-m-photo {
+            width: 120px; min-height: 140px; flex-shrink: 0;
+            background-size: cover; background-position: center; background-color: #1a1a1a;
+            position: relative;
+          }
+          .mfc-m-fav {
+            position: absolute; top: 6px; left: 6px; z-index: 2;
+            width: 30px; height: 30px; border-radius: 50%; background: rgba(10,10,10,0.6);
+            border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+          }
+          .mfc-m-fav.active { background: rgba(201,169,89,0.15); }
+          .map-float-photo-count {
+            position: absolute; bottom: 6px; right: 6px;
+            display: flex; align-items: center; gap: 3px;
+            background: rgba(10,10,10,0.7); padding: 2px 8px; border-radius: 100px;
+            font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.85);
+            font-family: 'Manrope', sans-serif;
+          }
+          .mfp-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 26px; height: 26px; border-radius: 50%; background: rgba(10,10,10,0.6);
+            border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            z-index: 2;
+          }
+          .mfp-prev { left: 4px; }
+          .mfp-next { right: 4px; }
+          .mfc-m-body {
+            flex: 1; padding: 10px 12px; display: flex; flex-direction: column; justify-content: center;
+            min-width: 0;
+          }
+          .mfc-m-name {
+            font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 400;
+            color: #fff; line-height: 1.2; margin-bottom: 2px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          }
+          .mfc-m-specs {
+            font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.3px;
+            margin-bottom: 4px; font-family: 'Manrope', sans-serif;
+          }
+          .mfc-m-price {
+            font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 400;
+            color: #c9a959; line-height: 1; margin-bottom: 6px;
+          }
+          .mfc-m-price span { font-size: 12px; color: rgba(201,169,89,0.6); }
+          .mfc-m-badges { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
+          .mfc-m-badge {
+            font-size: 9px; padding: 2px 6px; border-radius: 100px;
+            border: 1px solid rgba(201,169,89,0.25); color: #c9a959;
+            font-family: 'Manrope', sans-serif;
+          }
+          .mfc-m-actions { display: flex; gap: 6px; }
+          .mfc-m-btn-detail {
+            flex: 1; padding: 7px; background: transparent; border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.8); font-family: 'Manrope', sans-serif; font-size: 11px;
+            font-weight: 500; cursor: pointer; border-radius: 6px;
+          }
+          .mfc-m-btn-wsp {
+            flex: 1; padding: 7px; background: #25d366; border: none; border-radius: 6px;
+            color: #fff; font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 600;
+            text-decoration: none; text-align: center;
+          }
+        `}</style>
+      </div>
+    )
+  }
 
   return (
     <div className="map-float-card">
