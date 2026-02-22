@@ -434,6 +434,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 139 | reactivar_alquileres_existentes | Reactivar 61 alquileres existentes → completado | ✅ |
 | 140 | market_absorption_snapshots | Tabla + función snapshot inversión mercado (absorción, precios, renta, ROI) | ✅ |
 | 158 | bien_inmuebles_fotos_alquiler | Branch fotos + agente Bien Inmuebles en buscar_unidades_alquiler() | ✅ |
+| 160 | alquiler_offset | OFFSET en buscar_unidades_alquiler() para paginación server-side | ✅ |
 
 ## Repo Legacy
 
