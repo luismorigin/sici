@@ -47,18 +47,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     } catch { /* ignore */ }
 
+    // Validate numeric params (NaN/out-of-bounds → null)
+    const propIdNum = prop_id ? parseInt(prop_id as string, 10) : NaN
+    const precioNum = precio ? parseFloat(precio as string) : NaN
+    const dormsNum = dorms ? parseInt(dorms as string, 10) : NaN
+
     // Insert lead (fire and forget — don't block the redirect)
     if (supabaseUrl && supabaseAnonKey) {
       const supabase = createClient(supabaseUrl, supabaseAnonKey)
       supabase.from('leads_alquiler').insert({
-        propiedad_id: prop_id ? parseInt(prop_id as string, 10) : null,
-        nombre_propiedad: typeof nombre === 'string' ? nombre : null,
-        zona: typeof zona === 'string' ? zona : null,
-        precio_bob: precio ? parseFloat(precio as string) : null,
-        dormitorios: dorms ? parseInt(dorms as string, 10) : null,
+        propiedad_id: !isNaN(propIdNum) && propIdNum > 0 ? propIdNum : null,
+        nombre_propiedad: typeof nombre === 'string' ? nombre.slice(0, 200) : null,
+        zona: typeof zona === 'string' ? zona.slice(0, 100) : null,
+        precio_bob: !isNaN(precioNum) && precioNum > 0 && precioNum < 1_000_000 ? precioNum : null,
+        dormitorios: !isNaN(dormsNum) && dormsNum >= 0 && dormsNum <= 10 ? dormsNum : null,
         broker_telefono: finalPhone,
-        broker_nombre: typeof broker_nombre === 'string' ? broker_nombre : null,
-        fuente: typeof fuente === 'string' ? fuente : 'card',
+        broker_nombre: typeof broker_nombre === 'string' ? broker_nombre.slice(0, 200) : null,
+        fuente: typeof fuente === 'string' ? fuente.slice(0, 50) : 'card',
         preguntas_enviadas: preguntasArr.length > 0 ? preguntasArr : null,
       }).then(({ error }) => {
         if (error) console.error('Error registrando lead alquiler:', error)
