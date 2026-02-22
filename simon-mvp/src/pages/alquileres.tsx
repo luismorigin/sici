@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { buscarUnidadesAlquiler, type UnidadAlquiler, type FiltrosAlquiler } from '@/lib/supabase'
+import { type UnidadAlquiler, type FiltrosAlquiler } from '@/lib/supabase'
 
 // Leaflet: dynamic import SSR-safe
 const MapComponent = dynamic(() => import('@/components/alquiler/AlquilerMap'), { ssr: false })
@@ -35,6 +35,61 @@ const FILTER_CARD_POSITION = 3
 
 function dormLabel(d: number) { return d === 0 ? 'Estudio' : d + ' dorm' }
 function formatPrice(p: number) { return 'Bs ' + p.toLocaleString('es-BO') }
+
+// Server-side API proxy (anti-scraping: no direct Supabase calls from browser)
+function mapRawToUnidad(p: any): UnidadAlquiler {
+  return {
+    id: p.id,
+    nombre_edificio: p.nombre_edificio || null,
+    nombre_proyecto: p.nombre_proyecto || null,
+    desarrollador: p.desarrollador || null,
+    zona: p.zona || 'Sin zona',
+    dormitorios: p.dormitorios ?? 0,
+    banos: p.banos ? parseFloat(p.banos) : null,
+    area_m2: parseFloat(p.area_m2) || 0,
+    precio_mensual_bob: parseFloat(p.precio_mensual_bob) || 0,
+    precio_mensual_usd: p.precio_mensual_usd ? parseFloat(p.precio_mensual_usd) : null,
+    amoblado: p.amoblado || null,
+    acepta_mascotas: p.acepta_mascotas ?? null,
+    deposito_meses: p.deposito_meses ? parseFloat(p.deposito_meses) : null,
+    servicios_incluidos: p.servicios_incluidos || null,
+    contrato_minimo_meses: p.contrato_minimo_meses || null,
+    monto_expensas_bob: p.monto_expensas_bob ? parseFloat(p.monto_expensas_bob) : null,
+    piso: p.piso || null,
+    estacionamientos: p.estacionamientos || null,
+    baulera: p.baulera ?? null,
+    latitud: p.latitud ? parseFloat(p.latitud) : null,
+    longitud: p.longitud ? parseFloat(p.longitud) : null,
+    fotos_urls: p.fotos_urls || [],
+    fotos_count: p.fotos_count || 0,
+    url: p.url || '',
+    fuente: p.fuente || '',
+    agente_nombre: p.agente_nombre || null,
+    agente_telefono: p.agente_telefono || null,
+    agente_whatsapp: p.agente_whatsapp || null,
+    dias_en_mercado: p.dias_en_mercado || null,
+    estado_construccion: p.estado_construccion || 'no_especificado',
+    id_proyecto_master: p.id_proyecto_master || null,
+    amenities_lista: p.amenities_lista || null,
+    equipamiento_lista: p.equipamiento_lista || null,
+    descripcion: p.descripcion || null,
+  }
+}
+
+async function fetchFromAPI(filtros: FiltrosAlquiler & { offset?: number }): Promise<{ data: UnidadAlquiler[]; total: number }> {
+  try {
+    const res = await fetch('/api/alquileres', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filtros })
+    })
+    if (!res.ok) return { data: [], total: 0 }
+    const json = await res.json()
+    return { data: (json.data || []).map(mapRawToUnidad), total: json.total || 0 }
+  } catch {
+    return { data: [], total: 0 }
+  }
+}
 
 // Build lead-tracked WhatsApp URL (goes through /api/lead-alquiler for tracking)
 function buildLeadWhatsAppUrl(p: UnidadAlquiler, msg: string, fuente: string, preguntas?: string[]) {
@@ -130,6 +185,7 @@ export default function AlquileresPage() {
 
   // Analytics: session-level metrics
   const analyticsRef = useRef({ startTime: Date.now(), maxCardIdx: 0, hasInteracted: false, viewedIds: new Set<number>() })
+  const fetchGenRef = useRef(0) // increments on each fetchProperties call to cancel stale background loads
 
   // Persist favorites to localStorage
   useEffect(() => {
@@ -172,22 +228,48 @@ export default function AlquileresPage() {
   }, [activeCardIndex, isDesktop])
 
   const fetchProperties = useCallback(async (f: FiltrosAlquiler, retry = true): Promise<number> => {
+    const gen = ++fetchGenRef.current // cancel any prior background loads
     setLoading(true)
     setLoadError(false)
     try {
-      const data = await buscarUnidadesAlquiler(f)
+      const { data, total } = await fetchFromAPI({ ...f, limite: 50, offset: 0 })
+      if (gen !== fetchGenRef.current) return 0 // stale
       if (data.length === 0 && retry) {
-        // Retry once after 1.5s (Supabase cold start)
         await new Promise(r => setTimeout(r, 1500))
-        const data2 = await buscarUnidadesAlquiler(f)
-        setProperties(data2)
+        if (gen !== fetchGenRef.current) return 0
+        const r2 = await fetchFromAPI({ ...f, limite: 50, offset: 0 })
+        if (gen !== fetchGenRef.current) return 0
+        setProperties(r2.data)
         setLoading(false)
-        return data2.length
+        setTotalCount(r2.total)
+        return r2.total
       }
       setProperties(data)
       setLoading(false)
-      return data.length
+      setTotalCount(total)
+
+      // Incremental loading: fetch remaining pages in background
+      if (data.length === 50) {
+        let offset = 50
+        const loadMore = async () => {
+          await new Promise(r => setTimeout(r, 300))
+          if (gen !== fetchGenRef.current) return // filters changed, stop
+          const next = await fetchFromAPI({ ...f, limite: 50, offset })
+          if (gen !== fetchGenRef.current) return // filters changed, stop
+          if (next.data.length > 0) {
+            setProperties(prev => [...prev, ...next.data])
+            if (next.data.length === 50) {
+              offset += 50
+              loadMore()
+            }
+          }
+        }
+        loadMore()
+      }
+
+      return total
     } catch {
+      if (gen !== fetchGenRef.current) return 0
       if (retry) {
         await new Promise(r => setTimeout(r, 1500))
         return fetchProperties(f, false)
@@ -200,8 +282,7 @@ export default function AlquileresPage() {
 
   useEffect(() => {
     async function init() {
-      const count = await fetchProperties(filters)
-      setTotalCount(count)
+      await fetchProperties(filters)
     }
     init()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -268,7 +349,6 @@ export default function AlquileresPage() {
     setFilters(defaultFilters)
     setIsFiltered(false)
     const count = await fetchProperties(defaultFilters)
-    setTotalCount(count)
     showToast(`${count} alquileres · sin filtros`)
     feedRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -1821,8 +1901,8 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
     if (previewRef.current) clearTimeout(previewRef.current)
     previewRef.current = setTimeout(async () => {
       const f = buildFilters()
-      const data = await buscarUnidadesAlquiler(f)
-      setPreviewCount(data.length)
+      const { total } = await fetchFromAPI({ ...f, limite: 1 })
+      setPreviewCount(total)
     }, 400)
     return () => { if (previewRef.current) clearTimeout(previewRef.current) }
   }, [buildFilters])
