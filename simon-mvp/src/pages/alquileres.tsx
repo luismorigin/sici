@@ -233,12 +233,12 @@ export default function AlquileresPage() {
     setLoadError(false)
     try {
       const { data, total } = await fetchFromAPI({ ...f, limite: 50, offset: 0 })
-      if (gen !== fetchGenRef.current) return 0 // stale
+      if (gen !== fetchGenRef.current) { setLoading(false); return 0 }
       if (data.length === 0 && retry) {
         await new Promise(r => setTimeout(r, 1500))
-        if (gen !== fetchGenRef.current) return 0
+        if (gen !== fetchGenRef.current) { setLoading(false); return 0 }
         const r2 = await fetchFromAPI({ ...f, limite: 50, offset: 0 })
-        if (gen !== fetchGenRef.current) return 0
+        if (gen !== fetchGenRef.current) { setLoading(false); return 0 }
         setProperties(r2.data)
         setLoading(false)
         setTotalCount(r2.total)
@@ -249,19 +249,22 @@ export default function AlquileresPage() {
       setTotalCount(total)
 
       // Incremental loading: fetch remaining pages in background
-      if (data.length === 50) {
+      if (data.length === 50 && total > 50) {
+        const seenIds = new Set(data.map((d: UnidadAlquiler) => d.id))
         let offset = 50
         const loadMore = async () => {
           await new Promise(r => setTimeout(r, 300))
           if (gen !== fetchGenRef.current) return // filters changed, stop
           const next = await fetchFromAPI({ ...f, limite: 50, offset })
           if (gen !== fetchGenRef.current) return // filters changed, stop
-          if (next.data.length > 0) {
-            setProperties(prev => [...prev, ...next.data])
-            if (next.data.length === 50) {
-              offset += 50
-              loadMore()
-            }
+          // Dedupe: if all IDs already seen, offset isn't working — stop
+          const newItems = next.data.filter((d: UnidadAlquiler) => !seenIds.has(d.id))
+          if (newItems.length === 0) return // offset not working or no new data
+          newItems.forEach((d: UnidadAlquiler) => seenIds.add(d.id))
+          setProperties(prev => [...prev, ...newItems])
+          if (next.data.length === 50) {
+            offset += 50
+            loadMore()
           }
         }
         loadMore()
@@ -269,7 +272,7 @@ export default function AlquileresPage() {
 
       return total
     } catch {
-      if (gen !== fetchGenRef.current) return 0
+      if (gen !== fetchGenRef.current) { setLoading(false); return 0 }
       if (retry) {
         await new Promise(r => setTimeout(r, 1500))
         return fetchProperties(f, false)
