@@ -125,7 +125,7 @@ export default function PhotoViewer({ photos, initialIndex, buildingName, subtit
 
       <style jsx>{`
         .pv-overlay {
-          position: fixed; inset: 0; z-index: 400; background: #0a0a0a;
+          position: fixed; inset: 0; z-index: 9999; background: #0a0a0a;
           display: flex; flex-direction: column;
         }
         .pv-top {
