@@ -76,16 +76,22 @@ function mapRawToUnidad(p: any): UnidadAlquiler {
   }
 }
 
-async function fetchFromAPI(filtros: FiltrosAlquiler & { offset?: number }): Promise<{ data: UnidadAlquiler[]; total: number }> {
+async function fetchFromAPI(filtros: FiltrosAlquiler & { offset?: number }, spotlightId?: number): Promise<{ data: UnidadAlquiler[]; total: number; spotlight?: UnidadAlquiler | null }> {
   try {
+    const body: Record<string, any> = { filtros }
+    if (spotlightId) body.spotlightId = spotlightId
     const res = await fetch('/api/alquileres', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filtros })
+      body: JSON.stringify(body)
     })
     if (!res.ok) return { data: [], total: 0 }
     const json = await res.json()
-    return { data: (json.data || []).map(mapRawToUnidad), total: json.total || 0 }
+    return {
+      data: (json.data || []).map(mapRawToUnidad),
+      total: json.total || 0,
+      spotlight: json.spotlight ? mapRawToUnidad(json.spotlight) : null
+    }
   } catch {
     return { data: [], total: 0 }
   }
@@ -149,6 +155,7 @@ export default function AlquileresPage() {
   const [properties, setProperties] = useState<UnidadAlquiler[]>([])
   const [loading, setLoading] = useState(true)
   const [spotlightId, setSpotlightId] = useState<number | null>(null)
+  const [fetchedSpotlight, setFetchedSpotlight] = useState<UnidadAlquiler | null>(null)
   const [favorites, setFavorites] = useState<Set<number>>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -451,14 +458,30 @@ export default function AlquileresPage() {
     }
   }, [router.query.id])
 
-  // Resolve spotlight property from current data
+  // Resolve spotlight property — check loaded data, then fetched spotlight
   const spotlightProperty = useMemo(() => {
     if (!spotlightId) return null
-    return properties.find(p => p.id === spotlightId) || null
-  }, [spotlightId, properties])
+    return properties.find(p => p.id === spotlightId) || fetchedSpotlight || null
+  }, [spotlightId, properties, fetchedSpotlight])
+
+  // If spotlight not found in loaded data, fetch it via API
+  useEffect(() => {
+    if (!spotlightId) { setFetchedSpotlight(null); return }
+    if (properties.find(p => p.id === spotlightId)) return
+    let cancelled = false
+    async function doFetch() {
+      try {
+        const { spotlight } = await fetchFromAPI({ solo_con_fotos: false, limite: 50 }, spotlightId ?? undefined)
+        if (!cancelled && spotlight) setFetchedSpotlight(spotlight)
+      } catch { /* best-effort */ }
+    }
+    doFetch()
+    return () => { cancelled = true }
+  }, [spotlightId, properties.length])
 
   function clearSpotlight() {
     setSpotlightId(null)
+    setFetchedSpotlight(null)
     router.replace('/alquileres', undefined, { shallow: true })
   }
 
@@ -1613,7 +1636,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
       {/* Content */}
       <div className="dc-content">
         <div className="dc-name">{displayName}</div>
-        <div className="dc-zona">{p.zona || 'Equipetrol'}</div>
+        <div className="dc-zona">{p.zona || 'Equipetrol'} <span className="dc-id">#{p.id}</span></div>
         <div className="dc-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
         <div className="dc-specs">
           {p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · ${p.piso}° piso` : ''}
@@ -1654,6 +1677,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
         .dc-content { padding: 16px; }
         .dc-name { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 400; color: #fff; line-height: 1.2; margin-bottom: 2px; }
         .dc-zona { font-size: 11px; color: rgba(255,255,255,0.6); letter-spacing: 1px; margin-bottom: 10px; }
+        .dc-id { color: rgba(255,255,255,0.2); font-size: 10px; margin-left: 4px; letter-spacing: 0; }
         .dc-price { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; color: #c9a959; line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
         .dc-price span { font-size: 16px; color: rgba(201,169,89,0.6); }
         .dc-specs { font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 10px; font-family: 'Manrope', sans-serif; }
@@ -1714,7 +1738,7 @@ function MobilePropertyCard({
       )}
       <div className="mc-content">
         <div className="mc-name">{displayName}</div>
-        <div className="mc-zona">{p.zona || 'Equipetrol'}</div>
+        <div className="mc-zona">{p.zona || 'Equipetrol'} <span className="mc-id">#{p.id}</span></div>
         <div className="mc-price">{formatPrice(p.precio_mensual_bob)}/mes</div>
         <div className="mc-specs">{p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · ${p.piso}°` : ''}</div>
         <div className="mc-badges">
@@ -1759,6 +1783,7 @@ function MobilePropertyCard({
         .mc-content { flex: 1; padding: 0 24px 20px; padding-bottom: max(20px, calc(env(safe-area-inset-bottom) + 8px)); display: flex; flex-direction: column; overflow: hidden; }
         .mc-name { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400; color: #fff; line-height: 1.1; margin-bottom: 3px; }
         .mc-zona { font-size: 12px; color: rgba(255,255,255,0.7); letter-spacing: 1px; margin-bottom: 12px; }
+        .mc-id { color: rgba(255,255,255,0.15); font-size: 10px; margin-left: 4px; letter-spacing: 0; }
         .mc-price { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 400; color: #c9a959; line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
         .mc-specs { font-size: 13px; font-weight: 300; color: rgba(255,255,255,0.7); margin-bottom: 12px; font-family: 'Manrope', sans-serif; }
         .mc-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }

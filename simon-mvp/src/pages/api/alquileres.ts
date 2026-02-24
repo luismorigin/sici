@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { filtros = {} } = req.body || {}
+    const { filtros = {}, spotlightId } = req.body || {}
 
     // Build RPC params — clamp limite to 50 max
     const rpcFiltros: Record<string, any> = {
@@ -102,10 +102,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       total = countResult.data?.length || data.length
     }
 
+    // Spotlight: fetch a specific property by ID if not in current results
+    let spotlight = null
+    if (spotlightId && typeof spotlightId === 'number' && !data.find((d: any) => d.id === spotlightId)) {
+      try {
+        const spotResult = await supabase.rpc('buscar_unidades_alquiler', {
+          p_filtros: { limite: 200, solo_con_fotos: false }
+        })
+        spotlight = spotResult.data?.find((d: any) => d.id === spotlightId) || null
+      } catch { /* spotlight is best-effort, don't fail the main request */ }
+    }
+
     // Cache control: no caching of dynamic data
     res.setHeader('Cache-Control', 'no-store')
 
-    return res.status(200).json({ data, total })
+    return res.status(200).json({ data, total, spotlight })
   } catch (err) {
     console.error('API /alquileres error:', err)
     return res.status(500).json({ error: 'Internal server error' })
