@@ -603,6 +603,9 @@ export default function AdminPropiedades() {
               <p className="text-slate-400 text-sm">Editor de Propiedades v2</p>
             </div>
             <div className="flex items-center gap-4">
+              <Link href="/admin/alquileres" className="text-emerald-400 hover:text-emerald-300 text-sm font-medium">
+                Alquileres HITL
+              </Link>
               <Link href="/admin/proyectos" className="text-slate-300 hover:text-white text-sm">
                 Proyectos
               </Link>
