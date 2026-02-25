@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Broker Share — Alquileres</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --text: #f8f6f3;
+    --muted: #888;
+    --gold: #c9a959;
+    --gold-dim: #9a7e3a;
+    --green: #4caf50;
+    --radius: 10px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  header {
+    max-width: 720px;
+    margin: 0 auto 32px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: -0.3px;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .counter-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .counter-text {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .counter-sent {
+    font-size: 13px;
+    color: var(--green);
+    font-weight: 500;
+  }
+
+  .reset-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .reset-btn:hover { color: var(--text); border-color: var(--muted); }
+
+  .main {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .broker-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .broker-header {
+    padding: 14px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .broker-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--bg);
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+
+  .broker-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--gold);
+  }
+
+  .broker-phone {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .broker-count {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .prop-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .prop-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  .prop-row:last-child { border-bottom: none; }
+  .prop-row:hover { background: rgba(255,255,255,0.02); }
+
+  .prop-check {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    accent-color: var(--green);
+    cursor: pointer;
+  }
+
+  .prop-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .prop-name {
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .prop-meta {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .prop-price {
+    font-size: 12px;
+    color: var(--gold);
+    font-weight: 500;
+    margin-top: 1px;
+  }
+
+  .prop-id {
+    font-size: 11px;
+    color: #555;
+    flex-shrink: 0;
+  }
+
+  .wa-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #25d366;
+    color: #fff;
+    text-decoration: none;
+    padding: 7px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+    transition: background 0.15s, opacity 0.15s;
+    white-space: nowrap;
+  }
+  .wa-btn:hover { background: #1ebd5a; }
+
+  .wa-icon {
+    width: 14px;
+    height: 14px;
+    fill: #fff;
+  }
+
+  .prop-row.sent .prop-name { color: var(--muted); text-decoration: line-through; }
+  .prop-row.sent .prop-meta { opacity: 0.5; }
+  .prop-row.sent .prop-price { opacity: 0.4; }
+  .prop-row.sent .wa-btn { background: #1a6b3a; opacity: 0.7; }
+
+  .prop-row.inactive { opacity: 0.4; background: rgba(255,60,60,0.04); }
+  .prop-row.inactive .prop-name { color: #c44; text-decoration: line-through; }
+  .prop-row.inactive .prop-meta { opacity: 0.5; }
+  .prop-row.inactive .prop-price { opacity: 0.4; }
+  .prop-row.inactive .wa-btn { display: none; }
+
+  .inactive-tag {
+    display: inline-block;
+    background: #c44;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: 0.5px;
+    text-decoration: none;
+  }
+
+  .inactive-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .inactive-check {
+    display: none;
+  }
+
+  .inactive-icon {
+    font-size: 16px;
+    opacity: 0.3;
+    transition: opacity 0.15s;
+  }
+  .inactive-label:hover .inactive-icon { opacity: 0.7; }
+  .inactive-check:checked + .inactive-icon { opacity: 1; }
+
+  @media (max-width: 480px) {
+    body { padding: 16px 10px; }
+    .prop-row { padding: 10px 12px; gap: 8px; }
+    .broker-header { padding: 12px 14px; }
+    .wa-btn { padding: 6px 10px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Alquileres — Envío WhatsApp</h1>
+  <p class="subtitle">Mensajes pre-cargados para brokers. Marca cada uno al enviarlo.</p>
+  <div class="counter-bar">
+    <div>
+      <div class="counter-text" id="counter-text">Cargando...</div>
+      <div class="counter-sent" id="counter-sent"></div>
+    </div>
+    <button class="reset-btn" onclick="resetAll()">Reiniciar</button>
+  </div>
+</header>
+
+<main class="main" id="main-container"></main>
+
+<script>
+const SENT_IDS = [88,89,880,883,12,33,108,881,600,4,523,566,443,831,599,879,146,13,573,882,28,633,884,37,40,512,847,848];
+const INACTIVE_IDS = [883,88,89,880,108,4,28];
+
+const NAME_MAP = {
+  "59176363013":"Hector Rodriguez De Vidts",
+  "59179010060":"Katherine Oblitas Barba",
+  "59175669000":"Carmen Emilia Nazer Calabi",
+  "59172046060":"Carla Valeria Murillo Calderon",
+  "59176314443":"Maria Laura Aguilera Franco",
+  "59177075769":"Gigliola Roca",
+  "59177338471":"Rita Alcazar de Quiroga",
+  "59176607868":"Carmen Alanis Pelaez",
+  "59172151182":"Douglas De Lima Diaz",
+  "59170815908":"Maria Lydia Perez Gumucio",
+  "59170949229":"Julio Cesar Castañon Villarpando",
+  "59176370100":"Jessica Barbery",
+  "59176604712":"Raquel Landivar Viruez",
+  "59169296919":"Pamela Verónica Rodriguez Barja",
+  "59178522284":"Danitza Suarez Lafuente",
+  "59178142226":"Gabriela Barroso Justiniano",
+  "59175648174":"Lidia Alejandra Gamarra Mayser",
+  "59175005526":"Noelia Romero Delgadillo",
+  "59176733123":"Paola Veronica Luzio Riveros",
+  "59170294957":"Erick Antonio Tapia Siles",
+  "59172122365":"Maria Lourdes Durán Herrera",
+  "59175587345":"Carlos Velasco",
+  "59170841414":"Walter Rivera Claussen",
+  "59177165395":"Guisela Giesse",
+  "59170864382":"Ana Maria Suaznabar",
+  "59176029990":"Nayma de Cuadros Morales",
+  "59170036253":"Romy Bulacia Arce",
+  "59178440773":"Mariuly Añez Mangifesti",
+  "59177831000":"Grover Orlando Audivert Papadopulos",
+  "59177631211":"Vivian Vilasboas",
+  "59169101671":"Veronica Lily Rosazza de Nishihira",
+  "59169004018":"Maria Griselda Moron Peña",
+  "59177170917":"Carlos Alberto Blades Daza",
+  "59170942959":"Susana Maldonado De Gaithe",
+  "59175042340":"Veronica Subieta Sanchez",
+  "59162042499":"Gladys Daza Arteaga",
+  "59176315936":"Esmeralda Abeldaño Velasquez",
+  "59178511085":"Wendy Abuawad",
+  "59178568427":"Cristhian Henriquez Navarro",
+  "59175504808":"Jesica Justiniano Cuellar",
+  "59162816858":"Cristian Mauricio Antelo Cortez",
+  "59177000990":"Cinthia Lola Vilagut Revollo",
+  "59178180180":"Rolando Marcelo Asbun Landivar",
+  "59178055677":"Silvia Djasmin Nayar Moreno",
+  "59175022012":"Ana Carola Peñafiel Molina",
+  "59170887734":"Cecilia Gumiel Ordoñez",
+  "59177761601":"Yohana Garcia Rodriguez",
+  "59177099948":"Maria Jose Zeballos Paz",
+  "59175266777":"Alejandra Alcoba Ustarez",
+  "59177080680":"Ines Gutierrez Suarez",
+  "59172101108":"Eduardo Antonio Orellanos Kukoc",
+  "59163527047":"Maria Karolina Chore Zamorano",
+  "59175793860":"Fabiola Fanny Burgoa Gonzales",
+  "59176607876":"Tommy C. Fernández Ortiz",
+  "59177330345":"Giovanna Del Rosario Aguilera Hurtado",
+  "59178143911":"Luis Fernando Rojas Muriel",
+  "59172140041":"Dora Lucía Yañez Dantas",
+  "59169195605":"Elimer Landivar Tambare",
+  "59175852349":"Karla La Fuente Miserendino",
+  "59178403324":"Mauricio Landívar Piotti",
+  "59178240341":"Diego Andre Echart Estrada",
+  "59175008678":"Carolina Roca Longaric",
+  "59177090222":"Maoly Balcazar Parada",
+  "59170407656":"Nacia Karel Burgoa Montero",
+  "59177690905":"Natalia Sanchez Castillo",
+  "59172036763":"Jens Meyer Gronemann",
+  "59168084028":"Daniela Clavijo Velasco",
+  "59169059918":"Mario Joel Alpire España",
+  "59162205433":"Lola Vaca Alpire",
+  "59169154198":"Luis Gorena",
+  "59175639355":"Claudia Rivero",
+  "59178999999":"Marcelo Guardia Vasquez",
+  "59178452844":"Giovana Chavez Jordan",
+  "59176002984":"Enrique Urenda Aily",
+  "59176000430":"Antonio Erlan Dara Chao",
+  "59170280949":"Elena Herrera Varquez",
+  "59177018025":"Vivian Gabriela Justiniano Sanchez",
+  "59169002003":"Carlos Ortiz Mercado",
+  "59170840460":"Susana Faldin Peña",
+  "59177860092":"Laura Maria Zarate Ostria",
+  "59176321009":"Andres Suarez",
+  "59178000101":"Betty Jeannine Ortiz Arteaga",
+  "59170044323":"Pedro Blancourt Ferrier",
+  "59175111122":"María Eliana Saavedra Antelo De Forti",
+  "59175393177":"Fabiola Trinidad Landivar Chavez",
+  "59176066289":"Ruth Ayala Balcazar",
+  "59171609391":"Heybert Cruz Pedraza",
+  "59173672482":"Maria Johaquina Romero Jimenez",
+  "59175636155":"Melissa Rea Rodriguez",
+  "59171161200":"Maria Fernanda Ramos Orias",
+  "59172656449":"Jose Alberto Rendon Crespo",
+  "59177313000":"Carlos Charles Chavez Espinoza",
+  "59172190248":"Juan Carlos Virreira Avila",
+  "59172873643":"Wendy Fabiola Villalpando Prieto",
+  "59176333353":"Maria Fernanda Cabrera Rodriguez",
+  "59177648322":"Marianty Pérez Peredo",
+  "59178518388":"Romina Marquez Pinto",
+  "59164308350":"Melissa Guereca Saravia",
+  "59175076718":"Eliana Valeria Callau Justiniano",
+  "59175064424":"Alejandra Isabel Chavez Luna",
+  "59169168050":"Romy Paola Peredo Montaño",
+  "59176000909":"Cindy Ivonne Roca Tominaga",
+  "59169092668":"Jaelin Rosado Moreno",
+  "59177042919":"Ana Paola Villarroel Romero",
+  "59170327518":"Luis Alejandro Nava Vargas",
+  "59179683985":"Andrea Valeria Viveros Gardeazabal",
+  "59171030038":"Orlando Lozada Diez",
+  "59160036124":"Viviana Maria Olmos Paz"
+};
+
+const DATA = [
+  {"id":88,"whatsapp":"59176698633","nombre":"Alejandra Sahonero Quiroz","nombre_edificio":"LUXE SUITES","zona":"Equipetrol","dormitorios":2,"area_total_m2":"71.02","precio_mensual_bob":"6000.00"},
+  {"id":89,"whatsapp":"59176698633","nombre":"Alejandra Sahonero Quiroz","nombre_edificio":"LUXE SUITES","zona":"Equipetrol","dormitorios":2,"area_total_m2":"71.20","precio_mensual_bob":"6000.00"},
+  {"id":880,"whatsapp":"59167868396","nombre":"Alenka Lopez Torres Mercado","nombre_edificio":"You Smart Studios","zona":"Equipetrol Norte/Norte","dormitorios":1,"area_total_m2":"49.00","precio_mensual_bob":"3900.00"},
+  {"id":883,"whatsapp":"59175500028","nombre":"Andrea Miranda","nombre_edificio":"Madero Residence","zona":"Equipetrol","dormitorios":2,"area_total_m2":"103.00","precio_mensual_bob":"9744.00"},
+  {"id":12,"whatsapp":"59177015279","nombre":"Andres Duran Aguilera","nombre_edificio":"SÖLO Industrial Apartments","zona":"Equipetrol","dormitorios":1,"area_total_m2":"40.88","precio_mensual_bob":"3600.00"},
+  {"id":33,"whatsapp":"59177230341","nombre":"Boaz Rafael Saucier Godoy","nombre_edificio":"LUXE SUITES","zona":"Equipetrol","dormitorios":1,"area_total_m2":"121.96","precio_mensual_bob":"5000.00"},
+  {"id":108,"whatsapp":"59177363400","nombre":"Cindy Tatiana Canedo Ugarte","nombre_edificio":"Torre 3","zona":"Equipetrol Norte/Sur","dormitorios":1,"area_total_m2":"32.00","precio_mensual_bob":"3300.00"},
+  {"id":881,"whatsapp":"59162056781","nombre":"Cinthia Lema","nombre_edificio":null,"zona":"Equipetrol","dormitorios":3,"area_total_m2":null,"precio_mensual_bob":"6000.00"},
+  {"id":600,"whatsapp":"59162161084","nombre":"Claudia Marcela Aguirre Jara","nombre_edificio":null,"zona":"Equipetrol","dormitorios":2,"area_total_m2":null,"precio_mensual_bob":"4300.00"},
+  {"id":4,"whatsapp":"59170007423","nombre":"Dabeyba Ribera Ortiz","nombre_edificio":"Platinum II","zona":"Villa Brigida","dormitorios":2,"area_total_m2":"107.00","precio_mensual_bob":"6000.00"},
+  {"id":523,"whatsapp":"59170007423","nombre":"Dabeyba Ribera Ortiz","nombre_edificio":"Condominio Bamboo","zona":"Equipetrol Norte","dormitorios":1,"area_total_m2":"28.00","precio_mensual_bob":"3150.00"},
+  {"id":566,"whatsapp":"59170494961","nombre":"Damaris Tamara Velazco Heredia","nombre_edificio":"Condominio Santorini Ventura","zona":"Villa Brigida","dormitorios":1,"area_total_m2":"45.00","precio_mensual_bob":"2500.00"},
+  {"id":443,"whatsapp":"59178091200","nombre":"Daniela Sol Lopez","nombre_edificio":"Puerto Madero","zona":"Sirari","dormitorios":1,"area_total_m2":"75.00","precio_mensual_bob":"4800.00"},
+  {"id":831,"whatsapp":"59169895198","nombre":"Elizabeth Belaunde Cano","nombre_edificio":"Sirari Deluxe","zona":"Equipetrol","dormitorios":1,"area_total_m2":"49.57","precio_mensual_bob":"3500.00"},
+  {"id":599,"whatsapp":"59160013240","nombre":"Fabrizio Alejandro Armaza Maldonado","nombre_edificio":"Condominio Vertical 60","zona":"Villa Brigida","dormitorios":1,"area_total_m2":"43.04","precio_mensual_bob":"4500.00"},
+  {"id":879,"whatsapp":"59160904343","nombre":"Ignacio Torres-Laureda Gaete","nombre_edificio":"Edificio Malibú Friendly","zona":"Equipetrol","dormitorios":1,"area_total_m2":"40.00","precio_mensual_bob":"3200.00"},
+  {"id":146,"whatsapp":"59171640409","nombre":"Jorge Walter Hernan Ayala Antezana","nombre_edificio":null,"zona":"Equipetrol Norte/Sur","dormitorios":1,"area_total_m2":"60.00","precio_mensual_bob":"3000.00"},
+  {"id":13,"whatsapp":"59161311418","nombre":"Karina Yenny Vaca Pereira Pedraza","nombre_edificio":"Condominio Sky Magnolia","zona":"Sirari","dormitorios":1,"area_total_m2":"40.00","precio_mensual_bob":"3500.00"},
+  {"id":573,"whatsapp":"59178517859","nombre":"Karla Parejas Gomez","nombre_edificio":"Condominio Haus Equipe","zona":"Equipetrol","dormitorios":2,"area_total_m2":"96.29","precio_mensual_bob":"5800.00"},
+  {"id":882,"whatsapp":"59173674332","nombre":"Katiany Arce","nombre_edificio":"Condominio Tuareg","zona":"Equipetrol","dormitorios":1,"area_total_m2":"300.00","precio_mensual_bob":"2700.00"},
+  {"id":28,"whatsapp":"59175003857","nombre":"Lida Aldunate Arandia","nombre_edificio":"Grigia Residence","zona":"Equipetrol Norte/Sur","dormitorios":1,"area_total_m2":"37.02","precio_mensual_bob":"3200.00"},
+  {"id":633,"whatsapp":"59168215551","nombre":"Lizette Nieme Rios","nombre_edificio":"Condominio Platinum I","zona":"Villa Brigida","dormitorios":2,"area_total_m2":"118.00","precio_mensual_bob":"8500.00"},
+  {"id":884,"whatsapp":"59178465744","nombre":"Mauricio Alcazar Mejia","nombre_edificio":"Baruc IV","zona":"Villa Brigida","dormitorios":1,"area_total_m2":"36.00","precio_mensual_bob":"2600.00"},
+  {"id":37,"whatsapp":"59177647578","nombre":"Nayra Serrate Altmann","nombre_edificio":"Torre Suant","zona":"Equipetrol","dormitorios":2,"area_total_m2":"116.00","precio_mensual_bob":"5500.00"},
+  {"id":40,"whatsapp":"59177647578","nombre":"Nayra Serrate Altmann","nombre_edificio":"Guapay Norte","zona":"Equipetrol Norte","dormitorios":2,"area_total_m2":"83.00","precio_mensual_bob":"4200.00"},
+  {"id":512,"whatsapp":"59177647578","nombre":"Nayra Serrate Altmann","nombre_edificio":"YOU SMART STUDIO","zona":"Equipetrol Norte/Norte","dormitorios":1,"area_total_m2":"35.00","precio_mensual_bob":"3400.00"},
+  {"id":847,"whatsapp":"59177647578","nombre":"Nayra Serrate Altmann","nombre_edificio":"Condominio Stanza","zona":"Equipetrol","dormitorios":1,"area_total_m2":"42.57","precio_mensual_bob":"3600.00"},
+  {"id":848,"whatsapp":"59177647578","nombre":"Nayra Serrate Altmann","nombre_edificio":"Cond. Metta","zona":"Equipetrol","dormitorios":2,"area_total_m2":"77.00","precio_mensual_bob":"6000.00"},
+  {"id":513,"whatsapp":"59172681568","nombre":"Pily Sonia Justiniano Chavez","nombre_edificio":null,"zona":"Equipetrol","dormitorios":3,"area_total_m2":"240.00","precio_mensual_bob":"10500.00"},
+  {"id":85,"whatsapp":"59176600776","nombre":"Rolando Alberto Moro Barba","nombre_edificio":"Smart Studio Nanotec","zona":"Equipetrol Norte/Sur","dormitorios":2,"area_total_m2":"68.00","precio_mensual_bob":"5750.00"},
+  {"id":820,"whatsapp":"59170036253","nombre":"Romy Bulacia Arce","nombre_edificio":"Sky Eclipse","zona":"Faremafu","dormitorios":2,"area_total_m2":"95.00","precio_mensual_bob":"10500.00"},
+  {"id":845,"whatsapp":"59170036253","nombre":"Romy Bulacia Arce","nombre_edificio":"Sky Moon","zona":"Equipetrol Norte/Norte","dormitorios":2,"area_total_m2":"95.00","precio_mensual_bob":"10500.00"},
+  {"id":109,"whatsapp":"59175021064","nombre":"Sergio Amelunge Antelo","nombre_edificio":"SKY DESING","zona":"Sirari","dormitorios":2,"area_total_m2":"148.70","precio_mensual_bob":"9100.00"},
+  {"id":520,"whatsapp":"59169899008","nombre":"Silvia Tatiana Vargas Prada","nombre_edificio":"SKY LUXIA","zona":"Villa Brigida","dormitorios":1,"area_total_m2":"31.00","precio_mensual_bob":"3500.00"},
+  {"id":870,"whatsapp":"59169899008","nombre":"Silvia Tatiana Vargas Prada","nombre_edificio":"SKY DESIGN","zona":"Sirari","dormitorios":1,"area_total_m2":"56.10","precio_mensual_bob":"4200.00"},
+  {"id":514,"whatsapp":"59177606899","nombre":"Zdenko Knez Araya","nombre_edificio":"Eurodesing Residence","zona":"Equipetrol","dormitorios":0,"area_total_m2":"39.52","precio_mensual_bob":"3150.00"},
+  {"id":657,"whatsapp":"59176363013","nombre":null,"nombre_edificio":"Madero Residence","zona":"Equipetrol","dormitorios":2,"area_total_m2":"102.00","precio_mensual_bob":"10000.00"},
+  {"id":658,"whatsapp":"59179010060","nombre":null,"nombre_edificio":"Condominio Atrium","zona":"Equipetrol","dormitorios":2,"area_total_m2":"98.00","precio_mensual_bob":"8000.00"},
+  {"id":659,"whatsapp":"59175669000","nombre":null,"nombre_edificio":"Sky ArtDeco","zona":"Equipetrol","dormitorios":2,"area_total_m2":"99.00","precio_mensual_bob":"8300.00"},
+  {"id":661,"whatsapp":"59172046060","nombre":null,"nombre_edificio":"UPTOWN EQUIPETROL","zona":"Faremafu","dormitorios":1,"area_total_m2":"50.00","precio_mensual_bob":"3800.00"},
+  {"id":662,"whatsapp":"59176314443","nombre":null,"nombre_edificio":"SKY ELITE","zona":"Equipetrol","dormitorios":2,"area_total_m2":"85.00","precio_mensual_bob":"8000.00"},
+  {"id":664,"whatsapp":"59177075769","nombre":null,"nombre_edificio":"Condado III","zona":"Equipetrol","dormitorios":3,"area_total_m2":"142.80","precio_mensual_bob":"12500.00"},
+  {"id":665,"whatsapp":"59177338471","nombre":null,"nombre_edificio":"CONDOMINIO LAS PALMERAS","zona":"Equipetrol","dormitorios":3,"area_total_m2":"141.00","precio_mensual_bob":"12528.00"},
+  {"id":666,"whatsapp":"59176607868","nombre":null,"nombre_edificio":"CONDADO III","zona":"Equipetrol","dormitorios":3,"area_total_m2":"142.80","precio_mensual_bob":"5950.00"},
+  {"id":667,"whatsapp":"59172151182","nombre":null,"nombre_edificio":"TORRE SIRARI","zona":"Sin zona","dormitorios":2,"area_total_m2":"85.00","precio_mensual_bob":"6000.00"},
+  {"id":668,"whatsapp":"59170815908","nombre":null,"nombre_edificio":"Sky Luxia","zona":"Villa Brigida","dormitorios":0,"area_total_m2":"31.20","precio_mensual_bob":"4000.00"},
+  {"id":669,"whatsapp":"59170949229","nombre":null,"nombre_edificio":"Condominio Puerto Madero","zona":"Sirari","dormitorios":2,"area_total_m2":"142.00","precio_mensual_bob":"8400.00"},
+  {"id":670,"whatsapp":"59176370100","nombre":null,"nombre_edificio":"SKY COLLETION","zona":"Equipetrol","dormitorios":2,"area_total_m2":"115.00","precio_mensual_bob":"9000.00"},
+  {"id":672,"whatsapp":"59176604712","nombre":null,"nombre_edificio":"Condominio Omnia Prime","zona":"Sirari","dormitorios":2,"area_total_m2":"78.00","precio_mensual_bob":"5500.00"},
+  {"id":674,"whatsapp":"59169296919","nombre":null,"nombre_edificio":"EDIFICIO ZENIT","zona":"Equipetrol","dormitorios":null,"area_total_m2":"53.00","precio_mensual_bob":"3700.00"},
+  {"id":676,"whatsapp":"59178522284","nombre":null,"nombre_edificio":"Madero Residence","zona":"Equipetrol","dormitorios":2,"area_total_m2":"102.00","precio_mensual_bob":"8000.00"},
+  {"id":677,"whatsapp":"59178142226","nombre":null,"nombre_edificio":"Uptown Equipetrol","zona":"Faremafu","dormitorios":1,"area_total_m2":"41.00","precio_mensual_bob":"3700.00"},
+  {"id":678,"whatsapp":"59175648174","nombre":null,"nombre_edificio":"Condominio Onix Art by Elite","zona":"Sirari","dormitorios":0,"area_total_m2":"40.61","precio_mensual_bob":"3200.00"},
+  {"id":679,"whatsapp":"59175005526","nombre":null,"nombre_edificio":"Onix Art By EliTe","zona":"Sirari","dormitorios":1,"area_total_m2":"61.00","precio_mensual_bob":"4000.00"},
+  {"id":680,"whatsapp":"59176733123","nombre":null,"nombre_edificio":"EDIFICIO MULTIFAMILIAR SAN NICOLAS 3","zona":"Sin zona","dormitorios":2,"area_total_m2":"82.00","precio_mensual_bob":"4500.00"},
+  {"id":681,"whatsapp":"59170294957","nombre":null,"nombre_edificio":"Condominio Stanza","zona":"Equipetrol","dormitorios":1,"area_total_m2":"47.59","precio_mensual_bob":"3500.00"},
+  {"id":682,"whatsapp":"59172122365","nombre":null,"nombre_edificio":"La Foret","zona":"Equipetrol","dormitorios":0,"area_total_m2":"44.00","precio_mensual_bob":"3200.00"},
+  {"id":683,"whatsapp":"59175587345","nombre":null,"nombre_edificio":"MACORORO 8","zona":"Faremafu","dormitorios":1,"area_total_m2":"42.35","precio_mensual_bob":"3500.00"},
+  {"id":684,"whatsapp":"59170841414","nombre":null,"nombre_edificio":"Maré","zona":"Sirari","dormitorios":1,"area_total_m2":"47.00","precio_mensual_bob":"5500.00"},
+  {"id":685,"whatsapp":"59176363013","nombre":null,"nombre_edificio":"MARE","zona":"Sirari","dormitorios":0,"area_total_m2":"41.00","precio_mensual_bob":"3600.00"},
+  {"id":686,"whatsapp":"59177165395","nombre":null,"nombre_edificio":"Baruc Uno","zona":"Equipetrol","dormitorios":1,"area_total_m2":"40.00","precio_mensual_bob":"2800.00"},
+  {"id":687,"whatsapp":"59170864382","nombre":null,"nombre_edificio":"NOMAD BY SMART STUDIO","zona":"Equipetrol","dormitorios":1,"area_total_m2":"50.54","precio_mensual_bob":"3828.00"},
+  {"id":689,"whatsapp":"59176029990","nombre":null,"nombre_edificio":"Sky Elite","zona":"Equipetrol","dormitorios":2,"area_total_m2":"92.00","precio_mensual_bob":"6500.00"},
+  {"id":690,"whatsapp":"59170036253","nombre":null,"nombre_edificio":"SKY Eclipse","zona":"Faremafu","dormitorios":2,"area_total_m2":"105.00","precio_mensual_bob":"8900.00"},
+  {"id":691,"whatsapp":"59178440773","nombre":null,"nombre_edificio":"EDIFICIO NOMAD BY SMART STUDIO","zona":"Equipetrol","dormitorios":2,"area_total_m2":"61.00","precio_mensual_bob":"5300.00"},
+  {"id":693,"whatsapp":"59177831000","nombre":null,"nombre_edificio":"Maracaná Apart Hotel","zona":"Equipetrol","dormitorios":1,"area_total_m2":"24.86","precio_mensual_bob":"2150.00"},
+  {"id":694,"whatsapp":"59177631211","nombre":null,"nombre_edificio":null,"zona":"Faremafu","dormitorios":2,"area_total_m2":"84.00","precio_mensual_bob":"5600.00"},
+  {"id":695,"whatsapp":"59169101671","nombre":null,"nombre_edificio":"Genz Sirari","zona":"Equipetrol","dormitorios":0,"area_total_m2":"28.79","precio_mensual_bob":"2500.00"},
+  {"id":696,"whatsapp":"59169004018","nombre":null,"nombre_edificio":"Edificio Condado II","zona":"Equipetrol","dormitorios":3,"area_total_m2":"340.00","precio_mensual_bob":"17425.00"},
+  {"id":698,"whatsapp":"59177170917","nombre":null,"nombre_edificio":"Edificio Malibú Friendly","zona":"Equipetrol","dormitorios":0,"area_total_m2":"31.64","precio_mensual_bob":"3000.00"},
+  {"id":699,"whatsapp":"59179010060","nombre":null,"nombre_edificio":"SMART STUDIO ISUTO","zona":"Sin zona","dormitorios":0,"area_total_m2":"54.00","precio_mensual_bob":"2800.00"},
+  {"id":700,"whatsapp":"59170942959","nombre":null,"nombre_edificio":"CONDOMINIO BARUC UNO","zona":"Equipetrol","dormitorios":1,"area_total_m2":"33.00","precio_mensual_bob":"2500.00"},
+  {"id":701,"whatsapp":"59175669000","nombre":null,"nombre_edificio":"Sky Eclipse","zona":"Faremafu","dormitorios":2,"area_total_m2":"95.00","precio_mensual_bob":"7500.00"},
+  {"id":703,"whatsapp":"59175042340","nombre":null,"nombre_edificio":"Sky Eclipse","zona":"Faremafu","dormitorios":2,"area_total_m2":"106.00","precio_mensual_bob":"8900.00"},
+  {"id":704,"whatsapp":"59162042499","nombre":null,"nombre_edificio":"Madero Residences Dpto 10D","zona":"Equipetrol","dormitorios":2,"area_total_m2":"132.00","precio_mensual_bob":"11000.00"},
+  {"id":705,"whatsapp":"59162042499","nombre":null,"nombre_edificio":"SOLO INDUSTRIAL APARTAMENTS","zona":"Equipetrol","dormitorios":0,"area_total_m2":"35.00","precio_mensual_bob":"3900.00"},
+  {"id":706,"whatsapp":"59162042499","nombre":null,"nombre_edificio":"Sky Luxia","zona":"Villa Brigida","dormitorios":0,"area_total_m2":"32.00","precio_mensual_bob":"3800.00"},
+  {"id":707,"whatsapp":"59176315936","nombre":null,"nombre_edificio":"Lateris","zona":"Equipetrol","dormitorios":3,"area_total_m2":"177.00","precio_mensual_bob":"7500.00"},
+  {"id":708,"whatsapp":"59178511085","nombre":null,"nombre_edificio":"Sky Eclipse","zona":"Faremafu","dormitorios":1,"area_total_m2":"65.00","precio_mensual_bob":"5500.00"},
+  {"id":711,"whatsapp":"59178568427","nombre":null,"nombre_edificio":"Smart Isuto","zona":"Equipetrol","dormitorios":0,"area_total_m2":"43.84","precio_mensual_bob":"2800.00"},
+  {"id":712,"whatsapp":"59175504808","nombre":null,"nombre_edificio":"Sky Eclipse","zona":"Faremafu","dormitorios":1,"area_total_m2":"65.00","precio_mensual_bob":"4850.00"},
+  {"id":713,"whatsapp":"59162816858","nombre":null,"nombre_edificio":"Condominio Solo","zona":"Equipetrol","dormitorios":0,"area_total_m2":"34.00","precio_mensual_bob":"3600.00"},
+  {"id":714,"whatsapp":"59177000990","nombre":null,"nombre_edificio":"Sky Eclipse","zona":"Faremafu","dormitorios":1,"area_total_m2":"68.00","precio_mensual_bob":"5500.00"},
+  {"id":715,"whatsapp":"59178180180","nombre":null,"nombre_edificio":"EDIFICIO ATRIUM","zona":"Equipetrol","dormitorios":2,"area_total_m2":"85.00","precio_mensual_bob":"6000.00"},
+  {"id":716,"whatsapp":"59178055677","nombre":null,"nombre_edificio":"Edificio San Martín","zona":"Equipetrol","dormitorios":3,"area_total_m2":"152.00","precio_mensual_bob":"6200.00"},
+  {"id":717,"whatsapp":"59175022012","nombre":null,"nombre_edificio":"SOLO","zona":"Equipetrol","dormitorios":1,"area_total_m2":"43.89","precio_mensual_bob":"3100.00"},
+  {"id":718,"whatsapp":"59170887734","nombre":null,"nombre_edificio":"Hotel Yotaú Suites","zona":"Equipetrol","dormitorios":1,"area_total_m2":"91.45","precio_mensual_bob":"4000.00"},
+  {"id":719,"whatsapp":"59177761601","nombre":null,"nombre_edificio":"Baruc IV","zona":"Villa Brigida","dormitorios":1,"area_total_m2":"37.00","precio_mensual_bob":"3200.00"},
+  {"id":720,"whatsapp":"59177099948","nombre":null,"nombre_edificio":"La Casona","zona":"Sin zona","dormitorios":0,"area_total_m2":"29.65","precio_mensual_bob":"3000.00"},
+  {"id":721,"whatsapp":"59175266777","nombre":null,"nombre_edificio":"Sky Luxia","zona":"Villa Brigida","dormitorios":2,"area_total_m2":"73.00","precio_mensual_bob":"7300.00"},
+  {"id":723,"whatsapp":"59177080680","nombre":null,"nombre_edificio":"La Riviera Residence","zona":"Sirari","dormitorios":2,"area_total_m2":"99.95","precio_mensual_bob":"11000.00"},
+  {"id":724,"whatsapp":"59172101108","nombre":null,"nombre_edificio":"Luxe Suites","zona":"Equipetrol","dormitorios":0,"area_total_m2":"34.50","precio_mensual_bob":"3800.00"},
+  {"id":725,"whatsapp":"59163527047","nombre":null,"nombre_edificio":null,"zona":"Equipetrol","dormitorios":2,"area_total_m2":"65.00","precio_mensual_bob":"2850.00"},
+  {"id":726,"whatsapp":"59163527047","nombre":null,"nombre_edificio":null,"zona":"Equipetrol","dormitorios":1,"area_total_m2":"50.00","precio_mensual_bob":"2290.00"},
+  {"id":727,"whatsapp":"59163527047","nombre":null,"nombre_edificio":null,"zona":"Equipetrol","dormitorios":2,"area_total_m2":"65.00","precio_mensual_bob":"2750.00"},
+  {"id":728,"whatsapp":"59177165395","nombre":null,"nombre_edificio":"Torre Oasis","zona":"Equipetrol","dormitorios":1,"area_total_m2":"40.00","precio_mensual_bob":"3000.00"},
+  {"id":729,"whatsapp":"59175793860","nombre":null,"nombre_edificio":"EDIFICIO SOLO","zona":"Equipetrol","dormitorios":1,"area_total_m2":"35.13","precio_mensual_bob":"3200.00"},
+  {"id":731,"whatsapp":"59176607876","nombre":null,"nombre_edificio":"edificio cristina","zona":"Equipetrol","dormitorios":1,"area_total_m2":"65.00","precio_mensual_bob":"2800.00"},
+  {"id":732,"whatsapp":"59177330345","nombre":null,"nombre_edificio":"CONDOMINIO BAMBOO","zona":"Equipetrol Norte","dormitorios":1,"area_total_m2":"40.00","precio_mensual_bob":"2800.00"},
+  {"id":733,"whatsapp":"59178143911","nombre":null,"nombre_edificio":"Macororo 7","zona":"Faremafu","dormitorios":2,"area_total_m2":"79.00","precio_mensual_bob":"5500.00"},
+  {"id":734,"whatsapp":"59178143911","nombre":null,"nombre_edificio":"Enrique Finot Edificio Macororo 7","zona":"Faremafu","dormitorios":2,"area_total_m2":"79.00","precio_mensual_bob":"5500.00"},
+  {"id":736,"whatsapp":"59172140041","nombre":null,"nombre_edificio":"CONDOMINIO GUAYRA","zona":"Equipetrol","dormitorios":1,"area_total_m2":"105.00","precio_mensual_bob":"3500.00"},
+  {"id":740,"whatsapp":"59169195605","nombre":null,"nombre_edificio":null,"zona":"Equipetrol Norte/Sur","dormitorios":1,"area_total_m2":"50.00","precio_mensual_bob":"3800.00"},
+  {"id":741,"whatsapp":"59175852349","nombre":null,"nombre_edificio":"Luxe Residence","zona":"Equipetrol Norte/Norte","dormitorios":1,"area_total_m2":"59.50","precio_mensual_bob":"6000.00"},
+  {"id":742,"whatsapp":"59175852349","nombre":null,"nombre_edificio":"LUXE RESIDENCE","zona":"Equipetrol Norte/Norte","dormitorios":2,"area_total_m2":"81.00","precio_mensual_bob":"8500.00"},
+  {"id":743,"whatsapp":"59178403324","nombre":null,"nombre_edificio":null,"zona":"Equipetrol Norte/Norte","dormitorios":2,"area_total_m2":"58.00","precio_mensual_bob":"4500.00"},
+  {"id":744,"whatsapp":"59178403324","nombre":null,"nombre_edificio":"CONDOMINIO DU NORD X","zona":"Equipetrol Norte/Norte","dormitorios":0,"area_total_m2":"30.00","precio_mensual_bob":"3500.00"},
+  {"id":746,"whatsapp":"59178240341","nombre":null,"nombre_edificio":"EXPERIENCE","zona":"Equipetrol","dormitorios":0,"area_total_m2":"35.01","precio_mensual_bob":"3500.00"},
+  {"id":748,"whatsapp":"59175008678","nombre":null,"nombre_edificio":"Sky moon equipetrol","zona":"Equipetrol Norte/Norte","dormitorios":3,"area_total_m2":"132.00","precio_mensual_bob":"15000.00"},
+  {"id":749,"whatsapp":"59177090222","nombre":null,"nombre_edificio":"Balconada","zona":"Equipetrol Norte/Sur","dormitorios":2,"area_total_m2":"94.00","precio_mensual_bob":"5300.00"},
+  {"id":751,"whatsapp":"59170407656","nombre":null,"nombre_edificio":"GREEN TOWER","zona":"Equipetrol Norte/Norte","dormitorios":1,"area_total_m2":"83.00","precio_mensual_bob":"13000.00"},
+  {"id":753,"whatsapp":"59170815908","nombre":null,"nombre_edificio":"Sky Moon","zona":"Equipetrol Norte/Norte","dormitorios":0,"area_total_m2":"41.50","precio_mensual_bob":"4700.00"},
+  {"id":755,"whatsapp":"59177690905","nombre":null,"nombre_edificio":"LA RIVIERA BEAUTY PLAZA","zona":"Sirari","dormitorios":2,"area_total_m2":"100.00","precio_mensual_bob":"9500.00"},
+  {"id":756,"whatsapp":"59172036763","nombre":null,"nombre_edificio":"Sky Moon","zona":"Equipetrol Norte/Norte","dormitorios":1,"area_total_m2":"77.00","precio_mensual_bob":"6500.00"},
+  {"id":757,"whatsapp":"59168084028","nombre":null,"nombre_edificio":"Nanotec by smartstudio","zona":"Equipetrol Norte/Sur","dormitorios":1,"area_total_m2":"42.00","precio_mensual_bob":"4700.00"},
+  {"id":758,"whatsapp":"59177690905","nombre":null,"nombre_edificio":"LA RIVIERA BEAUTY PLAZA","zona":"Sirari","dormitorios":2,"area_total_m2":"100.00","precio_mensual_bob":"8500.00"},
+  {"id":759,"whatsapp":"59175266777","nombre":null,"nombre_edificio":"Sky Moon","zona":"Equipetrol Norte/Norte","dormitorios":1,"area_total_m2":"41.00","precio_mensual_bob":"4550.00"},
+  {"id":761,"whatsapp":"59169059918","nombre":null,"nombre_edificio":"Condominio Sky Moon","zona":"Equipetrol Norte/Norte","dormitorios":2,"area_total_m2":"105.00","precio_mensual_bob":"9500.00"},
+  {"id":762,"whatsapp":"59170407656","nombre":null,"nombre_edificio":"GREEN TOWER","zona":"Equipetrol Norte/Norte","dormitorios":1,"area_total_m2":"83.00","precio_mensual_bob":"13500.00"},
+  {"id":763,"whatsapp":"59162205433","nombre":null,"nombre_edificio":"La Riviera","zona":"Sirari","dormitorios":2,"area_total_m2":"99.95","precio_mensual_bob":"9500.00"},
+  {"id":764,"whatsapp":"59177338471","nombre":null,"nombre_edificio":"EDIFICIO SKY PALMETTO","zona":"Sirari","dormitorios":2,"area_total_m2":"89.00","precio_mensual_bob":"4872.00"},
+  {"id":765,"whatsapp":"59168084028","nombre":null,"nombre_edificio":"Nanotec BY Smartstudio","zona":"Equipetrol Norte/Sur","dormitorios":1,"area_total_m2":"42.00","precio_mensual_bob":"3800.00"},
+  {"id":767,"whatsapp":"59160036124","nombre":null,"nombre_edificio":null,"zona":"Equipetrol Norte/Norte","dormitorios":1,"area_total_m2":"56.00","precio_mensual_bob":"5000.00"},
+  {"id":768,"whatsapp":"59169154198","nombre":null,"nombre_edificio":"Sky Collection Magnolia","zona":"Sirari","dormitorios":2,"area_total_m2":"79.95","precio_mensual_bob":"10500.00"},
+  {"id":769,"whatsapp":"59178511085","nombre":null,"nombre_edificio":"CONDOMINIO SKY LUMIERE","zona":"Equipetrol Norte/Sur","dormitorios":2,"area_total_m2":"103.00","precio_mensual_bob":"7656.00"},
+  {"id":770,"whatsapp":"59170815908","nombre":null,"nombre_edificio":"Sky Moon","zona":"Equipetrol Norte/Norte","dormitorios":0,"area_total_m2":"84.00","precio_mensual_bob":"8700.00"},
+  {"id":771,"whatsapp":"59175639355","nombre":null,"nombre_edificio":"EDIFICIO SKY MOON","zona":"Equipetrol Norte/Norte","dormitorios":1,"area_total_m2":"66.00","precio_mensual_bob":"6500.00"},
+  {"id":773,"whatsapp":"59178999999","nombre":null,"nombre_edificio":"EDIFICIO ECOSOSTENIBLE MULTIFAMILIAR EXPERIENCE","zona":"Equipetrol","dormitorios":1,"area_total_m2":"55.00","precio_mensual_bob":"4400.00"},
+  {"id":776,"whatsapp":"59178452844","nombre":null,"nombre_edificio":"SKY MOON","zona":"Equipetrol Norte/Norte","dormitorios":1,"area_total_m2":"97.00","precio_mensual_bob":"6500.00"},
+  {"id":777,"whatsapp":"59176002984","nombre":null,"nombre_edificio":"YOU by Smart Studio","zona":"Equipetrol Norte/Norte","dormitorios":1,"area_total_m2":"34.00","precio_mensual_bob":"3000.00"},
+  {"id":778,"whatsapp":"59176000430","nombre":null,"nombre_edificio":"Sky Moon","zona":"Equipetrol Norte/Norte","dormitorios":1,"area_total_m2":"41.05","precio_mensual_bob":"4900.00"},
+  {"id":779,"whatsapp":"59176029990","nombre":null,"nombre_edificio":"Element","zona":"Equipetrol","dormitorios":1,"area_total_m2":"37.23","precio_mensual_bob":"3500.00"},
+  {"id":782,"whatsapp":"59170280949","nombre":null,"nombre_edificio":"Sky Moon","zona":"Equipetrol Norte/Norte","dormitorios":1,"area_total_m2":"42.00","precio_mensual_bob":"5220.00"},
+  {"id":783,"whatsapp":"59177018025","nombre":null,"nombre_edificio":"Omnia Eco Lux","zona":"Equipetrol","dormitorios":1,"area_total_m2":"75.02","precio_mensual_bob":"4200.00"},
+  {"id":784,"whatsapp":"59169002003","nombre":null,"nombre_edificio":"Condominio Aguai","zona":"Equipetrol Norte/Norte","dormitorios":3,"area_total_m2":"238.00","precio_mensual_bob":"10000.00"},
+  {"id":787,"whatsapp":"59175669000","nombre":null,"nombre_edificio":null,"zona":"Equipetrol","dormitorios":1,"area_total_m2":"50.00","precio_mensual_bob":"3150.00"},
+  {"id":788,"whatsapp":"59170840460","nombre":null,"nombre_edificio":"Condominio Haus Equipe 5","zona":"Equipetrol","dormitorios":1,"area_total_m2":"46.00","precio_mensual_bob":"3500.00"},
+  {"id":790,"whatsapp":"59177860092","nombre":null,"nombre_edificio":"Condominio Domus Deluxe","zona":"Equipetrol","dormitorios":0,"area_total_m2":"38.00","precio_mensual_bob":"3400.00"},
+  {"id":791,"whatsapp":"59175639355","nombre":null,"nombre_edificio":"CONDOMINIO CASA BLANCA","zona":"Equipetrol Franja","dormitorios":2,"area_total_m2":"121.00","precio_mensual_bob":"5800.00"},
+  {"id":794,"whatsapp":"59176321009","nombre":null,"nombre_edificio":"BARUC IV EQUIPETROL","zona":"Villa Brigida","dormitorios":2,"area_total_m2":"76.00","precio_mensual_bob":"5220.00"},
+  {"id":795,"whatsapp":"59178000101","nombre":null,"nombre_edificio":"Smart Nano","zona":"Equipetrol","dormitorios":1,"area_total_m2":"31.88","precio_mensual_bob":"2850.00"},
+  {"id":796,"whatsapp":"59170044323","nombre":null,"nombre_edificio":"Quartier Isuto","zona":"Equipetrol","dormitorios":1,"area_total_m2":"48.61","precio_mensual_bob":"3300.00"},
+  {"id":797,"whatsapp":"59170044323","nombre":null,"nombre_edificio":"Quartier Isuto","zona":"Equipetrol","dormitorios":1,"area_total_m2":"48.61","precio_mensual_bob":"3800.00"},
+  {"id":799,"whatsapp":"59175111122","nombre":null,"nombre_edificio":"VERTICAL 60","zona":"Villa Brigida","dormitorios":2,"area_total_m2":"73.00","precio_mensual_bob":"5000.00"},
+  {"id":800,"whatsapp":"59175111122","nombre":null,"nombre_edificio":"ISUTO","zona":"Equipetrol","dormitorios":2,"area_total_m2":"64.00","precio_mensual_bob":"4500.00"},
+  {"id":801,"whatsapp":"59162816858","nombre":null,"nombre_edificio":"Condominio La Salle","zona":"Sin zona","dormitorios":2,"area_total_m2":"83.00","precio_mensual_bob":"4900.00"},
+  {"id":802,"whatsapp":"59162816858","nombre":null,"nombre_edificio":"Condominio La Madre","zona":"Equipetrol","dormitorios":3,"area_total_m2":"140.00","precio_mensual_bob":"5300.00"},
+  {"id":803,"whatsapp":"59170044323","nombre":null,"nombre_edificio":"Hotel Casa Blanca","zona":"Equipetrol Franja","dormitorios":2,"area_total_m2":"117.09","precio_mensual_bob":"5600.00"},
+  {"id":804,"whatsapp":"59170044323","nombre":null,"nombre_edificio":"Hotel Casa Blanca","zona":"Equipetrol Franja","dormitorios":2,"area_total_m2":"130.09","precio_mensual_bob":"4500.00"},
+  {"id":805,"whatsapp":"59177338471","nombre":null,"nombre_edificio":"EDIFICIO LUXE SUITES","zona":"Equipetrol","dormitorios":2,"area_total_m2":"79.00","precio_mensual_bob":"8000.00"},
+  {"id":806,"whatsapp":"59177338471","nombre":null,"nombre_edificio":"EDIFICIO LUXE SUITES","zona":"Equipetrol","dormitorios":2,"area_total_m2":"79.00","precio_mensual_bob":"8000.00"},
+  {"id":807,"whatsapp":"59178440773","nombre":null,"nombre_edificio":"EDIFICIO MACORORO 9","zona":"Equipetrol","dormitorios":1,"area_total_m2":"45.00","precio_mensual_bob":"3202.00"},
+  {"id":808,"whatsapp":"59175022012","nombre":null,"nombre_edificio":"Baruc IV","zona":"Villa Brigida","dormitorios":1,"area_total_m2":"36.00","precio_mensual_bob":"3000.00"},
+  {"id":809,"whatsapp":"59175022012","nombre":null,"nombre_edificio":"Baruc IV","zona":"Villa Brigida","dormitorios":1,"area_total_m2":"36.00","precio_mensual_bob":"3000.00"},
+  {"id":812,"whatsapp":"59176066289","nombre":null,"nombre_edificio":"Torre Platinium II","zona":"Villa Brigida","dormitorios":2,"area_total_m2":"118.00","precio_mensual_bob":"6000.00"},
+  {"id":813,"whatsapp":"59171609391","nombre":null,"nombre_edificio":"CRUZ","zona":"Villa Brigida","dormitorios":1,"area_total_m2":"37.30","precio_mensual_bob":"3200.00"},
+  {"id":819,"whatsapp":"59177860092","nombre":null,"nombre_edificio":"Condominio Sucumbe","zona":"Equipetrol","dormitorios":1,"area_total_m2":"81.16","precio_mensual_bob":"3500.00"},
+  {"id":830,"whatsapp":"59173672482","nombre":null,"nombre_edificio":"Condominio Eco Studios","zona":"Equipetrol","dormitorios":null,"area_total_m2":"34.81","precio_mensual_bob":"2400.00"},
+  {"id":844,"whatsapp":"59175636155","nombre":null,"nombre_edificio":"Madero Residence","zona":"Equipetrol","dormitorios":0,"area_total_m2":"137.00","precio_mensual_bob":"11000.00"},
+  {"id":846,"whatsapp":"59172036763","nombre":null,"nombre_edificio":"Sky Design","zona":"Sirari","dormitorios":2,"area_total_m2":"106.00","precio_mensual_bob":"5800.00"},
+  {"id":850,"whatsapp":"59176314443","nombre":null,"nombre_edificio":"INFINITY","zona":"Equipetrol","dormitorios":1,"area_total_m2":"50.00","precio_mensual_bob":"3500.00"},
+  {"id":851,"whatsapp":"59176314443","nombre":null,"nombre_edificio":"Element Sirari","zona":"Equipetrol","dormitorios":1,"area_total_m2":"80.00","precio_mensual_bob":"4200.00"},
+  {"id":852,"whatsapp":"59176314443","nombre":null,"nombre_edificio":"Infinity","zona":"Equipetrol","dormitorios":1,"area_total_m2":"50.00","precio_mensual_bob":"4200.00"},
+  {"id":853,"whatsapp":"59176314443","nombre":null,"nombre_edificio":"Onix Art","zona":"Sirari","dormitorios":1,"area_total_m2":"40.00","precio_mensual_bob":"3200.00"},
+  {"id":854,"whatsapp":"59176314443","nombre":null,"nombre_edificio":"Edif. Onix Art","zona":"Sirari","dormitorios":1,"area_total_m2":"53.00","precio_mensual_bob":"4550.00"},
+  {"id":855,"whatsapp":"59176314443","nombre":null,"nombre_edificio":"Onix Art","zona":"Sirari","dormitorios":1,"area_total_m2":"34.00","precio_mensual_bob":"3200.00"},
+  {"id":856,"whatsapp":"59176314443","nombre":null,"nombre_edificio":"Onix Art Sirari","zona":"Sirari","dormitorios":1,"area_total_m2":"34.00","precio_mensual_bob":"3200.00"},
+  {"id":857,"whatsapp":"59171161200","nombre":null,"nombre_edificio":"Edificio Lofty Green","zona":"Equipetrol","dormitorios":1,"area_total_m2":"66.00","precio_mensual_bob":"3700.00"},
+  {"id":858,"whatsapp":"59172656449","nombre":null,"nombre_edificio":"Edificio Malibú Friendly","zona":"Equipetrol","dormitorios":0,"area_total_m2":"29.00","precio_mensual_bob":"2500.00"},
+  {"id":859,"whatsapp":"59178055677","nombre":null,"nombre_edificio":"Sky Blue","zona":"Equipetrol","dormitorios":2,"area_total_m2":"98.05","precio_mensual_bob":"6000.00"},
+  {"id":860,"whatsapp":"59177313000","nombre":null,"nombre_edificio":"SKY MOON","zona":"Equipetrol Norte/Norte","dormitorios":null,"area_total_m2":"41.00","precio_mensual_bob":"3800.00"},
+  {"id":861,"whatsapp":"59176314443","nombre":null,"nombre_edificio":"Elite Sirari","zona":"Sirari","dormitorios":1,"area_total_m2":"50.00","precio_mensual_bob":"3800.00"},
+  {"id":862,"whatsapp":"59176314443","nombre":null,"nombre_edificio":"Elite Sirari","zona":"Sirari","dormitorios":1,"area_total_m2":"80.00","precio_mensual_bob":"4200.00"},
+  {"id":863,"whatsapp":"59172036763","nombre":null,"nombre_edificio":"Sky Moon","zona":"Equipetrol Norte/Norte","dormitorios":2,"area_total_m2":"102.00","precio_mensual_bob":"10000.00"},
+  {"id":865,"whatsapp":"59175155643","nombre":null,"nombre_edificio":"Condominio Curupau Isuto","zona":"Sin zona","dormitorios":3,"area_total_m2":"151.00","precio_mensual_bob":"7500.00"},
+  {"id":866,"whatsapp":"59172190248","nombre":null,"nombre_edificio":"Legendary by Elite","zona":"Sirari","dormitorios":1,"area_total_m2":"47.00","precio_mensual_bob":"3700.00"},
+  {"id":867,"whatsapp":"59170036253","nombre":null,"nombre_edificio":"Sky Moon","zona":"Equipetrol Norte/Norte","dormitorios":2,"area_total_m2":"95.00","precio_mensual_bob":"12800.00"},
+  {"id":868,"whatsapp":"59172873643","nombre":null,"nombre_edificio":"Impera Tower","zona":"Equipetrol","dormitorios":1,"area_total_m2":"41.04","precio_mensual_bob":"4100.00"},
+  {"id":869,"whatsapp":"59176333353","nombre":null,"nombre_edificio":"Malibu Inside","zona":"Equipetrol","dormitorios":1,"area_total_m2":"38.00","precio_mensual_bob":"2800.00"},
+  {"id":877,"whatsapp":"59177648322","nombre":null,"nombre_edificio":"NANOTEC","zona":"Equipetrol Norte/Sur","dormitorios":2,"area_total_m2":"68.00","precio_mensual_bob":"5100.00"},
+  {"id":894,"whatsapp":"59177817712","nombre":null,"nombre_edificio":"MARE","zona":"Sirari","dormitorios":1,"area_total_m2":"44.00","precio_mensual_bob":"5000.00"},
+  {"id":895,"whatsapp":"59178518388","nombre":null,"nombre_edificio":null,"zona":"Faremafu","dormitorios":3,"area_total_m2":"121.00","precio_mensual_bob":"5500.00"},
+  {"id":896,"whatsapp":"59176314443","nombre":null,"nombre_edificio":"INFINITY","zona":"Equipetrol","dormitorios":1,"area_total_m2":"50.00","precio_mensual_bob":"4200.00"},
+  {"id":897,"whatsapp":"59164308350","nombre":null,"nombre_edificio":"MARE","zona":"Sirari","dormitorios":2,"area_total_m2":"86.76","precio_mensual_bob":"7000.00"},
+  {"id":898,"whatsapp":"59177860092","nombre":null,"nombre_edificio":"Condominio Toborochi","zona":"Equipetrol","dormitorios":1,"area_total_m2":"70.56","precio_mensual_bob":"3500.00"},
+  {"id":899,"whatsapp":"59175076718","nombre":null,"nombre_edificio":"Sky Luxia","zona":"Villa Brigida","dormitorios":2,"area_total_m2":"73.00","precio_mensual_bob":"6800.00"},
+  {"id":900,"whatsapp":"59175064424","nombre":null,"nombre_edificio":"Element by Elite","zona":"Sirari","dormitorios":1,"area_total_m2":"40.00","precio_mensual_bob":"3300.00"},
+  {"id":901,"whatsapp":"59169168050","nombre":null,"nombre_edificio":"Condominio Macororo Once","zona":"Equipetrol","dormitorios":3,"area_total_m2":"191.70","precio_mensual_bob":"15000.00"},
+  {"id":906,"whatsapp":"59171161200","nombre":null,"nombre_edificio":"LOFTY GREEN","zona":"Equipetrol","dormitorios":1,"area_total_m2":"57.00","precio_mensual_bob":"3700.00"}
+];
+
+const STORAGE_KEY = 'broker_share_sent_v1';
+const INACTIVE_KEY = 'broker_share_inactive_v1';
+
+function formatPrecio(val) {
+  const n = Math.round(parseFloat(val));
+  return n.toLocaleString('de-DE'); // uses dots as thousands separator
+}
+
+function formatDorms(d) {
+  if (d === null || d === undefined) return null;
+  if (d === 0) return 'Estudio';
+  return d + ' dorm';
+}
+
+function formatArea(a) {
+  if (a === null || a === undefined) return null;
+  const n = Math.round(parseFloat(a));
+  return n + 'm\u00B2';
+}
+
+function displayZona(zona) {
+  if (!zona) return 'Otras';
+  switch (zona) {
+    case 'Equipetrol': case 'Equipetrol Centro': return 'Eq. Centro';
+    case 'Equipetrol Norte': case 'Equipetrol Norte/Norte': case 'Equipetrol Norte/Sur': return 'Eq. Norte';
+    case 'Faremafu': return 'Eq. Oeste';
+    case 'Equipetrol Franja': return 'Eq. 3er Anillo';
+    case 'Villa Brigida': return 'V. Brigida';
+    case 'Sin zona': case 'sin zona': return 'Otras';
+    default: return zona;
+  }
+}
+
+function buildMessage(prop) {
+  const edificio = prop.nombre_edificio || 'Departamento';
+  const zona = displayZona(prop.zona);
+  const precio = formatPrecio(prop.precio_mensual_bob);
+
+  const parts = [];
+  const dorms = formatDorms(prop.dormitorios);
+  if (dorms !== null) parts.push(dorms);
+  const area = formatArea(prop.area_total_m2);
+  if (area !== null) parts.push(area);
+  parts.push('Bs ' + precio + '/mes');
+
+  const line1 = edificio + ' \u2014 ' + zona;
+  const line2 = parts.join(' \u00B7 ');
+  const line3 = 'https://simonbo.com/alquileres?id=' + prop.id;
+
+  return 'Mira este depto en alquiler:\n\n' + line1 + '\n' + line2 + '\n\n' + line3;
+}
+
+function encodeWA(msg) {
+  // Manual encode to ensure correct formatting
+  return encodeURIComponent(msg);
+}
+
+function buildWALink(phone, msg) {
+  return 'https://wa.me/' + phone + '?text=' + encodeWA(msg);
+}
+
+function initials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+function getSentSet() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch(e) { return new Set(); }
+}
+
+function saveSentSet(s) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...s])); } catch(e) {}
+}
+
+function updateCounter() {
+  const total = DATA.length;
+  const sent = getSentSet().size;
+  const inact = getInactiveSet().size;
+  const pending = total - sent;
+  document.getElementById('counter-text').textContent =
+    pending === 0 ? 'Todos enviados' : pending + ' mensaje' + (pending !== 1 ? 's' : '') + ' por enviar';
+  const parts = [];
+  if (sent > 0) parts.push(sent + ' enviado' + (sent !== 1 ? 's' : ''));
+  if (inact > 0) parts.push(inact + ' inactivo' + (inact !== 1 ? 's' : ''));
+  document.getElementById('counter-sent').textContent = parts.join(' · ');
+}
+
+function toggleSent(id, checkbox) {
+  const sent = getSentSet();
+  const key = String(id);
+  if (checkbox.checked) { sent.add(key); } else { sent.delete(key); }
+  saveSentSet(sent);
+  const row = document.querySelector('.prop-row[data-id="' + id + '"]');
+  if (row) row.classList.toggle('sent', checkbox.checked);
+  updateCounter();
+}
+
+function resetAll() {
+  if (!confirm('Reiniciar todos los checks?')) return;
+  saveSentSet(new Set());
+  saveInactiveSet(new Set());
+  document.querySelectorAll('.prop-check').forEach(cb => { cb.checked = false; });
+  document.querySelectorAll('.inactive-check').forEach(cb => { cb.checked = false; });
+  document.querySelectorAll('.prop-row').forEach(row => { row.classList.remove('sent'); row.classList.remove('inactive'); });
+  updateCounter();
+}
+
+function getInactiveSet() {
+  try {
+    const raw = localStorage.getItem(INACTIVE_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch(e) { return new Set(); }
+}
+
+function saveInactiveSet(s) {
+  try { localStorage.setItem(INACTIVE_KEY, JSON.stringify([...s])); } catch(e) {}
+}
+
+function toggleInactive(id, checkbox) {
+  const inactive = getInactiveSet();
+  const key = String(id);
+  if (checkbox.checked) { inactive.add(key); } else { inactive.delete(key); }
+  saveInactiveSet(inactive);
+  const row = document.querySelector('.prop-row[data-id="' + id + '"]');
+  if (row) row.classList.toggle('inactive', checkbox.checked);
+  updateCounter();
+}
+
+// Pre-seed sent + inactive IDs (merge with existing, never remove)
+function seedIds() {
+  const sent = getSentSet();
+  SENT_IDS.forEach(id => sent.add(String(id)));
+  saveSentSet(sent);
+
+  const inactive = getInactiveSet();
+  INACTIVE_IDS.forEach(id => inactive.add(String(id)));
+  saveInactiveSet(inactive);
+}
+seedIds();
+
+function render() {
+  const sent = getSentSet();
+  const inactive = getInactiveSet();
+
+  // Group by whatsapp number
+  const brokerMap = new Map();
+  DATA.forEach(prop => {
+    const phone = prop.whatsapp;
+    const resolvedName = prop.nombre || NAME_MAP[phone.replace(/\D/g, '')] || null;
+    if (!brokerMap.has(phone)) {
+      brokerMap.set(phone, { nombre: resolvedName, phone, props: [] });
+    }
+    // Prefer named broker
+    if (resolvedName && !brokerMap.get(phone).nombre) {
+      brokerMap.get(phone).nombre = resolvedName;
+    }
+    brokerMap.get(phone).props.push(prop);
+  });
+
+  // Sort: named brokers first (alphabetically), then unnamed (by phone)
+  const brokers = [...brokerMap.values()].sort((a, b) => {
+    const aHasName = !!a.nombre;
+    const bHasName = !!b.nombre;
+    if (aHasName && !bHasName) return -1;
+    if (!aHasName && bHasName) return 1;
+    if (aHasName && bHasName) return a.nombre.localeCompare(b.nombre, 'es');
+    return a.phone.localeCompare(b.phone);
+  });
+
+  const container = document.getElementById('main-container');
+  container.innerHTML = '';
+
+  brokers.forEach(broker => {
+    const section = document.createElement('div');
+    section.className = 'broker-section';
+
+    const displayName = broker.nombre || broker.phone;
+    const initStr = broker.nombre ? initials(broker.nombre) : '#';
+    const propCount = broker.props.length;
+
+    section.innerHTML = `
+      <div class="broker-header">
+        <div class="broker-avatar">${initStr}</div>
+        <div>
+          <div class="broker-name">${escHtml(displayName)}</div>
+          ${broker.nombre ? '<div class="broker-phone">' + escHtml(broker.phone) + '</div>' : ''}
+        </div>
+        <div class="broker-count">${propCount} prop${propCount !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="prop-list" id="list-${escHtml(broker.phone)}"></div>
+    `;
+
+    const list = section.querySelector('.prop-list');
+
+    broker.props.forEach(prop => {
+      const msg = buildMessage(prop);
+      const waLink = buildWALink(prop.whatsapp, msg);
+      const isSent = sent.has(String(prop.id));
+      const isInactive = inactive.has(String(prop.id));
+
+      const edificio = prop.nombre_edificio || 'Departamento';
+      const dorms = formatDorms(prop.dormitorios);
+      const area = formatArea(prop.area_total_m2);
+      const precio = formatPrecio(prop.precio_mensual_bob);
+
+      const metaParts = [];
+      if (dorms !== null) metaParts.push(dorms);
+      if (area !== null) metaParts.push(area);
+      metaParts.push(prop.zona);
+
+      const row = document.createElement('div');
+      row.className = 'prop-row' + (isSent ? ' sent' : '') + (isInactive ? ' inactive' : '');
+      row.setAttribute('data-id', prop.id);
+
+      row.innerHTML = `
+        <input type="checkbox" class="prop-check" ${isSent ? 'checked' : ''}
+          onchange="toggleSent(${prop.id}, this)" title="Marcar como enviado">
+        <div class="prop-info">
+          <div class="prop-name">${escHtml(edificio)}${isInactive ? ' <span class="inactive-tag">INACTIVO</span>' : ''}</div>
+          <div class="prop-meta">${escHtml(metaParts.join(' · '))}</div>
+          <div class="prop-price">Bs ${escHtml(precio)}/mes</div>
+        </div>
+        <div class="prop-id">#${prop.id}</div>
+        <label class="inactive-label" title="Marcar como inactivo (ya no disponible)">
+          <input type="checkbox" class="inactive-check" ${isInactive ? 'checked' : ''}
+            onchange="toggleInactive(${prop.id}, this)">
+          <span class="inactive-icon">${isInactive ? '&#x26D4;' : '&#x1F6AB;'}</span>
+        </label>
+        <a class="wa-btn" href="${waLink}" target="_blank" rel="noopener">
+          <svg class="wa-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+          Enviar
+        </a>
+      `;
+
+      list.appendChild(row);
+    });
+
+    container.appendChild(section);
+  });
+
+  updateCounter();
+}
+
+function escHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+render();
+</script>
+</body>
+</html>
