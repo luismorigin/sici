@@ -235,16 +235,17 @@ export default function AlquileresPage() {
   }, [activeCardIndex, isDesktop])
 
   const fetchProperties = useCallback(async (f: FiltrosAlquiler, retry = true): Promise<number> => {
-    const gen = ++fetchGenRef.current // cancel any prior background loads
+    const gen = ++fetchGenRef.current
     setLoading(true)
     setLoadError(false)
     try {
-      const { data, total } = await fetchFromAPI({ ...f, limite: 50, offset: 0 })
+      // Single fetch — 185 properties, ~80KB gzipped, ~250ms total
+      const { data, total } = await fetchFromAPI({ ...f, limite: 200 })
       if (gen !== fetchGenRef.current) { setLoading(false); return 0 }
       if (data.length === 0 && retry) {
         await new Promise(r => setTimeout(r, 1500))
         if (gen !== fetchGenRef.current) { setLoading(false); return 0 }
-        const r2 = await fetchFromAPI({ ...f, limite: 50, offset: 0 })
+        const r2 = await fetchFromAPI({ ...f, limite: 200 })
         if (gen !== fetchGenRef.current) { setLoading(false); return 0 }
         setProperties(r2.data)
         setLoading(false)
@@ -254,29 +255,6 @@ export default function AlquileresPage() {
       setProperties(data)
       setLoading(false)
       setTotalCount(total)
-
-      // Incremental loading: fetch remaining pages in background
-      if (data.length === 50 && total > 50) {
-        const seenIds = new Set(data.map((d: UnidadAlquiler) => d.id))
-        let offset = 50
-        const loadMore = async () => {
-          await new Promise(r => setTimeout(r, 300))
-          if (gen !== fetchGenRef.current) return // filters changed, stop
-          const next = await fetchFromAPI({ ...f, limite: 50, offset })
-          if (gen !== fetchGenRef.current) return // filters changed, stop
-          // Dedupe: if all IDs already seen, offset isn't working — stop
-          const newItems = next.data.filter((d: UnidadAlquiler) => !seenIds.has(d.id))
-          if (newItems.length === 0) return // offset not working or no new data
-          newItems.forEach((d: UnidadAlquiler) => seenIds.add(d.id))
-          setProperties(prev => [...prev, ...newItems])
-          if (next.data.length === 50) {
-            offset += 50
-            loadMore()
-          }
-        }
-        loadMore()
-      }
-
       return total
     } catch {
       if (gen !== fetchGenRef.current) { setLoading(false); return 0 }
@@ -1929,7 +1907,8 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
     if (previewRef.current) clearTimeout(previewRef.current)
     previewRef.current = setTimeout(async () => {
       const f = buildFilters()
-      const { total } = await fetchFromAPI({ ...f, limite: 1 })
+      const { data } = await fetchFromAPI({ ...f, limite: 200 })
+      const total = data.length
       setPreviewCount(total)
     }, 400)
     return () => { if (previewRef.current) clearTimeout(previewRef.current) }

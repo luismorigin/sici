@@ -61,9 +61,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { filtros = {}, spotlightId } = req.body || {}
 
-    // Build RPC params — clamp limite to 50 max
+    // Build RPC params — clamp limite to 200 max (185 active inventory)
     const rpcFiltros: Record<string, any> = {
-      limite: Math.min(filtros.limite || 50, 50),
+      limite: Math.min(filtros.limite || 200, 200),
       solo_con_fotos: filtros.solo_con_fotos ?? true,
     }
 
