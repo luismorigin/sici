@@ -22,6 +22,20 @@ const ZONAS_UI = [
   { id: 'sin_zona', label: 'Otras' },
 ]
 
+// Map raw DB zone names → friendly display labels (matches filter UI)
+function displayZona(zona: string | null | undefined): string {
+  if (!zona) return 'Otras'
+  switch (zona) {
+    case 'Equipetrol': case 'Equipetrol Centro': return 'Eq. Centro'
+    case 'Equipetrol Norte': case 'Equipetrol Norte/Norte': case 'Equipetrol Norte/Sur': return 'Eq. Norte'
+    case 'Faremafu': return 'Eq. Oeste'
+    case 'Equipetrol Franja': return 'Eq. 3er Anillo'
+    case 'Villa Brigida': return 'V. Brigida'
+    case 'Sin zona': case 'sin zona': return 'Otras'
+    default: return zona
+  }
+}
+
 const ORDEN_OPTIONS: Array<{ value: FiltrosAlquiler['orden']; label: string }> = [
   { value: 'recientes', label: 'Recientes' },
   { value: 'precio_asc', label: 'Precio ↑' },
@@ -121,7 +135,7 @@ function buildLeadWhatsAppUrl(p: UnidadAlquiler, msg: string, fuente: string, pr
 // Build WhatsApp share URL for sharing a property with friends (NOT lead tracking)
 function buildShareWhatsAppUrl(p: UnidadAlquiler) {
   const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
-  const zone = p.zona || 'Equipetrol'
+  const zone = displayZona(p.zona)
   const specs = `${dormLabel(p.dormitorios)} · ${p.area_m2}m² · ${formatPrice(p.precio_mensual_bob)}/mes`
   const url = `https://simonbo.com/alquileres?id=${p.id}`
   const text = `Mira este depto en alquiler:\n\n${name} — ${zone}\n${specs}\n\n${url}`
@@ -391,7 +405,7 @@ export default function AlquileresPage() {
     setViewerPhotos(p.fotos_urls)
     setViewerIndex(photoIndex)
     setViewerName(p.nombre_edificio || p.nombre_proyecto || 'Departamento')
-    setViewerSubtitle(`${p.zona || 'Equipetrol'} · ${p.area_m2}m² · ${dormLabel(p.dormitorios)}`)
+    setViewerSubtitle(`${displayZona(p.zona)} · ${p.area_m2}m² · ${dormLabel(p.dormitorios)}`)
     setViewerOpen(true)
     analyticsRef.current.hasInteracted = true
     trackEvent('view_photos', { property_id: p.id, property_name: p.nombre_edificio || p.nombre_proyecto || '', fotos_count: p.fotos_urls.length })
@@ -1342,7 +1356,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
         </div>
         <div className="mfc-m-body">
           <div className="mfc-m-name">{spName}</div>
-          <div className="mfc-m-specs">{sp.zona || 'Equipetrol'} · {sp.area_m2}m² · {dormLabel(sp.dormitorios)}</div>
+          <div className="mfc-m-specs">{displayZona(sp.zona)} · {sp.area_m2}m² · {dormLabel(sp.dormitorios)}</div>
           <div className="mfc-m-price">{formatPrice(sp.precio_mensual_bob)}<span>/mes</span></div>
           {spBadges.length > 0 && (
             <div className="mfc-m-badges">{spBadges.map((b, i) => <span key={i} className="mfc-m-badge">{b}</span>)}</div>
@@ -1462,7 +1476,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
       </div>
       <div className="map-float-body">
         <div className="map-float-name">{spName}</div>
-        <div className="map-float-zona">{sp.zona || 'Equipetrol'} · {sp.area_m2}m² · {dormLabel(sp.dormitorios)}</div>
+        <div className="map-float-zona">{displayZona(sp.zona)} · {sp.area_m2}m² · {dormLabel(sp.dormitorios)}</div>
         <div className="map-float-price">{formatPrice(sp.precio_mensual_bob)}<span>/mes</span></div>
         {spBadges.length > 0 && (
           <div className="map-float-badges">{spBadges.map((b, i) => <span key={i} className="map-float-badge">{b}</span>)}</div>
@@ -1614,7 +1628,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
       {/* Content */}
       <div className="dc-content">
         <div className="dc-name">{displayName}</div>
-        <div className="dc-zona">{p.zona || 'Equipetrol'} <span className="dc-id">#{p.id}</span></div>
+        <div className="dc-zona">{displayZona(p.zona)} <span className="dc-id">#{p.id}</span></div>
         <div className="dc-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
         <div className="dc-specs">
           {p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · ${p.piso}° piso` : ''}
@@ -1716,7 +1730,7 @@ function MobilePropertyCard({
       )}
       <div className="mc-content">
         <div className="mc-name">{displayName}</div>
-        <div className="mc-zona">{p.zona || 'Equipetrol'} <span className="mc-id">#{p.id}</span></div>
+        <div className="mc-zona">{displayZona(p.zona)} <span className="mc-id">#{p.id}</span></div>
         <div className="mc-price">{formatPrice(p.precio_mensual_bob)}/mes</div>
         <div className="mc-specs">{p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · ${p.piso}°` : ''}</div>
         <div className="mc-badges">
