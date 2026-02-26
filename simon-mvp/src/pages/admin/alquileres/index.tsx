@@ -209,6 +209,7 @@ export default function AdminAlquileres() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('activos')
   const [fuenteFilter, setFuenteFilter] = useState('')
   const [enviadoFilter, setEnviadoFilter] = useState<EnviadoFilter>('todos')
+  const [diasMax, setDiasMax] = useState<string>('')
   const [orden, setOrden] = useState<'recientes' | 'precio_asc' | 'precio_desc' | 'dias_desc'>('recientes')
 
   // Edit state
@@ -313,6 +314,17 @@ export default function AdminAlquileres() {
       list = list.filter(p => getSentDate(p.id) === null)
     }
 
+    // Dias max filter
+    if (diasMax !== '') {
+      const max = parseInt(diasMax)
+      if (!isNaN(max)) {
+        list = list.filter(p => {
+          const dias = diasEnMercado(p.fecha_publicacion, p.fecha_discovery)
+          return dias !== null && dias <= max
+        })
+      }
+    }
+
     // Sort: activos first, then by selected order
     return list.sort((a, b) => {
       // Inactive/expirado always at the bottom
@@ -330,7 +342,7 @@ export default function AdminAlquileres() {
       // Default: recientes (fecha_discovery desc)
       return (b.fecha_discovery || '').localeCompare(a.fecha_discovery || '')
     })
-  }, [propiedades, statusFilter, zonaFilter, dormsFilter, search, fuenteFilter, enviadoFilter, orden, sentVersion])
+  }, [propiedades, statusFilter, zonaFilter, dormsFilter, search, fuenteFilter, enviadoFilter, diasMax, orden, sentVersion])
 
   // ===== STATS =====
 
@@ -665,6 +677,15 @@ export default function AdminAlquileres() {
               <option value="precio_asc">Precio ↑</option>
               <option value="precio_desc">Precio ↓</option>
               <option value="dias_desc">Mas dias</option>
+            </select>
+            <select value={diasMax} onChange={e => setDiasMax(e.target.value)} style={selectStyle}>
+              <option value="">Dias: todos</option>
+              <option value="7">≤ 7 dias</option>
+              <option value="15">≤ 15 dias</option>
+              <option value="30">≤ 30 dias</option>
+              <option value="60">≤ 60 dias</option>
+              <option value="90">≤ 90 dias</option>
+              <option value="120">≤ 120 dias</option>
             </select>
             <select value={enviadoFilter} onChange={e => setEnviadoFilter(e.target.value as EnviadoFilter)} style={selectStyle}>
               <option value="todos">Enviados: todos</option>
