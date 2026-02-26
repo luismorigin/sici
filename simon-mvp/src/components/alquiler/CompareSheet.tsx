@@ -34,9 +34,19 @@ interface CompareSheetProps {
 function dormLabel(d: number) { return d === 0 ? 'Estudio' : `${d} dorm` }
 function fmt(n: number) { return n.toLocaleString('es-BO') }
 
+function trackEvent(name: string, params?: Record<string, any>) {
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', name, params)
+  }
+}
+
 function buildLeadUrl(p: UnidadAlquiler, msg: string, fuente: string, preguntas?: string[]) {
   const phone = p.agente_whatsapp?.replace(/\D/g, '') || ''
   const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
+  trackEvent('click_whatsapp', {
+    property_id: p.id, property_name: name, zone: p.zona || '',
+    price: p.precio_mensual_bob, dorms: p.dormitorios, broker_phone: phone, fuente,
+  })
   const params = new URLSearchParams({
     phone, msg, prop_id: String(p.id), nombre: name,
     zona: p.zona || '', precio: String(p.precio_mensual_bob),

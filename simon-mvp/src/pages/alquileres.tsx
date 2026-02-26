@@ -115,6 +115,15 @@ async function fetchFromAPI(filtros: FiltrosAlquiler & { offset?: number }, spot
 function buildLeadWhatsAppUrl(p: UnidadAlquiler, msg: string, fuente: string, preguntas?: string[]) {
   const phone = p.agente_whatsapp?.replace(/\D/g, '') || ''
   const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
+  trackEvent('click_whatsapp', {
+    property_id: p.id,
+    property_name: name,
+    zone: p.zona || '',
+    price: p.precio_mensual_bob,
+    dorms: p.dormitorios,
+    broker_phone: phone,
+    fuente,
+  })
   const params = new URLSearchParams({
     phone,
     msg,
@@ -290,6 +299,7 @@ export default function AlquileresPage() {
       await fetchProperties(filters)
     }
     init()
+    trackEvent('page_enter_alquiler', {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
