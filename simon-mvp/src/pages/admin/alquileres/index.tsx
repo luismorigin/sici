@@ -35,7 +35,7 @@ interface AlquilerProp {
   url: string | null
 }
 
-type StatusFilter = 'activos' | 'inactivo_pending' | 'inactivo_confirmed' | 'todos'
+type StatusFilter = 'activos' | 'expirados_150' | 'expirado_stale' | 'inactivo_pending' | 'inactivo_confirmed' | 'todos'
 type EnviadoFilter = 'todos' | 'enviados' | 'no_enviados'
 
 // ===== HELPERS =====
@@ -275,7 +275,14 @@ export default function AdminAlquileres() {
     if (!searchingById) {
       // Status filter
       if (statusFilter === 'activos') {
-        list = list.filter(p => !p.status.startsWith('inactivo') && p.es_activa)
+        list = list.filter(p => !p.status.startsWith('inactivo') && p.status !== 'expirado_stale' && p.es_activa)
+      } else if (statusFilter === 'expirados_150') {
+        list = list.filter(p => {
+          const dias = diasEnMercado(p.fecha_publicacion, p.fecha_discovery) || 0
+          return dias > 150 && !p.status.startsWith('inactivo') && p.status !== 'expirado_stale' && p.es_activa
+        })
+      } else if (statusFilter === 'expirado_stale') {
+        list = list.filter(p => p.status === 'expirado_stale')
       } else if (statusFilter === 'inactivo_pending') {
         list = list.filter(p => p.status === 'inactivo_pending')
       } else if (statusFilter === 'inactivo_confirmed') {
@@ -308,9 +315,9 @@ export default function AdminAlquileres() {
 
     // Sort: activos first, then by selected order
     return list.sort((a, b) => {
-      // Inactive always at the bottom
-      const aInactive = a.status.startsWith('inactivo') || !a.es_activa ? 1 : 0
-      const bInactive = b.status.startsWith('inactivo') || !b.es_activa ? 1 : 0
+      // Inactive/expirado always at the bottom
+      const aInactive = a.status.startsWith('inactivo') || a.status === 'expirado_stale' || !a.es_activa ? 1 : 0
+      const bInactive = b.status.startsWith('inactivo') || b.status === 'expirado_stale' || !b.es_activa ? 1 : 0
       if (aInactive !== bInactive) return aInactive - bInactive
 
       if (orden === 'precio_asc') return (a.precio_mensual_bob || 0) - (b.precio_mensual_bob || 0)
@@ -328,10 +335,15 @@ export default function AdminAlquileres() {
   // ===== STATS =====
 
   const stats = useMemo(() => {
-    const activos = propiedades.filter(p => !p.status.startsWith('inactivo') && p.es_activa).length
+    const activos = propiedades.filter(p => !p.status.startsWith('inactivo') && p.status !== 'expirado_stale' && p.es_activa).length
+    const expirados150 = propiedades.filter(p => {
+      const dias = diasEnMercado(p.fecha_publicacion, p.fecha_discovery) || 0
+      return dias > 150 && !p.status.startsWith('inactivo') && p.status !== 'expirado_stale' && p.es_activa
+    }).length
+    const expiradoStale = propiedades.filter(p => p.status === 'expirado_stale').length
     const inactivoPending = propiedades.filter(p => p.status === 'inactivo_pending').length
     const inactivoConfirmed = propiedades.filter(p => p.status === 'inactivo_confirmed').length
-    return { activos, inactivoPending, inactivoConfirmed, total: propiedades.length }
+    return { activos, expirados150, expiradoStale, inactivoPending, inactivoConfirmed, total: propiedades.length }
   }, [propiedades])
 
   // ===== EDIT HANDLERS =====
@@ -510,6 +522,32 @@ export default function AdminAlquileres() {
     }
   }
 
+  async function expirar(p: AlquilerProp) {
+    if (!supabase || !confirm(`Marcar #${p.id} ${p.nombre_edificio || ''} como expirado stale?\n(No cuenta como absorción)`)) return
+    try {
+      const { error } = await supabase
+        .from('propiedades_v2')
+        .update({ status: 'expirado_stale', es_activa: false })
+        .eq('id', p.id)
+      if (error) throw error
+
+      await supabase.from('propiedades_v2_historial').insert({
+        propiedad_id: p.id,
+        usuario_tipo: 'admin',
+        usuario_id: 'admin-hitl',
+        usuario_nombre: 'Admin HITL',
+        campo: 'status',
+        valor_anterior: p.status,
+        valor_nuevo: 'expirado_stale',
+        motivo: 'Expirado sin confirmación broker (>150d, no cuenta absorción)',
+      })
+
+      await fetchData()
+    } catch (err: any) {
+      alert('Error: ' + err.message)
+    }
+  }
+
   // ===== WA SEND =====
 
   function handleWASend(p: AlquilerProp) {
@@ -538,7 +576,11 @@ export default function AdminAlquileres() {
   if (authLoading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a', color: '#666' }}>Verificando acceso...</div>
   if (!admin) return null
 
-  const isInactive = (p: AlquilerProp) => p.status === 'inactivo_confirmed' || !p.es_activa
+  const isInactive = (p: AlquilerProp) => p.status === 'inactivo_confirmed' || p.status === 'expirado_stale' || !p.es_activa
+  const isExpired150 = (p: AlquilerProp) => {
+    const dias = diasEnMercado(p.fecha_publicacion, p.fecha_discovery) || 0
+    return dias > 150 && !isInactive(p)
+  }
 
   return (
     <>
@@ -571,9 +613,11 @@ export default function AdminAlquileres() {
           <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', gap: 24, fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
             <span style={{ color: '#4ade80' }}>{stats.activos} activos</span>
             <span>|</span>
-            <span style={{ color: '#fbbf24' }}>{stats.inactivoPending} inactivo pending</span>
+            {stats.expirados150 > 0 && (<><span style={{ color: '#ff6b35' }}>{stats.expirados150} &gt;150d</span><span>|</span></>)}
+            {stats.expiradoStale > 0 && (<><span style={{ color: '#888' }}>{stats.expiradoStale} expirados</span><span>|</span></>)}
+            <span style={{ color: '#fbbf24' }}>{stats.inactivoPending} pending</span>
             <span>|</span>
-            <span style={{ color: '#f87171' }}>{stats.inactivoConfirmed} inactivo confirmed</span>
+            <span style={{ color: '#f87171' }}>{stats.inactivoConfirmed} inactivos</span>
             <span>|</span>
             <span>{stats.total} total</span>
             <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.3)' }}>
@@ -610,6 +654,8 @@ export default function AdminAlquileres() {
             </select>
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as StatusFilter)} style={selectStyle}>
               <option value="activos">Activos</option>
+              <option value="expirados_150">&gt;150d (verificar)</option>
+              <option value="expirado_stale">Expirados stale</option>
               <option value="inactivo_pending">Inactivo pending</option>
               <option value="inactivo_confirmed">Inactivo confirmed</option>
               <option value="todos">Todos</option>
@@ -644,6 +690,7 @@ export default function AdminAlquileres() {
                   key={p.id}
                   p={p}
                   inactive={isInactive(p)}
+                  expired150={isExpired150(p)}
                   expanded={expandedId === p.id}
                   editValues={expandedId === p.id ? editValues : {}}
                   saving={saving}
@@ -653,6 +700,7 @@ export default function AdminAlquileres() {
                   onSave={() => saveEdit(p)}
                   onInactivar={() => inactivar(p)}
                   onReactivar={() => reactivar(p)}
+                  onExpirar={() => expirar(p)}
                   onWASend={() => handleWASend(p)}
                   onToggleSent={() => toggleSent(p.id)}
                 />
@@ -684,9 +732,10 @@ const selectStyle: React.CSSProperties = {
 
 // ===== CARD COMPONENT =====
 
-function PropertyCard({ p, inactive, expanded, editValues, saving, sentDate, onToggleEdit, onEditChange, onSave, onInactivar, onReactivar, onWASend, onToggleSent }: {
+function PropertyCard({ p, inactive, expired150, expanded, editValues, saving, sentDate, onToggleEdit, onEditChange, onSave, onInactivar, onReactivar, onExpirar, onWASend, onToggleSent }: {
   p: AlquilerProp
   inactive: boolean
+  expired150: boolean
   expanded: boolean
   editValues: Record<string, any>
   saving: boolean
@@ -696,6 +745,7 @@ function PropertyCard({ p, inactive, expanded, editValues, saving, sentDate, onT
   onSave: () => void
   onInactivar: () => void
   onReactivar: () => void
+  onExpirar: () => void
   onWASend: () => void
   onToggleSent: () => void
 }) {
@@ -719,7 +769,7 @@ function PropertyCard({ p, inactive, expanded, editValues, saving, sentDate, onT
   return (
     <div style={{
       background: '#111',
-      border: `1px solid ${inactive ? 'rgba(248,113,113,0.3)' : 'rgba(255,255,255,0.06)'}`,
+      border: `1px solid ${inactive ? 'rgba(248,113,113,0.3)' : expired150 ? 'rgba(255,107,53,0.4)' : 'rgba(255,255,255,0.06)'}`,
       borderRadius: 12,
       overflow: 'hidden',
       opacity: inactive ? 0.5 : 1,
@@ -756,9 +806,21 @@ function PropertyCard({ p, inactive, expanded, editValues, saving, sentDate, onT
             position: 'absolute', inset: 0,
             background: 'rgba(0,0,0,0.5)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#f87171', fontSize: 14, fontWeight: 600,
+            color: p.status === 'expirado_stale' ? '#888' : '#f87171', fontSize: 14, fontWeight: 600,
           }}>
-            INACTIVO
+            {p.status === 'expirado_stale' ? 'EXPIRADO' : 'INACTIVO'}
+          </div>
+        )}
+        {/* Expired >150d badge */}
+        {expired150 && !inactive && (
+          <div style={{
+            position: 'absolute', bottom: 8, left: 8,
+            background: 'rgba(255,107,53,0.9)', padding: '3px 10px',
+            borderRadius: 100, fontSize: 10, fontWeight: 700,
+            color: '#fff', fontFamily: "'Manrope', sans-serif",
+            letterSpacing: 0.5,
+          }}>
+            &gt;150d — VERIFICAR
           </div>
         )}
       </div>
@@ -823,7 +885,7 @@ function PropertyCard({ p, inactive, expanded, editValues, saving, sentDate, onT
             </button>
           )}
 
-          {/* Inactivar / Reactivar */}
+          {/* Inactivar / Reactivar / Expirar */}
           {inactive ? (
             <button onClick={onReactivar} style={{
               padding: '6px 10px', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)',
@@ -832,12 +894,22 @@ function PropertyCard({ p, inactive, expanded, editValues, saving, sentDate, onT
               REACTIVAR
             </button>
           ) : (
-            <button onClick={onInactivar} style={{
-              padding: '6px 10px', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)',
-              borderRadius: 6, color: '#f87171', fontSize: 11, cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
-            }}>
-              INACTIVAR
-            </button>
+            <>
+              <button onClick={onInactivar} style={{
+                padding: '6px 10px', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)',
+                borderRadius: 6, color: '#f87171', fontSize: 11, cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
+              }}>
+                INACTIVAR
+              </button>
+              {expired150 && (
+                <button onClick={onExpirar} style={{
+                  padding: '6px 10px', background: 'rgba(255,107,53,0.1)', border: '1px solid rgba(255,107,53,0.3)',
+                  borderRadius: 6, color: '#ff6b35', fontSize: 11, cursor: 'pointer', fontFamily: "'Manrope', sans-serif",
+                }}>
+                  EXPIRAR
+                </button>
+              )}
+            </>
           )}
 
           {/* Edit toggle */}
