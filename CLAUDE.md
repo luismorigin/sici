@@ -79,6 +79,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 | **Prompt LLM Alquiler** | `docs/alquiler/LLM_ENRICHMENT_PROMPT.md` |
 | **Roadmap Alquiler** | `docs/alquiler/ROADMAP_IMPLEMENTACION.md` |
 | **Pipeline Alquiler Canonical** | `docs/canonical/pipeline_alquiler_canonical.md` |
+| **Learnings Alquiler** | `docs/alquiler/LEARNINGS_PIPELINE_ALQUILER.md` |
 | Plan activo | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
@@ -437,6 +438,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 160 | alquiler_offset | OFFSET en buscar_unidades_alquiler() para paginación server-side | ✅ |
 | 163 | alquiler_filtro_150_dias | Reducir filtro antigüedad alquiler de 180→150 días | ✅ |
 | 164 | status_expirado_stale | Status `expirado_stale` (no cuenta absorción) + limpiar 4 props >150d | ✅ |
+| 165 | fix_discovery_alquiler_fecha | Fix fecha_discovery BI (preservar si sin fecha_publicacion) + retroactivo | ✅ |
 
 ## Repo Legacy
 
