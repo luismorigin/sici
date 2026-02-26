@@ -436,6 +436,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 158 | bien_inmuebles_fotos_alquiler | Branch fotos + agente Bien Inmuebles en buscar_unidades_alquiler() | ✅ |
 | 160 | alquiler_offset | OFFSET en buscar_unidades_alquiler() para paginación server-side | ✅ |
 | 163 | alquiler_filtro_150_dias | Reducir filtro antigüedad alquiler de 180→150 días | ✅ |
+| 164 | status_expirado_stale | Status `expirado_stale` (no cuenta absorción) + limpiar 4 props >150d | ✅ |
 
 ## Repo Legacy
 
