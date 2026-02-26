@@ -54,7 +54,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
    - `(es_multiproyecto = false OR es_multiproyecto IS NULL)`
    - `area_total_m2 >= 20`
    - `<= 300 días` en mercado para venta (730 para preventa)
-   - `<= 180 días` en mercado para alquiler (vida mediana: C21 34d, Remax 73d)
+   - `<= 150 días` en mercado para alquiler (vida mediana: C21 34d, Remax 73d)
    - Ver detalle completo en `docs/reports/FILTROS_CALIDAD_MERCADO.md`
    - **Zona venta** usa nombres nuevos (`Equipetrol Centro`, `Villa Brígida`, etc.)
    - **Zona alquiler** usa nombres viejos (`Equipetrol`, `Faremafu`, `Villa Brigida`, etc.)
@@ -435,6 +435,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 140 | market_absorption_snapshots | Tabla + función snapshot inversión mercado (absorción, precios, renta, ROI) | ✅ |
 | 158 | bien_inmuebles_fotos_alquiler | Branch fotos + agente Bien Inmuebles en buscar_unidades_alquiler() | ✅ |
 | 160 | alquiler_offset | OFFSET en buscar_unidades_alquiler() para paginación server-side | ✅ |
+| 163 | alquiler_filtro_150_dias | Reducir filtro antigüedad alquiler de 180→150 días | ✅ |
 
 ## Repo Legacy
 
