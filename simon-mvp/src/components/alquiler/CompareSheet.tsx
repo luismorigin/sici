@@ -45,6 +45,9 @@ function buildLeadUrl(p: UnidadAlquiler, msg: string, fuente: string, preguntas?
   if (preguntas && preguntas.length > 0) {
     params.set('preguntas', JSON.stringify(preguntas))
   }
+  if (typeof window !== 'undefined' && localStorage.getItem('simon_debug') === '1') {
+    params.set('debug', '1')
+  }
   return `/api/lead-alquiler?${params.toString()}`
 }
 

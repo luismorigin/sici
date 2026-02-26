@@ -25,6 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       broker_nombre,
       fuente,
       preguntas,
+      debug,
     } = req.query
 
     if (!phone || typeof phone !== 'string') {
@@ -65,6 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         broker_nombre: typeof broker_nombre === 'string' ? broker_nombre.slice(0, 200) : null,
         fuente: typeof fuente === 'string' ? fuente.slice(0, 50) : 'card',
         preguntas_enviadas: preguntasArr.length > 0 ? preguntasArr : null,
+        es_test: debug === '1',
       }).then(({ error }) => {
         if (error) console.error('Error registrando lead alquiler:', error)
       })
