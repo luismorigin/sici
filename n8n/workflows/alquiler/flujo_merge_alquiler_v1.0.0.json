@@ -1,5 +1,5 @@
 {
-  "name": "Merge Alquiler v1.0.0",
+  "name": "Merge Alquiler v1.1.0",
   "nodes": [
     {
       "parameters": {
@@ -17,16 +17,16 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [-480, 288],
-      "notes": "Después de enrichment (2:30 AM)"
+      "notes": "Después de enrichment (3:00 AM)"
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, url, status, precio_mensual_bob, area_total_m2, dormitorios FROM propiedades_v2 WHERE tipo_operacion = 'alquiler' AND status IN ('nueva', 'actualizado') AND datos_json_enrichment IS NOT NULL ORDER BY fecha_discovery ASC",
+        "query": "SELECT COUNT(*) as pendientes FROM propiedades_v2 WHERE tipo_operacion = 'alquiler' AND status IN ('nueva', 'actualizado') AND datos_json_enrichment IS NOT NULL",
         "options": {}
       },
       "id": "m1-query",
-      "name": "Query Alquileres Pendientes",
+      "name": "Contar Pendientes",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [-240, 288],
@@ -49,7 +49,7 @@
           "conditions": [
             {
               "id": "has-items",
-              "leftValue": "={{ $json.id }}",
+              "leftValue": "={{ $json.pendientes }}",
               "rightValue": "0",
               "operator": {
                 "type": "number",
@@ -69,84 +69,107 @@
     },
     {
       "parameters": {
-        "options": {
-          "reset": false
-        },
-        "batchSize": 1
-      },
-      "id": "m1-batch",
-      "name": "Loop Alquileres",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [240, 176]
-    },
-    {
-      "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT * FROM merge_alquiler($1::INTEGER)",
-        "options": {
-          "queryReplacement": "={{ [$json.id] }}"
-        }
+        "query": "SELECT * FROM merge_alquiler()",
+        "options": {}
       },
       "id": "m1-merge",
       "name": "Ejecutar Merge",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [480, 300],
+      "position": [240, 288],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
           "name": "Supabase - Censo Inmobiliario"
         }
       },
-      "notes": "merge_alquiler() - enrichment-first, sin TC paralelo"
+      "notes": "merge_alquiler() sin parámetro procesa TODAS las pendientes en un solo call"
     },
     {
       "parameters": {
-        "jsCode": "// === RESUMEN MERGE ALQUILER ===\n// Split In Batches no acumula items en la salida 'done'.\n// Solución: simplemente reportar que terminó.\n// Los resultados reales se verifican en la BD.\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  workflow: 'Merge Alquiler',\n  version: '1.0.2',\n  message: 'Merge completado. Verificar resultados en BD.',\n  status: 'completado'\n};\n\nreturn [{ json: resumen }];"
+        "jsCode": "const items = $input.all();\n\nlet merged = 0;\nlet errors = 0;\nconst resultados = [];\n\nfor (const item of items) {\n  const data = item.json;\n  if (data.status === 'merged') {\n    merged++;\n  } else if (data.status === 'no_pending') {\n    // nada\n  } else if (data.status) {\n    errors++;\n  }\n  if (data.id) {\n    resultados.push({\n      id: data.id,\n      accion: data.status || 'unknown',\n      mensaje: data.message || ''\n    });\n  }\n}\n\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  workflow: 'Merge Alquiler',\n  version: '1.1.0',\n  total_procesadas: resultados.length,\n  merged: merged,\n  errors: errors,\n  resultados: resultados.slice(0, 20),\n  status: errors === 0 ? 'completado' : 'completado_con_errores'\n};\n\nreturn [{ json: resumen }];"
       },
       "id": "m1-summary",
       "name": "Resumen Final",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [720, 288]
+      "position": [480, 288]
     },
     {
       "parameters": {
-        "jsCode": "// Sin pendientes\nreturn [{ json: { timestamp: new Date().toISOString(), message: 'No hay alquileres pendientes de merge', status: 'sin_pendientes' } }];"
+        "jsCode": "return [{ json: { timestamp: new Date().toISOString(), message: 'No hay alquileres pendientes de merge', status: 'sin_pendientes' } }];"
       },
       "id": "m1-empty",
       "name": "Sin Pendientes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [240, 480]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT registrar_ejecucion_workflow('merge_alquiler', 'success')",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [720, 288],
+      "id": "m1-tracking",
+      "name": "Tracking",
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT registrar_ejecucion_workflow('merge_alquiler', 'success', 0, 0, 0)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [480, 480],
+      "id": "m1-tracking-empty",
+      "name": "Tracking Sin Pendientes",
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
     }
   ],
   "pinData": {},
   "connections": {
     "Trigger 3:30 AM": {
-      "main": [[{"node": "Query Alquileres Pendientes", "type": "main", "index": 0}]]
+      "main": [[{"node": "Contar Pendientes", "type": "main", "index": 0}]]
     },
-    "Query Alquileres Pendientes": {
+    "Contar Pendientes": {
       "main": [[{"node": "Hay Pendientes?", "type": "main", "index": 0}]]
     },
     "Hay Pendientes?": {
       "main": [
-        [{"node": "Loop Alquileres", "type": "main", "index": 0}],
+        [{"node": "Ejecutar Merge", "type": "main", "index": 0}],
         [{"node": "Sin Pendientes", "type": "main", "index": 0}]
       ]
     },
-    "Loop Alquileres": {
-      "main": [
-        [{"node": "Resumen Final", "type": "main", "index": 0}],
-        [{"node": "Ejecutar Merge", "type": "main", "index": 0}]
-      ]
-    },
     "Ejecutar Merge": {
-      "main": [[{"node": "Loop Alquileres", "type": "main", "index": 0}]]
+      "main": [[{"node": "Resumen Final", "type": "main", "index": 0}]]
+    },
+    "Resumen Final": {
+      "main": [[{"node": "Tracking", "type": "main", "index": 0}]]
+    },
+    "Sin Pendientes": {
+      "main": [[{"node": "Tracking Sin Pendientes", "type": "main", "index": 0}]]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "timeSavedMode": "fixed",
