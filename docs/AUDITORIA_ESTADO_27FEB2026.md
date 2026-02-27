@@ -68,11 +68,9 @@ Exportadas de BD via `pg_get_functiondef()` el 27 Feb 2026:
 - `formulario-inversion-renta.tsx`, `formulario-inversion-plusvalia.tsx`
 - `results.tsx`, `resultsV2.tsx`, `resultados.tsx` (4,628 líneas), `summary.tsx`, `contact.tsx`
 
-### Fase 2D — README
+### Fase 2D — README ✅
 
-Actualizar README.md con métricas reales.
-
-**Riesgo:** Bajo (solo documentación)
+README.md reescrito con métricas reales de BD (986 props, 227 proyectos, 171 migraciones), estructura actualizada, horarios pipeline, rutas frontend.
 
 ---
 
