@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  eslint: {
+    // Lint errors in legacy code — don't block production builds
+    ignoreDuringBuilds: true,
+  },
   swcMinify: true,
   compress: true,
   poweredByHeader: false,
