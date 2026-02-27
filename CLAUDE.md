@@ -300,7 +300,7 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 
 ## Migraciones SQL (001-129)
 
-> **Nota de Auditoría (5 Feb 2026):** Números duplicados en 115 y 116 (2 archivos c/u). Saltos en 045, 055, 058.
+> **Nota de Auditoría (27 Feb 2026):** Duplicados renombrados con sufijo "b" (115b, 116b, 140b, 147b, 148b). Saltos intencionales en 045, 055, 058.
 
 | # | Archivo | Propósito | Estado |
 |---|---------|-----------|--------|
@@ -418,9 +418,9 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 112 | trigger_creditos_cma | Trigger créditos CMA | ✅ |
 | 113 | validacion_humana_auto_aprobados | Validación humana auto-aprobados | ✅ |
 | 114 | unificar_dias_mercado_300 | Unificar días en mercado (300 máx) | ✅ |
-| 115a | candados_ediciones_manuales | Candados para ediciones manuales | ✅ |
+| 115 | candados_ediciones_manuales | Candados para ediciones manuales | ✅ |
 | 115b | fix_amenities_confirmados_usar_lista | Fix amenities usar lista | ✅ |
-| 116a | trigger_proteger_amenities | Trigger proteger amenities | ✅ |
+| 116 | trigger_proteger_amenities | Trigger proteger amenities | ✅ |
 | 116b | fix_equipamiento_usar_lista | Fix equipamiento usar lista | ✅ |
 | 117 | fix_tc_paralelo_columna | Fix TC paralelo columna | ✅ |
 | 118 | candados_nombres_proyecto | Candados nombres proyecto | ✅ |
@@ -446,12 +446,38 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 | 138 | merge_alquiler | Merge enrichment-first, sin TC paralelo | ✅ |
 | 139 | reactivar_alquileres_existentes | Reactivar 61 alquileres existentes → completado | ✅ |
 | 140 | market_absorption_snapshots | Tabla + función snapshot inversión mercado (absorción, precios, renta, ROI) | ✅ |
+| 140b | rescatar_precios_alquiler | Rescatar precios alquiler de discovery a columnas | ✅ |
+| 141 | matching_alquileres_lookup | Lookup matching alquileres por nombre/GPS | ✅ |
+| 142 | matching_alquileres_ejecutar_batch | Batch matching alquileres | ✅ |
+| 143 | fix_aplicar_matches_campos_bloqueados | Fix aplicar matches respetando campos_bloqueados | ✅ |
+| 144 | fix_excluidas_con_proyecto | Fix excluidas con proyecto asignado | ✅ |
+| 145 | bajar_umbral_pendientes_55 | Bajar umbral pendientes a 55% | ✅ |
+| 146 | matching_alquileres_trigram_v2 | Matching alquileres con trigram v2 | ✅ |
+| 147 | buscar_unidades_alquiler | RPC feed alquileres con mapeo microzonas | ✅ |
+| 147b | trigger_asignar_zona_gps | Trigger auto-asignar zona desde GPS | ✅ |
+| 148 | fix_agente_alquiler | Fix datos agente en alquiler | ✅ |
+| 148b | fix_filtros_alquiler | Fix filtros búsqueda alquiler | ✅ |
+| 149 | orden_fecha_publicacion_alquiler | Orden por fecha publicación en alquiler | ✅ |
+| 150 | filtro_dormitorios_min_alquiler | Filtro dormitorios mínimo alquiler | ✅ |
+| 151 | amenidades_fallback_proyecto_alquiler | Fallback amenidades proyecto en alquiler | ✅ |
+| 152 | fix_status_alquiler_incluir_actualizado | Incluir status actualizado en búsqueda alquiler | ✅ |
+| 153 | dormitorios_multiselect_alquiler | Multiselect dormitorios en alquiler | ✅ |
+| 154 | leads_alquiler | Tabla leads_alquiler + RPC | ✅ |
+| 155 | permisos_anon_alquileres | Permisos anon para feed alquileres | ✅ |
+| 156 | filtro_parqueo_alquiler | Filtro parqueo en alquiler | ✅ |
+| 157 | fix_whatsapp_remax_alquiler | Fix WhatsApp Remax en alquiler | ✅ |
 | 158 | bien_inmuebles_fotos_alquiler | Branch fotos + agente Bien Inmuebles en buscar_unidades_alquiler() | ✅ |
+| 159 | fotos_remax_merge_alquiler | Fotos Remax en merge alquiler | ✅ |
 | 160 | alquiler_offset | OFFSET en buscar_unidades_alquiler() para paginación server-side | ✅ |
+| 161 | agente_nombre_c21_alquiler | Nombre agente C21 en alquiler | ✅ |
+| 162 | leads_alquiler_es_test | Campo es_test en leads_alquiler | ✅ |
 | 163 | alquiler_filtro_150_dias | Reducir filtro antigüedad alquiler de 180→150 días | ✅ |
 | 164 | status_expirado_stale | Status `expirado_stale` (no cuenta absorción) + limpiar 4 props >150d | ✅ |
 | 165 | fix_discovery_alquiler_fecha | Fix fecha_discovery BI (preservar si sin fecha_publicacion) + retroactivo | ✅ |
 | 166 | fix_trigger_matchear_alquiler_numeric | Fix casteo ::integer→::numeric en confidence/tier del trigger matching alquiler | ✅ |
+| 167 | precio_normalizado_helper | Helper `precio_normalizado(precio_usd, tipo_cambio_detectado)` para normalizar TC paralelo | ✅ |
+| 168 | normalizar_precios_tc_paralelo | Reescribir buscar_unidades_reales, vistas, snapshot, razón fiduciaria usando precio_normalizado() | ✅ |
+| 169 | drop_overload_discovery_alquiler | Dropear overload huérfano TEXT de registrar_discovery_alquiler() | ✅ |
 
 ## Repo Legacy
 
