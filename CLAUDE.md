@@ -56,16 +56,30 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
    - `<= 300 días` en mercado para venta (730 para preventa)
    - `<= 150 días` en mercado para alquiler (vida mediana: C21 34d, Remax 73d)
    - Ver detalle completo en `docs/reports/FILTROS_CALIDAD_MERCADO.md`
-   - **Zona venta** usa nombres nuevos (`Equipetrol Centro`, `Villa Brígida`, etc.)
-   - **Zona alquiler** usa nombres viejos (`Equipetrol`, `Faremafu`, `Villa Brigida`, etc.)
+   - Ver sección **Zonas Canónicas** abajo para mapeo completo
+
+## Zonas Canónicas (5 zonas)
+
+La fuente de verdad geográfica es `microzona` (asignada por PostGIS). La columna `zona` fue normalizada para venta (migración 131) pero NO para alquiler.
+
+| Zona canónica | microzona(s) en BD | zona en venta (pm.zona) | zona en alquiler (p.zona) |
+|---|---|---|---|
+| Equipetrol Centro | `Equipetrol` | `Equipetrol Centro` | `Equipetrol`, `Equipetrol Centro` |
+| Equipetrol Norte | `Equipetrol Norte/Norte`, `Equipetrol Norte/Sur` | `Equipetrol Norte` | `Equipetrol Norte/Norte`, `Equipetrol Norte/Sur`, `Equipetrol Norte` |
+| Sirari | `Sirari` | `Sirari` | `Sirari` |
+| Villa Brígida | `Villa Brigida` | `Villa Brígida` | `Villa Brigida` |
+| Equipetrol Oeste | `Faremafu` | `Equipetrol Oeste` | `Faremafu` |
+
+**Ignorar:** `Equipetrol Franja` — zona marginal con pocas propiedades, no se incluye en filtros ni reportes.
+
+**En queries de alquiler:** Usar la expansión de `buscar_unidades_alquiler()` que mapea slugs UI → nombres sucios de BD.
+**En queries de venta:** Usar `pm.zona` directamente (ya normalizada a 5 nombres limpios).
 
 ## Documentación Principal
 
 | Propósito | Archivo |
 |-----------|---------|
-| Onboarding completo | `docs/GUIA_ONBOARDING_CLAUDE.md` |
 | **Arquitectura SICI** | `docs/arquitectura/SICI_ARQUITECTURA_MAESTRA.md` |
-| **MVP Spec 30 días** | `docs/planning/SICI_MVP_SPEC.md` |
 | **Simón Arquitectura** | `docs/simon/SIMON_ARQUITECTURA_COGNITIVA.md` |
 | **Simón Formularios** | `docs/simon/formularios/BLOQUE_2_FORM_*.md` |
 | **Formulario MVP 2 Niveles** | `docs/simon/formularios/FORM_VIVIENDA_MVP.md` |
@@ -74,25 +88,23 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 | **Sistema Broker B2B** | `docs/simon/SIMON_BROKER_SYSTEM.md` |
 | **Broker Handoff Original** | `docs/simon/broker/BROKER_HANDOFF_ORIGINAL.md` |
 | **Broker Roadmap Refinado** | `docs/simon/broker/BROKER_ROADMAP_REFINADO.md` |
-| **Plan Alquileres** | `docs/planning/ALQUILERES_PLAN_IMPLEMENTACION.md` |
-| **Investigación Alquileres** | `docs/planning/ALQUILERES_INVESTIGACION.md` |
+| **Brand Guidelines** | `docs/simon/SIMON_BRAND_GUIDELINES.md` |
 | **Prompt LLM Alquiler** | `docs/alquiler/LLM_ENRICHMENT_PROMPT.md` |
-| **Roadmap Alquiler** | `docs/alquiler/ROADMAP_IMPLEMENTACION.md` |
 | **Pipeline Alquiler Canonical** | `docs/canonical/pipeline_alquiler_canonical.md` |
 | **Learnings Alquiler** | `docs/alquiler/LEARNINGS_PIPELINE_ALQUILER.md` |
-| Plan activo | `docs/modulo_2/PLAN_MATCHING_MULTIFUENTE_v3.0.md` |
+| **Monetización Alquileres** | `docs/planning/PLAN_MONETIZACION_ALQUILERES.md` |
+| **Lanzamiento Alquileres** | `docs/planning/PLAN_LANZAMIENTO_ALQUILERES.md` |
+| **Filtros Calidad Mercado** | `docs/reports/FILTROS_CALIDAD_MERCADO.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
-| Estado Módulo 1 | `docs/MODULO_1_ESTADO_FINAL.md` |
-| Spec Sin Match | `docs/modulo_2/SIN_MATCH_SPEC.md` |
-| Spec Matching | `docs/modulo_2/MATCHING_NOCTURNO_SPEC.md` |
 | Spec Auditoría | `docs/modulo_2/AUDITORIA_DIARIA_SPEC.md` |
-| Spec Tracking | `docs/modulo_2/WORKFLOW_TRACKING_SPEC.md` |
-| **Investment Snapshots** | `docs/modulo_2/MARKET_INVESTMENT_SNAPSHOTS.md` |
 | **Bitácora Snapshots Feb 2026** | `docs/modulo_2/BITACORA_SNAPSHOTS_FEB_2026.md` |
-| Spec TC Dinámico | `docs/modulo_2/TC_DINAMICO_BINANCE_SPEC.md` |
-| Knowledge Graph Plan | `docs/planning/KNOWLEDGE_GRAPH_VALIDATED_PLAN.md` |
-| Knowledge Graph Design | `docs/planning/SICI_KNOWLEDGE_GRAPH_DESIGN.md` |
+| Backlog TC Paralelo | `docs/backlog/FIX_TC_PARALELO_EXTRACTORES.md` |
+| N8N Workflows Alquiler | `docs/alquiler/N8N_WORKFLOWS_ALQUILER.md` |
+| Admin Dashboard Alquiler | `docs/alquiler/ADMIN_DASHBOARD_ALQUILER.md` |
+| Fuente Bien Inmuebles | `docs/alquiler/FUENTE_BIEN_INMUEBLES.md` |
+| Docs archivados (implementados) | `docs/archive/implementado/` |
+| Docs archivados (obsoletos) | `docs/archive/obsoleto/` |
 
 ## Admin Pages (simon-mvp)
 
