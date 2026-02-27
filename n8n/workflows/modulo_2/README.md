@@ -6,10 +6,8 @@
 **Fecha:** 1 Enero 2026
 
 > **⚠️ NOTA (27 Feb 2026):** El sistema HITL migró a Admin Dashboard (`/admin/supervisor/*`).
-> Los workflows `matching_supervisor.json`, `supervisor_sin_match.json`, `supervisor_excluidas.json`,
-> `exportar_sin_match.json`, `exportar_excluidas.json` y `SICI - Radar Mensual v1.1.json`
-> son **snapshots históricos** — contienen nodos Google Sheets que ya no se usan en producción.
-> Los workflows activos en producción son: `matching_nocturno.json`, `auditoria_diaria_sici.json`, `tc_dinamico_binance.json`.
+> Los workflows históricos que usaban Google Sheets fueron movidos a `archive/`.
+> Los 3 workflows activos en producción son: `matching_nocturno.json`, `auditoria_diaria_sici.json`, `tc_dinamico_binance.json`.
 
 ---
 
