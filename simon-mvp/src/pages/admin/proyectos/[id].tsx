@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { normalizarPrecio } from '@/lib/precio-utils'
 
 interface FormData {
   nombre_oficial: string
@@ -53,6 +54,7 @@ interface PropiedadVinculada {
   fecha_publicacion: string | null
   fecha_discovery: string | null
   fuente: string | null
+  tipo_cambio_detectado: string | null
   datos_json: {
     agente?: {
       nombre?: string
@@ -136,6 +138,7 @@ export default function EditarProyecto() {
 
   const [originalData, setOriginalData] = useState<ProyectoOriginal | null>(null)
   const [propiedades, setPropiedades] = useState<PropiedadVinculada[]>([])
+  const [tcParalelo, setTcParalelo] = useState(0)
 
   // Propagación
   const [propagarEstado, setPropagarEstado] = useState(false)
@@ -358,10 +361,17 @@ export default function EditarProyecto() {
     if (!supabase || !id) return
 
     try {
+      // Fetch TC paralelo for price normalization
+      const { data: tcData } = await supabase
+        .from('config_global')
+        .select('valor')
+        .eq('clave', 'tipo_cambio_paralelo')
+        .single()
+      setTcParalelo(parseFloat(tcData?.valor) || 0)
       // Solo departamentos (área >= 20m²), excluir parqueos/bauleras
       const { data, error } = await supabase
         .from('propiedades_v2')
-        .select('id, precio_usd, precio_mensual_usd, precio_mensual_bob, tipo_operacion, dormitorios, area_total_m2, estado_construccion, fecha_publicacion, fecha_discovery, fuente, datos_json')
+        .select('id, precio_usd, precio_mensual_usd, precio_mensual_bob, tipo_operacion, dormitorios, area_total_m2, estado_construccion, fecha_publicacion, fecha_discovery, fuente, datos_json, tipo_cambio_detectado')
         .eq('id_proyecto_master', id)
         .eq('status', 'completado')
         .eq('es_activa', true)  // Solo activas
@@ -842,11 +852,11 @@ export default function EditarProyecto() {
   const calcularEstadisticas = () => {
     if (propiedades.length === 0) return null
 
-    const precios = propiedadesVenta.map(p => p.precio_usd).filter(p => p > 0)
+    const precios = propiedadesVenta.map(p => normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcParalelo)).filter(p => p > 0)
     const areas = propiedades.map(p => p.area_total_m2).filter(a => a > 0)
     const preciosM2 = propiedadesVenta
       .filter(p => p.precio_usd > 0 && p.area_total_m2 > 0)
-      .map(p => p.precio_usd / p.area_total_m2)
+      .map(p => normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcParalelo) / p.area_total_m2)
     const preciosMensuales = propiedadesAlquiler.map(p => Number(p.precio_mensual_usd)).filter(p => p > 0)
     const diasMercado = propiedades.map(p => calcularDiasEnMercado(p))
 
@@ -892,10 +902,10 @@ export default function EditarProyecto() {
     .filter(p => !ocultarViejas || !esPropiedadVieja(p))
     .sort((a, b) => {
       const precioEfectivo = (p: PropiedadVinculada) =>
-        p.tipo_operacion === 'alquiler' ? Number(p.precio_mensual_usd || 0) : p.precio_usd
+        p.tipo_operacion === 'alquiler' ? Number(p.precio_mensual_usd || 0) : normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcParalelo)
       switch (ordenarPor) {
         case 'precio_m2':
-          return (a.precio_usd / a.area_total_m2) - (b.precio_usd / b.area_total_m2)
+          return (normalizarPrecio(a.precio_usd, a.tipo_cambio_detectado, tcParalelo) / a.area_total_m2) - (normalizarPrecio(b.precio_usd, b.tipo_cambio_detectado, tcParalelo) / b.area_total_m2)
         case 'area':
           return b.area_total_m2 - a.area_total_m2
         case 'dias':

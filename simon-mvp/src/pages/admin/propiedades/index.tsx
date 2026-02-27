@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { normalizarPrecio } from '@/lib/precio-utils'
 
 interface Propiedad {
   id: number
@@ -116,6 +117,7 @@ export default function AdminPropiedades() {
   const [propiedades, setPropiedades] = useState<PropiedadConCandados[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [tcParalelo, setTcParalelo] = useState(0)
 
   // Tab Venta/Alquiler
   const [tipoOperacion, setTipoOperacion] = useState<'venta' | 'alquiler'>('venta')
@@ -257,6 +259,15 @@ export default function AdminPropiedades() {
     setLoading(true)
     setError(null)
 
+    // Fetch TC paralelo for price normalization
+    const { data: tcData } = await supabase
+      .from('config_global')
+      .select('valor')
+      .eq('clave', 'tipo_cambio_paralelo')
+      .single()
+    const tcPar = parseFloat(tcData?.valor) || 0
+    setTcParalelo(tcPar)
+
     try {
       // Búsqueda por ID directo
       if (busquedaId.trim()) {
@@ -286,7 +297,8 @@ export default function AdminPropiedades() {
             const proj = projMap.get(p.id_proyecto_master)
             const fotosUrls = p.datos_json?.contenido?.fotos_urls || []
             const esAlquiler = p.tipo_operacion === 'alquiler'
-            const precioDisplay = esAlquiler ? (Number(p.precio_mensual_usd) || 0) : (p.precio_usd || 0)
+            const precioRaw = esAlquiler ? (Number(p.precio_mensual_usd) || 0) : (p.precio_usd || 0)
+            const precioDisplay = esAlquiler ? precioRaw : normalizarPrecio(precioRaw, p.tipo_cambio_detectado, tcPar)
             return {
               ...p,
               proyecto: proj?.nombre_oficial || p.nombre_edificio || 'Sin nombre',

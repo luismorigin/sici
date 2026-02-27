@@ -1,4 +1,5 @@
 import { supabase, obtenerSnapshot24h, obtenerMicrozonas, type Snapshot24h, type MicrozonaData } from './supabase'
+import { normalizarPrecio } from './precio-utils'
 
 // Fallbacks con datos reales de Enero 2026 (se usan si Supabase falla en build)
 const FALLBACK_SNAPSHOT: Snapshot24h = {
@@ -59,7 +60,7 @@ export async function fetchLandingData(): Promise<LandingData> {
     // Query 3: Precio promedio /m² (filtros limpios)
     const { data: priceData } = await supabase
       .from('propiedades_v2')
-      .select('precio_usd, area_total_m2')
+      .select('precio_usd, area_total_m2, tipo_cambio_detectado')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
@@ -67,11 +68,19 @@ export async function fetchLandingData(): Promise<LandingData> {
       .is('duplicado_de', null)
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
+    // Fetch TC paralelo for normalization
+    const { data: tcData } = await supabase
+      .from('config_global')
+      .select('valor')
+      .eq('clave', 'tipo_cambio_paralelo')
+      .single()
+    const tcPar = parseFloat(tcData?.valor) || 0
+
     let avgPriceM2: number | null = null
     if (priceData && priceData.length > 0) {
       const validPrices = priceData
         .filter((p: any) => p.precio_usd > 0 && p.area_total_m2 > 0)
-        .map((p: any) => p.precio_usd / p.area_total_m2)
+        .map((p: any) => normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcPar) / p.area_total_m2)
         .filter((pm2: number) => pm2 >= 800 && pm2 <= 5000)
 
       if (validPrices.length > 0) {

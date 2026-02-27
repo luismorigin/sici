@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { innegociablesToAmenidades } from '@/config/amenidades-mercado'
+import { normalizarPrecio } from './precio-utils'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -682,7 +683,7 @@ export async function obtenerMetricasMercado(): Promise<MetricasMercado | null> 
     // Incluye: status=completado, duplicado_de IS NULL, filtro días en mercado
     const { data, error } = await supabase
       .from('propiedades_v2')
-      .select('precio_usd, area_total_m2, dormitorios, estado_construccion, fecha_publicacion, fecha_discovery')
+      .select('precio_usd, area_total_m2, dormitorios, estado_construccion, fecha_publicacion, fecha_discovery, tipo_cambio_detectado')
       .eq('es_activa', true)
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
@@ -691,13 +692,22 @@ export async function obtenerMetricasMercado(): Promise<MetricasMercado | null> 
 
     if (error || !data) return null
 
+    // Fetch TC paralelo for normalization
+    const { data: tcData } = await supabase
+      .from('config_global')
+      .select('valor')
+      .eq('clave', 'tipo_cambio_paralelo')
+      .single()
+    const tcPar = parseFloat(tcData?.valor) || 0
+
     // Calcular días en mercado y filtrar datos viejos
     // v2.30: Límite unificado 300 días para TODOS los estados
     const hoy = new Date()
     const propiedadesValidas = data.filter((p: any) => {
       // Filtros básicos
       if (p.area_total_m2 <= 20) return false
-      if (p.precio_usd / p.area_total_m2 < 800) return false
+      const precioNorm = normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcPar)
+      if (precioNorm / p.area_total_m2 < 800) return false
 
       // Filtro días en mercado: 300 días para todos
       const fechaRef = p.fecha_publicacion || p.fecha_discovery
@@ -712,8 +722,8 @@ export async function obtenerMetricasMercado(): Promise<MetricasMercado | null> 
 
     if (propiedadesValidas.length === 0) return null
 
-    const precios = propiedadesValidas.map((p: any) => p.precio_usd)
-    const preciosM2 = propiedadesValidas.map((p: any) => p.precio_usd / p.area_total_m2)
+    const precios = propiedadesValidas.map((p: any) => normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcPar))
+    const preciosM2 = propiedadesValidas.map((p: any) => normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcPar) / p.area_total_m2)
 
     // Agrupar por dormitorios
     const porDorms: Record<number, number> = {}

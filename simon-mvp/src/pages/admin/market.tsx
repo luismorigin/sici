@@ -3,6 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { normalizarPrecio } from '@/lib/precio-utils'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   LineChart, Line, AreaChart, Area, ScatterChart, Scatter, ZAxis,
@@ -210,7 +211,7 @@ export default function MarketPulseDashboard() {
     // Fetch properties
     const { data: props } = await supabase
       .from('propiedades_v2')
-      .select('precio_usd, area_total_m2, id_proyecto_master')
+      .select('precio_usd, area_total_m2, id_proyecto_master, tipo_cambio_detectado')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
@@ -233,6 +234,7 @@ export default function MarketPulseDashboard() {
       .single()
 
     if (props) {
+      const tcPar = parseFloat(tcParalelo?.valor) || 0
       const validProps = props.filter(p => p.precio_usd && p.area_total_m2 && parseFloat(p.precio_usd) > 0)
       const totalUnidades = validProps.length
       const proyectosSet = new Set(validProps.map(p => p.id_proyecto_master).filter(Boolean))
@@ -242,7 +244,7 @@ export default function MarketPulseDashboard() {
       let sumPrecioM2 = 0
 
       validProps.forEach(p => {
-        const precio = parseFloat(p.precio_usd) || 0
+        const precio = normalizarPrecio(parseFloat(p.precio_usd) || 0, p.tipo_cambio_detectado, tcPar)
         const area = parseFloat(p.area_total_m2) || 1
         sumPrecio += precio
         sumArea += area
@@ -266,7 +268,7 @@ export default function MarketPulseDashboard() {
 
     const { data } = await supabase
       .from('propiedades_v2')
-      .select('dormitorios, precio_usd, area_total_m2')
+      .select('dormitorios, precio_usd, area_total_m2, tipo_cambio_detectado')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
@@ -274,6 +276,13 @@ export default function MarketPulseDashboard() {
       .not('zona', 'is', null)
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
       .gte('fecha_publicacion', cutoffDate)
+
+    const { data: tcData } = await supabase
+      .from('config_global')
+      .select('valor')
+      .eq('clave', 'tipo_cambio_paralelo')
+      .single()
+    const tcPar = parseFloat(tcData?.valor) || 0
 
     if (data) {
       const validData = data.filter(p => p.precio_usd && parseFloat(p.precio_usd) > 1000)
@@ -291,7 +300,7 @@ export default function MarketPulseDashboard() {
         if (!grouped[key]) {
           grouped[key] = { dormitorios: p.dormitorios, precios: [], areas: [], preciosM2: [] }
         }
-        const precio = parseFloat(p.precio_usd)
+        const precio = normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
         const area = parseFloat(p.area_total_m2) || 1
         grouped[key].precios.push(precio)
         grouped[key].areas.push(area)
@@ -322,7 +331,7 @@ export default function MarketPulseDashboard() {
     // Fetch all properties with project IDs
     const { data: props } = await supabase
       .from('propiedades_v2')
-      .select('id_proyecto_master, precio_usd, area_total_m2')
+      .select('id_proyecto_master, precio_usd, area_total_m2, tipo_cambio_detectado')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
@@ -333,6 +342,13 @@ export default function MarketPulseDashboard() {
       .gte('fecha_publicacion', cutoffDate)
 
     if (!props || props.length === 0) return
+
+    const { data: tcData } = await supabase
+      .from('config_global')
+      .select('valor')
+      .eq('clave', 'tipo_cambio_paralelo')
+      .single()
+    const tcPar = parseFloat(tcData?.valor) || 0
 
     // Get unique project IDs
     const projectIds = [...new Set(props.map(p => p.id_proyecto_master).filter(Boolean))]
@@ -370,7 +386,7 @@ export default function MarketPulseDashboard() {
         }
       }
 
-      const precio = parseFloat(p.precio_usd)
+      const precio = normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
       const area = parseFloat(p.area_total_m2) || 1
       if (precio > 1000) {
         grouped[key].precios.push(precio)
@@ -399,7 +415,7 @@ export default function MarketPulseDashboard() {
 
     const { data } = await supabase
       .from('propiedades_v2')
-      .select('estado_construccion, precio_usd, area_total_m2')
+      .select('estado_construccion, precio_usd, area_total_m2, tipo_cambio_detectado')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
@@ -409,6 +425,13 @@ export default function MarketPulseDashboard() {
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
       .gte('fecha_publicacion', cutoffDate)
 
+    const { data: tcData } = await supabase
+      .from('config_global')
+      .select('valor')
+      .eq('clave', 'tipo_cambio_paralelo')
+      .single()
+    const tcPar = parseFloat(tcData?.valor) || 0
+
     if (data) {
       const grouped: Record<string, { estado: string; preciosM2: number[] }> = {}
 
@@ -417,7 +440,7 @@ export default function MarketPulseDashboard() {
         if (!grouped[key]) {
           grouped[key] = { estado: key, preciosM2: [] }
         }
-        const precio = parseFloat(p.precio_usd)
+        const precio = normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
         const area = parseFloat(p.area_total_m2) || 1
         if (precio > 1000) {
           grouped[key].preciosM2.push(precio / area)
@@ -485,7 +508,7 @@ export default function MarketPulseDashboard() {
     // Fetch all valid properties with projects, estado and amenidades
     const { data: props } = await supabase
       .from('propiedades_v2')
-      .select('id_proyecto_master, dormitorios, precio_usd, area_total_m2, estado_construccion, datos_json')
+      .select('id_proyecto_master, dormitorios, precio_usd, area_total_m2, estado_construccion, datos_json, tipo_cambio_detectado')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
@@ -496,6 +519,13 @@ export default function MarketPulseDashboard() {
       .gte('fecha_publicacion', cutoffDate)
 
     if (!props) return
+
+    const { data: tcData } = await supabase
+      .from('config_global')
+      .select('valor')
+      .eq('clave', 'tipo_cambio_paralelo')
+      .single()
+    const tcPar = parseFloat(tcData?.valor) || 0
 
     // Get project names and developers
     const projectIds = [...new Set(props.map(p => p.id_proyecto_master).filter(Boolean))]
@@ -510,13 +540,13 @@ export default function MarketPulseDashboard() {
 
     // Calculate average price/m2 for reference
     const validProps = props.filter(p => {
-      const precio = parseFloat(p.precio_usd)
+      const precio = normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
       const area = parseFloat(p.area_total_m2)
       return precio > 10000 && area >= 20
     })
 
     const avgPrecioM2 = validProps.reduce((acc, p) => {
-      return acc + parseFloat(p.precio_usd) / parseFloat(p.area_total_m2)
+      return acc + normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar) / parseFloat(p.area_total_m2)
     }, 0) / validProps.length
 
     // Helper to count amenidades
@@ -545,7 +575,7 @@ export default function MarketPulseDashboard() {
     // - Amenidades ≥ 5 (real value)
     // - NOT precio_sospechoso (exclude data errors)
     const oportunidadesReales = props.filter(p => {
-      const precio = parseFloat(p.precio_usd)
+      const precio = normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
       const area = parseFloat(p.area_total_m2)
       if (!precio || !area) return false
 
@@ -564,7 +594,7 @@ export default function MarketPulseDashboard() {
 
     // Map to OportunidadData
     const mappedOportunidades: OportunidadData[] = oportunidadesReales.map(p => {
-      const precio = parseFloat(p.precio_usd)
+      const precio = normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
       const area = parseFloat(p.area_total_m2)
       const precioM2 = precio / area
       const projData = projectMap.get(p.id_proyecto_master)
