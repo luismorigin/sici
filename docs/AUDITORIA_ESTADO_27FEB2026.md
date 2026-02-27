@@ -55,21 +55,18 @@ Exportadas de BD via `pg_get_functiondef()` el 27 Feb 2026:
 - Horarios alquiler corregidos en CLAUDE.md: C21 1:30, Remax 1:30, BI 2:30, Enrichment 2:30, Merge 3:30, Verificador 7:00
 - Workflows Sheets: nota legacy agregada en `n8n/workflows/modulo_2/README.md` (JSONs no tocados, son snapshots históricos)
 
-### Fase 2C — Auditar frontend legacy completo
+### Fase 2C — Auditar frontend legacy completo ✅
 
-Verificar que las 12 páginas legacy no tengan tráfico ni estén indexadas antes de mover.
+**Eliminados (8 archivos, safe):**
+- `pages/landing-premium.tsx` (auto-referencial, no usado por otros)
+- 6 componentes `landing/`: CTAFinal, PremiumSection, ProblemSection, StepsSection, WhoSection, WhyEquipetrol
+- 1 componente `broker/ScoreBreakdown.tsx`
+- Limpiados exports en `components/landing/index.ts`
 
-**Páginas a auditar:**
-- `landing-premium.tsx`, `filtros.tsx`, `form.tsx`, `formV2.tsx`
-- `formulario-vivienda.tsx`, `formulario-inversion-renta.tsx`, `formulario-inversion-plusvalia.tsx`
-- `results.tsx`, `resultsV2.tsx`, `resultados.tsx`, `summary.tsx`, `contact.tsx`
-
-**Componentes huérfanos identificados:**
-- `landing/CTAFinal.tsx`, `landing/PremiumSection.tsx`, `landing/ProblemSection.tsx`
-- `landing/StepsSection.tsx`, `landing/WhoSection.tsx`, `landing/WhyEquipetrol.tsx`
-- `broker/ScoreBreakdown.tsx`
-
-**Riesgo:** Ninguno (solo análisis)
+**Conservados (11 páginas legacy — interconectadas en pipelines activos):**
+- `filtros.tsx` (8 links entrantes), `form.tsx`, `formV2.tsx`, `formulario-vivienda.tsx`
+- `formulario-inversion-renta.tsx`, `formulario-inversion-plusvalia.tsx`
+- `results.tsx`, `resultsV2.tsx`, `resultados.tsx` (4,628 líneas), `summary.tsx`, `contact.tsx`
 
 ### Fase 2D — README
 
