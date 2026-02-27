@@ -38,20 +38,17 @@
 > Cada fase requiere aprobación antes de ejecutar.
 > Antes de cualquier cambio: mostrar qué se va a hacer y qué archivos se tocan.
 
-### Fase 2A — Canonical de funciones críticas
+### Fase 2A — Canonical de funciones críticas ✅
 
-Exportar de BD las 5 funciones críticas que no tienen archivo en `sql/functions/`:
+Exportadas de BD via `pg_get_functiondef()` el 27 Feb 2026:
 
-| Función | Última migración | Líneas aprox |
-|---------|-----------------|-------------|
-| `buscar_unidades_reales()` | 168 | ~500 |
-| `buscar_unidades_alquiler()` | 163 | ~400 |
-| `generar_razon_fiduciaria()` | 168 | ~300 |
-| `calcular_posicion_mercado()` | 168 | ~200 |
-| `snapshot_absorcion_mercado()` | 168 | ~200 |
-
-**Acción:** `pg_get_functiondef()` → crear archivos en `sql/functions/`
-**Riesgo:** Ninguno (solo leer BD y crear archivos nuevos)
+| Función | Archivo | Última migración |
+|---------|---------|-----------------|
+| `buscar_unidades_reales()` | `sql/functions/query_layer/buscar_unidades_reales.sql` | 168 |
+| `buscar_unidades_alquiler()` | `sql/functions/query_layer/buscar_unidades_alquiler.sql` | 163 |
+| `generar_razon_fiduciaria()` | `sql/functions/query_layer/generar_razon_fiduciaria.sql` | 168 |
+| `calcular_posicion_mercado()` | `sql/functions/query_layer/calcular_posicion_mercado.sql` | 168 |
+| `snapshot_absorcion_mercado()` | `sql/functions/snapshots/snapshot_absorcion_mercado.sql` | 168 |
 
 ### Fase 2B — Sync horarios n8n
 
