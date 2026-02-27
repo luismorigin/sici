@@ -8,6 +8,22 @@ const nextConfig = {
   swcMinify: true,
   compress: true,
   poweredByHeader: false,
+  async redirects() {
+    return [
+      { source: '/filtros', destination: '/filtros-v2', permanent: true },
+      { source: '/form', destination: '/formulario-v2', permanent: true },
+      { source: '/formV2', destination: '/formulario-v2', permanent: true },
+      { source: '/results', destination: '/resultados-v2', permanent: true },
+      { source: '/resultsV2', destination: '/resultados-v2', permanent: true },
+      { source: '/resultados', destination: '/resultados-v2', permanent: true },
+      { source: '/summary', destination: '/filtros-v2', permanent: true },
+      { source: '/contact', destination: '/filtros-v2', permanent: true },
+      { source: '/pro', destination: '/', permanent: true },
+      { source: '/formulario-vivienda', destination: '/formulario-v2', permanent: true },
+      { source: '/formulario-inversion-plusvalia', destination: '/formulario-v2', permanent: true },
+      { source: '/formulario-inversion-renta', destination: '/formulario-v2', permanent: true },
+    ]
+  },
   async headers() {
     return [
       {
