@@ -6,9 +6,20 @@ config.local.json
 # Claude Code
 .claude/
 .claude-sessions/
+.agents/
+.agent/
+simon-mvp/.agents/
+simon-mvp/.agent/
+
+# Next.js build
+.next/
 
 # Node
 node_modules/
+
+# Generated reports & stories
+simon-mvp/docs/reports/
+simon-mvp/stories/
 
 # OS
 .DS_Store
