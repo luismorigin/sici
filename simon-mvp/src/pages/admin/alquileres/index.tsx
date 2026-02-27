@@ -90,14 +90,23 @@ function getPhoto(p: AlquilerProp): string | null {
 
 function getAgenteName(p: AlquilerProp): string | null {
   if (p.fuente === 'century21') return p.datos_json_discovery?.asesorNombre || null
-  if (p.fuente === 'remax') return p.datos_json_discovery?.agent?.user?.name_to_show || null
+  if (p.fuente === 'remax') {
+    return p.datos_json_enrichment?.llm_output?.agente_nombre
+      || p.datos_json_discovery?.agent?.user?.name_to_show
+      || null
+  }
   if (p.fuente === 'bien_inmuebles') return p.datos_json_discovery?.amigo_clie || null
   return null
 }
 
 function getAgentePhone(p: AlquilerProp): string | null {
   if (p.fuente === 'century21') return p.datos_json_discovery?.whatsapp || null
-  if (p.fuente === 'remax') return p.datos_json_discovery?.agent?.user?.phone || null
+  if (p.fuente === 'remax') {
+    return p.datos_json_enrichment?.llm_output?.agente_telefono
+      || p.datos_json_discovery?.agent?.user?.phone_number
+      || p.datos_json_discovery?.agent?.user?.phone
+      || null
+  }
   if (p.fuente === 'bien_inmuebles') {
     return p.datos_json_enrichment?.agente_telefono || p.datos_json_discovery?.agente_telefono || null
   }
