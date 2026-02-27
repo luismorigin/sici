@@ -1,8 +1,8 @@
 # Catálogo de Funciones SQL — SICI
 
 > 143 funciones custom en producción (schema public, excluye extensiones PostGIS/pg_trgm/fuzzystrmatch)
-> 22 archivos canónicos en `sql/functions/`
-> Generado: 27 Feb 2026
+> 42 archivos canónicos en `sql/functions/`
+> Actualizado: 27 Feb 2026 (Fase 7: +20 archivos exportados de producción)
 
 **Convención:** Las funciones con archivo canónico (`sql/functions/...`) tienen la definición actualizada exportada con `pg_get_functiondef()`. Las que solo indican migración fueron creadas/modificadas ahí y NO tienen archivo canónico.
 
@@ -56,8 +56,8 @@
 
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
-| `matchear_alquiler(id)` | — | 146 |
-| `matching_alquileres_batch()` | — | 142 |
+| `matchear_alquiler(id)` | `matching/matchear_alquiler.sql` | 146 |
+| `matching_alquileres_batch()` | `matching/matchear_alquiler.sql` | 142 |
 
 ## Discovery Alquiler (1 función)
 
@@ -71,7 +71,7 @@
 |---------|-----------------|------------------|
 | `buscar_unidades_reales(filtros)` | `query_layer/buscar_unidades_reales.sql` | 168 |
 | `buscar_unidades_alquiler(filtros)` | `query_layer/buscar_unidades_alquiler.sql` | 163 |
-| `buscar_unidades_broker(filtros)` | — | 101 |
+| `buscar_unidades_broker(filtros)` | `broker/buscar_unidades_broker.sql` | 101 |
 | `buscar_unidades_con_amenities(amenities, filtros)` | — | 069 |
 | `buscar_proyecto_fuzzy(nombre, umbral, limite)` | — | 022 |
 | `buscar_broker_por_telefono(tel)` | — | 075 |
@@ -100,13 +100,13 @@
 
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
-| `procesar_decision_sin_match(prop_id, accion, proyecto_id TEXT, ...)` | — | 010 |
-| `procesar_decision_sin_match(prop_id, accion, proyecto_id INT, ...)` | — | 010 |
-| `procesar_accion_excluida(prop_id, accion, ...)` | — | 023 |
-| `procesar_validacion_auto_aprobado(sug_id, accion, ...)` | — | 113 |
-| `exportar_propiedades_excluidas()` | — | 023 |
-| `detectar_razon_exclusion(id)` | — | 023 |
-| `detectar_razon_exclusion_v2(id, filtros)` | — | 023 |
+| `procesar_decision_sin_match(prop_id, accion, proyecto_id TEXT, ...)` | `hitl/procesar_decision_sin_match.sql` | 010 |
+| `procesar_decision_sin_match(prop_id, accion, proyecto_id INT, ...)` | `hitl/procesar_decision_sin_match.sql` | 010 |
+| `procesar_accion_excluida(prop_id, accion, ...)` | `hitl/procesar_accion_excluida.sql` | 023 |
+| `procesar_validacion_auto_aprobado(sug_id, accion, ...)` | `hitl/procesar_validacion_auto_aprobado.sql` | 113 |
+| `exportar_propiedades_excluidas()` | `hitl/exportar_propiedades_excluidas.sql` | 023 |
+| `detectar_razon_exclusion(id)` | `hitl/detectar_razon_exclusion.sql` | 023 |
+| `detectar_razon_exclusion_v2(id, filtros)` | `hitl/detectar_razon_exclusion.sql` | 023 |
 | `obtener_pendientes_para_sheets()` | — | — |
 | `obtener_sin_match_para_exportar(limit)` | — | 009 |
 
@@ -114,10 +114,10 @@
 
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
-| `inferir_datos_proyecto(id_proyecto)` | — | 087 |
-| `propagar_proyecto_a_propiedades(id_proyecto, ...)` | — | 128 |
+| `inferir_datos_proyecto(id_proyecto)` | `admin/inferir_datos_proyecto.sql` | 087 |
+| `propagar_proyecto_a_propiedades(id_proyecto, ...)` | `admin/propagar_proyecto_a_propiedades.sql` | 128 |
 | `propagar_proyecto_con_apertura_temporal(id_proyecto, ...)` | — | 129 |
-| `sincronizar_propiedad_desde_proyecto(id_prop, id_proy, ...)` | — | 108 |
+| `sincronizar_propiedad_desde_proyecto(id_prop, id_proy, ...)` | `admin/sincronizar_propiedad_desde_proyecto.sql` | 108 |
 | `crear_proyecto_desde_sugerencia(nombre, prop_id, sug_id, ...)` | — | 007 |
 | `asignar_proyecto_existente(sug_id, prop_id, proy_id)` | — | 018 |
 | `crear_desarrollador(nombre, ...)` | — | 088 |
@@ -128,10 +128,10 @@
 
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
-| `calcular_score_broker(id)` | — | 092 |
-| `actualizar_score_broker(id)` | — | 092 |
-| `verificar_broker(broker_id, accion, ...)` | — | 075 |
-| `registrar_contacto_broker(lead_id, prop_id, ...)` | — | 070 |
+| `calcular_score_broker(id)` | `broker/calcular_score_broker.sql` | 092 |
+| `actualizar_score_broker(id)` | `broker/calcular_score_broker.sql` | 092 |
+| `verificar_broker(broker_id, accion, ...)` | `broker/verificar_broker.sql` | 075 |
+| `registrar_contacto_broker(lead_id, prop_id, ...)` | `broker/registrar_contacto_broker.sql` | 070 |
 | `consumir_credito_cma(broker_id)` | — | 112 |
 
 ## Leads / CRM (6 funciones)
@@ -159,16 +159,16 @@
 
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
-| `precio_normalizado(precio_usd, tc_detectado)` | — | 167 |
-| `campo_esta_bloqueado(campos_bloqueados, campo)` | — | 115 |
-| `_is_campo_bloqueado(candados, campo)` | — | 115 |
-| `normalize_nombre(texto)` | — | 022 |
-| `normalizar_nombre_edificio(texto)` | — | 022 |
+| `precio_normalizado(precio_usd, tc_detectado)` | `helpers/precio_normalizado.sql` | 167 |
+| `campo_esta_bloqueado(campos_bloqueados, campo)` | `helpers/campo_esta_bloqueado.sql` | 115 |
+| `_is_campo_bloqueado(candados, campo)` | `helpers/campo_esta_bloqueado.sql` | 115 |
+| `normalize_nombre(texto)` | `helpers/normalize_nombre.sql` | 022 |
+| `normalizar_nombre_edificio(texto)` | `helpers/normalize_nombre.sql` | 022 |
 | `normalizar_amenity(label)` | — | 064 |
 | `normalizar_telefono(tel)` | — | 075 |
 | `calcular_similitud(texto1, texto2)` | — | 022 |
 | `calcular_confianza_datos(id)` | — | 096 |
-| `es_propiedad_vigente(estado, fecha_pub, fecha_disc)` | — | 114 |
+| `es_propiedad_vigente(estado, fecha_pub, fecha_disc)` | `helpers/es_propiedad_vigente.sql` | 114 |
 | `posicion_mercado_texto(precio_m2, zona, dorms)` | — | 053 |
 | `calcular_distancia_gps(lat1, lon1, lat2, lon2)` | — | — |
 | `calcular_distancia_metros(lat1, lng1, lat2, lng2)` | — | — |
@@ -177,10 +177,10 @@
 
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
-| `proteger_amenities_candados()` | — | 116 |
-| `trg_matchear_alquiler_fn()` | — | 166 |
+| `proteger_amenities_candados()` | `triggers/proteger_amenities_candados.sql` | 116 |
+| `trg_matchear_alquiler_fn()` | `triggers/trg_matchear_alquiler_fn.sql` | 166 |
 | `trg_refresh_lookup_fn()` | — | 141 |
-| `trigger_asignar_zona_alquiler()` | — | 147b |
+| `trigger_asignar_zona_alquiler()` | `triggers/trigger_asignar_zona_alquiler.sql` | 147b |
 | `trigger_calcular_score_broker()` | — | 092 |
 | `trigger_normalizar_telefono()` | — | 075 |
 | `fn_trigger_tc_actualizado()` | — | 014 |
@@ -221,17 +221,17 @@
 | Enrichment | 2 | 2 archivos |
 | Merge | 4 | 3 archivos (main + 2 helpers) |
 | Matching venta | 11 | 7 archivos |
-| Matching alquiler | 2 | 0 |
+| Matching alquiler | 2 | 1 archivo (Fase 7) |
 | Discovery alquiler | 1 | 1 archivo |
-| Query Layer | 6 | 4 archivos (Fase 2A) |
+| Query Layer | 6 | 4 archivos + 1 broker (Fase 2A+7) |
 | Análisis/Valuación | 8 | 2 (via query_layer) |
 | Snapshots | 2 | 1 archivo (Fase 2A) |
-| HITL | 9 | 0 |
-| Proyectos/Admin | 9 | 0 |
-| Broker | 5 | 0 |
+| HITL | 9 | 5 archivos (Fase 7) |
+| Proyectos/Admin | 9 | 3 archivos (Fase 7) |
+| Broker | 5 | 4 archivos (Fase 7) |
 | Leads/CRM | 6 | 0 |
 | TC Dinámico | 5 | 1 archivo (multi-función) |
-| Helpers | 13 | 0 |
-| Triggers | 9+ | 0 |
+| Helpers | 13 | 4 archivos (Fase 7) |
+| Triggers | 9+ | 3 archivos (Fase 7) |
 | Misc | 15+ | 0 |
-| **Total** | **~143** | **22 archivos** |
+| **Total** | **~143** | **42 archivos** |
