@@ -257,8 +257,8 @@ sici/
 
 - **Pipeline Alquiler Completo (Fases 1-4):** Publicado 12 Feb 2026
   - Migraciones 135-139 desplegadas en Supabase
-  - 5 workflows n8n activos: Discovery C21 (2:00 AM), Discovery Remax (2:15 AM), Discovery Bien Inmuebles (2:30 AM), Enrichment LLM (3:00 AM), Merge (4:00 AM)
-  - Flujo C Verificador: universal (venta + alquiler), LIMIT 200, sin filtro tipo_operacion
+  - 6 workflows n8n activos: Discovery C21 (1:30 AM), Discovery Remax (1:30 AM), Discovery Bien Inmuebles (2:30 AM), Enrichment LLM (2:30 AM), Merge (3:30 AM), Verificador Alquiler (7:00 AM)
+  - Flujo C Verificador venta: universal (venta + alquiler), LIMIT 200, sin filtro tipo_operacion
   - `registrar_discovery_alquiler()`, `registrar_enrichment_alquiler()`, `merge_alquiler()`
   - Primera corrida test: 168 completadas, 46 inactivo_confirmed, 6 actualizado
   - **Nota:** absorción alquiler contaminada por backlog hasta ~14 Mar 2026 (ver bitácora)

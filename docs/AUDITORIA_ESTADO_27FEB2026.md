@@ -50,12 +50,10 @@ Exportadas de BD via `pg_get_functiondef()` el 27 Feb 2026:
 | `calcular_posicion_mercado()` | `sql/functions/query_layer/calcular_posicion_mercado.sql` | 168 |
 | `snapshot_absorcion_mercado()` | `sql/functions/snapshots/snapshot_absorcion_mercado.sql` | 168 |
 
-### Fase 2B — Sync horarios n8n
+### Fase 2B — Sync horarios n8n ✅
 
-- Corregir en CLAUDE.md los horarios reales de producción (repo dice 1:30/2:30/3:30, CLAUDE.md dice 2:00/3:00/4:00)
-- Limpiar refs a Google Sheets en 3 workflows HITL (matching_supervisor, supervisor_sin_match, supervisor_excluidas)
-
-**Riesgo:** Bajo (documentación + workflows no críticos)
+- Horarios alquiler corregidos en CLAUDE.md: C21 1:30, Remax 1:30, BI 2:30, Enrichment 2:30, Merge 3:30, Verificador 7:00
+- Workflows Sheets: nota legacy agregada en `n8n/workflows/modulo_2/README.md` (JSONs no tocados, son snapshots históricos)
 
 ### Fase 2C — Auditar frontend legacy completo
 
