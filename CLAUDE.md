@@ -108,15 +108,20 @@ La fuente de verdad geográfica es `microzona` (asignada por PostGIS). La column
 
 ```
 sici/
-├── sql/functions/       → Funciones SQL canónicas (22 archivos, 8 subdirectorios)
+├── sql/functions/       → Funciones SQL canónicas (42 archivos, 14 subdirectorios)
 │   ├── discovery/       → registrar_discovery
 │   ├── enrichment/      → registrar_enrichment
 │   ├── merge/           → merge_discovery_enrichment v2.2.0
-│   ├── matching/        → matching v3.1
+│   ├── matching/        → matching v3.1 + matchear_alquiler
 │   ├── alquiler/        → discovery/enrichment/merge alquiler
 │   ├── query_layer/     → buscar_unidades_reales/alquiler, razón fiduciaria, posición mercado
 │   ├── snapshots/       → snapshot_absorcion_mercado
-│   └── tc_dinamico/     → TC Binance P2P
+│   ├── tc_dinamico/     → TC Binance P2P
+│   ├── hitl/            → procesar_decision_sin_match, acción excluida, validación auto-aprobado
+│   ├── admin/           → inferir_datos_proyecto, propagar, sincronizar
+│   ├── broker/          → buscar_unidades_broker, score, verificar, contacto
+│   ├── helpers/         → precio_normalizado, campo_bloqueado, normalize_nombre, vigente
+│   └── triggers/        → proteger_amenities, matchear_alquiler, asignar_zona
 ├── sql/migrations/      → 171 migraciones (001–169) — ver docs/migrations/MIGRATION_INDEX.md
 ├── geodata/             → microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
@@ -125,6 +130,7 @@ sici/
 │   └── alquiler/        → Pipeline completo alquiler (6 workflows)
 ├── docs/                → Documentación activa + canonical
 └── simon-mvp/           → Frontend Next.js (simonbo.com)
+    └── src/_archive/    → 12 legacy pages + componentes huérfanos (excluidos de build)
 ```
 
 ## Admin Pages (simon-mvp)
@@ -155,6 +161,9 @@ sici/
 | `/alquileres` | **Feed alquileres** |
 
 Flujo producción: `simonbo.com (/) → /filtros-v2 → /formulario-v2 → /resultados-v2`
+
+> **Legacy archivado (Fase 8):** 12 páginas v1 movidas a `src/_archive/pages/` con 301 redirects en `next.config.js`.
+> Componentes huérfanos (landing/, pro/, FilterBar, useForm, formQuestions, etc.) en `src/_archive/`.
 
 ### Landing Premium
 - **Fonts:** Cormorant Garamond (display) + Manrope (body)
@@ -216,5 +225,5 @@ SELECT COUNT(*) FROM proyectos_master WHERE activo;
 
 ## Repo Legacy
 
-`sici-matching/` contiene funciones SQL que apuntan a tabla deprecada.
-**NO USAR** - Todo migrado a `sici/sql/functions/matching/`.
+- `sici-matching/` — funciones SQL que apuntan a tabla deprecada. **NO USAR.**
+- `simon-mvp/src/_archive/` — 12 páginas v1 + 20 componentes/hooks/data huérfanos. Excluidos de build via `tsconfig.json`. Redirects 301 en `next.config.js`.
