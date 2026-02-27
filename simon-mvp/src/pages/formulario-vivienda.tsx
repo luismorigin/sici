@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import InternalHeader from '@/components/InternalHeader'
+import InternalHeader from '@/components/shared/InternalHeader'
 
 // Tipos
 interface FiltrosNivel1 {

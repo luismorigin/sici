@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import BrokerLayout from '@/components/BrokerLayout'
+import BrokerLayout from '@/components/broker/BrokerLayout'
 import { useBrokerAuth } from '@/hooks/useBrokerAuth'
 import { supabase } from '@/lib/supabase'
 

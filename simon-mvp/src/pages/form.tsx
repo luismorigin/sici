@@ -4,8 +4,8 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useForm } from '@/hooks/useForm'
 import { supabase } from '@/lib/supabase'
-import ProgressBar from '@/components/ProgressBar'
-import QuestionCard from '@/components/QuestionCard'
+import ProgressBar from '@/components/ui/ProgressBar'
+import QuestionCard from '@/components/ui/QuestionCard'
 
 export default function FormPage() {
   const router = useRouter()

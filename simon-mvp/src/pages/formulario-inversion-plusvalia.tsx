@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import InternalHeader from '@/components/InternalHeader'
+import InternalHeader from '@/components/shared/InternalHeader'
 
 interface FormInversionPlusvalia {
   horizonte_salida: '3_anos' | '5_anos' | '10_plus' | null

@@ -13,12 +13,12 @@ import {
 } from '@/components/results-premium'
 import { premiumFonts } from '@/styles/premium-theme'
 import { formatDorms } from '@/lib/format-utils'
-import FeedbackPremiumModal from '@/components/FeedbackPremiumModal'
+import FeedbackPremiumModal from '@/components/shared/FeedbackPremiumModal'
 import { innegociablesToAmenidades } from '@/config/amenidades-mercado'
 import { trackEvent } from '@/lib/analytics'
 
 // Dynamic import para mapa (sin SSR)
-const MapaResultados = dynamic(() => import('@/components/MapaResultados'), {
+const MapaResultados = dynamic(() => import('@/components/shared/MapaResultados'), {
   ssr: false,
   loading: () => (
     <div className="fixed inset-0 z-50 bg-[#0a0a0a] flex items-center justify-center">

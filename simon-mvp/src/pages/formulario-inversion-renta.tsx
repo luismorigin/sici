@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import InternalHeader from '@/components/InternalHeader'
+import InternalHeader from '@/components/shared/InternalHeader'
 
 interface FormInversionRenta {
   retorno_esperado: '4_6' | '6_8' | '8_plus' | null

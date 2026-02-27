@@ -1,5 +1,5 @@
-import FilterBar, { FiltrosNivel1 } from '@/components/FilterBar'
-import InternalHeader from '@/components/InternalHeader'
+import FilterBar, { FiltrosNivel1 } from '@/components/shared/FilterBar'
+import InternalHeader from '@/components/shared/InternalHeader'
 import { useState } from 'react'
 
 export default function FiltrosPage() {

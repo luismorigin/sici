@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useFormV2 } from '@/hooks/useFormV2'
-import QuestionCard from '@/components/QuestionCard'
+import QuestionCard from '@/components/ui/QuestionCard'
 
 export default function FormV2Page() {
   const router = useRouter()

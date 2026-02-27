@@ -27,13 +27,13 @@ import {
   getCostoEquipamiento
 } from '@/config/estimados-equipamiento'
 import PremiumModal from '@/components/landing/PremiumModal'
-import InternalHeader from '@/components/InternalHeader'
-import ContactarBrokerModal from '@/components/ContactarBrokerModal'
-import FeedbackPremiumModal from '@/components/FeedbackPremiumModal'
+import InternalHeader from '@/components/shared/InternalHeader'
+import ContactarBrokerModal from '@/components/shared/ContactarBrokerModal'
+import FeedbackPremiumModal from '@/components/shared/FeedbackPremiumModal'
 import dynamic from 'next/dynamic'
 
 // Cargar mapa dinámicamente para evitar SSR issues con Leaflet
-const MapaResultados = dynamic(() => import('@/components/MapaResultados'), {
+const MapaResultados = dynamic(() => import('@/components/shared/MapaResultados'), {
   ssr: false,
   loading: () => <div className="fixed inset-0 z-50 bg-black flex items-center justify-center text-white">Cargando mapa...</div>
 })
