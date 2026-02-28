@@ -1,9 +1,15 @@
+> **DESACTUALIZADO** — Métricas stale (dice 439 props / 188 proyectos, real: 1,002 / 227).
+> Falta pipeline alquiler completo, sistema broker B2B, admin dashboards, Bien Inmuebles
+> como 3ra fuente, amenities 69 campos, TC dinámico. Horarios pipeline incorrectos.
+> Secciones J/K/M (roadmap) obsoletas. Metodología y protocolos (B-G) siguen vigentes.
+> Consultar CLAUDE.md como fuente de verdad operativa.
+
 # SICI / Simón - Arquitectura Maestra
 
-**Documento:** Arquitectura completa del sistema  
-**Versión:** 2.2  
-**Fecha:** 6 Enero 2026  
-**Estado:** Aprobado - Conectado con Knowledge Graph  
+**Documento:** Arquitectura completa del sistema
+**Versión:** 2.2
+**Fecha:** 6 Enero 2026
+**Estado:** Aprobado - Conectado con Knowledge Graph
 **Audiencias:** Fundador · Inversores · Equipo Técnico · Claude Code
 
 ---

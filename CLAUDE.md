@@ -4,7 +4,7 @@
 
 **SICI** = Sistema Inteligente de Captura Inmobiliaria (Bolivia)
 - Pipeline nocturno: Discovery → Enrichment → Merge → Matching (venta + alquiler)
-- Tabla principal: `propiedades_v2` (986 registros: ~681 venta, ~303 alquiler)
+- Tabla principal: `propiedades_v2` (1,002 registros: ~692 venta, ~310 alquiler)
 - Tabla proyectos: `proyectos_master` (227 activos, 99.1% con GPS)
 - Tracking: `workflow_executions` (health check)
 - Fuentes: Century21, Remax, Bien Inmuebles
@@ -93,6 +93,7 @@ La fuente de verdad geográfica es `microzona` (asignada por PostGIS). La column
 2:00 AM  Enrichment LLM → datos_json_enrichment
 3:00 AM  Merge → campos consolidados + TC paralelo
 4:00 AM  Matching → id_proyecto_master
+6:00 AM  Verificador ausencias (solo Remax, LIMIT 200)
 9:00 AM  Auditoría + Snapshots absorción
 ```
 
@@ -145,8 +146,10 @@ sici/
 | `/admin/supervisor/matching` | Revisar matches pendientes |
 | `/admin/supervisor/sin-match` | Asignar proyectos huérfanas |
 | `/admin/supervisor/excluidas` | Gestionar excluidas |
+| `/admin/supervisor/auto-aprobados` | Revisar auto-aprobaciones matching |
 | `/admin/salud` | **Health dashboard sistema** |
-| `/admin/market` | **Market Pulse Dashboard** |
+| `/admin/market` | **Market Pulse Dashboard (venta)** |
+| `/admin/market-alquileres` | **Market Pulse Dashboard (alquiler)** |
 | `/admin/alquileres` | **Admin alquileres** — cards + inline edit + WA tracking |
 
 ## Landing Pages (simon-mvp)
@@ -182,14 +185,37 @@ Flujo producción: `simonbo.com (/) → /filtros-v2 → /formulario-v2 → /resu
 | `/broker/dashboard` | Listado propiedades + botón PDF |
 | `/broker/nueva-propiedad` | Crear nueva propiedad |
 | `/broker/editar/[id]` | Editar propiedad |
+| `/broker/fotos/[id]` | Gestión fotos propiedad |
 | `/broker/leads` | Listado leads recibidos |
 | `/broker/perfil` | Subir foto/logo + datos contacto |
 
-## Estado Actual (27 Feb 2026)
+## API Routes (simon-mvp)
+
+| Ruta | Propósito |
+|------|-----------|
+| `/api/alquileres` | Feed alquileres (buscar_unidades_alquiler) |
+| `/api/razon-fiduciaria` | Generar razón fiduciaria por propiedad |
+| `/api/generar-guia` | Generar guía fiduciaria (Claude API) |
+| `/api/informe` | Generar informe PDF |
+| `/api/contactar-broker` | Contactar broker desde resultados |
+| `/api/abrir-whatsapp` | Tracking apertura WhatsApp |
+| `/api/lead-alquiler` | Registrar lead de alquiler |
+| `/api/crear-lead-feedback` | Crear lead con feedback |
+| `/api/notify-slack` | Enviar notificación a Slack |
+| `/api/broker/create-propiedad` | CRUD propiedades broker |
+| `/api/broker/update-propiedad` | Actualizar propiedad broker |
+| `/api/broker/delete-propiedad` | Eliminar propiedad broker |
+| `/api/broker/buscar-proyectos` | Buscar proyectos para matching |
+| `/api/broker/generate-pdf` | Generar PDF propiedad |
+| `/api/broker/generate-cma` | Generar CMA (análisis mercado) |
+| `/api/broker/manage-fotos` | CRUD fotos propiedad |
+| `/api/broker/update-profile` | Actualizar perfil broker |
+
+## Estado Actual (28 Feb 2026)
 
 ### Completado
-- **Pipeline venta:** Discovery → Enrichment → Merge → Matching nocturno (86.2% matching, 355/412 completadas)
-- **Pipeline alquiler matching:** 91.3% (167/183 completadas)
+- **Pipeline venta:** Discovery → Enrichment → Merge → Matching nocturno (86.2% matching, 350/406 completadas)
+- **Pipeline alquiler matching:** 91.2% (166/182 completadas)
 - **Pipeline alquiler:** 6 workflows n8n activos, 3 fuentes (C21, Remax, Bien Inmuebles)
 - **HITL completo:** Matching supervisor, Sin Match, Excluidas — todo en Admin Dashboard
 - **Query Layer:** buscar_unidades_reales/alquiler(), generar_razon_fiduciaria(), calcular_posicion_mercado()

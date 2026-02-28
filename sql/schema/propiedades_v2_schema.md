@@ -1,3 +1,9 @@
+> **DESACTUALIZADO** — Dice 67+ columnas, producción tiene 82. Faltan:
+> columnas alquiler (mig 135), microzona, duplicado_de, plan_pagos_cuotas/texto,
+> razon_inactiva, fecha_inactivacion, cambios_enrichment. Fuente dice solo
+> century21/remax (falta bien_inmuebles). `confianza_match` → `confianza_sugerencia_extractor`.
+> Pendiente reescritura.
+
 # Schema: propiedades_v2
 
 **Última actualización:** 28 Enero 2026
