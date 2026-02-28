@@ -12,33 +12,42 @@
           ]
         }
       },
-      "id": "a1-trigger",
+      "id": "1c16a41f-8ff9-4041-86d9-2d72ffea3526",
       "name": "Trigger 1:30 AM",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [-1488, 288],
+      "position": [
+        -2448,
+        112
+      ],
       "notes": "Ejecución diaria a las 1:30 AM (30min después de venta)"
     },
     {
       "parameters": {
         "jsCode": "// === GENERADOR DE URLs REMAX ALQUILER ===\n// Misma zona Equipetrol, misma API, mismas páginas\n// La API Remax devuelve VENTA y ALQUILER mezclados\n// El filtrado se hace en 'Filtrar Solo Alquileres'\n\nconst TOTAL_PAGES = 8;\nconst BASE_URL = 'https://remax.bo/api/search/departamento/santa-cruz-de-la-sierra/equipetrolnoroeste';\n\nconst urls = [];\n\nfor (let page = 1; page <= TOTAL_PAGES; page++) {\n  urls.push({\n    json: {\n      page_url: `${BASE_URL}?page=${page}`,\n      page_number: page,\n      fuente: 'remax'\n    }\n  });\n}\n\nreturn urls;"
       },
-      "id": "a1-gen-urls",
+      "id": "e185200f-d0c8-4c1f-9178-f3b27ac85787",
       "name": "Generar URLs Remax",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-1264, 288],
+      "position": [
+        -2224,
+        112
+      ],
       "notes": "8 páginas - misma API que venta"
     },
     {
       "parameters": {
         "options": {}
       },
-      "id": "a1-split",
+      "id": "9ebbf324-7fab-40c8-a851-eb8ff19f3be2",
       "name": "Split In Batches",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [-1040, 288]
+      "position": [
+        -2000,
+        112
+      ]
     },
     {
       "parameters": {
@@ -47,11 +56,14 @@
           "timeout": 30000
         }
       },
-      "id": "a1-http",
+      "id": "d5c9417b-5054-4c33-939c-59bb5a42b3bc",
       "name": "HTTP Request API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-816, 432],
+      "position": [
+        -1776,
+        256
+      ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 2000
@@ -60,22 +72,29 @@
       "parameters": {
         "amount": 2
       },
-      "id": "a1-wait",
+      "id": "33daa15f-764d-4050-9562-7bca05ccb892",
       "name": "Wait 2s",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [-608, 432],
+      "position": [
+        -1568,
+        256
+      ],
       "webhookId": "a1-wait-webhook"
     },
     {
       "parameters": {
         "jsCode": "// === EXTRAER PROPIEDADES REMAX ===\n// v1.0.0 Alquiler: Extrae TODAS, filtrado posterior\nconst response = $input.first().json;\nconst propiedades = response.data || [];\n\nreturn propiedades.map(prop => ({\n  json: {\n    url: `https://remax.bo/propiedad/${prop.slug}`,\n    fuente: 'remax',\n    codigo_propiedad: prop.MLSID,\n    tipo_operacion: prop.transaction_type?.name?.toLowerCase() || null,\n    latitud: parseFloat(prop.location?.latitude) || null,\n    longitud: parseFloat(prop.location?.longitude) || null,\n    precio_bob: prop.price?.amount || null,\n    precio_usd: prop.price?.price_in_dollars || null,\n    moneda_original: prop.price?.currency_id === 1 ? 'BOB' : 'USD',\n    area_total_m2: prop.listing_information?.construction_area_m || null,\n    dormitorios: prop.listing_information?.number_bedrooms || null,\n    banos: prop.listing_information?.number_bathrooms || null,\n    estacionamientos: prop.listing_information?.number_parking || null,\n    tipo_propiedad_original: prop.listing_information?.subtype_property?.name || null,\n    fecha_publicacion: prop.date_of_listing || null,\n    datos_json_discovery: prop,\n    metodo_discovery: 'api_rest'\n  }\n}));"
       },
-      "id": "a1-extract",
+      "id": "cbf112aa-a822-4812-a114-d42d86e6c855",
       "name": "Extraer Propiedades",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-352, 432]
+      "position": [
+        -1312,
+        256
+      ],
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -84,22 +103,28 @@
         "include": "allFieldsExceptDefault",
         "options": {}
       },
-      "id": "a1-aggregate",
+      "id": "f274eaa9-77e7-4be3-a27c-b8e5aa9551e9",
       "name": "Aggregate Snapshot",
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
-      "position": [-160, 288],
+      "position": [
+        -1120,
+        112
+      ],
       "notes": "Fin de fase SNAPSHOT"
     },
     {
       "parameters": {
         "jsCode": "// === FILTRAR SOLO ALQUILERES ===\n// La API Remax devuelve venta + alquiler mezclados\n// Filtramos por transaction_type que contenga 'alquiler' o 'arriendo'\n// Excluimos anticrético (modelo financiero distinto)\n\nconst snapshot = $input.first().json.propiedades;\n\nconst alquileres = snapshot.filter(prop => {\n  const tipo = (prop.tipo_operacion || '').toLowerCase();\n  // Aceptar: alquiler, arriendo, renta\n  // Rechazar: venta, anticretico, anticrético\n  return tipo.includes('alquiler') || tipo.includes('arriendo') || tipo.includes('renta');\n});\n\nconst excluidos = snapshot.length - alquileres.length;\n\nconsole.log(`Filtro alquiler: ${alquileres.length} alquileres de ${snapshot.length} total (${excluidos} excluidos)`);\n\nreturn [{\n  json: {\n    propiedades: alquileres,\n    stats_filtro: {\n      total_api: snapshot.length,\n      alquileres: alquileres.length,\n      excluidos: excluidos\n    }\n  }\n}];"
       },
-      "id": "a1-filter",
+      "id": "99df902c-3b34-488a-91a1-017260986a8b",
       "name": "Filtrar Solo Alquileres",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [64, 288],
+      "position": [
+        -896,
+        112
+      ],
       "notes": "Excluir venta y anticrético"
     },
     {
@@ -108,11 +133,14 @@
         "query": "SELECT id, url, status FROM propiedades_v2 WHERE fuente = 'remax' AND tipo_operacion = 'alquiler' AND status NOT IN ('inactivo_confirmed')",
         "options": {}
       },
-      "id": "a1-bd-urls",
+      "id": "df64d8c5-12cc-48e7-882e-7351ee3d4efd",
       "name": "Obtener Alquileres Activos BD",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [288, 288],
+      "position": [
+        -672,
+        112
+      ],
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
@@ -125,31 +153,40 @@
       "parameters": {
         "jsCode": "// === PREPARAR COMPARACIÓN ALQUILERES ===\nconst snapshot = $('Filtrar Solo Alquileres').first().json.propiedades;\nconst propiedadesBD = $('Obtener Alquileres Activos BD').all().map(item => item.json);\n\nconst snapshotDedup = new Map();\nfor (const prop of snapshot) {\n  snapshotDedup.set(prop.url, prop);\n}\n\nconst urlsSnapshot = new Set(snapshotDedup.keys());\nconst urlsBD = new Map(propiedadesBD.map(p => [p.url, { id: p.id, status: p.status }]));\n\nconst nuevas = [];\nconst existentes = [];\nconst ausentes = [];\n\nfor (const [url, prop] of snapshotDedup) {\n  if (!urlsBD.has(url)) {\n    nuevas.push(prop);\n  } else {\n    existentes.push({\n      ...prop,\n      _id_bd: urlsBD.get(url).id,\n      _status_bd: urlsBD.get(url).status\n    });\n  }\n}\n\nfor (const [url, info] of urlsBD) {\n  if (!urlsSnapshot.has(url)) {\n    if (!['inactivo_pending', 'inactivo_confirmed'].includes(info.status)) {\n      ausentes.push({ id: info.id, url: url, status_actual: info.status });\n    }\n  }\n}\n\nreturn [{\n  json: {\n    nuevas,\n    existentes,\n    ausentes,\n    stats: {\n      total_snapshot: snapshotDedup.size,\n      total_bd: urlsBD.size,\n      nuevas: nuevas.length,\n      existentes: existentes.length,\n      ausentes: ausentes.length\n    }\n  }\n}];"
       },
-      "id": "a1-compare",
+      "id": "2153f0c4-4fd6-40bc-9b72-82722f4908c2",
       "name": "Preparar Comparación",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [512, 288]
+      "position": [
+        -448,
+        112
+      ]
     },
     {
       "parameters": {
         "jsCode": "// === LOG STATS ALQUILER ===\nconst stats = $input.first().json.stats;\nconst filtro = $('Filtrar Solo Alquileres').first().json.stats_filtro;\n\nconsole.log(`\n=== DISCOVERY REMAX ALQUILER ===\nAPI total: ${filtro.total_api}\nAlquileres filtrados: ${filtro.alquileres}\nExcluidos (venta/antic): ${filtro.excluidos}\n---\nBD activas: ${stats.total_bd}\nNuevas: ${stats.nuevas}\nExistentes: ${stats.existentes}\nAusentes: ${stats.ausentes}\n================================\n`);\n\nreturn $input.all();"
       },
-      "id": "a1-log",
+      "id": "9bfe2444-295f-4118-b2ad-e6a35c14d742",
       "name": "Log Stats",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [736, 288]
+      "position": [
+        -224,
+        112
+      ]
     },
     {
       "parameters": {
         "jsCode": "// === PREPARAR PARA registrar_discovery_alquiler() ===\nconst data = $input.first().json;\nconst nuevas = data.nuevas || [];\nconst existentes = data.existentes || [];\nconst todas = [...nuevas, ...existentes];\n\nif (todas.length === 0) {\n  return [{ json: { skip: true, message: 'No hay alquileres para procesar' } }];\n}\n\nreturn todas.map(prop => ({\n  json: {\n    p_url: prop.url,\n    p_fuente: prop.fuente,\n    p_codigo_propiedad: prop.codigo_propiedad,\n    p_precio_mensual_bob: prop.precio_bob,\n    p_precio_mensual_usd: prop.precio_usd,\n    p_moneda_original: prop.moneda_original || 'BOB',\n    p_area_total_m2: prop.area_total_m2,\n    p_dormitorios: prop.dormitorios,\n    p_banos: prop.banos,\n    p_estacionamientos: prop.estacionamientos,\n    p_tipo_propiedad_original: prop.tipo_propiedad_original,\n    p_latitud: prop.latitud,\n    p_longitud: prop.longitud,\n    p_fecha_publicacion: prop.fecha_publicacion,\n    p_metodo_discovery: prop.metodo_discovery,\n    p_zona: null,\n    p_datos_json_discovery: JSON.stringify(prop.datos_json_discovery)\n  }\n}));"
       },
-      "id": "a1-process",
+      "id": "78bf4e33-63c7-401a-9322-6148902521c0",
       "name": "Procesar Alquileres",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [960, 176]
+      "position": [
+        0,
+        0
+      ]
     },
     {
       "parameters": {
@@ -174,11 +211,14 @@
         },
         "options": {}
       },
-      "id": "a1-if-props",
+      "id": "e8a42167-50be-43e6-aa8e-f76eaf184cf4",
       "name": "IF Alquileres",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1184, 176]
+      "position": [
+        224,
+        0
+      ]
     },
     {
       "parameters": {
@@ -188,11 +228,14 @@
           "queryReplacement": "={{ [$json.p_url, $json.p_fuente, $json.p_codigo_propiedad, $json.p_precio_mensual_bob, $json.p_precio_mensual_usd, $json.p_moneda_original, $json.p_area_total_m2, $json.p_dormitorios, $json.p_banos, $json.p_estacionamientos, $json.p_tipo_propiedad_original, $json.p_latitud, $json.p_longitud, $json.p_fecha_publicacion, $json.p_metodo_discovery, $json.p_zona, $json.p_datos_json_discovery] }}"
         }
       },
-      "id": "a1-register",
+      "id": "d204a16e-04a3-435e-8867-0c429e8026b8",
       "name": "Registrar Discovery Alquiler",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1408, 176],
+      "position": [
+        448,
+        0
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -205,11 +248,14 @@
       "parameters": {
         "jsCode": "// === PROCESAR AUSENTES ALQUILER ===\nconst ausentes = $input.first().json.ausentes;\n\nif (ausentes.length === 0) {\n  return [{ json: { skip: true, message: 'No hay alquileres ausentes' } }];\n}\n\nreturn ausentes.map(prop => ({\n  json: {\n    id: prop.id,\n    url: prop.url,\n    status_actual: prop.status_actual\n  }\n}));"
       },
-      "id": "a1-ausentes",
+      "id": "6ac51e09-af41-42af-a90d-ec0c60d17979",
       "name": "Procesar Ausentes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [960, 480]
+      "position": [
+        0,
+        304
+      ]
     },
     {
       "parameters": {
@@ -234,25 +280,31 @@
         },
         "options": {}
       },
-      "id": "a1-if-ausentes",
+      "id": "6afa5e43-f712-4d4b-b712-3a63e17e5eef",
       "name": "IF Ausentes",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1184, 480]
+      "position": [
+        224,
+        304
+      ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE propiedades_v2 SET status = 'inactivo_pending', fecha_discovery = NOW(), primera_ausencia_at = COALESCE(primera_ausencia_at, NOW()) WHERE id = $1 AND tipo_operacion = 'alquiler' AND status NOT IN ('inactivo_pending', 'inactivo_confirmed')",
+        "query": "UPDATE propiedades_v2 SET status = 'inactivo_pending', fecha_discovery = NOW() WHERE id = $1 AND tipo_operacion = 'alquiler' AND status NOT IN ('inactivo_pending', 'inactivo_confirmed')",
         "options": {
           "queryReplacement": "={{ [$json.id] }}"
         }
       },
-      "id": "a1-mark-absent",
+      "id": "6a89afba-bd13-4a6f-bf5d-ef5148bbcf2a",
       "name": "Marcar Ausentes",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [1408, 480],
+      "position": [
+        448,
+        304
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -264,82 +316,266 @@
       "parameters": {
         "jsCode": "// === RESUMEN FINAL ALQUILER ===\nconst stats = $('Log Stats').first().json.stats;\nconst filtro = $('Filtrar Solo Alquileres').first().json.stats_filtro;\n\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  fuente: 'remax',\n  workflow: 'Discovery Remax Alquiler',\n  version: '1.0.0',\n  resultados: {\n    api_total: filtro.total_api,\n    alquileres_filtrados: filtro.alquileres,\n    excluidos_venta: filtro.excluidos,\n    bd_activas: stats.total_bd,\n    nuevas_insertadas: stats.nuevas,\n    existentes_actualizadas: stats.existentes,\n    ausentes_marcadas: stats.ausentes\n  },\n  status: 'completado'\n};\n\nconsole.log('=== DISCOVERY REMAX ALQUILER COMPLETADO ===');\nconsole.log(JSON.stringify(resumen, null, 2));\n\nreturn [{ json: resumen }];"
       },
-      "id": "a1-summary",
+      "id": "b9536f10-444e-40a3-a005-c41f1b37c3e7",
       "name": "Resumen Final",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1632, 288]
+      "position": [
+        672,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT registrar_ejecucion_workflow(\n    'discovery_remax_alquiler',\n    'success',\n    {{ $json.resultados.alquileres_filtrados || 0 }},\n    {{ $json.resultados.nuevas_insertadas || 0 }},\n    {{ $json.resultados.existentes_actualizadas || 0 }}\n  )",
+        "options": {
+          "queryReplacement": "="
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        832,
+        112
+      ],
+      "id": "783bad2f-4ac5-48e9-b50b-ddff1a8760a9",
+      "name": "Tracking",
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
     }
   ],
   "pinData": {},
   "connections": {
     "Trigger 1:30 AM": {
-      "main": [[{"node": "Generar URLs Remax", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Generar URLs Remax",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Generar URLs Remax": {
-      "main": [[{"node": "Split In Batches", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Split In Batches": {
       "main": [
-        [{"node": "Aggregate Snapshot", "type": "main", "index": 0}],
-        [{"node": "HTTP Request API", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Aggregate Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request API",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "HTTP Request API": {
-      "main": [[{"node": "Wait 2s", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Wait 2s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Wait 2s": {
-      "main": [[{"node": "Extraer Propiedades", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Extraer Propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extraer Propiedades": {
-      "main": [[{"node": "Split In Batches", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Aggregate Snapshot": {
-      "main": [[{"node": "Filtrar Solo Alquileres", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Filtrar Solo Alquileres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Filtrar Solo Alquileres": {
-      "main": [[{"node": "Obtener Alquileres Activos BD", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Obtener Alquileres Activos BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Obtener Alquileres Activos BD": {
-      "main": [[{"node": "Preparar Comparación", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Preparar Comparación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Preparar Comparación": {
-      "main": [[{"node": "Log Stats", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Log Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Log Stats": {
       "main": [
-        [{"node": "Procesar Alquileres", "type": "main", "index": 0}],
-        [{"node": "Procesar Ausentes", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Procesar Alquileres",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Procesar Ausentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Procesar Alquileres": {
-      "main": [[{"node": "IF Alquileres", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "IF Alquileres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "IF Alquileres": {
-      "main": [[{"node": "Registrar Discovery Alquiler", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Registrar Discovery Alquiler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Registrar Discovery Alquiler": {
-      "main": [[{"node": "Resumen Final", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Resumen Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Procesar Ausentes": {
-      "main": [[{"node": "IF Ausentes", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "IF Ausentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "IF Ausentes": {
-      "main": [[{"node": "Marcar Ausentes", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Marcar Ausentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Marcar Ausentes": {
-      "main": [[{"node": "Resumen Final", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Resumen Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumen Final": {
+      "main": [
+        [
+          {
+            "node": "Tracking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
     "timeSavedMode": "fixed",
     "timezone": "America/La_Paz",
     "callerPolicy": "workflowsFromSameOwner"
   },
+  "versionId": "dbd82c3d-c251-4c25-a4aa-ba1904bfc319",
   "meta": {
-    "templateCredsSetupCompleted": true
+    "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
   },
+  "id": "LhW19o2jhhPXthTDOubnE",
   "tags": []
 }
