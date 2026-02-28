@@ -43,7 +43,7 @@ export const ZONAS_CANONICAS: ZonaCanonica[] = [
     labelCorto: 'V. Brigida',
   },
   {
-    slug: 'faremafu',
+    slug: 'equipetrol_oeste',
     db: 'Faremafu',
     dbAlquiler: ['Faremafu'],
     label: 'Equipetrol Oeste (Busch)',
