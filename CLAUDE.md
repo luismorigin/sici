@@ -83,6 +83,8 @@ La fuente de verdad geográfica es `microzona` (asignada por PostGIS). La column
 | **Índice migraciones** | `docs/migrations/MIGRATION_INDEX.md` |
 | **Backlog calidad datos** | `docs/backlog/CALIDAD_DATOS_BACKLOG.md` |
 | **Deuda técnica** | `docs/backlog/DEUDA_TECNICA.md` |
+| **Cómo contribuir** | `CONTRIBUTING.md` |
+| **Catálogo funciones SQL** | `sql/functions/FUNCTION_CATALOG.md` |
 | Docs archivados | `docs/archive/implementado/`, `docs/archive/obsoleto/` |
 
 ## Pipeline Nocturno
@@ -211,26 +213,10 @@ Flujo producción: `simonbo.com (/) → /filtros-v2 → /formulario-v2 → /resu
 | `/api/broker/manage-fotos` | CRUD fotos propiedad |
 | `/api/broker/update-profile` | Actualizar perfil broker |
 
-## Estado Actual (28 Feb 2026)
+## Estado Actual
 
-### Completado
-- **Pipeline venta:** Discovery → Enrichment → Merge → Matching nocturno (86.2% matching, 350/406 completadas)
-- **Pipeline alquiler matching:** 91.2% (166/182 completadas)
-- **Pipeline alquiler:** 6 workflows n8n activos, 3 fuentes (C21, Remax, Bien Inmuebles)
-- **HITL completo:** Matching supervisor, Sin Match, Excluidas — todo en Admin Dashboard
-- **Query Layer:** buscar_unidades_reales/alquiler(), generar_razon_fiduciaria(), calcular_posicion_mercado()
-- **Market Snapshots:** Absorción, precios, renta, ROI por tipología (tabla market_absorption_snapshots)
-- **Sistema Broker B2B:** Tablas, búsqueda, PDF profesional, score calidad, portal broker
-- **Admin Dashboards:** Propiedades, Proyectos, Salud, Market Pulse, Supervisor HITL, Alquileres
-- **TC Dinámico:** Binance P2P integrado + precio_normalizado() helper
-- **Deduplicación:** Sistema duplicado_de activo
-- **Amenities:** 69 campos extraídos + candados
-
-### Pendiente
-- **Broker Fase 5-7:** Portal broker avanzado, sistema leads, CMA
-- **Enriquecimiento IA proyectos** (15 sin desarrollador asignado)
-- **Validación GPS** (workflow validador Google Places)
-- Ver backlogs detallados en `docs/backlog/`
+Ver `/admin/salud` para métricas en tiempo real (matching rates, workflow health, contadores).
+Ver `docs/backlog/` para pendientes detallados.
 
 ## Queries Rápidos
 
