@@ -6,6 +6,7 @@ import { useBrokerAuth } from '@/hooks/useBrokerAuth'
 import { supabase, convertirZona, obtenerTCActuales } from '@/lib/supabase'
 import ProyectoAutocomplete, { ProyectoSugerencia } from '@/components/broker/ProyectoAutocomplete'
 import { ZONAS_BROKER } from '@/lib/zonas'
+import type { CuotaPago } from '@/types/propiedad-editor'
 
 interface FormData {
   proyecto_nombre: string
@@ -49,13 +50,6 @@ interface FormData {
   latitud: number | null
   longitud: number | null
   amenidades_heredadas: string[]
-}
-
-interface CuotaPago {
-  id: string
-  porcentaje: string
-  momento: 'reserva' | 'firma_contrato' | 'durante_obra' | 'cuotas_mensuales' | 'entrega' | 'personalizado'
-  descripcion: string
 }
 
 const MOMENTOS_PAGO = [

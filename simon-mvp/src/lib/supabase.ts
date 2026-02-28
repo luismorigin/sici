@@ -13,13 +13,9 @@ export interface TCActuales {
   oficial: number
 }
 
-// v2.27: Plan de pagos detallado
-export interface CuotaPago {
-  id: string
-  porcentaje: string
-  momento: 'reserva' | 'firma_contrato' | 'durante_obra' | 'cuotas_mensuales' | 'entrega' | 'personalizado'
-  descripcion: string
-}
+// Re-export from canonical location
+import type { CuotaPago } from '@/types/propiedad-editor'
+export type { CuotaPago }
 
 export async function obtenerTCActuales(): Promise<TCActuales> {
   if (!supabase) {
