@@ -1,3 +1,7 @@
+> **DESACTUALIZADO** — Versión stuck en 2.1.0 (Dec 2025). No documenta
+> `precio_normalizado()` (mig 167-168) ni cambios de TC paralelo.
+> Consultar CLAUDE.md como fuente de verdad. Pendiente reescritura.
+
 # MERGE - DOCUMENTO CANÓNICO
 
 **Versión:** 2.1.0

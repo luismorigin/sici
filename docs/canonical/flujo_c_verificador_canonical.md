@@ -1,3 +1,7 @@
+> **DESACTUALIZADO** — Datos y horarios no reflejan producción actual.
+> Premisa central obsoleta: verificador ahora es universal (no solo Remax).
+> Consultar CLAUDE.md como fuente de verdad. Pendiente reescritura.
+
 # CONTRATO CANONICAL - FLUJO C: EL VERIFICADOR DE AUSENCIAS
 
 ## RESPONSABILIDAD ÚNICA

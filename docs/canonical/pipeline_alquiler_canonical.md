@@ -1,3 +1,7 @@
+> **DESACTUALIZADO** — Cron times incorrectos, falta Bien Inmuebles como 3ra fuente,
+> no refleja migraciones 147-169 post-launch. `expirado_stale` nunca se desplegó.
+> Consultar CLAUDE.md como fuente de verdad. Pendiente reescritura.
+
 # Pipeline Alquiler — Canonical Reference v1.0
 
 **Estado:** PRODUCCIÓN (activado 12 Feb 2026)

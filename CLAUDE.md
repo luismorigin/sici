@@ -5,7 +5,7 @@
 **SICI** = Sistema Inteligente de Captura Inmobiliaria (Bolivia)
 - Pipeline nocturno: Discovery → Enrichment → Merge → Matching (venta + alquiler)
 - Tabla principal: `propiedades_v2` (986 registros: ~681 venta, ~303 alquiler)
-- Tabla proyectos: `proyectos_master` (227 activos, 98.9% con GPS)
+- Tabla proyectos: `proyectos_master` (227 activos, 99.1% con GPS)
 - Tracking: `workflow_executions` (health check)
 - Fuentes: Century21, Remax, Bien Inmuebles
 
@@ -188,7 +188,8 @@ Flujo producción: `simonbo.com (/) → /filtros-v2 → /formulario-v2 → /resu
 ## Estado Actual (27 Feb 2026)
 
 ### Completado
-- **Pipeline venta:** Discovery → Enrichment → Merge → Matching nocturno (100% matching rate)
+- **Pipeline venta:** Discovery → Enrichment → Merge → Matching nocturno (86.2% matching, 355/412 completadas)
+- **Pipeline alquiler matching:** 91.3% (167/183 completadas)
 - **Pipeline alquiler:** 6 workflows n8n activos, 3 fuentes (C21, Remax, Bien Inmuebles)
 - **HITL completo:** Matching supervisor, Sin Match, Excluidas — todo en Admin Dashboard
 - **Query Layer:** buscar_unidades_reales/alquiler(), generar_razon_fiduciaria(), calcular_posicion_mercado()
