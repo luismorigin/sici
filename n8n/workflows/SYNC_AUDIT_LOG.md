@@ -267,7 +267,7 @@ Diferencias encontradas antes del reemplazo:
 
 | Prioridad | Descripción | Workflow afectado |
 |-----------|-------------|-------------------|
-| **URGENTE** | Reconectar `Log Stats → Procesar Ausentes` en producción BI | Discovery BI Alquiler |
+| ~~URGENTE~~ | ~~Reconectar `Log Stats → Procesar Ausentes` en producción BI~~ ✅ DONE 28 Feb | Discovery BI Alquiler |
 | ALTA | Agregar `primera_ausencia_at` a Marcar Ausentes Remax Alquiler | Discovery Remax Alquiler |
 | ALTA | Migrar producción a `$env.ANTHROPIC_API_KEY` | Enrichment LLM Alquiler |
 | MEDIA | Migrar producción a `$env.SLACK_WEBHOOK_SICI` (5 workflows) | Merge, Matching, TC Binance, Auditoría |
