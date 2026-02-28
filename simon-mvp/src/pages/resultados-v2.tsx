@@ -55,7 +55,7 @@ const ZONAS_PREMIUM = [
   { id: 'sirari', label: 'Sirari' },
   { id: 'equipetrol_norte', label: 'Eq. Norte' },
   { id: 'villa_brigida', label: 'Villa Brigida' },
-  { id: 'faremafu', label: 'Eq. Oeste' },
+  { id: 'equipetrol_oeste', label: 'Eq. Oeste' },
 ]
 
 const DORMITORIOS_PREMIUM = [
@@ -795,7 +795,7 @@ export default function ResultadosV2() {
         sirari: 'Sirari',
         equipetrol_norte: 'Eq. Norte',
         villa_brigida: 'Villa Brigida',
-        faremafu: 'Eq. Oeste',
+        equipetrol_oeste: 'Eq. Oeste',
       }[zona] || zona
 
       chips.push({

@@ -14,7 +14,7 @@ const microzonas: MicrozonaInfo[] = [
   { id: 'equipetrol_norte_norte', nombre: 'Eq. Norte/Norte (premium)', color: '#ff0000' },
   { id: 'equipetrol_norte_sur', nombre: 'Eq. Norte/Sur (premium tranquila)', color: '#ff6666' },
   { id: 'villa_brigida', nombre: 'Villa Brigida (emergente)', color: '#00ff00' },
-  { id: 'faremafu', nombre: 'Eq. Oeste - Busch (universitario)', color: '#9900ff' },
+  { id: 'equipetrol_oeste', nombre: 'Eq. Oeste - Busch (universitario)', color: '#9900ff' },
 ]
 
 export default function MicrozonasMap() {

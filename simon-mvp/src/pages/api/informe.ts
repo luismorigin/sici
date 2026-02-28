@@ -233,11 +233,14 @@ const getTradeOffLabel = (value: number, left: string, right: string): string =>
 
 const zonaDisplay = (zona: string): string => {
   const mapeo: Record<string, string> = {
-    'equipetrol': 'Equipetrol',
+    'equipetrol': 'Equipetrol Centro',
+    'equipetrol_centro': 'Equipetrol Centro',
     'equipetrol_norte': 'Equipetrol Norte',
-    'las_palmas': 'Las Palmas',
-    'urubo': 'Urubó',
-    'downtown': 'Centro/Downtown'
+    'sirari': 'Sirari',
+    'villa_brigida': 'Villa Brígida',
+    'equipetrol_oeste': 'Equipetrol Oeste',
+    'faremafu': 'Equipetrol Oeste',
+    'equipetrol_3er_anillo': 'Equipetrol Franja',
   }
   return mapeo[zona?.toLowerCase()] || zona || 'Sin zona'
 }
