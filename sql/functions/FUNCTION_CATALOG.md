@@ -1,8 +1,8 @@
 # Catálogo de Funciones SQL — SICI
 
-> 143 funciones custom en producción (schema public, excluye extensiones PostGIS/pg_trgm/fuzzystrmatch)
-> 42 archivos canónicos en `sql/functions/`
-> Actualizado: 27 Feb 2026 (Fase 7: +20 archivos exportados de producción)
+> 141 funciones custom únicas en producción (144 con overloads; schema public, excluye extensiones PostGIS/pg_trgm/fuzzystrmatch)
+> 42 archivos canónicos en `sql/functions/` (13 subdirectorios)
+> Actualizado: 28 Feb 2026 (auditoría cruzada BD vs catálogo)
 
 **Convención:** Las funciones con archivo canónico (`sql/functions/...`) tienen la definición actualizada exportada con `pg_get_functiondef()`. Las que solo indican migración fueron creadas/modificadas ahí y NO tienen archivo canónico.
 
@@ -34,7 +34,12 @@
 | `ejecutar_merge_batch(limite)` | — | 001 |
 | `merge_alquiler(id)` | `alquiler/merge_alquiler.sql` | 159 |
 
-*Helpers: `funciones_auxiliares_merge.sql`, `funciones_helper_merge.sql`*
+| `estadisticas_merge()` | — | — |
+| `calcular_discrepancia_exacta(p_valor_discovery, p_valor_enrichment, p_campo)` | — (helper interno merge) | — |
+| `calcular_discrepancia_porcentual(p_valor_discovery, p_valor_enrichment, p_campo)` | — (helper interno merge) | — |
+| `registrar_discrepancia_cambio(p_campo, p_valor_anterior, p_valor_nuevo)` | — (helper interno merge) | — |
+
+*Helpers canónicos: `funciones_auxiliares_merge.sql`, `funciones_helper_merge.sql`*
 
 ## Matching Venta (11 funciones)
 
@@ -51,6 +56,8 @@
 | `aplicar_matches_aprobados()` | `matching/aplicar_matches_aprobados.sql` | — |
 | `aplicar_matches_revisados(ids_aprobados, ids_rechazados)` | `matching/funciones_rpc_matching.sql` | 143 |
 | `corregir_proyecto_matching(sugerencia_id, ...)` | `matching/funciones_rpc_matching.sql` | — |
+| `match_propiedad_a_proyecto_master(p_latitud, p_longitud, p_nombre_edificio)` | — | — |
+| `registrar_alias_desde_correccion()` | — | — |
 
 ## Matching Alquiler (2 funciones)
 
@@ -96,7 +103,7 @@
 | `snapshot_absorcion_mercado()` | `snapshots/snapshot_absorcion_mercado.sql` | 168 |
 | `guardar_snapshot_precios()` | — | — |
 
-## HITL / Supervisión (9 funciones)
+## HITL / Supervisión (13 funciones)
 
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
@@ -107,8 +114,12 @@
 | `exportar_propiedades_excluidas()` | `hitl/exportar_propiedades_excluidas.sql` | 023 |
 | `detectar_razon_exclusion(id)` | `hitl/detectar_razon_exclusion.sql` | 023 |
 | `detectar_razon_exclusion_v2(id, filtros)` | `hitl/detectar_razon_exclusion.sql` | 023 |
-| `obtener_pendientes_para_sheets()` | — | — |
+| `obtener_pendientes_para_sheets()` | — (stale, era Google Sheets) | — |
 | `obtener_sin_match_para_exportar(limit)` | — | 009 |
+| `contar_auto_aprobados_sin_validar()` | — | — |
+| `obtener_auto_aprobados_para_revision(p_metodo, p_confianza_min, ...)` | — | — |
+| `registrar_exportacion_sin_match(p_propiedad_ids)` | — | — |
+| `sync_sin_match_on_proyecto_assigned()` | — (trigger) | — |
 
 ## Proyectos / Admin (9 funciones)
 
@@ -133,6 +144,7 @@
 | `verificar_broker(broker_id, accion, ...)` | `broker/verificar_broker.sql` | 075 |
 | `registrar_contacto_broker(lead_id, prop_id, ...)` | `broker/registrar_contacto_broker.sql` | 070 |
 | `consumir_credito_cma(broker_id)` | — | 112 |
+| `otorgar_credito_cma_por_calidad()` | — | — |
 
 ## Leads / CRM (6 funciones)
 
@@ -154,6 +166,36 @@
 | `validar_tc_binance(tc_nuevo, tipo)` | `tc_dinamico/modulo_tipo_cambio_dinamico.sql` | 014 |
 | `obtener_tc_actuales()` | `tc_dinamico/modulo_tipo_cambio_dinamico.sql` | 014 |
 | `ver_historial_tc(limite, tipo)` | `tc_dinamico/modulo_tipo_cambio_dinamico.sql` | 014 |
+
+## Análisis / Valuación — adicionales
+
+| Función | Archivo canónico | Última migración |
+|---------|-----------------|------------------|
+| `razon_fiduciaria_texto(p_propiedad_id)` | — | — |
+
+## Workflow Tracking (1 función)
+
+| Función | Archivo canónico | Última migración |
+|---------|-----------------|------------------|
+| `registrar_ejecucion_workflow(p_workflow_name, p_status, ...)` | — | — |
+
+## Auditoría / Historial (1 función)
+
+| Función | Archivo canónico | Última migración |
+|---------|-----------------|------------------|
+| `registrar_cambio_propiedad(p_propiedad_id, p_usuario_tipo, ...)` | — | — |
+
+## GIS (1 función)
+
+| Función | Archivo canónico | Última migración |
+|---------|-----------------|------------------|
+| `poblar_zonas_batch()` | — | — |
+
+## Vistas Materializadas (1 función)
+
+| Función | Archivo canónico | Última migración |
+|---------|-----------------|------------------|
+| `refresh_v_amenities_proyecto()` | — | — |
 
 ## Helpers / Normalización (13 funciones)
 
@@ -234,4 +276,8 @@
 | Helpers | 13 | 4 archivos (Fase 7) |
 | Triggers | 9+ | 3 archivos (Fase 7) |
 | Misc | 15+ | 0 |
-| **Total** | **~143** | **42 archivos** |
+| Workflow Tracking | 1 | 0 |
+| Auditoría/Historial | 1 | 0 |
+| GIS | 1 | 0 |
+| Vistas Materializadas | 1 | 0 |
+| **Total** | **~141 unique (144 con overloads)** | **42 archivos** |

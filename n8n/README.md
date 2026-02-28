@@ -8,8 +8,8 @@
 |----------|---------|---------|
 | Discovery C21 + Remax | 1:00 AM | `modulo_1/flujo_a_discovery_century21_v1.0.3_FINAL.json` |
 | Enrichment LLM | 2:00 AM | `modulo_1/flujo_b_processing_v3.0.json` |
-| Verificador | (post-merge) | `modulo_1/flujo_c_verificador_v1.1.0_FINAL.json` |
 | Merge Nocturno | 3:00 AM | `modulo_1/Flujo Merge - Nocturno v1.0.0.json` |
+| Verificador ausencias | 6:00 AM | `modulo_1/flujo_c_verificador_v1.1.0_FINAL.json` |
 
 ### Matching + Auditoría (modulo_2) — 3 workflows activos
 

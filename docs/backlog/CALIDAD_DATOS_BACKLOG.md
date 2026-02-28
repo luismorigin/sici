@@ -46,8 +46,8 @@ Auditoría manual con IA completada. 14 propiedades corregidas con `campos_bloqu
 
 ## Backlog Extractores n8n
 
-- [ ] **REIMPORTAR flujo_b_processing_v3.0.json en n8n** - Contiene Fix 1 TC paralelo (patrones regex)
-- [ ] **Fix 2 TC Paralelo** - Lógica normalización USD paralelo - Ver `docs/backlog/FIX_TC_PARALELO_EXTRACTORES.md`
+- [x] ~~**REIMPORTAR flujo_b_processing_v3.0.json en n8n**~~ - Resuelto: `precio_normalizado()` (migraciones 167-168) maneja TC paralelo a nivel SQL
+- [x] ~~**Fix 2 TC Paralelo**~~ - Resuelto: `precio_normalizado()` convierte precios paralelo a USD reales
 
 ## Validaciones Pendientes en Pipeline
 

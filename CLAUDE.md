@@ -109,10 +109,10 @@ La fuente de verdad geográfica es `microzona` (asignada por PostGIS). La column
 
 ```
 sici/
-├── sql/functions/       → Funciones SQL canónicas (42 archivos, 14 subdirectorios)
+├── sql/functions/       → Funciones SQL canónicas (42 archivos, 13 subdirectorios)
 │   ├── discovery/       → registrar_discovery
 │   ├── enrichment/      → registrar_enrichment
-│   ├── merge/           → merge_discovery_enrichment v2.2.0
+│   ├── merge/           → merge_discovery_enrichment v2.3.0
 │   ├── matching/        → matching v3.1 + matchear_alquiler
 │   ├── alquiler/        → discovery/enrichment/merge alquiler
 │   ├── query_layer/     → buscar_unidades_reales/alquiler, razón fiduciaria, posición mercado

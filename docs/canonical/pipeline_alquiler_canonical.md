@@ -380,7 +380,7 @@ Sin esto, el verificador no puede calcular `dias_desde_ausencia` y las propiedad
 El matching de alquileres es **independiente** del de ventas. Opera en 3 niveles:
 
 #### Tier 1 -- Exact Lookup (auto-approve, score 98%)
-Busca `nombre_edificio` exacto en `mv_nombre_proyecto_lookup` (vista materializada con 512 variantes de 200 proyectos).
+Busca `nombre_edificio` exacto en `mv_nombre_proyecto_lookup` (vista materializada con variantes de 227 proyectos activos).
 
 #### Tier 2 -- Normalized Lookup (auto-approve, score 90%)
 Normaliza el nombre (`normalizar_nombre_edificio()`: quita prefijos, acentos, sufijos de zona) y busca en la vista. Si encuentra match, agrega el nombre original como alias al proyecto.
@@ -642,7 +642,7 @@ LIMIT 10;
 | Documento | Proposito |
 |-----------|-----------|
 | `docs/alquiler/LLM_ENRICHMENT_PROMPT.md` | Prompt template para Claude Haiku |
-| `docs/alquiler/N8N_WORKFLOWS_ALQUILER.md` | Detalle nodos n8n (pseudocodigo) |
+| ~~`docs/alquiler/N8N_WORKFLOWS_ALQUILER.md`~~ | *(eliminado — ver `n8n/README.md` y `n8n/workflows/SYNC_AUDIT_LOG.md`)* |
 | `docs/alquiler/COSTOS_ROI_LLM.md` | Analisis costos LLM vs regex |
 | `docs/alquiler/LEARNINGS_PIPELINE_ALQUILER.md` | Learnings post-launch (filtros, bugs, absorcion) |
 | `docs/reports/FILTROS_CALIDAD_MERCADO.md` | Filtros calidad para estudios de mercado |

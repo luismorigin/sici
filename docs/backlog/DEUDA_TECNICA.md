@@ -24,5 +24,4 @@ completamente desde `datos_json_enrichment` en cada ejecución. Esto significa q
 - Modificar merge para verificar `campos_bloqueados->>'amenities'` antes de sobrescribir
 - O crear estructura separada `amenities_enriquecidos` que merge no toque
 
-**Impacto actual:** Las migraciones 064 deben re-ejecutarse después de cada merge nocturno
-hasta implementar la solución. La migración 066 (estacionamientos) es segura.
+**Estado (28 Feb 2026):** Parcialmente resuelto. La migración 116 agregó el trigger `proteger_amenities_candados()` que protege amenities con candados manuales (`campos_bloqueados`). Sin embargo, amenities sin candado aún se sobrescriben en cada merge. La re-ejecución de migraciones 064 ya no es necesaria para campos protegidos.

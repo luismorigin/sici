@@ -305,7 +305,7 @@ CREATE INDEX idx_prop_alquiler_filtros ON propiedades_v2 (dormitorios, precio_me
 
 ```
 Total registros: 1,002
-  Venta:     692 (C21: 513, Remax: 177, excluidos: 19)
+  Venta:     692 (C21: 515, Remax: 177, excluidos: 19)
   Alquiler:  310 (C21: 229, Remax: 74, BI: 7)
 ```
 

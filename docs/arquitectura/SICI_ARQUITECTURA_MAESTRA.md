@@ -12,7 +12,7 @@
 
 ### A.1 Qué es SICI/Simón
 
-**SICI** (Sistema Inteligente de Clasificación Inmobiliaria) es la infraestructura de datos.  
+**SICI** (Sistema Inteligente de Captura Inmobiliaria) es la infraestructura de datos.  
 **Simón** es el agente fiduciario que interactúa con usuarios.
 
 > "Simón no vende casas. Simón protege decisiones patrimoniales."
@@ -624,7 +624,7 @@ Simón mantiene un estado interno por sesión:
 │  ├── calcular_posicion_mercado(...)       → Ranking mercado      │
 │  └── knowledge_graph_health_check()       → Health check         │
 ├──────────────────────────────────────────────────────────────────┤
-│                        FUNCIONES (~130)                            │
+│                        FUNCIONES (~141)                            │
 │  ├── discovery/       → registrar_discovery, _alquiler            │
 │  ├── enrichment/      → registrar_enrichment, _alquiler           │
 │  ├── merge/           → merge_discovery_enrichment, merge_alquiler│
@@ -655,7 +655,7 @@ Simón mantiene un estado interno por sesión:
 
 | Fuente | Venta | Alquiler | Método |
 |--------|-------|----------|--------|
-| Century21 | 513 | 229 | API REST + HTML scraping |
+| Century21 | 515 | 229 | API REST + HTML scraping |
 | Remax | 177 | 74 | API REST + HTML scraping |
 | Bien Inmuebles | — | 7 | HTML scraping |
 
@@ -685,14 +685,14 @@ Bolivia tiene dualidad cambiaria: TC oficial (6.96 Bs/USD) vs TC paralelo (~7.30
 | Métrica | Valor |
 |---------|-------|
 | Propiedades totales | 1,002 |
-| Venta | 690 (C21: 513, Remax: 177) |
+| Venta | 692 (C21: 515, Remax: 177) |
 | Alquiler | 310 (C21: 229, Remax: 74, BI: 7) |
-| Proyectos activos | 227 (98.9% con GPS) |
+| Proyectos activos | 227 (99.1% con GPS) |
 | Completados con score | 588 |
 | Con amenities | 587 (100% de completados) |
 | Con nombre edificio | 462 (79%) |
 | Con microzona PostGIS | 430 (73%) |
-| Funciones custom SICI | ~130 |
+| Funciones custom SICI | ~141 |
 | Duplicados detectados | 41 |
 
 ### I.8 Pipeline Nocturno
@@ -739,7 +739,7 @@ Bolivia tiene dualidad cambiaria: TC oficial (6.96 Bs/USD) vs TC paralelo (~7.30
 |------|-------|---------|
 | Knowledge Graph MVP | Dic 2025 | `buscar_unidades_reales()`, vistas, índices GIN |
 | Pipeline venta completo | Dic 2025 | Discovery → Enrichment → Merge → Matching nocturno |
-| Matching v3.1 | Dic 2025 | GPS + fuzzy + trigram + URL. 100% matching rate venta |
+| Matching v3.1 | Dic 2025 | GPS + fuzzy + trigram + URL. 86.2% matching rate venta (350/406 completadas) |
 | HITL Admin Dashboard | Ene 2026 | Supervisor, Sin Match, Excluidas — reemplazó Google Sheets |
 | Amenities 69 campos | Ene 2026 | Extracción LLM + candados manuales + trigger protección |
 | TC Dinámico Binance | Ene 2026 | Consulta P2P + `precio_normalizado()` + recálculo batch |
@@ -800,7 +800,7 @@ Ver backlogs detallados en `docs/backlog/`
 | Término | Definición |
 |---------|------------|
 | **Fiduciario** | Que actúa en el mejor interés del cliente, no del vendedor |
-| **SICI** | Sistema Inteligente de Clasificación Inmobiliaria (infraestructura de datos) |
+| **SICI** | Sistema Inteligente de Captura Inmobiliaria (infraestructura de datos) |
 | **Simón** | Agente IA fiduciario que interactúa con usuarios |
 | **Knowledge Graph** | Capa de datos estructurados y funciones de búsqueda |
 | **Query Layer** | Funciones SQL que permiten búsquedas inteligentes |
@@ -839,7 +839,7 @@ Ver backlogs detallados en `docs/backlog/`
 | **Pipeline Alquiler** | `docs/canonical/pipeline_alquiler_canonical.md` | Pipeline alquiler completo v2.0 |
 | **Filtros Calidad Mercado** | `docs/reports/FILTROS_CALIDAD_MERCADO.md` | Filtros obligatorios para estudios |
 | **Schema BD** | `sql/schema/propiedades_v2_schema.md` | 84 columnas, enums, constraints, índices |
-| **Catálogo Funciones SQL** | `sql/functions/FUNCTION_CATALOG.md` | Inventario ~130 funciones por dominio |
+| **Catálogo Funciones SQL** | `sql/functions/FUNCTION_CATALOG.md` | Inventario ~141 funciones por dominio |
 | **Índice Migraciones** | `docs/migrations/MIGRATION_INDEX.md` | 171 migraciones (001-169) |
 | **Learnings Alquiler** | `docs/alquiler/LEARNINGS_PIPELINE_ALQUILER.md` | Bugs, filtros, absorción |
 

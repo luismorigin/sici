@@ -50,7 +50,7 @@ sici/
 - Pages Router (Next.js 14)
 - Styling: Tailwind CSS
 - Data: Supabase client (isomorphic)
-- Componentes en subdirectorios por feature: `landing-premium/`, `results-premium/`, `alquiler/`, `broker/`, `pro/`
+- Componentes en subdirectorios por feature: `landing-premium/`, `results-premium/`, `alquiler/`, `broker/`, `ui/`, `shared/`
 
 ### Commits
 - Convención: `tipo(scope): descripción`
