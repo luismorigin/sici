@@ -1,147 +1,38 @@
-> **DESACTUALIZADO** — Dice 67+ columnas, producción tiene 82. Faltan:
-> columnas alquiler (mig 135), microzona, duplicado_de, plan_pagos_cuotas/texto,
-> razon_inactiva, fecha_inactivacion, cambios_enrichment. Fuente dice solo
-> century21/remax (falta bien_inmuebles). `confianza_match` → `confianza_sugerencia_extractor`.
-> Pendiente reescritura.
-
 # Schema: propiedades_v2
 
-**Última actualización:** 28 Enero 2026
-**Columnas:** 67+
+**Exportado de producción:** 28 Feb 2026
+**Columnas:** 84
+**Fuente:** `information_schema.columns` + `pg_constraint` + `pg_indexes`
 
 ---
 
-## Grupos de Columnas
+## ENUMs
 
-### Identificación (9 cols)
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| `id` | SERIAL | PK autoincremental |
-| `url` | VARCHAR | URL única de la propiedad |
-| `fuente` | VARCHAR | 'century21' \| 'remax' |
-| `codigo_propiedad` | VARCHAR | ID del portal |
-| `tipo_operacion` | VARCHAR | 'venta' \| 'alquiler' |
-| `tipo_propiedad_original` | VARCHAR | Tipo según portal |
-| `estado_construccion` | estado_construccion_enum | Ver ENUM abajo |
-| `scraper_version` | VARCHAR | Versión del extractor |
-| `metodo_discovery` | VARCHAR | 'api_rest' \| 'grid_geografico' |
-
-### Financiero (10 cols)
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| `precio_usd` | NUMERIC(12,2) | Precio final en USD |
-| `precio_min_usd` | NUMERIC(12,2) | Mínimo (multiproyecto) |
-| `precio_max_usd` | NUMERIC(12,2) | Máximo (multiproyecto) |
-| `moneda_original` | VARCHAR | 'USD' \| 'BOB' |
-| `tipo_cambio_usado` | NUMERIC(10,4) | TC aplicado |
-| `tipo_cambio_detectado` | VARCHAR | 'oficial' \| 'paralelo' \| 'no_especificado' |
-| `tipo_cambio_paralelo_usado` | NUMERIC(10,4) | TC paralelo si aplica |
-| `precio_usd_actualizado` | NUMERIC(12,2) | Último precio recalculado |
-| `requiere_actualizacion_precio` | BOOLEAN | Flag para recálculo TC |
-| `depende_de_tc` | BOOLEAN | Si precio depende de TC |
-
-### Físico (12 cols)
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| `area_total_m2` | NUMERIC(10,2) | Metros cuadrados |
-| `dormitorios` | INTEGER | Cantidad dormitorios |
-| `banos` | NUMERIC(3,1) | Cantidad baños |
-| `estacionamientos` | INTEGER | Cantidad parking |
-| `parqueo_incluido` | BOOLEAN | **v2.26** true=incluido en precio, false=adicional |
-| `parqueo_precio_adicional` | NUMERIC(12,2) | **v2.26** USD por parqueo si no incluido |
-| `baulera` | BOOLEAN | Tiene baulera (v2.23) |
-| `baulera_incluido` | BOOLEAN | **v2.26** true=incluida en precio, false=adicional |
-| `baulera_precio_adicional` | NUMERIC(12,2) | **v2.26** USD por baulera si no incluida |
-| `piso` | INTEGER | **v2.25** Número de piso. NULL=sin confirmar |
-| `latitud` | NUMERIC(10,8) | GPS latitud |
-| `longitud` | NUMERIC(11,8) | GPS longitud |
-
-### Forma de Pago (5 cols) - v2.25
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| `plan_pagos_desarrollador` | BOOLEAN | Acepta cuotas. NULL=sin confirmar, false=solo contado |
-| `acepta_permuta` | BOOLEAN | Acepta vehículo/propiedad. NULL=sin confirmar |
-| `solo_tc_paralelo` | BOOLEAN | Solo USD paralelo. NULL=sin confirmar, false=acepta oficial/Bs |
-| `precio_negociable` | BOOLEAN | Acepta ofertas. NULL=sin confirmar |
-| `descuento_contado_pct` | NUMERIC(5,2) | % descuento contado. NULL=sin descuento/sin confirmar |
-
-### Multiproyecto (5 cols)
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| `es_multiproyecto` | BOOLEAN | Flag multiproyecto |
-| `dormitorios_opciones` | VARCHAR | Ej: "1-3" |
-| `area_min_m2` | NUMERIC(10,2) | Área mínima |
-| `area_max_m2` | NUMERIC(10,2) | Área máxima |
-| `tipologias_detectadas` | JSONB | Array de tipologías |
-
-### Matching (6 cols)
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| `id_proyecto_master` | INTEGER | FK a proyectos_master (confirmado) |
-| `id_proyecto_master_sugerido` | INTEGER | Sugerencia automática |
-| `metodo_match` | VARCHAR | 'fuzzy' \| 'gps' \| 'manual' |
-| `confianza_match` | NUMERIC(3,2) | 0.00-1.00 |
-| `nombre_edificio` | VARCHAR | **v2.1.0** - Nombre del edificio/proyecto |
-| `zona` | VARCHAR | **v2.1.0** - Zona geográfica |
-
-### Estado (7 cols)
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| `status` | estado_propiedad | ENUM: nueva, actualizado, completado, inactivo_pending, inactivo_confirmed |
-| `es_activa` | BOOLEAN | Flag activa |
-| `es_para_matching` | BOOLEAN | Apta para matching |
-| `score_calidad_dato` | INTEGER | 0-100 completitud |
-| `score_fiduciario` | INTEGER | 0-100 coherencia |
-| `primera_ausencia_at` | TIMESTAMP | Primera vez ausente en discovery |
-| `motivo_inactividad` | VARCHAR | Razón de inactivación |
-
-### Arquitectura Dual (8 cols)
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| `datos_json_discovery` | JSONB | RAW snapshot API (inmutable) |
-| `datos_json_enrichment` | JSONB | RAW extracción HTML (inmutable) |
-| `datos_json` | JSONB | **Merge consolidado v2.0.0** |
-| `fecha_discovery` | TIMESTAMP | Último discovery |
-| `fecha_enrichment` | TIMESTAMP | Último enrichment |
-| `fecha_merge` | TIMESTAMP | Último merge |
-| `campos_bloqueados` | JSONB | Candados manuales |
-| `cambios_merge` | JSONB | Log de merge |
-
-### Merge v2.0.0 (3 cols) ⚠️ NUEVAS
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| `flags_semanticos` | JSONB | Array de warnings/errors del scoring |
-| `discrepancias_detectadas` | JSONB | Diferencias discovery vs enrichment |
-| `cambios_merge` | JSONB | Tracking de fuentes usadas |
-
-### Timestamps (5 cols)
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| `fecha_creacion` | TIMESTAMP | Creación registro |
-| `fecha_actualizacion` | TIMESTAMP | Última modificación |
-| `fecha_publicacion` | DATE | Fecha publicación portal |
-| `fecha_scraping` | TIMESTAMP | Último scrape HTML |
-| `updated_at` | TIMESTAMP | Trigger automático |
-
----
-
-## Enum: estado_propiedad
+### estado_propiedad
 
 ```sql
 CREATE TYPE estado_propiedad AS ENUM (
-    'nueva',                    -- Recién descubierta (venta), pendiente enrichment
+    'nueva',
     'pendiente_enriquecimiento',
-    'actualizado',
     'completado',
+    'actualizado',
     'inactivo_pending',
     'inactivo_confirmed',
-    'excluido_operacion'        -- v2.5: Alquiler/anticrético, no entra a pipeline
+    'excluido_operacion'
 );
 ```
 
----
+### tipo_operacion_enum
 
-## Enum: estado_construccion_enum
+```sql
+CREATE TYPE tipo_operacion_enum AS ENUM (
+    'venta',
+    'alquiler',
+    'anticretico'
+);
+```
+
+### estado_construccion_enum
 
 ```sql
 CREATE TYPE estado_construccion_enum AS ENUM (
@@ -150,112 +41,275 @@ CREATE TYPE estado_construccion_enum AS ENUM (
     'construccion',
     'planos',
     'no_especificado',
-    'usado',              -- v1.4.5: Segunda mano
-    'nuevo_a_estrenar'    -- v1.4.5: Nuevo sin uso previo
+    'usado',
+    'nuevo_a_estrenar'
 );
 ```
 
 ---
 
-## Índices Recomendados
+## Columnas (84)
+
+### Identificación (7 cols)
+
+| # | Columna | Tipo | Nullable | Default | Descripción |
+|---|---------|------|----------|---------|-------------|
+| 1 | `id` | INTEGER | NO | nextval() | PK autoincremental |
+| 2 | `url` | VARCHAR(500) | NO | — | URL única de la propiedad |
+| 3 | `fuente` | VARCHAR(50) | NO | — | `'century21'` \| `'remax'` \| `'bien_inmuebles'` |
+| 4 | `codigo_propiedad` | VARCHAR(100) | YES | — | ID del portal |
+| 5 | `tipo_operacion` | tipo_operacion_enum | YES | — | `'venta'` \| `'alquiler'` \| `'anticretico'` |
+| 6 | `tipo_propiedad_original` | TEXT | YES | — | Tipo según portal (departamento, casa, etc.) |
+| 7 | `estado_construccion` | estado_construccion_enum | YES | — | Ver enum arriba |
+
+### Financiero — Venta (10 cols)
+
+| # | Columna | Tipo | Nullable | Default | Descripción |
+|---|---------|------|----------|---------|-------------|
+| 8 | `precio_usd` | NUMERIC(12,2) | YES | — | Precio en USD |
+| 9 | `precio_usd_original` | NUMERIC(12,2) | YES | — | Precio original antes de conversión |
+| 10 | `moneda_original` | VARCHAR(10) | YES | — | `'USD'` \| `'BOB'` |
+| 11 | `tipo_cambio_usado` | NUMERIC(6,4) | YES | — | TC aplicado en conversión |
+| 12 | `tipo_cambio_detectado` | VARCHAR(20) | YES | — | `'oficial'` \| `'paralelo'` \| `'no_especificado'` |
+| 13 | `requiere_actualizacion_precio` | BOOLEAN | YES | false | Flag para recálculo TC |
+| 52 | `tipo_cambio_paralelo_usado` | NUMERIC | YES | — | TC paralelo Binance si aplica |
+| 53 | `precio_usd_actualizado` | NUMERIC | YES | — | Último precio recalculado |
+| 54 | `fecha_ultima_actualizacion_precio` | TIMESTAMP | YES | — | Cuándo se recalculó |
+| 55 | `depende_de_tc` | BOOLEAN | YES | false | Si precio depende de TC paralelo |
+
+### Financiero — Alquiler (4 cols, migración 135)
+
+| # | Columna | Tipo | Nullable | Default | CHECK | Descripción |
+|---|---------|------|----------|---------|-------|-------------|
+| 77 | `precio_mensual_bob` | NUMERIC(10,2) | YES | — | > 0 | Precio mensual en Bs (canónico) |
+| 78 | `precio_mensual_usd` | NUMERIC(10,2) | YES | — | — | Precio mensual en USD (auto-calc BOB/6.96) |
+| 79 | `deposito_meses` | NUMERIC(2,1) | YES | — | 0-6 | Depósito garantía en meses |
+| 84 | `monto_expensas_bob` | NUMERIC(10,2) | YES | — | >= 0 | Gastos comunes en Bs |
+
+### Físico (8 cols)
+
+| # | Columna | Tipo | Nullable | Default | Descripción |
+|---|---------|------|----------|---------|-------------|
+| 20 | `latitud` | NUMERIC(10,8) | YES | — | GPS latitud |
+| 21 | `longitud` | NUMERIC(11,8) | YES | — | GPS longitud |
+| 22 | `area_total_m2` | NUMERIC(10,2) | YES | — | Metros cuadrados (CHECK > 0) |
+| 23 | `dormitorios` | INTEGER | YES | — | Cantidad dormitorios |
+| 24 | `banos` | NUMERIC(3,1) | YES | — | Cantidad baños |
+| 25 | `estacionamientos` | INTEGER | YES | — | Cantidad parking |
+| 64 | `baulera` | BOOLEAN | YES | — | Tiene baulera |
+| 65 | `piso` | INTEGER | YES | — | Número de piso |
+
+### Alquiler — Detalles (4 cols, migración 135)
+
+| # | Columna | Tipo | Nullable | Default | CHECK | Descripción |
+|---|---------|------|----------|---------|-------|-------------|
+| 80 | `amoblado` | TEXT | YES | — | `si/no/semi` | Estado amoblado |
+| 81 | `acepta_mascotas` | BOOLEAN | YES | — | — | Acepta mascotas |
+| 82 | `servicios_incluidos` | JSONB | YES | `'[]'` | — | Array: `["agua","luz","internet"]` |
+| 83 | `contrato_minimo_meses` | INTEGER | YES | — | 1-60 | Duración mínima contrato |
+
+### Parqueo y Baulera — Detalle (4 cols, migración ~085)
+
+| # | Columna | Tipo | Nullable | Default | Descripción |
+|---|---------|------|----------|---------|-------------|
+| 71 | `parqueo_incluido` | BOOLEAN | YES | — | true=incluido en precio |
+| 72 | `parqueo_precio_adicional` | NUMERIC(12,2) | YES | — | USD por parqueo si no incluido |
+| 73 | `baulera_incluido` | BOOLEAN | YES | — | true=incluida en precio |
+| 74 | `baulera_precio_adicional` | NUMERIC(12,2) | YES | — | USD por baulera si no incluida |
+
+### Forma de Pago (7 cols, migración 081)
+
+| # | Columna | Tipo | Nullable | Default | Descripción |
+|---|---------|------|----------|---------|-------------|
+| 66 | `plan_pagos_desarrollador` | BOOLEAN | YES | — | Acepta cuotas |
+| 67 | `acepta_permuta` | BOOLEAN | YES | — | Acepta vehículo/propiedad |
+| 68 | `solo_tc_paralelo` | BOOLEAN | YES | — | Solo USD paralelo |
+| 69 | `precio_negociable` | BOOLEAN | YES | — | Acepta ofertas |
+| 70 | `descuento_contado_pct` | NUMERIC(5,2) | YES | — | % descuento por pago contado |
+| 75 | `plan_pagos_cuotas` | JSONB | YES | — | Detalle cuotas estructurado |
+| 76 | `plan_pagos_texto` | TEXT | YES | — | Descripción libre forma de pago |
+
+**Interpretación NULL:** `NULL` = sin confirmar, `true` = confirmado sí, `false` = confirmado no.
+
+### Multiproyecto (5 cols)
+
+| # | Columna | Tipo | Nullable | Default | Descripción |
+|---|---------|------|----------|---------|-------------|
+| 14 | `es_multiproyecto` | BOOLEAN | YES | false | Flag multiproyecto |
+| 15 | `dormitorios_opciones` | VARCHAR(20) | YES | — | Ej: "1-3" |
+| 16 | `precio_min_usd` | NUMERIC(12,2) | YES | — | Precio mínimo |
+| 17 | `precio_max_usd` | NUMERIC(12,2) | YES | — | Precio máximo |
+| 18 | `area_min_m2` | NUMERIC(10,2) | YES | — | Área mínima |
+| 19 | `area_max_m2` | NUMERIC(10,2) | YES | — | Área máxima |
+
+### Matching (5 cols)
+
+| # | Columna | Tipo | Nullable | Default | Descripción |
+|---|---------|------|----------|---------|-------------|
+| 26 | `id_proyecto_master` | INTEGER | YES | — | FK a proyectos_master (confirmado) |
+| 27 | `id_proyecto_master_sugerido` | INTEGER | YES | — | Sugerencia automática |
+| 28 | `confianza_sugerencia_extractor` | NUMERIC(5,2) | YES | — | 0.00-1.00 score confianza |
+| 29 | `metodo_match` | VARCHAR(50) | YES | — | `'fuzzy'` \| `'gps'` \| `'manual'` \| `'lookup'` \| `'trigram'` |
+| 60 | `nombre_edificio` | VARCHAR | YES | — | Nombre del edificio/proyecto |
+
+### Ubicación (2 cols)
+
+| # | Columna | Tipo | Nullable | Default | Descripción |
+|---|---------|------|----------|---------|-------------|
+| 61 | `zona` | VARCHAR | YES | — | Zona geográfica (normalizada en venta, cruda en alquiler) |
+| 62 | `microzona` | VARCHAR(100) | YES | — | Microzona PostGIS (fuente de verdad geográfica) |
+
+### Estado y Calidad (8 cols)
+
+| # | Columna | Tipo | Nullable | Default | Descripción |
+|---|---------|------|----------|---------|-------------|
+| 30 | `status` | estado_propiedad | NO | `'nueva'` | Estado del pipeline |
+| 31 | `es_activa` | BOOLEAN | YES | true | Flag de actividad |
+| 32 | `es_para_matching` | BOOLEAN | YES | true | Apta para matching |
+| 33 | `razon_inactiva` | VARCHAR(200) | YES | — | Razón de inactivación (`'aviso_terminado'`) |
+| 34 | `fecha_inactivacion` | TIMESTAMP | YES | — | Cuándo se confirmó baja |
+| 35 | `score_calidad_dato` | INTEGER | YES | — | 0-100 completitud datos |
+| 36 | `score_fiduciario` | INTEGER | YES | — | 0-100 coherencia (solo venta) |
+| 58 | `primera_ausencia_at` | TIMESTAMP | YES | — | Primera vez ausente en discovery |
+
+### Deduplicación (1 col)
+
+| # | Columna | Tipo | Nullable | Default | Descripción |
+|---|---------|------|----------|---------|-------------|
+| 63 | `duplicado_de` | INTEGER | YES | — | FK self-ref a propiedades_v2(id) |
+
+### Arquitectura Dual — JSON (7 cols)
+
+| # | Columna | Tipo | Nullable | Default | Descripción |
+|---|---------|------|----------|---------|-------------|
+| 37 | `datos_json_discovery` | JSONB | YES | — | RAW snapshot API (inmutable por ejecución) |
+| 38 | `datos_json_enrichment` | JSONB | YES | — | RAW extracción HTML/LLM (inmutable) |
+| 39 | `datos_json` | JSONB | YES | — | Merge consolidado v2.0.0+ |
+| 40 | `campos_bloqueados` | JSONB | YES | `'{}'` | Candados manuales (CHECK: debe ser objeto) |
+| 41 | `discrepancias_detectadas` | JSONB | YES | — | Diferencias discovery vs enrichment |
+| 42 | `campos_conflicto` | JSONB | YES | `'[]'` | Campos con conflicto entre fuentes |
+| 59 | `flags_semanticos` | JSONB | YES | `'[]'` | Array warnings/errors del scoring |
+
+### Tracking de Cambios (2 cols)
+
+| # | Columna | Tipo | Nullable | Default | Descripción |
+|---|---------|------|----------|---------|-------------|
+| 56 | `cambios_enrichment` | JSONB | YES | — | Log de cambios enrichment |
+| 57 | `cambios_merge` | JSONB | YES | — | Log de fuentes usadas en merge |
+
+### Timestamps (6 cols)
+
+| # | Columna | Tipo | Nullable | Default | Descripción |
+|---|---------|------|----------|---------|-------------|
+| 43 | `scraper_version` | VARCHAR(20) | YES | — | Versión del extractor |
+| 44 | `fecha_creacion` | TIMESTAMP | YES | NOW() | Creación registro |
+| 45 | `fecha_actualizacion` | TIMESTAMP | YES | NOW() | Última modificación |
+| 46 | `fecha_discovery` | TIMESTAMP | YES | — | Último/primer discovery (ver nota) |
+| 47 | `fecha_enrichment` | TIMESTAMP | YES | — | Último enrichment |
+| 48 | `fecha_merge` | TIMESTAMP | YES | — | Último merge |
+| 49 | `fecha_publicacion` | DATE | YES | — | Fecha publicación portal |
+| 50 | `fecha_scraping` | TIMESTAMP | YES | — | Último scrape HTML |
+| 51 | `metodo_discovery` | VARCHAR(50) | YES | — | `'api_rest'` \| `'grid_geografico'` |
+
+**Nota sobre `fecha_discovery`:** Para fuentes sin `fecha_publicacion` (Bien Inmuebles), se preserva el valor original del INSERT. Para C21/Remax se actualiza con NOW() en cada re-discovery. Ver migración 165.
+
+---
+
+## CHECK Constraints (10)
 
 ```sql
-CREATE INDEX idx_propiedades_status ON propiedades_v2(status);
-CREATE INDEX idx_propiedades_fuente ON propiedades_v2(fuente);
-CREATE INDEX idx_propiedades_codigo ON propiedades_v2(codigo_propiedad);
-CREATE UNIQUE INDEX idx_propiedades_url_fuente ON propiedades_v2(url, fuente);
-CREATE INDEX idx_propiedades_proyecto ON propiedades_v2(id_proyecto_master);
-CREATE INDEX idx_propiedades_matching ON propiedades_v2(es_para_matching) WHERE es_para_matching = TRUE;
+-- Precio venta positivo
+CHECK (precio_usd > 0 OR precio_usd IS NULL)
+
+-- Área positiva
+CHECK (area_total_m2 > 0 OR area_total_m2 IS NULL)
+
+-- Precio alquiler positivo
+CHECK (precio_mensual_bob IS NULL OR precio_mensual_bob > 0)
+
+-- Expensas no negativas
+CHECK (monto_expensas_bob IS NULL OR monto_expensas_bob >= 0)
+
+-- Depósito 0-6 meses
+CHECK (deposito_meses IS NULL OR (deposito_meses >= 0 AND deposito_meses <= 6))
+
+-- Contrato 1-60 meses
+CHECK (contrato_minimo_meses IS NULL OR (contrato_minimo_meses >= 1 AND contrato_minimo_meses <= 60))
+
+-- Amoblado valores permitidos
+CHECK (amoblado IS NULL OR amoblado IN ('si', 'no', 'semi'))
+
+-- Candados debe ser objeto JSON
+CHECK (campos_bloqueados IS NULL OR jsonb_typeof(campos_bloqueados) = 'object')
+
+-- Multiproyecto debe tener al menos un rango
+CHECK (NOT es_multiproyecto OR (dormitorios_opciones IS NOT NULL OR precio_min_usd IS NOT NULL
+  OR precio_max_usd IS NOT NULL OR area_min_m2 IS NOT NULL OR area_max_m2 IS NOT NULL))
+
+-- Fecha actualización precio lógica
+CHECK (fecha_ultima_actualizacion_precio IS NULL OR fecha_ultima_actualizacion_precio >= fecha_creacion)
 ```
 
 ---
 
-## Migración v2.0.0
+## Constraints
 
 ```sql
--- Columnas agregadas para Merge v2.0.0
-ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS flags_semanticos JSONB DEFAULT '[]'::JSONB;
-ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS discrepancias_detectadas JSONB;
-ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS cambios_merge JSONB;
-```
+-- Primary Key
+PRIMARY KEY (id)
 
-Ver: `sql/migrations/migracion_merge_v2.0.0.sql`
+-- Unicidad
+UNIQUE (url, fuente)
 
----
-
-## Migración ENUM estado_construccion (24 Dic 2025)
-
-```sql
--- Agregar valores faltantes al ENUM
-ALTER TYPE estado_construccion_enum ADD VALUE IF NOT EXISTS 'usado';
-ALTER TYPE estado_construccion_enum ADD VALUE IF NOT EXISTS 'nuevo_a_estrenar';
+-- Foreign Key
+FOREIGN KEY (duplicado_de) REFERENCES propiedades_v2(id)
 ```
 
 ---
 
-## Migración v2.1.0 - Columnas Matching (25 Dic 2025)
+## Índices (13)
 
 ```sql
--- Columnas agregadas para Módulo 2 (Property Matching)
-ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS nombre_edificio VARCHAR(255);
-ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS zona VARCHAR(100);
+-- PK + Unique
+CREATE UNIQUE INDEX propiedades_v2_pkey ON propiedades_v2 (id);
+CREATE UNIQUE INDEX unique_url_fuente ON propiedades_v2 (url, fuente);
 
--- Índices recomendados para matching
-CREATE INDEX IF NOT EXISTS idx_propiedades_nombre_edificio
-    ON propiedades_v2(nombre_edificio) WHERE nombre_edificio IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_propiedades_zona
-    ON propiedades_v2(zona) WHERE zona IS NOT NULL;
-```
+-- GPS
+CREATE INDEX idx_propiedades_v2_lat_lon ON propiedades_v2 (latitud, longitud);
 
-Ver: `sql/migrations/migracion_columnas_matching_v1.0.0.sql`
+-- Matching
+CREATE INDEX idx_propiedades_v2_proyecto_match ON propiedades_v2 (id_proyecto_master, es_para_matching);
+CREATE INDEX idx_propiedades_v2_nombre_edificio ON propiedades_v2 (lower(nombre_edificio)) WHERE nombre_edificio IS NOT NULL;
 
----
-
-## Migración v2.25 - Piso y Forma de Pago (28 Ene 2026)
-
-```sql
--- Piso del departamento
-ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS piso INTEGER;
+-- Ubicación
+CREATE INDEX idx_propiedades_v2_zona ON propiedades_v2 (zona) WHERE zona IS NOT NULL;
+CREATE INDEX idx_propiedades_v2_microzona ON propiedades_v2 (microzona) WHERE microzona IS NOT NULL;
 
 -- Forma de pago
-ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS plan_pagos_desarrollador BOOLEAN;
-ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS acepta_permuta BOOLEAN;
-ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS solo_tc_paralelo BOOLEAN;
-ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS precio_negociable BOOLEAN;
-ALTER TABLE propiedades_v2 ADD COLUMN IF NOT EXISTS descuento_contado_pct NUMERIC(5,2);
+CREATE INDEX idx_propiedades_plan_pagos ON propiedades_v2 (plan_pagos_desarrollador) WHERE plan_pagos_desarrollador = true;
+CREATE INDEX idx_propiedades_tc_paralelo ON propiedades_v2 (solo_tc_paralelo) WHERE solo_tc_paralelo = true;
+CREATE INDEX idx_propiedades_piso ON propiedades_v2 (piso) WHERE piso IS NOT NULL;
 
--- Índices para filtros
-CREATE INDEX IF NOT EXISTS idx_propiedades_plan_pagos
-  ON propiedades_v2(plan_pagos_desarrollador) WHERE plan_pagos_desarrollador = true;
-CREATE INDEX IF NOT EXISTS idx_propiedades_tc_paralelo
-  ON propiedades_v2(solo_tc_paralelo) WHERE solo_tc_paralelo = true;
-CREATE INDEX IF NOT EXISTS idx_propiedades_piso
-  ON propiedades_v2(piso) WHERE piso IS NOT NULL;
+-- Alquiler (parciales)
+CREATE INDEX idx_prop_alquiler_activo ON propiedades_v2 (precio_mensual_bob)
+  WHERE tipo_operacion = 'alquiler' AND status = 'completado' AND duplicado_de IS NULL;
+CREATE INDEX idx_prop_alquiler_pipeline ON propiedades_v2 (status)
+  WHERE tipo_operacion = 'alquiler' AND status IN ('nueva', 'actualizado');
+CREATE INDEX idx_prop_alquiler_filtros ON propiedades_v2 (dormitorios, precio_mensual_bob)
+  WHERE tipo_operacion = 'alquiler' AND status = 'completado' AND duplicado_de IS NULL;
 ```
-
-### Interpretación de valores NULL
-
-| Valor | Significado | UI |
-|-------|-------------|-----|
-| `true` | Confirmado que SÍ | ✓ o badge específico |
-| `false` | Confirmado que NO | No mostrar o ✗ |
-| `NULL` | Sin confirmar | ? con tooltip |
-
-### Lógica derivada
-
-```sql
--- "Solo contado" = no acepta ningún financiamiento
-CASE
-  WHEN plan_pagos_desarrollador = false
-   AND (acepta_permuta = false OR acepta_permuta IS NULL)
-  THEN 'Solo contado'
-  ELSE NULL
-END
-```
-
-Ver: `sql/migrations/081_columnas_piso_forma_pago.sql`
-Ver: `sql/migrations/082_buscar_unidades_forma_pago.sql`
 
 ---
 
-**Última actualización:** 28 Enero 2026
+## Producción (28 Feb 2026)
+
+```
+Total registros: 1,002
+  Venta:     692 (C21: 513, Remax: 177, excluidos: 19)
+  Alquiler:  310 (C21: 229, Remax: 74, BI: 7)
+```
+
+---
+
+**Exportado de:** `information_schema.columns`, `pg_constraint`, `pg_indexes`
+**Base de datos:** Supabase PostgreSQL (producción)
