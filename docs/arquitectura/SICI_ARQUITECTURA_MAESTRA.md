@@ -1,15 +1,9 @@
-> **DESACTUALIZADO** — Métricas stale (dice 439 props / 188 proyectos, real: 1,002 / 227).
-> Falta pipeline alquiler completo, sistema broker B2B, admin dashboards, Bien Inmuebles
-> como 3ra fuente, amenities 69 campos, TC dinámico. Horarios pipeline incorrectos.
-> Secciones J/K/M (roadmap) obsoletas. Metodología y protocolos (B-G) siguen vigentes.
-> Consultar CLAUDE.md como fuente de verdad operativa.
-
 # SICI / Simón - Arquitectura Maestra
 
 **Documento:** Arquitectura completa del sistema
-**Versión:** 2.2
-**Fecha:** 6 Enero 2026
-**Estado:** Aprobado - Conectado con Knowledge Graph
+**Versión:** 3.0
+**Fecha:** 28 Febrero 2026
+**Estado:** Aprobado
 **Audiencias:** Fundador · Inversores · Equipo Técnico · Claude Code
 
 ---
@@ -596,158 +590,180 @@ Simón mantiene un estado interno por sesión:
 
 ---
 
-## I. INFRAESTRUCTURA DE DATOS (Knowledge Graph)
+## I. INFRAESTRUCTURA DE DATOS
 
 ### I.1 Arquitectura de Datos
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    KNOWLEDGE GRAPH                           │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  proyectos_master (188)  ←─── FK ───→  propiedades_v2 (439) │
-│  ├── id_proyecto_master               ├── id               │
-│  ├── nombre_oficial                   ├── id_proyecto_master│
-│  ├── zona                             ├── dormitorios      │
-│  ├── latitud/longitud                 ├── precio_usd       │
-│  ├── desarrollador                    ├── area_total_m2    │
-│  └── activo                           ├── es_multiproyecto │
-│                                       └── datos_json       │
-│                                           ├── agente {}    │
-│                                           ├── amenities {} │
-│                                           └── contenido {} │
-│                                                             │
-├─────────────────────────────────────────────────────────────┤
-│                   VISTAS MATERIALIZADAS                      │
-│  ├── v_amenities_proyecto                                   │
-│  ├── v_proyectos_con_tipologias                            │
-│  └── v_unidades_buscables                                  │
-├─────────────────────────────────────────────────────────────┤
-│                      QUERY LAYER                             │
-│  ├── buscar_unidades_reales(filtros)                       │
-│  ├── buscar_unidades_con_amenities(amenities, filtros)     │
-│  └── knowledge_graph_health_check()                        │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                       KNOWLEDGE GRAPH                             │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  proyectos_master (227)  ←── FK ──→  propiedades_v2 (1,002)      │
+│  ├── id_proyecto_master               ├── id                     │
+│  ├── nombre_oficial                   ├── id_proyecto_master     │
+│  ├── zona (5 canónicas)              ├── dormitorios            │
+│  ├── latitud/longitud                 ├── precio_usd             │
+│  ├── desarrollador                    ├── area_total_m2          │
+│  ├── microzona (PostGIS)             ├── tipo_operacion          │
+│  └── activo                           ├── es_multiproyecto       │
+│                                       ├── nombre_edificio        │
+│                                       ├── microzona              │
+│                                       └── datos_json (3 JSONBs)  │
+│                                           ├── discovery {}       │
+│                                           ├── enrichment {}      │
+│                                           └── merge {}           │
+│                                                                   │
+├──────────────────────────────────────────────────────────────────┤
+│                         QUERY LAYER                               │
+│  ├── buscar_unidades_reales(filtros)      → Venta                │
+│  ├── buscar_unidades_alquiler(filtros)    → Alquiler             │
+│  ├── buscar_unidades_broker(filtros)      → Portal broker        │
+│  ├── buscar_unidades_con_amenities(...)   → Filtro amenities     │
+│  ├── generar_razon_fiduciaria(...)        → Texto fiduciario     │
+│  ├── calcular_posicion_mercado(...)       → Ranking mercado      │
+│  └── knowledge_graph_health_check()       → Health check         │
+├──────────────────────────────────────────────────────────────────┤
+│                        FUNCIONES (~130)                            │
+│  ├── discovery/       → registrar_discovery, _alquiler            │
+│  ├── enrichment/      → registrar_enrichment, _alquiler           │
+│  ├── merge/           → merge_discovery_enrichment, merge_alquiler│
+│  ├── matching/        → matching_completo, _alquileres_batch      │
+│  ├── query_layer/     → buscar_*, generar_razon, posicion         │
+│  ├── tc_dinamico/     → actualizar_tc, recalcular_precios_batch   │
+│  ├── hitl/            → procesar_decision_sin_match, excluidas    │
+│  ├── broker/          → buscar_unidades_broker, score, verificar  │
+│  ├── admin/           → inferir_datos_proyecto, propagar_proyecto │
+│  ├── helpers/         → precio_normalizado, normalize_nombre      │
+│  ├── triggers/        → proteger_amenities, asignar_zona_alquiler │
+│  └── snapshots/       → snapshot_absorcion_mercado                │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-### I.2 Estructura datos_json
+### I.2 Tablas Principales
 
-```json
-{
-  "agente": {
-    "nombre": "Fernando Lamas",
-    "telefono": "+59178000988",
-    "oficina_nombre": "Century21"
-  },
-  "amenities": {
-    "lista": ["Piscina", "Pet Friendly", "Gimnasio"],
-    "estado_amenities": {
-      "Piscina": {
-        "valor": true,
-        "fuente": "jsonld",
-        "confianza": "alta"
-      },
-      "Pet Friendly": {
-        "valor": "por_confirmar",
-        "fuente": "no_detectado",
-        "confianza": "baja"
-      }
-    }
-  },
-  "contenido": {
-    "fotos_urls": ["url1", "url2", "..."]
-  }
-}
-```
+| Tabla | Registros | Propósito |
+|-------|-----------|-----------|
+| `propiedades_v2` | 1,002 | Tabla única de propiedades (84 columnas) |
+| `proyectos_master` | 229 (227 activos) | Catálogo de proyectos/edificios |
+| `workflow_executions` | — | Health check de ejecuciones nocturnas |
+| `market_absorption_snapshots` | — | Snapshots absorción, precios, ROI |
+| `config_global` | — | Config dinámica (TC paralelo, etc.) |
+| `brokers` | — | Directorio broker B2B |
 
-### I.3 Niveles de Confianza
+### I.3 Fuentes de Datos
 
-| Nivel | Significado | Acción en UI |
-|-------|-------------|--------------|
-| `alta` | Confirmado por fuente estructurada | ✅ Sin disclaimer |
-| `media` | Mencionado en descripción | ✅ Sin disclaimer |
-| `baja` | Inferido o por confirmar | ⚠️ "Por verificar con RES" |
+| Fuente | Venta | Alquiler | Método |
+|--------|-------|----------|--------|
+| Century21 | 513 | 229 | API REST + HTML scraping |
+| Remax | 177 | 74 | API REST + HTML scraping |
+| Bien Inmuebles | — | 7 | HTML scraping |
 
-### I.4 16 Amenities Normalizados
+### I.4 Arquitectura Dual (3 JSONBs por propiedad)
 
-```
-piscina, pet_friendly, gimnasio, churrasquera, sauna_jacuzzi,
-ascensor, seguridad_24h, coworking, area_social, salon_eventos,
-terraza, jardin, parque_infantil, recepcion, lavadero,
-estacionamiento_visitas
-```
+| Campo | Contenido | Mutabilidad |
+|-------|-----------|-------------|
+| `datos_json_discovery` | Snapshot crudo de API | Inmutable por ejecución |
+| `datos_json_enrichment` | Extracción HTML + LLM | Inmutable por ejecución |
+| `datos_json` | Merge consolidado v3.0 | Reescrito en cada merge |
 
-### I.5 Cobertura Actual
+El merge aplica reglas de prioridad (Discovery > Enrichment para campos físicos) y candados manuales (`campos_bloqueados`). Ver `docs/canonical/merge_canonical.md`.
+
+### I.5 Amenities (69 campos)
+
+El enrichment LLM extrae 69 campos de amenities del HTML de cada propiedad. Cada campo tiene `valor` (true/false/por_confirmar), `fuente` y `confianza`. Los candados protegen ediciones manuales via trigger `proteger_amenities_candados`.
+
+### I.6 TC Dinámico (Tipo de Cambio Paralelo)
+
+Bolivia tiene dualidad cambiaria: TC oficial (6.96 Bs/USD) vs TC paralelo (~7.30-7.80). El sistema:
+1. Consulta Binance P2P cada noche → `config_global.tipo_cambio_paralelo`
+2. Enrichment LLM detecta `tipo_cambio_detectado` = `oficial|paralelo|no_especificado`
+3. `precio_normalizado()` convierte precios paralelo a USD reales para comparaciones
+
+### I.7 Cobertura Actual (28 Feb 2026)
 
 | Métrica | Valor |
 |---------|-------|
-| Propiedades activas | 439 |
-| Unidades buscables (reales) | 371 |
-| Proyectos activos | 188 |
-| Con amenities | 373 (85%) |
-| Con agente completo | 358 (81%) |
+| Propiedades totales | 1,002 |
+| Venta | 690 (C21: 513, Remax: 177) |
+| Alquiler | 310 (C21: 229, Remax: 74, BI: 7) |
+| Proyectos activos | 227 (98.9% con GPS) |
+| Completados con score | 588 |
+| Con amenities | 587 (100% de completados) |
+| Con nombre edificio | 462 (79%) |
+| Con microzona PostGIS | 430 (73%) |
+| Funciones custom SICI | ~130 |
+| Duplicados detectados | 41 |
 
-### I.6 Refresh Schedule
+### I.8 Pipeline Nocturno
 
-| Hora | Proceso |
-|------|---------|
-| 2:00 AM | Discovery (nuevas propiedades) |
-| 3:00 AM | Enrichment (extracción datos) |
-| 4:00 AM | Matching (asignar a proyectos) |
-| 4:30 AM | Refresh vistas materializadas |
-| 8:00 PM | Supervisión HITL |
+**Venta (modulo_1)**
+
+| Hora | Proceso | Workflows |
+|------|---------|-----------|
+| 1:00 AM | Discovery C21 + Remax | 2 workflows |
+| 2:00 AM | Enrichment LLM | 1 workflow |
+| 3:00 AM | Merge → campos consolidados + TC | 1 workflow |
+| 4:00 AM | Matching → id_proyecto_master | 1 workflow |
+| 6:00 AM | Verificador ausencias (solo Remax) | 1 workflow |
+| 9:00 AM | Auditoría + Snapshots absorción | 2 workflows |
+
+**Alquiler**
+
+| Hora | Proceso | Workflows |
+|------|---------|-----------|
+| 1:30 AM | Discovery C21 + Remax | 2 workflows |
+| 2:30 AM | Discovery Bien Inmuebles + Enrichment LLM | 2 workflows |
+| 3:30 AM | Merge alquiler (enrichment-first, sin TC) | 1 workflow |
+| 7:00 AM | Verificador alquiler (pending + ghost) | 1 workflow |
+
+### I.9 Microzonas Geográficas (PostGIS)
+
+5 zonas canónicas asignadas por `poblar_zonas_batch()` usando `geodata/microzonas_equipetrol_v4.geojson`:
+
+| Zona | Perfil |
+|------|--------|
+| Equipetrol Centro | Motor principal, mayor volumen |
+| Equipetrol Norte | Financiero, rentas altas |
+| Sirari | Premium, venta directa desarrolladoras |
+| Villa Brígida | Emergente, entry-level, absorción rápida |
+| Equipetrol Oeste | Mixto: premium + universitario |
 
 ---
 
-## J. PRIORIDAD 30 DÍAS
+## J. HISTORIAL DE IMPLEMENTACIÓN + PENDIENTES
 
-### J.1 Semana 1-2: Infraestructura
+### J.1 Completado (Dic 2025 — Feb 2026)
 
-- [x] Knowledge Graph MVP (`buscar_unidades_reales()`)
-- [x] Vista `v_amenities_proyecto`
-- [x] Índices GIN
-- [ ] Formulario Vivienda funcional
+| Hito | Fecha | Detalle |
+|------|-------|---------|
+| Knowledge Graph MVP | Dic 2025 | `buscar_unidades_reales()`, vistas, índices GIN |
+| Pipeline venta completo | Dic 2025 | Discovery → Enrichment → Merge → Matching nocturno |
+| Matching v3.1 | Dic 2025 | GPS + fuzzy + trigram + URL. 100% matching rate venta |
+| HITL Admin Dashboard | Ene 2026 | Supervisor, Sin Match, Excluidas — reemplazó Google Sheets |
+| Amenities 69 campos | Ene 2026 | Extracción LLM + candados manuales + trigger protección |
+| TC Dinámico Binance | Ene 2026 | Consulta P2P + `precio_normalizado()` + recálculo batch |
+| Pipeline alquiler | Feb 2026 | 3 fuentes (C21, Remax, Bien Inmuebles), 6 workflows |
+| Sistema Broker B2B | Feb 2026 | Tablas, búsqueda, PDF, score calidad, portal broker |
+| Admin Dashboards | Feb 2026 | Propiedades, Proyectos, Salud, Market Pulse, Alquileres |
+| Market Snapshots | Feb 2026 | Absorción, precios, renta, ROI por tipología |
+| Deduplicación | Feb 2026 | Sistema `duplicado_de` activo (41 detectados) |
+| Landing Premium v2 | Feb 2026 | Flujo: filtros-v2 → formulario-v2 → resultados-v2 |
+| Feed Alquileres | Feb 2026 | `/alquileres` público con cards + filtros |
 
-### J.2 Semana 3: Integración
+### J.2 Pendiente
 
-- [ ] Claude API conectado
-- [ ] Generación de Guía Fiduciaria
-- [ ] UI resultados
+| Área | Tarea | Prioridad |
+|------|-------|-----------|
+| **Broker** | Portal broker avanzado (fases 5-7) | Alta |
+| **Broker** | Sistema leads completo + CMA automatizado | Alta |
+| **Datos** | Enriquecimiento IA proyectos (15 sin desarrollador) | Media |
+| **Datos** | Validación GPS (workflow Google Places) | Media |
+| **Producto** | Claude API integrado para Guía Fiduciaria | Alta |
+| **Producto** | Formulario Vivienda MVP funcional | Alta |
+| **Geografía** | Expansión a La Paz / Cochabamba | Baja |
 
-### J.3 Semana 4: Validación
-
-- [ ] 10 usuarios beta
-- [ ] Feedback cualitativo
-- [ ] Ajustes críticos
-
----
-
-## K. ROADMAP EXPANSIÓN
-
-### K.1 Perfiles (Q1 2026)
-
-| Perfil | Estado | ETA |
-|--------|--------|-----|
-| Vivienda | MVP | Enero |
-| Inversor Renta | Diseñado | Febrero |
-| Inversor Plusvalía | Diseñado | Febrero |
-| Transición | Diseñado | Marzo |
-
-### K.2 Geografía (Q2 2026)
-
-| Ciudad | Prioridad |
-|--------|-----------|
-| Santa Cruz | Activo |
-| La Paz | Q2 |
-| Cochabamba | Q3 |
-
-### K.3 Productos Derivados (Q2-Q3 2026)
-
-| Producto | Para quién |
-|----------|------------|
-| CMA Automatizado | RES |
-| Estudios de Mercado | Desarrolladores |
-| API de Coherencia | Fintechs |
+Ver backlogs detallados en `docs/backlog/`
 
 ---
 
@@ -776,31 +792,6 @@ estacionamiento_visitas
 | Brokers hostiles | Alta | Medio | Valor a desarrolladores |
 | Copycats | Media | Bajo | Metodología + data propietaria |
 | Regulación | Baja | Alto | Compliance desde inicio |
-
----
-
-## M. ROADMAP TÉCNICO
-
-### M.1 Corto Plazo (30 días)
-
-- [x] Knowledge Graph funcional
-- [ ] 1 formulario
-- [ ] Query → Resultados
-- [ ] Claude API integrado
-
-### M.2 Mediano Plazo (90 días)
-
-- [ ] 4 formularios completos
-- [ ] Sistema de alertas automático
-- [ ] Dashboard RES
-- [ ] Feedback loop
-
-### M.3 Largo Plazo (180 días)
-
-- [ ] App móvil
-- [ ] Multi-ciudad
-- [ ] API pública (partners)
-- [ ] ML para proxies
 
 ---
 
@@ -836,42 +827,38 @@ estacionamiento_visitas
 
 ## O. DOCUMENTOS RELACIONADOS
 
-### O.1 Documentos Esenciales (5)
+### O.1 Documentación Activa
 
-| # | Documento | Qué contiene | Para quién |
-|---|-----------|--------------|------------|
-| 1 | **SICI_ARQUITECTURA_MAESTRA.md** | Este documento - visión completa | Todos |
-| 2 | **METODOLOGIA_FIDUCIARIA_COMPLETA.md** | Bloques 1-7 + Pasos 8-12 fusionados | Equipo producto |
-| 3 | **FORMULARIOS/** | 4 formularios por perfil | Implementación |
-| 4 | **SIMON_ARQUITECTURA_COGNITIVA.md** | Guardrails, prompts, state machine | Equipo técnico |
-| 5 | **PLAYBOOK_RES.md** | Guía operativa para asesores | RES |
+| Documento | Ruta | Contenido |
+|-----------|------|-----------|
+| **Arquitectura Maestra** | `docs/arquitectura/SICI_ARQUITECTURA_MAESTRA.md` | Este documento |
+| **Simón Arquitectura Cognitiva** | `docs/simon/SIMON_ARQUITECTURA_COGNITIVA.md` | Guardrails, prompts, state machine |
+| **Simón Brand Guidelines** | `docs/simon/SIMON_BRAND_GUIDELINES.md` | Paleta, fonts, tono de marca |
+| **Metodología Fiduciaria** | `docs/canonical/METODOLOGIA_FIDUCIARIA_PARTE_*.md` | Bloques 1-7 + Pasos 8-12 |
+| **Merge Canonical** | `docs/canonical/merge_canonical.md` | Merge venta v3.0.0 |
+| **Pipeline Alquiler** | `docs/canonical/pipeline_alquiler_canonical.md` | Pipeline alquiler completo v2.0 |
+| **Filtros Calidad Mercado** | `docs/reports/FILTROS_CALIDAD_MERCADO.md` | Filtros obligatorios para estudios |
+| **Schema BD** | `sql/schema/propiedades_v2_schema.md` | 84 columnas, enums, constraints, índices |
+| **Catálogo Funciones SQL** | `sql/functions/FUNCTION_CATALOG.md` | Inventario ~130 funciones por dominio |
+| **Índice Migraciones** | `docs/migrations/MIGRATION_INDEX.md` | 171 migraciones (001-169) |
+| **Learnings Alquiler** | `docs/alquiler/LEARNINGS_PIPELINE_ALQUILER.md` | Bugs, filtros, absorción |
 
-### O.2 Ubicación de Archivos
+### O.2 Formularios (diseño)
 
-```
-docs/
-├── arquitectura/
-│   ├── SICI_ARQUITECTURA_MAESTRA.md      ← Este documento
-│   └── SIMON_ARQUITECTURA_COGNITIVA.md
-├── metodologia/
-│   ├── METODOLOGIA_FIDUCIARIA_PARTE_1.md
-│   └── METODOLOGIA_FIDUCIARIA_PARTE_2.md
-├── formularios/
-│   ├── BLOQUE_2_FORM_VIVIENDA.md
-│   ├── BLOQUE_2_FORM_INVERSOR_RENTA.md
-│   ├── BLOQUE_2_FORM_INVERSOR_PLUSVALIA.md
-│   └── BLOQUE_2_FORM_TRANSICION.md
-├── pasos/
-│   ├── PASO_8_TRADUCCION_FIDUCIARIA_BUSQUEDA.md
-│   ├── PASO_9_PRESENTACION_FIDUCIARIA.md
-│   ├── PASO_10_ACOMPANAMIENTO_FIDUCIARIO.md
-│   ├── PASO_11_APRENDIZAJE_FIDUCIARIO.md
-│   └── PASO_12_CIERRE_ASISTIDO.md
-└── operaciones/
-    └── handoffs/
-```
+| Formulario | Ruta |
+|------------|------|
+| Vivienda | `docs/simon/formularios/BLOQUE_2_FORM_VIVIENDA.md` |
+| Inversor Renta | `docs/simon/formularios/BLOQUE_2_FORM_INVERSOR_RENTA.md` |
+| Inversor Plusvalía | `docs/simon/formularios/BLOQUE_2_FORM_INVERSOR_PLUSVALIA.md` |
+| Transición | `docs/simon/formularios/BLOQUE_2_FORM_TRANSICION.md` |
 
-> **Meta:** Consolidar a 5 documentos principales en Fase 2.
+### O.3 Backlogs y Planning
+
+| Documento | Ruta |
+|-----------|------|
+| Calidad Datos | `docs/backlog/CALIDAD_DATOS_BACKLOG.md` |
+| Deuda Técnica | `docs/backlog/DEUDA_TECNICA.md` |
+| Broker Roadmap | `docs/simon/broker/BROKER_ROADMAP_REFINADO.md` |
 
 ---
 
@@ -905,44 +892,6 @@ docs/
 | Ejecutar query sin filtros duros | Resultados incoherentes |
 | Mostrar >5 opciones en cualquier modo | Parálisis de decisión |
 | Ignorar alerta crítica | Riesgo legal/reputacional |
-
----
-
-## Q. MVP LAUNCH CRITERIA
-
-### Q.1 Checklist Técnico
-
-- [ ] 1 formulario funcional (Vivienda)
-- [ ] Query Layer ejecutando contra DB producción
-- [ ] Coherencia calculada correctamente (tests)
-- [ ] 0 propiedades mostradas con filtro duro violado
-- [ ] Alertas detectadas y mostradas
-- [ ] Persistencia de sesión funcionando
-
-### Q.2 Checklist Operativo
-
-- [ ] 3 RES entrenados en metodología
-- [ ] Script de onboarding RES documentado
-- [ ] Proceso de escalamiento definido
-- [ ] Canal de soporte activo
-
-### Q.3 Checklist de Validación
-
-- [ ] 10 usuarios beta completaron flujo
-- [ ] NPS beta > 40
-- [ ] 0 bugs críticos en 48h de testing
-- [ ] Tiempo promedio formulario < 15 min
-- [ ] 80%+ califican "entendí mejor qué busco"
-
-### Q.4 Go/No-Go
-
-| Criterio | Umbral | Bloquea launch |
-|----------|--------|----------------|
-| Bugs críticos | 0 | ✅ Sí |
-| NPS beta | > 40 | ✅ Sí |
-| RES entrenados | ≥ 3 | ✅ Sí |
-| Usuarios beta | ≥ 10 | ✅ Sí |
-| Coherencia correcta | 100% tests | ✅ Sí |
 
 ---
 
@@ -1002,14 +951,14 @@ docs/
 
 | Versión | Fecha | Cambios |
 |---------|-------|---------|
-| 1.0 | 6 Enero 2026 | Documento inicial - 7 Bloques |
-| 1.1 | 6 Enero 2026 | Agregado: Arquitectura Cognitiva, Formularios, Pasos 8-12 |
-| 1.2 | 6 Enero 2026 | Integración completa: Bloques 4-7 expandidos, Paso 8 con fórmulas |
-| 2.0 | 6 Enero 2026 | Metodología 12 Pasos, 4 formularios, Sistema de Alertas |
-| 2.1 | 6 Enero 2026 | Revisión ejecutiva: 7 pasos visibles, North Star, Unit Economics, Anti-Patterns, MVP Criteria |
-| **2.2** | **6 Enero 2026** | **Conexión con implementación:** Nueva sección A-BIS (Actores: RES definido como verificador fiduciario, flujo completo), Paso 5 conectado con Knowledge Graph (`buscar_unidades_reales()`), Nueva sección I (Infraestructura de Datos: unidades reales vs virtuales, estructura datos_json, 16 amenities normalizados), Audiencia ahora incluye Claude Code |
+| 1.0 | 6 Ene 2026 | Documento inicial - 7 Bloques |
+| 1.1 | 6 Ene 2026 | Arquitectura Cognitiva, Formularios, Pasos 8-12 |
+| 1.2 | 6 Ene 2026 | Bloques 4-7 expandidos, Paso 8 con fórmulas |
+| 2.0 | 6 Ene 2026 | Metodología 12 Pasos, 4 formularios, Sistema de Alertas |
+| 2.1 | 6 Ene 2026 | North Star, Unit Economics, Anti-Patterns, MVP Criteria |
+| 2.2 | 6 Ene 2026 | Sección A-BIS (Actores/RES), Paso 5 con Knowledge Graph, Sección I (Infraestructura) |
+| **3.0** | **28 Feb 2026** | **Actualización mayor:** Sección I reescrita con datos producción (1,002 props, 227 proyectos, 3 fuentes, ~130 funciones, 69 amenities, TC dinámico, pipeline dual venta+alquiler). Secciones J/K/M/Q (roadmaps obsoletos) consolidadas en J (Historial + Pendientes). Sección O actualizada con rutas reales del repo. Eliminado banner DESACTUALIZADO. |
 
 ---
 
-*Este documento debe versionarse, no sobrescribirse.*  
-*Próxima revisión: Post-aprobación Knowledge Graph*
+*Este documento debe versionarse, no sobrescribirse.*
