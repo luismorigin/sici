@@ -96,9 +96,9 @@ function mapearZonaDesdeProyecto(zonaProyecto: string): string | null {
     'equipetrol norte': 'equipetrol_norte',
     'villa brigida': 'villa_brigida',
     'villa brígida': 'villa_brigida',
-    'equipetrol oeste': 'faremafu',
-    'equipetrol oeste (busch)': 'faremafu',
-    'faremafu': 'faremafu',
+    'equipetrol oeste': 'equipetrol_oeste',
+    'equipetrol oeste (busch)': 'equipetrol_oeste',
+    'faremafu': 'equipetrol_oeste',
   }
   if (mapeo[zonaNormalizada]) return mapeo[zonaNormalizada]
   for (const [key, value] of Object.entries(mapeo)) {
@@ -146,8 +146,8 @@ const zonaToId = (zona: string): string => {
     'Sirari': 'sirari',
     'Equipetrol Norte': 'equipetrol_norte',
     'Villa Brígida': 'villa_brigida',
-    'Equipetrol Oeste': 'faremafu',
-    'Equipetrol Oeste (Busch)': 'faremafu'
+    'Equipetrol Oeste': 'equipetrol_oeste',
+    'Equipetrol Oeste (Busch)': 'equipetrol_oeste'
   }
   return mapeo[zona] || zona
 }

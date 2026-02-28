@@ -149,6 +149,7 @@ const microzonaToZona: Record<string, string | string[]> = {
   'sirari': 'Sirari',
   'villa_brigida': 'Villa Brigida',
   'faremafu': 'Faremafu',
+  'equipetrol_oeste': 'Faremafu',
   'equipetrol_norte': ['Equipetrol Norte/Norte', 'Equipetrol Norte/Sur'],  // Agrupa ambas sub-zonas
   'equipetrol_norte_norte': 'Equipetrol Norte/Norte',
   'equipetrol_norte_sur': 'Equipetrol Norte/Sur',
