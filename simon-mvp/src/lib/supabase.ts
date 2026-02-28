@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { innegociablesToAmenidades } from '@/config/amenidades-mercado'
 import { normalizarPrecio } from './precio-utils'
+import type { RawUnidadRealRow, RawUnidadAlquilerRow, RawPropiedadMercado, RawPropiedadRango, RawPropiedadMicrozona } from '@/types/db-responses'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -204,7 +205,7 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
     }
 
     // Mapear respuesta RPC a interfaz UnidadReal (v2.2)
-    const resultados: UnidadReal[] = (data || []).map((p: any) => ({
+    const resultados: UnidadReal[] = (data || []).map((p: RawUnidadRealRow) => ({
       id: p.id,
       proyecto: p.nombre_proyecto || p.proyecto || 'Sin proyecto',
       desarrollador: p.desarrollador,
@@ -212,9 +213,9 @@ export async function buscarUnidadesReales(filtros: FiltrosBusqueda): Promise<Un
       microzona: p.microzona,
       dormitorios: p.dormitorios,
       banos: p.banos ? parseFloat(p.banos) : null,  // v2.11
-      precio_usd: parseFloat(p.precio_usd) || 0,
-      precio_m2: parseFloat(p.precio_m2) || 0,
-      area_m2: parseFloat(p.area_m2) || 0,
+      precio_usd: parseFloat(String(p.precio_usd)) || 0,
+      precio_m2: parseFloat(String(p.precio_m2)) || 0,
+      area_m2: parseFloat(String(p.area_m2)) || 0,
       score_calidad: p.score_calidad,
       asesor_nombre: p.agente_nombre || p.asesor_nombre,
       asesor_wsp: p.agente_telefono || p.asesor_wsp,
@@ -349,7 +350,7 @@ export async function buscarUnidadesBroker(filtros: FiltrosBusqueda): Promise<Un
     }
 
     // Mapear respuesta RPC a interfaz UnidadReal
-    return (data || []).map((p: any) => ({
+    return (data || []).map((p: RawUnidadRealRow) => ({
       id: p.id,
       proyecto: p.nombre_proyecto || p.proyecto || 'Sin proyecto',
       desarrollador: p.desarrollador,
@@ -357,9 +358,9 @@ export async function buscarUnidadesBroker(filtros: FiltrosBusqueda): Promise<Un
       microzona: p.microzona,
       dormitorios: p.dormitorios,
       banos: p.banos ? parseFloat(p.banos) : null,
-      precio_usd: parseFloat(p.precio_usd) || 0,
-      precio_m2: parseFloat(p.precio_m2) || 0,
-      area_m2: parseFloat(p.area_m2) || 0,
+      precio_usd: parseFloat(String(p.precio_usd)) || 0,
+      precio_m2: parseFloat(String(p.precio_m2)) || 0,
+      area_m2: parseFloat(String(p.area_m2)) || 0,
       score_calidad: p.score_calidad,
       asesor_nombre: p.agente_nombre || p.asesor_nombre,
       asesor_wsp: p.agente_telefono || p.asesor_wsp,
@@ -546,7 +547,7 @@ export async function buscarUnidadesAlquiler(filtros: FiltrosAlquiler): Promise<
       return []
     }
 
-    return (data || []).map((p: any) => ({
+    return (data || []).map((p: RawUnidadAlquilerRow) => ({
       id: p.id,
       nombre_edificio: p.nombre_edificio || null,
       nombre_proyecto: p.nombre_proyecto || null,
@@ -554,8 +555,8 @@ export async function buscarUnidadesAlquiler(filtros: FiltrosAlquiler): Promise<
       zona: p.zona || 'Sin zona',
       dormitorios: p.dormitorios ?? 0,
       banos: p.banos ? parseFloat(p.banos) : null,
-      area_m2: parseFloat(p.area_m2) || 0,
-      precio_mensual_bob: parseFloat(p.precio_mensual_bob) || 0,
+      area_m2: parseFloat(String(p.area_m2)) || 0,
+      precio_mensual_bob: parseFloat(String(p.precio_mensual_bob)) || 0,
       precio_mensual_usd: p.precio_mensual_usd ? parseFloat(p.precio_mensual_usd) : null,
       amoblado: p.amoblado || null,
       acepta_mascotas: p.acepta_mascotas ?? null,
@@ -628,7 +629,7 @@ export async function buscarSiguienteRango(
     if (error || !data || data.length === 0) return null
 
     // Filtrar por precio/m² >= 800 y encontrar opciones válidas
-    const opcionesValidas = data.filter((p: any) => {
+    const opcionesValidas = data.filter((p: { precio_usd: number; area_total_m2: number }) => {
       const precioM2 = p.area_total_m2 > 0 ? p.precio_usd / p.area_total_m2 : 0
       return precioM2 >= 800
     })
@@ -700,7 +701,7 @@ export async function obtenerMetricasMercado(): Promise<MetricasMercado | null> 
     // Calcular días en mercado y filtrar datos viejos
     // v2.30: Límite unificado 300 días para TODOS los estados
     const hoy = new Date()
-    const propiedadesValidas = data.filter((p: any) => {
+    const propiedadesValidas = data.filter((p: RawPropiedadMercado) => {
       // Filtros básicos
       if (p.area_total_m2 <= 20) return false
       const precioNorm = normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcPar)
@@ -719,12 +720,12 @@ export async function obtenerMetricasMercado(): Promise<MetricasMercado | null> 
 
     if (propiedadesValidas.length === 0) return null
 
-    const precios = propiedadesValidas.map((p: any) => normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcPar))
-    const preciosM2 = propiedadesValidas.map((p: any) => normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcPar) / p.area_total_m2)
+    const precios = propiedadesValidas.map((p: RawPropiedadMercado) => normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcPar))
+    const preciosM2 = propiedadesValidas.map((p: RawPropiedadMercado) => normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcPar) / p.area_total_m2)
 
     // Agrupar por dormitorios
     const porDorms: Record<number, number> = {}
-    propiedadesValidas.forEach((p: any) => {
+    propiedadesValidas.forEach((p: RawPropiedadMercado) => {
       const d = p.dormitorios || 0
       porDorms[d] = (porDorms[d] || 0) + 1
     })
@@ -1191,8 +1192,8 @@ export interface RazonExclusion {
   filtro: string
   razon: string
   severidad: 'hard' | 'medium' | 'soft' | 'alert'
-  valor_actual: any
-  valor_requerido: any
+  valor_actual: string | number | boolean | null
+  valor_requerido: string | number | boolean | null
   sugerencia?: string
 }
 
@@ -1687,7 +1688,7 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
     // Aggregate manually
     const zonaMap: Record<string, { total: number; precios: number[]; m2: number[]; proyectos: Set<number> }> = {}
 
-    data.forEach((p: any) => {
+    data.forEach((p: RawPropiedadMicrozona) => {
       const zona = p.microzona
       if (!zona) return
 

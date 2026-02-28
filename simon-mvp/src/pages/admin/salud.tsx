@@ -3,6 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import type { PropiedadSalud, MatchingSugerenciaConTipo, SinMatchRow } from '@/types/db-responses'
 
 interface StatsProps {
   // Venta
@@ -187,6 +188,7 @@ export default function DashboardSalud() {
 
     const esVenta = "COALESCE(tipo_operacion, 'venta') != 'alquiler'"
     const esAlquiler = "tipo_operacion = 'alquiler'"
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in Supabase typegen
     const { data, error } = await supabase.rpc('pg_execute_query' as any, {
       query: `
         SELECT
@@ -225,38 +227,39 @@ export default function DashboardSalud() {
         .select('status, id_proyecto_master, score_calidad_dato, zona, dormitorios, fecha_creacion, tipo_operacion, precio_mensual_bob, datos_json')
 
       if (props) {
-        const completadas = props.filter((p: any) => p.status === 'completado')
-        const venta = completadas.filter((p: any) => (p.tipo_operacion || 'venta') !== 'alquiler')
-        const alquiler = completadas.filter((p: any) => p.tipo_operacion === 'alquiler')
-        const inactivos = props.filter((p: any) => p.status === 'inactivo_pending' || p.status === 'inactivo_confirmed')
-        const nuevas = props.filter((p: any) => p.status === 'nueva')
-        const recientes = props.filter((p: any) => {
+        const rows = props as PropiedadSalud[]
+        const completadas = rows.filter(p => p.status === 'completado')
+        const venta = completadas.filter(p => (p.tipo_operacion || 'venta') !== 'alquiler')
+        const alquiler = completadas.filter(p => p.tipo_operacion === 'alquiler')
+        const inactivos = rows.filter(p => p.status === 'inactivo_pending' || p.status === 'inactivo_confirmed')
+        const nuevas = rows.filter(p => p.status === 'nueva')
+        const recientes = rows.filter(p => {
           const created = new Date(p.fecha_creacion)
           return created > new Date(Date.now() - 24 * 60 * 60 * 1000)
         })
 
         setPropStats({
           completadas_venta: venta.length,
-          nuevas_venta: nuevas.filter((p: any) => (p.tipo_operacion || 'venta') !== 'alquiler').length,
-          ultimas_24h_venta: recientes.filter((p: any) => (p.tipo_operacion || 'venta') !== 'alquiler').length,
-          matcheadas_venta: venta.filter((p: any) => p.id_proyecto_master).length,
-          sin_match_venta: venta.filter((p: any) => !p.id_proyecto_master).length,
-          inactivo_venta: inactivos.filter((p: any) => (p.tipo_operacion || 'venta') !== 'alquiler').length,
-          score_alto: venta.filter((p: any) => (p.score_calidad_dato || 0) >= 95).length,
-          score_medio: venta.filter((p: any) => (p.score_calidad_dato || 0) >= 85 && (p.score_calidad_dato || 0) < 95).length,
-          score_bajo: venta.filter((p: any) => (p.score_calidad_dato || 0) < 85).length,
+          nuevas_venta: nuevas.filter(p => (p.tipo_operacion || 'venta') !== 'alquiler').length,
+          ultimas_24h_venta: recientes.filter(p => (p.tipo_operacion || 'venta') !== 'alquiler').length,
+          matcheadas_venta: venta.filter(p => p.id_proyecto_master).length,
+          sin_match_venta: venta.filter(p => !p.id_proyecto_master).length,
+          inactivo_venta: inactivos.filter(p => (p.tipo_operacion || 'venta') !== 'alquiler').length,
+          score_alto: venta.filter(p => (p.score_calidad_dato || 0) >= 95).length,
+          score_medio: venta.filter(p => (p.score_calidad_dato || 0) >= 85 && (p.score_calidad_dato || 0) < 95).length,
+          score_bajo: venta.filter(p => (p.score_calidad_dato || 0) < 85).length,
           completadas_alquiler: alquiler.length,
-          nuevas_alquiler: nuevas.filter((p: any) => p.tipo_operacion === 'alquiler').length,
-          ultimas_24h_alquiler: recientes.filter((p: any) => p.tipo_operacion === 'alquiler').length,
-          matcheadas_alquiler: alquiler.filter((p: any) => p.id_proyecto_master).length,
-          sin_match_alquiler: alquiler.filter((p: any) => !p.id_proyecto_master).length,
-          inactivo_alquiler: inactivos.filter((p: any) => p.tipo_operacion === 'alquiler').length,
-          alq_con_precio: alquiler.filter((p: any) => p.precio_mensual_bob && p.precio_mensual_bob > 0).length,
-          alq_con_agente: alquiler.filter((p: any) => p.datos_json?.agente_nombre).length,
-          alq_con_zona: alquiler.filter((p: any) => p.zona).length,
-          alq_con_dormitorios: alquiler.filter((p: any) => p.dormitorios !== null).length,
-          sin_zona: completadas.filter((p: any) => !p.zona).length,
-          sin_dormitorios: completadas.filter((p: any) => p.dormitorios === null).length
+          nuevas_alquiler: nuevas.filter(p => p.tipo_operacion === 'alquiler').length,
+          ultimas_24h_alquiler: recientes.filter(p => p.tipo_operacion === 'alquiler').length,
+          matcheadas_alquiler: alquiler.filter(p => p.id_proyecto_master).length,
+          sin_match_alquiler: alquiler.filter(p => !p.id_proyecto_master).length,
+          inactivo_alquiler: inactivos.filter(p => p.tipo_operacion === 'alquiler').length,
+          alq_con_precio: alquiler.filter(p => p.precio_mensual_bob && p.precio_mensual_bob > 0).length,
+          alq_con_agente: alquiler.filter(p => p.datos_json?.agente_nombre).length,
+          alq_con_zona: alquiler.filter(p => p.zona).length,
+          alq_con_dormitorios: alquiler.filter(p => p.dormitorios !== null).length,
+          sin_zona: completadas.filter(p => !p.zona).length,
+          sin_dormitorios: completadas.filter(p => p.dormitorios === null).length
         })
       }
     } else if (data?.[0]) {
@@ -275,8 +278,9 @@ export default function DashboardSalud() {
       const now = new Date()
       const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
-      const getTipo = (d: any) => {
-        const t = d.propiedades_v2?.tipo_operacion
+      const getTipo = (d: { propiedades_v2: { tipo_operacion: string | null }[] | { tipo_operacion: string | null } | null }) => {
+        const pv2 = Array.isArray(d.propiedades_v2) ? d.propiedades_v2[0] : d.propiedades_v2
+        const t = pv2?.tipo_operacion
         return t === 'alquiler' ? 'alquiler' : 'venta'
       }
 
@@ -344,10 +348,16 @@ export default function DashboardSalud() {
     // Cola auto-aprobados sin validar (global)
     const { data: autoAprobados } = await supabase.rpc('contar_auto_aprobados_sin_validar')
 
-    const matchVenta = matching?.filter((m: any) => (m.propiedades_v2?.tipo_operacion || 'venta') !== 'alquiler').length || 0
-    const matchAlq = matching?.filter((m: any) => m.propiedades_v2?.tipo_operacion === 'alquiler').length || 0
-    const smVenta = sinMatch?.filter((p: any) => (p.tipo_operacion || 'venta') !== 'alquiler').length || 0
-    const smAlq = sinMatch?.filter((p: any) => p.tipo_operacion === 'alquiler').length || 0
+    const smRows = (sinMatch || []) as SinMatchRow[]
+    const getMatchTipo = (m: { propiedades_v2: { tipo_operacion: string | null }[] | { tipo_operacion: string | null } | null }) => {
+      const pv2 = Array.isArray(m.propiedades_v2) ? m.propiedades_v2[0] : m.propiedades_v2
+      return pv2?.tipo_operacion || 'venta'
+    }
+    const matchRows = matching || []
+    const matchVenta = matchRows.filter(m => getMatchTipo(m) !== 'alquiler').length
+    const matchAlq = matchRows.filter(m => getMatchTipo(m) === 'alquiler').length
+    const smVenta = smRows.filter(p => (p.tipo_operacion || 'venta') !== 'alquiler').length
+    const smAlq = smRows.filter(p => p.tipo_operacion === 'alquiler').length
 
     setColas({
       cola_matching_venta: matchVenta,
