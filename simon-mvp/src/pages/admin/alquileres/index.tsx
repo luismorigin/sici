@@ -3,6 +3,8 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { ZONAS_ALQUILER_FILTER, displayZona } from '@/lib/zonas'
+import { dormLabel, formatPriceBob } from '@/lib/format-utils'
 
 // ===== TYPES =====
 
@@ -40,29 +42,7 @@ type EnviadoFilter = 'todos' | 'enviados' | 'no_enviados'
 
 // ===== HELPERS =====
 
-function displayZona(zona: string | null | undefined): string {
-  if (!zona) return 'Otras'
-  switch (zona) {
-    case 'Equipetrol': case 'Equipetrol Centro': return 'Eq. Centro'
-    case 'Equipetrol Norte': case 'Equipetrol Norte/Norte': case 'Equipetrol Norte/Sur': return 'Eq. Norte'
-    case 'Faremafu': return 'Eq. Oeste'
-    case 'Equipetrol Franja': return 'Eq. 3er Anillo'
-    case 'Villa Brigida': return 'V. Brigida'
-    case 'Sirari': return 'Sirari'
-    case 'Sin zona': case 'sin zona': return 'Otras'
-    default: return zona
-  }
-}
-
-function dormLabel(d: number | null) {
-  if (d === null || d === undefined) return '—'
-  return d === 0 ? 'Estudio' : d + ' dorm'
-}
-
-function formatPrice(p: number | null) {
-  if (!p) return '—'
-  return 'Bs ' + p.toLocaleString('es-BO')
-}
+const formatPrice = formatPriceBob
 
 function diasEnMercado(fechaPub: string | null, fechaDisc: string | null): number | null {
   const fecha = fechaPub || fechaDisc
@@ -191,15 +171,6 @@ function getSentDate(id: number): string | null {
 
 // ===== ZONES FOR FILTER =====
 
-const ZONAS_FILTER = [
-  { id: '', label: 'Todas las zonas' },
-  { id: 'Equipetrol', label: 'Eq. Centro' },
-  { id: 'Equipetrol Norte', label: 'Eq. Norte' },
-  { id: 'Sirari', label: 'Sirari' },
-  { id: 'Villa Brigida', label: 'V. Brigida' },
-  { id: 'Faremafu', label: 'Eq. Oeste' },
-  { id: 'Equipetrol Franja', label: 'Eq. 3er Anillo' },
-]
 
 // ===== MAIN COMPONENT =====
 
@@ -658,7 +629,7 @@ export default function AdminAlquileres() {
               style={{ flex: '1 1 250px', minWidth: 200, padding: '8px 12px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }}
             />
             <select value={zonaFilter} onChange={e => setZonaFilter(e.target.value)} style={selectStyle}>
-              {ZONAS_FILTER.map(z => <option key={z.id} value={z.id}>{z.label}</option>)}
+              {ZONAS_ALQUILER_FILTER.map(z => <option key={z.id} value={z.id}>{z.label}</option>)}
             </select>
             <select value={dormsFilter} onChange={e => setDormsFilter(e.target.value)} style={selectStyle}>
               <option value="">Dorms: todos</option>

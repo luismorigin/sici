@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { normalizarPrecio } from '@/lib/precio-utils'
+import { ZONAS_ADMIN } from '@/lib/zonas'
 
 interface FormData {
   nombre_oficial: string
@@ -94,13 +95,7 @@ interface FotoProyecto {
   orden: number
 }
 
-const ZONAS = [
-  { id: 'Equipetrol', label: 'Equipetrol Centro' },
-  { id: 'Sirari', label: 'Sirari' },
-  { id: 'Equipetrol Norte', label: 'Equipetrol Norte' },
-  { id: 'Villa Brigida', label: 'Villa Brígida' },
-  { id: 'Faremafu', label: 'Equipetrol Oeste (Busch)' }
-]
+const ZONAS = ZONAS_ADMIN
 
 const ESTADO_CONSTRUCCION = [
   { id: 'entrega_inmediata', label: 'Entrega Inmediata' },

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import BrokerLayout from '@/components/broker/BrokerLayout'
 import { useBrokerAuth } from '@/hooks/useBrokerAuth'
 import { supabase } from '@/lib/supabase'
+import { formatPriceUSD } from '@/lib/format-utils'
 
 interface PropiedadBroker {
   id: number
@@ -172,13 +173,7 @@ export default function BrokerDashboard() {
     )
   }
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0
-    }).format(price)
-  }
+  const formatPrice = formatPriceUSD
 
   const handleDelete = async (propId: number, codigo: string) => {
     if (!confirm(`¿Estás seguro de eliminar la propiedad ${codigo}? Esta acción no se puede deshacer.`)) {

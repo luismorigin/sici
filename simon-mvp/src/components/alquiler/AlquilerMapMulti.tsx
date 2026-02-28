@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { dormLabel } from '@/lib/format-utils'
 
 interface Property {
   id: number
@@ -26,8 +27,6 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<L.Map | null>(null)
   const markersRef = useRef<Map<number, L.Marker>>(new Map())
-
-  const dormLabel = (d: number) => d === 0 ? 'Estudio' : d + ' dorm'
 
   const makeIcon = useCallback((price: string, isSelected: boolean) => {
     return L.divIcon({

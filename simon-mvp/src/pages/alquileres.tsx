@@ -4,6 +4,8 @@ import Head from 'next/head'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { type UnidadAlquiler, type FiltrosAlquiler } from '@/lib/supabase'
+import { ZONAS_ALQUILER_UI, displayZona } from '@/lib/zonas'
+import { dormLabel, formatPriceBob } from '@/lib/format-utils'
 
 // Leaflet: dynamic import SSR-safe
 const MapComponent = dynamic(() => import('@/components/alquiler/AlquilerMap'), { ssr: false })
@@ -12,29 +14,6 @@ const PhotoViewer = dynamic(() => import('@/components/alquiler/PhotoViewer'), {
 const CompareSheet = dynamic(() => import('@/components/alquiler/CompareSheet'), { ssr: false })
 
 // ===== CONSTANTS =====
-const ZONAS_UI = [
-  { id: 'equipetrol_centro', label: 'Eq. Centro' },
-  { id: 'equipetrol_norte', label: 'Eq. Norte' },
-  { id: 'sirari', label: 'Sirari' },
-  { id: 'villa_brigida', label: 'V. Brigida' },
-  { id: 'equipetrol_oeste', label: 'Eq. Oeste' },
-  { id: 'equipetrol_3er_anillo', label: 'Eq. 3er Anillo' },
-  { id: 'sin_zona', label: 'Otras' },
-]
-
-// Map raw DB zone names → friendly display labels (matches filter UI)
-function displayZona(zona: string | null | undefined): string {
-  if (!zona) return 'Otras'
-  switch (zona) {
-    case 'Equipetrol': case 'Equipetrol Centro': return 'Eq. Centro'
-    case 'Equipetrol Norte': case 'Equipetrol Norte/Norte': case 'Equipetrol Norte/Sur': return 'Eq. Norte'
-    case 'Faremafu': return 'Eq. Oeste'
-    case 'Equipetrol Franja': return 'Eq. 3er Anillo'
-    case 'Villa Brigida': return 'V. Brigida'
-    case 'Sin zona': case 'sin zona': return 'Otras'
-    default: return zona
-  }
-}
 
 const ORDEN_OPTIONS: Array<{ value: FiltrosAlquiler['orden']; label: string }> = [
   { value: 'recientes', label: 'Recientes' },
@@ -47,8 +26,7 @@ const MAX_SLIDER_PRICE = 18000
 const MAX_FAVORITES = 3
 const FILTER_CARD_POSITION = 3
 
-function dormLabel(d: number) { return d === 0 ? 'Estudio' : d + ' dorm' }
-function formatPrice(p: number) { return 'Bs ' + p.toLocaleString('es-BO') }
+const formatPrice = formatPriceBob
 
 // Server-side API proxy (anti-scraping: no direct Supabase calls from browser)
 function mapRawToUnidad(p: any): UnidadAlquiler {
@@ -791,7 +769,7 @@ export default function AlquileresPage() {
           {/* Expandable filter chips panel */}
           <div className={`alq-chips-panel ${chipsExpanded ? 'open' : ''}`}>
             {filters.zonas_permitidas?.map(z => {
-              const zona = ZONAS_UI.find(zu => zu.id === z)
+              const zona = ZONAS_ALQUILER_UI.find(zu => zu.id === z)
               return zona ? <span key={z} className="alq-chip">{zona.label} <button onClick={() => {
                 const newZonas = filters.zonas_permitidas!.filter(x => x !== z)
                 applyFilters({ ...filters, zonas_permitidas: newZonas.length > 0 ? newZonas : undefined })
@@ -1263,7 +1241,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
       <div className="df-group">
         <div className="df-label">MICROZONA</div>
         <div className="df-zona-btns">
-          {ZONAS_UI.map(z => (
+          {ZONAS_ALQUILER_UI.map(z => (
             <button key={z.id} className={`df-zona-btn ${selectedZonas.has(z.id) ? 'active' : ''}`}
               onClick={() => toggleZona(z.id)}>{z.label}</button>
           ))}
@@ -1963,7 +1941,7 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
 
       <div className="mfc-filters">
         <div className="mfc-group"><div className="mfc-gl">MICROZONA</div>
-          <div className="mfc-zonas">{ZONAS_UI.map(z => <button key={z.id} className={`mfc-zb ${selectedZonas.has(z.id)?'active':''}`} onClick={()=>toggleZona(z.id)}>{z.label}</button>)}</div>
+          <div className="mfc-zonas">{ZONAS_ALQUILER_UI.map(z => <button key={z.id} className={`mfc-zb ${selectedZonas.has(z.id)?'active':''}`} onClick={()=>toggleZona(z.id)}>{z.label}</button>)}</div>
         </div>
         <div className="mfc-group"><div className="mfc-gl">PRESUPUESTO MAXIMO</div>
           <input type="range" className="mfc-slider" min={2000} max={MAX_SLIDER_PRICE} step={500} value={maxPrice} onChange={e=>setMaxPrice(parseInt(e.target.value))}/>

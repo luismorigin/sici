@@ -5,6 +5,7 @@ import BrokerLayout from '@/components/broker/BrokerLayout'
 import { useBrokerAuth } from '@/hooks/useBrokerAuth'
 import { supabase, convertirZona, obtenerTCActuales } from '@/lib/supabase'
 import ProyectoAutocomplete, { ProyectoSugerencia } from '@/components/broker/ProyectoAutocomplete'
+import { ZONAS_BROKER } from '@/lib/zonas'
 
 interface FormData {
   proyecto_nombre: string
@@ -83,13 +84,7 @@ interface HistorialCambio {
 }
 
 // Zonas iguales a FilterBar.tsx para consistencia
-const ZONAS = [
-  { id: 'equipetrol', label: 'Equipetrol Centro' },
-  { id: 'sirari', label: 'Sirari' },
-  { id: 'equipetrol_norte', label: 'Equipetrol Norte' },
-  { id: 'villa_brigida', label: 'Villa Brígida' },
-  { id: 'faremafu', label: 'Equipetrol Oeste (Busch)' }
-]
+const ZONAS = ZONAS_BROKER
 
 // Mapear zona desde proyectos_master al formato del formulario
 function mapearZonaDesdeProyecto(zonaProyecto: string): string | null {

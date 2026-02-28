@@ -3,6 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { ZONAS_ADMIN_FILTER } from '@/lib/zonas'
 
 interface Proyecto {
   id_proyecto_master: number
@@ -41,14 +42,7 @@ interface ProyectoSuggestion {
   count?: number
 }
 
-const ZONAS = [
-  { id: '', label: 'Todas las zonas' },
-  { id: 'Equipetrol', label: 'Equipetrol Centro' },
-  { id: 'Sirari', label: 'Sirari' },
-  { id: 'Equipetrol Norte', label: 'Equipetrol Norte' },
-  { id: 'Villa Brigida', label: 'Villa Brígida' },
-  { id: 'Faremafu', label: 'Equipetrol Oeste (Busch)' }
-]
+const ZONAS = ZONAS_ADMIN_FILTER
 
 const ESTADOS_CONSTRUCCION = [
   { id: '', label: 'Todos los estados' },

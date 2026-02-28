@@ -24,3 +24,32 @@ export const formatNum = (n: number | null | undefined): string => {
   if (n === null || n === undefined) return '-'
   return Math.round(n).toLocaleString('es-BO')
 }
+
+/**
+ * Simple dorm label for alquiler cards/maps
+ * 0 → 'Estudio', null → '—', n → 'n dorm'
+ */
+export function dormLabel(d: number | null | undefined): string {
+  if (d === null || d === undefined) return '—'
+  return d === 0 ? 'Estudio' : d + ' dorm'
+}
+
+/**
+ * Format price in Bolivianos: 'Bs 5.000'
+ */
+export function formatPriceBob(p: number | null | undefined): string {
+  if (!p) return '—'
+  return 'Bs ' + p.toLocaleString('es-BO')
+}
+
+/**
+ * Format price in USD: '$85,000'
+ */
+export function formatPriceUSD(p: number | null | undefined): string {
+  if (!p) return '—'
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(p)
+}

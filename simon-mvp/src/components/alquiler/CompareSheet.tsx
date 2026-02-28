@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { dormLabel } from '@/lib/format-utils'
 
 interface UnidadAlquiler {
   id: number
@@ -31,7 +32,6 @@ interface CompareSheetProps {
   onClose: () => void
 }
 
-function dormLabel(d: number) { return d === 0 ? 'Estudio' : `${d} dorm` }
 function fmt(n: number) { return n.toLocaleString('es-BO') }
 
 function trackEvent(name: string, params?: Record<string, any>) {

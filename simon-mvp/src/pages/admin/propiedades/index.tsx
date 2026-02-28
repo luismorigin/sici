@@ -5,6 +5,7 @@ import { useRouter } from 'next/router'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { normalizarPrecio } from '@/lib/precio-utils'
+import { ZONAS_ADMIN_FILTER, getZonaLabel } from '@/lib/zonas'
 
 interface Propiedad {
   id: number
@@ -72,32 +73,7 @@ interface PropiedadConCandados extends Propiedad {
 
 // IDs = valores exactos de proyectos_master.zona (para filtrar en RPC)
 // Labels = nombres amigables para mostrar al usuario
-const ZONAS = [
-  { id: '', label: 'Todas las zonas' },
-  { id: 'Equipetrol', label: 'Equipetrol Centro' },
-  { id: 'Sirari', label: 'Sirari' },
-  { id: 'Equipetrol Norte', label: 'Equipetrol Norte' },  // ILIKE encuentra ambas subzonas
-  { id: 'Villa Brigida', label: 'Villa Brígida' },        // Sin acento en BD
-  { id: 'Faremafu', label: 'Equipetrol Oeste (Busch)' }   // Faremafu en BD
-]
-
-// Mapeo de valores de BD a nombres amigables para mostrar en cards
-const getZonaLabel = (zonaBD: string | null): string => {
-  if (!zonaBD) return 'Sin zona'
-
-  const mapeo: Record<string, string> = {
-    'Equipetrol': 'Equipetrol Centro',
-    'Faremafu': 'Equipetrol Oeste',
-    'Villa Brigida': 'Villa Brígida',
-    'Equipetrol Norte/Norte': 'Equipetrol Norte',
-    'Equipetrol Norte/Sur': 'Equipetrol Norte',
-    'Equipetrol Franja': 'Equipetrol Centro',
-    'Equipetrol Centro': 'Equipetrol Centro',
-    'Sin zona': 'Sin zona'
-  }
-
-  return mapeo[zonaBD] || zonaBD
-}
+const ZONAS = ZONAS_ADMIN_FILTER
 
 interface ProyectoOption {
   id: number
