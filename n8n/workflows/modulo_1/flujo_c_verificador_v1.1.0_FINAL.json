@@ -24,7 +24,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT \n    id,\n    url,\n    fuente,\n    codigo_propiedad,\n    status,\n    primera_ausencia_at,\n    EXTRACT(DAY FROM NOW() - primera_ausencia_at)::INTEGER as dias_desde_ausencia\nFROM propiedades_v2\nWHERE status = 'inactivo_pending'::estado_propiedad\n  AND fuente = 'remax'  -- ✅ SOLO REMAX (C21 no confiable)\n  AND tipo_operacion = 'venta'  -- ✅ No tocar alquileres\nORDER BY primera_ausencia_at ASC\nLIMIT 100;",
+        "query": "SELECT \n    id,\n    url,\n    fuente,\n    codigo_propiedad,\n    status,\n    primera_ausencia_at,\n    EXTRACT(DAY FROM NOW() - primera_ausencia_at)::INTEGER as dias_desde_ausencia\nFROM propiedades_v2\nWHERE status = 'inactivo_pending'::estado_propiedad\n  AND fuente = 'remax'  -- ✅ SOLO REMAX (C21 no confiable)\nORDER BY primera_ausencia_at ASC\nLIMIT 200;",
         "options": {}
       },
       "id": "385545db-6f02-4069-bc42-cec17c6c5fc4",
@@ -84,7 +84,7 @@
       "typeVersion": 2,
       "position": [
         -656,
-        664
+        672
       ]
     },
     {
@@ -199,7 +199,7 @@
       "typeVersion": 2.5,
       "position": [
         16,
-        -56
+        -64
       ],
       "credentials": {
         "postgres": {
@@ -218,7 +218,7 @@
       "typeVersion": 2,
       "position": [
         240,
-        424
+        432
       ]
     },
     {
@@ -233,7 +233,7 @@
       "typeVersion": 1,
       "position": [
         -880,
-        136
+        144
       ]
     },
     {
@@ -257,7 +257,7 @@
       "typeVersion": 3,
       "position": [
         -432,
-        136
+        144
       ]
     },
     {
@@ -289,7 +289,7 @@
       "typeVersion": 2.3,
       "position": [
         16,
-        136
+        144
       ],
       "id": "f1eb663f-e944-4512-b1b1-7c2cca440a91",
       "name": "If"
@@ -304,7 +304,7 @@
       "typeVersion": 2.6,
       "position": [
         240,
-        232
+        240
       ],
       "id": "e80b99b0-5818-4a06-83c6-ce5bdf056bfe",
       "name": "UPDATE Reactivar Propiedad",
@@ -318,25 +318,24 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=SELECT registrar_ejecucion_workflow(\n  'verificador',\n  'success',\n  {{ $json.total_procesadas || 0 }},\n  {{ $json.confirmadas_inactivas || 0 }},\n  0,\n  NULL,\n  '{{ JSON.stringify({ reactivadas: $json.reactivadas || 0, fuente: $json.fuente || \"remax\" }) }}'::jsonb\n);",
+        "query": " SELECT registrar_ejecucion_workflow('verificador', 'success', 0, 0, 0, NULL, '{}'::jsonb);",
         "options": {}
       },
-      "id": "reg-exec-verificador-001",
-      "name": "PG: Registrar Ejecución",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
+      "typeVersion": 2.6,
       "position": [
-        -208,
-        136
+        -240,
+        144
       ],
+      "id": "8bfe4989-1b75-4cf1-8524-f34c18779e8b",
+      "name": "registrar_ejecucion_workflow",
+      "executeOnce": true,
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
           "name": "Supabase - Censo Inmobiliario"
         }
-      },
-      "executeOnce": true,
-      "notes": "Registrar ejecución del workflow"
+      }
     }
   ],
   "pinData": {},
@@ -538,7 +537,7 @@
       "main": [
         [
           {
-            "node": "PG: Registrar Ejecución",
+            "node": "registrar_ejecucion_workflow",
             "type": "main",
             "index": 0
           }
@@ -546,34 +545,19 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "America/La_Paz",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
-  "versionId": "47422f1b-26ac-4dce-8e6b-2e2ca55c9117",
+  "versionId": "4c0cde40-c7ed-4ccf-9217-5e98bf28a5e3",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
   },
   "id": "PUKkUhh2NwNDEmTb",
-  "tags": [
-    {
-      "name": "SICI",
-      "id": "obZptuoaE3ynlZQO",
-      "updatedAt": "2025-12-18T13:23:45.918Z",
-      "createdAt": "2025-12-18T13:23:45.918Z"
-    },
-    {
-      "name": "Modulo1",
-      "id": "rQ5lGbtTrI7S7Dom",
-      "updatedAt": "2025-12-18T13:23:45.932Z",
-      "createdAt": "2025-12-18T13:23:45.932Z"
-    },
-    {
-      "name": "FlujoC",
-      "id": "gKJ01rv40PeKhQrO",
-      "updatedAt": "2025-12-18T13:23:45.944Z",
-      "createdAt": "2025-12-18T13:23:45.944Z"
-    }
-  ]
+  "tags": []
 }

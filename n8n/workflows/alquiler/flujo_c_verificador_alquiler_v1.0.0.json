@@ -12,11 +12,14 @@
           ]
         }
       },
-      "id": "va-trigger",
+      "id": "866f682c-3cc9-4c22-bbcf-9592f724d792",
       "name": "Trigger 7:00 AM",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [-1776, 496]
+      "position": [
+        -896,
+        576
+      ]
     },
     {
       "parameters": {
@@ -24,11 +27,14 @@
         "query": "-- Verificador Alquiler: inactivo_pending + ghost properties\nWITH pending AS (\n  SELECT\n    id, url, fuente, codigo_propiedad, status,\n    primera_ausencia_at,\n    EXTRACT(DAY FROM NOW() - primera_ausencia_at)::INTEGER as dias_desde_ausencia,\n    'pending' as origen\n  FROM propiedades_v2\n  WHERE status = 'inactivo_pending'::estado_propiedad\n    AND tipo_operacion = 'alquiler'\n),\nghost AS (\n  SELECT\n    id, url, fuente, codigo_propiedad, status,\n    fecha_discovery as primera_ausencia_at,\n    EXTRACT(DAY FROM NOW() - fecha_discovery)::INTEGER as dias_desde_ausencia,\n    'ghost' as origen\n  FROM propiedades_v2\n  WHERE status = 'completado'\n    AND tipo_operacion = 'alquiler'\n    AND es_activa = true\n    AND fecha_discovery < NOW() - INTERVAL '14 days'\n    AND url NOT LIKE '%empty_%'\n  ORDER BY fecha_discovery ASC\n  LIMIT 20\n)\nSELECT * FROM pending\nUNION ALL\nSELECT * FROM ghost\nORDER BY origen, dias_desde_ausencia DESC\nLIMIT 100;",
         "options": {}
       },
-      "id": "va-query",
+      "id": "ff2c6200-2aa5-45fa-ae8a-8660f479ee94",
       "name": "Query Pendientes + Ghost",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [-1552, 496],
+      "position": [
+        -672,
+        576
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -59,31 +65,40 @@
         },
         "options": {}
       },
-      "id": "va-if-hay",
+      "id": "4152d875-273b-40e0-b084-a56cff4663ce",
       "name": "Hay propiedades?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [-1328, 496]
+      "position": [
+        -448,
+        576
+      ]
     },
     {
       "parameters": {
         "jsCode": "const timestamp = new Date().toISOString();\nreturn [{\n  json: {\n    status: 'completed',\n    message: 'No hay alquileres pendientes de verificar',\n    verificadas: 0,\n    confirmadas_404: 0,\n    rescatadas_200: 0,\n    errores: 0,\n    timestamp\n  }\n}];"
       },
-      "id": "va-sin-pend",
+      "id": "274d466f-6d02-4407-8f05-afab334e2427",
       "name": "Sin pendientes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-656, 664]
+      "position": [
+        224,
+        752
+      ]
     },
     {
       "parameters": {
         "options": {}
       },
-      "id": "va-split",
+      "id": "ec4bc3b8-7e3d-4989-9e6b-3077124e4baf",
       "name": "Split propiedades",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [-1104, 160]
+      "position": [
+        -224,
+        240
+      ]
     },
     {
       "parameters": {
@@ -104,33 +119,42 @@
           "timeout": 10000
         }
       },
-      "id": "va-http",
+      "id": "e3cdabb7-545d-4634-aff9-891053f7a5c5",
       "name": "HTTP Check",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-880, -80],
+      "position": [
+        0,
+        0
+      ],
       "continueOnFail": true
     },
     {
       "parameters": {
         "amount": 1.5
       },
-      "id": "va-wait",
+      "id": "5ad23f19-af5e-4ba6-99ba-2e730f234abf",
       "name": "Wait 1.5s",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [-656, -80],
+      "position": [
+        224,
+        0
+      ],
       "webhookId": "va-wait-001"
     },
     {
       "parameters": {
         "jsCode": "// ============================================================================\n// Verificador Alquiler - Procesar respuesta HTTP\n// v1.0.0 - Soporta pending + ghost properties\n// ============================================================================\n\nconst item = $input.first();\nconst originalData = item.json;\n\nconst propiedadData = $('Split propiedades').first().json;\nconst diasDesdeAusencia = propiedadData.dias_desde_ausencia || 0;\nconst primeraAusenciaAt = propiedadData.primera_ausencia_at;\nconst origen = propiedadData.origen; // 'pending' o 'ghost'\n\nconst MAX_DIAS_PENDING = 7;\n\n// HTTP Request con fullResponse devuelve statusCode en el json\n// Con continueOnFail, errores vienen con $json.error\nlet statusCode = 0;\nlet isError = false;\n\nif (originalData.statusCode) {\n  statusCode = originalData.statusCode;\n} else if (originalData.error) {\n  isError = true;\n  // Intentar extraer status code del error message\n  const match = (originalData.message || '').match(/(\\d{3})/);\n  if (match) statusCode = parseInt(match[1]);\n}\n\n// ============================================================================\n// LÓGICA DE DECISIÓN\n// ============================================================================\n\nlet action = 'skip';\nlet newStatus = null;\nlet reason = '';\n\nif (origen === 'ghost') {\n  // Ghost: solo confirmar si HTTP 404\n  if (statusCode === 404) {\n    action = 'confirm';\n    newStatus = 'inactivo_confirmed';\n    reason = `Ghost: HTTP 404 confirmado (sin discovery hace ${diasDesdeAusencia} días)`;\n  } else if (statusCode === 200) {\n    action = 'skip';\n    reason = `Ghost: HTTP 200 - propiedad sigue activa`;\n  } else {\n    action = 'skip';\n    reason = `Ghost: HTTP ${statusCode} - no concluyente, reintentar`;\n  }\n} else {\n  // Pending: lógica Flujo C\n  if (!primeraAusenciaAt) {\n    action = 'skip';\n    reason = 'ERROR: primera_ausencia_at es NULL';\n  } else if (statusCode === 404) {\n    action = 'confirm';\n    newStatus = 'inactivo_confirmed';\n    reason = `HTTP 404 - Confirmado (ausente ${diasDesdeAusencia} días)`;\n  } else if (diasDesdeAusencia >= MAX_DIAS_PENDING) {\n    action = 'confirm';\n    newStatus = 'inactivo_confirmed';\n    reason = `Auto-confirmado: ${diasDesdeAusencia} días ausente (límite: ${MAX_DIAS_PENDING})`;\n  } else if (statusCode === 200) {\n    action = 'reactivate';\n    newStatus = 'completado';\n    reason = `HTTP 200 - Reapareció después de ${diasDesdeAusencia} días`;\n  } else if (isError) {\n    action = 'skip';\n    reason = `Error de red/timeout - Reintentar (día ${diasDesdeAusencia}/${MAX_DIAS_PENDING})`;\n  } else {\n    action = 'skip';\n    reason = `HTTP ${statusCode} - Esperar (día ${diasDesdeAusencia}/${MAX_DIAS_PENDING})`;\n  }\n}\n\nreturn [{\n  json: {\n    id: propiedadData.id,\n    url: propiedadData.url,\n    fuente: propiedadData.fuente,\n    codigo_propiedad: propiedadData.codigo_propiedad,\n    primera_ausencia_at: primeraAusenciaAt,\n    statusCode,\n    isError,\n    action,\n    newStatus,\n    reason,\n    origen,\n    diasDesdeAusencia,\n    maxDiasPending: MAX_DIAS_PENDING,\n    timestamp: new Date().toISOString()\n  }\n}];"
       },
-      "id": "va-procesar",
+      "id": "ecbba88f-c427-4b7a-bc39-9cd4841ac931",
       "name": "Procesar respuesta",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-432, -80]
+      "position": [
+        448,
+        0
+      ]
     },
     {
       "parameters": {
@@ -156,11 +180,14 @@
         },
         "options": {}
       },
-      "id": "va-if-confirm",
+      "id": "a2e463cb-fa72-491c-bd8e-481c722678c8",
       "name": "Confirmar baja?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [-208, -80]
+      "position": [
+        672,
+        0
+      ]
     },
     {
       "parameters": {
@@ -168,11 +195,14 @@
         "query": "UPDATE propiedades_v2\nSET\n  status = 'inactivo_confirmed',\n  es_activa = FALSE,\n  fecha_inactivacion = COALESCE(primera_ausencia_at, NOW()),\n  razon_inactiva = 'aviso_terminado',\n  fecha_actualizacion = NOW()\nWHERE id = {{ $json.id }}\n  AND es_activa = TRUE\nRETURNING id, url, status, fecha_inactivacion;",
         "options": {}
       },
-      "id": "va-update-confirm",
+      "id": "f26396b1-37a8-4440-84d8-854263744586",
       "name": "UPDATE inactivo_confirmed",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [16, -56],
+      "position": [
+        896,
+        32
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -207,8 +237,11 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [16, 136],
-      "id": "va-if-react",
+      "position": [
+        896,
+        224
+      ],
+      "id": "46d14345-3648-4b8c-9818-e8394be9487a",
       "name": "Reactivar?"
     },
     {
@@ -219,8 +252,11 @@
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [240, 232],
-      "id": "va-update-react",
+      "position": [
+        1120,
+        320
+      ],
+      "id": "c3edf4ee-6b68-4a9c-8f7b-03b87746bd4a",
       "name": "UPDATE Reactivar",
       "credentials": {
         "postgres": {
@@ -233,11 +269,14 @@
       "parameters": {
         "jsCode": "const item = $input.first();\nreturn [{ json: { ...item.json, logged: true, logType: 'skipped' } }];"
       },
-      "id": "va-log-skip",
+      "id": "36fc22e9-d8c6-40c4-92fb-e0a75e023756",
       "name": "Log skipped",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [240, 424]
+      "position": [
+        1120,
+        512
+      ]
     },
     {
       "parameters": {
@@ -245,29 +284,38 @@
         "destinationFieldName": "results",
         "options": {}
       },
-      "id": "va-aggregate",
+      "id": "dd7a44c3-689f-4362-851a-8a526bf3fca9",
       "name": "Agregar resultados",
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
-      "position": [-880, 136]
+      "position": [
+        0,
+        224
+      ]
     },
     {
       "parameters": {
         "jsCode": "// ============================================================================\n// Verificador Alquiler - Resumen final\n// ============================================================================\n\nconst results = $input.first().json.results || [];\n\nlet confirmadas = 0;\nlet reactivadas = 0;\nlet ghosts_detectados = 0;\nlet skipped = 0;\n\nfor (const r of results) {\n  if (r.status === 'inactivo_confirmed') {\n    confirmadas++;\n    if (r.origen === 'ghost') ghosts_detectados++;\n  } else if (r.status === 'completado') {\n    reactivadas++;\n  } else {\n    skipped++;\n  }\n}\n\nreturn [{\n  json: {\n    status: 'completed',\n    flujo: 'Flujo C - Verificador Alquiler v1.0.0',\n    timestamp: new Date().toISOString(),\n    total_procesadas: results.length,\n    confirmadas_inactivas: confirmadas,\n    ghosts_detectados,\n    reactivadas,\n    skipped,\n    propiedades: results.map(r => ({\n      id: r.id,\n      url: r.url,\n      fuente: r.fuente,\n      origen: r.origen,\n      nuevo_status: r.status,\n      fecha_inactivacion: r.fecha_inactivacion\n    }))\n  }\n}];"
       },
-      "id": "va-resumen",
+      "id": "49e0a734-50cc-47c4-bfd5-0a8b7fcc5990",
       "name": "Generar resumen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-656, 144]
+      "position": [
+        224,
+        224
+      ]
     },
     {
       "parameters": {},
-      "id": "va-merge",
+      "id": "889968bc-43c8-4288-bbf8-d91be8889686",
       "name": "Merge outputs",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
-      "position": [-432, 136]
+      "position": [
+        448,
+        224
+      ]
     },
     {
       "parameters": {
@@ -275,90 +323,243 @@
         "query": "=SELECT registrar_ejecucion_workflow(\n  'verificador_alquiler',\n  'success',\n  {{ $json.total_procesadas || 0 }},\n  {{ $json.confirmadas_inactivas || 0 }},\n  0,\n  NULL,\n  '{{ JSON.stringify({ reactivadas: $json.reactivadas || 0, ghosts: $json.ghosts_detectados || 0, skipped: $json.skipped || 0 }) }}'::jsonb\n);",
         "options": {}
       },
-      "id": "va-reg-exec",
+      "id": "04f8a61e-0297-433a-9331-7182b6b062f8",
       "name": "PG: Registrar Ejecución",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [-208, 136],
+      "position": [
+        672,
+        224
+      ],
+      "executeOnce": true,
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
           "name": "Supabase - Censo Inmobiliario"
         }
-      },
-      "executeOnce": true
+      }
     }
   ],
   "pinData": {},
   "connections": {
     "Trigger 7:00 AM": {
-      "main": [[{ "node": "Query Pendientes + Ghost", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Query Pendientes + Ghost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Query Pendientes + Ghost": {
-      "main": [[{ "node": "Hay propiedades?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Hay propiedades?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Hay propiedades?": {
       "main": [
-        [{ "node": "Split propiedades", "type": "main", "index": 0 }],
-        [{ "node": "Sin pendientes", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Split propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sin pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Sin pendientes": {
-      "main": [[{ "node": "Merge outputs", "type": "main", "index": 1 }]]
+      "main": [
+        [
+          {
+            "node": "Merge outputs",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
     },
     "Split propiedades": {
       "main": [
-        [{ "node": "Agregar resultados", "type": "main", "index": 0 }],
-        [{ "node": "HTTP Check", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Agregar resultados",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "HTTP Check": {
-      "main": [[{ "node": "Wait 1.5s", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Wait 1.5s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Wait 1.5s": {
-      "main": [[{ "node": "Procesar respuesta", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Procesar respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Procesar respuesta": {
-      "main": [[{ "node": "Confirmar baja?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Confirmar baja?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Confirmar baja?": {
       "main": [
-        [{ "node": "UPDATE inactivo_confirmed", "type": "main", "index": 0 }],
-        [{ "node": "Reactivar?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "UPDATE inactivo_confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reactivar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "UPDATE inactivo_confirmed": {
-      "main": [[{ "node": "Split propiedades", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Split propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Reactivar?": {
       "main": [
-        [{ "node": "UPDATE Reactivar", "type": "main", "index": 0 }],
-        [{ "node": "Log skipped", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "UPDATE Reactivar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "UPDATE Reactivar": {
-      "main": [[{ "node": "Split propiedades", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Split propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Log skipped": {
-      "main": [[{ "node": "Split propiedades", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Split propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Agregar resultados": {
-      "main": [[{ "node": "Generar resumen", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Generar resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Generar resumen": {
-      "main": [[{ "node": "Merge outputs", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Merge outputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Merge outputs": {
-      "main": [[{ "node": "PG: Registrar Ejecución", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecución",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
-    "timezone": "America/La_Paz"
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/La_Paz",
+    "callerPolicy": "workflowsFromSameOwner"
   },
+  "versionId": "3b85f752-f541-44e7-9334-c77daaf6fe3f",
   "meta": {
-    "templateCredsSetupCompleted": true
+    "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
   },
+  "id": "H1q1J5QTcJFa5Z-SFgJ0k",
   "tags": []
 }
