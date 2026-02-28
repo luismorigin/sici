@@ -353,7 +353,14 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
   // ---- Form handlers ----
 
   const updateField = (field: keyof FormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value }
+      // Sync: tipo_precio usd_paralelo → solo_tc_paralelo true, y viceversa
+      if (field === 'tipo_precio') {
+        updated.solo_tc_paralelo = value === 'usd_paralelo'
+      }
+      return updated
+    })
     if (validationErrors.length > 0 || validationWarnings.length > 0) {
       setValidationErrors([])
       setValidationWarnings([])

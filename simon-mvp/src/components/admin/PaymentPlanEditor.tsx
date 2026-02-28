@@ -43,29 +43,26 @@ export default function PaymentPlanEditor({ formData, updateField, estaCampoBloq
             </div>
           </label>
 
-          <label className={`flex items-center gap-3 p-4 border-2 rounded-lg transition-colors ${
-            formData.acepta_financiamiento
-              ? 'border-slate-100 bg-slate-50 cursor-not-allowed opacity-50'
-              : formData.solo_tc_paralelo
-                ? 'border-amber-500 bg-amber-50 cursor-pointer'
-                : 'border-slate-200 hover:bg-slate-50 cursor-pointer'
+          <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+            formData.solo_tc_paralelo
+              ? 'border-amber-500 bg-amber-50'
+              : 'border-slate-200 hover:bg-slate-50'
           }`}>
             <input
               type="checkbox"
-              checked={!formData.acepta_financiamiento && formData.solo_tc_paralelo}
-              disabled={formData.acepta_financiamiento}
+              checked={formData.solo_tc_paralelo}
               onChange={(e) => updateField('solo_tc_paralelo', e.target.checked)}
               className="w-5 h-5 rounded text-amber-500 focus:ring-amber-500"
             />
             <div>
-              <span className="block text-sm font-medium text-slate-700">💱 Solo contado TC paralelo</span>
-              <span className="block text-xs text-slate-500">Solo acepta pago al contado en USD paralelo</span>
+              <span className="block text-sm font-medium text-slate-700">💱 TC paralelo</span>
+              <span className="block text-xs text-slate-500">Precios en USD tasa paralela (Binance)</span>
             </div>
           </label>
         </div>
-        {!formData.acepta_financiamiento && !formData.solo_tc_paralelo && (
+        {!formData.solo_tc_paralelo && (
           <p className="text-xs text-slate-500 mt-2 italic">
-            💵 Sin marcar ninguna = Acepta contado en USD oficial o Bolivianos
+            💵 Sin TC paralelo = Precios en USD oficial o Bolivianos
           </p>
         )}
       </div>
