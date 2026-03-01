@@ -28,29 +28,47 @@ AND (
 )
 ```
 
-## Nomenclatura de zonas (Feb 2026)
+## Nomenclatura de zonas (Mar 2026)
 
-La migración 131 (`alinear_zona`) actualizó la columna `zona` para ventas pero NO para alquileres. Usar las tablas correctas:
+Post migraciones 171-173, venta usa **nombres crudos de PostGIS** (= microzona). La migración 131 fue revertida porque rompía el matching `p.zona = pm.zona`.
 
-### Ventas (zona actualizada)
+### Ventas y Alquileres (misma convención)
 
-| zona en BD | Display |
-|------------|---------|
-| `Equipetrol Centro` | Eq. Centro |
-| `Sirari` | Sirari |
-| `Villa Brígida` | V. Brígida |
-| `Equipetrol Oeste` | Eq. Oeste |
-| `Equipetrol Norte` | Eq. Norte |
+`p.zona` y `p.microzona` ahora contienen nombres crudos de `zonas_geograficas.nombre`:
 
-### Alquileres (zona con nombres viejos)
+| zona/microzona en BD | Display | Zona canónica |
+|---------------------|---------|---------------|
+| `Equipetrol` | Eq. Centro | Equipetrol Centro |
+| `Equipetrol Norte/Norte` | Eq. Norte (norte) | Equipetrol Norte |
+| `Equipetrol Norte/Sur` | Eq. Norte (sur) | Equipetrol Norte |
+| `Faremafu` | Eq. Oeste | Equipetrol Oeste |
+| `Sirari` | Sirari | Sirari |
+| `Villa Brigida` | V. Brígida | Villa Brígida |
+| `Equipetrol Franja` | Marginal (ignorar) | — |
 
-| zona en BD | Display |
-|------------|---------|
-| `Equipetrol`, `Equipetrol Franja`, `Equipetrol Centro` | Eq. Centro |
-| `Equipetrol Norte/Norte`, `Equipetrol Norte/Sur`, `Equipetrol Norte` | Eq. Norte |
-| `Faremafu` | Eq. Oeste |
-| `Sirari` | Sirari |
-| `Villa Brigida` | V. Brígida |
+### Agrupar Eq. Norte en queries
+
+Las dos microzonas de Eq. Norte deben agruparse para análisis por zona:
+
+```sql
+CASE zona
+  WHEN 'Equipetrol Norte/Norte' THEN 'Equipetrol Norte'
+  WHEN 'Equipetrol Norte/Sur' THEN 'Equipetrol Norte'
+  ELSE zona
+END AS zona_display
+```
+
+### Valores sucios residuales (alquiler)
+
+36 alquileres aún tienen valores no estándar. Usar `buscar_unidades_alquiler()` que los mapea internamente.
+
+| Valor sucio | Cantidad | Mapea a |
+|-------------|:--------:|---------|
+| `Equipetrol Centro` | 19 | Equipetrol |
+| `Equipetrol Norte` | 10 | Eq Norte/Norte o Eq Norte/Sur |
+| `Sin zona` | 4 | Sin asignar |
+| `Villa Brígida` | 2 | Villa Brigida |
+| `Equipetrol Oeste` | 1 | Faremafu |
 
 ## Impacto de NO aplicar filtros (ejemplo real, 17 Feb 2026)
 
