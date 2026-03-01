@@ -35,57 +35,56 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 
 **IMPORTANTE:** Nunca commitear webhooks reales a GitHub - Slack los revoca automáticamente.
 
-## Reglas Críticas
+## Reglas Criticas
 
 1. **Manual > Automatic** - `campos_bloqueados` SIEMPRE se respetan
-2. **Discovery > Enrichment** - Para campos físicos (area, dorms, GPS)
-3. **propiedades_v2** - ÚNICA tabla activa. `propiedades` es LEGACY
+2. **Discovery > Enrichment** - Para campos fisicos (area, dorms, GPS)
+3. **propiedades_v2** - UNICA tabla activa. `propiedades` es LEGACY
 4. **SQL > Regex** - Potenciar matching en BD, no extractores
 5. **Human-in-the-Loop** - Sistema HITL migrado a Admin Dashboard (ya no usa Google Sheets)
 6. **Alquiler aislado** - Pipeline alquiler usa funciones PROPIAS (`_alquiler`), NUNCA modificar funciones de venta
-7. **pg_get_functiondef() SIEMPRE** - Antes de modificar cualquier función SQL, exportar la versión actual de producción. NUNCA confiar en archivos de migración locales.
+7. **pg_get_functiondef() SIEMPRE** - Antes de modificar cualquier funcion SQL, exportar la version actual de produccion. NUNCA confiar en archivos de migracion locales.
 8. **Filtros de calidad en estudios de mercado** - SIEMPRE aplicar al consultar propiedades para informes:
    - `duplicado_de IS NULL`, `tipo_propiedad_original NOT IN ('baulera','parqueo','garaje','deposito')`
    - `(es_multiproyecto = false OR es_multiproyecto IS NULL)`, `area_total_m2 >= 20`
-   - `<= 300 días` en mercado para venta (730 para preventa), `<= 150 días` para alquiler
+   - `<= 300 dias` en mercado para venta (730 para preventa), `<= 150 dias` para alquiler
    - Ver detalle completo en `docs/reports/FILTROS_CALIDAD_MERCADO.md`
 
-## Zonas Canónicas (5 zonas)
+## Zonas Canonicas (5 zonas)
 
-La fuente de verdad geográfica es `microzona` (asignada por PostGIS). La columna `zona` fue normalizada para venta (migración 131) pero NO para alquiler.
+La fuente de verdad geografica es `microzona` (asignada por PostGIS). La columna `zona` fue normalizada para venta (migracion 131) pero NO para alquiler.
 
-| Zona canónica | microzona(s) en BD | zona en venta (pm.zona) | zona en alquiler (p.zona) |
+| Zona canonica | microzona(s) en BD | zona en venta (pm.zona) | zona en alquiler (p.zona) |
 |---|---|---|---|
 | Equipetrol Centro | `Equipetrol` | `Equipetrol Centro` | `Equipetrol`, `Equipetrol Centro` |
 | Equipetrol Norte | `Equipetrol Norte/Norte`, `Equipetrol Norte/Sur` | `Equipetrol Norte` | `Equipetrol Norte/Norte`, `Equipetrol Norte/Sur`, `Equipetrol Norte` |
 | Sirari | `Sirari` | `Sirari` | `Sirari` |
-| Villa Brígida | `Villa Brigida` | `Villa Brígida` | `Villa Brigida` |
+| Villa Brigida | `Villa Brigida` | `Villa Brigida` | `Villa Brigida` |
 | Equipetrol Oeste | `Faremafu` | `Equipetrol Oeste` | `Faremafu` |
 
 **Ignorar:** `Equipetrol Franja` — zona marginal con pocas propiedades.
 
-**En queries de alquiler:** Usar la expansión de `buscar_unidades_alquiler()` que mapea slugs UI → nombres sucios de BD.
+**En queries de alquiler:** Usar la expansion de `buscar_unidades_alquiler()` que mapea slugs UI → nombres sucios de BD.
 **En queries de venta:** Usar `pm.zona` directamente (ya normalizada a 5 nombres limpios).
 
-## Documentación Principal
+## Documentacion Principal
 
-| Propósito | Archivo |
+| Proposito | Archivo |
 |-----------|---------|
 | **Arquitectura SICI** | `docs/arquitectura/SICI_ARQUITECTURA_MAESTRA.md` |
-| **Simón Arquitectura** | `docs/simon/SIMON_ARQUITECTURA_COGNITIVA.md` |
-| **Metodología Fiduciaria** | `docs/canonical/METODOLOGIA_FIDUCIARIA_PARTE_*.md` |
+| **Simon Arquitectura** | `docs/simon/SIMON_ARQUITECTURA_COGNITIVA.md` |
+| **Metodologia Fiduciaria** | `docs/canonical/METODOLOGIA_FIDUCIARIA_PARTE_*.md` |
 | **Pipeline Alquiler Canonical** | `docs/canonical/pipeline_alquiler_canonical.md` |
 | **Filtros Calidad Mercado** | `docs/reports/FILTROS_CALIDAD_MERCADO.md` |
 | **Learnings Alquiler** | `docs/alquiler/LEARNINGS_PIPELINE_ALQUILER.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
 | **Brand Guidelines** | `docs/simon/SIMON_BRAND_GUIDELINES.md` |
-| **Índice migraciones** | `docs/migrations/MIGRATION_INDEX.md` |
+| **Indice migraciones** | `docs/migrations/MIGRATION_INDEX.md` |
 | **Backlog calidad datos** | `docs/backlog/CALIDAD_DATOS_BACKLOG.md` |
-| **Deuda técnica** | `docs/backlog/DEUDA_TECNICA.md` |
-| **Cómo contribuir** | `CONTRIBUTING.md` |
-| **Catálogo funciones SQL** | `sql/functions/FUNCTION_CATALOG.md` |
-| Docs archivados | `docs/archive/implementado/`, `docs/archive/obsoleto/` |
+| **Deuda tecnica** | `docs/backlog/DEUDA_TECNICA.md` |
+| **Como contribuir** | `CONTRIBUTING.md` |
+| **Catalogo funciones SQL** | `sql/functions/FUNCTION_CATALOG.md` |
 
 ## Pipeline Nocturno
 
@@ -96,7 +95,7 @@ La fuente de verdad geográfica es `microzona` (asignada por PostGIS). La column
 3:00 AM  Merge → campos consolidados + TC paralelo
 4:00 AM  Matching → id_proyecto_master
 6:00 AM  Verificador ausencias (solo Remax, LIMIT 200)
-9:00 AM  Auditoría + Snapshots absorción
+9:00 AM  Auditoria + Snapshots absorcion
 ```
 
 ### Alquiler
@@ -111,42 +110,94 @@ La fuente de verdad geográfica es `microzona` (asignada por PostGIS). La column
 
 ```
 sici/
-├── sql/functions/       → Funciones SQL canónicas (42 archivos, 13 subdirectorios)
+├── sql/functions/       → Funciones SQL canonicas (42 archivos, 13 subdirectorios)
 │   ├── discovery/       → registrar_discovery
 │   ├── enrichment/      → registrar_enrichment
 │   ├── merge/           → merge_discovery_enrichment v2.3.0
 │   ├── matching/        → matching v3.1 + matchear_alquiler
 │   ├── alquiler/        → discovery/enrichment/merge alquiler
-│   ├── query_layer/     → buscar_unidades_reales/alquiler, razón fiduciaria, posición mercado
+│   ├── query_layer/     → buscar_unidades_reales/alquiler, razon fiduciaria, posicion mercado
 │   ├── snapshots/       → snapshot_absorcion_mercado
 │   ├── tc_dinamico/     → TC Binance P2P
-│   ├── hitl/            → procesar_decision_sin_match, acción excluida, validación auto-aprobado
+│   ├── hitl/            → procesar_decision_sin_match, accion excluida, validacion auto-aprobado
 │   ├── admin/           → inferir_datos_proyecto, propagar, sincronizar
 │   ├── broker/          → buscar_unidades_broker, score, verificar, contacto
 │   ├── helpers/         → precio_normalizado, campo_bloqueado, normalize_nombre, vigente
 │   └── triggers/        → proteger_amenities, matchear_alquiler, asignar_zona
-├── sql/migrations/      → 171 migraciones (001–169) — ver docs/migrations/MIGRATION_INDEX.md
+├── sql/migrations/      → 171 migraciones (001-169) — ver docs/migrations/MIGRATION_INDEX.md
 ├── geodata/             → microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/        → Discovery, Enrichment, Merge, Verificador (venta)
-│   ├── modulo_2/        → Matching, Auditoría, TC dinámico
+│   ├── modulo_2/        → Matching, Auditoria, TC dinamico
 │   └── alquiler/        → Pipeline completo alquiler (6 workflows)
-├── docs/                → Documentación activa + canonical
+├── docs/                → Documentacion activa + canonical
+│   └── archive/         → planning, reports, snapshots, specs (archivados en S1)
 └── simon-mvp/           → Frontend Next.js (simonbo.com)
-    └── src/_archive/    → 12 legacy pages + componentes huérfanos (excluidos de build)
+    └── src/             → Ver seccion "simon-mvp Arquitectura" abajo
 ```
+
+## simon-mvp Arquitectura
+
+Refactorizado en S1-S6. Paginas monoliticas descompuestas en tipos + hooks + componentes.
+
+```
+simon-mvp/src/
+├── types/                        → Interfaces TypeScript
+│   ├── propiedad-editor.ts        → FormData, PropiedadOriginal, ProyectoMaster, HistorialEntry, CuotaPago
+│   ├── proyecto-editor.ts         → ProyectoFormData, PropiedadVinculada, ProyectoStats, DatosInferidos
+│   ├── db-responses.ts            → RawUnidadRealRow, RawUnidadAlquilerRow, RawPropiedadRow (Supabase RPC)
+│   └── landing.ts                 → Tipos landing page
+├── config/
+│   └── propiedad-constants.ts     → MICROZONAS, TIPO_OPERACION, DORMITORIOS, amenidades, equipamiento
+├── hooks/
+│   ├── usePropertyEditor.ts       → Logica propiedades/[id]: detectarCambios, validar, save, candados, precios
+│   ├── useProjectEditor.ts        → Logica proyectos/[id]: fetch, update, inferir, propagar, stats
+│   ├── useAdminAuth.ts            → Auth admin (context provider en _app.tsx)
+│   └── useBrokerAuth.ts           → Auth broker
+├── components/admin/
+│   ├── PropertyGallery.tsx        → Galeria fotos + lightbox (propiedades/[id])
+│   ├── LockPanel.tsx              → Panel candados slide-out (propiedades/[id])
+│   ├── LockIcon.tsx               → Toggle candado individual (compartido)
+│   ├── AmenitiesEditor.tsx        → Toggles amenidades + equipamiento (propiedades/[id])
+│   ├── PaymentPlanEditor.tsx      → Forma de pago + CRUD cuotas (propiedades/[id])
+│   └── PropiedadesVinculadasTable.tsx → Stats + filtros + tabla propiedades (proyectos/[id])
+├── lib/
+│   ├── supabase.ts                → Cliente Supabase + RPC mappers tipados (db-responses.ts)
+│   ├── zonas.ts                   → Constantes zonas, mapeo slug→display, filtros admin/alquiler
+│   ├── precio-utils.ts            → normalizarPrecio, TC paralelo
+│   ├── format-utils.ts            → dormLabel, formatPriceBob
+│   └── informe/                   → Generacion informes PDF (split de api/informe.ts)
+│       ├── types.ts                → Propiedad, DatosUsuario, Analisis, LeadData, TemplateData
+│       ├── helpers.ts              → fmt, getCategoria, getNegociacion, calcularPrecioReal, zonaDisplay
+│       └── template.ts            → generateInformeHTML(data) — template HTML completo
+├── pages/admin/                   → Paginas admin (orquestadores delgados post-refactor)
+├── pages/api/                     → API routes
+├── components/                    → landing-premium/, alquiler/, broker/, filters-premium/, results-premium/
+└── _archive/                      → Legacy v1 (excluido de build via tsconfig.json, redirects 301)
+```
+
+### Patron arquitectonico (paginas admin)
+
+Las paginas editores siguen el patron: **tipos → constantes → hook → componentes → pagina orquestadora**
+
+| Pagina | Lineas | Hook | Componentes |
+|--------|--------|------|-------------|
+| `propiedades/[id]` | ~1,035 | `usePropertyEditor` | Gallery, LockPanel, Amenities, PaymentPlan, LockIcon |
+| `proyectos/[id]` | ~1,145 | `useProjectEditor` | PropiedadesVinculadasTable |
+| `api/informe` | ~150 | — | informe/types + helpers + template |
 
 ## Admin Pages (simon-mvp)
 
-| Ruta | Propósito |
+| Ruta | Proposito |
 |------|-----------|
-| `/admin/propiedades` | Editor propiedades con candados |
+| `/admin/propiedades` | Listado propiedades (venta/alquiler) con filtros |
+| `/admin/propiedades/[id]` | Editor propiedad: candados, amenidades, pagos, galeria |
 | `/admin/proyectos` | Listado + crear proyectos |
-| `/admin/proyectos/[id]` | Editor proyecto individual |
-| `/admin/brokers` | Gestión brokers B2B |
+| `/admin/proyectos/[id]` | Editor proyecto: datos, inferir, propagar, tabla propiedades |
+| `/admin/brokers` | Gestion brokers B2B |
 | `/admin/supervisor` | Dashboard HITL (contadores) |
 | `/admin/supervisor/matching` | Revisar matches pendientes |
-| `/admin/supervisor/sin-match` | Asignar proyectos huérfanas |
+| `/admin/supervisor/sin-match` | Asignar proyectos huerfanas |
 | `/admin/supervisor/excluidas` | Gestionar excluidas |
 | `/admin/supervisor/auto-aprobados` | Revisar auto-aprobaciones matching |
 | `/admin/salud` | **Health dashboard sistema** |
@@ -156,7 +207,7 @@ sici/
 
 ## Landing Pages (simon-mvp)
 
-| Ruta | Propósito |
+| Ruta | Proposito |
 |------|-----------|
 | `/` | **Landing Premium** (re-exporta `landing-v2` desde index.tsx) |
 | `/landing-v2` | Landing premium directa (negro/crema/oro, minimalista) |
@@ -165,78 +216,34 @@ sici/
 | `/resultados-v2` | **Resultados premium** (fondo crema, cards blancos) |
 | `/alquileres` | **Feed alquileres** |
 
-Flujo producción: `simonbo.com (/) → /filtros-v2 → /formulario-v2 → /resultados-v2`
+Flujo produccion: `simonbo.com (/) → /filtros-v2 → /formulario-v2 → /resultados-v2`
 
-> **Legacy archivado (Fase 8):** 12 páginas v1 movidas a `src/_archive/pages/` con 301 redirects en `next.config.js`.
-> Componentes huérfanos (landing/, pro/, FilterBar, useForm, formQuestions, etc.) en `src/_archive/`.
-
-### Landing Premium
 - **Fonts:** Cormorant Garamond (display) + Manrope (body)
 - **Colores:** Negro (#0a0a0a), Crema (#f8f6f3), Oro (#c9a959)
-- **Componentes:** `/components/landing-premium/`
+- **Google Analytics:** `G-Q8CRRJD6SL` — `simonbo.com?debug=1` desactiva GA
 
-### Analytics
-- **Google Analytics:** `G-Q8CRRJD6SL` — configurado en `_app.tsx`
-- **Debug mode:** `simonbo.com?debug=1` desactiva GA (persiste en localStorage), `?debug=0` reactiva
+## Broker Pages & API Routes (simon-mvp)
 
-## Broker Pages (simon-mvp)
+**Broker:** `/broker/login`, `/broker/dashboard`, `/broker/nueva-propiedad`, `/broker/editar/[id]`, `/broker/fotos/[id]`, `/broker/leads`, `/broker/perfil`
 
-| Ruta | Propósito |
-|------|-----------|
-| `/broker/login` | Login broker (email + código) |
-| `/broker/dashboard` | Listado propiedades + botón PDF |
-| `/broker/nueva-propiedad` | Crear nueva propiedad |
-| `/broker/editar/[id]` | Editar propiedad |
-| `/broker/fotos/[id]` | Gestión fotos propiedad |
-| `/broker/leads` | Listado leads recibidos |
-| `/broker/perfil` | Subir foto/logo + datos contacto |
+**API publicas:** `/api/alquileres`, `/api/razon-fiduciaria`, `/api/generar-guia`, `/api/informe` (usa lib/informe/), `/api/contactar-broker`, `/api/abrir-whatsapp`, `/api/lead-alquiler`, `/api/crear-lead-feedback`, `/api/notify-slack`
 
-## API Routes (simon-mvp)
-
-| Ruta | Propósito |
-|------|-----------|
-| `/api/alquileres` | Feed alquileres (buscar_unidades_alquiler) |
-| `/api/razon-fiduciaria` | Generar razón fiduciaria por propiedad |
-| `/api/generar-guia` | Generar guía fiduciaria (Claude API) |
-| `/api/informe` | Generar informe PDF |
-| `/api/contactar-broker` | Contactar broker desde resultados |
-| `/api/abrir-whatsapp` | Tracking apertura WhatsApp |
-| `/api/lead-alquiler` | Registrar lead de alquiler |
-| `/api/crear-lead-feedback` | Crear lead con feedback |
-| `/api/notify-slack` | Enviar notificación a Slack |
-| `/api/broker/create-propiedad` | CRUD propiedades broker |
-| `/api/broker/update-propiedad` | Actualizar propiedad broker |
-| `/api/broker/delete-propiedad` | Eliminar propiedad broker |
-| `/api/broker/buscar-proyectos` | Buscar proyectos para matching |
-| `/api/broker/generate-pdf` | Generar PDF propiedad |
-| `/api/broker/generate-cma` | Generar CMA (análisis mercado) |
-| `/api/broker/manage-fotos` | CRUD fotos propiedad |
-| `/api/broker/update-profile` | Actualizar perfil broker |
+**API broker:** `/api/broker/*` — CRUD propiedades, fotos, PDF, CMA, perfil
 
 ## Estado Actual
 
-Ver `/admin/salud` para métricas en tiempo real (matching rates, workflow health, contadores).
+Ver `/admin/salud` para metricas en tiempo real (matching rates, workflow health, contadores).
 Ver `docs/backlog/` para pendientes detallados.
 
-## Queries Rápidos
+## Queries Rapidos
 
 ```sql
--- Estado general
-SELECT status, fuente, COUNT(*) FROM propiedades_v2 GROUP BY 1,2;
-
--- Tasa de matching
-SELECT
-    COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL) as con_proyecto,
-    COUNT(*) FILTER (WHERE status = 'completado') as completadas,
-    ROUND(100.0 * COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL) /
-          NULLIF(COUNT(*) FILTER (WHERE status = 'completado'), 0), 1) as tasa
-FROM propiedades_v2;
-
--- Proyectos activos
-SELECT COUNT(*) FROM proyectos_master WHERE activo;
+SELECT status, fuente, COUNT(*) FROM propiedades_v2 GROUP BY 1,2; -- Estado general
+SELECT COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL) as matched,
+       COUNT(*) FILTER (WHERE status = 'completado') as total FROM propiedades_v2; -- Matching
 ```
 
 ## Repo Legacy
 
 - `sici-matching/` — funciones SQL que apuntan a tabla deprecada. **NO USAR.**
-- `simon-mvp/src/_archive/` — 12 páginas v1 + 20 componentes/hooks/data huérfanos. Excluidos de build via `tsconfig.json`. Redirects 301 en `next.config.js`.
+- `simon-mvp/src/_archive/` — 12 paginas v1 + componentes huerfanos. Excluidos de build via `tsconfig.json`. Redirects 301 en `next.config.js`.
