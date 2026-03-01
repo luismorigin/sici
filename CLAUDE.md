@@ -52,20 +52,19 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 
 ## Zonas Canonicas (5 zonas)
 
-La fuente de verdad geografica es `microzona` (asignada por PostGIS). La columna `zona` fue normalizada para venta (migracion 131) pero NO para alquiler.
+La fuente de verdad es `microzona` (PostGIS). Desde migración 171, `p.zona = microzona` para venta (nombres crudos). `pm.zona` también usa nombres crudos. Trigger `trg_asignar_zona_venta` (migración 173) auto-asigna zona/microzona desde GPS.
 
-| Zona canonica | microzona(s) en BD | zona en venta (pm.zona) | zona en alquiler (p.zona) |
-|---|---|---|---|
-| Equipetrol Centro | `Equipetrol` | `Equipetrol Centro` | `Equipetrol`, `Equipetrol Centro` |
-| Equipetrol Norte | `Equipetrol Norte/Norte`, `Equipetrol Norte/Sur` | `Equipetrol Norte` | `Equipetrol Norte/Norte`, `Equipetrol Norte/Sur`, `Equipetrol Norte` |
-| Sirari | `Sirari` | `Sirari` | `Sirari` |
-| Villa Brigida | `Villa Brigida` | `Villa Brigida` | `Villa Brigida` |
-| Equipetrol Oeste | `Faremafu` | `Equipetrol Oeste` | `Faremafu` |
+| Zona canonica | Valor en BD (p.zona, pm.zona, microzona) | Display (zonas.ts) |
+|---|---|---|
+| Equipetrol Centro | `Equipetrol` | Eq. Centro |
+| Equipetrol Norte | `Equipetrol Norte/Norte`, `Equipetrol Norte/Sur` | Eq. Norte |
+| Sirari | `Sirari` | Sirari |
+| Villa Brigida | `Villa Brigida` | V. Brigida |
+| Equipetrol Oeste | `Faremafu` | Eq. Oeste |
 
 **Ignorar:** `Equipetrol Franja` — zona marginal con pocas propiedades.
 
-**En queries de alquiler:** Usar la expansion de `buscar_unidades_alquiler()` que mapea slugs UI → nombres sucios de BD.
-**En queries de venta:** Usar `pm.zona` directamente (ya normalizada a 5 nombres limpios).
+**En queries:** Usar nombres crudos de BD. `lib/zonas.ts` mapea crudo → display via `displayZona()` y `getZonaLabel()`.
 
 ## Documentacion Principal
 
@@ -126,8 +125,8 @@ sici/
 │   ├── admin/           → inferir_datos_proyecto, propagar, sincronizar
 │   ├── broker/          → buscar_unidades_broker, score, verificar, contacto
 │   ├── helpers/         → precio_normalizado, campo_bloqueado, normalize_nombre, vigente
-│   └── triggers/        → proteger_amenities, matchear_alquiler, asignar_zona
-├── sql/migrations/      → migraciones (001-170) — ver docs/migrations/MIGRATION_INDEX.md
+│   └── triggers/        → proteger_amenities, matchear_alquiler, asignar_zona_alquiler, asignar_zona_venta
+├── sql/migrations/      → migraciones (001-173) — ver docs/migrations/MIGRATION_INDEX.md
 ├── geodata/             → microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/        → Discovery, Enrichment, Merge, Verificador (venta)
