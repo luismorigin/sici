@@ -85,6 +85,9 @@ La fuente de verdad geografica es `microzona` (asignada por PostGIS). La columna
 | **Deuda tecnica** | `docs/backlog/DEUDA_TECNICA.md` |
 | **Como contribuir** | `CONTRIBUTING.md` |
 | **Catalogo funciones SQL** | `sql/functions/FUNCTION_CATALOG.md` |
+| Auditoria datos ventas | `docs/analysis/AUDITORIA_DATOS_VENTAS.md` |
+| Comparativa ventas vs alquileres | `docs/analysis/COMPARATIVA_VENTAS_VS_ALQUILERES.md` |
+| Prueba LLM vs Regex ventas | `docs/analysis/PRUEBA_LLM_VS_REGEX_VENTAS.md` |
 
 ## Pipeline Nocturno
 
@@ -93,7 +96,7 @@ La fuente de verdad geografica es `microzona` (asignada por PostGIS). La columna
 1:00 AM  Discovery C21 + Remax → propiedades_v2
 2:00 AM  Enrichment LLM → datos_json_enrichment
 3:00 AM  Merge → campos consolidados + TC paralelo
-4:00 AM  Matching → id_proyecto_master
+4:00 AM  Matching → id_proyecto_master + nombre_edificio (migración 170)
 6:00 AM  Verificador ausencias (solo Remax, LIMIT 200)
 9:00 AM  Auditoria + Snapshots absorcion
 ```
@@ -124,7 +127,7 @@ sici/
 │   ├── broker/          → buscar_unidades_broker, score, verificar, contacto
 │   ├── helpers/         → precio_normalizado, campo_bloqueado, normalize_nombre, vigente
 │   └── triggers/        → proteger_amenities, matchear_alquiler, asignar_zona
-├── sql/migrations/      → 171 migraciones (001-169) — ver docs/migrations/MIGRATION_INDEX.md
+├── sql/migrations/      → migraciones (001-170) — ver docs/migrations/MIGRATION_INDEX.md
 ├── geodata/             → microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/        → Discovery, Enrichment, Merge, Verificador (venta)
