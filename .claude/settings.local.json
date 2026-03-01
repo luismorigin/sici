@@ -84,7 +84,8 @@
       "Bash(head:*)",
       "Bash(do echo:*)",
       "Bash(git checkout:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(xargs basename:*)"
     ]
   }
 }
