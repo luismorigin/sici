@@ -28,12 +28,16 @@ interface AlquilerProp {
   fuente: string | null
   estacionamientos: number | null
   baulera: boolean | null
+  // JSONB blobs — schemaless, different structure per source (C21/Remax/BI)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   datos_json: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   datos_json_enrichment: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   datos_json_discovery: any
   fecha_publicacion: string | null
   fecha_discovery: string | null
-  campos_bloqueados: any
+  campos_bloqueados: Record<string, { bloqueado: boolean; por: string; usuario_nombre: string; fecha: string } | boolean> | null
   url: string | null
 }
 
@@ -215,8 +219,8 @@ export default function AdminAlquileres() {
 
       if (fetchErr) throw fetchErr
       setPropiedades(data || [])
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
     }
@@ -388,7 +392,7 @@ export default function AdminAlquileres() {
         }
       }
 
-      const updates: Record<string, any> = {
+      const updates: Record<string, unknown> = {
         precio_mensual_bob: precioBob,
         precio_mensual_usd: precioUsd,
         amoblado: editValues.amoblado || null,
@@ -445,7 +449,7 @@ export default function AdminAlquileres() {
           usuario_id: 'admin-hitl',
           usuario_nombre: 'Admin HITL',
           campo: field,
-          valor_anterior: (p as any)[field],
+          valor_anterior: String((p as unknown as Record<string, unknown>)[field] ?? ''),
           valor_nuevo: updates[field],
           motivo: 'Edición inline alquileres HITL',
         })
@@ -453,8 +457,8 @@ export default function AdminAlquileres() {
 
       closeEdit()
       await fetchData()
-    } catch (err: any) {
-      alert('Error al guardar: ' + err.message)
+    } catch (err: unknown) {
+      alert('Error al guardar: ' + (err instanceof Error ? err.message : String(err)))
     } finally {
       setSaving(false)
     }
@@ -483,8 +487,8 @@ export default function AdminAlquileres() {
       })
 
       await fetchData()
-    } catch (err: any) {
-      alert('Error: ' + err.message)
+    } catch (err: unknown) {
+      alert('Error: ' + (err instanceof Error ? err.message : String(err)))
     }
   }
 
@@ -509,8 +513,8 @@ export default function AdminAlquileres() {
       })
 
       await fetchData()
-    } catch (err: any) {
-      alert('Error: ' + err.message)
+    } catch (err: unknown) {
+      alert('Error: ' + (err instanceof Error ? err.message : String(err)))
     }
   }
 
@@ -535,8 +539,8 @@ export default function AdminAlquileres() {
       })
 
       await fetchData()
-    } catch (err: any) {
-      alert('Error: ' + err.message)
+    } catch (err: unknown) {
+      alert('Error: ' + (err instanceof Error ? err.message : String(err)))
     }
   }
 
@@ -652,7 +656,7 @@ export default function AdminAlquileres() {
               <option value="inactivo_confirmed">Inactivo confirmed</option>
               <option value="todos">Todos</option>
             </select>
-            <select value={orden} onChange={e => setOrden(e.target.value as any)} style={selectStyle}>
+            <select value={orden} onChange={e => setOrden(e.target.value as typeof orden)} style={selectStyle}>
               <option value="recientes">Recientes</option>
               <option value="precio_asc">Precio ↑</option>
               <option value="precio_desc">Precio ↓</option>
@@ -738,10 +742,12 @@ function PropertyCard({ p, inactive, expired150, expanded, editValues, saving, s
   inactive: boolean
   expired150: boolean
   expanded: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   editValues: Record<string, any>
   saving: boolean
   sentDate: string | null
   onToggleEdit: () => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onEditChange: (field: string, value: any) => void
   onSave: () => void
   onInactivar: () => void

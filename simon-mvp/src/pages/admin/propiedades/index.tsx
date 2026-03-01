@@ -7,6 +7,10 @@ import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { normalizarPrecio } from '@/lib/precio-utils'
 import { ZONAS_ADMIN_FILTER, getZonaLabel } from '@/lib/zonas'
 
+// Supabase RPC/query results — no codegen, typed at usage boundaries
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseRow = Record<string, any>
+
 interface Propiedad {
   id: number
   proyecto: string
@@ -184,7 +188,7 @@ export default function AdminPropiedades() {
       if (!error && data) {
         // Agrupar por asesor_nombre y contar
         const brokersMap = new Map<string, { inmobiliaria: string | null, cantidad: number }>()
-        data.forEach((p: any) => {
+        data.forEach((p: SupabaseRow) => {
           if (p.asesor_nombre) {
             const existing = brokersMap.get(p.asesor_nombre)
             if (existing) {
@@ -257,19 +261,19 @@ export default function AdminPropiedades() {
           if (propsErr) throw new Error(propsErr.message)
 
           // También traer info de proyectos_master para nombre y desarrollador
-          const projIds = (propsData || []).map((p: any) => p.id_proyecto_master).filter(Boolean)
-          let projMap = new Map<number, any>()
+          const projIds = (propsData || []).map((p: SupabaseRow) => p.id_proyecto_master).filter(Boolean)
+          let projMap = new Map<number, SupabaseRow>()
           if (projIds.length > 0) {
             const { data: projData } = await supabase
               .from('proyectos_master')
               .select('id_proyecto_master, nombre_oficial, desarrollador')
               .in('id_proyecto_master', projIds)
             if (projData) {
-              projMap = new Map(projData.map((p: any) => [p.id_proyecto_master, p]))
+              projMap = new Map(projData.map((p: SupabaseRow) => [p.id_proyecto_master as number, p]))
             }
           }
 
-          const resultado = (propsData || []).map((p: any) => {
+          const resultado = (propsData || []).map((p: SupabaseRow) => {
             const proj = projMap.get(p.id_proyecto_master)
             const fotosUrls = p.datos_json?.contenido?.fotos_urls || []
             const esAlquiler = p.tipo_operacion === 'alquiler'
@@ -294,7 +298,7 @@ export default function AdminPropiedades() {
               equipamiento_detectado: null,
               dias_en_mercado: null,
               microzona: null,
-            }
+            } as PropiedadConCandados
           })
 
           setPropiedades(resultado)
@@ -328,7 +332,7 @@ export default function AdminPropiedades() {
 
         if (huerfanasErr) throw new Error(huerfanasErr.message)
 
-        const resultado = (huerfanasData || []).map((p: any) => {
+        const resultado = (huerfanasData || []).map((p: SupabaseRow) => {
           const fotosUrls = p.datos_json?.contenido?.fotos_urls || []
           const precioMensual = p.precio_mensual_usd ? Number(p.precio_mensual_usd) : (p.precio_usd ? Number(p.precio_usd) : 0)
           return {
@@ -385,7 +389,7 @@ export default function AdminPropiedades() {
       }
 
       // Construir filtros para buscar_unidades_reales
-      const filtros: Record<string, any> = {
+      const filtros: Record<string, string | number | boolean> = {
         limite: limite,
         incluir_outliers: true,
         incluir_multiproyecto: true,
@@ -423,7 +427,7 @@ export default function AdminPropiedades() {
       }
 
       // Si necesitamos info de candados, hacemos otra consulta
-      const ids = (unidades || []).map((u: any) => u.id)
+      const ids = (unidades || []).map((u: SupabaseRow) => u.id)
 
       if (ids.length > 0) {
         const { data: propiedadesData, error: propsError } = await supabase
@@ -437,10 +441,10 @@ export default function AdminPropiedades() {
 
         // Combinar datos
         const candadosMap = new Map(
-          (propiedadesData || []).map((p: any) => [p.id, p])
+          (propiedadesData || []).map((p: SupabaseRow) => [p.id, p])
         )
 
-        let resultado = (unidades || []).map((u: any) => {
+        let resultado = (unidades || []).map((u: SupabaseRow) => {
           const extra = candadosMap.get(u.id)
           // Para alquileres, usar precio_mensual_usd como precio_usd para display unificado
           const precioUsd = tipoOperacion === 'alquiler'
@@ -511,8 +515,8 @@ export default function AdminPropiedades() {
         setPropiedades([])
       }
 
-    } catch (err: any) {
-      setError(err.message || 'Error cargando propiedades')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error cargando propiedades')
       console.error('Error:', err)
     } finally {
       setLoading(false)
