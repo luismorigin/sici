@@ -183,3 +183,4 @@
 | 176 | correccion_precios_inflados | Corregir precio_usd inflado en 85 props + candados + 4 anticréticos |
 | 177 | correccion_6_props_pendientes | Corregir precio_usd inflado en 6 props de revisión manual |
 | 178 | correccion_26_props_infladas_villa_brigida | Corregir 26 props CASO 2 + candados + excluir ID 1105 + normalizar Villa Brígida |
+| 179 | limpieza_9_props_sin_datos | Inactivar 2 + excluir 2 + re-enrichment 5 props sin descripción |
