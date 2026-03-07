@@ -66,6 +66,21 @@ La fuente de verdad es `microzona` (PostGIS). Desde migración 171, `p.zona = mi
 
 **En queries:** Usar nombres crudos de BD. `lib/zonas.ts` mapea crudo → display via `displayZona()` y `getZonaLabel()`.
 
+## Sistema de precios — Definiciones
+
+- `precio_usd`: USD reales del listing. No se modifica por TC.
+- `tipo_cambio_detectado`: `'paralelo'`, `'oficial'`, o `'no_especificado'`. Detectado de la descripción.
+- `depende_de_tc`: `false` para props con precio verificado en USD real. `true` solo para props donde `precio_usd` fue derivado de BOB.
+- `precio_usd_actualizado`: Campo interno del módulo TC dinámico. Ningún query de mercado lo consume.
+- `precio_normalizado()`: Función que calcula precio comparable. Si paralelo: `precio_usd × tc_paralelo / 6.96`. Si no: `precio_usd` directo. **SIEMPRE** usar esta función para queries de mercado, nunca `precio_usd` directo.
+
+### Regla fundamental
+
+- `precio_usd` = USD reales del listing. **NUNCA** usar directo para comparar, mostrar o calcular métricas.
+- Para queries de mercado, informes o estudios: **SIEMPRE** usar `precio_normalizado()` en SQL o `normalizarPrecio()` en JS.
+- Para queries ad-hoc: `SELECT precio_normalizado(precio_usd, tipo_cambio_detectado)` — nunca `precio_usd` directo.
+- Deuda técnica resuelta: `obtenerMicrozonas()` y `buscarSiguienteRango()` ya normalizan (migración 177).
+
 ## Documentacion Principal
 
 | Proposito | Archivo |

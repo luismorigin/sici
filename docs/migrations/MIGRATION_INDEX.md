@@ -178,3 +178,7 @@
 | 167 | precio_normalizado_helper | Helper `precio_normalizado(precio_usd, tipo_cambio_detectado)` para normalizar TC paralelo |
 | 168 | normalizar_precios_tc_paralelo | Reescribir buscar_unidades_reales, vistas, snapshot, razón fiduciaria usando precio_normalizado() |
 | 169 | drop_overload_discovery_alquiler | Dropear overload huérfano TEXT de registrar_discovery_alquiler() |
+| 174 | fix_config_global_tc_duplicada | Desactivar claves MAYÚSCULAS duplicadas en config_global (TC stale) |
+| 175 | fix_normalizarPrecioUSD_caso2 | Doc: fix CASO 2 en extractor n8n (no multiplica USD × TC) |
+| 176 | correccion_precios_inflados | Corregir precio_usd inflado en 85 props + candados + 4 anticréticos |
+| 177 | correccion_6_props_pendientes | Corregir precio_usd inflado en 6 props de revisión manual |

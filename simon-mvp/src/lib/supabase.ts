@@ -603,17 +603,25 @@ export async function buscarSiguienteRango(
   if (!supabase) return null
 
   try {
+    // Fetch TC paralelo for normalization
+    const { data: tcData } = await supabase
+      .from('config_global')
+      .select('valor')
+      .eq('clave', 'tipo_cambio_paralelo')
+      .single()
+    const tcPar = parseFloat(tcData?.valor) || 0
+
     // Buscar el precio mínimo de la siguiente opción disponible
     let query = supabase
       .from('propiedades_v2')
       .select(`
         precio_usd,
         area_total_m2,
+        tipo_cambio_detectado,
         proyectos_master!inner (zona)
       `)
       .eq('es_activa', true)
       .eq('tipo_operacion', 'venta')
-      .gt('precio_usd', presupuestoActual)
       .gte('precio_usd', 30000)
       .order('precio_usd', { ascending: true })
 
@@ -624,20 +632,27 @@ export async function buscarSiguienteRango(
       query = query.ilike('proyectos_master.zona', `%${zona}%`)
     }
 
-    const { data, error } = await query.limit(20)
+    const { data, error } = await query.limit(100)
 
     if (error || !data || data.length === 0) return null
 
-    // Filtrar por precio/m² >= 800 y encontrar opciones válidas
-    const opcionesValidas = data.filter((p: { precio_usd: number; area_total_m2: number }) => {
-      const precioM2 = p.area_total_m2 > 0 ? p.precio_usd / p.area_total_m2 : 0
-      return precioM2 >= 800
-    })
+    // Normalizar y filtrar por precio > presupuesto y precio/m² >= 800
+    const opcionesValidas = data
+      .map((p: any) => ({
+        ...p,
+        precioNorm: normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcPar)
+      }))
+      .filter(p => p.precioNorm > presupuestoActual)
+      .filter(p => {
+        const precioM2 = p.area_total_m2 > 0 ? p.precioNorm / p.area_total_m2 : 0
+        return precioM2 >= 800
+      })
+      .sort((a, b) => a.precioNorm - b.precioNorm)
 
     if (opcionesValidas.length === 0) return null
 
     // Sugerir precio redondeado al siguiente $10k
-    const precioMinimo = opcionesValidas[0].precio_usd
+    const precioMinimo = opcionesValidas[0].precioNorm
     const precioSugerido = Math.ceil(precioMinimo / 10000) * 10000
 
     return {
@@ -1658,10 +1673,18 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
   }
 
   try {
+    // Fetch TC paralelo for normalization
+    const { data: tcData } = await supabase
+      .from('config_global')
+      .select('valor')
+      .eq('clave', 'tipo_cambio_paralelo')
+      .single()
+    const tcPar = parseFloat(tcData?.valor) || 0
+
     // Query con filtros limpios (mismos que admin dashboard)
     const { data, error } = await supabase
       .from('propiedades_v2')
-      .select('microzona, precio_usd, area_total_m2, id_proyecto_master')
+      .select('microzona, precio_usd, area_total_m2, tipo_cambio_detectado, id_proyecto_master')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gt('precio_usd', 30000)
@@ -1699,9 +1722,12 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
         zonaMap[zonaDisplay] = { total: 0, precios: [], m2: [], proyectos: new Set() }
       }
       zonaMap[zonaDisplay].total++
-      if (p.precio_usd) zonaMap[zonaDisplay].precios.push(p.precio_usd)
-      if (p.area_total_m2 > 0 && p.precio_usd) {
-        zonaMap[zonaDisplay].m2.push(p.precio_usd / p.area_total_m2)
+      if (p.precio_usd) {
+        const precioNorm = normalizarPrecio(p.precio_usd, p.tipo_cambio_detectado, tcPar)
+        zonaMap[zonaDisplay].precios.push(precioNorm)
+        if (p.area_total_m2 > 0) {
+          zonaMap[zonaDisplay].m2.push(precioNorm / p.area_total_m2)
+        }
       }
       if (p.id_proyecto_master) {
         zonaMap[zonaDisplay].proyectos.add(p.id_proyecto_master)

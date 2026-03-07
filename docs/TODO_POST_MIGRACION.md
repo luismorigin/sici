@@ -1,6 +1,6 @@
 # TODO Post-Migración — Precios Ventas (2026-03-07)
 
-Migraciones 174-176 ejecutadas. Extractor CASO 2 deployadoen n8n.
+Migraciones 174-177 ejecutadas. Extractor CASO 2 deployado en n8n.
 
 ## Verificación inmediata (mañana 2026-03-08)
 
@@ -21,18 +21,30 @@ Migraciones 174-176 ejecutadas. Extractor CASO 2 deployadoen n8n.
   ```
 - [ ] Confirmar cambios n8n: flujo_b_processing_v3.0 tiene config lowercase + CASO 2 sin multiplicar
 
-## Revisión manual (16 props pendientes)
+## Revisión manual — COMPLETADA
 
-- [ ] **4 precio ambiguo** — descripción dice "desde" (precio mínimo del proyecto, no de la unidad):
-  - 299 (Ed. ITAJU, SICI $477,326, desc "desde 327,000 USDT")
-  - 300 (Ed. ITAJU, SICI $490,622, desc "desde 327,000 USDT")
-  - 301 (Ed. ITAJU, SICI $477,330, desc "desde 327,000 USDT")
-  - 494 (Luxe Tower, SICI $216,992, solo precio/m2 $1,250-1,450)
+### 6 props activas (migración 177) — CORREGIDAS
+- [x] 299 (Ed. ITAJU): $477,326 → $359,000 (meta tag verificado)
+- [x] 300 (Ed. ITAJU): $490,622 → $369,000 (meta tag verificado)
+- [x] 301 (Ed. ITAJU): $477,330 → $359,003 (meta tag verificado)
+- [x] 308 (Sky Lux): $268,046 → $200,000 (TC paralelo, verificado)
+- [x] 494 (Luxe Tower): $216,992 → $163,060 (desc "tipo de cambio blue")
+- [x] 521 (Experience): $103,983 → $77,586 (TC paralelo, verificado)
 
-- [ ] **12 sin precio en descripción** — requieren visita al URL del listing:
-  - 208, 209, 210, 211, 212, 213, 214, 215, 216, 217 (T-Veinticinco, todos inactivo_pending)
-  - 308 (Sky Lux, completado)
-  - 521 (Experience, completado)
+### 10 T-Veinticinco (inactivo_pending) — NO CORREGIDAS
+- 208-217: URLs devuelven 404. Props inactivas, no afectan métricas de mercado.
+  Precios inflados persisten pero son irrelevantes (excluidas de queries activos).
+
+## Bugs frontend corregidos
+
+- [x] `obtenerMicrozonas()` en `supabase.ts`: usaba `precio_usd` raw → ahora normaliza con `normalizarPrecio()`
+- [x] `buscarSiguienteRango()` en `supabase.ts`: usaba `precio_usd` raw → ahora normaliza con `normalizarPrecio()`
+- [x] Tipos actualizados: `RawPropiedadRango` y `RawPropiedadMicrozona` ahora incluyen `tipo_cambio_detectado`
+
+## Reglas documentadas en CLAUDE.md
+
+- [x] Sección "Sistema de precios — Definiciones" agregada
+- [x] Regla fundamental: SIEMPRE usar `precio_normalizado()` / `normalizarPrecio()`, nunca `precio_usd` directo
 
 ## Backlog calidad de datos
 
@@ -48,5 +60,5 @@ Migraciones 174-176 ejecutadas. Extractor CASO 2 deployadoen n8n.
 ## Referencia
 
 - Auditoría completa: `docs/analysis/AUDITORIA_PRECIOS_VENTAS.md`
-- Migraciones: `sql/migrations/174_*.sql`, `175_*.sql`, `176_*.sql`
+- Migraciones: `sql/migrations/174_*.sql` .. `177_*.sql`
 - Propuesta zonas: `docs/analysis/NORMALIZACION_ZONAS_PROPUESTA.md`

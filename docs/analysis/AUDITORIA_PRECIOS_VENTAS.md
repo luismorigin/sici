@@ -483,6 +483,28 @@ Candado `campos_bloqueados->'precio_usd'` con metadata completa (`bloqueado`, `p
 - IDs 596, 637 (migración 176)
 - IDs 495, 950 (UPDATE manual post-migración)
 
+### 6 props revisión manual — HECHO (migración 177, 2026-03-07)
+
+6 props activas corregidas con precio_usd = USD real de `datos_json_enrichment.precio_usd_original`:
+- 299 (ITAJU): $477,326 → $359,000
+- 300 (ITAJU): $490,622 → $369,000
+- 301 (ITAJU): $477,330 → $359,003
+- 308 (Sky Lux): $268,046 → $200,000
+- 494 (Luxe Tower): $216,992 → $163,060
+- 521 (Experience): $103,983 → $77,586
+
+Las 6 ya tenían candado puesto por admin. `depende_de_tc = false` (USD real verificado).
+
+10 T-Veinticinco (208-217) no corregidas: URLs 404, inactivo_pending, no afectan métricas.
+
+### Bugs frontend normalizarPrecio — HECHO (2026-03-07)
+
+2 funciones en `supabase.ts` usaban `precio_usd` raw sin normalizar:
+- `obtenerMicrozonas()`: landing page stats por zona
+- `buscarSiguienteRango()`: sugerencia "siguiente rango de precio"
+
+Corregido: ambas ahora fetchean `tipo_cambio_detectado` y aplican `normalizarPrecio()`.
+
 ### Resumen ejecución
 
 ```
@@ -492,16 +514,19 @@ Candado `campos_bloqueados->'precio_usd'` con metadata completa (`bloqueado`, `p
   Paso 3 (UPDATE 85 props)         ✅ HECHO — migración 176
   Paso 4 (candados 85 props)       ✅ HECHO — migración 176
   Anticréticos (6 props)           ✅ HECHO — migración 176 + manual
+  6 props revisión manual          ✅ HECHO — migración 177
+  Bugs normalizarPrecio frontend   ✅ HECHO — supabase.ts
+  Reglas en CLAUDE.md              ✅ HECHO
 Pendiente:
-  Verificar pipeline nocturno (mañana)
-  Revisar 16 props manual
+  Verificar pipeline nocturno (mañana 2026-03-08)
+  10 T-Veinticinco inactivas (no urgente, URLs 404)
 ```
 
 ---
 
 ## 9. IDs Consolidados
 
-### Para corrección de precio (85)
+### Corregidas migración 176 (85)
 
 ```
 -- Auditoría original (57):
@@ -518,11 +543,16 @@ Pendiente:
 483, 490, 530, 619, 975, 977, 996, 1104
 ```
 
-### Para revisión manual (16)
+### Corregidas migración 177 (6)
 
 ```
--- Precio ambiguo (4): 299, 300, 301, 494
--- Sin precio (12): 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 308, 521
+299, 300, 301, 308, 494, 521
+```
+
+### No corregidas (10 T-Veinticinco, inactivo_pending, URLs 404)
+
+```
+208, 209, 210, 211, 212, 213, 214, 215, 216, 217
 ```
 
 ### Anticrético — HECHO (todos corregidos)

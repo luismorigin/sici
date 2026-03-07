@@ -133,6 +133,7 @@ export interface RawPropiedadMercado {
 export interface RawPropiedadRango {
   precio_usd: number
   area_total_m2: number
+  tipo_cambio_detectado: string | null
   proyectos_master: { zona: string } | null
 }
 
@@ -142,6 +143,7 @@ export interface RawPropiedadMicrozona {
   microzona: string | null
   precio_usd: number
   area_total_m2: number
+  tipo_cambio_detectado: string | null
   id_proyecto_master: number | null
 }
 
