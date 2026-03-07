@@ -1,0 +1,124 @@
+-- Migración 174: Desactivar claves MAYÚSCULAS duplicadas en config_global
+--
+-- Problema encontrado en auditoría de precios (docs/analysis/AUDITORIA_PRECIOS_VENTAS.md):
+--   config_global tiene 4 filas de tipo de cambio, 2 UPPERCASE y 2 lowercase.
+--   El enrichment n8n lee UPPERCASE (id=1,2) → obtiene TC paralelo = 10.4 (stale desde Nov 2025).
+--   Binance P2P actualiza lowercase (id=4) nightly → TC paralelo = 9.354 (correcto).
+--   Las dos nunca se cruzan: enrichment siempre usa el valor congelado.
+--
+-- Estado actual de config_global (verificado 2026-03-07):
+--   id=1  TIPO_CAMBIO_OFICIAL   = 6.96   (2025-11-21, sin actualizador)  ← DESACTIVAR
+--   id=2  TIPO_CAMBIO_PARALELO  = 10.4   (2025-11-24, sin actualizador)  ← DESACTIVAR
+--   id=3  tipo_cambio_oficial   = 6.96   (2025-12-13, seed_data)          OK
+--   id=4  tipo_cambio_paralelo  = 9.354  (2026-03-07, binance_p2p)        OK
+--
+-- Fix: Desactivar id=1,2 (UPPERCASE). No borrar para audit trail.
+--      Luego cambiar n8n para leer las lowercase (id=3,4).
+--
+-- Impacto: 85+ propiedades de venta tienen precio_usd inflado 19-153%
+--          porque el extractor multiplicaba por 10.4/6.96 en vez de 9.354/6.96.
+--          (Ver migración 176 para corrección de datos.)
+--
+-- Dependencias:
+--   Ejecutar ANTES de cambiar n8n para que ambas filas existan durante transición.
+--   Si se ejecuta sin cambiar n8n, enrichment no encontrará las UPPERCASE →
+--   usará fallback hardcodeado 10.20 (también stale) → cambiar n8n el mismo día.
+--
+-- Verificación pre-ejecución:
+--
+-- SELECT id, clave, valor, activo, fecha_actualizacion, actualizado_por
+-- FROM config_global WHERE clave ILIKE '%tipo_cambio%' ORDER BY id;
+--
+-- Esperado:
+--   id=1  TIPO_CAMBIO_OFICIAL   6.96   activo=true   2025-11-21  null
+--   id=2  TIPO_CAMBIO_PARALELO  10.4   activo=true   2025-11-24  null
+--   id=3  tipo_cambio_oficial   6.96   activo=true   2025-12-13  seed_data
+--   id=4  tipo_cambio_paralelo  9.354  activo=true   (reciente)  binance_p2p
+
+UPDATE config_global
+SET activo = false,
+    descripcion = descripcion || ' [DESACTIVADA 2026-03-07: duplicada de id='
+      || CASE id WHEN 1 THEN '3' WHEN 2 THEN '4' END
+      || ', enrichment migrado a lowercase]'
+WHERE id IN (1, 2);
+
+-- Verificación post-ejecución:
+--
+-- 1. Confirmar desactivación:
+-- SELECT id, clave, valor, activo, descripcion
+-- FROM config_global WHERE clave ILIKE '%tipo_cambio%' ORDER BY id;
+-- Esperado: id=1,2 activo=false; id=3,4 activo=true
+--
+-- 2. Confirmar que Binance sigue actualizando (esperar 1 noche):
+-- SELECT id, clave, valor, fecha_actualizacion FROM config_global WHERE id = 4;
+-- Esperado: fecha_actualizacion = hoy o ayer
+--
+-- ============================================================================
+-- CAMBIOS EN n8n (hacer manualmente en el editor de n8n después de esta migración)
+-- ============================================================================
+--
+-- Workflow: flujo_b_processing_v3.0
+--
+-- NODO "Cargar Config Global" — cambiar query:
+--
+--   ANTES:
+--     SELECT clave, valor FROM config_global
+--     WHERE clave IN ('TIPO_CAMBIO_OFICIAL', 'TIPO_CAMBIO_PARALELO') AND activo = true
+--
+--   DESPUÉS:
+--     SELECT clave, valor FROM config_global
+--     WHERE clave IN ('tipo_cambio_oficial', 'tipo_cambio_paralelo') AND activo = true
+--
+--
+-- NODO "Transformar Config" — reemplazar JS completo:
+--
+--   ANTES:
+--     const config = {};
+--     for (const item of $input.all()) {
+--       config[item.json.clave] = parseFloat(item.json.valor);
+--     }
+--     return [{
+--       json: {
+--         CONFIG_GLOBAL: {
+--           TIPO_CAMBIO_USD_BS_OFICIAL: config.TIPO_CAMBIO_OFICIAL || 6.96,
+--           TIPO_CAMBIO_USD_BS_PARALELO: config.TIPO_CAMBIO_PARALELO || 10.20
+--         }
+--       }
+--     }];
+--
+--   DESPUÉS:
+--     const config = {};
+--     for (const item of $input.all()) {
+--       config[item.json.clave] = parseFloat(item.json.valor);
+--     }
+--
+--     if (!config.tipo_cambio_paralelo || isNaN(config.tipo_cambio_paralelo)) {
+--       throw new Error(
+--         'TC paralelo no encontrado en config_global — verificar Binance workflow. '
+--         + 'Claves recibidas: ' + Object.keys(config).join(', ')
+--       );
+--     }
+--
+--     if (!config.tipo_cambio_oficial || isNaN(config.tipo_cambio_oficial)) {
+--       throw new Error(
+--         'TC oficial no encontrado en config_global — verificar seed data. '
+--         + 'Claves recibidas: ' + Object.keys(config).join(', ')
+--       );
+--     }
+--
+--     return [{
+--       json: {
+--         CONFIG_GLOBAL: {
+--           TIPO_CAMBIO_USD_BS_OFICIAL: config.tipo_cambio_oficial,
+--           TIPO_CAMBIO_USD_BS_PARALELO: config.tipo_cambio_paralelo
+--         }
+--       }
+--     }];
+--
+-- IMPORTANTE:
+--   - Sin fallbacks hardcodeados. Si config_global no tiene los valores,
+--     el workflow FALLA con error claro en vez de usar un TC incorrecto.
+--   - El error incluye las claves recibidas para facilitar debugging.
+--   - Ejecutar la migración SQL Y el cambio n8n el mismo día.
+--   - Hacer estos cambios en n8n ANTES de las 2:00 AM (hora del enrichment).
+-- ============================================================================

@@ -1,0 +1,101 @@
+-- Migración 175: Eliminar multiplicación inflacionaria en normalizarPrecioUSD CASO 2
+--
+-- Contexto (docs/analysis/AUDITORIA_PRECIOS_VENTAS.md):
+--   El extractor C21 v16.5 tiene 3 casos en normalizarPrecioUSD():
+--     CASO 1: precio > 350k + "Bs" → BOB / 6.96 → USD       ← CORRECTO
+--     CASO 2: detectarTipoCambio = 'paralelo' → USD × TC_PARALELO / 6.96  ← BUG
+--     CASO 3: default → precio as-is                         ← CORRECTO
+--
+-- Bug CASO 2:
+--   Cuando la descripción menciona "paralelo"/"blue"/"pago en dólares"/etc.,
+--   el extractor MULTIPLICA el precio USD por TC_PARALELO (10.4) y divide por 6.96.
+--   Pero el precio ya está en USD → infla 33-49%.
+--
+-- Evidencia que CASO 2 nunca recibe input legítimo en BOB:
+--   - 144 props con tipo_cambio_detectado = 'paralelo': TODAS tienen moneda_original = 'BOB'
+--     (C21 devuelve currency_id=1 siempre, sin discriminar — "BOB" no significa nada)
+--   - 0 listings en la BD tienen precio real en BOB + descripción "paralelo"
+--   - Desarrolladoras SIEMPRE cotizan en USD cuando mencionan "TC paralelo"
+--   - Las ~44 props con 'paralelo' que están OK: 10 son Remax (extractor diferente,
+--     no usa normalizarPrecioUSD) + 12 C21 corregidas manualmente con candado
+--
+-- Impacto: 85+ propiedades infladas 19-153%
+--
+-- ============================================================================
+-- CAMBIOS EN n8n (hacer manualmente en el editor de n8n)
+-- ============================================================================
+--
+-- Workflow: flujo_b_processing_v3.0
+-- Nodo: Extractor Century21 v16.5
+-- Función: normalizarPrecioUSD
+--
+-- ANTES (CASO 2, líneas dentro de normalizarPrecioUSD):
+--
+--     // CASO 2: El precio está en USD, pero se menciona "TC Paralelo"
+--     if (tipoCambio === 'paralelo') {
+--         const precioEnBs = precio_original * CONFIG.TIPO_CAMBIO_USD_BS_PARALELO;
+--         const precioNormalizado = precioEnBs / CONFIG.TIPO_CAMBIO_USD_BS_OFICIAL;
+--         return { precio: Math.round(precioNormalizado), normalizado: true, precio_original: precio_original };
+--     }
+--
+-- DESPUÉS:
+--
+--     // CASO 2: Descripción menciona "paralelo"/"blue"/etc.
+--     // El precio ya está en USD — no multiplicar.
+--     // Solo registrar tipo_cambio_detectado para trazabilidad.
+--     if (tipoCambio === 'paralelo') {
+--         return { precio: precio_original, normalizado: false, precio_original: precio_original };
+--     }
+--
+-- ============================================================================
+-- EXPLICACIÓN DEL CAMBIO
+-- ============================================================================
+--
+-- La función detectarTipoCambio() NO se modifica — sigue detectando "paralelo"
+-- correctamente para trazabilidad (el valor se guarda en tipo_cambio_detectado).
+--
+-- Lo que cambia es la REACCIÓN al detectar "paralelo":
+--   ANTES: multiplicaba precio × TC_PARALELO / 6.96 (asumía BOB, pero es USD)
+--   DESPUÉS: devuelve precio as-is (igual que CASO 3)
+--
+-- normalizado cambia de true a false porque no se aplica ninguna transformación.
+-- precio_original se preserva para audit trail.
+--
+-- ============================================================================
+-- VERIFICACIÓN POST-CAMBIO
+-- ============================================================================
+--
+-- 1. Ejecutar enrichment manual en 2-3 propiedades C21 de venta con "paralelo"
+--    en la descripción. Verificar que precio_usd = precio_original (sin inflación).
+--
+-- 2. Query de control (ejecutar al día siguiente del cambio):
+--
+-- SELECT id, precio_usd, precio_usd_original,
+--        ROUND(precio_usd::numeric / NULLIF(precio_usd_original, 0)::numeric, 2) AS ratio
+-- FROM propiedades_v2
+-- WHERE tipo_operacion = 'venta'
+--   AND fecha_enrichment >= CURRENT_DATE
+--   AND tipo_cambio_detectado = 'paralelo';
+--
+-- Esperado: ratio = 1.00 para todas (precio_usd = precio_usd_original)
+-- Si alguna tiene ratio > 1.2, el fix no se aplicó correctamente.
+--
+-- 3. Monitorear /admin/salud durante 3 días para confirmar que no hay
+--    regresión en tasas de matching o errores de enrichment.
+--
+-- ============================================================================
+-- DEPENDENCIAS
+-- ============================================================================
+--
+-- - Migración 174 (config_global) debe estar ejecutada Y n8n actualizado a lowercase
+-- - Ejecutar cambio n8n ANTES de las 2:00 AM (hora del enrichment C21)
+-- - Migración 176 (corrección de datos) se ejecuta DESPUÉS de este cambio
+--
+-- ============================================================================
+-- ESTA MIGRACIÓN NO TIENE SQL — ES SOLO DOCUMENTACIÓN DEL CAMBIO n8n
+-- ============================================================================
+-- El cambio se aplica manualmente en el editor visual de n8n.
+-- Este archivo existe para:
+--   1. Mantener trazabilidad en el repo (git blame)
+--   2. Documentar verificaciones pre/post
+--   3. Registrar dependencias con otras migraciones
