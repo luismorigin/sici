@@ -7,19 +7,22 @@
 ## Filtros SQL obligatorios
 
 ```sql
--- 1. Sin duplicados
+-- 1. Solo props activas (excluye inactivas, excluidas por calidad/operación/zona)
+AND status IN ('completado', 'actualizado')
+
+-- 2. Sin duplicados
 AND duplicado_de IS NULL
 
--- 2. Solo departamentos reales (excluir parqueos, bauleras, garajes, depósitos)
+-- 3. Solo departamentos reales (excluir parqueos, bauleras, garajes, depósitos)
 AND COALESCE(tipo_propiedad_original, '') NOT IN ('baulera', 'parqueo', 'garaje', 'deposito')
 
--- 3. Sin multiproyectos (evita contar la misma unidad varias veces)
+-- 4. Sin multiproyectos (evita contar la misma unidad varias veces)
 AND (es_multiproyecto = false OR es_multiproyecto IS NULL)
 
--- 4. Área mínima 20m² (segundo filtro contra parqueos mal clasificados)
+-- 5. Área mínima 20m² (segundo filtro contra parqueos mal clasificados)
 AND area_total_m2 >= 20
 
--- 5. Antigüedad máxima: 300 días para entregados, 730 para preventa
+-- 6. Antigüedad máxima: 300 días para entregados, 730 para preventa
 AND (
   CASE WHEN COALESCE(estado_construccion::text, '') IN ('en_construccion', 'en_pozo')
     THEN CURRENT_DATE - COALESCE(fecha_publicacion, fecha_discovery::date) <= 730
@@ -78,6 +81,36 @@ END AS zona_display
 | SANTORINI VENTURA | 17 uds (#1) | 0 uds (desaparece) | Todo duplicados/parqueos/viejos |
 | V. Brígida activas | 55 | 36 | -19 (35% inflado) |
 | Absorción 1D | 17.6% | 22.2% | Subestimada sin filtros |
+
+## Status que excluyen props de análisis
+
+Los queries de mercado filtran por `status IN ('completado', 'actualizado')`. Los siguientes status quedan excluidos automáticamente:
+
+| Status | Significado | Ejemplo |
+|--------|-------------|---------|
+| `inactivo_pending` | URL devuelve 404, pendiente confirmación | Avisos removidos |
+| `inactivo_confirmed` | Aviso terminado confirmado | Props vendidas/retiradas |
+| `excluido_calidad` | Datos basura o no confiables | Descripción ".", precio imposible |
+| `excluido_operacion` | Tipo de operación fuera de scope | Anticrético clasificado como venta |
+| `excluida_zona` | GPS fuera de polígonos de cobertura | Props en Av. Bush, Av. Beni, etc. |
+| `nueva` | Recién descubierta, sin enrichment | — |
+| `pendiente_enriquecimiento` | Esperando enrichment | — |
+
+### Props excluidas por zona (migración 181)
+
+9 props cuyo GPS cae fuera de los polígonos de microzonas en `geodata/microzonas_equipetrol_v4.geojson`:
+
+| ID | Edificio | Ubicación real |
+|----|----------|---------------|
+| 285 | — | Sin datos, GPS fuera |
+| 580 | CUPESI | Av. Ovidio Barbery |
+| 581 | — | Av. Bush |
+| 598 | Mediterraneo 2 | Fuera de polígonos |
+| 885 | Providence | 3er anillo externo |
+| 886 | Maracana Apart Hotel | Borde fuera |
+| 1019 | Condominio San Andrés | Fuera |
+| 1055 | Millennial Tower | Av. Bush 1er-2do anillo |
+| 1072 | Portobello Green | GPS fuera (Remax) |
 
 ## Referencia
 

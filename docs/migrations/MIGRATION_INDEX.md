@@ -184,3 +184,5 @@
 | 177 | correccion_6_props_pendientes | Corregir precio_usd inflado en 6 props de revisión manual |
 | 178 | correccion_26_props_infladas_villa_brigida | Corregir 26 props CASO 2 + candados + excluir ID 1105 + normalizar Villa Brígida |
 | 179 | limpieza_9_props_sin_datos | Inactivar 2 + excluir 2 + re-enrichment 5 props sin descripción |
+| 180 | duplicados_sky_equinox | Marcar 7 Sky Equinox (1000-1004, 1049, 1050) como duplicado_de = 999 |
+| 181 | excluir_props_fuera_zona | Nuevo enum `excluida_zona` + excluir 9 props con GPS fuera de polígonos |
