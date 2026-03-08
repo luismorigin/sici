@@ -1,25 +1,21 @@
 # TODO Post-Migración — Precios Ventas (2026-03-07)
 
-Migraciones 174-178 ejecutadas. Extractor CASO 2 deployado en n8n.
+Migraciones 174-181 ejecutadas. Extractor CASO 2 deployado en n8n.
 
-## Verificación inmediata (mañana 2026-03-08)
+## Verificación inmediata (2026-03-08) — COMPLETADA
 
-- [ ] Verificar que pipeline nocturno no infla props nuevas con "paralelo":
-  ```sql
-  SELECT id, precio_usd, precio_usd_original,
-         ROUND(precio_usd::numeric / NULLIF(precio_usd_original, 0)::numeric, 2) AS ratio
-  FROM propiedades_v2
-  WHERE tipo_operacion = 'venta'
-    AND fecha_enrichment >= CURRENT_DATE
-    AND tipo_cambio_detectado = 'paralelo';
-  -- Esperado: ratio = 1.00 para todas
-  ```
-- [ ] Confirmar que Binance sigue actualizando config_global id=4:
-  ```sql
-  SELECT id, clave, valor, fecha_actualizacion FROM config_global WHERE id = 4;
-  -- Esperado: fecha_actualizacion = hoy o ayer
-  ```
-- [ ] Confirmar cambios n8n: flujo_b_processing_v3.0 tiene config lowercase + CASO 2 sin multiplicar
+- [x] Verificar que pipeline nocturno no infla props nuevas con "paralelo":
+  - Enrichment corrió OK con TC correcto (9.54 paralelo, 6.96 oficial)
+  - Props 586, 590, 837, 842, 1096 re-enriquecidas y merge completado
+- [x] Confirmar que Binance sigue actualizando config_global id=4:
+  - `tipo_cambio_paralelo = 9.54`, `fecha_actualizacion = 2026-03-08 09:00`
+- [x] Confirmar cambios n8n: flujo_b_processing_v3.0 corregido:
+  - "Cargar Config Global": query cambiado a claves lowercase
+  - "Transformar Config": lee claves lowercase, sin fallback — falla si no hay datos
+  - "Preparar Datos": sin fallback hardcodeado (10.20 eliminado)
+  - "Extractor Century21": TC_PARALELO sin fallback (7.25 eliminado) + throw si falta
+  - "Extractor Remax": TC_PARALELO sin fallback (10.20 eliminado) + throw si falta
+- [x] Migración 174 ejecutada: claves UPPERCASE (id=1,2) desactivadas en config_global
 
 ## Correcciones ejecutadas
 
@@ -35,6 +31,37 @@ Migraciones 174-178 ejecutadas. Extractor CASO 2 deployado en n8n.
 - [x] Candados actualizados (22 existentes) y creados (4 nuevos) con valor_original correcto
 - [x] ID 1105 excluido (excluido_calidad): garbage data, descripcion = "."
 - [x] 31 props Villa Brígida → Villa Brigida (normalización tilde)
+
+### Migración 179 — Limpieza 9 props sin datos
+- [x] 285, 286: inactivo_confirmed (avisos terminados) → luego 285 a anticrético, 286 inactivo
+- [x] 609: excluido_calidad (precio genérico)
+- [x] 1007: excluido_operacion (anticrético)
+- [x] 586, 590, 837, 842, 1096: re-enrichment exitoso (status = nueva → enrichment → merge)
+
+### Migración 180 — 7 duplicados Sky Equinox
+- [x] IDs 1000-1004, 1049, 1050: duplicado_de = 999
+
+### Migración 181 — Excluir 9 props fuera de zona
+- [x] Nuevo enum `excluida_zona` agregado a `estado_propiedad`
+- [x] 9 props excluidas: 285, 580, 581, 598, 885, 886, 1019, 1055, 1072
+- [x] 2 props adicionales excluidas: 493 (Alpha, Av. Beni), 948 (Vilareal Duo)
+- [x] Documentado en `docs/reports/FILTROS_CALIDAD_MERCADO.md`
+
+### Matching manual (2026-03-08)
+- [x] 999 → Sky Equinox (PM 50)
+- [x] 837 → Spazios (corregido post re-enrichment)
+- [x] 842 → Once By Macororo (enrichment OK)
+- [x] 1096 → Torre Fragata (PM 92)
+- [x] 910 → Aura Concept (PM 324)
+- [x] 1011 → Plus+ Isuto (PM 325, nuevo)
+- [x] 1068 → Portobello Green (PM 326, nuevo)
+- [x] 1095 → Sky Eclipse (PM 30)
+- [x] 586, 590 → Miro Tower (PM 273, re-enrichment)
+- [x] 834 → Lofty Island (PM 2)
+- [x] 971 → Sky Onix (PM 323)
+- [x] 1018 → Stone 4 (PM 268)
+- [x] 1021 → Giardino (PM 8)
+- [x] 980 → Madero Residence (PM 278)
 
 ### 10 T-Veinticinco (inactivo_pending) — NO CORREGIDAS
 - 208-217: URLs devuelven 404. Props inactivas, no afectan métricas de mercado.
@@ -63,7 +90,22 @@ Migraciones 174-178 ejecutadas. Extractor CASO 2 deployado en n8n.
 | 176 | 85 | CASO 2 — enrichment USD, merge multiplicó |
 | 177 | 6 | Revisión manual verificada |
 | 178 | 26 | CASO 2 edge cases — enrichment regex falló |
-| **Total** | **117** | Props con precio_usd corregido |
+| 180 | 7 | Duplicados Sky Equinox |
+| 181 | 11 | Excluidas por zona (GPS fuera de polígonos) |
+| **Total** | **135** | Props corregidas/excluidas |
+
+## Matching rate final
+
+- **375/376 props activas con proyecto asignado (99.7%)**
+- Única sin match: ID 1103 (Calle Los Claveles, Sirari, sin nombre de edificio)
+
+## Cambios n8n (2026-03-08)
+
+- [x] "Cargar Config Global": query lowercase (`tipo_cambio_oficial`, `tipo_cambio_paralelo`)
+- [x] "Transformar Config": claves lowercase, throw si no hay datos
+- [x] "Preparar Datos": sin fallback, falla ruidosamente si config no llega
+- [x] "Extractor Century21": TC_PARALELO sin fallback 7.25
+- [x] "Extractor Remax": TC_PARALELO sin fallback 10.20
 
 ## Backlog calidad de datos
 
@@ -79,5 +121,6 @@ Migraciones 174-178 ejecutadas. Extractor CASO 2 deployado en n8n.
 ## Referencia
 
 - Auditoría completa: `docs/analysis/AUDITORIA_PRECIOS_VENTAS.md`
-- Migraciones: `sql/migrations/174_*.sql` .. `178_*.sql`
+- Migraciones: `sql/migrations/174_*.sql` .. `181_*.sql`
+- Filtros de calidad: `docs/reports/FILTROS_CALIDAD_MERCADO.md`
 - Propuesta zonas: `docs/analysis/NORMALIZACION_ZONAS_PROPUESTA.md`
