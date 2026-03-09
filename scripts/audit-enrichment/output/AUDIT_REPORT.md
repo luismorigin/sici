@@ -15,176 +15,107 @@ Campos auditados: `nombre_edificio`, `estado_construccion`, `parqueo_incluido`, 
 | **parqueo_incluido** | 39 (12%) | — | **44** (13%) | 1 | 245 (75%) |
 | **tipo_cambio_detectado** | 128 (39%) | — | **18** (5%) | — | 183 (56%) |
 
-### Impacto potencial
+---
 
-- **37 props** con `estado_construccion = 'no_especificado'` corregibles automáticamente (sin candado, keyword detectado)
-- **44 props** con `parqueo_incluido = null` rellenable (16 incluido, 28 no incluido)
-- **30 props** con `nombre_edificio` incorrecto (basura regex o nombre totalmente diferente al PM)
-- **18 props** con `tipo_cambio_detectado` detectable desde descripción (9 paralelo, 9 oficial)
-- **16 props** con candado en estado_construccion que el LLM sugiere diferente → requieren revisión manual
+## Correcciones Aplicadas (9 Mar 2026)
+
+### Resumen de correcciones ejecutadas
+
+| Acción | Props | Método | Estado |
+|--------|-------|--------|--------|
+| nombre_edificio → pm.nombre_oficial (basura + incorrecto) | 30 | Migración 187: `aplicar_matches_aprobados()` v3.1 | **APLICADO** |
+| estado_construccion → entrega_inmediata | 32 | UPDATE directo | **APLICADO** |
+| estado_construccion → preventa | 4 | UPDATE directo | **APLICADO** |
+| parqueo_incluido → true | 20 | UPDATE directo | **APLICADO** |
+| parqueo_incluido → false | 24 | UPDATE directo | **APLICADO** |
+| tipo_cambio_detectado → paralelo | 9 | UPDATE directo | **APLICADO** |
+| tipo_cambio_detectado → oficial | 8 | UPDATE directo | **APLICADO** |
+| tipo_cambio_detectado → paralelo (ID 335, era "pago en dólares") | 1 | UPDATE directo | **APLICADO** |
+| Precios inflados CASO 2 (ratio 1.00) | 6 | UPDATE directo | **APLICADO** |
+| Aire Acondicionado fantasma (regex `/ac/i`) | 440 | Migración 188 + fix regex n8n | **APLICADO** |
+
+**Total: 574 correcciones aplicadas.**
+
+### Detalle por campo
+
+#### 1. nombre_edificio — Migración 187
+
+`aplicar_matches_aprobados()` v3.1: SIEMPRE copia `pm.nombre_oficial` a `nombre_edificio` (excepto candado). Antes solo copiaba cuando `nombre_edificio IS NULL`, preservando basura del regex.
+
+- 30 props corregidas (27 incorrecto + 3 basura)
+- 40 variaciones menores también normalizadas por la misma lógica
+- **Preventivo**: todo match futuro copia nombre oficial automáticamente
+
+#### 2. estado_construccion — 36 correcciones
+
+**32 → entrega_inmediata** (sin candado, keywords claros):
+IDs: 159, 287, 355, 372, 554, 572, 577, 578, 584, 601, 602, 612, 814, 816, 842, 843, 888, 902, 907, 924, 934, 953, 968, 971, 972, 975, 977, 996, 1005, 1008, 1009, 1104
+
+**4 → preventa** (detectados durante revisión manual):
+- IDs 1061, 1068: Portobello Green — "Precios al cambio Bs.7" = preventa
+- IDs 1063, 1064: Stone 3 — preventa confirmada por admin
+
+**Lección clave**: "amoblado/equipado" NO implica entrega_inmediata. "Precios al cambio Bs.7" es señal de preventa. Ver `docs/analysis/LECCIONES_AUDITORIA_ENRICHMENT.md`.
+
+#### 3. parqueo_incluido — 44 correcciones
+
+**20 → true** (incluido):
+IDs: 18, 173, 179, 246, 322, 450, 502, 636, 814, 828, 842, 843, 872, 972, 996, 997, 1006, 1040, 1074, 1087
+
+**24 → false** (precio separado):
+IDs: 43, 44, 45, 46, 48, 49, 52, 204, 207, 317, 483, 491, 510, 511, 527, 597, 612, 824, 827, 874, 953, 977, 1053, 1102
+
+**Reclasificaciones vs auditoría original** (6 errores del regex corregidos):
+- ID 953: auditoría decía "incluido" → realmente `false` ("Parqueo + Baulera: 14.000$")
+- IDs 179, 843, 972, 1040, 1074: auditoría decía "no incluido" → realmente `true`
+- ID 977: "Parqueo" en Áreas Sociales → `false` (no es parqueo propio)
+
+#### 4. tipo_cambio_detectado — 18 correcciones
+
+**9 → paralelo**: IDs 502, 554, 934, 953, 967, 997, 1053, 1073, 1075
+- También corregido `depende_de_tc = false` (precios ya eran USD reales)
+
+**8 → oficial**: IDs 162, 250, 251, 252, 289, 459, 525, 574
+- ID 335 reclasificado: auditoría decía "oficial" pero desc dice "pago en dólares" = **paralelo**
+
+**Lección clave**: "pago en dólares" / "solo dólares" = paralelo (en Bolivia, exigir USD = operar al paralelo). "TC 7" = oficial (6.96 redondeado, tasa fija). Ver `docs/analysis/LECCIONES_AUDITORIA_ENRICHMENT.md`.
+
+#### 5. Precios inflados CASO 2 (ratio 1.00) — 6 correcciones
+
+Props donde el extractor multiplicó USD × TC / 6.96 sobre precios que ya eran USD. Escaparon migraciones 176-178 porque `enrich_precio_original` ya estaba inflado (ratio = 1.00).
+
+IDs corregidos: 567, 568, 953, 967, 997, 1053
+
+**Lección**: la detección por ratio > 1.15 no cubre casos donde el enrichment guardó el precio ya inflado. Solo detectable comparando contra la descripción original.
+
+#### 6. Aire Acondicionado fantasma — Migración 188
+
+**Bug**: regex del extractor Remax/C21 usaba `/aire\s+acondicionado|split|ac/i`. El patrón `|ac` matcheaba cualquier palabra con "ac": espacios, ubicación, extractor, elegancia, capacidad, etc.
+
+- **440 props** con A/C fantasma en equipamiento (80% del total con A/C)
+- Solo 57 props realmente mencionaban aire acondicionado
+- Fix regex: `/aire\s+acondicionado|split/i` (removido `|ac`)
+- Fix BD: migración 188 limpió array equipamiento
+- Fix n8n: actualizado en ambos nodos (C21 + Remax)
 
 ---
 
-## 1. nombre_edificio
+## Pendiente
 
-### 1A. Nombres basura (3 props) — CORRECCIÓN SEGURA
-
-Regex del extractor produjo valores genéricos sin sentido.
-
-| ID | nombre_bd | PM correcto | Zona |
-|----|-----------|------------|------|
-| 980 | `"Venta"` | Madero Residence | Eq. Centro |
-| 1087 | `"Venta"` | TORRE ARA | Eq. Centro |
-| 1103 | `null` | (sin match) | Sirari |
-
-**Acción**: IDs 980 y 1087 se pueden corregir al nombre del PM. ID 1103 no tiene PM asignado.
-
-### 1B. Nombre incorrecto vs PM (27 props) — CORRECCIÓN SEGURA
-
-Regex extrajo un nombre que NO corresponde al proyecto matcheado. En estos casos, `pm.nombre_oficial` es la fuente de verdad (match fue validado por GPS/manual).
-
-| ID | nombre_bd | PM correcto |
-|----|-----------|------------|
-| 20 | Venta En Equipetrol En Edificio Solo | SÖLO Industrial Apartments |
-| 53 | Equipetrol Plaza Italia | Condado VI Plaza Italia |
-| 57 | Venta En You Plaza | You Smart Studios |
-| 125 | Brigida | SANTORINI VENTURA |
-| 126 | Brigida | SANTORINI VENTURA |
-| 162 | Uptown Drei | Uptown NUU |
-| 176 | Edificio Uptown Equipetrol | Uptown NUU |
-| 428 | Edificio Las Palmeras | EURODESIGN TOWER |
-| 462 | Pre Venta | Condominio Las Dalias |
-| 463 | Pre Venta | Condominio Las Dalias |
-| 491 | LINDA VISTA | Legendary by EliTe |
-| 502 | El Centro De | Edificio TORRE OASIS |
-| 527 | Moderno | Vertical Terra |
-| 555 | Condominio SKY LUXIA | Sky Lux |
-| 560 | SKY Luxury | Sky Lux |
-| 570 | Consta De Seguridad Las | Stratto Up |
-| 571 | Consta De Seguridad Las | Stratto Up |
-| 595 | Bloque La Salle | Edificio Equipetrol Norte - Calle H |
-| 814 | Eco Sostenible Nomad By | Nomad by Smart Studio |
-| 876 | Moderno Que Ofrece Una | Nano Smart |
-| 887 | PAGO AL CONTADO | Sky Tower |
-| 888 | Torre Real | TORRE ARA |
-| 890 | Victor Pinto | Euro Design Le Blanc |
-| 893 | Equipetrol Mas Parqueo | Nano Smart |
-| 958 | De Dise | Portofino V |
-| 969 | Nicolas Ortiz | Lofty Island |
-| 1008 | Sirari Palm | Onix Art By EliTe |
-
-**Acción**: Copiar `pm.nombre_oficial` a `nombre_edificio` para estas 27 props. Son correcciones seguras — el matching ya fue validado.
-
-### 1C. Variación menor vs PM (40 props) — NORMALIZACIÓN OPCIONAL
-
-Nombre reconocible pero no idéntico al PM. Ejemplos: "Stanza" vs "Condominio Stanza", "Alto  Busch" vs "Alto Busch", "STONE III" vs "Stone 3".
-
-**Acción**: Opcional — normalizar `nombre_edificio = pm.nombre_oficial` para consistencia. Bajo riesgo.
-
----
-
-## 2. estado_construccion
-
-### 2A. Correcciones seguras (37 props) — SIN CANDADO
-
-Props con `estado_construccion = 'no_especificado'`, sin candado, y keyword detectado en descripción.
-
-| llm_estado | Cantidad | IDs |
-|------------|----------|-----|
-| entrega_inmediata | 37 | 159, 287, 355, 372, 554, 572, 577, 578, 584, 601, 602, 612, 814, 816, 842, 843, 888, 902, 907, 924, 934, 953, 968, 971, 972, 975, 977, 996, 1005, 1008, 1009, 1040, 1061, 1063, 1064, 1068, 1104 |
-
-Keywords detectados: "amoblado", "equipado", "listo para", "entrega inmediata".
-
-**Acción**: Actualizar `estado_construccion = 'entrega_inmediata'` para estas 37 props. Todas son "amoblado/equipado" → claramente entrega inmediata.
-
-### 2B. Conflictos con candado (16 props) — NO TOCAR
-
-Props con `estado_construccion = 'no_especificado'` + candado admin. El LLM sugiere diferente pero el admin dejó 'no_especificado' intencionalmente.
-
-| ID | llm_estado | Nota |
-|----|------------|------|
-| 18, 31 | preventa | Sky Eclipse — desc dice "Pre-Venta" pero admin fijó no_especificado |
-| 59, 61, 62 | nuevo_a_estrenar | Sky Eclipse — desc dice "nuevo a estrenar" |
-| 117 | entrega_inmediata | LUXE RESIDENCE |
-| 149 | entrega_inmediata | Nomad by Smart Studio |
-| 173 | entrega_inmediata | Sky Collection Art Deco |
-| 198 | entrega_inmediata | OMNIA PRIME |
-| 459 | entrega_inmediata | Sky Eclipse |
-| 479, 482, 485 | nuevo_a_estrenar | varios |
-| 555 | entrega_inmediata | SKY LUXIA |
-| 557 | entrega_inmediata | |
-| 832 | nuevo_a_estrenar | |
-
-**Acción**: Revisar manualmente si el admin quiso dejar 'no_especificado' o si fue un descuido.
-
-### 2C. Sin detección (56 props)
-
-Descripción no contiene keywords suficientes para inferir estado. Un LLM real podría inferir más por contexto (p.ej. "precio en BS" → probable preventa, "piso 8 con vista" → terminado).
-
----
-
-## 3. parqueo_incluido
-
-### 3A. Rellenable — incluido (16 props)
-
-Descripción menciona "parqueo incluido", "incluye parqueo", o similar.
-
-IDs: 18, 173, 246, 322, 450, 502, 636, 814, 828, 842, 872, 953, 996, 997, 1006, 1087
-
-**Acción**: Actualizar `parqueo_incluido = true`.
-
-### 3B. Rellenable — no incluido (28 props)
-
-Descripción menciona "parqueo $X USD", "parqueo adicional", parqueo con precio separado.
-
-IDs: 43, 44, 45, 46, 48, 49, 52, 179, 204, 207, 317, 483, 491, 510, 511, 527, 597, 612, 824, 827, 843, 874, 972, 977, 1040, 1053, 1074, 1102
-
-**Acción**: Actualizar `parqueo_incluido = false`.
-
-### 3C. Sin detección (245 props)
-
-Descripción no menciona parqueo o mención ambigua. Requeriría LLM real para inferir.
-
----
-
-## 4. tipo_cambio_detectado
-
-### 4A. Detectable — paralelo (9 props)
-
-Descripción menciona "paralelo", "T/C paralelo" pero BD tiene `no_especificado` o `null`.
-
-IDs: 502, 554, 934, 953, 967, 997, 1053, 1073, 1075
-
-**Acción**: Actualizar `tipo_cambio_detectado = 'paralelo'`. **PRECAUCIÓN**: verificar que `depende_de_tc` sea consistente.
-
-### 4B. Detectable — oficial/USD (9 props)
-
-Descripción menciona "TC oficial", "pago en dólares", "al oficial".
-
-IDs: 162, 250, 251, 252, 289, 335, 459, 525, 574
-
-**Acción**: Actualizar `tipo_cambio_detectado = 'oficial'`.
-
----
-
-## Resumen de acciones recomendadas
-
-| Prioridad | Acción | Props | Riesgo |
-|-----------|--------|-------|--------|
-| **ALTA** | Corregir nombre_edificio basura/incorrecto → pm.nombre_oficial | 30 | Bajo — PM ya validado |
-| **ALTA** | estado_construccion no_especificado → entrega_inmediata (sin candado) | 37 | Bajo — keywords claros |
-| **MEDIA** | parqueo_incluido null → true/false según descripción | 44 | Bajo — keywords explícitos |
-| **MEDIA** | tipo_cambio_detectado → paralelo/oficial según descripción | 18 | Medio — verificar depende_de_tc |
-| **BAJA** | Normalizar nombre_edificio variaciones menores → pm.nombre_oficial | 40 | Muy bajo |
-| **REVISAR** | estado_construccion con candado — ¿admin intencional? | 16 | N/A — manual |
-
-### Total: ~129 correcciones automatizables + 40 normalizaciones + 16 revisiones manuales
+| Prioridad | Acción | Props | Nota |
+|-----------|--------|-------|------|
+| **BAJA** | Normalizar nombre_edificio variaciones menores | 40 | Ya cubierto por migración 187 para matches futuros |
+| **REVISAR** | estado_construccion con candado — ¿intencional? | 16 | Requiere revisión manual del admin |
+| **GAP** | estado_construccion sin detección (regex) | 56 | Solo LLM real inferiría más por contexto |
+| **GAP** | parqueo_incluido sin detección | 245 | Solo LLM real inferiría más |
+| **GAP** | plan_pagos (0% regex, ~60% LLM estimado) | ~200 | Mayor gap — campo nunca extraído por regex |
+| **MENOR** | IDs 322, 558 — TC 7 = oficial (están no_especificado) | 2 | Cero impacto en queries (oficial = no_especificado en precio_normalizado) |
 
 ---
 
 ## Limitaciones
 
-1. **Solo keywords**: análisis basado en regex, no comprensión contextual. Un LLM real detectaría más (p.ej. "precio en BS al cambio 7" → TC paralelo, "desde USD 65K" → preventa por rango).
+1. **Solo keywords**: análisis basado en regex, no comprensión contextual. Un LLM real detectaría más (p.ej. "precio en BS al cambio 7" → preventa, "desde USD 65K" → preventa por rango).
 2. **56 props sin detección de estado**: un LLM podría inferir por contexto en muchos casos.
 3. **245 props sin detección de parqueo**: muchas probablemente lo incluyen pero no lo dicen explícitamente.
 4. **plan_pagos**: regex no detectó ningún plan de pagos (0/329). El LLM detectaría "cuotas", "reserva + saldo", "financiamiento directo" — campo con mayor gap.
@@ -194,4 +125,5 @@ IDs: 162, 250, 251, 252, 289, 335, 459, 525, 574
 
 - Datos crudos: `scripts/audit-enrichment/output/audit-results.json`
 - Simulación 10 props: `docs/analysis/SIMULACION_LLM_VS_REGEX_2026_03_09.md`
+- Lecciones para LLM: `docs/analysis/LECCIONES_AUDITORIA_ENRICHMENT.md`
 - Prompt LLM propuesto: `docs/analysis/COMPARATIVA_VENTAS_VS_ALQUILERES.md` sección 4.3
