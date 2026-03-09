@@ -12,11 +12,11 @@ export const MICROZONAS = [
 
 /** Form ID → BD microzona column value */
 export const MICROZONA_ID_TO_DB: Record<string, string> = {
-  'equipetrol_centro': 'Equipetrol',
+  'equipetrol_centro': 'Equipetrol Centro',
   'sirari': 'Sirari',
-  'equipetrol_norte': 'Equipetrol Norte/Norte',
+  'equipetrol_norte': 'Equipetrol Norte',
   'villa_brigida': 'Villa Brigida',
-  'equipetrol_oeste': 'Faremafu',
+  'equipetrol_oeste': 'Equipetrol Oeste',
 }
 
 export const AMENIDADES_OPCIONES = [

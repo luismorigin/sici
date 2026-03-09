@@ -16,8 +16,8 @@ export interface ZonaCanonica {
 export const ZONAS_CANONICAS: ZonaCanonica[] = [
   {
     slug: 'equipetrol_centro',
-    db: 'Equipetrol',
-    dbAlquiler: ['Equipetrol', 'Equipetrol Centro'],
+    db: 'Equipetrol Centro',
+    dbAlquiler: ['Equipetrol Centro', 'Equipetrol', 'Equipetrol Centro'],
     label: 'Equipetrol Centro',
     labelCorto: 'Eq. Centro',
   },
@@ -38,15 +38,15 @@ export const ZONAS_CANONICAS: ZonaCanonica[] = [
   {
     slug: 'villa_brigida',
     db: 'Villa Brigida',
-    dbAlquiler: ['Villa Brigida'],
+    dbAlquiler: ['Villa Brigida', 'Villa Brígida'],
     label: 'Villa Brígida',
     labelCorto: 'V. Brigida',
   },
   {
     slug: 'equipetrol_oeste',
-    db: 'Faremafu',
-    dbAlquiler: ['Faremafu'],
-    label: 'Equipetrol Oeste (Busch)',
+    db: 'Equipetrol Oeste',
+    dbAlquiler: ['Equipetrol Oeste', 'Faremafu'],
+    label: 'Equipetrol Oeste',
     labelCorto: 'Eq. Oeste',
   },
 ]
@@ -66,8 +66,8 @@ for (const z of ZONAS_CANONICAS) {
  */
 export function displayZona(zona: string | null | undefined): string {
   if (!zona) return 'Otras'
-  // Equipetrol Franja is marginal → show as '3er Anillo'
-  if (zona === 'Equipetrol Franja') return 'Eq. 3er Anillo'
+  // Legacy + current marginal zone names
+  if (zona === 'Equipetrol Franja' || zona === 'Eq. 3er Anillo') return 'Eq. 3er Anillo'
   if (zona === 'Sin zona' || zona === 'sin zona') return 'Otras'
   const found = dbToZona.get(zona)
   return found ? found.labelCorto : zona
@@ -79,7 +79,7 @@ export function displayZona(zona: string | null | undefined): string {
  */
 export function getZonaLabel(zona: string | null | undefined): string {
   if (!zona) return 'Sin zona'
-  if (zona === 'Equipetrol Franja') return 'Equipetrol Centro'
+  if (zona === 'Equipetrol Franja' || zona === 'Eq. 3er Anillo') return 'Eq. 3er Anillo'
   if (zona === 'Sin zona') return 'Sin zona'
   const found = dbToZona.get(zona)
   return found ? found.label : zona
@@ -110,7 +110,7 @@ export const ZONAS_ALQUILER_UI = [
 export const ZONAS_ALQUILER_FILTER = [
   { id: '', label: 'Todas las zonas' },
   ...ZONAS_CANONICAS.map(z => ({ id: z.db, label: z.labelCorto })),
-  { id: 'Equipetrol Franja', label: 'Eq. 3er Anillo' },
+  { id: 'Eq. 3er Anillo', label: 'Eq. 3er Anillo' },
 ]
 
 /** Broker form dropdown (slug IDs) */
