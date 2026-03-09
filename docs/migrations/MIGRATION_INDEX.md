@@ -191,3 +191,4 @@
 | 184 | renombrar_zonas_display | Renombrar polígonos a nombres display (Faremafu→Equipetrol Oeste, etc.) + retroactivo en props/proyectos |
 | 185 | crear_get_zona_by_gps | Función `get_zona_by_gps(lat, lon)` — PostGIS point-in-polygon para editor de proyectos |
 | 186 | normalizar_zonas_residuales | Normalizar microzona='Equipetrol'→'Equipetrol Centro' (28), zona='Villa Brígida'→sin tilde (1), excluir 6 alquiler sin zona, fix 2 microzona NULL + fix v_metricas_mercado (agregar status=completado) + fix buscar_unidades_reales (ILIKE→exact match zona/microzona) |
+| 187 | fix_aplicar_matches_sobrescribir_nombre | Fix `aplicar_matches_aprobados()` v3.1: SIEMPRE copiar `pm.nombre_oficial` a `nombre_edificio` (excepto candado). Antes solo copiaba cuando NULL → basura regex se preservaba |
