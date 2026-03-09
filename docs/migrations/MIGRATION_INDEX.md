@@ -186,3 +186,5 @@
 | 179 | limpieza_9_props_sin_datos | Inactivar 2 + excluir 2 + re-enrichment 5 props sin descripción |
 | 180 | duplicados_sky_equinox | Marcar 7 Sky Equinox (1000-1004, 1049, 1050) como duplicado_de = 999 |
 | 181 | excluir_props_fuera_zona | Nuevo enum `excluida_zona` + excluir 9 props con GPS fuera de polígonos |
+| 182 | normalizar_zonas_problematicas | Corregir zona/microzona 13 props (PostGIS) + excluir 45 props fuera de polígonos |
+| 183 | corregir_equipetrol_centro_restantes | Corregir zona/microzona 11 props restantes con 'Equipetrol Centro' → 0 activas |

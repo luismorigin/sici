@@ -1,6 +1,6 @@
 # TODO Post-Migración — Precios Ventas (2026-03-07)
 
-Migraciones 174-181 ejecutadas. Extractor CASO 2 deployado en n8n.
+Migraciones 174-183 ejecutadas. Extractor CASO 2 deployado en n8n.
 
 ## Verificación inmediata (2026-03-08) — COMPLETADA
 
@@ -47,6 +47,24 @@ Migraciones 174-181 ejecutadas. Extractor CASO 2 deployado en n8n.
 - [x] 2 props adicionales excluidas: 493 (Alpha, Av. Beni), 948 (Vilareal Duo)
 - [x] Documentado en `docs/reports/FILTROS_CALIDAD_MERCADO.md`
 
+### Migración 182 — Normalizar 51 props con zona problemática (2026-03-09)
+- [x] PARTE 1: 13 props con zona='Equipetrol Centro' corregidas por PostGIS:
+  - 7 → Equipetrol (837, 842, 902, 910, 971, 980, 1096)
+  - 5 → Villa Brigida (1011, 1061, 1064, 1069, 1071)
+  - 1 → Faremafu (1095)
+- [x] PARTE 2: 45 props fuera de todos los polígonos → excluida_zona:
+  - 30 con zona=NULL (Miro Tower ×15, Swissôtel ×2, La Casona ×2, Curupau Isuto ×2, etc.)
+  - 7 con zona='Equipetrol Centro' (Stone 4 ×4, Portobello Isuto ×2, Miro Tower ×1)
+  - 8 multiproyecto Miro Tower (605-610, 978, 979, 1076)
+
+### Migración 183 — Corregir 11 props 'Equipetrol Centro' restantes (2026-03-09)
+- [x] 5 → Equipetrol (716, 718, 844, 898, 1045)
+- [x] 1 → Equipetrol Norte/Norte (770 Sky Moon)
+- [x] 1 → Faremafu (834 Lofty Island)
+- [x] 3 → Villa Brigida (839, 840, 1086 Stone 3)
+- [x] 1 → Sirari (1021 Giardino, verificado manualmente)
+- [x] **Resultado: 0 props activas con zona='Equipetrol Centro'**
+
 ### Matching manual (2026-03-08)
 - [x] 999 → Sky Equinox (PM 50)
 - [x] 837 → Spazios (corregido post re-enrichment)
@@ -92,7 +110,9 @@ Migraciones 174-181 ejecutadas. Extractor CASO 2 deployado en n8n.
 | 178 | 26 | CASO 2 edge cases — enrichment regex falló |
 | 180 | 7 | Duplicados Sky Equinox |
 | 181 | 11 | Excluidas por zona (GPS fuera de polígonos) |
-| **Total** | **135** | Props corregidas/excluidas |
+| 182 | 58 | 13 zona corregida (PostGIS) + 45 excluida_zona (fuera polígonos) |
+| 183 | 11 | 11 zona corregida ('Equipetrol Centro' → microzona real) |
+| **Total** | **204** | Props corregidas/excluidas |
 
 ## Matching rate final
 
@@ -109,18 +129,20 @@ Migraciones 174-181 ejecutadas. Extractor CASO 2 deployado en n8n.
 
 ## Backlog calidad de datos
 
-- [ ] Normalización de zonas (ver `docs/analysis/NORMALIZACION_ZONAS_PROPUESTA.md`)
+- [x] Normalización de zonas venta — 'Equipetrol Centro' eliminado (migraciones 182-183)
   - [x] Paso parcial: Villa Brígida → Villa Brigida (migración 178)
-  - [ ] Paso 1: Crear función `microzona_a_zona()` — riesgo nulo
-  - [ ] Paso 2: Normalizar `proyectos_master.zona` (27 proyectos con zona incorrecta)
-  - [ ] Paso 3: Normalizar `propiedades_v2.zona` alquiler (32 props sucias)
-  - [ ] Paso 4: Fix `v_metricas_mercado` + `calcular_posicion_mercado` (48 props Eq. Norte sin datos)
-  - [ ] Paso 5: Simplificar `zonas.ts`
-- [ ] Resolver 94 props sin zona (39 proyectos_master + propiedades sin GPS)
+  - [x] 24 props corregidas zona/microzona por PostGIS (182 + 183)
+  - [x] 45 props fuera de polígonos → excluida_zona (182)
+  - [x] 0 props activas con zona='Equipetrol Centro'
+- [ ] Normalización de zonas pendiente (ver `docs/analysis/NORMALIZACION_ZONAS_PROPUESTA.md`)
+  - [ ] Paso 1: Normalizar `proyectos_master.zona` (39 proyectos con zona='Sin zona', 6 con 'Equipetrol Centro')
+  - [ ] Paso 2: Normalizar `propiedades_v2.zona` alquiler (32 props sucias)
+  - [ ] Paso 3: Fix `v_metricas_mercado` + `calcular_posicion_mercado`
+  - [ ] Paso 4: Simplificar `zonas.ts`
 
 ## Referencia
 
 - Auditoría completa: `docs/analysis/AUDITORIA_PRECIOS_VENTAS.md`
-- Migraciones: `sql/migrations/174_*.sql` .. `181_*.sql`
+- Migraciones: `sql/migrations/174_*.sql` .. `183_*.sql`
 - Filtros de calidad: `docs/reports/FILTROS_CALIDAD_MERCADO.md`
 - Propuesta zonas: `docs/analysis/NORMALIZACION_ZONAS_PROPUESTA.md`
