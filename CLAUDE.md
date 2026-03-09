@@ -50,21 +50,24 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
    - `<= 300 dias` en mercado para venta (730 para preventa), `<= 150 dias` para alquiler
    - Ver detalle completo en `docs/reports/FILTROS_CALIDAD_MERCADO.md`
 
-## Zonas Canonicas (5 zonas)
+## Zonas Canonicas (6 zonas)
 
-La fuente de verdad es `microzona` (PostGIS). Desde migración 171, `p.zona = microzona` para venta (nombres crudos). `pm.zona` también usa nombres crudos. Trigger `trg_asignar_zona_venta` (migración 173) auto-asigna zona/microzona desde GPS.
+Fuente de verdad: tabla `zonas_geograficas` (7 polígonos PostGIS, 6 nombres únicos). Trigger `trg_asignar_zona_venta` (migración 173) auto-asigna `p.zona` y `p.microzona` desde GPS. Función `get_zona_by_gps(lat, lon)` (migración 185) disponible para consultas ad-hoc.
 
-| Zona canonica | Valor en BD (p.zona, pm.zona, microzona) | Display (zonas.ts) |
-|---|---|---|
-| Equipetrol Centro | `Equipetrol` | Eq. Centro |
-| Equipetrol Norte | `Equipetrol Norte/Norte`, `Equipetrol Norte/Sur` | Eq. Norte |
-| Sirari | `Sirari` | Sirari |
-| Villa Brigida | `Villa Brigida` | V. Brigida |
-| Equipetrol Oeste | `Faremafu` | Eq. Oeste |
+Desde migración 184, los nombres en BD son los nombres display definitivos (ya no hay nombres crudos internos).
 
-**Ignorar:** `Equipetrol Franja` — zona marginal con pocas propiedades.
+| Zona | Valor en BD (`p.zona`, `pm.zona`) | Display corto (`zonas.ts`) | Props activas |
+|---|---|---|---|
+| Equipetrol Centro | `Equipetrol Centro` | Eq. Centro | ~120 |
+| Equipetrol Norte | `Equipetrol Norte` | Eq. Norte | ~26 |
+| Sirari | `Sirari` | Sirari | ~44 |
+| Villa Brigida | `Villa Brigida` | V. Brigida | ~40 |
+| Equipetrol Oeste | `Equipetrol Oeste` | Eq. Oeste | ~32 |
+| Eq. 3er Anillo | `Eq. 3er Anillo` | Eq. 3er Anillo | ~3 |
 
-**En queries:** Usar nombres crudos de BD. `lib/zonas.ts` mapea crudo → display via `displayZona()` y `getZonaLabel()`.
+**Nombres legacy (aliases en `zonas.ts` para backwards compatibility):** `Equipetrol`, `Faremafu`, `Equipetrol Norte/Norte`, `Equipetrol Norte/Sur`, `Equipetrol Franja`, `Villa Brígida` (con tilde).
+
+**En queries:** Usar nombres de BD directos (columna izquierda). `lib/zonas.ts` mapea BD → display via `displayZona()` y `getZonaLabel()`.
 
 ## Sistema de precios — Definiciones
 
