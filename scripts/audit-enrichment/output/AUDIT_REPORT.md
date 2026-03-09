@@ -24,8 +24,9 @@ Campos auditados: `nombre_edificio`, `estado_construccion`, `parqueo_incluido`, 
 | Acción | Props | Método | Estado |
 |--------|-------|--------|--------|
 | nombre_edificio → pm.nombre_oficial (basura + incorrecto) | 30 | Migración 187: `aplicar_matches_aprobados()` v3.1 | **APLICADO** |
-| estado_construccion → entrega_inmediata | 32 | UPDATE directo | **APLICADO** |
+| estado_construccion → entrega_inmediata (sin candado) | 32 | UPDATE directo | **APLICADO** |
 | estado_construccion → preventa | 4 | UPDATE directo | **APLICADO** |
+| estado_construccion → entrega_inmediata (con candado, revisión admin) | 14 | UPDATE directo | **APLICADO** |
 | parqueo_incluido → true | 20 | UPDATE directo | **APLICADO** |
 | parqueo_incluido → false | 24 | UPDATE directo | **APLICADO** |
 | tipo_cambio_detectado → paralelo | 9 | UPDATE directo | **APLICADO** |
@@ -34,7 +35,7 @@ Campos auditados: `nombre_edificio`, `estado_construccion`, `parqueo_incluido`, 
 | Precios inflados CASO 2 (ratio 1.00) | 6 | UPDATE directo | **APLICADO** |
 | Aire Acondicionado fantasma (regex `/ac/i`) | 440 | Migración 188 + fix regex n8n | **APLICADO** |
 
-**Total: 574 correcciones aplicadas.**
+**Total: 588 correcciones aplicadas.**
 
 ### Detalle por campo
 
@@ -46,7 +47,7 @@ Campos auditados: `nombre_edificio`, `estado_construccion`, `parqueo_incluido`, 
 - 40 variaciones menores también normalizadas por la misma lógica
 - **Preventivo**: todo match futuro copia nombre oficial automáticamente
 
-#### 2. estado_construccion — 36 correcciones
+#### 2. estado_construccion — 50 correcciones
 
 **32 → entrega_inmediata** (sin candado, keywords claros):
 IDs: 159, 287, 355, 372, 554, 572, 577, 578, 584, 601, 602, 612, 814, 816, 842, 843, 888, 902, 907, 924, 934, 953, 968, 971, 972, 975, 977, 996, 1005, 1008, 1009, 1104
@@ -54,6 +55,19 @@ IDs: 159, 287, 355, 372, 554, 572, 577, 578, 584, 601, 602, 612, 814, 816, 842, 
 **4 → preventa** (detectados durante revisión manual):
 - IDs 1061, 1068: Portobello Green — "Precios al cambio Bs.7" = preventa
 - IDs 1063, 1064: Stone 3 — preventa confirmada por admin
+
+**14 → entrega_inmediata** (con candado, revisión manual admin):
+- 8 Sky Eclipse: IDs 18, 31, 59, 61, 62, 459, 479, 832
+- ID 117: LUXE RESIDENCE — "totalmente equipado"
+- ID 149: Nomad by Smart Studio — "EQUIPADO Y AMOBLADO"
+- ID 173: Sky Collection Art Deco — piso específico, parqueo doble
+- ID 198: OMNIA PRIME — "Departamento Equipado"
+- ID 482: Breeze Tower — "A ESTRENAR"
+- ID 555: Sky Lux — detalla muebles específicos (cama, TV, A/C, ropero)
+
+**2 → sin cambio** (no determinable, se mantienen no_especificado con candado):
+- ID 485: SPERANTO RESIDENZE — información insuficiente
+- ID 557: Domus Tower — posible preventa ("pronto a entregarse")
 
 **Lección clave**: "amoblado/equipado" NO implica entrega_inmediata. "Precios al cambio Bs.7" es señal de preventa. Ver `docs/analysis/LECCIONES_AUDITORIA_ENRICHMENT.md`.
 
@@ -105,7 +119,7 @@ IDs corregidos: 567, 568, 953, 967, 997, 1053
 | Prioridad | Acción | Props | Nota |
 |-----------|--------|-------|------|
 | **BAJA** | Normalizar nombre_edificio variaciones menores | 40 | Ya cubierto por migración 187 para matches futuros |
-| **REVISAR** | estado_construccion con candado — ¿intencional? | 16 | Requiere revisión manual del admin |
+| ~~**REVISAR**~~ | ~~estado_construccion con candado~~ | ~~16~~ | **CERRADO**: 14 corregidos, 2 sin info suficiente (485, 557) |
 | **GAP** | estado_construccion sin detección (regex) | 56 | Solo LLM real inferiría más por contexto |
 | **GAP** | parqueo_incluido sin detección | 245 | Solo LLM real inferiría más |
 | **GAP** | plan_pagos (0% regex, ~60% LLM estimado) | ~200 | Mayor gap — campo nunca extraído por regex |
