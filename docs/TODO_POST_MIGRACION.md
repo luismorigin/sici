@@ -127,6 +127,12 @@ Migraciones 174-183 ejecutadas. Extractor CASO 2 deployado en n8n.
 - [x] "Extractor Century21": TC_PARALELO sin fallback 7.25
 - [x] "Extractor Remax": TC_PARALELO sin fallback 10.20
 
+## Pendientes n8n + docs (post migración 184)
+
+- [ ] Actualizar extractor_century21.json con nombres nuevos de zonas
+- [ ] Actualizar extractor_remax.json con nombres nuevos de zonas
+- [ ] Actualizar CLAUDE.md con tabla de zonas canónicas post-migración 184
+
 ## Backlog calidad de datos
 
 - [x] Normalización de zonas venta — 'Equipetrol Centro' eliminado (migraciones 182-183)
@@ -143,6 +149,6 @@ Migraciones 174-183 ejecutadas. Extractor CASO 2 deployado en n8n.
 ## Referencia
 
 - Auditoría completa: `docs/analysis/AUDITORIA_PRECIOS_VENTAS.md`
-- Migraciones: `sql/migrations/174_*.sql` .. `183_*.sql`
+- Migraciones: `sql/migrations/174_*.sql` .. `185_*.sql`
 - Filtros de calidad: `docs/reports/FILTROS_CALIDAD_MERCADO.md`
 - Propuesta zonas: `docs/analysis/NORMALIZACION_ZONAS_PROPUESTA.md`

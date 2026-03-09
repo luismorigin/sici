@@ -99,6 +99,13 @@ export const ZONAS_ADMIN_FILTER = [
   ...ZONAS_ADMIN,
 ]
 
+/** Proyecto editor dropdown (6 zonas reales de zonas_geograficas + Sin zona) */
+export const ZONAS_PROYECTO_EDITOR = [
+  { id: 'Sin zona', label: 'Sin zona' },
+  ...ZONAS_ADMIN,
+  { id: 'Eq. 3er Anillo', label: 'Eq. 3er Anillo' },
+]
+
 /** Alquiler public UI (slug IDs for RPC) + Franja + Otras */
 export const ZONAS_ALQUILER_UI = [
   ...ZONAS_CANONICAS.map(z => ({ id: z.slug, label: z.labelCorto })),

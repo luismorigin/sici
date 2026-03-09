@@ -66,12 +66,12 @@ export function useProjectEditor(id: string | string[] | undefined, admin: boole
   const [showDesarrolladorDropdown, setShowDesarrolladorDropdown] = useState(false)
 
   // Zona detectada por GPS
-  const [zonaDetectada, setZonaDetectada] = useState<{zona: string, microzona: string} | null>(null)
+  const [zonaDetectada, setZonaDetectada] = useState<string | null>(null)
 
   const [formData, setFormData] = useState<ProyectoFormData>({
     nombre_oficial: '',
     desarrollador: '',
-    zona: 'Equipetrol',
+    zona: 'Sin zona',
     estado_construccion: 'no_especificado',
     fecha_entrega: '',
     cantidad_pisos: '',
@@ -135,9 +135,11 @@ export function useProjectEditor(id: string | string[] | undefined, admin: boole
         p_lon: lngNum
       })
       if (data && data.length > 0 && data[0].zona) {
-        setZonaDetectada({ zona: data[0].zona, microzona: data[0].microzona || '' })
+        setZonaDetectada(data[0].zona)
+        updateField('zona', data[0].zona)
       } else {
-        setZonaDetectada(null)
+        setZonaDetectada('Fuera de cobertura')
+        updateField('zona', 'Sin zona')
       }
     } catch (err) {
       console.error('Error detectando zona:', err)
@@ -198,7 +200,7 @@ export function useProjectEditor(id: string | string[] | undefined, admin: boole
       setFormData({
         nombre_oficial: data.nombre_oficial || '',
         desarrollador: data.desarrollador || '',
-        zona: data.zona || 'Equipetrol',
+        zona: data.zona || 'Sin zona',
         estado_construccion: data.estado_construccion || 'no_especificado',
         fecha_entrega: data.fecha_entrega ? data.fecha_entrega.substring(0, 7) : '',
         cantidad_pisos: data.cantidad_pisos?.toString() || '',

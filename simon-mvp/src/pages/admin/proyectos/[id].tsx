@@ -4,14 +4,14 @@ import Link from 'next/link'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { useProjectEditor } from '@/hooks/useProjectEditor'
 import PropiedadesVinculadasTable from '@/components/admin/PropiedadesVinculadasTable'
-import { ZONAS_ADMIN } from '@/lib/zonas'
+import { ZONAS_PROYECTO_EDITOR } from '@/lib/zonas'
 import {
   ESTADO_CONSTRUCCION,
   AMENIDADES_OPCIONES_PROYECTO as AMENIDADES_OPCIONES,
   EQUIPAMIENTO_OPCIONES_PROYECTO as EQUIPAMIENTO_OPCIONES
 } from '@/types/proyecto-editor'
 
-const ZONAS = ZONAS_ADMIN
+const ZONAS = ZONAS_PROYECTO_EDITOR
 
 export default function EditarProyecto() {
   const { admin, loading: authLoading } = useAdminAuth(['super_admin'])
@@ -509,26 +509,15 @@ export default function EditarProyecto() {
                   </div>
 
                   {/* Zona detectada por GPS */}
-                  {zonaDetectada && (
+                  {zonaDetectada && zonaDetectada === 'Fuera de cobertura' && (
+                    <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <span className="text-amber-700 text-sm">GPS fuera de cobertura — zona asignada como &quot;Sin zona&quot;</span>
+                    </div>
+                  )}
+                  {zonaDetectada && zonaDetectada !== 'Fuera de cobertura' && (
                     <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="text-green-700 text-sm">Zona detectada: </span>
-                          <strong className="text-green-800">{zonaDetectada.zona}</strong>
-                          {zonaDetectada.microzona && (
-                            <span className="text-green-600 ml-1">({zonaDetectada.microzona})</span>
-                          )}
-                        </div>
-                        {zonaDetectada.zona !== formData.zona && (
-                          <button
-                            type="button"
-                            onClick={() => updateField('zona', zonaDetectada.zona)}
-                            className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
-                          >
-                            Usar esta zona
-                          </button>
-                        )}
-                      </div>
+                      <span className="text-green-700 text-sm">Zona detectada por GPS: </span>
+                      <strong className="text-green-800">{zonaDetectada}</strong>
                     </div>
                   )}
 

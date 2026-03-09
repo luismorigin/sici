@@ -188,3 +188,5 @@
 | 181 | excluir_props_fuera_zona | Nuevo enum `excluida_zona` + excluir 9 props con GPS fuera de polígonos |
 | 182 | normalizar_zonas_problematicas | Corregir zona/microzona 13 props (PostGIS) + excluir 45 props fuera de polígonos |
 | 183 | corregir_equipetrol_centro_restantes | Corregir zona/microzona 11 props restantes con 'Equipetrol Centro' → 0 activas |
+| 184 | renombrar_zonas_display | Renombrar polígonos a nombres display (Faremafu→Equipetrol Oeste, etc.) + retroactivo en props/proyectos |
+| 185 | crear_get_zona_by_gps | Función `get_zona_by_gps(lat, lon)` — PostGIS point-in-polygon para editor de proyectos |
