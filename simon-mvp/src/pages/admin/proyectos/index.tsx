@@ -3,7 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
-import { ZONAS_ADMIN_FILTER } from '@/lib/zonas'
+import { ZONAS_ADMIN_FILTER, ZONAS_PROYECTO_EDITOR } from '@/lib/zonas'
 
 interface Proyecto {
   id_proyecto_master: number
@@ -99,7 +99,7 @@ export default function AdminProyectos() {
   const [creando, setCreando] = useState(false)
   const [nuevoProyecto, setNuevoProyecto] = useState({
     nombre_oficial: '',
-    zona: 'Equipetrol',
+    zona: 'Sin zona',
     latitud: '',
     longitud: ''
   })
@@ -111,7 +111,7 @@ export default function AdminProyectos() {
   const [showDesarrolladorDropdown, setShowDesarrolladorDropdown] = useState(false)
 
   // Zona detectada por GPS
-  const [zonaDetectada, setZonaDetectada] = useState<{zona: string, microzona: string} | null>(null)
+  const [zonaDetectada, setZonaDetectada] = useState<string | null>(null)
 
   useEffect(() => {
     if (authLoading || !admin) return
@@ -364,16 +364,11 @@ export default function AdminProyectos() {
       })
 
       if (data && data.length > 0 && data[0].zona) {
-        setZonaDetectada({
-          zona: data[0].zona,
-          microzona: data[0].microzona || ''
-        })
-        // Auto-asignar zona si está vacía o es genérica
-        if (!nuevoProyecto.zona || nuevoProyecto.zona === 'Equipetrol') {
-          setNuevoProyecto(prev => ({ ...prev, zona: data[0].zona }))
-        }
+        setZonaDetectada(data[0].zona)
+        setNuevoProyecto(prev => ({ ...prev, zona: data[0].zona }))
       } else {
-        setZonaDetectada(null)
+        setZonaDetectada('Fuera de cobertura')
+        setNuevoProyecto(prev => ({ ...prev, zona: 'Sin zona' }))
       }
     } catch (err) {
       console.error('Error detectando zona:', err)
@@ -418,7 +413,7 @@ export default function AdminProyectos() {
     try {
       const insertData: any = {
         nombre_oficial: nuevoProyecto.nombre_oficial.trim(),
-        zona: zonaDetectada?.zona || nuevoProyecto.zona || null,
+        zona: nuevoProyecto.zona || null,
         activo: true
       }
 
@@ -434,10 +429,7 @@ export default function AdminProyectos() {
         insertData.longitud = parseFloat(nuevoProyecto.longitud)
       }
 
-      // Microzona si detectada
-      if (zonaDetectada?.microzona) {
-        insertData.microzona = zonaDetectada.microzona
-      }
+      // proyectos_master no tiene columna microzona — zona ya fue auto-asignada
 
       const { data, error } = await supabase
         .from('proyectos_master')
@@ -450,7 +442,7 @@ export default function AdminProyectos() {
       // Resetear form y cerrar modal
       setNuevoProyecto({
         nombre_oficial: '',
-        zona: 'Equipetrol',
+        zona: 'Sin zona',
         latitud: '',
         longitud: ''
       })
@@ -935,7 +927,7 @@ export default function AdminProyectos() {
                     onChange={(e) => setNuevoProyecto({ ...nuevoProyecto, zona: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                   >
-                    {ZONAS.filter(z => z.id).map((z) => (
+                    {ZONAS_PROYECTO_EDITOR.map((z) => (
                       <option key={z.id} value={z.id}>{z.label}</option>
                     ))}
                   </select>
@@ -974,15 +966,18 @@ export default function AdminProyectos() {
                     />
                   </div>
                 </div>
-                {zonaDetectada ? (
+                {zonaDetectada && zonaDetectada === 'Fuera de cobertura' && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-sm">
+                    <span className="text-amber-700">GPS fuera de cobertura — zona asignada como &quot;Sin zona&quot;</span>
+                  </div>
+                )}
+                {zonaDetectada && zonaDetectada !== 'Fuera de cobertura' && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-sm">
                     <span className="text-green-700">Zona detectada: </span>
-                    <strong className="text-green-800">{zonaDetectada.zona}</strong>
-                    {zonaDetectada.microzona && (
-                      <span className="text-green-600 ml-1">({zonaDetectada.microzona})</span>
-                    )}
+                    <strong className="text-green-800">{zonaDetectada}</strong>
                   </div>
-                ) : (
+                )}
+                {!zonaDetectada && (
                   <p className="text-xs text-slate-500">
                     GPS opcional. Al ingresar coordenadas se detectará la zona automáticamente.
                   </p>
