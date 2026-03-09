@@ -153,7 +153,7 @@ Migraciones 174-183 ejecutadas. Extractor CASO 2 deployado en n8n.
   - [x] Paso 3: Fix `buscar_unidades_reales()` — ILIKE→exact match para zona/microzona (migración 186)
   - [x] Paso 4: Simplificar `zonas.ts` — eliminar `dbAlquiler` (aliases legacy ya no existen en BD)
   - [x] `calcular_posicion_mercado` — ya usa exact match, no necesitó cambios
-  - [ ] 39 proyectos con zona='Sin zona': 38 fuera de polígonos (0 props activas), 1 corregido (Lofty Island). No requieren acción.
+  - [x] 39 proyectos con zona='Sin zona': 38 fuera de polígonos (0 props activas), 1 corregido (Lofty Island). No requieren acción.
 
 ## Referencia
 
