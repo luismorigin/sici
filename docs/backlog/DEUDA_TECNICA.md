@@ -1,27 +1,30 @@
 # Deuda Técnica — SICI
 
-> Extraído de CLAUDE.md el 27 Feb 2026
+> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 9 Mar 2026.
 
-## Merge NO preserva enriquecimientos manuales a `datos_json->amenities`
+## Merge y amenities — RIESGO ACEPTADO (9 Mar 2026)
 
-**Problema:** La función `merge_discovery_enrichment.sql` reconstruye `datos_json->amenities`
-completamente desde `datos_json_enrichment` en cada ejecución. Esto significa que:
+**Problema original:** `merge_discovery_enrichment()` reconstruye `datos_json->'amenities'` desde enrichment cada noche, sobrescribiendo ediciones manuales.
 
-1. Las migraciones 064 (amenities/equipamiento) y 066 (estacionamientos) enriquecen `datos_json->amenities`
-2. Pero el merge nocturno las sobrescribe con los datos originales de enrichment
-3. Solo la columna `estacionamientos` está protegida porque enrichment tiene "sin_confirmar" (texto) que merge ignora
+**Mitigación actual (suficiente):**
+1. Trigger `proteger_amenities_candados()` (migración 116): si hay candado `amenities` o `equipamiento`, restaura valor previo post-merge
+2. `AmenitiesEditor.tsx` auto-activa candados al editar → toda edición manual queda protegida automáticamente
 
-**Campos afectados:**
-- `datos_json->amenities->amenities_confirmados` - Migración 064
-- `datos_json->amenities->amenities_por_verificar` - Migración 064
-- `datos_json->amenities->equipamiento_detectado` - Migración 064
+**Análisis (9 Mar 2026):**
+- 367 props venta activas
+- 249 (68%) con candado amenities/equipamiento → protegidas por trigger
+- 118 (32%) sin candado → nunca fueron editadas manualmente, enrichment produce los mismos datos cada noche
+- Sin enrichment nuevo → merge escribe lo mismo (sin impacto)
+- Con enrichment nuevo → merge escribe datos frescos (comportamiento deseado)
 
-**Campos NO afectados (seguros):**
-- `estacionamientos` (columna) - Migración 066 (merge preserva porque enrichment no tiene número)
-- Campos con `campos_bloqueados` activos
+**Conclusión:** El único caso de pérdida sería editar amenities sin candado, pero el admin auto-activa candados. El riesgo es teórico, no práctico. No requiere cambios adicionales.
 
-**Solución futura:**
-- Modificar merge para verificar `campos_bloqueados->>'amenities'` antes de sobrescribir
-- O crear estructura separada `amenities_enriquecidos` que merge no toque
+## Refactor extractores n8n — PENDIENTE (futuro)
 
-**Estado (28 Feb 2026):** Parcialmente resuelto. La migración 116 agregó el trigger `proteger_amenities_candados()` que protege amenities con candados manuales (`campos_bloqueados`). Sin embargo, amenities sin candado aún se sobrescriben en cada merge. La re-ejecución de migraciones 064 ya no es necesaria para campos protegidos.
+**Problema:** `MEDIA_ZONA_USD_M2` y bounding boxes están hardcodeados en extractores C21/Remax.
+
+**Solución ideal:**
+- `MEDIA_ZONA_USD_M2` debería leerse de BD (snapshots o query) en vez de estar hardcodeado
+- Bounding boxes de `zona_validada_gps` deberían reemplazarse por `get_zona_by_gps()`
+
+**Estado:** Valores actualizados manualmente (9 Mar 2026). Funcional pero requiere actualización manual cuando cambian promedios de zona.
