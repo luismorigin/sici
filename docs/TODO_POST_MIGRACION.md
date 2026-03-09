@@ -129,10 +129,9 @@ Migraciones 174-183 ejecutadas. Extractor CASO 2 deployado en n8n.
 
 ## Pendientes n8n + docs (post migración 184)
 
-- [ ] Actualizar `MEDIA_ZONA_USD_M2` en Extractor C21 v16.5 (n8n) — keys nuevas + valores reales 2026-03-09
-- [ ] Actualizar `MEDIA_ZONA_USD_M2` en Extractor Remax v1.9 (n8n) — keys nuevas + valores reales 2026-03-09
-- [ ] Actualizar `zona_validada_gps` en C21: bounding box produce `"Equipetrol"` → debe ser `"Equipetrol Centro"`
-- [ ] Actualizar `zona_validada_gps` en Remax: bounding box produce `"Equipetrol"` → debe ser `"Equipetrol Centro"`
+- [x] Actualizar `MEDIA_ZONA_USD_M2` en Extractor C21 v16.5 (n8n) — keys nuevas + valores reales 2026-03-09
+- [x] Actualizar `MEDIA_ZONA_USD_M2` en Extractor Remax v1.9 (n8n) — keys nuevas + valores reales 2026-03-09
+- [x] Actualizar `zona_validada_gps` en C21/Remax: agregado `"Equipetrol": 2100` como key genérica en MEDIA_ZONA_USD_M2
 - [x] Actualizar CLAUDE.md con tabla de zonas canónicas post-migración 184
 - [ ] Refactor extractores: `MEDIA_ZONA_USD_M2` debería leerse de la BD (snapshots o query) en vez de estar hardcodeado. Los bounding boxes de `zona_validada_gps` deberían reemplazarse por `get_zona_by_gps()`.
 
