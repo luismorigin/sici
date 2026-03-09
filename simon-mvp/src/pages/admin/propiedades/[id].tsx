@@ -537,6 +537,23 @@ export default function EditarPropiedad() {
             {/* GPS */}
             <section>
               <h2 className="flex items-center text-lg font-semibold text-slate-900 mb-4">Ubicación GPS<Lock campo="gps" /></h2>
+              <div className="mb-3">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Pegar GPS</label>
+                <input type="text" placeholder="Pegar desde Google Maps: -17.768, -63.195"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm"
+                  onChange={(ev) => {
+                    const parts = ev.target.value.split(',').map(s => s.trim())
+                    if (parts.length === 2 && parts[0] && parts[1]) {
+                      const lat = parts[0], lng = parts[1]
+                      if (!isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
+                        e.updateField('latitud', lat)
+                        e.updateField('longitud', lng)
+                        ev.target.value = ''
+                      }
+                    }
+                  }}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Latitud</label>

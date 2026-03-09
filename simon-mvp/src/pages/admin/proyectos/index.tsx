@@ -934,7 +934,28 @@ export default function AdminProyectos() {
                 </div>
 
                 {/* GPS */}
-                <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Pegar GPS
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Pegar desde Google Maps: -17.768, -63.195"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm"
+                    onChange={(e) => {
+                      const parts = e.target.value.split(',').map(s => s.trim())
+                      if (parts.length === 2 && parts[0] && parts[1]) {
+                        const lat = parts[0], lng = parts[1]
+                        if (!isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
+                          setNuevoProyecto(prev => ({ ...prev, latitud: lat, longitud: lng }))
+                          detectarZonaPorGPS(lat, lng)
+                          e.target.value = ''
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-2">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       Latitud
