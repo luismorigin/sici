@@ -142,15 +142,22 @@ Migraciones 174-183 ejecutadas. Extractor CASO 2 deployado en n8n.
   - [x] 24 props corregidas zona/microzona por PostGIS (182 + 183)
   - [x] 45 props fuera de polígonos → excluida_zona (182)
   - [x] 0 props activas con zona='Equipetrol Centro'
-- [ ] Normalización de zonas pendiente (ver `docs/analysis/NORMALIZACION_ZONAS_PROPUESTA.md`)
-  - [ ] Paso 1: Normalizar `proyectos_master.zona` (39 proyectos con zona='Sin zona', 6 con 'Equipetrol Centro')
-  - [ ] Paso 2: Normalizar `propiedades_v2.zona` alquiler (32 props sucias)
-  - [ ] Paso 3: Fix `v_metricas_mercado` + `calcular_posicion_mercado`
-  - [ ] Paso 4: Simplificar `zonas.ts`
+- [x] Normalización de zonas — migración 186 (2026-03-09)
+  - [x] Paso 1a: Lofty Island (PM 2) → zona='Equipetrol Oeste' (manual pre-migración)
+  - [x] Paso 1b: 10 props de 7 proyectos fuera de polígonos → excluida_zona (manual pre-migración)
+  - [x] Paso 1c: 28 props microzona='Equipetrol' → 'Equipetrol Centro' (migración 186)
+  - [x] Paso 1d: 1 prop zona='Villa Brígida' → 'Villa Brigida' (migración 186)
+  - [x] Paso 1e: 6 props alquiler zona=NULL → excluida_zona (fuera de polígonos, migración 186)
+  - [x] Paso 1f: 2 props alquiler microzona=NULL → copiada desde zona (migración 186)
+  - [x] Paso 2: Fix `v_metricas_mercado` — agregar `status = 'completado'` (migración 186)
+  - [x] Paso 3: Fix `buscar_unidades_reales()` — ILIKE→exact match para zona/microzona (migración 186)
+  - [x] Paso 4: Simplificar `zonas.ts` — eliminar `dbAlquiler` (aliases legacy ya no existen en BD)
+  - [x] `calcular_posicion_mercado` — ya usa exact match, no necesitó cambios
+  - [ ] 39 proyectos con zona='Sin zona': 38 fuera de polígonos (0 props activas), 1 corregido (Lofty Island). No requieren acción.
 
 ## Referencia
 
 - Auditoría completa: `docs/analysis/AUDITORIA_PRECIOS_VENTAS.md`
-- Migraciones: `sql/migrations/174_*.sql` .. `185_*.sql`
+- Migraciones: `sql/migrations/174_*.sql` .. `186_*.sql`
 - Filtros de calidad: `docs/reports/FILTROS_CALIDAD_MERCADO.md`
 - Propuesta zonas: `docs/analysis/NORMALIZACION_ZONAS_PROPUESTA.md`

@@ -7,8 +7,7 @@
 
 export interface ZonaCanonica {
   slug: string          // URL-safe identifier (e.g. 'equipetrol_centro')
-  db: string            // Primary BD value for venta (proyectos_master.zona)
-  dbAlquiler: string[]  // All BD values that map here (alquiler dirty names)
+  db: string            // BD value (proyectos_master.zona, propiedades_v2.zona/microzona)
   label: string         // Full display label
   labelCorto: string    // Short label for compact UI (cards, pills)
 }
@@ -17,47 +16,39 @@ export const ZONAS_CANONICAS: ZonaCanonica[] = [
   {
     slug: 'equipetrol_centro',
     db: 'Equipetrol Centro',
-    dbAlquiler: ['Equipetrol Centro', 'Equipetrol', 'Equipetrol Centro'],
     label: 'Equipetrol Centro',
     labelCorto: 'Eq. Centro',
   },
   {
     slug: 'equipetrol_norte',
     db: 'Equipetrol Norte',
-    dbAlquiler: ['Equipetrol Norte', 'Equipetrol Norte/Norte', 'Equipetrol Norte/Sur'],
     label: 'Equipetrol Norte',
     labelCorto: 'Eq. Norte',
   },
   {
     slug: 'sirari',
     db: 'Sirari',
-    dbAlquiler: ['Sirari'],
     label: 'Sirari',
     labelCorto: 'Sirari',
   },
   {
     slug: 'villa_brigida',
     db: 'Villa Brigida',
-    dbAlquiler: ['Villa Brigida', 'Villa Brígida'],
     label: 'Villa Brígida',
     labelCorto: 'V. Brigida',
   },
   {
     slug: 'equipetrol_oeste',
     db: 'Equipetrol Oeste',
-    dbAlquiler: ['Equipetrol Oeste', 'Faremafu'],
     label: 'Equipetrol Oeste',
     labelCorto: 'Eq. Oeste',
   },
 ]
 
-// Build lookup maps once
+// Build lookup map once
 const dbToZona = new Map<string, ZonaCanonica>()
 for (const z of ZONAS_CANONICAS) {
   dbToZona.set(z.db, z)
-  for (const alias of z.dbAlquiler) {
-    dbToZona.set(alias, z)
-  }
 }
 
 /**
@@ -66,7 +57,6 @@ for (const z of ZONAS_CANONICAS) {
  */
 export function displayZona(zona: string | null | undefined): string {
   if (!zona) return 'Otras'
-  // Legacy + current marginal zone names
   if (zona === 'Equipetrol Franja' || zona === 'Eq. 3er Anillo') return 'Eq. 3er Anillo'
   if (zona === 'Sin zona' || zona === 'sin zona') return 'Otras'
   const found = dbToZona.get(zona)
