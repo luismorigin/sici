@@ -133,7 +133,7 @@ Migraciones 174-183 ejecutadas. Extractor CASO 2 deployado en n8n.
 - [ ] Actualizar `MEDIA_ZONA_USD_M2` en Extractor Remax v1.9 (n8n) — keys nuevas + valores reales 2026-03-09
 - [ ] Actualizar `zona_validada_gps` en C21: bounding box produce `"Equipetrol"` → debe ser `"Equipetrol Centro"`
 - [ ] Actualizar `zona_validada_gps` en Remax: bounding box produce `"Equipetrol"` → debe ser `"Equipetrol Centro"`
-- [ ] Actualizar CLAUDE.md con tabla de zonas canónicas post-migración 184
+- [x] Actualizar CLAUDE.md con tabla de zonas canónicas post-migración 184
 - [ ] Refactor extractores: `MEDIA_ZONA_USD_M2` debería leerse de la BD (snapshots o query) en vez de estar hardcodeado. Los bounding boxes de `zona_validada_gps` deberían reemplazarse por `get_zona_by_gps()`.
 
 ## Backlog calidad de datos
