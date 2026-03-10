@@ -53,17 +53,18 @@
 
 ## 3. Hallazgos críticos
 
-### 3a. depende_de_tc — Error sistemático
+### 3a. depende_de_tc vs tipo_cambio_detectado — Campos complementarios
 
-El campo `depende_de_tc` es **100% determinístico** basado en `moneda_original`. Si la moneda original es BOB, depende_de_tc=true. El LLM NO tiene acceso a esta información y hace inferencias erróneas desde el texto.
+Estos dos campos trabajan juntos en el sistema de precios pero tienen fuentes de verdad distintas:
 
-**Decisión: NO incluir `depende_de_tc` en el prompt LLM.** Mantener lógica actual del merge.
+- **`depende_de_tc`** = ¿el precio depende de conversión BOB→USD? Se calcula **determinísticamente** desde `moneda_original`. Si BOB → true, si USD → false. No requiere NLP ni LLM. Error en test: 77% (el LLM ve "$us" en texto y dice false, pero moneda_original=BOB).
+- **`tipo_cambio_detectado`** = ¿QUÉ tipo de cambio usa el vendedor? (paralelo/oficial). Esto sí es textual y el LLM lo detecta bien. Ejemplo: ID 1049 "SOLO EN DOLARES" → `paralelo` con confianza alta, donde el regex tenía `no_especificado`.
 
-### 3b. tipo_cambio_detectado — Valor limitado
+**`precio_normalizado()` necesita ambos**: `depende_de_tc` determina SI hay que normalizar, `tipo_cambio_detectado` determina CON QUÉ TC se normaliza. Son complementarios, no redundantes.
 
-El LLM convierte 10× `no_especificado→NULL`, lo cual es neutral (ambos significan "no se sabe"). Solo 1 caso de nueva información (ID 1049: no_especificado→paralelo). El regex actual ya cubre los casos claros.
-
-**Decisión: Mantener en prompt pero con peso bajo. No sobreescribir valores existentes no-null.**
+**Decisión:**
+- `depende_de_tc`: **Excluir del prompt LLM.** Se calcula desde `moneda_original` en el merge. El LLM no tiene acceso a esa metadata y falla sistemáticamente.
+- `tipo_cambio_detectado`: **Habilitar en producción.** El LLM aporta valor real detectando "solo dólares"=paralelo, "TC 7"=oficial. No sobreescribir valores existentes `paralelo`/`oficial` (solo llenar `no_especificado` y `NULL`).
 
 ### 3c. estado_construccion — Valor ALTO
 
@@ -110,7 +111,7 @@ El LLM convierte 10× `no_especificado→NULL`, lo cual es neutral (ambos signif
 ### Fase 3: Merge update
 1. Modificar `merge_discovery_enrichment_v2()` para consumir LLM output
 2. Prioridad: LLM > Enrichment regex para campos seleccionados
-3. **NUNCA** para: depende_de_tc, precio_usd, area, dorms, baños, GPS
+3. **NUNCA** para: precio_usd, area, dorms, baños, GPS. `depende_de_tc` se calcula determinísticamente en merge (no viene del LLM).
 4. Respetar `campos_bloqueados` siempre
 
 ### Campos habilitados para producción (safe)
@@ -119,6 +120,7 @@ El LLM convierte 10× `no_especificado→NULL`, lo cual es neutral (ambos signif
 |-------|------------------------------|
 | nombre_edificio | confianza alta + match con proyectos_master |
 | estado_construccion | confianza alta solamente |
+| tipo_cambio_detectado | Solo si BD es `no_especificado` o NULL. Nunca sobreescribir paralelo/oficial existente. |
 | piso | rango -2 a 40 |
 | parqueo_incluido | cualquier confianza |
 | parqueo_precio_adicional | rango 0-50k |
@@ -133,7 +135,7 @@ El LLM convierte 10× `no_especificado→NULL`, lo cual es neutral (ambos signif
 
 | Campo | Razón |
 |-------|-------|
-| depende_de_tc | Determinístico por moneda_original. LLM no tiene acceso. |
+| depende_de_tc | Determinístico desde `moneda_original` (BOB→true, USD→false). Se calcula en merge sin NLP. El LLM no tiene acceso a moneda_original y falla 77%. Su campo complementario `tipo_cambio_detectado` SÍ lo extrae el LLM (ver campos habilitados). |
 | precio_usd | Riesgo alto. Regex robusto. |
 | area_total_m2 | Discovery es fuente de verdad. |
 | dormitorios/baños | Discovery es fuente de verdad. |
