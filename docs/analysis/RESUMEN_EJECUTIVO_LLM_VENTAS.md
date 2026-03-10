@@ -78,6 +78,20 @@ Estos dos campos trabajan juntos en el sistema de precios pero tienen fuentes de
 
 `fecha_entrega_estimada`, `piso`, `parqueo_incluido`, `es_multiproyecto` tienen 0 falsos positivos en 30 props. Son campos que el regex no extrae o extrae mal.
 
+### 3e. Amenities y equipamiento — Opción B (solo lectura, fase posterior)
+
+El LLM extrae `amenities_confirmados` y `equipamiento_detectado` pero **no escriben a las columnas directas** `amenidades_edificio` ni `equipamiento_interior`. Se guardan únicamente en `datos_json_enrichment.llm_output` como referencia.
+
+**Estado actual del merge v2.3.0:** Lee amenities/equipamiento del extractor regex (`datos_json_enrichment->amenities`) y los copia a `datos_json.amenities`. No tiene lógica para consumir `llm_output.amenities_confirmados`. Las columnas `amenidades_edificio` y `equipamiento_interior` las escribe el extractor n8n directamente, no el merge.
+
+**Por qué no Opción A ahora:** Las columnas de amenities tienen correcciones manuales acumuladas (auditoría, candados, trigger `proteger_amenities`). Escribir desde el LLM sin validación podría pisar esas correcciones. En el test, todos los casos de amenities dieron `llm_difiere` — el LLM no produce exactamente lo mismo que el regex.
+
+**Prerequisito para Opción A (fase posterior):** Validar precisión del LLM en amenities contra las correcciones manuales existentes antes de escribir a columnas directas. Esto requiere:
+1. Comparar `llm_output.amenities_confirmados` vs `amenidades_edificio` en props con correcciones manuales (campos_bloqueados con amenities)
+2. Medir tasa de acuerdo con las correcciones humanas (no con el regex)
+3. Solo habilitar si el LLM coincide con las correcciones humanas en >90% de los casos
+4. Respetar `proteger_amenities` trigger y `campos_bloqueados` siempre
+
 ---
 
 ## 4. Costo estimado en producción
@@ -127,9 +141,9 @@ Estos dos campos trabajan juntos en el sistema de precios pero tienen fuentes de
 | fecha_entrega_estimada | campo nuevo, siempre escribir |
 | es_multiproyecto | campo nuevo, siempre escribir |
 | plan_pagos_desarrollador | cualquier confianza |
-| amenities_confirmados | en datos_json_enrichment (no en campo directo) |
-| equipamiento_detectado | en datos_json_enrichment (no en campo directo) |
-| descripcion_limpia | en datos_json_enrichment (no en campo directo) |
+| amenities_confirmados | Solo a `datos_json_enrichment.llm_output`. **No escribe a `amenidades_edificio`.** Ver sección 3e. |
+| equipamiento_detectado | Solo a `datos_json_enrichment.llm_output`. **No escribe a `equipamiento_interior`.** Ver sección 3e. |
+| descripcion_limpia | Solo a `datos_json_enrichment.llm_output`. No tiene columna directa. |
 
 ### Campos EXCLUIDOS del LLM
 
@@ -140,6 +154,8 @@ Estos dos campos trabajan juntos en el sistema de precios pero tienen fuentes de
 | area_total_m2 | Discovery es fuente de verdad. |
 | dormitorios/baños | Discovery es fuente de verdad. |
 | latitud/longitud | API GPS es fuente de verdad. |
+| amenidades_edificio | No se escribe desde LLM. Ver sección 3e. |
+| equipamiento_interior | No se escribe desde LLM. Ver sección 3e. |
 
 ---
 
