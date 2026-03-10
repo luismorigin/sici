@@ -145,6 +145,8 @@ async function fetchProyectosMaster(zona) {
 // BUILD PROMPT
 // ═══════════════════════════════════════
 
+const NOMBRE_BASURA = ['venta', 'pre venta', 'preventa', 'departamento', 'en venta', ''];
+
 function buildPrompt(prop, proyectos) {
   const enrichment = prop.datos_json_enrichment || {};
   const descripcion = enrichment.descripcion || '';
@@ -155,6 +157,11 @@ function buildPrompt(prop, proyectos) {
   }
 
   const pmList = proyectos.map(p => `- ${p.nombre_oficial} (ID ${p.id_proyecto_master})`).join('\n');
+
+  const nombreEdificioRaw = prop.nombre_edificio || '';
+  const nombreEdificio = NOMBRE_BASURA.includes(nombreEdificioRaw.toLowerCase().trim())
+    ? 'no detectado'
+    : nombreEdificioRaw;
 
   return `Eres un extractor de datos inmobiliarios para Santa Cruz de la Sierra, Bolivia.
 Extraes datos de páginas web de propiedades en VENTA.
@@ -167,7 +174,7 @@ DATOS YA EXTRAÍDOS (del pipeline regex — pueden tener errores):
 - Área: ${prop.area_total_m2 ? prop.area_total_m2 + ' m²' : 'desconocida'}
 - Dormitorios: ${prop.dormitorios ?? 'desconocido'}
 - Baños: ${prop.banos ?? 'desconocido'}
-- Nombre edificio (regex): ${prop.nombre_edificio || 'no detectado'}
+- Nombre edificio (regex): ${nombreEdificio}
 - Estado construcción (regex): ${prop.estado_construccion || 'no detectado'}
 - Zona GPS: ${prop.zona || 'desconocida'}
 

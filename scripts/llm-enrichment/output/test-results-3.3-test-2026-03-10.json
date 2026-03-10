@@ -3,25 +3,25 @@
   "processed": 30,
   "skipped": 0,
   "errors": 0,
-  "totalTokens": 103590,
+  "totalTokens": 100974,
   "comparisons": {
-    "igual": 288,
-    "llm_agrega": 141,
-    "llm_no_detecta": 4,
-    "llm_difiere": 17
+    "igual": 290,
+    "llm_agrega": 142,
+    "llm_no_detecta": 2,
+    "llm_difiere": 16
   },
   "byField": {
     "nombre_edificio": {
-      "igual": 24,
+      "igual": 28,
       "llm_agrega": 1,
-      "llm_no_detecta": 2,
-      "llm_difiere": 3
+      "llm_no_detecta": 0,
+      "llm_difiere": 1
     },
     "estado_construccion": {
-      "igual": 24,
+      "igual": 23,
       "llm_agrega": 0,
       "llm_no_detecta": 0,
-      "llm_difiere": 6
+      "llm_difiere": 7
     },
     "tipo_cambio_detectado": {
       "igual": 21,
@@ -96,8 +96,8 @@
       "llm_difiere": 0
     },
     "es_multiproyecto": {
-      "igual": 1,
-      "llm_agrega": 29,
+      "igual": 0,
+      "llm_agrega": 30,
       "llm_no_detecta": 0,
       "llm_difiere": 0
     }

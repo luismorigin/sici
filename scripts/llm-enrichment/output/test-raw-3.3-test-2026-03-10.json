@@ -26,17 +26,17 @@
         "precio_negociable": false,
         "solo_tc_paralelo": true
       },
-      "descripcion_limpia": "Monoambiente de 31,20 m² totalmente amoblado y equipado en Condominio SKY LUXIA, Equipetrol. Incluye cama de 2 plazas, sofá cama, roperos empotrados, TV, aire acondicionado, cocina equipada con encimera de 2 hornillas, horno, heladera, mesón desayunador, área de lavado con espacio para lavadora y calefón, baño completo con ducha y box, chapa inteligente, ventana trasera e iluminación natural.",
+      "descripcion_limpia": "Monoambiente en venta en Condominio SKY LUXIA, Equipetrol – 3er Anillo Interno. Superficie: 31,20 m². Totalmente amoblado y excelentemente distribuido. Incluye: cama de 2 plazas, sofá cama, roperos empotrados, televisión, mueble de TV, aire acondicionado. Cocina totalmente equipada con encimera de 2 hornillas, horno, heladera, mesón desayunador, mueblería alta y baja. Área de lavado con espacio para lavadora y calefón instalado. Baño completo con ducha con box, espejo, muebles bajos, bacha moderna. Extras: chapa inteligente, ventana trasera, excelente iluminación natural.",
       "amenities_confirmados": [
+        "Lobby",
         "Piscina",
         "Sauna seco",
         "Sauna a vapor",
         "Sala de reuniones",
-        "Churrasqueras (4)",
+        "4 churrasqueras",
         "Sala de juegos",
         "Sala de TV",
-        "Salón de eventos",
-        "Lobby"
+        "Salón de eventos"
       ],
       "equipamiento_detectado": [
         "Cama de 2 plazas",
@@ -50,11 +50,12 @@
         "Horno",
         "Heladera",
         "Mesón desayunador",
-        "Mueblería alta y baja",
+        "Mueblería cocina alta y baja",
+        "Lavadora (espacio)",
         "Calefón",
         "Ducha con box",
         "Espejo",
-        "Muebles bajos",
+        "Muebles bajos baño",
         "Bacha moderna",
         "Chapa inteligente"
       ]
@@ -62,10 +63,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 3487,
-      "output": 710
+      "input": 3406,
+      "output": 785
     },
-    "elapsed_ms": 6280,
+    "elapsed_ms": 6214,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -217,10 +218,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2672,
+      "input": 2590,
       "output": 493
     },
-    "elapsed_ms": 3645,
+    "elapsed_ms": 3919,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -339,7 +340,7 @@
       "nombre_edificio_confianza": "alta",
       "estado_construccion": "preventa",
       "estado_construccion_confianza": "alta",
-      "fecha_entrega_estimada": "abril 2026",
+      "fecha_entrega_estimada": "2026-04",
       "es_multiproyecto": false,
       "tipo_cambio_detectado": "no_especificado",
       "tipo_cambio_confianza": "media",
@@ -369,17 +370,17 @@
         "Mobiliario de cocina alto y bajo",
         "Calefón a gas",
         "Roperos y vestidores amplios",
-        "Baños con box de vidrio templado y muebles bajos",
+        "Baños con box de vidrio templado, muebles bajos y espejos",
         "Chapas digitales en puertas"
       ]
     },
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2811,
-      "output": 610
+      "input": 2727,
+      "output": 614
     },
-    "elapsed_ms": 5196,
+    "elapsed_ms": 5622,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -475,7 +476,7 @@
       {
         "campo": "fecha_entrega_estimada",
         "valor_bd": "NULL",
-        "valor_llm": "abril 2026",
+        "valor_llm": "2026-04",
         "confianza_llm": null,
         "veredicto": "llm_agrega"
       },
@@ -515,7 +516,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamentos de 1 y 2 dormitorios en pre-venta en Equipetrol. Ubicación: Calle Nicolás Ortiz, esquina C4 Oeste. Arquitectura contemporánea con materiales de alta calidad. Construcción con tecnología antisísmica grado 5. Precios desde $us 109.104. Entrega estimada abril 2026.",
+      "descripcion_limpia": "Departamentos de 1 y 2 dormitorios en pre-venta en Equipetrol, ubicados en Calle Nicolás Ortiz esquina C4 Oeste. Proyecto moderno con arquitectura contemporánea y materiales de alta calidad. Construcción con tecnología antisísmica grado 5. Precios desde $us. 109.104. Entrega estimada abril 2026.",
       "amenities_confirmados": [
         "Piscina",
         "Churrasquera",
@@ -524,21 +525,21 @@
       ],
       "equipamiento_detectado": [
         "Aires acondicionados en dormitorios y living",
-        "Cocina completamente equipada con encimera, horno empotrado, extractor y microondas",
+        "Cocina equipada con encimera, horno empotrado, extractor y microondas",
         "Mobiliario de cocina alto y bajo",
         "Calefón a gas",
         "Roperos y vestidores amplios",
-        "Baños con box de vidrio templado y muebles bajos",
+        "Baños con box de vidrio templado",
         "Chapas digitales en puertas"
       ]
     },
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2811,
-      "output": 595
+      "input": 2727,
+      "output": 590
     },
-    "elapsed_ms": 5605,
+    "elapsed_ms": 4961,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -674,7 +675,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamento en venta en Edificio Sky Eclipse, nuevo a estrenar. Ubicado en Equipetrol, 2do Anillo – Calle Enrique Finot. 95 m² con 2 dormitorios (1 en suite con box de baño) y 2 baños. Cocina amoblada y equipada con heladera, horno empotrado, microondas, encimera y campana extractora. Área de servicio. Amplio living-comedor. Amenities: piscina panorámica, gimnasio equipado, terraza con churrasqueras, salón de eventos, sala de juegos, sala de reuniones y coworking.",
+      "descripcion_limpia": "Departamento en venta en Edificio Sky Eclipse, Equipetrol, 2do Anillo – Calle Enrique Finot. 95 m² con 2 dormitorios (1 en suite con box de baño) y 2 baños. Cocina amoblada y equipada con heladera, horno empotrado, microondas, encimera y campana extractora. Área de servicio. Amplio living-comedor. Amenidades: piscina panorámica, gimnasio equipado, terraza con churrasqueras, salón de eventos, sala de juegos, sala de reuniones y coworking.",
       "amenities_confirmados": [
         "Piscina panorámica",
         "Gimnasio equipado",
@@ -697,10 +698,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2369,
-      "output": 608
+      "input": 2282,
+      "output": 599
     },
-    "elapsed_ms": 4723,
+    "elapsed_ms": 4224,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -836,7 +837,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamento de 2 dormitorios en venta en Edificio Atrium sobre Enrique Finot. Superficie: 95 m². Precio: 1,463,000 BS. 2 dormitorios (1 en suite), 2 baños. Hermosa vista piso 8. Cocina tipo americana totalmente equipada. Todos los ambientes con aire acondicionado. Roperos de techo a piso. Acabado de Lujo. Áreas sociales premium: Piscina en piso 14, churrasquera, gimnasio.",
+      "descripcion_limpia": "Departamento de 2 dormitorios en venta en Edificio Atrium sobre Enrique Finot. Superficie 95 m². 2 dormitorios con 1 en suite, 2 baños. Hermosa vista piso 8. Cocina tipo americana totalmente equipada. Todos los ambientes con aire acondicionado. Roperos de techo a piso. Acabado de lujo. Áreas sociales premium: piscina en piso 14, churrasquera, gimnasio.",
       "amenities_confirmados": [
         "Piscina",
         "Gimnasio",
@@ -851,10 +852,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 3297,
-      "output": 512
+      "input": 3211,
+      "output": 498
     },
-    "elapsed_ms": 4231,
+    "elapsed_ms": 3938,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -976,7 +977,7 @@
       "fecha_entrega_estimada": "diciembre 2026",
       "es_multiproyecto": false,
       "tipo_cambio_detectado": "no_especificado",
-      "tipo_cambio_confianza": "media",
+      "tipo_cambio_confianza": "baja",
       "piso": null,
       "parqueo_incluido": false,
       "parqueo_precio_adicional_usd": null,
@@ -999,10 +1000,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 3319,
-      "output": 410
+      "input": 3232,
+      "output": 411
     },
-    "elapsed_ms": 3031,
+    "elapsed_ms": 4333,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -1022,7 +1023,7 @@
         "campo": "tipo_cambio_detectado",
         "valor_bd": "NULL",
         "valor_llm": "no_especificado",
-        "confianza_llm": "media",
+        "confianza_llm": "baja",
         "veredicto": "llm_agrega"
       },
       {
@@ -1117,7 +1118,7 @@
     "zona": "Equipetrol Centro",
     "url": "https://c21.com.bo/propiedad/91113_en-venta-monoambiente-en-equipetrol",
     "llm_raw": {
-      "nombre_edificio": "Edificio Mururé",
+      "nombre_edificio": "Edificio MURURE",
       "nombre_edificio_confianza": "alta",
       "estado_construccion": "nuevo_a_estrenar",
       "estado_construccion_confianza": "alta",
@@ -1138,7 +1139,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Monoambiente a estrenar en Edificio Mururé, Equipetrol entre 2do y 3er anillo calle 6 la plata. Piso 5. Superficie 38m². Incluye balcón, cocina con mueblería alta y baja, aire acondicionado, baño con box de baño, ropero. Áreas sociales: piscina, 2 churrasqueras, salón de eventos, área de lavandería.",
+      "descripcion_limpia": "Monoambiente a estrenar en Edificio Mururé, Equipetrol entre 2do y 3er anillo calle 6 la plata. Superficie 38m2, piso 5. Cuenta con balcón, cocina con mueblería alta y baja, aire acondicionado, baño con box de baño, ropero. Áreas sociales: piscina, 2 churrasqueras, salón de eventos, área de lavandería.",
       "amenities_confirmados": [
         "Piscina",
         "Churrasqueras",
@@ -1156,17 +1157,17 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 3256,
-      "output": 523
+      "input": 3173,
+      "output": 522
     },
-    "elapsed_ms": 4014,
+    "elapsed_ms": 4895,
     "comparisons": [
       {
         "campo": "nombre_edificio",
         "valor_bd": "Edificio MURURE",
-        "valor_llm": "Edificio Mururé",
+        "valor_llm": "Edificio MURURE",
         "confianza_llm": "alta",
-        "veredicto": "llm_difiere"
+        "veredicto": "igual"
       },
       {
         "campo": "estado_construccion",
@@ -1281,7 +1282,7 @@
       "fecha_entrega_estimada": null,
       "es_multiproyecto": false,
       "tipo_cambio_detectado": "no_especificado",
-      "tipo_cambio_confianza": "alta",
+      "tipo_cambio_confianza": "baja",
       "piso": null,
       "parqueo_incluido": false,
       "parqueo_precio_adicional_usd": null,
@@ -1295,21 +1296,18 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamento de 1 dormitorio en suite con vestidor, 2 baños, 66.10 m². Living-comedor con cocina integrada, cuarto de máquinas, balcones en dormitorio y living. Equipamiento incluido: cocina con encimera, horno, extractor, muebles de cocina y baño, termotanque, aires acondicionados, espejos. Amenidades: piscina semi techada, gimnasio completo, sauna seco y vapor, cowork, 2 salas de reuniones, 2 salones de eventos con churrasqueras, salas de juegos, terraza panorámica, cancha de pádel, mirador con fogateros y vista 360° de la ciudad.",
+      "descripcion_limpia": "Departamento de 1 dormitorio en suite con vestidor, living-comedor con cocina integrada, baño de visitas, cuarto de máquinas. Balcones en dormitorio y living. Equipamiento incluido: cocina con encimera, horno y extractor, muebles de cocina y baño, termotanque, aires acondicionados, box de baño y espejos.",
       "amenities_confirmados": [
         "Piscina semi techada",
         "Gimnasio completo",
-        "Sauna seco",
-        "Sauna vapor",
+        "Sauna seco y vapor",
         "Cowork",
         "Salas de reuniones",
-        "Salones de eventos",
-        "Churrasqueras",
+        "Salones de eventos con churrasqueras",
         "Salas de juegos",
         "Terraza panorámica",
         "Cancha de pádel",
-        "Mirador",
-        "Fogateros"
+        "Mirador con fogateros"
       ],
       "equipamiento_detectado": [
         "Cocina con encimera",
@@ -1319,16 +1317,17 @@
         "Muebles de baño",
         "Termotanque",
         "Aires acondicionados",
+        "Box de baño",
         "Espejos"
       ]
     },
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2535,
-      "output": 688
+      "input": 2448,
+      "output": 599
     },
-    "elapsed_ms": 5387,
+    "elapsed_ms": 4793,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -1348,7 +1347,7 @@
         "campo": "tipo_cambio_detectado",
         "valor_bd": "NULL",
         "valor_llm": "no_especificado",
-        "confianza_llm": "alta",
+        "confianza_llm": "baja",
         "veredicto": "llm_agrega"
       },
       {
@@ -1464,7 +1463,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamento de 1 dormitorio, modelo 1D-A CT. Superficie: 61,68 m². Precio: $us. 112.300. Ubicación: Avenida San Martin, calle 9-A Este, Equipetrol. Acabado de primera calidad con cerradura inteligente, video porteo on-line, muebles de cocina y baño, iluminación LED. Amenidades: piscina, lounge, churrasqueras, salón multiuso, co-work, lavandería. Seguridad: control de acceso, cámaras en cada nivel, casilleros inteligentes, ascensor eco-friendly. Entrega: Diciembre 2025.",
+      "descripcion_limpia": "Departamento de 1 dormitorio, modelo 1D-A CT. Superficie: 61,68 m². Ubicación: Avenida San Martin, calle 9-A Este, Equipetrol. Acabado de primera calidad con cerradura inteligente, video porteo on-line, muebles de cocina y baño, iluminación LED. Amenidades: piscina, lounge, churrasqueras, salón multiuso, co-work, lavandería. Seguridad: control de acceso, cámaras en cada nivel, casilleros inteligentes, ascensor eco-friendly. Entrega: Diciembre 2025.",
       "amenities_confirmados": [
         "Piscina",
         "Lounge",
@@ -1472,28 +1471,29 @@
         "Salón multiuso",
         "Co-work",
         "Lavandería",
-        "Control de acceso",
         "Cámaras de seguridad",
+        "Control de acceso",
         "Casilleros inteligentes",
         "Ascensor eco-friendly"
       ],
       "equipamiento_detectado": [
         "Cerradura inteligente",
         "Video porteo on-line",
-        "Muebles altos y bajos de cocina",
+        "Mueble alto y bajo de cocina",
         "Encimera",
         "Extractor",
         "Mueble bajo del baño",
-        "Iluminación LED de bajo consumo"
+        "Iluminación LED de bajo consumo",
+        "Aplicación del celular"
       ]
     },
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 3380,
-      "output": 659
+      "input": 3298,
+      "output": 656
     },
-    "elapsed_ms": 5584,
+    "elapsed_ms": 5158,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -1615,7 +1615,7 @@
       "fecha_entrega_estimada": null,
       "es_multiproyecto": false,
       "tipo_cambio_detectado": "no_especificado",
-      "tipo_cambio_confianza": "media",
+      "tipo_cambio_confianza": "baja",
       "piso": null,
       "parqueo_incluido": true,
       "parqueo_precio_adicional_usd": null,
@@ -1646,10 +1646,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2589,
-      "output": 488
+      "input": 2512,
+      "output": 489
     },
-    "elapsed_ms": 3681,
+    "elapsed_ms": 3579,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -1669,7 +1669,7 @@
         "campo": "tipo_cambio_detectado",
         "valor_bd": "no_especificado",
         "valor_llm": "no_especificado",
-        "confianza_llm": "media",
+        "confianza_llm": "baja",
         "veredicto": "igual"
       },
       {
@@ -1785,7 +1785,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": true
       },
-      "descripcion_limpia": "Hermoso departamento de 2 dormitorios en suite en exclusivo condominio Edificio Ariaa, Plaza Italia, Equipetrol. Living comedor amplio, escritorio o sala de TV ideal para home office, amplios ambientes con excelente iluminación natural, cocina cerrada funcional y elegante, lavandería, baño de visitas, balcón con hermosa vista. Parqueo bajo techo y baulera incluidos. Aire acondicionado centralizado. Edificio boutique en zona premium rodeado de cafés, restaurantes y servicios. Inversión sólida en zona de alta plusvalía.",
+      "descripcion_limpia": "Hermoso departamento de 2 dormitorios en suite en exclusivo condominio Aria Plaza Italia, Equipetrol. Living comedor amplio, escritorio o sala de TV, amplios ambientes con excelente iluminación natural, cocina cerrada funcional y elegante, lavandería, baño de visitas, balcón con hermosa vista. Parqueo bajo techo y baulera incluidos. Aire acondicionado centralizado. Edificio boutique en zona Plaza Italia rodeado de cafés, restaurantes y servicios premium.",
       "amenities_confirmados": [
         "Aire acondicionado centralizado",
         "Balcón",
@@ -1800,10 +1800,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 3401,
-      "output": 521
+      "input": 3318,
+      "output": 500
     },
-    "elapsed_ms": 11102,
+    "elapsed_ms": 3996,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -1939,7 +1939,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Monoambiente en preventa ubicado en Equipetrol calle 9 A Este. Superficie: 37.05 m². Consta de living comedor, cocina con muebles altos y bajos, cocina encimera y extractor, mueble bajo del baño, balcón a la calle. Edificio con control de acceso, casilleros inteligentes, aplicación propia. Áreas sociales: piscina, lounge, 2 churrasqueras, SUM, sala de entretenimiento, cowork y lavandería.",
+      "descripcion_limpia": "Monoambiente en preventa ubicado en Equipetrol calle 9 A Este. Superficie: 37,05 m². Consta de living comedor, cocina con muebles altos y bajos, cocina encimera y extractor, mueble bajo del baño, balcón a la calle. Edificio con control de acceso, casilleros inteligentes y aplicación propia. Áreas sociales: piscina, lounge, 2 churrasqueras, SUM, sala de entretenimiento, cowork y lavandería.",
       "amenities_confirmados": [
         "Piscina",
         "Lounge",
@@ -1962,10 +1962,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 3307,
+      "input": 3225,
       "output": 583
     },
-    "elapsed_ms": 4411,
+    "elapsed_ms": 4579,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -2101,7 +2101,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Monoambiente amoblado moderno de 42,43 m² en Condominio Sky Plaza Italia, ubicado entre 2do y 3er anillo interno en zona residencial privilegiada. Ambiente amplio con buena iluminación, baño moderno con acabados de calidad, cocina eléctrica equipada con microondas y refrigerador, sofá, aire acondicionado y balcón con vista despejada. Amenidades: piscina, área de descanso, churrasquera con horno eléctrico, sala lounge social, sala multifuncional, mesa de billar y futbolín.",
+      "descripcion_limpia": "Monoambiente amoblado moderno de 42,43 m² en Condominio Sky Plaza Italia, Equipetrol. Ambiente amplio con buena iluminación, baño moderno, cocina eléctrica equipada con microondas y refrigerador, sofá, aire acondicionado y balcón con vista despejada. Ubicado entre 2do y 3er anillo interno en zona residencial privilegiada a minutos de universidades, colegios, hospitales y centros comerciales.",
       "amenities_confirmados": [
         "Piscina",
         "Área de descanso",
@@ -2115,18 +2115,18 @@
         "Cocina eléctrica",
         "Microondas",
         "Refrigerador",
-        "Sofá",
         "Aire acondicionado",
+        "Sofá",
         "Balcón"
       ]
     },
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 3465,
-      "output": 583
+      "input": 3379,
+      "output": 555
     },
-    "elapsed_ms": 4646,
+    "elapsed_ms": 4730,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -2262,10 +2262,9 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamento 104 en Condominio Las Dalias, ubicado en Equipetrol Norte, Calle Las Dalias Nro. 15. Superficie 51.66 m², 1 dormitorio, piso 1. Edificio con 7 plantas de departamentos (10 por piso) y terraza en octavo piso con áreas sociales. Diseño por SOMMET. Precio USD 129,150. Entrega estimada Diciembre 2025.",
+      "descripcion_limpia": "Departamento 104 en Condominio Las Dalias, ubicado en Equipetrol Norte, Calle Las Dalias Nro. 15. Superficie 51.66 m², 1 dormitorio, piso 1. Proyecto con 7 plantas de departamentos, 10 departamentos por piso, terraza en octavo piso con áreas sociales. Diseño por SOMMET. Departamentos iluminados con ambientes funcionales y balcones propios.",
       "amenities_confirmados": [
-        "Terraza en áreas sociales (piso 8)",
-        "Balcones propios"
+        "Terraza en octavo piso con áreas sociales"
       ],
       "equipamiento_detectado": [
         "Aires acondicionados con wifi",
@@ -2285,10 +2284,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 3339,
-      "output": 626
+      "input": 3258,
+      "output": 615
     },
-    "elapsed_ms": 5617,
+    "elapsed_ms": 5408,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -2424,7 +2423,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamento a estrenar de 1 dormitorio en suite con vestidor, balcón amplio con puerta de aislamiento acústico, baño de visita, cocina integrada y equipada, área de lavandería. Ubicado en piso 13 de Sky Eclipse, Equipetrol, pasaje Enrique Finot entre 2do y 3er anillo.",
+      "descripcion_limpia": "Departamento a estrenar de 1 dormitorio en suite con vestidor, balcón amplio con puerta de aislamiento acústico, baño de visita, cocina integrada y equipada, área de lavandería. Ubicado en piso 13 de Sky Eclipse, Equipetrol, Pasaje Enrique Finot entre 2do y 3er anillo.",
       "amenities_confirmados": [
         "Piscina",
         "Deck panorámico",
@@ -2461,10 +2460,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2667,
-      "output": 729
+      "input": 2580,
+      "output": 730
     },
-    "elapsed_ms": 6022,
+    "elapsed_ms": 5943,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -2581,7 +2580,7 @@
     "llm_raw": {
       "nombre_edificio": "Garden Equipetrol",
       "nombre_edificio_confianza": "alta",
-      "estado_construccion": "entrega_inmediata",
+      "estado_construccion": "nuevo_a_estrenar",
       "estado_construccion_confianza": "alta",
       "fecha_entrega_estimada": null,
       "es_multiproyecto": false,
@@ -2600,7 +2599,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamento a estrenar en Edificio Garden Equipetrol, Villa Brígida. 1 dormitorio en suite con closet, cocina moderna, living, baño con box de ducha. Piso 7. Superficie 46.2 m². Precio: $74.900 USD. Se acepta dólares o al tipo de cambio paralelo.",
+      "descripcion_limpia": "Departamento a estrenar en Edificio Garden Equipetrol, Villa Brígida. 1 dormitorio en suite con closet, cocina moderna, living, baño con box de ducha. Piso 7. Superficie 46.2 m². Precio: $us 74.900 (se acepta dólares o al tipo de cambio paralelo).",
       "amenities_confirmados": [
         "Piscina con vista espectacular",
         "Churrasquera",
@@ -2620,10 +2619,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2574,
-      "output": 519
+      "input": 2490,
+      "output": 521
     },
-    "elapsed_ms": 3927,
+    "elapsed_ms": 3880,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -2635,9 +2634,9 @@
       {
         "campo": "estado_construccion",
         "valor_bd": "entrega_inmediata",
-        "valor_llm": "entrega_inmediata",
+        "valor_llm": "nuevo_a_estrenar",
         "confianza_llm": "alta",
-        "veredicto": "igual"
+        "veredicto": "llm_difiere"
       },
       {
         "campo": "tipo_cambio_detectado",
@@ -2745,7 +2744,7 @@
       "fecha_entrega_estimada": null,
       "es_multiproyecto": false,
       "tipo_cambio_detectado": "no_especificado",
-      "tipo_cambio_confianza": "media",
+      "tipo_cambio_confianza": "baja",
       "piso": null,
       "parqueo_incluido": true,
       "parqueo_precio_adicional_usd": null,
@@ -2765,25 +2764,23 @@
         "Churrasquera",
         "Sauna",
         "Salón de eventos",
-        "Seguridad con cámaras en todos los pisos"
+        "Seguridad con cámaras"
       ],
       "equipamiento_detectado": [
-        "Aire acondicionado en todos los ambientes",
-        "Box de vidrio templado en baño",
+        "Aire acondicionado",
+        "Box de vidrio templado",
         "Mueble de lavamanos",
-        "Cocina cerrada",
         "Extractor de cocina",
-        "Muebles superiores e inferiores de cocina",
-        "Área de lavandería"
+        "Muebles de cocina superiores e inferiores"
       ]
     },
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 3346,
-      "output": 604
+      "input": 3263,
+      "output": 573
     },
-    "elapsed_ms": 4946,
+    "elapsed_ms": 4714,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -2803,7 +2800,7 @@
         "campo": "tipo_cambio_detectado",
         "valor_bd": "paralelo",
         "valor_llm": "no_especificado",
-        "confianza_llm": "media",
+        "confianza_llm": "baja",
         "veredicto": "llm_difiere"
       },
       {
@@ -2919,7 +2916,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": true
       },
-      "descripcion_limpia": "Departamento de 1 dormitorio amoblado en Edificio PLATINUM, piso 6. Incluye cocina amoblada y equipada, living-comedor, balcón y parqueo. Acceso a áreas sociales: piscina, churrasqueras y salón social.",
+      "descripcion_limpia": "Departamento de 1 dormitorio amoblado en Edificio Platinum, piso 6. Incluye cocina amoblada y equipada, living-comedor, balcón y parqueo. Acceso a áreas sociales: piscina, churrasqueras y salón social. Ubicado en Equipetrol, 4to anillo Av. Dr Jaime Roman.",
       "amenities_confirmados": [
         "Piscina",
         "Churrasqueras",
@@ -2934,10 +2931,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2383,
-      "output": 440
+      "input": 2299,
+      "output": 463
     },
-    "elapsed_ms": 3047,
+    "elapsed_ms": 3637,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -3073,7 +3070,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamento a estrenar en Edificio Stone II, ubicado en Barrio Brígida. 1 suite, 1 baño, cocina, piso 7 con balcones. Superficie 54.34 m². Amenities: piscina, gimnasio, co-work, churrasqueras, sala de TV, billar.",
+      "descripcion_limpia": "Departamento a estrenar en Edificio Stone II, ubicado en Barrio Brígida. 1 suite, 1 baño, cocina, piso 7, balcones. Superficie 54.34 m². Amenities: piscina, gimnasio, co-work, churrasqueras, sala de TV, billar.",
       "amenities_confirmados": [
         "piscina",
         "gimnasio",
@@ -3083,17 +3080,16 @@
         "billar"
       ],
       "equipamiento_detectado": [
-        "balcones",
-        "cocina"
+        "balcones"
       ]
     },
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2339,
-      "output": 457
+      "input": 2254,
+      "output": 450
     },
-    "elapsed_ms": 3751,
+    "elapsed_ms": 3237,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -3229,7 +3225,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamento en pre venta de 63 m² con 1 dormitorio en suite con walking closet, living comedor, cocina americana, baño de visitas y espacio para lavadora. Ubicado en Luxe Tower en calle Enrique Finot y esquina calle Guemes, Equipetrol Centro.",
+      "descripcion_limpia": "Departamento en pre venta de 63 m² con 1 dormitorio en suite con walking closet, living comedor, cocina americana, baño de visitas y espacio para lavadora. Ubicado en Luxe Tower (By Luxe Design) en calle Enrique Finot y esquina calle Guemes, Equipetrol Centro.",
       "amenities_confirmados": [
         "Chapas digitales Smart",
         "Domótica",
@@ -3249,10 +3245,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 3341,
-      "output": 496
+      "input": 3256,
+      "output": 503
     },
-    "elapsed_ms": 3985,
+    "elapsed_ms": 4267,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -3367,8 +3363,8 @@
     "zona": "Villa Brigida",
     "url": "https://c21.com.bo/propiedad/99490_departamento-en-venta-2-d-equpetrol-norte-av-la-salle",
     "llm_raw": {
-      "nombre_edificio": null,
-      "nombre_edificio_confianza": null,
+      "nombre_edificio": "Condominio Cruz",
+      "nombre_edificio_confianza": "alta",
       "estado_construccion": "entrega_inmediata",
       "estado_construccion_confianza": "alta",
       "fecha_entrega_estimada": null,
@@ -3388,7 +3384,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamento de 2 dormitorios en venta en Av. La Salle, Equipetrol Norte. 91.84 m². 1 suite con walking closet, 2 baños. Full equipado con aire acondicionado, mesón de granito, encimera, extractor, calefón, muebles altos y bajos, roperos empotrados. Áreas comunes: piscina con cascada, churrasquera techada, sauna, seguridad 24/7, ascensor. Última unidad disponible. Oferta válida hasta 15 de febrero.",
+      "descripcion_limpia": "Departamento de 2 dormitorios en venta en Av. La Salle, Equipetrol Norte. Suite con walking closet, 2 baños, 91.84 m². Full equipado con aire acondicionado, mesón de granito, encimera, extractor, calefón, muebles altos y bajos, roperos empotrados. Áreas comunes: piscina con cascada, churrasquera techada, sauna, seguridad 24/7, ascensor. Última unidad disponible. Oferta válida hasta 15 de febrero.",
       "amenities_confirmados": [
         "Piscina con cascada",
         "Churrasquera techada",
@@ -3403,23 +3399,24 @@
         "Extractor",
         "Calefón",
         "Muebles altos y bajos",
-        "Roperos empotrados"
+        "Roperos empotrados",
+        "Walking closet"
       ]
     },
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2550,
-      "output": 571
+      "input": 2466,
+      "output": 581
     },
-    "elapsed_ms": 4225,
+    "elapsed_ms": 4291,
     "comparisons": [
       {
         "campo": "nombre_edificio",
         "valor_bd": "Condominio Cruz",
-        "valor_llm": "NULL",
-        "confianza_llm": null,
-        "veredicto": "llm_no_detecta"
+        "valor_llm": "Condominio Cruz",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
       },
       {
         "campo": "estado_construccion",
@@ -3534,7 +3531,7 @@
       "fecha_entrega_estimada": "Mayo 2026",
       "es_multiproyecto": false,
       "tipo_cambio_detectado": "no_especificado",
-      "tipo_cambio_confianza": "media",
+      "tipo_cambio_confianza": "baja",
       "piso": 1,
       "parqueo_incluido": false,
       "parqueo_precio_adicional_usd": null,
@@ -3548,10 +3545,9 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamento 110 en Condominio Las Dalias, ubicado en Equipetrol Norte, Calle Las Dalias Nro. 15. Superficie 75.23 m², 2 dormitorios, piso 1. Edificio con 7 plantas de departamentos (10 por piso) y terraza en octavo piso con áreas sociales. Diseño por SOMMET. Departamentos iluminados con ambientes funcionales y balcones propios.",
+      "descripcion_limpia": "Departamento 110 en Condominio Las Dalias, ubicado en Equipetrol Norte, Calle Las Dalias Nro. 15. Superficie 75.23 m², 2 dormitorios, piso 1. Proyecto diseñado por SOMMET con 7 plantas de departamentos (10 por piso) y terraza de áreas sociales en octavo piso. Departamentos iluminados con ambientes funcionales y balcones propios.",
       "amenities_confirmados": [
-        "Terraza con áreas sociales",
-        "Balcones propios"
+        "Terraza de áreas sociales"
       ],
       "equipamiento_detectado": [
         "Aires acondicionados con wifi",
@@ -3571,10 +3567,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 3337,
-      "output": 617
+      "input": 3256,
+      "output": 606
     },
-    "elapsed_ms": 5727,
+    "elapsed_ms": 5225,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -3594,7 +3590,7 @@
         "campo": "tipo_cambio_detectado",
         "valor_bd": "NULL",
         "valor_llm": "no_especificado",
-        "confianza_llm": "media",
+        "confianza_llm": "baja",
         "veredicto": "llm_agrega"
       },
       {
@@ -3689,12 +3685,12 @@
     "zona": "Equipetrol Centro",
     "url": "https://c21.com.bo/propiedad/100467_departamento-de-lujo-en-venta-en-equipetrol-condominio-spazios-1",
     "llm_raw": {
-      "nombre_edificio": null,
-      "nombre_edificio_confianza": null,
+      "nombre_edificio": "Edificio Spazios",
+      "nombre_edificio_confianza": "alta",
       "estado_construccion": "nuevo_a_estrenar",
       "estado_construccion_confianza": "alta",
       "fecha_entrega_estimada": null,
-      "es_multiproyecto": null,
+      "es_multiproyecto": false,
       "tipo_cambio_detectado": "paralelo",
       "tipo_cambio_confianza": "alta",
       "piso": 4,
@@ -3708,33 +3704,33 @@
         "descuento_contado_pct": null,
         "acepta_permuta": false,
         "precio_negociable": false,
-        "solo_tc_paralelo": true
+        "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamento de lujo a estrenar en Equipetrol. 3 dormitorios en suite, 165 m² de superficie. Ubicación en fachada principal, piso 4. Precio: $312,717 USD (pago en dólares o TC paralelo).",
+      "descripcion_limpia": "Departamento de lujo a estrenar en Equipetrol. 3 dormitorios en suite, 165 m² de superficie. Ubicación en fachada principal, piso 4. Acceso a áreas sociales: lobby, piscina temperada, 2 churrasqueras, salón de uso común con vista 180 grados, sauna y sala de TV.",
       "amenities_confirmados": [
-        "Lobby",
         "Piscina temperada",
-        "2 churrasqueras",
-        "Salón de uso común con vista 180 grados",
+        "Churrasqueras",
+        "Salón de uso común",
         "Sauna",
-        "Sala de TV"
+        "Sala de TV",
+        "Lobby"
       ],
       "equipamiento_detectado": []
     },
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 3270,
-      "output": 431
+      "input": 3188,
+      "output": 454
     },
-    "elapsed_ms": 3364,
+    "elapsed_ms": 3419,
     "comparisons": [
       {
         "campo": "nombre_edificio",
         "valor_bd": "Edificio Spazios",
-        "valor_llm": "NULL",
-        "confianza_llm": null,
-        "veredicto": "llm_no_detecta"
+        "valor_llm": "Edificio Spazios",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
       },
       {
         "campo": "estado_construccion",
@@ -3816,7 +3812,7 @@
       {
         "campo": "solo_tc_paralelo",
         "valor_bd": "NULL",
-        "valor_llm": "true",
+        "valor_llm": "false",
         "confianza_llm": null,
         "veredicto": "llm_agrega"
       },
@@ -3830,9 +3826,9 @@
       {
         "campo": "es_multiproyecto",
         "valor_bd": "NULL",
-        "valor_llm": "NULL",
+        "valor_llm": "false",
         "confianza_llm": null,
-        "veredicto": "igual"
+        "veredicto": "llm_agrega"
       }
     ]
   },
@@ -3879,10 +3875,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2411,
+      "input": 2326,
       "output": 547
     },
-    "elapsed_ms": 4665,
+    "elapsed_ms": 4822,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -4018,7 +4014,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Proyecto de pre-venta en Equipetrol 2do y 3er anillo. Departamentos de 1 y 2 dormitorios con diseño exclusivo. Superficies desde 52m² hasta 94m². Áreas sociales techadas. Entrega estimada diciembre 2026.",
+      "descripcion_limpia": "Proyecto de pre-venta Sky Level en Equipetrol 2do y 3er anillo. Departamentos de 1 y 2 dormitorios con diseño exclusivo. Superficies desde 52m² hasta 94m². Áreas sociales techadas. Entrega estimada diciembre 2026.",
       "amenities_confirmados": [
         "Áreas sociales techadas"
       ],
@@ -4027,10 +4023,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 3334,
-      "output": 398
+      "input": 3247,
+      "output": 400
     },
-    "elapsed_ms": 2834,
+    "elapsed_ms": 3929,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -4148,7 +4144,7 @@
       "nombre_edificio": "Impera Tower",
       "nombre_edificio_confianza": "alta",
       "estado_construccion": "entrega_inmediata",
-      "estado_construccion_confianza": "media",
+      "estado_construccion_confianza": "alta",
       "fecha_entrega_estimada": null,
       "es_multiproyecto": false,
       "tipo_cambio_detectado": "oficial",
@@ -4166,14 +4162,14 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamento de 74.60 m² en piso 6 con 2 dormitorios (1 suite), cocina americana, todos los ambientes con balcones. Incluye parqueo. Acceso a áreas sociales premium: piscina temperada, churrasqueras equipadas bajo galería cubierta, co-work de lujo, lobby moderno, fogatero en último piso, estación pet-shower.",
+      "descripcion_limpia": "Departamento de 74.60 m² en piso 6 con 2 dormitorios (1 suite), cocina americana, todos los ambientes con balcones. Incluye parqueo. Amenities: piscina temperada, churrasqueras equipadas bajo galería cubierta, co-work de lujo, lobby moderno, fogatero en último piso, estación pet-shower.",
       "amenities_confirmados": [
         "Piscina temperada",
-        "Churrasqueras equipadas bajo galería cubierta",
-        "Co-work con ambientes de lujo",
-        "Lobby exclusivo de diseño moderno",
-        "Fogatero en último piso",
-        "Estación pet-shower"
+        "Churrasqueras equipadas",
+        "Co-work",
+        "Lobby de diseño moderno",
+        "Fogatero",
+        "Pet-shower"
       ],
       "equipamiento_detectado": [
         "Cocina americana",
@@ -4183,10 +4179,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2557,
-      "output": 511
+      "input": 2472,
+      "output": 484
     },
-    "elapsed_ms": 4249,
+    "elapsed_ms": 3901,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -4199,7 +4195,7 @@
         "campo": "estado_construccion",
         "valor_bd": "no_especificado",
         "valor_llm": "entrega_inmediata",
-        "confianza_llm": "media",
+        "confianza_llm": "alta",
         "veredicto": "llm_difiere"
       },
       {
@@ -4301,7 +4297,7 @@
     "zona": "Sirari",
     "url": "https://c21.com.bo/propiedad/101460_departamento-amoblado-de-1-dormitorio-en-venta-en-equipetrol-cond-sirari-palm",
     "llm_raw": {
-      "nombre_edificio": "Edificio Sirari Palm",
+      "nombre_edificio": "Onix Art By EliTe",
       "nombre_edificio_confianza": "alta",
       "estado_construccion": "entrega_inmediata",
       "estado_construccion_confianza": "alta",
@@ -4322,7 +4318,7 @@
         "precio_negociable": false,
         "solo_tc_paralelo": false
       },
-      "descripcion_limpia": "Departamento amoblado de 1 dormitorio en Equipetrol, Condominio Sirari Palm. Superficie: 35.30 m². Cocina amoblada y equipada, living comedor, amplia terraza, baño.",
+      "descripcion_limpia": "Departamento amoblado de 1 dormitorio en venta en Equipetrol, Condominio Sirari Palm. Superficie: 35.30 m². Cocina amoblada y equipada, living comedor, amplia terraza, baño.",
       "amenities_confirmados": [],
       "equipamiento_detectado": [
         "cocina amoblada",
@@ -4333,17 +4329,17 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2389,
-      "output": 399
+      "input": 2309,
+      "output": 404
     },
-    "elapsed_ms": 2939,
+    "elapsed_ms": 3347,
     "comparisons": [
       {
         "campo": "nombre_edificio",
         "valor_bd": "Onix Art By EliTe",
-        "valor_llm": "Edificio Sirari Palm",
+        "valor_llm": "Onix Art By EliTe",
         "confianza_llm": "alta",
-        "veredicto": "llm_difiere"
+        "veredicto": "igual"
       },
       {
         "campo": "estado_construccion",
@@ -4472,17 +4468,17 @@
         "precio_negociable": false,
         "solo_tc_paralelo": true
       },
-      "descripcion_limpia": "SKY EQUINOX – Equipetrol. Ubicado en 4to anillo Equipetrol sobre avenida. Unidades disponibles: monoambientes, 1 dormitorio, 2 dormitorios tipo penthouse. Ideal para renta mensual o Airbnb. Entrega junio 2027. Pago solo al contado en dólares.",
+      "descripcion_limpia": "SKY EQUINOX – Equipetrol. Preventa exclusiva ubicada en 4to anillo Equipetrol sobre avenida. Unidades disponibles: monoambientes, 1 dormitorio, 2 dormitorios tipo penthouse. Ideal para renta mensual o Airbnb. Entrega junio 2027. Pago solo al contado en dólares.",
       "amenities_confirmados": [],
       "equipamiento_detectado": []
     },
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2426,
-      "output": 412
+      "input": 2340,
+      "output": 416
     },
-    "elapsed_ms": 3106,
+    "elapsed_ms": 3493,
     "comparisons": [
       {
         "campo": "nombre_edificio",
@@ -4634,10 +4630,10 @@
     "errores_validacion": [],
     "requiere_revision": false,
     "tokens": {
-      "input": 2446,
+      "input": 2359,
       "output": 442
     },
-    "elapsed_ms": 2713,
+    "elapsed_ms": 3497,
     "comparisons": [
       {
         "campo": "nombre_edificio",

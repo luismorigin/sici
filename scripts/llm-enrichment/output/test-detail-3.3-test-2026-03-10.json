@@ -8,7 +8,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:40:48.263Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
@@ -19,7 +19,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:48.263Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
@@ -30,7 +30,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:48.263Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
@@ -41,7 +41,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:48.263Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
@@ -52,7 +52,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:40:48.263Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
@@ -63,7 +63,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:48.263Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
@@ -74,7 +74,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:48.264Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
@@ -85,7 +85,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:48.264Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
@@ -96,7 +96,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:48.264Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
@@ -107,7 +107,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:48.264Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
@@ -118,7 +118,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:48.264Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
@@ -129,7 +129,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:48.264Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
@@ -140,7 +140,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:40:48.264Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
@@ -151,7 +151,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:48.264Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
@@ -162,40 +162,40 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:40:48.264Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Monoambiente de 31,20 m² totalmente amoblado y equipado en Condominio SKY LUXIA, Equipetrol. Incluye cama de 2 plazas, sofá cama, roperos empotrados, TV, aire acondicionado, cocina equipada con encimera de 2 hornillas, horno, heladera, mesón desayunador, área de lavado con espacio para lavadora y calefón, baño completo con ducha y box, chapa inteligente, ventana trasera e iluminación natural.",
+    "valor_llm": "Monoambiente en venta en Condominio SKY LUXIA, Equipetrol – 3er Anillo Interno. Superficie: 31,20 m². Totalmente amoblado y excelentemente distribuido. Incluye: cama de 2 plazas, sofá cama, roperos empotrados, televisión, mueble de TV, aire acondicionado. Cocina totalmente equipada con encimera de 2 hornillas, horno, heladera, mesón desayunador, mueblería alta y baja. Área de lavado con espacio para lavadora y calefón instalado. Baño completo con ducha con box, espejo, muebles bajos, bacha moderna. Extras: chapa inteligente, ventana trasera, excelente iluminación natural.",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:40:48.264Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
     "campo": "amenities",
     "valor_actual_bd": "Piscina, Sauna/Jacuzzi, Parque Infantil, Terraza/Balcón, Ascensor, Gimnasio, Churrasquera, Lavadero, Recepción",
-    "valor_llm": "Piscina, Sauna seco, Sauna a vapor, Sala de reuniones, Churrasqueras (4), Sala de juegos, Sala de TV, Salón de eventos, Lobby",
+    "valor_llm": "Lobby, Piscina, Sauna seco, Sauna a vapor, Sala de reuniones, 4 churrasqueras, Sala de juegos, Sala de TV, Salón de eventos",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:40:48.264Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 30,
     "campo": "equipamiento",
     "valor_actual_bd": "Aire Acondicionado, Lavandería, Amoblado, Cocina Equipada, Roperos Empotrados, Lavadora, Horno, Calefón",
-    "valor_llm": "Cama de 2 plazas, Sofá cama, Roperos empotrados, Televisión, Mueble de TV, Aire acondicionado, Cocina equipada, Encimera de 2 hornillas, Horno, Heladera, Mesón desayunador, Mueblería alta y baja, Calefón, Ducha con box, Espejo, Muebles bajos, Bacha moderna, Chapa inteligente",
+    "valor_llm": "Cama de 2 plazas, Sofá cama, Roperos empotrados, Televisión, Mueble de TV, Aire acondicionado, Cocina equipada, Encimera de 2 hornillas, Horno, Heladera, Mesón desayunador, Mueblería cocina alta y baja, Lavadora (espacio), Calefón, Ducha con box, Espejo, Muebles bajos baño, Bacha moderna, Chapa inteligente",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:40:48.264Z"
+    "timestamp": "2026-03-10T13:49:09.420Z"
   },
   {
     "id_propiedad": 35,
@@ -206,7 +206,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -217,7 +217,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -228,7 +228,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -239,7 +239,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -250,7 +250,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -261,7 +261,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -272,7 +272,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -283,7 +283,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -294,7 +294,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -305,7 +305,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -316,7 +316,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -327,7 +327,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -338,7 +338,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -349,7 +349,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -360,7 +360,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -371,7 +371,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -382,7 +382,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 35,
@@ -393,7 +393,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:40:53.912Z"
+    "timestamp": "2026-03-10T13:49:15.343Z"
   },
   {
     "id_propiedad": 43,
@@ -404,7 +404,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:01.111Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -415,7 +415,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:01.111Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -426,7 +426,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:01.111Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -437,7 +437,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:01.111Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -448,7 +448,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:01.111Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -459,7 +459,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:01.111Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -470,7 +470,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:01.111Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -481,7 +481,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:01.111Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -492,7 +492,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:01.111Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -503,7 +503,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:01.111Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -514,7 +514,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:01.112Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -525,7 +525,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:01.112Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -536,18 +536,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:01.112Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
     "campo": "fecha_entrega_estimada",
     "valor_actual_bd": "NULL",
-    "valor_llm": "abril 2026",
+    "valor_llm": "2026-04",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:01.112Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -558,7 +558,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:01.112Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -569,7 +569,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:01.112Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
@@ -580,18 +580,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:01.112Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 43,
     "campo": "equipamiento",
     "valor_actual_bd": "Aire Acondicionado, Lavandería, Cocina Equipada, Campana Extractora, Microondas, Horno, Calefón",
-    "valor_llm": "Aires acondicionados en dormitorios y living, Cocina completamente equipada con encimera, horno empotrado, extractor y microondas, Mobiliario de cocina alto y bajo, Calefón a gas, Roperos y vestidores amplios, Baños con box de vidrio templado y muebles bajos, Chapas digitales en puertas",
+    "valor_llm": "Aires acondicionados en dormitorios y living, Cocina completamente equipada con encimera, horno empotrado, extractor y microondas, Mobiliario de cocina alto y bajo, Calefón a gas, Roperos y vestidores amplios, Baños con box de vidrio templado, muebles bajos y espejos, Chapas digitales en puertas",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:01.112Z"
+    "timestamp": "2026-03-10T13:49:22.975Z"
   },
   {
     "id_propiedad": 48,
@@ -602,7 +602,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -613,7 +613,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -624,7 +624,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -635,7 +635,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -646,7 +646,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -657,7 +657,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -668,7 +668,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -679,7 +679,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -690,7 +690,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -701,7 +701,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -712,7 +712,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -723,7 +723,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -734,7 +734,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -745,7 +745,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -756,18 +756,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamentos de 1 y 2 dormitorios en pre-venta en Equipetrol. Ubicación: Calle Nicolás Ortiz, esquina C4 Oeste. Arquitectura contemporánea con materiales de alta calidad. Construcción con tecnología antisísmica grado 5. Precios desde $us 109.104. Entrega estimada abril 2026.",
+    "valor_llm": "Departamentos de 1 y 2 dormitorios en pre-venta en Equipetrol, ubicados en Calle Nicolás Ortiz esquina C4 Oeste. Proyecto moderno con arquitectura contemporánea y materiales de alta calidad. Construcción con tecnología antisísmica grado 5. Precios desde $us. 109.104. Entrega estimada abril 2026.",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
@@ -778,18 +778,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 48,
     "campo": "equipamiento",
     "valor_actual_bd": "Aire Acondicionado, Lavandería, Cocina Equipada, Campana Extractora, Microondas, Horno, Calefón",
-    "valor_llm": "Aires acondicionados en dormitorios y living, Cocina completamente equipada con encimera, horno empotrado, extractor y microondas, Mobiliario de cocina alto y bajo, Calefón a gas, Roperos y vestidores amplios, Baños con box de vidrio templado y muebles bajos, Chapas digitales en puertas",
+    "valor_llm": "Aires acondicionados en dormitorios y living, Cocina equipada con encimera, horno empotrado, extractor y microondas, Mobiliario de cocina alto y bajo, Calefón a gas, Roperos y vestidores amplios, Baños con box de vidrio templado, Chapas digitales en puertas",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:08.721Z"
+    "timestamp": "2026-03-10T13:49:29.939Z"
   },
   {
     "id_propiedad": 59,
@@ -800,7 +800,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -811,7 +811,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -822,7 +822,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -833,7 +833,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -844,7 +844,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -855,7 +855,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -866,7 +866,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -877,7 +877,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -888,7 +888,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -899,7 +899,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -910,7 +910,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -921,7 +921,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -932,7 +932,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -943,7 +943,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -954,18 +954,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento en venta en Edificio Sky Eclipse, nuevo a estrenar. Ubicado en Equipetrol, 2do Anillo – Calle Enrique Finot. 95 m² con 2 dormitorios (1 en suite con box de baño) y 2 baños. Cocina amoblada y equipada con heladera, horno empotrado, microondas, encimera y campana extractora. Área de servicio. Amplio living-comedor. Amenities: piscina panorámica, gimnasio equipado, terraza con churrasqueras, salón de eventos, sala de juegos, sala de reuniones y coworking.",
+    "valor_llm": "Departamento en venta en Edificio Sky Eclipse, Equipetrol, 2do Anillo – Calle Enrique Finot. 95 m² con 2 dormitorios (1 en suite con box de baño) y 2 baños. Cocina amoblada y equipada con heladera, horno empotrado, microondas, encimera y campana extractora. Área de servicio. Amplio living-comedor. Amenidades: piscina panorámica, gimnasio equipado, terraza con churrasqueras, salón de eventos, sala de juegos, sala de reuniones y coworking.",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -976,7 +976,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 59,
@@ -987,7 +987,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:15.449Z"
+    "timestamp": "2026-03-10T13:49:36.166Z"
   },
   {
     "id_propiedad": 101,
@@ -998,7 +998,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.110Z"
   },
   {
     "id_propiedad": 101,
@@ -1009,7 +1009,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1020,7 +1020,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1031,7 +1031,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1042,7 +1042,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1053,7 +1053,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1064,7 +1064,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1075,7 +1075,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1086,7 +1086,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1097,7 +1097,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1108,7 +1108,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1119,7 +1119,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1130,7 +1130,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1141,7 +1141,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1152,18 +1152,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento de 2 dormitorios en venta en Edificio Atrium sobre Enrique Finot. Superficie: 95 m². Precio: 1,463,000 BS. 2 dormitorios (1 en suite), 2 baños. Hermosa vista piso 8. Cocina tipo americana totalmente equipada. Todos los ambientes con aire acondicionado. Roperos de techo a piso. Acabado de Lujo. Áreas sociales premium: Piscina en piso 14, churrasquera, gimnasio.",
+    "valor_llm": "Departamento de 2 dormitorios en venta en Edificio Atrium sobre Enrique Finot. Superficie 95 m². 2 dormitorios con 1 en suite, 2 baños. Hermosa vista piso 8. Cocina tipo americana totalmente equipada. Todos los ambientes con aire acondicionado. Roperos de techo a piso. Acabado de lujo. Áreas sociales premium: piscina en piso 14, churrasquera, gimnasio.",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1174,7 +1174,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 101,
@@ -1185,7 +1185,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:21.685Z"
+    "timestamp": "2026-03-10T13:49:42.111Z"
   },
   {
     "id_propiedad": 183,
@@ -1196,7 +1196,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1207,18 +1207,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
     "campo": "tipo_cambio_detectado",
     "valor_actual_bd": "NULL",
     "valor_llm": "no_especificado",
-    "confianza_llm": "media",
+    "confianza_llm": "baja",
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1229,7 +1229,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1240,7 +1240,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1251,7 +1251,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1262,7 +1262,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1273,7 +1273,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1284,7 +1284,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1295,7 +1295,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1306,7 +1306,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1317,7 +1317,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1328,7 +1328,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1339,7 +1339,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1350,7 +1350,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1361,7 +1361,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 183,
@@ -1372,18 +1372,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:26.720Z"
+    "timestamp": "2026-03-10T13:49:48.447Z"
   },
   {
     "id_propiedad": 234,
     "campo": "nombre_edificio",
     "valor_actual_bd": "Edificio MURURE",
-    "valor_llm": "Edificio Mururé",
+    "valor_llm": "Edificio MURURE",
     "confianza_llm": "alta",
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
-    "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "veredicto": "igual",
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1394,7 +1394,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1405,7 +1405,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1416,7 +1416,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1427,7 +1427,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1438,7 +1438,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1449,7 +1449,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1460,7 +1460,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1471,7 +1471,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1482,7 +1482,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1493,7 +1493,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1504,7 +1504,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1515,7 +1515,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1526,7 +1526,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1537,18 +1537,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Monoambiente a estrenar en Edificio Mururé, Equipetrol entre 2do y 3er anillo calle 6 la plata. Piso 5. Superficie 38m². Incluye balcón, cocina con mueblería alta y baja, aire acondicionado, baño con box de baño, ropero. Áreas sociales: piscina, 2 churrasqueras, salón de eventos, área de lavandería.",
+    "valor_llm": "Monoambiente a estrenar en Edificio Mururé, Equipetrol entre 2do y 3er anillo calle 6 la plata. Superficie 38m2, piso 5. Cuenta con balcón, cocina con mueblería alta y baja, aire acondicionado, baño con box de baño, ropero. Áreas sociales: piscina, 2 churrasqueras, salón de eventos, área de lavandería.",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1559,7 +1559,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 234,
@@ -1570,7 +1570,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:32.738Z"
+    "timestamp": "2026-03-10T13:49:55.343Z"
   },
   {
     "id_propiedad": 296,
@@ -1581,7 +1581,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
@@ -1592,18 +1592,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
     "campo": "tipo_cambio_detectado",
     "valor_actual_bd": "NULL",
     "valor_llm": "no_especificado",
-    "confianza_llm": "alta",
+    "confianza_llm": "baja",
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
@@ -1614,7 +1614,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
@@ -1625,7 +1625,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
@@ -1636,7 +1636,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
@@ -1647,7 +1647,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
@@ -1658,7 +1658,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
@@ -1669,7 +1669,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
@@ -1680,7 +1680,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
@@ -1691,7 +1691,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
@@ -1702,7 +1702,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
@@ -1713,7 +1713,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
@@ -1724,7 +1724,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
@@ -1735,40 +1735,40 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento de 1 dormitorio en suite con vestidor, 2 baños, 66.10 m². Living-comedor con cocina integrada, cuarto de máquinas, balcones en dormitorio y living. Equipamiento incluido: cocina con encimera, horno, extractor, muebles de cocina y baño, termotanque, aires acondicionados, espejos. Amenidades: piscina semi techada, gimnasio completo, sauna seco y vapor, cowork, 2 salas de reuniones, 2 salones de eventos con churrasqueras, salas de juegos, terraza panorámica, cancha de pádel, mirador con fogateros y vista 360° de la ciudad.",
+    "valor_llm": "Departamento de 1 dormitorio en suite con vestidor, living-comedor con cocina integrada, baño de visitas, cuarto de máquinas. Balcones en dormitorio y living. Equipamiento incluido: cocina con encimera, horno y extractor, muebles de cocina y baño, termotanque, aires acondicionados, box de baño y espejos.",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
     "campo": "amenities",
     "valor_actual_bd": "Piscina, Área Social, Ascensor, Gimnasio, Churrasquera, Salón de Eventos, Co-working, Sauna/Jacuzzi, Terraza/Balcón, Seguridad 24/7",
-    "valor_llm": "Piscina semi techada, Gimnasio completo, Sauna seco, Sauna vapor, Cowork, Salas de reuniones, Salones de eventos, Churrasqueras, Salas de juegos, Terraza panorámica, Cancha de pádel, Mirador, Fogateros",
+    "valor_llm": "Piscina semi techada, Gimnasio completo, Sauna seco y vapor, Cowork, Salas de reuniones, Salones de eventos con churrasqueras, Salas de juegos, Terraza panorámica, Cancha de pádel, Mirador con fogateros",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 296,
     "campo": "equipamiento",
     "valor_actual_bd": "Cocina Equipada, Aire Acondicionado, Roperos Empotrados, Baño con Box, Campana Extractora, Lavadora, Horno",
-    "valor_llm": "Cocina con encimera, Horno, Extractor, Muebles de cocina, Muebles de baño, Termotanque, Aires acondicionados, Espejos",
+    "valor_llm": "Cocina con encimera, Horno, Extractor, Muebles de cocina, Muebles de baño, Termotanque, Aires acondicionados, Box de baño, Espejos",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:40.130Z"
+    "timestamp": "2026-03-10T13:50:02.141Z"
   },
   {
     "id_propiedad": 370,
@@ -1779,7 +1779,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
@@ -1790,7 +1790,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
@@ -1801,7 +1801,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
@@ -1812,7 +1812,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
@@ -1823,7 +1823,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
@@ -1834,7 +1834,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
@@ -1845,7 +1845,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
@@ -1856,7 +1856,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
@@ -1867,7 +1867,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
@@ -1878,7 +1878,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
@@ -1889,7 +1889,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
@@ -1900,7 +1900,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
@@ -1911,7 +1911,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
@@ -1922,7 +1922,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
@@ -1933,40 +1933,40 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento de 1 dormitorio, modelo 1D-A CT. Superficie: 61,68 m². Precio: $us. 112.300. Ubicación: Avenida San Martin, calle 9-A Este, Equipetrol. Acabado de primera calidad con cerradura inteligente, video porteo on-line, muebles de cocina y baño, iluminación LED. Amenidades: piscina, lounge, churrasqueras, salón multiuso, co-work, lavandería. Seguridad: control de acceso, cámaras en cada nivel, casilleros inteligentes, ascensor eco-friendly. Entrega: Diciembre 2025.",
+    "valor_llm": "Departamento de 1 dormitorio, modelo 1D-A CT. Superficie: 61,68 m². Ubicación: Avenida San Martin, calle 9-A Este, Equipetrol. Acabado de primera calidad con cerradura inteligente, video porteo on-line, muebles de cocina y baño, iluminación LED. Amenidades: piscina, lounge, churrasqueras, salón multiuso, co-work, lavandería. Seguridad: control de acceso, cámaras en cada nivel, casilleros inteligentes, ascensor eco-friendly. Entrega: Diciembre 2025.",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
     "campo": "amenities",
     "valor_actual_bd": "Piscina, Pet Friendly, Área Social, Estacionamiento para Visitas, Ascensor, Recepción, Churrasquera, Seguridad 24/7",
-    "valor_llm": "Piscina, Lounge, Churrasqueras, Salón multiuso, Co-work, Lavandería, Control de acceso, Cámaras de seguridad, Casilleros inteligentes, Ascensor eco-friendly",
+    "valor_llm": "Piscina, Lounge, Churrasqueras, Salón multiuso, Co-work, Lavandería, Cámaras de seguridad, Control de acceso, Casilleros inteligentes, Ascensor eco-friendly",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 370,
     "campo": "equipamiento",
     "valor_actual_bd": "Lavandería, Campana Extractora",
-    "valor_llm": "Cerradura inteligente, Video porteo on-line, Muebles altos y bajos de cocina, Encimera, Extractor, Mueble bajo del baño, Iluminación LED de bajo consumo",
+    "valor_llm": "Cerradura inteligente, Video porteo on-line, Mueble alto y bajo de cocina, Encimera, Extractor, Mueble bajo del baño, Iluminación LED de bajo consumo, Aplicación del celular",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:47.724Z"
+    "timestamp": "2026-03-10T13:50:09.303Z"
   },
   {
     "id_propiedad": 418,
@@ -1977,7 +1977,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -1988,18 +1988,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
     "campo": "tipo_cambio_detectado",
     "valor_actual_bd": "no_especificado",
     "valor_llm": "no_especificado",
-    "confianza_llm": "media",
+    "confianza_llm": "baja",
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2010,7 +2010,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2021,7 +2021,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2032,7 +2032,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2043,7 +2043,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2054,7 +2054,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2065,7 +2065,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2076,7 +2076,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2087,7 +2087,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2098,7 +2098,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2109,7 +2109,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2120,7 +2120,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2131,7 +2131,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2142,7 +2142,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2153,7 +2153,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 418,
@@ -2164,7 +2164,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:41:53.410Z"
+    "timestamp": "2026-03-10T13:50:14.882Z"
   },
   {
     "id_propiedad": 450,
@@ -2175,7 +2175,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2186,7 +2186,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2197,7 +2197,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2208,7 +2208,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2219,7 +2219,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2230,7 +2230,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2241,7 +2241,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2252,7 +2252,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2263,7 +2263,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2274,7 +2274,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2285,7 +2285,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2296,7 +2296,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2307,7 +2307,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2318,7 +2318,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2329,18 +2329,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Hermoso departamento de 2 dormitorios en suite en exclusivo condominio Edificio Ariaa, Plaza Italia, Equipetrol. Living comedor amplio, escritorio o sala de TV ideal para home office, amplios ambientes con excelente iluminación natural, cocina cerrada funcional y elegante, lavandería, baño de visitas, balcón con hermosa vista. Parqueo bajo techo y baulera incluidos. Aire acondicionado centralizado. Edificio boutique en zona premium rodeado de cafés, restaurantes y servicios. Inversión sólida en zona de alta plusvalía.",
+    "valor_llm": "Hermoso departamento de 2 dormitorios en suite en exclusivo condominio Aria Plaza Italia, Equipetrol. Living comedor amplio, escritorio o sala de TV, amplios ambientes con excelente iluminación natural, cocina cerrada funcional y elegante, lavandería, baño de visitas, balcón con hermosa vista. Parqueo bajo techo y baulera incluidos. Aire acondicionado centralizado. Edificio boutique en zona Plaza Italia rodeado de cafés, restaurantes y servicios premium.",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2351,7 +2351,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 450,
@@ -2362,7 +2362,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:06.568Z"
+    "timestamp": "2026-03-10T13:50:20.883Z"
   },
   {
     "id_propiedad": 455,
@@ -2373,7 +2373,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:12.984Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2384,7 +2384,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2395,7 +2395,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2406,7 +2406,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2417,7 +2417,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2428,7 +2428,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2439,7 +2439,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2450,7 +2450,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2461,7 +2461,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2472,7 +2472,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2483,7 +2483,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2494,7 +2494,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2505,7 +2505,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2516,7 +2516,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2527,18 +2527,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Monoambiente en preventa ubicado en Equipetrol calle 9 A Este. Superficie: 37.05 m². Consta de living comedor, cocina con muebles altos y bajos, cocina encimera y extractor, mueble bajo del baño, balcón a la calle. Edificio con control de acceso, casilleros inteligentes, aplicación propia. Áreas sociales: piscina, lounge, 2 churrasqueras, SUM, sala de entretenimiento, cowork y lavandería.",
+    "valor_llm": "Monoambiente en preventa ubicado en Equipetrol calle 9 A Este. Superficie: 37,05 m². Consta de living comedor, cocina con muebles altos y bajos, cocina encimera y extractor, mueble bajo del baño, balcón a la calle. Edificio con control de acceso, casilleros inteligentes y aplicación propia. Áreas sociales: piscina, lounge, 2 churrasqueras, SUM, sala de entretenimiento, cowork y lavandería.",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2549,7 +2549,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 455,
@@ -2560,7 +2560,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:12.985Z"
+    "timestamp": "2026-03-10T13:50:27.464Z"
   },
   {
     "id_propiedad": 465,
@@ -2571,7 +2571,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2582,7 +2582,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2593,7 +2593,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2604,7 +2604,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2615,7 +2615,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2626,7 +2626,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2637,7 +2637,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2648,7 +2648,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2659,7 +2659,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2670,7 +2670,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2681,7 +2681,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2692,7 +2692,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2703,7 +2703,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2714,7 +2714,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2725,18 +2725,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:19.636Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Monoambiente amoblado moderno de 42,43 m² en Condominio Sky Plaza Italia, ubicado entre 2do y 3er anillo interno en zona residencial privilegiada. Ambiente amplio con buena iluminación, baño moderno con acabados de calidad, cocina eléctrica equipada con microondas y refrigerador, sofá, aire acondicionado y balcón con vista despejada. Amenidades: piscina, área de descanso, churrasquera con horno eléctrico, sala lounge social, sala multifuncional, mesa de billar y futbolín.",
+    "valor_llm": "Monoambiente amoblado moderno de 42,43 m² en Condominio Sky Plaza Italia, Equipetrol. Ambiente amplio con buena iluminación, baño moderno, cocina eléctrica equipada con microondas y refrigerador, sofá, aire acondicionado y balcón con vista despejada. Ubicado entre 2do y 3er anillo interno en zona residencial privilegiada a minutos de universidades, colegios, hospitales y centros comerciales.",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:19.637Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
@@ -2747,18 +2747,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:19.637Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 465,
     "campo": "equipamiento",
     "valor_actual_bd": "Amoblado, Lavandería, Aire Acondicionado, Cocina Equipada, Microondas, Horno",
-    "valor_llm": "Cocina eléctrica, Microondas, Refrigerador, Sofá, Aire acondicionado, Balcón",
+    "valor_llm": "Cocina eléctrica, Microondas, Refrigerador, Aire acondicionado, Sofá, Balcón",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:19.637Z"
+    "timestamp": "2026-03-10T13:50:34.198Z"
   },
   {
     "id_propiedad": 470,
@@ -2769,7 +2769,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.613Z"
   },
   {
     "id_propiedad": 470,
@@ -2780,7 +2780,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.613Z"
   },
   {
     "id_propiedad": 470,
@@ -2791,7 +2791,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.613Z"
   },
   {
     "id_propiedad": 470,
@@ -2802,7 +2802,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.613Z"
   },
   {
     "id_propiedad": 470,
@@ -2813,7 +2813,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.613Z"
   },
   {
     "id_propiedad": 470,
@@ -2824,7 +2824,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.613Z"
   },
   {
     "id_propiedad": 470,
@@ -2835,7 +2835,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.613Z"
   },
   {
     "id_propiedad": 470,
@@ -2846,7 +2846,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.613Z"
   },
   {
     "id_propiedad": 470,
@@ -2857,7 +2857,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.614Z"
   },
   {
     "id_propiedad": 470,
@@ -2868,7 +2868,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.614Z"
   },
   {
     "id_propiedad": 470,
@@ -2879,7 +2879,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.614Z"
   },
   {
     "id_propiedad": 470,
@@ -2890,7 +2890,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.614Z"
   },
   {
     "id_propiedad": 470,
@@ -2901,7 +2901,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.614Z"
   },
   {
     "id_propiedad": 470,
@@ -2912,7 +2912,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.614Z"
   },
   {
     "id_propiedad": 470,
@@ -2923,29 +2923,29 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.614Z"
   },
   {
     "id_propiedad": 470,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento 104 en Condominio Las Dalias, ubicado en Equipetrol Norte, Calle Las Dalias Nro. 15. Superficie 51.66 m², 1 dormitorio, piso 1. Edificio con 7 plantas de departamentos (10 por piso) y terraza en octavo piso con áreas sociales. Diseño por SOMMET. Precio USD 129,150. Entrega estimada Diciembre 2025.",
+    "valor_llm": "Departamento 104 en Condominio Las Dalias, ubicado en Equipetrol Norte, Calle Las Dalias Nro. 15. Superficie 51.66 m², 1 dormitorio, piso 1. Proyecto con 7 plantas de departamentos, 10 departamentos por piso, terraza en octavo piso con áreas sociales. Diseño por SOMMET. Departamentos iluminados con ambientes funcionales y balcones propios.",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.614Z"
   },
   {
     "id_propiedad": 470,
     "campo": "amenities",
     "valor_actual_bd": "Terraza/Balcón",
-    "valor_llm": "Terraza en áreas sociales (piso 8), Balcones propios",
+    "valor_llm": "Terraza en octavo piso con áreas sociales",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.614Z"
   },
   {
     "id_propiedad": 470,
@@ -2956,7 +2956,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:27.259Z"
+    "timestamp": "2026-03-10T13:50:41.614Z"
   },
   {
     "id_propiedad": 479,
@@ -2967,7 +2967,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -2978,7 +2978,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -2989,7 +2989,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -3000,7 +3000,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -3011,7 +3011,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -3022,7 +3022,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -3033,7 +3033,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -3044,7 +3044,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -3055,7 +3055,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -3066,7 +3066,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -3077,7 +3077,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -3088,7 +3088,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -3099,7 +3099,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -3110,7 +3110,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -3121,18 +3121,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento a estrenar de 1 dormitorio en suite con vestidor, balcón amplio con puerta de aislamiento acústico, baño de visita, cocina integrada y equipada, área de lavandería. Ubicado en piso 13 de Sky Eclipse, Equipetrol, pasaje Enrique Finot entre 2do y 3er anillo.",
+    "valor_llm": "Departamento a estrenar de 1 dormitorio en suite con vestidor, balcón amplio con puerta de aislamiento acústico, baño de visita, cocina integrada y equipada, área de lavandería. Ubicado en piso 13 de Sky Eclipse, Equipetrol, Pasaje Enrique Finot entre 2do y 3er anillo.",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -3143,7 +3143,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 479,
@@ -3154,7 +3154,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:35.290Z"
+    "timestamp": "2026-03-10T13:50:49.561Z"
   },
   {
     "id_propiedad": 519,
@@ -3165,18 +3165,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
     "campo": "estado_construccion",
     "valor_actual_bd": "entrega_inmediata",
-    "valor_llm": "entrega_inmediata",
+    "valor_llm": "nuevo_a_estrenar",
     "confianza_llm": "alta",
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
-    "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "veredicto": "llm_difiere",
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3187,7 +3187,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3198,7 +3198,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3209,7 +3209,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3220,7 +3220,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3231,7 +3231,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3242,7 +3242,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3253,7 +3253,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3264,7 +3264,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3275,7 +3275,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3286,7 +3286,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3297,7 +3297,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3308,7 +3308,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3319,18 +3319,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento a estrenar en Edificio Garden Equipetrol, Villa Brígida. 1 dormitorio en suite con closet, cocina moderna, living, baño con box de ducha. Piso 7. Superficie 46.2 m². Precio: $74.900 USD. Se acepta dólares o al tipo de cambio paralelo.",
+    "valor_llm": "Departamento a estrenar en Edificio Garden Equipetrol, Villa Brígida. 1 dormitorio en suite con closet, cocina moderna, living, baño con box de ducha. Piso 7. Superficie 46.2 m². Precio: $us 74.900 (se acepta dólares o al tipo de cambio paralelo).",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3341,7 +3341,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 519,
@@ -3352,7 +3352,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:41.227Z"
+    "timestamp": "2026-03-10T13:50:55.442Z"
   },
   {
     "id_propiedad": 530,
@@ -3363,7 +3363,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
@@ -3374,18 +3374,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
     "campo": "tipo_cambio_detectado",
     "valor_actual_bd": "paralelo",
     "valor_llm": "no_especificado",
-    "confianza_llm": "media",
+    "confianza_llm": "baja",
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
@@ -3396,7 +3396,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
@@ -3407,7 +3407,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
@@ -3418,7 +3418,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
@@ -3429,7 +3429,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
@@ -3440,7 +3440,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
@@ -3451,7 +3451,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
@@ -3462,7 +3462,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
@@ -3473,7 +3473,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
@@ -3484,7 +3484,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
@@ -3495,7 +3495,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
@@ -3506,7 +3506,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
@@ -3517,7 +3517,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
@@ -3528,29 +3528,29 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
     "campo": "amenities",
     "valor_actual_bd": "Área Social, Piscina, Churrasquera, Salón de Eventos, Seguridad 24/7, Sauna/Jacuzzi, Terraza/Balcón, Estacionamiento para Visitas",
-    "valor_llm": "Piscina, Churrasquera, Sauna, Salón de eventos, Seguridad con cámaras en todos los pisos",
+    "valor_llm": "Piscina, Churrasquera, Sauna, Salón de eventos, Seguridad con cámaras",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 530,
     "campo": "equipamiento",
     "valor_actual_bd": "Aire Acondicionado, Lavandería, Roperos Empotrados, Campana Extractora",
-    "valor_llm": "Aire acondicionado en todos los ambientes, Box de vidrio templado en baño, Mueble de lavamanos, Cocina cerrada, Extractor de cocina, Muebles superiores e inferiores de cocina, Área de lavandería",
+    "valor_llm": "Aire acondicionado, Box de vidrio templado, Mueble de lavamanos, Extractor de cocina, Muebles de cocina superiores e inferiores",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:48.187Z"
+    "timestamp": "2026-03-10T13:51:02.157Z"
   },
   {
     "id_propiedad": 559,
@@ -3561,7 +3561,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3572,7 +3572,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3583,7 +3583,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3594,7 +3594,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3605,7 +3605,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3616,7 +3616,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3627,7 +3627,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3638,7 +3638,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3649,7 +3649,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3660,7 +3660,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_no_detecta",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3671,7 +3671,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3682,7 +3682,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3693,7 +3693,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3704,7 +3704,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3715,18 +3715,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento de 1 dormitorio amoblado en Edificio PLATINUM, piso 6. Incluye cocina amoblada y equipada, living-comedor, balcón y parqueo. Acceso a áreas sociales: piscina, churrasqueras y salón social.",
+    "valor_llm": "Departamento de 1 dormitorio amoblado en Edificio Platinum, piso 6. Incluye cocina amoblada y equipada, living-comedor, balcón y parqueo. Acceso a áreas sociales: piscina, churrasqueras y salón social. Ubicado en Equipetrol, 4to anillo Av. Dr Jaime Roman.",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3737,7 +3737,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 559,
@@ -3748,7 +3748,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:53.249Z"
+    "timestamp": "2026-03-10T13:51:07.796Z"
   },
   {
     "id_propiedad": 569,
@@ -3759,7 +3759,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.039Z"
   },
   {
     "id_propiedad": 569,
@@ -3770,7 +3770,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
@@ -3781,7 +3781,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
@@ -3792,7 +3792,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
@@ -3803,7 +3803,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
@@ -3814,7 +3814,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
@@ -3825,7 +3825,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
@@ -3836,7 +3836,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
@@ -3847,7 +3847,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
@@ -3858,7 +3858,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_no_detecta",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
@@ -3869,7 +3869,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
@@ -3880,7 +3880,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
@@ -3891,7 +3891,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
@@ -3902,7 +3902,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
@@ -3913,18 +3913,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento a estrenar en Edificio Stone II, ubicado en Barrio Brígida. 1 suite, 1 baño, cocina, piso 7 con balcones. Superficie 54.34 m². Amenities: piscina, gimnasio, co-work, churrasqueras, sala de TV, billar.",
+    "valor_llm": "Departamento a estrenar en Edificio Stone II, ubicado en Barrio Brígida. 1 suite, 1 baño, cocina, piso 7, balcones. Superficie 54.34 m². Amenities: piscina, gimnasio, co-work, churrasqueras, sala de TV, billar.",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
@@ -3935,18 +3935,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 569,
     "campo": "equipamiento",
     "valor_actual_bd": "NULL",
-    "valor_llm": "balcones, cocina",
+    "valor_llm": "balcones",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:42:59.015Z"
+    "timestamp": "2026-03-10T13:51:13.040Z"
   },
   {
     "id_propiedad": 574,
@@ -3957,7 +3957,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -3968,7 +3968,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -3979,7 +3979,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -3990,7 +3990,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -4001,7 +4001,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -4012,7 +4012,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -4023,7 +4023,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -4034,7 +4034,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -4045,7 +4045,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -4056,7 +4056,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -4067,7 +4067,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -4078,7 +4078,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -4089,7 +4089,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -4100,7 +4100,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -4111,18 +4111,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento en pre venta de 63 m² con 1 dormitorio en suite con walking closet, living comedor, cocina americana, baño de visitas y espacio para lavadora. Ubicado en Luxe Tower en calle Enrique Finot y esquina calle Guemes, Equipetrol Centro.",
+    "valor_llm": "Departamento en pre venta de 63 m² con 1 dormitorio en suite con walking closet, living comedor, cocina americana, baño de visitas y espacio para lavadora. Ubicado en Luxe Tower (By Luxe Design) en calle Enrique Finot y esquina calle Guemes, Equipetrol Centro.",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -4133,7 +4133,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 574,
@@ -4144,18 +4144,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:05.002Z"
+    "timestamp": "2026-03-10T13:51:19.311Z"
   },
   {
     "id_propiedad": 611,
     "campo": "nombre_edificio",
     "valor_actual_bd": "Condominio Cruz",
-    "valor_llm": "NULL",
-    "confianza_llm": null,
+    "valor_llm": "Condominio Cruz",
+    "confianza_llm": "alta",
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
-    "veredicto": "llm_no_detecta",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "veredicto": "igual",
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4166,7 +4166,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4177,7 +4177,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4188,7 +4188,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4199,7 +4199,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4210,7 +4210,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4221,7 +4221,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4232,7 +4232,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4243,7 +4243,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4254,7 +4254,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4265,7 +4265,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4276,7 +4276,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4287,7 +4287,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4298,7 +4298,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4309,18 +4309,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento de 2 dormitorios en venta en Av. La Salle, Equipetrol Norte. 91.84 m². 1 suite con walking closet, 2 baños. Full equipado con aire acondicionado, mesón de granito, encimera, extractor, calefón, muebles altos y bajos, roperos empotrados. Áreas comunes: piscina con cascada, churrasquera techada, sauna, seguridad 24/7, ascensor. Última unidad disponible. Oferta válida hasta 15 de febrero.",
+    "valor_llm": "Departamento de 2 dormitorios en venta en Av. La Salle, Equipetrol Norte. Suite con walking closet, 2 baños, 91.84 m². Full equipado con aire acondicionado, mesón de granito, encimera, extractor, calefón, muebles altos y bajos, roperos empotrados. Áreas comunes: piscina con cascada, churrasquera techada, sauna, seguridad 24/7, ascensor. Última unidad disponible. Oferta válida hasta 15 de febrero.",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
@@ -4331,18 +4331,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 611,
     "campo": "equipamiento",
     "valor_actual_bd": "Aire Acondicionado, Roperos Empotrados, Campana Extractora, Calefón",
-    "valor_llm": "Aire acondicionado, Mesón de granito, Encimera, Extractor, Calefón, Muebles altos y bajos, Roperos empotrados",
+    "valor_llm": "Aire acondicionado, Mesón de granito, Encimera, Extractor, Calefón, Muebles altos y bajos, Roperos empotrados, Walking closet",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:11.228Z"
+    "timestamp": "2026-03-10T13:51:25.612Z"
   },
   {
     "id_propiedad": 621,
@@ -4353,7 +4353,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.838Z"
   },
   {
     "id_propiedad": 621,
@@ -4364,18 +4364,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
     "campo": "tipo_cambio_detectado",
     "valor_actual_bd": "NULL",
     "valor_llm": "no_especificado",
-    "confianza_llm": "media",
+    "confianza_llm": "baja",
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
@@ -4386,7 +4386,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
@@ -4397,7 +4397,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
@@ -4408,7 +4408,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
@@ -4419,7 +4419,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
@@ -4430,7 +4430,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
@@ -4441,7 +4441,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
@@ -4452,7 +4452,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
@@ -4463,7 +4463,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
@@ -4474,7 +4474,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
@@ -4485,7 +4485,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
@@ -4496,7 +4496,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
@@ -4507,29 +4507,29 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento 110 en Condominio Las Dalias, ubicado en Equipetrol Norte, Calle Las Dalias Nro. 15. Superficie 75.23 m², 2 dormitorios, piso 1. Edificio con 7 plantas de departamentos (10 por piso) y terraza en octavo piso con áreas sociales. Diseño por SOMMET. Departamentos iluminados con ambientes funcionales y balcones propios.",
+    "valor_llm": "Departamento 110 en Condominio Las Dalias, ubicado en Equipetrol Norte, Calle Las Dalias Nro. 15. Superficie 75.23 m², 2 dormitorios, piso 1. Proyecto diseñado por SOMMET con 7 plantas de departamentos (10 por piso) y terraza de áreas sociales en octavo piso. Departamentos iluminados con ambientes funcionales y balcones propios.",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
     "campo": "amenities",
     "valor_actual_bd": "Terraza/Balcón",
-    "valor_llm": "Terraza con áreas sociales, Balcones propios",
+    "valor_llm": "Terraza de áreas sociales",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 621,
@@ -4540,18 +4540,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:18.965Z"
+    "timestamp": "2026-03-10T13:51:32.839Z"
   },
   {
     "id_propiedad": 849,
     "campo": "nombre_edificio",
     "valor_actual_bd": "Edificio Spazios",
-    "valor_llm": "NULL",
-    "confianza_llm": null,
+    "valor_llm": "Edificio Spazios",
+    "confianza_llm": "alta",
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
-    "veredicto": "llm_no_detecta",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "veredicto": "igual",
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
@@ -4562,7 +4562,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
@@ -4573,7 +4573,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
@@ -4584,7 +4584,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
@@ -4595,7 +4595,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
@@ -4606,7 +4606,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
@@ -4617,7 +4617,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
@@ -4628,7 +4628,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
@@ -4639,7 +4639,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
@@ -4650,7 +4650,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
@@ -4661,7 +4661,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
@@ -4672,18 +4672,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
     "campo": "solo_tc_paralelo",
     "valor_actual_bd": "NULL",
-    "valor_llm": "true",
+    "valor_llm": "false",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
@@ -4694,40 +4694,40 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
     "campo": "es_multiproyecto",
     "valor_actual_bd": "NULL",
-    "valor_llm": "NULL",
+    "valor_llm": "false",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
-    "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "veredicto": "llm_agrega",
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento de lujo a estrenar en Equipetrol. 3 dormitorios en suite, 165 m² de superficie. Ubicación en fachada principal, piso 4. Precio: $312,717 USD (pago en dólares o TC paralelo).",
+    "valor_llm": "Departamento de lujo a estrenar en Equipetrol. 3 dormitorios en suite, 165 m² de superficie. Ubicación en fachada principal, piso 4. Acceso a áreas sociales: lobby, piscina temperada, 2 churrasqueras, salón de uso común con vista 180 grados, sauna y sala de TV.",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 849,
     "campo": "amenities",
     "valor_actual_bd": "Piscina, Churrasquera, Sauna/Jacuzzi, Recepción, Seguridad 24/7",
-    "valor_llm": "Lobby, Piscina temperada, 2 churrasqueras, Salón de uso común con vista 180 grados, Sauna, Sala de TV",
+    "valor_llm": "Piscina temperada, Churrasqueras, Salón de uso común, Sauna, Sala de TV, Lobby",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:24.331Z"
+    "timestamp": "2026-03-10T13:51:38.259Z"
   },
   {
     "id_propiedad": 909,
@@ -4738,7 +4738,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4749,7 +4749,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4760,7 +4760,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4771,7 +4771,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4782,7 +4782,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4793,7 +4793,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4804,7 +4804,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4815,7 +4815,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4826,7 +4826,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4837,7 +4837,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4848,7 +4848,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4859,7 +4859,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4870,7 +4870,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4881,7 +4881,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4892,7 +4892,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4903,7 +4903,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4914,7 +4914,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 909,
@@ -4925,7 +4925,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:31.011Z"
+    "timestamp": "2026-03-10T13:51:45.087Z"
   },
   {
     "id_propiedad": 920,
@@ -4936,7 +4936,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -4947,7 +4947,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -4958,7 +4958,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -4969,7 +4969,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -4980,7 +4980,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -4991,7 +4991,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -5002,7 +5002,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -5013,7 +5013,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -5024,7 +5024,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -5035,7 +5035,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -5046,7 +5046,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -5057,7 +5057,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -5068,7 +5068,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -5079,7 +5079,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -5090,18 +5090,18 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Proyecto de pre-venta en Equipetrol 2do y 3er anillo. Departamentos de 1 y 2 dormitorios con diseño exclusivo. Superficies desde 52m² hasta 94m². Áreas sociales techadas. Entrega estimada diciembre 2026.",
+    "valor_llm": "Proyecto de pre-venta Sky Level en Equipetrol 2do y 3er anillo. Departamentos de 1 y 2 dormitorios con diseño exclusivo. Superficies desde 52m² hasta 94m². Áreas sociales techadas. Entrega estimada diciembre 2026.",
     "confianza_llm": null,
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 920,
@@ -5112,7 +5112,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:35.978Z"
+    "timestamp": "2026-03-10T13:51:51.018Z"
   },
   {
     "id_propiedad": 1006,
@@ -5123,18 +5123,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
     "campo": "estado_construccion",
     "valor_actual_bd": "no_especificado",
     "valor_llm": "entrega_inmediata",
-    "confianza_llm": "media",
+    "confianza_llm": "alta",
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
@@ -5145,7 +5145,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
@@ -5156,7 +5156,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
@@ -5167,7 +5167,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
@@ -5178,7 +5178,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
@@ -5189,7 +5189,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
@@ -5200,7 +5200,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
@@ -5211,7 +5211,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
@@ -5222,7 +5222,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
@@ -5233,7 +5233,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
@@ -5244,7 +5244,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
@@ -5255,7 +5255,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
@@ -5266,7 +5266,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
@@ -5277,29 +5277,29 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento de 74.60 m² en piso 6 con 2 dormitorios (1 suite), cocina americana, todos los ambientes con balcones. Incluye parqueo. Acceso a áreas sociales premium: piscina temperada, churrasqueras equipadas bajo galería cubierta, co-work de lujo, lobby moderno, fogatero en último piso, estación pet-shower.",
+    "valor_llm": "Departamento de 74.60 m² en piso 6 con 2 dormitorios (1 suite), cocina americana, todos los ambientes con balcones. Incluye parqueo. Amenities: piscina temperada, churrasqueras equipadas bajo galería cubierta, co-work de lujo, lobby moderno, fogatero en último piso, estación pet-shower.",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
     "campo": "amenities",
     "valor_actual_bd": "Piscina, Churrasquera, Terraza/Balcón, Estacionamiento para Visitas, Recepción",
-    "valor_llm": "Piscina temperada, Churrasqueras equipadas bajo galería cubierta, Co-work con ambientes de lujo, Lobby exclusivo de diseño moderno, Fogatero en último piso, Estación pet-shower",
+    "valor_llm": "Piscina temperada, Churrasqueras equipadas, Co-work, Lobby de diseño moderno, Fogatero, Pet-shower",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1006,
@@ -5310,18 +5310,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:42.234Z"
+    "timestamp": "2026-03-10T13:51:56.920Z"
   },
   {
     "id_propiedad": 1009,
     "campo": "nombre_edificio",
     "valor_actual_bd": "Onix Art By EliTe",
-    "valor_llm": "Edificio Sirari Palm",
+    "valor_llm": "Onix Art By EliTe",
     "confianza_llm": "alta",
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
-    "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "veredicto": "igual",
+    "timestamp": "2026-03-10T13:52:02.269Z"
   },
   {
     "id_propiedad": 1009,
@@ -5332,7 +5332,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.269Z"
   },
   {
     "id_propiedad": 1009,
@@ -5343,7 +5343,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.269Z"
   },
   {
     "id_propiedad": 1009,
@@ -5354,7 +5354,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.269Z"
   },
   {
     "id_propiedad": 1009,
@@ -5365,7 +5365,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.269Z"
   },
   {
     "id_propiedad": 1009,
@@ -5376,7 +5376,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.269Z"
   },
   {
     "id_propiedad": 1009,
@@ -5387,7 +5387,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.269Z"
   },
   {
     "id_propiedad": 1009,
@@ -5398,7 +5398,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.269Z"
   },
   {
     "id_propiedad": 1009,
@@ -5409,7 +5409,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.269Z"
   },
   {
     "id_propiedad": 1009,
@@ -5420,7 +5420,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.269Z"
   },
   {
     "id_propiedad": 1009,
@@ -5431,7 +5431,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.269Z"
   },
   {
     "id_propiedad": 1009,
@@ -5442,7 +5442,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.269Z"
   },
   {
     "id_propiedad": 1009,
@@ -5453,7 +5453,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.270Z"
   },
   {
     "id_propiedad": 1009,
@@ -5464,7 +5464,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.270Z"
   },
   {
     "id_propiedad": 1009,
@@ -5475,18 +5475,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.270Z"
   },
   {
     "id_propiedad": 1009,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "Departamento amoblado de 1 dormitorio en Equipetrol, Condominio Sirari Palm. Superficie: 35.30 m². Cocina amoblada y equipada, living comedor, amplia terraza, baño.",
+    "valor_llm": "Departamento amoblado de 1 dormitorio en venta en Equipetrol, Condominio Sirari Palm. Superficie: 35.30 m². Cocina amoblada y equipada, living comedor, amplia terraza, baño.",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.270Z"
   },
   {
     "id_propiedad": 1009,
@@ -5497,7 +5497,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:47.187Z"
+    "timestamp": "2026-03-10T13:52:02.270Z"
   },
   {
     "id_propiedad": 1049,
@@ -5508,7 +5508,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
@@ -5519,7 +5519,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
@@ -5530,7 +5530,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
@@ -5541,7 +5541,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
@@ -5552,7 +5552,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
@@ -5563,7 +5563,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
@@ -5574,7 +5574,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
@@ -5585,7 +5585,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
@@ -5596,7 +5596,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
@@ -5607,7 +5607,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
@@ -5618,7 +5618,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
@@ -5629,7 +5629,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
@@ -5640,7 +5640,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
@@ -5651,7 +5651,7 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
@@ -5662,18 +5662,18 @@
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1049,
     "campo": "descripcion_limpia",
     "valor_actual_bd": "NULL",
-    "valor_llm": "SKY EQUINOX – Equipetrol. Ubicado en 4to anillo Equipetrol sobre avenida. Unidades disponibles: monoambientes, 1 dormitorio, 2 dormitorios tipo penthouse. Ideal para renta mensual o Airbnb. Entrega junio 2027. Pago solo al contado en dólares.",
+    "valor_llm": "SKY EQUINOX – Equipetrol. Preventa exclusiva ubicada en 4to anillo Equipetrol sobre avenida. Unidades disponibles: monoambientes, 1 dormitorio, 2 dormitorios tipo penthouse. Ideal para renta mensual o Airbnb. Entrega junio 2027. Pago solo al contado en dólares.",
     "confianza_llm": null,
     "portal": "century21",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:52.310Z"
+    "timestamp": "2026-03-10T13:52:07.778Z"
   },
   {
     "id_propiedad": 1095,
@@ -5684,7 +5684,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5695,7 +5695,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5706,7 +5706,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5717,7 +5717,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5728,7 +5728,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5739,7 +5739,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5750,7 +5750,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5761,7 +5761,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5772,7 +5772,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5783,7 +5783,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5794,7 +5794,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5805,7 +5805,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5816,7 +5816,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5827,7 +5827,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "igual",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5838,7 +5838,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5849,7 +5849,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5860,7 +5860,7 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_difiere",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   },
   {
     "id_propiedad": 1095,
@@ -5871,6 +5871,6 @@
     "portal": "remax",
     "iteracion": "3.3-test-2026-03-10",
     "veredicto": "llm_agrega",
-    "timestamp": "2026-03-10T13:43:57.032Z"
+    "timestamp": "2026-03-10T13:52:13.278Z"
   }
 ]
