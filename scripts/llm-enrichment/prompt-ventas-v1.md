@@ -128,6 +128,19 @@ Devuelve SOLO este JSON (sin explicaciones, sin markdown):
 - `latitud/longitud` — API GPS es fuente de verdad
 - `fotos_urls` — HTML parsing más confiable
 - `agente_*` — data-page/meta tags son fuente directa
+- `depende_de_tc` — ver explicación abajo
+
+### Por qué `depende_de_tc` se excluyó del prompt (v1.0, 2026-03-10)
+
+**Contexto:** `depende_de_tc` indica si el precio USD depende de una conversión desde BOB (true) o es USD directo (false). Trabaja en conjunto con `tipo_cambio_detectado` — ambos alimentan `precio_normalizado()`.
+
+**Problema:** En el test de 30 props, el LLM falló en 23/30 (77%). Decía `false` donde BD tenía `true`. El error es sistemático: el LLM lee "$us 72,000" en la descripción y concluye que el precio es USD directo. Pero la metadata del portal (`moneda_original`) dice BOB — el portal publicó en bolivianos y el extractor convirtió a USD.
+
+**Causa raíz:** El LLM solo ve el texto de la descripción. No tiene acceso a `moneda_original`, que es metadata estructurada del portal (viene de `data-page` en Remax, JSON-LD en C21). La descripción frecuentemente menciona precios en "$us" aunque el listing original esté en BOB.
+
+**Decisión:** `depende_de_tc` es 100% determinístico: si `moneda_original = BOB` → true, si `moneda_original = USD` → false. Se calcula en el merge sin necesidad de NLP. No tiene sentido pedirle al LLM que infiera algo que ya se sabe con certeza desde la metadata.
+
+**Nota:** `tipo_cambio_detectado` (paralelo/oficial) SÍ se mantiene en el prompt porque es textual — el LLM detecta "solo dólares" = paralelo, "TC 7" = oficial. Son campos complementarios: `depende_de_tc` dice SI normalizar, `tipo_cambio_detectado` dice CON QUÉ tasa.
 
 ### Inyección de proyectos_master
 La lista se inyecta como texto plano:
