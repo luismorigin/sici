@@ -1,7 +1,7 @@
-# Prompt LLM Enrichment — Ventas v3.1
+# Prompt LLM Enrichment — Ventas v3.2
 
 > Modelo: claude-haiku-4-5-20251001 | temperature: 0 | max_tokens: 1500
-> Evolución: v1.0 → v2.0 → v3.0 → v3.1 (2026-03-10)
+> Evolución: v1.0 → v2.0 → v3.0 → v3.1 → v3.2 (2026-03-10)
 
 ---
 
@@ -42,13 +42,12 @@ NOMBRE_EDIFICIO:
 - NUNCA devolver: "Venta", "Pre Venta", "Departamento", fragmentos de oraciones
 
 ESTADO_CONSTRUCCION:
-- "entrega_inmediata": "listo para vivir", "entrega inmediata", amoblado CON piso específico y precio fijo USD
-- "preventa": "precios desde", "precios al cambio Bs.7", "entrega [fecha futura]"
+- "entrega_inmediata": "listo para vivir", "entrega inmediata", "listo para ocupar"
+- "preventa": "precios desde", "entrega [fecha futura]"
 - "en_construccion": "en construcción", "obra gruesa", "avance X%"
 - "nuevo_a_estrenar": "a estrenar", depto terminado sin amueblar
 - "usado": "segunda mano", "de ocasión"
 - CUIDADO: "amoblado" o "equipado" SOLOS no implican entrega_inmediata
-- CUIDADO: "Precios al cambio Bs.7" = preventa
 
 TIPO_CAMBIO_DETECTADO:
 - "paralelo": "TC paralelo", "al paralelo", "dólares o paralelo", "solo dólares", "tc del día", "pago en dólares", "blue", "dólar blue", "al blue", "USDT", "cripto"
@@ -119,6 +118,13 @@ Devuelve SOLO este JSON (sin explicaciones, sin markdown):
 ---
 
 ## Changelog
+
+### v3.2 (2026-03-10)
+
+Cambios desde v3.1:
+- ESTADO_CONSTRUCCION: eliminar "precios al cambio Bs.7" de preventa (pertenece a tipo_cambio, no a estado)
+- ESTADO_CONSTRUCCION: eliminar "amoblado CON piso específico y precio fijo USD" de entrega_inmediata (inferencia frágil)
+- ESTADO_CONSTRUCCION: eliminar CUIDADO "Precios al cambio Bs.7 = preventa" (incorrecto, contradictorio)
 
 ### v3.1 (2026-03-10)
 

@@ -1,4 +1,4 @@
-# Resumen Ejecutivo — LLM Enrichment Ventas v3.1
+# Resumen Ejecutivo — LLM Enrichment Ventas v3.2
 
 > Fecha: 2026-03-10 | Modelo: claude-haiku-4-5-20251001 | N=30 | 3 iteraciones | Costo final: $0.030
 
@@ -59,7 +59,14 @@ V3.1 es cambio de prompt solamente (sinónimos TC), sin re-test.
 
 ### V3 → V3.1: Sinónimos TC paralelo
 
-Agregados sinónimos de "paralelo" para el mercado informal boliviano: "blue", "dólar blue", "al blue", "USDT", "cripto". Estos términos son usados por vendedores que operan fuera del TC oficial BCB. Cambio preventivo — sin re-test (no había props en el sample con estos términos).
+Agregados sinónimos de "paralelo" para el mercado informal boliviano: "blue", "dólar blue", "al blue", "USDT", "cripto". Resultado: difiere 18→16 (fix solo_tc_paralelo IDs 59, 465).
+
+### V3.1 → V3.2: Limpieza estado_construccion
+
+Eliminadas señales incorrectas o frágiles de ESTADO_CONSTRUCCION:
+- "precios al cambio Bs.7" no es señal de preventa (pertenece a tipo_cambio_detectado)
+- "amoblado CON piso específico y precio fijo USD" era inferencia compleja y frágil
+- CUIDADO "Precios al cambio Bs.7 = preventa" era incorrecto y contradictorio
 
 ### Documentación detallada por iteración
 

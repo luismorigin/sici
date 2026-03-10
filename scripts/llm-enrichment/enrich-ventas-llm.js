@@ -190,13 +190,12 @@ NOMBRE_EDIFICIO:
 - NUNCA devolver: "Venta", "Pre Venta", "Departamento", fragmentos de oraciones
 
 ESTADO_CONSTRUCCION:
-- "entrega_inmediata": "listo para vivir", "entrega inmediata", amoblado CON piso específico y precio fijo USD
-- "preventa": "precios desde", "precios al cambio Bs.7", "entrega [fecha futura]"
+- "entrega_inmediata": "listo para vivir", "entrega inmediata", "listo para ocupar"
+- "preventa": "precios desde", "entrega [fecha futura]"
 - "en_construccion": "en construcción", "obra gruesa", "avance X%"
 - "nuevo_a_estrenar": "a estrenar", depto terminado sin amueblar
 - "usado": "segunda mano", "de ocasión"
 - CUIDADO: "amoblado" o "equipado" SOLOS no implican entrega_inmediata
-- CUIDADO: "Precios al cambio Bs.7" = preventa
 
 TIPO_CAMBIO_DETECTADO:
 - "paralelo": "TC paralelo", "al paralelo", "dólares o paralelo", "solo dólares", "tc del día", "pago en dólares", "blue", "dólar blue", "al blue", "USDT", "cripto"

@@ -1,0 +1,105 @@
+{
+  "total": 30,
+  "processed": 30,
+  "skipped": 0,
+  "errors": 0,
+  "totalTokens": 100961,
+  "comparisons": {
+    "igual": 290,
+    "llm_agrega": 142,
+    "llm_no_detecta": 2,
+    "llm_difiere": 16
+  },
+  "byField": {
+    "nombre_edificio": {
+      "igual": 28,
+      "llm_agrega": 1,
+      "llm_no_detecta": 0,
+      "llm_difiere": 1
+    },
+    "estado_construccion": {
+      "igual": 23,
+      "llm_agrega": 0,
+      "llm_no_detecta": 0,
+      "llm_difiere": 7
+    },
+    "tipo_cambio_detectado": {
+      "igual": 21,
+      "llm_agrega": 6,
+      "llm_no_detecta": 0,
+      "llm_difiere": 3
+    },
+    "piso": {
+      "igual": 24,
+      "llm_agrega": 6,
+      "llm_no_detecta": 0,
+      "llm_difiere": 0
+    },
+    "parqueo_incluido": {
+      "igual": 7,
+      "llm_agrega": 23,
+      "llm_no_detecta": 0,
+      "llm_difiere": 0
+    },
+    "parqueo_precio_adicional": {
+      "igual": 28,
+      "llm_agrega": 2,
+      "llm_no_detecta": 0,
+      "llm_difiere": 0
+    },
+    "baulera": {
+      "igual": 15,
+      "llm_agrega": 13,
+      "llm_no_detecta": 0,
+      "llm_difiere": 2
+    },
+    "baulera_precio_adicional": {
+      "igual": 30,
+      "llm_agrega": 0,
+      "llm_no_detecta": 0,
+      "llm_difiere": 0
+    },
+    "plan_pagos_desarrollador": {
+      "igual": 16,
+      "llm_agrega": 13,
+      "llm_no_detecta": 0,
+      "llm_difiere": 1
+    },
+    "descuento_contado_pct": {
+      "igual": 28,
+      "llm_agrega": 0,
+      "llm_no_detecta": 2,
+      "llm_difiere": 0
+    },
+    "acepta_permuta": {
+      "igual": 17,
+      "llm_agrega": 13,
+      "llm_no_detecta": 0,
+      "llm_difiere": 0
+    },
+    "precio_negociable": {
+      "igual": 17,
+      "llm_agrega": 13,
+      "llm_no_detecta": 0,
+      "llm_difiere": 0
+    },
+    "solo_tc_paralelo": {
+      "igual": 15,
+      "llm_agrega": 13,
+      "llm_no_detecta": 0,
+      "llm_difiere": 2
+    },
+    "fecha_entrega_estimada": {
+      "igual": 21,
+      "llm_agrega": 9,
+      "llm_no_detecta": 0,
+      "llm_difiere": 0
+    },
+    "es_multiproyecto": {
+      "igual": 0,
+      "llm_agrega": 30,
+      "llm_no_detecta": 0,
+      "llm_difiere": 0
+    }
+  }
+}
