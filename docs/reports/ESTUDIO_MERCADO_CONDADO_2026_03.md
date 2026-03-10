@@ -2,7 +2,7 @@
 
 **Cliente:** Proinco / Constructora Condado
 **Fecha:** 10 de marzo de 2026
-**Fuente:** SICI — 280 unidades verificadas con GPS en 6 microzonas
+**Fuente:** SICI — 312 unidades verificadas con GPS en 6 microzonas
 **TC Paralelo:** Bs 9.454/USD (Binance P2P, 10 Mar 2026)
 **Precios:** Todos normalizados a USD billete via `precio_normalizado()`
 
@@ -16,30 +16,31 @@
 
 | Indicador | Valor |
 |-----------|-------|
-| Unidades activas en venta | **280** (con zona GPS verificada) |
-| Microzonas monitoreadas | 5 (+ Eq. 3er Anillo, sin stock activo) |
-| $/m² promedio general | **$2,155** |
-| $/m² mediana general | **$2,107** |
-| Ticket promedio | **$171K USD** |
-| Área promedio | 80 m² |
+| Unidades activas en venta | **312** (con zona GPS verificada) |
+| Microzonas monitoreadas | 6 (incluye Eq. 3er Anillo, 3 uds) |
+| $/m² promedio general | **$2,128** |
+| $/m² mediana general | **$2,055** |
+| Ticket promedio | **$160K USD** |
+| Área promedio | 78 m² |
 | TC Paralelo actual | Bs 9.454 |
 
 ### 1.2 Comparativo por Zona
 
 | Zona | Uds | Proy | $/m² Avg | Mediana $/m² | Min $/m² | Max $/m² | Ticket Avg | Área Avg |
 |------|-----|------|----------|-------------|----------|----------|-----------|----------|
-| **Eq. Centro** | 123 | 59 | $2,238 | $2,114 | $1,005 | $4,073 | $154K | 74 m² |
-| **Sirari** | 53 | 16 | $2,157 | $2,036 | $1,498 | $3,535 | $212K | 99 m² |
-| **Eq. Oeste** | 33 | 10 | $2,061 | $2,107 | $983 | $3,296 | $198K | 88 m² |
-| **V. Brígida** | 46 | 22 | $1,906 | $1,959 | $1,137 | $2,889 | $128K | 69 m² |
-| **Eq. Norte** | 25 | 18 | $2,413 | $2,420 | $1,370 | $3,653 | $166K | 69 m² |
+| **Eq. Centro** | 136 | 58 | $2,209 | $2,096 | $1,005 | $3,795 | $164K | 76 m² |
+| **Eq. Oeste** | 52 | 9 | $1,945 | $1,874 | $983 | $3,257 | $146K | 76 m² |
+| **V. Brígida** | 48 | 18 | $1,907 | $1,955 | $1,026 | $3,265 | $128K | 70 m² |
+| **Sirari** | 47 | 18 | $2,114 | $2,001 | $1,498 | $3,798 | $171K | 82 m² |
+| **Eq. Norte** | 26 | 15 | $2,366 | $2,338 | $1,195 | $3,653 | $236K | 104 m² |
+| **Eq. 3er Anillo** | 3 | 1 | $1,955 | $1,957 | $1,817 | $2,091 | $109K | 56 m² |
 
 **Lectura clave:**
-- **Equipetrol Centro** domina con 44% de la oferta total (123/280)
-- **Eq. Norte** es la zona más cara ($2,420 mediana), +24% premium vs Villa Brígida
-- **Sirari** ofrece las áreas más generosas (99 m² avg) a precio intermedio
-- **Villa Brígida** es la zona de entry-level ($1,959 mediana, ticket $128K)
-- **Eq. Oeste** tiene amplia dispersión ($983-$3,296), indicando mercado mixto
+- **Equipetrol Centro** domina con 44% de la oferta total (136/312)
+- **Eq. Norte** es la zona más cara ($2,338 mediana), +20% premium vs Villa Brígida
+- **Eq. Norte** tiene las áreas más generosas (104 m² avg) y ticket más alto ($236K)
+- **Villa Brígida** es la zona de entry-level ($1,955 mediana, ticket $128K)
+- **Eq. Oeste** tiene amplia dispersión ($983-$3,257), indicando mercado mixto
 
 ### 1.3 Evolución vs Febrero 2026
 
@@ -89,28 +90,28 @@
 
 | Indicador | Valor |
 |-----------|-------|
-| Unidades activas | **123** |
-| Proyectos distintos | **59** |
-| $/m² promedio | **$2,238** |
-| $/m² mediana | **$2,114** |
-| Rango $/m² | $1,005 — $4,073 |
-| Ticket promedio | **$154K** |
-| Área promedio | **74 m²** |
+| Unidades activas | **136** |
+| Proyectos distintos | **58** |
+| $/m² promedio | **$2,209** |
+| $/m² mediana | **$2,096** |
+| Rango $/m² | $1,005 — $3,795 |
+| Ticket promedio | **$164K** |
+| Área promedio | **76 m²** |
 
 ### 2.2 Precios por Tipología en Eq. Centro
 
 | Tipología | Uds | $/m² Avg | $/m² Mediana | Área Avg | Ticket Avg |
 |-----------|-----|----------|-------------|----------|-----------|
-| **Monoambiente (0D)** | 15 | $2,632 | $2,510 | 43 m² | $111K |
-| **1 Dormitorio** | 56 | $2,287 | $2,218 | 51 m² | $113K |
-| **2 Dormitorios** | 42 | $2,127 | $2,047 | 91 m² | $187K |
-| **3 Dormitorios** | 9 | $1,841 | $1,527 | 173 m² | $300K |
-| **4 Dormitorios** | 1 | $1,789 | $1,789 | 243 m² | $435K |
+| **Monoambiente (0D)** | 16 | $2,508 | $2,355 | 46 m² | $112K |
+| **1 Dormitorio** | 65 | $2,232 | $2,183 | 52 m² | $113K |
+| **2 Dormitorios** | 46 | $2,098 | $2,039 | 92 m² | $187K |
+| **3 Dormitorios** | 7 | $1,946 | $1,685 | 172 m² | $327K |
+| **4 Dormitorios** | 2 | $2,542 | $2,542 | 401 m² | $1,137K |
 
 **Insights:**
-- Los monoambientes son premium (+19% vs 1D) por efecto de área chica
-- El **sweet spot de volumen** es 1D + 2D = 98 unidades (80% del total)
-- Los 3D tienen mediana baja ($1,527) por unidades grandes que diluyen el $/m²
+- Los monoambientes son premium (+8% vs 1D) por efecto de área chica
+- El **sweet spot de volumen** es 1D + 2D = 111 unidades (82% del total)
+- Los 3D tienen mediana baja ($1,685) por unidades grandes que diluyen el $/m²
 - Condado VI tiene unidades en las 3 tipologías principales (1D, 2D, 3D)
 
 ### 2.3 Proyectos Activos en Equipetrol Centro (3+ unidades)
@@ -170,8 +171,8 @@
 | 1037 | Condado VI | 1D | 62.00 | $132,733 | $2,141 | no_espec. | no_espec. | **Activo** |
 | 423 | Condado VI | 1D | 62.21 | $140,107 | $2,252 | no_espec. | Entrega inmed. | **Activo** |
 | 921 | Condado VI | 1D | 62.21 | $153,046 | $2,460 | no_espec. | Entrega inmed. | **Activo** |
-| 53 | Condado VI | 2D | 86.73 | $265,323 | $3,059 | paralelo | Entrega inmed. | **Activo** |
-| 821 | Condado VI | 3D | 144.31 | $428,181 | $2,967 | paralelo | Entrega inmed. | **Activo** |
+| 53 | Condado VI | 2D | 86.73 | $194,384 | $2,241 | paralelo | Entrega inmed. | **Activo** |
+| 821 | Condado VI | 3D | 144.31 | $323,435 | $2,241 | paralelo | Entrega inmed. | **Activo** |
 | 968 | Condado IV | 1D | 62.21 | $139,429 | $2,241 | paralelo | Entrega inmed. | **Activo** |
 | 816 | Condado Park V | 2D | 85.25 | $190,167 | $2,231 | paralelo | Entrega inmed. | **Activo** |
 | 529 | Condado II | 3D | 228.02 | $292,042 | $1,281 | paralelo | Entrega inmed. | **Activo** |
@@ -181,10 +182,7 @@
 
 **Resumen Condado VI activo en portales:** 5 listings (3x 1D, 1x 2D, 1x 3D)
 
-**Problema de precios detectado:**
-- Los **1D** muestran precios coherentes: $2,141-$2,460/m² (rango aceptable)
-- El **2D (ID 53)** aparece a **$3,059/m²** — muy por encima del mercado ($2,047 mediana 2D). Posible error de precio o TC mal detectado
-- El **3D (ID 821)** aparece a **$2,967/m²** — también elevado vs mediana 3D ($1,527), pero los 3D premium existen en ese rango
+**Precios corregidos (10 Mar 2026):** IDs 53 y 821 tenían precios inflados por bug de doble normalización en el dashboard (ver `docs/architecture/TIPO_CAMBIO_SICI.md` sección 4). Ahora todos los listings de Condado VI están en el rango **$2,141-$2,460/m²** — coherente entre tipologías y con el mercado.
 
 **Nota sobre inventario real:** Según el informe de Feb 2026, Condado VI tiene 14 unidades disponibles (4x1D, 7x2D, 3x3D). Los portales solo muestran 5 listings — hay **9 unidades invisibles** que no están publicadas online.
 
@@ -204,7 +202,7 @@ Comparación con proyectos de entrega inmediata en Eq. Centro, segmento mercado:
 | **HH Once** | 8 | $1,833 | 0, 1D | Preventa | Precio agresivo, amenidades |
 | **HH Chuubi** | 5 | $1,747 | 1, 2D | Preventa | Precio entry-level |
 
-**Posición de Condado VI 1D:** Los 1D a ~$2,200/m² están en el **P60-P70 del mercado** — ligeramente por encima de la mediana ($2,218 para 1D) pero justificado por el equipamiento.
+**Posición de Condado VI:** Todas las tipologías están en el rango **$2,141-$2,460/m²**, centradas en el **P55-P70 del mercado** — ligeramente por encima de la mediana ($2,183 para 1D, $2,039 para 2D) pero justificado por el equipamiento completo.
 
 ### 3.3 Equipamiento Comparativo
 
@@ -247,7 +245,7 @@ Comparación con proyectos de entrega inmediata en Eq. Centro, segmento mercado:
 | **Luxe Suites** | 5 | 5+ | $99K-$227K |
 | **Sky Level** | 5 | 5+ | $103K-$193K |
 | **HH Chuubi** | 5 | 5+ | $90K-$193K |
-| **Condado VI** | **5** | **~14** | **$133K-$428K** |
+| **Condado VI** | **5** | **~14** | **$133K-$323K** |
 | **Luxe Tower** | 4 | 4+ | $132K-$277K |
 | **Sky Plaza Italia** | 4 | 4+ | $83K-$148K |
 
@@ -262,7 +260,7 @@ Constructora Condado tiene **5 proyectos** registrados en SICI, todos en Equipet
 | Condado II | 1 (3D, 228m²) | $1,281 | Precio muy bajo — posible oportunidad o dato erróneo |
 | CONDADO IV | 1 (1D, 62m²) | $2,241 | Precio coherente con Condado VI |
 | Condado Park V | 1 (2D, 85m²) | $2,231 | Bien posicionado, 1 venta confirmada (ID 556) |
-| **Condado VI** | **5** | **$2,141-$3,059** | Proyecto principal actual |
+| **Condado VI** | **5** | **$2,141-$2,460** | Proyecto principal actual, precios coherentes |
 | Condado III | 0 | — | Sin listings activos |
 
 **Señal positiva:** Condado Park V tuvo una venta confirmada (ID 556 → inactivo_confirmed). La marca Condado vende cuando está visible.
@@ -276,12 +274,7 @@ Constructora Condado tiene **5 proyectos** registrados en SICI, todos en Equipet
 - Publicar TODAS las unidades en Century 21 Y Remax con fotos reales (no renders).
 - **Impacto estimado:** Duplicar exposición = duplicar consultas.
 
-**2. Corregir el precio del 2D (ID 53)**
-- Aparece a $3,059/m², 50% por encima de la mediana de 2D en Eq. Centro ($2,047).
-- Si el precio real es ~$2,100/m² (coherente con el portfolio Condado), hay un error de TC o publicación.
-- **Impacto:** Un 2D a $3,059/m² genera rechazo inmediato en comparación directa.
-
-**3. Unificar la identidad**
+**2. Unificar la identidad**
 - En el informe de Feb se detectaron 5+ nombres distintos en portales (Condado VI, Condado 6, Quartier Italia, etc.).
 - Estandarizar a **"Condado VI Plaza Italia"** en todos los portales, fotos y comunicaciones.
 
@@ -291,9 +284,9 @@ Constructora Condado tiene **5 proyectos** registrados en SICI, todos en Equipet
 
 | Tipología | Precio Sugerido $/m² | Referencia Mercado | Posicionamiento |
 |-----------|----------------------|-------------------|----------------|
-| **1D (62 m²)** | $2,100-$2,250 | Mediana 1D: $2,218 | En mediana — competir por equipamiento |
-| **2D (~87 m²)** | $2,050-$2,150 | Mediana 2D: $2,047 | Ligeramente sobre mediana — justificado por línea blanca |
-| **3D (144 m²)** | $1,900-$2,100 | Mediana 3D: $1,527 (distorsionada) | Premium vs mediana pero con equipamiento superior |
+| **1D (62 m²)** | $2,100-$2,250 | Mediana 1D: $2,183 | En mediana — competir por equipamiento |
+| **2D (~87 m²)** | $2,050-$2,150 | Mediana 2D: $2,039 | Ligeramente sobre mediana — justificado por línea blanca |
+| **3D (144 m²)** | $1,900-$2,100 | Mediana 3D: $1,685 | Premium vs mediana pero con equipamiento superior |
 
 **5. Narrativa comercial: "El departamento más equipado de Equipetrol"**
 - Ningún competidor directo ofrece línea blanca completa.
@@ -341,16 +334,14 @@ Constructora Condado tiene **5 proyectos** registrados en SICI, todos en Equipet
 ### Debilidades
 1. **Visibilidad:** Solo 5 de ~14 unidades en portales (64% invisible)
 2. **Identidad fragmentada:** Múltiples nombres en portales
-3. **Incoherencia de precios:** 2D a $3,059/m² genera rechazo
-4. **Canal único:** Solo 1 broker activo (Remax Futuro)
-5. **Amenidades limitadas:** Sin churrasquera, pet friendly, ni co-working
+3. **Canal único:** Solo 1 broker activo (Remax Futuro)
+4. **Amenidades limitadas:** Sin churrasquera, pet friendly, ni co-working
 
 ### Prioridad de acción
 
 | Prioridad | Acción | Impacto Esperado | Esfuerzo |
 |-----------|--------|-----------------|----------|
 | **P0** | Publicar las 14 unidades | +180% exposición | Bajo |
-| **P0** | Corregir precio 2D | Eliminar barrera de conversión | Bajo |
 | **P1** | Unificar nombre en portales | Coherencia de marca | Bajo |
 | **P1** | Fotos profesionales reales | +30-50% engagement | Medio |
 | **P2** | Sumar 2do broker (C21) | +50% cobertura | Medio |
@@ -363,14 +354,15 @@ Constructora Condado tiene **5 proyectos** registrados en SICI, todos en Equipet
 
 | Métrica | Valor |
 |---------|-------|
-| Propiedades activas analizadas | 280 (con zona GPS verificada) |
-| Proyectos monitoreados | 59 en Eq. Centro, 125+ total |
+| Propiedades activas analizadas | 312 (con zona GPS verificada) |
+| Proyectos monitoreados | 58 en Eq. Centro, 119+ total |
 | Fuentes de datos | Century 21, Remax, Bien Inmuebles |
 | Verificación GPS | PostGIS ST_Contains contra polígonos |
 | Precios normalizados | `precio_normalizado()` — TC paralelo Bs 9.454 |
 | Filtros aplicados | area >= 20m², no duplicadas, no parqueos/bauleras, <= 300 días, no multiproyecto |
 | Fecha de datos | 10 de marzo de 2026 |
 | Informe base anterior | 13 de febrero de 2026 (CASO_CONDADO_VI.md) |
+| Correcciones de precio | IDs 53, 821 corregidas por bug doble normalización TC (10 Mar 2026) |
 
 ---
 
