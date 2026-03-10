@@ -1,4 +1,4 @@
-# Resumen Ejecutivo — LLM Enrichment Ventas v3.0
+# Resumen Ejecutivo — LLM Enrichment Ventas v3.1
 
 > Fecha: 2026-03-10 | Modelo: claude-haiku-4-5-20251001 | N=30 | 3 iteraciones | Costo final: $0.030
 
@@ -29,13 +29,15 @@
 
 ## 2. Evolución del prompt (3 iteraciones)
 
-| Métrica | V1 | V2 | V3 (final) |
-|---------|----|----|------------|
-| igual | 282 | 286 | **287** |
-| llm_agrega | 68 | **143** | 143 |
-| llm_no_detecta | **90** | 2 | **2** |
-| llm_difiere | 40 | 19 | **18** |
-| Costo | $0.026 | $0.029 | $0.030 |
+| Métrica | V1 | V2 | V3 | V3.1 |
+|---------|----|----|-----|------|
+| igual | 282 | 286 | **287** | — |
+| llm_agrega | 68 | **143** | 143 | — |
+| llm_no_detecta | **90** | 2 | **2** | — |
+| llm_difiere | 40 | 19 | **18** | — |
+| Costo | $0.026 | $0.029 | $0.030 | — |
+
+V3.1 es cambio de prompt solamente (sinónimos TC), sin re-test.
 
 ### V1 → V2: Eliminación masiva de falsos negativos (-98%)
 
@@ -54,6 +56,10 @@
 | nombre_edificio ID 1009 | Matching incorrecto con otro proyecto | Menos matching agresivo |
 
 **Resultado**: difiere 19→18, con 3 fixes y 2 regresiones menores (posiblemente LLM correcto en ambas).
+
+### V3 → V3.1: Sinónimos TC paralelo
+
+Agregados sinónimos de "paralelo" para el mercado informal boliviano: "blue", "dólar blue", "al blue", "USDT", "cripto". Estos términos son usados por vendedores que operan fuera del TC oficial BCB. Cambio preventivo — sin re-test (no había props en el sample con estos términos).
 
 ### Documentación detallada por iteración
 
@@ -170,7 +176,7 @@ El LLM extrae `amenities_confirmados` y `equipamiento_detectado` pero **no escri
 |-------|------------------------------|
 | nombre_edificio | confianza alta + match con proyectos_master |
 | estado_construccion | confianza alta solamente |
-| tipo_cambio_detectado | Solo si BD es `no_especificado` o NULL. Nunca sobreescribir paralelo/oficial existente. |
+| tipo_cambio_detectado | Solo si BD es `no_especificado` o NULL. Nunca sobreescribir paralelo/oficial existente. Sinónimos de paralelo: "blue", "dólar blue", "al blue", "USDT", "cripto". |
 | piso | rango -2 a 40 |
 | parqueo_incluido | cualquier confianza |
 | parqueo_precio_adicional | rango 0-50k |

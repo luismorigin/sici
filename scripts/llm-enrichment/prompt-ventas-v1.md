@@ -1,7 +1,7 @@
-# Prompt LLM Enrichment — Ventas v3.0
+# Prompt LLM Enrichment — Ventas v3.1
 
 > Modelo: claude-haiku-4-5-20251001 | temperature: 0 | max_tokens: 1500
-> Evolución: v1.0 → v2.0 → v3.0 (2026-03-10)
+> Evolución: v1.0 → v2.0 → v3.0 → v3.1 (2026-03-10)
 
 ---
 
@@ -51,10 +51,10 @@ ESTADO_CONSTRUCCION:
 - CUIDADO: "Precios al cambio Bs.7" = preventa
 
 TIPO_CAMBIO_DETECTADO:
-- "paralelo": "TC paralelo", "al paralelo", "dólares o paralelo", "solo dólares", "tc del día", "pago en dólares"
+- "paralelo": "TC paralelo", "al paralelo", "dólares o paralelo", "solo dólares", "tc del día", "pago en dólares", "blue", "dólar blue", "al blue", "USDT", "cripto"
 - "oficial": "TC 7", "al cambio Bs.7", "TC oficial", "tipo de cambio 7", precio listado SOLO en Bs/bolivianos sin mención de USD
 - "no_especificado": si no hay mención de TC ni forma de pago. NUNCA devolver null — usar "no_especificado"
-- CLAVE: "solo dólares" o "pago en dólares" = PARALELO
+- CLAVE: "solo dólares", "pago en dólares", "blue", "dólar blue", "USDT", "cripto" = PARALELO
 - CLAVE: "TC 7" o "cambio 6.96" = OFICIAL
 - CLAVE: Precio en "Bs" o "bolivianos" sin mención de dólares = OFICIAL (tasa BCB fija)
 - CLAVE: "$us X" sin más contexto = "no_especificado" (moneda sola no indica TC)
@@ -119,6 +119,11 @@ Devuelve SOLO este JSON (sin explicaciones, sin markdown):
 ---
 
 ## Changelog
+
+### v3.1 (2026-03-10)
+
+Cambios desde v3.0:
+- TIPO_CAMBIO: agregados sinónimos de paralelo: "blue", "dólar blue", "al blue", "USDT", "cripto". En Bolivia el mercado informal usa estos términos para referirse al TC paralelo.
 
 ### v3.0 (2026-03-10) — Production-ready
 
