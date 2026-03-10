@@ -42,6 +42,152 @@
 
 ---
 
+## 1b. Extracción multi-fuente (detalle por portal)
+
+### Alquileres: arquitectura híbrida (extracción directa + LLM)
+
+El enrichment de alquileres NO pasa todo al LLM. Primero extrae campos estructurados directamente del HTML/API, y solo pasa al LLM lo que requiere comprensión semántica. Esto es un patrón de **extracción en dos fases**.
+
+#### Fase 1: Firecrawl scrape (todas las fuentes)
+
+Todas las URLs pasan por Firecrawl que devuelve `{ markdown, rawHtml }`. Luego el nodo "Construir Prompt" hace extracción per-source:
+
+#### Remax — data-page JSON (extracción directa)
+
+```javascript
+// Del HTML: <script data-page="...encoded JSON...">
+const match = html.match(/data-page=\"([^\"]*?)\"/i);
+const data = JSON.parse(unescape(match[1]));
+const listing = data.props.listing;
+```
+
+| Campo | Fuente | Método |
+|-------|--------|--------|
+| `agente_nombre` | `listing.agent.user.name_to_show` | Directo del JSON |
+| `agente_telefono` | `listing.agent.user.phone_number` | Directo del JSON |
+| `agente_oficina` | `listing.agent.office.name` | Directo del JSON |
+| `fotos_urls[]` | `listing.multimedias[].large_url` | Directo del JSON |
+| `titulo` | `listing.title` | Directo del JSON |
+| `descripcion` | `listing.description_website` | Directo del JSON |
+
+**Contenido al LLM**: `"TÍTULO: {titulo}\n\nDESCRIPCIÓN:\n{descripcion}"` (max 3000 chars)
+
+El LLM de Remax recibe texto limpio extraído del JSON, no markdown de Firecrawl. Es más limpio y predecible.
+
+#### Century21 — Firecrawl markdown (LLM hace todo)
+
+```javascript
+contenido = markdown.substring(0, 3000);
+// NO hay extracción directa de agente ni fotos
+```
+
+| Campo | Fuente | Método |
+|-------|--------|--------|
+| `agente_nombre` | Texto del markdown | LLM extrae |
+| `agente_telefono` | Texto del markdown | LLM extrae |
+| `fotos_urls[]` | Firecrawl (discovery) | Ya extraídas en discovery |
+| Todo lo demás | Texto del markdown | LLM extrae |
+
+**Contenido al LLM**: markdown crudo de Firecrawl (max 3000 chars). C21 es la fuente que más depende del LLM.
+
+#### Bien Inmuebles — regex HTML (extracción directa)
+
+```javascript
+// Fotos: regex del HTML crudo
+const fotoMatches = html.match(/uploads\/catalogo\/pics\/[^\"'\s)]+/g);
+fotosUnicas = [...new Set(fotoMatches)]
+  .map(f => 'https://www.bieninmuebles.com.bo/admin/' + f);
+
+// Ordenar: nomb_img (foto principal) primero
+fotosUnicas.sort((a, b) => (a.includes(nomb_img) ? -1 : b.includes(nomb_img) ? 1 : 0));
+
+// Agente: regex de la sección agent-sides_2
+const seccion = html.match(/agent-sides_2[\s\S]*?<\/div>/i)[0];
+agente_nombre = seccion.match(/<h4>([^<]+)<\/h4>/i)[1];
+agente_telefono = '+591' + seccion.match(/[67]\d{7}/)[0];
+```
+
+| Campo | Fuente | Método |
+|-------|--------|--------|
+| `agente_nombre` | HTML `agent-sides_2 > h4` | Regex directo |
+| `agente_telefono` | HTML `agent-sides_2`, patrón `[67]\d{7}` | Regex directo |
+| `agente_oficina` | Hardcodeado `'Bien Inmuebles'` | Constante |
+| `fotos_urls[]` | HTML `uploads/catalogo/pics/*` | Regex directo |
+| `nomb_img` (foto principal) | `datos_json_discovery.nomb_img` | Discovery API |
+
+**Contenido al LLM**: markdown de Firecrawl (max 3000 chars). Pero agente y fotos ya fueron extraídos sin LLM.
+
+#### Fase 2: Merge post-LLM (prioridad directo > LLM)
+
+Después de que el LLM responde, el nodo "Parsear y Validar" fusiona:
+
+```javascript
+// Agente: directo tiene prioridad sobre LLM
+agente_final = {
+  nombre:  agente_directo?.nombre  || datos_llm.agente_nombre,
+  telefono: agente_directo?.telefono || datos_llm.agente_telefono,
+  oficina:  agente_directo?.oficina  || datos_llm.agente_oficina
+};
+
+// Fotos: directas reemplazan las del LLM
+if (fotos_extraidas?.length > 0) {
+  datos_llm.fotos_urls = fotos_extraidas;
+}
+```
+
+**Cadena de prioridad para agente:**
+1. data-page JSON (Remax) o regex HTML (BI) → **directo, más confiable**
+2. LLM (C21 o fallback) → **solo si directo no encontró**
+
+**Cadena de prioridad para fotos:**
+1. data-page JSON (Remax) o regex HTML (BI) → **directo, reemplaza LLM**
+2. Discovery (Firecrawl) → **fallback si enrichment no encontró**
+
+### Ventas: fuente única (solo descripción)
+
+Ventas NO tiene extracción multi-fuente. El script `enrich-ventas-llm.js` lee:
+
+```javascript
+// fetchProperties() query:
+SELECT ..., datos_json_enrichment FROM propiedades_v2
+
+// buildPrompt() usa:
+const contenido = prop.datos_json_enrichment?.descripcion
+  || prop.datos_json_enrichment?.scrape?.markdown
+  || '';
+```
+
+| Campo | Fuente | Método |
+|-------|--------|--------|
+| Descripción | `datos_json_enrichment.descripcion` | Texto del n8n extractor |
+| Agente | No se extrae | Ya viene de discovery |
+| Fotos | No se extraen | Ya vienen de discovery |
+| Datos físicos | Columnas directas de `propiedades_v2` | Discovery + regex |
+
+**No hay:**
+- Parsing de `data-page` para Remax
+- Regex de HTML para ninguna fuente
+- Diferenciación por portal del contenido enviado al LLM
+- Extracción directa pre-LLM de ningún campo
+
+### Qué de esto ventas NO está usando
+
+| Feature alquileres | Estado en ventas | Vale la pena? |
+|--------------------|-----------------|---------------|
+| **data-page Remax** (agente, fotos, título, descripción limpia) | No usa. Lee `datos_json_enrichment.descripcion` | **No prioritario** — ventas ya tiene agente y fotos de discovery. El título limpio de data-page podría mejorar matching de nombre_edificio, pero el gain es marginal. |
+| **Contenido diferenciado por fuente** (data-page vs markdown) | No diferencia. Una sola fuente de texto. | **Sí vale** — Remax con data-page da texto más limpio al LLM. Pero requiere acceso al rawHtml en el paso de LLM, que hoy no tiene. |
+| **Regex HTML para BI** (fotos, agente) | No aplica — ventas no tiene Bien Inmuebles | N/A |
+| **Merge directo > LLM** para agente/fotos | No aplica — ventas no extrae agente/fotos por LLM | N/A |
+| **Firecrawl en enrichment** (scrape fresh del HTML) | Ventas usa texto pre-scrapeado guardado en `datos_json_enrichment` | **Podría mejorar** — el texto guardado puede estar truncado o desactualizado. Pero Firecrawl agrega latencia y costo. |
+
+### Conclusión extracción multi-fuente
+
+La ventaja principal de alquileres es que **extrae agente y fotos sin LLM** (más barato, más confiable). Pero ventas no necesita esto porque discovery ya maneja agente y fotos.
+
+La ventaja real que ventas podría adoptar es **contenido diferenciado por fuente**: usar data-page JSON para Remax (texto más limpio) en vez del markdown genérico. Esto requiere acceso al `rawHtml` en el paso de LLM, que hoy no está disponible porque el script lee de `datos_json_enrichment.descripcion` (ya procesado por el extractor regex). Sería un cambio en el flujo n8n, no en el script LLM standalone.
+
+---
+
 ## 2. Construcción del prompt
 
 ### Alquileres
