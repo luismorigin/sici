@@ -29,12 +29,13 @@ AS $function$
           CROSS JOIN LATERAL (
               SELECT unnest(
                   CASE zona_ui
-                      WHEN 'equipetrol_centro'    THEN ARRAY['Equipetrol', 'Equipetrol Centro']
+                      -- Migración 184: nombres display definitivos + aliases legacy
+                      WHEN 'equipetrol_centro'    THEN ARRAY['Equipetrol Centro', 'Equipetrol', 'Equipetrol Centro']
                       WHEN 'equipetrol_norte'     THEN ARRAY['Equipetrol Norte', 'Equipetrol Norte/Norte', 'Equipetrol Norte/Sur']
                       WHEN 'sirari'               THEN ARRAY['Sirari']
                       WHEN 'villa_brigida'        THEN ARRAY['Villa Brigida']
-                      WHEN 'equipetrol_oeste'     THEN ARRAY['Faremafu']
-                      WHEN 'equipetrol_3er_anillo' THEN ARRAY['Equipetrol Franja']
+                      WHEN 'equipetrol_oeste'     THEN ARRAY['Equipetrol Oeste', 'Faremafu']
+                      WHEN 'equipetrol_3er_anillo' THEN ARRAY['Eq. 3er Anillo', 'Equipetrol Franja']
                       WHEN 'sin_zona'             THEN ARRAY['Sin zona', 'sin zona']
                       ELSE ARRAY[zona_ui]
                   END
