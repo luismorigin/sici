@@ -1,6 +1,7 @@
-# Prompt LLM Enrichment — Ventas v1.0
+# Prompt LLM Enrichment — Ventas v3.0
 
 > Modelo: claude-haiku-4-5-20251001 | temperature: 0 | max_tokens: 1500
+> Evolución: v1.0 → v2.0 → v3.0 (2026-03-10)
 
 ---
 
@@ -22,7 +23,7 @@ DATOS YA EXTRAÍDOS (del pipeline regex — pueden tener errores):
 - Estado construcción (regex): {estado_construccion_regex}
 - Zona GPS: {zona}
 
-PROYECTOS CONOCIDOS EN ESTA ZONA ({zona}):
+PROYECTOS CONOCIDOS EN ZONA {zona}:
 {lista_proyectos_zona}
 
 TEXTO DE LA PÁGINA:
@@ -41,49 +42,48 @@ NOMBRE_EDIFICIO:
 - NUNCA devolver: "Venta", "Pre Venta", "Departamento", fragmentos de oraciones
 
 ESTADO_CONSTRUCCION:
-- "entrega_inmediata": "listo para vivir", "listo para ocupar", "entrega inmediata", amoblado CON piso específico y precio fijo USD
-- "preventa": "precios desde", "precios al cambio Bs.7", "entrega [fecha futura]", "avance de obra X%"
-- "en_construccion": "en construcción", "obra gruesa"
+- "entrega_inmediata": "listo para vivir", "entrega inmediata", amoblado CON piso específico y precio fijo USD
+- "preventa": "precios desde", "precios al cambio Bs.7", "entrega [fecha futura]"
+- "en_construccion": "en construcción", "obra gruesa", "avance X%"
 - "nuevo_a_estrenar": "a estrenar", depto terminado sin amueblar
 - "usado": "segunda mano", "de ocasión"
 - CUIDADO: "amoblado" o "equipado" SOLOS no implican entrega_inmediata
-- CUIDADO: "Precios al cambio Bs.7" = preventa (precio fijo BOB a TC oficial)
-- CUIDADO: Un mismo edificio puede tener unidades en diferentes estados
+- CUIDADO: "Precios al cambio Bs.7" = preventa
 
 TIPO_CAMBIO_DETECTADO:
-- "paralelo": "TC paralelo", "al paralelo", "dólares o paralelo", "pago en dólares", "solo dólares", "tc del día" (sin número fijo)
-- "oficial": "TC 7", "al cambio Bs.7", "TC oficial", "tipo de cambio 7", "cambio 6.96"
-- null: si no hay mención de tipo de cambio ni forma de pago
-- CLAVE: "solo dólares" o "pago en dólares" = PARALELO (en Bolivia, exigir USD = operar al paralelo)
-- CLAVE: "TC 7" = OFICIAL (6.96 redondeado, tasa fija BCB)
-- CLAVE: "$us X" sin más contexto = null (la moneda sola no indica TC)
+- "paralelo": "TC paralelo", "al paralelo", "dólares o paralelo", "solo dólares", "tc del día", "pago en dólares"
+- "oficial": "TC 7", "al cambio Bs.7", "TC oficial", "tipo de cambio 7", precio listado SOLO en Bs/bolivianos sin mención de USD
+- "no_especificado": si no hay mención de TC ni forma de pago. NUNCA devolver null — usar "no_especificado"
+- CLAVE: "solo dólares" o "pago en dólares" = PARALELO
+- CLAVE: "TC 7" o "cambio 6.96" = OFICIAL
+- CLAVE: Precio en "Bs" o "bolivianos" sin mención de dólares = OFICIAL (tasa BCB fija)
+- CLAVE: "$us X" sin más contexto = "no_especificado" (moneda sola no indica TC)
 
 PARQUEO_INCLUIDO:
-- true: "incluye parqueo", "incluye 1 parqueo", "con parqueo y baulera" (sin precio aparte)
-- false: "Parqueo: $us X", "parqueo adicional", precio explícito por parqueo
-- null: si "parqueo" aparece solo en áreas comunes, o no se menciona
-- PRIORIDAD: precio explícito → false (sin importar otras menciones)
+- true: "incluye parqueo", "con parqueo" sin precio aparte
+- false: "Parqueo: $us X" (precio explícito) O no se menciona parqueo en absoluto
+- null: SOLO si "parqueo" aparece en áreas comunes sin detalle de inclusión
+- DEFAULT: false (si no hay info de parqueo)
+
+BAULERA_INCLUIDA:
+- true: "incluye baulera", "con baulera" sin precio aparte
+- false: si no se menciona baulera, o precio explícito por baulera
+- DEFAULT: false (si no hay info de baulera)
 
 PLAN_PAGOS:
-- Detectá si hay información sobre forma de pago:
-  - "plan de pagos", "financiamiento directo", "cuotas mensuales"
-  - "reserva + cuotas", "30% anticipo + saldo"
-  - "pago al contado", "solo contado"
-- tiene_plan_pagos: true si hay financiamiento/cuotas, false si solo contado
-- plan_pagos_texto: resumen breve de las condiciones
+- tiene_plan_pagos: true si cuotas/financiamiento, false si solo contado o no hay info. DEFAULT: false
+- plan_pagos_texto: resumen breve de condiciones, null si no hay info
+- descuento_contado_pct: porcentaje de descuento por pago contado, null si no se menciona
+- acepta_permuta: true si menciona permuta/canje, false si no. DEFAULT: false
+- precio_negociable: true si "negociable"/"escucha ofertas", false si no. DEFAULT: false
+- solo_tc_paralelo: true SOLO si exige exclusivamente dólares/paralelo ("solo dólares", "pago en dólares", "solo paralelo"). false si acepta ambas opciones. DEFAULT: false
+- CUIDADO: "dólares O paralelo" = false (acepta ambas opciones, no exige una sola)
+- CUIDADO: "Se acepta dólares o al tipo de cambio paralelo" = false (da opciones)
+- Solo true cuando NO hay alternativa: "Pago en Dolares" (sin "o"), "SOLO EN DOLARES"
 
-PISO:
-- Extraé el número de piso si se menciona: "piso 7", "planta 3", "PB"
-- PB/planta baja = 0
-- Si no se menciona, null
-
-AMENITIES Y EQUIPAMIENTO:
-- Solo listá amenities que el texto CONFIRME explícitamente
-- NUNCA inferir Pet Friendly si no dice "pet friendly" o "acepta mascotas"
-- NUNCA inferir Sauna si no dice "sauna" o "jacuzzi"
-- Amenities = áreas del edificio (piscina, gym, churrasquera, cowork, etc.)
-- Equipamiento = del departamento (A/C, cocina equipada, lavadora, etc.)
-- A/C: solo si dice "aire acondicionado", "split", "climatización". NO si dice "acceso", "acústico"
+AMENITIES y EQUIPAMIENTO:
+- Solo lo que el texto CONFIRME explícitamente
+- NUNCA inferir Pet Friendly, Sauna, etc. sin mención explícita
 
 ═══════════════════════════════════════
 
@@ -95,7 +95,7 @@ Devuelve SOLO este JSON (sin explicaciones, sin markdown):
   "estado_construccion_confianza": "alta" | "media" | "baja" | null,
   "fecha_entrega_estimada": string | null,
   "es_multiproyecto": boolean | null,
-  "tipo_cambio_detectado": "paralelo" | "oficial" | null,
+  "tipo_cambio_detectado": "paralelo" | "oficial" | "no_especificado",
   "tipo_cambio_confianza": "alta" | "media" | "baja" | null,
   "piso": number | null,
   "parqueo_incluido": boolean | null,
@@ -115,6 +115,32 @@ Devuelve SOLO este JSON (sin explicaciones, sin markdown):
   "equipamiento_detectado": string[]
 }
 ```
+
+---
+
+## Changelog
+
+### v3.0 (2026-03-10) — Production-ready
+
+Cambios desde v2.0:
+- TIPO_CAMBIO: precio en Bs/bolivianos sin mención USD = `oficial` (fix ID 234)
+- SOLO_TC_PARALELO: "dólares O paralelo" = `false` (fix ID 519). Solo `true` sin alternativa.
+- Instrucciones con ejemplos negativos para prevenir falsos positivos
+
+### v2.0 (2026-03-10)
+
+Cambios desde v1.0:
+- Booleanos DEFAULT false: `baulera_incluida`, `parqueo_incluido`, `plan_pagos.*`, `acepta_permuta`, `precio_negociable`, `solo_tc_paralelo`
+- `tipo_cambio_detectado`: agregado `"no_especificado"` como valor válido. NUNCA devolver null.
+- Instrucciones expandidas para BAULERA (sección propia)
+- Instrucciones expandidas para PLAN_PAGOS (detalle por subcampo)
+- Resultado: no_detecta 90→2 (-98%), llm_agrega 68→143 (+110%)
+
+### v1.0 (2026-03-10) — Versión inicial
+
+- Prompt base con 15 campos
+- `depende_de_tc` incluido (removido post-v1, ver "Campos excluidos")
+- Resultado: 30 props, $0.026, 90 no_detecta por desalineación de defaults
 
 ---
 
@@ -155,7 +181,7 @@ La lista se inyecta como texto plano:
 ### Manejo de contenido por portal
 
 | Portal | Método | Contenido enviado al LLM |
-|--------|--------|--------------------------|
+|--------|--------|-----------------------------|
 | Century21 | Markdown de Firecrawl | `scrape.markdown` (max 3000 chars) |
 | Remax | data-page parsed | `TÍTULO: {title}\n\nDESCRIPCIÓN:\n{description}` (max 3000 chars) |
 
@@ -168,7 +194,7 @@ La lista se inyecta como texto plano:
 | baulera_precio_adicional_usd | 0 a 20,000 | → null |
 | descuento_contado_pct | 0 a 30 | → null |
 | estado_construccion | enum values only | → null |
-| tipo_cambio_detectado | "paralelo" / "oficial" / null | → null |
+| tipo_cambio_detectado | "paralelo" / "oficial" / "no_especificado" | → "no_especificado" |
 | amenities_confirmados | array of strings | → [] |
 | equipamiento_detectado | array of strings | → [] |
 | Más de 3 errores de validación | — | requiere_revision = true |
@@ -177,8 +203,8 @@ La lista se inyecta como texto plano:
 
 | Concepto | Valor |
 |----------|-------|
-| Input tokens/prop | ~1,800 (prompt + PM list + contenido) |
-| Output tokens/prop | ~600 |
-| Costo/prop (Haiku 4.5) | ~$0.0006 |
+| Input tokens/prop | ~2,200 (prompt + PM list + contenido) |
+| Output tokens/prop | ~1,200 |
+| Costo/prop (Haiku 4.5) | ~$0.0010 |
 | Props/noche | ~40-50 |
-| Costo/mes | ~$0.90 |
+| Costo/mes | ~$1.50 |
