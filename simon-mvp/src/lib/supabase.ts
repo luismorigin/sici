@@ -1698,14 +1698,18 @@ export async function obtenerMicrozonas(): Promise<MicrozonaData[]> {
       return demoData
     }
 
-    // Mapeo canónico: microzona BD → display (5 zonas, alineado con FilterBarPremium)
+    // Mapeo canónico: microzona BD → display (post-migración 184, nombres nuevos)
     const microzonaDisplay: Record<string, string> = {
-      'Equipetrol': 'Eq. Centro',
+      'Equipetrol Centro': 'Eq. Centro',
+      'Equipetrol Norte': 'Eq. Norte',
+      'Equipetrol Oeste': 'Eq. Oeste',
       'Sirari': 'Sirari',
+      'Villa Brigida': 'Villa Brigida',
+      // Legacy aliases (por si quedan props sin re-asignar)
+      'Equipetrol': 'Eq. Centro',
       'Faremafu': 'Eq. Oeste',
       'Equipetrol Norte/Norte': 'Eq. Norte',
       'Equipetrol Norte/Sur': 'Eq. Norte',
-      'Villa Brigida': 'Villa Brigida'
     }
 
     // Aggregate manually

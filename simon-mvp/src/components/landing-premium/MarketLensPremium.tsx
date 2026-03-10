@@ -77,7 +77,7 @@ export default function MarketLensPremium({ snapshot, microzonas }: MarketLensPr
               </div>
             </div>
 
-            <Link href="/filtros-v2" prefetch={false}>
+            <Link href="/mercado/equipetrol" prefetch={false}>
               <button className="bg-[#0a0a0a] text-white px-10 py-4 text-xs tracking-[3px] uppercase hover:bg-[#c9a959] transition-all duration-300 flex items-center gap-4">
                 Ver datos del mercado
                 <IconArrowRight />
@@ -111,6 +111,12 @@ export default function MarketLensPremium({ snapshot, microzonas }: MarketLensPr
                 <span className="text-white/70 text-sm">En tiempo real</span>
               </div>
             </div>
+            <p className="mt-6 text-white/30 text-[0.65rem] leading-relaxed">
+              Incluye todo Equipetrol sin filtros de vigencia.{' '}
+              <Link href="/mercado/equipetrol" className="underline hover:text-white/50" prefetch={false}>
+                Ver análisis filtrado
+              </Link>.
+            </p>
           </div>
         </div>
 
