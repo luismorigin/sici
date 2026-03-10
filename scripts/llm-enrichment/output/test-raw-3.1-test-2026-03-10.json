@@ -1,0 +1,4745 @@
+[
+  {
+    "id": 30,
+    "fuente": "remax",
+    "zona": "Equipetrol Centro",
+    "url": "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120045022-125",
+    "llm_raw": {
+      "nombre_edificio": "Condominio SKY LUXIA",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "entrega_inmediata",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "paralelo",
+      "tipo_cambio_confianza": "alta",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": true
+      },
+      "descripcion_limpia": "Monoambiente en venta en Condominio SKY LUXIA, Equipetrol – 3er Anillo Interno. Superficie: 31,20 m². Totalmente amoblado y excelentemente distribuido. Incluye: cama de 2 plazas, sofá cama, roperos empotrados, televisión, mueble de TV, aire acondicionado. Cocina totalmente equipada con encimera de 2 hornillas, horno, heladera, mesón desayunador y mueblería. Área de lavado con espacio para lavadora y calefón. Baño completo con ducha con box, espejo, muebles bajos y bacha moderna. Extras: chapa inteligente, ventana trasera, excelente iluminación natural.",
+      "amenities_confirmados": [
+        "Lobby",
+        "Piscina",
+        "Sauna seco",
+        "Sauna a vapor",
+        "Sala de reuniones",
+        "4 churrasqueras",
+        "Sala de juegos",
+        "Sala de TV",
+        "Salón de eventos"
+      ],
+      "equipamiento_detectado": [
+        "Cama de 2 plazas",
+        "Sofá cama",
+        "Roperos empotrados",
+        "Televisión",
+        "Mueble de TV",
+        "Aire acondicionado",
+        "Cocina equipada",
+        "Encimera de 2 hornillas",
+        "Horno",
+        "Heladera",
+        "Mesón desayunador",
+        "Mueblería alta y baja",
+        "Lavadora (espacio)",
+        "Calefón",
+        "Ducha con box",
+        "Espejo",
+        "Muebles bajos",
+        "Bacha moderna",
+        "Chapa inteligente"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 3446,
+      "output": 775
+    },
+    "elapsed_ms": 5951,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Edificio TORRE OASIS",
+        "valor_llm": "Condominio SKY LUXIA",
+        "confianza_llm": "alta",
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "entrega_inmediata",
+        "valor_llm": "entrega_inmediata",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "paralelo",
+        "valor_llm": "paralelo",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 35,
+    "fuente": "remax",
+    "zona": "Villa Brigida",
+    "url": "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120088023-177",
+    "llm_raw": {
+      "nombre_edificio": "Condominio Avanti",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "entrega_inmediata",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "baja",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento de 2 dormitorios en Condominio Avanti. Living-comedor amplio e iluminado. Cocina equipada con mobiliario moderno. Dormitorio principal en suite con baño privado y roperos empotrados. Segundo dormitorio en suite con baño privado. Baño de visitas. Acabados de alta calidad.",
+      "amenities_confirmados": [
+        "Piscina",
+        "Churrasquera",
+        "Salón de eventos",
+        "Espacio de coworking"
+      ],
+      "equipamiento_detectado": [
+        "Cocina equipada",
+        "Roperos empotrados",
+        "Mobiliario de diseño moderno"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2630,
+      "output": 479
+    },
+    "elapsed_ms": 3729,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Condominio Avanti",
+        "valor_llm": "Condominio Avanti",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "entrega_inmediata",
+        "valor_llm": "entrega_inmediata",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "NULL",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "baja",
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 43,
+    "fuente": "remax",
+    "zona": "Equipetrol Oeste",
+    "url": "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120088023-173",
+    "llm_raw": {
+      "nombre_edificio": "Lofty Island",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "preventa",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": "2026-04",
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "baja",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": 12000,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": true,
+        "plan_pagos_texto": "Pago al contado. Inicial del 50% y saldo contra entrega. Inicial del 70% y saldo contra entrega.",
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Pre-venta exclusiva de departamentos de 1 y 2 dormitorios en Condominio Lofty Island, ubicado en Calle Nicolás Ortiz esquina C4 Oeste, zona Equipetrol. Proyecto moderno con arquitectura contemporánea, materiales de alta calidad y construcción antisísmica grado 5. Entrega estimada abril 2026. Precios desde $us. 109.104.",
+      "amenities_confirmados": [
+        "Piscina",
+        "Churrasquera",
+        "Gimnasio",
+        "Lobby de recepción"
+      ],
+      "equipamiento_detectado": [
+        "Aire acondicionado en dormitorios y living",
+        "Cocina equipada con encimera, horno empotrado, extractor y microondas",
+        "Mobiliario de cocina alto y bajo",
+        "Calefón a gas",
+        "Roperos y vestidores",
+        "Baños con box de vidrio templado",
+        "Chapas digitales"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2767,
+      "output": 594
+    },
+    "elapsed_ms": 5257,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Lofty Island",
+        "valor_llm": "Lofty Island",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "preventa",
+        "valor_llm": "preventa",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "no_especificado",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "baja",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "12000",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "NULL",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "2026-04",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 48,
+    "fuente": "remax",
+    "zona": "Equipetrol Oeste",
+    "url": "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120088023-168",
+    "llm_raw": {
+      "nombre_edificio": "Lofty Island",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "preventa",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": "abril 2026",
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "media",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": 12000,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": true,
+        "plan_pagos_texto": "Pago al contado. Inicial del 50% y saldo contra entrega. Inicial del 70% y saldo contra entrega.",
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Pre-venta exclusiva de departamentos de 1 y 2 dormitorios en Condominio Lofty Island, ubicado en Calle Nicolás Ortiz esquina C4 Oeste, zona Equipetrol. Proyecto moderno con arquitectura contemporánea y materiales de alta calidad. Construcción con tecnología antisísmica grado 5. Entrega estimada abril 2026. Precios desde $us. 109.104.",
+      "amenities_confirmados": [
+        "Piscina",
+        "Churrasquera",
+        "Gimnasio",
+        "Lobby de recepción"
+      ],
+      "equipamiento_detectado": [
+        "Aire acondicionado en dormitorios y living",
+        "Cocina equipada con encimera, horno empotrado, extractor y microondas",
+        "Mobiliario de cocina alto y bajo",
+        "Calefón a gas",
+        "Roperos y vestidores",
+        "Baños con box de vidrio templado",
+        "Chapas digitales"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2767,
+      "output": 597
+    },
+    "elapsed_ms": 4980,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Lofty Island",
+        "valor_llm": "Lofty Island",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "preventa",
+        "valor_llm": "preventa",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "no_especificado",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "media",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "12000",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "NULL",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "abril 2026",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 59,
+    "fuente": "remax",
+    "zona": "Equipetrol Oeste",
+    "url": "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034128-492",
+    "llm_raw": {
+      "nombre_edificio": "Sky Eclipse",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "nuevo_a_estrenar",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "paralelo",
+      "tipo_cambio_confianza": "alta",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento en Edificio Sky Eclipse, Equipetrol 2do Anillo – Calle Enrique Finot. 95 m² con 2 dormitorios (1 en suite con box de baño) y 2 baños. Cocina amoblada y equipada con heladera, horno empotrado, microondas, encimera y campana extractora. Área de servicio. Amplio living-comedor. Amenities: piscina panorámica, gimnasio equipado, terraza con churrasqueras, salón de eventos, sala de juegos, sala de reuniones y coworking.",
+      "amenities_confirmados": [
+        "Piscina panorámica",
+        "Gimnasio equipado",
+        "Terraza con churrasqueras",
+        "Salón de eventos",
+        "Sala de juegos",
+        "Sala de reuniones",
+        "Coworking"
+      ],
+      "equipamiento_detectado": [
+        "Cocina amoblada",
+        "Heladera",
+        "Horno empotrado",
+        "Microondas",
+        "Encimera",
+        "Campana extractora",
+        "Área de servicio"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2322,
+      "output": 592
+    },
+    "elapsed_ms": 4226,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Sky Eclipse",
+        "valor_llm": "Sky Eclipse",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "entrega_inmediata",
+        "valor_llm": "nuevo_a_estrenar",
+        "confianza_llm": "alta",
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "paralelo",
+        "valor_llm": "paralelo",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 101,
+    "fuente": "remax",
+    "zona": "Equipetrol Centro",
+    "url": "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120097006-5",
+    "llm_raw": {
+      "nombre_edificio": "Atrium",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "entrega_inmediata",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "oficial",
+      "tipo_cambio_confianza": "alta",
+      "piso": 8,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento de 2 dormitorios en piso 8 del Edificio Atrium sobre Enrique Finot. 95 m² con 2 baños (1 en suite), cocina tipo americana totalmente equipada, todos los ambientes con aire acondicionado, roperos de techo a piso, acabado de lujo. Áreas sociales premium: piscina en piso 14, churrasquera, gimnasio.",
+      "amenities_confirmados": [
+        "Piscina",
+        "Gimnasio",
+        "Churrasquera"
+      ],
+      "equipamiento_detectado": [
+        "Aire acondicionado",
+        "Cocina tipo americana equipada",
+        "Roperos de techo a piso"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 3251,
+      "output": 480
+    },
+    "elapsed_ms": 3612,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Atrium",
+        "valor_llm": "Atrium",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "no_especificado",
+        "valor_llm": "entrega_inmediata",
+        "confianza_llm": "alta",
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "no_especificado",
+        "valor_llm": "oficial",
+        "confianza_llm": "alta",
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "8",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 183,
+    "fuente": "century21",
+    "zona": "Equipetrol Centro",
+    "url": "https://c21.com.bo/propiedad/87548_departamento-en-preventa-de-2-suites-en-sky-level",
+    "llm_raw": {
+      "nombre_edificio": "Sky Level",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "preventa",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": "2026-12",
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "baja",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Proyecto de pre-venta en Equipetrol 2do y 3er anillo. Departamentos modernos de 1 y 2 dormitorios con diseño de vanguardia. Espacios para locales comerciales. Áreas sociales techadas. Ubicación estratégica. Precios de lanzamiento. Entrega diciembre 2026.",
+      "amenities_confirmados": [
+        "Áreas sociales techadas"
+      ],
+      "equipamiento_detectado": []
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 3272,
+      "output": 410
+    },
+    "elapsed_ms": 3140,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Sky Level",
+        "valor_llm": "Sky Level",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "preventa",
+        "valor_llm": "preventa",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "NULL",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "baja",
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "2026-12",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 234,
+    "fuente": "century21",
+    "zona": "Equipetrol Centro",
+    "url": "https://c21.com.bo/propiedad/91113_en-venta-monoambiente-en-equipetrol",
+    "llm_raw": {
+      "nombre_edificio": "Edificio MURURE",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "nuevo_a_estrenar",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "oficial",
+      "tipo_cambio_confianza": "alta",
+      "piso": 5,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Monoambiente a estrenar en Edificio Mururé, Equipetrol entre 2do y 3er anillo calle 6 la plata. Superficie 38m2, piso 5. Cuenta con balcón, cocina con mueblería alta y baja, aire acondicionado, baño con box de baño, ropero. Áreas sociales: piscina, 2 churrasqueras, salón de eventos, área de lavandería.",
+      "amenities_confirmados": [
+        "Piscina",
+        "Churrasqueras",
+        "Salón de eventos",
+        "Área de lavandería"
+      ],
+      "equipamiento_detectado": [
+        "Balcón",
+        "Cocina con mueblería alta y baja",
+        "Aire acondicionado",
+        "Baño con box de baño",
+        "Ropero"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 3213,
+      "output": 522
+    },
+    "elapsed_ms": 3979,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Edificio MURURE",
+        "valor_llm": "Edificio MURURE",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "nuevo_a_estrenar",
+        "valor_llm": "nuevo_a_estrenar",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "oficial",
+        "valor_llm": "oficial",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "5",
+        "valor_llm": "5",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 296,
+    "fuente": "century21",
+    "zona": "Equipetrol Norte",
+    "url": "https://c21.com.bo/propiedad/92794_departamento-en-venta-en-condominio-sky-moon",
+    "llm_raw": {
+      "nombre_edificio": "Sky Moon",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "entrega_inmediata",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "alta",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento de 1 dormitorio en suite con vestidor, 2 baños, 66.10 m². Living-comedor con cocina integrada, cuarto de máquinas, balcones en dormitorio y living. Equipamiento incluido: cocina con encimera, horno, extractor, muebles de cocina y baño, termotanque, aires acondicionados, espejos. Amenidades: piscina semi techada, gimnasio, sauna seco y vapor, cowork, 2 salas de reuniones, 2 salones de eventos con churrasqueras, salas de juegos, terraza panorámica, cancha de pádel, mirador con fogateros y vista 360° de la ciudad.",
+      "amenities_confirmados": [
+        "Piscina semi techada",
+        "Gimnasio",
+        "Sauna seco",
+        "Sauna vapor",
+        "Cowork",
+        "Salas de reuniones",
+        "Salones de eventos",
+        "Churrasqueras",
+        "Salas de juegos",
+        "Terraza panorámica",
+        "Cancha de pádel",
+        "Mirador",
+        "Fogateros"
+      ],
+      "equipamiento_detectado": [
+        "Cocina con encimera",
+        "Horno",
+        "Extractor",
+        "Muebles de cocina",
+        "Muebles de baño",
+        "Termotanque",
+        "Aires acondicionados",
+        "Espejos"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2488,
+      "output": 684
+    },
+    "elapsed_ms": 5100,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Sky Moon",
+        "valor_llm": "Sky Moon",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "entrega_inmediata",
+        "valor_llm": "entrega_inmediata",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "NULL",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "alta",
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 370,
+    "fuente": "century21",
+    "zona": "Equipetrol Centro",
+    "url": "https://c21.com.bo/propiedad/88406_departamento-de-1-dormitorio-modelo-1d-a-ct-en-equipetrol-edificio-hh-once",
+    "llm_raw": {
+      "nombre_edificio": "HH Once Equipetrol",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "preventa",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": "Diciembre 2025",
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "media",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento de 1 dormitorio, modelo 1D-A CT. Superficie: 61,68 m². Ubicación: Avenida San Martin, calle 9-A Este, Equipetrol. Acabado de primera calidad con cerradura inteligente, video porteo on-line, muebles de cocina y baño, iluminación LED. Amenidades: piscina, lounge, churrasqueras, salón multiuso, co-work, lavandería. Seguridad: control de acceso, cámaras en cada nivel, casilleros inteligentes, ascensor eco-friendly. Entrega: Diciembre 2025.",
+      "amenities_confirmados": [
+        "Piscina",
+        "Lounge",
+        "Churrasqueras",
+        "Salón multiuso",
+        "Co-work",
+        "Lavandería",
+        "Cámaras de seguridad",
+        "Control de acceso",
+        "Casilleros inteligentes",
+        "Ascensor eco-friendly"
+      ],
+      "equipamiento_detectado": [
+        "Cerradura inteligente",
+        "Video porteo on-line",
+        "Mueble alto y bajo de cocina",
+        "Encimera",
+        "Extractor",
+        "Mueble bajo del baño",
+        "Iluminación LED de bajo consumo",
+        "Aplicación del celular"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 3338,
+      "output": 656
+    },
+    "elapsed_ms": 5047,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "HH Once Equipetrol",
+        "valor_llm": "HH Once Equipetrol",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "preventa",
+        "valor_llm": "preventa",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "no_especificado",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "media",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "Diciembre 2025",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 418,
+    "fuente": "remax",
+    "zona": "Sirari",
+    "url": "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125002206-44",
+    "llm_raw": {
+      "nombre_edificio": "Edif. SKY DESIGN - SKY Properties",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "entrega_inmediata",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "media",
+      "piso": null,
+      "parqueo_incluido": true,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": true,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento de 2 dormitorios en suite con vestidor, 3 baños, balcón con acceso desde sala y dormitorios, baño para visitas, cocina equipada, living-comedor amplio, área de servicio, 1 parqueo y baulera. Condominio con piscinas, churrasqueras, gimnasio y seguridad 24/7.",
+      "amenities_confirmados": [
+        "Piscinas",
+        "Churrasqueras",
+        "Gimnasio",
+        "Seguridad 24/7"
+      ],
+      "equipamiento_detectado": [
+        "Cocina equipada",
+        "Balcón",
+        "Vestidor",
+        "Baño moderno"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2552,
+      "output": 488
+    },
+    "elapsed_ms": 3403,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Edif. SKY DESIGN - SKY Properties",
+        "valor_llm": "Edif. SKY DESIGN - SKY Properties",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "entrega_inmediata",
+        "valor_llm": "entrega_inmediata",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "no_especificado",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "media",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "true",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 450,
+    "fuente": "century21",
+    "zona": "Equipetrol Centro",
+    "url": "https://c21.com.bo/propiedad/95338_exclusivo-departamento-de-2-dormitorios-en-venta",
+    "llm_raw": {
+      "nombre_edificio": "Edificio Ariaa",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "entrega_inmediata",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "paralelo",
+      "tipo_cambio_confianza": "alta",
+      "piso": null,
+      "parqueo_incluido": true,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": true,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": true
+      },
+      "descripcion_limpia": "Hermoso departamento de 2 dormitorios en suite en exclusivo condominio Aria Plaza Italia, Equipetrol. Living comedor amplio, escritorio o sala de TV, amplios ambientes con excelente iluminación natural, cocina cerrada funcional y elegante, lavandería, baño de visitas, balcón con hermosa vista. Parqueo bajo techo y baulera incluidos. Aire acondicionado centralizado. Edificio boutique en zona Plaza Italia rodeado de cafés, restaurantes y servicios premium.",
+      "amenities_confirmados": [
+        "Aire acondicionado centralizado",
+        "Balcón",
+        "Parqueo bajo techo",
+        "Baulera"
+      ],
+      "equipamiento_detectado": [
+        "Cocina cerrada",
+        "Lavandería"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 3358,
+      "output": 500
+    },
+    "elapsed_ms": 3792,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Edificio Ariaa",
+        "valor_llm": "Edificio Ariaa",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "no_especificado",
+        "valor_llm": "entrega_inmediata",
+        "confianza_llm": "alta",
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "paralelo",
+        "valor_llm": "paralelo",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "true",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "NULL",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "NULL",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 455,
+    "fuente": "century21",
+    "zona": "Equipetrol Centro",
+    "url": "https://c21.com.bo/propiedad/95876_preventa-de-monoambiente-en-edificio-hh-once",
+    "llm_raw": {
+      "nombre_edificio": "HH Once Equipetrol",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "preventa",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "media",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": "Pago al contado",
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Monoambiente en preventa ubicado en Equipetrol calle 9 A Este. Superficie: 37,05 m². Consta de living comedor, cocina con muebles altos y bajos, cocina encimera y extractor, mueble bajo del baño, balcón a la calle. Edificio con control de acceso, casilleros inteligentes y aplicación propia. Áreas sociales: piscina, lounge, 2 churrasqueras, SUM, sala de entretenimiento, cowork y lavandería.",
+      "amenities_confirmados": [
+        "Piscina",
+        "Lounge",
+        "Churrasqueras",
+        "SUM",
+        "Sala de entretenimiento",
+        "Cowork",
+        "Lavandería",
+        "Control de acceso",
+        "Casilleros inteligentes"
+      ],
+      "equipamiento_detectado": [
+        "Cocina con muebles altos y bajos",
+        "Cocina encimera",
+        "Extractor",
+        "Mueble bajo del baño",
+        "Balcón"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 3265,
+      "output": 583
+    },
+    "elapsed_ms": 4481,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "HH Once Equipetrol",
+        "valor_llm": "HH Once Equipetrol",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "preventa",
+        "valor_llm": "preventa",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "no_especificado",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "media",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 465,
+    "fuente": "remax",
+    "zona": "Equipetrol Centro",
+    "url": "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001318-39",
+    "llm_raw": {
+      "nombre_edificio": "Sky Plaza Italia",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "entrega_inmediata",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "paralelo",
+      "tipo_cambio_confianza": "alta",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Monoambiente amoblado moderno de 42,43 m² en Condominio Sky Plaza Italia, Equipetrol. Ubicado entre 2do y 3er anillo interno. Ambiente amplio con buena iluminación, baño moderno, cocina eléctrica equipada con microondas y refrigerador, sofá, aire acondicionado y balcón con vista despejada. Amenidades: piscina, área de descanso, churrasquera con horno eléctrico, sala lounge social, sala multifuncional, mesa de billar y futbolín.",
+      "amenities_confirmados": [
+        "Piscina",
+        "Área de descanso",
+        "Churrasquera con horno eléctrico",
+        "Sala lounge social",
+        "Sala multifuncional",
+        "Mesa de billar",
+        "Futbolín"
+      ],
+      "equipamiento_detectado": [
+        "Cocina eléctrica",
+        "Microondas",
+        "Refrigerador",
+        "Sofá",
+        "Aire acondicionado",
+        "Balcón"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 3419,
+      "output": 576
+    },
+    "elapsed_ms": 4240,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Sky Plaza Italia",
+        "valor_llm": "Sky Plaza Italia",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "entrega_inmediata",
+        "valor_llm": "entrega_inmediata",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "paralelo",
+        "valor_llm": "paralelo",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 470,
+    "fuente": "remax",
+    "zona": "Sirari",
+    "url": "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034093-102",
+    "llm_raw": {
+      "nombre_edificio": "Condominio Las Dalias",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "preventa",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": "Diciembre 2025",
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "media",
+      "piso": 1,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": true,
+        "plan_pagos_texto": "Modalidades de pago de 50% y 90% de aporte sobre el valor total",
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento 104 en Condominio Las Dalias, ubicado en Equipetrol Norte, Calle Las Dalias Nro. 15. Superficie 51.66 m², 1 dormitorio, piso 1. Proyecto con 7 plantas de departamentos (10 por piso) y terraza en octavo piso con áreas sociales. Diseño por SOMMET. Precio USD 129,150. Entrega estimada Diciembre 2025.",
+      "amenities_confirmados": [
+        "Terraza en octavo piso con áreas sociales",
+        "Balcones propios"
+      ],
+      "equipamiento_detectado": [
+        "Aires acondicionados con wifi",
+        "Termotanque",
+        "Cocina eléctrica",
+        "Extractor",
+        "Horno eléctrico",
+        "Heladera panelable a medida",
+        "Cajonería alta y baja de cocina",
+        "Cajonería baja de baño",
+        "Accesorios de baño",
+        "Blindex de baño",
+        "Puertas de roperos empotrados",
+        "Luces LED"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 3298,
+      "output": 625
+    },
+    "elapsed_ms": 5710,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Condominio Las Dalias",
+        "valor_llm": "Condominio Las Dalias",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "preventa",
+        "valor_llm": "preventa",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "no_especificado",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "media",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "1",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "NULL",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "Diciembre 2025",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 479,
+    "fuente": "century21",
+    "zona": "Equipetrol Oeste",
+    "url": "https://c21.com.bo/propiedad/96509_sky-eclipse-diseno-confort-y-exclusividad-en-un-solo-lugar",
+    "llm_raw": {
+      "nombre_edificio": "Sky Eclipse",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "nuevo_a_estrenar",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "paralelo",
+      "tipo_cambio_confianza": "alta",
+      "piso": 13,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento a estrenar de 1 dormitorio en suite con vestidor, balcón amplio con puerta de aislamiento acústico, baño de visita, cocina integrada y equipada, área de lavandería. Ubicado en piso 13 de Sky Eclipse, Equipetrol, Pasaje Enrique Finot entre 2do y 3er anillo. 68 m². Precio: $us. 110.000 (TC Paralelo).",
+      "amenities_confirmados": [
+        "Piscina",
+        "Deck panorámico",
+        "Fitness Club",
+        "Wellness Center",
+        "Sauna seco",
+        "Sauna vapor",
+        "Salones de fiesta",
+        "Churrasqueras",
+        "Salas de juegos",
+        "3 ascensores",
+        "Sistema integral contra incendios",
+        "Seguridad",
+        "Acceso inteligente"
+      ],
+      "equipamiento_detectado": [
+        "Iluminación domotizada",
+        "Cocina equipada Tramontina",
+        "Horno empotrado",
+        "Microondas empotrado",
+        "Cocina eléctrica vitrificada",
+        "Heladera No-Frost doble puerta",
+        "Aire acondicionado frío/calor",
+        "Termotanque",
+        "Intercomunicador con videollamada",
+        "Sistema de detección de incendios",
+        "Chapa digital de alta seguridad",
+        "Mobiliario de cocina DI-ENZO",
+        "Bachas y accesorios Tramontina",
+        "Pisos de porcelanato de alto tráfico",
+        "Carpintería de aluminio europea con sistema DVH acústico"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2620,
+      "output": 749
+    },
+    "elapsed_ms": 6251,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Sky Eclipse",
+        "valor_llm": "Sky Eclipse",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "entrega_inmediata",
+        "valor_llm": "nuevo_a_estrenar",
+        "confianza_llm": "alta",
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "paralelo",
+        "valor_llm": "paralelo",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "13",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 519,
+    "fuente": "remax",
+    "zona": "Villa Brigida",
+    "url": "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-1250016143-20",
+    "llm_raw": {
+      "nombre_edificio": "Garden Equipetrol",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "nuevo_a_estrenar",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "paralelo",
+      "tipo_cambio_confianza": "alta",
+      "piso": 7,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento a estrenar en Edificio Garden Equipetrol, Villa Brígida. 1 dormitorio en suite con closet, cocina moderna, living, baño con box de ducha. Piso 7. Superficie 46.2 m². Precio: $74.900 USD. Se acepta dólares o al tipo de cambio paralelo. Áreas sociales: piscina, churrasquera, caja china, espacio de cowork, cocina gourmet, sala de TV, seguridad 24 horas.",
+      "amenities_confirmados": [
+        "Piscina",
+        "Churrasquera",
+        "Caja china",
+        "Espacio de cowork",
+        "Cocina gourmet",
+        "Sala de TV",
+        "Seguridad 24 horas",
+        "Control de acceso"
+      ],
+      "equipamiento_detectado": [
+        "Closet",
+        "Cocina moderna con cajonería",
+        "Box de ducha"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2530,
+      "output": 547
+    },
+    "elapsed_ms": 4306,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Garden Equipetrol",
+        "valor_llm": "Garden Equipetrol",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "entrega_inmediata",
+        "valor_llm": "nuevo_a_estrenar",
+        "confianza_llm": "alta",
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "paralelo",
+        "valor_llm": "paralelo",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "7",
+        "valor_llm": "7",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 530,
+    "fuente": "century21",
+    "zona": "Equipetrol Centro",
+    "url": "https://c21.com.bo/propiedad/98183_departamento-de-lujo-con-balcon-en-equipetrol",
+    "llm_raw": {
+      "nombre_edificio": "Macororo 12",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "entrega_inmediata",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "baja",
+      "piso": null,
+      "parqueo_incluido": true,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento de lujo con balcón en Edificio Macororo 12, Equipetrol. 2 dormitorios (1 en suite con vestidor), baño con box de vidrio templado y mueble de lavamanos, cocina cerrada con extractor y muebles, aires acondicionados en todos los ambientes, área de lavandería. Amenidades: terraza con piscina, churrasquera, sauna, salón de eventos, seguridad con cámaras. Ubicación frente a Plaza Italia, cerca de Av. San Martín, tercer anillo, Patio Design, IC Norte, colegios, restaurantes, farmacias, transporte.",
+      "amenities_confirmados": [
+        "Piscina",
+        "Churrasquera",
+        "Sauna",
+        "Salón de eventos",
+        "Seguridad con cámaras",
+        "Balcón"
+      ],
+      "equipamiento_detectado": [
+        "Aire acondicionado",
+        "Box de vidrio templado",
+        "Mueble de lavamanos",
+        "Cocina cerrada",
+        "Extractor",
+        "Muebles de cocina superiores e inferiores",
+        "Vestidor"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 3303,
+      "output": 611
+    },
+    "elapsed_ms": 4781,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Macororo 12",
+        "valor_llm": "Macororo 12",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "no_especificado",
+        "valor_llm": "entrega_inmediata",
+        "confianza_llm": "alta",
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "paralelo",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "baja",
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "true",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 559,
+    "fuente": "century21",
+    "zona": "Villa Brigida",
+    "url": "https://c21.com.bo/propiedad/98337_departamento-en-venta-de-1-dormitorio-amoblado-en-equipetrol",
+    "llm_raw": {
+      "nombre_edificio": "Edificio PLATINUM",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "entrega_inmediata",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "paralelo",
+      "tipo_cambio_confianza": "alta",
+      "piso": 6,
+      "parqueo_incluido": true,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": true
+      },
+      "descripcion_limpia": "Departamento de 1 dormitorio amoblado en Edificio Platinum, piso 6. Incluye cocina amoblada y equipada, living-comedor, balcón y parqueo. Acceso a áreas sociales: piscina, churrasqueras y salón social. Ubicado en Equipetrol, 4to anillo Av. Dr Jaime Roman.",
+      "amenities_confirmados": [
+        "Piscina",
+        "Churrasqueras",
+        "Salón social"
+      ],
+      "equipamiento_detectado": [
+        "Cocina amoblada y equipada",
+        "Balcón",
+        "Parqueo"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2339,
+      "output": 463
+    },
+    "elapsed_ms": 3399,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Edificio PLATINUM",
+        "valor_llm": "Edificio PLATINUM",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "entrega_inmediata",
+        "valor_llm": "entrega_inmediata",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "paralelo",
+        "valor_llm": "paralelo",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "6",
+        "valor_llm": "6",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "true",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "1.5",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "llm_no_detecta"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 569,
+    "fuente": "century21",
+    "zona": "Villa Brigida",
+    "url": "https://c21.com.bo/propiedad/98671_departamento-a-estrenar-en-cond-stone-ii-equipetrol",
+    "llm_raw": {
+      "nombre_edificio": "STONE 2",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "nuevo_a_estrenar",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "media",
+      "piso": 7,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento a estrenar en Edificio Stone II, Barrio Brígida. 1 suite, 1 baño, cocina, piso 7, balcones. Superficie 54.34 m². Amenities: piscina, gimnasio, co-work, churrasqueras, sala de TV, billar.",
+      "amenities_confirmados": [
+        "piscina",
+        "gimnasio",
+        "co-work",
+        "churrasqueras",
+        "sala de TV",
+        "billar"
+      ],
+      "equipamiento_detectado": [
+        "balcones"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2294,
+      "output": 446
+    },
+    "elapsed_ms": 3277,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "STONE 2",
+        "valor_llm": "STONE 2",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "nuevo_a_estrenar",
+        "valor_llm": "nuevo_a_estrenar",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "NULL",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "media",
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "7",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "7",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "llm_no_detecta"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 574,
+    "fuente": "remax",
+    "zona": "Equipetrol Centro",
+    "url": "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034093-263",
+    "llm_raw": {
+      "nombre_edificio": "Luxe Tower",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "preventa",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": "Noviembre 2026",
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "oficial",
+      "tipo_cambio_confianza": "alta",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento en pre venta de 63 m² con 1 dormitorio en suite con walking closet, living comedor, cocina americana, baño de visitas y espacio para lavadora. Ubicado en Luxe Tower (By Luxe Design) en Calle Enrique Finot y Esquina Calle Guemes, Equipetrol Centro. Entrega estimada Noviembre 2026.",
+      "amenities_confirmados": [],
+      "equipamiento_detectado": [
+        "Chapas digitales Smart",
+        "Domótica",
+        "Iluminación LED",
+        "Cocina equipada (extractor, microondas, horno, cocina encimera)",
+        "Muebles fijos exclusivos",
+        "Heladera panelable",
+        "Box de baño",
+        "Termotanque"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 3296,
+      "output": 503
+    },
+    "elapsed_ms": 4132,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Luxe Tower",
+        "valor_llm": "Luxe Tower",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "preventa",
+        "valor_llm": "preventa",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "oficial",
+        "valor_llm": "oficial",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "Noviembre 2026",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 611,
+    "fuente": "century21",
+    "zona": "Villa Brigida",
+    "url": "https://c21.com.bo/propiedad/99490_departamento-en-venta-2-d-equpetrol-norte-av-la-salle",
+    "llm_raw": {
+      "nombre_edificio": "Condominio Cruz",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "entrega_inmediata",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "oficial",
+      "tipo_cambio_confianza": "alta",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": 10000,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": 3000,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento de 2 dormitorios en venta en Equipetrol Norte, Av. La Salle. Superficie 91.84 m². 1 suite con walking closet, 2 baños. Full equipado con aire acondicionado, mesón de granito, extractor, calefón, muebles empotrados. Áreas comunes: piscina con cascada, churrasquera techada, sauna, seguridad 24/7, ascensor. Última unidad disponible. Oferta válida hasta 15 de febrero.",
+      "amenities_confirmados": [
+        "Piscina con cascada",
+        "Churrasquera techada",
+        "Sauna",
+        "Seguridad 24/7",
+        "Ascensor"
+      ],
+      "equipamiento_detectado": [
+        "Aire acondicionado",
+        "Mesón de granito",
+        "Encimera",
+        "Extractor",
+        "Calefón",
+        "Muebles altos y bajos",
+        "Roperos empotrados"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2506,
+      "output": 566
+    },
+    "elapsed_ms": 4143,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Condominio Cruz",
+        "valor_llm": "Condominio Cruz",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "entrega_inmediata",
+        "valor_llm": "entrega_inmediata",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "oficial",
+        "valor_llm": "oficial",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "10000",
+        "valor_llm": "10000",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "true",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "3000",
+        "valor_llm": "3000",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 621,
+    "fuente": "remax",
+    "zona": "Sirari",
+    "url": "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034093-273",
+    "llm_raw": {
+      "nombre_edificio": "Condominio Las Dalias",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "preventa",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": "Mayo 2026",
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "media",
+      "piso": 1,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": true,
+        "plan_pagos_texto": "Modalidades de pago de 50% y 90% de aporte sobre el valor total",
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento 110 en Condominio Las Dalias, ubicado en Equipetrol Norte, Calle Las Dalias Nro. 15. Superficie 75.23 m², 2 dormitorios, piso 1. Proyecto diseñado por SOMMET con 7 plantas de departamentos (10 por piso) y terraza en octavo piso para áreas sociales. Departamentos iluminados con ambientes funcionales y balcones propios.",
+      "amenities_confirmados": [
+        "Terraza en áreas sociales (piso 8)"
+      ],
+      "equipamiento_detectado": [
+        "Aires acondicionados con wifi",
+        "Termotanque",
+        "Cocina eléctrica",
+        "Extractor",
+        "Horno eléctrico",
+        "Heladera panelable a medida",
+        "Cajonería alta y baja de cocina",
+        "Cajonería baja de baño",
+        "Accesorios de baño",
+        "Blindex de baño",
+        "Puertas de roperos empotrados",
+        "Luces LED"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 3296,
+      "output": 610
+    },
+    "elapsed_ms": 5570,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Condominio Las Dalias",
+        "valor_llm": "Condominio Las Dalias",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "preventa",
+        "valor_llm": "preventa",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "NULL",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "media",
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "1",
+        "valor_llm": "1",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "Mayo 2026",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 849,
+    "fuente": "century21",
+    "zona": "Equipetrol Centro",
+    "url": "https://c21.com.bo/propiedad/100467_departamento-de-lujo-en-venta-en-equipetrol-condominio-spazios-1",
+    "llm_raw": {
+      "nombre_edificio": "Edificio Spazios",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "nuevo_a_estrenar",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "paralelo",
+      "tipo_cambio_confianza": "alta",
+      "piso": 4,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento de lujo a estrenar en Equipetrol. 3 dormitorios en suite, 165 m² de superficie. Ubicación en fachada principal, piso 4. Precio: $312,717 USD (pago en dólares o TC paralelo). Áreas sociales: lobby, piscina temperada, 2 churrasqueras, salón de uso común con vista 180 grados, sauna y sala de TV.",
+      "amenities_confirmados": [
+        "Piscina temperada",
+        "Churrasqueras (2)",
+        "Salón de uso común con vista 180 grados",
+        "Sauna",
+        "Sala de TV",
+        "Lobby"
+      ],
+      "equipamiento_detectado": []
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 3228,
+      "output": 481
+    },
+    "elapsed_ms": 3520,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Edificio Spazios",
+        "valor_llm": "Edificio Spazios",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "nuevo_a_estrenar",
+        "valor_llm": "nuevo_a_estrenar",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "paralelo",
+        "valor_llm": "paralelo",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "4",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 909,
+    "fuente": "remax",
+    "zona": "Equipetrol Oeste",
+    "url": "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-125001323-55",
+    "llm_raw": {
+      "nombre_edificio": "Alto Busch",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "entrega_inmediata",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "baja",
+      "piso": 1,
+      "parqueo_incluido": true,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Condominio Alto Busch ubicado en 3er Anillo Interno (Calle 11 Oeste). Departamento 101 de 114.12 m² con 3 dormitorios (1 en suite), cocina con cajonería, balcón, baño compartido y punto de servicio. Amenidades: piscina con vista panorámica, terraza con churrasquera, sala TV/Juego. Parqueos en planta baja. Zona de alta demanda, a 250m de UDABOL y UTEPSA, minutos de Patio Design Lifestyle Center e IC Norte.",
+      "amenities_confirmados": [
+        "Piscina con vista panorámica",
+        "Terraza con churrasquera",
+        "Sala de TV/Juego",
+        "Parqueos en planta baja"
+      ],
+      "equipamiento_detectado": [
+        "Cocina con cajonería alta y baja",
+        "Balcón",
+        "Punto de servicio"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2366,
+      "output": 550
+    },
+    "elapsed_ms": 4608,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Alto Busch",
+        "valor_llm": "Alto Busch",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "entrega_inmediata",
+        "valor_llm": "entrega_inmediata",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "no_especificado",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "baja",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "1",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 920,
+    "fuente": "remax",
+    "zona": "Equipetrol Centro",
+    "url": "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120034039-418",
+    "llm_raw": {
+      "nombre_edificio": "Sky Level",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "preventa",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": "diciembre 2026",
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "baja",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Proyecto de pre-venta Sky Level en Equipetrol 2do y 3er anillo. Departamentos de 1 y 2 dormitorios con diseño exclusivo. Superficies desde 52m² hasta 94m². Áreas sociales techadas. Entrega estimada diciembre 2026.",
+      "amenities_confirmados": [
+        "Áreas sociales techadas"
+      ],
+      "equipamiento_detectado": []
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 3287,
+      "output": 400
+    },
+    "elapsed_ms": 2733,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Sky Level",
+        "valor_llm": "Sky Level",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "preventa",
+        "valor_llm": "preventa",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "no_especificado",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "baja",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "diciembre 2026",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 1006,
+    "fuente": "century21",
+    "zona": "Sirari",
+    "url": "https://c21.com.bo/propiedad/101511_impera-tower-departamento-en-venta",
+    "llm_raw": {
+      "nombre_edificio": "Impera Tower",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "entrega_inmediata",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "oficial",
+      "tipo_cambio_confianza": "alta",
+      "piso": 6,
+      "parqueo_incluido": true,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento de 74.60 m² en piso 6 de Impera Tower, Barrio Sirari. 2 dormitorios (1 suite), cocina americana, todos los ambientes con balcones. Incluye parqueo. Amenities: piscina temperada, churrasqueras equipadas bajo galería cubierta, co-work de lujo, lobby moderno, fogatero en último piso, estación pet-shower.",
+      "amenities_confirmados": [
+        "Piscina temperada",
+        "Churrasqueras equipadas bajo galería cubierta",
+        "Co-work con ambientes de lujo",
+        "Lobby exclusivo de diseño moderno",
+        "Fogatero en último piso",
+        "Estación pet-shower"
+      ],
+      "equipamiento_detectado": [
+        "Cocina estilo americana",
+        "Balcones en todos los ambientes"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2512,
+      "output": 519
+    },
+    "elapsed_ms": 3819,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Impera Tower",
+        "valor_llm": "Impera Tower",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "no_especificado",
+        "valor_llm": "entrega_inmediata",
+        "confianza_llm": "alta",
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "oficial",
+        "valor_llm": "oficial",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "6",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "true",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 1009,
+    "fuente": "century21",
+    "zona": "Sirari",
+    "url": "https://c21.com.bo/propiedad/101460_departamento-amoblado-de-1-dormitorio-en-venta-en-equipetrol-cond-sirari-palm",
+    "llm_raw": {
+      "nombre_edificio": "Onix Art By EliTe",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "entrega_inmediata",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "baja",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento amoblado de 1 dormitorio en venta en Equipetrol, Condominio Sirari Palm. Superficie: 35.30 m². Cocina amoblada y equipada, living comedor, amplia terraza, baño.",
+      "amenities_confirmados": [],
+      "equipamiento_detectado": [
+        "cocina amoblada y equipada",
+        "terraza"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2349,
+      "output": 399
+    },
+    "elapsed_ms": 3708,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Onix Art By EliTe",
+        "valor_llm": "Onix Art By EliTe",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "entrega_inmediata",
+        "valor_llm": "entrega_inmediata",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "no_especificado",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "baja",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 1049,
+    "fuente": "century21",
+    "zona": "Sirari",
+    "url": "https://c21.com.bo/propiedad/101830_departamento-monoambiente-sky-equinox",
+    "llm_raw": {
+      "nombre_edificio": "Condominio SKY EQUINOX",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "preventa",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": "junio 2027",
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "paralelo",
+      "tipo_cambio_confianza": "alta",
+      "piso": null,
+      "parqueo_incluido": false,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": false,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": "Pago solo al contado",
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": true
+      },
+      "descripcion_limpia": "SKY EQUINOX – Equipetrol. Preventa exclusiva ubicada en 4to anillo Equipetrol sobre avenida. Unidades disponibles: monoambientes, 1 dormitorio, 2 dormitorios tipo penthouse. Ideal para renta mensual o Airbnb. Entrega junio 2027. Pago solo al contado en dólares.",
+      "amenities_confirmados": [],
+      "equipamiento_detectado": []
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2380,
+      "output": 416
+    },
+    "elapsed_ms": 3155,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "NULL",
+        "valor_llm": "Condominio SKY EQUINOX",
+        "confianza_llm": "alta",
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "preventa",
+        "valor_llm": "preventa",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "no_especificado",
+        "valor_llm": "paralelo",
+        "confianza_llm": "alta",
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "NULL",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "junio 2027",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  },
+  {
+    "id": 1095,
+    "fuente": "remax",
+    "zona": "Equipetrol Oeste",
+    "url": "https://remax.bo/propiedad/venta-departamento-120016002-426",
+    "llm_raw": {
+      "nombre_edificio": "Sky Eclipse",
+      "nombre_edificio_confianza": "alta",
+      "estado_construccion": "entrega_inmediata",
+      "estado_construccion_confianza": "alta",
+      "fecha_entrega_estimada": null,
+      "es_multiproyecto": false,
+      "tipo_cambio_detectado": "no_especificado",
+      "tipo_cambio_confianza": "baja",
+      "piso": null,
+      "parqueo_incluido": true,
+      "parqueo_precio_adicional_usd": null,
+      "baulera_incluida": true,
+      "baulera_precio_adicional_usd": null,
+      "plan_pagos": {
+        "tiene_plan_pagos": false,
+        "plan_pagos_texto": null,
+        "descuento_contado_pct": null,
+        "acepta_permuta": false,
+        "precio_negociable": false,
+        "solo_tc_paralelo": false
+      },
+      "descripcion_limpia": "Departamento de lujo en Sky Eclipse, Equipetrol. 106 m², 2 dormitorios, 2 baños, sala-comedor, cocina moderna, garaje, baulera. Amenities: piscina, jacuzzi, gimnasio, salas de reuniones.",
+      "amenities_confirmados": [
+        "Piscina",
+        "Jacuzzi",
+        "Gimnasio",
+        "Salas de reuniones"
+      ],
+      "equipamiento_detectado": [
+        "Cocina moderna",
+        "Garaje",
+        "Baulera"
+      ]
+    },
+    "errores_validacion": [],
+    "requiere_revision": false,
+    "tokens": {
+      "input": 2399,
+      "output": 442
+    },
+    "elapsed_ms": 2808,
+    "comparisons": [
+      {
+        "campo": "nombre_edificio",
+        "valor_bd": "Sky Eclipse",
+        "valor_llm": "Sky Eclipse",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "estado_construccion",
+        "valor_bd": "entrega_inmediata",
+        "valor_llm": "entrega_inmediata",
+        "confianza_llm": "alta",
+        "veredicto": "igual"
+      },
+      {
+        "campo": "tipo_cambio_detectado",
+        "valor_bd": "NULL",
+        "valor_llm": "no_especificado",
+        "confianza_llm": "baja",
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "piso",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "parqueo_incluido",
+        "valor_bd": "NULL",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      },
+      {
+        "campo": "parqueo_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "baulera",
+        "valor_bd": "false",
+        "valor_llm": "true",
+        "confianza_llm": null,
+        "veredicto": "llm_difiere"
+      },
+      {
+        "campo": "baulera_precio_adicional",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "plan_pagos_desarrollador",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "descuento_contado_pct",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "acepta_permuta",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "precio_negociable",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "solo_tc_paralelo",
+        "valor_bd": "false",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "fecha_entrega_estimada",
+        "valor_bd": "NULL",
+        "valor_llm": "NULL",
+        "confianza_llm": null,
+        "veredicto": "igual"
+      },
+      {
+        "campo": "es_multiproyecto",
+        "valor_bd": "NULL",
+        "valor_llm": "false",
+        "confianza_llm": null,
+        "veredicto": "llm_agrega"
+      }
+    ]
+  }
+]
