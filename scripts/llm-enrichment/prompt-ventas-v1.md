@@ -58,11 +58,6 @@ TIPO_CAMBIO_DETECTADO:
 - CLAVE: "TC 7" = OFICIAL (6.96 redondeado, tasa fija BCB)
 - CLAVE: "$us X" sin más contexto = null (la moneda sola no indica TC)
 
-DEPENDE_DE_TC:
-- true: si el precio original está en BOB y se convirtió a USD
-- false: si el precio está directamente en USD ("$us", "USD", "dólares")
-- null: si no se puede determinar
-
 PARQUEO_INCLUIDO:
 - true: "incluye parqueo", "incluye 1 parqueo", "con parqueo y baulera" (sin precio aparte)
 - false: "Parqueo: $us X", "parqueo adicional", precio explícito por parqueo
@@ -102,7 +97,6 @@ Devuelve SOLO este JSON (sin explicaciones, sin markdown):
   "es_multiproyecto": boolean | null,
   "tipo_cambio_detectado": "paralelo" | "oficial" | null,
   "tipo_cambio_confianza": "alta" | "media" | "baja" | null,
-  "depende_de_tc": boolean | null,
   "piso": number | null,
   "parqueo_incluido": boolean | null,
   "parqueo_precio_adicional_usd": number | null,
