@@ -142,14 +142,15 @@ export interface FiltrosBusqueda {
 // Mapeo de IDs de microzona del formulario a nombres en BD
 // Algunos IDs expanden a múltiples zonas (ej: equipetrol_norte → ambas subzonas)
 const microzonaToZona: Record<string, string | string[]> = {
-  'equipetrol': 'Equipetrol',
+  'equipetrol': 'Equipetrol Centro',
+  'equipetrol_centro': 'Equipetrol Centro',
   'sirari': 'Sirari',
   'villa_brigida': 'Villa Brigida',
-  'faremafu': 'Faremafu',
-  'equipetrol_oeste': 'Faremafu',
-  'equipetrol_norte': ['Equipetrol Norte/Norte', 'Equipetrol Norte/Sur'],  // Agrupa ambas sub-zonas
-  'equipetrol_norte_norte': 'Equipetrol Norte/Norte',
-  'equipetrol_norte_sur': 'Equipetrol Norte/Sur',
+  'equipetrol_oeste': 'Equipetrol Oeste',
+  'faremafu': 'Equipetrol Oeste',  // alias legacy
+  'equipetrol_norte': 'Equipetrol Norte',
+  'equipetrol_norte_norte': 'Equipetrol Norte',  // subzonas ya no existen, todo es Equipetrol Norte
+  'equipetrol_norte_sur': 'Equipetrol Norte',
   'flexible': '' // vacío = no filtra
 }
 
