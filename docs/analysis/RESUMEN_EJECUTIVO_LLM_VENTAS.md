@@ -68,6 +68,17 @@ Eliminadas señales incorrectas o frágiles de ESTADO_CONSTRUCCION:
 - "amoblado CON piso específico y precio fijo USD" era inferencia compleja y frágil
 - CUIDADO "Precios al cambio Bs.7 = preventa" era incorrecto y contradictorio
 
+### V3.3 (descartada): Intento de quitar nombre_edificio_regex
+
+**Hipótesis**: el regex genera basura que contamina el LLM por anclaje.
+
+**Resultado del test**: 3 regresiones, 0 fixes en nombre_edificio. Difiere global 16→17, no_detecta 2→4.
+- ID 611, 849: LLM dejó de encontrar nombres que antes confirmaba (la descripción no los contiene — venían de fuentes externas)
+- ID 234: LLM "corrigió" capitalización (`MURURE` → `Mururé`) — difiere innecesario
+- ID 1009: Volvió a matchear incorrectamente (`Onix Art By EliTe` → `Edificio Sirari Palm`)
+
+**Conclusión**: El regex no es pura basura — en los casos donde acierta, el LLM lo usa como confirmación válida. Sin el ancla, pierde más de lo que gana. **Se mantiene V3.2 como versión de producción.** La mejora real para nombre_edificio requiere Opción B (parsear `listing.title` de Remax data-page en n8n).
+
 ### Documentación detallada por iteración
 
 | Archivo | Contenido |
