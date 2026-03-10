@@ -1,8 +1,13 @@
 # Tipo de Cambio en SICI — Documento Autoritativo
 
 **Fecha:** 10 de marzo de 2026
-**Status:** Fuente de verdad para todo lo relacionado con TC, precios y moneda en SICI
+**Status:** Documento de referencia para entender el sistema de TC y precios en SICI
 **Actualizar este documento** antes de modificar cualquier extractor, merge o funcion de precio.
+
+> **ADVERTENCIA:** Este documento es un punto de partida, no verdad absoluta.
+> - Las secciones de diagnostico (5, 6) y propuestas de fix (7) necesitan verificacion caso por caso contra datos reales
+> - El comportamiento de candados al editar precio_usd manualmente no esta verificado
+> - Cualquier cambio al pipeline debe validarse con datos de produccion antes de implementarse
 
 ---
 
@@ -295,6 +300,10 @@ Identificadas por: `precio_usd * 6.96 ≈ precio_bs` (desvio < 5%).
 
 **Todos los 7 confirmados son de Remax.**
 
+> **PENDIENTE:** La causa raiz de cada una de estas 7 props necesita verificacion individual.
+> El patron descrito (doble conversion) es una hipotesis basada en el codigo del extractor,
+> pero podrian existir otros factores (edicion manual, re-enrichment, etc.).
+
 ---
 
 ## 6. Como detectar propiedades bugged
@@ -366,20 +375,23 @@ if (currency_id === 1) {
 
 ### 7.3 Fix alternativo: precio_normalizado()
 
-Si no se quiere tocar el extractor, `precio_normalizado()` podria detectar la doble conversion:
+> **NOTA:** Esta seccion es una idea preliminar, NO una propuesta validada.
+> Requiere verificacion caso por caso contra datos reales antes de implementarse.
 
-```sql
-CASE
-  WHEN p_tipo_cambio_detectado = 'paralelo' AND p_depende_de_tc = true THEN
-    p_precio_usd  -- Ya fue convertido de BOB, NO multiplicar de nuevo
-  WHEN p_tipo_cambio_detectado = 'paralelo' THEN
-    ROUND(p_precio_usd * tc_paralelo / 6.96, 2)  -- USD billete -> comparable
-  ELSE
-    p_precio_usd
-END
-```
+Si no se quiere tocar el extractor, `precio_normalizado()` podria intentar detectar la doble conversion. Pero la logica es delicada:
 
-**Advertencia:** Este fix es un parche. No resuelve que `precio_usd` sea inconsistente entre props. El fix del extractor (7.2) es la solucion correcta.
+- `depende_de_tc = true` significa que `precio_usd` **fue derivado de BOB** → el precio **depende** del TC y necesita normalizacion con Binance
+- `depende_de_tc = false` significa que `precio_usd` es USD real del listing → no necesita ajuste por TC
+
+El problema especifico de las 7 props bugged es que `precio_usd = BOB/6.96` (conversion oficial) y luego `precio_normalizado()` multiplica por `tc_paralelo/6.96` (porque `tipo_cambio_detectado = 'paralelo'`). Esto produce doble conversion.
+
+Un fix en `precio_normalizado()` tendria que distinguir entre:
+1. Props donde `precio_usd` ya es BOB/6.96 (Remax BOB) → no volver a dividir por 6.96
+2. Props donde `precio_usd` es USD billete real (C21 paralelo) → si normalizar con TC
+
+**Esta distincion no es trivial con los campos actuales.** No hay un campo que diga "este precio_usd fue convertido con TC oficial vs TC paralelo vs es USD directo".
+
+**Advertencia:** Este fix seria un parche. No resuelve que `precio_usd` sea inconsistente entre props. El fix del extractor (7.2) es la solucion mas limpia, pero tambien necesita validacion.
 
 ---
 
