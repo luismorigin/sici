@@ -114,8 +114,7 @@ Desde migración 184, los nombres en BD son los nombres display definitivos (ya 
 ### Venta (modulo_1)
 ```
 1:00 AM  Discovery C21 + Remax → propiedades_v2
-2:00 AM  Enrichment regex → datos_json_enrichment
-         (LLM enrichment testeado v3.3, pendiente integración n8n — ver RESUMEN_EJECUTIVO_LLM_VENTAS.md)
+2:00 AM  Enrichment LLM → datos_json_enrichment
 3:00 AM  Merge → campos consolidados + TC paralelo
 4:00 AM  Matching → id_proyecto_master + nombre_edificio (migración 170)
 6:00 AM  Verificador ausencias (solo Remax, LIMIT 200)
