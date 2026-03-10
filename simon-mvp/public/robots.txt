@@ -1,0 +1,35 @@
+# Simon — Inteligencia Inmobiliaria
+# https://simonbo.com
+
+User-agent: *
+Allow: /
+Allow: /mercado/
+
+# AI crawlers — explicitly welcomed
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Private areas
+Disallow: /admin/
+Disallow: /broker/
+Disallow: /api/
+
+Sitemap: https://simonbo.com/sitemap.xml

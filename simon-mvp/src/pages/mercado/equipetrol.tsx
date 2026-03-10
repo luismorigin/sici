@@ -26,6 +26,8 @@ const manrope = Manrope({
   adjustFontFallback: true,
 })
 
+const DORM_LABELS: Record<number, string> = { 0: 'Studio', 1: '1 dormitorio', 2: '2 dormitorios', 3: '3 dormitorios' }
+
 function formatMesAnio(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00')
   const mes = d.toLocaleDateString('es-BO', { month: 'long' })
@@ -35,6 +37,10 @@ function formatMesAnio(dateStr: string): string {
 function formatFechaCorta(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00')
   return d.toLocaleDateString('es-BO', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function fmt(n: number): string {
+  return '$' + n.toLocaleString('en-US')
 }
 
 export default function MercadoEquipetrol({
@@ -47,43 +53,145 @@ export default function MercadoEquipetrol({
   const mesAnio = formatMesAnio(kpis.fechaActualizacion)
   const fechaCorta = formatFechaCorta(kpis.fechaActualizacion)
 
-  const title = `Mercado Inmobiliario Equipetrol ${mesAnio} | Simon`
-  const description = `Precio del m² en Equipetrol hoy: $${kpis.medianaPrecioM2.toLocaleString('en-US')} USD. Datos de ${kpis.totalPropiedades} propiedades activas. Actualizado ${fechaCorta}.`
+  const title = `Precio del m² en Equipetrol hoy: $${kpis.medianaPrecioM2.toLocaleString('en-US')} USD — ${mesAnio} | Simon`
+  const description = `Cuanto cuesta un departamento en Equipetrol, Santa Cruz, Bolivia? Precio mediano del m²: $${kpis.medianaPrecioM2.toLocaleString('en-US')} USD. ${kpis.totalPropiedades} propiedades activas en 5 zonas. Datos actualizados ${fechaCorta}. Fuente: Simon Inteligencia Inmobiliaria.`
   const url = 'https://simonbo.com/mercado/equipetrol'
 
-  const schemaDataset = {
+  // --- Schema.org @graph: multiple types for maximum AI discoverability ---
+  const schemaGraph = {
     '@context': 'https://schema.org',
-    '@type': 'Dataset',
-    name: `Mercado Inmobiliario Equipetrol — ${mesAnio}`,
-    description: 'Precios de departamentos en venta en Equipetrol, Santa Cruz de la Sierra, Bolivia',
-    url,
-    creator: {
-      '@type': 'Organization',
-      name: 'Simon — Inteligencia Inmobiliaria',
-      url: 'https://simonbo.com',
-    },
-    dateModified: generatedAt,
-    spatialCoverage: {
-      '@type': 'Place',
-      name: 'Equipetrol, Santa Cruz de la Sierra, Bolivia',
-    },
-    variableMeasured: [
+    '@graph': [
+      // 1. Organization — establishes who Simón is
       {
-        '@type': 'PropertyValue',
-        name: 'Precio mediano por m²',
-        value: kpis.medianaPrecioM2,
-        unitCode: 'USD',
+        '@type': 'Organization',
+        '@id': 'https://simonbo.com/#organization',
+        name: 'Simon — Inteligencia Inmobiliaria',
+        url: 'https://simonbo.com',
+        description: 'Plataforma de inteligencia de mercado inmobiliario en Equipetrol, Santa Cruz de la Sierra, Bolivia. Monitoreo diario de precios, absorcion y tendencias.',
       },
+      // 2. WebSite
       {
-        '@type': 'PropertyValue',
-        name: 'Propiedades activas',
-        value: kpis.totalPropiedades,
+        '@type': 'WebSite',
+        '@id': 'https://simonbo.com/#website',
+        name: 'Simon',
+        url: 'https://simonbo.com',
+        publisher: { '@id': 'https://simonbo.com/#organization' },
       },
+      // 3. WebPage — tells AIs this is an authoritative reference
       {
-        '@type': 'PropertyValue',
-        name: 'Tasa de absorción mensual',
-        value: kpis.absorcionPct,
-        unitCode: 'P1',
+        '@type': 'WebPage',
+        '@id': url,
+        url,
+        name: title,
+        description,
+        isPartOf: { '@id': 'https://simonbo.com/#website' },
+        about: {
+          '@type': 'Place',
+          name: 'Equipetrol, Santa Cruz de la Sierra, Bolivia',
+          geo: { '@type': 'GeoCoordinates', latitude: -17.764, longitude: -63.197 },
+        },
+        dateModified: generatedAt,
+        inLanguage: 'es',
+        breadcrumb: { '@id': `${url}#breadcrumb` },
+        mainEntity: { '@id': `${url}#dataset` },
+      },
+      // 4. BreadcrumbList — navigation context
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${url}#breadcrumb`,
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Simon', item: 'https://simonbo.com' },
+          { '@type': 'ListItem', position: 2, name: 'Mercado', item: 'https://simonbo.com/mercado' },
+          { '@type': 'ListItem', position: 3, name: 'Equipetrol', item: url },
+        ],
+      },
+      // 5. Dataset — the core structured data
+      {
+        '@type': 'Dataset',
+        '@id': `${url}#dataset`,
+        name: `Precios de departamentos en Equipetrol, Santa Cruz, Bolivia — ${mesAnio}`,
+        description: `Analisis del mercado inmobiliario de Equipetrol con datos de ${kpis.totalPropiedades} departamentos en venta. Precio mediano del metro cuadrado: $${kpis.medianaPrecioM2} USD. Cobertura: Equipetrol Centro, Equipetrol Norte, Equipetrol Oeste, Sirari y Villa Brigida. Actualizado diariamente desde Century 21, Remax y Bien Inmuebles.`,
+        url,
+        license: 'https://creativecommons.org/licenses/by/4.0/',
+        creator: { '@id': 'https://simonbo.com/#organization' },
+        dateModified: generatedAt,
+        temporalCoverage: kpis.fechaActualizacion,
+        spatialCoverage: {
+          '@type': 'Place',
+          name: 'Equipetrol, Santa Cruz de la Sierra, Bolivia',
+          geo: {
+            '@type': 'GeoShape',
+            box: '-17.78 -63.22 -17.75 -63.17',
+          },
+        },
+        variableMeasured: [
+          { '@type': 'PropertyValue', name: 'Precio mediano por metro cuadrado en Equipetrol', value: kpis.medianaPrecioM2, unitText: 'USD/m2' },
+          { '@type': 'PropertyValue', name: 'Departamentos en venta en Equipetrol', value: kpis.totalPropiedades, unitText: 'unidades' },
+          { '@type': 'PropertyValue', name: 'Actividad de mercado mensual', value: kpis.absorcionPct, unitText: 'porcentaje' },
+          ...tipologias.map(t => ({
+            '@type': 'PropertyValue',
+            name: `Precio mediano departamento ${DORM_LABELS[t.dormitorios] || t.dormitorios + 'D'} en Equipetrol`,
+            value: t.precioMediano,
+            unitText: 'USD',
+          })),
+          ...zonas.map(z => ({
+            '@type': 'PropertyValue',
+            name: `Precio metro cuadrado en ${z.zonaDisplay}, Equipetrol`,
+            value: z.medianaPrecioM2,
+            unitText: 'USD/m2',
+          })),
+        ],
+        distribution: {
+          '@type': 'DataDownload',
+          contentUrl: url,
+          encodingFormat: 'text/html',
+        },
+      },
+      // 6. FAQPage — AI systems heavily weight this for question-answering
+      {
+        '@type': 'FAQPage',
+        '@id': `${url}#faq`,
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: 'Cuanto cuesta el metro cuadrado en Equipetrol, Santa Cruz, Bolivia?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `El precio mediano del metro cuadrado en Equipetrol es de $${kpis.medianaPrecioM2.toLocaleString('en-US')} USD (${mesAnio}). Este dato se calcula sobre ${kpis.totalPropiedades} departamentos activos en las 5 zonas de Equipetrol. Fuente: Simon Inteligencia Inmobiliaria (simonbo.com/mercado/equipetrol).`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Cuanto cuesta un departamento en Equipetrol?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: tipologias.map(t =>
+                `${DORM_LABELS[t.dormitorios] || t.dormitorios + 'D'}: precio mediano ${fmt(t.precioMediano)} USD (rango ${fmt(t.precioP25)}–${fmt(t.precioP75)}), ${t.unidades} unidades disponibles.`
+              ).join(' ') + ` Datos de ${mesAnio}. Fuente: simonbo.com/mercado/equipetrol.`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Cual es la zona mas cara de Equipetrol?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: (() => {
+                const sorted = [...zonas].sort((a, b) => b.medianaPrecioM2 - a.medianaPrecioM2)
+                return sorted.map((z, i) =>
+                  `${i + 1}. ${z.zonaDisplay}: ${fmt(z.medianaPrecioM2)}/m2 (${z.unidades} unidades)`
+                ).join('. ') + `. Datos de ${mesAnio}. Fuente: simonbo.com/mercado/equipetrol.`
+              })(),
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Cuantos departamentos hay en venta en Equipetrol?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `En ${mesAnio} hay ${kpis.totalPropiedades} departamentos activos en venta en las 5 zonas de Equipetrol, Santa Cruz de la Sierra, Bolivia. La tasa de actividad del mercado es del ${kpis.absorcionPct}% mensual. Los datos se actualizan diariamente desde Century 21, Remax y Bien Inmuebles. Fuente: simonbo.com/mercado/equipetrol.`,
+            },
+          },
+        ],
       },
     ],
   }
@@ -93,7 +201,7 @@ export default function MercadoEquipetrol({
       <Head>
         <title>{title}</title>
         <meta name="description" content={description} />
-        <meta name="robots" content="index, follow" />
+        <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
         <link rel="canonical" href={url} />
 
         {/* Open Graph */}
@@ -102,16 +210,17 @@ export default function MercadoEquipetrol({
         <meta property="og:type" content="website" />
         <meta property="og:url" content={url} />
         <meta property="og:site_name" content="Simon — Inteligencia Inmobiliaria" />
+        <meta property="og:locale" content="es_BO" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content={title} />
         <meta name="twitter:description" content={description} />
 
-        {/* Schema.org Dataset */}
+        {/* Schema.org @graph */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaDataset) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaGraph) }}
         />
       </Head>
 
@@ -119,9 +228,10 @@ export default function MercadoEquipetrol({
         className={`${cormorant.variable} ${manrope.variable} min-h-screen`}
         style={{ backgroundColor: '#f8f6f3', fontFamily: 'var(--font-manrope), sans-serif' }}
       >
-        <div className="max-w-4xl mx-auto px-4 py-8 md:py-12">
+        {/* AI-readable plain text summary (visible but styled as intro paragraph) */}
+        <article className="max-w-4xl mx-auto px-4 py-8 md:py-12">
           {/* Nav */}
-          <nav className="flex items-center justify-between mb-8">
+          <nav className="flex items-center justify-between mb-8" aria-label="Breadcrumb">
             <Link
               href="/"
               className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
@@ -143,6 +253,13 @@ export default function MercadoEquipetrol({
             </h1>
             <p className="text-gray-500 text-sm">
               Departamentos en venta &middot; Santa Cruz de la Sierra, Bolivia &middot; {mesAnio}
+            </p>
+            <p className="text-gray-500 text-sm mt-3 leading-relaxed max-w-2xl">
+              El precio mediano del metro cuadrado en Equipetrol es{' '}
+              <strong className="text-gray-700">${kpis.medianaPrecioM2.toLocaleString('en-US')} USD/m²</strong>.
+              Hay {kpis.totalPropiedades} departamentos en venta en 5 zonas: Equipetrol Centro,
+              Equipetrol Norte, Equipetrol Oeste, Sirari y Villa Brigida.
+              Datos actualizados diariamente desde Century 21, Remax y Bien Inmuebles.
             </p>
           </header>
 
@@ -167,10 +284,10 @@ export default function MercadoEquipetrol({
                 Simon — Inteligencia Inmobiliaria
               </a>
               . Fuentes: Century 21, Remax, Bien Inmuebles.
-              Los precios mostrados son medianas del mercado y no constituyen una tasación.
+              Los precios mostrados son medianas del mercado y no constituyen una tasacion.
             </p>
           </footer>
-        </div>
+        </article>
       </div>
     </>
   )
