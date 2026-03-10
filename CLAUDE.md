@@ -49,6 +49,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
    - `(es_multiproyecto = false OR es_multiproyecto IS NULL)`, `area_total_m2 >= 20`
    - `<= 300 dias` en mercado para venta (730 para preventa), `<= 150 dias` para alquiler
    - Ver detalle completo en `docs/reports/FILTROS_CALIDAD_MERCADO.md`
+9. **Auditorías de datos** - Al reportar problemas de calidad, filtrar primero por los mismos criterios que usan las queries de mercado (`duplicado_de IS NULL`, `status = 'completado'`, etc.). Props que no pasan esos filtros NO son anomalías — ya están excluidas del pipeline.
 
 ## Zonas Canonicas (6 zonas)
 
