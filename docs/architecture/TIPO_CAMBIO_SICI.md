@@ -1,13 +1,9 @@
 # Tipo de Cambio en SICI — Documento Autoritativo
 
 **Fecha:** 10 de marzo de 2026
+**Ultima actualizacion:** 10 de marzo de 2026 (post-fix dashboard double-normalization)
 **Status:** Documento de referencia para entender el sistema de TC y precios en SICI
 **Actualizar este documento** antes de modificar cualquier extractor, merge o funcion de precio.
-
-> **ADVERTENCIA:** Este documento es un punto de partida, no verdad absoluta.
-> - Las secciones de diagnostico (5, 6) y propuestas de fix (7) necesitan verificacion caso por caso contra datos reales
-> - El comportamiento de candados al editar precio_usd manualmente no esta verificado
-> - Cualquier cambio al pipeline debe validarse con datos de produccion antes de implementarse
 
 ---
 
@@ -232,77 +228,91 @@ END
 
 ---
 
-## 4. Bug de doble conversion — causa raiz
+## 4. Bug de doble normalizacion — causa raiz (CORREGIDO)
 
-### 4.1 Descripcion
+> **Estado: RESUELTO** — Fix en commit `ffdd5ca` (10 Mar 2026) + commit `c1f07ac` (display).
+> Las 8 propiedades afectadas fueron corregidas manualmente desde el dashboard.
 
-Afecta listings de **Remax** donde:
-- El portal publica en **BOB** (`currency_id = 1`)
-- La descripcion menciona **"tc paralelo"** o equivalente
-- El enrichment JSON almacena `precio_usd = BOB / 6.96` (igual que discovery)
+### 4.1 El bug real: dashboard normalizaba al guardar
 
-### 4.2 Cadena de pasos — Ejemplo ID 53
+El bug estaba en `usePropertyEditor.ts`, funcion `calcularPrecioNormalizado()`. Cuando un usuario editaba una propiedad con `tipoPrecio = 'usd_paralelo'` y guardaba:
+
+```js
+// ANTES del fix (BUG):
+case 'usd_paralelo':
+  return Math.round(precioPublicado * (tcParalelo / tcOficial));
+  // Ej: 143,105 * (9.454 / 6.96) = $194,384 → se guardaba en precio_usd
+```
+
+Esto escribia un valor ya normalizado en `precio_usd`. Luego, `precio_normalizado()` en SQL normalizaba **de nuevo** al consultar:
+
+```sql
+-- precio_normalizado(194384, 'paralelo') = 194384 * 9.454 / 6.96 = $264,038
+-- Inflacion: ~36%
+```
+
+**El pipeline nocturno (extractores + merge) NO tiene este bug.** El problema era exclusivamente en la edicion manual desde el dashboard.
+
+### 4.2 El fix: guardar billete directo (commit ffdd5ca)
+
+```js
+// DESPUES del fix:
+case 'usd_paralelo':
+  return precioPublicado;  // Billete directo → precio_usd
+  // Ej: 143,105 → se guarda 143,105 en precio_usd
+  // precio_normalizado(143105, 'paralelo') = 143105 * 9.454 / 6.96 = $194,384 ✓
+```
+
+Se agrego `calcularPrecioDisplay()` separada (commit `c1f07ac`) para mostrar el precio normalizado en el UI del editor sin afectar lo que se guarda en BD.
+
+### 4.3 Cadena correcta post-fix — Ejemplo ID 53
 
 **Listing:** Condado VI 2D, 86.73 m2. Descripcion dice: "Precio: 143,105 $us. a t.c. paralelo"
 
-| Paso | Componente | Accion | Resultado |
-|------|-----------|--------|-----------|
-| 1 | Portal Remax | Publica en BOB | Bs 1,359,490, `currency_id=1` |
-| 2 | Extractor Remax | `BOB / 6.96` | `precio_usd=195,329`, `moneda_original="BOB"`, `normalizado=true` |
-| 3 | Extractor Remax | `detectarTipoCambio()` | `tipo_cambio_detectado="paralelo"` (de la descripcion) |
-| 4 | Enrichment JSON | Almacena todo | `precio_usd=195,329` (NO corrige a billete USD) |
-| 5 | LLM Enrichment | Confirma TC | `tipo_cambio_detectado="paralelo"` (confianza alta) |
-| 6 | Merge | `normalizado=true` -> usa enrichment | `precio_usd=194,384` (~= BOB/6.96) |
-| 7 | Merge | `paralelo + normalizado` | `depende_de_tc=true` |
-| 8 | `precio_normalizado()` | `$194,384 * 9.454 / 6.96` | **$264,038** |
-| 9 | Query de mercado | `$264,038 / 86.73 m2` | **$3,044/m2** (INFLADO ~36%) |
+| Paso | Componente | Valor | Correcto? |
+|------|-----------|-------|-----------|
+| 1 | Dashboard: usuario escribe | precio_publicado = 143,105 (billete) | SI |
+| 2 | calcularPrecioNormalizado() | retorna 143,105 (billete directo) | SI |
+| 3 | Save → BD | `precio_usd = 143,105` | SI |
+| 4 | `precio_normalizado(143105, 'paralelo')` | `143105 * 9.454 / 6.96 = $194,384` | SI |
+| 5 | Query de mercado | `$194,384 / 86.73 m2 = $2,240/m2` | SI |
 
-**Precio real:** El vendedor pide $143,105 USD billete = Bs 1,359,490 / ~9.5 (TC paralelo al momento del listing).
+### 4.4 Bug historico del extractor Remax (pipeline, NO dashboard)
 
-**Precio correcto comparable:** Bs 1,359,490 / 6.96 = $195,329 USD oficial. `precio_normalizado()` NO deberia multiplicar de nuevo.
+Existe un bug **separado** en el extractor Remax que afecta props que nunca fueron editadas manualmente. El extractor hace `BOB / 6.96` sin considerar TC paralelo, produciendo `precio_usd ≈ BOB/6.96` en vez de billete. Esto causa que `precio_normalizado()` infle el precio ~36%.
 
-### 4.3 Por que C21 no tiene este bug
+Este bug del extractor **no fue corregido** en esta sesion — la correccion fue solo del dashboard. Las 8 props afectadas se corrigieron manualmente re-guardando desde el dashboard con el comportamiento correcto.
 
-El extractor C21 maneja el CASO 2 (USD + paralelo) de forma integrada. En la practica, la mayoria de props C21+paralelo tienen `precio_usd = billete directo` (el precio se extrae como USD del HTML/meta), y `precio_normalizado()` aplica la conversion correctamente.
+### 4.5 Por que C21 no tiene el bug del extractor
 
-### 4.4 Por que solo 7 de 49 props con el patron estan bugged
-
-Las 49 propiedades activas con `moneda_original=BOB + tipo_cambio_detectado=paralelo + depende_de_tc=true` se dividen en:
-- **7 bugged:** El enrichment JSON almaceno `precio_usd ≈ BOB / 6.96` (hereda el error de discovery)
-- **~39 correctas:** El enrichment logro almacenar el precio billete real como `precio_usd`
-- **3 borderline:** Desvios de 5-10%, probablemente bugs parciales
-
-La diferencia esta en si el enrichment extrajo el precio USD de la descripcion o simplemente copio el `BOB/6.96` de discovery.
+El extractor C21 integra deteccion de TC en la normalizacion (seccion 3.2). Si detecta "paralelo", guarda `precio_usd = USD billete directo`, y `precio_normalizado()` aplica la conversion correctamente.
 
 ---
 
-## 5. Las 7 propiedades bugged (activas, 10 Mar 2026)
+## 5. Las 8 propiedades corregidas (10 Mar 2026)
 
-Identificadas por: `precio_usd * 6.96 ≈ precio_bs` (desvio < 5%).
+> **Estado: CORREGIDAS** — Todas re-guardadas manualmente desde el dashboard post-fix.
+> `precio_usd` ahora contiene el billete real extraido de la descripcion del listing.
 
-| ID | Proyecto | Zona | Dorms | `precio_usd` (BD) | Precio billete real | $/m2 inflado | $/m2 real est. | Fuente |
-|----|----------|------|-------|--------------------|--------------------|--------------|--------------------|--------|
-| 53 | Condado VI Plaza Italia | Eq. Centro | 2D | $194,384 | ~$143,105 | $3,044 | ~$1,650 | remax |
-| 465 | Sky Plaza Italia | Eq. Centro | 1D | $89,128 | ~$67,028 | $2,853 | ~$1,580 | remax |
-| 821 | Condado VI Plaza Italia | Eq. Centro | 3D | $315,225 | ~$210,638 | $2,967 | ~$1,460 | remax |
-| 905 | Sky Plaza Italia | Eq. Centro | 2D | $191,102 | ~$127,891 | $2,963 | ~$1,460 | remax |
-| 910 | Edificio Aura Concept | Eq. Centro | 2D | $148,034 | ~$108,000 | $2,793 | ~$1,500 | remax |
-| 59 | Sky Eclipse | Eq. Oeste | 2D | $218,391 | ~$147,524 | $3,123 | ~$1,553 | remax |
-| 1103 | (sin proyecto) | Sirari | 3D | $241,092 | ~$175,838 | $2,127 | ~$1,142 | remax |
+| ID | Proyecto | Zona | Dorms | `precio_usd` ANTES | `precio_usd` DESPUES (billete) | Fuente |
+|----|----------|------|-------|---------------------|-------------------------------|--------|
+| 53 | Condado VI Plaza Italia | Eq. Centro | 2D | $194,384 | $143,105 | remax |
+| 465 | Sky Plaza Italia | Eq. Centro | 1D | $120,892 | $89,001 | remax |
+| 821 | Condado VI Plaza Italia | Eq. Centro | 3D | $315,225 | $210,638 | remax |
+| 905 | Sky Plaza Italia | Eq. Centro | 2D | $191,102 | $127,891 | remax |
+| 910 | Edificio Aura Concept | Eq. Centro | 2D | $148,034 | $108,000 | remax |
+| 59 | Sky Eclipse | Eq. Oeste | 2D | $218,391 | $147,524 | remax |
+| 1103 | (sin proyecto) | Sirari | 3D | $241,092 | $175,838 | remax |
+| 519 | Garden Equipetrol | V. Brigida | 1D | ~$67,028 | $51,000 | remax |
 
-**3 borderline** (desvio 5-10%):
+**Todas son de Remax.** Los valores billete se extrajeron de la descripcion del listing (ej: "Precio: 143,105 $us. a t.c. paralelo").
+
+**3 borderline NO corregidas** (desvio 5-10%, necesitan verificacion manual):
 
 | ID | Proyecto | Zona | Dorms | % desvio | Fuente |
 |----|----------|------|-------|----------|--------|
-| 519 | Garden Equipetrol | V. Brigida | 1D | 5.8% | remax |
 | 1011 | + PLUS ISUTO | V. Brigida | 0D | 9.0% | century21 |
 | 902 | Nomad by Smart Studio | Eq. Centro | 1D | 9.0% | century21 |
-
-**Todos los 7 confirmados son de Remax.**
-
-> **PENDIENTE:** La causa raiz de cada una de estas 7 props necesita verificacion individual.
-> El patron descrito (doble conversion) es una hipotesis basada en el codigo del extractor,
-> pero podrian existir otros factores (edicion manual, re-enrichment, etc.).
 
 ---
 
@@ -340,58 +350,60 @@ ORDER BY pct_match_oficial ASC;
 
 ---
 
-## 7. Fix correcto a largo plazo
+## 7. Fixes aplicados y pendientes
 
-### 7.1 Causa raiz en el extractor Remax
+### 7.1 Fix aplicado: Dashboard (commit ffdd5ca, 10 Mar 2026)
 
-El extractor Remax hace `BOB / 6.96` sin considerar si el vendedor esta priceando al TC paralelo. La descripcion menciona el precio billete, pero el extractor ignora esa informacion y usa el monto BOB crudo.
+**Archivo:** `simon-mvp/src/hooks/usePropertyEditor.ts`
 
-### 7.2 Fix propuesto: Extractor Remax
+**Cambio en `calcularPrecioNormalizado()`:**
+- `case 'usd_paralelo'`: ahora retorna `precioPublicado` directo (billete) en vez de `precioPublicado * (tcParalelo / tcOficial)`
+- `precio_usd` en BD contiene billete USD real
+- `precio_normalizado()` en SQL es la unica normalizacion — funciona correctamente
 
-Cuando detecta `tipo_cambio = 'paralelo'` y `moneda_original = 'BOB'`:
-1. Intentar extraer el precio USD mencionado en la descripcion (ya tiene `precioExplicitoDesc`)
-2. Si lo encuentra -> usar como `precio_usd` (es el billete real)
-3. Si no lo encuentra -> usar `BOB / tc_paralelo` como `precio_usd`
-4. En ambos casos: `precio_fue_normalizado = true`, `moneda_original = "BOB"`
+**Nuevo: `calcularPrecioDisplay()` (commit c1f07ac):**
+- Funcion separada para mostrar precio normalizado en el UI del editor
+- `case 'usd_paralelo'`: retorna `Math.round(precioPublicado * (tcParalelo / tcOficial))`
+- Se usa en: headline price, $/m2, alertas de precio, panel de conversion
+- **NO** se usa en save ni validateForm
 
-**Pseudocodigo:**
+### 7.2 precio_normalizado() — funciona correctamente
+
+La funcion SQL `precio_normalizado()` **NO tiene bug**. Su logica es correcta:
+
+```sql
+CASE WHEN p_tipo_cambio_detectado = 'paralelo'
+  THEN ROUND(p_precio_usd * tc_paralelo / 6.96, 2)  -- billete → comparable
+  ELSE p_precio_usd                                    -- ya es comparable
+END
+```
+
+El contrato es: `precio_usd` debe contener USD billete para props paralelo. Si eso se cumple, la normalizacion es correcta. El bug era que el dashboard rompia ese contrato al escribir un valor ya normalizado.
+
+### 7.3 Pendiente: Fix extractor Remax
+
+El extractor Remax tiene un bug **separado** del dashboard: hace `BOB / 6.96` para TODAS las props BOB, sin importar si es TC paralelo. Para props BOB+paralelo, deberia guardar el billete (extraido de la descripcion) en vez de `BOB/6.96`.
+
+**Impacto actual:** Limitado. Las props que pasan por el dashboard se corrigen con el fix 7.1. Solo afecta props que nunca se editan manualmente y cuyo merge hereda el `BOB/6.96` incorrecto del extractor.
+
+**Propuesta (NO implementada):**
 ```js
-if (currency_id === 1) {
-    moneda_original = "BOB";
-    precio_fue_normalizado = true;
-
-    if (tipoCambio === 'paralelo' && precioExplicitoDesc) {
-        // BOB + paralelo + USD en descripcion -> usar billete
-        precio_final_usd = Math.round(precioExplicitoDesc);
-    } else if (tipoCambio === 'paralelo') {
-        // BOB + paralelo, sin USD explicito -> aproximar
-        precio_final_usd = Math.round(precio_bruto / CONFIG.TIPO_CAMBIO_USD_BS_PARALELO);
-    } else {
-        // BOB sin paralelo -> TC oficial (comportamiento actual)
-        precio_final_usd = Math.round(precio_bruto / CONFIG.TIPO_CAMBIO_USD_BS_OFICIAL);
-    }
+if (currency_id === 1 && tipoCambio === 'paralelo' && precioExplicitoDesc) {
+    precio_final_usd = Math.round(precioExplicitoDesc); // Billete de descripcion
+} else if (currency_id === 1) {
+    precio_final_usd = Math.round(precio_bruto / 6.96); // Comportamiento actual
 }
 ```
 
-### 7.3 Fix alternativo: precio_normalizado()
+### 7.4 precio_usd_original — campo NO confiable
 
-> **NOTA:** Esta seccion es una idea preliminar, NO una propuesta validada.
-> Requiere verificacion caso por caso contra datos reales antes de implementarse.
+`precio_usd_original` en `datos_json_enrichment` **no sirve como referencia** para correccion automatica:
 
-Si no se quiere tocar el extractor, `precio_normalizado()` podria intentar detectar la doble conversion. Pero la logica es delicada:
+- **Remax:** Contiene el monto crudo del portal (BOB en la mayoria de casos, ej: 1,359,490)
+- **C21:** Contiene USD billete × TC paralelo (ya normalizado por el extractor)
+- **Solo es confiable** cuando fue editado manualmente desde el dashboard
 
-- `depende_de_tc = true` significa que `precio_usd` **fue derivado de BOB** → el precio **depende** del TC y necesita normalizacion con Binance
-- `depende_de_tc = false` significa que `precio_usd` es USD real del listing → no necesita ajuste por TC
-
-El problema especifico de las 7 props bugged es que `precio_usd = BOB/6.96` (conversion oficial) y luego `precio_normalizado()` multiplica por `tc_paralelo/6.96` (porque `tipo_cambio_detectado = 'paralelo'`). Esto produce doble conversion.
-
-Un fix en `precio_normalizado()` tendria que distinguir entre:
-1. Props donde `precio_usd` ya es BOB/6.96 (Remax BOB) → no volver a dividir por 6.96
-2. Props donde `precio_usd` es USD billete real (C21 paralelo) → si normalizar con TC
-
-**Esta distincion no es trivial con los campos actuales.** No hay un campo que diga "este precio_usd fue convertido con TC oficial vs TC paralelo vs es USD directo".
-
-**Advertencia:** Este fix seria un parche. No resuelve que `precio_usd` sea inconsistente entre props. El fix del extractor (7.2) es la solucion mas limpia, pero tambien necesita validacion.
+De las 99 props con `tipo_cambio_detectado = 'paralelo'` y `depende_de_tc = true`, 98 tienen BOB crudo en este campo. No se puede usar para automatizar correcciones.
 
 ---
 
@@ -434,6 +446,10 @@ detectarTipoCambio()             detectarTipoCambio()
                v
       propiedades_v2.precio_usd
                |
+               +<--- DASHBOARD EDIT (post-fix ffdd5ca):
+               |     calcularPrecioNormalizado() retorna billete directo
+               |     → precio_usd = billete USD (contrato correcto)
+               |
                v
       precio_normalizado(precio_usd, tipo_cambio_detectado)
       - Si paralelo: precio_usd * tc_paralelo / 6.96
@@ -441,9 +457,12 @@ detectarTipoCambio()             detectarTipoCambio()
                |
                v
       QUERIES DE MERCADO / INFORMES
+      (buscar_unidades_reales retorna precio_normalizado() AS precio_usd)
 ```
 
-**Donde falla (bug):** En Remax BOB+paralelo, `datos_json_enrichment.precio_usd` ya es `BOB/6.96` (USD oficial). `precio_normalizado()` luego multiplica por `tc_paralelo/6.96` otra vez.
+**Bug historico del dashboard (CORREGIDO):** Cuando un usuario editaba una prop `usd_paralelo` desde el dashboard, `calcularPrecioNormalizado()` escribia `billete * tc/6.96` en `precio_usd`. Luego `precio_normalizado()` multiplicaba de nuevo → ~36% inflacion. Fix: el dashboard ahora guarda billete directo (commit ffdd5ca).
+
+**Bug pendiente del extractor Remax:** En Remax BOB+paralelo, `datos_json_enrichment.precio_usd` puede ser `BOB/6.96` (no billete). Si el merge hereda este valor y no se edita manualmente, `precio_normalizado()` infla el precio.
 
 ---
 
@@ -453,20 +472,23 @@ detectarTipoCambio()             detectarTipoCambio()
 |-----------|--------------------|---------------------------------|-----------|
 | Remax USD | USD real | Devolver directo | SI |
 | Remax BOB + no_espec | BOB/6.96 (oficial) | Devolver directo | SI |
-| **Remax BOB + paralelo** | **BOB/6.96 (oficial)** | **Devolver directo (ya es comparable)** | **NO — multiplica de mas** |
+| Remax BOB + paralelo (editado dashboard) | USD billete (post-fix) | Multiplicar por tc_par/6.96 | SI |
+| **Remax BOB + paralelo (sin editar)** | **BOB/6.96 (oficial)** | **Devolver directo (ya es comparable)** | **NO — multiplica de mas** |
 | C21 USD + no_espec | USD real | Devolver directo | SI |
 | C21 USD + paralelo | USD billete directo | Multiplicar por tc_par/6.96 | SI |
 | C21 BOB explicito | BOB/6.96 (oficial) | Devolver directo | SI |
+| Dashboard edit usd_paralelo (post-fix) | USD billete directo | Multiplicar por tc_par/6.96 | SI |
 
 ---
 
-## 10. Impacto en el mercado
+## 10. Impacto en el mercado (post-fix)
 
-- 7 propiedades confirmadas de 280 activas = **2.5%** del mercado
-- 3 borderline adicionales = **3.6%** en el peor caso
-- Todas son de venta (no afecta alquiler)
-- Precios inflados ~36% sesgan promedios de Eq. Centro, Eq. Oeste y Sirari
-- Proyectos afectados: Condado VI (2 listings), Sky Plaza Italia (2), Sky Eclipse Oeste (1), Aura Concept (1), sin proyecto Sirari (1)
+- **8 propiedades corregidas** manualmente el 10 Mar 2026 (ver seccion 5)
+- **2 borderline pendientes** de verificacion (C21, desvio 9%)
+- Todas eran de venta (no afecta alquiler)
+- Precios estaban inflados ~36%, sesgaban promedios de Eq. Centro, Eq. Oeste, Sirari y V. Brigida
+- **Dashboard fix previene recurrencia** — cualquier edicion futura desde el dashboard guarda billete directo
+- **Extractor Remax sigue con el bug** — props nuevas de Remax BOB+paralelo que no se editen manualmente pueden tener precio inflado
 
 ---
 
@@ -677,4 +699,5 @@ En todo momento, cualquier query de mercado:
 ---
 
 *Documento generado por SICI — 10 de marzo de 2026*
-*Basado en revision de codigo de extractores, merge, funciones SQL, workflow n8n, y analisis de 49 propiedades activas en BD*
+*Actualizado 10 Mar 2026: fix dashboard double-normalization (commits ffdd5ca, c1f07ac), 8 props corregidas*
+*Basado en revision de codigo de extractores, merge, funciones SQL, workflow n8n, dashboard, y analisis de 99 propiedades paralelo activas en BD*
