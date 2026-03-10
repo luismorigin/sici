@@ -457,10 +457,24 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
     }
   }
 
+  const calcularPrecioDisplay = () => {
+    const precioPublicado = parseFloat(formData.precio_publicado) || 0
+    const tcOficial = 6.96
+    const tcParalelo = tcParaleloActual || 10.5
+
+    if (formData.tipo_operacion === 'alquiler') return precioPublicado
+
+    switch (formData.tipo_precio) {
+      case 'usd_oficial': return precioPublicado
+      case 'usd_paralelo': return Math.round(precioPublicado * (tcParalelo / tcOficial))
+      case 'bob': return Math.round(precioPublicado / tcOficial)
+      default: return precioPublicado
+    }
+  }
+
   const getPrecioInfo = () => {
-    const precioNormalizado = calcularPrecioNormalizado()
     return {
-      precio: precioNormalizado,
+      precio: calcularPrecioDisplay(),
       precioPublicado: parseFloat(formData.precio_publicado) || 0,
       esParalelo: formData.tipo_precio === 'usd_paralelo',
       esBob: formData.tipo_precio === 'bob',
@@ -469,7 +483,7 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
   }
 
   const getPrecioAlerta = (): { tipo: 'error' | 'warning' | null; mensaje: string; color: string } => {
-    const precio = calcularPrecioNormalizado()
+    const precio = calcularPrecioDisplay()
     const area = parseFloat(formData.area_m2) || 0
     if (precio <= 0 || area <= 0) return { tipo: null, mensaje: '', color: '' }
 
@@ -996,7 +1010,7 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
   const esPreventa = ['preventa', 'en_construccion', 'en_planos'].includes(formData.estado_construccion)
   const precioInfo = getPrecioInfo()
   const precioM2 = formData.precio_publicado && formData.area_m2
-    ? Math.round(calcularPrecioNormalizado() / parseFloat(formData.area_m2))
+    ? Math.round(calcularPrecioDisplay() / parseFloat(formData.area_m2))
     : 0
   const nombreEdificio = proyectoMaster?.nombre_oficial || formData.proyecto_nombre || 'Sin nombre'
   const camposBloqueados = getCamposBloqueadosInfo()
