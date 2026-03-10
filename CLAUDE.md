@@ -71,17 +71,24 @@ Desde migración 184, los nombres en BD son los nombres display definitivos (ya 
 
 ## Sistema de precios — Definiciones
 
-- `precio_usd`: USD reales del listing. No se modifica por TC.
+- `precio_usd`: Para props paralelo = USD **billete** (el precio que pide el vendedor en dólares físicos). Para el resto = USD directo del listing.
 - `tipo_cambio_detectado`: `'paralelo'`, `'oficial'`, o `'no_especificado'`. Detectado de la descripción.
-- `depende_de_tc`: `false` para props con precio verificado en USD real. `true` solo para props donde `precio_usd` fue derivado de BOB.
+- `depende_de_tc`: `true` para props donde el precio depende del TC (paralelo u oficial + normalizado). `false` = USD real verificado.
 - `precio_usd_actualizado`: Campo interno del módulo TC dinámico. Ningún query de mercado lo consume.
-- `precio_normalizado()`: Función que calcula precio comparable. Si paralelo: `precio_usd × tc_paralelo / 6.96`. Si no: `precio_usd` directo. **SIEMPRE** usar esta función para queries de mercado, nunca `precio_usd` directo.
+- `precio_usd_original` (en `datos_json_enrichment`): **NO confiable** como referencia — contiene BOB crudo (Remax) o USD×TC (C21). No usar para correcciones automáticas.
+- `precio_normalizado()`: Función SQL que calcula precio comparable. Si paralelo: `precio_usd × tc_paralelo / 6.96`. Si no: `precio_usd` directo. **SIEMPRE** usar para queries de mercado.
 
-### Regla fundamental
+### Reglas fundamentales de precio
 
-- `precio_usd` = USD reales del listing. **NUNCA** usar directo para comparar, mostrar o calcular métricas.
-- Para queries de mercado, informes o estudios: **SIEMPRE** usar `precio_normalizado()` en SQL o `normalizarPrecio()` en JS.
-- Para queries ad-hoc: `SELECT precio_normalizado(precio_usd, tipo_cambio_detectado)` — nunca `precio_usd` directo.
+1. **`precio_usd` NUNCA se usa directo** para comparar, mostrar o calcular métricas. Siempre `precio_normalizado()` en SQL o `normalizarPrecio()` en JS.
+2. **`precio_normalizado()` es la UNICA normalización** — no normalizar antes de guardar en `precio_usd`. Si el código escribe a `precio_usd`, debe escribir el valor crudo (billete para paralelo, USD directo para el resto).
+3. **Dashboard (`usePropertyEditor.ts`)**: `calcularPrecioNormalizado()` retorna billete directo para `usd_paralelo` → se guarda en `precio_usd`. `calcularPrecioDisplay()` muestra el valor normalizado en UI. **NUNCA** mezclar — display es para mostrar, normalizado es para guardar.
+4. **`buscar_unidades_reales()` retorna `precio_normalizado() AS precio_usd`** — el frontend recibe valores ya normalizados. No volver a normalizar en JS al mostrar resultados de esta RPC.
+5. Para queries ad-hoc: `SELECT precio_normalizado(precio_usd, tipo_cambio_detectado)` — nunca `precio_usd` directo.
+
+### Referencia completa
+
+- Documento autoritativo: `docs/architecture/TIPO_CAMBIO_SICI.md` — flujo completo portal→extractor→merge→dashboard→query, bugs históricos, TC Binance.
 - Deuda técnica resuelta: `obtenerMicrozonas()` y `buscarSiguienteRango()` ya normalizan (migración 177).
 
 ## Documentacion Principal
@@ -94,6 +101,7 @@ Desde migración 184, los nombres en BD son los nombres display definitivos (ya 
 | **Pipeline Alquiler Canonical** | `docs/canonical/pipeline_alquiler_canonical.md` |
 | **Filtros Calidad Mercado** | `docs/reports/FILTROS_CALIDAD_MERCADO.md` |
 | **Learnings Alquiler** | `docs/alquiler/LEARNINGS_PIPELINE_ALQUILER.md` |
+| **Sistema TC y precios** | `docs/architecture/TIPO_CAMBIO_SICI.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
 | **Brand Guidelines** | `docs/simon/SIMON_BRAND_GUIDELINES.md` |
