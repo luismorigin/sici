@@ -45,7 +45,6 @@ const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_TOKENS = 1500;
 const TEMPERATURE = 0;
 const MAX_CONTENT_LENGTH = 3000;
-const ITERATION = 'v1.0-test-' + new Date().toISOString().slice(0, 10);
 
 // Parse args
 const args = process.argv.slice(2);
@@ -54,6 +53,9 @@ const limitArg = args.find(a => a.startsWith('--limit='));
 const dryRun = args.includes('--dry-run');
 const specificIds = idsArg ? idsArg.split('=')[1].split(',').map(Number) : null;
 const limit = limitArg ? parseInt(limitArg.split('=')[1]) : 30;
+const versionArg = args.find(a => a.startsWith('--version='));
+const VERSION = versionArg ? versionArg.split('=')[1] : 'v1.0';
+const ITERATION = VERSION + '-test-' + new Date().toISOString().slice(0, 10);
 
 // ═══════════════════════════════════════
 // SUPABASE CLIENT
@@ -199,18 +201,28 @@ ESTADO_CONSTRUCCION:
 TIPO_CAMBIO_DETECTADO:
 - "paralelo": "TC paralelo", "al paralelo", "pago en dólares", "solo dólares", "tc del día"
 - "oficial": "TC 7", "al cambio Bs.7", "TC oficial", "tipo de cambio 7"
-- null: si no hay mención de TC ni forma de pago
+- "no_especificado": si no hay mención de TC ni forma de pago. NUNCA devolver null — usar "no_especificado"
 - "solo dólares" o "pago en dólares" = PARALELO
 - "TC 7" = OFICIAL (6.96 redondeado)
 
 PARQUEO_INCLUIDO:
 - true: "incluye parqueo", "con parqueo" sin precio aparte
-- false: "Parqueo: $us X" (precio explícito)
-- null: solo en áreas comunes o no mencionado
+- false: "Parqueo: $us X" (precio explícito) O no se menciona parqueo en absoluto
+- null: SOLO si "parqueo" aparece en áreas comunes sin detalle de inclusión
+- DEFAULT: false (si no hay info de parqueo)
+
+BAULERA_INCLUIDA:
+- true: "incluye baulera", "con baulera" sin precio aparte
+- false: si no se menciona baulera, o precio explícito por baulera
+- DEFAULT: false (si no hay info de baulera)
 
 PLAN_PAGOS:
-- tiene_plan_pagos: true si cuotas/financiamiento, false si solo contado, null si no hay info
-- plan_pagos_texto: resumen breve de condiciones
+- tiene_plan_pagos: true si cuotas/financiamiento, false si solo contado o no hay info. DEFAULT: false
+- plan_pagos_texto: resumen breve de condiciones, null si no hay info
+- descuento_contado_pct: porcentaje de descuento por pago contado, null si no se menciona
+- acepta_permuta: true si menciona permuta/canje, false si no. DEFAULT: false
+- precio_negociable: true si "negociable"/"escucha ofertas", false si no. DEFAULT: false
+- solo_tc_paralelo: true SOLO si exige explícitamente "solo dólares"/"solo paralelo". false si no exige. DEFAULT: false
 
 AMENITIES y EQUIPAMIENTO:
 - Solo lo que el texto CONFIRME explícitamente
@@ -226,7 +238,7 @@ Devuelve SOLO este JSON (sin explicaciones, sin markdown):
   "estado_construccion_confianza": "alta" | "media" | "baja" | null,
   "fecha_entrega_estimada": string | null,
   "es_multiproyecto": boolean | null,
-  "tipo_cambio_detectado": "paralelo" | "oficial" | null,
+  "tipo_cambio_detectado": "paralelo" | "oficial" | "no_especificado",
   "tipo_cambio_confianza": "alta" | "media" | "baja" | null,
   "piso": number | null,
   "parqueo_incluido": boolean | null,
@@ -252,7 +264,7 @@ Devuelve SOLO este JSON (sin explicaciones, sin markdown):
 // ═══════════════════════════════════════
 
 const VALID_ESTADOS = ['entrega_inmediata', 'preventa', 'en_construccion', 'nuevo_a_estrenar', 'usado'];
-const VALID_TC = ['paralelo', 'oficial'];
+const VALID_TC = ['paralelo', 'oficial', 'no_especificado'];
 const VALID_CONFIANZA = ['alta', 'media', 'baja'];
 
 function parseAndValidate(text) {
