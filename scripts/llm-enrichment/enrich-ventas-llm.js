@@ -199,11 +199,13 @@ ESTADO_CONSTRUCCION:
 - CUIDADO: "Precios al cambio Bs.7" = preventa
 
 TIPO_CAMBIO_DETECTADO:
-- "paralelo": "TC paralelo", "al paralelo", "pago en dólares", "solo dólares", "tc del día"
-- "oficial": "TC 7", "al cambio Bs.7", "TC oficial", "tipo de cambio 7"
+- "paralelo": "TC paralelo", "al paralelo", "dólares o paralelo", "solo dólares", "tc del día", "pago en dólares"
+- "oficial": "TC 7", "al cambio Bs.7", "TC oficial", "tipo de cambio 7", precio listado SOLO en Bs/bolivianos sin mención de USD
 - "no_especificado": si no hay mención de TC ni forma de pago. NUNCA devolver null — usar "no_especificado"
-- "solo dólares" o "pago en dólares" = PARALELO
-- "TC 7" = OFICIAL (6.96 redondeado)
+- CLAVE: "solo dólares" o "pago en dólares" = PARALELO
+- CLAVE: "TC 7" o "cambio 6.96" = OFICIAL
+- CLAVE: Precio en "Bs" o "bolivianos" sin mención de dólares = OFICIAL (tasa BCB fija)
+- CLAVE: "$us X" sin más contexto = "no_especificado" (moneda sola no indica TC)
 
 PARQUEO_INCLUIDO:
 - true: "incluye parqueo", "con parqueo" sin precio aparte
@@ -222,7 +224,10 @@ PLAN_PAGOS:
 - descuento_contado_pct: porcentaje de descuento por pago contado, null si no se menciona
 - acepta_permuta: true si menciona permuta/canje, false si no. DEFAULT: false
 - precio_negociable: true si "negociable"/"escucha ofertas", false si no. DEFAULT: false
-- solo_tc_paralelo: true SOLO si exige explícitamente "solo dólares"/"solo paralelo". false si no exige. DEFAULT: false
+- solo_tc_paralelo: true SOLO si exige exclusivamente dólares/paralelo ("solo dólares", "pago en dólares", "solo paralelo"). false si acepta ambas opciones. DEFAULT: false
+- CUIDADO: "dólares O paralelo" = false (acepta ambas opciones, no exige una sola)
+- CUIDADO: "Se acepta dólares o al tipo de cambio paralelo" = false (da opciones)
+- Solo true cuando NO hay alternativa: "Pago en Dolares" (sin "o"), "SOLO EN DOLARES"
 
 AMENITIES y EQUIPAMIENTO:
 - Solo lo que el texto CONFIRME explícitamente
