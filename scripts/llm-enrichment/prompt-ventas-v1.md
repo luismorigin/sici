@@ -19,7 +19,7 @@ DATOS YA EXTRAÍDOS (del pipeline regex — pueden tener errores):
 - Área: {area_total_m2} m²
 - Dormitorios: {dormitorios}
 - Baños: {banos}
-- Nombre edificio (regex): {nombre_edificio_regex}
+- Nombre edificio (BD): {nombre_edificio_bd}
 - Estado construcción (regex): {estado_construccion_regex}
 - Zona GPS: {zona}
 

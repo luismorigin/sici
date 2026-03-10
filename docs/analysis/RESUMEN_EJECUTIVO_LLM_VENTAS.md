@@ -110,7 +110,9 @@ Eliminadas señales incorrectas o frágiles de ESTADO_CONSTRUCCION:
 | Campo | Status | Nota |
 |-------|--------|------|
 | estado_construccion | 7 difiere, 0 agrega | LLM corrige matices que regex no captura. Posiblemente más correcto que BD. |
-| nombre_edificio | 1 agrega, 1 difiere | Conservador — solo matchea con alta confianza. |
+| nombre_edificio | 1 agrega, 1 difiere | Conservador — solo matchea con alta confianza. **Ver nota abajo.** |
+
+> **Nota sobre nombre_edificio en los tests:** El campo que se pasa al LLM como contexto lee de `propiedades_v2.nombre_edificio` (columna consolidada con correcciones manuales y matching), NO del regex crudo. El 99% de las props en BD ya tienen nombre_edificio correctamente matcheado por auditoría manual, y las 30 props del test reflejan ese estado — no el caso de props nuevas sin matching. **Los tests son válidos para todos los campos excepto nombre_edificio, donde el escenario real (props nuevas) no está representado.** Para props nuevas, el matching contra `proyectos_master` debe correr ANTES del LLM en n8n para que el LLM reciba el ancla correcta.
 | descuento_contado_pct | 2 no_detecta | Datos manuales que no aparecen en descripción. |
 
 ---
@@ -177,10 +179,11 @@ El LLM extrae `amenities_confirmados` y `equipamiento_detectado` pero **no escri
 ### Fase 2: Integración n8n
 1. Crear nodo "LLM Enrichment Venta" entre Enrichment y Merge
 2. Input: propiedades con `datos_json_enrichment.descripcion` no vacía
-3. Construir prompt con `buildPrompt()` del script
-4. POST a Anthropic API (mismo patrón que alquileres)
-5. Parsear y validar con `parseAndValidate()`
-6. Guardar en `datos_json_enrichment.llm_output`
+3. **Para Remax (~60% del volumen):** parsear `listing.title` del `data-page` JSON en el rawHtml de Firecrawl (mismo patrón que alquileres). Guardarlo en `datos_json_enrichment.titulo_pagina`. Pasarlo al LLM como `TÍTULO DE PÁGINA: {titulo}` — dato estructurado de alta calidad para nombre_edificio en props nuevas.
+4. Construir prompt con `buildPrompt()` del script
+5. POST a Anthropic API (mismo patrón que alquileres)
+6. Parsear y validar con `parseAndValidate()`
+7. Guardar en `datos_json_enrichment.llm_output`
 
 ### Fase 3: Merge update
 1. Modificar `merge_discovery_enrichment_v2()` para consumir LLM output

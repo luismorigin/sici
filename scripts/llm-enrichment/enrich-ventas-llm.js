@@ -174,7 +174,7 @@ DATOS YA EXTRAÍDOS (del pipeline regex — pueden tener errores):
 - Área: ${prop.area_total_m2 ? prop.area_total_m2 + ' m²' : 'desconocida'}
 - Dormitorios: ${prop.dormitorios ?? 'desconocido'}
 - Baños: ${prop.banos ?? 'desconocido'}
-- Nombre edificio (regex): ${nombreEdificio}
+- Nombre edificio (BD): ${nombreEdificio}
 - Estado construcción (regex): ${prop.estado_construccion || 'no detectado'}
 - Zona GPS: ${prop.zona || 'desconocida'}
 
