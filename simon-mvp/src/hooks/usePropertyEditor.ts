@@ -451,7 +451,7 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
 
     switch (formData.tipo_precio) {
       case 'usd_oficial': return precioPublicado
-      case 'usd_paralelo': return Math.round(precioPublicado * (tcParalelo / tcOficial))
+      case 'usd_paralelo': return precioPublicado
       case 'bob': return Math.round(precioPublicado / tcOficial)
       default: return precioPublicado
     }
