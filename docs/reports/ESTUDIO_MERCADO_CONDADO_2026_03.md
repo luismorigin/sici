@@ -145,7 +145,6 @@
 |----------|-----|----------|---------|------------|--------|-------------|
 | **HH Chuubi** | 5 | $1,600 | $1,747 | 1, 2D | Preventa | $90K-$193K |
 
-> **Nota:** Alto Busch (Eq. Oeste, entrega inmediata) y Portofino V (Sin zona) no se incluyen en esta tabla — no compiten directamente con Condado VI en Equipetrol Centro.
 
 ### 2.4 Qué se Mueve y Qué Está Estancado
 
@@ -319,8 +318,8 @@ Constructora Condado tiene **5 proyectos** registrados en SICI, todos en Equipet
 #### MEDIANO PLAZO (Mes 2-3)
 
 **6. Activación broker multicanal**
-- Actualmente solo Juan José Cruz (Remax Futuro) publica Condado VI.
-- Sumar al menos 1 broker de Century 21 para duplicar exposición.
+- Condado VI ya tiene presencia en 2 portales: 5 listings en Remax + 1 en Century 21 (ID 1037).
+- Oportunidad: el listing de C21 es de baja calidad (sin fotos, descripción pobre) — mejorar esa publicación tiene alto impacto.
 - Considerar brokers especializados en inversión (el 1D a $113K es atractivo para inversores por alquiler).
 
 **7. Estrategia TC paralelo**
@@ -359,7 +358,7 @@ Constructora Condado tiene **5 proyectos** registrados en SICI, todos en Equipet
 ### Debilidades
 1. **Identidad fragmentada:** Múltiples nombres en portales (Condado VI, Condado Park 6, etc.)
 2. **Publicaciones desactualizadas:** Precios con TC viejo, descripciones pobres (ID 1037)
-3. **Canal único:** Solo 1 broker activo (Remax Futuro)
+3. **Listing C21 de baja calidad:** Presencia en 2 portales pero el listing de Century 21 (ID 1037) sin fotos ni descripción adecuada
 4. **Sin co-working:** Único competidor directo sin este servicio (6/7 amenidades vs 7/7 del resto)
 5. **Pet Friendly sin confirmar:** Si permite mascotas, no se está comunicando — el 46% de la oferta de Eq. Centro es Pet Friendly
 
@@ -370,7 +369,7 @@ Constructora Condado tiene **5 proyectos** registrados en SICI, todos en Equipet
 | **P0** | Unificar nombre + actualizar publicaciones | Coherencia de marca | Bajo |
 | **P1** | Fotos profesionales reales | +30-50% engagement | Medio |
 | **P1** | Campaña "más equipado" | Diferenciación clara | Medio |
-| **P2** | Sumar 2do broker (C21) | +50% cobertura | Medio |
+| **P2** | Mejorar listing C21 (ID 1037) | Calidad en 2do portal | Bajo |
 | **P2** | Confirmar y comunicar Pet Friendly | Alinearse con 46% del mercado | Bajo |
 | **P3** | Estrategia TC billete | Capturar comprador BOB | Bajo |
 
