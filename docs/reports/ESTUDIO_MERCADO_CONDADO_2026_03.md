@@ -203,6 +203,7 @@ Comparación con proyectos de entrega inmediata en Eq. Centro, segmento mercado:
 | **Sky Level** | 5 | $2,055 | 1, 2D | Preventa | Marca Sky |
 | **HH Once** | 8 | $1,833 | 0, 1D | Preventa | Precio agresivo, amenidades |
 | **HH Chuubi** | 5 | $1,747 | 1, 2D | Preventa | Precio entry-level |
+| **Terrazzo** | 14 | $2,030 | 0, 1, 2, 3D, Dúplex | Preventa (dic 2026) | Amenidades amplias, interiorismo autor |
 
 **Posición de Condado VI:** Todas las tipologías están en el rango **$2,141-$2,460/m²**, centradas en el **P55-P70 del mercado** — ligeramente por encima de la mediana ($2,183 para 1D, $2,039 para 2D) pero justificado por el equipamiento completo.
 
@@ -212,32 +213,32 @@ Datos verificados en campo y actualizados en BD (marzo 2026).
 
 #### Equipamiento de unidad
 
-| Característica | Condado VI | Atrium | HH Once | HH Chuubi | Luxe Suites | Sky Level |
-|---------------|-----------|--------|---------|-----------|-------------|-----------|
-| **Aire acondicionado** | SI | SI | — | — | SI | SI |
-| **Cocina encimera** | SI | SI | SI | SI | SI | SI |
-| **Campana extractora** | SI | — | SI | SI | SI | SI |
-| **Horno eléctrico** | SI | SI | — | — | SI | SI |
-| **Heladera** | SI | — | — | — | SI | — |
-| **Lavavajillas** | SI | — | — | — | — | — |
-| **Lavadora/Secadora** | SI | — | — | — | SI | — |
-| **Calefón/Termotanque** | SI | SI | — | — | SI | SI |
-| **Roperos empotrados** | SI | SI | SI | SI | SI | SI |
-| **Box de baño vidrio** | SI | SI | SI | SI | SI | SI |
-| **Total equip. unidad** | **10/10** | **6/10** | **4/10** | **4/10** | **9/10** | **7/10** |
+| Característica | Condado VI | Atrium | HH Once | HH Chuubi | Luxe Suites | Sky Level | Terrazzo |
+|---------------|-----------|--------|---------|-----------|-------------|-----------|----------|
+| **Aire acondicionado** | SI | SI | — | — | SI | SI | SI |
+| **Cocina encimera** | SI | SI | SI | SI | SI | SI | SI |
+| **Campana extractora** | SI | — | SI | SI | SI | SI | SI |
+| **Horno eléctrico** | SI | SI | — | — | SI | SI | SI |
+| **Heladera** | SI | — | — | — | SI | — | SI |
+| **Lavavajillas** | SI | — | — | — | — | — | — |
+| **Lavadora/Secadora** | SI | — | — | — | SI | — | — |
+| **Calefón/Termotanque** | SI | SI | — | — | SI | SI | — |
+| **Roperos empotrados** | SI | SI | SI | SI | SI | SI | —* |
+| **Box de baño vidrio** | SI | SI | SI | SI | SI | SI | SI |
+| **Total equip. unidad** | **10/10** | **6/10** | **4/10** | **4/10** | **9/10** | **7/10** | **6/10** |
 
 #### Amenidades de edificio
 
-| Característica | Condado VI | Atrium | HH Once | HH Chuubi | Luxe Suites | Sky Level |
-|---------------|-----------|--------|---------|-----------|-------------|-----------|
-| **Piscina** | SI | SI | SI | SI | SI | SI |
-| **Gimnasio** | SI | SI | — | — | SI | SI |
-| **Churrasquera** | SI | SI | SI | SI | SI | SI |
-| **Ascensor** | SI | SI | SI | SI | SI | SI |
-| **Salón de eventos** | SI | SI | SI | SI | SI | SI |
-| **Co-working** | — | SI | SI | SI | SI | SI |
-| **Seguridad 24/7** | SI | SI | SI | SI | SI | SI |
-| **Total amenidades** | **6/7** | **7/7** | **6/7** | **6/7** | **7/7** | **7/7** |
+| Característica | Condado VI | Atrium | HH Once | HH Chuubi | Luxe Suites | Sky Level | Terrazzo |
+|---------------|-----------|--------|---------|-----------|-------------|-----------|----------|
+| **Piscina** | SI | SI | SI | SI | SI | SI | SI |
+| **Gimnasio** | SI | SI | — | — | SI | SI | SI |
+| **Churrasquera** | SI | SI | SI | SI | SI | SI | SI |
+| **Ascensor** | SI | SI | SI | SI | SI | SI | SI |
+| **Salón de eventos** | SI | SI | SI | SI | SI | SI | SI |
+| **Co-working** | — | SI | SI | SI | SI | SI | — |
+| **Seguridad 24/7** | SI | SI | SI | SI | SI | SI | SI |
+| **Total amenidades** | **6/7** | **7/7** | **6/7** | **6/7** | **7/7** | **7/7** | **6/7** |
 
 #### Diferenciadores únicos
 
@@ -249,10 +250,11 @@ Datos verificados en campo y actualizados en BD (marzo 2026).
 | **HH Chuubi** | Sauna/Jacuzzi, lavandería compartida |
 | **Luxe Suites** | Sala de masajes, equipamiento casi completo |
 | **Sky Level** | Cine, roof garden, sala de juegos |
+| **Terrazzo** | Sauna, cocina de verano, fogatero, Pet Center, parque infantil, interiorismo Roberto Franco. *Closets no confirmados en brochure. |
 
-**Veredicto:** Condado VI tiene el **equipamiento interior más completo** del mercado en Eq. Centro (10/10). Es el **único proyecto con línea blanca completa** (heladera + lavavajillas + lavadora + secadora). Luxe Suites es el competidor más cercano (9/10) pero sin lavavajillas. Esto justifica un premium de 5-10% sobre la mediana.
+**Veredicto:** Condado VI tiene el **equipamiento interior más completo** del mercado en Eq. Centro (10/10). Es el **único proyecto con línea blanca completa** (heladera + lavavajillas + lavadora + secadora). Luxe Suites es el competidor más cercano (9/10) pero sin lavavajillas. Terrazzo (6/10) compensa con acabados constructivos (piedra sinterizada, doble vidriado) pero no incluye línea blanca. Esto justifica un premium de 5-10% sobre la mediana.
 
-**Debilidad en amenidades:** Condado VI es el único sin co-working (6/7) — amenidad que los otros 5 competidores sí ofrecen y que es valorada por compradores jóvenes y profesionales.
+**Debilidad en amenidades:** Condado VI y Terrazzo empatan en amenidades estándar (6/7 — ambos sin co-working), pero Terrazzo ofrece 5 amenidades adicionales no contempladas en esta tabla (sauna, cocina de verano, parque infantil, fogatero, Pet Center) que amplían la brecha real a 7 vs 12. Ver sección 3.7 para análisis detallado.
 
 ### 3.4 Unidades Disponibles por Competidor
 
@@ -265,6 +267,7 @@ Datos verificados en campo y actualizados en BD (marzo 2026).
 | **Sky Level** | 5 | 5+ | $103K-$193K |
 | **HH Chuubi** | 5 | 5+ | $90K-$193K |
 | **Condado VI** | **5** | **~14** | **$133K-$323K** |
+| **Terrazzo** | **0** | **14 (5 vendidos)** | **$81K-$483K** (norm.) |
 | **Luxe Tower** | 4 | 4+ | $132K-$277K |
 | **Sky Plaza Italia** | 4 | 4+ | $83K-$148K |
 
@@ -325,7 +328,86 @@ Estos yields son referenciales. Las medianas de alquiler mezclan departamentos c
 > - No distingue nivel de equipamiento ni amoblado — las medianas mezclan deptos equipados y vacíos.
 > - Durante la verificación manual con brokers se dieron de baja listings que figuraban en portales pero ya no estaban disponibles — el conteo de inactivos no debe interpretarse como absorción.
 
-### 3.7 Recomendaciones Estratégicas
+### 3.7 Análisis competitivo: Terrazzo
+
+Terrazzo es un proyecto de **Levent Construcciones** ubicado frente a Plaza Italia, Calle 9 Oeste — a menos de 500 metros de Condado VI. Por proximidad geográfica, rango de precios y tipologías, es el competidor más directo en el micro-mercado inmediato.
+
+**Fuente:** Brochure oficial del desarrollador + inventario de ventas (marzo 2026). Contacto comercial: +591 74162430.
+
+#### Ficha técnica
+
+| | Condado VI | Terrazzo |
+|---|---|---|
+| Desarrolladora | Condado Urbano | Levent Construcciones |
+| Ubicación | Equipetrol Centro | Equipetrol Centro (Plaza Italia) |
+| Pisos | 5 | 7 + 2 pisos áreas sociales |
+| Tipologías | 1D, 2D, 3D | Mono, 1D, 2D, 3D, Dúplex |
+| Precio/m² (norm.) | $2,212 uniforme | $1,824–$2,289 variable |
+| Entrega | Inmediata | Diciembre 2026 |
+| Unidades disponibles | 14 | 14 |
+| Unidades vendidas | Por confirmar | 5 |
+| Interiorismo | — | Roberto Franco |
+| TC recibido | Paralelo | Paralelo |
+
+#### Comparación de precios por tipología (normalizados a TC oficial)
+
+| Tipología | Condado VI | Terrazzo | Diferencia |
+|-----------|-----------|---------|------------|
+| Mono | No ofrece | $80,752–$85,816 (40–41 m²) | Terrazzo sin competencia |
+| 1D | $137,597 (62 m²) | $99,585–$173,265 (50–95 m²) | Condado +38% en ticket comparable¹ |
+| 2D | $191,860–$193,828 (87 m²) | $194,815–$221,545 (85–107 m²) | Precio total similar² |
+| 3D | $319,182 (144 m²) | $384,434–$482,596 (174–248 m²) | Terrazzo más caro pero más grande |
+| Dúplex | No ofrece | $336,497 (168 m²) | Terrazzo sin competencia |
+
+¹ Condado 1D: 62 m² a $2,212/m². Terrazzo 1D comparable (50 m²): $2,000–$2,073/m². Terrazzo ofrece menos m² pero a menor precio total.
+² En 2D, el ticket es casi idéntico (~$194K), pero Condado incluye electrodomésticos de línea blanca que representan un ahorro post-entrega de ~$3,000–$5,000 USD.
+
+#### Precio por m² normalizado — Comparación directa
+
+| Tipología | Condado VI $/m² | Terrazzo $/m² | Diferencia |
+|-----------|:-----------:|:----------:|:----------:|
+| Mono | — | $2,004–$2,073 | N/A |
+| 1D | $2,212 | $1,824–$2,073 | Terrazzo −6% a −18% |
+| 2D | $2,212 | $2,073–$2,289 | −6% a +3% |
+| 3D | $2,212 | $1,944–$2,210 | Terrazzo −0.1% a −12% |
+| Dúplex | — | $2,002 | N/A |
+| **Promedio** | **$2,212** | **~$2,030** | **Terrazzo −8%** |
+
+> Terrazzo es en promedio 8% más económico por m², pero sin incluir lavadora, secadora, lavavajillas, closets ni calefón. Ajustando por el costo de equipar la unidad post-entrega (~$3,000–$5,000), la diferencia real de precio se reduce a ~3–5%.
+
+#### Equipamiento de unidad: Condado VI 16 items vs. Terrazzo 12
+
+Ambos proyectos comparten 10 items base: aire acondicionado, cocina equipada, horno, heladera, campana extractora, microondas, box de baño, cerradura digital, aislamiento acústico e intercomunicador.
+
+**Exclusivos Condado VI (6):** Lavavajillas, lavadora, secadora, closets, calefón/termotanque, mesones de granito.
+
+**Exclusivos Terrazzo (2):** Piedra sinterizada, doble vidriado hermético.
+
+> La ventaja de Condado VI en equipamiento es significativa: un comprador de Terrazzo deberá invertir ~$3,000–$5,000 USD adicionales en lavadora, secadora y lavavajillas post-entrega. Esta es una de las propuestas de valor más fuertes de Condado VI en la zona.
+
+*Nota: El brochure de Terrazzo no menciona closets empotrados, aunque es posible que los incluya — confirmar con el desarrollador.*
+
+#### Amenidades de edificio: Terrazzo 12 vs. Condado VI 7
+
+Ambos comparten 7 amenidades: piscina, gimnasio, churrasquera, salón de eventos, seguridad 24/7, ascensor y terraza/balcón.
+
+**Exclusivos Terrazzo (5):** Sauna, cocina de verano, parque infantil, fogatero, Pet Center.
+
+**Exclusivos Condado VI:** Ninguno.
+
+> Terrazzo tiene una oferta de amenidades notablemente más amplia. Los 2 pisos exclusivos de áreas sociales y el Pet Center dedicado son diferenciadores fuertes en el segmento. Si Condado VI confirma política Pet Friendly (ver Recomendación 10), se reduce parcialmente esta brecha.
+
+#### Lectura estratégica
+
+Condado VI y Terrazzo compiten en el mismo micro-mercado con propuestas de valor distintas:
+
+- **Condado VI = "Listo para vivir"** — Entrega inmediata. El equipamiento más completo de la zona (16 items). Un comprador se muda sin comprar nada adicional. Precio/m² uniforme y predecible. Ideal para inversores y compradores que valoran conveniencia y certeza.
+
+- **Terrazzo = "Experiencia de edificio"** — Entrega diciembre 2026. Más amenidades sociales (12 vs 7), mayor variedad de tipologías (mono a dúplex), acabados constructivos premium, interiorismo de autor. Precio/m² más bajo en promedio (~$2,030 vs $2,212). Ideal para compradores que priorizan estilo de vida y pueden esperar.
+
+**Implicación para Condado VI:** La combinación de entrega inmediata + equipamiento completo es un argumento difícil de rebatir — "Mudarse hoy con 0 costos adicionales post-entrega" es concreto y cuantificable ($3,000–$5,000 de ahorro + 9 meses de espera evitados). La brecha en amenidades (7 vs 12) es la principal vulnerabilidad competitiva.
+
+### 3.8 Recomendaciones Estratégicas
 
 #### URGENTE (Semana 1-2)
 
@@ -372,6 +454,7 @@ Estos yields son referenciales. Las medianas de alquiler mezclan departamentos c
 - **ALERTA:** Este spread se está achicando (era Bs 9.17 en Feb → Bs 9.454 ahora). La ventana del billete sigue abierta pero puede cerrarse.
 
 **8. Monitoreo competitivo mensual**
+- **Terrazzo** (14 uds, 5 vendidos) es el competidor más cercano geográficamente (~500m). Monitorear su absorción como indicador directo del micro-mercado Plaza Italia. Entrega dic 2026 — su ritmo de ventas en preventa indica demanda real de la zona.
 - Atrium (10 uds) y HH Once (8 uds) son los competidores directos por volumen.
 - Si Atrium baja precios, Condado VI debe responder con valor (equipamiento) no con descuento.
 - HH Chuubi a $1,747/m² puede capturar compradores price-sensitive — diferenciarse por calidad, no competir por precio.
@@ -392,18 +475,20 @@ Estos yields son referenciales. Las medianas de alquiler mezclan departamentos c
 ## Resumen Ejecutivo
 
 ### Fortalezas de Condado VI
-1. **Equipamiento superior:** Único con línea blanca completa en Eq. Centro
-2. **Entrega inmediata:** Compite en el segmento más activo (40% del mercado)
+1. **Equipamiento superior:** Único con línea blanca completa en Eq. Centro (16 items vs 12 de Terrazzo, su competidor más cercano)
+2. **Entrega inmediata:** Compite en el segmento más activo (40% del mercado). Terrazzo, el competidor más cercano, recién entrega en dic 2026
 3. **Ubicación:** Plaza Italia, corazón de Equipetrol
 4. **Marca:** Constructora Condado tiene track record (5 edificios, venta confirmada en Park V)
 5. **Precio 1D:** En la mediana del mercado — competitivo
+6. **Costo total de propiedad:** $3,000-$5,000 de ahorro vs competidores que no incluyen línea blanca
 
 ### Debilidades
 1. **Identidad fragmentada:** Múltiples nombres en portales (Condado VI, Condado Park 6, etc.)
 2. **Publicaciones desactualizadas:** Precios con TC viejo, descripciones pobres (ID 1037)
 3. **Listing C21 de baja calidad:** Presencia en 2 portales pero el listing de Century 21 (ID 1037) sin fotos ni descripción adecuada
 4. **Sin co-working:** Único competidor directo sin este servicio (6/7 amenidades vs 7/7 del resto)
-5. **Pet Friendly sin confirmar:** Si permite mascotas, no se está comunicando — el 46% de la oferta de Eq. Centro es Pet Friendly
+5. **Brecha en amenidades vs Terrazzo:** 7 amenidades vs 12 de Terrazzo (sauna, cocina de verano, parque infantil, fogatero, Pet Center). Es la principal vulnerabilidad competitiva en el micro-mercado Plaza Italia
+6. **Pet Friendly sin confirmar:** Si permite mascotas, no se está comunicando — el 46% de la oferta de Eq. Centro es Pet Friendly
 
 ### Prioridad de acción
 
@@ -414,6 +499,7 @@ Estos yields son referenciales. Las medianas de alquiler mezclan departamentos c
 | **P1** | Campaña "más equipado" | Diferenciación clara | Medio |
 | **P2** | Mejorar listing C21 (ID 1037) | Calidad en 2do portal | Bajo |
 | **P2** | Confirmar y comunicar Pet Friendly | Alinearse con 46% del mercado | Bajo |
+| **P2** | Monitorear absorción Terrazzo | Indicador directo micro-mercado Plaza Italia | Bajo |
 | **P3** | Estrategia TC billete | Capturar comprador BOB | Bajo |
 
 ---
