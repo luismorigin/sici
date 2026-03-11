@@ -282,7 +282,50 @@ Constructora Condado tiene **5 proyectos** registrados en SICI, todos en Equipet
 
 **Señal positiva:** Condado Park V tuvo una venta confirmada (ID 556 → inactivo_confirmed). La marca Condado vende cuando está visible.
 
-### 3.6 Recomendaciones Estratégicas
+### 3.6 Mercado de Alquiler — Contexto de Referencia
+
+Datos del pipeline de alquileres SICI (operativo desde febrero 2026). Se presenta como contexto de mercado, no como análisis de rentabilidad definitivo.
+
+#### Oferta de alquiler en Equipetrol
+
+| Zona | Activos | Inactivos | Total |
+|------|---------|-----------|-------|
+| **Eq. Centro** | 67 | 74 | 141 |
+| Sirari | 30 | 31 | 61 |
+| Eq. Norte | 24 | 37 | 61 |
+| Eq. Oeste | 15 | 7 | 22 |
+| V. Brígida | 8 | 15 | 23 |
+| **Total** | **144** | **164** | **308** |
+
+Ratio venta:alquiler en Eq. Centro: 136 en venta vs 67 en alquiler (2:1).
+
+#### Precios de lista — Eq. Centro (medianas, activos)
+
+| Tipología | Activos | Mediana/mes | Rango |
+|-----------|---------|-------------|-------|
+| Mono | 6 | $456 | $388-$575 |
+| 1D | 28 | $517 | $402-$718 |
+| 2D | 21 | $1,149 | $690-$1,839 |
+| 3D | 5 | $1,800 | $1,020-$2,200 |
+
+#### Yield bruto de referencia — Condado VI
+
+| Tipología | Venta ~aprox | Alquiler mediana | Yield bruto anual |
+|-----------|-------------|------------------|-------------------|
+| 1D (~63m²) | ~$140,000 | $517/mes | 4.4% |
+| 2D (~87m²) | ~$185,000 | $1,149/mes | 7.5% |
+| 3D (~144m²) | ~$290,000 | $1,800/mes | 7.4% |
+
+Estos yields son referenciales. Las medianas de alquiler mezclan departamentos con distinto nivel de equipamiento y amenidades. Un departamento con equipamiento completo como Condado VI podría posicionarse en el rango alto de cada tipología, pero no es posible cuantificar ese premium con la data actual.
+
+> **Limitaciones de esta sección:**
+> - Pipeline de alquileres operativo desde febrero 2026 (data preliminar).
+> - Precios son de lista (precio pedido), no renta efectiva cerrada.
+> - Alquileres en BOB convertidos a USD al TC oficial (6.96).
+> - No distingue nivel de equipamiento ni amoblado — las medianas mezclan deptos equipados y vacíos.
+> - Durante la verificación manual con brokers se dieron de baja listings que figuraban en portales pero ya no estaban disponibles — el conteo de inactivos no debe interpretarse como absorción.
+
+### 3.7 Recomendaciones Estratégicas
 
 #### URGENTE (Semana 1-2)
 
