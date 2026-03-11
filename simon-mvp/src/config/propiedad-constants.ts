@@ -3,6 +3,7 @@
  */
 
 export const MICROZONAS = [
+  { id: 'sin_zona', label: 'Sin zona' },
   { id: 'equipetrol_centro', label: 'Equipetrol Centro' },
   { id: 'sirari', label: 'Sirari' },
   { id: 'equipetrol_norte', label: 'Equipetrol Norte' },
@@ -12,6 +13,7 @@ export const MICROZONAS = [
 
 /** Form ID → BD microzona column value */
 export const MICROZONA_ID_TO_DB: Record<string, string> = {
+  'sin_zona': 'Sin zona',
   'equipetrol_centro': 'Equipetrol Centro',
   'sirari': 'Sirari',
   'equipetrol_norte': 'Equipetrol Norte',
