@@ -121,7 +121,7 @@
 | Proyecto | Uds | $/m² Avg | Mediana | Tipologías | Estado | Ticket Rango |
 |----------|-----|----------|---------|------------|--------|-------------|
 | **Sky Tower** | 7 | $2,887 | $2,833 | 0, 1, 2D | Preventa/Nuevo | $90K-$206K |
-| **Luxe Suites** | 5 | $2,880 | $2,819 | 0, 1, 2D | Mixto | $99K-$227K |
+| **Luxe Suites** | 5 | $2,880 | $2,819 | 0, 1, 2D | Entrega inmed. | $99K-$227K |
 | **Luxe Tower** | 4 | $2,600 | $2,642 | 1, 2D | Preventa | $132K-$277K |
 | **Nomad Smart Studio** | 3 | $2,509 | $1,871 | 1D | Entrega inmed. | $80K-$130K |
 | **Sky Plaza Italia** | 4 | $2,421 | $2,403 | 0, 1D | Entrega/Nuevo | $83K-$148K |
@@ -138,14 +138,14 @@
 | **Sky Level** | 5 | $2,055 | $2,055 | 1, 2D | Preventa | $103K-$193K |
 | **HH Once Equipetrol** | 8 | $1,890 | $1,833 | 0, 1D | Preventa | $77K-$147K |
 | **Torre ARA** | 3 | $1,869 | $1,893 | 0, 2, 3D | Entrega inmed. | $176K-$297K |
-| **Alto Busch** | 3 | $1,853 | $1,917 | 2D | No espec. | $119K-$124K |
 
 #### Segmento Oportunidad (<$1,800/m²)
 
 | Proyecto | Uds | $/m² Avg | Mediana | Tipologías | Estado | Ticket Rango |
 |----------|-----|----------|---------|------------|--------|-------------|
-| **Portofino V** | 3 | $1,714 | $1,720 | 1, 2D | Entrega inmed. | $65K-$130K |
 | **HH Chuubi** | 5 | $1,600 | $1,747 | 1, 2D | Preventa | $90K-$193K |
+
+> **Nota:** Alto Busch (Eq. Oeste, entrega inmediata) y Portofino V (Sin zona) no se incluyen en esta tabla — no compiten directamente con Condado VI en Equipetrol Centro.
 
 ### 2.4 Qué se Mueve y Qué Está Estancado
 
@@ -173,18 +173,21 @@
 | 921 | Condado VI | 1D | 62.21 | $153,046 | $2,460 | no_espec. | Entrega inmed. | **Activo** |
 | 53 | Condado VI | 2D | 86.73 | $194,384 | $2,241 | paralelo | Entrega inmed. | **Activo** |
 | 821 | Condado VI | 3D | 144.31 | $323,435 | $2,241 | paralelo | Entrega inmed. | **Activo** |
-| 968 | Condado IV | 1D | 62.21 | $139,429 | $2,241 | paralelo | Entrega inmed. | **Activo** |
+| 968 | Condado Park 6 | 1D | 62.21 | $139,429 | $2,241 | paralelo | Entrega inmed. | **Activo** |
 | 816 | Condado Park V | 2D | 85.25 | $190,167 | $2,231 | paralelo | Entrega inmed. | **Activo** |
 | 529 | Condado II | 3D | 228.02 | $292,042 | $1,281 | paralelo | Entrega inmed. | **Activo** |
 | 174 | Condado IV | 1D | 62.21 | $135,203 | $2,173 | paralelo | no_espec. | Inactivo |
 | 427 | Condado VI | 3D | 144.31 | $325,008 | $2,252 | oficial | Entrega inmed. | Inactivo |
 | 556 | Condado Park V | 2D | 85.25 | $273,071 | $3,203 | paralelo | Entrega inmed. | Inactivo (conf.) |
 
-**Resumen Condado VI activo en portales:** 5 listings (3x 1D, 1x 2D, 1x 3D)
+**Resumen Condado VI activo en portales:** 5 listings (3x 1D, 1x 2D, 1x 3D). Rango de precios coherente: **$2,141-$2,460/m²** en todas las tipologías.
 
-**Precios corregidos (10 Mar 2026):** IDs 53 y 821 tenían precios inflados por bug de doble normalización en el dashboard (ver `docs/architecture/TIPO_CAMBIO_SICI.md` sección 4). Ahora todos los listings de Condado VI están en el rango **$2,141-$2,460/m²** — coherente entre tipologías y con el mercado.
+**Observaciones para brokers:**
+- **ID 1037 (C21):** Publicación de baja calidad — descripción genérica, sin fotos de áreas comunes ni equipamiento detallado. Precio publicado ($102,647) desactualizado respecto al precio real (~$132,733). Requiere actualización urgente.
+- **ID 423 (Remax):** Precio publicado como "$102,647 a t.c. 9.5" — el TC 9.5 corresponde a la fecha original de publicación. El TC actual es 9.454. Los compradores pueden confundirse si el TC del anuncio no se actualiza periódicamente.
+- **ID 968 (Remax):** La descripción dice "Condado Park 6" pero el proyecto es **Condado VI Plaza Italia**. Nombre incorrecto en el anuncio — debe unificarse.
 
-**Nota sobre inventario real:** Según el informe de Feb 2026, Condado VI tiene 14 unidades disponibles (4x1D, 7x2D, 3x3D). Los portales solo muestran 5 listings — hay **9 unidades invisibles** que no están publicadas online.
+**Sobre el inventario:** Condado VI tiene ~14 unidades disponibles (4x1D, 7x2D, 3x3D) pero solo 5 listings en portales. Esto es consistente con la estrategia habitual de brokers de publicar **1 listing representativo por tipología** — el inventario completo se gestiona en consultas directas. No es necesariamente un problema de visibilidad.
 
 ### 3.2 Condado VI vs Competidores Directos — Precio/m²
 
@@ -192,7 +195,7 @@ Comparación con proyectos de entrega inmediata en Eq. Centro, segmento mercado:
 
 | Proyecto | Uds | $/m² Mediana | Tipologías | Estado | Ventaja |
 |----------|-----|-------------|------------|--------|---------|
-| **Luxe Suites** | 5 | $2,819 | 0, 1, 2D | Mixto | Marca premium, coworking |
+| **Luxe Suites** | 5 | $2,819 | 0, 1, 2D | Entrega inmed. | Marca premium, coworking |
 | **Sky Tower** | 7 | $2,833 | 0, 1, 2D | Preventa/Nuevo | Marca Sky, altura |
 | **Luxe Tower** | 4 | $2,642 | 1, 2D | Preventa | Preventa, marca Luxe |
 | **Condado VI** (1D) | 3 | **$2,252** | 1D | Entrega inmed. | **Equipamiento completo** |
@@ -206,34 +209,51 @@ Comparación con proyectos de entrega inmediata en Eq. Centro, segmento mercado:
 
 ### 3.3 Equipamiento Comparativo
 
+Datos verificados en campo y actualizados en BD (marzo 2026).
+
+#### Equipamiento de unidad
+
 | Característica | Condado VI | Atrium | HH Once | HH Chuubi | Luxe Suites | Sky Level |
 |---------------|-----------|--------|---------|-----------|-------------|-----------|
-| **Aire acondicionado** | SI | SI | — | — | SI | — |
-| **Cocina encimera** | SI | SI | — | SI | SI | — |
-| **Campana extractora** | SI | — | SI | SI | SI | — |
-| **Horno eléctrico** | SI | — | — | — | — | — |
-| **Heladera** | SI | — | — | — | — | — |
+| **Aire acondicionado** | SI | SI | — | — | SI | SI |
+| **Cocina encimera** | SI | SI | SI | SI | SI | SI |
+| **Campana extractora** | SI | — | SI | SI | SI | SI |
+| **Horno eléctrico** | SI | SI | — | — | SI | SI |
+| **Heladera** | SI | — | — | — | SI | — |
 | **Lavavajillas** | SI | — | — | — | — | — |
-| **Lavadora** | SI | — | — | SI | SI | — |
-| **Secadora** | SI | — | — | — | SI | — |
-| **Calefón** | SI | — | — | — | SI | — |
-| **Roperos empotrados** | SI | — | — | — | SI | — |
-| **Box de baño vidrio** | SI | — | — | SI | — | — |
-| **Piscina** | SI | SI | SI | SI | SI | — |
-| **Gimnasio** | SI | SI | — | — | SI | — |
-| **Ascensor (Orona)** | SI | SI | SI | SI | SI | — |
-| **Salón eventos** | SI | — | — | — | SI | — |
-| **Churrasquera** | — | SI | SI | SI | SI | — |
-| **Pet Friendly** | — | — | SI | SI | SI | — |
-| **Sauna/Jacuzzi** | — | — | — | SI | SI | — |
-| **Co-working** | — | — | SI | — | SI | — |
-| **Seguridad 24/7** | SI | — | SI | SI | SI | — |
-| | | | | | | |
-| **Total items equip.** | **11** | **2** | **2** | **3-5** | **4-6** | **—** |
+| **Lavadora/Secadora** | SI | — | — | — | SI | — |
+| **Calefón/Termotanque** | SI | SI | — | — | SI | SI |
+| **Roperos empotrados** | SI | SI | SI | SI | SI | SI |
+| **Box de baño vidrio** | SI | SI | SI | SI | SI | SI |
+| **Total equip. unidad** | **10/10** | **6/10** | **4/10** | **4/10** | **9/10** | **7/10** |
 
-**Veredicto:** Condado VI tiene el **equipamiento interior más completo** del mercado en Eq. Centro. Es el **único proyecto con línea blanca completa** (heladera + lavavajillas + lavadora + secadora). Esto es un diferenciador real que justifica un premium de 5-10% sobre la mediana.
+#### Amenidades de edificio
 
-**Debilidad en amenidades:** Condado VI no tiene churrasquera, pet friendly, ni co-working — amenidades que HH y Luxe Suites sí ofrecen y que son valoradas por compradores jóvenes.
+| Característica | Condado VI | Atrium | HH Once | HH Chuubi | Luxe Suites | Sky Level |
+|---------------|-----------|--------|---------|-----------|-------------|-----------|
+| **Piscina** | SI | SI | SI | SI | SI | SI |
+| **Gimnasio** | SI | SI | — | — | SI | SI |
+| **Churrasquera** | SI | SI | SI | SI | SI | SI |
+| **Ascensor** | SI | SI | SI | SI | SI | SI |
+| **Salón de eventos** | SI | SI | SI | SI | SI | SI |
+| **Co-working** | — | SI | SI | SI | SI | SI |
+| **Seguridad 24/7** | SI | SI | SI | SI | SI | SI |
+| **Total amenidades** | **6/7** | **7/7** | **6/7** | **6/7** | **7/7** | **7/7** |
+
+#### Diferenciadores únicos
+
+| Proyecto | Diferenciador |
+|----------|--------------|
+| **Condado VI** | Único con línea blanca completa (heladera + lavavajillas + lavadora + secadora) |
+| **Atrium** | Espacio Zen, único con jacuzzi + salón de eventos |
+| **HH Once** | Casilleros inteligentes, cerradura inteligente, bar/lounge |
+| **HH Chuubi** | Sauna/Jacuzzi, lavandería compartida |
+| **Luxe Suites** | Sala de masajes, equipamiento casi completo |
+| **Sky Level** | Cine, roof garden, sala de juegos |
+
+**Veredicto:** Condado VI tiene el **equipamiento interior más completo** del mercado en Eq. Centro (10/10). Es el **único proyecto con línea blanca completa** (heladera + lavavajillas + lavadora + secadora). Luxe Suites es el competidor más cercano (9/10) pero sin lavavajillas. Esto justifica un premium de 5-10% sobre la mediana.
+
+**Debilidad en amenidades:** Condado VI es el único sin co-working (6/7) — amenidad que los otros 5 competidores sí ofrecen y que es valorada por compradores jóvenes y profesionales.
 
 ### 3.4 Unidades Disponibles por Competidor
 
@@ -249,8 +269,6 @@ Comparación con proyectos de entrega inmediata en Eq. Centro, segmento mercado:
 | **Luxe Tower** | 4 | 4+ | $132K-$277K |
 | **Sky Plaza Italia** | 4 | 4+ | $83K-$148K |
 
-**Problema evidente:** Condado VI tiene ~14 unidades disponibles pero solo 5 visibles en portales. Está **compitiendo con un brazo atado** — 64% de su inventario es invisible para compradores online.
-
 ### 3.5 Análisis del Portfolio Condado Completo
 
 Constructora Condado tiene **5 proyectos** registrados en SICI, todos en Equipetrol Centro:
@@ -258,29 +276,30 @@ Constructora Condado tiene **5 proyectos** registrados en SICI, todos en Equipet
 | Proyecto | Listings Activos | $/m² | Observación |
 |----------|-----------------|------|-------------|
 | Condado II | 1 (3D, 228m²) | $1,281 | Precio muy bajo — posible oportunidad o dato erróneo |
-| CONDADO IV | 1 (1D, 62m²) | $2,241 | Precio coherente con Condado VI |
+| Condado Park 6 | 1 (1D, 62m²) | $2,241 | Precio coherente con Condado VI (desc. dice "Condado Park 6") |
 | Condado Park V | 1 (2D, 85m²) | $2,231 | Bien posicionado, 1 venta confirmada (ID 556) |
 | **Condado VI** | **5** | **$2,141-$2,460** | Proyecto principal actual, precios coherentes |
 | Condado III | 0 | — | Sin listings activos |
 
 **Señal positiva:** Condado Park V tuvo una venta confirmada (ID 556 → inactivo_confirmed). La marca Condado vende cuando está visible.
 
-### 3.6 Recomendaciones Estratégicas para Vender las 14 Unidades
+### 3.6 Recomendaciones Estratégicas
 
 #### URGENTE (Semana 1-2)
 
-**1. Publicar el 100% del inventario**
-- Solo 5 de ~14 unidades están en portales. Las 9 invisibles no existen para el mercado.
-- Publicar TODAS las unidades en Century 21 Y Remax con fotos reales (no renders).
-- **Impacto estimado:** Duplicar exposición = duplicar consultas.
-
-**2. Unificar la identidad**
-- En el informe de Feb se detectaron 5+ nombres distintos en portales (Condado VI, Condado 6, Quartier Italia, etc.).
+**1. Unificar nombre e identidad en publicaciones**
+- Se detectaron nombres distintos en portales: "Condado VI", "Condado Park 6", "Condado 6", etc.
 - Estandarizar a **"Condado VI Plaza Italia"** en todos los portales, fotos y comunicaciones.
+- ID 968 dice "Condado Park 6" en la descripción — corregir.
+
+**2. Actualizar publicaciones existentes**
+- ID 1037 (C21): descripción pobre, precio desactualizado ($102,647 vs real). Renovar con fotos de áreas comunes y equipamiento detallado.
+- ID 423 (Remax): TC publicado (9.5) ya no es vigente. Actualizar al TC del día o eliminar referencia específica al TC.
+- Todas las publicaciones deben reflejar el equipamiento completo como diferenciador.
 
 #### CORTO PLAZO (Mes 1)
 
-**4. Estrategia de precios por tipología**
+**3. Estrategia de precios por tipología**
 
 | Tipología | Precio Sugerido $/m² | Referencia Mercado | Posicionamiento |
 |-----------|----------------------|-------------------|----------------|
@@ -288,37 +307,43 @@ Constructora Condado tiene **5 proyectos** registrados en SICI, todos en Equipet
 | **2D (~87 m²)** | $2,050-$2,150 | Mediana 2D: $2,039 | Ligeramente sobre mediana — justificado por línea blanca |
 | **3D (144 m²)** | $1,900-$2,100 | Mediana 3D: $1,685 | Premium vs mediana pero con equipamiento superior |
 
-**5. Narrativa comercial: "El departamento más equipado de Equipetrol"**
+**4. Narrativa comercial: "El departamento más equipado de Equipetrol"**
 - Ningún competidor directo ofrece línea blanca completa.
 - Calcular y comunicar el ahorro: heladera + lavavajillas + lavadora/secadora + horno + aires = **~$8,000-$12,000 USD** que el comprador NO gasta.
 - Mensaje: "En Condado VI usted se muda mañana. Literalmente. Solo trae su ropa."
 
-**6. Fotos reales, no renders**
+**5. Fotos reales, no renders**
 - El edificio está terminado y entregado. Usar fotos profesionales de departamentos reales.
 - El 40% de Eq. Centro es entrega inmediata — los compradores quieren ver lo que van a recibir.
 
 #### MEDIANO PLAZO (Mes 2-3)
 
-**7. Activación broker multicanal**
+**6. Activación broker multicanal**
 - Actualmente solo Juan José Cruz (Remax Futuro) publica Condado VI.
 - Sumar al menos 1 broker de Century 21 para duplicar exposición.
 - Considerar brokers especializados en inversión (el 1D a $113K es atractivo para inversores por alquiler).
 
-**8. Estrategia TC paralelo**
+**7. Estrategia TC paralelo**
 - TC actual: Bs 9.454. El spread con TC oficial (6.96) genera un "descuento billete" de ~26%.
 - Para el comprador que paga en bolivianos: comunicar el precio en BOB al TC paralelo como ventaja.
 - **Ejemplo 1D:** $140,000 × 6.96 = Bs 974,400 (precio oficial) vs $140,000 × 9.454 = Bs 1,323,560. Diferencia: Bs 349,160 (~$37,000 USD). El que paga billete ahorra $37K.
 - **ALERTA:** Este spread se está achicando (era Bs 9.17 en Feb → Bs 9.454 ahora). La ventana del billete sigue abierta pero puede cerrarse.
 
-**9. Monitoreo competitivo mensual**
+**8. Monitoreo competitivo mensual**
 - Atrium (10 uds) y HH Once (8 uds) son los competidores directos por volumen.
 - Si Atrium baja precios, Condado VI debe responder con valor (equipamiento) no con descuento.
 - HH Chuubi a $1,747/m² puede capturar compradores price-sensitive — diferenciarse por calidad, no competir por precio.
 
-**10. Acelerar los 2D — tipología más demandada**
+**9. Acelerar los 2D — tipología más demandada**
 - El 2D es 34% del inventario de Eq. Centro y la tipología con mayor rotación.
 - Condado VI tiene 7 unidades 2D disponibles — es su mayor oportunidad de volumen.
 - Precio sugerido para 2D: **~$180,000-$190,000** ($2,050-$2,150/m² × 87m²), competitivo con Atrium ($99K-$213K) pero con equipamiento superior.
+
+**10. Evaluar y comunicar política Pet Friendly**
+- En Equipetrol Centro, **18 de 63 proyectos** (29%) se declaran Pet Friendly, pero representan **101 de 219 unidades activas** (46%) — casi la mitad de la oferta.
+- Los 5 competidores directos de Condado VI que son Pet Friendly: Atrium, HH Once, HH Chuubi, Luxe Suites, Sky Tower.
+- Ser Pet Friendly es hoy un **estándar del segmento**, no un diferenciador — pero **no serlo sí es una desventaja** visible en portales (filtro activo en búsquedas).
+- **Recomendación:** Si Condado VI permite mascotas (decisión del desarrollador y la administración), comunicarlo explícitamente en todas las publicaciones. Es un dato de bajo costo y alto impacto que alinea al edificio con la norma del mercado.
 
 ---
 
@@ -332,20 +357,21 @@ Constructora Condado tiene **5 proyectos** registrados en SICI, todos en Equipet
 5. **Precio 1D:** En la mediana del mercado — competitivo
 
 ### Debilidades
-1. **Visibilidad:** Solo 5 de ~14 unidades en portales (64% invisible)
-2. **Identidad fragmentada:** Múltiples nombres en portales
+1. **Identidad fragmentada:** Múltiples nombres en portales (Condado VI, Condado Park 6, etc.)
+2. **Publicaciones desactualizadas:** Precios con TC viejo, descripciones pobres (ID 1037)
 3. **Canal único:** Solo 1 broker activo (Remax Futuro)
-4. **Amenidades limitadas:** Sin churrasquera, pet friendly, ni co-working
+4. **Sin co-working:** Único competidor directo sin este servicio (6/7 amenidades vs 7/7 del resto)
+5. **Pet Friendly sin confirmar:** Si permite mascotas, no se está comunicando — el 46% de la oferta de Eq. Centro es Pet Friendly
 
 ### Prioridad de acción
 
 | Prioridad | Acción | Impacto Esperado | Esfuerzo |
 |-----------|--------|-----------------|----------|
-| **P0** | Publicar las 14 unidades | +180% exposición | Bajo |
-| **P1** | Unificar nombre en portales | Coherencia de marca | Bajo |
+| **P0** | Unificar nombre + actualizar publicaciones | Coherencia de marca | Bajo |
 | **P1** | Fotos profesionales reales | +30-50% engagement | Medio |
+| **P1** | Campaña "más equipado" | Diferenciación clara | Medio |
 | **P2** | Sumar 2do broker (C21) | +50% cobertura | Medio |
-| **P2** | Campaña "más equipado" | Diferenciación clara | Medio |
+| **P2** | Confirmar y comunicar Pet Friendly | Alinearse con 46% del mercado | Bajo |
 | **P3** | Estrategia TC billete | Capturar comprador BOB | Bajo |
 
 ---
