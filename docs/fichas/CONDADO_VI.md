@@ -63,42 +63,43 @@ No detallada. Consultar con desarrollador.
 > **Fecha de relevamiento: 11/03/2026**
 > **Fuente: Lista de inventario del desarrollador (captura Excel)**
 > **Contacto: Proporcionado por cliente (Proinco/Constructora Condado)**
-> **Moneda publicada: USD | TC recibido: paralelo (9.33) | TC oficial: 6.96**
+> **Moneda publicada: USD | TC recibido: paralelo | TC oficial: 6.96**
+> **TC paralelo al relevamiento (11 Mar): 9.33 | TC paralelo actual (12 Mar): 9.454**
 
-**Formula normalizacion:** Precio Norm. = Precio USD x TC paralelo (9.33) / TC oficial (6.96)
+**Formula normalizacion:** Precio Norm. = Precio USD x TC paralelo / TC oficial (6.96)
 
-**Precio uniforme: $1,650/m2 USD ($2,212/m2 normalizado)**
+**Precio uniforme: $1,650/m2 USD ($2,241/m2 normalizado al TC 9.454)**
 
 ### Detalle de unidades disponibles
 
 | # Dpto | Piso | Dorms | Area m2 | Precio USD | Precio Norm. | $/m2 Norm. | Estado |
 |--------|------|-------|---------|-----------|-------------|-----------|--------|
-| 101 | 1 | 1D | 62.21 | $102,646 | $137,597 | $2,212 | Disponible |
-| 102 | 1 | 2D | 87.62 | $144,573 | $193,828 | $2,212 | Disponible |
-| 103 | 1 | 2D | 86.73 | $143,105 | $191,860 | $2,212 | Disponible |
-| 201 | 2 | 1D | 62.21 | $102,647 | $137,597 | $2,212 | Disponible |
-| 202 | 2 | 2D | 87.62 | $144,573 | $193,828 | $2,212 | Disponible |
-| 205 | 2 | 3D | 144.31 | $238,112 | $319,182 | $2,212 | Disponible |
-| 301 | 3 | 1D | 62.21 | $102,647 | $137,597 | $2,212 | Disponible |
-| 302 | 3 | 2D | 87.62 | $144,573 | $193,828 | $2,212 | Disponible |
-| 303 | 3 | 2D | 86.73 | $143,105 | $191,860 | $2,212 | Disponible |
-| 305 | 3 | 3D | 144.31 | $238,112 | $319,182 | $2,212 | Disponible |
-| 401 | 4 | 1D | 62.21 | $102,647 | $137,597 | $2,212 | Disponible |
-| 405 | 4 | 3D | 144.31 | $238,112 | $319,182 | $2,212 | Disponible |
-| 502 | 5 | 2D | 87.62 | $144,573 | $193,828 | $2,212 | Disponible |
-| 503 | 5 | 2D | 86.73 | $143,105 | $191,860 | $2,212 | Disponible |
+| 101 | 1 | 1D | 62.21 | $102,646 | $139,390 | $2,241 | Disponible |
+| 102 | 1 | 2D | 87.62 | $144,573 | $196,350 | $2,241 | Disponible |
+| 103 | 1 | 2D | 86.73 | $143,105 | $194,357 | $2,241 | Disponible |
+| 201 | 2 | 1D | 62.21 | $102,647 | $139,390 | $2,241 | Disponible |
+| 202 | 2 | 2D | 87.62 | $144,573 | $196,350 | $2,241 | Disponible |
+| 205 | 2 | 3D | 144.31 | $238,112 | $323,293 | $2,241 | Disponible |
+| 301 | 3 | 1D | 62.21 | $102,647 | $139,390 | $2,241 | Disponible |
+| 302 | 3 | 2D | 87.62 | $144,573 | $196,350 | $2,241 | Disponible |
+| 303 | 3 | 2D | 86.73 | $143,105 | $194,357 | $2,241 | Disponible |
+| 305 | 3 | 3D | 144.31 | $238,112 | $323,293 | $2,241 | Disponible |
+| 401 | 4 | 1D | 62.21 | $102,647 | $139,390 | $2,241 | Disponible |
+| 405 | 4 | 3D | 144.31 | $238,112 | $323,293 | $2,241 | Disponible |
+| 502 | 5 | 2D | 87.62 | $144,573 | $196,350 | $2,241 | Disponible |
+| 503 | 5 | 2D | 86.73 | $143,105 | $194,357 | $2,241 | Disponible |
 
 ### Resumen inventario
 
 | Metrica | Valor |
 |---------|-------|
 | Total disponibles | 14 |
-| 1 Dormitorio | 4 unidades (62.21 m2, $137,597 norm.) |
-| 2 Dormitorios | 7 unidades (86.73-87.62 m2, $191,860-$193,828 norm.) |
-| 3 Dormitorios | 3 unidades (144.31 m2, $319,182 norm.) |
+| 1 Dormitorio | 4 unidades (62.21 m2, $139,390 norm.) |
+| 2 Dormitorios | 7 unidades (86.73-87.62 m2, $194,357-$196,350 norm.) |
+| 3 Dormitorios | 3 unidades (144.31 m2, $323,293 norm.) |
 | Monoambiente | No ofrece |
-| $/m2 norm. uniforme | $2,212 |
-| Ticket norm. rango | $137,597 — $319,182 |
+| $/m2 norm. uniforme | $2,241 (TC 9.454) |
+| Ticket norm. rango | $139,390 — $323,293 |
 
 ### Unidades no disponibles (vendidas o reservadas)
 
