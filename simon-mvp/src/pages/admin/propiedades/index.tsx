@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -117,8 +117,6 @@ export default function AdminPropiedades() {
 
   // Filtros
   const [zonas, setZonas] = useState<string[]>(saved?.zonas ?? [])
-  const [showZonaDropdown, setShowZonaDropdown] = useState(false)
-  const zonaDropdownRef = useRef<HTMLDivElement>(null)
   const [dormitorios, setDormitorios] = useState(saved?.dormitorios ?? '')
   const [busqueda, setBusqueda] = useState('')
   const [busquedaId, setBusquedaId] = useState('')
@@ -127,25 +125,31 @@ export default function AdminPropiedades() {
   const [soloPreciosSospechosos, setSoloPreciosSospechosos] = useState(saved?.soloPreciosSospechosos ?? false)
   const [soloHuerfanas, setSoloHuerfanas] = useState(saved?.soloHuerfanas ?? false)
   const [ordenarPor, setOrdenarPor] = useState(saved?.ordenarPor ?? '')
+  const [maxDias, setMaxDias] = useState<number>(saved?.maxDias ?? 0)
+  const [filtroEstado, setFiltroEstado] = useState(saved?.filtroEstado ?? '')
 
   // Persistir filtros en sessionStorage
   useEffect(() => {
     sessionStorage.setItem(FILTROS_STORAGE_KEY, JSON.stringify({
       tipoOperacion, zonas, dormitorios, limite,
-      soloConCandados, soloPreciosSospechosos, soloHuerfanas, ordenarPor
+      soloConCandados, soloPreciosSospechosos, soloHuerfanas, ordenarPor, maxDias, filtroEstado
     }))
-  }, [tipoOperacion, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, ordenarPor])
+  }, [tipoOperacion, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, ordenarPor, maxDias, filtroEstado])
 
-  // Cerrar dropdown zonas al hacer click fuera
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (zonaDropdownRef.current && !zonaDropdownRef.current.contains(e.target as Node)) {
-        setShowZonaDropdown(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  // Helper: ciclar ordenamiento (off → desc → asc → off)
+  const ciclarOrden = (campo: string) => {
+    const descKey = `${campo}_desc`
+    const ascKey = `${campo}_asc`
+    if (ordenarPor === descKey) setOrdenarPor(ascKey)
+    else if (ordenarPor === ascKey) setOrdenarPor('')
+    else setOrdenarPor(descKey)
+  }
+
+  const getOrdenEstado = (campo: string): '' | 'desc' | 'asc' => {
+    if (ordenarPor === `${campo}_desc`) return 'desc'
+    if (ordenarPor === `${campo}_asc`) return 'asc'
+    return ''
+  }
 
   // Autocompletado de proyectos
   const [proyectosList, setProyectosList] = useState<ProyectoOption[]>([])
@@ -176,13 +180,13 @@ export default function AdminPropiedades() {
     return () => {
       router.events.off('routeChangeComplete', handleRouteChange)
     }
-  }, [authLoading, router.events, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado, tipoOperacion])
+  }, [authLoading, router.events, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado, tipoOperacion, maxDias, filtroEstado])
 
   // Fetch inicial y cuando cambian filtros (no incluir busquedaId - solo busca on Enter/click)
   useEffect(() => {
     if (authLoading || !admin) return
     fetchPropiedades()
-  }, [authLoading, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado, tipoOperacion])
+  }, [authLoading, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado, tipoOperacion, maxDias, filtroEstado])
 
   // Cargar lista de proyectos para autocompletado
   useEffect(() => {
@@ -509,6 +513,28 @@ export default function AdminPropiedades() {
           )
         }
 
+        // Filtrar por días en mercado
+        if (maxDias > 0) {
+          resultado = resultado.filter((p: PropiedadConCandados) =>
+            (p.dias_en_mercado ?? 0) <= maxDias
+          )
+        }
+
+        // Filtrar por estado de construcción
+        if (filtroEstado === 'entrega') {
+          resultado = resultado.filter((p: PropiedadConCandados) =>
+            p.estado_construccion === 'entrega_inmediata' || p.estado_construccion === 'nuevo_a_estrenar'
+          )
+        } else if (filtroEstado === 'preventa') {
+          resultado = resultado.filter((p: PropiedadConCandados) =>
+            p.estado_construccion === 'preventa'
+          )
+        } else if (filtroEstado === 'sin_dato') {
+          resultado = resultado.filter((p: PropiedadConCandados) =>
+            !p.estado_construccion || p.estado_construccion === 'no_especificado'
+          )
+        }
+
         // Filtrar por candados si está activo
         if (soloConCandados) {
           resultado = resultado.filter((p: PropiedadConCandados) => {
@@ -814,14 +840,14 @@ export default function AdminPropiedades() {
           })()}
 
           {/* Filtros */}
-          <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-            <div className="flex flex-wrap items-center gap-4">
-              {/* Búsqueda por ID */}
-              <div className="w-[160px]">
+          <div className="bg-white rounded-xl shadow-sm p-4 mb-6 space-y-4">
+            {/* FILA 1: Búsqueda */}
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="w-[140px]">
                 <label className="text-xs text-slate-500 mb-1 block">Buscar por ID</label>
                 <input
                   type="text"
-                  placeholder="338, 480, 251..."
+                  placeholder="338, 480..."
                   value={busquedaId}
                   onChange={(e) => setBusquedaId(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && fetchPropiedades()}
@@ -830,7 +856,6 @@ export default function AdminPropiedades() {
               </div>
 
               <div className="flex-1 min-w-[280px] busqueda-container">
-                {/* Tabs Proyecto / Broker */}
                 <div className="flex mb-1">
                   <button
                     type="button"
@@ -847,7 +872,7 @@ export default function AdminPropiedades() {
                         : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                     }`}
                   >
-                    🏢 Proyecto
+                    Proyecto
                   </button>
                   <button
                     type="button"
@@ -864,7 +889,7 @@ export default function AdminPropiedades() {
                         : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                     }`}
                   >
-                    👤 Broker
+                    Broker
                   </button>
                 </div>
 
@@ -878,7 +903,6 @@ export default function AdminPropiedades() {
                       if (tipoBusqueda === 'proyecto') {
                         setShowProyectoSuggestions(e.target.value.length > 0)
                         setShowBrokerSuggestions(false)
-                        // Si el texto cambió y no coincide con el proyecto seleccionado, limpiar
                         const proyectoActual = proyectosList.find(p => p.id === proyectoSeleccionadoId)
                         if (proyectoActual && e.target.value !== proyectoActual.nombre) {
                           setProyectoSeleccionadoId(null)
@@ -886,7 +910,6 @@ export default function AdminPropiedades() {
                       } else {
                         setShowBrokerSuggestions(e.target.value.length > 0)
                         setShowProyectoSuggestions(false)
-                        // Si el texto cambió y no coincide con el broker seleccionado, limpiar
                         if (brokerSeleccionado && e.target.value !== brokerSeleccionado) {
                           setBrokerSeleccionado(null)
                         }
@@ -910,219 +933,59 @@ export default function AdminPropiedades() {
                             : 'border-blue-300 focus:ring-blue-500'
                     }`}
                   />
-                  {/* Indicador de proyecto seleccionado */}
                   {tipoBusqueda === 'proyecto' && proyectoSeleccionadoId && (
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-sm flex items-center gap-1">
                       ✓
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setProyectoSeleccionadoId(null)
-                          setBusqueda('')
-                        }}
-                        className="text-red-400 hover:text-red-600 ml-1"
-                        title="Limpiar filtro"
-                      >
-                        ✕
-                      </button>
+                      <button type="button" onClick={() => { setProyectoSeleccionadoId(null); setBusqueda('') }} className="text-red-400 hover:text-red-600 ml-1" title="Limpiar">✕</button>
                     </span>
                   )}
-
-                  {/* Indicador de broker seleccionado */}
                   {tipoBusqueda === 'broker' && brokerSeleccionado && (
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-sm flex items-center gap-1">
                       ✓
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBrokerSeleccionado(null)
-                          setBusqueda('')
-                        }}
-                        className="text-red-400 hover:text-red-600 ml-1"
-                        title="Limpiar filtro"
-                      >
-                        ✕
-                      </button>
+                      <button type="button" onClick={() => { setBrokerSeleccionado(null); setBusqueda('') }} className="text-red-400 hover:text-red-600 ml-1" title="Limpiar">✕</button>
                     </span>
                   )}
 
-                  {/* Sugerencias de proyectos */}
                   {tipoBusqueda === 'proyecto' && showProyectoSuggestions && busqueda.length > 0 && (
                     <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                       {proyectosList
                         .filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()))
                         .slice(0, 8)
                         .map(p => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => {
-                              setBusqueda(p.nombre)
-                              setProyectoSeleccionadoId(p.id)
-                              setShowProyectoSuggestions(false)
-                              // El useEffect se encarga de buscar cuando cambia proyectoSeleccionadoId
-                            }}
-                            className="w-full px-4 py-2 text-left hover:bg-amber-50 border-b border-slate-100 last:border-0"
-                          >
+                          <button key={p.id} type="button" onClick={() => { setBusqueda(p.nombre); setProyectoSeleccionadoId(p.id); setShowProyectoSuggestions(false) }} className="w-full px-4 py-2 text-left hover:bg-amber-50 border-b border-slate-100 last:border-0">
                             <span className="font-medium text-slate-900">{p.nombre}</span>
-                            {p.desarrollador && (
-                              <span className="block text-xs text-slate-500">{p.desarrollador}</span>
-                            )}
+                            {p.desarrollador && <span className="block text-xs text-slate-500">{p.desarrollador}</span>}
                           </button>
                         ))
                       }
                       {proyectosList.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase())).length === 0 && (
-                        <div className="px-4 py-3 text-sm text-slate-500">
-                          No se encontró "{busqueda}"
-                        </div>
+                        <div className="px-4 py-3 text-sm text-slate-500">No se encontro &quot;{busqueda}&quot;</div>
                       )}
                     </div>
                   )}
 
-                  {/* Sugerencias de brokers */}
                   {tipoBusqueda === 'broker' && showBrokerSuggestions && busqueda.length > 0 && (
                     <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                       {brokersList
                         .filter(b => b.nombre.toLowerCase().includes(busqueda.toLowerCase()))
                         .slice(0, 8)
                         .map(b => (
-                          <button
-                            key={b.nombre}
-                            type="button"
-                            onClick={() => {
-                              setBusqueda(b.nombre)
-                              setBrokerSeleccionado(b.nombre)
-                              setShowBrokerSuggestions(false)
-                              // El useEffect se encarga de buscar cuando cambia brokerSeleccionado
-                            }}
-                            className="w-full px-4 py-2 text-left hover:bg-blue-50 border-b border-slate-100 last:border-0"
-                          >
+                          <button key={b.nombre} type="button" onClick={() => { setBusqueda(b.nombre); setBrokerSeleccionado(b.nombre); setShowBrokerSuggestions(false) }} className="w-full px-4 py-2 text-left hover:bg-blue-50 border-b border-slate-100 last:border-0">
                             <span className="font-medium text-slate-900">{b.nombre}</span>
                             <span className="block text-xs text-slate-500">
                               {b.cantidad} {b.cantidad === 1 ? 'propiedad' : 'propiedades'}
-                              {b.inmobiliaria && ` • ${b.inmobiliaria}`}
+                              {b.inmobiliaria && ` \u2022 ${b.inmobiliaria}`}
                             </span>
                           </button>
                         ))
                       }
                       {brokersList.filter(b => b.nombre.toLowerCase().includes(busqueda.toLowerCase())).length === 0 && (
-                        <div className="px-4 py-3 text-sm text-slate-500">
-                          No se encontró broker "{busqueda}"
-                        </div>
+                        <div className="px-4 py-3 text-sm text-slate-500">No se encontro broker &quot;{busqueda}&quot;</div>
                       )}
                     </div>
                   )}
                 </div>
               </div>
-
-              <div className="relative" ref={zonaDropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowZonaDropdown(!showZonaDropdown)}
-                  className={`px-4 py-2 border rounded-lg text-left min-w-[180px] flex items-center justify-between gap-2 ${
-                    zonas.length > 0
-                      ? 'border-amber-400 bg-amber-50 text-amber-800'
-                      : 'border-slate-300 text-slate-700'
-                  }`}
-                >
-                  <span className="text-sm truncate">
-                    {zonas.length === 0 ? 'Todas las zonas' : zonas.length === 1 ? zonas[0] : `${zonas.length} zonas`}
-                  </span>
-                  <span className="text-xs text-slate-400">{showZonaDropdown ? '\u25B2' : '\u25BC'}</span>
-                </button>
-                {showZonaDropdown && (
-                  <div className="absolute z-20 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg p-2 min-w-[200px]">
-                    {ZONAS.filter(z => z.id !== '').map(z => (
-                      <label key={z.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={zonas.includes(z.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setZonas([...zonas, z.id])
-                            } else {
-                              setZonas(zonas.filter(x => x !== z.id))
-                            }
-                          }}
-                          className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500"
-                        />
-                        <span className="text-sm text-slate-700">{z.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <select
-                value={dormitorios}
-                onChange={(e) => setDormitorios(e.target.value)}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-              >
-                <option value="">Dormitorios</option>
-                <option value="todos">Todos</option>
-                <option value="0">Monoambiente</option>
-                <option value="1">1 dorm</option>
-                <option value="2">2 dorms</option>
-                <option value="3">3 dorms</option>
-                <option value="4">4+ dorms</option>
-              </select>
-
-              <select
-                value={limite.toString()}
-                onChange={(e) => setLimite(parseInt(e.target.value))}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-              >
-                <option value="25">25 resultados</option>
-                <option value="50">50 resultados</option>
-                <option value="100">100 resultados</option>
-                <option value="200">200 resultados</option>
-              </select>
-
-              <select
-                value={ordenarPor}
-                onChange={(e) => setOrdenarPor(e.target.value)}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-              >
-                <option value="">Ordenar por...</option>
-                <option value="dias_desc">Dias: mas a menos</option>
-                <option value="dias_asc">Dias: menos a mas</option>
-                <option value="precio_desc">Precio: mayor a menor</option>
-                <option value="precio_asc">Precio: menor a mayor</option>
-                <option value="precio_m2_desc">$/m2: mayor a menor</option>
-                <option value="precio_m2_asc">$/m2: menor a mayor</option>
-              </select>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={soloConCandados}
-                  onChange={(e) => setSoloConCandados(e.target.checked)}
-                  className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500"
-                />
-                <span className="text-sm text-slate-700">Solo editadas</span>
-              </label>
-
-              {tipoOperacion === 'venta' && (
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={soloPreciosSospechosos}
-                    onChange={(e) => setSoloPreciosSospechosos(e.target.checked)}
-                    className="w-4 h-4 rounded text-red-500 focus:ring-red-500"
-                  />
-                  <span className="text-sm text-red-600">⚠️ Precios sospechosos</span>
-                </label>
-              )}
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={soloHuerfanas}
-                  onChange={(e) => setSoloHuerfanas(e.target.checked)}
-                  className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500"
-                />
-                <span className="text-sm text-orange-600">Sin proyecto</span>
-              </label>
 
               <button
                 onClick={fetchPropiedades}
@@ -1131,7 +994,173 @@ export default function AdminPropiedades() {
                 Buscar
               </button>
 
-              {(zonas.length > 0 || dormitorios || soloConCandados || soloPreciosSospechosos || soloHuerfanas || ordenarPor || busqueda || busquedaId) && (
+              <select
+                value={limite.toString()}
+                onChange={(e) => setLimite(parseInt(e.target.value))}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none"
+              >
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
+              </select>
+            </div>
+
+            {/* FILA 2: Zonas + Dormitorios */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">Zonas:</span>
+              <button
+                type="button"
+                onClick={() => setZonas([])}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  zonas.length === 0
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Todas
+              </button>
+              {ZONAS.filter(z => z.id !== '').map(z => (
+                <button
+                  key={z.id}
+                  type="button"
+                  onClick={() => {
+                    if (zonas.includes(z.id)) {
+                      setZonas(zonas.filter(x => x !== z.id))
+                    } else {
+                      setZonas([...zonas, z.id])
+                    }
+                  }}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    zonas.includes(z.id)
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {z.label}
+                </button>
+              ))}
+
+              <span className="text-slate-300 mx-1">|</span>
+
+              <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">Dorms:</span>
+              {[
+                { value: '', label: 'Todos' },
+                { value: '0', label: '0' },
+                { value: '1', label: '1' },
+                { value: '2', label: '2' },
+                { value: '3', label: '3' },
+                { value: '4', label: '4+' },
+              ].map(d => (
+                <button
+                  key={d.value}
+                  type="button"
+                  onClick={() => setDormitorios(d.value === dormitorios ? '' : d.value)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    dormitorios === d.value || (d.value === '' && dormitorios === '')
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
+
+              <span className="text-slate-300 mx-1">|</span>
+
+              <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">Estado:</span>
+              {[
+                { value: '', label: 'Todos' },
+                { value: 'preventa', label: 'Preventa' },
+                { value: 'entrega', label: 'Entrega inmediata' },
+                { value: 'sin_dato', label: 'Sin dato' },
+              ].map(e => (
+                <button
+                  key={e.value}
+                  type="button"
+                  onClick={() => setFiltroEstado(filtroEstado === e.value ? '' : e.value)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    filtroEstado === e.value || (e.value === '' && filtroEstado === '')
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {e.label}
+                </button>
+              ))}
+            </div>
+
+            {/* FILA 3: Días + Ordenar + Toggles */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">Dias:</span>
+              {[
+                { value: 0, label: 'Todos' },
+                { value: 30, label: '\u226430d' },
+                { value: 90, label: '\u226490d' },
+                { value: 180, label: '\u2264180d' },
+              ].map(d => (
+                <button
+                  key={d.value}
+                  type="button"
+                  onClick={() => setMaxDias(d.value)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    maxDias === d.value
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
+
+              <span className="text-slate-300 mx-1">|</span>
+
+              <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">Ordenar:</span>
+              {[
+                { campo: 'dias', label: 'Dias' },
+                { campo: 'precio', label: 'Precio' },
+                { campo: 'precio_m2', label: '$/m\u00B2' },
+              ].map(o => {
+                const estado = getOrdenEstado(o.campo)
+                return (
+                  <button
+                    key={o.campo}
+                    type="button"
+                    onClick={() => ciclarOrden(o.campo)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
+                      estado
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {o.label}
+                    {estado === 'desc' && <span>{'\u2193'}</span>}
+                    {estado === 'asc' && <span>{'\u2191'}</span>}
+                    {!estado && <span className="text-slate-400">{'\u2195'}</span>}
+                  </button>
+                )
+              })}
+
+              <span className="text-slate-300 mx-1">|</span>
+
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" checked={soloConCandados} onChange={(e) => setSoloConCandados(e.target.checked)} className="w-3.5 h-3.5 rounded text-amber-500 focus:ring-amber-500" />
+                <span className="text-xs text-slate-600">Editadas</span>
+              </label>
+
+              {tipoOperacion === 'venta' && (
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" checked={soloPreciosSospechosos} onChange={(e) => setSoloPreciosSospechosos(e.target.checked)} className="w-3.5 h-3.5 rounded text-red-500 focus:ring-red-500" />
+                  <span className="text-xs text-red-600">Precio sosp.</span>
+                </label>
+              )}
+
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" checked={soloHuerfanas} onChange={(e) => setSoloHuerfanas(e.target.checked)} className="w-3.5 h-3.5 rounded text-orange-500 focus:ring-orange-500" />
+                <span className="text-xs text-orange-600">Sin proyecto</span>
+              </label>
+
+              {(zonas.length > 0 || dormitorios || soloConCandados || soloPreciosSospechosos || soloHuerfanas || ordenarPor || maxDias > 0 || filtroEstado || busqueda || busquedaId) && (
                 <button
                   onClick={() => {
                     setZonas([])
@@ -1141,13 +1170,15 @@ export default function AdminPropiedades() {
                     setSoloPreciosSospechosos(false)
                     setSoloHuerfanas(false)
                     setOrdenarPor('')
+                    setMaxDias(0)
+                    setFiltroEstado('')
                     setBusqueda('')
                     setBusquedaId('')
                     setProyectoSeleccionadoId(null)
                     setBrokerSeleccionado(null)
                     sessionStorage.removeItem(FILTROS_STORAGE_KEY)
                   }}
-                  className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                  className="ml-auto px-3 py-1 text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
                 >
                   Limpiar filtros
                 </button>
