@@ -50,6 +50,16 @@ module.exports = {
         },
         neutral: {
           850: '#1f1f23',
+        },
+        // Condado VI — design system propio (NO Simon)
+        condado: {
+          marfil: '#FAF7F2',
+          carbon: '#2C2824',
+          piedra: '#7A7168',
+          caramelo: '#B8906F',
+          'caramelo-dark': '#9A7558',
+          arena: '#E8E2DA',
+          ebano: '#1A1714',
         }
       },
       fontFamily: {
