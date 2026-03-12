@@ -1109,40 +1109,46 @@ function extraerFotos(html) {
   };
 }
 //============================================================================
-// 🏘️ detectarMultiproyecto v2.1 (MEJORADO - v14.2)
+// 🏘️ detectarMultiproyecto v3.0 (FIX falsos positivos - migración 191)
 // ============================================================================
-// CHANGELOG v2.1:
-// - ✅ Agregado: Detección de "desde X" sin "hasta Y"
-// - ✅ Agregado: Detección de "precio desde"
-// - ✅ Agregado: Detección de "a partir de X m²"
-// - ✅ Agregado: Plural "departamentos/casas" + singular "1 dormitorio"
-// - ✅ Mejorado: Detección de "disponibles" o "disponibilidad"
+// CHANGELOG v3.0:
+// - 🐛 FIX: Cambiado de OR (1 patrón basta) a count >= 2 (igual que Remax)
+//   v2.1 generaba ~30% falsos positivos porque "departamentos disponibles"
+//   o "desde $95K" (frases normales en listings individuales) bastaban solas.
+//   45 props corregidas en migraciones 190-191.
+// - 🐛 FIX: tiene_indicador_multiple restringido a "diferentes/varios/múltiples"
+//   (antes incluía "desde" y "disponibles" que son palabras comunes)
+// - ✅ Agregado: tiene_disponibilidad_tipos cuenta como patrón en el count
 // ============================================================================
 function detectarMultiproyecto(descripcion = "") {
   if (typeof descripcion !== 'string') return false;
   const desc = descripcion.toLowerCase();
-  
+
   const tiene_multiples_dormitorios = /\d+\s*(?:,|y|o)\s*\d+\s+dormitorios?/i.test(desc);
   const tiene_varias_tipologias = /varias\s+(tipolog[ií]as?|opciones)/i.test(desc);
   const tiene_diferentes_modelos = /diferentes\s+(tipolog[ií]as?|modelos|plantas)/i.test(desc);
   const tiene_rango_areas = /de\s+\d+\s*m[²2]\s+hasta\s+\d+\s*m[²2]/i.test(desc);
   const tiene_desde_area = /(?:desde|a\s+partir\s+de|superficie\s+desde)\s+\d+\s*m[²2]/i.test(desc);
   const tiene_precio_desde = /(?:precio\s+desde|desde\s+\$?\s?(?:us\.?|usd)|a\s+partir\s+de\s+\$?\s?(?:us\.?|usd))\s?[\d.,]+/i.test(desc);
-  
+
   const es_plural = /(?:departamentos|casas|monoambientes|unidades)\b/i.test(desc);
-  const tiene_indicador_multiple = /(?:desde|disponibles?|disponibilidad|varias?\s+unidades)/i.test(desc);
-  const plural_con_indicador = es_plural && tiene_indicador_multiple;
-  
+  const tiene_indicador_multiple = /(?:diferentes|varios|m[uú]ltiples|variedad)\s+(?:tipos|modelos|opciones)/i.test(desc);
+
   const tiene_disponibilidad_tipos = /disponibilidad\s*:?\s*(?:monoambientes?|departamentos?|casas?)/i.test(desc);
-  
-  return tiene_multiples_dormitorios || 
-         tiene_varias_tipologias || 
-         tiene_diferentes_modelos ||
-         tiene_rango_areas ||
-         tiene_desde_area ||
-         tiene_precio_desde ||
-         plural_con_indicador ||
-         tiene_disponibilidad_tipos;
+
+  const patrones_positivos = [
+    tiene_multiples_dormitorios,
+    tiene_varias_tipologias,
+    tiene_diferentes_modelos,
+    tiene_rango_areas,
+    tiene_desde_area,
+    tiene_precio_desde,
+    es_plural,
+    tiene_indicador_multiple,
+    tiene_disponibilidad_tipos
+  ];
+  const count = patrones_positivos.filter(Boolean).length;
+  return count >= 2;
 }
 
 // ============================================================================

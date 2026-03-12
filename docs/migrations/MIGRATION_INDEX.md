@@ -193,3 +193,11 @@
 | 186 | normalizar_zonas_residuales | Normalizar microzona='Equipetrol'→'Equipetrol Centro' (28), zona='Villa Brígida'→sin tilde (1), excluir 6 alquiler sin zona, fix 2 microzona NULL + fix v_metricas_mercado (agregar status=completado) + fix buscar_unidades_reales (ILIKE→exact match zona/microzona) |
 | 187 | fix_aplicar_matches_sobrescribir_nombre | Fix `aplicar_matches_aprobados()` v3.1: SIEMPRE copiar `pm.nombre_oficial` a `nombre_edificio` (excepto candado). Antes solo copiaba cuando NULL → basura regex se preservaba |
 | 188 | limpiar_aire_acondicionado_fantasma | Limpiar A/C fantasma: regex `/ac/i` matcheaba "espacios", "ubicación", etc. 440 props afectadas (80%). Fix: remover de equipamiento donde desc no menciona A/C |
+| 189 | fix_fecha_discovery_alquiler_bi | Preservar fecha_discovery alquiler para Bien Inmuebles |
+| 190 | fix_multiproyecto_condado_vi | Corregir es_multiproyecto=false para Condado VI (IDs 53, 423, 821) + candado |
+| 191 | fix_multiproyecto_falsos_positivos | Corregir 42 falsos positivos de es_multiproyecto + candados. **Requiere deploy de extractor C21 v3.0** (ver abajo) |
+
+**⚠️ Post-migración 191 — Deploy requerido en n8n:**
+La migración 191 corrige datos existentes pero el extractor C21 sigue generando falsos positivos.
+Copiar `detectarMultiproyecto()` v3.0 al nodo **"Extractor Century21 v16.5"** dentro del
+workflow **Flujo B Processing v3.0** (modulo_1). Ver `docs/extractores/DEPLOY_EXTRACTOR_C21_v3.md`.
