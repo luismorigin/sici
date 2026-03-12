@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -91,6 +91,16 @@ interface BrokerOption {
   cantidad: number
 }
 
+const FILTROS_STORAGE_KEY = 'admin_propiedades_filtros'
+
+function getSavedFilters() {
+  if (typeof window === 'undefined') return null
+  try {
+    const saved = sessionStorage.getItem(FILTROS_STORAGE_KEY)
+    return saved ? JSON.parse(saved) : null
+  } catch { return null }
+}
+
 export default function AdminPropiedades() {
   const { admin, loading: authLoading, error: authError } = useAdminAuth(['super_admin'])
   const router = useRouter()
@@ -99,18 +109,43 @@ export default function AdminPropiedades() {
   const [error, setError] = useState<string | null>(null)
   const [tcParalelo, setTcParalelo] = useState(0)
 
+  // Restaurar filtros de sessionStorage
+  const saved = typeof window !== 'undefined' ? getSavedFilters() : null
+
   // Tab Venta/Alquiler
-  const [tipoOperacion, setTipoOperacion] = useState<'venta' | 'alquiler'>('venta')
+  const [tipoOperacion, setTipoOperacion] = useState<'venta' | 'alquiler'>(saved?.tipoOperacion ?? 'venta')
 
   // Filtros
-  const [zona, setZona] = useState('')
-  const [dormitorios, setDormitorios] = useState('')
+  const [zonas, setZonas] = useState<string[]>(saved?.zonas ?? [])
+  const [showZonaDropdown, setShowZonaDropdown] = useState(false)
+  const zonaDropdownRef = useRef<HTMLDivElement>(null)
+  const [dormitorios, setDormitorios] = useState(saved?.dormitorios ?? '')
   const [busqueda, setBusqueda] = useState('')
   const [busquedaId, setBusquedaId] = useState('')
-  const [limite, setLimite] = useState(50)
-  const [soloConCandados, setSoloConCandados] = useState(false)
-  const [soloPreciosSospechosos, setSoloPreciosSospechosos] = useState(false)
-  const [soloHuerfanas, setSoloHuerfanas] = useState(false)
+  const [limite, setLimite] = useState(saved?.limite ?? 50)
+  const [soloConCandados, setSoloConCandados] = useState(saved?.soloConCandados ?? false)
+  const [soloPreciosSospechosos, setSoloPreciosSospechosos] = useState(saved?.soloPreciosSospechosos ?? false)
+  const [soloHuerfanas, setSoloHuerfanas] = useState(saved?.soloHuerfanas ?? false)
+  const [ordenarPor, setOrdenarPor] = useState(saved?.ordenarPor ?? '')
+
+  // Persistir filtros en sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem(FILTROS_STORAGE_KEY, JSON.stringify({
+      tipoOperacion, zonas, dormitorios, limite,
+      soloConCandados, soloPreciosSospechosos, soloHuerfanas, ordenarPor
+    }))
+  }, [tipoOperacion, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, ordenarPor])
+
+  // Cerrar dropdown zonas al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (zonaDropdownRef.current && !zonaDropdownRef.current.contains(e.target as Node)) {
+        setShowZonaDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Autocompletado de proyectos
   const [proyectosList, setProyectosList] = useState<ProyectoOption[]>([])
@@ -141,13 +176,13 @@ export default function AdminPropiedades() {
     return () => {
       router.events.off('routeChangeComplete', handleRouteChange)
     }
-  }, [authLoading, router.events, zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado, tipoOperacion])
+  }, [authLoading, router.events, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado, tipoOperacion])
 
   // Fetch inicial y cuando cambian filtros (no incluir busquedaId - solo busca on Enter/click)
   useEffect(() => {
     if (authLoading || !admin) return
     fetchPropiedades()
-  }, [authLoading, zona, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado, tipoOperacion])
+  }, [authLoading, zonas, dormitorios, limite, soloConCandados, soloPreciosSospechosos, soloHuerfanas, proyectoSeleccionadoId, brokerSeleccionado, tipoOperacion])
 
   // Cargar lista de proyectos para autocompletado
   useEffect(() => {
@@ -321,8 +356,8 @@ export default function AdminPropiedades() {
           .order('id', { ascending: false })
           .limit(limite)
 
-        if (zona) {
-          query = query.ilike('zona', `%${zona}%`)
+        if (zonas.length === 1) {
+          query = query.ilike('zona', `%${zonas[0]}%`)
         }
         if (dormitorios && dormitorios !== 'todos') {
           query = query.eq('dormitorios', parseInt(dormitorios))
@@ -397,8 +432,8 @@ export default function AdminPropiedades() {
         tipo_operacion: tipoOperacion
       }
 
-      if (zona) {
-        filtros.zona = zona
+      if (zonas.length === 1) {
+        filtros.zona = zonas[0]
       }
       if (dormitorios && dormitorios !== 'todos') {
         filtros.dormitorios = parseInt(dormitorios)
@@ -466,6 +501,13 @@ export default function AdminPropiedades() {
             tipo_cambio_usado: extra?.tipo_cambio_usado,
           }
         })
+
+        // Filtrar por zonas (client-side cuando hay más de 1 zona seleccionada)
+        if (zonas.length > 1) {
+          resultado = resultado.filter((p: PropiedadConCandados) =>
+            zonas.some(z => p.zona?.includes(z))
+          )
+        }
 
         // Filtrar por candados si está activo
         if (soloConCandados) {
@@ -650,54 +692,126 @@ export default function AdminPropiedades() {
         </div>
 
         <main className="max-w-7xl mx-auto py-8 px-6">
-          {/* Stats rápidos */}
-          <div className="grid grid-cols-6 gap-4 mb-8">
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <p className="text-slate-500 text-sm">Mostrando</p>
-              <p className="text-2xl font-bold text-slate-900">{propiedades.length}</p>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <p className="text-slate-500 text-sm">Con Candados</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {propiedades.filter(p => contarCandados(p.campos_bloqueados) > 0).length}
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <p className="text-slate-500 text-sm">
-                {tipoOperacion === 'alquiler' ? 'Renta Prom./mes' : 'Precio Promedio'}
-              </p>
-              <p className="text-2xl font-bold text-green-600">
-                {formatPrecio(propiedades.reduce((acc, p) => acc + (p.precio_usd || 0), 0) / (propiedades.length || 1))}
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <p className="text-slate-500 text-sm">Con Fotos</p>
-              <p className="text-2xl font-bold text-purple-600">
-                {propiedades.filter(p => p.cantidad_fotos > 0).length}
-              </p>
-            </div>
-            {tipoOperacion === 'venta' ? (
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <p className="text-slate-500 text-sm">⚠️ Precio Sospechoso</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {contarSospechosos()}
-                </p>
+          {/* Dashboard de mercado */}
+          {(() => {
+            const n = propiedades.length
+            if (n === 0) return null
+
+            const isAlq = tipoOperacion === 'alquiler'
+
+            // Precios ticket
+            const tickets = propiedades
+              .map(p => isAlq ? (p.precio_mensual_bob ?? 0) : (p.precio_usd ?? 0))
+              .filter(v => v > 0)
+              .sort((a, b) => a - b)
+            const avgTicket = tickets.length > 0 ? tickets.reduce((a, b) => a + b, 0) / tickets.length : 0
+            const medTicket = tickets.length > 0
+              ? tickets.length % 2 === 0
+                ? (tickets[tickets.length / 2 - 1] + tickets[tickets.length / 2]) / 2
+                : tickets[Math.floor(tickets.length / 2)]
+              : 0
+
+            // Precios /m2
+            const preciosM2 = propiedades
+              .map(p => {
+                if (isAlq) return p.precio_mensual_bob && p.area_m2 > 0 ? p.precio_mensual_bob / p.area_m2 : 0
+                return p.precio_m2 ?? 0
+              })
+              .filter(v => v > 0)
+              .sort((a, b) => a - b)
+            const avgM2 = preciosM2.length > 0 ? preciosM2.reduce((a, b) => a + b, 0) / preciosM2.length : 0
+            const medM2 = preciosM2.length > 0
+              ? preciosM2.length % 2 === 0
+                ? (preciosM2[preciosM2.length / 2 - 1] + preciosM2[preciosM2.length / 2]) / 2
+                : preciosM2[Math.floor(preciosM2.length / 2)]
+              : 0
+
+            // Dias en mercado
+            const dias = propiedades
+              .map(p => p.dias_en_mercado ?? 0)
+              .filter(v => v > 0)
+              .sort((a, b) => a - b)
+            const avgDias = dias.length > 0 ? Math.round(dias.reduce((a, b) => a + b, 0) / dias.length) : 0
+            const medDias = dias.length > 0
+              ? dias.length % 2 === 0
+                ? Math.round((dias[dias.length / 2 - 1] + dias[dias.length / 2]) / 2)
+                : dias[Math.floor(dias.length / 2)]
+              : 0
+
+            // Proyectos distintos
+            const proyectosUnicos = new Set(propiedades.filter(p => p.id_proyecto_master).map(p => p.id_proyecto_master)).size
+
+            const moneda = isAlq ? 'Bs' : '$'
+            const fmtNum = (v: number) => Math.round(v).toLocaleString('es-BO')
+
+            return (
+              <div className="mb-8">
+                {/* Mercado */}
+                <div className="grid grid-cols-5 gap-4 mb-3">
+                  <div className="bg-white rounded-xl p-4 shadow-sm">
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">Unidades</p>
+                    <p className="text-2xl font-bold text-slate-900">{n}</p>
+                    <p className="text-xs text-slate-400 mt-1">{proyectosUnicos} proyecto{proyectosUnicos !== 1 ? 's' : ''}</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 shadow-sm">
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">
+                      {isAlq ? 'Ticket Bs/mes' : 'Ticket USD'}
+                    </p>
+                    <p className="text-2xl font-bold text-slate-900">{moneda} {fmtNum(avgTicket)}</p>
+                    <p className="text-xs text-slate-400 mt-1">med: {moneda} {fmtNum(medTicket)}</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 shadow-sm">
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">
+                      {isAlq ? 'Bs/m²' : '$/m²'}
+                    </p>
+                    <p className="text-2xl font-bold text-slate-900">{moneda} {fmtNum(avgM2)}</p>
+                    <p className="text-xs text-slate-400 mt-1">med: {moneda} {fmtNum(medM2)}</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 shadow-sm">
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">Dias en mercado</p>
+                    <p className="text-2xl font-bold text-slate-900">{avgDias}d</p>
+                    <p className="text-xs text-slate-400 mt-1">med: {medDias}d</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 shadow-sm">
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">
+                      {isAlq ? 'Rango Bs/mes' : 'Rango USD'}
+                    </p>
+                    <p className="text-lg font-bold text-slate-900">
+                      {tickets.length > 0
+                        ? `${moneda} ${fmtNum(tickets[0])} - ${fmtNum(tickets[tickets.length - 1])}`
+                        : '-'}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {isAlq ? 'Bs/m²' : '$/m²'}: {preciosM2.length > 0 ? `${fmtNum(preciosM2[0])} - ${fmtNum(preciosM2[preciosM2.length - 1])}` : '-'}
+                    </p>
+                  </div>
+                </div>
+                {/* Salud del segmento */}
+                <div className="flex items-center gap-3 text-xs text-slate-500 px-1">
+                  <span className="text-slate-400 font-medium uppercase tracking-wide">Salud:</span>
+                  <span>
+                    {propiedades.filter(p => contarCandados(p.campos_bloqueados) > 0).length} con candados
+                  </span>
+                  <span className="text-slate-300">|</span>
+                  <span>
+                    {propiedades.filter(p => p.cantidad_fotos > 0).length} con fotos
+                  </span>
+                  {!isAlq && (
+                    <>
+                      <span className="text-slate-300">|</span>
+                      <span className={contarSospechosos() > 0 ? 'text-red-500 font-medium' : ''}>
+                        {contarSospechosos()} precio sospechoso
+                      </span>
+                    </>
+                  )}
+                  <span className="text-slate-300">|</span>
+                  <span className={contarHuerfanas() > 0 ? 'text-orange-500 font-medium' : ''}>
+                    {contarHuerfanas()} sin proyecto
+                  </span>
+                </div>
               </div>
-            ) : (
-              <div className="bg-white rounded-xl p-4 shadow-sm">
-                <p className="text-slate-500 text-sm">Con Proyecto</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {propiedades.filter(p => p.id_proyecto_master).length}
-                </p>
-              </div>
-            )}
-            <div className="bg-orange-50 rounded-xl p-4 shadow-sm border border-orange-200">
-              <p className="text-orange-600 text-sm">Sin Proyecto</p>
-              <p className="text-2xl font-bold text-orange-700">
-                {contarHuerfanas()}
-              </p>
-            </div>
-          </div>
+            )
+          })()}
 
           {/* Filtros */}
           <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
@@ -901,15 +1015,43 @@ export default function AdminPropiedades() {
                 </div>
               </div>
 
-              <select
-                value={zona}
-                onChange={(e) => setZona(e.target.value)}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-              >
-                {ZONAS.map(z => (
-                  <option key={z.id} value={z.id}>{z.label}</option>
-                ))}
-              </select>
+              <div className="relative" ref={zonaDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowZonaDropdown(!showZonaDropdown)}
+                  className={`px-4 py-2 border rounded-lg text-left min-w-[180px] flex items-center justify-between gap-2 ${
+                    zonas.length > 0
+                      ? 'border-amber-400 bg-amber-50 text-amber-800'
+                      : 'border-slate-300 text-slate-700'
+                  }`}
+                >
+                  <span className="text-sm truncate">
+                    {zonas.length === 0 ? 'Todas las zonas' : zonas.length === 1 ? zonas[0] : `${zonas.length} zonas`}
+                  </span>
+                  <span className="text-xs text-slate-400">{showZonaDropdown ? '\u25B2' : '\u25BC'}</span>
+                </button>
+                {showZonaDropdown && (
+                  <div className="absolute z-20 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg p-2 min-w-[200px]">
+                    {ZONAS.filter(z => z.id !== '').map(z => (
+                      <label key={z.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={zonas.includes(z.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setZonas([...zonas, z.id])
+                            } else {
+                              setZonas(zonas.filter(x => x !== z.id))
+                            }
+                          }}
+                          className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500"
+                        />
+                        <span className="text-sm text-slate-700">{z.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <select
                 value={dormitorios}
@@ -934,6 +1076,20 @@ export default function AdminPropiedades() {
                 <option value="50">50 resultados</option>
                 <option value="100">100 resultados</option>
                 <option value="200">200 resultados</option>
+              </select>
+
+              <select
+                value={ordenarPor}
+                onChange={(e) => setOrdenarPor(e.target.value)}
+                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+              >
+                <option value="">Ordenar por...</option>
+                <option value="dias_desc">Dias: mas a menos</option>
+                <option value="dias_asc">Dias: menos a mas</option>
+                <option value="precio_desc">Precio: mayor a menor</option>
+                <option value="precio_asc">Precio: menor a mayor</option>
+                <option value="precio_m2_desc">$/m2: mayor a menor</option>
+                <option value="precio_m2_asc">$/m2: menor a mayor</option>
               </select>
 
               <label className="flex items-center gap-2 cursor-pointer">
@@ -974,6 +1130,28 @@ export default function AdminPropiedades() {
               >
                 Buscar
               </button>
+
+              {(zonas.length > 0 || dormitorios || soloConCandados || soloPreciosSospechosos || soloHuerfanas || ordenarPor || busqueda || busquedaId) && (
+                <button
+                  onClick={() => {
+                    setZonas([])
+                    setDormitorios('')
+                    setLimite(50)
+                    setSoloConCandados(false)
+                    setSoloPreciosSospechosos(false)
+                    setSoloHuerfanas(false)
+                    setOrdenarPor('')
+                    setBusqueda('')
+                    setBusquedaId('')
+                    setProyectoSeleccionadoId(null)
+                    setBrokerSeleccionado(null)
+                    sessionStorage.removeItem(FILTROS_STORAGE_KEY)
+                  }}
+                  className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  Limpiar filtros
+                </button>
+              )}
             </div>
           </div>
 
@@ -996,7 +1174,38 @@ export default function AdminPropiedades() {
                 <p className="text-slate-500">No se encontraron propiedades</p>
               </div>
             ) : (
-              propiedades.map((prop) => (
+              [...propiedades].sort((a, b) => {
+                if (!ordenarPor) return 0
+                switch (ordenarPor) {
+                  case 'dias_desc': return (b.dias_en_mercado ?? 0) - (a.dias_en_mercado ?? 0)
+                  case 'dias_asc': return (a.dias_en_mercado ?? 0) - (b.dias_en_mercado ?? 0)
+                  case 'precio_desc': {
+                    const pa = tipoOperacion === 'alquiler' ? (a.precio_mensual_bob ?? 0) : (a.precio_usd ?? 0)
+                    const pb = tipoOperacion === 'alquiler' ? (b.precio_mensual_bob ?? 0) : (b.precio_usd ?? 0)
+                    return pb - pa
+                  }
+                  case 'precio_asc': {
+                    const pa = tipoOperacion === 'alquiler' ? (a.precio_mensual_bob ?? 0) : (a.precio_usd ?? 0)
+                    const pb = tipoOperacion === 'alquiler' ? (b.precio_mensual_bob ?? 0) : (b.precio_usd ?? 0)
+                    return pa - pb
+                  }
+                  case 'precio_m2_desc': {
+                    const pa = tipoOperacion === 'alquiler' && a.precio_mensual_bob && a.area_m2 > 0
+                      ? a.precio_mensual_bob / a.area_m2 : (a.precio_m2 ?? 0)
+                    const pb = tipoOperacion === 'alquiler' && b.precio_mensual_bob && b.area_m2 > 0
+                      ? b.precio_mensual_bob / b.area_m2 : (b.precio_m2 ?? 0)
+                    return pb - pa
+                  }
+                  case 'precio_m2_asc': {
+                    const pa = tipoOperacion === 'alquiler' && a.precio_mensual_bob && a.area_m2 > 0
+                      ? a.precio_mensual_bob / a.area_m2 : (a.precio_m2 ?? 0)
+                    const pb = tipoOperacion === 'alquiler' && b.precio_mensual_bob && b.area_m2 > 0
+                      ? b.precio_mensual_bob / b.area_m2 : (b.precio_m2 ?? 0)
+                    return pa - pb
+                  }
+                  default: return 0
+                }
+              }).map((prop) => (
                 <div
                   key={prop.id}
                   className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
