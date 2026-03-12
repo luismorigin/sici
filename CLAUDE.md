@@ -103,6 +103,7 @@ Desde migración 184, los nombres en BD son los nombres display definitivos (ya 
 | **Filtros Calidad Mercado** | `docs/reports/FILTROS_CALIDAD_MERCADO.md` |
 | **Learnings Alquiler** | `docs/alquiler/LEARNINGS_PIPELINE_ALQUILER.md` |
 | **Alquileres queries** | `docs/canonical/ALQUILERES_QUERIES.md` |
+| **Fichas tecnicas proyectos** | `docs/fichas/` — data de desarrollador (inventario, precios, equipamiento) no disponible en portales |
 | **Sistema TC y precios** | `docs/architecture/TIPO_CAMBIO_SICI.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |

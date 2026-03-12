@@ -138,6 +138,9 @@
 | **Sky Level** | 5 | $2,055 | $2,055 | 1, 2D | Preventa | $103K-$193K |
 | **HH Once Equipetrol** | 8 | $1,890 | $1,833 | 0, 1D | Preventa | $77K-$147K |
 | **Torre ARA** | 3 | $1,869 | $1,893 | 0, 2, 3D | Entrega inmed. | $176K-$297K |
+| **Terrazzo**¹ | 14 | $2,030 | $2,073 | 0, 1, 2, 3D, Dúplex | Preventa (dic 2026) | $81K-$483K |
+
+¹ Terrazzo no aparece en portales — datos de inventario del desarrollador (ver sección 3.7 y ficha técnica `docs/fichas/TERRAZZO.md`).
 
 #### Segmento Oportunidad (<$1,800/m²)
 
@@ -170,8 +173,8 @@
 | 1037 | Condado VI | 1D | 62.00 | $132,733 | $2,141 | no_espec. | no_espec. | **Activo** |
 | 423 | Condado VI | 1D | 62.21 | $140,107 | $2,252 | no_espec. | Entrega inmed. | **Activo** |
 | 921 | Condado VI | 1D | 62.21 | $153,046 | $2,460 | no_espec. | Entrega inmed. | **Activo** |
-| 53 | Condado VI | 2D | 86.73 | $194,384 | $2,241 | paralelo | Entrega inmed. | **Activo** |
-| 821 | Condado VI | 3D | 144.31 | $323,435 | $2,241 | paralelo | Entrega inmed. | **Activo** |
+| 53 | Condado VI | 2D | 86.73 | $191,835 | $2,212 | paralelo | Entrega inmed. | **Activo** |
+| 821 | Condado VI | 3D | 144.31 | $319,193 | $2,212 | paralelo | Entrega inmed. | **Activo** |
 | 968 | Condado Park 6 | 1D | 62.21 | $139,429 | $2,241 | paralelo | Entrega inmed. | **Activo** |
 | 816 | Condado Park V | 2D | 85.25 | $190,167 | $2,231 | paralelo | Entrega inmed. | **Activo** |
 | 529 | Condado II | 3D | 228.02 | $292,042 | $1,281 | paralelo | Entrega inmed. | **Activo** |
@@ -203,7 +206,8 @@ Comparación con proyectos de entrega inmediata en Eq. Centro, segmento mercado:
 | **Sky Level** | 5 | $2,055 | 1, 2D | Preventa | Marca Sky |
 | **HH Once** | 8 | $1,833 | 0, 1D | Preventa | Precio agresivo, amenidades |
 | **HH Chuubi** | 5 | $1,747 | 1, 2D | Preventa | Precio entry-level |
-| **Terrazzo** | 14 | $2,030 | 0, 1, 2, 3D, Dúplex | Preventa (dic 2026) | Amenidades amplias, interiorismo autor |
+
+> **Competidor emergente:** Terrazzo (14 uds, $2,030/m² mediana, preventa dic 2026) no aparece en portales pero compite directamente en el micro-mercado Plaza Italia. Ver sección 3.7 para análisis detallado.
 
 **Posición de Condado VI:** Todas las tipologías están en el rango **$2,141-$2,460/m²**, centradas en el **P55-P70 del mercado** — ligeramente por encima de la mediana ($2,183 para 1D, $2,039 para 2D) pero justificado por el equipamiento completo.
 

@@ -116,8 +116,8 @@ No se proporcionaron datos de unidades vendidas. Los numeros de departamento fal
 | 1037 | Century 21 | 1D | $132,733 | $2,141 | Activo — baja calidad, sin fotos |
 | 423 | Remax | 1D | $140,107 | $2,252 | Activo — TC desactualizado |
 | 921 | Remax | 1D | $153,046 | $2,460 | Activo |
-| 53 | Remax | 2D | $194,384 | $2,241 | Activo |
-| 821 | Remax | 3D | $323,435 | $2,241 | Activo |
+| 53 | Remax | 2D | $191,835 | $2,212 | Activo |
+| 821 | Remax | 3D | $319,193 | $2,212 | Activo |
 | 968 | Remax | 1D | $139,429 | $2,241 | Activo — dice "Condado Park 6" |
 
 > Nota: Los precios en portales varian ($2,141-$2,460/m2) porque cada broker publica con distinto TC. El precio real del desarrollador es uniforme: $1,650/m2 USD ($2,212/m2 norm. al TC 9.33).
