@@ -4,8 +4,8 @@
 
 **SICI** = Sistema Inteligente de Captura Inmobiliaria (Bolivia)
 - Pipeline nocturno: Discovery → Enrichment → Merge → Matching (venta + alquiler)
-- Tabla principal: `propiedades_v2` (1,002 registros: ~692 venta, ~310 alquiler)
-- Tabla proyectos: `proyectos_master` (227 activos, 99.1% con GPS)
+- Tabla principal: `propiedades_v2` — conteos actuales via `v_mercado_venta` y `v_mercado_alquiler`
+- Tabla proyectos: `proyectos_master` (99%+ con GPS)
 - Tracking: `workflow_executions` (health check)
 - Fuentes: Century21, Remax, Bien Inmuebles
 
@@ -50,6 +50,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
    - `<= 300 dias` en mercado para venta (730 para preventa), `<= 150 dias` para alquiler
    - Ver detalle completo en `docs/reports/FILTROS_CALIDAD_MERCADO.md`
 9. **Auditorías de datos** - Al reportar problemas de calidad, filtrar primero por los mismos criterios que usan las queries de mercado (`duplicado_de IS NULL`, `status = 'completado'`, etc.). Props que no pasan esos filtros NO son anomalías — ya están excluidas del pipeline.
+10. **Queries de mercado ad-hoc** — SIEMPRE usar `v_mercado_venta` o `v_mercado_alquiler` (migración 193). NUNCA escribir filtros canónicos a mano contra `propiedades_v2`. Las vistas pre-aplican todos los filtros y exponen `precio_m2`, `precio_norm`, `dias_en_mercado` (venta) y `precio_mensual` = `precio_mensual_usd` (alquiler). En alquiler usar `precio_mensual_usd` o `precio_mensual_bob`, NUNCA `precio_usd`.
 
 ## Zonas Canonicas (6 zonas)
 
@@ -57,14 +58,15 @@ Fuente de verdad: tabla `zonas_geograficas` (7 polígonos PostGIS, 6 nombres ún
 
 Desde migración 184, los nombres en BD son los nombres display definitivos (ya no hay nombres crudos internos).
 
-| Zona | Valor en BD (`p.zona`, `pm.zona`) | Display corto (`zonas.ts`) | Props activas |
-|---|---|---|---|
-| Equipetrol Centro | `Equipetrol Centro` | Eq. Centro | ~120 |
-| Equipetrol Norte | `Equipetrol Norte` | Eq. Norte | ~26 |
-| Sirari | `Sirari` | Sirari | ~44 |
-| Villa Brigida | `Villa Brigida` | V. Brigida | ~40 |
-| Equipetrol Oeste | `Equipetrol Oeste` | Eq. Oeste | ~32 |
-| Eq. 3er Anillo | `Eq. 3er Anillo` | Eq. 3er Anillo | ~3 |
+| Zona | Valor en BD (`p.zona`, `pm.zona`) | Display corto (`zonas.ts`) |
+|---|---|---|
+| Equipetrol Centro | `Equipetrol Centro` | Eq. Centro |
+| Equipetrol Norte | `Equipetrol Norte` | Eq. Norte |
+| Sirari | `Sirari` | Sirari |
+| Villa Brigida | `Villa Brigida` | V. Brigida |
+| Equipetrol Oeste | `Equipetrol Oeste` | Eq. Oeste |
+
+Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 
 **Nombres legacy (aliases en `zonas.ts` para backwards compatibility):** `Equipetrol`, `Faremafu`, `Equipetrol Norte/Norte`, `Equipetrol Norte/Sur`, `Equipetrol Franja`, `Villa Brígida` (con tilde).
 
@@ -85,7 +87,7 @@ Desde migración 184, los nombres en BD son los nombres display definitivos (ya 
 2. **`precio_normalizado()` es la UNICA normalización** — no normalizar antes de guardar en `precio_usd`. Si el código escribe a `precio_usd`, debe escribir el valor crudo (billete para paralelo, USD directo para el resto).
 3. **Dashboard (`usePropertyEditor.ts`)**: `calcularPrecioNormalizado()` retorna billete directo para `usd_paralelo` → se guarda en `precio_usd`. `calcularPrecioDisplay()` muestra el valor normalizado en UI. **NUNCA** mezclar — display es para mostrar, normalizado es para guardar.
 4. **`buscar_unidades_reales()` retorna `precio_normalizado() AS precio_usd`** — el frontend recibe valores ya normalizados. No volver a normalizar en JS al mostrar resultados de esta RPC.
-5. Para queries ad-hoc: `SELECT precio_normalizado(precio_usd, tipo_cambio_detectado)` — nunca `precio_usd` directo.
+5. Para queries ad-hoc usar `v_mercado_venta` (ya expone `precio_norm` y `precio_m2`) — ver regla 10.
 
 ### Referencia completa
 
@@ -159,7 +161,7 @@ sici/
 │   ├── broker/          → buscar_unidades_broker, score, verificar, contacto
 │   ├── helpers/         → precio_normalizado, campo_bloqueado, normalize_nombre, vigente
 │   └── triggers/        → proteger_amenities, matchear_alquiler, asignar_zona_alquiler, asignar_zona_venta
-├── sql/migrations/      → migraciones (001-173) — ver docs/migrations/MIGRATION_INDEX.md
+├── sql/migrations/      → migraciones — ver docs/migrations/MIGRATION_INDEX.md
 ├── scripts/llm-enrichment/  → Script test LLM ventas + prompt v3.3 + output tests
 ├── geodata/             → microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/

@@ -28,3 +28,25 @@
 - Bounding boxes de `zona_validada_gps` deberían reemplazarse por `get_zona_by_gps()`
 
 **Estado:** Valores actualizados manualmente (9 Mar 2026). Funcional pero requiere actualización manual cuando cambian promedios de zona.
+
+## Funciones SQL con filtros de mercado incompletos — PENDIENTE (12 Mar 2026)
+
+**Contexto:** Migración 193 creó vistas canónicas `v_mercado_venta` y `v_mercado_alquiler`. Migración 194 refactorizó `snapshot_absorcion_mercado()` para usarlas. Auditoría de 60 funciones encontró 3 en producción con filtros incompletos.
+
+**Funciones en producción que requieren corrección:**
+
+| Prioridad | Función | Filtros faltantes | Riesgo de cambio | Dónde se usa |
+|-----------|---------|-------------------|-------------------|--------------|
+| ALTA | `analisis_mercado_fiduciario` | Subqueries stock/alertas: duplicado_de, tipo_prop, area, zona, precio, días | Bajo | formulario-v2 → resultados-v2 |
+| MEDIA | `buscar_unidades_reales` | `precio_usd > 0`, status solo 'completado' (falta 'actualizado') | Medio (función más usada) | Landing venta, admin propiedades, broker CMA |
+| BAJA | `buscar_unidades_alquiler` | Usa `precio_mensual_bob IS NOT NULL` en vez de `precio_mensual_usd > 0` | Medio-bajo (verificar si hay props con BOB sin USD) | API alquileres, admin propiedades |
+
+**Funciones sin uso en producción (código muerto):**
+- `buscar_unidades_con_amenities` — nunca integrada al frontend (migración 019)
+- `generar_razon_fiduciaria` — sin llamadas desde frontend/API
+- `explicar_precio` — sin llamadas desde frontend/API
+
+**Orden recomendado:**
+1. `analisis_mercado_fiduciario` — swap subqueries a `FROM v_mercado_venta` (bajo riesgo, alto valor)
+2. `buscar_unidades_alquiler` — verificar datos BOB vs USD primero
+3. `buscar_unidades_reales` — el más delicado, testear bien

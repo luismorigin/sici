@@ -24,7 +24,7 @@ AND area_total_m2 >= 20
 
 -- 6. Antigüedad máxima: 300 días para entregados, 730 para preventa
 AND (
-  CASE WHEN COALESCE(estado_construccion::text, '') IN ('en_construccion', 'en_pozo')
+  CASE WHEN COALESCE(estado_construccion::text, '') IN ('preventa', 'en_construccion', 'en_pozo')
     THEN CURRENT_DATE - COALESCE(fecha_publicacion, fecha_discovery::date) <= 730
     ELSE CURRENT_DATE - COALESCE(fecha_publicacion, fecha_discovery::date) <= 300
   END
@@ -33,45 +33,18 @@ AND (
 
 ## Nomenclatura de zonas (Mar 2026)
 
-Post migraciones 171-173, venta usa **nombres crudos de PostGIS** (= microzona). La migración 131 fue revertida porque rompía el matching `p.zona = pm.zona`.
+Post migración 184, `p.zona` y `pm.zona` contienen nombres display directos:
 
-### Ventas y Alquileres (misma convención)
+| Valor en BD | Display corto | Props activas |
+|-------------|---------------|:-------------:|
+| `Equipetrol Centro` | Eq. Centro | ~156 |
+| `Sirari` | Sirari | ~54 |
+| `Villa Brigida` | V. Brígida | ~43 |
+| `Equipetrol Oeste` | Eq. Oeste | ~32 |
+| `Equipetrol Norte` | Eq. Norte | ~25 |
 
-`p.zona` y `p.microzona` ahora contienen nombres crudos de `zonas_geograficas.nombre`:
-
-| zona/microzona en BD | Display | Zona canónica |
-|---------------------|---------|---------------|
-| `Equipetrol` | Eq. Centro | Equipetrol Centro |
-| `Equipetrol Norte/Norte` | Eq. Norte (norte) | Equipetrol Norte |
-| `Equipetrol Norte/Sur` | Eq. Norte (sur) | Equipetrol Norte |
-| `Faremafu` | Eq. Oeste | Equipetrol Oeste |
-| `Sirari` | Sirari | Sirari |
-| `Villa Brigida` | V. Brígida | Villa Brígida |
-| `Equipetrol Franja` | Marginal (ignorar) | — |
-
-### Agrupar Eq. Norte en queries
-
-Las dos microzonas de Eq. Norte deben agruparse para análisis por zona:
-
-```sql
-CASE zona
-  WHEN 'Equipetrol Norte/Norte' THEN 'Equipetrol Norte'
-  WHEN 'Equipetrol Norte/Sur' THEN 'Equipetrol Norte'
-  ELSE zona
-END AS zona_display
-```
-
-### Valores sucios residuales (alquiler)
-
-36 alquileres aún tienen valores no estándar. Usar `buscar_unidades_alquiler()` que los mapea internamente.
-
-| Valor sucio | Cantidad | Mapea a |
-|-------------|:--------:|---------|
-| `Equipetrol Centro` | 19 | Equipetrol |
-| `Equipetrol Norte` | 10 | Eq Norte/Norte o Eq Norte/Sur |
-| `Sin zona` | 4 | Sin asignar |
-| `Villa Brígida` | 2 | Villa Brigida |
-| `Equipetrol Oeste` | 1 | Faremafu |
+**Ya no es necesario** agrupar microzonas ni mapear nombres crudos.
+`lib/zonas.ts` mantiene aliases legacy para backwards compatibility.
 
 ## Impacto de NO aplicar filtros (ejemplo real, 17 Feb 2026)
 

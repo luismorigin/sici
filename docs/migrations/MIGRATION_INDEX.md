@@ -197,6 +197,8 @@
 | 190 | fix_multiproyecto_condado_vi | Corregir es_multiproyecto=false para Condado VI (IDs 53, 423, 821) + candado |
 | 191 | fix_multiproyecto_falsos_positivos | Corregir 42 falsos positivos de es_multiproyecto + candados. **Requiere deploy de extractor C21 v3.0** (ver abajo) |
 | 192 | duplicados_lofty_island | Marcar 7 duplicados same-source en Lofty Island (mismo agente + dorms + área ±2m²). Desempate: fecha > fotos > ID mayor |
+| 193 | vistas_mercado | Crear `v_mercado_venta` y `v_mercado_alquiler` — vistas con filtros canónicos + campos calculados (precio_m2, precio_norm, dias_en_mercado) |
+| 194 | snapshot_absorcion_v2 | Refactorizar `snapshot_absorcion_mercado()` para usar vistas canónicas. Agregar `filter_version` a `market_absorption_snapshots` (v1=legacy, v2=canónico). Históricos marcados v1. Nota: loop 0..3, props 4+ dorms no capturadas (~5) |
 
 **⚠️ Post-migración 191 — Deploy requerido en n8n:**
 La migración 191 corrige datos existentes pero el extractor C21 sigue generando falsos positivos.
