@@ -97,7 +97,15 @@ function getSavedFilters() {
   if (typeof window === 'undefined') return null
   try {
     const saved = sessionStorage.getItem(FILTROS_STORAGE_KEY)
-    return saved ? JSON.parse(saved) : null
+    if (!saved) return null
+    const parsed = JSON.parse(saved)
+    // Migrar formato viejo: zona string → zonas array, dormitorios 'todos' → ''
+    if (typeof parsed.zona === 'string' && !parsed.zonas) {
+      parsed.zonas = parsed.zona ? [parsed.zona] : []
+      delete parsed.zona
+    }
+    if (parsed.dormitorios === 'todos') parsed.dormitorios = ''
+    return parsed
   } catch { return null }
 }
 
@@ -428,8 +436,10 @@ export default function AdminPropiedades() {
       }
 
       // Construir filtros para buscar_unidades_reales
+      // Si hay filtros client-side activos, traer más datos del RPC para no perder resultados
+      const tieneFiltroCl = filtroEstado || maxDias > 0 || zonas.length > 1
       const filtros: Record<string, string | number | boolean> = {
-        limite: limite,
+        limite: tieneFiltroCl ? Math.max(limite, 200) : limite,
         incluir_outliers: true,
         incluir_multiproyecto: true,
         incluir_datos_viejos: true,
