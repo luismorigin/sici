@@ -66,7 +66,7 @@ const FAQS = [
   { q: '¿En qué moneda es el precio?', a: 'USD. Se recibe al tipo de cambio paralelo vigente. También aceptamos bolivianos.' },
   { q: '¿Puedo visitar el departamento?', a: 'Sí. El edificio está terminado. Coordiná tu visita por WhatsApp.' },
   { q: '¿Tienen financiamiento bancario?', a: 'Sí. Consultá condiciones con nuestro equipo.' },
-  { q: '¿Por qué 7 amenidades y no 12?', a: 'Porque cada amenidad que no se usa la pagás igual en expensas. Nuestras 7 se usan, se mantienen, y tus gastos mensuales lo reflejan.' },
+  { q: '¿Por qué 7 amenidades y no 12?', a: 'Porque cada amenidad que no se usa la pagás igual en expensas. Y las que sí se usan, mejor que no estén llenas de gente. Pocos vecinos, amenidades reales.' },
   { q: '¿Cuánto son las expensas?', a: 'Consultá el monto exacto por WhatsApp. Al tener amenidades pensadas para el uso real, las expensas se mantienen razonables.' },
 ]
 
@@ -533,10 +533,10 @@ export default function CondadoVI() {
         <section className="bg-condado-marfil">
           <div className="max-w-6xl mx-auto px-5 md:px-10 py-16 md:py-24">
             <h2 className="font-playfair text-3xl md:text-4xl text-condado-carbon mb-3">
-              Lo justo para vivir bien.<br />Sin expensas infladas.
+              7 amenidades. Pocos vecinos.<br />Las que importan, sin la multitud.
             </h2>
             <p className="font-dm text-[17px] text-condado-piedra mb-10 max-w-xl leading-relaxed">
-              7 amenidades pensadas para el uso real, no para el brochure. Cada una se mantiene, se usa, y vale lo que pagás de expensas.
+              En torres grandes, las amenidades son para el brochure — la piscina llena, el gimnasio en fila, las expensas por las nubes. Acá cada espacio se usa, se cuida, y se paga lo justo.
             </p>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
