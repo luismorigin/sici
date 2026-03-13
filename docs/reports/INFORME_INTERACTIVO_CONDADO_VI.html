@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Estudio de Mercado — Condado VI Plaza Italia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --marfil: #FAF7F2;
+  --white: #FFFFFF;
+  --ebano: #2C2824;
+  --carbon: #2C2824;
+  --piedra: #524A43;
+  --piedra-light: #7A7168;
+  --caramelo: #A07A5A;
+  --caramelo-dark: #8A6748;
+  --arena: #E8E2DA;
+  --arena-text: #8C847A;
+  --caramelo-10: rgba(160,122,90,0.10);
+  --caramelo-15: rgba(160,122,90,0.15);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  color: var(--carbon);
+  background: var(--marfil);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── NAV ─────────────────────────────────── */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(44,40,36,0.97);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transform: translateY(-100%);
+  transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+  border-bottom: 1px solid rgba(160,122,90,0.2);
+}
+.nav.visible { transform: translateY(0); }
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  height: 52px;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.nav-inner::-webkit-scrollbar { display: none; }
+.nav-brand {
+  font-family: 'Playfair Display', serif;
+  font-size: 15px;
+  color: var(--marfil);
+  white-space: nowrap;
+  margin-right: 32px;
+  flex-shrink: 0;
+}
+.nav-link {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--arena);
+  text-decoration: none;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 16px 14px;
+  white-space: nowrap;
+  transition: color 0.3s;
+  flex-shrink: 0;
+  position: relative;
+}
+.nav-link:hover, .nav-link.active { color: var(--caramelo); }
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 14px;
+  right: 14px;
+  height: 2px;
+  background: var(--caramelo);
+}
+
+/* ── SECTIONS ────────────────────────────── */
+.section {
+  min-height: 100vh;
+  padding: 100px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.section-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+.bg-marfil { background: var(--marfil); }
+.bg-white { background: var(--white); }
+.bg-ebano { background: var(--ebano); color: var(--marfil); }
+
+/* ── TYPOGRAPHY ──────────────────────────── */
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--caramelo-dark);
+  border: 1px solid var(--caramelo);
+  padding: 6px 18px;
+  margin-bottom: 28px;
+}
+.bg-ebano .badge { border-color: rgba(160,122,90,0.5); color: var(--caramelo-dark); }
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 36px;
+  font-weight: 500;
+  color: var(--carbon);
+  margin-bottom: 10px;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+.bg-ebano .section-title { color: var(--marfil); }
+.section-subtitle {
+  font-size: 17px;
+  color: var(--piedra);
+  margin-bottom: 48px;
+  line-height: 1.5;
+}
+.bg-ebano .section-subtitle { color: var(--piedra-light); }
+
+/* ── REVEAL ANIMATION ────────────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+.reveal-delay-5 { transition-delay: 0.5s; }
+.reveal-delay-6 { transition-delay: 0.6s; }
+
+/* ── HERO ────────────────────────────────── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 60px 32px;
+  background: url('Fotocondadoplazaitalia.jpg') center center / cover no-repeat;
+  position: relative;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(44,40,36,0.15);
+  pointer-events: none;
+}
+.hero-panel {
+  position: relative;
+  z-index: 1;
+  background: rgba(250,247,242,0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 64px 72px;
+  max-width: 640px;
+  width: 100%;
+}
+@media (max-width: 768px) {
+  .hero-panel { padding: 40px 28px; max-width: 92%; }
+}
+.hero-badge {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--caramelo-dark);
+  border: 1px solid var(--caramelo);
+  padding: 8px 24px;
+  margin-bottom: 40px;
+}
+.hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(36px, 5vw, 52px);
+  font-weight: 500;
+  color: var(--carbon);
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+.hero-sub {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(18px, 2.5vw, 24px);
+  font-weight: 400;
+  color: var(--caramelo-dark);
+  margin-bottom: 48px;
+}
+.hero-line {
+  width: 60px;
+  height: 1px;
+  background: var(--caramelo);
+  margin: 0 auto 40px;
+}
+.hero-meta {
+  font-size: 14px;
+  color: var(--piedra);
+  line-height: 2.2;
+}
+.hero-meta strong { color: var(--carbon); font-weight: 500; }
+.hero-scroll {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--marfil);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  animation: pulse-down 2s ease-in-out infinite;
+}
+@keyframes pulse-down {
+  0%, 100% { opacity: 0.4; transform: translateX(-50%) translateY(0); }
+  50% { opacity: 0.8; transform: translateX(-50%) translateY(6px); }
+}
+
+/* ── KPIs ────────────────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 32px 24px;
+}
+.kpi {
+  text-align: center;
+}
+.kpi-value {
+  font-family: 'Playfair Display', serif;
+  font-size: 54px;
+  font-weight: 500;
+  color: var(--carbon);
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+.kpi-value.accent { color: var(--caramelo-dark); }
+.kpi-label {
+  font-size: 14px;
+  color: var(--piedra);
+  letter-spacing: 0.5px;
+}
+
+/* ── CHART CONTAINERS ────────────────────── */
+.chart-container {
+  position: relative;
+  width: 100%;
+  margin: 24px 0;
+}
+.chart-container canvas {
+  max-height: 400px;
+}
+.chart-note {
+  font-size: 14px;
+  color: var(--piedra);
+  font-style: italic;
+  margin-top: 16px;
+}
+
+/* ── DELTAS ──────────────────────────────── */
+.delta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+.delta-card {
+  text-align: center;
+  padding: 32px 16px;
+  border: 1px solid var(--arena);
+  background: var(--white);
+}
+.delta-value {
+  font-family: 'Playfair Display', serif;
+  font-size: 48px;
+  font-weight: 500;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+.delta-value.strong { color: var(--carbon); }
+.delta-value.muted { color: var(--arena-text); }
+.delta-detail {
+  font-size: 15px;
+  color: var(--piedra);
+  margin-bottom: 4px;
+}
+.delta-label {
+  font-size: 12px;
+  color: var(--piedra);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+.takeaway {
+  font-size: 16px;
+  font-style: italic;
+  color: var(--piedra);
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--arena);
+  line-height: 1.6;
+}
+
+/* ── TABS ────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--arena);
+}
+.tab-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--piedra);
+  background: none;
+  border: none;
+  padding: 12px 20px;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.3s;
+}
+.tab-btn:hover { color: var(--carbon); }
+.tab-btn.active {
+  color: var(--caramelo);
+}
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--caramelo);
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── TABLES ──────────────────────────────── */
+.table-wrap { overflow-x: auto; margin: 16px 0; }
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+table.data thead tr {
+  background: var(--carbon);
+  color: var(--marfil);
+}
+table.data th {
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 14px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+table.data td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--arena);
+  vertical-align: middle;
+}
+table.data tbody tr:hover {
+  background: var(--caramelo-10);
+}
+table.data tr.highlight {
+  background: var(--caramelo-10);
+}
+table.data tr.highlight td {
+  font-weight: 600;
+  color: var(--caramelo-dark);
+}
+table.data .muted { color: var(--arena-text); }
+table.data .strong { color: var(--carbon); font-weight: 600; }
+
+/* ── ABSORPTION BARS ─────────────────────── */
+.abs-bars { display: flex; flex-direction: column; gap: 24px; margin: 24px 0; }
+.abs-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 100px 100px;
+  align-items: center;
+  gap: 16px;
+}
+.abs-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--carbon);
+}
+.abs-bar-track {
+  height: 28px;
+  background: var(--arena);
+  position: relative;
+  overflow: hidden;
+}
+.abs-bar-fill {
+  height: 100%;
+  background: var(--caramelo);
+  transition: width 1.2s cubic-bezier(0.16,1,0.3,1);
+  width: 0;
+}
+.abs-bar-fill.muted-fill { background: var(--arena); border-right: 2px solid var(--piedra); }
+.abs-rate {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 500;
+  text-align: right;
+}
+.abs-months {
+  font-size: 13px;
+  color: var(--piedra);
+  text-align: right;
+}
+.abs-row.attenuated .abs-label,
+.abs-row.attenuated .abs-rate,
+.abs-row.attenuated .abs-months { color: var(--arena-text); }
+.abs-detail {
+  font-size: 12px;
+  color: var(--piedra);
+  margin-top: 2px;
+}
+
+/* ── COMPARISON SIDE BY SIDE ─────────────── */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid var(--arena);
+}
+.compare-col {
+  padding: 32px;
+}
+.compare-col:first-child {
+  border-right: 1px solid var(--arena);
+}
+.compare-header {
+  font-family: 'Playfair Display', serif;
+  font-size: 24px;
+  font-weight: 500;
+  margin-bottom: 24px;
+}
+.compare-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--arena);
+  font-size: 15px;
+}
+.compare-row:last-child { border-bottom: none; }
+.compare-key { color: var(--piedra); }
+.compare-val { font-weight: 600; }
+.compare-val.wins { color: var(--carbon); }
+.compare-val.loses { color: var(--arena-text); }
+
+/* ── SCORECARD ───────────────────────────── */
+.scorecard {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin: 24px 0;
+}
+.scorecard th {
+  font-weight: 600;
+  text-align: center;
+  padding: 12px 14px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--arena);
+}
+.scorecard th:first-child { text-align: left; }
+.scorecard td {
+  padding: 10px 14px;
+  text-align: center;
+  border-bottom: 1px solid var(--arena);
+  font-size: 18px;
+}
+.scorecard td:first-child {
+  text-align: left;
+  font-size: 14px;
+}
+.scorecard .dot-yes { color: var(--caramelo); }
+.scorecard .dot-no { color: var(--arena); } /* arena OK here — visual symbol, not text */
+.scorecard .dot-yes-other { color: var(--carbon); }
+.scorecard tr.sc-diff { background: var(--caramelo-10); }
+.scorecard .sc-total td { font-weight: 700; border-top: 2px solid var(--carbon); font-size: 14px; }
+.scorecard .sc-total .cvi-total { color: var(--caramelo); }
+
+/* ── YIELD CARDS ─────────────────────────── */
+.yield-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.yield-card {
+  border: 1px solid var(--arena);
+  padding: 24px;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+.yield-card:hover { border-color: var(--caramelo); }
+.yield-card.attractive { border-color: var(--caramelo); }
+.yield-value {
+  font-family: 'Playfair Display', serif;
+  font-size: 40px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.yield-value.low { color: var(--piedra); }
+.yield-value.high { color: var(--caramelo-dark); }
+.yield-tipo { font-size: 15px; font-weight: 600; color: var(--carbon); margin-bottom: 6px; }
+.yield-rent { font-size: 14px; color: var(--piedra); }
+.yield-detail {
+  display: none;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--arena);
+  font-size: 14px;
+  color: var(--piedra);
+  line-height: 1.8;
+}
+.yield-card.expanded .yield-detail { display: block; }
+
+/* ── TIMELINE ────────────────────────────── */
+.timeline { position: relative; padding-left: 40px; }
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--arena);
+}
+.tl-block { margin-bottom: 48px; position: relative; }
+.tl-dot {
+  position: absolute;
+  left: -34px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--caramelo);
+  background: var(--marfil);
+  border-radius: 0;
+}
+.tl-block.urgente .tl-dot { background: var(--caramelo); }
+.tl-period {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.tl-period.urgente { color: var(--caramelo-dark); }
+.tl-period.corto { color: var(--carbon); }
+.tl-period.mediano { color: var(--piedra); }
+.tl-card {
+  border: 1px solid var(--arena);
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: border-color 0.3s;
+  background: var(--white);
+}
+.tl-card:hover { border-color: var(--caramelo); }
+.tl-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--carbon);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.tl-card-title::after {
+  content: '+';
+  font-size: 18px;
+  color: var(--piedra);
+  transition: transform 0.3s;
+}
+.tl-card.expanded .tl-card-title::after {
+  transform: rotate(45deg);
+}
+.tl-card-body {
+  display: none;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--arena);
+  font-size: 15px;
+  color: var(--piedra);
+  line-height: 1.7;
+}
+.tl-card.expanded .tl-card-body { display: block; }
+
+/* ── FORTALEZAS / DEBILIDADES ────────────── */
+.fd-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+}
+.fd-col h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 24px;
+  font-weight: 500;
+  margin-bottom: 28px;
+}
+.fd-item {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 20px;
+  align-items: flex-start;
+}
+.fd-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 500;
+  min-width: 32px;
+  line-height: 1.2;
+}
+.fd-num.strength { color: var(--caramelo-dark); }
+.fd-num.weakness { color: var(--arena-text); }
+.fd-text {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--carbon);
+}
+.fd-text span { color: var(--piedra); font-size: 14px; }
+
+/* ── PRIORITY MATRIX ─────────────────────── */
+.priority-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin-top: 40px;
+}
+.priority-matrix th {
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 14px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--arena);
+}
+.priority-matrix td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--arena);
+}
+.priority-matrix .p-label {
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+.priority-matrix .p0 { color: var(--caramelo-dark); }
+.priority-matrix .p1 { color: var(--carbon); }
+.priority-matrix .p2, .priority-matrix .p3 { color: var(--piedra); }
+.priority-matrix tr.p0-row { background: var(--caramelo-10); }
+.dots { color: var(--caramelo); letter-spacing: 2px; }
+
+/* ── FOOTER ──────────────────────────────── */
+.footer {
+  background: var(--carbon);
+  color: var(--piedra-light);
+  padding: 80px 32px;
+}
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.footer table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 40px;
+}
+.footer th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--piedra-light);
+  border-bottom: 1px solid rgba(160,122,90,0.25);
+}
+.footer td {
+  padding: 10px 14px;
+  color: var(--marfil);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.footer-brand {
+  text-align: center;
+  margin-top: 40px;
+  padding-top: 40px;
+  border-top: 1px solid rgba(160,122,90,0.25);
+}
+.footer-brand span {
+  font-size: 11px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--piedra-light);
+}
+
+/* ── RESPONSIVE ──────────────────────────── */
+@media (max-width: 768px) {
+  .section { padding: 60px 20px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+  .kpi-value { font-size: 40px; }
+  .delta-grid { grid-template-columns: 1fr; gap: 16px; }
+  .delta-value { font-size: 32px; }
+  .compare-grid { grid-template-columns: 1fr; }
+  .compare-col:first-child { border-right: none; border-bottom: 1px solid var(--arena); }
+  .fd-grid { grid-template-columns: 1fr; gap: 40px; }
+  .yield-grid { grid-template-columns: 1fr; }
+  .abs-row { grid-template-columns: 60px 1fr 70px 80px; gap: 8px; }
+  .abs-rate { font-size: 16px; }
+  .section-title { font-size: 28px; }
+  .nav-link { padding: 16px 10px; font-size: 11px; }
+  .hero h1 { font-size: 34px; }
+}
+
+/* ── COLLAPSIBLE NOTE ────────────────────── */
+.note-toggle {
+  font-size: 13px;
+  color: var(--caramelo-dark);
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: 'DM Sans', sans-serif;
+  padding: 4px 0;
+  margin-top: 8px;
+}
+.note-toggle:hover { text-decoration: underline; }
+.note-body {
+  display: none;
+  font-size: 14px;
+  color: var(--piedra);
+  line-height: 1.6;
+  margin-top: 8px;
+  padding: 12px 16px;
+  border-left: 2px solid var(--arena);
+}
+.note-body.open { display: block; }
+
+/* ── INSIGHTS LIST ───────────────────────── */
+.insights {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--arena);
+}
+.insights li {
+  font-size: 15px;
+  color: var(--piedra);
+  line-height: 1.6;
+  margin-bottom: 10px;
+  margin-left: 16px;
+}
+.insights li strong { color: var(--carbon); }
+
+/* ── TWO COL LAYOUT ──────────────────────── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+@media (max-width: 768px) {
+  .two-col { grid-template-columns: 1fr; gap: 32px; }
+}
+
+/* ── POSICIONAMIENTO LABEL ───────────────── */
+.pos-label {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--arena);
+}
+.pos-item {
+  text-align: center;
+}
+.pos-item .pos-tag {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  font-style: italic;
+}
+.pos-item .pos-who {
+  font-size: 12px;
+  color: var(--piedra);
+  margin-top: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.pos-tag.cvi { color: var(--caramelo-dark); }
+.pos-tag.other { color: var(--piedra); }
+
+/* ── CARAMELO LINE TOP ───────────────────── */
+.section:not(.hero):not(.footer-section)::before {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 3px;
+  background: var(--caramelo);
+  margin-bottom: 32px;
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <span class="nav-brand">Condado VI</span>
+    <a href="#panorama" class="nav-link" data-section="panorama">Mercado</a>
+    <a href="#zonas" class="nav-link" data-section="zonas">Zonas</a>
+    <a href="#centro" class="nav-link" data-section="centro">Eq. Centro</a>
+    <a href="#absorcion" class="nav-link" data-section="absorcion">Absorción</a>
+    <a href="#terrazzo" class="nav-link" data-section="terrazzo">Terrazzo</a>
+    <a href="#competidores" class="nav-link" data-section="competidores">Competencia</a>
+    <a href="#alquiler" class="nav-link" data-section="alquiler">Alquiler</a>
+    <a href="#acciones" class="nav-link" data-section="acciones">Qué hacer</a>
+    <a href="#resumen" class="nav-link" data-section="resumen">Resumen</a>
+  </div>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section class="hero" id="hero">
+  <div class="hero-panel reveal">
+    <div class="hero-badge">Estudio de Mercado</div>
+    <h1>Condado VI</h1>
+    <div class="hero-sub">Plaza Italia</div>
+    <div class="hero-line"></div>
+    <div class="hero-meta">
+      <strong>Cliente:</strong> Proinco / Constructora Condado<br/>
+      <strong>Fecha:</strong> 12 de marzo de 2026<br/>
+      <strong>Fuente:</strong> SICI — 311 unidades verificadas con GPS<br/>
+      <strong>TC Paralelo:</strong> Bs 9.454/USD (Binance P2P)
+    </div>
+  </div>
+  <div class="hero-scroll">Scroll ↓</div>
+</section>
+
+<!-- ═══════════════ PANORAMA ═══════════════ -->
+<section class="section bg-marfil" id="panorama">
+  <div class="section-inner">
+    <div class="badge reveal">Panorama Equipetrol</div>
+    <h2 class="section-title reveal">El mercado hoy</h2>
+    <p class="section-subtitle reveal">5 microzonas monitoreadas · Corte 12 de marzo de 2026</p>
+    <div class="kpi-grid">
+      <div class="kpi reveal reveal-delay-1">
+        <div class="kpi-value" data-count="311">0</div>
+        <div class="kpi-label">unidades activas</div>
+      </div>
+      <div class="kpi reveal reveal-delay-2">
+        <div class="kpi-value" data-count="2033" data-prefix="$" data-separator=",">0</div>
+        <div class="kpi-label">mediana $/m²</div>
+      </div>
+      <div class="kpi reveal reveal-delay-3">
+        <div class="kpi-value" data-count="162" data-prefix="$" data-suffix="K">0</div>
+        <div class="kpi-label">ticket promedio</div>
+      </div>
+      <div class="kpi reveal reveal-delay-4">
+        <div class="kpi-value" data-count="2112" data-prefix="$" data-separator=",">0</div>
+        <div class="kpi-label">promedio $/m²</div>
+      </div>
+      <div class="kpi reveal reveal-delay-5">
+        <div class="kpi-value" data-count="78" data-suffix=" m²">0</div>
+        <div class="kpi-label">área promedio</div>
+      </div>
+      <div class="kpi reveal reveal-delay-6">
+        <div class="kpi-value accent" data-count="9454" data-prefix="" data-decimal="9.454">0</div>
+        <div class="kpi-label">TC paralelo (Bs/USD)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ PRECIOS POR ZONA ═══════════════ -->
+<section class="section bg-white" id="zonas">
+  <div class="section-inner">
+    <div class="badge reveal">Comparativo por zona</div>
+    <h2 class="section-title reveal">Precio por zona</h2>
+    <p class="section-subtitle reveal">Mediana $/m² normalizado — hover para más detalle</p>
+    <div class="chart-container reveal">
+      <canvas id="chartZonas" height="280"></canvas>
+    </div>
+    <p class="chart-note reveal">Línea punteada: Condado VI $2,241/m² → percentil 55–70 del mercado</p>
+    <ul class="insights reveal">
+      <li><strong>Equipetrol Centro</strong> domina con 45% de la oferta (140/311)</li>
+      <li><strong>Eq. Norte</strong> es la zona más cara — +24% premium vs Villa Brígida</li>
+      <li><strong>Villa Brígida</strong> es entry-level: $1,866 mediana, ticket $117K</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════ EVOLUCIÓN FEB→MAR ═══════════════ -->
+<section class="section bg-marfil" id="evolucion">
+  <div class="section-inner">
+    <div class="badge reveal">Tendencia</div>
+    <h2 class="section-title reveal">Febrero → Marzo</h2>
+    <p class="section-subtitle reveal">Qué cambió en un mes</p>
+    <div class="delta-grid">
+      <div class="delta-card reveal reveal-delay-1">
+        <div class="delta-value strong">+11%</div>
+        <div class="delta-detail">280 → 311 unidades</div>
+        <div class="delta-label">Oferta</div>
+      </div>
+      <div class="delta-card reveal reveal-delay-2">
+        <div class="delta-value muted">−1.1%</div>
+        <div class="delta-detail">$2,055 → $2,033</div>
+        <div class="delta-label">$/m² mediana</div>
+      </div>
+      <div class="delta-card reveal reveal-delay-3">
+        <div class="delta-value muted">+1.3%</div>
+        <div class="delta-detail">9.33 → 9.454</div>
+        <div class="delta-label">TC paralelo</div>
+      </div>
+    </div>
+    <p class="takeaway reveal">Más oferta + precios estables = mercado de compradores</p>
+    <button class="note-toggle" onclick="toggleNote('note-evol')">Ver nota metodológica</button>
+    <div class="note-body" id="note-evol">
+      Entre Feb y Mar se realizaron correcciones de calidad de datos (exclusión de duplicados, reclasificación de zonas por GPS). Parte del crecimiento en inventario refleja mejor cobertura de datos, no solo oferta nueva.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ ESTADO CONSTRUCCIÓN ═══════════════ -->
+<section class="section bg-white" id="estado">
+  <div class="section-inner">
+    <div class="badge reveal">Estado de construcción</div>
+    <h2 class="section-title reveal">Entregado vs Preventa</h2>
+    <p class="section-subtitle reveal">Condado VI compite en el segmento entregado de Eq. Centro (93 unidades)</p>
+    <div class="chart-container reveal">
+      <canvas id="chartEstado" height="260"></canvas>
+    </div>
+    <ul class="insights reveal">
+      <li><strong>Eq. Norte</strong> tiene la mayor proporción de entregados (81%)</li>
+      <li><strong>V. Brígida</strong> tiene fuerte pipeline de preventa (42%) — zona en desarrollo activo</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════ ZOOM EQ. CENTRO ═══════════════ -->
+<section class="section bg-marfil" id="centro">
+  <div class="section-inner">
+    <div class="badge reveal">Zoom Equipetrol Centro</div>
+    <h2 class="section-title reveal">El campo de batalla</h2>
+    <p class="section-subtitle reveal">140 unidades · 62 proyectos · mediana $2,088/m²</p>
+    <div class="chart-container reveal">
+      <canvas id="chartTipologia" height="300"></canvas>
+    </div>
+    <p class="chart-note reveal">Línea punteada: Condado VI $2,241/m² — por encima de las 4 tipologías principales</p>
+    <ul class="insights reveal">
+      <li><strong>1D + 2D = 80%</strong> del inventario (112 de 140 unidades)</li>
+      <li>Monoambientes son premium (+12% vs 1D) por efecto de área chica</li>
+      <li>CVI no tiene monoambientes — compite en 1D, 2D y 3D</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════ PROYECTOS ACTIVOS ═══════════════ -->
+<section class="section bg-white" id="proyectos">
+  <div class="section-inner">
+    <div class="badge reveal">Proyectos activos Eq. Centro</div>
+    <h2 class="section-title reveal">El mapa competitivo</h2>
+    <p class="section-subtitle reveal">Proyectos con 3+ unidades activas, agrupados por segmento de precio</p>
+    <div class="tabs reveal">
+      <button class="tab-btn active" onclick="switchTab('proyectos', 0)">Premium &gt;$2,400</button>
+      <button class="tab-btn" onclick="switchTab('proyectos', 1)">Segmento CVI</button>
+      <button class="tab-btn" onclick="switchTab('proyectos', 2)">Entry &lt;$1,900</button>
+    </div>
+    <div class="tab-content active" id="proyectos-tab-0">
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Proyecto</th><th>Uds</th><th>$/m² Avg</th><th>Mediana</th><th>Tipologías</th><th>Estado</th><th>Ticket</th></tr></thead>
+          <tbody>
+            <tr><td>Sky Tower</td><td>7</td><td>$2,883</td><td>$2,833</td><td>0, 1, 2D</td><td>Preventa/Entregado</td><td>$89K–$206K</td></tr>
+            <tr><td>Luxe Suites</td><td>6</td><td>$2,678</td><td>$2,796</td><td>0, 1, 2D</td><td>Entregado</td><td>$98K–$227K</td></tr>
+            <tr><td>Luxe Tower</td><td>4</td><td>$2,592</td><td>$2,627</td><td>1, 2D</td><td>Preventa</td><td>$132K–$277K</td></tr>
+            <tr><td>Nano Smart</td><td>3</td><td>$2,415</td><td>$2,446</td><td>1, 2D</td><td>Entregado</td><td>$92K–$153K</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="tab-content" id="proyectos-tab-1">
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Proyecto</th><th>Uds</th><th>$/m² Avg</th><th>Mediana</th><th>Tipologías</th><th>Estado</th><th>Ticket</th></tr></thead>
+          <tbody>
+            <tr><td>Sky Plaza Italia</td><td>5</td><td>$2,353</td><td>$2,212</td><td>0, 1, 2D</td><td>Entregado</td><td>$82K–$194K</td></tr>
+            <tr class="highlight"><td><strong>▸ Condado VI</strong></td><td><strong>14</strong></td><td><strong>$2,241</strong></td><td><strong>$2,241</strong></td><td><strong>1, 2, 3D</strong></td><td><strong>Entregado</strong></td><td><strong>$139K–$323K</strong></td></tr>
+            <tr><td>Edificio Spazios</td><td>4</td><td>$2,237</td><td>$2,223</td><td>1, 2, 3D</td><td>Entregado/Preventa</td><td>$76K–$419K</td></tr>
+            <tr><td>Edificio Klug</td><td>3</td><td>$2,216</td><td>$2,115</td><td>1, 2D</td><td>Entregado</td><td>$135K–$156K</td></tr>
+            <tr><td>Atrium</td><td>10</td><td>$2,206</td><td>$2,213</td><td>1, 2D</td><td>Entregado</td><td>$99K–$220K</td></tr>
+            <tr><td>Domus Infinity</td><td>3</td><td>$2,171</td><td>$2,335</td><td>1, 2D</td><td>Preventa</td><td>$87K–$190K</td></tr>
+            <tr><td>Nomad Smart Studio</td><td>3</td><td>$2,129</td><td>$1,871</td><td>1D</td><td>Entregado</td><td>$80K–$94K</td></tr>
+            <tr><td>Terrazzo</td><td>14</td><td>$2,030</td><td>$2,073</td><td>0–3D, Dúplex</td><td>Preventa (dic 2026)</td><td>$81K–$483K</td></tr>
+            <tr><td>Sky Level</td><td>11</td><td>$1,976</td><td>$1,911</td><td>1, 2D</td><td>Preventa</td><td>$99K–$193K</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="tab-content" id="proyectos-tab-2">
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Proyecto</th><th>Uds</th><th>$/m² Avg</th><th>Mediana</th><th>Tipologías</th><th>Estado</th><th>Ticket</th></tr></thead>
+          <tbody>
+            <tr><td>HH Once Equipetrol</td><td>8</td><td>$1,887</td><td>$1,833</td><td>0, 1D</td><td>Preventa</td><td>$77K–$145K</td></tr>
+            <tr><td>TORRE ARA</td><td>3</td><td>$1,859</td><td>$1,893</td><td>0, 2, 3D</td><td>Entregado</td><td>$176K–$293K</td></tr>
+            <tr><td>HH Chuubi</td><td>5</td><td>$1,653</td><td>$1,747</td><td>1, 2D</td><td>Preventa</td><td>$90K–$193K</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ ABSORCIÓN ═══════════════ -->
+<section class="section bg-marfil" id="absorcion">
+  <div class="section-inner">
+    <div class="badge reveal">Absorción — Marzo 2026</div>
+    <h2 class="section-title reveal">Dónde está la demanda real</h2>
+    <p class="section-subtitle reveal">Mercado total (5 zonas) — Snapshot 12 Mar 2026</p>
+    <div class="abs-bars reveal">
+      <div class="abs-row">
+        <div class="abs-label">Mono</div>
+        <div class="abs-bar-track"><div class="abs-bar-fill" data-width="11.8"></div></div>
+        <div class="abs-rate" style="color:var(--carbon)">11.8%</div>
+        <div class="abs-months">7.5 meses<br/><span class="abs-detail">45 act · 6 ventas</span></div>
+      </div>
+      <div class="abs-row">
+        <div class="abs-label">1D</div>
+        <div class="abs-bar-track"><div class="abs-bar-fill" data-width="8.6"></div></div>
+        <div class="abs-rate" style="color:var(--carbon)">8.6%</div>
+        <div class="abs-months">10.7 meses<br/><span class="abs-detail">139 act · 13 ventas</span></div>
+      </div>
+      <div class="abs-row attenuated">
+        <div class="abs-label">2D</div>
+        <div class="abs-bar-track"><div class="abs-bar-fill muted-fill" data-width="2.0"></div></div>
+        <div class="abs-rate">2.0%</div>
+        <div class="abs-months">49.0 meses<br/><span class="abs-detail">98 act · 2 ventas</span></div>
+      </div>
+      <div class="abs-row">
+        <div class="abs-label">3D</div>
+        <div class="abs-bar-track"><div class="abs-bar-fill" data-width="7.4"></div></div>
+        <div class="abs-rate" style="color:var(--carbon)">7.4%</div>
+        <div class="abs-months">12.5 meses<br/><span class="abs-detail">25 act · 2 ventas</span></div>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Playfair Display',serif;font-size:22px;font-weight:500;margin:48px 0 16px;color:var(--carbon)" class="reveal">Proyectos más lentos en Eq. Centro</h3>
+    <p style="font-size:15px;color:var(--piedra);margin-bottom:16px" class="reveal">Todos 2D · Todos &gt;100 días promedio</p>
+    <div class="table-wrap reveal">
+      <table class="data">
+        <thead><tr><th>Proyecto</th><th>Uds</th><th>$/m²</th><th>Días</th><th>Señal</th></tr></thead>
+        <tbody>
+          <tr><td>Sky Plaza Italia</td><td>1</td><td>$2,212</td><td class="strong">211</td><td>Vecino directo CVI</td></tr>
+          <tr><td>Luxe Tower</td><td>1</td><td>$3,014</td><td class="strong">195</td><td>Premium estancado</td></tr>
+          <tr><td>Uptown NUU</td><td>1</td><td>$2,810</td><td class="strong">168</td><td>Ultra-premium, nicho</td></tr>
+          <tr><td>HH Chuubi</td><td>1</td><td>$1,772</td><td class="strong">162</td><td>Preventa sin tracción</td></tr>
+          <tr><td>Domus Infinity</td><td>1</td><td>$2,463</td><td class="strong">155</td><td>Premium sin demanda</td></tr>
+          <tr><td>Atrium</td><td>7/10</td><td>$2,123</td><td class="strong">137</td><td>Gran inventario</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="takeaway reveal">Señal para CVI: priorizar 1D y 3D. Los 2D necesitan diferenciación — línea blanca completa y entrega inmediata son los argumentos.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ TERRAZZO ═══════════════ -->
+<section class="section bg-white" id="terrazzo">
+  <div class="section-inner">
+    <div class="badge reveal">Competidor clave</div>
+    <h2 class="section-title reveal">Condado VI vs Terrazzo</h2>
+    <p class="section-subtitle reveal">Mismo micro-mercado · ~500m de distancia · Plaza Italia</p>
+
+    <div class="compare-grid reveal">
+      <div class="compare-col">
+        <div class="compare-header" style="color:var(--caramelo)">Condado VI</div>
+        <div class="compare-row"><span class="compare-key">Entrega</span><span class="compare-val wins">Inmediata</span></div>
+        <div class="compare-row"><span class="compare-key">$/m²</span><span class="compare-val">$2,241</span></div>
+        <div class="compare-row"><span class="compare-key">Equipamiento</span><span class="compare-val wins">16 items</span></div>
+        <div class="compare-row"><span class="compare-key">Amenidades</span><span class="compare-val loses">7</span></div>
+        <div class="compare-row"><span class="compare-key">Tipologías</span><span class="compare-val">1D, 2D, 3D</span></div>
+        <div class="compare-row"><span class="compare-key">Disponibles</span><span class="compare-val">14</span></div>
+        <div class="compare-row"><span class="compare-key">Vendidas</span><span class="compare-val wins">~11+</span></div>
+      </div>
+      <div class="compare-col">
+        <div class="compare-header" style="color:var(--piedra)">Terrazzo</div>
+        <div class="compare-row"><span class="compare-key">Entrega</span><span class="compare-val loses">Dic 2026</span></div>
+        <div class="compare-row"><span class="compare-key">$/m²</span><span class="compare-val">~$2,078 (−7%)</span></div>
+        <div class="compare-row"><span class="compare-key">Equipamiento</span><span class="compare-val loses">12 items</span></div>
+        <div class="compare-row"><span class="compare-key">Amenidades</span><span class="compare-val wins">12</span></div>
+        <div class="compare-row"><span class="compare-key">Tipologías</span><span class="compare-val">Mono–3D, Dúplex</span></div>
+        <div class="compare-row"><span class="compare-key">Disponibles</span><span class="compare-val">14</span></div>
+        <div class="compare-row"><span class="compare-key">Vendidas</span><span class="compare-val loses">6</span></div>
+      </div>
+    </div>
+
+    <div class="tabs reveal" style="margin-top:48px">
+      <button class="tab-btn active" onclick="switchTab('terrazzo', 0)">Precio</button>
+      <button class="tab-btn" onclick="switchTab('terrazzo', 1)">Equipamiento</button>
+      <button class="tab-btn" onclick="switchTab('terrazzo', 2)">Amenidades</button>
+    </div>
+    <div class="tab-content active" id="terrazzo-tab-0">
+      <div class="chart-container">
+        <canvas id="chartTerrazzo" height="280"></canvas>
+      </div>
+      <p class="chart-note">CVI cobra +7% pero incluye $3–5K en equipamiento. Diferencia real: +3–4%</p>
+    </div>
+    <div class="tab-content" id="terrazzo-tab-1">
+      <div class="two-col">
+        <div>
+          <h4 style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:16px;letter-spacing:0.5px;text-transform:uppercase">Comparten (10 items)</h4>
+          <p style="font-size:14px;color:var(--piedra);line-height:1.8">Aire acondicionado, cocina, horno, heladera, campana, microondas, box baño, cerradura digital, aislamiento acústico, intercomunicador</p>
+        </div>
+        <div>
+          <h4 style="font-size:14px;font-weight:600;color:var(--caramelo-dark);margin-bottom:16px;letter-spacing:0.5px;text-transform:uppercase">Solo Condado VI (6)</h4>
+          <p style="font-size:14px;color:var(--carbon);line-height:1.8;font-weight:500">Lavavajillas, lavadora, secadora, closets empotrados, calefón, mesones de granito</p>
+          <h4 style="font-size:13px;font-weight:600;color:var(--piedra);margin:24px 0 16px;letter-spacing:0.5px;text-transform:uppercase">Solo Terrazzo (2)</h4>
+          <p style="font-size:14px;color:var(--piedra);line-height:1.8">Piedra sinterizada, doble vidriado hermético</p>
+        </div>
+      </div>
+      <p class="chart-note" style="margin-top:24px">Costo de equipar un Terrazzo post-entrega: ~$3,000–$5,000 USD (lavadora + secadora + lavavajillas)</p>
+    </div>
+    <div class="tab-content" id="terrazzo-tab-2">
+      <div class="two-col">
+        <div>
+          <h4 style="font-size:14px;font-weight:600;color:var(--piedra);margin-bottom:16px;letter-spacing:0.5px;text-transform:uppercase">Comparten (7)</h4>
+          <p style="font-size:14px;color:var(--piedra);line-height:1.8">Piscina, gimnasio, churrasquera, salón eventos, seguridad 24/7, ascensor, terraza</p>
+        </div>
+        <div>
+          <h4 style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:16px;letter-spacing:0.5px;text-transform:uppercase">Solo Terrazzo (5)</h4>
+          <p style="font-size:14px;color:var(--carbon);line-height:1.8;font-weight:500">Sauna, cocina de verano, parque infantil, fogatero, Pet Center</p>
+          <p style="font-size:13px;color:var(--piedra);margin-top:12px;font-style:italic">Terrazzo tiene 2 pisos completos de áreas sociales. Principal vulnerabilidad de CVI en Plaza Italia.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="pos-label reveal" style="margin-top:40px">
+      <div class="pos-item">
+        <div class="pos-tag cvi">"Listo para vivir"</div>
+        <div class="pos-who">Condado VI</div>
+      </div>
+      <div class="pos-item">
+        <div class="pos-tag other">"Experiencia de edificio"</div>
+        <div class="pos-who">Terrazzo</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ COMPETIDORES ENTREGADOS ═══════════════ -->
+<section class="section bg-marfil" id="competidores">
+  <div class="section-inner">
+    <div class="badge reveal">Entregados Eq. Centro</div>
+    <h2 class="section-title reveal">Dónde compite Condado VI</h2>
+    <p class="section-subtitle reveal">8 proyectos entregados con 3+ unidades — Precio vs Velocidad de venta</p>
+    <div class="chart-container reveal">
+      <canvas id="chartScatter" height="350"></canvas>
+    </div>
+    <p class="chart-note reveal">Tamaño = cantidad de unidades · CVI en caramelo · Hover para detalle</p>
+
+    <h3 style="font-family:'Playfair Display',serif;font-size:22px;font-weight:500;margin:48px 0 16px;color:var(--carbon)" class="reveal">Equipamiento de unidad — Scorecard</h3>
+    <div class="table-wrap reveal">
+      <table class="scorecard">
+        <thead><tr><th></th><th style="color:var(--caramelo)">CVI</th><th>Atrium</th><th>Luxe S.</th><th>Sky PI</th></tr></thead>
+        <tbody>
+          <tr><td>Aire acondicionado</td><td class="dot-yes">●</td><td class="dot-yes-other">●</td><td class="dot-yes-other">●</td><td class="dot-yes-other">●</td></tr>
+          <tr><td>Cocina encimera</td><td class="dot-yes">●</td><td class="dot-yes-other">●</td><td class="dot-yes-other">●</td><td class="dot-yes-other">●</td></tr>
+          <tr><td>Campana extractora</td><td class="dot-yes">●</td><td class="dot-no">○</td><td class="dot-yes-other">●</td><td class="dot-no">○</td></tr>
+          <tr><td>Horno eléctrico</td><td class="dot-yes">●</td><td class="dot-yes-other">●</td><td class="dot-yes-other">●</td><td class="dot-yes-other">●</td></tr>
+          <tr class="sc-diff"><td><strong>Heladera</strong></td><td class="dot-yes">●</td><td class="dot-no">○</td><td class="dot-yes-other">●</td><td class="dot-no">○</td></tr>
+          <tr class="sc-diff"><td><strong>Lavavajillas</strong></td><td class="dot-yes">●</td><td class="dot-no">○</td><td class="dot-no">○</td><td class="dot-no">○</td></tr>
+          <tr class="sc-diff"><td><strong>Lavadora/Secadora</strong></td><td class="dot-yes">●</td><td class="dot-no">○</td><td class="dot-yes-other">●</td><td class="dot-no">○</td></tr>
+          <tr><td>Calefón</td><td class="dot-yes">●</td><td class="dot-yes-other">●</td><td class="dot-yes-other">●</td><td class="dot-yes-other">●</td></tr>
+          <tr><td>Roperos empotrados</td><td class="dot-yes">●</td><td class="dot-yes-other">●</td><td class="dot-yes-other">●</td><td class="dot-yes-other">●</td></tr>
+          <tr><td>Box baño vidrio</td><td class="dot-yes">●</td><td class="dot-yes-other">●</td><td class="dot-yes-other">●</td><td class="dot-yes-other">●</td></tr>
+          <tr class="sc-total"><td>TOTAL</td><td class="cvi-total">10/10</td><td>6/10</td><td>9/10</td><td>6/10</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ ALQUILER + YIELDS ═══════════════ -->
+<section class="section bg-white" id="alquiler">
+  <div class="section-inner">
+    <div class="badge reveal">Mercado de alquiler</div>
+    <h2 class="section-title reveal">Referencia de rentabilidad</h2>
+    <p class="section-subtitle reveal">Eq. Centro — 64 activos · Pipeline desde Feb 2026 · Precios de lista</p>
+    <div class="two-col reveal">
+      <div>
+        <h4 style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:16px;letter-spacing:0.5px;text-transform:uppercase">Precios de lista — mediana/mes</h4>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>Tipología</th><th>Activos</th><th>Mediana/mes</th><th>Rango</th></tr></thead>
+            <tbody>
+              <tr><td>Mono</td><td>7</td><td>$460</td><td>$388–$575</td></tr>
+              <tr><td>1D</td><td>24</td><td>$510</td><td>$402–$718</td></tr>
+              <tr><td>2D</td><td>20</td><td>$1,149</td><td>$790–$1,839</td></tr>
+              <tr><td>3D</td><td>4</td><td>$1,978</td><td>$1,796–$2,200</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h4 style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:16px;letter-spacing:0.5px;text-transform:uppercase">Yield bruto — Condado VI</h4>
+        <div class="yield-grid" style="grid-template-columns:1fr">
+          <div class="yield-card" onclick="toggleYield(this)">
+            <div class="yield-value low">4.4%</div>
+            <div class="yield-tipo">1 Dormitorio · ~62 m²</div>
+            <div class="yield-rent">$510/mes</div>
+            <div class="yield-detail">
+              Precio venta: $139,390 (norm.)<br/>
+              Alquiler mediana: $510/mes<br/>
+              Yield: ($510 × 12) / $139,390 = 4.4%<br/>
+              Tipología con mayor absorción en venta — mejor como vivienda que inversión.
+            </div>
+          </div>
+          <div class="yield-card attractive" onclick="toggleYield(this)">
+            <div class="yield-value high">7.1%</div>
+            <div class="yield-tipo">2 Dormitorios · ~87 m²</div>
+            <div class="yield-rent">$1,149/mes</div>
+            <div class="yield-detail">
+              Precio venta: ~$195,350 (norm.)<br/>
+              Alquiler mediana: $1,149/mes<br/>
+              Yield: ($1,149 × 12) / $195,350 = 7.1%<br/>
+              Retorno en ~14 años. Equipamiento completo permite pedir rango alto.
+            </div>
+          </div>
+          <div class="yield-card attractive" onclick="toggleYield(this)">
+            <div class="yield-value high">7.3%</div>
+            <div class="yield-tipo">3 Dormitorios · ~144 m²</div>
+            <div class="yield-rent">$1,978/mes</div>
+            <div class="yield-detail">
+              Precio venta: $323,293 (norm.)<br/>
+              Alquiler mediana: $1,978/mes<br/>
+              Yield: ($1,978 × 12) / $323,293 = 7.3%<br/>
+              Poca competencia 3D en alquiler (4 activos) — oportunidad de pricing premium.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="chart-note reveal" style="margin-top:32px">Precios de lista, no renta efectiva. No distingue equipamiento ni amoblado. Yields referenciales — no garantizan ocupación.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ RECOMENDACIONES ═══════════════ -->
+<section class="section bg-marfil" id="acciones">
+  <div class="section-inner">
+    <div class="badge reveal">Plan de acción</div>
+    <h2 class="section-title reveal">Qué hacer y cuándo</h2>
+    <p class="section-subtitle reveal">Recomendaciones basadas en datos del mercado</p>
+    <div class="timeline reveal">
+      <div class="tl-block urgente">
+        <div class="tl-dot"></div>
+        <div class="tl-period urgente">Urgente — Semana 1-2</div>
+        <div class="tl-card" onclick="toggleCard(this)">
+          <div class="tl-card-title">Vestir amenidades + sesión foto/video profesional</div>
+          <div class="tl-card-body">Completar la puesta en escena de áreas comunes — reposeras en piscina, macetas, TV y mobiliario en salón de eventos, iluminación cálida. Contratar sesión fotográfica y video profesional. Este material alimenta todo lo demás: landing, redes, brokers. La foto de un departamento real equipado es más poderosa que cualquier render.</div>
+        </div>
+        <div class="tl-card" onclick="toggleCard(this)">
+          <div class="tl-card-title">Landing page + redes sociales</div>
+          <div class="tl-card-body">Landing básica de Condado VI: galería de fotos reales, planos, equipamiento, formulario de contacto. Perfiles en Facebook e Instagram. Hoy el comprador se informa digitalmente antes de contactar. Sin presencia propia, la única imagen es la que publican los brokers — desordenada y de baja calidad.</div>
+        </div>
+      </div>
+      <div class="tl-block corto">
+        <div class="tl-dot"></div>
+        <div class="tl-period corto">Corto Plazo — Mes 1</div>
+        <div class="tl-card" onclick="toggleCard(this)">
+          <div class="tl-card-title">Kit profesional para brokers</div>
+          <div class="tl-card-body">Entregar a cada broker: fotos HD, video, ficha técnica con equipamiento, planos. Sin material propio, publican con fotos de baja calidad y descripciones genéricas — esto devalúa el producto. Su canal real de venta son redes sociales y videos, no solo portales.</div>
+        </div>
+        <div class="tl-card" onclick="toggleCard(this)">
+          <div class="tl-card-title">Foco comercial en 1D y 3D</div>
+          <div class="tl-card-body">1D: segmento más dinámico — 13 absorciones/mes, tasa 8.6%. Las 4 unidades 1D ($139K) están bien posicionadas. 3D: poca competencia en entregados (solo 8 en Centro), ticket alto ($323K) con universo de compradores más reducido. 2D: requiere paciencia y diferenciación (49 meses inventario).</div>
+        </div>
+        <div class="tl-card" onclick="toggleCard(this)">
+          <div class="tl-card-title">Narrativa: "Listo para vivir"</div>
+          <div class="tl-card-body">Único proyecto con línea blanca completa en Eq. Centro (10/10 equipamiento). La diferencia real con Atrium y Sky Plaza Italia es heladera + lavavajillas + lavadora/secadora. Verificar el costo real de estos electrodomésticos antes de comunicar un monto de ahorro específico.</div>
+        </div>
+      </div>
+      <div class="tl-block mediano">
+        <div class="tl-dot"></div>
+        <div class="tl-period mediano">Mediano Plazo — Mes 2-3</div>
+        <div class="tl-card" onclick="toggleCard(this)">
+          <div class="tl-card-title">Monitoreo competitivo mensual</div>
+          <div class="tl-card-body">Terrazzo (14 uds, 6 vendidas, entrega dic 2026): su ritmo de ventas indica demanda del micro-mercado. Atrium (10 uds, 134 días estancado): si baja precios, responder con valor, no con descuento. Sky Plaza Italia (5 uds, 112 días): evidencia de que sin diferenciación el micro-mercado es lento.</div>
+        </div>
+        <div class="tl-card" onclick="toggleCard(this)">
+          <div class="tl-card-title">Confirmar y comunicar Pet Friendly</div>
+          <div class="tl-card-body">En Eq. Centro entregados: 49% de proyectos son Pet Friendly. Los 3 competidores directos (Atrium, Luxe Suites, Sky Plaza Italia) son todos Pet Friendly. No serlo es desventaja visible — es filtro activo en portales y redes. Dato de bajo costo y alto impacto.</div>
+        </div>
+        <div class="tl-card" onclick="toggleCard(this)">
+          <div class="tl-card-title">Rentabilidad por alquiler — usar con cautela</div>
+          <div class="tl-card-body">Yields brutos 1D 4.4%, 2D 7.1%, 3D 7.3%. Presentar como dato complementario ("además de vivir, tiene potencial de renta") — nunca como promesa. Un inversor informado verá las mismas cifras de absorción. No usar como argumento primario de venta.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ RESUMEN EJECUTIVO ═══════════════ -->
+<section class="section bg-white" id="resumen">
+  <div class="section-inner">
+    <div class="badge reveal">Resumen ejecutivo</div>
+    <h2 class="section-title reveal">La foto completa</h2>
+    <p class="section-subtitle reveal">Fortalezas para capitalizar · Debilidades para resolver</p>
+    <div class="fd-grid reveal">
+      <div class="fd-col">
+        <h3 style="color:var(--caramelo)">Fortalezas</h3>
+        <div class="fd-item"><div class="fd-num strength">01</div><div class="fd-text">Equipamiento 10/10<br/><span>Único con línea blanca completa en Eq. Centro</span></div></div>
+        <div class="fd-item"><div class="fd-num strength">02</div><div class="fd-text">Entrega inmediata<br/><span>Competidores estancados (Atrium 134d, Sky Plaza 112d) o en preventa</span></div></div>
+        <div class="fd-item"><div class="fd-num strength">03</div><div class="fd-text">Plaza Italia<br/><span>Corazón de Equipetrol Centro</span></div></div>
+        <div class="fd-item"><div class="fd-num strength">04</div><div class="fd-text">$2,241/m²<br/><span>Equipamiento de Luxe Suites ($2,678) al precio de Atrium ($2,206)</span></div></div>
+        <div class="fd-item"><div class="fd-num strength">05</div><div class="fd-text">Poca competencia 3D<br/><span>Solo 8 unidades 3D entregadas en todo Eq. Centro</span></div></div>
+        <div class="fd-item"><div class="fd-num strength">06</div><div class="fd-text">1D más dinámico<br/><span>8.6% absorción, 13 ventas/mes en mercado total</span></div></div>
+      </div>
+      <div class="fd-col">
+        <h3 style="color:var(--piedra)">Debilidades</h3>
+        <div class="fd-item"><div class="fd-num weakness">01</div><div class="fd-text">Sin presencia digital<br/><span>Los brokers controlan la narrativa del producto</span></div></div>
+        <div class="fd-item"><div class="fd-num weakness">02</div><div class="fd-text">Material audiovisual inexistente<br/><span>Sin fotos profesionales de departamentos equipados</span></div></div>
+        <div class="fd-item"><div class="fd-num weakness">03</div><div class="fd-text">Amenidades sin vestir<br/><span>Áreas comunes sin puesta en escena</span></div></div>
+        <div class="fd-item"><div class="fd-num weakness">04</div><div class="fd-text">Brecha en amenidades<br/><span>4/8 vs 7/8 de Atrium y Luxe Suites</span></div></div>
+        <div class="fd-item"><div class="fd-num weakness">05</div><div class="fd-text">2D sobreofertado<br/><span>49 meses de inventario — segmento más lento</span></div></div>
+        <div class="fd-item"><div class="fd-num weakness">06</div><div class="fd-text">Pet Friendly sin confirmar<br/><span>3 competidores directos sí lo son</span></div></div>
+        <div class="fd-item"><div class="fd-num weakness">07</div><div class="fd-text">Terrazzo: 12 vs 7 amenidades<br/><span>Principal vulnerabilidad en Plaza Italia</span></div></div>
+      </div>
+    </div>
+
+    <h3 style="font-family:'Playfair Display',serif;font-size:22px;font-weight:500;margin:56px 0 24px;color:var(--carbon)" class="reveal">Matriz de prioridades</h3>
+    <div class="table-wrap reveal">
+      <table class="priority-matrix">
+        <thead><tr><th>Prioridad</th><th>Acción</th><th>Impacto</th><th>Esfuerzo</th></tr></thead>
+        <tbody>
+          <tr class="p0-row"><td><span class="p-label p0">P0</span></td><td>Vestir amenidades + fotos/video</td><td class="dots">●●●</td><td class="dots">●●</td></tr>
+          <tr class="p0-row"><td><span class="p-label p0">P0</span></td><td>Landing page + redes sociales</td><td class="dots">●●●</td><td class="dots">●●</td></tr>
+          <tr><td><span class="p-label p1">P1</span></td><td>Kit profesional para brokers</td><td class="dots">●●●</td><td class="dots">●</td></tr>
+          <tr><td><span class="p-label p1">P1</span></td><td>Foco comercial en 1D y 3D</td><td class="dots">●●</td><td class="dots">●</td></tr>
+          <tr><td><span class="p-label p1">P1</span></td><td>Narrativa "Listo para vivir"</td><td class="dots">●●</td><td class="dots">●</td></tr>
+          <tr><td><span class="p-label p2">P2</span></td><td>Confirmar Pet Friendly</td><td class="dots">●●</td><td class="dots">●</td></tr>
+          <tr><td><span class="p-label p2">P2</span></td><td>Monitoreo mensual competitivo</td><td class="dots">●</td><td class="dots">●</td></tr>
+          <tr><td><span class="p-label p3">P3</span></td><td>Amoblar departamentos modelo</td><td class="dots">●●●</td><td class="dots">●●●</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="takeaway reveal">Quick wins: Kit brokers + Pet Friendly — alto impacto, bajo costo</p>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<section class="footer footer-section" id="footer">
+  <div class="footer-inner">
+    <h3 style="font-family:'Playfair Display',serif;font-size:22px;font-weight:500;color:var(--marfil);margin-bottom:24px">Datos de calidad del estudio</h3>
+    <table>
+      <tbody>
+        <tr><th>Propiedades analizadas</th><td>311 con zona GPS verificada</td></tr>
+        <tr><th>Microzonas</th><td>5</td></tr>
+        <tr><th>Proyectos Eq. Centro</th><td>62</td></tr>
+        <tr><th>Fuentes</th><td>Century 21, Remax</td></tr>
+        <tr><th>Verificación GPS</th><td>PostGIS ST_Contains contra polígonos</td></tr>
+        <tr><th>Normalización</th><td>precio_normalizado() — TC paralelo Bs 9.454</td></tr>
+        <tr><th>Filtros aplicados</th><td>≥20m², no duplicadas, no parqueos/bauleras, ≤300d (730 preventa)</td></tr>
+        <tr><th>Competidores</th><td>Fichas técnicas Condado VI y Terrazzo (inventario desarrollador)</td></tr>
+        <tr><th>Alquileres</th><td>64 activos en Eq. Centro (6 outliers excluidos)</td></tr>
+        <tr><th>Fecha de datos</th><td>12 de marzo de 2026</td></tr>
+      </tbody>
+    </table>
+    <div class="footer-brand">
+      <span>SICI — Sistema Inteligente de Captura Inmobiliaria · Marzo 2026</span>
+    </div>
+  </div>
+</section>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────
+const COLORS = {
+  marfil: '#FAF7F2', white: '#FFFFFF', ebano: '#2C2824',
+  carbon: '#2C2824', piedra: '#7A7168', caramelo: '#A07A5A',
+  carameloDark: '#9A7558', arena: '#E8E2DA',
+  caramelo20: 'rgba(160,122,90,0.2)', caramelo40: 'rgba(160,122,90,0.4)',
+};
+
+// ── SCROLL REVEAL ─────────────────────────────────────────────────
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      // Count-up for KPIs
+      if (e.target.classList.contains('kpi')) {
+        const el = e.target.querySelector('.kpi-value');
+        if (el && el.dataset.count && !el.dataset.done) {
+          animateCount(el);
+          el.dataset.done = '1';
+        }
+      }
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+// ── COUNT-UP ──────────────────────────────────────────────────────
+function animateCount(el) {
+  if (el.dataset.decimal) {
+    el.textContent = el.dataset.decimal;
+    return;
+  }
+  const target = parseInt(el.dataset.count);
+  const prefix = el.dataset.prefix || '';
+  const suffix = el.dataset.suffix || '';
+  const useSep = el.dataset.separator === ',';
+  const duration = 1200;
+  const start = performance.now();
+
+  function step(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = Math.round(eased * target);
+    const formatted = useSep ? current.toLocaleString('en-US') : current;
+    el.textContent = prefix + formatted + suffix;
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ── NAV VISIBILITY ────────────────────────────────────────────────
+const nav = document.getElementById('nav');
+const heroSection = document.getElementById('hero');
+const navObserver = new IntersectionObserver(([entry]) => {
+  nav.classList.toggle('visible', !entry.isIntersecting);
+}, { threshold: 0.1 });
+navObserver.observe(heroSection);
+
+// Active nav link
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-link');
+const sectionObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector(`.nav-link[data-section="${entry.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { threshold: 0.3 });
+sections.forEach(s => sectionObserver.observe(s));
+
+// ── ABSORPTION BARS ANIMATION ─────────────────────────────────────
+const absObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.querySelectorAll('.abs-bar-fill').forEach(bar => {
+        const w = parseFloat(bar.dataset.width);
+        // Scale to visual: max absorption is ~12%, map to 0-100% bar width
+        const visual = Math.min(w * 6, 100);
+        setTimeout(() => { bar.style.width = visual + '%'; }, 200);
+      });
+    }
+  });
+}, { threshold: 0.3 });
+document.querySelectorAll('.abs-bars').forEach(el => absObserver.observe(el));
+
+// ── TABS ──────────────────────────────────────────────────────────
+function switchTab(group, index) {
+  const tabs = document.querySelectorAll(`#${group} .tab-btn, [id^="${group}-tab-"]`);
+  // Reset all in group
+  document.querySelectorAll(`[id^="${group}-tab-"]`).forEach(t => t.classList.remove('active'));
+  const parent = document.getElementById(group) || document.querySelector(`#${group}`);
+  // Find tab buttons within the section
+  let section;
+  if (group === 'proyectos') section = document.getElementById('proyectos');
+  else if (group === 'terrazzo') section = document.getElementById('terrazzo');
+  if (!section) return;
+
+  section.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === index);
+  });
+  section.querySelectorAll('.tab-content').forEach((content, i) => {
+    content.classList.toggle('active', i === index);
+  });
+
+  // Reinit Terrazzo chart if needed
+  if (group === 'terrazzo' && index === 0 && !window.terrazzoChartInit) {
+    initTerrazzoChart();
+  }
+}
+
+// ── COLLAPSIBLES ──────────────────────────────────────────────────
+function toggleNote(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+function toggleCard(el) {
+  el.classList.toggle('expanded');
+}
+function toggleYield(el) {
+  el.classList.toggle('expanded');
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.color = COLORS.piedra;
+
+// Zonas chart
+function initZonasChart() {
+  const ctx = document.getElementById('chartZonas');
+  if (!ctx) return;
+
+  const data = [
+    { zona: 'Eq. Norte', mediana: 2317, uds: 26, min: 1179, max: 3653, ticket: '$166K', area: '73 m²' },
+    { zona: 'Eq. Centro', mediana: 2088, uds: 140, min: 1264, max: 3792, ticket: '$150K', area: '72 m²' },
+    { zona: 'Sirari', mediana: 1991, uds: 54, min: 1498, max: 3748, ticket: '$212K', area: '102 m²' },
+    { zona: 'Eq. Oeste', mediana: 1900, uds: 48, min: 1086, max: 3296, ticket: '$178K', area: '83 m²' },
+    { zona: 'V. Brígida', mediana: 1866, uds: 43, min: 1137, max: 2493, ticket: '$117K', area: '66 m²' },
+  ];
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => `${d.zona} (${d.uds})`),
+      datasets: [{
+        data: data.map(d => d.mediana),
+        backgroundColor: data.map(d => d.zona === 'Eq. Centro' ? COLORS.caramelo : COLORS.arena),
+        borderWidth: 0,
+        borderRadius: 2,
+        barThickness: 32,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: COLORS.ebano,
+          titleColor: COLORS.marfil,
+          bodyColor: COLORS.marfil,
+          borderColor: COLORS.caramelo,
+          borderWidth: 1,
+          padding: 12,
+          callbacks: {
+            title: (items) => data[items[0].dataIndex].zona,
+            label: (item) => {
+              const d = data[item.dataIndex];
+              return [
+                `Mediana: $${d.mediana.toLocaleString()}/m²`,
+                `Rango: $${d.min.toLocaleString()} – $${d.max.toLocaleString()}`,
+                `Ticket promedio: ${d.ticket}`,
+                `Área promedio: ${d.area}`,
+                `${d.uds} unidades activas`,
+              ];
+            }
+          }
+        },
+        annotation: undefined
+      },
+      scales: {
+        x: {
+          min: 1500,
+          max: 2500,
+          grid: { color: 'rgba(232,226,218,0.5)', drawBorder: false },
+          ticks: { callback: v => '$' + v.toLocaleString(), font: { size: 11 } },
+        },
+        y: {
+          grid: { display: false },
+          ticks: { font: { size: 12 } }
+        }
+      }
+    },
+    plugins: [{
+      id: 'cviLine',
+      afterDraw(chart) {
+        const xScale = chart.scales.x;
+        const x = xScale.getPixelForValue(2241);
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.beginPath();
+        ctx.setLineDash([6, 4]);
+        ctx.strokeStyle = COLORS.caramelo;
+        ctx.lineWidth = 1.5;
+        ctx.moveTo(x, chart.chartArea.top);
+        ctx.lineTo(x, chart.chartArea.bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = COLORS.caramelo;
+        ctx.font = "11px 'DM Sans'";
+        ctx.textAlign = 'center';
+        ctx.fillText('CVI $2,241', x, chart.chartArea.top - 6);
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+// Estado construccion
+function initEstadoChart() {
+  const ctx = document.getElementById('chartEstado');
+  if (!ctx) return;
+
+  const zonas = ['Eq. Centro', 'Sirari', 'Eq. Oeste', 'V. Brígida', 'Eq. Norte'];
+  const entregados = [93, 34, 31, 25, 21];
+  const preventa = [47, 20, 17, 18, 5];
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: zonas,
+      datasets: [
+        {
+          label: 'Entregado',
+          data: entregados,
+          backgroundColor: COLORS.carbon,
+          borderRadius: 2,
+        },
+        {
+          label: 'Preventa',
+          data: preventa,
+          backgroundColor: COLORS.arena,
+          borderRadius: 2,
+        }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          align: 'end',
+          labels: { boxWidth: 12, padding: 20, font: { size: 11 } }
+        },
+        tooltip: {
+          backgroundColor: COLORS.ebano,
+          titleColor: COLORS.marfil,
+          bodyColor: COLORS.marfil,
+          borderColor: COLORS.caramelo,
+          borderWidth: 1,
+          callbacks: {
+            label: (item) => {
+              const total = entregados[item.dataIndex] + preventa[item.dataIndex];
+              const pct = Math.round(item.raw / total * 100);
+              return `${item.dataset.label}: ${item.raw} (${pct}%)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { color: 'rgba(232,226,218,0.5)', drawBorder: false },
+          ticks: { font: { size: 11 } }
+        },
+        y: {
+          stacked: true,
+          grid: { display: false },
+          ticks: { font: { size: 12 } }
+        }
+      }
+    }
+  });
+}
+
+// Tipología chart
+function initTipologiaChart() {
+  const ctx = document.getElementById('chartTipologia');
+  if (!ctx) return;
+
+  const tipos = ['Mono (0D)\n18 uds', '1D\n67 uds', '2D\n45 uds', '3D\n8 uds', '4D\n2 uds'];
+  const medianas = [2324, 2141, 2055, 2001, 1795];
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: tipos,
+      datasets: [{
+        data: medianas,
+        backgroundColor: COLORS.arena,
+        borderRadius: 2,
+        barThickness: 48,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: COLORS.ebano,
+          titleColor: COLORS.marfil,
+          bodyColor: COLORS.marfil,
+          borderColor: COLORS.caramelo,
+          borderWidth: 1,
+        }
+      },
+      scales: {
+        y: {
+          min: 1500,
+          max: 2600,
+          grid: { color: 'rgba(232,226,218,0.5)', drawBorder: false },
+          ticks: { callback: v => '$' + v.toLocaleString(), font: { size: 11 } }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 11 } }
+        }
+      }
+    },
+    plugins: [{
+      id: 'cviLineH',
+      afterDraw(chart) {
+        const yScale = chart.scales.y;
+        const y = yScale.getPixelForValue(2241);
+        const ctx2 = chart.ctx;
+        ctx2.save();
+        ctx2.beginPath();
+        ctx2.setLineDash([6, 4]);
+        ctx2.strokeStyle = COLORS.caramelo;
+        ctx2.lineWidth = 1.5;
+        ctx2.moveTo(chart.chartArea.left, y);
+        ctx2.lineTo(chart.chartArea.right, y);
+        ctx2.stroke();
+        ctx2.setLineDash([]);
+        ctx2.fillStyle = COLORS.caramelo;
+        ctx2.font = "11px 'DM Sans'";
+        ctx2.textAlign = 'right';
+        ctx2.fillText('CVI $2,241', chart.chartArea.right, y - 6);
+        ctx2.restore();
+      }
+    }]
+  });
+}
+
+// Terrazzo price chart
+function initTerrazzoChart() {
+  const ctx = document.getElementById('chartTerrazzo');
+  if (!ctx) return;
+  window.terrazzoChartInit = true;
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['1D', '2D', '3D'],
+      datasets: [
+        {
+          label: 'Condado VI',
+          data: [2241, 2241, 2241],
+          backgroundColor: COLORS.caramelo,
+          borderRadius: 2,
+          barThickness: 36,
+        },
+        {
+          label: 'Terrazzo (rango medio)',
+          data: [1975, 2210, 2105],
+          backgroundColor: COLORS.arena,
+          borderRadius: 2,
+          barThickness: 36,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          align: 'end',
+          labels: { boxWidth: 12, padding: 20, font: { size: 11 } }
+        },
+        tooltip: {
+          backgroundColor: COLORS.ebano,
+          titleColor: COLORS.marfil,
+          bodyColor: COLORS.marfil,
+          borderColor: COLORS.caramelo,
+          borderWidth: 1,
+        }
+      },
+      scales: {
+        y: {
+          min: 1600,
+          max: 2500,
+          grid: { color: 'rgba(232,226,218,0.5)', drawBorder: false },
+          ticks: { callback: v => '$' + v.toLocaleString(), font: { size: 11 } }
+        },
+        x: { grid: { display: false }, ticks: { font: { size: 12 } } }
+      }
+    }
+  });
+}
+
+// Scatter plot - Competidores
+function initScatterChart() {
+  const ctx = document.getElementById('chartScatter');
+  if (!ctx) return;
+
+  const competitors = [
+    { name: 'Luxe Suites', x: 2796, y: 51, r: 6, ticket: '$98K–$227K' },
+    { name: 'Nano Smart', x: 2446, y: 68, r: 3, ticket: '$92K–$153K' },
+    { name: 'Ed. Spazios', x: 2541, y: 25, r: 3, ticket: '$110K–$419K' },
+    { name: 'Sky Plaza It.', x: 2212, y: 112, r: 5, ticket: '$82K–$194K' },
+    { name: 'Ed. Klug', x: 2115, y: 47, r: 3, ticket: '$135K–$156K' },
+    { name: 'Atrium', x: 2213, y: 134, r: 10, ticket: '$99K–$220K' },
+    { name: 'Torre Ara', x: 1893, y: 19, r: 3, ticket: '$176K–$293K' },
+  ];
+  const cvi = { name: 'Condado VI', x: 2212, y: 88, r: 6, ticket: '$133K–$319K' };
+
+  new Chart(ctx, {
+    type: 'bubble',
+    data: {
+      datasets: [
+        {
+          label: 'Competidores',
+          data: competitors.map(c => ({ x: c.x, y: c.y, r: c.r * 3.5, name: c.name, ticket: c.ticket, uds: c.r })),
+          backgroundColor: 'rgba(232,226,218,0.6)',
+          borderColor: COLORS.piedra,
+          borderWidth: 1,
+        },
+        {
+          label: 'Condado VI',
+          data: [{ x: cvi.x, y: cvi.y, r: cvi.r * 3.5, name: cvi.name, ticket: cvi.ticket, uds: cvi.r }],
+          backgroundColor: 'rgba(160,122,90,0.5)',
+          borderColor: COLORS.caramelo,
+          borderWidth: 2,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          align: 'end',
+          labels: { boxWidth: 12, padding: 20, font: { size: 11 } }
+        },
+        tooltip: {
+          backgroundColor: COLORS.ebano,
+          titleColor: COLORS.marfil,
+          bodyColor: COLORS.marfil,
+          borderColor: COLORS.caramelo,
+          borderWidth: 1,
+          padding: 12,
+          callbacks: {
+            title: (items) => items[0].raw.name,
+            label: (item) => [
+              `$/m² mediana: $${item.raw.x.toLocaleString()}`,
+              `Días en mercado: ${item.raw.y}`,
+              `Unidades: ${item.raw.uds}`,
+              `Ticket: ${item.raw.ticket}`,
+            ]
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: '$/m² mediana', font: { size: 11 }, color: COLORS.piedra },
+          min: 1800,
+          max: 2900,
+          grid: { color: 'rgba(232,226,218,0.5)', drawBorder: false },
+          ticks: { callback: v => '$' + v.toLocaleString(), font: { size: 11 } }
+        },
+        y: {
+          title: { display: true, text: 'Días en mercado', font: { size: 11 }, color: COLORS.piedra },
+          min: 0,
+          max: 160,
+          reverse: false,
+          grid: { color: 'rgba(232,226,218,0.5)', drawBorder: false },
+          ticks: { font: { size: 11 } }
+        }
+      }
+    },
+    plugins: [{
+      id: 'labels',
+      afterDraw(chart) {
+        const ctx2 = chart.ctx;
+        ctx2.save();
+        ctx2.font = "11px 'DM Sans'";
+        ctx2.textAlign = 'center';
+        chart.data.datasets.forEach((ds, di) => {
+          const meta = chart.getDatasetMeta(di);
+          meta.data.forEach((point, i) => {
+            const d = ds.data[i];
+            ctx2.fillStyle = di === 1 ? COLORS.caramelo : COLORS.piedra;
+            ctx2.fillText(d.name, point.x, point.y - d.r - 6);
+          });
+        });
+        ctx2.restore();
+      }
+    }]
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  initZonasChart();
+  initEstadoChart();
+  initTipologiaChart();
+  initTerrazzoChart();
+  initScatterChart();
+});
+</script>
+</body>
+</html>
