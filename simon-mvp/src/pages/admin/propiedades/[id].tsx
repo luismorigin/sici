@@ -140,6 +140,9 @@ export default function EditarPropiedad() {
                 </div>
 
                 <h2 className="text-xl font-bold text-slate-900">{e.nombreEdificio}</h2>
+                {e.originalData.nombre_edificio && e.originalData.nombre_edificio !== e.nombreEdificio && (
+                  <p className="text-xs text-slate-400">Portal: {e.originalData.nombre_edificio}</p>
+                )}
                 {e.proyectoMaster?.desarrollador && <p className="text-slate-600">por <strong>{e.proyectoMaster.desarrollador}</strong></p>}
 
                 {e.originalData.url && (
