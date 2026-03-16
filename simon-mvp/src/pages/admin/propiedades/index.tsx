@@ -501,7 +501,7 @@ export default function AdminPropiedades() {
             : (u.precio_usd || 0)
           return {
             ...u,
-            proyecto: u.nombre_proyecto || 'Sin nombre',
+            proyecto: u.nombre_proyecto || u.nombre_edificio || 'Sin nombre',
             precio_usd: precioUsd,
             precio_m2: u.area_m2 > 0 ? Math.round(precioUsd / Number(u.area_m2)) : 0,
             precio_mensual_bob: u.precio_mensual_bob ? Number(u.precio_mensual_bob) : null,

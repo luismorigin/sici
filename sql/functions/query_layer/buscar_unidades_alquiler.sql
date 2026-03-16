@@ -1,6 +1,6 @@
 -- ============================================================================
 -- buscar_unidades_alquiler(p_filtros JSONB)
--- Canonical export from production — 27 Feb 2026
+-- Canonical export from production — 16 Mar 2026
 -- ============================================================================
 -- Query Layer principal para ALQUILER. Expande slugs UI a nombres sucios de BD,
 -- soporta multiselect dormitorios (3+ = >=3), fotos multi-fuente (C21/Remax/BI),
@@ -145,7 +145,8 @@ AS $function$
               p.datos_json->'agente'->>'telefono'
           )::TEXT,
 
-          (CURRENT_DATE - COALESCE(p.fecha_publicacion, p.fecha_discovery::date))::INTEGER,
+          -- FIX: usar fecha_creacion en vez de fecha_discovery (BI pisa fecha_discovery cada noche)
+          (CURRENT_DATE - COALESCE(p.fecha_publicacion, p.fecha_creacion::date))::INTEGER,
 
           COALESCE(p.estado_construccion::TEXT, 'no_especificado'),
           p.id_proyecto_master,
@@ -245,14 +246,16 @@ AS $function$
             )
         )
         -- v163: reducido de 180 a 150 dias (vida mediana C21=34d, Remax=73d)
-        AND CURRENT_DATE - COALESCE(p.fecha_publicacion, p.fecha_discovery::date) <= 150
+        -- FIX: usar fecha_creacion en vez de fecha_discovery
+        AND CURRENT_DATE - COALESCE(p.fecha_publicacion, p.fecha_creacion::date) <= 150
         AND p.precio_mensual_bob IS NOT NULL
 
       ORDER BY
           CASE WHEN p_filtros->>'orden' = 'precio_desc' THEN p.precio_mensual_bob END DESC NULLS LAST,
           CASE WHEN p_filtros->>'orden' = 'precio_asc' THEN p.precio_mensual_bob END ASC NULLS LAST,
+          -- FIX: usar fecha_creacion en vez de fecha_discovery
           CASE WHEN p_filtros->>'orden' IS NULL OR p_filtros->>'orden' = 'recientes'
-               THEN COALESCE(p.fecha_publicacion, p.fecha_discovery::date) END DESC NULLS LAST,
+               THEN COALESCE(p.fecha_publicacion, p.fecha_creacion::date) END DESC NULLS LAST,
           p.id DESC
       LIMIT COALESCE((p_filtros->>'limite')::int, 50)
       OFFSET COALESCE((p_filtros->>'offset')::int, 0);
