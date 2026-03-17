@@ -1,0 +1,319 @@
+{
+  "name": "Enrichment LLM Venta v1.0.0",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "15 2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "ev-trigger",
+      "name": "Trigger 2:15 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-720, 288],
+      "notes": "Después de enrichment regex (2:00 AM), antes de merge (3:00 AM)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT p.id AS prop_id, p.url, p.fuente, p.zona, p.nombre_edificio, p.estado_construccion, p.tipo_cambio_detectado, p.dormitorios, p.banos, p.precio_usd, p.moneda_original, p.area_total_m2, p.datos_json_enrichment FROM propiedades_v2 p WHERE p.tipo_operacion = 'venta' AND p.status IN ('nueva', 'actualizado') AND p.datos_json_enrichment IS NOT NULL AND LENGTH(p.datos_json_enrichment->>'descripcion') >= 30 AND p.datos_json_enrichment->'llm_output' IS NULL ORDER BY p.fecha_discovery DESC LIMIT 30",
+        "options": {}
+      },
+      "id": "ev-query",
+      "name": "Query Ventas Pendientes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-480, 288],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "Ventas con descripcion >= 30 chars, sin llm_output previo. Max 30/ejecucion."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id_proyecto_master, nombre_oficial, zona FROM proyectos_master WHERE activo = true ORDER BY zona, nombre_oficial",
+        "options": {}
+      },
+      "id": "ev-pm",
+      "name": "Cargar Proyectos Master",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-480, 528],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "Carga todos los PM una vez, se filtra por zona en Build Prompt"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "has-items",
+              "leftValue": "={{ $json.prop_id }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ev-if",
+      "name": "Hay Pendientes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-240, 288]
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        },
+        "batchSize": 1
+      },
+      "id": "ev-batch",
+      "name": "Loop Propiedades",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [0, 176]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === BUILD PROMPT v4.0 — Enrichment LLM Venta ===\n// Lee descripcion de datos_json_enrichment (ya guardada por enrichment regex)\n// NO necesita Firecrawl — todo el contenido ya está en BD\n\nconst prop = $('Loop Propiedades').first().json;\nconst allPm = $('Cargar Proyectos Master').all().map(i => i.json);\n\nconst enrichment = typeof prop.datos_json_enrichment === 'string'\n  ? JSON.parse(prop.datos_json_enrichment)\n  : (prop.datos_json_enrichment || {});\n\nconst descripcion = (enrichment.descripcion || '').substring(0, 3000);\n\nif (!descripcion || descripcion.length < 30) {\n  return [{ json: { skip: true, error: 'Sin descripcion suficiente', prop_id: prop.prop_id } }];\n}\n\n// Filter PM by zona\nconst pmZona = allPm.filter(p => p.zona === prop.zona);\nconst pmList = pmZona.map(p => `- ${p.nombre_oficial} (ID ${p.id_proyecto_master})`).join('\\n') || '(sin proyectos cargados)';\n\n// Extract titulo and ubicacion if available in enrichment data\nconst titulo = enrichment.titulo_anuncio || enrichment.titulo || '';\nconst ubicacion = enrichment.ubicacion_detalle || enrichment.ubicacion || '';\n\n// Nombre edificio — limpiar basura\nconst BASURA = ['venta', 'pre venta', 'preventa', 'departamento', 'en venta', ''];\nconst nombreRaw = prop.nombre_edificio || '';\nconst nombre = BASURA.includes(nombreRaw.toLowerCase().trim()) ? 'no detectado' : nombreRaw;\n\nconst prompt = `Eres un extractor de datos inmobiliarios para Santa Cruz de la Sierra, Bolivia.\nExtraes datos de páginas web de propiedades en VENTA.\nREGLA ABSOLUTA: NUNCA inventes datos. Si no aparece en el texto, devuelve null.\n\n═══════════════════════════════════════\nTÍTULO DEL ANUNCIO:\n${titulo || '(no disponible)'}\n\nUBICACIÓN:\n${ubicacion || '(no disponible)'}\n\nDATOS PORTAL (metadata estructurada del portal — confiables):\n- URL: ${prop.url || 'desconocida'}\n- Fuente: ${prop.fuente || 'desconocida'}\n- Precio: $${prop.precio_usd || '?'} USD (moneda original: ${prop.moneda_original || 'desconocida'})\n- Área: ${prop.area_total_m2 ? prop.area_total_m2 + ' m²' : 'desconocida'}\n- Dormitorios (portal): ${prop.dormitorios ?? 'desconocido'}\n- Baños (portal): ${prop.banos ?? 'desconocido'}\n\nDATOS EXTRACTOR (regex — pueden tener errores):\n- Nombre edificio: ${nombre}\n- Estado construcción: ${prop.estado_construccion || 'no detectado'}\n- Tipo cambio: ${prop.tipo_cambio_detectado || 'no detectado'}\n- Zona GPS: ${prop.zona || 'desconocida'}\n\nPROYECTOS CONOCIDOS EN ZONA ${prop.zona || '?'}:\n${pmList}\n\nDESCRIPCIÓN:\n${descripcion}\n═══════════════════════════════════════\n\nINSTRUCCIONES POR CAMPO:\n═══════════════════════════════════════\n\nPRIORIDAD: Si título/ubicación/descripción CONTRADICE un dato portal o extractor, usar la evidencia del texto. Si no hay contradicción, mantener el dato existente.\n\nNOMBRE_EDIFICIO:\n- Buscá el nombre del edificio/condominio/proyecto en título, ubicación y descripción\n- Compará contra la lista de PROYECTOS CONOCIDOS de arriba\n- Si encontrás match (incluso parcial: \"Edif Nomad\" → \"Nomad by Smart Studio\"), usá el nombre oficial de la lista\n- Si no hay match pero el texto tiene un nombre claro, devolvelo tal cual\n- Si no hay nombre en el texto, devolvé null\n- NUNCA devolver: \"Venta\", \"Pre Venta\", \"Departamento\", fragmentos de oraciones\n\nDORMITORIOS:\n- Buscar en título/descripción: \"monoambiente\", \"studio\", \"loft\" = 0 dormitorios\n- \"1 dormitorio\", \"1 dorm\", \"1 hab\" = 1\n- Si el portal dice 1 pero el texto dice \"monoambiente\" o \"studio\" → usar 0\n- Si el portal dice un número y el texto no lo contradice → mantener el del portal\n- Rango válido: 0-6\n\nBAÑOS:\n- Buscar en título/descripción cantidad de baños\n- \"medio baño\" o \"toilette\" cuenta como 0.5\n- Si el portal dice un número y el texto no lo contradice → mantener el del portal\n- Rango válido: 0-6\n\nESTADO_CONSTRUCCION:\n- Solo 2 valores válidos:\n  - \"preventa\": \"precios desde\", \"entrega [fecha futura]\", \"en construcción\", \"obra gruesa\", \"avance X%\", fecha de entrega futura\n  - \"entrega_inmediata\": \"listo para vivir\", \"entrega inmediata\", \"listo para ocupar\", \"a estrenar\", inmueble terminado\n- Si no hay evidencia clara → null\n- CUIDADO: \"amoblado\" o \"equipado\" SOLOS no implican entrega_inmediata\n\nTIPO_CAMBIO_DETECTADO:\n- \"paralelo\": \"TC paralelo\", \"al paralelo\", \"dólares o paralelo\", \"solo dólares\", \"tc del día\", \"pago en dólares\", \"blue\", \"dólar blue\", \"al blue\", \"USDT\", \"cripto\"\n- \"oficial\": \"TC 7\", \"al cambio Bs.7\", \"TC oficial\", \"tipo de cambio 7\", precio listado SOLO en Bs/bolivianos sin mención de USD\n- \"no_especificado\": si no hay mención de TC ni forma de pago. NUNCA devolver null — usar \"no_especificado\"\n\nPARQUEO_INCLUIDO:\n- true: \"incluye parqueo\", \"con parqueo\" sin precio aparte\n- false: \"Parqueo: $us X\" (precio explícito) O no se menciona parqueo en absoluto\n- DEFAULT: false\n\nBAULERA_INCLUIDA:\n- true: \"incluye baulera\", \"con baulera\" sin precio aparte\n- false: si no se menciona baulera, o precio explícito por baulera\n- DEFAULT: false\n\nES_MULTIPROYECTO:\n- true: el anuncio NO tiene precio + área + dormitorios definidos en DATOS PORTAL simultáneamente, Y la descripción habla del proyecto en general sin identificar una unidad específica\n- false: si DATOS PORTAL tiene precio, área Y dormitorios definidos → siempre false\n- DEFAULT: false\n- CLAVE: solo marcar true cuando faltan 2 o más de estos 3 datos en metadata: precio, área, dormitorios\n\nPLAN_PAGOS:\n- tiene_plan_pagos: true si cuotas/financiamiento, false si solo contado o no hay info. DEFAULT: false\n- plan_pagos_texto: resumen breve de condiciones, null si no hay info\n- descuento_contado_pct: porcentaje de descuento por pago contado, null si no se menciona\n- acepta_permuta: true si menciona permuta/canje, false si no. DEFAULT: false\n- precio_negociable: true si \"negociable\"/\"escucha ofertas\", false si no. DEFAULT: false\n- solo_tc_paralelo: true si la descripción menciona dólares o TC paralelo como forma de pago, en cualquier combinación. DEFAULT: false\\n- true: \"pago en dólares\", \"solo dólares\", \"TC paralelo\", \"dólares o paralelo\", \"dólares y/o paralelo\"\\n- false: solo si acepta explícitamente bolivianos o TC oficial. Ej: \"dólares o bolivianos\", \"se acepta Bs\", \"al cambio oficial\"\\n- CLAVE: cualquier mención de dólares/paralelo SIN mención de bolivianos/oficial = true\\n- CLAVE: si no hay info de forma de pago = false (default)\n\nAMENITIES y EQUIPAMIENTO:\n- Solo lo que el texto CONFIRME explícitamente\n- NUNCA inferir sin mención explícita\n\n═══════════════════════════════════════\n\nDevuelve SOLO este JSON (sin explicaciones, sin markdown):\n{\n  \"nombre_edificio\": string | null,\n  \"nombre_edificio_confianza\": \"alta\" | \"media\" | \"baja\" | null,\n  \"dormitorios\": number | null,\n  \"dormitorios_confianza\": \"alta\" | \"media\" | \"baja\" | null,\n  \"banos\": number | null,\n  \"estado_construccion\": \"entrega_inmediata\" | \"preventa\" | null,\n  \"estado_construccion_confianza\": \"alta\" | \"media\" | \"baja\" | null,\n  \"fecha_entrega_estimada\": string | null,\n  \"es_multiproyecto\": boolean | null,\n  \"tipo_cambio_detectado\": \"paralelo\" | \"oficial\" | \"no_especificado\",\n  \"tipo_cambio_confianza\": \"alta\" | \"media\" | \"baja\" | null,\n  \"piso\": number | null,\n  \"parqueo_incluido\": boolean | null,\n  \"parqueo_precio_adicional_usd\": number | null,\n  \"baulera_incluida\": boolean | null,\n  \"baulera_precio_adicional_usd\": number | null,\n  \"plan_pagos\": {\n    \"tiene_plan_pagos\": boolean | null,\n    \"plan_pagos_texto\": string | null,\n    \"descuento_contado_pct\": number | null,\n    \"acepta_permuta\": boolean | null,\n    \"precio_negociable\": boolean | null,\n    \"solo_tc_paralelo\": boolean | null\n  },\n  \"descripcion_limpia\": string,\n  \"amenities_confirmados\": string[],\n  \"equipamiento_detectado\": string[]\n}`;\n\nreturn [{\n  json: {\n    prop_id: prop.prop_id,\n    prop_url: prop.url,\n    fuente: prop.fuente,\n    prompt: prompt,\n    contenido_length: descripcion.length\n  }\n}];"
+      },
+      "id": "ev-build-prompt",
+      "name": "Build Prompt v4.0",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 176],
+      "notes": "Prompt v4.0 con secciones TITULO/UBICACION/DATOS PORTAL/EXTRACTOR + dormitorios/baños"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ev-if-prompt",
+      "name": "IF Prompt OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 176]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1500, temperature: 0, messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "ev-llm",
+      "name": "Anthropic LLM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 64],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "notes": "Haiku 4.5 — temperature 0, max_tokens 1500"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PARSE & VALIDATE v4.0 — Enrichment LLM Venta ===\nconst prop_id = $('Build Prompt v4.0').first().json.prop_id;\nconst prop_url = $('Build Prompt v4.0').first().json.prop_url;\nconst response = $input.first().json;\n\nconst text = response?.content?.[0]?.text || '';\nconst inputTokens = response?.usage?.input_tokens || 0;\nconst outputTokens = response?.usage?.output_tokens || 0;\nconst tokens = inputTokens + outputTokens;\n\n// Extract JSON\nlet jsonStr = text;\nconst jsonMatch = text.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\nif (jsonMatch) {\n  jsonStr = jsonMatch[1].trim();\n} else {\n  const braceMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (braceMatch) jsonStr = braceMatch[0];\n}\n\nlet datos_llm;\nlet errores = [];\nlet requiere_revision = false;\n\ntry {\n  datos_llm = JSON.parse(jsonStr);\n} catch (e) {\n  errores.push('json_parse_error: ' + e.message);\n  requiere_revision = true;\n  datos_llm = null;\n}\n\n// Si parse falló, skip validaciones — enviar solo metadata\nif (!datos_llm) {\n  return [{\n    json: {\n      prop_id: prop_id,\n      prop_url: prop_url,\n      datos_llm: null,\n      tokens_usados: tokens,\n      errores: errores,\n      requiere_revision: true,\n      parse_error: true\n    }\n  }];\n}\n\n// === VALIDACIONES ===\nconst VALID_ESTADOS = ['entrega_inmediata', 'preventa'];\nconst VALID_TC = ['paralelo', 'oficial', 'no_especificado'];\nconst VALID_CONFIANZA = ['alta', 'media', 'baja'];\n\n// estado_construccion: solo 2 valores\nif (datos_llm.estado_construccion && !VALID_ESTADOS.includes(datos_llm.estado_construccion)) {\n  errores.push('estado_construccion_invalido: ' + datos_llm.estado_construccion);\n  datos_llm.estado_construccion = null;\n}\n\n// tipo_cambio_detectado\nif (datos_llm.tipo_cambio_detectado && !VALID_TC.includes(datos_llm.tipo_cambio_detectado)) {\n  errores.push('tipo_cambio_invalido: ' + datos_llm.tipo_cambio_detectado);\n  datos_llm.tipo_cambio_detectado = 'no_especificado';\n}\n\n// confianza fields\nfor (const field of ['nombre_edificio_confianza', 'estado_construccion_confianza', 'tipo_cambio_confianza', 'dormitorios_confianza']) {\n  if (datos_llm[field] && !VALID_CONFIANZA.includes(datos_llm[field])) {\n    datos_llm[field] = null;\n  }\n}\n\n// dormitorios: 0-6\nif (datos_llm.dormitorios !== null && datos_llm.dormitorios !== undefined) {\n  if (datos_llm.dormitorios < 0 || datos_llm.dormitorios > 6) {\n    errores.push('dormitorios_fuera_rango: ' + datos_llm.dormitorios);\n    datos_llm.dormitorios = null;\n  }\n}\n\n// banos: 0-6\nif (datos_llm.banos !== null && datos_llm.banos !== undefined) {\n  if (datos_llm.banos < 0 || datos_llm.banos > 6) {\n    errores.push('banos_fuera_rango: ' + datos_llm.banos);\n    datos_llm.banos = null;\n  }\n}\n\n// piso: -2 to 40\nif (datos_llm.piso !== null && datos_llm.piso !== undefined) {\n  if (datos_llm.piso < -2 || datos_llm.piso > 40) {\n    errores.push('piso_fuera_rango: ' + datos_llm.piso);\n    datos_llm.piso = null;\n  }\n}\n\n// parqueo_precio_adicional_usd: 0-50000\nif (datos_llm.parqueo_precio_adicional_usd !== null && datos_llm.parqueo_precio_adicional_usd !== undefined) {\n  if (datos_llm.parqueo_precio_adicional_usd < 0 || datos_llm.parqueo_precio_adicional_usd > 50000) {\n    errores.push('parqueo_precio_fuera_rango: ' + datos_llm.parqueo_precio_adicional_usd);\n    datos_llm.parqueo_precio_adicional_usd = null;\n  }\n}\n\n// baulera_precio_adicional_usd: 0-20000\nif (datos_llm.baulera_precio_adicional_usd !== null && datos_llm.baulera_precio_adicional_usd !== undefined) {\n  if (datos_llm.baulera_precio_adicional_usd < 0 || datos_llm.baulera_precio_adicional_usd > 20000) {\n    errores.push('baulera_precio_fuera_rango: ' + datos_llm.baulera_precio_adicional_usd);\n    datos_llm.baulera_precio_adicional_usd = null;\n  }\n}\n\n// descuento_contado_pct: 0-30\nif (datos_llm.plan_pagos?.descuento_contado_pct !== null && datos_llm.plan_pagos?.descuento_contado_pct !== undefined) {\n  if (datos_llm.plan_pagos.descuento_contado_pct < 0 || datos_llm.plan_pagos.descuento_contado_pct > 30) {\n    errores.push('descuento_fuera_rango: ' + datos_llm.plan_pagos.descuento_contado_pct);\n    datos_llm.plan_pagos.descuento_contado_pct = null;\n  }\n}\n\n// Ensure arrays\nif (!Array.isArray(datos_llm.amenities_confirmados)) datos_llm.amenities_confirmados = [];\nif (!Array.isArray(datos_llm.equipamiento_detectado)) datos_llm.equipamiento_detectado = [];\n\nif (errores.length > 2) requiere_revision = true;\n\nreturn [{\n  json: {\n    prop_id: prop_id,\n    prop_url: prop_url,\n    datos_llm: datos_llm,\n    tokens_usados: tokens,\n    errores: errores,\n    requiere_revision: requiere_revision\n  }\n}];"
+      },
+      "id": "ev-parse",
+      "name": "Parsear y Validar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 64],
+      "notes": "Validacion v4.0: dormitorios, baños, estado (solo 2 vals), piso, precios"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT registrar_enrichment_venta_llm(\n  p_id := $1::INTEGER,\n  p_datos_llm := $2::JSONB,\n  p_modelo_usado := 'claude-haiku-4-5-20251001',\n  p_tokens_usados := $3::INTEGER,\n  p_requiere_revision := $4::BOOLEAN,\n  p_errores_validacion := $5::TEXT[]\n)",
+        "options": {
+          "queryReplacement": "={{ [$json.prop_id, JSON.stringify($json.datos_llm), $json.tokens_usados, $json.requiere_revision, $json.errores.length > 0 ? '{' + $json.errores.map(e => '\"' + e + '\"').join(',') + '}' : null] }}"
+        }
+      },
+      "id": "ev-register",
+      "name": "Registrar Enrichment",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1200, 64],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "registrar_enrichment_venta_llm() v2.0 — modo observacion"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "ev-wait",
+      "name": "Wait 2s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1440, 64],
+      "webhookId": "ev-wait-webhook",
+      "notes": "Rate limit entre propiedades"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === RESUMEN ENRICHMENT LLM VENTA ===\nconst lote = $('Query Ventas Pendientes').all();\nconst totalLote = lote.filter(i => i.json.prop_id).length;\n\nreturn [{ json: {\n  timestamp: new Date().toISOString(),\n  workflow: 'Enrichment LLM Venta',\n  version: '1.0.0',\n  prompt_version: 'v4.0',\n  modelo: 'claude-haiku-4-5-20251001',\n  modo: 'observacion',\n  total_lote: totalLote,\n  status: 'completado'\n}}];"
+      },
+      "id": "ev-summary",
+      "name": "Resumen Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1680, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { timestamp: new Date().toISOString(), message: 'No hay ventas pendientes de enrichment LLM', status: 'sin_pendientes' } }];"
+      },
+      "id": "ev-empty",
+      "name": "Sin Pendientes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === SKIP: prompt no construido ===\nconst prop_id = $('Build Prompt v4.0').first().json.prop_id;\nconsole.log('WARN: Prompt skip para prop ' + prop_id);\nreturn [{ json: { skip: true, prop_id: prop_id, error: 'prompt_skip' } }];"
+      },
+      "id": "ev-fallback",
+      "name": "Log Skip",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 352],
+      "notes": "Fallback si prompt no se pudo construir"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger 2:15 AM": {
+      "main": [
+        [
+          {"node": "Query Ventas Pendientes", "type": "main", "index": 0},
+          {"node": "Cargar Proyectos Master", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Query Ventas Pendientes": {
+      "main": [[{"node": "Hay Pendientes?", "type": "main", "index": 0}]]
+    },
+    "Hay Pendientes?": {
+      "main": [
+        [{"node": "Loop Propiedades", "type": "main", "index": 0}],
+        [{"node": "Sin Pendientes", "type": "main", "index": 0}]
+      ]
+    },
+    "Loop Propiedades": {
+      "main": [
+        [{"node": "Resumen Final", "type": "main", "index": 0}],
+        [{"node": "Build Prompt v4.0", "type": "main", "index": 0}]
+      ]
+    },
+    "Build Prompt v4.0": {
+      "main": [[{"node": "IF Prompt OK", "type": "main", "index": 0}]]
+    },
+    "IF Prompt OK": {
+      "main": [
+        [{"node": "Anthropic LLM", "type": "main", "index": 0}],
+        [{"node": "Log Skip", "type": "main", "index": 0}]
+      ]
+    },
+    "Anthropic LLM": {
+      "main": [[{"node": "Parsear y Validar", "type": "main", "index": 0}]]
+    },
+    "Parsear y Validar": {
+      "main": [[{"node": "Registrar Enrichment", "type": "main", "index": 0}]]
+    },
+    "Registrar Enrichment": {
+      "main": [[{"node": "Wait 2s", "type": "main", "index": 0}]]
+    },
+    "Wait 2s": {
+      "main": [[{"node": "Loop Propiedades", "type": "main", "index": 0}]]
+    },
+    "Log Skip": {
+      "main": [[{"node": "Loop Propiedades", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "America/La_Paz",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

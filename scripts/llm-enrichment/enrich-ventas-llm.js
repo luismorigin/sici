@@ -1,15 +1,24 @@
 #!/usr/bin/env node
 /**
- * LLM Enrichment para Ventas — Script Standalone v1.0
+ * LLM Enrichment para Ventas — Script Standalone v2.0
  *
  * Uso:
  *   node scripts/llm-enrichment/enrich-ventas-llm.js [--ids 30,35,43] [--limit 10] [--dry-run]
+ *   node scripts/llm-enrichment/enrich-ventas-llm.js --model sonnet --limit 50
+ *   node scripts/llm-enrichment/enrich-ventas-llm.js --save-to-db --limit 30
+ *
+ * Flags:
+ *   --ids=30,35       Procesar IDs específicos
+ *   --limit=N         Número de propiedades (default: 30)
+ *   --dry-run         Solo construir prompts, no llamar API
+ *   --print-prompt    Con --dry-run, imprime el prompt completo en consola
+ *   --model=haiku     Modelo: haiku (default) o sonnet
+ *   --save-to-db      Guardar resultado en BD vía registrar_enrichment_venta_llm()
+ *   --version=v4.0    Etiqueta de versión (default: v4.0)
  *
  * Requiere:
  *   ANTHROPIC_API_KEY en .env.local o variable de entorno
  *   Supabase credentials en simon-mvp/.env.local
- *
- * SEGURIDAD: NUNCA escribe en propiedades_v2. Solo lee de BD y escribe a llm_enrichment_test_results.
  */
 
 const path = require('path');
@@ -41,7 +50,12 @@ const { createClient } = require(supabasePath);
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const MODEL = 'claude-haiku-4-5-20251001';
+
+const MODELS = {
+  haiku: 'claude-haiku-4-5-20251001',
+  sonnet: 'claude-sonnet-4-6',
+};
+
 const MAX_TOKENS = 1500;
 const TEMPERATURE = 0;
 const MAX_CONTENT_LENGTH = 3000;
@@ -50,12 +64,17 @@ const MAX_CONTENT_LENGTH = 3000;
 const args = process.argv.slice(2);
 const idsArg = args.find(a => a.startsWith('--ids='));
 const limitArg = args.find(a => a.startsWith('--limit='));
+const modelArg = args.find(a => a.startsWith('--model='));
+const versionArg = args.find(a => a.startsWith('--version='));
 const dryRun = args.includes('--dry-run');
+const printPrompt = args.includes('--print-prompt');
+const shouldSaveToDb = args.includes('--save-to-db');
 const specificIds = idsArg ? idsArg.split('=')[1].split(',').map(Number) : null;
 const limit = limitArg ? parseInt(limitArg.split('=')[1]) : 30;
-const versionArg = args.find(a => a.startsWith('--version='));
-const VERSION = versionArg ? versionArg.split('=')[1] : 'v1.0';
-const ITERATION = VERSION + '-test-' + new Date().toISOString().slice(0, 10);
+const modelKey = modelArg ? modelArg.split('=')[1] : 'haiku';
+const MODEL = MODELS[modelKey] || MODELS.haiku;
+const VERSION = versionArg ? versionArg.split('=')[1] : 'v4.0';
+const ITERATION = VERSION + '-' + modelKey + '-' + new Date().toISOString().slice(0, 10);
 
 // ═══════════════════════════════════════
 // SUPABASE CLIENT
@@ -135,14 +154,14 @@ async function fetchProyectosMaster(zona) {
     .eq('zona', zona)
     .eq('activo', true);
   if (error) {
-    console.warn(`  ⚠ Error fetching proyectos for zona ${zona}: ${error.message}`);
+    console.warn(`  Warning: Error fetching proyectos for zona ${zona}: ${error.message}`);
     return [];
   }
   return data || [];
 }
 
 // ═══════════════════════════════════════
-// BUILD PROMPT
+// BUILD PROMPT v4.0
 // ═══════════════════════════════════════
 
 const NOMBRE_BASURA = ['venta', 'pre venta', 'preventa', 'departamento', 'en venta', ''];
@@ -163,45 +182,73 @@ function buildPrompt(prop, proyectos) {
     ? 'no detectado'
     : nombreEdificioRaw;
 
+  // Extract titulo_anuncio and ubicacion_detalle from enrichment data if available
+  const tituloAnuncio = enrichment.titulo_anuncio || enrichment.titulo || '';
+  const ubicacionDetalle = enrichment.ubicacion_detalle || enrichment.ubicacion || '';
+
   return `Eres un extractor de datos inmobiliarios para Santa Cruz de la Sierra, Bolivia.
 Extraes datos de páginas web de propiedades en VENTA.
 REGLA ABSOLUTA: NUNCA inventes datos. Si no aparece en el texto, devuelve null.
 
-DATOS YA EXTRAÍDOS (del pipeline regex — pueden tener errores):
+═══════════════════════════════════════
+TÍTULO DEL ANUNCIO:
+${tituloAnuncio || '(no disponible)'}
+
+UBICACIÓN:
+${ubicacionDetalle || '(no disponible)'}
+
+DATOS PORTAL (metadata estructurada del portal — confiables):
 - URL: ${prop.url || 'desconocida'}
 - Fuente: ${prop.fuente || 'desconocida'}
 - Precio: $${prop.precio_usd || '?'} USD (moneda original: ${prop.moneda_original || 'desconocida'})
 - Área: ${prop.area_total_m2 ? prop.area_total_m2 + ' m²' : 'desconocida'}
-- Dormitorios: ${prop.dormitorios ?? 'desconocido'}
-- Baños: ${prop.banos ?? 'desconocido'}
-- Nombre edificio (BD): ${nombreEdificio}
-- Estado construcción (regex): ${prop.estado_construccion || 'no detectado'}
+- Dormitorios (portal): ${prop.dormitorios ?? 'desconocido'}
+- Baños (portal): ${prop.banos ?? 'desconocido'}
+
+DATOS EXTRACTOR (regex — pueden tener errores):
+- Nombre edificio: ${nombreEdificio}
+- Estado construcción: ${prop.estado_construccion || 'no detectado'}
+- Tipo cambio: ${prop.tipo_cambio_detectado || 'no detectado'}
 - Zona GPS: ${prop.zona || 'desconocida'}
 
 PROYECTOS CONOCIDOS EN ZONA ${prop.zona || '?'}:
 ${pmList || '(sin proyectos cargados)'}
 
-TEXTO DE LA PÁGINA:
+DESCRIPCIÓN:
 ${contenido}
-
 ═══════════════════════════════════════
+
 INSTRUCCIONES POR CAMPO:
 ═══════════════════════════════════════
 
+PRIORIDAD: Si título/ubicación/descripción CONTRADICE un dato portal o extractor, usar la evidencia del texto. Si no hay contradicción, mantener el dato existente.
+
 NOMBRE_EDIFICIO:
-- Buscá el nombre del edificio/condominio/proyecto en el texto
+- Buscá el nombre del edificio/condominio/proyecto en título, ubicación y descripción
 - Compará contra la lista de PROYECTOS CONOCIDOS de arriba
 - Si encontrás match (incluso parcial: "Edif Nomad" → "Nomad by Smart Studio"), usá el nombre oficial de la lista
 - Si no hay match pero el texto tiene un nombre claro, devolvelo tal cual
 - Si no hay nombre en el texto, devolvé null
 - NUNCA devolver: "Venta", "Pre Venta", "Departamento", fragmentos de oraciones
 
+DORMITORIOS:
+- Buscar en título/descripción: "monoambiente", "studio", "loft" = 0 dormitorios
+- "1 dormitorio", "1 dorm", "1 hab" = 1
+- Si el portal dice 1 pero el texto dice "monoambiente" o "studio" → usar 0
+- Si el portal dice un número y el texto no lo contradice → mantener el del portal
+- Rango válido: 0-6
+
+BAÑOS:
+- Buscar en título/descripción cantidad de baños
+- "medio baño" o "toilette" cuenta como 0.5
+- Si el portal dice un número y el texto no lo contradice → mantener el del portal
+- Rango válido: 0-6
+
 ESTADO_CONSTRUCCION:
-- "entrega_inmediata": "listo para vivir", "entrega inmediata", "listo para ocupar"
-- "preventa": "precios desde", "entrega [fecha futura]"
-- "en_construccion": "en construcción", "obra gruesa", "avance X%"
-- "nuevo_a_estrenar": "a estrenar", depto terminado sin amueblar
-- "usado": "segunda mano", "de ocasión"
+- Solo 2 valores válidos:
+  - "preventa": "precios desde", "entrega [fecha futura]", "en construcción", "obra gruesa", "avance X%", fecha de entrega futura
+  - "entrega_inmediata": "listo para vivir", "entrega inmediata", "listo para ocupar", "a estrenar", inmueble terminado
+- Si no hay evidencia clara → null
 - CUIDADO: "amoblado" o "equipado" SOLOS no implican entrega_inmediata
 
 TIPO_CAMBIO_DETECTADO:
@@ -224,16 +271,24 @@ BAULERA_INCLUIDA:
 - false: si no se menciona baulera, o precio explícito por baulera
 - DEFAULT: false (si no hay info de baulera)
 
+ES_MULTIPROYECTO:
+- true: el anuncio NO tiene precio + área + dormitorios definidos en DATOS PORTAL simultáneamente, Y la descripción habla del proyecto en general sin identificar una unidad específica
+- false: si DATOS PORTAL tiene precio, área Y dormitorios definidos → siempre false, aunque la descripción mencione otras tipologías del mismo proyecto
+- DEFAULT: false
+- CLAVE: "departamentos de 1 y 2 dormitorios" en descripción con metadata completa = false (es una unidad específica con texto genérico del proyecto)
+- CLAVE: solo marcar true cuando faltan 2 o más de estos 3 datos en metadata: precio, área, dormitorios
+
 PLAN_PAGOS:
 - tiene_plan_pagos: true si cuotas/financiamiento, false si solo contado o no hay info. DEFAULT: false
 - plan_pagos_texto: resumen breve de condiciones, null si no hay info
 - descuento_contado_pct: porcentaje de descuento por pago contado, null si no se menciona
 - acepta_permuta: true si menciona permuta/canje, false si no. DEFAULT: false
 - precio_negociable: true si "negociable"/"escucha ofertas", false si no. DEFAULT: false
-- solo_tc_paralelo: true SOLO si exige exclusivamente dólares/paralelo ("solo dólares", "pago en dólares", "solo paralelo"). false si acepta ambas opciones. DEFAULT: false
-- CUIDADO: "dólares O paralelo" = false (acepta ambas opciones, no exige una sola)
-- CUIDADO: "Se acepta dólares o al tipo de cambio paralelo" = false (da opciones)
-- Solo true cuando NO hay alternativa: "Pago en Dolares" (sin "o"), "SOLO EN DOLARES"
+- solo_tc_paralelo: true si la descripción menciona dólares o TC paralelo como forma de pago, en cualquier combinación. DEFAULT: false
+- true: "pago en dólares", "solo dólares", "TC paralelo", "dólares o paralelo", "dólares y/o paralelo", "$us X (dolares)", "(TC paralelo)"
+- false: solo si acepta explícitamente bolivianos o TC oficial como alternativa. Ej: "dólares o bolivianos", "se acepta Bs", "al cambio oficial"
+- CLAVE: cualquier mención de dólares/paralelo SIN mención de bolivianos/oficial = true
+- CLAVE: si no hay info de forma de pago = false (default)
 
 AMENITIES y EQUIPAMIENTO:
 - Solo lo que el texto CONFIRME explícitamente
@@ -245,7 +300,10 @@ Devuelve SOLO este JSON (sin explicaciones, sin markdown):
 {
   "nombre_edificio": string | null,
   "nombre_edificio_confianza": "alta" | "media" | "baja" | null,
-  "estado_construccion": "entrega_inmediata" | "preventa" | "en_construccion" | "nuevo_a_estrenar" | "usado" | null,
+  "dormitorios": number | null,
+  "dormitorios_confianza": "alta" | "media" | "baja" | null,
+  "banos": number | null,
+  "estado_construccion": "entrega_inmediata" | "preventa" | null,
   "estado_construccion_confianza": "alta" | "media" | "baja" | null,
   "fecha_entrega_estimada": string | null,
   "es_multiproyecto": boolean | null,
@@ -274,7 +332,7 @@ Devuelve SOLO este JSON (sin explicaciones, sin markdown):
 // PARSE & VALIDATE
 // ═══════════════════════════════════════
 
-const VALID_ESTADOS = ['entrega_inmediata', 'preventa', 'en_construccion', 'nuevo_a_estrenar', 'usado'];
+const VALID_ESTADOS = ['entrega_inmediata', 'preventa'];
 const VALID_TC = ['paralelo', 'oficial', 'no_especificado'];
 const VALID_CONFIANZA = ['alta', 'media', 'baja'];
 
@@ -295,10 +353,10 @@ function parseAndValidate(text) {
   try {
     datos = JSON.parse(jsonStr);
   } catch (e) {
-    return { datos: null, errores: ['json_parse_error: ' + e.message], requiere_revision: true };
+    return { datos: null, errores: ['json_parse_error: ' + e.message], requiere_revision: true, parseError: true };
   }
 
-  // Validate estado_construccion
+  // Validate estado_construccion (v4.0: only 2 valid values)
   if (datos.estado_construccion && !VALID_ESTADOS.includes(datos.estado_construccion)) {
     errores.push(`estado_construccion_invalido: ${datos.estado_construccion}`);
     datos.estado_construccion = null;
@@ -311,9 +369,25 @@ function parseAndValidate(text) {
   }
 
   // Validate confianza fields
-  for (const field of ['nombre_edificio_confianza', 'estado_construccion_confianza', 'tipo_cambio_confianza']) {
+  for (const field of ['nombre_edificio_confianza', 'estado_construccion_confianza', 'tipo_cambio_confianza', 'dormitorios_confianza']) {
     if (datos[field] && !VALID_CONFIANZA.includes(datos[field])) {
       datos[field] = null;
+    }
+  }
+
+  // Validate dormitorios (v4.0: new field)
+  if (datos.dormitorios !== null && datos.dormitorios !== undefined) {
+    if (datos.dormitorios < 0 || datos.dormitorios > 6) {
+      errores.push(`dormitorios_fuera_rango: ${datos.dormitorios}`);
+      datos.dormitorios = null;
+    }
+  }
+
+  // Validate banos (v4.0: new field)
+  if (datos.banos !== null && datos.banos !== undefined) {
+    if (datos.banos < 0 || datos.banos > 6) {
+      errores.push(`banos_fuera_rango: ${datos.banos}`);
+      datos.banos = null;
     }
   }
 
@@ -367,6 +441,8 @@ function compareLlmVsBd(prop, llmData) {
 
   const fields = [
     { campo: 'nombre_edificio', bd: prop.nombre_edificio, llm: llmData.nombre_edificio, confianza: llmData.nombre_edificio_confianza },
+    { campo: 'dormitorios', bd: prop.dormitorios, llm: llmData.dormitorios, confianza: llmData.dormitorios_confianza },
+    { campo: 'banos', bd: prop.banos, llm: llmData.banos, confianza: null },
     { campo: 'estado_construccion', bd: prop.estado_construccion, llm: llmData.estado_construccion, confianza: llmData.estado_construccion_confianza },
     { campo: 'tipo_cambio_detectado', bd: prop.tipo_cambio_detectado, llm: llmData.tipo_cambio_detectado, confianza: llmData.tipo_cambio_confianza },
     { campo: 'piso', bd: prop.piso, llm: llmData.piso, confianza: null },
@@ -411,11 +487,40 @@ function compareLlmVsBd(prop, llmData) {
 }
 
 // ═══════════════════════════════════════
+// SAVE TO DB (--save-to-db flag)
+// ═══════════════════════════════════════
+
+async function saveToDb(propId, datos, tokensUsados, requiereRevision, errores) {
+  const { data, error } = await supabase.rpc('registrar_enrichment_venta_llm', {
+    p_id: propId,
+    p_datos_llm: datos,
+    p_modelo_usado: MODEL,
+    p_tokens_usados: tokensUsados,
+    p_requiere_revision: requiereRevision,
+    p_errores_validacion: errores.length > 0 ? errores : null,
+  });
+
+  if (error) {
+    console.log(`  DB Error: ${error.message}`);
+    return false;
+  }
+
+  const result = data;
+  if (result?.success) {
+    console.log(`  DB: saved (mode=${result.modo})`);
+    return true;
+  } else {
+    console.log(`  DB: failed — ${result?.error || 'unknown'}`);
+    return false;
+  }
+}
+
+// ═══════════════════════════════════════
 // SAVE RESULTS TO LOCAL JSON
 // ═══════════════════════════════════════
-// No DB table needed — all results stored locally for analysis.
 
-const allTestResults = []; // Accumulated for final JSON dump
+const allTestResults = [];
+const perPropertyResults = [];
 
 function recordTestResult(propId, campo, valorBd, valorLlm, confianzaLlm, portal, veredicto) {
   allTestResults.push({
@@ -431,20 +536,19 @@ function recordTestResult(propId, campo, valorBd, valorLlm, confianzaLlm, portal
   });
 }
 
-// Per-property detailed results (raw LLM output + comparisons)
-const perPropertyResults = [];
-
 // ═══════════════════════════════════════
 // MAIN
 // ═══════════════════════════════════════
 
 async function main() {
   console.log('═══════════════════════════════════════');
-  console.log('  LLM Enrichment Ventas — Test Runner');
+  console.log('  LLM Enrichment Ventas — Test Runner v2.0');
   console.log('═══════════════════════════════════════');
-  console.log(`  Model: ${MODEL}`);
+  console.log(`  Model: ${MODEL} (${modelKey})`);
+  console.log(`  Prompt: v4.0`);
   console.log(`  Iteration: ${ITERATION}`);
   console.log(`  Dry run: ${dryRun}`);
+  console.log(`  Save to DB: ${shouldSaveToDb}`);
   console.log(`  Specific IDs: ${specificIds ? specificIds.join(', ') : 'none (random ' + limit + ')'}`);
   console.log('');
 
@@ -454,7 +558,7 @@ async function main() {
   }
 
   // 1. Fetch properties
-  console.log('→ Fetching properties...');
+  console.log('-> Fetching properties...');
   const props = await fetchProperties();
   console.log(`  Found ${props.length} properties`);
 
@@ -466,7 +570,7 @@ async function main() {
   // 2. Cache proyectos_master by zona
   const pmCache = {};
   const zonas = [...new Set(props.map(p => p.zona).filter(Boolean))];
-  console.log(`→ Fetching proyectos_master for ${zonas.length} zonas...`);
+  console.log(`-> Fetching proyectos_master for ${zonas.length} zonas...`);
   for (const zona of zonas) {
     pmCache[zona] = await fetchProyectosMaster(zona);
     console.log(`  ${zona}: ${pmCache[zona].length} proyectos`);
@@ -478,6 +582,7 @@ async function main() {
     processed: 0,
     skipped: 0,
     errors: 0,
+    savedToDb: 0,
     totalTokens: 0,
     comparisons: { igual: 0, llm_agrega: 0, llm_no_detecta: 0, llm_difiere: 0 },
     byField: {},
@@ -492,38 +597,54 @@ async function main() {
     // Build prompt
     const prompt = buildPrompt(prop, proyectos);
     if (!prompt) {
-      console.log('  ⏭ Skip — no content');
+      console.log('  Skip — no content');
       results.skipped++;
       continue;
     }
 
     if (dryRun) {
-      console.log('  🔍 Dry run — prompt built (' + prompt.length + ' chars)');
+      if (printPrompt) {
+        console.log('\n--- PROMPT START ---');
+        console.log(prompt);
+        console.log('--- PROMPT END ---\n');
+      } else {
+        console.log('  Dry run — prompt built (' + prompt.length + ' chars)');
+      }
       results.skipped++;
       continue;
     }
 
     // Call LLM
     try {
-      console.log('  📡 Calling Anthropic...');
+      console.log('  Calling Anthropic...');
       const start = Date.now();
       const response = await callAnthropic(prompt);
       const elapsed = Date.now() - start;
-      results.totalTokens += response.inputTokens + response.outputTokens;
-      console.log(`  ✓ Response in ${elapsed}ms (${response.inputTokens}+${response.outputTokens} tokens)`);
+      const totalTokens = response.inputTokens + response.outputTokens;
+      results.totalTokens += totalTokens;
+      console.log(`  Response in ${elapsed}ms (${response.inputTokens}+${response.outputTokens} tokens)`);
 
       // Parse & validate
       const { datos, errores, requiere_revision } = parseAndValidate(response.text);
       if (!datos) {
-        console.log('  ✗ Parse failed:', errores.join(', '));
+        console.log('  Parse failed:', errores.join(', '));
+        if (shouldSaveToDb) {
+          await saveToDb(prop.id, null, totalTokens, true, errores);
+        }
         results.errors++;
         continue;
       }
       if (errores.length > 0) {
-        console.log(`  ⚠ ${errores.length} validation errors: ${errores.join(', ')}`);
+        console.log(`  ${errores.length} validation errors: ${errores.join(', ')}`);
       }
       if (requiere_revision) {
-        console.log('  🔴 Requires revision (>2 errors)');
+        console.log('  Requires revision (>2 errors)');
+      }
+
+      // Save to DB if flag is set
+      if (shouldSaveToDb) {
+        const saved = await saveToDb(prop.id, datos, totalTokens, requiere_revision, errores);
+        if (saved) results.savedToDb++;
       }
 
       // Compare LLM vs BD
@@ -546,9 +667,9 @@ async function main() {
       // Log key findings
       for (const c of comparisons) {
         if (c.veredicto === 'llm_agrega') {
-          console.log(`  ✨ ${c.campo}: NULL → ${c.valor_llm} (${c.confianza_llm || '—'})`);
+          console.log(`  + ${c.campo}: NULL -> ${c.valor_llm} (${c.confianza_llm || '-'})`);
         } else if (c.veredicto === 'llm_difiere') {
-          console.log(`  ⚡ ${c.campo}: ${c.valor_bd} → ${c.valor_llm} (${c.confianza_llm || '—'})`);
+          console.log(`  ~ ${c.campo}: ${c.valor_bd} -> ${c.valor_llm} (${c.confianza_llm || '-'})`);
         }
 
         // Aggregate stats
@@ -558,7 +679,7 @@ async function main() {
         }
         results.byField[c.campo][c.veredicto]++;
 
-        // Save to test table
+        // Save to test results
         recordTestResult(
           prop.id, c.campo, c.valor_bd, c.valor_llm,
           c.confianza_llm, prop.fuente, c.veredicto
@@ -584,7 +705,7 @@ async function main() {
       await new Promise(r => setTimeout(r, 2000));
 
     } catch (err) {
-      console.log(`  ✗ Error: ${err.message}`);
+      console.log(`  Error: ${err.message}`);
       results.errors++;
     }
   }
@@ -593,12 +714,30 @@ async function main() {
   console.log('\n═══════════════════════════════════════');
   console.log('  RESUMEN');
   console.log('═══════════════════════════════════════');
+  console.log(`  Model: ${MODEL} (${modelKey})`);
   console.log(`  Total: ${results.total}`);
   console.log(`  Processed: ${results.processed}`);
   console.log(`  Skipped: ${results.skipped}`);
   console.log(`  Errors: ${results.errors}`);
+  if (shouldSaveToDb) {
+    console.log(`  Saved to DB: ${results.savedToDb}`);
+  }
   console.log(`  Total tokens: ${results.totalTokens}`);
-  console.log(`  Est. cost: $${(results.totalTokens * 0.0000003).toFixed(4)}`);
+
+  // Cost calculation based on model
+  let costPerInputToken, costPerOutputToken;
+  if (modelKey === 'sonnet') {
+    costPerInputToken = 3 / 1_000_000;   // $3/MTok
+    costPerOutputToken = 15 / 1_000_000;  // $15/MTok
+  } else {
+    costPerInputToken = 0.80 / 1_000_000;  // $0.80/MTok
+    costPerOutputToken = 4 / 1_000_000;    // $4/MTok
+  }
+  const totalInputTokens = perPropertyResults.reduce((s, p) => s + p.tokens.input, 0);
+  const totalOutputTokens = perPropertyResults.reduce((s, p) => s + p.tokens.output, 0);
+  const estCost = totalInputTokens * costPerInputToken + totalOutputTokens * costPerOutputToken;
+  console.log(`  Est. cost: $${estCost.toFixed(4)}`);
+
   console.log('');
   console.log('  Comparisons:');
   console.log(`    Igual: ${results.comparisons.igual}`);
@@ -617,17 +756,14 @@ async function main() {
   const outputDir = path.join(__dirname, 'output');
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
-  // 1. Summary with aggregate stats
   const summaryPath = path.join(outputDir, `test-results-${ITERATION}.json`);
   fs.writeFileSync(summaryPath, JSON.stringify(results, null, 2));
   console.log(`\n  Summary saved to: ${summaryPath}`);
 
-  // 2. Detailed per-comparison rows (equivalent to DB table)
   const detailPath = path.join(outputDir, `test-detail-${ITERATION}.json`);
   fs.writeFileSync(detailPath, JSON.stringify(allTestResults, null, 2));
   console.log(`  Detail rows saved to: ${detailPath} (${allTestResults.length} rows)`);
 
-  // 3. Per-property raw LLM output + comparisons
   const rawPath = path.join(outputDir, `test-raw-${ITERATION}.json`);
   fs.writeFileSync(rawPath, JSON.stringify(perPropertyResults, null, 2));
   console.log(`  Raw LLM output saved to: ${rawPath} (${perPropertyResults.length} props)`);
