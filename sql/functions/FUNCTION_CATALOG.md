@@ -18,11 +18,12 @@
 
 *Nota: `get_discovery_value_integer()` y `get_discovery_value_numeric()` también en funciones_auxiliares.*
 
-## Enrichment (2 funciones)
+## Enrichment (3 funciones)
 
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
 | `registrar_enrichment(data)` | `enrichment/registrar_enrichment.sql` | — |
+| `registrar_enrichment_venta_llm(id, datos_llm, ...)` | `enrichment/registrar_enrichment_venta_llm.sql` | — (deploy manual 2026-03-17) |
 | `registrar_enrichment_alquiler(id, datos_llm, ...)` | `alquiler/registrar_enrichment_alquiler.sql` | 137 |
 
 ## Merge (4 funciones)

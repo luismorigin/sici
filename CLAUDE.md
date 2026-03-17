@@ -121,15 +121,16 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | Prueba LLM vs Regex ventas | `docs/analysis/PRUEBA_LLM_VS_REGEX_VENTAS.md` |
 | **LLM Enrichment Ventas** | `docs/analysis/RESUMEN_EJECUTIVO_LLM_VENTAS.md` |
 | Comparativa LLM alq vs venta | `docs/analysis/COMPARATIVA_ALQUILERES_VS_VENTAS_LLM.md` |
-| Prompt LLM ventas | `scripts/llm-enrichment/prompt-ventas-v1.md` |
+| Prompt LLM ventas (activo) | `scripts/llm-enrichment/prompt-ventas-v2.md` |
+| **LLM Enrichment README** | `scripts/llm-enrichment/README.md` |
 
 ## Pipeline Nocturno
 
 ### Venta (modulo_1)
 ```
 1:00 AM  Discovery C21 + Remax → propiedades_v2
-2:00 AM  Enrichment LLM → datos_json_enrichment
-         (LLM enrichment Haiku testeado v3.3, pendiente integración n8n — ver RESUMEN_EJECUTIVO_LLM_VENTAS.md)
+2:00 AM  Enrichment regex → datos_json_enrichment
+2:15 AM  Enrichment LLM (Haiku 4.5, prompt v4.1, modo observación) → llm_output en datos_json_enrichment
 3:00 AM  Merge → campos consolidados + TC paralelo
 4:00 AM  Matching → id_proyecto_master + nombre_edificio (migración 170)
 6:00 AM  Verificador ausencias (solo Remax, LIMIT 200)
@@ -163,7 +164,7 @@ sici/
 │   ├── helpers/         → precio_normalizado, campo_bloqueado, normalize_nombre, vigente
 │   └── triggers/        → proteger_amenities, matchear_alquiler, asignar_zona_alquiler, asignar_zona_venta
 ├── sql/migrations/      → migraciones — ver docs/migrations/MIGRATION_INDEX.md
-├── scripts/llm-enrichment/  → Script test LLM ventas + prompt v3.3 + output tests
+├── scripts/llm-enrichment/  → LLM enrichment ventas: prompt v4.1 + script test/backfill + README
 ├── geodata/             → microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/        → Discovery, Enrichment, Merge, Verificador (venta)

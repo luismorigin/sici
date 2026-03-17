@@ -25,5 +25,8 @@ simon-mvp/stories/
 .DS_Store
 Thumbs.db
 
+# LLM enrichment test output
+scripts/llm-enrichment/output/
+
 # Logs
 *.log

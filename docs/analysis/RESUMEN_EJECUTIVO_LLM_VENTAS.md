@@ -1,4 +1,6 @@
-# Resumen Ejecutivo — LLM Enrichment Ventas v3.2
+# Resumen Ejecutivo — LLM Enrichment Ventas v3.2 (Histórico)
+
+> **Nota:** Este documento describe los tests iniciales de v1.0-v3.2 (2026-03-10). La versión actual en producción es **v4.1** (deployada 2026-03-17, backfill 352 props, Haiku elegido). Ver `scripts/llm-enrichment/README.md` para estado actual.
 
 > Fecha: 2026-03-10 | Modelo: claude-haiku-4-5-20251001 | N=30 | 3 iteraciones | Costo final: $0.030
 
