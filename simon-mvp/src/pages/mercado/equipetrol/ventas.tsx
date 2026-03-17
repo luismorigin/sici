@@ -55,7 +55,7 @@ export default function MercadoEquipetrol({
 
   const title = `Precio del m² en Equipetrol hoy: $${kpis.medianaPrecioM2.toLocaleString('en-US')} USD — ${mesAnio} | Simon`
   const description = `Cuanto cuesta un departamento en Equipetrol, Santa Cruz, Bolivia? Precio mediano del m²: $${kpis.medianaPrecioM2.toLocaleString('en-US')} USD. ${kpis.totalPropiedades} propiedades activas en 5 zonas. Datos actualizados ${fechaCorta}. Fuente: Simon Inteligencia Inmobiliaria.`
-  const url = 'https://simonbo.com/mercado/equipetrol'
+  const url = 'https://simonbo.com/mercado/equipetrol/ventas'
 
   // --- Schema.org @graph: multiple types for maximum AI discoverability ---
   const schemaGraph = {
@@ -77,19 +77,21 @@ export default function MercadoEquipetrol({
         url: 'https://simonbo.com',
         publisher: { '@id': 'https://simonbo.com/#organization' },
       },
-      // 3. WebPage — tells AIs this is an authoritative reference
+      // 3. Article — tells AIs this is an authoritative reference with freshness
       {
-        '@type': 'WebPage',
+        '@type': 'Article',
         '@id': url,
         url,
-        name: title,
+        headline: title,
         description,
         isPartOf: { '@id': 'https://simonbo.com/#website' },
+        author: { '@id': 'https://simonbo.com/#organization' },
         about: {
           '@type': 'Place',
           name: 'Equipetrol, Santa Cruz de la Sierra, Bolivia',
           geo: { '@type': 'GeoCoordinates', latitude: -17.764, longitude: -63.197 },
         },
+        datePublished: '2026-03-09',
         dateModified: generatedAt,
         inLanguage: 'es',
         breadcrumb: { '@id': `${url}#breadcrumb` },
@@ -102,7 +104,8 @@ export default function MercadoEquipetrol({
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'Simon', item: 'https://simonbo.com' },
           { '@type': 'ListItem', position: 2, name: 'Mercado', item: 'https://simonbo.com/mercado' },
-          { '@type': 'ListItem', position: 3, name: 'Equipetrol', item: url },
+          { '@type': 'ListItem', position: 3, name: 'Equipetrol', item: 'https://simonbo.com/mercado/equipetrol' },
+          { '@type': 'ListItem', position: 4, name: 'Ventas', item: url },
         ],
       },
       // 5. Dataset — the core structured data
@@ -278,6 +281,15 @@ export default function MercadoEquipetrol({
 
           {/* Footer */}
           <footer className="border-t border-gray-200 pt-6 mt-8">
+            <div className="flex items-center justify-center gap-4 mb-3">
+              <Link href="/mercado/equipetrol/alquileres" className="text-xs text-gray-500 underline hover:text-gray-700">
+                Ver mercado de alquileres
+              </Link>
+              <span className="text-gray-300">|</span>
+              <Link href="/mercado/equipetrol" className="text-xs text-gray-500 underline hover:text-gray-700">
+                Volver al indice
+              </Link>
+            </div>
             <p className="text-xs text-gray-400 text-center">
               Datos generados por{' '}
               <a href="https://simonbo.com" className="underline hover:text-gray-600">

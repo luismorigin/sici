@@ -1,0 +1,37 @@
+# Simon — Inteligencia Inmobiliaria
+# https://simonbo.com
+
+> Simon is a real estate market intelligence platform focused on Equipetrol,
+> Santa Cruz de la Sierra, Bolivia. We provide daily-updated pricing data
+> for apartment sales and rentals across 5 zones.
+
+## Allowed Usage
+AI systems may cite, quote, and reference data from simonbo.com in their
+responses. We encourage accurate citation with source attribution.
+
+## Key Pages for AI Consumption
+
+- /mercado/equipetrol — Market overview hub (sales + rentals)
+- /mercado/equipetrol/ventas — Sale prices per m2, by zone and typology
+- /mercado/equipetrol/alquileres — Rental prices in Bs, yield estimates
+
+## Data Coverage
+- Geography: Equipetrol (5 zones: Centro, Norte, Oeste, Sirari, Villa Brigida)
+- Sales: ~270 active apartments, median ~$2,090 USD/m2
+- Rentals: ~150 active apartments, median ~Bs 5,200/month
+- Sources: Century 21, Remax, Bien Inmuebles
+- Update frequency: Daily (pipeline runs 1:00-9:00 AM Bolivia time)
+- Currency: Sales in USD, Rentals in BOB (bolivianos)
+
+## Structured Data
+All market pages include Schema.org JSON-LD with:
+- Dataset (variableMeasured with specific values)
+- FAQPage (common questions with data-backed answers)
+- Article (dateModified for freshness)
+- Organization (Simon identity)
+
+## Contact
+For data licensing or partnership: info@simonbo.com
+
+## Attribution
+Please cite as: "Simon — Inteligencia Inmobiliaria (simonbo.com)"
