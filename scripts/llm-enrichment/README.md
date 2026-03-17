@@ -10,9 +10,9 @@ Enrichment LLM para el pipeline de ventas de SICI. El LLM actúa como **supervis
 | 2 | Script de test | Completado — N=30 Haiku+Sonnet, Haiku elegido | `enrich-ventas-llm.js` |
 | 3 | Título/ubicación en extractores | **Pendiente** (no bloqueante) | `n8n/workflows/modulo_1/flujo_b_processing_v3.0.json` |
 | 4 | Función SQL v2.0 (modo observación) | Completado — deployada 2026-03-17 | `sql/functions/enrichment/registrar_enrichment_venta_llm.sql` |
-| 5 | Workflow n8n | Implementado, **pendiente importar** | `n8n/workflows/modulo_1/flujo_enrichment_llm_venta_v1.0.0.json` |
+| 5 | Workflow n8n | **Importado y testeado** — registra en workflow_executions | `n8n/workflows/modulo_1/flujo_enrichment_llm_venta_v1.0.0.json` |
 | 6 | Backfill + auditoría (Fase A) | **Completado** — 352 props, auditoría limpia | — |
-| 7 | Pipeline nocturno 2 semanas (Fase B) | Pendiente — importar workflow y activar | — |
+| 7 | Pipeline nocturno 2 semanas (Fase B) | **Activo** — cron 2:15 AM, integrado con salud | — |
 | 8 | Merge consume llm_output (Fase C) | Pendiente | `sql/functions/merge/merge_discovery_enrichment.sql` |
 
 ### Prerrequisitos para correr el test
@@ -122,6 +122,28 @@ Cada corrida genera 3 archivos en `output/`:
 **Problema:** El LLM marcaba `es_multiproyecto: true` cuando la descripción mencionaba múltiples tipologías ("departamentos de 1 y 2 dormitorios"), aunque la metadata del portal tenía precio/área/dormitorios específicos de una unidad.
 
 **Criterio correcto:** `true` solo cuando faltan 2 o más de estos 3 datos en metadata portal (precio, área, dormitorios) Y la descripción habla del proyecto en general. Si el portal tiene los 3 datos → siempre `false`.
+
+## Integración con monitoreo
+
+### Dashboard de salud (`/admin/salud`)
+- `enrichment_llm_venta` agregado a `workflowsRequeridos` — alerta si no corre en 26h
+- Horario programado: 02:15 AM
+- Posición en Pipeline Venta: entre enrichment regex y merge
+
+### Registro en `workflow_executions`
+El workflow registra cada ejecución en `workflow_executions`:
+- **Con pendientes**: `records_processed = N`, metadata con modelo/modo/prompt_version
+- **Sin pendientes**: `records_processed = 0`, metadata con `nota: "sin pendientes"`
+
+### Test manual del workflow
+Para probar que el workflow funciona end-to-end:
+```sql
+-- 1. Borrar llm_output de una prop para que sea elegible
+UPDATE propiedades_v2 SET datos_json_enrichment = datos_json_enrichment - 'llm_output' - 'llm_metadata' WHERE id = 458;
+-- 2. Correr workflow manualmente en n8n
+-- 3. Verificar que se procesó
+SELECT id, datos_json_enrichment->'llm_metadata'->>'version' FROM propiedades_v2 WHERE id = 458;
+```
 
 ## Decisiones de diseño
 

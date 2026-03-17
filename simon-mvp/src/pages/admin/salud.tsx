@@ -142,7 +142,7 @@ export default function DashboardSalud() {
     }
 
     const workflowsRequeridos = [
-      'discovery_remax', 'discovery_century21', 'enrichment', 'merge',
+      'discovery_remax', 'discovery_century21', 'enrichment', 'enrichment_llm_venta', 'merge',
       'verificador', 'matching_nocturno',
       'discovery_remax_alquiler', 'discovery_c21_alquiler',
       'enrichment_alquiler', 'merge_alquiler', 'verificador_alquiler'
@@ -449,6 +449,7 @@ export default function DashboardSalud() {
         'discovery_remax': 1,
         'discovery_century21': 2,
         'enrichment': 3,
+        'enrichment_llm_venta': 3.5,
         'merge': 4,
         'matching_nocturno': 5,
         'auditoria_diaria': 6,
@@ -488,6 +489,7 @@ export default function DashboardSalud() {
     'discovery_remax': '01:00 AM',
     'discovery_century21': '01:00 AM',
     'enrichment': '02:00 AM',
+    'enrichment_llm_venta': '02:15 AM',
     'merge': '03:00 AM',
     'verificador': '04:00 AM',
     'matching_nocturno': '04:00 AM',
@@ -507,7 +509,7 @@ export default function DashboardSalud() {
     {
       label: 'Pipeline Venta',
       color: 'text-slate-700',
-      workflows: ['discovery_remax', 'discovery_century21', 'enrichment', 'merge', 'verificador', 'matching_nocturno']
+      workflows: ['discovery_remax', 'discovery_century21', 'enrichment', 'enrichment_llm_venta', 'merge', 'verificador', 'matching_nocturno']
     },
     {
       label: 'Pipeline Alquiler',

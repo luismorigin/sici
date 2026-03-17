@@ -245,6 +245,25 @@
     },
     {
       "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_executions (workflow_name, workflow_version, status, started_at, finished_at, records_processed, records_created, records_errors, metadata) VALUES ('enrichment_llm_venta', '1.0.0', 'success', NOW(), NOW(), 0, 0, 0, jsonb_build_object('modelo', 'claude-haiku-4-5-20251001', 'modo', 'observacion', 'prompt_version', 'v4.1', 'nota', 'sin pendientes'))",
+        "options": {}
+      },
+      "id": "ev-log-empty",
+      "name": "Registrar Sin Pendientes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [240, 480],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "Registra ejecucion con 0 procesadas para que salud no alerte"
+    },
+    {
+      "parameters": {
         "jsCode": "// === SKIP: prompt no construido ===\nconst prop_id = $('Build Prompt v4.0').first().json.prop_id;\nconsole.log('WARN: Prompt skip para prop ' + prop_id);\nreturn [{ json: { skip: true, prop_id: prop_id, error: 'prompt_skip' } }];"
       },
       "id": "ev-fallback",
@@ -253,6 +272,27 @@
       "typeVersion": 2,
       "position": [720, 352],
       "notes": "Fallback si prompt no se pudo construir"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO workflow_executions (workflow_name, workflow_version, status, started_at, finished_at, records_processed, records_created, records_errors, metadata) VALUES ('enrichment_llm_venta', '1.0.0', 'success', NOW() - INTERVAL '2 minutes', NOW(), $1::INTEGER, $1::INTEGER, 0, jsonb_build_object('modelo', 'claude-haiku-4-5-20251001', 'modo', 'observacion', 'prompt_version', 'v4.1'))",
+        "options": {
+          "queryReplacement": "={{ [$json.total_lote] }}"
+        }
+      },
+      "id": "ev-log-execution",
+      "name": "Registrar Ejecucion",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1920, 288],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "Registra en workflow_executions para dashboard de salud"
     }
   ],
   "pinData": {},
@@ -302,6 +342,12 @@
     },
     "Log Skip": {
       "main": [[{"node": "Loop Propiedades", "type": "main", "index": 0}]]
+    },
+    "Resumen Final": {
+      "main": [[{"node": "Registrar Ejecucion", "type": "main", "index": 0}]]
+    },
+    "Sin Pendientes": {
+      "main": [[{"node": "Registrar Sin Pendientes", "type": "main", "index": 0}]]
     }
   },
   "active": false,
