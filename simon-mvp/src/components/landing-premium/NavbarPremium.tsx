@@ -8,9 +8,30 @@ export default function NavbarPremium() {
           Simon
         </Link>
         <div className="flex items-center gap-8">
-          <a href="#mercado" className="text-white/70 hover:text-white text-sm tracking-wide transition-colors hidden md:block">
-            Mercado
-          </a>
+          {/* Mercado dropdown */}
+          <div className="relative group hidden md:block">
+            <span className="text-white/70 hover:text-white text-sm tracking-wide transition-colors cursor-default">
+              Mercado
+            </span>
+            <div className="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+              <div className="bg-[#0a0a0a] border border-white/10 rounded-lg py-2 min-w-[200px] shadow-xl">
+                <Link
+                  href="/mercado/equipetrol"
+                  prefetch={false}
+                  className="block px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/5 text-sm tracking-wide transition-colors"
+                >
+                  Equipetrol — Venta
+                </Link>
+                <Link
+                  href="/mercado/equipetrol/alquileres"
+                  prefetch={false}
+                  className="block px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/5 text-sm tracking-wide transition-colors"
+                >
+                  Equipetrol — Alquiler
+                </Link>
+              </div>
+            </div>
+          </div>
           <a href="#proceso" className="text-white/70 hover:text-white text-sm tracking-wide transition-colors hidden md:block">
             Proceso
           </a>
