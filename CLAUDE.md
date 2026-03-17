@@ -206,13 +206,15 @@ simon-mvp/src/
 │   ├── zonas.ts                   → Constantes zonas, mapeo slug→display, filtros admin/alquiler
 │   ├── precio-utils.ts            → normalizarPrecio, TC paralelo
 │   ├── format-utils.ts            → dormLabel, formatPriceBob
+│   ├── mercado-data.ts            → Fetch datos mercado ventas (getStaticProps)
+│   ├── mercado-alquiler-data.ts   → Fetch datos mercado alquileres + yield (getStaticProps)
 │   └── informe/                   → Generacion informes PDF (split de api/informe.ts)
 │       ├── types.ts                → Propiedad, DatosUsuario, Analisis, LeadData, TemplateData
 │       ├── helpers.ts              → fmt, getCategoria, getNegociacion, calcularPrecioReal, zonaDisplay
 │       └── template.ts            → generateInformeHTML(data) — template HTML completo
 ├── pages/admin/                   → Paginas admin (orquestadores delgados post-refactor)
 ├── pages/api/                     → API routes
-├── components/                    → landing-premium/, alquiler/, broker/, filters-premium/, results-premium/
+├── components/                    → landing-premium/, alquiler/, broker/, filters-premium/, results-premium/, mercado/
 └── _archive/                      → Legacy v1 (excluido de build via tsconfig.json, redirects 301)
 ```
 
@@ -255,6 +257,9 @@ Las paginas editores siguen el patron: **tipos → constantes → hook → compo
 | `/formulario-v2` | **Formulario Nivel 2** (innegociables, deseables, trade-offs) |
 | `/resultados-v2` | **Resultados premium** (fondo crema, cards blancos) |
 | `/alquileres` | **Feed alquileres** |
+| `/mercado/equipetrol` | **Mercado hub** — índice ventas + alquileres (Schema.org CollectionPage) |
+| `/mercado/equipetrol/ventas` | **Mercado ventas** — precios/m2, zonas, tipologías, tendencias (Article + Dataset + FAQPage) |
+| `/mercado/equipetrol/alquileres` | **Mercado alquileres** — rentas Bs, zonas, yield estimado (Article + Dataset + FAQPage) |
 
 Flujo produccion: `simonbo.com (/) → /filtros-v2 → /formulario-v2 → /resultados-v2`
 
