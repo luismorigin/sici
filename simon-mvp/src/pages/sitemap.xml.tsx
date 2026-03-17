@@ -9,6 +9,8 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
   const urls = [
     { loc: '/', changefreq: 'daily', priority: '1.0' },
     { loc: '/mercado/equipetrol', changefreq: 'daily', priority: '0.9' },
+    { loc: '/mercado/equipetrol/ventas', changefreq: 'daily', priority: '0.9' },
+    { loc: '/mercado/equipetrol/alquileres', changefreq: 'daily', priority: '0.9' },
     { loc: '/alquileres', changefreq: 'daily', priority: '0.7' },
     { loc: '/filtros-v2', changefreq: 'weekly', priority: '0.6' },
   ]
