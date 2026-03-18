@@ -116,6 +116,54 @@ export interface RawUnidadAlquilerRow {
   descripcion: string | null
 }
 
+// === RPC buscar_unidades_simple (feed /ventas) ===
+
+export interface RawUnidadSimpleRow {
+  id: number
+  nombre_proyecto: string | null
+  desarrollador: string | null
+  zona: string | null
+  microzona: string | null
+  dormitorios: number
+  banos: string | null
+  precio_usd: string | number
+  precio_m2: string | number
+  area_m2: string | number
+  score_calidad: number | null
+  agente_nombre: string | null
+  agente_telefono: string | null
+  agente_oficina: string | null
+  fotos_urls: string[] | null
+  fotos_count: number | null
+  url: string | null
+  amenities_lista: string[] | null
+  es_multiproyecto: boolean | null
+  estado_construccion: string | null
+  dias_en_mercado: number | null
+  amenities_confirmados: string[] | null
+  amenities_por_verificar: string[] | null
+  equipamiento_detectado: string[] | null
+  descripcion: string | null
+  latitud: string | null
+  longitud: string | null
+  estacionamientos: number | null
+  baulera: boolean | null
+  fecha_entrega: string | null
+  piso: string | null
+  plan_pagos_desarrollador: boolean | null
+  acepta_permuta: boolean | null
+  solo_tc_paralelo: boolean | null
+  precio_negociable: boolean | null
+  descuento_contado_pct: number | null
+  parqueo_incluido: boolean | null
+  parqueo_precio_adicional: number | null
+  baulera_incluido: boolean | null
+  baulera_precio_adicional: number | null
+  plan_pagos_cuotas: unknown | null
+  plan_pagos_texto: string | null
+  fuente: string | null
+}
+
 // === Direct queries (obtenerMetricasMercado) ===
 
 export interface RawPropiedadMercado {

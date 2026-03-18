@@ -46,7 +46,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 7. **pg_get_functiondef() SIEMPRE** - Antes de modificar cualquier funcion SQL, exportar la version actual de produccion. NUNCA confiar en archivos de migracion locales.
 8. **Filtros de calidad en estudios de mercado** - SIEMPRE aplicar al consultar propiedades para informes:
    - `duplicado_de IS NULL`, `tipo_propiedad_original NOT IN ('baulera','parqueo','garaje','deposito')`
-   - `(es_multiproyecto = false OR es_multiproyecto IS NULL)`, `area_total_m2 >= 20`
+   - `(es_multiproyecto = false OR es_multiproyecto IS NULL)` (columna directa, NO `llm_output->>'es_multiproyecto'`), `area_total_m2 >= 20`
    - `<= 300 dias` en mercado para venta (730 para preventa), `<= 150 dias` para alquiler
    - Ver detalle completo en `docs/reports/FILTROS_CALIDAD_MERCADO.md`
 9. **Auditorías de datos** - Al reportar problemas de calidad, filtrar primero por los mismos criterios que usan las queries de mercado (`duplicado_de IS NULL`, `status = 'completado'`, etc.). Props que no pasan esos filtros NO son anomalías — ya están excluidas del pipeline.
@@ -114,6 +114,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Indice migraciones** | `docs/migrations/MIGRATION_INDEX.md` |
 | **Backlog calidad datos** | `docs/backlog/CALIDAD_DATOS_BACKLOG.md` |
 | **Deuda tecnica** | `docs/backlog/DEUDA_TECNICA.md` |
+| **Refactor ventas (activo)** | `docs/refactor/VENTAS_SIMPLIFICADO.md` — plan vivo, inventario features, 6 bloques |
 | **Como contribuir** | `CONTRIBUTING.md` |
 | **Catalogo funciones SQL** | `sql/functions/FUNCTION_CATALOG.md` |
 | Auditoria datos ventas | `docs/analysis/AUDITORIA_DATOS_VENTAS.md` |
@@ -149,7 +150,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 
 ```
 sici/
-├── sql/functions/       → Funciones SQL canonicas (42 archivos, 13 subdirectorios)
+├── sql/functions/       → Funciones SQL canonicas (43 archivos, 13 subdirectorios)
 │   ├── discovery/       → registrar_discovery
 │   ├── enrichment/      → registrar_enrichment
 │   ├── merge/           → merge_discovery_enrichment v2.3.0
@@ -162,7 +163,7 @@ sici/
 │   ├── admin/           → inferir_datos_proyecto, propagar, sincronizar
 │   ├── broker/          → buscar_unidades_broker, score, verificar, contacto
 │   ├── helpers/         → precio_normalizado, campo_bloqueado, normalize_nombre, vigente
-│   └── triggers/        → proteger_amenities, matchear_alquiler, asignar_zona_alquiler, asignar_zona_venta
+│   └── triggers/        → proteger_amenities, matchear_alquiler, asignar_zona_alquiler
 ├── sql/migrations/      → migraciones — ver docs/migrations/MIGRATION_INDEX.md
 ├── scripts/llm-enrichment/  → LLM enrichment ventas: prompt v4.1 + script test/backfill + README
 ├── geodata/             → microzonas_equipetrol_v4.geojson
@@ -232,6 +233,7 @@ Las paginas editores siguen el patron: **tipos → constantes → hook → compo
 
 | Ruta | Proposito |
 |------|-----------|
+| `/admin/login` | Login admin |
 | `/admin/propiedades` | Listado propiedades (venta/alquiler) con filtros |
 | `/admin/propiedades/[id]` | Editor propiedad: candados, amenidades, pagos, galeria |
 | `/admin/proyectos` | Listado + crear proyectos |
@@ -260,6 +262,7 @@ Las paginas editores siguen el patron: **tipos → constantes → hook → compo
 | `/mercado/equipetrol` | **Mercado hub** — índice ventas + alquileres (Schema.org CollectionPage) |
 | `/mercado/equipetrol/ventas` | **Mercado ventas** — precios/m2, zonas, tipologías, tendencias (Article + Dataset + FAQPage) |
 | `/mercado/equipetrol/alquileres` | **Mercado alquileres** — rentas Bs, zonas, yield estimado (Article + Dataset + FAQPage) |
+| `/condado-vi` | **Landing cliente** Condado VI (estudio de mercado) |
 
 Flujo produccion: `simonbo.com (/) → /filtros-v2 → /formulario-v2 → /resultados-v2`
 

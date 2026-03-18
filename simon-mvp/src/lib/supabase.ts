@@ -1877,3 +1877,62 @@ export function calcularEscenarioFinanciero(opcion: OpcionValida): EscenarioFina
     factores_riesgo: factoresRiesgo
   }
 }
+
+// ========== FEED VENTAS SIMPLE (/ventas) ==========
+
+export interface FiltrosVentaSimple {
+  precio_min?: number
+  precio_max?: number
+  dormitorios?: number
+  dormitorios_lista?: number[]
+  zonas_permitidas?: string[]
+  estado_entrega?: 'entrega_inmediata' | 'solo_preventa'
+  orden?: 'precio_asc' | 'precio_desc' | 'recientes'
+  solo_con_fotos?: boolean
+}
+
+export interface UnidadVenta {
+  id: number
+  proyecto: string
+  desarrollador: string | null
+  zona: string
+  microzona: string | null
+  dormitorios: number
+  banos: number | null
+  precio_usd: number
+  precio_m2: number
+  area_m2: number
+  score_calidad: number | null
+  agente_nombre: string | null
+  agente_telefono: string | null
+  agente_oficina: string | null
+  fotos_urls: string[]
+  fotos_count: number
+  url: string
+  amenities_lista: string[]
+  es_multiproyecto: boolean
+  estado_construccion: string
+  dias_en_mercado: number | null
+  amenities_confirmados: string[]
+  amenities_por_verificar: string[]
+  equipamiento_detectado: string[]
+  descripcion: string | null
+  latitud: number | null
+  longitud: number | null
+  estacionamientos: number | null
+  baulera: boolean | null
+  fecha_entrega: string | null
+  piso: string | null
+  plan_pagos_desarrollador: boolean | null
+  acepta_permuta: boolean | null
+  solo_tc_paralelo: boolean | null
+  precio_negociable: boolean | null
+  descuento_contado_pct: number | null
+  parqueo_incluido: boolean | null
+  parqueo_precio_adicional: number | null
+  baulera_incluido: boolean | null
+  baulera_precio_adicional: number | null
+  plan_pagos_cuotas: unknown | null
+  plan_pagos_texto: string | null
+  fuente: string
+}
