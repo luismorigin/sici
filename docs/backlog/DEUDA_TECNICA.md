@@ -50,3 +50,15 @@
 1. `analisis_mercado_fiduciario` — swap subqueries a `FROM v_mercado_venta` (bajo riesgo, alto valor)
 2. `buscar_unidades_alquiler` — verificar datos BOB vs USD primero
 3. `buscar_unidades_reales` — el más delicado, testear bien
+
+## Refactor ventas /ventas — Deuda del Bloque 1 (18 Mar 2026)
+
+Ítems encontrados durante el Bloque 1 del refactor ventas (`docs/refactor/VENTAS_SIMPLIFICADO.md`).
+
+| # | Ítem | Dónde | Severidad | Cuándo resolver |
+|---|---|---|---|---|
+| 1 | `plan_pagos_cuotas: unknown \| null` en `RawUnidadSimpleRow` y `UnidadVenta` — debería ser `Record<string, unknown>[] \| null` | `types/db-responses.ts`, `lib/supabase.ts` | Baja | Cuando se use en UI |
+| 2 | `LIMIT 500` en `buscar_unidades_simple()` — si el catálogo supera 500 props activas, corta sin aviso | `sql/functions/query_layer/buscar_unidades_simple.sql` | Media | Cuando ventas pase ~400 props |
+| 3 | Spotlight en `api/ventas.ts` hace query completa (`limite: 500`) para buscar un solo ID — ineficiente | `pages/api/ventas.ts` | Baja | Bloque 5 (compartir/spotlight) |
+| 4 | `CardPlaceholder` ya tiene foto, precio, specs y badges funcionales — en Bloque 3 iterar sobre esta base, no reescribir desde cero | `pages/ventas.tsx` | Info | Bloque 3 |
+| 5 | `fotos_count` badge se renderiza fuera de la imagen + `object-fit` no adapta bien fotos de distintos portales (collages, watermarks, aspect ratios verticales) | `pages/ventas.tsx` | Media | Bloque 3 |
