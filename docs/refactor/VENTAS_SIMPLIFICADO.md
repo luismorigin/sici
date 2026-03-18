@@ -1,7 +1,7 @@
 # Refactor Ventas — De Funnel Premium a Feed Simple
 
 > **Inicio:** 18 Mar 2026
-> **Estado:** Planificación
+> **Estado:** En ejecución — Bloques 1-2 completados, Bloque 3 en progreso
 > **Última actualización:** 18 Mar 2026
 
 ---
@@ -163,7 +163,8 @@ Cada bloque es independiente y deployable por separado.
 | 1.5 | Layout mobile — detección `isMobile`, contenedor scroll vertical, cards apiladas (grid básico, no TikTok — eso es Bloque 4) | Versión mobile funcional | 30 min |
 | 1.6 | Smoke test — verificar carga, props reales, responsive, performance (~300 props) | Verificado en dev | 15 min |
 
-**Estado:** Pendiente
+**Commit:** `2f2b752` — RPC + API proxy + página esqueleto + Playwright
+**Estado:** Completado
 
 ---
 
@@ -171,20 +172,20 @@ Cada bloque es independiente y deployable por separado.
 
 **Objetivo:** Filtros auto-apply estilo alquileres, adaptados a datos de venta.
 
-**Filtros:**
-| Filtro | Tipo | Valores | Notas |
-|---|---|---|---|
-| Zonas | Botones multi-select | 5 zonas canónicas | Mismo que alquileres |
-| Presupuesto | Slider rango | $50k — $500k USD | En USD, no BOB |
-| Dormitorios | Botones | Mono, 1, 2, 3+ | Mismo que alquileres |
-| Entrega | Botones | Todo, Inmediata, Preventa | No existe en alquileres |
-| Orden | Botones | Recientes, Precio ↑, Precio ↓ | Mismo que alquileres |
+**Filtros implementados:**
+| Filtro | Tipo | Valores |
+|---|---|---|
+| Zonas | Botones multi-select pill | 5 zonas canónicas (match exacto BD) |
+| Presupuesto | Slider rango doble (min+max) | $30k — $500k USD, step $10k |
+| Dormitorios | Botones multi-select | Mono, 1, 2, 3+ |
+| Entrega | Botones single-select | Todo, Inmediata, Preventa |
+| Orden | Botones single-select | Recientes, Precio asc/desc |
 
-**Filtros que NO se incluyen (futuro):** Innegociables, deseables, trade-offs, parqueo/baulera.
+Auto-apply con debounce 400ms (desktop). Botón "APLICAR FILTROS" (mobile).
+Count "{filtered} de {total}" preserva total sin filtros.
 
-**Referencia:** Filtros inline en `pages/alquileres.tsx` (no componente separado).
-
-**Estado:** Pendiente
+**Commit:** `2a4fae8` — filtros desktop + mobile panel expandible
+**Estado:** Completado
 
 ---
 
@@ -192,46 +193,47 @@ Cada bloque es independiente y deployable por separado.
 
 **Objetivo:** Card de propiedad simple que no exponga análisis de mercado.
 
-**Card propuesta (mobile):**
+**Card implementada:**
 ```
 ┌─────────────────────────┐
-│  [Photo Carousel]       │
-│  ♡ (favorite)  ↗ (share)│
+│  [Photo Carousel 1/7 ▸] │
+│  ♡  ↗                   │
 ├─────────────────────────┤
 │ Nombre Edificio         │  ← Cormorant Garamond
 │ ZONA · #1234            │
-│ $145,000                │  ← Precio USD grande
-│ $2,100/m²               │  ← Precio por m² en gold
-│ 65m² · 2 dorm · 1 baño  │
-│ [TC Paralelo] [Preventa]│  ← Badges neutrales
-│ [Plan pagos] [-5% ctdo] │
-│ Piscina · Gym · +3 más  │  ← Amenidades resumidas
-├─────────────────────────┤
-│  [♡ FAVORITO] [↗ COMPARTIR] │
+│ $145,000                │  ← Precio USD (normalizado)
+│ $2,100/m²               │  ← gold
+│ 65m² · 2 dorm · 1 baño · 5° piso
+│ [Preventa · Mar 2026]   │  ← Con fecha entrega si tiene
+│ [Negociable] [Plan pagos]│
+│ 🏢 Piscina · Gym · +4   │  ← Amenidades edificio (hint)
+│ 🏠 Cocina · AC · +1     │  ← Equipamiento depto (hint, gold)
+│ [Ver detalles] [Ver original ↗]
 └─────────────────────────┘
 ```
 
 **Qué se muestra (neutral):**
-- Foto carousel con navegación
+- Photo carousel con background-image (cover), prev/next, counter
+- Heart (favorito) + Share (copiar URL) overlay sobre foto
 - Nombre proyecto + zona + ID
-- Precio USD + precio/m²
-- Specs: m², dormitorios, baños
-- Badges informativos: TC Paralelo, Negociable, Plan pagos, Descuento contado, Preventa
-- Amenidades resumidas (3 + "+N más")
-- Botones: favorito, compartir
+- Precio USD normalizado + precio/m²
+- Specs con separadores: m² · dorms · baños · piso
+- Badges pill: Negociable, Plan pagos, Descuento contado, Preventa (con fecha), Parqueo incl., Baulera incl.
+- Dos líneas hint con íconos diferenciados: edificio (blanco) + depto (gold)
+- "Ver detalles" (placeholder → Bloque 5) + "Ver original ↗"
 
-**Qué NO se muestra (se reserva para Tier 2):**
-- Síntesis fiduciaria (Oportunidad / Premium / Sospechoso)
-- Posición vs mercado ("12% bajo mercado")
-- Poder de negociación (estrellas)
-- Ranking en edificio
-- Precio real de compra (parqueo/baulera estimados)
-- Costo mensual de vivir
-- Innegociables/deseables del usuario
+**Qué NO se muestra:**
+- TC Paralelo (confunde — precios ya normalizados a oficial, se mueve a "Ver detalles")
+- Síntesis fiduciaria, posición mercado, negociación, ranking
+- Precio real de compra, costo mensual, innegociables/deseables
 
-**Referencia:** `MobilePropertyCard` y card desktop en `pages/alquileres.tsx`.
+**Decisiones de diseño:**
+- `style jsx global` (no scoped) para que CSS aplique a componentes hijos
+- Íconos edificio vs casa diferenciados por color (blanco vs gold muted)
+- "+N" en hints NO es clickeable — solo visual. "Ver detalles" es el CTA
+- Badge "Preventa · Mar 2026" enriquece con fecha_entrega cuando está disponible
 
-**Estado:** Pendiente
+**Estado:** En progreso
 
 ---
 
@@ -253,17 +255,31 @@ Cada bloque es independiente y deployable por separado.
 
 ---
 
-### Bloque 5 — Compartir + Comparar
+### Bloque 5 — Vista detalle + Compartir + Comparar
 
-**Objetivo:** Share URL por propiedad y comparación side-by-side.
+**Objetivo:** Bottom sheet/panel de detalle por propiedad + share URL + comparación.
 
-**Specs:**
+**5a — Vista detalle (bottom sheet):**
+El botón "Ver detalles" de la card (Bloque 3) abre un panel con información completa organizada:
+- Amenidades del edificio (lista completa)
+- Equipamiento del departamento (lista completa)
+- Descripción del listing
+- Info de pago: TC paralelo (sí/no), plan de pagos, descuento contado
+- WhatsApp del broker/agente (sin gate, acceso directo)
+- **"Ver anuncio original"** — detrás de gate: nombre + teléfono + correo. El gate aparece solo al clickear este link, NO para acceder al sheet. Esto captura leads reales antes de salir a los portales.
+- Referencia: `BottomSheet` pattern de alquileres (`pages/alquileres.tsx`)
+- **Deuda técnica:** Verificación de datos falsos en el gate (email válido, teléfono boliviano, etc.) queda para después.
+- **Deuda técnica:** Agregar sección "Transparencia de precio" en el sheet que muestre: TC detectado del anunciante (paralelo/oficial/no especificado), el valor normalizado vs el valor original, y disclaimer: "El precio normalizado es para comparación — el precio real de transacción depende de la forma de pago acordada con el vendedor."
+
+**5b — Compartir:**
 - URL compartible: `/ventas?id=123` → spotlight mode
 - Spotlight card con banner "Te compartieron este depto"
+- Share button ya existe en card (copia URL al clipboard)
+
+**5c — Comparar:**
 - Compare sheet adaptado a ventas (precio USD, $/m², estado construcción)
 - Máximo 3 favoritos para comparar
-
-**Referencia:** `CompareSheet.tsx` de alquileres + spotlight mode en `pages/alquileres.tsx`.
+- Referencia: `CompareSheet.tsx` de alquileres
 
 **Estado:** Pendiente
 
@@ -372,3 +388,5 @@ Bloque 5 (compartir/comparar) → Bloque 6 (navbar/routing)
 |---|---|
 | 18 Mar 2026 | Documento inicial — planificación completa, inventario de features, 6 bloques definidos |
 | 18 Mar 2026 | Sección "Restricciones absolutas" agregada. 6 decisiones resueltas (RPC nueva, sin LIMIT, virtual scroll, navbar 2 links, landing→/ventas, no redirect 301). Bloque 1 desglosado en 6 pasos de 30 min. |
+| 18 Mar 2026 | Bloque 1 completado (`2f2b752`). Bloque 2 completado (`2a4fae8`). Bloque 3 en progreso. |
+| 18 Mar 2026 | Bloque 5 expandido: "Vista detalle" (bottom sheet) agregado como 5a. TC Paralelo movido de badges de card a vista detalle. Íconos edificio/depto diferenciados por color. Preventa badge enriquecido con fecha_entrega. |
