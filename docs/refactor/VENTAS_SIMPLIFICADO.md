@@ -299,6 +299,36 @@ El botón "Ver detalles" de la card (Bloque 3) abre un panel con información co
 
 ---
 
+### Bloque 7 — Mapa simplificado
+
+**Objetivo:** Vista de mapa con pins de propiedades, sin categorías MOAT ni análisis.
+
+**Desktop:**
+- Toggle Grid/Mapa en la barra superior del main (mismo patrón que alquileres)
+- Mapa Leaflet ocupa el área del grid cuando está activo
+- Pins con precio (`$145k`) — click en pin muestra card flotante
+- Filtros del sidebar siguen aplicando al mapa
+
+**Mobile:**
+- Botón flotante "Mapa" (bottom-right, como alquileres)
+- Click abre overlay fullscreen con el mapa
+- Pins con precio, tap muestra card resumida
+- Botón cerrar vuelve al feed
+
+**Qué NO incluye (diferencia con mapa viejo de ventas):**
+- Sin filtros MOAT (Oportunidad/Justo/Premium)
+- Sin color-coding por categoría de precio
+- Sin clustering por tipología
+- Pins neutrales — solo precio
+
+**Referencia:**
+- `components/alquiler/AlquilerMapMulti.tsx` — mapa multi-pin para alquileres
+- `components/results-premium/MapaResultados.tsx` — mapa viejo de ventas (Tier 2, no modificar)
+
+**Estado:** Pendiente (post Bloques 4-6)
+
+---
+
 ## 7. Learnings de alquileres aplicables
 
 Extraídos de `docs/alquiler/LEARNINGS_PIPELINE_ALQUILER.md` y la experiencia de construcción.
@@ -343,17 +373,16 @@ La nueva página `/ventas` usa exactamente el mismo stack que `/alquileres`:
 ## 9. Orden de ejecución recomendado
 
 ```
-Bloque 1 (esqueleto) → Bloque 2 (filtros) → Bloque 3 (cards) → Bloque 4 (mobile)
-     ↓ deployable                                                      ↓ deployable
-Bloque 5 (compartir/comparar) → Bloque 6 (navbar/routing)
-                                       ↓ deployable
+Bloque 1 (esqueleto) ✅ → Bloque 2 (filtros) ✅ → Bloque 3 (cards) ✅ → Bloque 4 (mobile TikTok)
+     ↓ MVP deployable                                                          ↓ deployable
+Bloque 5 (detalle/compartir/comparar) → Bloque 6 (navbar/routing) → Bloque 7 (mapa)
+                                               ↓ deployable               ↓ deployable
 ```
 
-- Bloques 1-3 se pueden trabajar juntos (son la página mínima funcional)
-- Bloque 4 (mobile) puede ir en paralelo si las cards ya existen
-- Bloque 5-6 son post-MVP
-
-**MVP mínimo deployable:** Bloques 1 + 2 + 3 = página `/ventas` con filtros y cards en desktop. Mobile básico (grid, no TikTok todavía).
+- **MVP alcanzado:** Bloques 1+2+3 = página `/ventas` con filtros, cards y datos reales
+- Bloque 4: mejora mobile a TikTok feed
+- Bloque 5-6: features de engagement + integración navegación
+- Bloque 7: mapa simplificado, independiente, post-MVP
 
 ---
 

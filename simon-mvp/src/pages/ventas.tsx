@@ -333,8 +333,8 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare }: {
       <div className="vc-body">
         <div className="vc-name">{p.proyecto}</div>
         <div className="vc-zona">{displayZona(p.zona)} <span className="vc-id">#{p.id}</span></div>
-        <div className="vc-price">${p.precio_usd.toLocaleString('en-US')}</div>
-        <div className="vc-m2">${p.precio_m2.toLocaleString('en-US')}/m²</div>
+        <div className="vc-price">${Math.round(p.precio_usd).toLocaleString('en-US')}</div>
+        <div className="vc-m2">${Math.round(p.precio_m2).toLocaleString('en-US')}/m²</div>
         <div className="vc-usd-note">USD oficial</div>
         <div className="vc-specs">
           {[
