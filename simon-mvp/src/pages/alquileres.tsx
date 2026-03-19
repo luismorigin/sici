@@ -2062,6 +2062,9 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         <div className="bs-title">{displayName}</div>
         <button className="bs-close" aria-label="Cerrar detalle" onClick={onClose}>&times;</button>
       </div>
+      {p.dias_en_mercado !== null && p.dias_en_mercado >= 0 && (
+        <div className="bs-published">Publicado hace {p.dias_en_mercado === 0 ? 'hoy' : p.dias_en_mercado === 1 ? '1 día' : `${p.dias_en_mercado} días`}</div>
+      )}
       <div className="bs-section">
         <div className="bs-sl">CARACTERISTICAS</div>
         <div className="bs-grid">
@@ -2130,6 +2133,7 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         .bs-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px 12px;border-bottom:1px solid rgba(255,255,255,0.06);}
         .bs-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:#fff;}
         .bs-close{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;}
+        .bs-published{padding:12px 24px 0;font-size:12px;color:rgba(255,255,255,0.45);font-family:'Manrope',sans-serif;}
         .bs-section{padding:16px 24px;}
         .bs-sl{font-size:10px;font-weight:500;color:rgba(255,255,255,0.55);letter-spacing:2px;margin-bottom:12px;font-family:'Manrope',sans-serif;}
         .bs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}

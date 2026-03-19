@@ -480,6 +480,9 @@ function BottomSheet({ property: p, isOpen, onClose, gateCompleted, onGate, isDe
           </button>
         </div>
         <div className="bs-scroll">
+          {p.dias_en_mercado !== null && p.dias_en_mercado >= 0 && (
+            <div className="bs-published">Publicado hace {p.dias_en_mercado === 0 ? 'hoy' : p.dias_en_mercado === 1 ? '1 día' : `${p.dias_en_mercado} días`}</div>
+          )}
           {/* Zona + ubicación */}
           <div className="bs-section">
             <span className="bs-zona">{displayZona(p.zona)} <span className="bs-id">#{p.id}</span></span>
@@ -1152,6 +1155,7 @@ export default function VentasPage() {
         .bs-title { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:400; color:#fff }
         .bs-close { background:none; border:none; color:#888; cursor:pointer; padding:8px; display:flex; align-items:center }
         .bs-scroll { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:max(24px, env(safe-area-inset-bottom)) }
+        .bs-published { padding:12px 24px 0; font-size:12px; color:rgba(255,255,255,0.45); font-family:'Manrope',sans-serif }
         .bs-section { padding:18px 24px; border-bottom:1px solid rgba(255,255,255,0.04) }
         .bs-section-border { border-bottom:1px solid rgba(255,255,255,0.08) }
         .bs-zona { font-size:14px; color:rgba(255,255,255,0.55); letter-spacing:1px }
