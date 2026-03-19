@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
 import type { UnidadVenta, FiltrosVentaSimple } from '@/lib/supabase'
 import { ZONAS_CANONICAS, displayZona } from '@/lib/zonas'
@@ -262,8 +263,8 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
 }
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
-function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails }: {
-  property: UnidadVenta; isFavorite: boolean
+function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight }: {
+  property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -317,6 +318,9 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
           </div>
         )}
       </div>
+
+      {/* Spotlight badge */}
+      {isSpotlight && <div className="mc-spotlight">Te compartieron este depto</div>}
 
       {/* Content zone (45%) */}
       <div className="mc-content">
@@ -585,7 +589,11 @@ export default function VentasPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sheetProperty, setSheetProperty] = useState<UnidadVenta | null>(null)
   const [gateCompleted, setGateCompleted] = useState(false)
+  // Spotlight
+  const [spotlightId, setSpotlightId] = useState<number | null>(null)
+  const [fetchedSpotlight, setFetchedSpotlight] = useState<UnidadVenta | null>(null)
   const isDesktop = useIsDesktop()
+  const router = useRouter()
   const fetchGenRef = useRef(0)
   const feedRef = useRef<HTMLDivElement>(null)
 
@@ -593,6 +601,31 @@ export default function VentasPage() {
   useEffect(() => {
     try { if (localStorage.getItem('ventas_gate_v1')) setGateCompleted(true) } catch {}
   }, [])
+
+  // Spotlight: parse ?id= from URL
+  useEffect(() => {
+    const idParam = router.query.id
+    if (idParam && typeof idParam === 'string') {
+      const parsed = parseInt(idParam, 10)
+      if (!isNaN(parsed)) setSpotlightId(parsed)
+    }
+  }, [router.query.id])
+
+  // Spotlight: fetch if not in properties
+  useEffect(() => {
+    if (!spotlightId) { setFetchedSpotlight(null); return }
+    if (properties.find(p => p.id === spotlightId)) return
+    let cancelled = false
+    fetchFromAPI({ solo_con_fotos: false }, spotlightId).then(({ spotlight }) => {
+      if (!cancelled && spotlight) setFetchedSpotlight(spotlight as UnidadVenta)
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [spotlightId, properties.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const spotlightProperty = useMemo(() => {
+    if (!spotlightId) return null
+    return properties.find(p => p.id === spotlightId) || fetchedSpotlight || null
+  }, [spotlightId, properties, fetchedSpotlight])
 
   function showToast(msg: string) { setToastMsg(msg); setToastVisible(true); setTimeout(() => setToastVisible(false), 2500) }
 
@@ -695,17 +728,20 @@ export default function VentasPage() {
     setActiveCardIndex(0)
   }
 
-  // Build feed items (mobile): property cards + filter card at position 3
+  // Build feed items (mobile): spotlight first, then property cards + filter card
   const feedItems = useMemo(() => {
-    const items: Array<{ type: 'property'; data: UnidadVenta } | { type: 'filter' }> = []
+    const items: Array<{ type: 'property'; data: UnidadVenta; isSpotlight?: boolean } | { type: 'filter' }> = []
     let filterInserted = false
-    properties.forEach((p, i) => {
-      items.push({ type: 'property', data: p })
+    const mobileProps = spotlightProperty
+      ? [spotlightProperty, ...properties.filter(p => p.id !== spotlightId)]
+      : properties
+    mobileProps.forEach((p, i) => {
+      items.push({ type: 'property', data: p, isSpotlight: i === 0 && !!spotlightProperty })
       if (i === FILTER_CARD_POSITION - 1 && !filterInserted) { items.push({ type: 'filter' }); filterInserted = true }
     })
-    if (properties.length > 0 && !filterInserted) items.push({ type: 'filter' })
+    if (mobileProps.length > 0 && !filterInserted) items.push({ type: 'filter' })
     return items
-  }, [properties])
+  }, [properties, spotlightProperty, spotlightId])
 
   return (
     <>
@@ -748,9 +784,24 @@ export default function VentasPage() {
             {loadError && <div className="ventas-status"><p>No se pudo cargar.</p><button onClick={() => fetchProperties()}>Reintentar</button></div>}
             {loading && properties.length === 0 && !loadError && <div className="ventas-status">Cargando departamentos en venta...</div>}
             {!loading && properties.length === 0 && !loadError && <div className="ventas-status">No se encontraron departamentos con esos filtros.</div>}
+            {/* Desktop spotlight */}
+            {spotlightProperty && (
+              <div className="ds-spotlight">
+                <div className="ds-spotlight-banner">
+                  <span>Te compartieron este departamento</span>
+                  <button className="ds-spotlight-close" onClick={() => setSpotlightId(null)}>&times;</button>
+                </div>
+                <VentaCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
+                  onToggleFavorite={() => toggleFavorite(spotlightProperty.id)} onShare={() => shareProperty(spotlightProperty)}
+                  onPhotoTap={(idx) => openViewer(spotlightProperty, idx)} onDetails={() => openSheet(spotlightProperty)} />
+                <div className="ds-spotlight-sep">
+                  <span className="ds-spotlight-line" /><span className="ds-spotlight-text">Explorar más departamentos</span><span className="ds-spotlight-line" />
+                </div>
+              </div>
+            )}
             {properties.length > 0 && (
               <div className="ventas-grid">
-                {properties.map(p => (
+                {(spotlightProperty ? properties.filter(p => p.id !== spotlightId) : properties).map(p => (
                   <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
                     onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
                     onPhotoTap={(idx) => openViewer(p, idx)} onDetails={() => openSheet(p)} />
@@ -801,6 +852,7 @@ export default function VentasPage() {
               }
               const p = item.data
               return <MobileVentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
+                isSpotlight={item.isSpotlight}
                 onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
                 onPhotoTap={(idx) => openViewer(p, idx)} onDetails={() => openSheet(p)} />
             })}
@@ -855,6 +907,15 @@ export default function VentasPage() {
         .mc-action-icon { width:44px; min-width:44px; height:44px; border-radius:50%; background:none; border:1px solid rgba(255,255,255,0.12); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s }
         .mc-action-icon.active { border-color:rgba(201,169,89,0.3); background:rgba(201,169,89,0.08) }
         .mc-action-icon svg { filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3)) }
+        .mc-spotlight { position:absolute; top:max(56px, calc(env(safe-area-inset-top) + 50px)); left:16px; z-index:10; background:rgba(26,23,20,0.9); border-left:3px solid #c9a959; padding:8px 14px; border-radius:0 8px 8px 0; font-family:'Manrope',sans-serif; font-size:12px; color:#f8f6f3; letter-spacing:0.3px }
+
+        /* Desktop spotlight */
+        .ds-spotlight { margin-bottom:32px }
+        .ds-spotlight-banner { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; margin-bottom:16px; background:#1a1714; border-left:3px solid #c9a959; border-radius:0 8px 8px 0; font-family:'Manrope',sans-serif; font-size:14px; color:#f8f6f3 }
+        .ds-spotlight-close { background:none; border:none; color:#888; font-size:20px; cursor:pointer; padding:0 4px }
+        .ds-spotlight-sep { display:flex; align-items:center; gap:16px; margin-top:24px }
+        .ds-spotlight-line { flex:1; height:1px; background:#222 }
+        .ds-spotlight-text { font-size:12px; color:#555; font-family:'Manrope',sans-serif; letter-spacing:1px; white-space:nowrap }
 
         /* Content zone (45%) */
         .mc-content { flex:1; padding:0 24px; padding-bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px)); display:flex; flex-direction:column; overflow:hidden }
