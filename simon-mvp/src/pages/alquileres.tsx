@@ -28,6 +28,27 @@ const FILTER_CARD_POSITION = 3
 
 const formatPrice = formatPriceBob
 
+function buildEmptyMessage(f: FiltrosAlquiler): string {
+  const parts: string[] = []
+  if (f.dormitorios_lista?.length) {
+    const labels = f.dormitorios_lista.map(d => d === 0 ? 'mono' : d === 3 ? '3+ dorm' : `${d} dorm`)
+    parts.push(labels.join(' o '))
+  }
+  if (f.amoblado) parts.push('amoblado')
+  if (f.acepta_mascotas) parts.push('con mascotas')
+  if (f.con_parqueo) parts.push('con parqueo')
+  if (f.zonas_permitidas?.length) {
+    const zonas = f.zonas_permitidas.map(z => {
+      const found = ZONAS_ALQUILER_UI.find(zu => zu.id === z)
+      return found ? found.label : z
+    })
+    parts.push('en ' + zonas.join(' o '))
+  }
+  if (f.precio_mensual_max) parts.push(`bajo ${formatPrice(f.precio_mensual_max)}`)
+  if (parts.length === 0) return 'No hay alquileres disponibles en este momento.'
+  return `No hay ${parts.join(', ')}. Probá quitando un filtro.`
+}
+
 // Server-side API proxy (anti-scraping: no direct Supabase calls from browser)
 function mapRawToUnidad(p: any): UnidadAlquiler {
   return {
@@ -649,7 +670,7 @@ export default function AlquileresPage() {
             ) : loading && properties.length === 0 ? (
               <div className="desktop-loading">Cargando alquileres...</div>
             ) : properties.length === 0 ? (
-              <div className="desktop-loading">No se encontraron alquileres con estos filtros</div>
+              <div className="desktop-loading">{buildEmptyMessage(filters)}</div>
             ) : viewMode === 'grid' ? (
               <>
                 {/* Spotlight: shared property */}
@@ -885,7 +906,7 @@ export default function AlquileresPage() {
                 <div style={{ textAlign: 'center', padding: '0 32px' }}>
                   <div style={{ fontSize: 48, marginBottom: 12 }}>🔍</div>
                   <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: '#fff', marginBottom: 8 }}>Sin resultados</div>
-                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>No hay alquileres con estos filtros. Proba ampliando tu busqueda.</div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>{buildEmptyMessage(filters)}</div>
                   <button onClick={resetFilters} style={{ padding: '12px 28px', background: '#c9a959', border: 'none', color: '#0a0a0a', fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: 1, cursor: 'pointer', borderRadius: 4 }}>QUITAR FILTROS</button>
                 </div>
               </div>

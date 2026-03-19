@@ -28,6 +28,26 @@ const ENTREGA_OPTIONS = [
 
 function formatPriceK(v: number) { return `$${(v / 1000).toFixed(0)}k` }
 
+function buildEmptyMessage(f: FiltrosVentaSimple): string {
+  const parts: string[] = []
+  if (f.dormitorios_lista?.length) {
+    const labels = f.dormitorios_lista.map(d => d === 0 ? 'mono' : d === 3 ? '3+ dorm' : `${d} dorm`)
+    parts.push(labels.join(' o '))
+  }
+  if (f.estado_entrega === 'entrega_inmediata') parts.push('entrega inmediata')
+  if (f.estado_entrega === 'solo_preventa') parts.push('preventa')
+  if (f.zonas_permitidas?.length) {
+    const zonas = f.zonas_permitidas.map(z => {
+      const found = ZONAS_CANONICAS.find(zc => zc.db === z)
+      return found ? found.labelCorto : z
+    })
+    parts.push('en ' + zonas.join(' o '))
+  }
+  if (f.precio_max) parts.push(`bajo $us ${(f.precio_max / 1000).toFixed(0)}k`)
+  if (parts.length === 0) return 'No hay departamentos disponibles en este momento.'
+  return `No hay ${parts.join(', ')}. Probá quitando un filtro.`
+}
+
 const MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 function formatFechaEntrega(fecha: string): string {
   const [y, m] = fecha.split('-')
@@ -850,7 +870,7 @@ export default function VentasPage() {
             )}
             {loadError && <div className="ventas-status"><p>No se pudo cargar.</p><button onClick={() => fetchProperties()}>Reintentar</button></div>}
             {loading && properties.length === 0 && !loadError && <div className="ventas-status">Cargando departamentos en venta...</div>}
-            {!loading && properties.length === 0 && !loadError && <div className="ventas-status">No se encontraron departamentos con esos filtros.</div>}
+            {!loading && properties.length === 0 && !loadError && <div className="ventas-status">{buildEmptyMessage(filters)}</div>}
             {/* Desktop spotlight */}
             {spotlightProperty && (
               <div className="ds-spotlight">
@@ -936,7 +956,7 @@ export default function VentasPage() {
               <div style={{ textAlign: 'center' }}><p>No se pudo cargar.</p><button onClick={() => fetchProperties()} style={{ padding: '8px 20px', background: '#c9a959', color: '#0a0a0a', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>Reintentar</button></div>
             </div>}
             {loading && properties.length === 0 && !loadError && <div className="mc" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>Cargando...</div>}
-            {!loading && properties.length === 0 && !loadError && <div className="mc" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>No se encontraron departamentos.</div>}
+            {!loading && properties.length === 0 && !loadError && <div className="mc" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', textAlign: 'center', padding: '0 32px' }}>{buildEmptyMessage(filters)}</div>}
             {feedItems.map((item, idx) => {
               const isNearby = Math.abs(idx - activeCardIndex) <= VIRTUAL_WINDOW
               if (!isNearby) {
