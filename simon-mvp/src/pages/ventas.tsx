@@ -6,8 +6,10 @@ import { ZONAS_CANONICAS, displayZona } from '@/lib/zonas'
 
 // ===== Constants =====
 const MIN_PRICE = 30000
-const MAX_PRICE = 500000
+const MAX_PRICE = 400000
 const PRICE_STEP = 10000
+const FILTER_CARD_POSITION = 3
+const VIRTUAL_WINDOW = 3
 const ORDEN_OPTIONS: Array<{ value: FiltrosVentaSimple['orden']; label: string }> = [
   { value: 'recientes', label: 'Recientes' },
   { value: 'precio_asc', label: 'Precio \u2191' },
@@ -19,13 +21,10 @@ const ENTREGA_OPTIONS = [
   { value: 'solo_preventa', label: 'Preventa' },
 ]
 
-function formatPriceK(v: number) {
-  return `$${(v / 1000).toFixed(0)}k`
-}
+function formatPriceK(v: number) { return `$${(v / 1000).toFixed(0)}k` }
 
 const MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 function formatFechaEntrega(fecha: string): string {
-  // "2026-03" → "Mar 2026"
   const [y, m] = fecha.split('-')
   const mi = parseInt(m, 10) - 1
   return mi >= 0 && mi < 12 ? `${MESES_CORTO[mi]} ${y}` : fecha
@@ -58,7 +57,7 @@ async function fetchFromAPI(
   return res.json()
 }
 
-// ===== Build filters from component state =====
+// ===== Build filters =====
 function buildFilters(
   minP: number, maxP: number, dorms: Set<number>, zonas: Set<string>,
   entrega: string, orden: FiltrosVentaSimple['orden']
@@ -84,7 +83,78 @@ function buildFilters(
   return f
 }
 
-// ===== Desktop Filters Component =====
+// ===== SVG Icons =====
+const HeartIcon = ({ filled }: { filled: boolean }) => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill={filled ? '#c9a959' : 'none'} stroke={filled ? '#c9a959' : '#fff'} strokeWidth="1.5">
+    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+  </svg>
+)
+const ShareIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" strokeWidth="1.5">
+    <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+  </svg>
+)
+const ChevronLeft = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+)
+const ChevronRight = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" strokeWidth="2"><polyline points="9 6 15 12 9 18"/></svg>
+)
+
+// ===== Shared filter UI =====
+function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, onMinPrice, onMaxPrice, onToggleZona, onToggleDorm, onEntrega, onOrden }: {
+  minPrice: number; maxPrice: number; selectedDorms: Set<number>; selectedZonas: Set<string>; entrega: string; orden: FiltrosVentaSimple['orden']
+  onMinPrice: (v: number) => void; onMaxPrice: (v: number) => void; onToggleZona: (db: string) => void; onToggleDorm: (d: number) => void; onEntrega: (v: string) => void; onOrden: (v: FiltrosVentaSimple['orden']) => void
+}) {
+  return (
+    <>
+      <div className="vf-group"><div className="vf-label">ZONA</div>
+        <div className="vf-zona-btns">
+          {ZONAS_CANONICAS.map(z => (
+            <button key={z.db} className={`vf-zona-btn ${selectedZonas.has(z.db) ? 'active' : ''}`}
+              onClick={() => onToggleZona(z.db)}>{z.labelCorto}</button>
+          ))}
+        </div>
+      </div>
+      <div className="vf-group"><div className="vf-label">PRESUPUESTO</div>
+        <div className="vf-range-display">{formatPriceK(minPrice)} — {formatPriceK(maxPrice)}</div>
+        <div className="vf-range-wrap">
+          <input type="range" className="vf-slider vf-slider-min" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
+            value={minPrice} onChange={e => onMinPrice(parseInt(e.target.value))} />
+          <input type="range" className="vf-slider vf-slider-max" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
+            value={maxPrice} onChange={e => onMaxPrice(parseInt(e.target.value))} />
+        </div>
+        <div className="vf-tc-note">Precios en USD oficial · TC Bs 6.96</div>
+      </div>
+      <div className="vf-group"><div className="vf-label">DORMITORIOS</div>
+        <div className="vf-btn-row">
+          {[0, 1, 2, 3].map(d => (
+            <button key={d} className={`vf-btn ${selectedDorms.has(d) ? 'active' : ''}`}
+              onClick={() => onToggleDorm(d)}>{d === 0 ? 'Mono' : d === 3 ? '3+' : d}</button>
+          ))}
+        </div>
+      </div>
+      <div className="vf-group"><div className="vf-label">ENTREGA</div>
+        <div className="vf-btn-row">
+          {ENTREGA_OPTIONS.map(o => (
+            <button key={o.value} className={`vf-btn ${entrega === o.value ? 'active' : ''}`}
+              onClick={() => onEntrega(o.value)}>{o.label}</button>
+          ))}
+        </div>
+      </div>
+      <div className="vf-group"><div className="vf-label">ORDENAR POR</div>
+        <div className="vf-btn-row">
+          {ORDEN_OPTIONS.map(o => (
+            <button key={o.value} className={`vf-btn ${orden === o.value ? 'active' : ''}`}
+              onClick={() => onOrden(o.value)}>{o.label}</button>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ===== Desktop Filters =====
 function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
   currentFilters: FiltrosVentaSimple; isFiltered: boolean
   onApply: (f: FiltrosVentaSimple) => void; onReset: () => void
@@ -104,188 +174,24 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
     }, 400)
   }, [onApply])
 
-  function toggleZona(db: string) {
-    setSelectedZonas(prev => {
-      const n = new Set(prev)
-      if (n.has(db)) n.delete(db); else n.add(db)
-      autoApply(minPrice, maxPrice, selectedDorms, n, entrega, orden)
-      return n
-    })
-  }
-  function toggleDorm(d: number) {
-    setSelectedDorms(prev => {
-      const n = new Set(prev)
-      if (n.has(d)) n.delete(d); else n.add(d)
-      autoApply(minPrice, maxPrice, n, selectedZonas, entrega, orden)
-      return n
-    })
-  }
-  function handleMinPrice(v: number) {
-    const clamped = Math.min(v, maxPrice - PRICE_STEP)
-    setMinPrice(clamped)
-    autoApply(clamped, maxPrice, selectedDorms, selectedZonas, entrega, orden)
-  }
-  function handleMaxPrice(v: number) {
-    const clamped = Math.max(v, minPrice + PRICE_STEP)
-    setMaxPrice(clamped)
-    autoApply(minPrice, clamped, selectedDorms, selectedZonas, entrega, orden)
-  }
-  function handleEntrega(v: string) {
-    setEntrega(v)
-    autoApply(minPrice, maxPrice, selectedDorms, selectedZonas, v, orden)
-  }
-  function handleOrden(v: FiltrosVentaSimple['orden']) {
-    setOrden(v)
-    autoApply(minPrice, maxPrice, selectedDorms, selectedZonas, entrega, v)
-  }
+  function toggleZona(db: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(db)) n.delete(db); else n.add(db); autoApply(minPrice, maxPrice, selectedDorms, n, entrega, orden); return n }) }
+  function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); autoApply(minPrice, maxPrice, n, selectedZonas, entrega, orden); return n }) }
+  function handleMinPrice(v: number) { const c = Math.min(v, maxPrice - PRICE_STEP); setMinPrice(c); autoApply(c, maxPrice, selectedDorms, selectedZonas, entrega, orden) }
+  function handleMaxPrice(v: number) { const c = Math.max(v, minPrice + PRICE_STEP); setMaxPrice(c); autoApply(minPrice, c, selectedDorms, selectedZonas, entrega, orden) }
+  function handleEntrega(v: string) { setEntrega(v); autoApply(minPrice, maxPrice, selectedDorms, selectedZonas, v, orden) }
+  function handleOrden(v: FiltrosVentaSimple['orden']) { setOrden(v); autoApply(minPrice, maxPrice, selectedDorms, selectedZonas, entrega, v) }
 
   return (
     <div className="vf-wrap">
-      <div className="vf-group">
-        <div className="vf-label">ZONA</div>
-        <div className="vf-zona-btns">
-          {ZONAS_CANONICAS.map(z => (
-            <button key={z.db} className={`vf-zona-btn ${selectedZonas.has(z.db) ? 'active' : ''}`}
-              onClick={() => toggleZona(z.db)}>{z.labelCorto}</button>
-          ))}
-        </div>
-      </div>
-      <div className="vf-group">
-        <div className="vf-label">PRESUPUESTO</div>
-        <div className="vf-range-display">{formatPriceK(minPrice)} — {formatPriceK(maxPrice)}</div>
-        <div className="vf-range-wrap">
-          <input type="range" className="vf-slider vf-slider-min" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
-            value={minPrice} onChange={e => handleMinPrice(parseInt(e.target.value))} />
-          <input type="range" className="vf-slider vf-slider-max" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
-            value={maxPrice} onChange={e => handleMaxPrice(parseInt(e.target.value))} />
-        </div>
-        <div className="vf-tc-note">Precios en USD oficial · TC Bs 6.96</div>
-      </div>
-      <div className="vf-group">
-        <div className="vf-label">DORMITORIOS</div>
-        <div className="vf-btn-row">
-          {[0, 1, 2, 3].map(d => (
-            <button key={d} className={`vf-btn ${selectedDorms.has(d) ? 'active' : ''}`}
-              onClick={() => toggleDorm(d)}>{d === 0 ? 'Mono' : d === 3 ? '3+' : d}</button>
-          ))}
-        </div>
-      </div>
-      <div className="vf-group">
-        <div className="vf-label">ENTREGA</div>
-        <div className="vf-btn-row">
-          {ENTREGA_OPTIONS.map(o => (
-            <button key={o.value} className={`vf-btn ${entrega === o.value ? 'active' : ''}`}
-              onClick={() => handleEntrega(o.value)}>{o.label}</button>
-          ))}
-        </div>
-      </div>
-      <div className="vf-group">
-        <div className="vf-label">ORDENAR POR</div>
-        <div className="vf-btn-row">
-          {ORDEN_OPTIONS.map(o => (
-            <button key={o.value} className={`vf-btn ${orden === o.value ? 'active' : ''}`}
-              onClick={() => handleOrden(o.value)}>{o.label}</button>
-          ))}
-        </div>
-      </div>
+      <FilterControls minPrice={minPrice} maxPrice={maxPrice} selectedDorms={selectedDorms} selectedZonas={selectedZonas}
+        entrega={entrega} orden={orden} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
+        onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={handleEntrega} onOrden={handleOrden} />
       {isFiltered && <button className="vf-reset" onClick={onReset}>Quitar filtros</button>}
     </div>
   )
 }
 
-// ===== Mobile Filters Panel =====
-function MobileFilters({ currentFilters, isFiltered, onApply, onReset }: {
-  currentFilters: FiltrosVentaSimple; isFiltered: boolean
-  onApply: (f: FiltrosVentaSimple) => void; onReset: () => void
-}) {
-  const [minPrice, setMinPrice] = useState(currentFilters.precio_min || MIN_PRICE)
-  const [maxPrice, setMaxPrice] = useState(currentFilters.precio_max || MAX_PRICE)
-  const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set())
-  const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set(currentFilters.zonas_permitidas || []))
-  const [entrega, setEntrega] = useState(currentFilters.estado_entrega || '')
-  const [orden, setOrden] = useState<FiltrosVentaSimple['orden']>(currentFilters.orden || 'recientes')
-
-  function apply() {
-    onApply(buildFilters(minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden))
-  }
-  function toggleZona(db: string) {
-    setSelectedZonas(prev => { const n = new Set(prev); if (n.has(db)) n.delete(db); else n.add(db); return n })
-  }
-  function toggleDorm(d: number) {
-    setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); return n })
-  }
-  function handleMinPrice(v: number) { setMinPrice(Math.min(v, maxPrice - PRICE_STEP)) }
-  function handleMaxPrice(v: number) { setMaxPrice(Math.max(v, minPrice + PRICE_STEP)) }
-
-  return (
-    <div className="mf-panel">
-      <div className="vf-group"><div className="vf-label">ZONA</div>
-        <div className="vf-zona-btns">
-          {ZONAS_CANONICAS.map(z => (
-            <button key={z.db} className={`vf-zona-btn ${selectedZonas.has(z.db) ? 'active' : ''}`}
-              onClick={() => toggleZona(z.db)}>{z.labelCorto}</button>
-          ))}
-        </div>
-      </div>
-      <div className="vf-group"><div className="vf-label">PRESUPUESTO</div>
-        <div className="vf-range-display">{formatPriceK(minPrice)} — {formatPriceK(maxPrice)}</div>
-        <div className="vf-range-wrap">
-          <input type="range" className="vf-slider vf-slider-min" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
-            value={minPrice} onChange={e => handleMinPrice(parseInt(e.target.value))} />
-          <input type="range" className="vf-slider vf-slider-max" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
-            value={maxPrice} onChange={e => handleMaxPrice(parseInt(e.target.value))} />
-        </div>
-        <div className="vf-tc-note">Precios en USD oficial · TC Bs 6.96</div>
-      </div>
-      <div className="vf-group"><div className="vf-label">DORMITORIOS</div>
-        <div className="vf-btn-row">
-          {[0, 1, 2, 3].map(d => (
-            <button key={d} className={`vf-btn ${selectedDorms.has(d) ? 'active' : ''}`}
-              onClick={() => toggleDorm(d)}>{d === 0 ? 'Mono' : d === 3 ? '3+' : d}</button>
-          ))}
-        </div>
-      </div>
-      <div className="vf-group"><div className="vf-label">ENTREGA</div>
-        <div className="vf-btn-row">
-          {ENTREGA_OPTIONS.map(o => (
-            <button key={o.value} className={`vf-btn ${entrega === o.value ? 'active' : ''}`}
-              onClick={() => setEntrega(o.value)}>{o.label}</button>
-          ))}
-        </div>
-      </div>
-      <div className="vf-group"><div className="vf-label">ORDENAR POR</div>
-        <div className="vf-btn-row">
-          {ORDEN_OPTIONS.map(o => (
-            <button key={o.value} className={`vf-btn ${orden === o.value ? 'active' : ''}`}
-              onClick={() => setOrden(o.value)}>{o.label}</button>
-          ))}
-        </div>
-      </div>
-      <button className="mf-apply" onClick={apply}>APLICAR FILTROS</button>
-      {isFiltered && <button className="vf-reset" onClick={onReset}>Quitar filtros</button>}
-    </div>
-  )
-}
-
-// ===== SVG Icons =====
-const HeartIcon = ({ filled }: { filled: boolean }) => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill={filled ? '#c9a959' : 'none'} stroke={filled ? '#c9a959' : '#fff'} strokeWidth="1.5">
-    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-  </svg>
-)
-const ShareIcon = () => (
-  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" strokeWidth="1.5">
-    <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
-  </svg>
-)
-const ChevronLeft = () => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-)
-const ChevronRight = () => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" strokeWidth="2"><polyline points="9 6 15 12 9 18"/></svg>
-)
-
-// ===== Venta Card =====
+// ===== Desktop VentaCard =====
 function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare }: {
   property: UnidadVenta; isFavorite: boolean
   onToggleFavorite: () => void; onShare: () => void
@@ -298,68 +204,36 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare }: {
 
   return (
     <div className="vc">
-      {/* Photo section with carousel */}
-      <div className="vc-photo"
-        style={hasPhotos ? { backgroundImage: `url('${photos[photoIdx]}')` } : undefined}>
+      <div className="vc-photo" style={hasPhotos ? { backgroundImage: `url('${photos[photoIdx]}')` } : undefined}>
         {!hasPhotos && <div className="vc-nofoto">Sin fotos</div>}
-
-        {/* Carousel nav */}
-        {photos.length > 1 && (
-          <>
-            {photoIdx > 0 && (
-              <button className="vc-nav vc-nav-prev" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}>
-                <ChevronLeft />
-              </button>
-            )}
-            {photoIdx < photos.length - 1 && (
-              <button className="vc-nav vc-nav-next" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}>
-                <ChevronRight />
-              </button>
-            )}
-            <div className="vc-photo-count">{photoIdx + 1}/{photos.length}</div>
-          </>
-        )}
-
-        {/* Overlay buttons */}
-        <button className={`vc-fav ${isFavorite ? 'active' : ''}`} onClick={e => { e.stopPropagation(); onToggleFavorite() }}>
-          <HeartIcon filled={isFavorite} />
-        </button>
-        <button className="vc-share" onClick={e => { e.stopPropagation(); onShare() }}>
-          <ShareIcon />
-        </button>
+        {photos.length > 1 && (<>
+          {photoIdx > 0 && <button className="vc-nav vc-nav-prev" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
+          {photoIdx < photos.length - 1 && <button className="vc-nav vc-nav-next" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}><ChevronRight /></button>}
+          <div className="vc-photo-count">{photoIdx + 1}/{photos.length}</div>
+        </>)}
+        <button className={`vc-fav ${isFavorite ? 'active' : ''}`} onClick={e => { e.stopPropagation(); onToggleFavorite() }}><HeartIcon filled={isFavorite} /></button>
+        <button className="vc-share" onClick={e => { e.stopPropagation(); onShare() }}><ShareIcon /></button>
       </div>
-
-      {/* Content */}
       <div className="vc-body">
         <div className="vc-name">{p.proyecto}</div>
         <div className="vc-zona">{displayZona(p.zona)} <span className="vc-id">#{p.id}</span></div>
-        <div className="vc-price">${Math.round(p.precio_usd).toLocaleString('en-US')}</div>
-        <div className="vc-m2">${Math.round(p.precio_m2).toLocaleString('en-US')}/m²</div>
+        <div className="vc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
+        <div className="vc-m2">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</div>
         <div className="vc-usd-note">USD oficial</div>
-        <div className="vc-specs">
-          {[
-            p.area_m2 > 0 ? `${Math.round(p.area_m2)}m²` : null,
-            p.dormitorios !== null ? (p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`) : null,
-            p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
-            p.piso ? `${p.piso}° piso` : null,
-          ].filter(Boolean).join(' · ')}
-        </div>
-
-        {/* Badges */}
+        <div className="vc-specs">{[
+          p.area_m2 > 0 ? `${Math.round(p.area_m2)}m²` : null,
+          p.dormitorios !== null ? (p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`) : null,
+          p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
+          p.piso ? `${p.piso}° piso` : null,
+        ].filter(Boolean).join(' · ')}</div>
         <div className="vc-badges">
           {p.precio_negociable && <span className="vc-badge">Negociable</span>}
           {p.plan_pagos_desarrollador && <span className="vc-badge">Plan pagos</span>}
-          {p.descuento_contado_pct && p.descuento_contado_pct > 0 && (
-            <span className="vc-badge">-{p.descuento_contado_pct}% ctdo</span>
-          )}
-          {p.estado_construccion === 'preventa' && (
-            <span className="vc-badge">{p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa'}</span>
-          )}
+          {p.descuento_contado_pct && p.descuento_contado_pct > 0 && <span className="vc-badge">-{p.descuento_contado_pct}% ctdo</span>}
+          {p.estado_construccion === 'preventa' && <span className="vc-badge">{p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa'}</span>}
           {p.parqueo_incluido && <span className="vc-badge">Parqueo incl.</span>}
           {p.baulera_incluido && <span className="vc-badge">Baulera incl.</span>}
         </div>
-
-        {/* Feature hints: amenidades (edificio) + equipamiento (depto) */}
         {amenities.length > 0 && (
           <div className="vc-features">
             <svg className="vc-features-icon icon-building" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 21h18M3 7v14M21 7v14M6 21V10M10 21V10M14 21V10M18 21V10M3 7l9-4 9 4"/></svg>
@@ -374,17 +248,141 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare }: {
             {equipamiento.length > 3 && <span className="vc-features-count">+{equipamiento.length - 3}</span>}
           </div>
         )}
-
-        {/* Actions */}
         <div className="vc-actions">
-          <button className="vc-details-btn" onClick={() => { /* Bloque 5: bottom sheet */ }}>Ver detalles</button>
-          {p.url && (
-            <a href={p.url} target="_blank" rel="noopener noreferrer" className="vc-ver">
-              Ver original &#8599;
-            </a>
-          )}
+          <button className="vc-details-btn" onClick={() => { /* Bloque 5 */ }}>Ver detalles</button>
+          {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="vc-ver">Ver original &#8599;</a>}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
+function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare }: {
+  property: UnidadVenta; isFavorite: boolean
+  onToggleFavorite: () => void; onShare: () => void
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [photoIdx, setPhotoIdx] = useState(0)
+  const photos = p.fotos_urls?.length > 0 ? p.fotos_urls : []
+  const amenities = p.amenities_confirmados || []
+
+  // Track swipe position for dots
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || photos.length <= 1) return
+    let ticking = false
+    function onScroll() {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        if (!el) { ticking = false; return }
+        const idx = Math.round(el.scrollLeft / el.clientWidth)
+        setPhotoIdx(idx)
+        ticking = false
+      })
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [photos.length])
+
+  return (
+    <div className="mc">
+      {/* Photo carousel zone (55%) */}
+      <div className="mc-photo-zone">
+        <div className="mc-photo-scroll" ref={scrollRef}>
+          {photos.length > 0 ? photos.map((url, i) => (
+            <div key={i} className="mc-slide" style={{ backgroundImage: `url('${url}')` }} />
+          )) : (
+            <div className="mc-slide mc-slide-empty" />
+          )}
+        </div>
+        {/* Gradient fade to black at bottom */}
+        <div className="mc-photo-fade" />
+        {/* Photo counter */}
+        {photos.length > 1 && (
+          <div className="mc-photo-count">{photoIdx + 1}/{photos.length}</div>
+        )}
+        {/* Dots */}
+        {photos.length > 1 && photos.length <= 10 && (
+          <div className="mc-dots">
+            {photos.map((_, i) => (
+              <div key={i} className={`mc-dot ${i === photoIdx ? 'active' : ''}`} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Content zone (45%) */}
+      <div className="mc-content">
+        <div className="mc-name">{p.proyecto}</div>
+        <div className="mc-zona">{displayZona(p.zona)} <span className="mc-id">#{p.id}</span></div>
+        <div className="mc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
+        <div className="mc-specs">{[
+          p.area_m2 > 0 ? `${Math.round(p.area_m2)}m²` : null,
+          p.dormitorios !== null ? (p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`) : null,
+          p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
+        ].filter(Boolean).join(' · ')}</div>
+        <div className="mc-badges">
+          {p.precio_m2 > 0 && <span className="mc-badge-pill gold">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>}
+          <span className="mc-badge-pill">{p.estado_construccion === 'preventa'
+            ? (p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa')
+            : 'Entrega inmediata'}</span>
+        </div>
+        <div className="mc-actions">
+          <button className={`mc-action-icon ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}><HeartIcon filled={isFavorite} /></button>
+          <button className="mc-action-icon" onClick={onShare}><ShareIcon /></button>
+          <button className="mc-action-icon" onClick={() => { /* Bloque 5 */ }}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          </button>
+        </div>
+        {p.agente_telefono && (
+          <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi este departamento en Simon y me interesa: ${p.proyecto} - $$us {Math.round(p.precio_usd).toLocaleString('en-US')}${p.url ? '\n' + p.url : ''}`)}`}
+            target="_blank" rel="noopener noreferrer" className="mc-wsp">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+            Consultar por WhatsApp
+          </a>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ===== Mobile Filter Card (full-screen, snaps in feed) =====
+function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onReset }: {
+  totalCount: number; filteredCount: number; isFiltered: boolean
+  onApply: (f: FiltrosVentaSimple) => void; onReset: () => void
+}) {
+  const [minPrice, setMinPrice] = useState(MIN_PRICE)
+  const [maxPrice, setMaxPrice] = useState(MAX_PRICE)
+  const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set())
+  const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set())
+  const [entrega, setEntrega] = useState('')
+  const [orden, setOrden] = useState<FiltrosVentaSimple['orden']>('recientes')
+
+  function handleMinPrice(v: number) { setMinPrice(Math.min(v, maxPrice - PRICE_STEP)) }
+  function handleMaxPrice(v: number) { setMaxPrice(Math.max(v, minPrice + PRICE_STEP)) }
+  function toggleZona(db: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(db)) n.delete(db); else n.add(db); return n }) }
+  function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); return n }) }
+
+  function apply() {
+    onApply(buildFilters(minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden))
+  }
+
+  return (
+    <div className="mfc">
+      <div className="mfc-header">
+        <span className="mfc-count">{isFiltered ? filteredCount : totalCount}</span>
+        <span className="mfc-sub">{isFiltered ? `de ${totalCount} departamentos` : 'departamentos en Equipetrol'}</span>
+      </div>
+      <div className="mfc-divider"><span className="mfc-line" /><span className="mfc-text">Filtra</span><span className="mfc-line" /></div>
+      <div className="mfc-filters">
+        <FilterControls minPrice={minPrice} maxPrice={maxPrice} selectedDorms={selectedDorms} selectedZonas={selectedZonas}
+          entrega={entrega} orden={orden} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
+          onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={v => setEntrega(v)} onOrden={v => setOrden(v)} />
+      </div>
+      <button className="mfc-cta" onClick={apply}>APLICAR FILTROS</button>
+      {isFiltered && <button className="vf-reset" style={{ marginTop: 8 }} onClick={onReset}>Quitar filtros</button>}
     </div>
   )
 }
@@ -407,16 +405,12 @@ export default function VentasPage() {
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
   const [toastMsg, setToastMsg] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const [activeCardIndex, setActiveCardIndex] = useState(0)
   const isDesktop = useIsDesktop()
   const fetchGenRef = useRef(0)
+  const feedRef = useRef<HTMLDivElement>(null)
 
-  function showToast(msg: string) {
-    setToastMsg(msg)
-    setToastVisible(true)
-    setTimeout(() => setToastVisible(false), 2500)
-  }
-
+  function showToast(msg: string) { setToastMsg(msg); setToastVisible(true); setTimeout(() => setToastVisible(false), 2500) }
   function toggleFavorite(id: number) {
     setFavorites(prev => {
       const n = new Set(prev)
@@ -425,14 +419,9 @@ export default function VentasPage() {
       return n
     })
   }
-
   function shareProperty(p: UnidadVenta) {
     const url = `${window.location.origin}/ventas?id=${p.id}`
-    navigator.clipboard.writeText(url).then(() => {
-      showToast('Link copiado al portapapeles')
-    }).catch(() => {
-      showToast('No se pudo copiar el link')
-    })
+    navigator.clipboard.writeText(url).then(() => showToast('Link copiado')).catch(() => showToast('No se pudo copiar'))
   }
 
   const activeFilterCount = useMemo(() => {
@@ -446,59 +435,73 @@ export default function VentasPage() {
   }, [filters])
 
   // Persist favorites
+  useEffect(() => { try { const s = localStorage.getItem('ventas_favorites_v1'); if (s) setFavorites(new Set(JSON.parse(s))) } catch {} }, [])
+  useEffect(() => { if (favorites.size > 0) localStorage.setItem('ventas_favorites_v1', JSON.stringify([...favorites])) }, [favorites])
+
+  // Scroll tracking (mobile TikTok)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('ventas_favorites_v1')
-      if (saved) setFavorites(new Set(JSON.parse(saved)))
-    } catch { /* ignore */ }
-  }, [])
-  useEffect(() => {
-    if (favorites.size > 0) {
-      localStorage.setItem('ventas_favorites_v1', JSON.stringify([...favorites]))
+    const el = feedRef.current
+    if (!el || isDesktop) return
+    let ticking = false
+    function onScroll() {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        if (!el) { ticking = false; return }
+        const idx = Math.round(el.scrollTop / el.clientHeight)
+        setActiveCardIndex(idx)
+        ticking = false
+      })
     }
-  }, [favorites])
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [isDesktop, loading])
 
   // Fetch
   const fetchProperties = useCallback(async (f?: FiltrosVentaSimple) => {
     const gen = ++fetchGenRef.current
-    setLoading(true)
-    setLoadError(false)
+    setLoading(true); setLoadError(false)
     try {
       const result = await fetchFromAPI(f || filters)
       if (gen !== fetchGenRef.current) return 0
-      setProperties(result.data)
-      setTotalCount(result.total)
+      setProperties(result.data); setTotalCount(result.total)
       if (!f || Object.keys(f).length === 0) setUnfilteredCount(result.total)
       return result.total
     } catch (err) {
       if (gen !== fetchGenRef.current) return 0
-      console.error('Error fetching ventas:', err)
-      setLoadError(true)
-      return 0
-    } finally {
-      if (gen === fetchGenRef.current) setLoading(false)
-    }
+      console.error('Error fetching ventas:', err); setLoadError(true); return 0
+    } finally { if (gen === fetchGenRef.current) setLoading(false) }
   }, [filters])
 
-  useEffect(() => {
-    fetchProperties()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchProperties() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function applyFilters(newFilters: FiltrosVentaSimple) {
-    setFilters(newFilters)
-    setIsFiltered(true)
-    setMobileFiltersOpen(false)
+    setFilters(newFilters); setIsFiltered(true)
     const count = await fetchProperties(newFilters)
     showToast(`${count} departamentos encontrados`)
+    if (feedRef.current) feedRef.current.scrollTo({ top: 0 })
+    setActiveCardIndex(0)
   }
   async function resetFilters() {
     const defaults: FiltrosVentaSimple = {}
-    setFilters(defaults)
-    setIsFiltered(false)
-    setMobileFiltersOpen(false)
+    setFilters(defaults); setIsFiltered(false)
     const count = await fetchProperties(defaults)
     showToast(`${count} departamentos · sin filtros`)
+    if (feedRef.current) feedRef.current.scrollTo({ top: 0 })
+    setActiveCardIndex(0)
   }
+
+  // Build feed items (mobile): property cards + filter card at position 3
+  const feedItems = useMemo(() => {
+    const items: Array<{ type: 'property'; data: UnidadVenta } | { type: 'filter' }> = []
+    let filterInserted = false
+    properties.forEach((p, i) => {
+      items.push({ type: 'property', data: p })
+      if (i === FILTER_CARD_POSITION - 1 && !filterInserted) { items.push({ type: 'filter' }); filterInserted = true }
+    })
+    if (properties.length > 0 && !filterInserted) items.push({ type: 'filter' })
+    return items
+  }, [properties])
 
   return (
     <>
@@ -512,6 +515,7 @@ export default function VentasPage() {
       <Toast message={toastMsg} visible={toastVisible} />
 
       {isDesktop ? (
+        /* ===== DESKTOP (unchanged) ===== */
         <div className="ventas-desktop">
           <aside className="ventas-sidebar">
             <div className="ventas-sidebar-header">
@@ -520,23 +524,14 @@ export default function VentasPage() {
             </div>
             <div className="ventas-sidebar-count">
               <span className="ventas-count-num">{properties.length}</span>
-              <span className="ventas-count-text">
-                {isFiltered ? `de ${unfilteredCount} departamentos` : 'departamentos en Equipetrol'}
-              </span>
+              <span className="ventas-count-text">{isFiltered ? `de ${unfilteredCount} departamentos` : 'departamentos en Equipetrol'}</span>
             </div>
             <DesktopFilters currentFilters={filters} isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} />
           </aside>
           <main className="ventas-main">
-            {loadError && (
-              <div className="ventas-status"><p>No se pudo cargar. Verifica tu conexión.</p>
-                <button onClick={() => fetchProperties()}>Reintentar</button></div>
-            )}
-            {loading && properties.length === 0 && !loadError && (
-              <div className="ventas-status">Cargando departamentos en venta...</div>
-            )}
-            {!loading && properties.length === 0 && !loadError && (
-              <div className="ventas-status">No se encontraron departamentos con esos filtros.</div>
-            )}
+            {loadError && <div className="ventas-status"><p>No se pudo cargar.</p><button onClick={() => fetchProperties()}>Reintentar</button></div>}
+            {loading && properties.length === 0 && !loadError && <div className="ventas-status">Cargando departamentos en venta...</div>}
+            {!loading && properties.length === 0 && !loadError && <div className="ventas-status">No se encontraron departamentos con esos filtros.</div>}
             {properties.length > 0 && (
               <div className="ventas-grid">
                 {properties.map(p => (
@@ -548,43 +543,58 @@ export default function VentasPage() {
           </main>
         </div>
       ) : (
+        /* ===== MOBILE TIKTOK FEED ===== */
         <>
-          <div className="ventas-top-bar">
-            <Link href="/landing-v2" className="ventas-logo-mobile">Simon</Link>
-            <span className="ventas-label-mobile">
-              {isFiltered ? `${activeFilterCount} FILTRO${activeFilterCount > 1 ? 'S' : ''}` : 'VENTAS'}
-            </span>
-            <button className="ventas-filter-btn" onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}>
+          {/* Fixed top bar with gradient */}
+          <div className="mt-top-bar">
+            <Link href="/landing-v2" className="mt-logo">Simon</Link>
+            <span className="mt-label">VENTAS</span>
+            <button className="mt-filter-btn" onClick={() => {
+              const filterIdx = feedItems.findIndex(i => i.type === 'filter')
+              if (filterIdx >= 0 && feedRef.current) {
+                feedRef.current.scrollTo({ top: filterIdx * feedRef.current.clientHeight, behavior: 'smooth' })
+              }
+            }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
-              {isFiltered && <div className="ventas-filter-dot" />}
+              {isFiltered && <div className="mt-filter-dot" />}
             </button>
-            <span className="ventas-count-mobile">{properties.length} deptos</span>
           </div>
-          {mobileFiltersOpen && (
-            <MobileFilters currentFilters={filters} isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} />
+
+          {/* Card counter */}
+          {properties.length > 0 && (
+            <div className="mt-counter">{activeCardIndex + 1} / {feedItems.length}</div>
           )}
-          <div className="ventas-mobile-feed">
-            {loadError && (
-              <div className="ventas-status"><p>No se pudo cargar.</p>
-                <button onClick={() => fetchProperties()}>Reintentar</button></div>
-            )}
-            {loading && properties.length === 0 && !loadError && (
-              <div className="ventas-status">Cargando...</div>
-            )}
-            {!loading && properties.length === 0 && !loadError && (
-              <div className="ventas-status">No se encontraron departamentos.</div>
-            )}
-            {properties.map(p => (
-              <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
+
+          {/* TikTok feed */}
+          <div className="mt-feed" ref={feedRef}>
+            {loadError && <div className="mc" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+              <div style={{ textAlign: 'center' }}><p>No se pudo cargar.</p><button onClick={() => fetchProperties()} style={{ padding: '8px 20px', background: '#c9a959', color: '#0a0a0a', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>Reintentar</button></div>
+            </div>}
+            {loading && properties.length === 0 && !loadError && <div className="mc" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>Cargando...</div>}
+            {!loading && properties.length === 0 && !loadError && <div className="mc" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>No se encontraron departamentos.</div>}
+            {feedItems.map((item, idx) => {
+              const isNearby = Math.abs(idx - activeCardIndex) <= VIRTUAL_WINDOW
+              if (!isNearby) {
+                return <div key={item.type === 'filter' ? 'filter-ph' : `ph-${(item as any).data.id}`}
+                  className="mc-placeholder" />
+              }
+              if (item.type === 'filter') {
+                return <MobileFilterCard key="filter" totalCount={unfilteredCount || totalCount} filteredCount={properties.length}
+                  isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} />
+              }
+              const p = item.data
+              return <MobileVentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
                 onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)} />
-            ))}
+            })}
           </div>
         </>
       )}
 
       <style jsx global>{`
         body { background: #0a0a0a; margin: 0; }
-        /* ===== LAYOUT DESKTOP ===== */
+        @media (max-width: 767px) { body { overflow: hidden; } }
+
+        /* ===== DESKTOP LAYOUT ===== */
         .ventas-desktop { display:flex; min-height:100vh; font-family:'Manrope',sans-serif; color:#f8f6f3 }
         .ventas-sidebar { width:320px; min-width:320px; background:#111; border-right:1px solid #222; position:fixed; top:0; left:0; bottom:0; overflow-y:auto; z-index:10 }
         .ventas-sidebar-header { padding:24px 20px 12px; display:flex; align-items:baseline; gap:12px }
@@ -596,20 +606,65 @@ export default function VentasPage() {
         .ventas-main { margin-left:320px; flex:1; padding:24px; min-height:100vh }
         .ventas-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:24px }
 
-        /* ===== LAYOUT MOBILE ===== */
-        .ventas-top-bar { position:sticky; top:0; z-index:20; background:#0a0a0a; border-bottom:1px solid #222; padding:12px 16px; display:flex; align-items:center; gap:8px; font-family:'Manrope',sans-serif }
-        .ventas-logo-mobile { font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:600; color:#f8f6f3; text-decoration:none }
-        .ventas-label-mobile { font-size:10px; letter-spacing:2px; color:#c9a959; font-weight:600 }
-        .ventas-filter-btn { background:none; border:1px solid #333; border-radius:6px; color:#f8f6f3; padding:6px 8px; cursor:pointer; position:relative; display:flex; align-items:center }
-        .ventas-filter-dot { position:absolute; top:-3px; right:-3px; width:8px; height:8px; background:#c9a959; border-radius:50% }
-        .ventas-count-mobile { margin-left:auto; font-size:12px; color:#888 }
-        .ventas-mobile-feed { padding:12px; display:flex; flex-direction:column; gap:16px; font-family:'Manrope',sans-serif }
+        /* ===== MOBILE TIKTOK LAYOUT ===== */
+        .mt-top-bar { position:fixed; top:0; left:0; right:0; z-index:50; display:flex; align-items:center; gap:8px; padding:12px 20px; padding-top:max(12px, env(safe-area-inset-top)); background:linear-gradient(rgba(10,10,10,0.7), transparent); pointer-events:none; font-family:'Manrope',sans-serif }
+        .mt-top-bar > * { pointer-events:auto }
+        .mt-logo { font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:600; color:#f8f6f3; text-decoration:none }
+        .mt-label { font-size:10px; letter-spacing:2px; color:#c9a959; font-weight:600 }
+        .mt-filter-btn { background:rgba(10,10,10,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8f6f3; padding:6px 8px; cursor:pointer; position:relative; display:flex; align-items:center }
+        .mt-filter-dot { position:absolute; top:-3px; right:-3px; width:8px; height:8px; background:#c9a959; border-radius:50% }
+        .mt-counter { position:fixed; bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px)); right:16px; z-index:50; font-size:10px; color:rgba(255,255,255,0.3); font-family:'Manrope',sans-serif }
 
-        /* ===== MOBILE FILTER PANEL ===== */
-        .mf-panel { background:#111; border-bottom:1px solid #222; padding:16px 16px 12px; font-family:'Manrope',sans-serif }
-        .mf-apply { width:100%; padding:14px; background:#c9a959; color:#0a0a0a; border:none; border-radius:8px; font-weight:700; font-size:14px; letter-spacing:1px; cursor:pointer; margin-top:12px }
+        .mt-feed { height:100vh; height:100dvh; overflow-y:scroll; scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none }
+        .mt-feed::-webkit-scrollbar { display:none }
 
-        /* ===== FILTER COMPONENTS ===== */
+        /* ===== MOBILE CARD (55% foto / 45% contenido) ===== */
+        .mc { height:100vh; height:100dvh; scroll-snap-align:start; scroll-snap-stop:always; position:relative; overflow:hidden; display:flex; flex-direction:column; background:#0a0a0a }
+        .mc-placeholder { height:100vh; height:100dvh; scroll-snap-align:start; background:#0a0a0a }
+
+        /* Photo zone (55%) */
+        .mc-photo-zone { flex:0 0 55%; position:relative; overflow:hidden }
+        .mc-photo-scroll { display:flex; height:100%; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none }
+        .mc-photo-scroll::-webkit-scrollbar { display:none }
+        .mc-slide { flex:0 0 100%; height:100%; background-size:cover; background-position:center; background-color:#1a1a1a; scroll-snap-align:start }
+        .mc-slide-empty { background:#111 }
+        .mc-photo-fade { position:absolute; bottom:0; left:0; right:0; height:80px; background:linear-gradient(transparent, #0a0a0a); pointer-events:none; z-index:2 }
+        .mc-photo-count { position:absolute; top:max(60px, calc(env(safe-area-inset-top) + 52px)); right:16px; z-index:5; background:rgba(10,10,10,0.7); padding:4px 12px; border-radius:100px; font-size:12px; color:rgba(255,255,255,0.8); font-family:'Manrope',sans-serif }
+        .mc-dots { position:absolute; bottom:90px; left:50%; transform:translateX(-50%); display:flex; gap:6px; z-index:5 }
+        .mc-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.3); transition:all 0.25s }
+        .mc-dot.active { background:#fff; width:20px; border-radius:3px }
+
+        .mc-action-icon { width:44px; min-width:44px; height:44px; border-radius:50%; background:none; border:1px solid rgba(255,255,255,0.12); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s }
+        .mc-action-icon.active { border-color:rgba(201,169,89,0.3); background:rgba(201,169,89,0.08) }
+        .mc-action-icon svg { filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3)) }
+
+        /* Content zone (45%) */
+        .mc-content { flex:1; padding:0 24px; padding-bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px)); display:flex; flex-direction:column; overflow:hidden }
+        .mc-name { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:400; color:#fff; line-height:1.1; margin-bottom:3px }
+        .mc-zona { font-size:12px; color:rgba(255,255,255,0.6); letter-spacing:1px; margin-bottom:10px }
+        .mc-id { color:rgba(255,255,255,0.2); font-size:10px; margin-left:4px; letter-spacing:0 }
+        .mc-price { font-family:'Cormorant Garamond',serif; font-size:36px; font-weight:400; color:#c9a959; line-height:1; margin-bottom:4px; font-variant-numeric:tabular-nums }
+        .mc-specs { font-size:13px; color:rgba(255,255,255,0.7); font-family:'Manrope',sans-serif; margin-bottom:10px }
+        .mc-badges { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:auto }
+        .mc-badge-pill { font-size:10px; font-weight:500; padding:4px 10px; border-radius:100px; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.7); background:rgba(255,255,255,0.04); font-family:'Manrope',sans-serif; letter-spacing:0.3px }
+        .mc-badge-pill.gold { border-color:rgba(201,169,89,0.3); color:#c9a959; background:rgba(201,169,89,0.06) }
+        .mc-wsp { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:12px; background:#25d366; border:none; border-radius:8px; color:#fff; font-family:'Manrope',sans-serif; font-size:14px; font-weight:600; text-decoration:none; margin-top:8px; min-height:44px }
+        .mc-actions { display:flex; gap:8px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); margin-top:8px }
+        .mc-btn { flex:1; padding:10px; background:transparent; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.7); font-family:'Manrope',sans-serif; font-size:12px; cursor:pointer; border-radius:6px; text-align:center; text-decoration:none; transition:all 0.15s }
+        .mc-btn-gold { border-color:rgba(201,169,89,0.25); color:#c9a959; background:rgba(201,169,89,0.06) }
+
+        /* ===== MOBILE FILTER CARD (full-screen) ===== */
+        .mfc { height:100vh; height:100dvh; scroll-snap-align:start; scroll-snap-stop:always; background:#0a0a0a; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; padding-top:max(70px, calc(env(safe-area-inset-top) + 60px)); font-family:'Manrope',sans-serif; overflow-y:auto }
+        .mfc-header { text-align:center; margin-bottom:16px }
+        .mfc-count { font-family:'Cormorant Garamond',serif; font-size:40px; font-weight:400; color:#c9a959; display:block; line-height:1 }
+        .mfc-sub { font-size:12px; color:#888 }
+        .mfc-divider { display:flex; align-items:center; gap:12px; width:100%; margin-bottom:16px }
+        .mfc-line { flex:1; height:1px; background:#222 }
+        .mfc-text { font-size:10px; letter-spacing:2px; color:#555; font-weight:600 }
+        .mfc-filters { width:100%; max-width:340px }
+        .mfc-cta { width:100%; max-width:340px; padding:14px; background:#c9a959; color:#0a0a0a; border:none; border-radius:8px; font-weight:700; font-size:14px; letter-spacing:1px; cursor:pointer; margin-top:8px }
+
+        /* ===== FILTER COMPONENTS (shared) ===== */
         .vf-wrap { padding:0 20px 20px; border-top:1px solid #222; padding-top:16px }
         .vf-group { margin-bottom:20px }
         .vf-label { font-size:10px; letter-spacing:2px; color:#555; margin-bottom:10px; font-weight:600; font-family:'Manrope',sans-serif }
@@ -631,34 +686,26 @@ export default function VentasPage() {
         .vf-slider-min { z-index:1 }
         .vf-slider-max { z-index:2 }
         .vf-tc-note { font-size:10px; color:rgba(255,255,255,0.3); font-family:'Manrope',sans-serif; margin-top:8px; text-align:right }
-        .vf-reset { width:100%; padding:10px; background:transparent; border:1px solid #333; border-radius:6px; color:#888; font-size:12px; cursor:pointer; font-family:'Manrope',sans-serif; margin-top:4px; transition:all 0.15s }
+        .vf-reset { width:100%; max-width:340px; padding:10px; background:transparent; border:1px solid #333; border-radius:6px; color:#888; font-size:12px; cursor:pointer; font-family:'Manrope',sans-serif; transition:all 0.15s }
         .vf-reset:hover { border-color:#555; color:#ccc }
 
-        /* ===== VENTA CARD ===== */
+        /* ===== DESKTOP VENTA CARD ===== */
         .vc { background:#111; border:1px solid rgba(255,255,255,0.06); border-radius:12px; overflow:hidden; transition:border-color 0.2s }
         .vc:hover { border-color:rgba(201,169,89,0.2) }
-
-        /* Photo */
         .vc-photo { height:220px; background-size:cover; background-position:center; background-color:#1a1a1a; position:relative }
         @keyframes vcShimmer { 0%,100%{background-color:#1a1a1a} 50%{background-color:#262626} }
         .vc-photo:not([style*="background-image"]) { animation:vcShimmer 1.5s ease-in-out infinite }
         .vc-nofoto { display:flex; align-items:center; justify-content:center; height:100%; color:#444; font-size:13px; font-family:'Manrope',sans-serif }
-
-        /* Carousel nav */
         .vc-nav { position:absolute; top:50%; transform:translateY(-50%); width:36px; height:36px; border-radius:50%; background:rgba(10,10,10,0.6); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s; z-index:3 }
         .vc-nav:hover { background:rgba(10,10,10,0.85) }
         .vc-nav-prev { left:8px }
         .vc-nav-next { right:8px }
         .vc-photo-count { position:absolute; top:10px; right:10px; background:rgba(10,10,10,0.6); color:#ccc; font-size:11px; padding:3px 8px; border-radius:10px; font-family:'Manrope',sans-serif }
-
-        /* Overlay buttons */
         .vc-fav { position:absolute; top:10px; left:10px; width:40px; height:40px; border-radius:50%; background:rgba(10,10,10,0.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.15s; z-index:3 }
         .vc-fav:hover { transform:scale(1.1) }
         .vc-fav.active { background:rgba(201,169,89,0.15) }
         .vc-share { position:absolute; top:10px; left:58px; width:40px; height:40px; border-radius:50%; background:rgba(10,10,10,0.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.15s; z-index:3 }
         .vc-share:hover { transform:scale(1.1); background:rgba(10,10,10,0.7) }
-
-        /* Content */
         .vc-body { padding:16px }
         .vc-name { font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:400; color:#fff; line-height:1.2; margin-bottom:2px }
         .vc-zona { font-size:11px; color:rgba(255,255,255,0.5); letter-spacing:1px; margin-bottom:10px }
@@ -667,20 +714,13 @@ export default function VentasPage() {
         .vc-m2 { font-size:14px; color:#c9a959; margin-bottom:2px }
         .vc-usd-note { font-size:10px; color:rgba(255,255,255,0.25); font-family:'Manrope',sans-serif; margin-bottom:8px }
         .vc-specs { font-size:12px; color:rgba(255,255,255,0.6); margin-bottom:10px; font-family:'Manrope',sans-serif; display:flex; gap:8px; flex-wrap:wrap }
-        .vc-specs span { white-space:nowrap }
-
-        /* Badges */
         .vc-badges { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px }
         .vc-badge { font-size:10px; font-weight:500; padding:3px 9px; border-radius:100px; border:1px solid rgba(201,169,89,0.25); color:#c9a959; font-family:'Manrope',sans-serif }
-
-        /* Feature hints (amenidades + equipamiento) */
         .vc-features { font-size:11px; color:rgba(255,255,255,0.4); font-family:'Manrope',sans-serif; display:flex; align-items:center; gap:7px; margin-bottom:5px; line-height:1.4 }
         .vc-features-icon { flex-shrink:0 }
         .vc-features-icon.icon-building { color:rgba(255,255,255,0.5) }
         .vc-features-icon.icon-unit { color:rgba(201,169,89,0.5) }
         .vc-features-count { color:#c9a959; flex-shrink:0 }
-
-        /* Actions */
         .vc-actions { border-top:1px solid rgba(255,255,255,0.06); padding-top:12px; margin-top:2px; display:flex; gap:8px }
         .vc-details-btn { flex:1; padding:8px; background:transparent; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.7); font-family:'Manrope',sans-serif; font-size:11px; cursor:pointer; border-radius:6px; transition:all 0.2s }
         .vc-details-btn:hover { border-color:rgba(255,255,255,0.3); color:#fff }

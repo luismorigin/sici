@@ -245,11 +245,19 @@ Count "{filtered} de {total}" preserva total sin filtros.
 - `scroll-snap-type: y mandatory` en container
 - Cada card ocupa `100dvh`
 - Virtualización: solo renderizar ±3 cards del índice activo
-- Filter card insertada en posición 3 del feed
-- Detección de card activa por scroll position
-- Floating: favorites banner (bottom), mapa button (bottom-right)
+- Filter card insertada en posición 3 del feed (MobileFilterCard full-screen)
+- Detección de card activa por scroll position (`Math.round(scrollTop / clientHeight)`)
+- Top bar: `position: fixed`, gradient transparente, `pointer-events: none`
+- Card counter: numérico `3 / 300` (fixed, sutil)
+- MobileVentaCard: foto background full-screen + contenido overlay con gradient
 
 **Referencia:** Sección mobile de `pages/alquileres.tsx` (buscar `isMobile` y `scroll-snap`).
+
+**Recomendaciones UX pendientes de evaluar (post-implementación):**
+1. **Gradient extendido (60% inferior):** En vez de gradient corto, cubrir 60% inferior para proteger fotos de baja calidad (collages, watermarks). Gradient: `transparent 25% → rgba(10,10,10,0.3) 40% → rgba(10,10,10,0.85) 65% → #0a0a0a 80%`.
+2. **Contenido reducido en card TikTok:** Solo mostrar lo esencial en overlay (nombre, precio, specs, 2 badges max). Feature hints (amenidades/equipamiento) y badges restantes van en "Ver detalles" (Bloque 5). Principio: la card es para decidir si te interesa, no para evaluar en detalle.
+3. **Counter numérico vs pips:** Con ~300 props, pips verticales (máx 12) no comunican progreso real. Counter `3 / 300` en 10px muted es más honesto. Se actualiza con filtros (`3 / 38`).
+4. **Variante "Editorial scroll" futura:** `scroll-snap-type: y proximity` (no mandatory) + cards 85-90dvh con peek del siguiente. Más natural para discovery de propiedades de ticket alto. Documentar como alternativa si métricas muestran bajo scroll-through en ventas vs alquileres.
 
 **Estado:** Pendiente
 
@@ -259,7 +267,15 @@ Count "{filtered} de {total}" preserva total sin filtros.
 
 **Objetivo:** Bottom sheet/panel de detalle por propiedad + share URL + comparación.
 
-**5a — Vista detalle (bottom sheet):**
+**5a — Photo Viewer (full-screen carousel):**
+Reusar `components/alquiler/PhotoViewer.tsx` directamente — el componente es genérico (recibe `photos[]`, `buildingName`, `subtitle`, `initialIndex`, `onClose`). No tiene lógica de alquileres.
+- Tap en foto de la card (desktop o mobile) → abre viewer full-screen
+- Scroll-snap horizontal nativo, auto-hide controles a 3s, soporte keyboard, landscape mode
+- Subtitle adaptado a ventas: `"Eq. Centro · 65m² · 2 dorm · $145,000"`
+- 5 states en `ventas.tsx`: `viewerOpen`, `viewerPhotos`, `viewerIndex`, `viewerName`, `viewerSubtitle`
+- Función `openViewer(p: UnidadVenta, photoIdx)` + `onPhotoTap` callback en ambas cards
+
+**5b — Vista detalle (bottom sheet):**
 El botón "Ver detalles" de la card (Bloque 3) abre un panel con información completa organizada:
 - Amenidades del edificio (lista completa)
 - Equipamiento del departamento (lista completa)
@@ -271,12 +287,12 @@ El botón "Ver detalles" de la card (Bloque 3) abre un panel con información co
 - **Deuda técnica:** Verificación de datos falsos en el gate (email válido, teléfono boliviano, etc.) queda para después.
 - **Deuda técnica:** Agregar sección "Transparencia de precio" en el sheet que muestre: TC detectado del anunciante (paralelo/oficial/no especificado), el valor normalizado vs el valor original, y disclaimer: "El precio normalizado es para comparación — el precio real de transacción depende de la forma de pago acordada con el vendedor."
 
-**5b — Compartir:**
+**5c — Compartir:**
 - URL compartible: `/ventas?id=123` → spotlight mode
 - Spotlight card con banner "Te compartieron este depto"
 - Share button ya existe en card (copia URL al clipboard)
 
-**5c — Comparar:**
+**5d — Comparar:**
 - Compare sheet adaptado a ventas (precio USD, $/m², estado construcción)
 - Máximo 3 favoritos para comparar
 - Referencia: `CompareSheet.tsx` de alquileres
