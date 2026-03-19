@@ -27,7 +27,7 @@ export default function ProblemPremium() {
               El mercado inmobiliario de Santa Cruz es opaco y fragmentado.
               Nosotros lo hacemos transparente.
             </p>
-            <Link href="/filtros-v2" prefetch={false} className="inline-flex items-center gap-2 text-[#c9a959] hover:text-[#0a0a0a] transition-colors font-light tracking-wide">
+            <Link href="/ventas" prefetch={false} className="inline-flex items-center gap-2 text-[#c9a959] hover:text-[#0a0a0a] transition-colors font-light tracking-wide">
               Ver departamentos
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M5 12h14M12 5l7 7-7 7" />

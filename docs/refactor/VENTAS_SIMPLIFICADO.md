@@ -21,6 +21,8 @@ Estas restricciones aplican a TODO el refactor. No hay excepciones sin aprobaci�
 
 **Regla general:** `/ventas` solo CREA archivos nuevos y AGREGA al navbar. No modifica nada existente excepto `NavbarPremium.tsx` (Bloque 6) y `lib/supabase.ts` (agregar nuevo wrapper).
 
+**Excepción aprobada (Bloque 6, 19 Mar 2026):** Se modificaron 4 componentes de `landing-premium/` para cambiar CTAs de `/filtros-v2` a `/ventas`: HeroPremium, StepsPremium, ProblemPremium, CTAPremium. El funnel viejo sigue accesible por URL directa `/filtros-v2`. Esta excepción fue aprobada explícitamente.
+
 **Ante decisiones no resueltas durante ejecución:** Pausar y reportar antes de elegir.
 
 ---
@@ -292,12 +294,14 @@ El botón "Ver detalles" de la card (Bloque 3) abre un panel con información co
 - Spotlight card con banner "Te compartieron este depto"
 - Share button ya existe en card (copia URL al clipboard)
 
-**5d — Comparar:**
-- Compare sheet adaptado a ventas (precio USD, $/m², estado construcción)
+**5d — Comparar (PENDIENTE — potencial moat):**
+- Compare sheet para ventas — NO reutilizar el de alquileres (593 líneas, 100% específico de alquiler)
+- Construir desde cero con datos de venta: precio $us, $/m², estado entrega, amenidades, ubicación
 - Máximo 3 favoritos para comparar
-- Referencia: `CompareSheet.tsx` de alquileres
+- **Decisión estratégica:** Postergar hasta tener data de que usuarios marcan favoritos. El compare sheet puede ser el moat de la plataforma — darle tiempo para diseñarlo bien
+- Referencia visual: `CompareSheet.tsx` de alquileres (CSS reutilizable, lógica no)
 
-**Estado:** Pendiente
+**Estado:** Pendiente — post-deploy, cuando haya tracción de favoritos
 
 ---
 

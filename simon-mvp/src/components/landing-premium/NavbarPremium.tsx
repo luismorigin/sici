@@ -39,6 +39,13 @@ export default function NavbarPremium() {
             Contacto
           </a>
           <Link
+            href="/ventas"
+            prefetch={false}
+            className="text-[#c9a959] hover:text-white text-sm tracking-wide transition-colors hidden md:block"
+          >
+            Ventas
+          </Link>
+          <Link
             href="/alquileres"
             prefetch={false}
             className="text-[#c9a959] hover:text-white text-sm tracking-wide transition-colors hidden md:block"
@@ -46,7 +53,7 @@ export default function NavbarPremium() {
             Alquileres
           </Link>
           <Link
-            href="/filtros-v2"
+            href="/ventas"
             prefetch={false}
             className="bg-white text-[#0a0a0a] px-6 py-3 text-xs tracking-[3px] uppercase hover:bg-[#c9a959] hover:text-white transition-all duration-300"
           >
