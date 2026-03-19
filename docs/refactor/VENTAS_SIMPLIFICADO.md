@@ -345,7 +345,9 @@ El botón "Ver detalles" de la card (Bloque 3) abre un panel con información co
 - `components/alquiler/AlquilerMapMulti.tsx` — mapa multi-pin para alquileres
 - `components/results-premium/MapaResultados.tsx` — mapa viejo de ventas (Tier 2, no modificar)
 
-**Estado:** Pendiente (post Bloques 4-6)
+**Deuda UX:** Los pins se amontonan cuando hay muchas propiedades en la misma zona (Equipetrol Centro). Soluciones posibles: clustering con Leaflet MarkerCluster (agrupa pins cercanos en un círculo con número), o zoom automático al filtrar zona. Evaluar post-deploy.
+
+**Estado:** Completado (funcionalidad base)
 
 ---
 

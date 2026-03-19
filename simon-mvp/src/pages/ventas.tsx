@@ -7,6 +7,7 @@ import type { UnidadVenta, FiltrosVentaSimple } from '@/lib/supabase'
 import { ZONAS_CANONICAS, displayZona } from '@/lib/zonas'
 
 const PhotoViewer = dynamic(() => import('@/components/alquiler/PhotoViewer'), { ssr: false })
+const VentaMap = dynamic(() => import('@/components/venta/VentaMap'), { ssr: false })
 
 // ===== Constants =====
 const MIN_PRICE = 30000
@@ -396,6 +397,41 @@ function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onRe
   )
 }
 
+// ===== Map Float Card =====
+function MapFloatCard({ property: p, isFavorite, onClose, onOpenDetail, onToggleFavorite, mobile }: {
+  property: UnidadVenta; isFavorite: boolean; onClose: () => void; onOpenDetail: () => void; onToggleFavorite: () => void; mobile?: boolean
+}) {
+  const [photoIdx, setPhotoIdx] = useState(0)
+  const photos = p.fotos_urls ?? []
+  const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+  return (
+    <div className={mobile ? 'mfc-mobile' : 'mfc-desktop'}>
+      <button className="mfc-close" onClick={onClose}>&times;</button>
+      <div className="mfc-photo" style={photos[photoIdx] ? { backgroundImage: `url('${photos[photoIdx]}')` } : undefined}>
+        {photos.length > 1 && (<>
+          {photoIdx > 0 && <button className="mfc-nav mfc-nav-prev" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#fff" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>}
+          {photoIdx < photos.length - 1 && <button className="mfc-nav mfc-nav-next" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#fff" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+          </button>}
+          <div className="mfc-count">{photoIdx + 1}/{photos.length}</div>
+        </>)}
+        <button className={`mfc-fav ${isFavorite ? 'active' : ''}`} onClick={e => { e.stopPropagation(); onToggleFavorite() }}>
+          <HeartIcon filled={isFavorite} />
+        </button>
+      </div>
+      <div className="mfc-body">
+        <div className="mfc-name">{p.proyecto}</div>
+        <div className="mfc-specs">{displayZona(p.zona)} · {Math.round(p.area_m2)}m² · {dorms}</div>
+        <div className="mfc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
+        <div className="mfc-m2">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</div>
+        <button className="mfc-detail" onClick={onOpenDetail}>Ver detalles</button>
+      </div>
+    </div>
+  )
+}
+
 // ===== Bottom Sheet =====
 function BottomSheet({ property: p, isOpen, onClose, gateCompleted, onGate, isDesktop }: {
   property: UnidadVenta | null; isOpen: boolean; onClose: () => void
@@ -589,6 +625,9 @@ export default function VentasPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sheetProperty, setSheetProperty] = useState<UnidadVenta | null>(null)
   const [gateCompleted, setGateCompleted] = useState(false)
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
+  const [mobileMapOpen, setMobileMapOpen] = useState(false)
+  const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
   // Spotlight
   const [spotlightId, setSpotlightId] = useState<number | null>(null)
   const [fetchedSpotlight, setFetchedSpotlight] = useState<UnidadVenta | null>(null)
@@ -781,6 +820,19 @@ export default function VentasPage() {
             <DesktopFilters currentFilters={filters} isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} />
           </aside>
           <main className="ventas-main">
+            {/* View mode toggle */}
+            {properties.length > 0 && (
+              <div className="vm-toggle">
+                <button className={`vm-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  Grid
+                </button>
+                <button className={`vm-btn ${viewMode === 'map' ? 'active' : ''}`} onClick={() => setViewMode('map')}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  Mapa
+                </button>
+              </div>
+            )}
             {loadError && <div className="ventas-status"><p>No se pudo cargar.</p><button onClick={() => fetchProperties()}>Reintentar</button></div>}
             {loading && properties.length === 0 && !loadError && <div className="ventas-status">Cargando departamentos en venta...</div>}
             {!loading && properties.length === 0 && !loadError && <div className="ventas-status">No se encontraron departamentos con esos filtros.</div>}
@@ -799,13 +851,23 @@ export default function VentasPage() {
                 </div>
               </div>
             )}
-            {properties.length > 0 && (
+            {properties.length > 0 && viewMode === 'grid' && (
               <div className="ventas-grid">
                 {(spotlightProperty ? properties.filter(p => p.id !== spotlightId) : properties).map(p => (
                   <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
                     onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
                     onPhotoTap={(idx) => openViewer(p, idx)} onDetails={() => openSheet(p)} />
                 ))}
+              </div>
+            )}
+            {properties.length > 0 && viewMode === 'map' && (
+              <div className="ventas-map-container">
+                <VentaMap properties={properties} onSelectProperty={(id) => setMapSelectedId(id)} selectedId={mapSelectedId} />
+                {mapSelectedId && (() => {
+                  const sp = properties.find(x => x.id === mapSelectedId)
+                  if (!sp) return null
+                  return <MapFloatCard property={sp} isFavorite={favorites.has(sp.id)} onClose={() => setMapSelectedId(null)} onOpenDetail={() => { setMapSelectedId(null); openSheet(sp) }} onToggleFavorite={() => toggleFavorite(sp.id)} />
+                })()}
               </div>
             )}
           </main>
@@ -831,6 +893,26 @@ export default function VentasPage() {
           {/* Card counter */}
           {properties.length > 0 && (
             <div className="mt-counter">{activeCardIndex + 1} / {feedItems.length}</div>
+          )}
+
+          {/* Map floating button */}
+          <button className="mt-map-btn" onClick={() => setMobileMapOpen(true)}>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </button>
+
+          {/* Map overlay */}
+          {mobileMapOpen && (
+            <div className="mt-map-overlay">
+              <button className="mt-map-close" onClick={() => { setMobileMapOpen(false); setMapSelectedId(null) }}>
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+              <VentaMap properties={properties} onSelectProperty={(id) => setMapSelectedId(id)} selectedId={mapSelectedId} />
+              {mapSelectedId && (() => {
+                const sp = properties.find(x => x.id === mapSelectedId)
+                if (!sp) return null
+                return <MapFloatCard mobile property={sp} isFavorite={favorites.has(sp.id)} onClose={() => setMapSelectedId(null)} onOpenDetail={() => { setMapSelectedId(null); setMobileMapOpen(false); openSheet(sp) }} onToggleFavorite={() => toggleFavorite(sp.id)} />
+              })()}
+            </div>
           )}
 
           {/* TikTok feed */}
@@ -875,6 +957,33 @@ export default function VentasPage() {
         .ventas-count-text { font-size:13px; color:#888 }
         .ventas-main { margin-left:320px; flex:1; padding:24px; min-height:100vh }
         .ventas-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:24px }
+        .ventas-map-container { height:calc(100vh - 80px); border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.06); position:relative }
+
+        /* Map float card — desktop */
+        .mfc-desktop { position:absolute; bottom:20px; left:20px; z-index:1000; background:#111; border:1px solid rgba(201,169,89,0.25); border-radius:12px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.6); display:flex; width:380px; animation:mfcIn 0.2s ease-out }
+        /* Map float card — mobile */
+        .mfc-mobile { position:absolute; bottom:12px; left:12px; right:12px; z-index:1000; background:#111; border:1px solid rgba(201,169,89,0.25); border-radius:12px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.6); display:flex; animation:mfcIn 0.2s ease-out }
+        @keyframes mfcIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+        .mfc-close { position:absolute; top:8px; right:8px; z-index:10; width:28px; height:28px; border-radius:50%; background:rgba(10,10,10,0.7); border:none; color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center }
+        .mfc-photo { width:130px; min-width:130px; background-size:cover; background-position:center; background-color:#1a1a1a; position:relative }
+        .mfc-nav { position:absolute; top:50%; transform:translateY(-50%); width:28px; height:28px; border-radius:50%; background:rgba(10,10,10,0.6); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:3 }
+        .mfc-nav-prev { left:4px }
+        .mfc-nav-next { right:4px }
+        .mfc-count { position:absolute; bottom:6px; right:6px; background:rgba(10,10,10,0.7); color:#fff; font-size:10px !important; padding:2px 6px; border-radius:8px; font-family:'Manrope',sans-serif; line-height:1.2 }
+        .mfc-fav { position:absolute; top:6px; left:6px; width:32px; height:32px; border-radius:50%; background:rgba(10,10,10,0.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:3 }
+        .mfc-fav.active { background:rgba(201,169,89,0.2) }
+        .mfc-fav svg { width:16px; height:16px }
+        .mfc-body { flex:1; padding:14px }
+        .mfc-name { font-family:'Cormorant Garamond',serif; font-size:18px; color:#fff; line-height:1.2; margin-bottom:4px }
+        .mfc-specs { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:8px; font-family:'Manrope',sans-serif }
+        .mfc-price { font-family:'Cormorant Garamond',serif; font-size:22px; color:#c9a959; line-height:1 }
+        .mfc-m2 { font-size:11px; color:rgba(255,255,255,0.4); margin-bottom:10px; font-family:'Manrope',sans-serif }
+        .mfc-detail { width:100%; padding:8px; background:transparent; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.7); font-family:'Manrope',sans-serif; font-size:12px; cursor:pointer; border-radius:6px }
+
+        /* View mode toggle */
+        .vm-toggle { display:flex; gap:4px; margin-bottom:20px; background:#111; border-radius:8px; padding:4px; width:fit-content }
+        .vm-btn { display:flex; align-items:center; gap:6px; padding:8px 16px; border:none; border-radius:6px; background:transparent; color:rgba(255,255,255,0.5); font-family:'Manrope',sans-serif; font-size:12px; cursor:pointer; transition:all 0.15s }
+        .vm-btn.active { background:rgba(201,169,89,0.15); color:#c9a959 }
 
         /* ===== MOBILE TIKTOK LAYOUT ===== */
         .mt-top-bar { position:fixed; top:0; left:0; right:0; z-index:50; display:flex; align-items:center; gap:8px; padding:12px 20px; padding-top:max(12px, env(safe-area-inset-top)); background:linear-gradient(rgba(10,10,10,0.7), transparent); pointer-events:none; font-family:'Manrope',sans-serif }
@@ -884,6 +993,9 @@ export default function VentasPage() {
         .mt-filter-btn { background:rgba(10,10,10,0.5); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#f8f6f3; padding:6px 8px; cursor:pointer; position:relative; display:flex; align-items:center }
         .mt-filter-dot { position:absolute; top:-3px; right:-3px; width:8px; height:8px; background:#c9a959; border-radius:50% }
         .mt-counter { position:fixed; bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px)); right:16px; z-index:50; font-size:10px; color:rgba(255,255,255,0.3); font-family:'Manrope',sans-serif }
+        .mt-map-btn { position:fixed; bottom:max(24px, calc(env(safe-area-inset-bottom) + 8px)); left:24px; z-index:50; width:48px; height:48px; border-radius:50%; background:rgba(10,10,10,0.7); border:1px solid rgba(201,169,89,0.25); display:flex; align-items:center; justify-content:center; cursor:pointer; color:#c9a959 }
+        .mt-map-overlay { position:fixed; inset:0; z-index:200; background:#0a0a0a }
+        .mt-map-close { position:absolute; top:max(16px, env(safe-area-inset-top)); right:16px; z-index:201; width:44px; height:44px; border-radius:50%; background:rgba(10,10,10,0.7); border:1px solid rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; cursor:pointer }
 
         .mt-feed { height:100vh; height:100dvh; overflow-y:scroll; scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none }
         .mt-feed::-webkit-scrollbar { display:none }
