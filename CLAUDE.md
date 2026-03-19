@@ -114,7 +114,8 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Indice migraciones** | `docs/migrations/MIGRATION_INDEX.md` |
 | **Backlog calidad datos** | `docs/backlog/CALIDAD_DATOS_BACKLOG.md` |
 | **Deuda tecnica** | `docs/backlog/DEUDA_TECNICA.md` |
-| **Refactor ventas (activo)** | `docs/refactor/VENTAS_SIMPLIFICADO.md` — plan vivo, inventario features, 6 bloques |
+| **Refactor ventas (completado)** | `docs/refactor/VENTAS_SIMPLIFICADO.md` — bloques 1-7 completados, 5d pendiente |
+| **Auditoría UX alquileres** | `docs/refactor/AUDITORIA_UX_ALQUILERES.md` — 5 mejoras + 5 insights + 6 debilidades |
 | **Como contribuir** | `CONTRIBUTING.md` |
 | **Catalogo funciones SQL** | `sql/functions/FUNCTION_CATALOG.md` |
 | Auditoria datos ventas | `docs/analysis/AUDITORIA_DATOS_VENTAS.md` |

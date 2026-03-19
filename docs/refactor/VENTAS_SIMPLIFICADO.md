@@ -1,7 +1,7 @@
 # Refactor Ventas — De Funnel Premium a Feed Simple
 
 > **Inicio:** 18 Mar 2026
-> **Estado:** En ejecución — Bloques 1-2 completados, Bloque 3 en progreso
+> **Estado:** COMPLETADO — Bloques 1-7 implementados (10 commits, 18-19 Mar 2026). Pendientes: 5d Compare Sheet, clustering mapa.
 > **Última actualización:** 18 Mar 2026
 
 ---
