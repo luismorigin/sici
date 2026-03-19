@@ -233,6 +233,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
           p.piso ? `${p.piso}° piso` : null,
         ].filter(Boolean).join(' · ')}</div>
         <div className="vc-badges">
+          {p.dias_en_mercado !== null && p.dias_en_mercado <= 7 && <span className="vc-badge green">Nuevo</span>}
           {p.precio_negociable && <span className="vc-badge">Negociable</span>}
           {p.plan_pagos_desarrollador && <span className="vc-badge">Plan pagos</span>}
           {p.descuento_contado_pct && p.descuento_contado_pct > 0 && <span className="vc-badge">-{p.descuento_contado_pct}% ctdo</span>}
@@ -334,6 +335,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
           p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
         ].filter(Boolean).join(' · ')}</div>
         <div className="mc-badges">
+          {p.dias_en_mercado !== null && p.dias_en_mercado <= 7 && <span className="mc-badge-pill green">Nuevo</span>}
           {p.precio_m2 > 0 && <span className="mc-badge-pill gold">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</span>}
           <span className="mc-badge-pill">{p.estado_construccion === 'preventa'
             ? (p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa')
@@ -456,13 +458,13 @@ function BottomSheet({ property: p, isOpen, onClose, gateCompleted, onGate, isDe
   const equipamiento = p.equipamiento_detectado || []
 
   function handleVerOriginal() {
-    if (gateCompleted) { window.open(p.url, '_blank') }
+    if (gateCompleted) { window.open(p!.url, '_blank') }
     else { setShowGate(true) }
   }
 
   function submitGate() {
     if (!gateName.trim() || !gateTel.trim() || !gateEmail.trim()) return
-    onGate(gateName.trim(), gateTel.trim(), gateEmail.trim(), p.url || '')
+    onGate(gateName.trim(), gateTel.trim(), gateEmail.trim(), p!.url || '')
     setShowGate(false)
   }
 
@@ -686,6 +688,16 @@ export default function VentasPage() {
     try { localStorage.setItem('ventas_gate_v1', JSON.stringify({ nombre, telefono, correo, ts: new Date().toISOString() })) } catch {}
     setGateCompleted(true)
     window.open(url, '_blank')
+    // Fire and forget — save lead to DB
+    const prop = sheetProperty
+    fetch('/api/lead-gate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre, telefono, correo, origen: 'ventas',
+        propiedad_id: prop?.id, propiedad_nombre: prop?.proyecto, zona: prop?.zona,
+      }),
+    }).catch(() => {})
   }
   function toggleFavorite(id: number) {
     setFavorites(prev => {
@@ -1039,6 +1051,7 @@ export default function VentasPage() {
         .mc-badges { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:auto }
         .mc-badge-pill { font-size:10px; font-weight:500; padding:4px 10px; border-radius:100px; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.7); background:rgba(255,255,255,0.04); font-family:'Manrope',sans-serif; letter-spacing:0.3px }
         .mc-badge-pill.gold { border-color:rgba(201,169,89,0.3); color:#c9a959; background:rgba(201,169,89,0.06) }
+        .mc-badge-pill.green { border-color:rgba(34,197,94,0.25); color:#22c55e; background:rgba(34,197,94,0.06) }
         .mc-wsp { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:12px; background:#25d366; border:none; border-radius:8px; color:#fff; font-family:'Manrope',sans-serif; font-size:14px; font-weight:600; text-decoration:none; margin-top:8px; min-height:44px }
         .mc-actions { display:flex; gap:8px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); margin-top:8px }
         .mc-btn { flex:1; padding:10px; background:transparent; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.7); font-family:'Manrope',sans-serif; font-size:12px; cursor:pointer; border-radius:6px; text-align:center; text-decoration:none; transition:all 0.15s }
@@ -1107,6 +1120,7 @@ export default function VentasPage() {
         .vc-specs { font-size:12px; color:rgba(255,255,255,0.6); margin-bottom:10px; font-family:'Manrope',sans-serif; display:flex; gap:8px; flex-wrap:wrap }
         .vc-badges { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px }
         .vc-badge { font-size:10px; font-weight:500; padding:3px 9px; border-radius:100px; border:1px solid rgba(201,169,89,0.25); color:#c9a959; font-family:'Manrope',sans-serif }
+        .vc-badge.green { border-color:rgba(34,197,94,0.25); color:#22c55e }
         .vc-features { font-size:11px; color:rgba(255,255,255,0.4); font-family:'Manrope',sans-serif; display:flex; align-items:center; gap:7px; margin-bottom:5px; line-height:1.4 }
         .vc-features-icon { flex-shrink:0 }
         .vc-features-icon.icon-building { color:rgba(255,255,255,0.5) }

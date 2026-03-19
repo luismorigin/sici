@@ -176,6 +176,7 @@ export default function AlquileresPage() {
   const [activeCardIndex, setActiveCardIndex] = useState(0)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sheetProperty, setSheetProperty] = useState<UnidadAlquiler | null>(null)
+  const [gateCompleted, setGateCompleted] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
@@ -388,6 +389,27 @@ export default function AlquileresPage() {
     trackEvent('open_compare', { property_ids: Array.from(favorites).join(','), count: favorites.size })
   }
 
+  // Gate: check localStorage on mount
+  useEffect(() => {
+    try { if (localStorage.getItem('alquileres_gate_v1')) setGateCompleted(true) } catch {}
+  }, [])
+
+  function handleGate(nombre: string, telefono: string, correo: string, url: string) {
+    try { localStorage.setItem('alquileres_gate_v1', JSON.stringify({ nombre, telefono, correo, ts: new Date().toISOString() })) } catch {}
+    setGateCompleted(true)
+    window.open(url, '_blank')
+    // Fire and forget — save lead to DB
+    const prop = sheetProperty
+    fetch('/api/lead-gate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre, telefono, correo, origen: 'alquileres',
+        propiedad_id: prop?.id, propiedad_nombre: prop?.nombre_edificio || prop?.nombre_proyecto, zona: prop?.zona,
+      }),
+    }).catch(() => {})
+  }
+
   function openDetail(p: UnidadAlquiler) {
     setSheetProperty(p)
     setSheetOpen(true)
@@ -539,6 +561,8 @@ export default function AlquileresPage() {
         property={sheetProperty}
         onClose={() => setSheetOpen(false)}
         isDesktop={isDesktop}
+        gateCompleted={gateCompleted}
+        onGate={handleGate}
       />
 
       {isDesktop ? (
@@ -1574,6 +1598,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
   const displayName = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
 
   const badges: Array<{ text: string; color: string }> = []
+  if (p.dias_en_mercado !== null && p.dias_en_mercado <= 7) badges.push({ text: 'Nuevo', color: 'green' })
   if (p.amoblado === 'si') badges.push({ text: 'Amoblado', color: 'gold' })
   if (p.amoblado === 'semi') badges.push({ text: 'Semi-amoblado', color: 'gold' })
   if (p.acepta_mascotas) badges.push({ text: 'Mascotas', color: 'purple' })
@@ -1635,7 +1660,6 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
         </div>
         <div className="dc-actions">
           <button className="dc-info-btn" onClick={onOpenInfo}>Ver detalles</button>
-          <a href={p.url} target="_blank" rel="noopener noreferrer" className="dc-ver-btn" onClick={() => trackEvent('click_original', { property_id: p.id, property_name: p.nombre_edificio || p.nombre_proyecto || '', fuente: p.fuente })}>Ver &#8599;</a>
         </div>
         {p.agente_whatsapp && (
           <a href={buildLeadWhatsAppUrl(p, `Hola, vi este alquiler en Simon y me interesa: ${displayName} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_desktop')} onClick={() => trackWhatsAppClick(p, 'card_desktop')} target="_blank" rel="noopener noreferrer" className="dc-wsp-cta">
@@ -1672,11 +1696,10 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
         .dc-badge { font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.75); font-family: 'Manrope', sans-serif; }
         .dc-badge.gold { border-color: rgba(201,169,89,0.25); color: #c9a959; }
         .dc-badge.purple { border-color: rgba(168,85,247,0.25); color: #a855f7; }
+        .dc-badge.green { border-color: rgba(34,197,94,0.25); color: #22c55e; }
         .dc-actions { display: flex; gap: 8px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; }
         .dc-info-btn { flex: 1; padding: 8px; background: transparent; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); font-family: 'Manrope', sans-serif; font-size: 11px; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
         .dc-info-btn:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
-        .dc-ver-btn { flex: 1; padding: 8px; background: rgba(201,169,89,0.1); border: 1px solid rgba(201,169,89,0.25); color: #c9a959; font-family: 'Manrope', sans-serif; font-size: 11px; text-align: center; text-decoration: none; border-radius: 6px; transition: all 0.2s; font-weight: 500; }
-        .dc-ver-btn:hover { background: rgba(201,169,89,0.2); }
         .dc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: #25d366; border: none; border-radius: 6px; color: #fff; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600; text-decoration: none; margin-top: 8px; transition: opacity 0.2s; }
         .dc-wsp-cta:hover { opacity: 0.9; }
         @media (prefers-reduced-motion: reduce) {
@@ -1707,6 +1730,7 @@ function MobilePropertyCard({
   }
 
   const badges: Array<{ text: string; color: string }> = []
+  if (p.dias_en_mercado !== null && p.dias_en_mercado <= 7) badges.push({ text: 'Nuevo', color: 'green' })
   if (p.amoblado === 'si') badges.push({ text: 'Amoblado', color: 'gold' })
   if (p.amoblado === 'semi') badges.push({ text: 'Semi-amoblado', color: 'gold' })
   if (p.acepta_mascotas) badges.push({ text: 'Mascotas', color: 'purple' })
@@ -1752,7 +1776,6 @@ function MobilePropertyCard({
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
             </svg> Detalles
           </button>
-          <a href={p.url} target="_blank" rel="noopener noreferrer" className="mc-btn mc-ver" onClick={() => trackEvent('click_original', { property_id: p.id, property_name: p.nombre_edificio || p.nombre_proyecto || '', fuente: p.fuente })}>Ver &#8599;</a>
         </div>
         {p.agente_whatsapp && (
           <a href={buildLeadWhatsAppUrl(p, `Hola, vi este alquiler en Simon y me interesa: ${p.nombre_edificio || p.nombre_proyecto || 'Departamento'} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_mobile')} onClick={() => trackWhatsAppClick(p, 'card_mobile')} target="_blank" rel="noopener noreferrer" className="mc-wsp-cta">
@@ -1777,13 +1800,13 @@ function MobilePropertyCard({
         .mc-badge { font-size: 10px; font-weight: 500; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.04); font-family: 'Manrope', sans-serif; }
         .mc-badge.gold { border-color: rgba(201,169,89,0.25); color: #c9a959; background: rgba(201,169,89,0.06); }
         .mc-badge.purple { border-color: rgba(168,85,247,0.25); color: #a855f7; background: rgba(168,85,247,0.06); }
+        .mc-badge.green { border-color: rgba(34,197,94,0.25); color: #22c55e; background: rgba(34,197,94,0.06); }
         .mc-razon { font-size: 12px; font-weight: 300; color: rgba(255,255,255,0.6); line-height: 1.5; margin-bottom: auto; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .mc-actions { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 8px; }
         .mc-btn { display: flex; align-items: center; justify-content: center; gap: 5px; background: none; border: none; color: rgba(255,255,255,0.7); font-size: 12px; font-family: 'Manrope', sans-serif; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
         .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(201,169,89,0.5)); }
         .mc-btn.mc-share { color: rgba(255,255,255,0.7); }
         .mc-btn.mc-info { color: rgba(255,255,255,0.7); font-size: 11px; letter-spacing: 0.5px; }
-        .mc-btn.mc-ver { margin-left: auto; color: #c9a959; text-decoration: none; font-weight: 500; }
         .mc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: #25d366; border: none; border-radius: 8px; color: #fff; font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: 8px; min-height: 44px; transition: opacity 0.2s; }
         .mc-wsp-cta:active { opacity: 0.85; }
         .mc-btn.shake { animation: mcShake 0.3s ease; }
@@ -1999,8 +2022,20 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
 }
 
 // ===== BOTTOM SHEET =====
-function BottomSheet({ open, property, onClose, isDesktop }: { open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean }) {
+function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate }: {
+  open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean
+  gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void
+}) {
   const [mapExpanded, setMapExpanded] = useState(false)
+  const [showGate, setShowGate] = useState(false)
+  const [gateName, setGateName] = useState('')
+  const [gateTel, setGateTel] = useState('')
+  const [gateEmail, setGateEmail] = useState('')
+
+  // Reset gate form when property changes
+  const propId = property?.id
+  useEffect(() => { setShowGate(false) }, [propId])
+
   if (!property) return null
   const p = property
 
@@ -2056,7 +2091,24 @@ function BottomSheet({ open, property, onClose, isDesktop }: { open: boolean; pr
       )}
       {p.url && (
         <div className="bs-section">
-          <a href={p.url} target="_blank" rel="noopener noreferrer" className="bs-ver-anuncio">Ver anuncio original &#8599;</a>
+          {!showGate ? (
+            <button className="bs-ver-anuncio" onClick={() => {
+              if (gateCompleted) { window.open(p.url, '_blank') }
+              else { setShowGate(true) }
+            }}>Ver anuncio original &#8599;</button>
+          ) : (
+            <div className="bs-gate">
+              <div className="bs-gate-title">Para ver el anuncio original, dejanos tus datos</div>
+              <input className="bs-gate-input" placeholder="Tu nombre" value={gateName} onChange={e => setGateName(e.target.value)} />
+              <input className="bs-gate-input" placeholder="Tu teléfono" value={gateTel} onChange={e => setGateTel(e.target.value)} type="tel" />
+              <input className="bs-gate-input" placeholder="Tu correo" value={gateEmail} onChange={e => setGateEmail(e.target.value)} type="email" />
+              <button className="bs-gate-submit" onClick={() => {
+                if (!gateName.trim() || !gateTel.trim() || !gateEmail.trim()) return
+                onGate(gateName.trim(), gateTel.trim(), gateEmail.trim(), p.url || '')
+                setShowGate(false)
+              }} disabled={!gateName.trim() || !gateTel.trim() || !gateEmail.trim()}>Ver anuncio &#8599;</button>
+            </div>
+          )}
         </div>
       )}
       {hasGPS && (
@@ -2090,8 +2142,14 @@ function BottomSheet({ open, property, onClose, isDesktop }: { open: boolean; pr
         .bs-feat.hl .bs-fv{color:#c9a959;}
         .bs-aw{display:flex;flex-wrap:wrap;gap:6px;}
         .bs-at{font-size:11px;padding:4px 10px;border-radius:100px;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.75);font-family:'Manrope',sans-serif;}
-        .bs-ver-anuncio{display:block;text-align:center;padding:12px;background:rgba(201,169,89,0.1);border:1px solid rgba(201,169,89,0.25);color:#c9a959;font-family:'Manrope',sans-serif;font-size:13px;font-weight:600;text-decoration:none;border-radius:8px;transition:background 0.2s;}
+        .bs-ver-anuncio{display:block;width:100%;text-align:center;padding:12px;background:rgba(201,169,89,0.1);border:1px solid rgba(201,169,89,0.25);color:#c9a959;font-family:'Manrope',sans-serif;font-size:13px;font-weight:600;text-decoration:none;border-radius:8px;transition:background 0.2s;cursor:pointer;}
         .bs-ver-anuncio:hover{background:rgba(201,169,89,0.2);}
+        .bs-gate{display:flex;flex-direction:column;gap:12px}
+        .bs-gate-title{font-size:14px;color:rgba(255,255,255,0.6);margin-bottom:4px}
+        .bs-gate-input{width:100%;padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;color:#f8f6f3;font-family:'Manrope',sans-serif;font-size:15px;box-sizing:border-box}
+        .bs-gate-input::placeholder{color:rgba(255,255,255,0.3)}
+        .bs-gate-submit{width:100%;padding:14px;background:#c9a959;color:#0a0a0a;border:none;border-radius:8px;font-family:'Manrope',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+        .bs-gate-submit:disabled{opacity:0.4;cursor:default}
         .bs-map-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;background:transparent;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;cursor:pointer;margin-bottom:10px;}
         .bs-map-toggle:hover{border-color:rgba(255,255,255,0.15);}
         .bs-map{width:100%;height:200px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);}

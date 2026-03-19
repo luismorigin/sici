@@ -279,7 +279,7 @@ Flujo produccion: `simonbo.com (/) → /ventas` (feed simple). Funnel premium le
 
 **Broker:** `/broker/login`, `/broker/dashboard`, `/broker/nueva-propiedad`, `/broker/editar/[id]`, `/broker/fotos/[id]`, `/broker/leads`, `/broker/perfil`
 
-**API publicas:** `/api/ventas`, `/api/alquileres`, `/api/razon-fiduciaria`, `/api/generar-guia`, `/api/informe` (usa lib/informe/), `/api/contactar-broker`, `/api/abrir-whatsapp`, `/api/lead-alquiler`, `/api/crear-lead-feedback`, `/api/notify-slack`
+**API publicas:** `/api/ventas`, `/api/alquileres`, `/api/razon-fiduciaria`, `/api/generar-guia`, `/api/informe` (usa lib/informe/), `/api/contactar-broker`, `/api/abrir-whatsapp`, `/api/lead-alquiler`, `/api/lead-gate` (gate "Ver anuncio original" → `leads_gate`), `/api/crear-lead-feedback`, `/api/notify-slack`
 
 **API broker:** `/api/broker/*` — CRUD propiedades, fotos, PDF, CMA, perfil
 
