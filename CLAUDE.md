@@ -156,7 +156,7 @@ sici/
 │   ├── merge/           → merge_discovery_enrichment v2.3.0
 │   ├── matching/        → matching v3.1 + matchear_alquiler
 │   ├── alquiler/        → discovery/enrichment/merge alquiler
-│   ├── query_layer/     → buscar_unidades_reales/alquiler, razon fiduciaria, posicion mercado
+│   ├── query_layer/     → buscar_unidades_reales/alquiler/simple, razon fiduciaria, posicion mercado
 │   ├── snapshots/       → snapshot_absorcion_mercado
 │   ├── tc_dinamico/     → TC Binance P2P
 │   ├── hitl/            → procesar_decision_sin_match, accion excluida, validacion auto-aprobado
@@ -172,6 +172,7 @@ sici/
 │   ├── modulo_2/        → Matching, Auditoria, TC dinamico
 │   └── alquiler/        → Pipeline completo alquiler (6 workflows)
 ├── docs/                → Documentacion activa + canonical
+│   ├── refactor/        → planes vivos: VENTAS_SIMPLIFICADO.md (bloques 1-7)
 │   └── archive/         → planning, reports, snapshots, specs (archivados en S1)
 └── simon-mvp/           → Frontend Next.js (simonbo.com)
     └── src/             → Ver seccion "simon-mvp Arquitectura" abajo
@@ -202,6 +203,8 @@ simon-mvp/src/
 │   ├── AmenitiesEditor.tsx        → Toggles amenidades + equipamiento (propiedades/[id])
 │   ├── PaymentPlanEditor.tsx      → Forma de pago + CRUD cuotas (propiedades/[id])
 │   └── PropiedadesVinculadasTable.tsx → Stats + filtros + tabla propiedades (proyectos/[id])
+├── components/venta/
+│   └── VentaMap.tsx                 → Mapa Leaflet con pins de precio (feed /ventas)
 ├── lib/
 │   ├── supabase.ts                → Cliente Supabase + RPC mappers tipados (db-responses.ts)
 │   ├── zonas.ts                   → Constantes zonas, mapeo slug→display, filtros admin/alquiler
@@ -258,13 +261,14 @@ Las paginas editores siguen el patron: **tipos → constantes → hook → compo
 | `/filtros-v2` | **Filtros premium** (fondo negro, controles elegantes) |
 | `/formulario-v2` | **Formulario Nivel 2** (innegociables, deseables, trade-offs) |
 | `/resultados-v2` | **Resultados premium** (fondo crema, cards blancos) |
+| `/ventas` | **Feed ventas** — cards neutrales, filtros inline, mapa, TikTok mobile (Bloques 1-7) |
 | `/alquileres` | **Feed alquileres** |
 | `/mercado/equipetrol` | **Mercado hub** — índice ventas + alquileres (Schema.org CollectionPage) |
 | `/mercado/equipetrol/ventas` | **Mercado ventas** — precios/m2, zonas, tipologías, tendencias (Article + Dataset + FAQPage) |
 | `/mercado/equipetrol/alquileres` | **Mercado alquileres** — rentas Bs, zonas, yield estimado (Article + Dataset + FAQPage) |
 | `/condado-vi` | **Landing cliente** Condado VI (estudio de mercado) |
 
-Flujo produccion: `simonbo.com (/) → /filtros-v2 → /formulario-v2 → /resultados-v2`
+Flujo produccion: `simonbo.com (/) → /ventas` (feed simple). Funnel premium legacy: `/filtros-v2 → /formulario-v2 → /resultados-v2` (accesible por URL directa).
 
 - **Fonts:** Cormorant Garamond (display) + Manrope (body)
 - **Colores:** Negro (#0a0a0a), Crema (#f8f6f3), Oro (#c9a959)
@@ -274,7 +278,7 @@ Flujo produccion: `simonbo.com (/) → /filtros-v2 → /formulario-v2 → /resul
 
 **Broker:** `/broker/login`, `/broker/dashboard`, `/broker/nueva-propiedad`, `/broker/editar/[id]`, `/broker/fotos/[id]`, `/broker/leads`, `/broker/perfil`
 
-**API publicas:** `/api/alquileres`, `/api/razon-fiduciaria`, `/api/generar-guia`, `/api/informe` (usa lib/informe/), `/api/contactar-broker`, `/api/abrir-whatsapp`, `/api/lead-alquiler`, `/api/crear-lead-feedback`, `/api/notify-slack`
+**API publicas:** `/api/ventas`, `/api/alquileres`, `/api/razon-fiduciaria`, `/api/generar-guia`, `/api/informe` (usa lib/informe/), `/api/contactar-broker`, `/api/abrir-whatsapp`, `/api/lead-alquiler`, `/api/crear-lead-feedback`, `/api/notify-slack`
 
 **API broker:** `/api/broker/*` — CRUD propiedades, fotos, PDF, CMA, perfil
 

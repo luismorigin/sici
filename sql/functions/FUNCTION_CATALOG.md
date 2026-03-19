@@ -1,7 +1,7 @@
 # Catálogo de Funciones SQL — SICI
 
 > 141 funciones custom únicas en producción (144 con overloads; schema public, excluye extensiones PostGIS/pg_trgm/fuzzystrmatch)
-> 42 archivos canónicos en `sql/functions/` (13 subdirectorios)
+> 43 archivos canónicos en `sql/functions/` (13 subdirectorios)
 > Actualizado: 28 Feb 2026 (auditoría cruzada BD vs catálogo)
 
 **Convención:** Las funciones con archivo canónico (`sql/functions/...`) tienen la definición actualizada exportada con `pg_get_functiondef()`. Las que solo indican migración fueron creadas/modificadas ahí y NO tienen archivo canónico.
@@ -78,6 +78,7 @@
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
 | `buscar_unidades_reales(filtros)` | `query_layer/buscar_unidades_reales.sql` | 168 |
+| `buscar_unidades_simple(filtros)` | `query_layer/buscar_unidades_simple.sql` | — (deploy manual 2026-03-18, feed /ventas) |
 | `buscar_unidades_alquiler(filtros)` | `query_layer/buscar_unidades_alquiler.sql` | 163 |
 | `buscar_unidades_broker(filtros)` | `broker/buscar_unidades_broker.sql` | 101 |
 | `buscar_unidades_con_amenities(amenities, filtros)` | — | 069 |
@@ -224,6 +225,7 @@
 | `trg_matchear_alquiler_fn()` | `triggers/trg_matchear_alquiler_fn.sql` | 166 |
 | `trg_refresh_lookup_fn()` | — | 141 |
 | `trigger_asignar_zona_alquiler()` | `triggers/trigger_asignar_zona_alquiler.sql` | 147b |
+| `trg_asignar_zona_venta()` | — | 173 |
 | `trigger_calcular_score_broker()` | — | 092 |
 | `trigger_normalizar_telefono()` | — | 075 |
 | `fn_trigger_tc_actualizado()` | — | 014 |
@@ -275,7 +277,7 @@
 | Leads/CRM | 6 | 0 |
 | TC Dinámico | 5 | 1 archivo (multi-función) |
 | Helpers | 13 | 4 archivos (Fase 7) |
-| Triggers | 9+ | 3 archivos (Fase 7) |
+| Triggers | 10+ | 3 archivos (Fase 7) |
 | Misc | 15+ | 0 |
 | Workflow Tracking | 1 | 0 |
 | Auditoría/Historial | 1 | 0 |
