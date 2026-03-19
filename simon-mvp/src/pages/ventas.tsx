@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import type { UnidadVenta, FiltrosVentaSimple } from '@/lib/supabase'
 import { ZONAS_CANONICAS, displayZona } from '@/lib/zonas'
+
+const PhotoViewer = dynamic(() => import('@/components/alquiler/PhotoViewer'), { ssr: false })
 
 // ===== Constants =====
 const MIN_PRICE = 30000
@@ -192,9 +195,9 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
 }
 
 // ===== Desktop VentaCard =====
-function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare }: {
+function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails }: {
   property: UnidadVenta; isFavorite: boolean
-  onToggleFavorite: () => void; onShare: () => void
+  onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = p.fotos_urls?.length > 0 ? p.fotos_urls : []
@@ -204,7 +207,8 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare }: {
 
   return (
     <div className="vc">
-      <div className="vc-photo" style={hasPhotos ? { backgroundImage: `url('${photos[photoIdx]}')` } : undefined}>
+      <div className="vc-photo" style={hasPhotos ? { backgroundImage: `url('${photos[photoIdx]}')`, cursor: 'pointer' } : undefined}
+        onClick={() => { if (hasPhotos) onPhotoTap(photoIdx) }}>
         {!hasPhotos && <div className="vc-nofoto">Sin fotos</div>}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="vc-nav vc-nav-prev" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
@@ -249,7 +253,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare }: {
           </div>
         )}
         <div className="vc-actions">
-          <button className="vc-details-btn" onClick={() => { /* Bloque 5 */ }}>Ver detalles</button>
+          <button className="vc-details-btn" onClick={onDetails}>Ver detalles</button>
           {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="vc-ver">Ver original &#8599;</a>}
         </div>
       </div>
@@ -258,9 +262,9 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare }: {
 }
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
-function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare }: {
+function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails }: {
   property: UnidadVenta; isFavorite: boolean
-  onToggleFavorite: () => void; onShare: () => void
+  onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -292,7 +296,8 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare }:
       <div className="mc-photo-zone">
         <div className="mc-photo-scroll" ref={scrollRef}>
           {photos.length > 0 ? photos.map((url, i) => (
-            <div key={i} className="mc-slide" style={{ backgroundImage: `url('${url}')` }} />
+            <div key={i} className="mc-slide" style={{ backgroundImage: `url('${url}')`, cursor: 'pointer' }}
+              onClick={() => onPhotoTap(i)} />
           )) : (
             <div className="mc-slide mc-slide-empty" />
           )}
@@ -332,7 +337,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare }:
         <div className="mc-actions">
           <button className={`mc-action-icon ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}><HeartIcon filled={isFavorite} /></button>
           <button className="mc-action-icon" onClick={onShare}><ShareIcon /></button>
-          <button className="mc-action-icon" onClick={() => { /* Bloque 5 */ }}>
+          <button className="mc-action-icon" onClick={onDetails}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           </button>
         </div>
@@ -387,6 +392,170 @@ function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onRe
   )
 }
 
+// ===== Bottom Sheet =====
+function BottomSheet({ property: p, isOpen, onClose, gateCompleted, onGate, isDesktop }: {
+  property: UnidadVenta | null; isOpen: boolean; onClose: () => void
+  gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; isDesktop: boolean
+}) {
+  const [gateName, setGateName] = useState('')
+  const [gateTel, setGateTel] = useState('')
+  const [gateEmail, setGateEmail] = useState('')
+  const [showGate, setShowGate] = useState(false)
+  const [descExpanded, setDescExpanded] = useState(false)
+
+  // Reset state when property changes
+  const propId = p?.id
+  useEffect(() => {
+    setDescExpanded(false)
+    setShowGate(false)
+  }, [propId])
+
+  if (!p) return null
+
+  const amenities = p.amenities_confirmados || []
+  const equipamiento = p.equipamiento_detectado || []
+
+  function handleVerOriginal() {
+    if (gateCompleted) { window.open(p.url, '_blank') }
+    else { setShowGate(true) }
+  }
+
+  function submitGate() {
+    if (!gateName.trim() || !gateTel.trim() || !gateEmail.trim()) return
+    onGate(gateName.trim(), gateTel.trim(), gateEmail.trim(), p.url || '')
+    setShowGate(false)
+  }
+
+  return (
+    <>
+      <div className={`bs-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} />
+      <div className={`bs ${isOpen ? 'open' : ''} ${isDesktop ? 'bs-desktop' : ''}`}>
+        <div className="bs-handle" />
+        <div className="bs-header">
+          <div className="bs-title">{p.proyecto}</div>
+          <button className="bs-close" onClick={onClose}>
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div className="bs-scroll">
+          {/* Zona + ubicación */}
+          <div className="bs-section">
+            <span className="bs-zona">{displayZona(p.zona)} <span className="bs-id">#{p.id}</span></span>
+            {p.latitud && p.longitud && (
+              <a href={`https://www.google.com/maps?q=${p.latitud},${p.longitud}`}
+                target="_blank" rel="noopener noreferrer" className="bs-location">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#c9a959" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                Ver ubicación
+              </a>
+            )}
+          </div>
+
+          {/* Precio PRIMERO */}
+          <div className="bs-section">
+            <div className="bs-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
+            <div className="bs-price-detail">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m² · USD oficial</div>
+          </div>
+
+          {/* Specs grid */}
+          <div className="bs-section bs-section-border">
+            <div className="bs-grid">
+              {p.area_m2 > 0 && <div className="bs-feat"><span className="bs-feat-val">{Math.round(p.area_m2)}</span><span className="bs-feat-label">m²</span></div>}
+              {p.dormitorios !== null && <div className="bs-feat"><span className="bs-feat-val">{p.dormitorios}</span><span className="bs-feat-label">{p.dormitorios === 0 ? 'Mono' : 'Dorm'}</span></div>}
+              {p.banos !== null && <div className="bs-feat"><span className="bs-feat-val">{p.banos}</span><span className="bs-feat-label">Baño{p.banos !== 1 ? 's' : ''}</span></div>}
+              {p.piso && <div className="bs-feat"><span className="bs-feat-val">{p.piso}</span><span className="bs-feat-label">Piso</span></div>}
+              {p.estacionamientos && p.estacionamientos > 0 && <div className="bs-feat"><span className="bs-feat-val">{p.estacionamientos}</span><span className="bs-feat-label">Parqueo</span></div>}
+            </div>
+          </div>
+
+          {/* Badges */}
+          <div className="bs-section">
+            <div className="bs-badges">
+              {p.estado_construccion === 'preventa' && <span className="bs-badge gold">{p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa'}</span>}
+              {p.estado_construccion !== 'preventa' && <span className="bs-badge">Entrega inmediata</span>}
+              {p.precio_negociable && <span className="bs-badge gold">Negociable</span>}
+              {p.plan_pagos_desarrollador && <span className="bs-badge">Plan de pagos</span>}
+              {p.descuento_contado_pct && p.descuento_contado_pct > 0 && <span className="bs-badge gold">-{p.descuento_contado_pct}% contado</span>}
+              {p.parqueo_incluido && <span className="bs-badge">Parqueo incluido</span>}
+              {p.baulera_incluido && <span className="bs-badge">Baulera incluida</span>}
+              {p.solo_tc_paralelo && <span className="bs-badge">TC Paralelo</span>}
+            </div>
+          </div>
+
+          {/* Amenidades */}
+          {amenities.length > 0 && (
+            <div className="bs-section">
+              <div className="bs-section-title">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.5" style={{opacity:0.6}}><path d="M3 21h18M3 7v14M21 7v14M6 21V10M10 21V10M14 21V10M18 21V10M3 7l9-4 9 4"/></svg>
+                Edificio
+              </div>
+              <div className="bs-tags">{amenities.map((a, i) => <span key={i} className="bs-tag">{a}</span>)}</div>
+            </div>
+          )}
+
+          {/* Equipamiento */}
+          {equipamiento.length > 0 && (
+            <div className="bs-section">
+              <div className="bs-section-title">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c9a959" strokeWidth="1.5" style={{opacity:0.6}}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                Departamento
+              </div>
+              <div className="bs-tags">{equipamiento.map((e, i) => <span key={i} className="bs-tag">{e}</span>)}</div>
+            </div>
+          )}
+
+          {/* Descripción (colapsable) */}
+          {p.descripcion && (
+            <div className="bs-section">
+              <div className="bs-section-title">Sobre esta propiedad</div>
+              <div className={`bs-desc ${descExpanded ? 'expanded' : ''}`}>{p.descripcion}</div>
+              {p.descripcion.length > 150 && !descExpanded && (
+                <button className="bs-desc-more" onClick={() => setDescExpanded(true)}>Ver más</button>
+              )}
+            </div>
+          )}
+
+          {/* Agente + WhatsApp */}
+          {p.agente_telefono && (
+            <div className="bs-section">
+              {p.agente_nombre && (
+                <div className="bs-agent">
+                  <span className="bs-agent-name">{p.agente_nombre}</span>
+                  {p.agente_oficina && <span className="bs-agent-office"> · {p.agente_oficina}</span>}
+                </div>
+              )}
+              <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi ${p.proyecto} en Simon y me gustaría más información\n${p.url || ''}`)}`}
+                target="_blank" rel="noopener noreferrer" className="bs-wsp">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+                Consultar por WhatsApp
+              </a>
+            </div>
+          )}
+
+          {/* Ver original (con gate) */}
+          {p.url && (
+            <div className="bs-section">
+              {!showGate ? (
+                <button className="bs-ver-original" onClick={handleVerOriginal}>
+                  Ver anuncio original &#8599;
+                </button>
+              ) : (
+                <div className="bs-gate">
+                  <div className="bs-gate-title">Para ver el anuncio original, dejanos tus datos</div>
+                  <input className="bs-gate-input" placeholder="Tu nombre" value={gateName} onChange={e => setGateName(e.target.value)} />
+                  <input className="bs-gate-input" placeholder="Tu teléfono" value={gateTel} onChange={e => setGateTel(e.target.value)} type="tel" />
+                  <input className="bs-gate-input" placeholder="Tu correo" value={gateEmail} onChange={e => setGateEmail(e.target.value)} type="email" />
+                  <button className="bs-gate-submit" onClick={submitGate}
+                    disabled={!gateName.trim() || !gateTel.trim() || !gateEmail.trim()}>Ver anuncio &#8599;</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ===== Toast =====
 function Toast({ message, visible }: { message: string; visible: boolean }) {
   if (!visible) return null
@@ -406,11 +575,46 @@ export default function VentasPage() {
   const [toastMsg, setToastMsg] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
   const [activeCardIndex, setActiveCardIndex] = useState(0)
+  // PhotoViewer state
+  const [viewerOpen, setViewerOpen] = useState(false)
+  const [viewerPhotos, setViewerPhotos] = useState<string[]>([])
+  const [viewerIndex, setViewerIndex] = useState(0)
+  const [viewerName, setViewerName] = useState('')
+  const [viewerSubtitle, setViewerSubtitle] = useState('')
+  // Bottom Sheet state
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [sheetProperty, setSheetProperty] = useState<UnidadVenta | null>(null)
+  const [gateCompleted, setGateCompleted] = useState(false)
   const isDesktop = useIsDesktop()
   const fetchGenRef = useRef(0)
   const feedRef = useRef<HTMLDivElement>(null)
 
+  // Check gate status from localStorage
+  useEffect(() => {
+    try { if (localStorage.getItem('ventas_gate_v1')) setGateCompleted(true) } catch {}
+  }, [])
+
   function showToast(msg: string) { setToastMsg(msg); setToastVisible(true); setTimeout(() => setToastVisible(false), 2500) }
+
+  function openViewer(p: UnidadVenta, photoIdx: number) {
+    if (!p.fotos_urls?.length) return
+    setViewerPhotos(p.fotos_urls)
+    setViewerIndex(photoIdx)
+    setViewerName(p.proyecto)
+    setViewerSubtitle(`${displayZona(p.zona)} · ${Math.round(p.area_m2)}m² · ${p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`} · $us ${Math.round(p.precio_usd).toLocaleString('en-US')}`)
+    setViewerOpen(true)
+  }
+
+  function openSheet(p: UnidadVenta) {
+    setSheetProperty(p)
+    setSheetOpen(true)
+  }
+
+  function handleGate(nombre: string, telefono: string, correo: string, url: string) {
+    try { localStorage.setItem('ventas_gate_v1', JSON.stringify({ nombre, telefono, correo, ts: new Date().toISOString() })) } catch {}
+    setGateCompleted(true)
+    window.open(url, '_blank')
+  }
   function toggleFavorite(id: number) {
     setFavorites(prev => {
       const n = new Set(prev)
@@ -514,6 +718,18 @@ export default function VentasPage() {
 
       <Toast message={toastMsg} visible={toastVisible} />
 
+      {/* PhotoViewer */}
+      {viewerOpen && (
+        <PhotoViewer photos={viewerPhotos} initialIndex={viewerIndex}
+          buildingName={viewerName} subtitle={viewerSubtitle}
+          onClose={() => setViewerOpen(false)} />
+      )}
+
+      {/* Bottom Sheet */}
+      <BottomSheet property={sheetProperty} isOpen={sheetOpen}
+        onClose={() => { setSheetOpen(false); setSheetProperty(null) }}
+        gateCompleted={gateCompleted} onGate={handleGate} isDesktop={isDesktop} />
+
       {isDesktop ? (
         /* ===== DESKTOP (unchanged) ===== */
         <div className="ventas-desktop">
@@ -536,7 +752,8 @@ export default function VentasPage() {
               <div className="ventas-grid">
                 {properties.map(p => (
                   <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
-                    onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)} />
+                    onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
+                    onPhotoTap={(idx) => openViewer(p, idx)} onDetails={() => openSheet(p)} />
                 ))}
               </div>
             )}
@@ -584,7 +801,8 @@ export default function VentasPage() {
               }
               const p = item.data
               return <MobileVentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
-                onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)} />
+                onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
+                onPhotoTap={(idx) => openViewer(p, idx)} onDetails={() => openSheet(p)} />
             })}
           </div>
         </>
@@ -733,6 +951,51 @@ export default function VentasPage() {
 
         /* ===== TOAST ===== */
         .ventas-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#222; color:#f8f6f3; padding:10px 20px; border-radius:8px; font-size:13px; font-family:'Manrope',sans-serif; z-index:100; border:1px solid #333 }
+
+        /* ===== BOTTOM SHEET ===== */
+        .bs-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:500; opacity:0; pointer-events:none; transition:opacity 0.3s }
+        .bs-overlay.open { opacity:1; pointer-events:auto }
+        .bs { position:fixed; bottom:0; left:0; right:0; max-height:85vh; background:#111; border-top-left-radius:16px; border-top-right-radius:16px; z-index:501; transform:translateY(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1); overflow:hidden; display:flex; flex-direction:column; font-family:'Manrope',sans-serif; color:#f8f6f3 }
+        .bs.open { transform:translateY(0) }
+        .bs-desktop { left:auto; right:0; top:0; bottom:0; max-height:100vh; width:480px; max-width:100%; border-radius:0; border-left:1px solid #222; transform:translateX(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1) }
+        .bs-desktop.open { transform:translateX(0) }
+        .bs-handle { width:40px; height:4px; background:#333; border-radius:2px; margin:10px auto 0 }
+        .bs-desktop .bs-handle { display:none }
+        .bs-header { display:flex; align-items:center; justify-content:space-between; padding:18px 24px 14px; border-bottom:1px solid #222 }
+        .bs-title { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:400; color:#fff }
+        .bs-close { background:none; border:none; color:#888; cursor:pointer; padding:8px; display:flex; align-items:center }
+        .bs-scroll { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:max(24px, env(safe-area-inset-bottom)) }
+        .bs-section { padding:18px 24px; border-bottom:1px solid rgba(255,255,255,0.04) }
+        .bs-section-border { border-bottom:1px solid rgba(255,255,255,0.08) }
+        .bs-zona { font-size:14px; color:rgba(255,255,255,0.55); letter-spacing:1px }
+        .bs-id { color:rgba(255,255,255,0.25); font-size:12px; margin-left:4px; letter-spacing:0 }
+        .bs-location { display:inline-flex; align-items:center; gap:6px; color:#c9a959; font-size:13px; text-decoration:none; margin-top:6px }
+        .bs-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px }
+        .bs-feat { text-align:center }
+        .bs-feat-val { font-family:'Cormorant Garamond',serif; font-size:28px; color:#fff; display:block; line-height:1 }
+        .bs-feat-label { font-size:12px; color:rgba(255,255,255,0.55); letter-spacing:1px; text-transform:uppercase }
+        .bs-price { font-family:'Cormorant Garamond',serif; font-size:32px; color:#c9a959 }
+        .bs-price-detail { font-size:14px; color:rgba(255,255,255,0.55); margin-top:4px }
+        .bs-badges { display:flex; flex-wrap:wrap; gap:8px }
+        .bs-badge { font-size:12px; padding:6px 14px; border-radius:100px; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.7); font-family:'Manrope',sans-serif }
+        .bs-badge.gold { border-color:rgba(201,169,89,0.3); color:#c9a959 }
+        .bs-section-title { font-size:13px; letter-spacing:2px; color:rgba(255,255,255,0.55); font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:8px; text-transform:uppercase }
+        .bs-tags { display:flex; flex-wrap:wrap; gap:8px }
+        .bs-tag { font-size:13px; padding:6px 14px; border-radius:8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.7) }
+        .bs-desc { font-size:14px; color:rgba(255,255,255,0.55); line-height:1.7; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden }
+        .bs-desc.expanded { -webkit-line-clamp:unset; display:block }
+        .bs-desc-more { background:none; border:none; color:#c9a959; font-size:13px; cursor:pointer; padding:6px 0 0; font-family:'Manrope',sans-serif }
+        .bs-agent { font-size:14px; margin-bottom:10px }
+        .bs-agent-name { color:#f8f6f3 }
+        .bs-agent-office { color:rgba(255,255,255,0.4) }
+        .bs-wsp { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:14px; background:#25d366; border:none; border-radius:8px; color:#fff; font-family:'Manrope',sans-serif; font-size:15px; font-weight:600; text-decoration:none; min-height:48px }
+        .bs-ver-original { width:100%; padding:14px; background:transparent; border:1px solid rgba(201,169,89,0.25); color:#c9a959; border-radius:8px; font-family:'Manrope',sans-serif; font-size:14px; cursor:pointer }
+        .bs-gate { display:flex; flex-direction:column; gap:12px }
+        .bs-gate-title { font-size:14px; color:rgba(255,255,255,0.6); margin-bottom:4px }
+        .bs-gate-input { width:100%; padding:12px 14px; background:rgba(255,255,255,0.04); border:1px solid #333; border-radius:8px; color:#f8f6f3; font-family:'Manrope',sans-serif; font-size:15px; box-sizing:border-box }
+        .bs-gate-input::placeholder { color:rgba(255,255,255,0.3) }
+        .bs-gate-submit { width:100%; padding:14px; background:#c9a959; color:#0a0a0a; border:none; border-radius:8px; font-family:'Manrope',sans-serif; font-size:15px; font-weight:700; cursor:pointer }
+        .bs-gate-submit:disabled { opacity:0.4; cursor:default }
       `}</style>
     </>
   )
