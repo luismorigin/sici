@@ -1,10 +1,11 @@
 -- ============================================================================
 -- buscar_unidades_alquiler(p_filtros JSONB)
--- Canonical export from production — 16 Mar 2026
+-- Canonical export from production — 20 Mar 2026
 -- ============================================================================
 -- Query Layer principal para ALQUILER. Expande slugs UI a nombres sucios de BD,
 -- soporta multiselect dormitorios (3+ = >=3), fotos multi-fuente (C21/Remax/BI),
 -- filtro 150 días, OFFSET para paginación server-side.
+-- Filtro mascotas: incluye NULL (sin dato), excluye solo false. Confirmadas primero.
 -- Última migración: 163 (alquiler_filtro_150_dias)
 -- ============================================================================
 
@@ -217,7 +218,7 @@ AS $function$
         )
         AND (
             (p_filtros->>'acepta_mascotas')::boolean IS NOT TRUE
-            OR p.acepta_mascotas = true
+            OR p.acepta_mascotas IS NOT FALSE
         )
         AND (
             (p_filtros->>'con_parqueo')::boolean IS NOT TRUE
@@ -251,6 +252,7 @@ AS $function$
         AND p.precio_mensual_bob IS NOT NULL
 
       ORDER BY
+          CASE WHEN (p_filtros->>'acepta_mascotas')::boolean IS TRUE AND p.acepta_mascotas = true THEN 0 ELSE 1 END,
           CASE WHEN p_filtros->>'orden' = 'precio_desc' THEN p.precio_mensual_bob END DESC NULLS LAST,
           CASE WHEN p_filtros->>'orden' = 'precio_asc' THEN p.precio_mensual_bob END ASC NULLS LAST,
           -- FIX: usar fecha_creacion en vez de fecha_discovery

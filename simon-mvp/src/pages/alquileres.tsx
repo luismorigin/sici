@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo, Fragment } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
@@ -584,6 +584,7 @@ export default function AlquileresPage() {
         isDesktop={isDesktop}
         gateCompleted={gateCompleted}
         onGate={handleGate}
+        petFilterActive={filters.acepta_mascotas}
       />
 
       {isDesktop ? (
@@ -706,18 +707,28 @@ export default function AlquileresPage() {
                   </div>
                 )}
                 <div className="desktop-grid">
-                  {gridProperties.map(p => (
-                    <DesktopCard
-                      key={p.id}
-                      property={p}
-                      isFavorite={favorites.has(p.id)}
-                      favoritesCount={favorites.size}
-                      onToggleFavorite={() => toggleFavorite(p.id)}
-                      onOpenInfo={() => openDetail(p)}
-                      onPhotoTap={(photoIdx) => openViewer(p, photoIdx)}
-                      onShare={() => window.open(buildShareWhatsAppUrl(p), '_blank')}
-                    />
-                  ))}
+                  {gridProperties.map((p, idx) => {
+                    const showDivider = filters.acepta_mascotas && idx > 0 && gridProperties[idx - 1]?.acepta_mascotas === true && p.acepta_mascotas !== true
+                    return (
+                      <Fragment key={p.id}>
+                        {showDivider && (
+                          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '20px 0', margin: '8px 0', color: '#7c3aed', fontSize: 13, fontWeight: 600, letterSpacing: 0.3, border: '1px solid rgba(168,85,247,0.2)', fontFamily: "'Manrope', sans-serif", background: 'rgba(168,85,247,0.08)', borderRadius: 8 }}>
+                            🐾 También podrían aceptar mascotas · consultar con el anunciante
+                          </div>
+                        )}
+                        <DesktopCard
+                          property={p}
+                          isFavorite={favorites.has(p.id)}
+                          favoritesCount={favorites.size}
+                          petFilterActive={filters.acepta_mascotas}
+                          onToggleFavorite={() => toggleFavorite(p.id)}
+                          onOpenInfo={() => openDetail(p)}
+                          onPhotoTap={(photoIdx) => openViewer(p, photoIdx)}
+                          onShare={() => window.open(buildShareWhatsAppUrl(p), '_blank')}
+                        />
+                      </Fragment>
+                    )
+                  })}
                 </div>
               </>
             ) : (
@@ -940,6 +951,7 @@ export default function AlquileresPage() {
                     isFavorite={favorites.has(item.data.id)}
                     favoritesCount={favorites.size}
                     isSpotlight={item.isSpotlight || false}
+                    petFilterActive={filters.acepta_mascotas}
                     onToggleFavorite={() => toggleFavorite(item.data.id)}
                     onOpenInfo={() => openDetail(item.data)}
                     onPhotoTap={(photoIdx) => openViewer(item.data, photoIdx)}
@@ -1015,6 +1027,11 @@ export default function AlquileresPage() {
         .desktop-grid {
           display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
           gap: 24px; max-width: 1200px;
+        }
+        .alq-pet-divider {
+          grid-column: 1 / -1; text-align: center; padding: 20px 0 8px;
+          color: rgba(255,255,255,0.35); font-size: 12px; letter-spacing: 0.5px;
+          border-top: 1px solid rgba(255,255,255,0.08); font-family: 'Manrope', sans-serif;
         }
         .desktop-loading {
           display: flex; align-items: center; justify-content: center; height: 300px;
@@ -1610,8 +1627,8 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
 }
 
 // ===== DESKTOP CARD =====
-function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite, onOpenInfo, onPhotoTap, onShare }: {
-  property: UnidadAlquiler; isFavorite: boolean; favoritesCount: number
+function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare }: {
+  property: UnidadAlquiler; isFavorite: boolean; favoritesCount: number; petFilterActive?: boolean
   onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -1622,7 +1639,8 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
   if (p.dias_en_mercado !== null && p.dias_en_mercado <= 7) badges.push({ text: 'Nuevo', color: 'green' })
   if (p.amoblado === 'si') badges.push({ text: 'Amoblado', color: 'gold' })
   if (p.amoblado === 'semi') badges.push({ text: 'Semi-amoblado', color: 'gold' })
-  if (p.acepta_mascotas) badges.push({ text: 'Mascotas', color: 'purple' })
+  if (p.acepta_mascotas) badges.push({ text: petFilterActive ? 'Acepta mascotas' : 'Mascotas', color: 'purple' })
+  else if (p.acepta_mascotas === null && petFilterActive) badges.push({ text: '🐾 Mascotas: consultar', color: 'warn' })
   if (p.monto_expensas_bob && p.monto_expensas_bob > 0) badges.push({ text: 'Expensas incl.', color: 'gold' })
   if (p.estacionamientos && p.estacionamientos > 0) badges.push({ text: `${p.estacionamientos} parqueo`, color: '' })
   if (p.baulera) badges.push({ text: 'Baulera', color: '' })
@@ -1633,7 +1651,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
   }
 
   return (
-    <div className="dc-card">
+    <div className={`dc-card${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}`}>
       {/* Photo */}
       <div className="dc-photo" style={{ ...(photos[photoIdx] ? { backgroundImage: `url('${photos[photoIdx]}')` } : { background: '#1a1a1a' }), cursor: photos[photoIdx] ? 'pointer' : undefined }} onClick={() => { if (photos[photoIdx] && onPhotoTap) onPhotoTap(photoIdx) }}>
         {photos.length > 1 && (
@@ -1718,6 +1736,8 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
         .dc-badge.gold { border-color: rgba(201,169,89,0.25); color: #c9a959; }
         .dc-badge.purple { border-color: rgba(168,85,247,0.25); color: #a855f7; }
         .dc-badge.green { border-color: rgba(34,197,94,0.25); color: #22c55e; }
+        .dc-badge.warn { border-color: rgba(251,191,36,0.3); color: #fbbf24; background: rgba(251,191,36,0.08); }
+        .dc-card.pet-confirmed { border-left: 3px solid rgba(168,85,247,0.4); }
         .dc-actions { display: flex; gap: 8px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; }
         .dc-info-btn { flex: 1; padding: 8px; background: transparent; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); font-family: 'Manrope', sans-serif; font-size: 11px; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
         .dc-info-btn:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
@@ -1735,9 +1755,9 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, onToggleFavorite
 
 // ===== MOBILE PROPERTY CARD (full-screen) =====
 function MobilePropertyCard({
-  property: p, isFirst, isFavorite, favoritesCount, isSpotlight, onToggleFavorite, onOpenInfo, onPhotoTap, onShare,
+  property: p, isFirst, isFavorite, favoritesCount, isSpotlight, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare,
 }: {
-  property: UnidadAlquiler; isFirst: boolean; isFavorite: boolean; favoritesCount: number; isSpotlight: boolean
+  property: UnidadAlquiler; isFirst: boolean; isFavorite: boolean; favoritesCount: number; isSpotlight: boolean; petFilterActive?: boolean
   onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
@@ -1754,7 +1774,8 @@ function MobilePropertyCard({
   if (p.dias_en_mercado !== null && p.dias_en_mercado <= 7) badges.push({ text: 'Nuevo', color: 'green' })
   if (p.amoblado === 'si') badges.push({ text: 'Amoblado', color: 'gold' })
   if (p.amoblado === 'semi') badges.push({ text: 'Semi-amoblado', color: 'gold' })
-  if (p.acepta_mascotas) badges.push({ text: 'Mascotas', color: 'purple' })
+  if (p.acepta_mascotas) badges.push({ text: petFilterActive ? 'Acepta mascotas' : 'Mascotas', color: 'purple' })
+  else if (p.acepta_mascotas === null && petFilterActive) badges.push({ text: '🐾 Mascotas: consultar', color: 'warn' })
   if (p.monto_expensas_bob && p.monto_expensas_bob > 0) badges.push({ text: 'Expensas incl.', color: 'gold' })
   if (p.estacionamientos && p.estacionamientos > 0) badges.push({ text: `${p.estacionamientos} parqueo`, color: '' })
   if (p.baulera) badges.push({ text: 'Baulera', color: '' })
@@ -1763,7 +1784,7 @@ function MobilePropertyCard({
   const displayName = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
 
   return (
-    <div className="alq-card" ref={cardRef}>
+    <div className={`alq-card${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}`} ref={cardRef}>
       <PhotoCarousel photos={p.fotos_urls || []} isFirst={isFirst} onPhotoTap={onPhotoTap} />
       {isSpotlight && (
         <div className="mc-spotlight-badge">Te compartieron este depto</div>
@@ -1822,6 +1843,8 @@ function MobilePropertyCard({
         .mc-badge.gold { border-color: rgba(201,169,89,0.25); color: #c9a959; background: rgba(201,169,89,0.06); }
         .mc-badge.purple { border-color: rgba(168,85,247,0.25); color: #a855f7; background: rgba(168,85,247,0.06); }
         .mc-badge.green { border-color: rgba(34,197,94,0.25); color: #22c55e; background: rgba(34,197,94,0.06); }
+        .mc-badge.warn { border-color: rgba(251,191,36,0.3); color: #fbbf24; background: rgba(251,191,36,0.1); font-weight: 600; }
+        .alq-card.pet-confirmed { border-left: 3px solid rgba(168,85,247,0.4); }
         .mc-razon { font-size: 12px; font-weight: 300; color: rgba(255,255,255,0.6); line-height: 1.5; margin-bottom: auto; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .mc-actions { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 8px; }
         .mc-btn { display: flex; align-items: center; justify-content: center; gap: 5px; background: none; border: none; color: rgba(255,255,255,0.7); font-size: 12px; font-family: 'Manrope', sans-serif; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
@@ -2043,9 +2066,9 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
 }
 
 // ===== BOTTOM SHEET =====
-function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate }: {
+function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive }: {
   open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean
-  gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void
+  gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; petFilterActive?: boolean
 }) {
   const [mapExpanded, setMapExpanded] = useState(false)
   const [showGate, setShowGate] = useState(false)
@@ -2069,6 +2092,7 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
   if (p.baulera) features.push({ icon: '📦', label: 'Baulera', value: 'Si', highlight: true })
   if (p.amoblado === 'si' || p.amoblado === 'semi') features.push({ icon: '🪑', label: 'Amoblado', value: p.amoblado === 'si' ? 'Si' : 'Semi', highlight: true })
   if (p.acepta_mascotas !== null) features.push({ icon: '🐾', label: 'Mascotas', value: p.acepta_mascotas ? 'Acepta' : 'No acepta', highlight: p.acepta_mascotas })
+  else if (petFilterActive) features.push({ icon: '🐾', label: 'Mascotas', value: 'Consultar', highlight: false })
   if (p.deposito_meses) features.push({ icon: '💰', label: 'Deposito', value: `${p.deposito_meses} mes${p.deposito_meses > 1 ? 'es' : ''}` })
   if (p.monto_expensas_bob) features.push({ icon: '🏠', label: 'Expensas', value: `Bs ${p.monto_expensas_bob}`, highlight: true })
   if (p.contrato_minimo_meses) features.push({ icon: '📋', label: 'Contrato', value: `${p.contrato_minimo_meses} meses` })
