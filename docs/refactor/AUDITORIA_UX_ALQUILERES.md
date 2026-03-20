@@ -2,7 +2,7 @@
 
 > **Fecha:** 19 Mar 2026
 > **Puntaje general:** 6.2/10 (UX 7.5, CRO 6, Psicología 5)
-> **Estado:** Pendiente de implementación
+> **Estado:** CERRADA — 4 implementados, 1 planificado, 11 descartados/no aplica
 
 ---
 
@@ -12,27 +12,27 @@
 **Impacto:** ALTO | **Costo:** BAJO (dato existe en `dias_en_mercado`)
 Debajo del precio: "Publicado hace 3 días · Los deptos en Eq. Centro se alquilan en ~34 días".
 Activa aversión a la pérdida + urgencia con datos reales.
-**Estado:** Pendiente
+**Estado:** IMPLEMENTADO parcial (19 Mar 2026) — "Publicado hace X días" en BottomSheet de alquileres y ventas. Velocidad de zona descartada en cards para no saturar el discovery.
 
 ### 2. Social proof: consultas/vistas
 **Impacto:** ALTO | **Costo:** MEDIO (necesita tracking de vistas)
 Badge "Visto por 12 personas" o proxy "Publicado recientemente" con ícono de fuego para primeros 7 días.
-**Estado:** Pendiente
+**Estado:** No aplica a /alquileres — es mejora de landing (simonbo.com). No hay tracking de vistas por propiedad aún.
 
 ### 3. Precio anclado al promedio de zona
 **Impacto:** ALTO | **Costo:** BAJO (promedios en `v_metricas_mercado`)
 "Bs 5.480/mes — 12% bajo el promedio de Eq. Norte (Bs 6.200)".
-**Estado:** Pendiente
+**Estado:** Descartado — muestra insuficiente. Solo 7 de 23 segmentos zona+dorms tienen n≥8 y CV<40%. El 60% de propiedades no tendría dato, y comparar solo por zona mezcla tipologías incomparables (mono vs 3 dorm). Revisitar cuando el inventario supere ~300 alquileres activos.
 
 ### 4. Empty state inteligente
 **Impacto:** MEDIO | **Costo:** BAJO
 En vez de "No se encontraron", sugerir: "Hay 8 deptos si subís el presupuesto a Bs 6.000" o "Probá sin filtro de mascotas".
-**Estado:** Pendiente
+**Estado:** IMPLEMENTADO (19 Mar 2026) — mensaje contextualizado con filtros activos en /alquileres y /ventas. Sin queries extra, solo lee state.
 
 ### 5. WhatsApp contextualizado
 **Impacto:** MEDIO | **Costo:** BAJO
 Cambiar "Consultar por WhatsApp" → "Preguntar si está disponible". Mensaje pre-armado con pregunta de disponibilidad como primera línea.
-**Estado:** Pendiente
+**Estado:** Descartado — el mensaje actual ya incluye nombre+precio de la propiedad. Cambiar CTA requiere A/B test con datos de conversión, no intuición.
 
 ---
 
@@ -53,11 +53,11 @@ Propiedad de 2 días y de 140 días se ven igual. Badge "Nuevo" para primeros 7 
 
 ### I4. Filtros invisibles en mobile
 El usuario no sabe que los filtros existen hasta card 3. Hint en top bar o primera card.
-**Estado:** Pendiente
+**Estado:** Descartado — card 3 es decisión de diseño (no espantar con filtros antes de ver contenido). Revisitar con datos de scroll depth y bounce rate.
 
 ### I5. No hay retención
 No hay notificaciones, email de favoritos, ni PWA. Cada visita es sin memoria (localStorage no cruza dispositivos).
-**Estado:** Pendiente (largo plazo)
+**Estado:** PLANIFICADO (19 Mar 2026) — plan en `docs/backlog/RETENCION_USUARIOS.md`. 6 fases: Google OAuth → BD favorites → hook sync → prompt post-comparativo → email comparativo (Resend) → alertas (n8n). ~1.5 días de trabajo.
 
 ---
 
@@ -108,3 +108,5 @@ Muchas de estas mejoras aplican también a `/ventas`:
 | 19 Mar 2026 | Auditoría inicial — 5 mejoras top + 5 insights + 6 debilidades |
 | 19 Mar 2026 | D6+I1 implementados: gate en BottomSheet, "Ver ↗" eliminado de cards, `leads_gate` tabla + API. D1-D5 descartados (no aplican) |
 | 19 Mar 2026 | I3 implementado: badge "Nuevo" (verde, ≤7 días) en /alquileres y /ventas. I2 descartado (pips imperceptibles) |
+| 19 Mar 2026 | Punto 1 implementado parcial: "Publicado hace X días" en BottomSheet (no cards). Punto 4 implementado: empty state contextualizado |
+| 19 Mar 2026 | Puntos 2,3,5 descartados. I4 descartado. I5 planificado en docs/backlog/RETENCION_USUARIOS.md (6 fases) |
