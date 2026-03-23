@@ -134,8 +134,8 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 ```
 1:00 AM  Discovery C21 + Remax → propiedades_v2
 2:00 AM  Enrichment regex → datos_json_enrichment
-2:15 AM  Enrichment LLM (Haiku 4.5, prompt v4.1, modo observación) → llm_output en datos_json_enrichment
-3:00 AM  Merge → campos consolidados + TC paralelo
+2:15 AM  Enrichment LLM (Haiku 4.5, prompt v4.1) → llm_output en datos_json_enrichment
+3:00 AM  Merge v2.4.0 → campos consolidados + TC paralelo + LLM (dormitorios, estado_construccion, nombre_edificio, solo_tc_paralelo, es_multiproyecto)
 4:00 AM  Matching → id_proyecto_master + nombre_edificio (migración 170)
 6:00 AM  Verificador ausencias (solo Remax, LIMIT 200)
 9:00 AM  Auditoria + Snapshots absorcion

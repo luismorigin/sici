@@ -30,8 +30,8 @@
 
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
-| `merge_discovery_enrichment(id)` | `merge/merge_discovery_enrichment.sql` | 168 |
-| `merge_discovery_enrichment(identificador text)` | `merge/merge_discovery_enrichment.sql` | 168 |
+| `merge_discovery_enrichment(id)` | `merge/merge_discovery_enrichment.sql` | 195 |
+| `merge_discovery_enrichment(identificador text)` | `merge/merge_discovery_enrichment.sql` | 195 |
 | `ejecutar_merge_batch(limite)` | — | 001 |
 | `merge_alquiler(id)` | `alquiler/merge_alquiler.sql` | 159 |
 

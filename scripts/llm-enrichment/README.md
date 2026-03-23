@@ -2,7 +2,7 @@
 
 Enrichment LLM para el pipeline de ventas de SICI. El LLM actúa como **supervisor del regex** — recibe lo que el extractor ya sacó + la descripción/título/ubicación, y valida/corrige/completa 17 campos.
 
-## Estado actual (2026-03-17)
+## Estado actual (2026-03-23)
 
 | Paso | Descripción | Estado | Archivos |
 |------|-------------|--------|----------|
@@ -11,9 +11,9 @@ Enrichment LLM para el pipeline de ventas de SICI. El LLM actúa como **supervis
 | 3 | Título/ubicación en extractores | **Pendiente** (no bloqueante) | `n8n/workflows/modulo_1/flujo_b_processing_v3.0.json` |
 | 4 | Función SQL v2.0 (modo observación) | Completado — deployada 2026-03-17 | `sql/functions/enrichment/registrar_enrichment_venta_llm.sql` |
 | 5 | Workflow n8n | **Importado y testeado** — registra en workflow_executions | `n8n/workflows/modulo_1/flujo_enrichment_llm_venta_v1.0.0.json` |
-| 6 | Backfill + auditoría (Fase A) | **Completado** — 352 props, auditoría limpia | — |
-| 7 | Pipeline nocturno 2 semanas (Fase B) | **Activo** — cron 2:15 AM, integrado con salud | — |
-| 8 | Merge consume llm_output (Fase C) | Pendiente | `sql/functions/merge/merge_discovery_enrichment.sql` |
+| 6 | Backfill + auditoría (Fase A) | **Completado** — 352 props, auditoría limpia (20 Mar) | `docs/analysis/AUDITORIA_LLM_VENTAS_2026_03_20.md` |
+| 7 | Pipeline nocturno 2 semanas (Fase B) | **Completado** — 7 noches sin errores, 363/364 props | — |
+| 8 | Merge consume llm_output (Fase C) | **Completado** — merge v2.4.0, migración 195 (23 Mar) | `sql/migrations/195_merge_consume_llm_output.sql` |
 
 ### Prerrequisitos para correr el test
 

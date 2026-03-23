@@ -1,5 +1,48 @@
 # CHANGELOG - Merge
 
+## [2.4.0] - 2026-03-23
+
+### New Features — Fase C: Merge consume LLM output
+
+El merge ahora lee `datos_json_enrichment.llm_output` y lo usa en las cadenas de prioridad.
+
+1. **Dormitorios — nueva cadena de prioridad:**
+   - `candado → LLM (confianza alta + difiere de discovery) → discovery → LLM fallback → regex → existing`
+   - Resuelve monoambientes: discovery dice 1, LLM con confianza alta dice 0 → LLM gana
+
+2. **Estado construcción — LLM con protección:**
+   - LLM actualiza `no_especificado` → valor real, `nuevo_a_estrenar` → `entrega_inmediata`
+   - **Regla de protección:** NUNCA degrada `entrega_inmediata` → `preventa` (anuncios desactualizados)
+   - Nueva fuente tracking: `v_fuente_estado_construccion` (`llm`, `existing`, `existing_protected`)
+
+3. **Nombre edificio — LLM como fallback:**
+   - Cadena: `candado → discovery → enrichment (regex) → LLM → existing`
+   - LLM llena nombres cuando ni discovery ni regex tienen dato (ej: SANTORINI VENTURA)
+
+4. **solo_tc_paralelo y es_multiproyecto — LLM directo:**
+   - `COALESCE(llm, valor_existente)` en el UPDATE
+   - Sin fuente discovery/regex confiable para estos campos
+
+### Changed
+
+- `datos_json.proyecto` incluye `fuente_estado_construccion`
+- `datos_json.trazabilidad` incluye `llm_version`, `llm_model`
+- `cambios_merge` incluye `llm_disponible` y fuente `estado_construccion`
+- `version_merge` → `2.4.0`
+
+### Backfill pre-deploy (23 Mar 2026)
+
+Correcciones manuales confirmadas por auditoría LLM (20 Mar):
+- 24 monoambientes: dormitorios 1→0
+- 1 dormi inverso: 0→1 (ID 953)
+- 5 nombre_edificio corregidos (Sirari Palm, Sky Luxia, Malibú Friendly, Sky Eclipse, Uptown Drei)
+
+### Migración
+
+`sql/migrations/195_merge_consume_llm_output.sql`
+
+---
+
 ## [2.1.0] - 2025-12-25
 
 ### New Features ✨
