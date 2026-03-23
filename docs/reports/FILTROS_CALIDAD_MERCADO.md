@@ -85,6 +85,20 @@ Los queries de mercado filtran por `status IN ('completado', 'actualizado')`. Lo
 | 1055 | Millennial Tower | Av. Bush 1er-2do anillo |
 | 1072 | Portobello Green | GPS fuera (Remax) |
 
+## Datos de absorcion corruptos (feb-mar 2026)
+
+**BUG-001:** Entre el 14 de febrero y el 22 de marzo de 2026, los campos de absorcion de venta en `market_absorption_snapshots` son incorrectos por una falla en el verificador de ausencias. Detalle completo en `docs/bugs/BUG_001_verificador_venta_inactivo.md`.
+
+| Campo | Estado en ese periodo |
+|---|---|
+| `venta_absorbidas_30d` | Subestimado (14 feb - 12 mar), cero (13-22 mar) |
+| `venta_tasa_absorcion` | Idem |
+| `venta_meses_inventario` | Idem (NULL desde 13 mar) |
+| `absorbidas_ticket_promedio`, `absorbidas_usd_m2` | Sin datos desde 13 mar |
+| Inventario, precios, m2, alquiler, ROI | **No afectados** |
+
+**Para estudios de mercado en ese periodo:** usar el snapshot del **15-feb-2026** como ultimo dato limpio de absorcion. Datos desde **23-mar-2026** son confiables.
+
 ## Referencia
 
 Estos filtros son los mismos que usa:

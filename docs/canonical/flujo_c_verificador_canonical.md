@@ -1,14 +1,17 @@
 # CONTRATO CANONICAL — FLUJO C: VERIFICADOR DE AUSENCIAS
 
-**Versión:** 4.0
-**Fecha:** 28 Feb 2026
+**Versión:** 5.0
+**Fecha:** 22 Mar 2026
 **Estado:** PRODUCCIÓN (venta desde 18 Dic 2025, alquiler desde 12 Feb 2026)
 
 ---
 
 ## RESPONSABILIDAD ÚNICA
 
-Confirmar técnicamente (vía HTTP HEAD) las ausencias marcadas por Discovery, reactivar propiedades que reaparecen, y auto-confirmar después de 7 días sin respuesta. Existen **dos workflows separados**: uno para venta y otro para alquiler, con reglas distintas.
+Confirmar las ausencias marcadas por Discovery. Existen **dos workflows separados** con estrategias distintas:
+
+- **Venta:** Solo auto-confirmación por tiempo (2 días). HTTP no se usa — Remax devuelve 200 genérico (SPA), igual que C21.
+- **Alquiler:** HTTP HEAD + auto-confirmación por tiempo (7 días) + ghost detection.
 
 ---
 
@@ -17,24 +20,22 @@ Confirmar técnicamente (vía HTTP HEAD) las ausencias marcadas por Discovery, r
 | Aspecto | Venta (6:00 AM) | Alquiler (7:00 AM) |
 |---------|-----------------|-------------------|
 | **Archivo** | `modulo_1/flujo_c_verificador_v1.1.0_FINAL.json` | `alquiler/flujo_c_verificador_alquiler_v1.0.0.json` |
-| **Fuentes** | Solo Remax (C21 excluido) | Todas (sin filtro fuente) |
-| **Scope** | `inactivo_pending` solamente | `inactivo_pending` + ghost detection |
-| **Reactivación a** | `nueva` | `completado` |
+| **Fuentes** | Solo Remax venta (C21 excluido) | Todas (sin filtro fuente) |
+| **Método** | Solo tiempo (sin HTTP) | HTTP HEAD + tiempo |
+| **Auto-confirma** | 2 días | 7 días |
+| **Reactivación** | No (Discovery se encarga) | Sí (HTTP 200 → completado) |
 | **Ghost detection** | No | Sí (completado + es_activa + >14 días) |
 | **LIMIT** | 200 | 100 (20 ghost + resto pending) |
-| **Delay entre requests** | 1s | 1.5s |
 
 ---
 
-## VENTA: SOLO REMAX
+## VENTA: SOLO REMAX, SOLO TIEMPO
 
-### Por qué C21 está excluido
+### Por qué no se usa HTTP (BUG-001)
 
-Century21 devuelve HTTP 200 con página genérica para propiedades removidas. No hay señal HTTP confiable para distinguir "existe" de "fue removida". Discovery se encarga de C21 vía snapshot (comparación diaria).
+Tanto C21 como Remax devuelven HTTP 200 con página genérica para propiedades removidas. Remax es una SPA que sirve el mismo shell HTML para cualquier URL. No hay señal HTTP confiable para distinguir "existe" de "fue removida" en ningún portal boliviano.
 
-**Consecuencia en producción (28 Feb 2026):**
-- 62 propiedades C21 en `inactivo_pending` (Discovery las marcó, Flujo C no las toca)
-- 32 propiedades Remax en `inactivo_pending` (Flujo C las procesa cada noche)
+**Discovery es la fuente de verdad:** si una propiedad reaparece en el API de Remax, `registrar_discovery()` la reactiva automáticamente vía `determinar_status_post_discovery(inactivo_pending → actualizado)`. Incluso `inactivo_confirmed` se reactiva si Discovery la encuentra.
 
 ### Query de entrada (venta)
 
@@ -44,35 +45,28 @@ SELECT id, url, fuente, codigo_propiedad, status, primera_ausencia_at,
 FROM propiedades_v2
 WHERE status = 'inactivo_pending'::estado_propiedad
   AND fuente = 'remax'
+  AND tipo_operacion = 'venta'
 ORDER BY primera_ausencia_at ASC
 LIMIT 200;
 ```
 
-**Nota:** No filtra por `tipo_operacion = 'venta'` — el filtro `fuente = 'remax'` es suficiente porque Remax en `inactivo_pending` son siempre de venta (el pipeline alquiler tiene su propio verificador).
-
 ### Lógica de decisión (venta)
 
 ```
-1. dias_desde_ausencia >= 7  → CONFIRM (auto-confirmación por tiempo)
-2. HTTP 404                  → CONFIRM (confirmación técnica)
-3. HTTP 200                  → REACTIVATE (status='nueva', limpiar primera_ausencia_at)
-4. HTTP 301/302              → SKIP (redirect ambiguo)
-5. Error/timeout             → SKIP (reintentar mañana)
+1. primera_ausencia_at IS NULL  → SKIP (datos inconsistentes)
+2. dias_desde_ausencia >= 2     → CONFIRM (auto-confirmación por tiempo)
+3. dias_desde_ausencia < 2      → SKIP (esperar)
 ```
+
+No hay reactivación por HTTP. Si la propiedad reaparece, Discovery la reactiva en el siguiente ciclo nocturno.
 
 ### Updates (venta)
 
 ```sql
--- CONFIRMAR BAJA
+-- CONFIRMAR BAJA (único update posible)
 UPDATE propiedades_v2
 SET status = 'inactivo_confirmed', es_activa = FALSE, fecha_actualizacion = NOW()
 WHERE id = $1 AND status = 'inactivo_pending';
-
--- REACTIVAR
-UPDATE propiedades_v2
-SET status = 'nueva'::estado_propiedad, primera_ausencia_at = NULL,
-    es_activa = TRUE, fecha_discovery = NOW(), fecha_actualizacion = NOW()
-WHERE id = $1 AND status = 'inactivo_pending'::estado_propiedad;
 ```
 
 ---
@@ -170,14 +164,17 @@ WHERE id = $1 AND status = 'inactivo_pending'::estado_propiedad;
                              │
             ┌────────────────┼────────────────┐
             │                │                │
-        HTTP 404        >= 7 días         HTTP 200
-        o ghost 404     sin respuesta     (pending only)
+     >= 2 días (venta)  HTTP 404 (alq)   HTTP 200 (alq)
+     >= 7 días (alq)    ghost 404 (alq)  (pending only)
             │                │                │
             ▼                ▼                ▼
     ┌───────────────┐  ┌───────────────┐  ┌──────────┐
-    │  inactivo_    │  │  inactivo_    │  │  nueva   │ (venta)
-    │  confirmed    │  │  confirmed    │  │completado│ (alquiler)
-    └───────────────┘  └───────────────┘  └──────────┘
+    │  inactivo_    │  │  inactivo_    │  │completado│ (alquiler)
+    │  confirmed    │  │  confirmed    │  └──────────┘
+    └───────────────┘  └───────────────┘
+
+    Discovery reaparece propiedad → registrar_discovery() → actualizado
+    (aplica tanto a inactivo_pending como inactivo_confirmed)
 ```
 
 ### Campos involucrados
@@ -221,15 +218,16 @@ WHERE id = $1 AND status = 'inactivo_pending'::estado_propiedad;
 ## GARANTÍAS
 
 - **Idempotente:** puede correr múltiples veces sin efecto
-- **No toca C21 en venta:** señal HTTP no confiable
-- **Auto-confirma a 7 días:** no deja pending indefinidamente
-- **Limpia primera_ausencia_at** en reactivaciones
+- **No usa HTTP para venta:** señal no confiable en portales bolivianos (SPA)
+- **Auto-confirma a 2 días (venta) / 7 días (alquiler):** no deja pending indefinidamente
+- **Discovery como safety net:** si la propiedad reaparece en el API, se reactiva automáticamente
 - **Ghost detection** (solo alquiler): detecta propiedades que Discovery no captura
 
 ## LIMITACIONES
 
-- **C21 venta queda en pending** hasta que Discovery las vuelva a encontrar o el admin las gestione manualmente
+- **C21 venta queda en pending** hasta que Discovery las vuelva a encontrar o el admin las gestione manualmente. C21 no está en el scope del verificador (HTTP inútil).
 - **`expirado_stale` nunca se implementó** (migración 164 no agregó el valor al enum). Las propiedades viejas no se transicionan a un status especial — simplemente dejan de aparecer en queries por el filtro de 150/300 días
+- **HTTP no confiable:** Remax (SPA) y C21 devuelven HTTP 200 para propiedades removidas. Solo alquiler usa HTTP porque las fuentes de alquiler sí devuelven 404.
 
 ---
 
@@ -259,6 +257,14 @@ Cada ejecución registra en `workflow_executions`:
 ---
 
 ## CHANGELOG
+
+**v5.0 — 22 Mar 2026 (BUG-001 fix):**
+- Eliminado HTTP check para venta — Remax devuelve 200 genérico (SPA)
+- `MAX_DIAS_PENDING` reducido de 7 a 2 para venta
+- Agregado filtro `AND tipo_operacion = 'venta'` a la query
+- Logging dinámico en `registrar_ejecucion_workflow` (antes hardcodeado a 0)
+- Eliminada reactivación por HTTP para venta — Discovery es el safety net
+- Ver `docs/bugs/BUG_001_verificador_venta_inactivo.md` para detalle completo
 
 **v4.0 — 28 Feb 2026:**
 - Reescritura completa verificada contra JSONs de producción
