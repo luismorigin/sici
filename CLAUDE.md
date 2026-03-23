@@ -76,7 +76,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 ## Sistema de precios — Definiciones
 
 - `precio_usd`: Para props paralelo = USD **billete** (el precio que pide el vendedor en dólares físicos). Para el resto = USD directo del listing.
-- `tipo_cambio_detectado`: `'paralelo'`, `'oficial'`, o `'no_especificado'`. Detectado de la descripción.
+- `tipo_cambio_detectado`: `'paralelo'`, `'oficial'`, o `'no_especificado'`. Detectado por regex de la descripción; merge v2.5.0 upgrade con LLM (alta confianza, solo upgrade no_especificado→específico).
 - `depende_de_tc`: `true` para props donde el precio depende del TC (paralelo u oficial + normalizado). `false` = USD real verificado.
 - `precio_usd_actualizado`: Campo interno del módulo TC dinámico. Ningún query de mercado lo consume.
 - `precio_usd_original` (en `datos_json_enrichment`): **NO confiable** como referencia — contiene BOB crudo (Remax) o USD×TC (C21). No usar para correcciones automáticas.
@@ -135,7 +135,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 1:00 AM  Discovery C21 + Remax → propiedades_v2
 2:00 AM  Enrichment regex → datos_json_enrichment
 2:15 AM  Enrichment LLM (Haiku 4.5, prompt v4.1) → llm_output en datos_json_enrichment
-3:00 AM  Merge v2.4.0 → campos consolidados + TC paralelo + LLM (dormitorios, estado_construccion, nombre_edificio, solo_tc_paralelo, es_multiproyecto)
+3:00 AM  Merge v2.5.0 → campos consolidados + TC paralelo + LLM (dormitorios, estado_construccion, nombre_edificio, solo_tc_paralelo, es_multiproyecto, tipo_cambio_detectado)
 4:00 AM  Matching → id_proyecto_master + nombre_edificio (migración 170)
 6:00 AM  Verificador ausencias (solo Remax, LIMIT 200)
 9:00 AM  Auditoria + Snapshots absorcion
