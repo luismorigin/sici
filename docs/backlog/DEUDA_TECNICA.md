@@ -38,10 +38,9 @@
 - Las páginas del funnel premium (`resultados-v2`) usan `buscar_unidades_reales`, no esta función
 - Deprecar cuando se haga limpieza de funciones SQL
 
-**`buscar_unidades_reales` — DEFENSIVO, baja prioridad**
-- Falta `precio_usd > 0` y status `'actualizado'`: verificado 23 Mar, hay **0 registros** con precio=0 y **0 registros** con status=actualizado
-- El pipeline no deja pasar datos malos actualmente. Fix válido pero sin impacto inmediato
-- `buscar_unidades_simple` (nueva, /ventas) ya tiene status fix pero comparte el gap de precio>0
+**`buscar_unidades_reales` — CORREGIDO (23 Mar 2026)**
+- Migración 198: status `IN ('completado', 'actualizado')` + `precio_normalizado() > 0` en WHERE, 4 CTEs y 2 subqueries
+- 0 registros afectados al deploy (defensivo). Pendiente aplicar en producción
 
 **`buscar_unidades_alquiler` — CORREGIDO (23 Mar 2026)**
 - Cambio: `precio_mensual_bob IS NOT NULL` → `precio_mensual_usd > 0` (alinea con `v_mercado_alquiler`)
