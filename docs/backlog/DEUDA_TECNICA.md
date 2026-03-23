@@ -29,27 +29,29 @@
 
 **Estado:** Valores actualizados manualmente (9 Mar 2026). Funcional pero requiere actualización manual cuando cambian promedios de zona.
 
-## Funciones SQL con filtros de mercado incompletos — PENDIENTE (12 Mar 2026)
+## Funciones SQL con filtros de mercado — REVISADO (23 Mar 2026)
 
-**Contexto:** Migración 193 creó vistas canónicas `v_mercado_venta` y `v_mercado_alquiler`. Migración 194 refactorizó `snapshot_absorcion_mercado()` para usarlas. Auditoría de 60 funciones encontró 3 en producción con filtros incompletos.
+**Contexto:** Migración 193 creó vistas canónicas `v_mercado_venta` y `v_mercado_alquiler`. Auditoría de 60 funciones encontró 3 con filtros incompletos. Re-investigado 23 Mar 2026.
 
-**Funciones en producción que requieren corrección:**
+**`analisis_mercado_fiduciario` — CÓDIGO MUERTO (eliminar del backlog)**
+- Ninguna página la llama. `obtenerAnalisisMercado()` existe en `supabase.ts` pero ningún componente lo importa
+- Las páginas del funnel premium (`resultados-v2`) usan `buscar_unidades_reales`, no esta función
+- Deprecar cuando se haga limpieza de funciones SQL
 
-| Prioridad | Función | Filtros faltantes | Riesgo de cambio | Dónde se usa |
-|-----------|---------|-------------------|-------------------|--------------|
-| ALTA | `analisis_mercado_fiduciario` | Subqueries stock/alertas: duplicado_de, tipo_prop, area, zona, precio, días | Bajo | formulario-v2 → resultados-v2 |
-| MEDIA | `buscar_unidades_reales` | `precio_usd > 0`, status solo 'completado' (falta 'actualizado') | Medio (función más usada) | Landing venta, admin propiedades, broker CMA |
-| BAJA | `buscar_unidades_alquiler` | Usa `precio_mensual_bob IS NOT NULL` en vez de `precio_mensual_usd > 0` | Medio-bajo (verificar si hay props con BOB sin USD) | API alquileres, admin propiedades |
+**`buscar_unidades_reales` — DEFENSIVO, baja prioridad**
+- Falta `precio_usd > 0` y status `'actualizado'`: verificado 23 Mar, hay **0 registros** con precio=0 y **0 registros** con status=actualizado
+- El pipeline no deja pasar datos malos actualmente. Fix válido pero sin impacto inmediato
+- `buscar_unidades_simple` (nueva, /ventas) ya tiene status fix pero comparte el gap de precio>0
+
+**`buscar_unidades_alquiler` — CORREGIDO (23 Mar 2026)**
+- Cambio: `precio_mensual_bob IS NOT NULL` → `precio_mensual_usd > 0` (alinea con `v_mercado_alquiler`)
+- Solo 1 prop afectada (id 1156, BOB sin USD). Pendiente aplicar migración en producción
 
 **Funciones sin uso en producción (código muerto):**
 - `buscar_unidades_con_amenities` — nunca integrada al frontend (migración 019)
 - `generar_razon_fiduciaria` — sin llamadas desde frontend/API
 - `explicar_precio` — sin llamadas desde frontend/API
-
-**Orden recomendado:**
-1. `analisis_mercado_fiduciario` — swap subqueries a `FROM v_mercado_venta` (bajo riesgo, alto valor)
-2. `buscar_unidades_alquiler` — verificar datos BOB vs USD primero
-3. `buscar_unidades_reales` — el más delicado, testear bien
+- `analisis_mercado_fiduciario` — sin llamadas desde frontend/API (ver arriba)
 
 ## Refactor ventas /ventas — Deuda del Bloque 1 (18 Mar 2026)
 

@@ -200,6 +200,7 @@
 | 193 | vistas_mercado | Crear `v_mercado_venta` y `v_mercado_alquiler` — vistas con filtros canónicos + campos calculados (precio_m2, precio_norm, dias_en_mercado) |
 | 194 | snapshot_absorcion_v2 | Refactorizar `snapshot_absorcion_mercado()` para usar vistas canónicas. Agregar `filter_version` a `market_absorption_snapshots` (v1=legacy, v2=canónico). Históricos marcados v1. Nota: loop 0..3, props 4+ dorms no capturadas (~5) |
 | 195 | merge_consume_llm_output | **Merge v2.4.0 — Fase C LLM.** Merge consume `llm_output` de enrichment. Dormitorios: candado→LLM(alta)→discovery→regex. Estado construcción: LLM con protección (nunca degrada entrega_inmediata→preventa). Nombre edificio: LLM como fallback. solo_tc_paralelo y es_multiproyecto: LLM directo. Trazabilidad: llm_version, llm_model |
+| 196 | fix_buscar_unidades_alquiler_precio_usd | Fix filtro `buscar_unidades_alquiler()`: `precio_mensual_bob IS NOT NULL` → `precio_mensual_usd > 0`. Alinea con `v_mercado_alquiler`. 1 prop afectada (id 1156, BOB sin USD) |
 
 **⚠️ Post-migración 191 — Deploy requerido en n8n:**
 La migración 191 corrige datos existentes pero el extractor C21 sigue generando falsos positivos.

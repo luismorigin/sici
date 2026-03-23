@@ -28,7 +28,8 @@ Las 5 activas (156, 309, 385, 158, 452) tienen valores plausibles — no requier
 - [x] Validación precio/m² < $800: cubierto por `v_metricas_mercado` (filtra `BETWEEN 800 AND 4000`) + `buscar_unidades_reales` (outlier flag ±55%)
 - [x] Filtro `tipo_operacion = 'venta'` en función `buscar_unidades_reales()` (migración 026)
 - [x] Filtro `area >= 20m²` para excluir parqueos/bauleras mal clasificados (migración 026)
-- [ ] Detectar duplicados por proyecto + área + dormitorios con precios muy diferentes
+- [x] ~~Detectar duplicados por proyecto + área + dormitorios con precios muy diferentes~~ — Investigado 23 Mar: 19 pares, 63% son problemas de TC detection (no duplicados reales). Cross-source price variance es comportamiento normal. Cerrado.
+- [ ] Auditar `tipo_cambio_detectado = NULL` en props activas de venta (causa raíz de las anomalías de precio detectadas arriba)
 
 ## UX Completado
 
