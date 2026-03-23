@@ -1,6 +1,6 @@
 # Deuda Técnica — SICI
 
-> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 9 Mar 2026.
+> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 23 Mar 2026.
 
 ## Merge y amenities — RIESGO ACEPTADO (9 Mar 2026)
 

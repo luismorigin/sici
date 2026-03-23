@@ -838,6 +838,17 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
           break
       }
 
+      // Auto-candado TC: proteger edición manual del merge nocturno
+      if (updateData.tipo_cambio_detectado !== undefined) {
+        updateData.campos_bloqueados = {
+          ...updateData.campos_bloqueados,
+          tipo_cambio_detectado: {
+            bloqueado: true, por: 'admin', usuario_id: 'admin-panel',
+            usuario_nombre: 'Administrador', fecha: ahora,
+          },
+        }
+      }
+
       const { error: updateError } = await supabase.from('propiedades_v2').update(updateData).eq('id', id)
       if (updateError) throw new Error(updateError.message)
 
