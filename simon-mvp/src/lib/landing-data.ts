@@ -1,4 +1,4 @@
-import { supabase, obtenerSnapshot24h, obtenerMicrozonas, type Snapshot24h, type MicrozonaData } from './supabase'
+import { supabase, obtenerSnapshot24h, obtenerMicrozonas, obtenerZonasAlquiler, type Snapshot24h, type MicrozonaData, type ZonaAlquilerData } from './supabase'
 import { normalizarPrecio } from './precio-utils'
 
 // Fallbacks con datos reales de Enero 2026 (se usan si Supabase falla en build)
@@ -35,6 +35,7 @@ export interface LandingData {
   heroMetrics: HeroMetrics
   snapshot: Snapshot24h
   microzonas: MicrozonaData[]
+  zonasAlquiler: ZonaAlquilerData[]
 }
 
 export async function fetchLandingData(): Promise<LandingData> {
@@ -88,10 +89,11 @@ export async function fetchLandingData(): Promise<LandingData> {
       }
     }
 
-    // Query 4+5: Snapshot + Microzonas (en paralelo)
-    const [snapshot, microzonas] = await Promise.all([
+    // Query 4+5+6: Snapshot + Microzonas + Zonas Alquiler (en paralelo)
+    const [snapshot, microzonas, zonasAlquiler] = await Promise.all([
       obtenerSnapshot24h(),
-      obtenerMicrozonas()
+      obtenerMicrozonas(),
+      obtenerZonasAlquiler()
     ])
 
     const heroMetrics: HeroMetrics = {
@@ -114,6 +116,7 @@ export async function fetchLandingData(): Promise<LandingData> {
       heroMetrics,
       snapshot: alignedSnapshot,
       microzonas: microzonas.length > 0 ? microzonas : FALLBACK_MICROZONAS,
+      zonasAlquiler,
     }
   } catch (error) {
     console.error('[landing-data] Error fetching data:', error)
@@ -125,6 +128,7 @@ export async function fetchLandingData(): Promise<LandingData> {
       },
       snapshot: FALLBACK_SNAPSHOT,
       microzonas: FALLBACK_MICROZONAS,
+      zonasAlquiler: [],
     }
   }
 }

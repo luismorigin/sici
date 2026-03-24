@@ -1772,6 +1772,59 @@ function categorizarZona(precioM2: number): 'premium' | 'standard' | 'value' {
   return 'value'
 }
 
+// ========== ZONAS ALQUILER ==========
+
+export interface ZonaAlquilerData {
+  zona: string
+  total: number
+  mediana_bob: number
+  avg_bob: number
+}
+
+export async function obtenerZonasAlquiler(): Promise<ZonaAlquilerData[]> {
+  if (!supabase) return []
+
+  try {
+    const { data, error } = await supabase
+      .from('v_mercado_alquiler')
+      .select('zona, precio_mensual_bob')
+
+    if (error || !data || data.length === 0) {
+      console.warn('Error obteniendo zonas alquiler:', error?.message)
+      return []
+    }
+
+    // Agregar por zona en JS (mismo patrón que obtenerMicrozonas)
+    const zonaMap: Record<string, number[]> = {}
+    data.forEach((row: any) => {
+      const zona = row.zona
+      if (!zona || !row.precio_mensual_bob) return
+      if (!zonaMap[zona]) zonaMap[zona] = []
+      zonaMap[zona].push(row.precio_mensual_bob)
+    })
+
+    return Object.entries(zonaMap)
+      .filter(([_, precios]) => precios.length >= 2)
+      .map(([zona, precios]) => {
+        const sorted = [...precios].sort((a, b) => a - b)
+        const mid = Math.floor(sorted.length / 2)
+        const mediana = sorted.length % 2 === 0
+          ? Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+          : sorted[mid]
+        return {
+          zona,
+          total: precios.length,
+          mediana_bob: mediana,
+          avg_bob: Math.round(precios.reduce((a, b) => a + b, 0) / precios.length),
+        }
+      })
+      .sort((a, b) => b.total - a.total)
+  } catch (err) {
+    console.warn('Error obteniendo zonas alquiler:', err)
+    return []
+  }
+}
+
 // ========== FOTOS POR ID ==========
 
 export async function obtenerFotosPorIds(ids: number[]): Promise<Record<number, string[]>> {

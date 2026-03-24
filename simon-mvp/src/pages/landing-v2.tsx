@@ -12,24 +12,6 @@ import {
 } from '@/components/landing-premium'
 import { trackEvent } from '@/lib/analytics'
 import { fetchLandingData, type LandingData } from '@/lib/landing-data'
-import { Cormorant_Garamond, Manrope } from 'next/font/google'
-
-const cormorant = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['300'],
-  style: ['normal', 'italic'],
-  variable: '--font-cormorant',
-  display: 'optional',
-  adjustFontFallback: true,
-})
-
-const manrope = Manrope({
-  subsets: ['latin'],
-  weight: ['300', '500'],
-  variable: '--font-manrope',
-  display: 'optional',
-  adjustFontFallback: true,
-})
 
 export default function LandingV2({ heroMetrics, snapshot, microzonas }: InferGetStaticPropsType<typeof getStaticProps>) {
   useEffect(() => {
@@ -48,10 +30,7 @@ export default function LandingV2({ heroMetrics, snapshot, microzonas }: InferGe
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div
-        className={`${cormorant.variable} ${manrope.variable} antialiased`}
-        style={{ fontFamily: 'var(--font-manrope), -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif' }}
-      >
+      <div className="font-s-body antialiased">
         <NavbarPremium />
 
         <main>
