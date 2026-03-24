@@ -145,6 +145,13 @@ interface ZonaEstado {
   pm2: number
 }
 
+interface AbsorcionHistorico {
+  fecha: string
+  activas: number
+  absorcionPct: number
+  absorbidas: number
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -171,6 +178,9 @@ export default function MarketPulseDashboard() {
   const [edificioDispersion, setEdificioDispersion] = useState<EdificioDispersion[]>([])
   const [antiguedad, setAntiguedad] = useState<AntiguedadBucket[]>([])
   const [zonaEstados, setZonaEstados] = useState<ZonaEstado[]>([])
+  const [absorcionZonas, setAbsorcionZonas] = useState<Record<string, { absorbidas: number; pending: number; tasa: number; meses: number | null }>>({})
+  const [absorcionGlobal, setAbsorcionGlobal] = useState<{ tasa: number; meses: number | null; pending: number } | null>(null)
+  const [absorcionHistorico, setAbsorcionHistorico] = useState<AbsorcionHistorico[]>([])
 
   // ============================================================================
   // FETCH FUNCTIONS
@@ -192,7 +202,8 @@ export default function MarketPulseDashboard() {
         fetchRankingAmenidades(),
         fetchZonaAnalysis(),
         fetchDataQuality(),
-        fetchAntiguedad()
+        fetchAntiguedad(),
+        fetchAbsorcion()
       ])
       setLastUpdate(new Date())
     } catch (err) {
@@ -989,6 +1000,81 @@ export default function MarketPulseDashboard() {
     })))
   }
 
+  const fetchAbsorcion = async () => {
+    if (!supabase) return
+
+    // Snapshot más reciente (hoy o ayer) — global + zonas
+    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0]
+    const { data: todaySnap } = await supabase
+      .from('market_absorption_snapshots')
+      .select('fecha, zona, dormitorios, venta_activas, venta_absorbidas_30d, venta_pending_30d, venta_tasa_absorcion, venta_meses_inventario')
+      .gte('fecha', twoDaysAgo)
+      .order('fecha', { ascending: false })
+
+    if (todaySnap && todaySnap.length > 0) {
+      const latestDate = (todaySnap[0] as any).fecha
+      const latest = todaySnap.filter((r: any) => r.fecha === latestDate)
+
+      // Global
+      const globalRows = latest.filter((r: any) => r.zona === 'global')
+      if (globalRows.length > 0) {
+        const totalAbsorbidas = globalRows.reduce((s: number, r: any) => s + (r.venta_absorbidas_30d || 0), 0)
+        const totalActivas = globalRows.reduce((s: number, r: any) => s + (r.venta_activas || 0), 0)
+        const totalPending = globalRows.reduce((s: number, r: any) => s + (r.venta_pending_30d || 0), 0)
+        const tasa = totalActivas + totalAbsorbidas > 0
+          ? Math.round(1000 * totalAbsorbidas / (totalActivas + totalAbsorbidas)) / 10
+          : 0
+        const meses = totalAbsorbidas > 0 ? Math.round(10 * totalActivas / totalAbsorbidas) / 10 : null
+        setAbsorcionGlobal({ tasa, meses, pending: totalPending })
+      }
+
+      // Por zona (agregar dorms)
+      const zonaRows = latest.filter((r: any) => r.zona !== 'global')
+      const byZona: Record<string, { absorbidas: number; pending: number; activas: number }> = {}
+      for (const row of zonaRows as any[]) {
+        const z = byZona[row.zona] || { absorbidas: 0, pending: 0, activas: 0 }
+        z.absorbidas += row.venta_absorbidas_30d || 0
+        z.pending += row.venta_pending_30d || 0
+        z.activas += row.venta_activas || 0
+        byZona[row.zona] = z
+      }
+      const zonaMap: Record<string, { absorbidas: number; pending: number; tasa: number; meses: number | null }> = {}
+      for (const [zona, d] of Object.entries(byZona)) {
+        const tasa = d.activas + d.absorbidas > 0
+          ? Math.round(1000 * d.absorbidas / (d.activas + d.absorbidas)) / 10
+          : 0
+        const meses = d.absorbidas > 0 ? Math.round(10 * d.activas / d.absorbidas) / 10 : null
+        zonaMap[zona] = { absorbidas: d.absorbidas, pending: d.pending, tasa, meses }
+      }
+      setAbsorcionZonas(zonaMap)
+    }
+
+    // Serie histórica global
+    const { data: histSnap } = await supabase
+      .from('market_absorption_snapshots')
+      .select('fecha, dormitorios, venta_activas, venta_tasa_absorcion, venta_absorbidas_30d')
+      .eq('zona', 'global')
+      .order('fecha', { ascending: true })
+
+    if (histSnap && histSnap.length > 0) {
+      const byDate = new Map<string, { activas: number; absSum: number; absorbidas: number; count: number }>()
+      for (const row of histSnap as any[]) {
+        const e = byDate.get(row.fecha) || { activas: 0, absSum: 0, absorbidas: 0, count: 0 }
+        e.activas += parseInt(row.venta_activas) || 0
+        e.absSum += parseFloat(row.venta_tasa_absorcion) || 0
+        e.absorbidas += parseInt(row.venta_absorbidas_30d) || 0
+        e.count += 1
+        byDate.set(row.fecha, e)
+      }
+      setAbsorcionHistorico(Array.from(byDate.entries()).map(([fecha, d]) => ({
+        fecha,
+        activas: d.activas,
+        absorcionPct: Math.round(d.absSum / d.count * 10) / 10,
+        absorbidas: d.absorbidas,
+      })))
+    }
+  }
+
   useEffect(() => {
     fetchAllData()
   }, [])
@@ -1009,6 +1095,15 @@ export default function MarketPulseDashboard() {
 
   const getZonaLabel = (zona: string): string => {
     return MICROZONA_DISPLAY[zona] || zona
+  }
+
+  // Mapeo display → nombre snapshot BD (para lookup absorción)
+  const ZONA_DISPLAY_TO_SNAPSHOT: Record<string, string> = {
+    'Eq. Centro': 'Equipetrol Centro',
+    'Eq. Oeste': 'Equipetrol Oeste',
+    'Eq. Norte': 'Equipetrol Norte',
+    'Sirari': 'Sirari',
+    'Villa Brigida': 'Villa Brigida',
   }
 
   const formatCurrency = (value: number) => {
@@ -1174,7 +1269,7 @@ export default function MarketPulseDashboard() {
         <main className="max-w-7xl mx-auto py-8 px-6">
           {/* KPIs Row */}
           {kpis && (
-            <div className="grid grid-cols-6 gap-4 mb-8">
+            <div className="grid grid-cols-7 gap-3 mb-8">
               <div className="bg-white rounded-xl p-5 shadow-lg border border-slate-200 hover:shadow-xl transition-shadow">
                 <p className="text-slate-500 text-xs uppercase tracking-wide font-medium">Unidades</p>
                 <p className="text-4xl font-bold text-slate-900 mt-1">{kpis.total_unidades}</p>
@@ -1200,6 +1295,14 @@ export default function MarketPulseDashboard() {
                 <p className="text-4xl font-bold text-slate-900 mt-1">{kpis.area_promedio}</p>
                 <p className="text-slate-400 text-sm mt-1">m² construidos</p>
               </div>
+              <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl p-5 shadow-lg text-white hover:shadow-xl transition-shadow">
+                <p className="text-emerald-100 text-xs uppercase tracking-wide font-medium">Absorción 30d</p>
+                <p className="text-4xl font-bold mt-1">{absorcionGlobal?.tasa ?? '—'}%</p>
+                <p className="text-emerald-200 text-sm mt-1">
+                  {absorcionGlobal?.meses ? `${absorcionGlobal.meses} meses inv.` : '—'}
+                  {absorcionGlobal?.pending ? ` · +${absorcionGlobal.pending} pend.` : ''}
+                </p>
+              </div>
               <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl p-5 shadow-lg text-white hover:shadow-xl transition-shadow">
                 <p className="text-amber-100 text-xs uppercase tracking-wide font-medium">TC Paralelo</p>
                 <p className="text-4xl font-bold mt-1">{kpis.tc_paralelo.toFixed(2)}</p>
@@ -1221,6 +1324,9 @@ export default function MarketPulseDashboard() {
                       <th className="text-right py-3 px-2 font-semibold text-slate-600">$/m² Avg</th>
                       <th className="text-right py-3 px-2 font-semibold text-slate-600">Ticket Avg</th>
                       <th className="text-right py-3 px-2 font-semibold text-slate-600">Área Avg</th>
+                      <th className="text-center py-3 px-2 font-semibold text-emerald-600">Absorb. 30d</th>
+                      <th className="text-center py-3 px-2 font-semibold text-emerald-600">Tasa %</th>
+                      <th className="text-center py-3 px-2 font-semibold text-emerald-600">Meses Inv.</th>
                       <th className="text-left py-3 px-2 font-semibold text-slate-600">Participación</th>
                     </tr>
                   </thead>
@@ -1241,6 +1347,39 @@ export default function MarketPulseDashboard() {
                           </td>
                           <td className="py-3 px-2 text-right font-medium text-slate-700">{formatCurrency(z.ticket_avg)}</td>
                           <td className="py-3 px-2 text-right text-slate-600">{z.area_avg} m²</td>
+                          {(() => {
+                            const snapZona = ZONA_DISPLAY_TO_SNAPSHOT[z.zona] || z.zona
+                            const abs = absorcionZonas[snapZona]
+                            return (
+                              <>
+                                <td className="py-3 px-2 text-center">
+                                  {abs ? (
+                                    <span className="text-xs font-medium text-slate-700">
+                                      {abs.absorbidas}{abs.pending > 0 && <span className="text-slate-400"> +{abs.pending}</span>}
+                                    </span>
+                                  ) : <span className="text-slate-300">—</span>}
+                                </td>
+                                <td className="py-3 px-2 text-center">
+                                  {abs ? (
+                                    <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                                      abs.tasa >= 20 ? 'bg-emerald-100 text-emerald-700' :
+                                      abs.tasa >= 10 ? 'bg-amber-100 text-amber-700' :
+                                      'bg-red-100 text-red-700'
+                                    }`}>{abs.tasa}%</span>
+                                  ) : <span className="text-slate-300">—</span>}
+                                </td>
+                                <td className="py-3 px-2 text-center">
+                                  {abs?.meses != null ? (
+                                    <span className={`text-xs font-bold ${
+                                      abs.meses <= 4 ? 'text-emerald-600' :
+                                      abs.meses <= 8 ? 'text-amber-600' :
+                                      'text-red-600'
+                                    }`}>{abs.meses}</span>
+                                  ) : <span className="text-slate-300">—</span>}
+                                </td>
+                              </>
+                            )
+                          })()}
                           <td className="py-3 px-2">
                             <div className="flex items-center gap-2">
                               <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden">
@@ -1846,14 +1985,14 @@ export default function MarketPulseDashboard() {
           )}
 
           {/* Historical Charts */}
-          <div className="grid grid-cols-2 gap-6 mb-8">
-            {/* Inventory Evolution */}
+          <div className="grid grid-cols-3 gap-6 mb-8">
+            {/* Inventario Activo */}
             <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900 mb-4">📈 Evolución del Inventario (28 días)</h3>
-              {snapshots.length > 0 ? (
+              <h3 className="text-lg font-bold text-slate-900 mb-4">📦 Inventario Activo</h3>
+              {absorcionHistorico.length > 0 ? (
                 <>
                   <ResponsiveContainer width="100%" height={200}>
-                    <AreaChart data={snapshots.slice(-15)}>
+                    <AreaChart data={absorcionHistorico.slice(-30)}>
                       <defs>
                         <linearGradient id="colorInventario" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
@@ -1865,25 +2004,18 @@ export default function MarketPulseDashboard() {
                         tickFormatter={(v) => new Date(v).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })}
                         tick={{ fontSize: 10 }}
                       />
-                      <YAxis tick={{ fontSize: 10 }} domain={['dataMin - 10', 'dataMax + 10']} />
+                      <YAxis tick={{ fontSize: 10 }} domain={['dataMin - 20', 'dataMax + 20']} />
                       <Tooltip content={<CustomTooltip />} />
-                      <Area
-                        type="monotone"
-                        dataKey="props_total"
-                        name="Propiedades"
-                        stroke="#3b82f6"
-                        strokeWidth={2}
-                        fill="url(#colorInventario)"
-                      />
+                      <Area type="monotone" dataKey="activas" name="Activas" stroke="#3b82f6" strokeWidth={2} fill="url(#colorInventario)" />
                     </AreaChart>
                   </ResponsiveContainer>
                   <div className="mt-4 flex justify-between text-sm text-slate-600">
-                    <span>Inicio: {snapshots[0]?.props_total || 0}</span>
+                    <span>Inicio: {absorcionHistorico[0]?.activas || 0}</span>
                     <span className="font-medium text-blue-600">
-                      Actual: {snapshots[snapshots.length - 1]?.props_total || 0}
+                      Actual: {absorcionHistorico[absorcionHistorico.length - 1]?.activas || 0}
                       {(() => {
-                        const first = snapshots[0]?.props_total || 1
-                        const last = snapshots[snapshots.length - 1]?.props_total || 0
+                        const first = absorcionHistorico[0]?.activas || 1
+                        const last = absorcionHistorico[absorcionHistorico.length - 1]?.activas || 0
                         const change = ((last - first) / first * 100).toFixed(1)
                         return ` (${parseFloat(change) >= 0 ? '+' : ''}${change}%)`
                       })()}
@@ -1892,6 +2024,41 @@ export default function MarketPulseDashboard() {
                 </>
               ) : (
                 <p className="text-slate-500 text-center py-12">No hay datos históricos</p>
+              )}
+            </div>
+
+            {/* Absorción Evolution */}
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">📊 Tasa de Absorción</h3>
+              {absorcionHistorico.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <AreaChart data={absorcionHistorico.slice(-30)}>
+                      <defs>
+                        <linearGradient id="colorAbsorcion" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="fecha"
+                        tickFormatter={(v) => new Date(v).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })}
+                        tick={{ fontSize: 10 }}
+                      />
+                      <YAxis tick={{ fontSize: 10 }} domain={[0, 'dataMax + 5']} unit="%" />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Area type="monotone" dataKey="absorcionPct" name="Absorción" stroke="#10b981" strokeWidth={2} fill="url(#colorAbsorcion)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  <div className="mt-4 flex justify-between text-sm text-slate-600">
+                    <span>Absorbidas hoy: {absorcionHistorico[absorcionHistorico.length - 1]?.absorbidas || 0}</span>
+                    <span className="font-medium text-emerald-600">
+                      Tasa: {absorcionHistorico[absorcionHistorico.length - 1]?.absorcionPct || 0}%
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-slate-500 text-center py-12">No hay datos de absorción</p>
               )}
             </div>
 

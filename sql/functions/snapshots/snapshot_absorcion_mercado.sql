@@ -64,6 +64,11 @@ BEGIN
       AND fuente IN ('century21', 'remax')
       AND precio_usd > 0
       AND area_total_m2 >= 20
+      AND duplicado_de IS NULL
+      AND (es_multiproyecto = false OR es_multiproyecto IS NULL)
+      AND COALESCE(tipo_propiedad_original, '') NOT IN ('baulera','parqueo','garaje','deposito')
+      AND zona IS NOT NULL
+      AND COALESCE(fecha_publicacion, fecha_creacion) >= CURRENT_DATE - INTERVAL '300 days'
       AND propiedades_v2.dormitorios = v_dorm;
 
     -- === VENTA: Absorbidas ultimos 30 dias ===
@@ -103,7 +108,11 @@ BEGIN
       AND area_total_m2 >= 20
       AND propiedades_v2.dormitorios = v_dorm
       AND fecha_creacion >= CURRENT_DATE - INTERVAL '30 days'
-      AND status NOT IN ('excluido_operacion');
+      AND status NOT IN ('excluido_operacion')
+      AND duplicado_de IS NULL
+      AND (es_multiproyecto = false OR es_multiproyecto IS NULL)
+      AND COALESCE(tipo_propiedad_original, '') NOT IN ('baulera','parqueo','garaje','deposito')
+      AND zona IS NOT NULL;
 
     -- === Calcular tasa y meses ===
     IF (v_venta_activas + v_venta_absorbidas) > 0 THEN
@@ -223,7 +232,11 @@ BEGIN
         AND precio_usd > 0
         AND area_total_m2 >= 20
         AND propiedades_v2.dormitorios = v_dorm
-        AND propiedades_v2.zona = v_zona;
+        AND propiedades_v2.zona = v_zona
+        AND duplicado_de IS NULL
+        AND (es_multiproyecto = false OR es_multiproyecto IS NULL)
+        AND COALESCE(tipo_propiedad_original, '') NOT IN ('baulera','parqueo','garaje','deposito')
+        AND COALESCE(fecha_publicacion, fecha_creacion) >= CURRENT_DATE - INTERVAL '300 days';
 
       -- Skip zona/dorm combos sin inventario
       IF v_venta_activas = 0 OR v_venta_activas IS NULL THEN
@@ -270,7 +283,10 @@ BEGIN
         AND propiedades_v2.dormitorios = v_dorm
         AND propiedades_v2.zona = v_zona
         AND fecha_creacion >= CURRENT_DATE - INTERVAL '30 days'
-        AND status NOT IN ('excluido_operacion');
+        AND status NOT IN ('excluido_operacion')
+        AND duplicado_de IS NULL
+        AND (es_multiproyecto = false OR es_multiproyecto IS NULL)
+        AND COALESCE(tipo_propiedad_original, '') NOT IN ('baulera','parqueo','garaje','deposito');
 
       -- === Calcular tasa y meses ===
       IF (v_venta_activas + v_venta_absorbidas) > 0 THEN
