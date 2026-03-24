@@ -75,18 +75,24 @@
 | 4 | `CardPlaceholder` ya tiene foto, precio, specs y badges funcionales — en Bloque 3 iterar sobre esta base, no reescribir desde cero | `pages/ventas.tsx` | Info | Bloque 3 |
 | 5 | `fotos_count` badge se renderiza fuera de la imagen + `object-fit` no adapta bien fotos de distintos portales (collages, watermarks, aspect ratios verticales) | `pages/ventas.tsx` | Media | Bloque 3 |
 
-## Simon Brand Tokens — PENDIENTE (24 Mar 2026)
+## Simon Brand — PENDIENTES (24 Mar 2026)
 
-Branch `feat/simon-tokens` lista para merge. Plan completo en `docs/simon/SIMON_BRAND_TOKENS_PLAN.md`.
+Tokens mergeados a main (`48fd79d`). Landing migrada en branch `feat/simon-landing-migration`.
+Plan completo en `docs/simon/SIMON_BRAND_TOKENS_PLAN.md`.
+Source of truth de marca: repo `simon-brand` (github.com/luismorigin/simon-brand).
 
-**Tareas pendientes (en orden):**
+**Bloqueado:** variación trimestral por zona — snapshots necesitan ≥30d historia (~24 Abr).
 
 | # | Tarea | Estado | Notas |
 |---|-------|--------|-------|
-| 1 | Probar branch local (`npm run dev`, ver rutas premium) | PENDIENTE | Verificar que fonts cargan y clases `s-*` funcionan |
-| 2 | Merge `feat/simon-tokens` → main | PENDIENTE | Solo después de probar |
-| 3 | Actualizar `SIMON_BRAND_GUIDELINES.md` con paleta v1.3 | PENDIENTE | Reemplazar #0a0a0a/#f8f6f3/#c9a959 con arena/negro/salvia |
-| 4 | Migrar landing (/) a tokens `s-*` | PENDIENTE | Primer componente real con el nuevo sistema |
-| 5 | Migrar landing-v2 a tokens `s-*` | PENDIENTE | Segundo componente |
-| 6 | Eliminar `premium-theme.ts` | PENDIENTE | Solo cuando no queden imports |
-| 7 | Limpiar hex hardcodeados en JSX | PENDIENTE | `bg-[#0a0a0a]` → `bg-s-negro`, etc. Componente por componente |
+| 1 | Aprobar look landing en localhost | PENDIENTE | `git checkout feat/simon-landing-migration && npm run dev` → mirar `/` |
+| 2 | Merge `feat/simon-landing-migration` → main | PENDIENTE | Solo después de aprobar #1 |
+| 3 | Implementar MercadoHero con datos dinámicos | PENDIENTE | Componente en `simon-brand/landing/MercadoHero.tsx`, integración en `MercadoHero.integration.ts`. ISR 6h, necesita `zonasAlquiler[]` nuevo en `fetchLandingData()` |
+| 4 | Actualizar `SIMON_BRAND_GUIDELINES.md` | PENDIENTE | Reemplazar paleta vieja (#0a0a0a etc.) con v1.3. Solo después de merge |
+| 5 | Eliminar `premium-theme.ts` | PENDIENTE | Solo cuando no queden imports del sistema viejo |
+| 6 | Migrar `/alquileres` a tokens `s-*` | PENDIENTE | Página con más tracción. Componente por componente |
+| 7 | Migrar `/ventas` a tokens `s-*` | PENDIENTE | 301 deptos, filtros, galería, mapa |
+| 8 | Migrar `/mercado` a tokens `s-*` | PENDIENTE | Dashboard público, SEO |
+| 9 | Limpiar hex hardcodeados en JSX | PENDIENTE | `bg-[#0a0a0a]` → `bg-s-negro`, etc. Gradual |
+| 10 | Actualizar MKT simon al branding v1.3 | PENDIENTE | Skills y contenido desalineados con nuevo sistema |
+| 11 | Subir docs actualizados al Knowledge de Claude.ai | PENDIENTE | `simon-decisions.md` + `simon-comunicacion.md` + `simon-design-tokens.ts` al proyecto "Simon Brand System" |

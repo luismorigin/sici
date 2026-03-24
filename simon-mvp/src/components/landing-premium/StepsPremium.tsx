@@ -44,28 +44,28 @@ export default function StepsPremium() {
   ]
 
   return (
-    <section id="proceso" className="bg-[#0a0a0a] py-32">
+    <section id="proceso" className="bg-s-arena py-32">
       <div className="max-w-6xl mx-auto px-4 md:px-8">
         {/* Label */}
         <div className="flex items-center gap-4 mb-8">
-          <span className="w-8 h-px bg-[#c9a959]" />
-          <span className="text-[#c9a959] text-[0.7rem] tracking-[3px] uppercase">Como funciona</span>
+          <span className="w-8 h-px bg-s-salvia" />
+          <span className="text-s-piedra text-[0.7rem] tracking-[3px] uppercase font-s-body">Como funciona</span>
         </div>
 
-        <h2 className="font-display text-white text-4xl md:text-5xl font-light mb-20">
+        <h2 className="font-s-display text-s-negro text-4xl md:text-5xl font-medium mb-20">
           Tres pasos hacia<br />
-          <span className="italic text-[#c9a959]">tu nuevo hogar</span>
+          <span className="italic text-s-tinta">tu nuevo hogar</span>
         </h2>
 
-        <div className="grid md:grid-cols-3 gap-12">
+        <div className="grid md:grid-cols-3 gap-8">
           {steps.map((step) => (
-            <div key={step.number} className="group">
-              <div className="text-[#c9a959] mb-8 opacity-60 group-hover:opacity-100 transition-opacity">
+            <div key={step.number} className="group bg-s-blanco rounded-xl p-8 border border-s-arena-mid hover:border-s-salvia/30 transition-colors">
+              <div className="text-s-negro mb-8 opacity-50 group-hover:opacity-100 transition-opacity">
                 {step.icon}
               </div>
-              <div className="text-white/30 font-display text-6xl font-light mb-4">{step.number}</div>
-              <h3 className="text-white text-xl font-light mb-4">{step.title}</h3>
-              <p className="text-white/50 font-light leading-relaxed">
+              <div className="text-s-arena-mid font-s-display text-6xl font-medium mb-4">{step.number}</div>
+              <h3 className="text-s-negro text-xl font-s-body mb-4">{step.title}</h3>
+              <p className="text-s-piedra font-s-body font-light leading-relaxed">
                 {step.description}
               </p>
             </div>
@@ -74,8 +74,8 @@ export default function StepsPremium() {
 
         {/* CTA inline */}
         <div className="mt-20 text-center">
-          <p className="text-white/40 text-sm mb-6">Solo toma 30 segundos</p>
-          <Link href="/ventas" prefetch={false} className="inline-flex items-center gap-3 bg-white text-[#0a0a0a] px-10 py-4 text-xs tracking-[3px] uppercase hover:bg-[#c9a959] hover:text-white transition-all duration-300">
+          <p className="text-s-piedra text-sm mb-6 font-s-body">Solo toma 30 segundos</p>
+          <Link href="/ventas" prefetch={false} className="inline-flex items-center gap-3 bg-s-negro text-s-arena px-10 py-4 text-xs tracking-[3px] uppercase hover:bg-s-salvia transition-all duration-300 font-s-body">
             Empezar ahora
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M5 12h14M12 5l7 7-7 7" />
