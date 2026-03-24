@@ -2,7 +2,7 @@ import '@/styles/globals.css'
 import type { AppProps } from 'next/app'
 import dynamic from 'next/dynamic'
 import Script from 'next/script'
-import { Inter, Outfit } from 'next/font/google'
+import { Inter, Outfit, Figtree, DM_Sans, DM_Mono } from 'next/font/google'
 import { AdminAuthProvider } from '@/contexts/AdminAuthContext'
 import { useEffect, useState } from 'react'
 
@@ -31,6 +31,28 @@ const outfit = Outfit({
   subsets: ['latin'],
   weight: ['500', '700', '800'],
   variable: '--font-outfit',
+  display: 'swap',
+})
+
+// Simon Brand v1.3
+const figtree = Figtree({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
+  variable: '--font-figtree',
+  display: 'swap',
+})
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['300', '400', '500'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+})
+
+const dmMono = DM_Mono({
+  subsets: ['latin'],
+  weight: ['300', '400'],
+  variable: '--font-dm-mono',
   display: 'swap',
 })
 
@@ -71,7 +93,7 @@ export default function App({ Component, pageProps, router }: AppProps) {
   )
 
   return (
-    <div className={isPremiumRoute ? '' : `${inter.variable} ${outfit.variable}`}>
+    <div className={isPremiumRoute ? `${figtree.variable} ${dmSans.variable} ${dmMono.variable}` : `${inter.variable} ${outfit.variable}`}>
       {/* Google Analytics — solo en rutas públicas, no admin/broker, no debug */}
       {!isDebug && !router.pathname.startsWith('/admin') && !router.pathname.startsWith('/broker') && (
         <>

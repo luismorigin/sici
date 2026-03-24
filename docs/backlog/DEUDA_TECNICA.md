@@ -74,3 +74,19 @@
 | 3 | Spotlight en `api/ventas.ts` hace query completa (`limite: 500`) para buscar un solo ID — ineficiente | `pages/api/ventas.ts` | Baja | Bloque 5 (compartir/spotlight) |
 | 4 | `CardPlaceholder` ya tiene foto, precio, specs y badges funcionales — en Bloque 3 iterar sobre esta base, no reescribir desde cero | `pages/ventas.tsx` | Info | Bloque 3 |
 | 5 | `fotos_count` badge se renderiza fuera de la imagen + `object-fit` no adapta bien fotos de distintos portales (collages, watermarks, aspect ratios verticales) | `pages/ventas.tsx` | Media | Bloque 3 |
+
+## Simon Brand Tokens — PENDIENTE (24 Mar 2026)
+
+Branch `feat/simon-tokens` lista para merge. Plan completo en `docs/simon/SIMON_BRAND_TOKENS_PLAN.md`.
+
+**Tareas pendientes (en orden):**
+
+| # | Tarea | Estado | Notas |
+|---|-------|--------|-------|
+| 1 | Probar branch local (`npm run dev`, ver rutas premium) | PENDIENTE | Verificar que fonts cargan y clases `s-*` funcionan |
+| 2 | Merge `feat/simon-tokens` → main | PENDIENTE | Solo después de probar |
+| 3 | Actualizar `SIMON_BRAND_GUIDELINES.md` con paleta v1.3 | PENDIENTE | Reemplazar #0a0a0a/#f8f6f3/#c9a959 con arena/negro/salvia |
+| 4 | Migrar landing (/) a tokens `s-*` | PENDIENTE | Primer componente real con el nuevo sistema |
+| 5 | Migrar landing-v2 a tokens `s-*` | PENDIENTE | Segundo componente |
+| 6 | Eliminar `premium-theme.ts` | PENDIENTE | Solo cuando no queden imports |
+| 7 | Limpiar hex hardcodeados en JSX | PENDIENTE | `bg-[#0a0a0a]` → `bg-s-negro`, etc. Componente por componente |
