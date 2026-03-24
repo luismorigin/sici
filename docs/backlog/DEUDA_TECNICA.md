@@ -61,7 +61,7 @@
 
 **Deuda residual:**
 - `MEDIA_ZONA_USD_M2` en extractores n8n sigue hardcodeado — podría leerse de snapshots por zona ahora que existen
-- `market.tsx` usa `MICROZONA_DISPLAY` con nombres legacy + `ZONA_DISPLAY_TO_SNAPSHOT` para mapear a snapshots — cuando se unifiquen los nombres de zona en el dashboard, eliminar el mapeo
+- ~~`market.tsx` usa `MICROZONA_DISPLAY` con nombres legacy~~ **RESUELTO 24 Mar 2026:** refactorizado a `displayZona()` de `lib/zonas.ts`, query usa `zona` en vez de `microzona`, eliminados `MICROZONA_DISPLAY`, `getZonaLabel`, `ZONA_DISPLAY_TO_SNAPSHOT`
 
 ## Refactor ventas /ventas — Deuda del Bloque 1 (18 Mar 2026)
 
