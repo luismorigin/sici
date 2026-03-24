@@ -24,11 +24,11 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT \n    id,\n    url,\n    fuente,\n    codigo_propiedad,\n    status,\n    primera_ausencia_at,\n    EXTRACT(DAY FROM NOW() - primera_ausencia_at)::INTEGER as dias_desde_ausencia\nFROM propiedades_v2\nWHERE status = 'inactivo_pending'::estado_propiedad\n  AND fuente = 'remax'\n  AND tipo_operacion = 'venta'\nORDER BY primera_ausencia_at ASC\nLIMIT 200;",
+        "query": "SELECT \n    id,\n    url,\n    fuente,\n    codigo_propiedad,\n    status,\n    primera_ausencia_at,\n    EXTRACT(DAY FROM NOW() - primera_ausencia_at)::INTEGER as dias_desde_ausencia\nFROM propiedades_v2\nWHERE status = 'inactivo_pending'::estado_propiedad\n  AND tipo_operacion = 'venta'\nORDER BY primera_ausencia_at ASC\nLIMIT 200;",
         "options": {}
       },
       "id": "385545db-6f02-4069-bc42-cec17c6c5fc4",
-      "name": "Query inactivo_pending (Remax)",
+      "name": "Query inactivo_pending (Venta)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
@@ -76,7 +76,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Log cuando no hay propiedades pendientes\nconst timestamp = new Date().toISOString();\n\nreturn [{\n  json: {\n    status: 'completed',\n    message: 'No hay propiedades Remax en inactivo_pending',\n    verificadas: 0,\n    confirmadas_404: 0,\n    rescatadas_200: 0,\n    errores: 0,\n    timestamp: timestamp\n  }\n}];"
+        "jsCode": "// Log cuando no hay propiedades pendientes\nconst timestamp = new Date().toISOString();\n\nreturn [{\n  json: {\n    status: 'completed',\n    message: 'No hay propiedades venta en inactivo_pending',\n    verificadas: 0,\n    confirmadas_404: 0,\n    rescatadas_200: 0,\n    errores: 0,\n    timestamp: timestamp\n  }\n}];"
       },
       "id": "b6d0ae86-989e-412d-867f-cba063854ccb",
       "name": "Sin pendientes",
@@ -240,7 +240,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ============================================================================\n// NODO: Generar resumen\n// Versión: 2.0.0 - Adaptado para trabajar con UPDATEs RETURNING\n// ============================================================================\n\nconst results = $input.first().json.results || [];\n\n// Contar basándose en el status devuelto por los UPDATEs\nlet confirmadas = 0;\nlet reactivadas = 0;\n\nfor (const r of results) {\n  if (r.status === 'inactivo_confirmed') {\n    confirmadas++;\n  } else if (r.status === 'nueva') {\n    reactivadas++;\n  }\n}\n\nconst timestamp = new Date().toISOString();\nconst total = results.length;\n\nreturn [{\n  json: {\n    status: 'completed',\n    flujo: 'Flujo C - Verificador v1.0.0',\n    fuente: 'remax',\n    timestamp: timestamp,\n    \n    // Resumen de acciones\n    total_procesadas: total,\n    confirmadas_inactivas: confirmadas,\n    reactivadas: reactivadas,\n    porcentaje_confirmadas: total > 0 \n      ? Math.round((confirmadas / total) * 100) \n      : 0,\n    \n    // Detalle de propiedades procesadas\n    propiedades: results.map(r => ({\n      id: r.id,\n      url: r.url,\n      nuevo_status: r.status,\n      accion: r.status === 'inactivo_confirmed' \n        ? 'Confirmada inactiva' \n        : r.status === 'nueva' \n          ? 'Reactivada' \n          : 'Mantenida'\n    }))\n  }\n}];"
+        "jsCode": "// ============================================================================\n// NODO: Generar resumen\n// Versión: 2.0.0 - Adaptado para trabajar con UPDATEs RETURNING\n// ============================================================================\n\nconst results = $input.first().json.results || [];\n\n// Contar basándose en el status devuelto por los UPDATEs\nlet confirmadas = 0;\nlet reactivadas = 0;\n\nfor (const r of results) {\n  if (r.status === 'inactivo_confirmed') {\n    confirmadas++;\n  } else if (r.status === 'nueva') {\n    reactivadas++;\n  }\n}\n\nconst timestamp = new Date().toISOString();\nconst total = results.length;\n\nreturn [{\n  json: {\n    status: 'completed',\n    flujo: 'Flujo C - Verificador v1.0.0',\n    fuente: 'todas',\n    timestamp: timestamp,\n    \n    // Resumen de acciones\n    total_procesadas: total,\n    confirmadas_inactivas: confirmadas,\n    reactivadas: reactivadas,\n    porcentaje_confirmadas: total > 0 \n      ? Math.round((confirmadas / total) * 100) \n      : 0,\n    \n    // Detalle de propiedades procesadas\n    propiedades: results.map(r => ({\n      id: r.id,\n      url: r.url,\n      nuevo_status: r.status,\n      accion: r.status === 'inactivo_confirmed' \n        ? 'Confirmada inactiva' \n        : r.status === 'nueva' \n          ? 'Reactivada' \n          : 'Mantenida'\n    }))\n  }\n}];"
       },
       "id": "26b04ae3-ef59-4cd6-8ae9-c8b9703d0054",
       "name": "Generar resumen",
@@ -346,14 +346,14 @@
       "main": [
         [
           {
-            "node": "Query inactivo_pending (Remax)",
+            "node": "Query inactivo_pending (Venta)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Query inactivo_pending (Remax)": {
+    "Query inactivo_pending (Venta)": {
       "main": [
         [
           {

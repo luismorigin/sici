@@ -169,6 +169,7 @@ export async function fetchMercadoData(): Promise<MercadoData> {
     const { data: absRows } = await supabase
       .from('market_absorption_snapshots')
       .select('fecha, venta_tasa_absorcion')
+      .eq('zona', 'global')
       .order('fecha', { ascending: false })
       .limit(8)
 
@@ -231,6 +232,7 @@ export async function fetchMercadoData(): Promise<MercadoData> {
     const { data: histData } = await supabase
       .from('market_absorption_snapshots')
       .select('fecha, venta_activas, venta_usd_m2, venta_tasa_absorcion')
+      .eq('zona', 'global')
       .order('fecha', { ascending: true })
 
     const historico: HistoricoPoint[] = []

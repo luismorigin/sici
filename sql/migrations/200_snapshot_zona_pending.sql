@@ -1,16 +1,29 @@
 -- ============================================================================
--- snapshot_absorcion_mercado()
--- Canonical export from production — 23 Mar 2026
--- ============================================================================
--- SECURITY DEFINER. Cron 9 AM diario via auditoría n8n.
--- Dos loops:
---   1. Global (zona='global'): venta + alquiler + ROI cruzado (4 filas/día)
---   2. Por zona (solo venta): inventario, absorción, precios (~20 filas/día)
--- Columnas: venta_pending_30d (tracking absorción probable)
--- Usa precio_normalizado() para TC paralelo en venta.
--- Última migración: 200 (snapshot_zona_pending)
+-- Migración 200: Snapshot por zona + tracking de pending
+-- Fecha: 23 Mar 2026
+-- Contexto: Snapshots eran globales (todo Equipetrol). Se agrega:
+--   1. Segmentación por zona para métricas de venta
+--   2. Columna venta_pending_30d para tracking de absorción probable
+-- Alquiler NO se segmenta por zona (muestra insuficiente).
 -- ============================================================================
 
+-- Paso 1: Agregar columnas
+ALTER TABLE market_absorption_snapshots
+  ADD COLUMN IF NOT EXISTS zona TEXT NOT NULL DEFAULT 'global',
+  ADD COLUMN IF NOT EXISTS venta_pending_30d INTEGER;
+
+-- Paso 2: Reemplazar unique constraint
+ALTER TABLE market_absorption_snapshots
+  DROP CONSTRAINT IF EXISTS market_absorption_snapshots_fecha_dormitorios_key;
+
+ALTER TABLE market_absorption_snapshots
+  ADD CONSTRAINT market_absorption_snapshots_fecha_dormitorios_zona_key
+  UNIQUE (fecha, dormitorios, zona);
+
+-- Paso 3: Drop función vieja (return type cambió: se agregó zona_out)
+DROP FUNCTION IF EXISTS snapshot_absorcion_mercado();
+
+-- Paso 3b: Nueva función con zona + pending
 CREATE OR REPLACE FUNCTION public.snapshot_absorcion_mercado()
  RETURNS TABLE(dormitorios_out integer, zona_out text, insertado boolean)
  LANGUAGE plpgsql
@@ -332,3 +345,6 @@ BEGIN
   END LOOP;
 END;
 $function$;
+
+-- Paso 4: Ejecutar snapshot para hoy (genera filas globales + por zona)
+SELECT * FROM snapshot_absorcion_mercado();

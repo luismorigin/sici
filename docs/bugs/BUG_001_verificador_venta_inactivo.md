@@ -164,15 +164,32 @@ Los pipelines operan con campos diferentes. El verificador de venta puede depend
 
 ### Impacto en datos
 
-**Snapshots corruptos:** `market_absorption_snapshots` tiene `venta_absorbidas_30d` incorrecto entre 14-feb y 22-mar-2026.
+**Snapshots corruptos:** `market_absorption_snapshots` tenía `venta_absorbidas_30d` incorrecto entre 14-feb y 22-mar-2026.
 
-| Periodo | Estado |
-|---|---|
-| Antes de 14 feb | Datos buenos |
-| 14 feb - 12 mar | Absorcion subestimada (decae de 16 a 6 sin nuevas confirmaciones) |
-| 13 mar - 22 mar | Absorcion = 0 (completamente corrupto) |
-| 23 mar en adelante | Datos confiables |
+| Periodo | Estado original | Estado post-backfill |
+|---|---|---|
+| Antes de 14 feb | Datos buenos | Recalculado (mig 199) |
+| 14 feb - 12 mar | Absorcion subestimada | **CORREGIDO** (mig 199) |
+| 13 mar - 22 mar | Absorcion = 0 (corrupto) | **CORREGIDO** (mig 199) |
+| 23 mar en adelante | Datos confiables | Datos confiables |
 
 **Campos NO afectados:** inventario activo, precios, USD/m2, areas, alquiler, ROI.
 
-**Referencia limpia para el periodo corrupto:** snapshot del 15-feb-2026 (dormitorios=0: 16 absorbidas, tasa 30.19%, 2.3 meses inventario).
+### Fix adicional: C21 excluido del verificador (23 marzo 2026)
+
+El fix del 22 mar mantuvo `AND fuente = 'remax'` en la query del verificador. Esto dejaba ~62 propiedades C21 venta permanentemente stuck en `inactivo_pending`.
+
+**Fix v5.1:** Eliminado `AND fuente = 'remax'` del verificador venta. La logica de auto-confirmacion por tiempo (2 dias) es agnostica de fuente. El verificador de alquiler ya funcionaba asi.
+
+**Resultado:** 131 propiedades C21 confirmadas inmediatamente. 22 quedan en pending (<2 dias).
+
+### Backfill de absorcion historica (23 marzo 2026)
+
+**Migracion 199:** Funcion temporal `backfill_snapshot_absorcion(fecha)` recalculo absorcion para las 40 fechas historicas (12 Feb - 23 Mar) incluyendo C21.
+
+| Tipologia | Absorcion ANTES | Absorcion DESPUES |
+|---|---|---|
+| 1 dorm | 0-13% (caida constante) | 19-26% (estable) |
+| 2 dorm | 0-11% (caida constante) | 20-31% (estable-creciente) |
+
+La "caida del mercado" era un artefacto de C21 acumulandose en pending. El mercado real tenia absorcion estable ~20-30%.

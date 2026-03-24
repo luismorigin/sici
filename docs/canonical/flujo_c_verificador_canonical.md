@@ -1,7 +1,7 @@
 # CONTRATO CANONICAL — FLUJO C: VERIFICADOR DE AUSENCIAS
 
-**Versión:** 5.0
-**Fecha:** 22 Mar 2026
+**Versión:** 5.1
+**Fecha:** 23 Mar 2026
 **Estado:** PRODUCCIÓN (venta desde 18 Dic 2025, alquiler desde 12 Feb 2026)
 
 ---
@@ -20,7 +20,7 @@ Confirmar las ausencias marcadas por Discovery. Existen **dos workflows separado
 | Aspecto | Venta (6:00 AM) | Alquiler (7:00 AM) |
 |---------|-----------------|-------------------|
 | **Archivo** | `modulo_1/flujo_c_verificador_v1.1.0_FINAL.json` | `alquiler/flujo_c_verificador_alquiler_v1.0.0.json` |
-| **Fuentes** | Solo Remax venta (C21 excluido) | Todas (sin filtro fuente) |
+| **Fuentes** | Todas (C21 + Remax, sin filtro fuente desde v5.1) | Todas (sin filtro fuente) |
 | **Método** | Solo tiempo (sin HTTP) | HTTP HEAD + tiempo |
 | **Auto-confirma** | 2 días | 7 días |
 | **Reactivación** | No (Discovery se encarga) | Sí (HTTP 200 → completado) |
@@ -44,7 +44,6 @@ SELECT id, url, fuente, codigo_propiedad, status, primera_ausencia_at,
        EXTRACT(DAY FROM NOW() - primera_ausencia_at)::INTEGER as dias_desde_ausencia
 FROM propiedades_v2
 WHERE status = 'inactivo_pending'::estado_propiedad
-  AND fuente = 'remax'
   AND tipo_operacion = 'venta'
 ORDER BY primera_ausencia_at ASC
 LIMIT 200;
@@ -225,7 +224,7 @@ WHERE id = $1 AND status = 'inactivo_pending'::estado_propiedad;
 
 ## LIMITACIONES
 
-- **C21 venta queda en pending** hasta que Discovery las vuelva a encontrar o el admin las gestione manualmente. C21 no está en el scope del verificador (HTTP inútil).
+- ~~**C21 venta queda en pending**~~ **RESUELTO v5.1 (23 Mar 2026):** Verificador venta ahora procesa TODAS las fuentes (C21 + Remax). El filtro `AND fuente = 'remax'` fue eliminado — la lógica de auto-confirmación por tiempo no depende de la fuente.
 - **`expirado_stale` nunca se implementó** (migración 164 no agregó el valor al enum). Las propiedades viejas no se transicionan a un status especial — simplemente dejan de aparecer en queries por el filtro de 150/300 días
 - **HTTP no confiable:** Remax (SPA) y C21 devuelven HTTP 200 para propiedades removidas. Solo alquiler usa HTTP porque las fuentes de alquiler sí devuelven 404.
 
@@ -265,6 +264,17 @@ Cada ejecución registra en `workflow_executions`:
 - Logging dinámico en `registrar_ejecucion_workflow` (antes hardcodeado a 0)
 - Eliminada reactivación por HTTP para venta — Discovery es el safety net
 - Ver `docs/bugs/BUG_001_verificador_venta_inactivo.md` para detalle completo
+
+**v5.1 — 23 Mar 2026:**
+- Eliminado filtro `AND fuente = 'remax'` del verificador venta → ahora procesa C21 + Remax
+- ~62 propiedades C21 venta en `inactivo_pending` (stuck desde Feb) serán auto-confirmadas en próximo ciclo
+- Lógica de auto-confirmación por tiempo (2 días) es agnóstica de fuente — no hay razón técnica para excluir C21
+
+**v5.0 — 22 Mar 2026:**
+- Fix BUG-001: verificador venta no procesaba registros desde ~11 Feb
+- Auto-confirmación reducida de 7 a 2 días
+- Agregado filtro `AND tipo_operacion = 'venta'`
+- HTTP check mantenido pero lógica no lo usa (SPA devuelve 200)
 
 **v4.0 — 28 Feb 2026:**
 - Reescritura completa verificada contra JSONs de producción
