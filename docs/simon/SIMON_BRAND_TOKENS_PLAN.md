@@ -1,6 +1,6 @@
 # Simon Brand Tokens — Plan de Implementación
 
-> Creado: 24 Mar 2026 | Estado: **landing migrada en branch, pendiente aprobación visual**
+> Creado: 24 Mar 2026 | Estado: **landing migrada y mergeada a main**
 
 ## Contexto
 
@@ -88,14 +88,15 @@ font-s-mono      → DM Mono (precios, métricas, peso 300/400)
 | # | Tarea | Estado | Notas |
 |---|-------|--------|-------|
 | 1 | ~~Tokens a main~~ | HECHO | `48fd79d` |
-| 2 | ~~Migrar landing a brand v1.3~~ | HECHO | Branch `feat/simon-landing-migration` — pendiente aprobación visual |
-| 3 | Aprobar look en localhost | **SIGUIENTE** | `npm run dev` → ver `/` y `/landing-v2` |
-| 4 | Merge landing → main | PENDIENTE | Solo después de aprobar |
-| 5 | Actualizar `SIMON_BRAND_GUIDELINES.md` | PENDIENTE | Solo después de aprobar look nuevo |
-| 6 | Migrar resto de páginas gradualmente | PENDIENTE | Componente por componente |
-| 7 | Eliminar `premium-theme.ts` | PENDIENTE | Solo cuando no queden imports |
-| 8 | Limpiar hex hardcodeados en JSX | PENDIENTE | `bg-[#0a0a0a]` → `bg-s-negro`, etc. |
-| 9 | Variación trimestral por zona | BLOQUEADO | Necesita ≥30 días de snapshots por zona (~24 Abr) |
+| 2 | ~~Migrar landing a brand v1.3~~ | HECHO | `d985619` — arena 70%, negro 25%, salvia 5% |
+| 3 | ~~Aprobar look + merge a main~~ | HECHO | Aprobado visualmente en localhost |
+| 4 | Actualizar `SIMON_BRAND_GUIDELINES.md` | **SIGUIENTE** | Reemplazar paleta vieja con v1.3 |
+| 5 | Migrar `/alquileres` a tokens `s-*` | PENDIENTE | Página con más tracción |
+| 6 | Migrar `/ventas` a tokens `s-*` | PENDIENTE | Feed, filtros, galería, mapa |
+| 7 | Migrar `/mercado` a tokens `s-*` | PENDIENTE | Dashboard público, SEO |
+| 8 | Eliminar `premium-theme.ts` | PENDIENTE | Solo cuando no queden imports |
+| 9 | Limpiar hex hardcodeados en JSX | PENDIENTE | `bg-[#0a0a0a]` → `bg-s-negro`, etc. |
+| 10 | Variación trimestral por zona | BLOQUEADO | Necesita ≥30 días de snapshots por zona (~24 Abr) |
 
 ## Relación con archivos existentes
 

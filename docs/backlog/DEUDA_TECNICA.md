@@ -77,22 +77,18 @@
 
 ## Simon Brand — PENDIENTES (24 Mar 2026)
 
-Tokens mergeados a main (`48fd79d`). Landing migrada en branch `feat/simon-landing-migration`.
-Plan completo en `docs/simon/SIMON_BRAND_TOKENS_PLAN.md`.
+Tokens + landing mergeados a main. Plan completo en `docs/simon/SIMON_BRAND_TOKENS_PLAN.md`.
 Source of truth de marca: repo `simon-brand` (github.com/luismorigin/simon-brand).
 
+**Completado:** tokens (`48fd79d`), landing migrada y aprobada (`d985619`), `zonasAlquiler` en `fetchLandingData()`.
 **Bloqueado:** variación trimestral por zona — snapshots necesitan ≥30d historia (~24 Abr).
 
 | # | Tarea | Estado | Notas |
 |---|-------|--------|-------|
-| 1 | Aprobar look landing en localhost | PENDIENTE | `git checkout feat/simon-landing-migration && npm run dev` → mirar `/` |
-| 2 | Merge `feat/simon-landing-migration` → main | PENDIENTE | Solo después de aprobar #1 |
-| 3 | Implementar MercadoHero con datos dinámicos | PENDIENTE | Componente en `simon-brand/landing/MercadoHero.tsx`, integración en `MercadoHero.integration.ts`. ISR 6h, necesita `zonasAlquiler[]` nuevo en `fetchLandingData()` |
-| 4 | Actualizar `SIMON_BRAND_GUIDELINES.md` | PENDIENTE | Reemplazar paleta vieja (#0a0a0a etc.) con v1.3. Solo después de merge |
-| 5 | Eliminar `premium-theme.ts` | PENDIENTE | Solo cuando no queden imports del sistema viejo |
-| 6 | Migrar `/alquileres` a tokens `s-*` | PENDIENTE | Página con más tracción. Componente por componente |
-| 7 | Migrar `/ventas` a tokens `s-*` | PENDIENTE | 301 deptos, filtros, galería, mapa |
-| 8 | Migrar `/mercado` a tokens `s-*` | PENDIENTE | Dashboard público, SEO |
-| 9 | Limpiar hex hardcodeados en JSX | PENDIENTE | `bg-[#0a0a0a]` → `bg-s-negro`, etc. Gradual |
-| 10 | Actualizar MKT simon al branding v1.3 | PENDIENTE | Skills y contenido desalineados con nuevo sistema |
+| 1 | Actualizar `SIMON_BRAND_GUIDELINES.md` | **SIGUIENTE** | Reemplazar paleta vieja con v1.3 |
+| 2 | Migrar `/alquileres` a tokens `s-*` | PENDIENTE | Página con más tracción |
+| 3 | Migrar `/ventas` a tokens `s-*` | PENDIENTE | Feed, filtros, galería, mapa |
+| 4 | Migrar `/mercado` a tokens `s-*` | PENDIENTE | Dashboard público, SEO |
+| 5 | Eliminar `premium-theme.ts` | PENDIENTE | Solo cuando no queden imports |
+| 6 | Limpiar hex hardcodeados en JSX | PENDIENTE | `bg-[#0a0a0a]` → `bg-s-negro`, etc. Gradual |
 | 11 | Subir docs actualizados al Knowledge de Claude.ai | PENDIENTE | `simon-decisions.md` + `simon-comunicacion.md` + `simon-design-tokens.ts` al proyecto "Simon Brand System" |
