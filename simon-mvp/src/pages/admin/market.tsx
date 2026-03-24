@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { normalizarPrecio } from '@/lib/precio-utils'
+import { displayZona } from '@/lib/zonas'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   LineChart, Line, AreaChart, Area, ScatterChart, Scatter, ZAxis,
@@ -750,15 +751,15 @@ export default function MarketPulseDashboard() {
     if (!supabase) return
 
     // One big query for zona analysis, outliers, dispersion, and zona×estado
-    // Usa microzona (fuente de verdad por GPS, alineada con filtros)
+    // Usa zona (nombres canónicos post-migración 184)
     const { data } = await supabase
       .from('propiedades_v2')
-      .select('id, microzona, dormitorios, precio_usd, area_total_m2, estado_construccion, id_proyecto_master')
+      .select('id, zona, dormitorios, precio_usd, area_total_m2, estado_construccion, id_proyecto_master')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
       .is('duplicado_de', null)
-      .not('microzona', 'is', null)
+      .not('zona', 'is', null)
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
       .gte('fecha_publicacion', cutoffDate)
 
@@ -766,13 +767,13 @@ export default function MarketPulseDashboard() {
 
     const validData = data.filter(p => p.precio_usd && parseFloat(p.precio_usd) > 1000)
 
-    // Helper: mapear microzona BD → zona canónica display (combina Norte/Norte + Norte/Sur)
-    const toZona = (mz: string): string => MICROZONA_DISPLAY[mz] || mz
+    // zona ya tiene nombres canónicos post-migración 184
+    const toZona = (z: string): string => z
 
     // --- 1. Zona KPIs ---
     const zonaGroups: Record<string, { precios: number[]; areas: number[]; preciosM2: number[] }> = {}
     validData.forEach(p => {
-      const z = toZona(p.microzona || 'Sin zona')
+      const z = toZona(p.zona || 'Sin zona')
       if (!zonaGroups[z]) zonaGroups[z] = { precios: [], areas: [], preciosM2: [] }
       const precio = parseFloat(p.precio_usd)
       const area = parseFloat(p.area_total_m2) || 1
@@ -797,7 +798,7 @@ export default function MarketPulseDashboard() {
     const ztGroups: Record<string, { preciosM2: number[] }> = {}
     validData.forEach(p => {
       if (p.dormitorios === null || p.dormitorios === undefined) return
-      const key = `${toZona(p.microzona)}|${p.dormitorios}`
+      const key = `${toZona(p.zona)}|${p.dormitorios}`
       if (!ztGroups[key]) ztGroups[key] = { preciosM2: [] }
       const precio = parseFloat(p.precio_usd)
       const area = parseFloat(p.area_total_m2) || 1
@@ -838,7 +839,7 @@ export default function MarketPulseDashboard() {
     const statsGroups: Record<string, { preciosM2: number[]; items: typeof validData }> = {}
     validData.forEach(p => {
       if (p.dormitorios === null || p.dormitorios === undefined) return
-      const key = `${toZona(p.microzona)}|${p.dormitorios}`
+      const key = `${toZona(p.zona)}|${p.dormitorios}`
       if (!statsGroups[key]) statsGroups[key] = { preciosM2: [], items: [] }
       const precio = parseFloat(p.precio_usd)
       const area = parseFloat(p.area_total_m2) || 1
@@ -861,7 +862,7 @@ export default function MarketPulseDashboard() {
           outlierResults.push({
             id: item.id,
             proyecto: projectMap.get(item.id_proyecto_master) || 'Desconocido',
-            zona: toZona(item.microzona),
+            zona: toZona(item.zona),
             dormitorios: item.dormitorios,
             precio_m2: Math.round(pm2),
             avg_zona: Math.round(avg),
@@ -903,7 +904,7 @@ export default function MarketPulseDashboard() {
     const zeGroups: Record<string, { preciosM2: number[] }> = {}
     validData.forEach(p => {
       if (!p.estado_construccion) return
-      const key = `${toZona(p.microzona)}|${p.estado_construccion}`
+      const key = `${toZona(p.zona)}|${p.estado_construccion}`
       if (!zeGroups[key]) zeGroups[key] = { preciosM2: [] }
       const precio = parseFloat(p.precio_usd)
       const area = parseFloat(p.area_total_m2) || 1
@@ -1083,28 +1084,7 @@ export default function MarketPulseDashboard() {
   // HELPERS
   // ============================================================================
 
-  // Mapeo canónico: microzona BD → display (alineado con FilterBarPremium)
-  const MICROZONA_DISPLAY: Record<string, string> = {
-    'Equipetrol': 'Eq. Centro',
-    'Sirari': 'Sirari',
-    'Faremafu': 'Eq. Oeste',
-    'Equipetrol Norte/Norte': 'Eq. Norte',
-    'Equipetrol Norte/Sur': 'Eq. Norte',
-    'Villa Brigida': 'Villa Brigida'
-  }
-
-  const getZonaLabel = (zona: string): string => {
-    return MICROZONA_DISPLAY[zona] || zona
-  }
-
-  // Mapeo display → nombre snapshot BD (para lookup absorción)
-  const ZONA_DISPLAY_TO_SNAPSHOT: Record<string, string> = {
-    'Eq. Centro': 'Equipetrol Centro',
-    'Eq. Oeste': 'Equipetrol Oeste',
-    'Eq. Norte': 'Equipetrol Norte',
-    'Sirari': 'Sirari',
-    'Villa Brigida': 'Villa Brigida',
-  }
+  // displayZona() importado de @/lib/zonas — convierte BD value a label corto
 
   const formatCurrency = (value: number) => {
     if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`
@@ -1336,7 +1316,7 @@ export default function MarketPulseDashboard() {
                       const pct = Math.round((z.unidades / totalUnidades) * 100)
                       return (
                         <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                          <td className="py-3 px-2 font-bold text-slate-900">{getZonaLabel(z.zona)}</td>
+                          <td className="py-3 px-2 font-bold text-slate-900">{displayZona(z.zona)}</td>
                           <td className="py-3 px-2 text-center">
                             <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-bold">{z.unidades}</span>
                           </td>
@@ -1348,8 +1328,7 @@ export default function MarketPulseDashboard() {
                           <td className="py-3 px-2 text-right font-medium text-slate-700">{formatCurrency(z.ticket_avg)}</td>
                           <td className="py-3 px-2 text-right text-slate-600">{z.area_avg} m²</td>
                           {(() => {
-                            const snapZona = ZONA_DISPLAY_TO_SNAPSHOT[z.zona] || z.zona
-                            const abs = absorcionZonas[snapZona]
+                            const abs = absorcionZonas[z.zona]
                             return (
                               <>
                                 <td className="py-3 px-2 text-center">
@@ -1515,7 +1494,7 @@ export default function MarketPulseDashboard() {
                     <tbody>
                       {zonaEstados.map((ze, i) => (
                         <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
-                          <td className="py-2 px-2 font-medium text-slate-900 text-xs">{getZonaLabel(ze.zona)}</td>
+                          <td className="py-2 px-2 font-medium text-slate-900 text-xs">{displayZona(ze.zona)}</td>
                           <td className="py-2 px-2 text-xs">{getEstadoLabel(ze.estado)}</td>
                           <td className="py-2 px-2 text-center text-xs">{ze.cantidad}</td>
                           <td className="py-2 px-2 text-right">
@@ -1576,7 +1555,7 @@ export default function MarketPulseDashboard() {
                       <tbody>
                         {zonas.map(zona => (
                           <tr key={zona} className="border-b border-slate-100">
-                            <td className="py-3 px-2 font-bold text-slate-900 text-xs">{getZonaLabel(zona)}</td>
+                            <td className="py-3 px-2 font-bold text-slate-900 text-xs">{displayZona(zona)}</td>
                             {dorms.map(d => {
                               const cell = lookup.get(`${zona}|${d}`)
                               if (!cell) return <td key={d} className="py-3 px-2 text-center text-slate-300">-</td>
@@ -1815,7 +1794,7 @@ export default function MarketPulseDashboard() {
                       <tr key={i} className="border-b border-orange-100 hover:bg-orange-50">
                         <td className="py-2 px-2 text-xs font-mono text-slate-600">{o.id}</td>
                         <td className="py-2 px-2 text-xs font-medium text-slate-900 max-w-[120px] truncate">{o.proyecto}</td>
-                        <td className="py-2 px-2 text-xs text-slate-600">{getZonaLabel(o.zona)}</td>
+                        <td className="py-2 px-2 text-xs text-slate-600">{displayZona(o.zona)}</td>
                         <td className="py-2 px-2 text-center text-xs">{o.dormitorios}D</td>
                         <td className="py-2 px-2 text-right text-xs font-bold">${formatNumber(o.precio_m2)}</td>
                         <td className="py-2 px-2 text-right text-xs text-slate-500">${formatNumber(o.avg_zona)}</td>
