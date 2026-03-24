@@ -252,7 +252,7 @@ Las paginas editores siguen el patron: **tipos → constantes → hook → compo
 | `/admin/supervisor/excluidas` | Gestionar excluidas |
 | `/admin/supervisor/auto-aprobados` | Revisar auto-aprobaciones matching |
 | `/admin/salud` | **Health dashboard sistema** |
-| `/admin/market` | **Market Pulse Dashboard (venta)** |
+| `/admin/market` | **Market Pulse Dashboard (venta)** — KPIs + absorción por zona + serie temporal inventario/absorción (usa `market_absorption_snapshots`, filtrar `zona='global'` para globales) |
 | `/admin/market-alquileres` | **Market Pulse Dashboard (alquiler)** |
 | `/admin/alquileres` | **Admin alquileres** — cards + inline edit + WA tracking |
 
