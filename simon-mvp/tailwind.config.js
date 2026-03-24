@@ -7,6 +7,17 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // ── Simon Brand v1.3 (prefijo s- para coexistir) ──
+        's-arena':     '#EDE8DC',
+        's-negro':     '#141414',
+        's-salvia':    '#3A6A48',
+        's-tinta':     '#3A3530',
+        's-piedra':    '#7A7060',
+        's-arena-mid': '#D8D0BC',
+        's-blanco':    '#FAFAF8',
+        's-dark-1':    '#EDE8DC',  // texto primario sobre negro (15:1 AAA)
+        's-dark-2':    '#C0B89E',  // texto secundario sobre negro (9.3:1 AAA)
+        's-dark-3':    '#9A8E7A',  // labels sobre negro (5.7:1 AA)
         // Brand colors
         brand: {
           primary: '#3B82F6',
@@ -65,6 +76,10 @@ module.exports = {
       fontFamily: {
         sans: ['Inter', 'SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         display: ['Outfit', 'Inter', 'sans-serif'],
+        // Simon Brand v1.3
+        's-display': ['var(--font-figtree)', 'Figtree', 'sans-serif'],
+        's-body':    ['var(--font-dm-sans)', 'DM Sans', 'sans-serif'],
+        's-mono':    ['var(--font-dm-mono)', 'DM Mono', 'monospace'],
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',
