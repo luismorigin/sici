@@ -246,7 +246,7 @@ Datos que Simón NO puede presentar como hechos. Mencionarlos solo como contexto
 |--------|-------------|----------|
 | **Inferencia de amoblado por LLM** (desde fotos o descripción) | Mejorar tasa de clasificación del 74% actual | Alto — requiere prompt engineering + validación |
 | **Snapshot de alquiler con flag amoblado** | Separar series amoblado / no amoblado / sin dato | Bajo (una vez que amoblado mejore) |
-| **Vacancia observable por edificio** | Para proyectos con unidades totales conocidas, inferir piso de vacancia | Medio — cruzar `proyectos_master` con listings de alquiler por edificio |
+| ~~**Vacancia observable por edificio**~~ | **DESCARTADO.** Listada ≠ vacía, no listada ≠ ocupada, solo 3 portales, n muy chico por edificio. El proxy sería engañoso — mejor seguir declarando "sin datos medidos de vacancia" | — |
 
 ### Largo plazo (6+ meses, requiere data externa)
 

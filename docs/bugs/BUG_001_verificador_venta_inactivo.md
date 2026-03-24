@@ -122,10 +122,10 @@ Los pipelines operan con campos diferentes. El verificador de venta puede depend
 - [ ] Decidir que hacer con C21 (pagina generica en vez de 404)
 - [ ] Testear con subset antes de ejecutar masivamente
 
-### Fase 3: Limpieza retroactiva
-- [ ] Confirmar las ~20 propiedades con 37+ dias en pending (evidencia suficiente)
-- [ ] Evaluar caso por caso las mas recientes
-- [ ] Recalcular `market_absorption_snapshots` retroactivamente
+### Fase 3: Limpieza retroactiva — COMPLETADA 23 Mar 2026
+- [x] Confirmar las ~20 propiedades con 37+ dias en pending → 131 C21 confirmadas (v5.1)
+- [x] Evaluar caso por caso las mas recientes → 22 quedan pending (<2 días)
+- [x] Recalcular `market_absorption_snapshots` retroactivamente → migración 199 (backfill 40 fechas)
 
 ### Fase 4: Monitoreo
 - [ ] Agregar alerta: si `inactivo_pending` crece N dias sin que `inactivo_confirmed` crezca, flag

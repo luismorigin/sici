@@ -85,19 +85,17 @@ Los queries de mercado filtran por `status IN ('completado', 'actualizado')`. Lo
 | 1055 | Millennial Tower | Av. Bush 1er-2do anillo |
 | 1072 | Portobello Green | GPS fuera (Remax) |
 
-## Datos de absorcion corruptos (feb-mar 2026)
+## Datos de absorcion corruptos (feb-mar 2026) — CORREGIDO
 
-**BUG-001:** Entre el 14 de febrero y el 22 de marzo de 2026, los campos de absorcion de venta en `market_absorption_snapshots` son incorrectos por una falla en el verificador de ausencias. Detalle completo en `docs/bugs/BUG_001_verificador_venta_inactivo.md`.
+**BUG-001:** Entre el 14 de febrero y el 22 de marzo de 2026, los campos de absorcion de venta en `market_absorption_snapshots` estaban incorrectos por una falla en el verificador de ausencias. Detalle completo en `docs/bugs/BUG_001_verificador_venta_inactivo.md`.
 
-| Campo | Estado en ese periodo |
-|---|---|
-| `venta_absorbidas_30d` | Subestimado (14 feb - 12 mar), cero (13-22 mar) |
-| `venta_tasa_absorcion` | Idem |
-| `venta_meses_inventario` | Idem (NULL desde 13 mar) |
-| `absorbidas_ticket_promedio`, `absorbidas_usd_m2` | Sin datos desde 13 mar |
-| Inventario, precios, m2, alquiler, ROI | **No afectados** |
+**RESUELTO 23 Mar 2026:**
+- Verificador v5.1: eliminado filtro `fuente = 'remax'`, ahora procesa C21 + Remax
+- Migración 199: backfill recalculó absorción para las 40 fechas históricas con C21 incluido
+- Migración 200: snapshot ahora segmentado por zona + tracking de `inactivo_pending`
+- **Toda la serie histórica (12 Feb - 23 Mar) está corregida.** Absorción 2 dorms pasó de 0-12% → 20-31%
 
-**Para estudios de mercado en ese periodo:** usar el snapshot del **15-feb-2026** como ultimo dato limpio de absorcion. Datos desde **23-mar-2026** son confiables.
+**Nota:** Queries a `market_absorption_snapshots` ahora deben filtrar `zona = 'global'` para obtener los agregados globales (filas por zona son adicionales desde mig. 200).
 
 ## Referencia
 

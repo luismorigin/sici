@@ -102,7 +102,7 @@
 
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
-| `snapshot_absorcion_mercado()` | `snapshots/snapshot_absorcion_mercado.sql` | 168 |
+| `snapshot_absorcion_mercado()` | `snapshots/snapshot_absorcion_mercado.sql` | 200 |
 | `guardar_snapshot_precios()` | — | — |
 
 ## HITL / Supervisión (13 funciones)

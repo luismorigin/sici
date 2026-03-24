@@ -636,7 +636,7 @@ Simón mantiene un estado interno por sesión:
 │  ├── admin/           → inferir_datos_proyecto, propagar_proyecto │
 │  ├── helpers/         → precio_normalizado, normalize_nombre      │
 │  ├── triggers/        → proteger_amenities, asignar_zona_alquiler │
-│  └── snapshots/       → snapshot_absorcion_mercado                │
+│  └── snapshots/       → snapshot_absorcion_mercado (global+zona)   │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -647,7 +647,7 @@ Simón mantiene un estado interno por sesión:
 | `propiedades_v2` | 1,002 | Tabla única de propiedades (84 columnas) |
 | `proyectos_master` | 229 (227 activos) | Catálogo de proyectos/edificios |
 | `workflow_executions` | — | Health check de ejecuciones nocturnas |
-| `market_absorption_snapshots` | — | Snapshots absorción, precios, ROI |
+| `market_absorption_snapshots` | — | Snapshots absorción, precios, ROI (global + por zona desde mig. 200). Filtrar `zona = 'global'` para agregados |
 | `config_global` | — | Config dinámica (TC paralelo, etc.) |
 | `brokers` | — | Directorio broker B2B |
 
