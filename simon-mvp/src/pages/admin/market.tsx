@@ -646,14 +646,21 @@ export default function MarketPulseDashboard() {
     // Fetch properties with amenidades
     const { data: props } = await supabase
       .from('propiedades_v2')
-      .select('id_proyecto_master, datos_json, precio_usd, area_total_m2')
+      .select('id_proyecto_master, datos_json, precio_usd, area_total_m2, tipo_cambio_detectado')
       .eq('status', 'completado')
       .eq('tipo_operacion', 'venta')
       .gte('area_total_m2', 20)
       .is('duplicado_de', null)
       .not('zona', 'is', null)
-      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+      .not('tipo_propiedad_original', 'in', '("parqueo","baulera","garaje","deposito")')
       .gte('fecha_publicacion', cutoffDate)
+
+    const { data: tcData } = await supabase
+      .from('config_global')
+      .select('valor')
+      .eq('clave', 'tipo_cambio_paralelo')
+      .single()
+    const tcPar = parseFloat(tcData?.valor) || 0
 
     if (!props) return
 
@@ -714,7 +721,7 @@ export default function MarketPulseDashboard() {
           projectAmenidades[p.id_proyecto_master].amenidades.push(lista.length)
         }
 
-        const precio = parseFloat(p.precio_usd)
+        const precio = normalizarPrecio(parseFloat(p.precio_usd), p.tipo_cambio_detectado, tcPar)
         const area = parseFloat(p.area_total_m2)
         if (precio && area) {
           projectAmenidades[p.id_proyecto_master].preciosM2.push(precio / area)
@@ -750,22 +757,15 @@ export default function MarketPulseDashboard() {
   const fetchZonaAnalysis = async () => {
     if (!supabase) return
 
-    // One big query for zona analysis, outliers, dispersion, and zona×estado
-    // Usa zona (nombres canónicos post-migración 184)
+    // Usa v_mercado_venta (migración 193) — filtros canónicos + precio_norm pre-calculado
     const { data } = await supabase
-      .from('propiedades_v2')
-      .select('id, zona, dormitorios, precio_usd, area_total_m2, estado_construccion, id_proyecto_master')
-      .eq('status', 'completado')
-      .eq('tipo_operacion', 'venta')
-      .gte('area_total_m2', 20)
-      .is('duplicado_de', null)
+      .from('v_mercado_venta')
+      .select('id, zona, dormitorios, precio_norm, area_total_m2, estado_construccion, id_proyecto_master')
       .not('zona', 'is', null)
-      .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
-      .gte('fecha_publicacion', cutoffDate)
 
     if (!data) return
 
-    const validData = data.filter(p => p.precio_usd && parseFloat(p.precio_usd) > 1000)
+    const validData = data.filter(p => p.precio_norm && parseFloat(p.precio_norm) > 1000)
 
     // zona ya tiene nombres canónicos post-migración 184
     const toZona = (z: string): string => z
@@ -775,7 +775,7 @@ export default function MarketPulseDashboard() {
     validData.forEach(p => {
       const z = toZona(p.zona || 'Sin zona')
       if (!zonaGroups[z]) zonaGroups[z] = { precios: [], areas: [], preciosM2: [] }
-      const precio = parseFloat(p.precio_usd)
+      const precio = parseFloat(p.precio_norm)
       const area = parseFloat(p.area_total_m2) || 1
       zonaGroups[z].precios.push(precio)
       zonaGroups[z].areas.push(area)
@@ -800,7 +800,7 @@ export default function MarketPulseDashboard() {
       if (p.dormitorios === null || p.dormitorios === undefined) return
       const key = `${toZona(p.zona)}|${p.dormitorios}`
       if (!ztGroups[key]) ztGroups[key] = { preciosM2: [] }
-      const precio = parseFloat(p.precio_usd)
+      const precio = parseFloat(p.precio_norm)
       const area = parseFloat(p.area_total_m2) || 1
       ztGroups[key].preciosM2.push(precio / area)
     })
@@ -841,7 +841,7 @@ export default function MarketPulseDashboard() {
       if (p.dormitorios === null || p.dormitorios === undefined) return
       const key = `${toZona(p.zona)}|${p.dormitorios}`
       if (!statsGroups[key]) statsGroups[key] = { preciosM2: [], items: [] }
-      const precio = parseFloat(p.precio_usd)
+      const precio = parseFloat(p.precio_norm)
       const area = parseFloat(p.area_total_m2) || 1
       statsGroups[key].preciosM2.push(precio / area)
       statsGroups[key].items.push(p)
@@ -881,7 +881,7 @@ export default function MarketPulseDashboard() {
       const projName = projectMap.get(p.id_proyecto_master)
       if (!projName) return
       if (!edificioGroups[projName]) edificioGroups[projName] = { preciosM2: [] }
-      const precio = parseFloat(p.precio_usd)
+      const precio = parseFloat(p.precio_norm)
       const area = parseFloat(p.area_total_m2) || 1
       edificioGroups[projName].preciosM2.push(precio / area)
     })
@@ -906,7 +906,7 @@ export default function MarketPulseDashboard() {
       if (!p.estado_construccion) return
       const key = `${toZona(p.zona)}|${p.estado_construccion}`
       if (!zeGroups[key]) zeGroups[key] = { preciosM2: [] }
-      const precio = parseFloat(p.precio_usd)
+      const precio = parseFloat(p.precio_norm)
       const area = parseFloat(p.area_total_m2) || 1
       zeGroups[key].preciosM2.push(precio / area)
     })
