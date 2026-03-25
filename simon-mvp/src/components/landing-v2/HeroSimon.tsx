@@ -14,8 +14,9 @@ export default function HeroSimon() {
           className="object-cover object-center"
         />
         {/* Arena overlay gradient left-to-right */}
+        {/* Desktop: left-to-right reveal */}
         <div
-          className="absolute inset-0 z-[1]"
+          className="absolute inset-0 z-[1] hidden md:block"
           style={{
             background: `linear-gradient(
               to right,
@@ -25,6 +26,13 @@ export default function HeroSimon() {
               rgba(237,232,220,0.55) 75%,
               rgba(237,232,220,0.4) 100%
             )`,
+          }}
+        />
+        {/* Mobile: almost solid, foto insinuada */}
+        <div
+          className="absolute inset-0 z-[1] md:hidden"
+          style={{
+            background: `#EDE8DC`,
           }}
         />
       </div>
