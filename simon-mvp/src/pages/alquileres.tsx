@@ -542,7 +542,7 @@ export default function AlquileresPage() {
         <title>Simon · Alquileres Equipetrol</title>
         <meta name="description" content="Alquileres en Equipetrol, Santa Cruz. Departamentos verificados con datos reales." />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta name="theme-color" content="#0a0a0a" />
+        <meta name="theme-color" content="#EDE8DC" />
         {/* Preload first photo for faster LCP */}
         {!loading && properties.length > 0 && properties[0].fotos_urls?.[0] && (
           <link rel="preload" as="image" href={properties[0].fotos_urls[0]} />
@@ -610,7 +610,7 @@ export default function AlquileresPage() {
             {favorites.size > 0 && (
               <div className="desktop-fav-summary">
                 <div className="desktop-fav-info">
-                  <svg viewBox="0 0 24 24" fill="#c9a959" stroke="#c9a959" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                  <svg viewBox="0 0 24 24" fill="#3A6A48" stroke="#3A6A48" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                   </svg>
                   {favorites.size} favorito{favorites.size > 1 ? 's' : ''}
@@ -629,18 +629,18 @@ export default function AlquileresPage() {
           <main className="desktop-main" ref={viewMode === 'grid' ? feedRef : undefined}
             style={viewMode === 'map' ? { overflow: 'hidden', display: 'flex', flexDirection: 'column' } : undefined}>
             {/* View toggle bar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{properties.length} resultado{properties.length !== 1 ? 's' : ''}</span>
-              <div style={{ display: 'flex', gap: 2, background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: 3 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #D8D0BC', flexShrink: 0 }}>
+              <span style={{ fontSize: 13, color: '#7A7060' }}>{properties.length} resultado{properties.length !== 1 ? 's' : ''}</span>
+              <div style={{ display: 'flex', gap: 2, background: 'rgba(58,53,48,0.06)', borderRadius: 10, padding: 3 }}>
                 <button
                   onClick={() => { setViewMode('grid'); trackEvent('switch_view', { view_mode: 'grid' }) }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px',
-                    background: viewMode === 'grid' ? '#c9a959' : '#1a1a1a',
-                    color: viewMode === 'grid' ? '#0a0a0a' : '#fff',
-                    fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600,
-                    cursor: 'pointer', borderRadius: 6, letterSpacing: 1,
-                    border: viewMode === 'grid' ? '2px solid #c9a959' : '2px solid rgba(255,255,255,0.3)',
+                    background: viewMode === 'grid' ? '#141414' : 'transparent',
+                    color: viewMode === 'grid' ? '#EDE8DC' : '#3A3530',
+                    fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600,
+                    cursor: 'pointer', borderRadius: 8, letterSpacing: 0.5,
+                    border: viewMode === 'grid' ? '2px solid #141414' : '2px solid #D8D0BC',
                   }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:15,height:15}}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                   Grid
@@ -649,11 +649,11 @@ export default function AlquileresPage() {
                   onClick={() => { setViewMode('map'); trackEvent('switch_view', { view_mode: 'map' }) }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px',
-                    background: viewMode === 'map' ? '#c9a959' : '#1a1a1a',
-                    color: viewMode === 'map' ? '#0a0a0a' : '#fff',
-                    fontFamily: "'Manrope', sans-serif", fontSize: 12, fontWeight: 600,
-                    cursor: 'pointer', borderRadius: 6, letterSpacing: 1,
-                    border: viewMode === 'map' ? '2px solid #c9a959' : '2px solid rgba(255,255,255,0.3)',
+                    background: viewMode === 'map' ? '#141414' : 'transparent',
+                    color: viewMode === 'map' ? '#EDE8DC' : '#3A3530',
+                    fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600,
+                    cursor: 'pointer', borderRadius: 8, letterSpacing: 0.5,
+                    border: viewMode === 'map' ? '2px solid #141414' : '2px solid #D8D0BC',
                   }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:15,height:15}}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
                   Mapa
@@ -665,7 +665,7 @@ export default function AlquileresPage() {
               <div className="desktop-loading">
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ marginBottom: 12, color: 'rgba(255,255,255,0.6)' }}>No se pudo cargar. Verifica tu conexion.</div>
-                  <button onClick={() => fetchProperties(filters)} style={{ background: '#c9a959', color: '#0a0a0a', border: 'none', padding: '10px 24px', borderRadius: 8, fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Reintentar</button>
+                  <button onClick={() => fetchProperties(filters)} style={{ background: '#141414', color: '#EDE8DC', border: 'none', padding: '10px 24px', borderRadius: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Reintentar</button>
                 </div>
               </div>
             ) : loading && properties.length === 0 ? (
@@ -712,7 +712,7 @@ export default function AlquileresPage() {
                     return (
                       <Fragment key={p.id}>
                         {showDivider && (
-                          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '20px 0', margin: '8px 0', color: '#7c3aed', fontSize: 13, fontWeight: 600, letterSpacing: 0.3, border: '1px solid rgba(168,85,247,0.2)', fontFamily: "'Manrope', sans-serif", background: 'rgba(168,85,247,0.08)', borderRadius: 8 }}>
+                          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '20px 0', margin: '8px 0', color: '#7c3aed', fontSize: 13, fontWeight: 600, letterSpacing: 0.3, border: '1px solid rgba(168,85,247,0.2)', fontFamily: "'DM Sans', sans-serif", background: 'rgba(168,85,247,0.08)', borderRadius: 8 }}>
                             🐾 También podrían aceptar mascotas · consultar con el anunciante
                           </div>
                         )}
@@ -763,7 +763,7 @@ export default function AlquileresPage() {
                   return (
                     <div className="map-fav-strip">
                       <div className="map-fav-label">
-                        <svg viewBox="0 0 24 24" fill="#c9a959" stroke="#c9a959" strokeWidth="1.5" style={{ width: 14, height: 14 }}>
+                        <svg viewBox="0 0 24 24" fill="#3A6A48" stroke="#3A6A48" strokeWidth="1.5" style={{ width: 14, height: 14 }}>
                           <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                         </svg>
                         {favProps.length}
@@ -856,7 +856,7 @@ export default function AlquileresPage() {
 
           {/* Floating map button */}
           <button className="alq-map-floating" aria-label="Ver mapa" onClick={() => { setMobileMapOpen(true); trackEvent('open_map_mobile') }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="#c9a959" strokeWidth="1.5" style={{width:22,height:22}}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#141414" strokeWidth="1.5" style={{width:22,height:22}}>
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
             </svg>
           </button>
@@ -901,24 +901,24 @@ export default function AlquileresPage() {
               <div className="alq-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center', padding: '0 32px' }}>
                   <div className="alq-logo" style={{ fontSize: 44, marginBottom: 8 }}>Simon</div>
-                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, marginBottom: 20 }}>No se pudo cargar. Verifica tu conexion.</div>
-                  <button onClick={() => fetchProperties(filters)} style={{ padding: '12px 28px', background: '#c9a959', border: 'none', color: '#0a0a0a', fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: 1, cursor: 'pointer', borderRadius: 8 }}>REINTENTAR</button>
+                  <div style={{ color: '#7A7060', fontSize: 14, marginBottom: 20 }}>No se pudo cargar. Verifica tu conexion.</div>
+                  <button onClick={() => fetchProperties(filters)} style={{ padding: '12px 28px', background: '#141414', border: 'none', color: '#EDE8DC', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: 0.5, cursor: 'pointer', borderRadius: 10 }}>REINTENTAR</button>
                 </div>
               </div>
             ) : loading && properties.length === 0 ? (
               <div className="alq-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div className="alq-logo" style={{ fontSize: 44, marginBottom: 8 }}>Simon</div>
-                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Cargando alquileres...</div>
+                  <div style={{ color: '#7A7060', fontSize: 14 }}>Cargando alquileres...</div>
                 </div>
               </div>
             ) : !loading && properties.length === 0 ? (
               <div className="alq-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center', padding: '0 32px' }}>
                   <div style={{ fontSize: 48, marginBottom: 12 }}>🔍</div>
-                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: '#fff', marginBottom: 8 }}>Sin resultados</div>
-                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>{buildEmptyMessage(filters)}</div>
-                  <button onClick={resetFilters} style={{ padding: '12px 28px', background: '#c9a959', border: 'none', color: '#0a0a0a', fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: 1, cursor: 'pointer', borderRadius: 4 }}>QUITAR FILTROS</button>
+                  <div style={{ fontFamily: "'Figtree', sans-serif", fontSize: 24, fontWeight: 500, color: '#141414', marginBottom: 8 }}>Sin resultados</div>
+                  <div style={{ color: '#7A7060', fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>{buildEmptyMessage(filters)}</div>
+                  <button onClick={resetFilters} style={{ padding: '12px 28px', background: '#141414', border: 'none', color: '#EDE8DC', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: 0.5, cursor: 'pointer', borderRadius: 10 }}>QUITAR FILTROS</button>
                 </div>
               </div>
             ) : (
@@ -928,7 +928,7 @@ export default function AlquileresPage() {
                 const isNearby = Math.abs(idx - activeCardIndex) <= WINDOW
                 if (!isNearby) {
                   // Placeholder preserves scroll position (must match card height + snap)
-                  return <div key={item.type === 'filter' ? 'filter' : item.data.id} style={{ height: '100dvh', scrollSnapAlign: 'start', background: '#0a0a0a' }} />
+                  return <div key={item.type === 'filter' ? 'filter' : item.data.id} style={{ height: '100dvh', scrollSnapAlign: 'start', background: '#EDE8DC' }} />
                 }
                 if (item.type === 'filter') {
                   return (
@@ -1355,19 +1355,19 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
       <style jsx>{`
         .df-wrap { flex: 1; }
         .df-group { margin-bottom: 18px; }
-        .df-label { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.6); letter-spacing: 2px; margin-bottom: 8px; }
+        .df-label { font-size: 12px; font-weight: 500; color: #7A7060; letter-spacing: 0.5px; margin-bottom: 8px; font-family: 'DM Sans', sans-serif; text-transform: uppercase; }
         .df-zona-btns { display: flex; flex-wrap: wrap; gap: 6px; }
-        .df-zona-btn { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: rgba(255,255,255,0.7); font-family: 'Manrope', sans-serif; font-size: 11px; cursor: pointer; border-radius: 100px; transition: all 0.2s; }
-        .df-zona-btn.active { border-color: #c9a959; color: #c9a959; background: rgba(201,169,89,0.06); }
+        .df-zona-btn { padding: 6px 12px; border: 1px solid #D8D0BC; background: transparent; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 11px; cursor: pointer; border-radius: 100px; transition: all 0.2s; }
+        .df-zona-btn.active { border-color: #3A6A48; color: #3A6A48; background: rgba(58,106,72,0.06); }
         .df-dorm-btns { display: flex; gap: 8px; }
-        .df-dorm-btn { flex: 1; padding: 9px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: rgba(255,255,255,0.7); font-family: 'Manrope', sans-serif; font-size: 12px; cursor: pointer; border-radius: 4px; transition: all 0.2s; }
-        .df-dorm-btn.active { border-color: #c9a959; color: #c9a959; background: rgba(201,169,89,0.06); }
-        .df-slider { width: 100%; -webkit-appearance: none; appearance: none; height: 2px; background: rgba(255,255,255,0.12); border-radius: 2px; outline: none; }
-        .df-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #c9a959; cursor: pointer; }
-        .df-slider-val { text-align: right; font-size: 13px; color: #c9a959; margin-top: 6px; font-weight: 500; }
-        .df-cta { display: block; width: 100%; padding: 12px; background: #c9a959; border: none; color: #0a0a0a; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; transition: opacity 0.2s; }
+        .df-dorm-btn { flex: 1; padding: 9px; border: 1px solid #D8D0BC; background: transparent; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; transition: all 0.2s; }
+        .df-dorm-btn.active { border-color: #3A6A48; color: #3A6A48; background: rgba(58,106,72,0.06); }
+        .df-slider { width: 100%; -webkit-appearance: none; appearance: none; height: 2px; background: #D8D0BC; border-radius: 2px; outline: none; }
+        .df-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #141414; cursor: pointer; }
+        .df-slider-val { text-align: right; font-size: 13px; color: #141414; margin-top: 6px; font-weight: 500; font-variant-numeric: tabular-nums; }
+        .df-cta { display: block; width: 100%; padding: 12px; background: #141414; border: none; color: #EDE8DC; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; border-radius: 10px; transition: opacity 0.2s; }
         .df-cta:hover { opacity: 0.9; }
-        .df-reset { display: block; width: 100%; padding: 10px; background: transparent; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); font-family: 'Manrope', sans-serif; font-size: 12px; cursor: pointer; border-radius: 4px; }
+        .df-reset { display: block; width: 100%; padding: 10px; background: transparent; border: 1px solid #D8D0BC; color: #7A7060; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; }
       `}</style>
     </div>
   )
@@ -1407,7 +1407,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
             </>
           )}
           <button className={`mfc-m-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
-            <svg viewBox="0 0 24 24" fill={isFavorite ? '#c9a959' : 'none'} stroke={isFavorite ? '#c9a959' : '#fff'} strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+            <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'none'} stroke={isFavorite ? '#3A6A48' : '#fff'} strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
@@ -1429,39 +1429,39 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
         <style jsx>{`
           .mfc-mobile {
             position: absolute; bottom: 12px; left: 12px; right: 12px; z-index: 1000;
-            background: #111; border: 1px solid rgba(201,169,89,0.25);
-            border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            background: #FAFAF8; border: 1px solid #D8D0BC;
+            border-radius: 14px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
             display: flex; flex-direction: row;
             animation: mfcSlideUp 0.25s ease-out;
           }
           @keyframes mfcSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
           .mfc-m-close {
             position: absolute; top: 6px; right: 6px; z-index: 2;
-            width: 24px; height: 24px; border-radius: 50%; background: rgba(10,10,10,0.7);
-            border: none; color: rgba(255,255,255,0.7); font-size: 14px; cursor: pointer;
+            width: 24px; height: 24px; border-radius: 50%; background: rgba(20,20,20,0.7);
+            border: none; color: rgba(255,255,255,0.8); font-size: 14px; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
           }
           .mfc-m-photo {
             width: 140px; min-height: 150px; flex-shrink: 0;
-            background-size: cover; background-position: center; background-color: #1a1a1a;
+            background-size: cover; background-position: center; background-color: #D8D0BC;
             position: relative;
           }
           .mfc-m-fav {
             position: absolute; top: 6px; left: 6px; z-index: 2;
-            width: 30px; height: 30px; border-radius: 50%; background: rgba(10,10,10,0.6);
+            width: 30px; height: 30px; border-radius: 50%; background: rgba(20,20,20,0.6);
             border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
           }
-          .mfc-m-fav.active { background: rgba(201,169,89,0.15); }
+          .mfc-m-fav.active { background: rgba(58,106,72,0.2); }
           .map-float-photo-count {
             position: absolute; bottom: 6px; right: 6px;
             display: flex; align-items: center; gap: 3px;
-            background: rgba(10,10,10,0.7); padding: 2px 8px; border-radius: 100px;
+            background: rgba(20,20,20,0.7); padding: 2px 8px; border-radius: 100px;
             font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.85);
-            font-family: 'Manrope', sans-serif;
+            font-family: 'DM Sans', sans-serif;
           }
           .mfp-nav {
             position: absolute; top: 50%; transform: translateY(-50%);
-            width: 26px; height: 26px; border-radius: 50%; background: rgba(10,10,10,0.6);
+            width: 26px; height: 26px; border-radius: 50%; background: rgba(20,20,20,0.6);
             border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
             z-index: 2;
           }
@@ -1472,34 +1472,34 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
             min-width: 0;
           }
           .mfc-m-name {
-            font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 400;
-            color: #fff; line-height: 1.2; margin-bottom: 3px;
+            font-family: 'Figtree', sans-serif; font-size: 18px; font-weight: 500;
+            color: #141414; line-height: 1.2; margin-bottom: 3px;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
           }
           .mfc-m-specs {
-            font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 0.3px;
-            margin-bottom: 4px; font-family: 'Manrope', sans-serif;
+            font-size: 11px; color: #7A7060; letter-spacing: 0.3px;
+            margin-bottom: 4px; font-family: 'DM Sans', sans-serif;
           }
           .mfc-m-price {
-            font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 400;
-            color: #c9a959; line-height: 1; margin-bottom: 6px;
+            font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 500;
+            color: #141414; line-height: 1; margin-bottom: 6px; font-variant-numeric: tabular-nums;
           }
-          .mfc-m-price span { font-size: 13px; color: rgba(201,169,89,0.6); }
+          .mfc-m-price span { font-size: 13px; color: #7A7060; }
           .mfc-m-badges { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
           .mfc-m-badge {
             font-size: 9px; padding: 2px 6px; border-radius: 100px;
-            border: 1px solid rgba(201,169,89,0.25); color: #c9a959;
-            font-family: 'Manrope', sans-serif;
+            border: 1px solid #D8D0BC; color: #3A3530;
+            font-family: 'DM Sans', sans-serif;
           }
           .mfc-m-actions { display: flex; gap: 6px; }
           .mfc-m-btn-detail {
-            flex: 1; padding: 7px; background: transparent; border: 1px solid rgba(255,255,255,0.15);
-            color: rgba(255,255,255,0.8); font-family: 'Manrope', sans-serif; font-size: 11px;
-            font-weight: 500; cursor: pointer; border-radius: 6px;
+            flex: 1; padding: 7px; background: transparent; border: 1px solid #D8D0BC;
+            color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 11px;
+            font-weight: 500; cursor: pointer; border-radius: 10px;
           }
           .mfc-m-btn-wsp {
-            flex: 1; padding: 7px; background: #25d366; border: none; border-radius: 6px;
-            color: #fff; font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 600;
+            flex: 1; padding: 7px; background: #25d366; border: none; border-radius: 10px;
+            color: #fff; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
             text-decoration: none; text-align: center;
           }
         `}</style>
@@ -1511,7 +1511,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
     <div className="map-float-card">
       <button className="map-float-close" onClick={onClose}>&times;</button>
       <button className={`map-float-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
-        <svg viewBox="0 0 24 24" fill={isFavorite ? '#c9a959' : 'none'} stroke={isFavorite ? '#c9a959' : '#fff'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+        <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'none'} stroke={isFavorite ? '#3A6A48' : '#fff'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
           <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
         </svg>
       </button>
@@ -1549,76 +1549,76 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
       <style jsx>{`
         .map-float-card {
           position: absolute; bottom: 20px; left: 20px; z-index: 1000;
-          width: 320px; background: #111; border: 1px solid rgba(201,169,89,0.25);
-          border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+          width: 320px; background: #FAFAF8; border: 1px solid #D8D0BC;
+          border-radius: 14px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
           animation: mapFloatIn 0.25s ease-out;
         }
         @keyframes mapFloatIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         .map-float-close {
           position: absolute; top: 8px; right: 8px; z-index: 2;
-          width: 28px; height: 28px; border-radius: 50%; background: rgba(10,10,10,0.7);
-          border: none; color: rgba(255,255,255,0.7); font-size: 16px; cursor: pointer;
+          width: 28px; height: 28px; border-radius: 50%; background: rgba(20,20,20,0.7);
+          border: none; color: rgba(255,255,255,0.8); font-size: 16px; cursor: pointer;
           display: flex; align-items: center; justify-content: center;
         }
         .map-float-fav {
           position: absolute; top: 8px; left: 8px; z-index: 2;
-          width: 36px; height: 36px; border-radius: 50%; background: rgba(10,10,10,0.6);
+          width: 36px; height: 36px; border-radius: 50%; background: rgba(20,20,20,0.6);
           border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
           transition: transform 0.15s;
         }
         .map-float-fav:hover { transform: scale(1.1); }
-        .map-float-fav.active { background: rgba(201,169,89,0.15); }
+        .map-float-fav.active { background: rgba(58,106,72,0.2); }
         .map-float-photo {
-          height: 140px; background-size: cover; background-position: center; background-color: #1a1a1a;
+          height: 140px; background-size: cover; background-position: center; background-color: #D8D0BC;
           position: relative;
         }
         .map-float-photo-count {
           position: absolute; bottom: 8px; right: 8px;
           display: flex; align-items: center; gap: 4px;
-          background: rgba(10,10,10,0.7); padding: 4px 10px; border-radius: 100px;
+          background: rgba(20,20,20,0.7); padding: 4px 10px; border-radius: 100px;
           font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.85);
-          font-family: 'Manrope', sans-serif;
+          font-family: 'DM Sans', sans-serif;
         }
         .mfp-nav {
           position: absolute; top: 50%; transform: translateY(-50%);
-          width: 32px; height: 32px; border-radius: 50%; background: rgba(10,10,10,0.6);
+          width: 32px; height: 32px; border-radius: 50%; background: rgba(20,20,20,0.6);
           border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
           z-index: 2; transition: background 0.15s;
         }
-        .mfp-nav:hover { background: rgba(10,10,10,0.85); }
+        .mfp-nav:hover { background: rgba(20,20,20,0.85); }
         .mfp-prev { left: 6px; }
         .mfp-next { right: 6px; }
         .map-float-body { padding: 14px 16px; }
         .map-float-name {
-          font-family: 'Cormorant Garamond', serif; font-size: 19px; font-weight: 400;
-          color: #fff; line-height: 1.2; margin-bottom: 2px;
+          font-family: 'Figtree', sans-serif; font-size: 19px; font-weight: 500;
+          color: #141414; line-height: 1.2; margin-bottom: 2px;
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .map-float-zona {
-          font-size: 11px; color: rgba(255,255,255,0.6); letter-spacing: 0.5px;
-          margin-bottom: 8px; font-family: 'Manrope', sans-serif;
+          font-size: 11px; color: #7A7060; letter-spacing: 0.5px;
+          margin-bottom: 8px; font-family: 'DM Sans', sans-serif;
         }
         .map-float-price {
-          font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400;
-          color: #c9a959; line-height: 1; margin-bottom: 8px;
+          font-family: 'DM Sans', sans-serif; font-size: 26px; font-weight: 500;
+          color: #141414; line-height: 1; margin-bottom: 8px; font-variant-numeric: tabular-nums;
         }
-        .map-float-price span { font-size: 14px; color: rgba(201,169,89,0.6); }
+        .map-float-price span { font-size: 14px; color: #7A7060; }
         .map-float-badges { display: flex; gap: 5px; margin-bottom: 10px; }
         .map-float-badge {
           font-size: 10px; padding: 3px 8px; border-radius: 100px;
-          border: 1px solid rgba(201,169,89,0.25); color: #c9a959;
-          font-family: 'Manrope', sans-serif;
+          border: 1px solid #D8D0BC; color: #3A3530;
+          font-family: 'DM Sans', sans-serif;
         }
         .map-float-actions { display: flex; gap: 8px; }
         .map-float-btn-detail {
-          flex: 1; padding: 9px; background: transparent; border: 1px solid rgba(255,255,255,0.15);
-          color: rgba(255,255,255,0.8); font-family: 'Manrope', sans-serif; font-size: 12px;
-          font-weight: 500; cursor: pointer; border-radius: 6px; transition: all 0.2s;
+          flex: 1; padding: 9px; background: transparent; border: 1px solid #D8D0BC;
+          color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px;
+          font-weight: 500; cursor: pointer; border-radius: 10px; transition: all 0.2s;
         }
-        .map-float-btn-detail:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
+        .map-float-btn-detail:hover { border-color: #7A7060; color: #141414; }
         .map-float-btn-wsp {
-          flex: 1; padding: 9px; background: #25d366; border: none; border-radius: 6px;
-          color: #fff; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600;
+          flex: 1; padding: 9px; background: #25d366; border: none; border-radius: 10px;
+          color: #fff; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
           text-decoration: none; text-align: center; transition: opacity 0.2s;
         }
         .map-float-btn-wsp:hover { opacity: 0.9; }
@@ -1654,7 +1654,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
   return (
     <div className={`dc-card${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}`}>
       {/* Photo */}
-      <div className="dc-photo" style={{ ...(photos[photoIdx] ? { backgroundImage: `url('${photos[photoIdx]}')` } : { background: '#1a1a1a' }), cursor: photos[photoIdx] ? 'pointer' : undefined }} onClick={() => { if (photos[photoIdx] && onPhotoTap) onPhotoTap(photoIdx) }}>
+      <div className="dc-photo" style={{ ...(photos[photoIdx] ? { backgroundImage: `url('${photos[photoIdx]}')` } : { background: '#D8D0BC' }), cursor: photos[photoIdx] ? 'pointer' : undefined }} onClick={() => { if (photos[photoIdx] && onPhotoTap) onPhotoTap(photoIdx) }}>
         {photos.length > 1 && (
           <>
             {photoIdx > 0 && (
@@ -1672,7 +1672,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
         )}
         {/* Fav + Share buttons on photo */}
         <button className={`dc-fav-btn ${isFavorite ? 'active' : ''}`} aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'} onClick={handleFav}>
-          <svg viewBox="0 0 24 24" fill={isFavorite ? '#c9a959' : 'none'} stroke={isFavorite ? '#c9a959' : '#fff'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+          <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'none'} stroke={isFavorite ? '#3A6A48' : '#fff'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
           </svg>
         </button>
@@ -1712,37 +1712,37 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
       </div>
 
       <style jsx>{`
-        .dc-card { background: #111; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; overflow: hidden; transition: border-color 0.2s; }
-        .dc-card:hover { border-color: rgba(201,169,89,0.2); }
-        .dc-photo { height: 220px; background-size: cover; background-position: center; background-color: #1a1a1a; position: relative; animation: dcShimmer 1.5s ease-in-out infinite; }
-        @keyframes dcShimmer { 0%,100%{background-color:#1a1a1a} 50%{background-color:#262626} }
-        .dc-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(10,10,10,0.6); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .dc-card { background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; overflow: hidden; transition: transform 0.25s, box-shadow 0.25s; }
+        .dc-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(58,53,48,0.08); }
+        .dc-photo { height: 220px; background-size: cover; background-position: center; background-color: #D8D0BC; position: relative; animation: dcShimmer 1.5s ease-in-out infinite; }
+        @keyframes dcShimmer { 0%,100%{background-color:#D8D0BC} 50%{background-color:#EDE8DC} }
+        .dc-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(20,20,20,0.6); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .dc-prev { left: 8px; }
         .dc-next { right: 8px; }
-        .dc-photo-count { position: absolute; top: 10px; right: 10px; background: rgba(10,10,10,0.6); padding: 3px 10px; border-radius: 100px; font-size: 11px; color: rgba(255,255,255,0.7); font-family: 'Manrope', sans-serif; }
-        .dc-fav-btn { position: absolute; top: 10px; left: 10px; width: 44px; height: 44px; border-radius: 50%; background: rgba(10,10,10,0.5); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
+        .dc-photo-count { position: absolute; top: 10px; right: 10px; background: rgba(20,20,20,0.6); padding: 3px 10px; border-radius: 100px; font-size: 11px; color: rgba(255,255,255,0.8); font-family: 'DM Sans', sans-serif; }
+        .dc-fav-btn { position: absolute; top: 10px; left: 10px; width: 44px; height: 44px; border-radius: 50%; background: rgba(20,20,20,0.5); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
         .dc-fav-btn:hover { transform: scale(1.1); }
-        .dc-fav-btn.active { background: rgba(201,169,89,0.15); }
-        .dc-share-btn { position: absolute; top: 10px; left: 62px; width: 44px; height: 44px; border-radius: 50%; background: rgba(10,10,10,0.5); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
-        .dc-share-btn:hover { transform: scale(1.1); background: rgba(10,10,10,0.7); }
+        .dc-fav-btn.active { background: rgba(58,106,72,0.2); }
+        .dc-share-btn { position: absolute; top: 10px; left: 62px; width: 44px; height: 44px; border-radius: 50%; background: rgba(20,20,20,0.5); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
+        .dc-share-btn:hover { transform: scale(1.1); background: rgba(20,20,20,0.7); }
         .dc-content { padding: 16px; }
-        .dc-name { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 400; color: #fff; line-height: 1.2; margin-bottom: 2px; }
-        .dc-zona { font-size: 11px; color: rgba(255,255,255,0.6); letter-spacing: 1px; margin-bottom: 10px; }
-        .dc-id { color: rgba(255,255,255,0.2); font-size: 10px; margin-left: 4px; letter-spacing: 0; }
-        .dc-price { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; color: #c9a959; line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
-        .dc-price span { font-size: 16px; color: rgba(201,169,89,0.6); }
-        .dc-specs { font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 10px; font-family: 'Manrope', sans-serif; }
+        .dc-name { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #141414; line-height: 1.2; margin-bottom: 2px; }
+        .dc-zona { font-size: 11px; color: #7A7060; letter-spacing: 0.5px; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
+        .dc-id { color: #D8D0BC; font-size: 10px; margin-left: 4px; letter-spacing: 0; }
+        .dc-price { font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 500; color: #141414; line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+        .dc-price span { font-size: 16px; color: #7A7060; }
+        .dc-specs { font-size: 12px; color: #3A3530; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
         .dc-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
-        .dc-badge { font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.75); font-family: 'Manrope', sans-serif; }
-        .dc-badge.gold { border-color: rgba(201,169,89,0.25); color: #c9a959; }
-        .dc-badge.purple { border-color: rgba(168,85,247,0.25); color: #a855f7; }
-        .dc-badge.green { border-color: rgba(34,197,94,0.25); color: #22c55e; }
-        .dc-badge.warn { border-color: rgba(251,191,36,0.3); color: #fbbf24; background: rgba(251,191,36,0.08); }
+        .dc-badge { font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 100px; border: 1px solid #D8D0BC; color: #3A3530; font-family: 'DM Sans', sans-serif; }
+        .dc-badge.gold { border-color: rgba(58,106,72,0.25); color: #3A6A48; }
+        .dc-badge.purple { border-color: rgba(168,85,247,0.25); color: #7c3aed; }
+        .dc-badge.green { border-color: rgba(34,197,94,0.25); color: #16a34a; }
+        .dc-badge.warn { border-color: rgba(251,191,36,0.3); color: #b45309; background: rgba(251,191,36,0.08); }
         .dc-card.pet-confirmed { border-left: 3px solid rgba(168,85,247,0.4); }
-        .dc-actions { display: flex; gap: 8px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; }
-        .dc-info-btn { flex: 1; padding: 8px; background: transparent; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); font-family: 'Manrope', sans-serif; font-size: 11px; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
-        .dc-info-btn:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
-        .dc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: #25d366; border: none; border-radius: 6px; color: #fff; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600; text-decoration: none; margin-top: 8px; transition: opacity 0.2s; }
+        .dc-actions { display: flex; gap: 8px; border-top: 1px solid #D8D0BC; padding-top: 12px; }
+        .dc-info-btn { flex: 1; padding: 8px; background: transparent; border: 1px solid #D8D0BC; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 11px; cursor: pointer; border-radius: 10px; transition: all 0.2s; }
+        .dc-info-btn:hover { border-color: #7A7060; color: #141414; }
+        .dc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: #25d366; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-decoration: none; margin-top: 8px; transition: opacity 0.2s; }
         .dc-wsp-cta:hover { opacity: 0.9; }
         @media (prefers-reduced-motion: reduce) {
           .dc-photo { animation: none; }
@@ -1803,7 +1803,7 @@ function MobilePropertyCard({
         )}
         <div className="mc-actions">
           <button className={`mc-btn mc-fav ${isFavorite ? 'active' : ''} ${shakeBtn ? 'shake' : ''}`} aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'} onClick={handleFavorite}>
-            <svg viewBox="0 0 24 24" fill={isFavorite ? '#c9a959' : 'none'} stroke={isFavorite ? '#c9a959' : 'currentColor'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
+            <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'none'} stroke={isFavorite ? '#3A6A48' : 'currentColor'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
@@ -1832,31 +1832,31 @@ function MobilePropertyCard({
       {isFirst && <div className="mc-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" style={{width:18,height:18}}><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>}
 
       <style jsx>{`
-        .alq-card { height: 100vh; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #0a0a0a; }
+        .alq-card { height: 100vh; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #FAFAF8; }
         .mc-content { flex: 1; padding: 0 24px 20px; padding-bottom: max(20px, calc(env(safe-area-inset-bottom) + 8px)); display: flex; flex-direction: column; overflow: hidden; }
-        .mc-name { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400; color: #fff; line-height: 1.1; margin-bottom: 3px; }
-        .mc-zona { font-size: 12px; color: rgba(255,255,255,0.7); letter-spacing: 1px; margin-bottom: 12px; }
-        .mc-id { color: rgba(255,255,255,0.15); font-size: 10px; margin-left: 4px; letter-spacing: 0; }
-        .mc-price { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 400; color: #c9a959; line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
-        .mc-specs { font-size: 13px; font-weight: 300; color: rgba(255,255,255,0.7); margin-bottom: 12px; font-family: 'Manrope', sans-serif; }
+        .mc-name { font-family: 'Figtree', sans-serif; font-size: 26px; font-weight: 500; color: #141414; line-height: 1.1; margin-bottom: 3px; }
+        .mc-zona { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; margin-bottom: 12px; font-family: 'DM Sans', sans-serif; }
+        .mc-id { color: #D8D0BC; font-size: 10px; margin-left: 4px; letter-spacing: 0; }
+        .mc-price { font-family: 'DM Sans', sans-serif; font-size: 36px; font-weight: 500; color: #141414; line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+        .mc-specs { font-size: 13px; font-weight: 300; color: #3A3530; margin-bottom: 12px; font-family: 'DM Sans', sans-serif; }
         .mc-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-        .mc-badge { font-size: 10px; font-weight: 500; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.04); font-family: 'Manrope', sans-serif; }
-        .mc-badge.gold { border-color: rgba(201,169,89,0.25); color: #c9a959; background: rgba(201,169,89,0.06); }
-        .mc-badge.purple { border-color: rgba(168,85,247,0.25); color: #a855f7; background: rgba(168,85,247,0.06); }
-        .mc-badge.green { border-color: rgba(34,197,94,0.25); color: #22c55e; background: rgba(34,197,94,0.06); }
-        .mc-badge.warn { border-color: rgba(251,191,36,0.3); color: #fbbf24; background: rgba(251,191,36,0.1); font-weight: 600; }
+        .mc-badge { font-size: 10px; font-weight: 500; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 100px; border: 1px solid #D8D0BC; color: #3A3530; background: rgba(58,53,48,0.02); font-family: 'DM Sans', sans-serif; }
+        .mc-badge.gold { border-color: rgba(58,106,72,0.25); color: #3A6A48; background: rgba(58,106,72,0.04); }
+        .mc-badge.purple { border-color: rgba(168,85,247,0.25); color: #7c3aed; background: rgba(168,85,247,0.04); }
+        .mc-badge.green { border-color: rgba(34,197,94,0.25); color: #16a34a; background: rgba(34,197,94,0.04); }
+        .mc-badge.warn { border-color: rgba(251,191,36,0.3); color: #b45309; background: rgba(251,191,36,0.06); font-weight: 600; }
         .alq-card.pet-confirmed { border-left: 3px solid rgba(168,85,247,0.4); }
-        .mc-razon { font-size: 12px; font-weight: 300; color: rgba(255,255,255,0.6); line-height: 1.5; margin-bottom: auto; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-        .mc-actions { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 8px; }
-        .mc-btn { display: flex; align-items: center; justify-content: center; gap: 5px; background: none; border: none; color: rgba(255,255,255,0.7); font-size: 12px; font-family: 'Manrope', sans-serif; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
-        .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(201,169,89,0.5)); }
-        .mc-btn.mc-share { color: rgba(255,255,255,0.7); }
-        .mc-btn.mc-info { color: rgba(255,255,255,0.7); font-size: 11px; letter-spacing: 0.5px; }
-        .mc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: #25d366; border: none; border-radius: 8px; color: #fff; font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: 8px; min-height: 44px; transition: opacity 0.2s; }
+        .mc-razon { font-size: 12px; font-weight: 300; color: #7A7060; line-height: 1.5; margin-bottom: auto; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .mc-actions { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid #D8D0BC; margin-top: 8px; }
+        .mc-btn { display: flex; align-items: center; justify-content: center; gap: 5px; background: none; border: none; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
+        .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(58,106,72,0.4)); }
+        .mc-btn.mc-share { color: #7A7060; }
+        .mc-btn.mc-info { color: #7A7060; font-size: 11px; letter-spacing: 0.5px; }
+        .mc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: #25d366; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: 8px; min-height: 44px; transition: opacity 0.2s; }
         .mc-wsp-cta:active { opacity: 0.85; }
         .mc-btn.shake { animation: mcShake 0.3s ease; }
         @keyframes mcShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
-        .mc-spotlight-badge { position: absolute; top: max(56px, calc(env(safe-area-inset-top) + 50px)); left: 16px; z-index: 10; background: rgba(26,23,20,0.9); border-left: 3px solid #c9a959; padding: 8px 14px; border-radius: 0 8px 8px 0; font-family: 'Manrope', sans-serif; font-size: 12px; color: #f8f6f3; letter-spacing: 0.3px; }
+        .mc-spotlight-badge { position: absolute; top: max(56px, calc(env(safe-area-inset-top) + 50px)); left: 16px; z-index: 10; background: rgba(250,250,248,0.92); border-left: 3px solid #3A6A48; padding: 8px 14px; border-radius: 0 14px 14px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #3A3530; letter-spacing: 0.3px; }
         .mc-scroll-hint { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); z-index: 10; animation: mcBounce 2s infinite; opacity: 0.25; }
         @keyframes mcBounce { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-5px)} }
         @media (prefers-reduced-motion: reduce) {
@@ -1899,7 +1899,7 @@ function PhotoCarousel({ photos, isFirst, onPhotoTap }: { photos: string[]; isFi
     <div className="pc-zone">
       <div className="pc-scroll" ref={scrollRef}>
         {(photos.length > 0 ? photos : ['']).map((url, i) => (
-          <div key={i} className="pc-slide" style={url ? { backgroundImage: `url('${url}')` } : { background: '#1a1a1a' }}
+          <div key={i} className="pc-slide" style={url ? { backgroundImage: `url('${url}')` } : { background: '#D8D0BC' }}
             onTouchStart={() => { isDragging.current = false }}
             onTouchMove={() => { isDragging.current = true }}
             onClick={() => { if (!isDragging.current && onPhotoTap && url) onPhotoTap(currentIdx) }}
@@ -1927,16 +1927,16 @@ function PhotoCarousel({ photos, isFirst, onPhotoTap }: { photos: string[]; isFi
       )}
       <style jsx>{`
         .pc-zone { flex: 0 0 55%; position: relative; overflow: hidden; }
-        .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(transparent, #0a0a0a); pointer-events: none; z-index: 2; }
+        .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(transparent, #FAFAF8); pointer-events: none; z-index: 2; }
         .pc-scroll { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .pc-scroll::-webkit-scrollbar { display: none; }
-        .pc-slide { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #1a1a1a; scroll-snap-align: start; animation: imgShimmer 1.5s ease-in-out infinite; }
-        @keyframes imgShimmer { 0%,100%{background-color:#1a1a1a} 50%{background-color:#262626} }
-        .pc-counter { position: absolute; top: 16px; right: 16px; z-index: 5; background: rgba(10,10,10,0.75); padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 5px; font-family: 'Manrope', sans-serif; }
+        .pc-slide { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #D8D0BC; scroll-snap-align: start; animation: imgShimmer 1.5s ease-in-out infinite; }
+        @keyframes imgShimmer { 0%,100%{background-color:#D8D0BC} 50%{background-color:#EDE8DC} }
+        .pc-counter { position: absolute; top: 16px; right: 16px; z-index: 5; background: rgba(20,20,20,0.75); padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 5px; font-family: 'DM Sans', sans-serif; }
         .pc-dots { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 5; }
-        .pc-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.35); transition: all 0.25s; }
-        .pc-dot.active { background: #fff; width: 20px; border-radius: 3px; }
-        .pc-swipe-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 10; display: flex; align-items: center; gap: 8px; background: rgba(10,10,10,0.65); padding: 10px 20px; border-radius: 100px; color: rgba(255,255,255,0.7); font-size: 13px; font-family: 'Manrope', sans-serif; pointer-events: none; animation: pcFade 3s ease-in-out forwards; }
+        .pc-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(20,20,20,0.25); transition: all 0.25s; }
+        .pc-dot.active { background: #141414; width: 20px; border-radius: 3px; }
+        .pc-swipe-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 10; display: flex; align-items: center; gap: 8px; background: rgba(20,20,20,0.65); padding: 10px 20px; border-radius: 100px; color: rgba(255,255,255,0.8); font-size: 13px; font-family: 'DM Sans', sans-serif; pointer-events: none; animation: pcFade 3s ease-in-out forwards; }
         @keyframes pcFade { 0%{opacity:0} 15%{opacity:1} 70%{opacity:1} 100%{opacity:0} }
         @media (prefers-reduced-motion: reduce) {
           .pc-slide { animation: none; }
@@ -2036,31 +2036,31 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
       {isFiltered && <button className="mfc-reset" onClick={onReset}>Quitar filtros · ver todas</button>}
       <div className="mfc-skip">segui explorando &darr;</div>
       <style jsx>{`
-        .mfc { display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;padding:60px 28px 20px;padding-bottom:max(20px,calc(env(safe-area-inset-bottom) + 8px));height:100vh;height:100dvh;scroll-snap-align:start;background:#0a0a0a; }
+        .mfc { display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;padding:60px 28px 20px;padding-bottom:max(20px,calc(env(safe-area-inset-bottom) + 8px));height:100vh;height:100dvh;scroll-snap-align:start;background:#EDE8DC; }
         .mfc-header { display:flex;align-items:baseline;gap:8px;margin-bottom:6px; }
-        .mfc-count { font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:300;color:#c9a959;line-height:1; }
-        .mfc-sub { font-size:15px;font-weight:400;color:rgba(255,255,255,0.65);font-family:'Manrope',sans-serif; }
+        .mfc-count { font-family:'Figtree',sans-serif;font-size:40px;font-weight:500;color:#141414;line-height:1;font-variant-numeric:tabular-nums; }
+        .mfc-sub { font-size:15px;font-weight:400;color:#7A7060;font-family:'DM Sans',sans-serif; }
         .mfc-divider { display:flex;align-items:center;gap:12px;margin-bottom:20px; }
-        .mfc-line { flex:1;height:1px;background:rgba(201,169,89,0.3); }
-        .mfc-divider-text { font-size:12px;color:#c9a959;letter-spacing:3px;font-family:'Manrope',sans-serif;text-transform:uppercase; }
+        .mfc-line { flex:1;height:1px;background:#D8D0BC; }
+        .mfc-divider-text { font-size:12px;color:#3A6A48;letter-spacing:0.5px;font-family:'DM Sans',sans-serif;text-transform:uppercase; }
         .mfc-filters { width:100%;max-width:320px;margin-bottom:16px; }
         .mfc-group { margin-bottom:14px;text-align:left; }
-        .mfc-gl { font-size:11px;font-weight:600;color:rgba(255,255,255,0.65);letter-spacing:2px;margin-bottom:7px;font-family:'Manrope',sans-serif; }
+        .mfc-gl { font-size:11px;font-weight:600;color:#7A7060;letter-spacing:0.5px;margin-bottom:7px;font-family:'DM Sans',sans-serif; }
         .mfc-zonas { display:flex;flex-wrap:wrap;gap:7px; }
-        .mfc-zb { padding:7px 14px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.8);font-family:'Manrope',sans-serif;font-size:13px;cursor:pointer;border-radius:100px;transition:all 0.2s; }
-        .mfc-zb.active { border-color:#c9a959;color:#c9a959;background:rgba(201,169,89,0.1); }
+        .mfc-zb { padding:7px 14px;border:1px solid #D8D0BC;background:transparent;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:100px;transition:all 0.2s; }
+        .mfc-zb.active { border-color:#3A6A48;color:#3A6A48;background:rgba(58,106,72,0.08); }
         .mfc-dorms { display:flex;gap:8px; }
-        .mfc-db { flex:1;padding:10px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.8);font-family:'Manrope',sans-serif;font-size:13px;cursor:pointer;border-radius:4px;transition:all 0.2s; }
-        .mfc-db.active { border-color:#c9a959;color:#c9a959;background:rgba(201,169,89,0.1); }
-        .mfc-slider { width:100%;-webkit-appearance:none;appearance:none;height:3px;background:rgba(255,255,255,0.25);border-radius:2px;outline:none; }
-        .mfc-slider::-webkit-slider-thumb { -webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#c9a959;cursor:pointer; }
-        .mfc-sv { text-align:right;font-size:15px;color:#c9a959;margin-top:4px;font-weight:600;font-family:'Manrope',sans-serif; }
-        .mfc-cta { display:block;width:100%;max-width:320px;padding:15px;background:rgba(201,169,89,0.25);border:1px solid rgba(201,169,89,0.4);color:rgba(255,255,255,0.6);font-family:'Manrope',sans-serif;font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-bottom:10px;transition:all 0.3s; }
+        .mfc-db { flex:1;padding:10px;border:1px solid #D8D0BC;background:transparent;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:10px;transition:all 0.2s; }
+        .mfc-db.active { border-color:#3A6A48;color:#3A6A48;background:rgba(58,106,72,0.08); }
+        .mfc-slider { width:100%;-webkit-appearance:none;appearance:none;height:3px;background:#D8D0BC;border-radius:2px;outline:none; }
+        .mfc-slider::-webkit-slider-thumb { -webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#141414;cursor:pointer; }
+        .mfc-sv { text-align:right;font-size:15px;color:#141414;margin-top:4px;font-weight:600;font-family:'DM Sans',sans-serif;font-variant-numeric:tabular-nums; }
+        .mfc-cta { display:block;width:100%;max-width:320px;padding:15px;background:rgba(20,20,20,0.08);border:1px solid #D8D0BC;color:#7A7060;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;margin-bottom:10px;border-radius:10px;transition:all 0.3s; }
         .mfc-cta:active { transform:scale(0.97); }
-        .mfc-cta-dirty { background:#c9a959;border-color:#c9a959;color:#0a0a0a;animation:mfc-pulse 1.5s ease-in-out infinite; }
-        @keyframes mfc-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(201,169,89,0.5)} 50%{box-shadow:0 0 16px 4px rgba(201,169,89,0.4)} }
-        .mfc-reset { display:block;width:100%;max-width:320px;padding:11px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.75);font-family:'Manrope',sans-serif;font-size:13px;cursor:pointer;margin-bottom:8px;border-radius:4px; }
-        .mfc-skip { font-size:13px;color:rgba(255,255,255,0.55);font-weight:300;font-family:'Manrope',sans-serif; }
+        .mfc-cta-dirty { background:#141414;border-color:#141414;color:#EDE8DC;animation:mfc-pulse 1.5s ease-in-out infinite; }
+        @keyframes mfc-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(20,20,20,0.3)} 50%{box-shadow:0 0 16px 4px rgba(20,20,20,0.2)} }
+        .mfc-reset { display:block;width:100%;max-width:320px;padding:11px;background:transparent;border:1px solid #D8D0BC;color:#7A7060;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;margin-bottom:8px;border-radius:10px; }
+        .mfc-skip { font-size:13px;color:#7A7060;font-weight:300;font-family:'DM Sans',sans-serif; }
       `}</style>
     </div>
   )
@@ -2170,39 +2170,39 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         </div>
       )}
       <style jsx>{`
-        .bs { position:fixed;bottom:0;left:0;right:0;z-index:501;background:#141414;border-radius:20px 20px 0 0;max-height:80vh;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:max(20px,env(safe-area-inset-bottom)); }
+        .bs { position:fixed;bottom:0;left:0;right:0;z-index:501;background:#FAFAF8;border-radius:20px 20px 0 0;max-height:80vh;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:max(20px,env(safe-area-inset-bottom)); }
         .bs::-webkit-scrollbar{display:none;}
         .bs.open{transform:translateY(0);}
         .bs-desktop{max-width:480px;left:auto;right:0;border-radius:20px 0 0 0;height:100vh;max-height:100vh;}
         .bs-desktop.open{transform:translateY(0);}
-        .bs-handle{width:36px;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;margin:12px auto 0;}
-        .bs-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px 12px;border-bottom:1px solid rgba(255,255,255,0.06);}
-        .bs-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:#fff;}
-        .bs-close{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;}
-        .bs-published{padding:12px 24px 0;font-size:12px;color:rgba(255,255,255,0.45);font-family:'Manrope',sans-serif;}
+        .bs-handle{width:36px;height:4px;background:#D8D0BC;border-radius:2px;margin:12px auto 0;}
+        .bs-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px 12px;border-bottom:1px solid #D8D0BC;}
+        .bs-title{font-family:'Figtree',sans-serif;font-size:22px;font-weight:500;color:#141414;}
+        .bs-close{width:44px;height:44px;border-radius:50%;border:1px solid #D8D0BC;background:transparent;color:#7A7060;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;}
+        .bs-published{padding:12px 24px 0;font-size:12px;color:#7A7060;font-family:'DM Sans',sans-serif;}
         .bs-section{padding:16px 24px;}
-        .bs-sl{font-size:10px;font-weight:500;color:rgba(255,255,255,0.55);letter-spacing:2px;margin-bottom:12px;font-family:'Manrope',sans-serif;}
+        .bs-sl{font-size:12px;font-weight:500;color:#7A7060;letter-spacing:0.5px;margin-bottom:12px;font-family:'DM Sans',sans-serif;text-transform:uppercase;}
         .bs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-        .bs-feat{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);}
+        .bs-feat{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border-radius:10px;background:rgba(58,53,48,0.02);border:1px solid #D8D0BC;}
         .bs-fi{font-size:20px;}
-        .bs-fl{font-size:10px;color:rgba(255,255,255,0.7);text-align:center;font-family:'Manrope',sans-serif;}
-        .bs-fv{font-size:12px;font-weight:500;color:#fff;font-family:'Manrope',sans-serif;}
-        .bs-feat.hl{border-color:rgba(201,169,89,0.2);background:rgba(201,169,89,0.04);}
-        .bs-feat.hl .bs-fl{color:#c9a959;}
-        .bs-feat.hl .bs-fv{color:#c9a959;}
+        .bs-fl{font-size:10px;color:#7A7060;text-align:center;font-family:'DM Sans',sans-serif;}
+        .bs-fv{font-size:12px;font-weight:500;color:#141414;font-family:'DM Sans',sans-serif;}
+        .bs-feat.hl{border-color:rgba(58,106,72,0.25);background:rgba(58,106,72,0.04);}
+        .bs-feat.hl .bs-fl{color:#3A6A48;}
+        .bs-feat.hl .bs-fv{color:#3A6A48;}
         .bs-aw{display:flex;flex-wrap:wrap;gap:6px;}
-        .bs-at{font-size:11px;padding:4px 10px;border-radius:100px;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.75);font-family:'Manrope',sans-serif;}
-        .bs-ver-anuncio{display:block;width:100%;text-align:center;padding:12px;background:rgba(201,169,89,0.1);border:1px solid rgba(201,169,89,0.25);color:#c9a959;font-family:'Manrope',sans-serif;font-size:13px;font-weight:600;text-decoration:none;border-radius:8px;transition:background 0.2s;cursor:pointer;}
-        .bs-ver-anuncio:hover{background:rgba(201,169,89,0.2);}
+        .bs-at{font-size:11px;padding:4px 10px;border-radius:100px;border:1px solid #D8D0BC;color:#3A3530;font-family:'DM Sans',sans-serif;}
+        .bs-ver-anuncio{display:block;width:100%;text-align:center;padding:12px;background:rgba(58,106,72,0.06);border:1px solid rgba(58,106,72,0.2);color:#3A6A48;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;text-decoration:none;border-radius:10px;transition:background 0.2s;cursor:pointer;}
+        .bs-ver-anuncio:hover{background:rgba(58,106,72,0.12);}
         .bs-gate{display:flex;flex-direction:column;gap:12px}
-        .bs-gate-title{font-size:14px;color:rgba(255,255,255,0.6);margin-bottom:4px}
-        .bs-gate-input{width:100%;padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:8px;color:#f8f6f3;font-family:'Manrope',sans-serif;font-size:15px;box-sizing:border-box}
-        .bs-gate-input::placeholder{color:rgba(255,255,255,0.3)}
-        .bs-gate-submit{width:100%;padding:14px;background:#c9a959;color:#0a0a0a;border:none;border-radius:8px;font-family:'Manrope',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+        .bs-gate-title{font-size:14px;color:#7A7060;margin-bottom:4px}
+        .bs-gate-input{width:100%;padding:12px 14px;background:#EDE8DC;border:1px solid #D8D0BC;border-radius:10px;color:#141414;font-family:'DM Sans',sans-serif;font-size:15px;box-sizing:border-box}
+        .bs-gate-input::placeholder{color:#7A7060}
+        .bs-gate-submit{width:100%;padding:14px;background:#141414;color:#EDE8DC;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
         .bs-gate-submit:disabled{opacity:0.4;cursor:default}
-        .bs-map-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;background:transparent;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;cursor:pointer;margin-bottom:10px;}
-        .bs-map-toggle:hover{border-color:rgba(255,255,255,0.15);}
-        .bs-map{width:100%;height:200px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);}
+        .bs-map-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;background:transparent;border:1px solid #D8D0BC;border-radius:10px;padding:10px 14px;cursor:pointer;margin-bottom:10px;}
+        .bs-map-toggle:hover{border-color:#7A7060;}
+        .bs-map{width:100%;height:200px;border-radius:14px;overflow:hidden;border:1px solid #D8D0BC;}
       `}</style>
     </div>
   )
@@ -2219,8 +2219,8 @@ function CardCounter({ total, active }: { total: number; active: number }) {
       ))}
       <style jsx>{`
         .cc{position:fixed;top:50%;right:10px;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;align-items:center;gap:3px;}
-        .cc-pip{width:3px;height:10px;border-radius:2px;background:rgba(255,255,255,0.12);transition:all 0.3s;}
-        .cc-pip.active{background:#c9a959;height:22px;}
+        .cc-pip{width:3px;height:10px;border-radius:2px;background:rgba(58,53,48,0.12);transition:all 0.3s;}
+        .cc-pip.active{background:#3A6A48;height:22px;}
       `}</style>
     </div>
   )
