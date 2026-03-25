@@ -185,15 +185,15 @@ export default function AlquileresPage() {
   const [loading, setLoading] = useState(true)
   const [spotlightId, setSpotlightId] = useState<number | null>(null)
   const [fetchedSpotlight, setFetchedSpotlight] = useState<UnidadAlquiler | null>(null)
-  const [favorites, setFavorites] = useState<Set<number>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('alq_favorites')
-        if (saved) return new Set(JSON.parse(saved) as number[])
-      } catch {}
-    }
-    return new Set()
-  })
+  const [favorites, setFavorites] = useState<Set<number>>(new Set())
+
+  // Restore favorites from localStorage after hydration
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('alq_favorites')
+      if (saved) setFavorites(new Set(JSON.parse(saved) as number[]))
+    } catch {}
+  }, [])
   const [activeCardIndex, setActiveCardIndex] = useState(0)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sheetProperty, setSheetProperty] = useState<UnidadAlquiler | null>(null)
