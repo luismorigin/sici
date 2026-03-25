@@ -550,7 +550,7 @@ export default function AlquileresPage() {
       </Head>
 
       <style jsx global>{`
-        body { background: #0a0a0a; }
+        body { background: #EDE8DC; }
         @media (max-width: 767px) { body { overflow: hidden; } }
       `}</style>
 
@@ -968,8 +968,8 @@ export default function AlquileresPage() {
         /* ========== TOAST ========== */
         .alq-toast {
           position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 600;
-          background: #c9a959; color: #0a0a0a; padding: 10px 24px; border-radius: 100px;
-          font-size: 13px; font-weight: 600; font-family: 'Manrope', sans-serif;
+          background: #141414; color: #EDE8DC; padding: 10px 24px; border-radius: 100px;
+          font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif;
           opacity: 0; transition: opacity 0.3s; pointer-events: none;
         }
         .alq-toast.show { opacity: 1; }
@@ -978,64 +978,64 @@ export default function AlquileresPage() {
         /* ========== DESKTOP ========== */
         .desktop-layout {
           display: flex; height: 100vh; overflow: hidden;
-          font-family: 'Manrope', sans-serif;
+          font-family: 'DM Sans', sans-serif;
         }
         .desktop-sidebar {
           width: 320px; min-width: 320px; height: 100vh;
-          background: #0a0a0a; border-right: 1px solid rgba(255,255,255,0.06);
+          background: #EDE8DC; border-right: 1px solid #D8D0BC;
           padding: 32px 28px; overflow-y: auto;
           display: flex; flex-direction: column;
         }
         .desktop-sidebar-header { margin-bottom: 32px; }
         .desktop-logo {
-          font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 400;
-          color: #fff; text-decoration: none; display: block;
+          font-family: 'Figtree', sans-serif; font-size: 32px; font-weight: 500;
+          color: #141414; text-decoration: none; display: block;
         }
-        .desktop-label { font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 3px; margin-top: 2px; }
+        .desktop-label { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; margin-top: 2px; text-transform: uppercase; }
         .desktop-sidebar-count { margin-bottom: 28px; }
         .desktop-count-num {
-          font-family: 'Cormorant Garamond', serif; font-size: 48px; font-weight: 300;
-          color: #c9a959; line-height: 1; display: block;
+          font-family: 'Figtree', sans-serif; font-size: 48px; font-weight: 500;
+          color: #141414; line-height: 1; display: block; font-variant-numeric: tabular-nums;
         }
-        .desktop-count-label { font-size: 13px; color: rgba(255,255,255,0.6); }
+        .desktop-count-label { font-size: 13px; color: #7A7060; }
         .desktop-fav-summary {
-          margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06);
+          margin-top: auto; padding-top: 20px; border-top: 1px solid #D8D0BC;
           display: flex; align-items: center; justify-content: space-between;
-          color: #c9a959; font-size: 13px;
+          color: #3A6A48; font-size: 13px;
         }
         .desktop-fav-info { display: flex; align-items: center; gap: 8px; }
         .desktop-fav-clear {
-          background: none; border: none; color: rgba(255,255,255,0.4); font-size: 16px;
+          background: none; border: none; color: #7A7060; font-size: 16px;
           cursor: pointer; padding: 0 4px; line-height: 1; transition: color 0.2s;
         }
-        .desktop-fav-clear:hover { color: #fff; }
+        .desktop-fav-clear:hover { color: #141414; }
         .desktop-compare-btn {
-          padding: 6px 14px; border-radius: 6px; border: 1px solid rgba(201,169,89,0.4);
-          background: rgba(201,169,89,0.08); color: #c9a959; font-size: 11px; font-weight: 600;
-          cursor: pointer; font-family: 'Manrope', sans-serif; letter-spacing: 0.5px;
+          padding: 6px 14px; border-radius: 10px; border: 1px solid #D8D0BC;
+          background: rgba(58,106,72,0.08); color: #3A6A48; font-size: 11px; font-weight: 600;
+          cursor: pointer; font-family: 'DM Sans', sans-serif; letter-spacing: 0.5px;
           transition: background 0.2s;
         }
-        .desktop-compare-btn:hover { background: rgba(201,169,89,0.15); }
+        .desktop-compare-btn:hover { background: rgba(58,106,72,0.15); }
 
         .desktop-main {
-          flex: 1; height: 100vh; overflow-y: auto; padding: 32px;
-          scrollbar-width: thin; scrollbar-color: rgba(201,169,89,0.3) transparent;
+          flex: 1; height: 100vh; overflow-y: auto; padding: 32px; background: #EDE8DC;
+          scrollbar-width: thin; scrollbar-color: #D8D0BC transparent;
         }
         .desktop-main::-webkit-scrollbar { width: 6px; }
         .desktop-main::-webkit-scrollbar-track { background: transparent; }
-        .desktop-main::-webkit-scrollbar-thumb { background: rgba(201,169,89,0.3); border-radius: 3px; }
+        .desktop-main::-webkit-scrollbar-thumb { background: #D8D0BC; border-radius: 3px; }
         .desktop-grid {
           display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
           gap: 24px; max-width: 1200px;
         }
         .alq-pet-divider {
           grid-column: 1 / -1; text-align: center; padding: 20px 0 8px;
-          color: rgba(255,255,255,0.35); font-size: 12px; letter-spacing: 0.5px;
-          border-top: 1px solid rgba(255,255,255,0.08); font-family: 'Manrope', sans-serif;
+          color: #7A7060; font-size: 12px; letter-spacing: 0.5px;
+          border-top: 1px solid #D8D0BC; font-family: 'DM Sans', sans-serif;
         }
         .desktop-loading {
           display: flex; align-items: center; justify-content: center; height: 300px;
-          color: rgba(255,255,255,0.6); font-size: 15px;
+          color: #7A7060; font-size: 15px;
         }
 
         /* ========== SPOTLIGHT (shared property) ========== */
@@ -1043,26 +1043,26 @@ export default function AlquileresPage() {
         .alq-spotlight-banner {
           display: flex; align-items: center; justify-content: space-between;
           padding: 12px 16px; margin-bottom: 16px;
-          background: #1a1714; border-left: 3px solid #c9a959;
-          border-radius: 0 8px 8px 0;
-          font-family: 'Manrope', sans-serif; font-size: 14px; color: #f8f6f3;
+          background: #FAFAF8; border-left: 3px solid #3A6A48;
+          border-radius: 0 14px 14px 0;
+          font-family: 'DM Sans', sans-serif; font-size: 14px; color: #3A3530;
         }
         .alq-spotlight-banner button {
-          background: none; border: none; color: rgba(255,255,255,0.5);
+          background: none; border: none; color: #7A7060;
           font-size: 20px; cursor: pointer; padding: 4px 8px; line-height: 1;
         }
-        .alq-spotlight-banner button:hover { color: #fff; }
+        .alq-spotlight-banner button:hover { color: #141414; }
         .alq-spotlight-content { display: flex; gap: 24px; margin-bottom: 24px; }
         .alq-spotlight-card { width: 400px; flex-shrink: 0; }
         .alq-spotlight-map {
-          flex: 1; min-height: 280px; border-radius: 12px; overflow: hidden;
-          border: 1px solid rgba(255,255,255,0.06);
+          flex: 1; min-height: 280px; border-radius: 14px; overflow: hidden;
+          border: 1px solid #D8D0BC;
         }
         .alq-spotlight-separator { display: flex; align-items: center; gap: 16px; }
-        .alq-spotlight-line { flex: 1; height: 1px; background: rgba(255,255,255,0.1); }
+        .alq-spotlight-line { flex: 1; height: 1px; background: #D8D0BC; }
         .alq-spotlight-text {
-          font-family: 'Manrope', sans-serif; font-size: 12px;
-          color: rgba(255,255,255,0.4); letter-spacing: 2px; text-transform: uppercase;
+          font-family: 'DM Sans', sans-serif; font-size: 12px;
+          color: #7A7060; letter-spacing: 0.5px; text-transform: uppercase;
           white-space: nowrap;
         }
 
@@ -1071,45 +1071,46 @@ export default function AlquileresPage() {
         .map-fav-strip {
           position: absolute; bottom: 12px; right: 12px; z-index: 1000;
           display: flex; align-items: center; gap: 8px;
-          background: rgba(10,10,10,0.85); backdrop-filter: blur(8px);
-          padding: 8px 12px; border-radius: 12px;
-          border: 1px solid rgba(201,169,89,0.2);
+          background: rgba(250,250,248,0.92); backdrop-filter: blur(8px);
+          padding: 8px 12px; border-radius: 14px;
+          border: 1px solid #D8D0BC;
           max-width: calc(100% - 340px - 24px);
         }
         .map-fav-label {
           display: flex; align-items: center; gap: 4px;
-          font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600; color: #c9a959;
+          font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; color: #3A6A48;
           flex-shrink: 0;
         }
         .map-fav-chip {
           display: flex; align-items: center; gap: 8px;
-          background: #1a1a1a; border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 8px; padding: 4px 8px 4px 4px; cursor: pointer;
+          background: #FAFAF8; border: 1px solid #D8D0BC;
+          border-radius: 10px; padding: 4px 8px 4px 4px; cursor: pointer;
           transition: border-color 0.2s; flex-shrink: 0;
         }
-        .map-fav-chip:hover { border-color: rgba(201,169,89,0.3); }
-        .map-fav-chip.selected { border-color: #c9a959; }
+        .map-fav-chip:hover { border-color: #3A6A48; }
+        .map-fav-chip.selected { border-color: #3A6A48; }
         .map-fav-chip-img {
-          width: 40px; height: 40px; border-radius: 6px; flex-shrink: 0;
-          background-size: cover; background-position: center; background-color: #222;
+          width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0;
+          background-size: cover; background-position: center; background-color: #D8D0BC;
         }
         .map-fav-chip-info { min-width: 0; }
         .map-fav-chip-name {
-          font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 500; color: #fff;
+          font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; color: #141414;
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;
         }
         .map-fav-chip-price {
-          font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 600; color: #c9a959;
+          font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; color: #141414;
+          font-variant-numeric: tabular-nums;
         }
         .map-fav-chip-remove {
           flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
-          background: rgba(255,255,255,0.08); border: none; color: rgba(255,255,255,0.5);
+          background: rgba(58,53,48,0.06); border: none; color: #7A7060;
           font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
-        .map-fav-chip-remove:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .map-fav-chip-remove:hover { background: rgba(58,53,48,0.12); color: #141414; }
         .map-fav-compare {
-          flex-shrink: 0; padding: 6px 14px; background: #c9a959; border: none; border-radius: 6px;
-          color: #0a0a0a; font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 600;
+          flex-shrink: 0; padding: 6px 14px; background: #141414; border: none; border-radius: 10px;
+          color: #EDE8DC; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
           cursor: pointer; transition: opacity 0.2s;
         }
         .map-fav-compare:hover { opacity: 0.85; }
@@ -1125,31 +1126,31 @@ export default function AlquileresPage() {
           position: fixed; top: 0; left: 0; right: 0; z-index: 50;
           display: flex; align-items: center; justify-content: space-between;
           padding: 12px 20px; padding-top: max(12px, env(safe-area-inset-top));
-          background: linear-gradient(rgba(10,10,10,0.7), transparent); pointer-events: none;
+          background: linear-gradient(rgba(237,232,220,0.85), transparent); pointer-events: none;
         }
         .alq-top-bar > * { pointer-events: auto; }
-        .alq-logo { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400; color: #fff; }
-        .alq-label { font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 3px; }
+        .alq-logo { font-family: 'Figtree', sans-serif; font-size: 26px; font-weight: 500; color: #141414; }
+        .alq-label { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; text-transform: uppercase; }
         .alq-filter-btn {
           width: 44px; height: 44px; border-radius: 50%;
-          border: 1px solid rgba(255,255,255,0.15); background: rgba(10,10,10,0.5); color: #fff;
+          border: 1px solid #D8D0BC; background: rgba(237,232,220,0.7); color: #141414;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
         .alq-filter-pill {
           padding: 6px 14px; border-radius: 100px;
-          background: rgba(201,169,89,0.12); border: 1px solid rgba(201,169,89,0.3);
-          color: #c9a959; font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 600;
+          background: rgba(58,106,72,0.08); border: 1px solid rgba(58,106,72,0.25);
+          color: #3A6A48; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
           letter-spacing: 0.5px; cursor: pointer;
         }
         .alq-filter-dot {
           position: absolute; top: 6px; right: 6px; width: 8px; height: 8px;
-          border-radius: 50%; background: #c9a959;
+          border-radius: 50%; background: #3A6A48;
         }
         .alq-filter-btn { position: relative; }
         .alq-chips-panel {
           position: fixed; top: max(56px, calc(env(safe-area-inset-top) + 48px)); left: 0; right: 0; z-index: 49;
           display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px;
-          background: rgba(10,10,10,0.95);
+          background: rgba(237,232,220,0.97);
           transform: translateY(-100%); opacity: 0; transition: transform 0.25s ease-out, opacity 0.2s;
           pointer-events: none;
         }
@@ -1157,34 +1158,34 @@ export default function AlquileresPage() {
         .alq-chip {
           flex-shrink: 0; display: flex; align-items: center; gap: 4px;
           padding: 6px 12px; border-radius: 100px; font-size: 12px;
-          background: rgba(201,169,89,0.12); border: 1px solid rgba(201,169,89,0.25);
-          color: #c9a959; font-family: 'Manrope', sans-serif; white-space: nowrap;
+          background: rgba(58,106,72,0.08); border: 1px solid rgba(58,106,72,0.2);
+          color: #3A6A48; font-family: 'DM Sans', sans-serif; white-space: nowrap;
         }
-        .alq-chip button { background: none; border: none; color: #c9a959; font-size: 14px; cursor: pointer; padding: 0; line-height: 1; }
-        .alq-chip-clear { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15); color: rgba(255,255,255,0.6); cursor: pointer; }
+        .alq-chip button { background: none; border: none; color: #3A6A48; font-size: 14px; cursor: pointer; padding: 0; line-height: 1; }
+        .alq-chip-clear { background: rgba(58,53,48,0.04); border-color: #D8D0BC; color: #7A7060; cursor: pointer; }
         .alq-compare-banner-wrap {
           position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 8px)); left: 50%; transform: translateX(-50%);
           z-index: 100; display: flex; align-items: center; gap: 0;
-          border-radius: 100px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+          border-radius: 100px; box-shadow: 0 4px 20px rgba(0,0,0,0.12);
           animation: alqBannerIn 0.3s ease-out;
         }
         .alq-compare-banner {
           display: flex; align-items: center; gap: 8px;
-          background: #c9a959; color: #0a0a0a; border: none; border-radius: 100px 0 0 100px;
+          background: #141414; color: #EDE8DC; border: none; border-radius: 100px 0 0 100px;
           padding: 12px 16px 12px 24px; cursor: pointer;
-          font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+          font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
         }
         .alq-compare-banner-clear {
-          background: rgba(160,130,60,1); color: #0a0a0a; border: none; border-radius: 0 100px 100px 0;
+          background: #3A3530; color: #EDE8DC; border: none; border-radius: 0 100px 100px 0;
           padding: 12px 16px 12px 12px; cursor: pointer; font-size: 18px; font-weight: 700; line-height: 1;
-          font-family: 'Manrope', sans-serif; border-left: 1px solid rgba(0,0,0,0.15);
+          font-family: 'DM Sans', sans-serif; border-left: 1px solid rgba(237,232,220,0.15);
         }
         @keyframes alqBannerIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
         .alq-compare-banner-text { white-space: nowrap; }
         .alq-fav-count {
           position: absolute; top: -4px; right: -4px;
           width: 18px; height: 18px; border-radius: 50%;
-          background: #c9a959; color: #0a0a0a; font-size: 10px; font-weight: 600;
+          background: #3A6A48; color: #EDE8DC; font-size: 10px; font-weight: 600;
           display: flex; align-items: center; justify-content: center;
           opacity: 0; transform: scale(0); transition: all 0.3s;
         }
@@ -1194,23 +1195,23 @@ export default function AlquileresPage() {
         .alq-map-floating {
           position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 8px)); left: 24px;
           z-index: 100; width: 48px; height: 48px; border-radius: 50%;
-          background: rgba(10,10,10,0.7); border: 1px solid rgba(201,169,89,0.25);
+          background: rgba(20,20,20,0.8); border: 1px solid rgba(58,53,48,0.2);
           display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
         .alq-mobile-map-overlay {
-          position: fixed; inset: 0; z-index: 300; background: #0a0a0a;
+          position: fixed; inset: 0; z-index: 300; background: #EDE8DC;
           display: flex; flex-direction: column;
         }
         .alq-mobile-map-header {
           display: flex; align-items: center; justify-content: space-between;
           padding: 12px 20px; padding-top: max(12px, env(safe-area-inset-top));
-          background: #0a0a0a; border-bottom: 1px solid rgba(255,255,255,0.06);
+          background: #EDE8DC; border-bottom: 1px solid #D8D0BC;
         }
-        .alq-mobile-map-title { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: #fff; }
+        .alq-mobile-map-title { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #141414; }
         .alq-mobile-map-close {
           width: 36px; height: 36px; border-radius: 50%;
-          border: 1px solid rgba(255,255,255,0.1); background: transparent;
-          color: rgba(255,255,255,0.5); font-size: 20px;
+          border: 1px solid #D8D0BC; background: transparent;
+          color: #7A7060; font-size: 20px;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
         .alq-mobile-map-body { flex: 1; position: relative; }
