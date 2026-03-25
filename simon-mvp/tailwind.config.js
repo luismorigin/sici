@@ -79,7 +79,6 @@ module.exports = {
         // Simon Brand v1.3
         's-display': ['var(--font-figtree)', 'Figtree', 'sans-serif'],
         's-body':    ['var(--font-dm-sans)', 'DM Sans', 'sans-serif'],
-        's-mono':    ['var(--font-dm-mono)', 'DM Mono', 'monospace'],
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',
@@ -121,6 +120,11 @@ module.exports = {
       borderRadius: {
         '2xl': '16px',
         '3xl': '24px',
+        's-card':      '14px',
+        's-btn':       '10px',
+        's-pill':      '100px',
+        's-container': '12px',
+        's-nav-btn':   '8px',
       },
     },
   },

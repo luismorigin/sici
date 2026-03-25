@@ -2,7 +2,7 @@ import '@/styles/globals.css'
 import type { AppProps } from 'next/app'
 import dynamic from 'next/dynamic'
 import Script from 'next/script'
-import { Inter, Outfit, Figtree, DM_Sans, DM_Mono } from 'next/font/google'
+import { Inter, Outfit, Figtree, DM_Sans } from 'next/font/google'
 import { AdminAuthProvider } from '@/contexts/AdminAuthContext'
 import { useEffect, useState } from 'react'
 
@@ -49,12 +49,6 @@ const dmSans = DM_Sans({
   display: 'swap',
 })
 
-const dmMono = DM_Mono({
-  subsets: ['latin'],
-  weight: ['300', '400'],
-  variable: '--font-dm-mono',
-  display: 'swap',
-})
 
 // Rutas que usan framer-motion para transiciones entre páginas
 const ANIMATED_ROUTES = ['/filtros', '/formulario', '/form', '/results', '/resultsV2', '/contact', '/summary', '/formV2']
@@ -93,7 +87,7 @@ export default function App({ Component, pageProps, router }: AppProps) {
   )
 
   return (
-    <div className={isPremiumRoute ? `${figtree.variable} ${dmSans.variable} ${dmMono.variable}` : `${inter.variable} ${outfit.variable}`}>
+    <div className={isPremiumRoute ? `${figtree.variable} ${dmSans.variable}` : `${inter.variable} ${outfit.variable}`}>
       {/* Google Analytics — solo en rutas públicas, no admin/broker, no debug */}
       {!isDebug && !router.pathname.startsWith('/admin') && !router.pathname.startsWith('/broker') && (
         <>

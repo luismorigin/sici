@@ -32,19 +32,19 @@ export const colors = {
   darkLabel:      '#9A8E7A',  // 5.72:1  AA  — labels sobre negro
 
   // Reglas críticas (documentadas para Claude Code):
-  // ❌ salvia NUNCA como texto sobre negro (2.9:1 — falla WCAG)
-  // ❌ salvia NUNCA como texto sobre arena (4.2:1 — falla WCAG texto pequeño)
-  // ✅ salvia SOLO como elemento gráfico: punto, borde, fondo de badge, tag
+  // ✅ salvia como texto en títulos 18px+ sobre blanco/arena (4.2:1 = WCAG AA large)
+  // ✅ salvia como elemento gráfico: punto, borde, fondo de badge, tag, dot pulsante
   // ✅ datos numéricos (↑ +4.2%) siempre en negro o darkPrimario — nunca en salvia
+  // ❌ salvia NUNCA como texto chico (<18px) sobre arena o blanco
+  // ❌ salvia NUNCA como texto sobre negro (2.9:1 — falla WCAG)
 } as const
 
 // ─── TIPOGRAFÍA ───────────────────────────────────────────────────────────────
 
 export const typography = {
-  // Familias
+  // Familias — solo 2 (DM Mono descartada v1.4: robótica, ceros con barra Ø)
   display: ['Figtree', 'sans-serif'],   // Títulos, nombre Simon, datos grandes. Peso 500.
-  body:    ['DM Sans', 'sans-serif'],   // Cuerpo, UI, navegación. Peso 300/400.
-  mono:    ['DM Mono', 'monospace'],    // Precios, coordenadas, métricas, labels. Peso 300/400.
+  body:    ['DM Sans', 'sans-serif'],   // Todo lo demás: cuerpo, UI, navegación, precios, labels. Peso 300/400/500.
 
   // Tamaños — fluid type con clamp()
   // Estos valores van directo en CSS. En Tailwind usar las clases personalizadas de tailwind.config.
@@ -56,8 +56,8 @@ export const typography = {
     bodyLg:   'clamp(16px, 1.8vw, 20px)',
     body:     'clamp(15px, 1.6vw, 18px)',
     bodySm:   'clamp(14px, 1.4vw, 16px)',
-    data:     'clamp(14px, 1.4vw, 16px)',
-    label:    'max(12px, clamp(12px, 1.1vw, 14px))',
+    data:     'clamp(14px, 1.4vw, 16px)',    // DM Sans 500 + tabular-nums
+    label:    'max(12px, clamp(12px, 1.1vw, 14px))',  // DM Sans 400, sentence case
     tag:      'max(11px, clamp(11px, 1vw, 13px))',
     btn:      'clamp(15px, 1.5vw, 17px)',
   },
@@ -65,21 +65,37 @@ export const typography = {
   // Letter spacing
   tracking: {
     display: '-1.5px',  // Solo en display grande — Figtree 500
-    label:    '1px',    // Labels DM Mono — máximo 1.5px
+    label:    '0.3px',  // Labels DM Sans — sutil, no robótico
     body:     '0',      // Body NUNCA tiene tracking
   },
 
   // Pesos
   weights: {
     display: 500,   // Figtree — nunca 600+ en display
-    body:    300,   // DM Sans light
-    data:    400,   // DM Mono regular
+    body:    300,   // DM Sans light — cuerpo
+    bodyUI:  400,   // DM Sans regular — labels, badges, nav
+    data:    500,   // DM Sans medium — precios, datos numéricos
+  },
+
+  // Números
+  numeric: {
+    fontVariantNumeric: 'tabular-nums',  // Alinea columnas de números sin mono
+    // Usar siempre en precios, m², porcentajes, contadores
+  },
+
+  // Labels
+  labels: {
+    textTransform: 'uppercase',  // Uppercase OK, pero en DM Sans con 0.5px tracking
+    letterSpacing: '0.5px',      // No 1-2px como era con DM Mono — eso era robótico
   },
 
   // Reglas críticas:
   // ❌ Ningún texto por debajo de 12px — 95% usuarios en móvil
-  // ❌ Letter-spacing > 1.5px en cualquier texto — fragmenta en móvil
+  // ❌ Letter-spacing > 0.5px en labels — más se siente robótico
+  // ✅ Labels uppercase OK pero en DM Sans con 0.5px tracking (no DM Mono con 1-2px)
+  // ❌ DM Mono en cualquier lugar — descartada v1.4
   // ✅ Botones: min-height 44px (Apple HIG mínimo táctil)
+  // ✅ Precios: DM Sans 500 + tabular-nums
 } as const
 
 // ─── ESPACIADO ────────────────────────────────────────────────────────────────
@@ -109,6 +125,16 @@ export const spacing = {
     sectionGap:    '48px',
     btnMinHeight:  '44px',  // Apple HIG
     btnPadding:    '12px 28px',
+  },
+
+  // Border radius — Simon es cálido, redondeo en todo
+  borderRadius: {
+    card:      '14px',   // Cards de propiedad, cards de datos
+    button:    '10px',   // Botones primarios y secundarios
+    pill:      '100px',  // Badges, tags, pills, filtros activos
+    container: '12px',   // Modals, sheets, containers
+    navBtn:    '8px',    // Botones en nav
+    // ❌ NUNCA 0px o 4px — bordes rectos = editorial frío, no Simon
   },
 } as const
 
@@ -152,6 +178,21 @@ export const motion = {
   fast:   '200ms',
   normal: '400ms',
   slow:   '600ms',
+
+  // Dot pulsante salvia — para estados "Activo" / "Actualizado"
+  dotPulse: {
+    dot:  { keyframes: 'scale(1) → scale(1.8) → scale(1)', duration: '2.5s', easing: 'ease-in-out', iterations: 'infinite' },
+    ring: { keyframes: 'scale(1) opacity(0.6) → scale(2.5) opacity(0)', duration: '2.5s', easing: 'ease-out', iterations: 'infinite' },
+    // Ring es un ::after con border salvia que se expande y desaparece
+  },
+
+  // Card hover lift
+  cardHover: {
+    transform: 'translateY(-4px)',
+    boxShadow: '0 12px 32px rgba(58,53,48,0.08)',
+    duration:  '250ms',
+    easing:    'ease-out',
+  },
 
   // Símbolo Norte — 4 estados (ver simon-animaciones.html)
   symbol: {
@@ -235,7 +276,14 @@ export const tailwindExtension = {
   fontFamily: {
     's-display': typography.display,
     's-body':    typography.body,
-    's-mono':    typography.mono,
+    // s-mono removed v1.4 — DM Mono descartada
+  },
+  borderRadius: {
+    's-card':      spacing.borderRadius.card,
+    's-btn':       spacing.borderRadius.button,
+    's-pill':      spacing.borderRadius.pill,
+    's-container': spacing.borderRadius.container,
+    's-nav-btn':   spacing.borderRadius.navBtn,
   },
   minHeight: {
     's-btn': spacing.app.btnMinHeight,
@@ -260,19 +308,18 @@ export const tailwindExtension = {
  *      }
  *    }
  *
- * 3. En _app.tsx o layout.tsx, agregar las fuentes:
+ * 3. En _app.tsx o layout.tsx, agregar las fuentes (solo 2 — DM Mono eliminada v1.4):
  *
- *    import { Figtree, DM_Sans, DM_Mono } from 'next/font/google'
+ *    import { Figtree, DM_Sans } from 'next/font/google'
  *    const figtree = Figtree({ subsets: ['latin'], weight: ['300','400','500','600'] })
  *    const dmSans  = DM_Sans({ subsets: ['latin'], weight: ['300','400','500'] })
- *    const dmMono  = DM_Mono({ subsets: ['latin'], weight: ['300','400'] })
  *
  * 4. Uso en componentes:
  *
  *    // Clases Tailwind nuevas:
  *    <div className="bg-s-arena text-s-negro font-s-display">
- *    <span className="text-s-piedra font-s-mono">$1,847 USD/m²</span>
- *    <button className="bg-s-negro text-s-arena min-h-s-btn">
+ *    <span className="text-s-negro font-s-body font-medium tabular-nums">$1,847 USD/m²</span>
+ *    <button className="bg-s-negro text-s-arena min-h-s-btn rounded-s-btn">
  *
  *    // O importar valores directos:
  *    import { colors, symbol } from '@/lib/simon-design-tokens'

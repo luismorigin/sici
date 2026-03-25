@@ -20,7 +20,7 @@ export default function ComoFuncionaSection() {
   return (
     <section className="bg-s-arena px-6 md:px-12 py-24">
       <div className="max-w-[1100px] mx-auto">
-        <p className="font-s-mono font-normal text-xs text-s-piedra tracking-[1px] uppercase mb-12">
+        <p className="font-s-body font-normal text-xs text-s-piedra tracking-[0.5px] uppercase mb-12">
           Cómo funciona
         </p>
 
@@ -34,7 +34,7 @@ export default function ComoFuncionaSection() {
                   : 'pr-0'
               } ${i > 0 ? 'pl-0 md:pl-9 pt-7 md:pt-0' : ''}`}
             >
-              <p className="font-s-mono font-light text-[11px] text-s-piedra tracking-[1px] mb-4">
+              <p className="font-s-body font-light text-[11px] text-s-piedra tracking-[0.5px] mb-4">
                 {p.num}
               </p>
               <h3 className="font-s-display font-medium text-xl text-s-negro tracking-tight mb-2.5">

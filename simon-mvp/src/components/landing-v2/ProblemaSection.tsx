@@ -23,7 +23,7 @@ export default function ProblemaSection() {
       <div className="max-w-[1100px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-start">
         {/* Left — copy */}
         <div>
-          <p className="font-s-mono font-normal text-[11px] text-s-dark-3 tracking-[1px] uppercase mb-6">
+          <p className="font-s-body font-normal text-[11px] text-s-dark-3 tracking-[0.5px] uppercase mb-6">
             Por qué existe Simon
           </p>
           <h2
@@ -50,7 +50,7 @@ export default function ProblemaSection() {
               key={i}
               className={`py-5 ${i < verdades.length - 1 ? 'border-b border-[#232323]' : ''} ${i === 0 ? 'pt-0' : ''}`}
             >
-              <p className="font-s-mono font-light text-xs text-s-dark-3 mb-1.5 line-through" style={{ textDecorationColor: '#333' }}>
+              <p className="font-s-body font-light text-xs text-s-dark-3 mb-1.5 line-through" style={{ textDecorationColor: '#333' }}>
                 {v.antes}
               </p>
               <p className="font-s-body font-normal text-[15px] text-s-dark-1 leading-snug">

@@ -18,7 +18,7 @@ export default function CTAFooterSimon() {
         <Link
           href="/alquileres"
           prefetch={false}
-          className="inline-flex items-center gap-2 bg-s-arena text-s-negro font-s-body font-medium text-sm px-7 py-3 min-h-[48px] no-underline hover:opacity-90 transition-opacity"
+          className="inline-flex items-center gap-2 bg-s-arena text-s-negro font-s-body font-medium text-sm px-7 py-3 min-h-[48px] no-underline rounded-s-btn transition-transform duration-200 hover:-translate-y-px"
         >
           Buscar en Equipetrol →
         </Link>
@@ -32,7 +32,7 @@ export default function CTAFooterSimon() {
             Decidí bien.
           </span>
         </Link>
-        <span className="font-s-mono font-light text-[11px] text-s-dark-3 tracking-[0.5px]">
+        <span className="font-s-body font-light text-[11px] text-s-dark-3 tracking-[0.3px]">
           © {new Date().getFullYear()} Simon · Inteligencia Inmobiliaria · Santa Cruz de la Sierra
         </span>
       </footer>

@@ -30,7 +30,7 @@ export default function ProductosSection({ heroMetrics, microzonas, zonasAlquile
       estado: 'Activo',
       activo: true,
       titulo: 'Alquileres',
-      desc: `${totalAlquileres} alquileres en Equipetrol de tres fuentes distintas. Todos los precios normalizados al tipo de cambio oficial — para que compares manzanas con manzanas, sin importar cómo publicó cada broker.`,
+      desc: `${totalAlquileres} alquileres en Equipetrol de tres fuentes distintas. Todos los precios normalizados al tipo de cambio oficial — para que compares manzanas con manzanas.`,
       dato: rentaMedianaGlobal
         ? `Bs ${rentaMedianaGlobal.toLocaleString('es-BO')}/mes · renta mediana actual`
         : null,
@@ -50,7 +50,7 @@ export default function ProductosSection({ heroMetrics, microzonas, zonasAlquile
       estado: 'Datos públicos',
       activo: false,
       titulo: 'Mercado',
-      desc: 'Los datos del mercado de Equipetrol, ordenados y actualizados todos los días. Precios por zona, tipología y tendencias. Sin registro, sin costo.',
+      desc: 'Los datos del mercado de Equipetrol, ordenados y actualizados todos los días. Precios por zona, tipología y tendencias.',
       dato: `${microzonas.length} zonas · ${zonaNames}`,
       link: '/mercado/equipetrol',
       linkText: 'Ver datos del mercado →',
@@ -60,20 +60,25 @@ export default function ProductosSection({ heroMetrics, microzonas, zonasAlquile
   return (
     <section className="bg-s-arena px-6 md:px-12 py-24">
       <div className="max-w-[1100px] mx-auto">
-        <p className="font-s-mono font-normal text-xs text-s-piedra tracking-[1px] uppercase mb-12">
+        <p className="font-s-body font-normal text-xs text-s-piedra tracking-[0.5px] uppercase mb-12">
           Empezá por donde necesitás
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-s-arena-mid">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {productos.map((p) => (
-            <div key={p.titulo} className="bg-s-arena p-7 md:p-9 flex flex-col">
-              <p className={`font-s-mono font-normal text-[10px] tracking-[1px] uppercase mb-4 ${
+            <div
+              key={p.titulo}
+              className="bg-s-blanco p-7 md:p-8 flex flex-col rounded-s-card border border-s-arena-mid transition-transform duration-250 hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(58,53,48,0.08)]"
+            >
+              <p className={`font-s-body font-medium text-[11px] tracking-[0.5px] uppercase mb-4 flex items-center gap-2 ${
                 p.activo ? 'text-s-salvia' : 'text-s-piedra'
               }`}>
-                {p.activo ? '●' : '◎'} {p.estado}
+                {p.activo && <span className="w-1.5 h-1.5 rounded-full bg-s-salvia flex-shrink-0" />}
+                {!p.activo && <span className="w-1.5 h-1.5 rounded-full bg-s-piedra flex-shrink-0" />}
+                {p.estado}
               </p>
 
-              <h3 className="font-s-display font-medium text-[22px] text-s-negro tracking-tight mb-2.5">
+              <h3 className="font-s-display font-medium text-[22px] text-s-salvia tracking-tight mb-2.5">
                 {p.titulo}
               </h3>
 
@@ -82,8 +87,8 @@ export default function ProductosSection({ heroMetrics, microzonas, zonasAlquile
               </p>
 
               {p.dato && (
-                <p className="font-s-mono font-normal text-xs text-s-piedra mb-5 pt-5 border-t border-s-arena-mid">
-                  <strong className="font-normal text-s-negro">{p.dato.split('·')[0].trim()}</strong>
+                <p className="font-s-body font-normal text-[13px] text-s-piedra mb-5 pt-5 border-t border-s-arena-mid" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  <strong className="font-medium text-s-negro">{p.dato.split('·')[0].trim()}</strong>
                   {p.dato.includes('·') ? ` · ${p.dato.split('·').slice(1).join('·').trim()}` : ''}
                 </p>
               )}
@@ -91,7 +96,7 @@ export default function ProductosSection({ heroMetrics, microzonas, zonasAlquile
               <Link
                 href={p.link}
                 prefetch={false}
-                className="font-s-body font-medium text-[13px] text-s-negro no-underline inline-flex items-center gap-1 hover:text-s-tinta transition-colors"
+                className="font-s-body font-medium text-[13px] text-s-negro no-underline inline-flex items-center gap-1 hover:gap-2 transition-all"
               >
                 {p.linkText}
               </Link>

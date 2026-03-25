@@ -55,7 +55,7 @@ export default function NavSimon() {
         <Link
           href="/alquileres"
           prefetch={false}
-          className="font-s-body font-medium text-sm text-s-arena bg-s-negro px-5 py-2.5 min-h-[40px] no-underline inline-flex items-center hover:opacity-90 transition-opacity"
+          className="font-s-body font-medium text-sm text-s-arena bg-s-negro px-5 py-2.5 min-h-[40px] no-underline inline-flex items-center hover:opacity-90 transition-opacity rounded-s-nav-btn"
         >
           Buscar en Equipetrol
         </Link>
