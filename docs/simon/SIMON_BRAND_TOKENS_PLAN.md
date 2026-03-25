@@ -4,7 +4,7 @@
 
 ## Contexto
 
-El brandbook Simon v1.3 define una nueva paleta (arena/negro/salvia) y tipografía (Figtree/DM Sans/DM Mono) que reemplaza el sistema anterior (negro premium #0a0a0a / crema #f8f6f3 / oro #c9a959 + Cormorant/Manrope).
+El brandbook Simon v1.4 define una nueva paleta (arena/negro/salvia) y tipografía (Figtree/DM Sans) que reemplaza el sistema anterior (negro premium #0a0a0a / crema #f8f6f3 / oro #c9a959 + Cormorant/Manrope). DM Mono eliminada en v1.4 (robótica, ceros con barra Ø) — reemplazada por DM Sans 500 + tabular-nums.
 
 Source of truth de la marca: repo `simon-brand` (github.com/luismorigin/simon-brand)
 Decisiones detalladas: `simon-brand/docs/simon-decisions.md`
@@ -17,7 +17,7 @@ Decisiones detalladas: `simon-brand/docs/simon-decisions.md`
 |---------|--------|--------|
 | `src/lib/simon-design-tokens.ts` | **Nuevo** — tokens completos (colores, tipografía, spacing, símbolo, motion, voz) | Ninguno — archivo nuevo |
 | `tailwind.config.js` | **Extendido** — colores `s-*` y fonts `s-*` agregados | Ninguno — solo agrega, no modifica |
-| `src/pages/_app.tsx` | **Modificado** — Figtree/DM Sans/DM Mono en rutas premium | Bajo — rutas premium ya no tenían fonts asignadas |
+| `src/pages/_app.tsx` | **Modificado** — Figtree/DM Sans en rutas premium (DM Mono eliminada v1.4) | Bajo — rutas premium ya no tenían fonts asignadas |
 
 ### Fase 2: Migración landing (branch `feat/simon-landing-migration`)
 
@@ -40,7 +40,7 @@ Decisiones detalladas: `simon-brand/docs/simon-decisions.md`
 - **Fondo negro descartado como base**: el brandbook lo decidió — difícil en PDFs, Instagram, presentaciones
 - **Oro/dorado eliminado**: reemplazado por salvia (elementos gráficos) y tinta (texto de acento)
 - **Salvia nunca como texto**: solo como líneas, puntos, bordes, hover de botones (WCAG)
-- **Precios en `font-s-mono`**: DM Mono para todos los datos numéricos
+- **Precios en DM Sans 500 + `tabular-nums`**: alinea columnas sin fuente mono (DM Mono eliminada v1.4)
 
 ## Clases Tailwind disponibles
 
@@ -61,14 +61,17 @@ bg-s-dark-3     text-s-dark-3     (labels sobre negro — 5.7:1 AA)
 ### Fonts
 ```
 font-s-display   → Figtree (títulos, datos grandes, peso 500)
-font-s-body      → DM Sans (cuerpo, UI, peso 300/400)
-font-s-mono      → DM Mono (precios, métricas, peso 300/400)
+font-s-body      → DM Sans (cuerpo, UI, precios, labels — peso 300/400/500)
+                    Precios: font-medium + tabular-nums
+                    Labels: uppercase + tracking-[0.5px]
 ```
 
 ### Reglas críticas
-- Salvia NUNCA como texto (falla WCAG). Solo como elemento gráfico.
+- Salvia OK como texto en títulos 18px+ sobre blanco/arena (4.2:1 WCAG AA large). NUNCA como texto chico o sobre negro.
+- Salvia como elemento gráfico: punto, borde, fondo de badge, tag, dot pulsante.
 - Datos numéricos siempre en negro o dark-1, nunca en salvia.
 - Min 12px en cualquier texto. Botones min-height 44px.
+- Border-radius: botones 10px, nav CTA 8px, cards 14px, tags/pills rounded-full. NUNCA 0px o 4px.
 
 ## Datos disponibles en landing (fetchLandingData)
 
@@ -90,7 +93,8 @@ font-s-mono      → DM Mono (precios, métricas, peso 300/400)
 | 1 | ~~Tokens a main~~ | HECHO | `48fd79d` |
 | 2 | ~~Migrar landing a brand v1.3~~ | HECHO | `d985619` — arena 70%, negro 25%, salvia 5% |
 | 3 | ~~Aprobar look + merge a main~~ | HECHO | Aprobado visualmente en localhost |
-| 4 | Actualizar `SIMON_BRAND_GUIDELINES.md` | **SIGUIENTE** | Reemplazar paleta vieja con v1.3 |
+| 3b | ~~Landing v1.4~~ | HECHO | `90d603f` — hero foto skyline, DM Mono eliminada, border-radius, trust bar, títulos salvia |
+| 4 | Actualizar `SIMON_BRAND_GUIDELINES.md` | **SIGUIENTE** | Reemplazar paleta vieja con v1.4 |
 | 5 | Migrar `/alquileres` a tokens `s-*` | PENDIENTE | Página con más tracción |
 | 6 | Migrar `/ventas` a tokens `s-*` | PENDIENTE | Feed, filtros, galería, mapa |
 | 7 | Migrar `/mercado` a tokens `s-*` | PENDIENTE | Dashboard público, SEO |

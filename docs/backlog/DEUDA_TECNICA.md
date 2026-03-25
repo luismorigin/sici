@@ -80,12 +80,12 @@
 Tokens + landing mergeados a main. Plan completo en `docs/simon/SIMON_BRAND_TOKENS_PLAN.md`.
 Source of truth de marca: repo `simon-brand` (github.com/luismorigin/simon-brand).
 
-**Completado:** tokens (`48fd79d`), landing v1 migrada (`d985619`), landing v2 desde mockup simon-brand (25 Mar 2026) — 8 componentes en `components/landing-v2/`, `zonasAlquiler` en `fetchLandingData()`.
+**Completado:** tokens (`48fd79d`), landing v1 migrada (`d985619`), landing v2 desde mockup (`c83e91e`), **landing v1.4** (`90d603f`) — hero foto skyline, DM Mono eliminada, border-radius, trust bar, títulos salvia.
 **Bloqueado:** variación trimestral por zona — snapshots necesitan ≥30d historia (~24 Abr).
 
 | # | Tarea | Estado | Notas |
 |---|-------|--------|-------|
-| 1 | Actualizar `SIMON_BRAND_GUIDELINES.md` | **SIGUIENTE** | Reemplazar paleta vieja con v1.3 |
+| 1 | Actualizar `SIMON_BRAND_GUIDELINES.md` | **SIGUIENTE** | Reemplazar paleta vieja con v1.4 |
 | 2 | Migrar `/alquileres` a tokens `s-*` | PENDIENTE | Página con más tracción |
 | 3 | Migrar `/ventas` a tokens `s-*` | PENDIENTE | Feed, filtros, galería, mapa |
 | 4 | Migrar `/mercado` a tokens `s-*` | PENDIENTE | Dashboard público, SEO |
