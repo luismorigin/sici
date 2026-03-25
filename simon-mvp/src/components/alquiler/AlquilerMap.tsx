@@ -34,14 +34,14 @@ export default function AlquilerMap({ lat, lng }: AlquilerMapProps) {
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
 
-    const goldIcon = L.divIcon({
+    const pinIcon = L.divIcon({
       className: '',
-      html: '<div style="width:24px;height:24px;background:#c9a959;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>',
+      html: '<div style="width:24px;height:24px;background:#141414;border-radius:50%;border:3px solid #FAFAF8;box-shadow:0 2px 8px rgba(0,0,0,0.2)"></div>',
       iconSize: [24, 24],
       iconAnchor: [12, 12],
     })
 
-    L.marker([lat, lng], { icon: goldIcon }).addTo(map)
+    L.marker([lat, lng], { icon: pinIcon }).addTo(map)
     mapInstance.current = map
 
     // Force recalculate size after animation settles
@@ -50,8 +50,8 @@ export default function AlquilerMap({ lat, lng }: AlquilerMapProps) {
     // Dark tiles styling
     const style = document.createElement('style')
     style.textContent = `
-      .alq-map-wrap .leaflet-tile { filter: brightness(0.7) contrast(1.1) saturate(0.3); }
-      .alq-map-wrap .leaflet-control-zoom a { background: #1a1a1a !important; color: #c9a959 !important; border-color: rgba(255,255,255,0.1) !important; }
+      .alq-map-wrap .leaflet-tile { filter: brightness(1.05) saturate(0.4) sepia(0.15); }
+      .alq-map-wrap .leaflet-control-zoom a { background: #FAFAF8 !important; color: #141414 !important; border-color: #D8D0BC !important; }
     `
     mapRef.current.appendChild(style)
 
