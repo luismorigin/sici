@@ -593,8 +593,15 @@ export default function AlquileresPage() {
           {/* Left sidebar - filters */}
           <aside className="desktop-sidebar" style={{ overscrollBehavior: 'contain' }}>
             <div className="desktop-sidebar-header">
-              <Link href="/landing-v2" className="desktop-logo">Simon</Link>
-              <div className="desktop-label">ALQUILERES</div>
+              <Link href="/landing-v2" className="desktop-logo">
+                <svg width={22} height={22} viewBox="0 0 64 64" fill="none" style={{display:'inline-block',verticalAlign:'middle',marginRight:8}}>
+                  <circle cx="32" cy="34" r="28" fill="#141414"/>
+                  <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
+                  <circle cx="32" cy="15" r="3" fill="#EDE8DC"/>
+                </svg>
+                Simon
+              </Link>
+              <div className="desktop-label">Alquileres</div>
             </div>
             <div className="desktop-sidebar-count">
               <span className="desktop-count-num">{properties.length}</span>
@@ -629,8 +636,18 @@ export default function AlquileresPage() {
           <main className="desktop-main" ref={viewMode === 'grid' ? feedRef : undefined}
             style={viewMode === 'map' ? { overflow: 'hidden', display: 'flex', flexDirection: 'column' } : undefined}>
             {/* View toggle bar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #D8D0BC', flexShrink: 0 }}>
-              <span style={{ fontSize: 13, color: '#7A7060' }}>{properties.length} resultado{properties.length !== 1 ? 's' : ''}</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #D8D0BC', flexShrink: 0, position: 'sticky', top: 0, background: '#EDE8DC', zIndex: 10, paddingTop: 4 }}>
+              <div style={{ fontSize: 13, color: '#7A7060', display: 'flex', alignItems: 'center', gap: 12 }}>
+                {properties.length} resultado{properties.length !== 1 ? 's' : ''}
+                {favorites.size >= 2 && (
+                  <button onClick={() => openCompare()} style={{ padding: '6px 16px', background: '#141414', color: '#EDE8DC', border: 'none', borderRadius: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.5 }}>
+                    Comparar {favorites.size} favoritos
+                  </button>
+                )}
+                {favorites.size === 1 && (
+                  <span style={{ fontSize: 12, color: '#7A7060' }}>1 favorito — elegí otro para comparar</span>
+                )}
+              </div>
               <div style={{ display: 'flex', gap: 2, background: 'rgba(58,53,48,0.06)', borderRadius: 10, padding: 3 }}>
                 <button
                   onClick={() => { setViewMode('grid'); trackEvent('switch_view', { view_mode: 'grid' }) }}
@@ -655,7 +672,7 @@ export default function AlquileresPage() {
                     cursor: 'pointer', borderRadius: 8, letterSpacing: 0.5,
                     border: viewMode === 'map' ? '2px solid #141414' : '2px solid #D8D0BC',
                   }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:15,height:15}}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{width:15,height:15}}><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
                   Mapa
                 </button>
               </div>
@@ -996,7 +1013,7 @@ export default function AlquileresPage() {
           font-family: 'Figtree', sans-serif; font-size: 32px; font-weight: 500;
           color: #141414; text-decoration: none; display: block;
         }
-        .desktop-label { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; margin-top: 2px; text-transform: uppercase; }
+        .desktop-label { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; margin-top: 2px; text-transform: uppercase; font-family: 'DM Sans', sans-serif; }
         .desktop-sidebar-count { margin-bottom: 28px; }
         .desktop-count-num {
           font-family: 'Figtree', sans-serif; font-size: 48px; font-weight: 500;
@@ -1315,9 +1332,9 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
     <div className="df-wrap">
       {/* Microzonas */}
       <div className="df-group">
-        <div className="df-label">MICROZONA</div>
+        <div className="df-label"><span className="df-dot" />MICROZONA</div>
         <div className="df-zona-btns">
-          {ZONAS_ALQUILER_UI.map(z => (
+          {ZONAS_ALQUILER_UI.filter(z => z.id !== 'sin_zona').map(z => (
             <button key={z.id} className={`df-zona-btn ${selectedZonas.has(z.id) ? 'active' : ''}`}
               onClick={() => toggleZona(z.id)}>{z.label}</button>
           ))}
@@ -1326,7 +1343,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
 
       {/* Budget */}
       <div className="df-group">
-        <div className="df-label">PRESUPUESTO MAXIMO</div>
+        <div className="df-label"><span className="df-dot" />PRESUPUESTO MAXIMO</div>
         <input type="range" className="df-slider" min={2000} max={18000} step={500} value={maxPrice}
           onChange={e => handlePriceChange(parseInt(e.target.value))} />
         <div className="df-slider-val">{formatPrice(maxPrice)}/mes</div>
@@ -1334,7 +1351,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
 
       {/* Dorms */}
       <div className="df-group">
-        <div className="df-label">DORMITORIOS</div>
+        <div className="df-label"><span className="df-dot" />DORMITORIOS</div>
         <div className="df-dorm-btns">
           {[0, 1, 2, 3].map(d => (
             <button key={d} className={`df-dorm-btn ${selectedDorms.has(d) ? 'active' : ''}`}
@@ -1354,7 +1371,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
 
       {/* Orden */}
       <div className="df-group">
-        <div className="df-label">ORDENAR POR</div>
+        <div className="df-label"><span className="df-dot" />ORDENAR POR</div>
         <div className="df-dorm-btns">
           {ORDEN_OPTIONS.map(o => (
             <button key={o.value} className={`df-dorm-btn ${orden === o.value ? 'active' : ''}`}
@@ -1368,17 +1385,18 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
       <style jsx>{`
         .df-wrap { flex: 1; }
         .df-group { margin-bottom: 18px; }
-        .df-label { font-size: 12px; font-weight: 500; color: #7A7060; letter-spacing: 0.5px; margin-bottom: 8px; font-family: 'DM Sans', sans-serif; text-transform: uppercase; }
+        .df-label { font-size: 12px; font-weight: 600; color: #3A3530; letter-spacing: 0.5px; margin-bottom: 8px; font-family: 'DM Sans', sans-serif; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+        .df-dot { width: 6px; height: 6px; border-radius: 50%; background: #3A6A48; flex-shrink: 0; }
         .df-zona-btns { display: flex; flex-wrap: wrap; gap: 6px; }
-        .df-zona-btn { padding: 6px 12px; border: 1px solid #D8D0BC; background: transparent; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 100px; transition: all 0.2s; }
-        .df-zona-btn.active { border-color: #3A6A48; color: #3A6A48; background: rgba(58,106,72,0.06); }
+        .df-zona-btn { padding: 6px 12px; border: 1px solid #D8D0BC; background: #FAFAF8; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 100px; transition: all 0.2s; }
+        .df-zona-btn.active { border-color: #3A6A48; border-width: 2px; color: #141414; background: #FAFAF8; font-weight: 600; box-shadow: 0 2px 8px rgba(58,106,72,0.12); }
         .df-dorm-btns { display: flex; gap: 8px; }
-        .df-dorm-btn { flex: 1; padding: 9px; border: 1px solid #D8D0BC; background: transparent; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; transition: all 0.2s; }
-        .df-dorm-btn.active { border-color: #3A6A48; color: #3A6A48; background: rgba(58,106,72,0.06); }
-        .df-mascotas.active { background: #3A6A48; color: #EDE8DC; border-color: #3A6A48; }
-        .df-amoblado.active { background: #141414; color: #EDE8DC; border-color: #141414; }
+        .df-dorm-btn { flex: 1; padding: 9px; border: 1px solid #D8D0BC; background: #FAFAF8; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; transition: all 0.2s; }
+        .df-dorm-btn.active { border-color: #3A6A48; border-width: 2px; color: #141414; background: #FAFAF8; font-weight: 600; box-shadow: 0 2px 8px rgba(58,106,72,0.12); }
+        .df-mascotas.active { background: #3A6A48; color: #EDE8DC; border-color: #3A6A48; box-shadow: none; }
+        .df-amoblado.active { background: #141414; color: #EDE8DC; border-color: #141414; box-shadow: none; }
         .df-slider { width: 100%; -webkit-appearance: none; appearance: none; height: 2px; background: #D8D0BC; border-radius: 2px; outline: none; }
-        .df-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #141414; cursor: pointer; }
+        .df-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #FAFAF8; border: 2px solid #141414; cursor: pointer; }
         .df-slider-val { text-align: right; font-size: 13px; color: #141414; margin-top: 6px; font-weight: 500; font-variant-numeric: tabular-nums; }
         .df-cta { display: block; width: 100%; padding: 12px; background: #141414; border: none; color: #EDE8DC; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; border-radius: 10px; transition: opacity 0.2s; }
         .df-cta:hover { opacity: 0.9; }
@@ -1513,7 +1531,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
             font-weight: 500; cursor: pointer; border-radius: 10px;
           }
           .mfc-m-btn-wsp {
-            flex: 1; padding: 7px; background: #25d366; border: none; border-radius: 10px;
+            flex: 1; padding: 7px; background: #1EA952; border: none; border-radius: 10px;
             color: #fff; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
             text-decoration: none; text-align: center;
           }
@@ -1632,7 +1650,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
         }
         .map-float-btn-detail:hover { border-color: #7A7060; color: #141414; }
         .map-float-btn-wsp {
-          flex: 1; padding: 9px; background: #25d366; border: none; border-radius: 10px;
+          flex: 1; padding: 9px; background: #1EA952; border: none; border-radius: 10px;
           color: #fff; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
           text-decoration: none; text-align: center; transition: opacity 0.2s;
         }
@@ -1686,7 +1704,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
           </>
         )}
         {/* Fav + Share buttons on photo */}
-        <button className={`dc-fav-btn ${isFavorite ? 'active' : ''}`} aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'} onClick={handleFav}>
+        <button className={`dc-fav-btn ${isFavorite ? 'active' : ''}`} aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'} onClick={(e) => { e.stopPropagation(); handleFav() }}>
           <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
           </svg>
@@ -1757,7 +1775,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
         .dc-actions { display: flex; gap: 8px; border-top: 1px solid #D8D0BC; padding-top: 12px; }
         .dc-info-btn { flex: 1; padding: 8px; background: transparent; border: 1px solid #D8D0BC; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; transition: all 0.2s; }
         .dc-info-btn:hover { border-color: #7A7060; color: #141414; }
-        .dc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: #25d366; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-decoration: none; margin-top: 8px; transition: opacity 0.2s; }
+        .dc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: #1EA952; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-decoration: none; margin-top: 8px; transition: opacity 0.2s; }
         .dc-wsp-cta:hover { opacity: 0.9; }
         @media (prefers-reduced-motion: reduce) {
           .dc-photo { animation: none; }
