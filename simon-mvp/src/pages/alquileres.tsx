@@ -610,7 +610,7 @@ export default function AlquileresPage() {
             {favorites.size > 0 && (
               <div className="desktop-fav-summary">
                 <div className="desktop-fav-info">
-                  <svg viewBox="0 0 24 24" fill="#3A6A48" stroke="#3A6A48" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                  <svg viewBox="0 0 24 24" fill="#E05555" stroke="#E05555" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                   </svg>
                   {favorites.size} favorito{favorites.size > 1 ? 's' : ''}
@@ -763,7 +763,7 @@ export default function AlquileresPage() {
                   return (
                     <div className="map-fav-strip">
                       <div className="map-fav-label">
-                        <svg viewBox="0 0 24 24" fill="#3A6A48" stroke="#3A6A48" strokeWidth="1.5" style={{ width: 14, height: 14 }}>
+                        <svg viewBox="0 0 24 24" fill="#E05555" stroke="#E05555" strokeWidth="1.5" style={{ width: 14, height: 14 }}>
                           <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                         </svg>
                         {favProps.length}
@@ -797,9 +797,14 @@ export default function AlquileresPage() {
         <>
           {/* Top bar */}
           <div className="alq-top-bar">
-            <div>
+            <div className="alq-top-bar-left">
+              <svg width={18} height={18} viewBox="0 0 64 64" fill="none" style={{flexShrink:0}}>
+                <circle cx="32" cy="34" r="28" fill="#141414"/>
+                <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
+                <circle cx="32" cy="15" r="3" fill="#EDE8DC"/>
+              </svg>
               <div className="alq-logo">Simon</div>
-              <div className="alq-label">{isFiltered ? `${activeFilterCount} FILTRO${activeFilterCount > 1 ? 'S' : ''} ACTIVO${activeFilterCount > 1 ? 'S' : ''}` : 'ALQUILERES'}</div>
+              <div className="alq-label">{isFiltered ? `${activeFilterCount} filtro${activeFilterCount > 1 ? 's' : ''}` : 'Alquileres'}</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {isFiltered && (
@@ -857,7 +862,7 @@ export default function AlquileresPage() {
           {/* Floating map button */}
           <button className="alq-map-floating" aria-label="Ver mapa" onClick={() => { setMobileMapOpen(true); trackEvent('open_map_mobile') }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="#141414" strokeWidth="1.5" style={{width:22,height:22}}>
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+              <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
             </svg>
           </button>
 
@@ -1011,7 +1016,7 @@ export default function AlquileresPage() {
         .desktop-fav-clear:hover { color: #141414; }
         .desktop-compare-btn {
           padding: 6px 14px; border-radius: 10px; border: 1px solid #D8D0BC;
-          background: rgba(58,106,72,0.08); color: #3A6A48; font-size: 11px; font-weight: 600;
+          background: rgba(58,106,72,0.08); color: #3A6A48; font-size: 12px; font-weight: 600;
           cursor: pointer; font-family: 'DM Sans', sans-serif; letter-spacing: 0.5px;
           transition: background 0.2s;
         }
@@ -1095,11 +1100,11 @@ export default function AlquileresPage() {
         }
         .map-fav-chip-info { min-width: 0; }
         .map-fav-chip-name {
-          font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; color: #141414;
+          font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: #141414;
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;
         }
         .map-fav-chip-price {
-          font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; color: #141414;
+          font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; color: #141414;
           font-variant-numeric: tabular-nums;
         }
         .map-fav-chip-remove {
@@ -1110,7 +1115,7 @@ export default function AlquileresPage() {
         .map-fav-chip-remove:hover { background: rgba(58,53,48,0.12); color: #141414; }
         .map-fav-compare {
           flex-shrink: 0; padding: 6px 14px; background: #141414; border: none; border-radius: 10px;
-          color: #EDE8DC; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
+          color: #EDE8DC; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
           cursor: pointer; transition: opacity 0.2s;
         }
         .map-fav-compare:hover { opacity: 0.85; }
@@ -1125,21 +1130,28 @@ export default function AlquileresPage() {
         .alq-top-bar {
           position: fixed; top: 0; left: 0; right: 0; z-index: 50;
           display: flex; align-items: center; justify-content: space-between;
-          padding: 12px 20px; padding-top: max(12px, env(safe-area-inset-top));
-          background: linear-gradient(rgba(237,232,220,0.85), transparent); pointer-events: none;
+          padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top));
+          pointer-events: none;
         }
         .alq-top-bar > * { pointer-events: auto; }
-        .alq-logo { font-family: 'Figtree', sans-serif; font-size: 26px; font-weight: 500; color: #141414; }
-        .alq-label { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; text-transform: uppercase; }
+        .alq-top-bar-left {
+          display: flex; align-items: center; gap: 10px;
+          background: rgba(237,232,220,0.92); backdrop-filter: blur(8px);
+          padding: 8px 16px; border-radius: 100px;
+          border: 1px solid rgba(216,208,188,0.6);
+        }
+        .alq-logo { font-family: 'Figtree', sans-serif; font-size: 18px; font-weight: 500; color: #141414; }
+        .alq-label { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; text-transform: uppercase; font-family: 'DM Sans', sans-serif; }
         .alq-filter-btn {
           width: 44px; height: 44px; border-radius: 50%;
-          border: 1px solid #D8D0BC; background: rgba(237,232,220,0.7); color: #141414;
+          border: 1px solid rgba(216,208,188,0.6); background: rgba(237,232,220,0.92); backdrop-filter: blur(8px); color: #141414;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
         .alq-filter-pill {
           padding: 6px 14px; border-radius: 100px;
-          background: rgba(58,106,72,0.08); border: 1px solid rgba(58,106,72,0.25);
-          color: #3A6A48; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
+          background: rgba(237,232,220,0.92); backdrop-filter: blur(8px);
+          border: 1px solid rgba(216,208,188,0.6);
+          color: #3A6A48; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
           letter-spacing: 0.5px; cursor: pointer;
         }
         .alq-filter-dot {
@@ -1164,9 +1176,9 @@ export default function AlquileresPage() {
         .alq-chip button { background: none; border: none; color: #3A6A48; font-size: 14px; cursor: pointer; padding: 0; line-height: 1; }
         .alq-chip-clear { background: rgba(58,53,48,0.04); border-color: #D8D0BC; color: #7A7060; cursor: pointer; }
         .alq-compare-banner-wrap {
-          position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 8px)); left: 50%; transform: translateX(-50%);
+          position: fixed; top: max(64px, calc(env(safe-area-inset-top) + 56px)); left: 50%; transform: translateX(-50%);
           z-index: 100; display: flex; align-items: center; gap: 0;
-          border-radius: 100px; box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+          border-radius: 100px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);
           animation: alqBannerIn 0.3s ease-out;
         }
         .alq-compare-banner {
@@ -1180,12 +1192,12 @@ export default function AlquileresPage() {
           padding: 12px 16px 12px 12px; cursor: pointer; font-size: 18px; font-weight: 700; line-height: 1;
           font-family: 'DM Sans', sans-serif; border-left: 1px solid rgba(237,232,220,0.15);
         }
-        @keyframes alqBannerIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        @keyframes alqBannerIn { from { opacity: 0; transform: translateX(-50%) translateY(-12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
         .alq-compare-banner-text { white-space: nowrap; }
         .alq-fav-count {
           position: absolute; top: -4px; right: -4px;
           width: 18px; height: 18px; border-radius: 50%;
-          background: #3A6A48; color: #EDE8DC; font-size: 10px; font-weight: 600;
+          background: #3A6A48; color: #EDE8DC; font-size: 12px; font-weight: 600;
           display: flex; align-items: center; justify-content: center;
           opacity: 0; transform: scale(0); transition: all 0.3s;
         }
@@ -1193,10 +1205,11 @@ export default function AlquileresPage() {
 
         /* Mobile map button */
         .alq-map-floating {
-          position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 8px)); left: 24px;
+          position: fixed; bottom: max(140px, calc(env(safe-area-inset-bottom) + 130px)); right: 20px;
           z-index: 100; width: 48px; height: 48px; border-radius: 50%;
-          background: rgba(20,20,20,0.8); border: 1px solid rgba(58,53,48,0.2);
+          background: #FAFAF8; border: 1px solid #D8D0BC;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .alq-mobile-map-overlay {
           position: fixed; inset: 0; z-index: 300; background: #EDE8DC;
@@ -1333,8 +1346,8 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
       {/* Toggles */}
       <div className="df-group">
         <div className="df-dorm-btns">
-          <button className={`df-dorm-btn ${amoblado ? 'active' : ''}`} onClick={handleAmoblado}>Amoblado</button>
-          <button className={`df-dorm-btn ${mascotas ? 'active' : ''}`} onClick={handleMascotas}>Mascotas</button>
+          <button className={`df-dorm-btn df-amoblado ${amoblado ? 'active' : ''}`} onClick={handleAmoblado}>Amoblado</button>
+          <button className={`df-dorm-btn df-mascotas ${mascotas ? 'active' : ''}`} onClick={handleMascotas}>Mascotas</button>
           <button className={`df-dorm-btn ${conParqueo ? 'active' : ''}`} onClick={handleParqueo}>Parqueo</button>
         </div>
       </div>
@@ -1357,11 +1370,13 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
         .df-group { margin-bottom: 18px; }
         .df-label { font-size: 12px; font-weight: 500; color: #7A7060; letter-spacing: 0.5px; margin-bottom: 8px; font-family: 'DM Sans', sans-serif; text-transform: uppercase; }
         .df-zona-btns { display: flex; flex-wrap: wrap; gap: 6px; }
-        .df-zona-btn { padding: 6px 12px; border: 1px solid #D8D0BC; background: transparent; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 11px; cursor: pointer; border-radius: 100px; transition: all 0.2s; }
+        .df-zona-btn { padding: 6px 12px; border: 1px solid #D8D0BC; background: transparent; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 100px; transition: all 0.2s; }
         .df-zona-btn.active { border-color: #3A6A48; color: #3A6A48; background: rgba(58,106,72,0.06); }
         .df-dorm-btns { display: flex; gap: 8px; }
         .df-dorm-btn { flex: 1; padding: 9px; border: 1px solid #D8D0BC; background: transparent; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; transition: all 0.2s; }
         .df-dorm-btn.active { border-color: #3A6A48; color: #3A6A48; background: rgba(58,106,72,0.06); }
+        .df-mascotas.active { background: #3A6A48; color: #EDE8DC; border-color: #3A6A48; }
+        .df-amoblado.active { background: #141414; color: #EDE8DC; border-color: #141414; }
         .df-slider { width: 100%; -webkit-appearance: none; appearance: none; height: 2px; background: #D8D0BC; border-radius: 2px; outline: none; }
         .df-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #141414; cursor: pointer; }
         .df-slider-val { text-align: right; font-size: 13px; color: #141414; margin-top: 6px; font-weight: 500; font-variant-numeric: tabular-nums; }
@@ -1407,7 +1422,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
             </>
           )}
           <button className={`mfc-m-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
-            <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'none'} stroke={isFavorite ? '#3A6A48' : '#fff'} strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+            <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
@@ -1451,12 +1466,12 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
             width: 30px; height: 30px; border-radius: 50%; background: rgba(20,20,20,0.6);
             border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
           }
-          .mfc-m-fav.active { background: rgba(58,106,72,0.2); }
+          .mfc-m-fav.active { background: rgba(224,85,85,0.15); }
           .map-float-photo-count {
             position: absolute; bottom: 6px; right: 6px;
             display: flex; align-items: center; gap: 3px;
             background: rgba(20,20,20,0.7); padding: 2px 8px; border-radius: 100px;
-            font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.85);
+            font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.85);
             font-family: 'DM Sans', sans-serif;
           }
           .mfp-nav {
@@ -1477,7 +1492,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
           }
           .mfc-m-specs {
-            font-size: 11px; color: #7A7060; letter-spacing: 0.3px;
+            font-size: 12px; color: #7A7060; letter-spacing: 0.3px;
             margin-bottom: 4px; font-family: 'DM Sans', sans-serif;
           }
           .mfc-m-price {
@@ -1487,19 +1502,19 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
           .mfc-m-price span { font-size: 13px; color: #7A7060; }
           .mfc-m-badges { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
           .mfc-m-badge {
-            font-size: 9px; padding: 2px 6px; border-radius: 100px;
+            font-size: 12px; padding: 2px 6px; border-radius: 100px;
             border: 1px solid #D8D0BC; color: #3A3530;
             font-family: 'DM Sans', sans-serif;
           }
           .mfc-m-actions { display: flex; gap: 6px; }
           .mfc-m-btn-detail {
             flex: 1; padding: 7px; background: transparent; border: 1px solid #D8D0BC;
-            color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 11px;
+            color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px;
             font-weight: 500; cursor: pointer; border-radius: 10px;
           }
           .mfc-m-btn-wsp {
             flex: 1; padding: 7px; background: #25d366; border: none; border-radius: 10px;
-            color: #fff; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
+            color: #fff; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
             text-decoration: none; text-align: center;
           }
         `}</style>
@@ -1511,7 +1526,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
     <div className="map-float-card">
       <button className="map-float-close" onClick={onClose}>&times;</button>
       <button className={`map-float-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
-        <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'none'} stroke={isFavorite ? '#3A6A48' : '#fff'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+        <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
           <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
         </svg>
       </button>
@@ -1567,7 +1582,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
           transition: transform 0.15s;
         }
         .map-float-fav:hover { transform: scale(1.1); }
-        .map-float-fav.active { background: rgba(58,106,72,0.2); }
+        .map-float-fav.active { background: rgba(224,85,85,0.15); }
         .map-float-photo {
           height: 140px; background-size: cover; background-position: center; background-color: #D8D0BC;
           position: relative;
@@ -1576,7 +1591,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
           position: absolute; bottom: 8px; right: 8px;
           display: flex; align-items: center; gap: 4px;
           background: rgba(20,20,20,0.7); padding: 4px 10px; border-radius: 100px;
-          font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.85);
+          font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.85);
           font-family: 'DM Sans', sans-serif;
         }
         .mfp-nav {
@@ -1595,7 +1610,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .map-float-zona {
-          font-size: 11px; color: #7A7060; letter-spacing: 0.5px;
+          font-size: 12px; color: #7A7060; letter-spacing: 0.5px;
           margin-bottom: 8px; font-family: 'DM Sans', sans-serif;
         }
         .map-float-price {
@@ -1605,7 +1620,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
         .map-float-price span { font-size: 14px; color: #7A7060; }
         .map-float-badges { display: flex; gap: 5px; margin-bottom: 10px; }
         .map-float-badge {
-          font-size: 10px; padding: 3px 8px; border-radius: 100px;
+          font-size: 12px; padding: 3px 8px; border-radius: 100px;
           border: 1px solid #D8D0BC; color: #3A3530;
           font-family: 'DM Sans', sans-serif;
         }
@@ -1672,7 +1687,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
         )}
         {/* Fav + Share buttons on photo */}
         <button className={`dc-fav-btn ${isFavorite ? 'active' : ''}`} aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'} onClick={handleFav}>
-          <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'none'} stroke={isFavorite ? '#3A6A48' : '#fff'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+          <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
           </svg>
         </button>
@@ -1719,28 +1734,28 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
         .dc-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(20,20,20,0.6); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .dc-prev { left: 8px; }
         .dc-next { right: 8px; }
-        .dc-photo-count { position: absolute; top: 10px; right: 10px; background: rgba(20,20,20,0.6); padding: 3px 10px; border-radius: 100px; font-size: 11px; color: rgba(255,255,255,0.8); font-family: 'DM Sans', sans-serif; }
+        .dc-photo-count { position: absolute; top: 10px; right: 10px; background: rgba(20,20,20,0.6); padding: 3px 10px; border-radius: 100px; font-size: 12px; color: rgba(255,255,255,0.8); font-family: 'DM Sans', sans-serif; }
         .dc-fav-btn { position: absolute; top: 10px; left: 10px; width: 44px; height: 44px; border-radius: 50%; background: rgba(20,20,20,0.5); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
         .dc-fav-btn:hover { transform: scale(1.1); }
-        .dc-fav-btn.active { background: rgba(58,106,72,0.2); }
+        .dc-fav-btn.active { background: rgba(224,85,85,0.15); }
         .dc-share-btn { position: absolute; top: 10px; left: 62px; width: 44px; height: 44px; border-radius: 50%; background: rgba(20,20,20,0.5); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
         .dc-share-btn:hover { transform: scale(1.1); background: rgba(20,20,20,0.7); }
         .dc-content { padding: 16px; }
         .dc-name { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #141414; line-height: 1.2; margin-bottom: 2px; }
-        .dc-zona { font-size: 11px; color: #7A7060; letter-spacing: 0.5px; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
-        .dc-id { color: #D8D0BC; font-size: 10px; margin-left: 4px; letter-spacing: 0; }
+        .dc-zona { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
+        .dc-id { color: #7A7060; font-size: 12px; margin-left: 4px; letter-spacing: 0; }
         .dc-price { font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 500; color: #141414; line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
         .dc-price span { font-size: 16px; color: #7A7060; }
         .dc-specs { font-size: 12px; color: #3A3530; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
         .dc-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
-        .dc-badge { font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 100px; border: 1px solid #D8D0BC; color: #3A3530; font-family: 'DM Sans', sans-serif; }
-        .dc-badge.gold { border-color: rgba(58,106,72,0.25); color: #3A6A48; }
-        .dc-badge.purple { border-color: rgba(168,85,247,0.25); color: #7c3aed; }
-        .dc-badge.green { border-color: rgba(34,197,94,0.25); color: #16a34a; }
-        .dc-badge.warn { border-color: rgba(251,191,36,0.3); color: #b45309; background: rgba(251,191,36,0.08); }
+        .dc-badge { font-size: 12px; font-weight: 500; padding: 3px 8px; border-radius: 100px; border: 1px solid #D8D0BC; color: #3A3530; font-family: 'DM Sans', sans-serif; }
+        .dc-badge.gold { background: #141414; color: #EDE8DC; border-color: #141414; }
+        .dc-badge.purple { background: #3A6A48; color: #EDE8DC; border-color: #3A6A48; }
+        .dc-badge.green { background: #3A6A48; color: #EDE8DC; border-color: #3A6A48; }
+        .dc-badge.warn { border-color: #3A3530; color: #3A3530; background: rgba(58,53,48,0.04); }
         .dc-card.pet-confirmed { border-left: 3px solid rgba(168,85,247,0.4); }
         .dc-actions { display: flex; gap: 8px; border-top: 1px solid #D8D0BC; padding-top: 12px; }
-        .dc-info-btn { flex: 1; padding: 8px; background: transparent; border: 1px solid #D8D0BC; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 11px; cursor: pointer; border-radius: 10px; transition: all 0.2s; }
+        .dc-info-btn { flex: 1; padding: 8px; background: transparent; border: 1px solid #D8D0BC; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; transition: all 0.2s; }
         .dc-info-btn:hover { border-color: #7A7060; color: #141414; }
         .dc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: #25d366; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-decoration: none; margin-top: 8px; transition: opacity 0.2s; }
         .dc-wsp-cta:hover { opacity: 0.9; }
@@ -1803,7 +1818,7 @@ function MobilePropertyCard({
         )}
         <div className="mc-actions">
           <button className={`mc-btn mc-fav ${isFavorite ? 'active' : ''} ${shakeBtn ? 'shake' : ''}`} aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'} onClick={handleFavorite}>
-            <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'none'} stroke={isFavorite ? '#3A6A48' : 'currentColor'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
+            <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
@@ -1816,7 +1831,7 @@ function MobilePropertyCard({
           )}
           <button className="mc-btn mc-info" onClick={onOpenInfo}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
             </svg> Detalles
           </button>
         </div>
@@ -1832,27 +1847,27 @@ function MobilePropertyCard({
       {isFirst && <div className="mc-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" style={{width:18,height:18}}><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>}
 
       <style jsx>{`
-        .alq-card { height: 100vh; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #FAFAF8; }
+        .alq-card { height: 100vh; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #EDE8DC; }
         .mc-content { flex: 1; padding: 0 24px 20px; padding-bottom: max(20px, calc(env(safe-area-inset-bottom) + 8px)); display: flex; flex-direction: column; overflow: hidden; }
-        .mc-name { font-family: 'Figtree', sans-serif; font-size: 26px; font-weight: 500; color: #141414; line-height: 1.1; margin-bottom: 3px; }
-        .mc-zona { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; margin-bottom: 12px; font-family: 'DM Sans', sans-serif; }
-        .mc-id { color: #D8D0BC; font-size: 10px; margin-left: 4px; letter-spacing: 0; }
-        .mc-price { font-family: 'DM Sans', sans-serif; font-size: 36px; font-weight: 500; color: #141414; line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+        .mc-name { font-family: 'Figtree', sans-serif; font-size: 22px; font-weight: 500; color: #141414; line-height: 1.1; margin-bottom: 3px; padding-top: 16px; }
+        .mc-zona { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; margin-bottom: 8px; font-family: 'DM Sans', sans-serif; }
+        .mc-id { color: #7A7060; font-size: 12px; margin-left: 4px; letter-spacing: 0; }
+        .mc-price { font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 500; color: #141414; line-height: 1; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
         .mc-specs { font-size: 13px; font-weight: 300; color: #3A3530; margin-bottom: 12px; font-family: 'DM Sans', sans-serif; }
         .mc-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-        .mc-badge { font-size: 10px; font-weight: 500; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 100px; border: 1px solid #D8D0BC; color: #3A3530; background: rgba(58,53,48,0.02); font-family: 'DM Sans', sans-serif; }
-        .mc-badge.gold { border-color: rgba(58,106,72,0.25); color: #3A6A48; background: rgba(58,106,72,0.04); }
-        .mc-badge.purple { border-color: rgba(168,85,247,0.25); color: #7c3aed; background: rgba(168,85,247,0.04); }
-        .mc-badge.green { border-color: rgba(34,197,94,0.25); color: #16a34a; background: rgba(34,197,94,0.04); }
-        .mc-badge.warn { border-color: rgba(251,191,36,0.3); color: #b45309; background: rgba(251,191,36,0.06); font-weight: 600; }
+        .mc-badge { font-size: 12px; font-weight: 500; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 100px; border: 1px solid #D8D0BC; color: #3A3530; background: #FAFAF8; font-family: 'DM Sans', sans-serif; box-shadow: 0 1px 4px rgba(58,53,48,0.06); }
+        .mc-badge.gold { background: #141414; color: #EDE8DC; border-color: #141414; box-shadow: none; }
+        .mc-badge.purple { background: #3A6A48; color: #EDE8DC; border-color: #3A6A48; box-shadow: none; }
+        .mc-badge.green { background: #3A6A48; color: #EDE8DC; border-color: #3A6A48; box-shadow: none; }
+        .mc-badge.warn { border-color: #3A3530; color: #3A3530; background: rgba(58,53,48,0.04); font-weight: 600; box-shadow: none; }
         .alq-card.pet-confirmed { border-left: 3px solid rgba(168,85,247,0.4); }
         .mc-razon { font-size: 12px; font-weight: 300; color: #7A7060; line-height: 1.5; margin-bottom: auto; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .mc-actions { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid #D8D0BC; margin-top: 8px; }
         .mc-btn { display: flex; align-items: center; justify-content: center; gap: 5px; background: none; border: none; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
-        .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(58,106,72,0.4)); }
+        .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
         .mc-btn.mc-share { color: #7A7060; }
-        .mc-btn.mc-info { color: #7A7060; font-size: 11px; letter-spacing: 0.5px; }
-        .mc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: #25d366; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: 8px; min-height: 44px; transition: opacity 0.2s; }
+        .mc-btn.mc-info { color: #7A7060; font-size: 12px; letter-spacing: 0.5px; }
+        .mc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: #1EA952; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: 8px; min-height: 44px; transition: opacity 0.2s; }
         .mc-wsp-cta:active { opacity: 0.85; }
         .mc-btn.shake { animation: mcShake 0.3s ease; }
         @keyframes mcShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
@@ -1927,13 +1942,13 @@ function PhotoCarousel({ photos, isFirst, onPhotoTap }: { photos: string[]; isFi
       )}
       <style jsx>{`
         .pc-zone { flex: 0 0 55%; position: relative; overflow: hidden; }
-        .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(transparent, #FAFAF8); pointer-events: none; z-index: 2; }
+        .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 24px; background: linear-gradient(transparent, #EDE8DC); pointer-events: none; z-index: 2; }
         .pc-scroll { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .pc-scroll::-webkit-scrollbar { display: none; }
         .pc-slide { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #D8D0BC; scroll-snap-align: start; animation: imgShimmer 1.5s ease-in-out infinite; }
         @keyframes imgShimmer { 0%,100%{background-color:#D8D0BC} 50%{background-color:#EDE8DC} }
-        .pc-counter { position: absolute; top: 16px; right: 16px; z-index: 5; background: rgba(20,20,20,0.75); padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 5px; font-family: 'DM Sans', sans-serif; }
-        .pc-dots { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 5; }
+        .pc-counter { position: absolute; bottom: 36px; right: 16px; z-index: 5; background: rgba(20,20,20,0.75); padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 5px; font-family: 'DM Sans', sans-serif; }
+        .pc-dots { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 5; }
         .pc-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(20,20,20,0.25); transition: all 0.25s; }
         .pc-dot.active { background: #141414; width: 20px; border-radius: 3px; }
         .pc-swipe-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 10; display: flex; align-items: center; gap: 8px; background: rgba(20,20,20,0.65); padding: 10px 20px; border-radius: 100px; color: rgba(255,255,255,0.8); font-size: 13px; font-family: 'DM Sans', sans-serif; pointer-events: none; animation: pcFade 3s ease-in-out forwards; }
@@ -2008,22 +2023,22 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
       <div className="mfc-divider"><span className="mfc-line"/><span className="mfc-divider-text">Filtra</span><span className="mfc-line"/></div>
 
       <div className="mfc-filters">
-        <div className="mfc-group"><div className="mfc-gl">MICROZONA</div>
-          <div className="mfc-zonas">{ZONAS_ALQUILER_UI.map(z => <button key={z.id} className={`mfc-zb ${selectedZonas.has(z.id)?'active':''}`} onClick={()=>toggleZona(z.id)}>{z.label}</button>)}</div>
+        <div className="mfc-group"><div className="mfc-gl"><span className="mfc-dot"/>MICROZONA</div>
+          <div className="mfc-zonas">{ZONAS_ALQUILER_UI.filter(z => z.id !== 'sin_zona').map(z => <button key={z.id} className={`mfc-zb ${selectedZonas.has(z.id)?'active':''}`} onClick={()=>toggleZona(z.id)}>{z.label}</button>)}</div>
         </div>
-        <div className="mfc-group"><div className="mfc-gl">PRESUPUESTO MAXIMO</div>
+        <div className="mfc-group"><div className="mfc-gl"><span className="mfc-dot"/>PRESUPUESTO MAXIMO</div>
           <input type="range" className="mfc-slider" min={2000} max={MAX_SLIDER_PRICE} step={500} value={maxPrice} onChange={e=>setMaxPrice(parseInt(e.target.value))}/>
           <div className="mfc-sv">{formatPrice(maxPrice)}/mes</div>
         </div>
-        <div className="mfc-group"><div className="mfc-gl">DORMITORIOS</div>
+        <div className="mfc-group"><div className="mfc-gl"><span className="mfc-dot"/>DORMITORIOS</div>
           <div className="mfc-dorms">{[0,1,2,3].map(d=><button key={d} className={`mfc-db ${selectedDorms.has(d)?'active':''}`} onClick={()=>toggleDorm(d)}>{d===0?'Mono':d===3?'3+':d}</button>)}</div>
         </div>
         <div className="mfc-group"><div className="mfc-dorms">
-          <button className={`mfc-db ${amoblado?'active':''}`} onClick={()=>setAmoblado(!amoblado)}>Amoblado</button>
-          <button className={`mfc-db ${mascotas?'active':''}`} onClick={()=>setMascotas(!mascotas)}>Mascotas</button>
+          <button className={`mfc-db mfc-amoblado ${amoblado?'active':''}`} onClick={()=>setAmoblado(!amoblado)}>Amoblado</button>
+          <button className={`mfc-db mfc-mascotas ${mascotas?'active':''}`} onClick={()=>setMascotas(!mascotas)}>Mascotas</button>
           <button className={`mfc-db ${conParqueo?'active':''}`} onClick={()=>setConParqueo(!conParqueo)}>Parqueo</button>
         </div></div>
-        <div className="mfc-group"><div className="mfc-gl">ORDENAR POR</div>
+        <div className="mfc-group"><div className="mfc-gl"><span className="mfc-dot"/>ORDENAR POR</div>
           <div className="mfc-dorms">{ORDEN_OPTIONS.map(o=><button key={o.value} className={`mfc-db ${orden===o.value?'active':''}`} onClick={()=>setOrden(o.value)}>{o.label}</button>)}</div>
         </div>
       </div>
@@ -2042,18 +2057,21 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
         .mfc-sub { font-size:15px;font-weight:400;color:#7A7060;font-family:'DM Sans',sans-serif; }
         .mfc-divider { display:flex;align-items:center;gap:12px;margin-bottom:20px; }
         .mfc-line { flex:1;height:1px;background:#D8D0BC; }
-        .mfc-divider-text { font-size:12px;color:#3A6A48;letter-spacing:0.5px;font-family:'DM Sans',sans-serif;text-transform:uppercase; }
+        .mfc-divider-text { font-size:12px;color:#3A3530;letter-spacing:0.5px;font-family:'DM Sans',sans-serif;text-transform:uppercase; }
         .mfc-filters { width:100%;max-width:320px;margin-bottom:16px; }
         .mfc-group { margin-bottom:14px;text-align:left; }
-        .mfc-gl { font-size:11px;font-weight:600;color:#7A7060;letter-spacing:0.5px;margin-bottom:7px;font-family:'DM Sans',sans-serif; }
+        .mfc-gl { font-size:12px;font-weight:600;color:#3A3530;letter-spacing:0.5px;margin-bottom:7px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px; }
+        .mfc-dot { width:6px;height:6px;border-radius:50%;background:#3A6A48;flex-shrink:0; }
         .mfc-zonas { display:flex;flex-wrap:wrap;gap:7px; }
-        .mfc-zb { padding:7px 14px;border:1px solid #D8D0BC;background:transparent;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:100px;transition:all 0.2s; }
-        .mfc-zb.active { border-color:#3A6A48;color:#3A6A48;background:rgba(58,106,72,0.08); }
+        .mfc-zb { padding:7px 14px;border:1px solid #D8D0BC;background:#FAFAF8;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:100px;transition:all 0.2s; }
+        .mfc-zb.active { border-color:#3A6A48;border-width:2px;color:#141414;background:#FAFAF8;font-weight:600;box-shadow:0 2px 8px rgba(58,106,72,0.12); }
         .mfc-dorms { display:flex;gap:8px; }
-        .mfc-db { flex:1;padding:10px;border:1px solid #D8D0BC;background:transparent;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:10px;transition:all 0.2s; }
-        .mfc-db.active { border-color:#3A6A48;color:#3A6A48;background:rgba(58,106,72,0.08); }
+        .mfc-db { flex:1;padding:10px;border:1px solid #D8D0BC;background:#FAFAF8;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:10px;transition:all 0.2s; }
+        .mfc-db.active { border-color:#3A6A48;border-width:2px;color:#141414;background:#FAFAF8;font-weight:600;box-shadow:0 2px 8px rgba(58,106,72,0.12); }
+        .mfc-mascotas.active { background:#3A6A48;color:#EDE8DC;border-color:#3A6A48; }
+        .mfc-amoblado.active { background:#141414;color:#EDE8DC;border-color:#141414; }
         .mfc-slider { width:100%;-webkit-appearance:none;appearance:none;height:3px;background:#D8D0BC;border-radius:2px;outline:none; }
-        .mfc-slider::-webkit-slider-thumb { -webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#141414;cursor:pointer; }
+        .mfc-slider::-webkit-slider-thumb { -webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#FAFAF8;border:2px solid #141414;cursor:pointer; }
         .mfc-sv { text-align:right;font-size:15px;color:#141414;margin-top:4px;font-weight:600;font-family:'DM Sans',sans-serif;font-variant-numeric:tabular-nums; }
         .mfc-cta { display:block;width:100%;max-width:320px;padding:15px;background:rgba(20,20,20,0.08);border:1px solid #D8D0BC;color:#7A7060;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;margin-bottom:10px;border-radius:10px;transition:all 0.3s; }
         .mfc-cta:active { transform:scale(0.97); }
@@ -2071,7 +2089,6 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
   open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; petFilterActive?: boolean
 }) {
-  const [mapExpanded, setMapExpanded] = useState(false)
   const [showGate, setShowGate] = useState(false)
   const [gateName, setGateName] = useState('')
   const [gateTel, setGateTel] = useState('')
@@ -2084,19 +2101,34 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
   if (!property) return null
   const p = property
 
+  // SVG icons (inline, Lucide-style line icons)
+  const icons: Record<string, string> = {
+    area: '<path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/>',
+    bed: '<path d="M2 4v16"/><path d="M2 8h18a2 2 0 012 2v10"/><path d="M2 17h20"/><path d="M6 8v3"/>',
+    bath: '<path d="M4 12h16a1 1 0 011 1v3a4 4 0 01-4 4H7a4 4 0 01-4-4v-3a1 1 0 011-1z"/><path d="M6 12V5a2 2 0 012-2h3v2.25"/>',
+    building: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/><path d="M8 14h.01"/><path d="M16 14h.01"/>',
+    car: '<path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>',
+    box: '<path d="M21 8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/>',
+    sofa: '<path d="M20 9V6a2 2 0 00-2-2H6a2 2 0 00-2 2v3"/><path d="M2 11v5a2 2 0 002 2h16a2 2 0 002-2v-5a2 2 0 00-4 0v2H6v-2a2 2 0 00-4 0z"/><path d="M4 18v2"/><path d="M20 18v2"/>',
+    paw: '<circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 015 5v3.5a3.5 3.5 0 01-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 015.5 10Z"/>',
+    coins: '<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1110.34 18"/><path d="M7 6h1v4"/><path d="M16.71 13.88l.7.71-2.82 2.82"/>',
+    home: '<path d="M15 21v-8a1 1 0 00-1-1h-4a1 1 0 00-1 1v8"/><path d="M3 10a2 2 0 01.709-1.528l7-5.999a2 2 0 012.582 0l7 5.999A2 2 0 0121 10v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>',
+    file: '<path d="M15 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7z"/><path d="M14 2v4a2 2 0 002 2h4"/>',
+  }
+
   const features: Array<{ icon: string; label: string; value: string; highlight?: boolean }> = []
-  features.push({ icon: '📐', label: 'Area', value: `${p.area_m2}m²` })
-  features.push({ icon: '🛏️', label: 'Tipo', value: dormLabel(p.dormitorios) })
-  features.push({ icon: '🚿', label: 'Banos', value: p.banos ? `${p.banos} bano${p.banos > 1 ? 's' : ''}` : '—' })
-  if (p.piso !== null) features.push({ icon: '🏢', label: 'Piso', value: p.piso === 0 ? 'PB' : `Piso ${p.piso}` })
-  if (p.estacionamientos !== null) features.push({ icon: '🚗', label: 'Parqueo', value: p.estacionamientos > 0 ? `${p.estacionamientos} incl.` : 'No incl.' })
-  if (p.baulera) features.push({ icon: '📦', label: 'Baulera', value: 'Si', highlight: true })
-  if (p.amoblado === 'si' || p.amoblado === 'semi') features.push({ icon: '🪑', label: 'Amoblado', value: p.amoblado === 'si' ? 'Si' : 'Semi', highlight: true })
-  if (p.acepta_mascotas !== null) features.push({ icon: '🐾', label: 'Mascotas', value: p.acepta_mascotas ? 'Acepta' : 'No acepta', highlight: p.acepta_mascotas })
-  else if (petFilterActive) features.push({ icon: '🐾', label: 'Mascotas', value: 'Consultar', highlight: false })
-  if (p.deposito_meses) features.push({ icon: '💰', label: 'Deposito', value: `${p.deposito_meses} mes${p.deposito_meses > 1 ? 'es' : ''}` })
-  if (p.monto_expensas_bob) features.push({ icon: '🏠', label: 'Expensas', value: `Bs ${p.monto_expensas_bob}`, highlight: true })
-  if (p.contrato_minimo_meses) features.push({ icon: '📋', label: 'Contrato', value: `${p.contrato_minimo_meses} meses` })
+  features.push({ icon: 'area', label: 'Area', value: `${p.area_m2}m²` })
+  features.push({ icon: 'bed', label: 'Tipo', value: dormLabel(p.dormitorios) })
+  features.push({ icon: 'bath', label: 'Banos', value: p.banos ? `${p.banos} bano${p.banos > 1 ? 's' : ''}` : '—' })
+  if (p.piso !== null) features.push({ icon: 'building', label: 'Piso', value: p.piso === 0 ? 'PB' : `Piso ${p.piso}` })
+  if (p.estacionamientos !== null) features.push({ icon: 'car', label: 'Parqueo', value: p.estacionamientos > 0 ? `${p.estacionamientos} incl.` : 'No incl.' })
+  if (p.baulera) features.push({ icon: 'box', label: 'Baulera', value: 'Incluida', highlight: true })
+  if (p.amoblado === 'si' || p.amoblado === 'semi') features.push({ icon: 'sofa', label: p.amoblado === 'si' ? 'Amoblado' : 'Semi-amoblado', value: '✓', highlight: true })
+  if (p.acepta_mascotas !== null) features.push({ icon: 'paw', label: 'Mascotas', value: p.acepta_mascotas ? 'Acepta ✓' : 'No acepta', highlight: p.acepta_mascotas })
+  else if (petFilterActive) features.push({ icon: 'paw', label: 'Mascotas', value: 'Consultar', highlight: false })
+  if (p.deposito_meses) features.push({ icon: 'coins', label: 'Deposito', value: `${p.deposito_meses} mes${p.deposito_meses > 1 ? 'es' : ''}` })
+  if (p.monto_expensas_bob) features.push({ icon: 'home', label: 'Expensas', value: `Bs ${p.monto_expensas_bob}`, highlight: true })
+  if (p.contrato_minimo_meses) features.push({ icon: 'file', label: 'Contrato', value: `${p.contrato_minimo_meses} meses` })
 
   const displayName = p.nombre_edificio || p.nombre_proyecto || 'Detalles'
   const hasGPS = p.latitud && p.longitud
@@ -2104,19 +2136,37 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
   return (
     <div className={`bs ${open ? 'open' : ''} ${isDesktop ? 'bs-desktop' : ''}`}>
       <div className="bs-handle" />
-      <div className="bs-header">
-        <div className="bs-title">{displayName}</div>
-        <button className="bs-close" aria-label="Cerrar detalle" onClick={onClose}>&times;</button>
+      {/* Header negro — nombre, precio, zona, fecha, WhatsApp */}
+      <div className="bs-dark-header">
+        <div className="bs-dh-top">
+          <div>
+            <div className="bs-title">{displayName}</div>
+            <div className="bs-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
+            <div className="bs-published">
+              {displayZona(p.zona)}
+              {p.dias_en_mercado !== null && p.dias_en_mercado >= 0 && (
+                <> · {p.dias_en_mercado === 0 ? 'Publicado hoy' : p.dias_en_mercado === 1 ? 'Hace 1 día' : `Hace ${p.dias_en_mercado} días`}</>
+              )}
+            </div>
+          </div>
+          <button className="bs-close" aria-label="Cerrar detalle" onClick={onClose}>&times;</button>
+        </div>
+        {p.agente_whatsapp && (
+          <a href={buildLeadWhatsAppUrl(p, `Hola, vi ${p.nombre_edificio || p.nombre_proyecto || 'el departamento'} en Simon y me gustaria mas informacion${p.url ? '\n' + p.url : ''}`, 'bottom_sheet')} onClick={() => trackWhatsAppClick(p, 'bottom_sheet')} target="_blank" rel="noopener noreferrer" className="bs-wsp-cta">
+            <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 18, height: 18 }}>
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            Consultar por WhatsApp
+          </a>
+        )}
       </div>
-      {p.dias_en_mercado !== null && p.dias_en_mercado >= 0 && (
-        <div className="bs-published">Publicado hace {p.dias_en_mercado === 0 ? 'hoy' : p.dias_en_mercado === 1 ? '1 día' : `${p.dias_en_mercado} días`}</div>
-      )}
+      {/* Body blanco — características, amenidades, ubicación, anuncio */}
       <div className="bs-section">
-        <div className="bs-sl">CARACTERISTICAS</div>
+        <div className="bs-sl"><span className="bs-sl-dot" />Caracteristicas</div>
         <div className="bs-grid">
           {features.map((f, i) => (
             <div key={i} className={`bs-feat ${f.highlight ? 'hl' : ''}`}>
-              <div className="bs-fi">{f.icon}</div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="bs-fi" dangerouslySetInnerHTML={{ __html: icons[f.icon] || '' }} />
               <div className="bs-fv">{f.value}</div>
               <div className="bs-fl">{f.label}</div>
             </div>
@@ -2125,17 +2175,23 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
       </div>
       {p.amenities_lista && p.amenities_lista.length > 0 && (
         <div className="bs-section">
-          <div className="bs-sl">AMENIDADES</div>
+          <div className="bs-sl"><span className="bs-sl-dot" />Amenidades</div>
           <div className="bs-aw">{p.amenities_lista.map((a, i) => <span key={i} className="bs-at">{a}</span>)}</div>
         </div>
       )}
-      {(p.agente_nombre || p.agente_whatsapp) && (
+      {hasGPS && (
         <div className="bs-section">
-          <div className="bs-sl">CONTACTO</div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            {p.agente_nombre && <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>{p.agente_nombre}</span>}
-            {p.agente_whatsapp && <a href={buildLeadWhatsAppUrl(p, `Hola, vi ${p.nombre_edificio || p.nombre_proyecto || 'el departamento'} en Simon y me gustaria mas informacion${p.url ? '\n' + p.url : ''}`, 'bottom_sheet')} onClick={() => trackWhatsAppClick(p, 'bottom_sheet')} target="_blank" rel="noopener noreferrer" style={{ color: '#25d366', fontSize: 12, textDecoration: 'none', fontWeight: 500 }}>WhatsApp</a>}
-          </div>
+          <a
+            href={`https://www.google.com/maps?q=${p.latitud},${p.longitud}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bs-gmaps-link"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18, flexShrink: 0 }}>
+              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+            Ver ubicacion en Google Maps
+          </a>
         </div>
       )}
       {p.url && (
@@ -2144,7 +2200,12 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
             <button className="bs-ver-anuncio" onClick={() => {
               if (gateCompleted) { window.open(p.url, '_blank') }
               else { setShowGate(true) }
-            }}>Ver anuncio original &#8599;</button>
+            }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+              Ver anuncio original
+            </button>
           ) : (
             <div className="bs-gate">
               <div className="bs-gate-title">Para ver el anuncio original, dejanos tus datos</div>
@@ -2160,49 +2221,46 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
           )}
         </div>
       )}
-      {hasGPS && (
-        <div className="bs-section">
-          <button className="bs-map-toggle" onClick={() => setMapExpanded(!mapExpanded)}>
-            <span className="bs-sl" style={{ margin: 0 }}>UBICACION</span>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{mapExpanded ? '▲ Ocultar' : '▼ Ver mapa'}</span>
-          </button>
-          {mapExpanded && <div className="bs-map">{open && <MapComponent lat={p.latitud!} lng={p.longitud!} />}</div>}
-        </div>
-      )}
       <style jsx>{`
-        .bs { position:fixed;bottom:0;left:0;right:0;z-index:501;background:#FAFAF8;border-radius:20px 20px 0 0;max-height:80vh;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:max(20px,env(safe-area-inset-bottom)); }
+        .bs { position:fixed;bottom:0;left:0;right:0;z-index:501;background:#EDE8DC;border-radius:20px 20px 0 0;max-height:80vh;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:max(20px,env(safe-area-inset-bottom)); }
         .bs::-webkit-scrollbar{display:none;}
         .bs.open{transform:translateY(0);}
         .bs-desktop{max-width:480px;left:auto;right:0;border-radius:20px 0 0 0;height:100vh;max-height:100vh;}
         .bs-desktop.open{transform:translateY(0);}
-        .bs-handle{width:36px;height:4px;background:#D8D0BC;border-radius:2px;margin:12px auto 0;}
-        .bs-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px 12px;border-bottom:1px solid #D8D0BC;}
-        .bs-title{font-family:'Figtree',sans-serif;font-size:22px;font-weight:500;color:#141414;}
-        .bs-close{width:44px;height:44px;border-radius:50%;border:1px solid #D8D0BC;background:transparent;color:#7A7060;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;}
-        .bs-published{padding:12px 24px 0;font-size:12px;color:#7A7060;font-family:'DM Sans',sans-serif;}
+        .bs-handle{width:36px;height:4px;background:rgba(237,232,220,0.3);border-radius:2px;margin:12px auto 0;}
+        .bs-dark-header{background:#141414;padding:0 24px 20px;border-radius:20px 20px 14px 14px;}
+        .bs-dh-top{display:flex;align-items:flex-start;justify-content:space-between;padding-top:16px;}
+        .bs-title{font-family:'Figtree',sans-serif;font-size:22px;font-weight:500;color:#EDE8DC;}
+        .bs-price{font-family:'DM Sans',sans-serif;font-size:28px;font-weight:500;color:#EDE8DC;margin-top:4px;font-variant-numeric:tabular-nums;}
+        .bs-price span{font-size:14px;color:#9A8E7A;font-weight:400;}
+        .bs-close{width:44px;height:44px;border-radius:50%;border:none;background:transparent;color:#9A8E7A;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;}
+        .bs-published{font-size:13px;color:#9A8E7A;font-family:'DM Sans',sans-serif;margin-top:6px;}
         .bs-section{padding:16px 24px;}
-        .bs-sl{font-size:12px;font-weight:500;color:#7A7060;letter-spacing:0.5px;margin-bottom:12px;font-family:'DM Sans',sans-serif;text-transform:uppercase;}
+        .bs-sl{font-size:12px;font-weight:600;color:#7A7060;letter-spacing:0.5px;margin-bottom:12px;font-family:'DM Sans',sans-serif;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+        .bs-sl-dot{width:6px;height:6px;border-radius:50%;background:#3A6A48;flex-shrink:0;}
+        .bs-wsp-cta{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#1EA952;border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;min-height:44px;transition:opacity 0.2s;margin-top:16px;}
+        .bs-wsp-cta:active{opacity:0.85;}
+        .bs-wsp-agent{font-weight:400;opacity:0.8;}
         .bs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-        .bs-feat{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border-radius:10px;background:rgba(58,53,48,0.02);border:1px solid #D8D0BC;}
-        .bs-fi{font-size:20px;}
-        .bs-fl{font-size:10px;color:#7A7060;text-align:center;font-family:'DM Sans',sans-serif;}
-        .bs-fv{font-size:12px;font-weight:500;color:#141414;font-family:'DM Sans',sans-serif;}
-        .bs-feat.hl{border-color:rgba(58,106,72,0.25);background:rgba(58,106,72,0.04);}
-        .bs-feat.hl .bs-fl{color:#3A6A48;}
-        .bs-feat.hl .bs-fv{color:#3A6A48;}
+        .bs-feat{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border-radius:14px;background:#FAFAF8;border:1px solid #D8D0BC;box-shadow:0 2px 8px rgba(58,53,48,0.06);}
+        .bs-fi{width:20px;height:20px;color:#7A7060;}
+        .bs-fl{font-size:13px;font-weight:300;color:#7A7060;text-align:center;font-family:'DM Sans',sans-serif;}
+        .bs-fv{font-size:15px;font-weight:300;color:#141414;font-family:'DM Sans',sans-serif;}
+        .bs-feat.hl{border-color:#D8D0BC;background:rgba(58,53,48,0.03);}
+        .bs-feat.hl .bs-fl{color:#141414;}
+        .bs-feat.hl .bs-fv{color:#141414;font-weight:600;}
         .bs-aw{display:flex;flex-wrap:wrap;gap:6px;}
-        .bs-at{font-size:11px;padding:4px 10px;border-radius:100px;border:1px solid #D8D0BC;color:#3A3530;font-family:'DM Sans',sans-serif;}
-        .bs-ver-anuncio{display:block;width:100%;text-align:center;padding:12px;background:rgba(58,106,72,0.06);border:1px solid rgba(58,106,72,0.2);color:#3A6A48;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;text-decoration:none;border-radius:10px;transition:background 0.2s;cursor:pointer;}
+        .bs-at{font-size:15px;font-weight:300;padding:4px 10px;border-radius:100px;background:#FAFAF8;border:1px solid #D8D0BC;color:#3A3530;font-family:'DM Sans',sans-serif;}
+        .bs-ver-anuncio{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:transparent;border:1px solid #D8D0BC;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;border-radius:10px;transition:background 0.2s;cursor:pointer;}
         .bs-ver-anuncio:hover{background:rgba(58,106,72,0.12);}
         .bs-gate{display:flex;flex-direction:column;gap:12px}
         .bs-gate-title{font-size:14px;color:#7A7060;margin-bottom:4px}
         .bs-gate-input{width:100%;padding:12px 14px;background:#EDE8DC;border:1px solid #D8D0BC;border-radius:10px;color:#141414;font-family:'DM Sans',sans-serif;font-size:15px;box-sizing:border-box}
         .bs-gate-input::placeholder{color:#7A7060}
-        .bs-gate-submit{width:100%;padding:14px;background:#141414;color:#EDE8DC;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+        .bs-gate-submit{width:100%;padding:14px;background:#141414;color:#EDE8DC;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer}
         .bs-gate-submit:disabled{opacity:0.4;cursor:default}
-        .bs-map-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;background:transparent;border:1px solid #D8D0BC;border-radius:10px;padding:10px 14px;cursor:pointer;margin-bottom:10px;}
-        .bs-map-toggle:hover{border-color:#7A7060;}
-        .bs-map{width:100%;height:200px;border-radius:14px;overflow:hidden;border:1px solid #D8D0BC;}
+        .bs-gmaps-link{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#D8D0BC;border-radius:10px;color:#141414;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;transition:opacity 0.2s;}
+        .bs-gmaps-link:active{opacity:0.85;}
       `}</style>
     </div>
   )
