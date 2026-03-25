@@ -125,7 +125,7 @@ export default function PhotoViewer({ photos, initialIndex, buildingName, subtit
 
       <style jsx>{`
         .pv-overlay {
-          position: fixed; inset: 0; z-index: 9999; background: #0a0a0a;
+          position: fixed; inset: 0; z-index: 9999; background: #141414;
           display: flex; flex-direction: column;
         }
         .pv-top {
@@ -142,9 +142,9 @@ export default function PhotoViewer({ photos, initialIndex, buildingName, subtit
           display: flex; align-items: center; justify-content: center;
         }
         .pv-counter {
-          background: rgba(10,10,10,0.75); padding: 6px 14px; border-radius: 100px;
+          background: rgba(20,20,20,0.75); padding: 6px 14px; border-radius: 100px;
           font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.8);
-          font-family: 'Manrope', sans-serif;
+          font-family: 'DM Sans', sans-serif;
         }
         .pv-slides {
           flex: 1; display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
@@ -166,7 +166,7 @@ export default function PhotoViewer({ photos, initialIndex, buildingName, subtit
           }
         }
         .pv-no-photo {
-          color: rgba(255,255,255,0.3); font-size: 14px; font-family: 'Manrope', sans-serif;
+          color: rgba(255,255,255,0.3); font-size: 14px; font-family: 'DM Sans', sans-serif;
         }
         .pv-arrow {
           display: none; position: absolute; top: 50%; transform: translateY(-50%);
@@ -190,12 +190,12 @@ export default function PhotoViewer({ photos, initialIndex, buildingName, subtit
         }
         .pv-caption.hidden { opacity: 0; pointer-events: none; }
         .pv-caption-name {
-          font-family: 'Cormorant Garamond', serif; font-size: 22px; color: #fff;
+          font-family: 'Figtree', sans-serif; font-size: 22px; font-weight: 500; color: #fff;
           line-height: 1.2; margin-bottom: 2px;
         }
         .pv-caption-sub {
-          font-size: 12px; color: rgba(255,255,255,0.6); font-family: 'Manrope', sans-serif;
-          letter-spacing: 0.5px;
+          font-size: 13px; color: rgba(255,255,255,0.6); font-family: 'DM Sans', sans-serif;
+          letter-spacing: 0.3px;
         }
         @media (prefers-reduced-motion: reduce) {
           .pv-top, .pv-caption, .pv-arrow { transition: none; }

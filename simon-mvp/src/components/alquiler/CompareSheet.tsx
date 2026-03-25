@@ -357,7 +357,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
                 <button key={i} className={`cs-question cs-q-selectable ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
                   onClick={() => toggleQuestion(i)} aria-pressed={isSelected}>
                   <span className={`cs-q-check ${isSelected ? 'checked' : ''}`}>
-                    {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="3" style={{width:10,height:10}}><path d="M5 12l5 5L20 7"/></svg>}
+                    {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="#EDE8DC" strokeWidth="3" style={{width:10,height:10}}><path d="M5 12l5 5L20 7"/></svg>}
                   </span>
                   <span className="cs-q-text">{q.text}</span>
                 </button>
@@ -396,7 +396,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
                   <span className="cs-cta-name">{name}</span>
                   {p.agente_whatsapp ? (
                     <a href={buildLeadUrl(p, msgText, 'comparativo', selectedTexts.length > 0 ? selectedTexts : undefined)} onClick={() => trackWhatsAppClick(p, 'comparativo')} target="_blank" rel="noopener noreferrer" className="cs-cta-btn">
-                      <svg viewBox="0 0 24 24" fill="#25d366" style={{ width: 16, height: 16 }}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+                      <svg viewBox="0 0 24 24" fill="#1EA952" style={{ width: 16, height: 16 }}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
                       WhatsApp
                     </a>
                   ) : (
@@ -415,7 +415,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
 
       <style jsx>{`
         .cs-overlay {
-          position: fixed; inset: 0; z-index: 300; background: #0f0f0f;
+          position: fixed; inset: 0; z-index: 300; background: #EDE8DC;
           transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
           display: flex; flex-direction: column;
           overflow: hidden;
@@ -424,14 +424,15 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
         .cs-header {
           display: flex; align-items: center; justify-content: space-between;
           padding: 16px 20px; padding-top: max(16px, env(safe-area-inset-top));
-          border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0;
+          background: #141414; flex-shrink: 0;
+          border-radius: 0 0 14px 14px;
         }
         .cs-header-left { display: flex; flex-direction: column; gap: 2px; }
-        .cs-title { font-family: 'Cormorant Garamond', serif; font-size: 24px; color: #fff; line-height: 1.2; }
-        .cs-subtitle { font-size: 11px; color: rgba(255,255,255,0.5); font-family: 'Manrope', sans-serif; letter-spacing: 0.5px; }
+        .cs-title { font-family: 'Figtree', sans-serif; font-size: 24px; font-weight: 500; color: #EDE8DC; line-height: 1.2; }
+        .cs-subtitle { font-size: 12px; color: #9A8E7A; font-family: 'DM Sans', sans-serif; letter-spacing: 0.5px; }
         .cs-close {
-          width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.15);
-          background: transparent; color: rgba(255,255,255,0.7); font-size: 20px; cursor: pointer;
+          width: 44px; height: 44px; border-radius: 50%; border: none;
+          background: transparent; color: #9A8E7A; font-size: 20px; cursor: pointer;
           display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
         .cs-scroll {
@@ -441,62 +442,63 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
         .cs-scroll::-webkit-scrollbar { display: none; }
         .cs-section { padding: 20px 20px 8px; }
         .cs-label {
-          font-size: 10px; font-weight: 600; color: #c9a959; letter-spacing: 2px;
-          margin-bottom: 14px; font-family: 'Manrope', sans-serif;
+          font-size: 12px; font-weight: 600; color: #7A7060; letter-spacing: 0.5px;
+          margin-bottom: 14px; font-family: 'DM Sans', sans-serif; text-transform: uppercase;
         }
         .cs-table-wrap { overflow-x: auto; margin: 0 -4px; }
         .cs-table {
-          width: 100%; border-collapse: collapse; font-family: 'Manrope', sans-serif;
-          font-size: 12px; table-layout: fixed;
+          width: 100%; border-collapse: collapse; font-family: 'DM Sans', sans-serif;
+          font-size: 13px; table-layout: fixed;
         }
         .cs-th-label { width: 30%; }
         .cs-th-name {
           text-align: center; padding: 8px 6px 12px; vertical-align: bottom;
-          font-weight: 400; color: rgba(255,255,255,0.9); font-size: 11px;
+          font-weight: 400; color: #141414; font-size: 12px;
         }
         .cs-thumb {
-          width: 48px; height: 48px; border-radius: 8px; margin: 0 auto 6px;
+          width: 48px; height: 48px; border-radius: 10px; margin: 0 auto 6px;
           background-size: cover; background-position: center;
-          border: 1px solid rgba(255,255,255,0.1);
+          border: 1px solid #D8D0BC;
         }
         .cs-th-letter {
           display: inline-flex; width: 20px; height: 20px; border-radius: 50%;
-          background: #c9a959; color: #0a0a0a; font-size: 10px; font-weight: 700;
+          background: #141414; color: #EDE8DC; font-size: 12px; font-weight: 700;
           align-items: center; justify-content: center; margin-right: 4px;
         }
         .cs-th-text {
-          display: block; margin-top: 4px; font-size: 11px; line-height: 1.2;
-          color: rgba(255,255,255,0.8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          display: block; margin-top: 4px; font-size: 12px; line-height: 1.2;
+          color: #3A3530; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .cs-td-label {
-          padding: 8px 8px 8px 0; color: rgba(255,255,255,0.5); font-size: 11px;
-          border-bottom: 1px solid rgba(255,255,255,0.04); white-space: nowrap;
+          padding: 8px 8px 8px 0; color: #7A7060; font-size: 12px;
+          border-bottom: 1px solid #D8D0BC; white-space: nowrap;
         }
         .cs-td {
-          text-align: center; padding: 8px 4px; color: rgba(255,255,255,0.85);
-          border-bottom: 1px solid rgba(255,255,255,0.04); font-variant-numeric: tabular-nums;
+          text-align: center; padding: 8px 4px; color: #141414;
+          border-bottom: 1px solid #D8D0BC; font-variant-numeric: tabular-nums;
         }
-        .cs-td-sub { font-size: 9px; color: rgba(255,255,255,0.4); }
+        .cs-td-sub { font-size: 12px; color: #7A7060; }
         .cs-td-total { font-weight: 600; }
-        .cs-tr-highlight td { background: rgba(201,169,89,0.04); }
-        .cs-best { color: #c9a959 !important; font-weight: 600; }
-        .cs-good { color: #4ade80; }
-        .cs-warn { color: #fbbf24; }
+        .cs-tr-highlight td { background: rgba(58,106,72,0.04); }
+        .cs-best { color: #3A6A48 !important; font-weight: 600; }
+        .cs-good { color: #3A6A48; }
+        .cs-warn { color: #b45309; }
 
         /* Insights */
         .cs-insights { display: flex; flex-direction: column; gap: 10px; }
         .cs-insight {
           display: flex; gap: 10px; align-items: flex-start;
-          padding: 12px 14px; border-radius: 10px;
-          background: rgba(201,169,89,0.04); border: 1px solid rgba(201,169,89,0.12);
+          padding: 12px 14px; border-radius: 14px;
+          background: #FAFAF8; border: 1px solid #D8D0BC;
+          box-shadow: 0 2px 8px rgba(58,53,48,0.06);
         }
         .cs-insight-dot {
-          width: 6px; height: 6px; border-radius: 50%; background: #c9a959;
+          width: 6px; height: 6px; border-radius: 50%; background: #3A6A48;
           flex-shrink: 0; margin-top: 6px;
         }
         .cs-insight-text {
-          font-family: 'Manrope', sans-serif; font-size: 13px; line-height: 1.5;
-          color: rgba(255,255,255,0.85);
+          font-family: 'DM Sans', sans-serif; font-size: 13px; line-height: 1.5;
+          color: #3A3530;
         }
 
         /* Questions */
@@ -506,72 +508,72 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
         }
         .cs-label-row .cs-label { margin-bottom: 0; }
         .cs-label-hint {
-          font-size: 10px; color: rgba(201,169,89,0.6); font-family: 'Manrope', sans-serif;
+          font-size: 12px; color: #7A7060; font-family: 'DM Sans', sans-serif;
           letter-spacing: 0.3px; white-space: nowrap;
         }
         .cs-questions { display: flex; flex-direction: column; gap: 6px; }
         .cs-question {
           display: flex; gap: 10px; align-items: center; padding: 10px 12px;
-          border-radius: 8px; background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 10px; background: #FAFAF8;
+          border: 1px solid #D8D0BC;
         }
         .cs-q-selectable {
           cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s;
           -webkit-tap-highlight-color: transparent;
         }
-        .cs-q-selectable:hover { border-color: rgba(255,255,255,0.12); }
+        .cs-q-selectable:hover { border-color: #7A7060; }
         .cs-q-selectable.selected {
-          border-color: rgba(201,169,89,0.35); background: rgba(201,169,89,0.05);
+          border-color: #3A6A48; border-width: 2px; background: #FAFAF8;
         }
         .cs-q-selectable.disabled { opacity: 0.35; cursor: default; }
         .cs-q-check {
           width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
-          border: 1.5px solid rgba(255,255,255,0.2);
+          border: 1.5px solid #D8D0BC;
           display: flex; align-items: center; justify-content: center;
           transition: background 0.15s, border-color 0.15s;
         }
         .cs-q-check.checked {
-          background: #c9a959; border-color: #c9a959;
+          background: #141414; border-color: #141414;
         }
         .cs-q-dot {
-          width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.25);
+          width: 5px; height: 5px; border-radius: 50%; background: #D8D0BC;
           flex-shrink: 0;
         }
         .cs-q-text {
-          font-family: 'Manrope', sans-serif; font-size: 12px; line-height: 1.4;
-          color: rgba(255,255,255,0.75);
+          font-family: 'DM Sans', sans-serif; font-size: 13px; line-height: 1.4;
+          color: #3A3530;
         }
 
         /* CTAs */
         .cs-ctas { display: flex; flex-direction: column; gap: 8px; }
         .cs-cta-row {
           display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-          border-radius: 10px; background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 10px; background: #FAFAF8;
+          border: 1px solid #D8D0BC;
         }
         .cs-cta-letter {
-          width: 24px; height: 24px; border-radius: 50%; background: #c9a959;
-          color: #0a0a0a; font-size: 11px; font-weight: 700; flex-shrink: 0;
+          width: 24px; height: 24px; border-radius: 50%; background: #141414;
+          color: #EDE8DC; font-size: 12px; font-weight: 700; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          font-family: 'Manrope', sans-serif;
+          font-family: 'DM Sans', sans-serif;
         }
         .cs-cta-name {
-          flex: 1; font-family: 'Manrope', sans-serif; font-size: 13px;
-          color: rgba(255,255,255,0.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          flex: 1; font-family: 'DM Sans', sans-serif; font-size: 13px;
+          color: #141414; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .cs-cta-btn {
           display: flex; align-items: center; gap: 6px; padding: 8px 14px;
-          border-radius: 8px; background: rgba(37,211,102,0.1); border: 1px solid rgba(37,211,102,0.3);
-          color: #25d366; font-size: 12px; font-weight: 600; text-decoration: none;
-          font-family: 'Manrope', sans-serif; white-space: nowrap;
+          border-radius: 10px; background: rgba(30,169,82,0.1); border: 1px solid rgba(30,169,82,0.3);
+          color: #1EA952; font-size: 12px; font-weight: 600; text-decoration: none;
+          font-family: 'DM Sans', sans-serif; white-space: nowrap;
         }
-        .cs-cta-link { background: rgba(201,169,89,0.1); border-color: rgba(201,169,89,0.3); color: #c9a959; }
+        .cs-cta-link { background: rgba(58,53,48,0.04); border-color: #D8D0BC; color: #3A3530; }
 
         /* Footer */
         .cs-footer { padding: 24px 20px 12px; text-align: center; }
         .cs-footer-text {
-          font-size: 10px; color: rgba(255,255,255,0.25); letter-spacing: 1px;
-          font-family: 'Manrope', sans-serif;
+          font-size: 12px; color: #7A7060; letter-spacing: 0.5px;
+          font-family: 'DM Sans', sans-serif;
         }
 
         @media (min-width: 768px) {

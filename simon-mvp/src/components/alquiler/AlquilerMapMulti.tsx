@@ -32,18 +32,19 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
     return L.divIcon({
       className: '',
       html: `<div style="
-        background:${isSelected ? '#c9a959' : '#0a0a0a'};
-        color:${isSelected ? '#0a0a0a' : '#c9a959'};
-        border:2px solid #c9a959;
+        background:${isSelected ? '#141414' : '#FAFAF8'};
+        color:${isSelected ? '#EDE8DC' : '#141414'};
+        border:2px solid ${isSelected ? '#141414' : '#D8D0BC'};
         padding:4px 10px;
         border-radius:20px;
-        font-size:11px;
+        font-size:12px;
         font-weight:600;
-        font-family:'Manrope',sans-serif;
+        font-family:'DM Sans',sans-serif;
         white-space:nowrap;
-        box-shadow:0 2px 8px rgba(0,0,0,0.5);
+        box-shadow:0 2px 8px rgba(0,0,0,0.15);
         cursor:pointer;
         transition:all 0.2s;
+        font-variant-numeric:tabular-nums;
       ">${price}</div>`,
       iconSize: [80, 28],
       iconAnchor: [40, 14],
@@ -84,10 +85,10 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
         .on('click', () => onSelectProperty(p.id))
 
       marker.bindTooltip(`
-        <div style="font-family:'Manrope',sans-serif;font-size:12px;line-height:1.4;">
-          <strong style="font-size:13px;">${name}</strong><br/>
-          <span style="color:#666;">${p.zona} · ${dormLabel(p.dormitorios)} · ${p.area_m2}m²</span><br/>
-          <span style="color:#b8942e;font-weight:600;">${price}/mes</span>
+        <div style="font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.4;">
+          <strong style="font-family:'Figtree',sans-serif;font-size:14px;font-weight:500;">${name}</strong><br/>
+          <span style="color:#7A7060;">${p.zona} · ${dormLabel(p.dormitorios)} · ${p.area_m2}m²</span><br/>
+          <span style="color:#141414;font-weight:600;font-variant-numeric:tabular-nums;">${price}/mes</span>
         </div>
       `, { direction: 'top', offset: [0, -10] })
 
@@ -103,10 +104,10 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
 
     const style = document.createElement('style')
     style.textContent = `
-      .alq-map-multi .leaflet-tile { filter: brightness(0.7) contrast(1.1) saturate(0.3); }
-      .alq-map-multi .leaflet-control-zoom a { background: #1a1a1a !important; color: #c9a959 !important; border-color: rgba(255,255,255,0.1) !important; }
-      .alq-map-multi .leaflet-tooltip { background: #fff; border: none; border-radius: 8px; padding: 8px 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-      .alq-map-multi .leaflet-tooltip-top::before { border-top-color: #fff; }
+      .alq-map-multi .leaflet-tile { filter: brightness(1.05) saturate(0.4) sepia(0.15); }
+      .alq-map-multi .leaflet-control-zoom a { background: #FAFAF8 !important; color: #141414 !important; border-color: #D8D0BC !important; }
+      .alq-map-multi .leaflet-tooltip { background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; padding: 10px 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+      .alq-map-multi .leaflet-tooltip-top::before { border-top-color: #FAFAF8; }
     `
     mapRef.current.appendChild(style)
 
