@@ -814,15 +814,17 @@ export default function AlquileresPage() {
         <>
           {/* Top bar */}
           <div className="alq-top-bar">
-            <Link href="/landing-v2" prefetch={false} className="alq-top-bar-left" style={{ textDecoration: 'none' }}>
-              <svg width={18} height={18} viewBox="0 0 64 64" fill="none" style={{flexShrink:0}}>
-                <circle cx="32" cy="34" r="28" fill="#141414"/>
-                <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
-                <circle cx="32" cy="15" r="3" fill="#EDE8DC"/>
-              </svg>
-              <div className="alq-logo">Simon</div>
+            <div className="alq-top-bar-left">
+              <Link href="/landing-v2" prefetch={false} className="alq-home-link">
+                <svg width={18} height={18} viewBox="0 0 64 64" fill="none" style={{flexShrink:0}}>
+                  <circle cx="32" cy="34" r="28" fill="#141414"/>
+                  <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
+                  <circle cx="32" cy="15" r="3" fill="#EDE8DC"/>
+                </svg>
+                <span className="alq-logo">Simon</span>
+              </Link>
               <div className="alq-label">{isFiltered ? `${activeFilterCount} filtro${activeFilterCount > 1 ? 's' : ''}` : 'Alquileres'}</div>
-            </Link>
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {isFiltered && (
                 <button className="alq-filter-pill" onClick={() => setChipsExpanded(!chipsExpanded)}>
@@ -1157,6 +1159,7 @@ export default function AlquileresPage() {
           padding: 8px 16px; border-radius: 100px;
           border: 1px solid rgba(216,208,188,0.6);
         }
+        .alq-home-link { display: flex; align-items: center; gap: 8px; text-decoration: none; }
         .alq-logo { font-family: 'Figtree', sans-serif; font-size: 18px; font-weight: 500; color: #141414; }
         .alq-label { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; text-transform: uppercase; font-family: 'DM Sans', sans-serif; }
         .alq-filter-btn {
