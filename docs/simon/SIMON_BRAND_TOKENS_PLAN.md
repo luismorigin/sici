@@ -28,7 +28,7 @@ Decisiones detalladas: `simon-brand/docs/simon-decisions.md`
 | `HeroPremium.tsx` | **Fondo arena** (era negro), `font-s-display/mono/body`, líneas salvia |
 | `ProblemPremium.tsx` | `bg-s-blanco` (diferencia sutil vs arena), `text-s-tinta` para itálica |
 | `StepsPremium.tsx` | **Fondo arena con cards blanco** (era negro), bordes arena-mid, hover salvia |
-| `MarketLensPremium.tsx` | `bg-s-arena`, stats box `bg-s-negro rounded-2xl`, cards `bg-s-blanco`, `font-s-mono` para datos |
+| `MarketLensPremium.tsx` | `bg-s-arena`, stats box `bg-s-negro rounded-2xl`, cards `bg-s-blanco` (legacy `font-s-mono` — pendiente migrar) |
 | `CTAPremium.tsx` | `bg-s-negro` (cierre dramático), botón arena→salvia hover |
 | `FooterPremium.tsx` | `bg-s-negro`, `text-s-dark-*` |
 | `landing-data.ts` | **Nuevo campo `zonasAlquiler`** — mediana/avg Bs por zona desde `v_mercado_alquiler` |
@@ -95,7 +95,7 @@ font-s-body      → DM Sans (cuerpo, UI, precios, labels — peso 300/400/500)
 | 3 | ~~Aprobar look + merge a main~~ | HECHO | Aprobado visualmente en localhost |
 | 3b | ~~Landing v1.4~~ | HECHO | `90d603f` — hero foto skyline, DM Mono eliminada, border-radius, trust bar, títulos salvia |
 | 4 | Actualizar `SIMON_BRAND_GUIDELINES.md` | **SIGUIENTE** | Reemplazar paleta vieja con v1.4 |
-| 5 | Migrar `/alquileres` a tokens `s-*` | PENDIENTE | Página con más tracción |
+| 5 | ~~Migrar `/alquileres` a tokens `s-*`~~ | HECHO | `198027e` — arena/negro/salvia, DM Sans/Figtree, 0 refs legacy. Doc: `ALQUILERES_UI_DECISIONS.md` |
 | 6 | Migrar `/ventas` a tokens `s-*` | PENDIENTE | Feed, filtros, galería, mapa |
 | 7 | Migrar `/mercado` a tokens `s-*` | PENDIENTE | Dashboard público, SEO |
 | 8 | Eliminar `premium-theme.ts` | PENDIENTE | Solo cuando no queden imports |

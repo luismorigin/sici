@@ -280,7 +280,7 @@ Las paginas editores siguen el patron: **tipos → constantes → hook → compo
 Flujo produccion: `simonbo.com (/) → /ventas` (feed simple). Funnel premium legacy: `/filtros-v2 → /formulario-v2 → /resultados-v2` (accesible por URL directa).
 
 - **Fonts:** Figtree (display) + DM Sans (body) — brand v1.4, DM Mono eliminada
-- **Colores:** Negro (#0a0a0a), Crema (#f8f6f3), Oro (#c9a959)
+- **Colores:** Arena (#EDE8DC), Negro (#141414), Salvia (#3A6A48) — ver `simon-design-tokens.ts`
 - **Google Analytics:** `G-Q8CRRJD6SL` — `simonbo.com?debug=1` desactiva GA
 
 ## Broker Pages & API Routes (simon-mvp)

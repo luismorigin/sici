@@ -80,13 +80,13 @@
 Tokens + landing mergeados a main. Plan completo en `docs/simon/SIMON_BRAND_TOKENS_PLAN.md`.
 Source of truth de marca: repo `simon-brand` (github.com/luismorigin/simon-brand).
 
-**Completado:** tokens (`48fd79d`), landing v1 migrada (`d985619`), landing v2 desde mockup (`c83e91e`), **landing v1.4** (`90d603f`) — hero foto skyline, DM Mono eliminada, border-radius, trust bar, títulos salvia.
+**Completado:** tokens (`48fd79d`), landing v1 migrada (`d985619`), landing v2 desde mockup (`c83e91e`), **landing v1.4** (`90d603f`), **alquileres v1.4** (`198027e`) — arena/negro/salvia completo, 0 refs legacy, hydration fix, doc UI decisions.
 **Bloqueado:** variación trimestral por zona — snapshots necesitan ≥30d historia (~24 Abr).
 
 | # | Tarea | Estado | Notas |
 |---|-------|--------|-------|
 | 1 | Actualizar `SIMON_BRAND_GUIDELINES.md` | **SIGUIENTE** | Reemplazar paleta vieja con v1.4 |
-| 2 | Migrar `/alquileres` a tokens `s-*` | PENDIENTE | Página con más tracción |
+| 2 | ~~Migrar `/alquileres` a tokens `s-*`~~ | HECHO | `198027e` — doc: `docs/simon/ALQUILERES_UI_DECISIONS.md` |
 | 3 | Migrar `/ventas` a tokens `s-*` | PENDIENTE | Feed, filtros, galería, mapa |
 | 4 | Migrar `/mercado` a tokens `s-*` | PENDIENTE | Dashboard público, SEO |
 | 5 | Eliminar `premium-theme.ts` | PENDIENTE | Solo cuando no queden imports |

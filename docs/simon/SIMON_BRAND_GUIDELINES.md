@@ -1,6 +1,12 @@
 # Simon — Brand Guidelines
 ## Inteligencia Inmobiliaria Premium
 
+> **⚠ LEGACY — Este documento describe el sistema viejo (negro/crema/oro + Cormorant/Manrope).**
+> El sistema actual es **brand v1.4**: arena/negro/salvia + Figtree/DM Sans.
+> Source of truth: `simon-brand/docs/simon-decisions.md` + `src/lib/simon-design-tokens.ts`
+> Decisiones UI de producto: `docs/simon/ALQUILERES_UI_DECISIONS.md`
+> Pendiente: reescribir este archivo con la paleta v1.4.
+
 ---
 
 ## 1. Esencia de Marca
