@@ -2,18 +2,23 @@ import Head from 'next/head'
 import { useEffect } from 'react'
 import type { GetStaticProps, InferGetStaticPropsType } from 'next'
 import {
-  NavbarPremium,
-  HeroPremium,
-  ProblemPremium,
-  StepsPremium,
-  MarketLensPremium,
-  CTAPremium,
-  FooterPremium
-} from '@/components/landing-premium'
+  NavSimon,
+  HeroSimon,
+  MercadoHero,
+  ProductosSection,
+  ProblemaSection,
+  ComoFuncionaSection,
+  CTAFooterSimon,
+} from '@/components/landing-v2'
 import { trackEvent } from '@/lib/analytics'
 import { fetchLandingData, type LandingData } from '@/lib/landing-data'
 
-export default function LandingV2({ heroMetrics, snapshot, microzonas }: InferGetStaticPropsType<typeof getStaticProps>) {
+export default function LandingV2({
+  heroMetrics,
+  snapshot,
+  microzonas,
+  zonasAlquiler,
+}: InferGetStaticPropsType<typeof getStaticProps>) {
   useEffect(() => {
     trackEvent('landing_view')
   }, [])
@@ -24,24 +29,33 @@ export default function LandingV2({ heroMetrics, snapshot, microzonas }: InferGe
         <title>Simon — Inteligencia Inmobiliaria | Equipetrol</title>
         <meta
           name="description"
-          content="Encontra tu departamento ideal en Equipetrol. Inteligencia artificial que analiza el mercado y te muestra las 3 mejores opciones con datos verificados."
+          content="Encontra tu departamento ideal en Equipetrol. Inteligencia artificial que analiza el mercado y te muestra las mejores opciones con datos verificados."
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <div className="font-s-body antialiased">
-        <NavbarPremium />
+        <NavSimon />
 
         <main>
-          <HeroPremium metrics={heroMetrics} />
-          <ProblemPremium />
-          <StepsPremium />
-          <MarketLensPremium snapshot={snapshot} microzonas={microzonas} />
-          <CTAPremium />
+          <HeroSimon />
+          <MercadoHero
+            microzonas={microzonas}
+            zonasAlquiler={zonasAlquiler}
+            tcActual={snapshot.tc_actual}
+            heroMetrics={heroMetrics}
+          />
+          <ProductosSection
+            heroMetrics={heroMetrics}
+            microzonas={microzonas}
+            zonasAlquiler={zonasAlquiler}
+          />
+          <ProblemaSection />
+          <ComoFuncionaSection />
         </main>
 
-        <FooterPremium />
+        <CTAFooterSimon />
       </div>
     </>
   )

@@ -1,0 +1,8 @@
+export { default as SymbolNorte } from './SymbolNorte'
+export { default as NavSimon } from './NavSimon'
+export { default as HeroSimon } from './HeroSimon'
+export { default as MercadoHero } from './MercadoHero'
+export { default as ProductosSection } from './ProductosSection'
+export { default as ProblemaSection } from './ProblemaSection'
+export { default as ComoFuncionaSection } from './ComoFuncionaSection'
+export { default as CTAFooterSimon } from './CTAFooterSimon'

@@ -80,7 +80,7 @@
 Tokens + landing mergeados a main. Plan completo en `docs/simon/SIMON_BRAND_TOKENS_PLAN.md`.
 Source of truth de marca: repo `simon-brand` (github.com/luismorigin/simon-brand).
 
-**Completado:** tokens (`48fd79d`), landing migrada y aprobada (`d985619`), `zonasAlquiler` en `fetchLandingData()`.
+**Completado:** tokens (`48fd79d`), landing v1 migrada (`d985619`), landing v2 desde mockup simon-brand (25 Mar 2026) — 8 componentes en `components/landing-v2/`, `zonasAlquiler` en `fetchLandingData()`.
 **Bloqueado:** variación trimestral por zona — snapshots necesitan ≥30d historia (~24 Abr).
 
 | # | Tarea | Estado | Notas |

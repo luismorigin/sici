@@ -110,7 +110,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Sistema TC y precios** | `docs/architecture/TIPO_CAMBIO_SICI.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
-| **Brand Guidelines** | `docs/simon/SIMON_BRAND_GUIDELINES.md` |
+| **Brand Guidelines** | Repo externo `simon-brand` — ver sección "Simon Brand (repo externo)" abajo |
 | **Indice migraciones** | `docs/migrations/MIGRATION_INDEX.md` |
 | **Backlog calidad datos** | `docs/backlog/CALIDAD_DATOS_BACKLOG.md` |
 | **Deuda tecnica** | `docs/backlog/DEUDA_TECNICA.md` |
@@ -128,6 +128,11 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | Comparativa LLM alq vs venta | `docs/analysis/COMPARATIVA_ALQUILERES_VS_VENTAS_LLM.md` |
 | Prompt LLM ventas (activo) | `scripts/llm-enrichment/prompt-ventas-v2.md` |
 | **LLM Enrichment README** | `scripts/llm-enrichment/README.md` |
+
+## Simon Brand (repo externo)
+
+Source of truth de branding: `C:/Users/LUCHO/Desktop/Censo inmobiliario/simon-brand/`
+Leer por path absoluto, no copiar. Si hay divergencia con sici, **simon-brand gana**. Tokens ya sincronizados en `simon-mvp/src/lib/simon-design-tokens.ts`.
 
 ## Pipeline Nocturno
 
