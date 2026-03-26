@@ -206,7 +206,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
       <div className="cs-scroll">
         {/* Comparison Table */}
         <div className="cs-section">
-          <div className="cs-label">COMPARACION</div>
+          <div className="cs-label"><span className="cs-label-dot" />COMPARACION</div>
           <div className="cs-table-wrap">
             <table className="cs-table">
               <thead>
@@ -289,7 +289,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
 
         {/* Costo Real */}
         <div className="cs-section">
-          <div className="cs-label">COSTO REAL MENSUAL</div>
+          <div className="cs-label"><span className="cs-label-dot" />COSTO REAL MENSUAL</div>
           <div className="cs-table-wrap">
             <table className="cs-table">
               <thead>
@@ -331,7 +331,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
         {/* Insights */}
         {insights.length > 0 && (
           <div className="cs-section">
-            <div className="cs-label">INSIGHTS</div>
+            <div className="cs-label"><span className="cs-label-dot" />INSIGHTS</div>
             <div className="cs-insights">
               {insights.map((insight, i) => (
                 <div key={i} className="cs-insight">
@@ -346,7 +346,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
         {/* Questions for broker — selectable, max 3, included in WhatsApp */}
         <div className="cs-section">
           <div className="cs-label-row">
-            <span className="cs-label">PREGUNTAS PARA EL BROKER</span>
+            <span className="cs-label"><span className="cs-label-dot" />PREGUNTAS PARA EL BROKER</span>
             <span className="cs-label-hint">{selectedQs.size > 0 ? `${selectedQs.size}/${MAX_QS} — se incluyen en WhatsApp` : `Selecciona hasta ${MAX_QS}`}</span>
           </div>
           <div className="cs-questions">
@@ -367,7 +367,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
         </div>
 
         <div className="cs-section">
-          <div className="cs-label">DURANTE LA VISITA, FIJATE EN</div>
+          <div className="cs-label"><span className="cs-label-dot" />DURANTE LA VISITA, FIJATE EN</div>
           <div className="cs-questions">
             {checkQuestions.map((q, i) => (
               <div key={i} className="cs-question">
@@ -380,7 +380,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
 
         {/* WhatsApp CTAs */}
         <div className="cs-section">
-          <div className="cs-label">CONTACTAR</div>
+          <div className="cs-label"><span className="cs-label-dot" />CONTACTAR</div>
           <div className="cs-ctas">
             {props.map((p, i) => {
               const name = p.nombre_edificio || p.nombre_proyecto || `Depto ${i + 1}`
@@ -444,6 +444,11 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
         .cs-label {
           font-size: 12px; font-weight: 600; color: #7A7060; letter-spacing: 0.5px;
           margin-bottom: 14px; font-family: 'DM Sans', sans-serif; text-transform: uppercase;
+          display: flex; align-items: center; gap: 8px;
+        }
+        .cs-label-dot {
+          width: 6px; height: 6px; border-radius: 50%; background: #3A6A48;
+          flex-shrink: 0;
         }
         .cs-table-wrap { overflow-x: auto; margin: 0 -4px; }
         .cs-table {
@@ -482,7 +487,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
         .cs-tr-highlight td { background: rgba(58,106,72,0.04); }
         .cs-best { color: #3A6A48 !important; font-weight: 600; }
         .cs-good { color: #3A6A48; }
-        .cs-warn { color: #b45309; }
+        .cs-warn { color: #7A7060; font-style: italic; }
 
         /* Insights */
         .cs-insights { display: flex; flex-direction: column; gap: 10px; }
@@ -497,7 +502,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
           flex-shrink: 0; margin-top: 6px;
         }
         .cs-insight-text {
-          font-family: 'DM Sans', sans-serif; font-size: 13px; line-height: 1.5;
+          font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.5;
           color: #3A3530;
         }
 
@@ -514,7 +519,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
         .cs-questions { display: flex; flex-direction: column; gap: 6px; }
         .cs-question {
           display: flex; gap: 10px; align-items: center; padding: 10px 12px;
-          border-radius: 10px; background: #FAFAF8;
+          border-radius: 14px; background: #FAFAF8;
           border: 1px solid #D8D0BC;
         }
         .cs-q-selectable {
@@ -540,7 +545,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
           flex-shrink: 0;
         }
         .cs-q-text {
-          font-family: 'DM Sans', sans-serif; font-size: 13px; line-height: 1.4;
+          font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.4;
           color: #3A3530;
         }
 
@@ -548,7 +553,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
         .cs-ctas { display: flex; flex-direction: column; gap: 8px; }
         .cs-cta-row {
           display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-          border-radius: 10px; background: #FAFAF8;
+          border-radius: 14px; background: #FAFAF8;
           border: 1px solid #D8D0BC;
         }
         .cs-cta-letter {
@@ -558,14 +563,14 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
           font-family: 'DM Sans', sans-serif;
         }
         .cs-cta-name {
-          flex: 1; font-family: 'DM Sans', sans-serif; font-size: 13px;
+          flex: 1; font-family: 'DM Sans', sans-serif; font-size: 15px;
           color: #141414; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .cs-cta-btn {
-          display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+          display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px;
           border-radius: 10px; background: rgba(30,169,82,0.1); border: 1px solid rgba(30,169,82,0.3);
           color: #1EA952; font-size: 12px; font-weight: 600; text-decoration: none;
-          font-family: 'DM Sans', sans-serif; white-space: nowrap;
+          font-family: 'DM Sans', sans-serif; white-space: nowrap; min-height: 44px;
         }
         .cs-cta-link { background: rgba(58,53,48,0.04); border-color: #D8D0BC; color: #3A3530; }
 
