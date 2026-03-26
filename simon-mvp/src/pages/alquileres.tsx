@@ -814,14 +814,14 @@ export default function AlquileresPage() {
         <>
           {/* Top bar */}
           <div className="alq-top-bar">
-            <Link href="/landing-v2" prefetch={false} className="alq-top-bar-left alq-home-link">
+            <a href="/landing-v2" className="alq-top-bar-left alq-home-link" onClick={(e) => { e.stopPropagation() }}>
               <svg width={18} height={18} viewBox="0 0 64 64" fill="none" style={{flexShrink:0}}>
                 <circle cx="32" cy="34" r="28" fill="#141414"/>
                 <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
                 <circle cx="32" cy="15" r="3" fill="#EDE8DC"/>
               </svg>
               <span className="alq-logo">Simon</span>
-            </Link>
+            </a>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {isFiltered && (
                 <button className="alq-filter-pill" onClick={() => setChipsExpanded(!chipsExpanded)}>
