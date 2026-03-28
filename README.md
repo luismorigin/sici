@@ -53,4 +53,4 @@ sici/
 
 ---
 
-*Última actualización: 28 Feb 2026*
+*Última actualización: 28 Mar 2026*

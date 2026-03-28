@@ -188,7 +188,14 @@ sici/
 │   ├── modulo_2/        → Matching, Auditoria, TC dinamico
 │   └── alquiler/        → Pipeline completo alquiler (6 workflows)
 ├── docs/                → Documentacion activa + canonical
+│   ├── backlog/         → pendientes: calidad datos, deuda tecnica, retencion, matching alquiler
+│   ├── canonical/       → docs canonicos: merge, pipeline alquiler, metodologia fiduciaria
+│   ├── meta/            → tracking: GA4, Meta Pixel, Clarity
 │   ├── refactor/        → planes vivos: VENTAS_SIMPLIFICADO.md (bloques 1-7)
+│   ├── analysis/        → auditorias LLM, precios, comparativas
+│   ├── fichas/          → data de desarrollador (inventario, precios, equipamiento)
+│   ├── clientes/        → documentos por cliente (Condado, Proinco)
+│   ├── informes/        → correos, cotizaciones, templates
 │   └── archive/         → planning, reports, snapshots, specs (archivados en S1)
 └── simon-mvp/           → Frontend Next.js (simonbo.com)
     └── src/             → Ver seccion "simon-mvp Arquitectura" abajo
