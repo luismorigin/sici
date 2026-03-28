@@ -116,6 +116,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Backlog calidad datos** | `docs/backlog/CALIDAD_DATOS_BACKLOG.md` |
 | **Deuda tecnica** | `docs/backlog/DEUDA_TECNICA.md` |
 | **Retención usuarios** | `docs/backlog/RETENCION_USUARIOS.md` — Google OAuth, favoritos BD, alertas email (6 fases) |
+| **Meta Pixel & eventos** | `docs/meta/META_PIXEL_EVENTOS.md` — Pixel ID, eventos Tier 1-2 implementados, Tier 3 backlog, CAPI futuro |
 | **Producto informe mercado** | `docs/backlog/PRODUCTO_INFORME_MERCADO.md` |
 | **Límites data fiduciaria** | `docs/canonical/LIMITES_DATA_FIDUCIARIA.md` — qué puede aseverar Simón y qué no, matriz verde/amarillo/rojo, guía por perfil (comprador vs inversionista) |
 | **Refactor ventas (completado)** | `docs/refactor/VENTAS_SIMPLIFICADO.md` — bloques 1-7 completados, 5d pendiente |
@@ -128,6 +129,8 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **LLM Enrichment Ventas** | `docs/analysis/RESUMEN_EJECUTIVO_LLM_VENTAS.md` |
 | Comparativa LLM alq vs venta | `docs/analysis/COMPARATIVA_ALQUILERES_VS_VENTAS_LLM.md` |
 | Prompt LLM ventas (activo) | `scripts/llm-enrichment/prompt-ventas-v2.md` |
+| **Prompt LLM alquiler (activo)** | `scripts/llm-enrichment/prompt-alquiler-v2.md` — v2.0 con PROYECTOS CONOCIDOS + confianza |
+| **Plan matching alquiler** | `docs/backlog/MATCHING_ALQUILER_PLAN.md` — 3 fases, target 95%+ |
 | **LLM Enrichment README** | `scripts/llm-enrichment/README.md` |
 
 ## Simon Brand (repo externo)
@@ -142,7 +145,7 @@ Leer por path absoluto, no copiar. Si hay divergencia con sici, **simon-brand ga
 1:00 AM  Discovery C21 + Remax → propiedades_v2
 2:00 AM  Enrichment regex → datos_json_enrichment
 2:15 AM  Enrichment LLM (Haiku 4.5, prompt v4.1) → llm_output en datos_json_enrichment
-3:00 AM  Merge v2.5.0 → campos consolidados + TC paralelo + LLM (dormitorios, estado_construccion, nombre_edificio, solo_tc_paralelo, es_multiproyecto, tipo_cambio_detectado)
+3:00 AM  Merge v2.6.0 → campos consolidados + TC paralelo + LLM (dormitorios, estado_construccion, nombre_edificio híbrido, solo_tc_paralelo, es_multiproyecto, tipo_cambio_detectado)
 4:00 AM  Matching → id_proyecto_master + nombre_edificio (migración 170)
 6:00 AM  Verificador ausencias (solo Remax, LIMIT 200)
 9:00 AM  Auditoria + Snapshots absorcion
@@ -151,7 +154,7 @@ Leer por path absoluto, no copiar. Si hay divergencia con sici, **simon-brand ga
 ### Alquiler
 ```
 1:30 AM  Discovery C21 + Remax
-2:30 AM  Discovery Bien Inmuebles + Enrichment LLM
+2:30 AM  Discovery Bien Inmuebles + Enrichment LLM (Haiku 4.5, prompt v2.0 + PROYECTOS CONOCIDOS)
 3:30 AM  Merge alquiler (enrichment-first, sin TC paralelo)
 7:00 AM  Verificador alquiler
 ```
@@ -163,7 +166,7 @@ sici/
 ├── sql/functions/       → Funciones SQL canonicas (43 archivos, 13 subdirectorios)
 │   ├── discovery/       → registrar_discovery
 │   ├── enrichment/      → registrar_enrichment
-│   ├── merge/           → merge_discovery_enrichment v2.3.0
+│   ├── merge/           → merge_discovery_enrichment v2.6.0
 │   ├── matching/        → matching v3.1 + matchear_alquiler
 │   ├── alquiler/        → discovery/enrichment/merge alquiler
 │   ├── query_layer/     → buscar_unidades_reales/alquiler/simple, razon fiduciaria, posicion mercado
@@ -222,6 +225,7 @@ simon-mvp/src/
 │   ├── format-utils.ts            → dormLabel, formatPriceBob
 │   ├── mercado-data.ts            → Fetch datos mercado ventas (getStaticProps)
 │   ├── mercado-alquiler-data.ts   → Fetch datos mercado alquileres + yield (getStaticProps)
+│   ├── meta-pixel.ts              → fbqTrack() helper — Meta Pixel events (no-op si pixel no cargado)
 │   └── informe/                   → Generacion informes PDF (split de api/informe.ts)
 │       ├── types.ts                → Propiedad, DatosUsuario, Analisis, LeadData, TemplateData
 │       ├── helpers.ts              → fmt, getCategoria, getNegociacion, calcularPrecioReal, zonaDisplay
@@ -283,6 +287,7 @@ Flujo produccion: `simonbo.com (/) → /ventas` (feed simple). Funnel premium le
 - **Fonts:** Figtree (display) + DM Sans (body) — brand v1.4, DM Mono eliminada
 - **Colores:** Arena (#EDE8DC), Negro (#141414), Salvia (#3A6A48) — ver `simon-design-tokens.ts`
 - **Google Analytics:** `G-Q8CRRJD6SL` — `simonbo.com?debug=1` desactiva GA
+- **Meta Pixel:** `934634159284471` — mismo scope que GA (excluye admin/broker/debug). Eventos: Lead, ViewContent, Search, Contact. Ver `docs/meta/META_PIXEL_EVENTOS.md`
 
 ## Broker Pages & API Routes (simon-mvp)
 

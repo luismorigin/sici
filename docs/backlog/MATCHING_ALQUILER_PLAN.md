@@ -44,6 +44,8 @@
 
 **Criterio de éxito**: Prompt desplegado, datos acumulándose en `llm_output`.
 
+**Estado**: COMPLETADO (28 Mar 2026). Workflow `Enrichment LLM Alquiler v2.0.0` activo en n8n. Testeado con props 105 y 1156 — ambas normalizaron nombre correctamente (Onix Art By EliTe, Sky Elite) con confianza alta.
+
 **Doc**: `scripts/llm-enrichment/prompt-alquiler-v2.md`
 
 ### Fase 2 — Eval con datos reales (7 días después de Fase 1)
