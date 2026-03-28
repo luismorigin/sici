@@ -38,16 +38,16 @@ INSTRUCCIONES POR CAMPO:
 PRIORIDAD: Si el texto CONTRADICE un dato del portal, usar la evidencia del texto. Si no hay contradicción, mantener el dato existente.
 
 NOMBRE_EDIFICIO:
-- Buscá el nombre del edificio/condominio/proyecto en el texto
+- Buscá el nombre del edificio/condominio/proyecto en el texto Y en el dato del extractor
 - Compará contra la lista de PROYECTOS CONOCIDOS de arriba
-- Si encontrás match (incluso parcial: "Edif Nomad" → "Nomad by Smart Studio"), usá el nombre oficial de la lista
-- Si el extractor dice "Eco Sostenible Onix Art by Elite" pero la lista tiene "Onix Art By EliTe", devolvé "Onix Art By EliTe"
-- Si no hay match pero el texto tiene un nombre claro, devolvelo tal cual
-- Si no hay nombre en el texto, devolvé null
-- NUNCA devolver: "Alquiler", "Departamento", direcciones, fragmentos de oraciones, prefijos de marketing ("Eco Sostenible...")
-- Confianza alta: nombre exacto en lista o textualmente claro
-- Confianza media: inferido de contexto (URL, título parcial)
-- Confianza baja: muy dudoso
+- PASO 1: Si el extractor ya tiene un nombre, limpiá prefijos genéricos ("Edificio", "Condominio", "Eco Sostenible") y buscá match en la lista
+- PASO 2: Si encontrás match en la lista (incluso parcial: "Elite by Sky Properties" → "Sky Elite"), usá el nombre oficial de la lista
+- PASO 3: Si NO hay match en la lista pero el extractor o el texto tiene un nombre claro de edificio, MANTENELO tal cual (confianza media)
+- PASO 4: Solo devolvé null si no hay NINGÚN nombre de edificio ni en extractor ni en texto
+- NUNCA devolver: "Alquiler", "Departamento", direcciones, "Venta", tipo de operación
+- Confianza alta: nombre exacto en lista, o nombre claro en texto que coincide con extractor
+- Confianza media: nombre del extractor o texto que NO está en la lista pero es un nombre real de edificio
+- Confianza baja: muy dudoso, solo fragmento parcial
 
 DORMITORIOS:
 - "monoambiente", "studio", "loft", "mono" = 0 dormitorios
@@ -97,6 +97,11 @@ Devuelve SOLO este JSON (sin explicaciones, sin markdown):
 ## Changelog
 
 ### v2.0 (2026-03-28) — Nombre edificio + Confianza + Proyectos conocidos
+
+**Testeado con Haiku en 5 props problemáticas** (test_prompt_v2.mjs):
+- Ronda 1: Haiku descartaba nombres válidos no en PM → regresión id 1089
+- Ronda 2 (fix PASO 3): "mantenelo tal cual con confianza media" → 5/5 correctos
+- Resultado: 3 matches nuevos (105→PM45, 1156→PM7, 1191→PM7), 4 dorms corregidos, 0 regresiones
 
 Cambios desde v1.3.0:
 - **PROYECTOS CONOCIDOS inyectados**: lista de PM por zona, permite normalizar nombres
