@@ -36,10 +36,10 @@
 
 ## Ventas
 
-`/ventas` no tiene tracking de eventos GA4 todavia. Cuando se agregue, replicar el mismo patron con `fbqTrack()`:
-- `Lead` en click WhatsApp
-- `ViewContent` en abrir detalle
-- `Search` en aplicar filtros
+`/ventas` tiene tracking GA4 (ver `GA4_EVENTOS.md`) pero NO tiene Meta Pixel todavia. Agregar cuando se activen campanas de venta:
+- `Lead` en click WhatsApp (`click_whatsapp_venta`)
+- `ViewContent` en abrir detalle (`open_detail_venta`)
+- `Search` en aplicar filtros (`apply_filters_venta`)
 
 ## Notas tecnicas
 
