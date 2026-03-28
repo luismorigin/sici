@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { dormLabel } from '@/lib/format-utils'
+import { fbqTrack } from '@/lib/meta-pixel'
 
 interface UnidadAlquiler {
   id: number
@@ -40,7 +41,13 @@ function trackEvent(name: string, params?: Record<string, any>) {
   }
 }
 
+// 30s cooldown per property to prevent duplicate events from double-clicks
+const _waCooldown = new Map<number, number>()
 function trackWhatsAppClick(p: UnidadAlquiler, fuente: string) {
+  const now = Date.now()
+  const last = _waCooldown.get(p.id) || 0
+  if (now - last < 30_000) return
+  _waCooldown.set(p.id, now)
   trackEvent('click_whatsapp', {
     property_id: p.id,
     property_name: p.nombre_edificio || p.nombre_proyecto || 'Departamento',
@@ -50,6 +57,20 @@ function trackWhatsAppClick(p: UnidadAlquiler, fuente: string) {
     broker_phone: p.agente_whatsapp?.replace(/\D/g, '') || '',
     fuente,
   })
+  fbqTrack('Lead', {
+    content_name: p.nombre_edificio || p.nombre_proyecto || 'Departamento',
+    content_category: 'alquiler',
+    value: p.precio_mensual_bob,
+    currency: 'BOB',
+    fuente,
+  })
+}
+
+function getSessionId(): string {
+  if (typeof window === 'undefined') return ''
+  let sid = sessionStorage.getItem('simon_sid')
+  if (!sid) { sid = crypto.randomUUID(); sessionStorage.setItem('simon_sid', sid) }
+  return sid
 }
 
 function buildLeadUrl(p: UnidadAlquiler, msg: string, fuente: string, preguntas?: string[]) {
@@ -59,6 +80,7 @@ function buildLeadUrl(p: UnidadAlquiler, msg: string, fuente: string, preguntas?
     phone, msg, prop_id: String(p.id), nombre: name,
     zona: p.zona || '', precio: String(p.precio_mensual_bob),
     dorms: String(p.dormitorios), broker_nombre: '', fuente,
+    sid: getSessionId(),
   })
   if (preguntas && preguntas.length > 0) {
     params.set('preguntas', JSON.stringify(preguntas))

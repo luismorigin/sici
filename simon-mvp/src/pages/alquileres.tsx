@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import { type UnidadAlquiler, type FiltrosAlquiler } from '@/lib/supabase'
 import { ZONAS_ALQUILER_UI, displayZona } from '@/lib/zonas'
 import { dormLabel, formatPriceBob } from '@/lib/format-utils'
+import { fbqTrack } from '@/lib/meta-pixel'
 
 // Leaflet: dynamic import SSR-safe
 const MapComponent = dynamic(() => import('@/components/alquiler/AlquilerMap'), { ssr: false })
@@ -111,7 +112,13 @@ async function fetchFromAPI(filtros: FiltrosAlquiler & { offset?: number }, spot
 }
 
 // Track WhatsApp click — call only from onClick handlers, not from render
+// 30s cooldown per property to prevent duplicate events from double-clicks
+const _waCooldown = new Map<number, number>()
 function trackWhatsAppClick(p: UnidadAlquiler, fuente: string) {
+  const now = Date.now()
+  const last = _waCooldown.get(p.id) || 0
+  if (now - last < 30_000) return // skip duplicate within 30s
+  _waCooldown.set(p.id, now)
   trackEvent('click_whatsapp', {
     property_id: p.id,
     property_name: p.nombre_edificio || p.nombre_proyecto || 'Departamento',
@@ -121,6 +128,24 @@ function trackWhatsAppClick(p: UnidadAlquiler, fuente: string) {
     broker_phone: p.agente_whatsapp?.replace(/\D/g, '') || '',
     fuente,
   })
+  fbqTrack('Lead', {
+    content_name: p.nombre_edificio || p.nombre_proyecto || 'Departamento',
+    content_category: 'alquiler',
+    value: p.precio_mensual_bob,
+    currency: 'BOB',
+    fuente,
+  })
+}
+
+// Anonymous session ID — one per browser session, not PII
+function getSessionId(): string {
+  if (typeof window === 'undefined') return ''
+  let sid = sessionStorage.getItem('simon_sid')
+  if (!sid) {
+    sid = crypto.randomUUID()
+    sessionStorage.setItem('simon_sid', sid)
+  }
+  return sid
 }
 
 // Build lead-tracked WhatsApp URL (goes through /api/lead-alquiler for tracking)
@@ -137,6 +162,7 @@ function buildLeadWhatsAppUrl(p: UnidadAlquiler, msg: string, fuente: string, pr
     dorms: String(p.dormitorios),
     broker_nombre: p.agente_nombre || '',
     fuente,
+    sid: getSessionId(),
   })
   if (preguntas && preguntas.length > 0) {
     params.set('preguntas', JSON.stringify(preguntas))
@@ -154,8 +180,13 @@ function buildShareWhatsAppUrl(p: UnidadAlquiler) {
   const specs = `${dormLabel(p.dormitorios)} · ${p.area_m2}m² · ${formatPrice(p.precio_mensual_bob)}/mes`
   const url = `https://simonbo.com/alquileres?id=${p.id}`
   const text = `Mira este depto en alquiler:\n\n${name} — ${zone}\n${specs}\n\n${url}`
-  trackEvent('share_alquiler', { property_id: p.id, property_name: name, zone, price: p.precio_mensual_bob, dorms: p.dormitorios })
   return `https://wa.me/?text=${encodeURIComponent(text)}`
+}
+
+// Track share separately — call from onClick, not from URL builder
+function trackShareClick(p: UnidadAlquiler) {
+  const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
+  trackEvent('share_alquiler', { property_id: p.id, property_name: name, zone: displayZona(p.zona), price: p.precio_mensual_bob, dorms: p.dormitorios })
 }
 
 // GA event helper — fire and forget, never throws
@@ -260,6 +291,14 @@ export default function AlquileresPage() {
       analyticsRef.current.viewedIds.add(item.data.id)
       analyticsRef.current.hasInteracted = true
       trackEvent('view_property', { property_id: item.data.id, property_name: item.data.nombre_edificio || item.data.nombre_proyecto || '', position: activeCardIndex })
+      fbqTrack('ViewContent', {
+        content_type: 'product',
+        content_ids: [String(item.data.id)],
+        content_name: item.data.nombre_edificio || item.data.nombre_proyecto || 'Departamento',
+        content_category: 'alquiler',
+        value: item.data.precio_mensual_bob,
+        currency: 'BOB',
+      })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCardIndex, isDesktop])
@@ -350,6 +389,14 @@ export default function AlquileresPage() {
       parqueo: newFilters.con_parqueo || false,
       results_count: count,
     })
+    fbqTrack('Search', {
+      search_string: [
+        newFilters.zonas_permitidas?.join(','),
+        newFilters.dormitorios_lista?.map(d => `${d}d`).join(','),
+        newFilters.precio_mensual_max ? `<${newFilters.precio_mensual_max}` : '',
+      ].filter(Boolean).join(' | '),
+      content_category: 'alquiler',
+    })
     if (count === 0) {
       trackEvent('no_results', {
         zonas: newFilters.zonas_permitidas?.join(',') || '',
@@ -436,6 +483,14 @@ export default function AlquileresPage() {
     setSheetOpen(true)
     analyticsRef.current.hasInteracted = true
     trackEvent('open_detail', { property_id: p.id, property_name: p.nombre_edificio || p.nombre_proyecto || '' })
+    fbqTrack('ViewContent', {
+      content_type: 'product',
+      content_ids: [String(p.id)],
+      content_name: p.nombre_edificio || p.nombre_proyecto || 'Departamento',
+      content_category: 'alquiler',
+      value: p.precio_mensual_bob,
+      currency: 'BOB',
+    })
   }
 
   function openViewer(p: UnidadAlquiler, photoIndex: number) {
@@ -707,7 +762,7 @@ export default function AlquileresPage() {
                           onToggleFavorite={() => toggleFavorite(spotlightProperty.id)}
                           onOpenInfo={() => openDetail(spotlightProperty)}
                           onPhotoTap={(photoIdx) => openViewer(spotlightProperty, photoIdx)}
-                          onShare={() => window.open(buildShareWhatsAppUrl(spotlightProperty), '_blank')}
+                          onShare={() => { trackShareClick(spotlightProperty); window.open(buildShareWhatsAppUrl(spotlightProperty), '_blank') }}
                         />
                       </div>
                       {spotlightProperty.latitud && spotlightProperty.longitud && (
@@ -741,7 +796,7 @@ export default function AlquileresPage() {
                           onToggleFavorite={() => toggleFavorite(p.id)}
                           onOpenInfo={() => openDetail(p)}
                           onPhotoTap={(photoIdx) => openViewer(p, photoIdx)}
-                          onShare={() => window.open(buildShareWhatsAppUrl(p), '_blank')}
+                          onShare={() => { trackShareClick(p); window.open(buildShareWhatsAppUrl(p), '_blank') }}
                         />
                       </Fragment>
                     )
@@ -976,7 +1031,7 @@ export default function AlquileresPage() {
                     onToggleFavorite={() => toggleFavorite(item.data.id)}
                     onOpenInfo={() => openDetail(item.data)}
                     onPhotoTap={(photoIdx) => openViewer(item.data, photoIdx)}
-                    onShare={() => window.open(buildShareWhatsAppUrl(item.data), '_blank')}
+                    onShare={() => { trackShareClick(item.data); window.open(buildShareWhatsAppUrl(item.data), '_blank') }}
                   />
                 )
               })

@@ -2,6 +2,7 @@
 // Captura datos del usuario + genera mensaje WhatsApp dinámico
 
 import { useState } from 'react'
+import { fbqTrack } from '@/lib/meta-pixel'
 
 interface ContactarBrokerModalProps {
   isOpen: boolean
@@ -99,6 +100,7 @@ export default function ContactarBrokerModal(props: ContactarBrokerModalProps) {
       setMensajeWhatsapp(data.mensajeWhatsapp)
       setWhatsappUrl(data.whatsappUrl)
       setEstado('listo')
+      fbqTrack('Contact', { content_name: props.proyectoNombre })
     } catch (err) {
       setError((err as Error).message)
       setEstado('error')
