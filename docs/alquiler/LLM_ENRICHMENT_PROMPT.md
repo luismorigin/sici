@@ -1,4 +1,7 @@
-# LLM Enrichment Prompt Schema
+# [LEGACY] LLM Enrichment Prompt Schema
+
+> **OBSOLETO** — Reemplazado por `scripts/llm-enrichment/prompt-alquiler-v2.md` (activo en producción desde 28 Mar 2026).
+> Este archivo documenta el prompt v1.0. NO modificar — usar el doc nuevo.
 
 ## Arquitectura de Llamada
 

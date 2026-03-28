@@ -131,6 +131,9 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | Prompt LLM ventas (activo) | `scripts/llm-enrichment/prompt-ventas-v2.md` |
 | **Prompt LLM alquiler (activo)** | `scripts/llm-enrichment/prompt-alquiler-v2.md` — v2.0 con PROYECTOS CONOCIDOS + confianza |
 | **Plan matching alquiler** | `docs/backlog/MATCHING_ALQUILER_PLAN.md` — 3 fases, target 95%+ |
+| **GA4 eventos** | `docs/meta/GA4_EVENTOS.md` — 32 eventos por página, verificación |
+| **Meta Pixel eventos** | `docs/meta/META_PIXEL_EVENTOS.md` — Lead, Contact, ViewContent, Search |
+| **Clarity tracking** | `docs/meta/CLARITY_TRACKING.md` — heatmaps, recordings, config |
 | **LLM Enrichment README** | `scripts/llm-enrichment/README.md` |
 
 ## Simon Brand (repo externo)
