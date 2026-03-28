@@ -5,6 +5,7 @@ import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
 import type { UnidadVenta, FiltrosVentaSimple } from '@/lib/supabase'
 import { ZONAS_CANONICAS, displayZona } from '@/lib/zonas'
+import { trackEvent } from '@/lib/analytics'
 
 const PhotoViewer = dynamic(() => import('@/components/alquiler/PhotoViewer'), { ssr: false })
 const VentaMap = dynamic(() => import('@/components/venta/VentaMap'), { ssr: false })
@@ -370,7 +371,8 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
         </div>
         {p.agente_telefono && (
           <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi este departamento en Simon y me interesa: ${p.proyecto} - $$us {Math.round(p.precio_usd).toLocaleString('en-US')}${p.url ? '\n' + p.url : ''}`)}`}
-            target="_blank" rel="noopener noreferrer" className="mc-wsp">
+            target="_blank" rel="noopener noreferrer" className="mc-wsp"
+            onClick={() => trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'card_mobile' })}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
             Consultar por WhatsApp
           </a>
@@ -589,7 +591,8 @@ function BottomSheet({ property: p, isOpen, onClose, gateCompleted, onGate, isDe
                 </div>
               )}
               <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi ${p.proyecto} en Simon y me gustaría más información\n${p.url || ''}`)}`}
-                target="_blank" rel="noopener noreferrer" className="bs-wsp">
+                target="_blank" rel="noopener noreferrer" className="bs-wsp"
+                onClick={() => trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'detail_sheet' })}>
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
                 Consultar por WhatsApp
               </a>
@@ -700,17 +703,20 @@ export default function VentasPage() {
     setViewerName(p.proyecto)
     setViewerSubtitle(`${displayZona(p.zona)} · ${Math.round(p.area_m2)}m² · ${p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`} · $us ${Math.round(p.precio_usd).toLocaleString('en-US')}`)
     setViewerOpen(true)
+    trackEvent('view_photos_venta', { property_id: p.id, property_name: p.proyecto, fotos_count: p.fotos_urls.length })
   }
 
   function openSheet(p: UnidadVenta) {
     setSheetProperty(p)
     setSheetOpen(true)
+    trackEvent('open_detail_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd) })
   }
 
   function handleGate(nombre: string, telefono: string, correo: string, url: string) {
     try { localStorage.setItem('ventas_gate_v1', JSON.stringify({ nombre, telefono, correo, ts: new Date().toISOString() })) } catch {}
     setGateCompleted(true)
     window.open(url, '_blank')
+    trackEvent('lead_gate_venta', { property_id: sheetProperty?.id, property_name: sheetProperty?.proyecto, zona: sheetProperty?.zona ? displayZona(sheetProperty.zona) : undefined })
     // Fire and forget — save lead to DB
     const prop = sheetProperty
     fetch('/api/lead-gate', {
@@ -723,6 +729,8 @@ export default function VentasPage() {
     }).catch(() => {})
   }
   function toggleFavorite(id: number) {
+    const isFav = favorites.has(id)
+    trackEvent('toggle_favorite_venta', { property_id: id, action: isFav ? 'remove' : 'add' })
     setFavorites(prev => {
       const n = new Set(prev)
       if (n.has(id)) { n.delete(id); showToast('Quitado de favoritos') }
@@ -733,6 +741,7 @@ export default function VentasPage() {
   function shareProperty(p: UnidadVenta) {
     const url = `${window.location.origin}/ventas?id=${p.id}`
     navigator.clipboard.writeText(url).then(() => showToast('Link copiado')).catch(() => showToast('No se pudo copiar'))
+    trackEvent('share_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona) })
   }
 
   const activeFilterCount = useMemo(() => {
@@ -789,6 +798,15 @@ export default function VentasPage() {
   async function applyFilters(newFilters: FiltrosVentaSimple) {
     setFilters(newFilters); setIsFiltered(true)
     const count = await fetchProperties(newFilters)
+    trackEvent('apply_filters_venta', {
+      zonas: newFilters.zonas_permitidas?.join(',') || 'todas',
+      dorms: newFilters.dormitorios_lista?.join(',') || 'todos',
+      precio_min: newFilters.precio_min,
+      precio_max: newFilters.precio_max,
+      estado_entrega: newFilters.estado_entrega || 'todo',
+      total_results: count
+    })
+    if (count === 0) trackEvent('no_results_venta', { zonas: newFilters.zonas_permitidas?.join(','), dorms: newFilters.dormitorios_lista?.join(',') })
     showToast(`${count} departamentos encontrados`)
     if (feedRef.current) feedRef.current.scrollTo({ top: 0 })
     setActiveCardIndex(0)
@@ -858,11 +876,11 @@ export default function VentasPage() {
             {/* View mode toggle */}
             {properties.length > 0 && (
               <div className="vm-toggle">
-                <button className={`vm-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')}>
+                <button className={`vm-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => { setViewMode('grid'); trackEvent('switch_view_venta', { view_mode: 'grid' }) }}>
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
                   Grid
                 </button>
-                <button className={`vm-btn ${viewMode === 'map' ? 'active' : ''}`} onClick={() => setViewMode('map')}>
+                <button className={`vm-btn ${viewMode === 'map' ? 'active' : ''}`} onClick={() => { setViewMode('map'); trackEvent('switch_view_venta', { view_mode: 'map' }) }}>
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
                   Mapa
                 </button>
@@ -931,7 +949,7 @@ export default function VentasPage() {
           )}
 
           {/* Map floating button */}
-          <button className="mt-map-btn" onClick={() => setMobileMapOpen(true)}>
+          <button className="mt-map-btn" onClick={() => { setMobileMapOpen(true); trackEvent('open_map_mobile_venta') }}>
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
           </button>
 

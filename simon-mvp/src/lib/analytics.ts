@@ -3,22 +3,12 @@
 
 export const GA_ID = 'G-Q8CRRJD6SL'
 
-// Tipos de eventos
-type EventName =
-  | 'landing_view'
-  | 'filtros_started'
-  | 'formulario_completed'
-  | 'resultados_view'
-  | 'premium_requested'
-  | 'favorite_toggle'
-  | 'favorite_complete'
-
 interface EventParams {
   [key: string]: string | number | boolean | undefined
 }
 
-// Enviar evento a Google Analytics
-export function trackEvent(eventName: EventName, params?: EventParams) {
+// Enviar evento a Google Analytics — acepta cualquier nombre de evento
+export function trackEvent(eventName: string, params?: EventParams) {
   if (typeof window !== 'undefined' && window.gtag) {
     window.gtag('event', eventName, params)
   }
