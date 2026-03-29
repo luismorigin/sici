@@ -3,9 +3,39 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
+import type { GetStaticProps } from 'next'
 import type { UnidadVenta, FiltrosVentaSimple } from '@/lib/supabase'
 import { ZONAS_CANONICAS, displayZona } from '@/lib/zonas'
 import { trackEvent } from '@/lib/analytics'
+import { fetchMercadoData, type MercadoData } from '@/lib/mercado-data'
+
+// --- SEO types ---
+interface VentasSEO {
+  totalPropiedades: number
+  medianaPrecioM2: number
+  absorcionPct: number
+  fechaActualizacion: string
+  generatedAt: string
+  tipologias: Array<{ dormitorios: number; unidades: number; precioMediano: number; precioP25: number; precioP75: number }>
+  zonas: Array<{ zonaDisplay: string; unidades: number; medianaPrecioM2: number }>
+}
+
+const DORM_LABELS_SEO: Record<number, string> = { 0: 'Studio', 1: '1 dormitorio', 2: '2 dormitorios', 3: '3 dormitorios' }
+
+function fmtSEO(n: number): string {
+  return '$' + n.toLocaleString('en-US')
+}
+
+function formatMesAnioSEO(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00')
+  const mes = d.toLocaleDateString('es-BO', { month: 'long' })
+  return mes.charAt(0).toUpperCase() + mes.slice(1) + ' ' + d.getFullYear()
+}
+
+function formatFechaCortaSEO(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00')
+  return d.toLocaleDateString('es-BO', { day: 'numeric', month: 'short', year: 'numeric' })
+}
 
 const PhotoViewer = dynamic(() => import('@/components/alquiler/PhotoViewer'), { ssr: false })
 const VentaMap = dynamic(() => import('@/components/venta/VentaMap'), { ssr: false })
@@ -631,7 +661,7 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
 }
 
 // ===== Page =====
-export default function VentasPage() {
+export default function VentasPage({ seo }: { seo: VentasSEO }) {
   const [properties, setProperties] = useState<UnidadVenta[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -837,12 +867,7 @@ export default function VentasPage() {
 
   return (
     <>
-      <Head>
-        <title>Simon · Departamentos en Venta · Equipetrol</title>
-        <meta name="description" content="Departamentos en venta en Equipetrol, Santa Cruz. Datos reales, precios actualizados." />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta name="theme-color" content="#0a0a0a" />
-      </Head>
+      <VentasHead seo={seo} />
 
       <Toast message={toastMsg} visible={toastVisible} />
 
@@ -1228,4 +1253,188 @@ export default function VentasPage() {
       `}</style>
     </>
   )
+}
+
+// ===== SEO Head Component =====
+function VentasHead({ seo }: { seo: VentasSEO }) {
+  const mesAnio = formatMesAnioSEO(seo.fechaActualizacion)
+  const fechaCorta = formatFechaCortaSEO(seo.fechaActualizacion)
+  const url = 'https://simonbo.com/ventas'
+
+  const title = `${seo.totalPropiedades} Departamentos en Venta en Equipetrol — Desde ${fmtSEO(seo.tipologias[0]?.precioMediano || 85000)} | Simon`
+  const description = `Departamentos en venta en Equipetrol, Santa Cruz, Bolivia. ${seo.totalPropiedades} unidades activas. Precio mediano del m²: ${fmtSEO(seo.medianaPrecioM2)} USD. Datos actualizados ${fechaCorta}. Fuente: Simon Inteligencia Inmobiliaria.`
+
+  const schemaGraph = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': 'https://simonbo.com/#organization',
+        name: 'Simon — Inteligencia Inmobiliaria',
+        url: 'https://simonbo.com',
+        description: 'Plataforma de inteligencia de mercado inmobiliario en Equipetrol, Santa Cruz de la Sierra, Bolivia.',
+      },
+      {
+        '@type': 'WebSite',
+        '@id': 'https://simonbo.com/#website',
+        name: 'Simon',
+        url: 'https://simonbo.com',
+        publisher: { '@id': 'https://simonbo.com/#organization' },
+      },
+      {
+        '@type': 'RealEstateListing',
+        '@id': url,
+        url,
+        name: title,
+        description,
+        isPartOf: { '@id': 'https://simonbo.com/#website' },
+        provider: { '@id': 'https://simonbo.com/#organization' },
+        dateModified: seo.generatedAt,
+        inLanguage: 'es',
+        about: {
+          '@type': 'Place',
+          name: 'Equipetrol, Santa Cruz de la Sierra, Bolivia',
+          geo: { '@type': 'GeoCoordinates', latitude: -17.764, longitude: -63.197 },
+        },
+        breadcrumb: { '@id': `${url}#breadcrumb` },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${url}#breadcrumb`,
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Simon', item: 'https://simonbo.com' },
+          { '@type': 'ListItem', position: 2, name: 'Departamentos en Venta', item: url },
+        ],
+      },
+      {
+        '@type': 'Dataset',
+        '@id': `${url}#dataset`,
+        name: `Departamentos en venta en Equipetrol — ${mesAnio}`,
+        description: `${seo.totalPropiedades} departamentos en venta en Equipetrol. Precio mediano del m²: ${fmtSEO(seo.medianaPrecioM2)} USD. Cobertura: 5 zonas. Fuentes: Century 21, Remax, Bien Inmuebles.`,
+        url,
+        license: 'https://creativecommons.org/licenses/by/4.0/',
+        creator: { '@id': 'https://simonbo.com/#organization' },
+        dateModified: seo.generatedAt,
+        temporalCoverage: seo.fechaActualizacion,
+        spatialCoverage: {
+          '@type': 'Place',
+          name: 'Equipetrol, Santa Cruz de la Sierra, Bolivia',
+          geo: { '@type': 'GeoShape', box: '-17.78 -63.22 -17.75 -63.17' },
+        },
+        variableMeasured: [
+          { '@type': 'PropertyValue', name: 'Precio mediano por metro cuadrado', value: seo.medianaPrecioM2, unitText: 'USD/m2' },
+          { '@type': 'PropertyValue', name: 'Departamentos en venta', value: seo.totalPropiedades, unitText: 'unidades' },
+          { '@type': 'PropertyValue', name: 'Actividad de mercado mensual', value: seo.absorcionPct, unitText: 'porcentaje' },
+          ...seo.tipologias.map(t => ({
+            '@type': 'PropertyValue',
+            name: `Precio mediano ${DORM_LABELS_SEO[t.dormitorios] || t.dormitorios + 'D'}`,
+            value: t.precioMediano,
+            unitText: 'USD',
+          })),
+          ...seo.zonas.map(z => ({
+            '@type': 'PropertyValue',
+            name: `Precio m² en ${z.zonaDisplay}`,
+            value: z.medianaPrecioM2,
+            unitText: 'USD/m2',
+          })),
+        ],
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': `${url}#faq`,
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: 'Cuantos departamentos hay en venta en Equipetrol?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `En ${mesAnio} hay ${seo.totalPropiedades} departamentos en venta en Equipetrol, Santa Cruz de la Sierra, Bolivia. Datos actualizados diariamente. Fuente: Simon Inteligencia Inmobiliaria (simonbo.com/ventas).`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Cuanto cuesta un departamento en Equipetrol, Santa Cruz?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: seo.tipologias.map(t =>
+                `${DORM_LABELS_SEO[t.dormitorios] || t.dormitorios + 'D'}: ${fmtSEO(t.precioMediano)} USD mediano (rango ${fmtSEO(t.precioP25)}–${fmtSEO(t.precioP75)}), ${t.unidades} unidades.`
+              ).join(' ') + ` Datos de ${mesAnio}. Fuente: simonbo.com/ventas.`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Cual es el precio del metro cuadrado en Equipetrol?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `El precio mediano del m² en Equipetrol es ${fmtSEO(seo.medianaPrecioM2)} USD (${mesAnio}). Por zona: ${seo.zonas.map(z => `${z.zonaDisplay}: ${fmtSEO(z.medianaPrecioM2)}/m²`).join(', ')}. Fuente: simonbo.com/ventas.`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Donde puedo ver departamentos en venta en Equipetrol con precios reales?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `Simon (simonbo.com/ventas) muestra ${seo.totalPropiedades} departamentos en venta en Equipetrol con precios verificados y actualizados diariamente desde Century 21, Remax y Bien Inmuebles. Incluye filtros por zona, dormitorios, precio y estado de entrega.`,
+            },
+          },
+        ],
+      },
+    ],
+  }
+
+  return (
+    <Head>
+      <title>{title}</title>
+      <meta name="description" content={description} />
+      <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta name="theme-color" content="#0a0a0a" />
+      <link rel="canonical" href={url} />
+
+      <meta property="og:title" content={title} />
+      <meta property="og:description" content={description} />
+      <meta property="og:type" content="website" />
+      <meta property="og:url" content={url} />
+      <meta property="og:site_name" content="Simon — Inteligencia Inmobiliaria" />
+      <meta property="og:locale" content="es_BO" />
+
+      <meta name="twitter:card" content="summary" />
+      <meta name="twitter:title" content={title} />
+      <meta name="twitter:description" content={description} />
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaGraph) }}
+      />
+    </Head>
+  )
+}
+
+// ===== getStaticProps — SEO data =====
+export const getStaticProps: GetStaticProps<{ seo: VentasSEO }> = async () => {
+  const data = await fetchMercadoData()
+  return {
+    props: {
+      seo: {
+        totalPropiedades: data.kpis.totalPropiedades,
+        medianaPrecioM2: data.kpis.medianaPrecioM2,
+        absorcionPct: data.kpis.absorcionPct,
+        fechaActualizacion: data.kpis.fechaActualizacion,
+        generatedAt: data.generatedAt,
+        tipologias: data.tipologias.map(t => ({
+          dormitorios: t.dormitorios,
+          unidades: t.unidades,
+          precioMediano: t.precioMediano,
+          precioP25: t.precioP25,
+          precioP75: t.precioP75,
+        })),
+        zonas: data.zonas.map(z => ({
+          zonaDisplay: z.zonaDisplay,
+          unidades: z.unidades,
+          medianaPrecioM2: z.medianaPrecioM2,
+        })),
+      },
+    },
+    revalidate: 21600, // 6 hours
+  }
 }
