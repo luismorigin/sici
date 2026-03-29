@@ -26,6 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       fuente,
       preguntas,
       debug,
+      sid,
     } = req.query
 
     if (!phone || typeof phone !== 'string') {
@@ -53,23 +54,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const precioNum = precio ? parseFloat(precio as string) : NaN
     const dormsNum = dorms ? parseInt(dorms as string, 10) : NaN
 
-    // Insert lead (fire and forget — don't block the redirect)
+    // Insert lead with server-side dedup (skip if same prop+phone in last 30s)
     if (supabaseUrl && supabaseAnonKey) {
       const supabase = createClient(supabaseUrl, supabaseAnonKey)
-      supabase.from('leads_alquiler').insert({
-        propiedad_id: !isNaN(propIdNum) && propIdNum > 0 ? propIdNum : null,
-        nombre_propiedad: typeof nombre === 'string' ? nombre.slice(0, 200) : null,
-        zona: typeof zona === 'string' ? zona.slice(0, 100) : null,
-        precio_bob: !isNaN(precioNum) && precioNum > 0 && precioNum < 1_000_000 ? precioNum : null,
-        dormitorios: !isNaN(dormsNum) && dormsNum >= 0 && dormsNum <= 10 ? dormsNum : null,
-        broker_telefono: finalPhone,
-        broker_nombre: typeof broker_nombre === 'string' ? broker_nombre.slice(0, 200) : null,
-        fuente: typeof fuente === 'string' ? fuente.slice(0, 50) : 'card',
-        preguntas_enviadas: preguntasArr.length > 0 ? preguntasArr : null,
-        es_test: debug === '1',
-      }).then(({ error }) => {
-        if (error) console.error('Error registrando lead alquiler:', error)
-      })
+      const safePropId = !isNaN(propIdNum) && propIdNum > 0 ? propIdNum : null
+
+      // Check for recent duplicate (fire and forget — don't block redirect)
+      const insertLead = async () => {
+        try {
+          if (safePropId) {
+            const { data: recent } = await supabase
+              .from('leads_alquiler')
+              .select('id')
+              .eq('propiedad_id', safePropId)
+              .eq('broker_telefono', finalPhone)
+              .gte('created_at', new Date(Date.now() - 30_000).toISOString())
+              .limit(1)
+            if (recent && recent.length > 0) return // duplicate, skip
+          }
+          const { error } = await supabase.from('leads_alquiler').insert({
+            propiedad_id: safePropId,
+            nombre_propiedad: typeof nombre === 'string' ? nombre.slice(0, 200) : null,
+            zona: typeof zona === 'string' ? zona.slice(0, 100) : null,
+            precio_bob: !isNaN(precioNum) && precioNum > 0 && precioNum < 1_000_000 ? precioNum : null,
+            dormitorios: !isNaN(dormsNum) && dormsNum >= 0 && dormsNum <= 10 ? dormsNum : null,
+            broker_telefono: finalPhone,
+            broker_nombre: typeof broker_nombre === 'string' ? broker_nombre.slice(0, 200) : null,
+            fuente: typeof fuente === 'string' ? fuente.slice(0, 50) : 'card',
+            preguntas_enviadas: preguntasArr.length > 0 ? preguntasArr : null,
+            es_test: debug === '1',
+            session_id: typeof sid === 'string' && sid.length <= 50 ? sid : null,
+          })
+          if (error) console.error('Error registrando lead alquiler:', error)
+        } catch (err) {
+          console.error('Error en dedup lead:', err)
+        }
+      }
+      insertLead()
     }
 
     // Redirect to WhatsApp
