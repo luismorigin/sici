@@ -66,6 +66,7 @@ Desde migración 184, los nombres en BD son los nombres display definitivos (ya 
 | Sirari | `Sirari` | Sirari |
 | Villa Brigida | `Villa Brigida` | V. Brigida |
 | Equipetrol Oeste | `Equipetrol Oeste` | Eq. Oeste |
+| Eq. 3er Anillo | `Eq. 3er Anillo` | Eq. 3er Anillo |
 
 Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 
@@ -243,7 +244,7 @@ simon-mvp/src/
 ├── pages/admin/                   → Paginas admin (orquestadores delgados post-refactor)
 ├── pages/api/                     → API routes
 ├── components/                    → landing-premium/, alquiler/, broker/, filters-premium/, results-premium/, mercado/
-└── _archive/                      → Legacy v1 (excluido de build via tsconfig.json, redirects 301)
+└── styles/                        → globals.css, premium-theme.ts
 ```
 
 ### Patron arquitectonico (paginas admin)
@@ -323,4 +324,4 @@ SELECT COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL) as matched,
 ## Repo Legacy
 
 - `sici-matching/` — funciones SQL que apuntan a tabla deprecada. **NO USAR.**
-- `simon-mvp/src/_archive/` — 12 paginas v1 + componentes huerfanos. Excluidos de build via `tsconfig.json`. Redirects 301 en `next.config.js`.
+- `simon-mvp/src/_archive/` — eliminado en refactor S1. Redirects 301 se mantienen en `next.config.js`.
