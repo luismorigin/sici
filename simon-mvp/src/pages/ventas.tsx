@@ -248,19 +248,32 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
 }
 
 // ===== Desktop VentaCard =====
-function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails }: {
-  property: UnidadVenta; isFavorite: boolean
+function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst }: {
+  property: UnidadVenta; isFavorite: boolean; isFirst?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = p.fotos_urls?.length > 0 ? p.fotos_urls : []
   const hasPhotos = photos.length > 0
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(!!isFirst)
+
+  useEffect(() => {
+    if (isFirst) return
+    const el = cardRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setVisible(true); obs.disconnect() }
+    }, { rootMargin: '300px' })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [isFirst])
   const amenities = p.amenities_confirmados || []
   const equipamiento = p.equipamiento_detectado || []
 
   return (
-    <div className="vc">
-      <div className="vc-photo" style={hasPhotos ? { backgroundImage: `url('${photos[photoIdx]}')`, cursor: 'pointer' } : undefined}
+    <div className="vc" ref={cardRef}>
+      <div className="vc-photo" style={hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')`, cursor: 'pointer' } : undefined}
         onClick={() => { if (hasPhotos) onPhotoTap(photoIdx) }}>
         {!hasPhotos && <div className="vc-nofoto">Sin fotos</div>}
         {photos.length > 1 && (<>
@@ -316,14 +329,28 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
 }
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
-function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight }: {
-  property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean
+function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst }: {
+  property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean; isFirst?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = p.fotos_urls?.length > 0 ? p.fotos_urls : []
   const amenities = p.amenities_confirmados || []
+  const zoneRef = useRef<HTMLDivElement>(null)
+  const [maxLoaded, setMaxLoaded] = useState(isFirst ? 2 : 0)
+
+  // Lazy: only start loading when card enters viewport
+  useEffect(() => {
+    if (isFirst) return
+    const el = zoneRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setMaxLoaded(2); obs.disconnect() }
+    }, { rootMargin: '200px' })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [isFirst])
 
   // Track swipe position for dots
   useEffect(() => {
@@ -337,6 +364,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
         if (!el) { ticking = false; return }
         const idx = Math.round(el.scrollLeft / el.clientWidth)
         setPhotoIdx(idx)
+        setMaxLoaded(prev => Math.max(prev, idx + 2))
         ticking = false
       })
     }
@@ -347,12 +375,21 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
   return (
     <div className="mc">
       {/* Photo carousel zone (55%) */}
-      <div className="mc-photo-zone">
+      <div className="mc-photo-zone" ref={zoneRef}>
         <div className="mc-photo-scroll" ref={scrollRef}>
-          {photos.length > 0 ? photos.map((url, i) => (
-            <div key={i} className="mc-slide" style={{ backgroundImage: `url('${url}')`, cursor: 'pointer' }}
-              onClick={() => onPhotoTap(i)} />
-          )) : (
+          {photos.length > 0 ? photos.map((url, i) => {
+            const shouldLoad = i < maxLoaded
+            const useRealImg = isFirst && i === 0 && url
+            return (
+            <div key={i} className="mc-slide" style={!useRealImg ? (shouldLoad && url ? { backgroundImage: `url('${url}')`, cursor: 'pointer' } : { cursor: 'pointer' }) : { cursor: 'pointer' }}
+              onClick={() => onPhotoTap(i)}>
+              {useRealImg && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={url} alt="" fetchPriority="high" draggable={false} className="mc-slide-img" />
+              )}
+            </div>
+            )
+          }) : (
             <div className="mc-slide mc-slide-empty" />
           )}
         </div>
@@ -868,6 +905,12 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
   return (
     <>
       <VentasHead seo={seo} />
+      {/* Preload first photo for faster LCP */}
+      {properties.length > 0 && properties[0].fotos_urls?.[0] && (
+        <Head>
+          <link rel="preload" as="image" href={properties[0].fotos_urls[0]} fetchPriority="high" />
+        </Head>
+      )}
 
       <Toast message={toastMsg} visible={toastVisible} />
 
@@ -931,8 +974,8 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
             )}
             {properties.length > 0 && viewMode === 'grid' && (
               <div className="ventas-grid">
-                {(spotlightProperty ? properties.filter(p => p.id !== spotlightId) : properties).map(p => (
-                  <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
+                {(spotlightProperty ? properties.filter(p => p.id !== spotlightId) : properties).map((p, idx) => (
+                  <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)} isFirst={idx === 0}
                     onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
                     onPhotoTap={(idx) => openViewer(p, idx)} onDetails={() => openSheet(p)} />
                 ))}
@@ -1012,7 +1055,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
               }
               const p = item.data
               return <MobileVentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
-                isSpotlight={item.isSpotlight}
+                isSpotlight={item.isSpotlight} isFirst={idx === 0}
                 onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
                 onPhotoTap={(idx) => openViewer(p, idx)} onDetails={() => openSheet(p)} />
             })}
@@ -1086,7 +1129,8 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .mc-photo-zone { flex:0 0 55%; position:relative; overflow:hidden }
         .mc-photo-scroll { display:flex; height:100%; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none }
         .mc-photo-scroll::-webkit-scrollbar { display:none }
-        .mc-slide { flex:0 0 100%; height:100%; background-size:cover; background-position:center; background-color:#1a1a1a; scroll-snap-align:start }
+        .mc-slide { flex:0 0 100%; height:100%; background-size:cover; background-position:center; background-color:#1a1a1a; scroll-snap-align:start; position:relative; overflow:hidden }
+        .mc-slide-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; pointer-events:none }
         .mc-slide-empty { background:#111 }
         .mc-photo-fade { position:absolute; bottom:0; left:0; right:0; height:80px; background:linear-gradient(transparent, #0a0a0a); pointer-events:none; z-index:2 }
         .mc-photo-count { position:absolute; top:max(60px, calc(env(safe-area-inset-top) + 52px)); right:16px; z-index:5; background:rgba(10,10,10,0.7); padding:4px 12px; border-radius:100px; font-size:12px; color:rgba(255,255,255,0.8); font-family:'Manrope',sans-serif }
