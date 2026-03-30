@@ -7,6 +7,12 @@ export default function Document() {
       <Head>
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://www.clarity.ms" />
+        {/* Preconnect image CDNs for faster LCP */}
+        <link rel="preconnect" href="https://cdn.21online.lat" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://intramax.bo" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://www.bieninmuebles.com.bo" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://o.clarity.ms" />
+        <link rel="dns-prefetch" href="https://connect.facebook.net" />
         <meta name="theme-color" content="#0a0a0a" />
       </Head>
       <body className="bg-white text-neutral-900">
