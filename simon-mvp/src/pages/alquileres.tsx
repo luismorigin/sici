@@ -627,7 +627,7 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
       {/* Preload first photo for faster LCP */}
       {!loading && properties.length > 0 && properties[0].fotos_urls?.[0] && (
         <Head>
-          <link rel="preload" as="image" href={properties[0].fotos_urls[0]} />
+          <link rel="preload" as="image" href={properties[0].fotos_urls[0]} fetchPriority="high" />
         </Head>
       )}
 
@@ -820,6 +820,7 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
                           isFavorite={favorites.has(p.id)}
                           favoritesCount={favorites.size}
                           petFilterActive={filters.acepta_mascotas}
+                          isFirst={idx === 0}
                           onToggleFavorite={() => toggleFavorite(p.id)}
                           onOpenInfo={() => openDetail(p)}
                           onPhotoTap={(photoIdx) => openViewer(p, photoIdx)}
@@ -1743,12 +1744,29 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
 }
 
 // ===== DESKTOP CARD =====
-function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare }: {
+function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare, isFirst }: {
   property: UnidadAlquiler; isFavorite: boolean; favoritesCount: number; petFilterActive?: boolean
-  onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void
+  onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void; isFirst?: boolean
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = (p.fotos_urls?.length ?? 0) > 0 ? p.fotos_urls : ['']
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(!!isFirst)
+
+  // Lazy load: only render image when card enters viewport
+  useEffect(() => {
+    if (isFirst) return
+    const el = cardRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisible(true)
+        obs.disconnect()
+      }
+    }, { rootMargin: '300px' })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [isFirst])
   const displayName = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
 
   const badges: Array<{ text: string; color: string }> = []
@@ -1767,9 +1785,9 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
   }
 
   return (
-    <div className={`dc-card${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}`}>
+    <div className={`dc-card${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}`} ref={cardRef}>
       {/* Photo */}
-      <div className="dc-photo" style={{ ...(photos[photoIdx] ? { backgroundImage: `url('${photos[photoIdx]}')` } : { background: '#D8D0BC' }), cursor: photos[photoIdx] ? 'pointer' : undefined }} onClick={() => { if (photos[photoIdx] && onPhotoTap) onPhotoTap(photoIdx) }}>
+      <div className="dc-photo" style={{ ...(visible && photos[photoIdx] ? { backgroundImage: `url('${photos[photoIdx]}')` } : { background: '#D8D0BC' }), cursor: photos[photoIdx] ? 'pointer' : undefined }} onClick={() => { if (photos[photoIdx] && onPhotoTap) onPhotoTap(photoIdx) }}>
         {photos.length > 1 && (
           <>
             {photoIdx > 0 && (
@@ -1990,6 +2008,24 @@ function PhotoCarousel({ photos, isFirst, onPhotoTap }: { photos: string[]; isFi
   const scrollRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
   const total = photos.length || 1
+  // Only load current slide + 1 neighbor to save bandwidth
+  const [maxLoaded, setMaxLoaded] = useState(isFirst ? 2 : 0)
+  const zoneRef = useRef<HTMLDivElement>(null)
+
+  // Lazy: only start loading when card enters viewport
+  useEffect(() => {
+    if (isFirst) return // first card loads immediately
+    const el = zoneRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setMaxLoaded(2)
+        obs.disconnect()
+      }
+    }, { rootMargin: '200px' })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [isFirst])
 
   // Detect current slide via scroll position
   useEffect(() => {
@@ -2003,6 +2039,8 @@ function PhotoCarousel({ photos, isFirst, onPhotoTap }: { photos: string[]; isFi
         if (!el) return
         const idx = Math.round(el.scrollLeft / el.offsetWidth)
         setCurrentIdx(idx)
+        // Preload next slide
+        setMaxLoaded(prev => Math.max(prev, idx + 2))
         ticking = false
       })
     }
@@ -2011,15 +2049,31 @@ function PhotoCarousel({ photos, isFirst, onPhotoTap }: { photos: string[]; isFi
   }, [])
 
   return (
-    <div className="pc-zone">
+    <div className="pc-zone" ref={zoneRef}>
       <div className="pc-scroll" ref={scrollRef}>
-        {(photos.length > 0 ? photos : ['']).map((url, i) => (
-          <div key={i} className="pc-slide" style={url ? { backgroundImage: `url('${url}')` } : { background: '#D8D0BC' }}
+        {(photos.length > 0 ? photos : ['']).map((url, i) => {
+          const shouldLoad = i < maxLoaded
+          const useRealImg = isFirst && i === 0 && url
+          return (
+          <div key={i} className="pc-slide" style={!useRealImg ? (shouldLoad && url ? { backgroundImage: `url('${url}')` } : { background: '#D8D0BC' }) : { background: '#D8D0BC' }}
             onTouchStart={() => { isDragging.current = false }}
             onTouchMove={() => { isDragging.current = true }}
             onClick={() => { if (!isDragging.current && onPhotoTap && url) onPhotoTap(currentIdx) }}
-          />
-        ))}
+          >
+            {/* First photo of first card uses real <img> for LCP priority */}
+            {useRealImg && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={url}
+                alt=""
+                fetchPriority="high"
+                draggable={false}
+                className="pc-slide-img"
+              />
+            )}
+          </div>
+          )
+        })}
       </div>
       <div className="pc-counter">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{width:14,height:14,opacity:0.7}}>
@@ -2045,7 +2099,8 @@ function PhotoCarousel({ photos, isFirst, onPhotoTap }: { photos: string[]; isFi
         .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 24px; background: linear-gradient(transparent, #EDE8DC); pointer-events: none; z-index: 2; }
         .pc-scroll { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .pc-scroll::-webkit-scrollbar { display: none; }
-        .pc-slide { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #D8D0BC; scroll-snap-align: start; animation: imgShimmer 1.5s ease-in-out infinite; }
+        .pc-slide { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #D8D0BC; scroll-snap-align: start; animation: imgShimmer 1.5s ease-in-out infinite; position: relative; overflow: hidden; }
+        .pc-slide-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; pointer-events: none; }
         @keyframes imgShimmer { 0%,100%{background-color:#D8D0BC} 50%{background-color:#EDE8DC} }
         .pc-counter { position: absolute; bottom: 36px; right: 16px; z-index: 5; background: rgba(20,20,20,0.75); padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 5px; font-family: 'DM Sans', sans-serif; }
         .pc-dots { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 5; }
