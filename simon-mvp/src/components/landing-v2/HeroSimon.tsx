@@ -11,7 +11,7 @@ export default function HeroSimon() {
           alt="Skyline de Equipetrol"
           fill
           priority
-          className="object-cover object-center"
+          className="object-cover object-center hidden md:block"
         />
         {/* Arena overlay gradient left-to-right */}
         {/* Desktop: left-to-right reveal */}
