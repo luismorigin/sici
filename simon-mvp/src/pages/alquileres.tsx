@@ -630,16 +630,6 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
           <link rel="preload" as="image" href={properties[0].fotos_urls[0]} fetchPriority="high" />
         </Head>
       )}
-      {/* Hidden img forces browser to discover LCP image early */}
-      {!loading && properties.length > 0 && properties[0].fotos_urls?.[0] && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={properties[0].fotos_urls[0]}
-          alt=""
-          fetchPriority="high"
-          style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }}
-        />
-      )}
 
       <style jsx global>{`
         body { background: #EDE8DC; }
@@ -2063,12 +2053,25 @@ function PhotoCarousel({ photos, isFirst, onPhotoTap }: { photos: string[]; isFi
       <div className="pc-scroll" ref={scrollRef}>
         {(photos.length > 0 ? photos : ['']).map((url, i) => {
           const shouldLoad = i < maxLoaded
+          const useRealImg = isFirst && i === 0 && url
           return (
-          <div key={i} className="pc-slide" style={shouldLoad && url ? { backgroundImage: `url('${url}')` } : { background: '#D8D0BC' }}
+          <div key={i} className="pc-slide" style={!useRealImg ? (shouldLoad && url ? { backgroundImage: `url('${url}')` } : { background: '#D8D0BC' }) : { background: '#D8D0BC' }}
             onTouchStart={() => { isDragging.current = false }}
             onTouchMove={() => { isDragging.current = true }}
             onClick={() => { if (!isDragging.current && onPhotoTap && url) onPhotoTap(currentIdx) }}
-          />
+          >
+            {/* First photo of first card uses real <img> for LCP priority */}
+            {useRealImg && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={url}
+                alt=""
+                fetchPriority="high"
+                draggable={false}
+                className="pc-slide-img"
+              />
+            )}
+          </div>
           )
         })}
       </div>
@@ -2096,7 +2099,8 @@ function PhotoCarousel({ photos, isFirst, onPhotoTap }: { photos: string[]; isFi
         .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 24px; background: linear-gradient(transparent, #EDE8DC); pointer-events: none; z-index: 2; }
         .pc-scroll { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .pc-scroll::-webkit-scrollbar { display: none; }
-        .pc-slide { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #D8D0BC; scroll-snap-align: start; animation: imgShimmer 1.5s ease-in-out infinite; }
+        .pc-slide { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #D8D0BC; scroll-snap-align: start; animation: imgShimmer 1.5s ease-in-out infinite; position: relative; overflow: hidden; }
+        .pc-slide-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; pointer-events: none; }
         @keyframes imgShimmer { 0%,100%{background-color:#D8D0BC} 50%{background-color:#EDE8DC} }
         .pc-counter { position: absolute; bottom: 36px; right: 16px; z-index: 5; background: rgba(20,20,20,0.75); padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 5px; font-family: 'DM Sans', sans-serif; }
         .pc-dots { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 5; }
