@@ -113,12 +113,15 @@ export default function App({ Component, pageProps, router }: AppProps) {
               t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
               (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
               fbq('init', '934634159284471');
+              fbq('init', '1353819603435799');
               fbq('track', 'PageView');
             `}
           </Script>
           <noscript>
             <img height="1" width="1" style={{display:'none'}}
               src="https://www.facebook.com/tr?id=934634159284471&ev=PageView&noscript=1" />
+            <img height="1" width="1" style={{display:'none'}}
+              src="https://www.facebook.com/tr?id=1353819603435799&ev=PageView&noscript=1" />
           </noscript>
         </>
       )}

@@ -2,10 +2,15 @@
 
 ## Configuracion
 
-- **Pixel ID:** `934634159284471`
-- **Instalacion:** `_app.tsx` via `next/script` con `strategy="lazyOnload"`
+- **Pixel 1 (original):** `934634159284471` — Business Manager principal (analytics/audiencias)
+- **Pixel 2 (Ads):** `1353819603435799` — "Simon Pixel Ads", vinculado a la cuenta publicitaria
+- **Instalacion:** `_app.tsx` via `next/script` con `strategy="lazyOnload"`. Ambos pixels comparten el mismo snippet fbq (doble `fbq('init', ...)`)
 - **Scope:** Solo rutas publicas (excluye `/admin/*`, `/broker/*`, y modo debug)
-- **Helper:** `fbqTrack()` en `lib/meta-pixel.ts` — unico punto de disparo
+- **Helper:** `fbqTrack()` en `lib/meta-pixel.ts` — unico punto de disparo. Dispara a AMBOS pixels automaticamente (fbq envia a todos los pixels inicializados)
+
+### Por que 2 pixels
+
+El pixel original (`934634159284471`) esta en un Business Manager distinto al de la cuenta publicitaria que corre las campanas. Meta requiere que el pixel pertenezca al mismo Business Manager de la cuenta de ads para optimizar campanas (Advantage+, conversiones, audiencias lookalike). El segundo pixel (`1353819603435799`) esta en el Business Manager correcto para ads.
 
 ## Eventos implementados
 
