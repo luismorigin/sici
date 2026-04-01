@@ -43,9 +43,7 @@ FEED VERTICAL (100dvh por card, scroll-snap = TikTok)
 │   ├── Acciones: [❤️ Fav] [🔗 Compartir] [▾ Ver mas]
 │   └── [███ Consultar por WhatsApp ███] (margin-top:auto, siempre visible)
 │
-├── TAP en foto → BottomSheet (NO PhotoViewer en mobile)
-│
-├── TAP "Ver mas" → BottomSheet (80vh, sube desde abajo)
+├── TAP en foto o "Ver mas" → BottomSheet (80vh, sube desde abajo)
 │   ├── Handle visible (48px, rgba(154,142,122,0.5)) — swipe down para cerrar
 │   ├── Header negro: nombre, precio, zona, días + [❤️ Fav] [✕ Cerrar]
 │   ├── WhatsApp CTA + [🔗 Compartir]
@@ -56,14 +54,40 @@ FEED VERTICAL (100dvh por card, scroll-snap = TikTok)
 │   ├── Google Maps link
 │   └── Ver anuncio original (con gate)
 │
-├── PhotoViewer (solo desktop, tap en foto)
-│   ├── X y counter SIEMPRE visibles (posición absoluta independiente)
-│   ├── Flechas + caption auto-hide 3s
-│   └── Mobile: SIN flechas (display:none <768px)
-│
 ├── Mapa: pins con clustering (leaflet.markercluster, zoom to expand)
 │
 └── Scroll vertical → siguiente propiedad
+```
+
+## Flujo desktop (post-fix, 1 abril 2026)
+
+```
+LAYOUT 2 COLUMNAS (sidebar 320px + main area)
+│
+├── SIDEBAR IZQUIERDO (320px)
+│   ├── Filtros (precio, dormitorios, zona, amoblado, mascotas, parqueo)
+│   ├── Contador favoritos
+│   └── Botón comparar
+│
+├── MAIN AREA → Grid o Mapa (toggle)
+│   ├── GRID: cards con foto 220px + contenido
+│   │   ├── Foto con overlay: [❤️ Fav] [🔗 Share]
+│   │   ├── Nombre, zona, precio, specs, badges
+│   │   ├── [Ver detalles] + [WhatsApp CTA]
+│   │   └── TAP en foto o "Ver detalles" → BottomSheet (sidebar derecho 480px)
+│   │
+│   └── MAPA: pins con clustering + card flotante al seleccionar
+│
+├── BottomSheet desktop (sidebar derecho, 480px, 100vh)
+│   ├── Header negro + [❤️ Fav] [✕ Cerrar]
+│   ├── WhatsApp CTA + [🔗 Compartir]
+│   ├── Galería fotos con flechas ← → (display:flex en 768px+)
+│   ├── Grid características, amenidades
+│   ├── "Sobre esta propiedad" (colapsable)
+│   ├── Google Maps link
+│   └── Ver anuncio original (con gate)
+│
+└── PhotoViewer: NO SE USA (eliminado en favor de BottomSheet)
 ```
 
 ---
