@@ -1983,13 +1983,13 @@ function MobilePropertyCard({
         .mc-badge.green { background: #3A6A48; color: #EDE8DC; border-color: #3A6A48; box-shadow: none; }
         .mc-badge.warn { border-color: #3A3530; color: #3A3530; background: rgba(58,53,48,0.04); font-weight: 600; box-shadow: none; }
         .alq-card.pet-confirmed { border-left: 3px solid rgba(168,85,247,0.4); }
-        .mc-razon { font-size: 12px; font-weight: 300; color: #7A7060; line-height: 1.5; margin-bottom: auto; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .mc-razon { font-size: 12px; font-weight: 300; color: #7A7060; line-height: 1.5; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; flex-shrink: 1; }
         .mc-actions { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid #D8D0BC; margin-top: 8px; }
         .mc-btn { display: flex; align-items: center; justify-content: center; gap: 5px; background: none; border: none; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
         .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
         .mc-btn.mc-share { color: #7A7060; }
         .mc-btn.mc-info { color: #4A4438; font-size: 12px; letter-spacing: 0.5px; background: rgba(216,208,188,0.45); border-radius: 20px; padding: 8px 14px; font-weight: 500; }
-        .mc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: #1EA952; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: 8px; min-height: 44px; transition: opacity 0.2s; }
+        .mc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: #1EA952; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: auto; min-height: 44px; transition: opacity 0.2s; flex-shrink: 0; }
         .mc-wsp-cta:active { opacity: 0.85; }
         .mc-btn.shake { animation: mcShake 0.3s ease; }
         @keyframes mcShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
@@ -2099,7 +2099,7 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap }: { photos: stri
         </div>
       )}
       <style jsx>{`
-        .pc-zone { flex: 0 0 55%; position: relative; overflow: hidden; }
+        .pc-zone { flex: 0 0 50%; position: relative; overflow: hidden; }
         .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 24px; background: linear-gradient(transparent, #EDE8DC); pointer-events: none; z-index: 2; }
         .pc-scroll { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .pc-scroll::-webkit-scrollbar { display: none; }
