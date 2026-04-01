@@ -1,8 +1,10 @@
 # Auditoría UX/UI Mobile — /alquileres
 
-> Fecha: 1 abril 2026
+> Fecha auditoría: 1 abril 2026
+> Fecha implementación: 1 abril 2026
 > Fuentes: GA4 (31 mar), revisión de código (`alquileres.tsx`, `PhotoViewer.tsx`), inspección visual desktop
 > Autor: Auditoría automatizada desde simon-mkt
+> Estado: **TODOS LOS FIXES IMPLEMENTADOS** (branch `fix/ux-mobile-alquileres`, merged a main)
 
 ---
 
@@ -23,36 +25,43 @@ El embudo está roto entre **ver propiedad → abrir detalle → WhatsApp**.
 
 ---
 
-## Flujo actual mobile
+## Flujo mobile (post-fix, 1 abril 2026)
 
 ```
 FEED VERTICAL (100dvh por card, scroll-snap = TikTok)
 │
-├── ZONA FOTOS (55% alto) ─── PhotoCarousel
+├── ZONA FOTOS (50% alto) ─── PhotoCarousel
 │   ├── Swipe horizontal → pasa fotos (scroll-snap CSS nativo)
 │   ├── Dots indicadores (max 8, 6px)
 │   ├── Counter "1/7" (pill abajo derecha)
-│   └── Hint "Desliza para mas fotos" (solo card 1, fade 3s)
+│   └── Hint "Desliza para mas fotos" (primeras 3 cards, fade 3s)
 │
-├── ZONA INFO (45% alto) ─── mc-content
+├── ZONA INFO (50% alto) ─── mc-content
 │   ├── Nombre → Zona → Precio (28px) → Specs → Badges (max 4)
-│   ├── Descripción (italic, 2 líneas)
+│   ├── Descripción (italic, 1 línea)
 │   ├── ─── border-top ───
-│   ├── Acciones: [❤️ Fav] [⬆️ Share] [ⓘ Detalles]
-│   └── [███ Consultar por WhatsApp ███]
+│   ├── Acciones: [❤️ Fav] [🔗 Compartir] [▾ Ver mas]
+│   └── [███ Consultar por WhatsApp ███] (margin-top:auto, siempre visible)
 │
-├── TAP en foto → PhotoViewer (fullscreen)
-│   ├── Controles auto-hide 3s (PhotoViewer.tsx:48)
-│   ├── Mobile: SIN flechas (display:none <768px, línea 172-184)
-│   ├── Solo swipe horizontal + tap para toggle controles
-│   └── Escape o X (invisible por defecto) para cerrar
+├── TAP en foto → BottomSheet (NO PhotoViewer en mobile)
 │
-├── TAP "Detalles" → BottomSheet (80vh, sube desde abajo)
-│   ├── Header negro: nombre, precio, zona, días
-│   ├── WhatsApp CTA
+├── TAP "Ver mas" → BottomSheet (80vh, sube desde abajo)
+│   ├── Handle visible (48px, rgba(154,142,122,0.5)) — swipe down para cerrar
+│   ├── Header negro: nombre, precio, zona, días + [❤️ Fav] [✕ Cerrar]
+│   ├── WhatsApp CTA + [🔗 Compartir]
+│   ├── Galería fotos horizontal (scroll-snap, counter, dots)
 │   ├── Grid características (3 cols)
-│   ├── Amenidades, Google Maps, Ver anuncio original (con gate)
-│   └── **NO incluye fotos**
+│   ├── Amenidades
+│   ├── "Sobre esta propiedad" (descripción colapsable, 3 líneas + "Ver mas")
+│   ├── Google Maps link
+│   └── Ver anuncio original (con gate)
+│
+├── PhotoViewer (solo desktop, tap en foto)
+│   ├── X y counter SIEMPRE visibles (posición absoluta independiente)
+│   ├── Flechas + caption auto-hide 3s
+│   └── Mobile: SIN flechas (display:none <768px)
+│
+├── Mapa: pins con clustering (leaflet.markercluster, zoom to expand)
 │
 └── Scroll vertical → siguiente propiedad
 ```
@@ -61,7 +70,7 @@ FEED VERTICAL (100dvh por card, scroll-snap = TikTok)
 
 ## Hallazgos priorizados
 
-### #1 — BottomSheet sin fotos (ALTA prioridad, esfuerzo MEDIO)
+### #1 — ~~BottomSheet sin fotos~~ ✅ IMPLEMENTADO (commit `1e710de`)
 
 **Archivo:** `src/pages/alquileres.tsx`, líneas 2243-2422 (componente `BottomSheet`)
 
@@ -73,7 +82,7 @@ FEED VERTICAL (100dvh por card, scroll-snap = TikTok)
 
 ---
 
-### #2 — Tap en foto abre visor redundante en mobile (ALTA, esfuerzo BAJO)
+### #2 — ~~Tap en foto abre visor redundante en mobile~~ ✅ IMPLEMENTADO (commit `1e710de`)
 
 **Archivo:** `src/pages/alquileres.tsx`, línea 2061 (`onClick` en `PhotoCarousel`)
 **Archivo:** `src/components/alquiler/PhotoViewer.tsx` (componente completo)
@@ -87,7 +96,7 @@ FEED VERTICAL (100dvh por card, scroll-snap = TikTok)
 
 ---
 
-### #3 — Botón "Detalles" con bajo peso visual (MEDIA, esfuerzo BAJO)
+### #3 — ~~Botón "Detalles" con bajo peso visual~~ ✅ IMPLEMENTADO (commit `6da5593`)
 
 **Archivo:** `src/pages/alquileres.tsx`, líneas 1950-1954 (mobile), línea 1835 (desktop)
 
@@ -101,7 +110,7 @@ FEED VERTICAL (100dvh por card, scroll-snap = TikTok)
 
 ---
 
-### #4 — BottomSheet sin gesture dismiss (MEDIA, esfuerzo MEDIO)
+### #4 — ~~BottomSheet sin gesture dismiss~~ ✅ IMPLEMENTADO (commit `3cda2f4`)
 
 **Archivo:** `src/pages/alquileres.tsx`, líneas 2379-2382 (CSS del BottomSheet)
 
@@ -111,7 +120,7 @@ FEED VERTICAL (100dvh por card, scroll-snap = TikTok)
 
 ---
 
-### #5 — PhotoViewer desktop: controles invisibles por defecto (MEDIA, esfuerzo BAJO)
+### #5 — ~~PhotoViewer desktop: controles invisibles por defecto~~ ✅ IMPLEMENTADO (commit `6da5593`)
 
 **Archivo:** `src/components/alquiler/PhotoViewer.tsx`, líneas 44-54
 
@@ -121,7 +130,7 @@ FEED VERTICAL (100dvh por card, scroll-snap = TikTok)
 
 ---
 
-### #6 — Hint de swipe solo en card 1 (BAJA, esfuerzo BAJO)
+### #6 — ~~Hint de swipe solo en card 1~~ ✅ IMPLEMENTADO (commit `6da5593`)
 
 **Archivo:** `src/pages/alquileres.tsx`, líneas 2091-2096
 
@@ -131,7 +140,7 @@ FEED VERTICAL (100dvh por card, scroll-snap = TikTok)
 
 ---
 
-### #7 — Ícono de Share es iOS-style (BAJA, esfuerzo BAJO)
+### #7 — ~~Ícono de Share es iOS-style~~ ✅ IMPLEMENTADO (commit `6da5593`)
 
 **Archivo:** `src/pages/alquileres.tsx`, líneas 1944-1948
 
@@ -176,19 +185,30 @@ El swipe horizontal en la card del feed se mantiene como preview rápido. El Bot
 
 ---
 
-## Plan de implementación
+## Implementación (1 abril 2026)
 
-**Branch:** `fix/ux-mobile-alquileres`
+**Branch:** `fix/ux-mobile-alquileres` (merged a main)
 
-### Fase 1 — Mayor impacto (combo #1 + #2)
-1. Agregar galería de fotos horizontal al top del BottomSheet
-2. En mobile, tap en foto abre BottomSheet en vez de PhotoViewer
+| Commit | Cambio |
+|--------|--------|
+| `1e710de` | Fase 1: Galería fotos en BottomSheet + tap foto abre sheet en mobile |
+| `6da5593` | Fase 2: "Ver mas" con pill, PhotoViewer X/counter permanentes, hint 3 cards, share universal |
+| `3cda2f4` | Fase 3: Gesture dismiss (swipe-down 120px threshold) + handle visible |
+| `6f6bd9f` | Extra: Botón favorito en BottomSheet header |
+| `9e8f511` | Extra: Botón compartir en BottomSheet |
+| `dc17ac9` | Extra: Clustering en mapa (leaflet.markercluster) |
+| `2403e15` | Fix: WhatsApp siempre visible (foto 50%, margin-top:auto, descripción 1 línea) |
+| `1783d24` | Extra: Descripción colapsable "Sobre esta propiedad" en BottomSheet |
 
-### Fase 2 — Quick wins (#3, #5, #6, #7)
-3. Mejorar peso visual del botón Detalles en mobile
-4. Mantener X y counter siempre visibles en PhotoViewer desktop
-5. Mostrar hint de swipe en primeras 3 cards
-6. Agregar label "Compartir" al ícono de share
+### Mejoras adicionales no planificadas
+- Favorito en BottomSheet (corazón junto al X)
+- Compartir en BottomSheet (botón outline debajo del WhatsApp CTA)
+- Clustering en mapa con leaflet.markercluster
+- Descripción colapsable en BottomSheet (3 líneas + "Ver mas")
+- WhatsApp button siempre visible: foto 55%→50%, margin-top:auto, descripción 2→1 línea
 
-### Fase 3 — Esfuerzo medio (#4)
-7. Gesture dismiss (swipe-down) para BottomSheet
+### Pendiente: medir impacto
+Comparar GA4 en 1-2 semanas:
+- `open_detail` / `view_property` → target 40%+ (era 10%)
+- `click_whatsapp` → target >0 (era 0)
+- `bounce_no_action` → target <30% (era 45%)

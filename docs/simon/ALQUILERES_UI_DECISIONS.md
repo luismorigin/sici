@@ -45,7 +45,7 @@
 |----------|-------|--------|
 | Características bottom sheet | SVG línea (Lucide-style) | `stroke: #7A7060`, 20px — área, cama, baño, edificio, auto, caja, sofá, pata, monedas, casa, archivo |
 | Mapa (botón + toggle) | Mapa con pliegues | No pin de ubicación |
-| Detalles (mobile actions) | Info circle (ⓘ) | Diferenciado del mapa |
+| Ver mas (mobile actions) | Chevron down (▾) | Pill con fondo `rgba(216,208,188,0.45)`, color `#4A4438` |
 | Ver anuncio / Google Maps | External link (cuadrado + flecha) | Indica que sale de Simon |
 | Labels de sección | Punto salvia 6px | Antes de CARACTERISTICAS, AMENIDADES, MICROZONA, etc. |
 
