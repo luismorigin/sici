@@ -86,11 +86,9 @@ export default function PhotoViewer({ photos, initialIndex, buildingName, subtit
 
   return (
     <div className="pv-overlay">
-      {/* Controls - top */}
-      <div className={`pv-top ${controlsVisible ? '' : 'hidden'}`}>
-        <button className="pv-close" aria-label="Cerrar visor" onClick={onClose}>&times;</button>
-        <div className="pv-counter">{currentIdx + 1} / {photos.length}</div>
-      </div>
+      {/* Persistent controls — always visible */}
+      <button className="pv-close" aria-label="Cerrar visor" onClick={onClose}>&times;</button>
+      <div className="pv-counter">{currentIdx + 1} / {photos.length}</div>
 
       {/* Photos */}
       <div className="pv-slides" ref={scrollRef} onClick={handleTap}>
@@ -128,20 +126,15 @@ export default function PhotoViewer({ photos, initialIndex, buildingName, subtit
           position: fixed; inset: 0; z-index: 9999; background: #141414;
           display: flex; flex-direction: column;
         }
-        .pv-top {
-          position: absolute; top: 0; left: 0; right: 0; z-index: 2;
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 16px 20px; padding-top: max(16px, env(safe-area-inset-top));
-          transition: opacity 0.2s;
-        }
-        .pv-top.hidden { opacity: 0; pointer-events: none; }
         .pv-close {
+          position: absolute; top: max(16px, env(safe-area-inset-top)); left: 20px; z-index: 3;
           width: 44px; height: 44px; border-radius: 50%;
           background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
           color: #fff; font-size: 22px; cursor: pointer;
           display: flex; align-items: center; justify-content: center;
         }
         .pv-counter {
+          position: absolute; top: max(16px, env(safe-area-inset-top)); right: 20px; z-index: 3;
           background: rgba(20,20,20,0.75); padding: 6px 14px; border-radius: 100px;
           font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.8);
           font-family: 'DM Sans', sans-serif;
@@ -198,7 +191,7 @@ export default function PhotoViewer({ photos, initialIndex, buildingName, subtit
           letter-spacing: 0.3px;
         }
         @media (prefers-reduced-motion: reduce) {
-          .pv-top, .pv-caption, .pv-arrow { transition: none; }
+          .pv-caption, .pv-arrow { transition: none; }
         }
       `}</style>
     </div>

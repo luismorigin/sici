@@ -1052,6 +1052,7 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
                     key={item.data.id}
                     property={item.data}
                     isFirst={idx === 0}
+                    showHint={idx < 3}
                     isFavorite={favorites.has(item.data.id)}
                     favoritesCount={favorites.size}
                     isSpotlight={item.isSpotlight || false}
@@ -1889,9 +1890,9 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
 
 // ===== MOBILE PROPERTY CARD (full-screen) =====
 function MobilePropertyCard({
-  property: p, isFirst, isFavorite, favoritesCount, isSpotlight, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare,
+  property: p, isFirst, showHint, isFavorite, favoritesCount, isSpotlight, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare,
 }: {
-  property: UnidadAlquiler; isFirst: boolean; isFavorite: boolean; favoritesCount: number; isSpotlight: boolean; petFilterActive?: boolean
+  property: UnidadAlquiler; isFirst: boolean; showHint?: boolean; isFavorite: boolean; favoritesCount: number; isSpotlight: boolean; petFilterActive?: boolean
   onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
@@ -1919,7 +1920,7 @@ function MobilePropertyCard({
 
   return (
     <div className={`alq-card${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}`} ref={cardRef}>
-      <PhotoCarousel photos={p.fotos_urls || []} isFirst={isFirst} onPhotoTap={onPhotoTap} />
+      <PhotoCarousel photos={p.fotos_urls || []} isFirst={isFirst} showHint={showHint} onPhotoTap={onPhotoTap} />
       {isSpotlight && (
         <div className="mc-spotlight-badge">Te compartieron este depto</div>
       )}
@@ -1942,15 +1943,15 @@ function MobilePropertyCard({
           </button>
           {onShare && (
             <button className="mc-btn mc-share" aria-label="Compartir por WhatsApp" onClick={onShare}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 20, height: 20 }}>
-                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
-              </svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg> Compartir
             </button>
           )}
           <button className="mc-btn mc-info" onClick={onOpenInfo}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
-            </svg> Detalles
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+              <polyline points="6 9 12 15 18 9"/>
+            </svg> Ver mas
           </button>
         </div>
         {p.agente_whatsapp && (
@@ -1984,7 +1985,7 @@ function MobilePropertyCard({
         .mc-btn { display: flex; align-items: center; justify-content: center; gap: 5px; background: none; border: none; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
         .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
         .mc-btn.mc-share { color: #7A7060; }
-        .mc-btn.mc-info { color: #7A7060; font-size: 12px; letter-spacing: 0.5px; }
+        .mc-btn.mc-info { color: #4A4438; font-size: 12px; letter-spacing: 0.5px; background: rgba(216,208,188,0.45); border-radius: 20px; padding: 8px 14px; font-weight: 500; }
         .mc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: #1EA952; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: 8px; min-height: 44px; transition: opacity 0.2s; }
         .mc-wsp-cta:active { opacity: 0.85; }
         .mc-btn.shake { animation: mcShake 0.3s ease; }
@@ -2003,7 +2004,7 @@ function MobilePropertyCard({
 }
 
 // ===== PHOTO CAROUSEL (native scroll-snap) =====
-function PhotoCarousel({ photos, isFirst, onPhotoTap }: { photos: string[]; isFirst: boolean; onPhotoTap?: (index: number) => void }) {
+function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap }: { photos: string[]; isFirst: boolean; showHint?: boolean; onPhotoTap?: (index: number) => void }) {
   const [currentIdx, setCurrentIdx] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
@@ -2088,7 +2089,7 @@ function PhotoCarousel({ photos, isFirst, onPhotoTap }: { photos: string[]; isFi
           ))}
         </div>
       )}
-      {isFirst && total > 1 && (
+      {(showHint ?? isFirst) && total > 1 && (
         <div className="pc-swipe-hint">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{width:20,height:20}}><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           Desliza para mas fotos
