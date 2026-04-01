@@ -2303,6 +2303,44 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
   const [gateTel, setGateTel] = useState('')
   const [gateEmail, setGateEmail] = useState('')
 
+  // Gesture dismiss (swipe down)
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const touchStartY = useRef(0)
+  const touchDeltaY = useRef(0)
+  const isDragging = useRef(false)
+
+  function handleTouchStart(e: React.TouchEvent) {
+    const el = sheetRef.current
+    if (!el || isDesktop) return
+    // Only activate if scrolled to top
+    if (el.scrollTop <= 0) {
+      touchStartY.current = e.touches[0].clientY
+      isDragging.current = true
+      touchDeltaY.current = 0
+    }
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!isDragging.current || !sheetRef.current) return
+    const delta = e.touches[0].clientY - touchStartY.current
+    if (delta < 0) { touchDeltaY.current = 0; sheetRef.current.style.transform = ''; return }
+    touchDeltaY.current = delta
+    sheetRef.current.style.transform = `translateY(${delta * 0.6}px)`
+    sheetRef.current.style.transition = 'none'
+  }
+
+  function handleTouchEnd() {
+    if (!isDragging.current || !sheetRef.current) return
+    isDragging.current = false
+    sheetRef.current.style.transition = ''
+    if (touchDeltaY.current > 120) {
+      sheetRef.current.style.transform = ''
+      onClose()
+    } else {
+      sheetRef.current.style.transform = ''
+    }
+  }
+
   // Reset gate form when property changes
   const propId = property?.id
   useEffect(() => { setShowGate(false) }, [propId])
@@ -2343,7 +2381,8 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
   const hasGPS = p.latitud && p.longitud
 
   return (
-    <div className={`bs ${open ? 'open' : ''} ${isDesktop ? 'bs-desktop' : ''}`}>
+    <div className={`bs ${open ? 'open' : ''} ${isDesktop ? 'bs-desktop' : ''}`} ref={sheetRef}
+      onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       <div className="bs-handle" />
       {/* Header negro — nombre, precio, zona, fecha, WhatsApp */}
       <div className="bs-dark-header">
@@ -2440,7 +2479,7 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         .bs.open{transform:translateY(0);}
         .bs-desktop{max-width:480px;left:auto;right:0;border-radius:20px 0 0 0;height:100vh;max-height:100vh;}
         .bs-desktop.open{transform:translateY(0);}
-        .bs-handle{width:36px;height:4px;background:rgba(237,232,220,0.3);border-radius:2px;margin:12px auto 0;}
+        .bs-handle{width:48px;height:4px;background:rgba(154,142,122,0.5);border-radius:2px;margin:12px auto 0;}
         .bs-dark-header{background:#141414;padding:0 24px 20px;border-radius:20px 20px 14px 14px;}
         .bs-dh-top{display:flex;align-items:flex-start;justify-content:space-between;padding-top:16px;}
         .bs-title{font-family:'Figtree',sans-serif;font-size:22px;font-weight:500;color:#EDE8DC;}
