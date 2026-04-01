@@ -2,7 +2,8 @@
 
 > **Fecha:** 19 Mar 2026
 > **Puntaje general:** 6.2/10 (UX 7.5, CRO 6, Psicología 5)
-> **Estado:** CERRADA — 4 implementados, 1 planificado, 11 descartados/no aplica
+> **Estado:** CERRADA — 6 implementados, 1 planificado, 9 descartados/no aplica
+> **Actualizado:** 1 abril 2026 — D5 y D6 implementados en sesión UX mobile audit
 
 ---
 
@@ -81,11 +82,11 @@ Cero "verificado", "actualizado hace X horas", reviews del broker.
 
 ### D5. WhatsApp requiere scroll en mobile
 CTA principal puede quedar parcialmente oculto si hay muchos badges.
-**Estado:** No aplica — layout flex + truncado de descripción protegen el CTA en fullscreen cards
+**Estado:** IMPLEMENTADO (1 abril 2026) — foto 55%→50%, WhatsApp `margin-top:auto` + `flex-shrink:0`, descripción 2→1 línea. CTA siempre visible.
 
 ### D6. "Ver detalles" compite con WhatsApp
 Dos CTAs al mismo nivel visual. El usuario no sabe cuál priorizar.
-**Estado:** IMPLEMENTADO (19 Mar 2026) — "Ver ↗" eliminado de cards, "Ver anuncio original" movido al BottomSheet con gate
+**Estado:** IMPLEMENTADO (1 abril 2026) — botón renombrado "Ver mas" con pill sutil (`rgba(216,208,188,0.45)`), diferenciado visualmente del WhatsApp CTA verde. Tap en foto también abre BottomSheet (mobile y desktop).
 
 ---
 
