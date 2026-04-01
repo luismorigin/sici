@@ -1058,7 +1058,7 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
                     petFilterActive={filters.acepta_mascotas}
                     onToggleFavorite={() => toggleFavorite(item.data.id)}
                     onOpenInfo={() => openDetail(item.data)}
-                    onPhotoTap={(photoIdx) => openViewer(item.data, photoIdx)}
+                    onPhotoTap={() => openDetail(item.data)}
                     onShare={() => { trackShareClick(item.data); window.open(buildShareWhatsAppUrl(item.data), '_blank') }}
                   />
                 )
@@ -2239,6 +2239,59 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
   )
 }
 
+// ===== BOTTOM SHEET GALLERY =====
+function BottomSheetGallery({ photos }: { photos: string[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [currentIdx, setCurrentIdx] = useState(0)
+  const total = photos.length
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const handleScroll = () => {
+      const idx = Math.round(el.scrollLeft / el.clientWidth)
+      setCurrentIdx(Math.min(idx, total - 1))
+    }
+    el.addEventListener('scroll', handleScroll, { passive: true })
+    return () => el.removeEventListener('scroll', handleScroll)
+  }, [total])
+
+  return (
+    <div className="bsg-wrap">
+      <div className="bsg-scroll" ref={scrollRef}>
+        {photos.map((url, i) => (
+          <div key={i} className="bsg-slide">
+            <img src={url} alt={`Foto ${i + 1}`} loading={i < 2 ? 'eager' : 'lazy'} draggable={false} />
+          </div>
+        ))}
+      </div>
+      {total > 1 && (
+        <div className="bsg-counter">{currentIdx + 1} / {total}</div>
+      )}
+      {total > 1 && (
+        <div className="bsg-dots">
+          {photos.slice(0, 8).map((_, i) => (
+            <span key={i} className={`bsg-dot ${i === currentIdx ? 'active' : ''}`} />
+          ))}
+          {total > 8 && <span className="bsg-dot-more">+{total - 8}</span>}
+        </div>
+      )}
+      <style jsx>{`
+        .bsg-wrap{position:relative;background:#141414;}
+        .bsg-scroll{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+        .bsg-scroll::-webkit-scrollbar{display:none;}
+        .bsg-slide{flex:0 0 100%;scroll-snap-align:start;aspect-ratio:4/3;overflow:hidden;}
+        .bsg-slide img{width:100%;height:100%;object-fit:cover;display:block;-webkit-user-drag:none;}
+        .bsg-counter{position:absolute;bottom:12px;right:12px;background:rgba(20,20,20,0.75);color:#EDE8DC;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:4px 10px;border-radius:100px;}
+        .bsg-dots{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:5px;align-items:center;}
+        .bsg-dot{width:6px;height:6px;border-radius:50%;background:rgba(237,232,220,0.35);transition:background 0.2s;}
+        .bsg-dot.active{background:#EDE8DC;}
+        .bsg-dot-more{font-size:10px;color:rgba(237,232,220,0.6);font-family:'DM Sans',sans-serif;}
+      `}</style>
+    </div>
+  )
+}
+
 // ===== BOTTOM SHEET =====
 function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive }: {
   open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean
@@ -2315,6 +2368,10 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
           </a>
         )}
       </div>
+      {/* Galería de fotos horizontal */}
+      {p.fotos_urls && p.fotos_urls.length > 0 && (
+        <BottomSheetGallery photos={p.fotos_urls} />
+      )}
       {/* Body blanco — características, amenidades, ubicación, anuncio */}
       <div className="bs-section">
         <div className="bs-sl"><span className="bs-sl-dot" />Caracteristicas</div>
