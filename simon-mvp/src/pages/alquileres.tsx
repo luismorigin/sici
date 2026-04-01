@@ -669,6 +669,7 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
         petFilterActive={filters.acepta_mascotas}
         isFavorite={sheetProperty ? favorites.has(sheetProperty.id) : false}
         onToggleFavorite={sheetProperty ? () => toggleFavorite(sheetProperty.id) : undefined}
+        onShare={sheetProperty ? () => { trackShareClick(sheetProperty); window.open(buildShareWhatsAppUrl(sheetProperty), '_blank') } : undefined}
       />
 
       {isDesktop ? (
@@ -2296,10 +2297,10 @@ function BottomSheetGallery({ photos }: { photos: string[] }) {
 }
 
 // ===== BOTTOM SHEET =====
-function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive, isFavorite, onToggleFavorite }: {
+function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive, isFavorite, onToggleFavorite, onShare }: {
   open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; petFilterActive?: boolean
-  isFavorite?: boolean; onToggleFavorite?: () => void
+  isFavorite?: boolean; onToggleFavorite?: () => void; onShare?: () => void
 }) {
   const [showGate, setShowGate] = useState(false)
   const [gateName, setGateName] = useState('')
@@ -2419,6 +2420,14 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
             Consultar por WhatsApp
           </a>
         )}
+        {onShare && (
+          <button className="bs-share-btn" onClick={onShare}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+            Compartir
+          </button>
+        )}
       </div>
       {/* Galería de fotos horizontal */}
       {p.fotos_urls && p.fotos_urls.length > 0 && (
@@ -2507,6 +2516,8 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         .bs-sl-dot{width:6px;height:6px;border-radius:50%;background:#3A6A48;flex-shrink:0;}
         .bs-wsp-cta{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#1EA952;border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;min-height:44px;transition:opacity 0.2s;margin-top:16px;}
         .bs-wsp-cta:active{opacity:0.85;}
+        .bs-share-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;background:transparent;border:1px solid rgba(237,232,220,0.2);border-radius:10px;color:#9A8E7A;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;cursor:pointer;margin-top:8px;transition:opacity 0.2s;}
+        .bs-share-btn:active{opacity:0.7;}
         .bs-wsp-agent{font-weight:400;opacity:0.8;}
         .bs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
         .bs-feat{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border-radius:14px;background:#FAFAF8;border:1px solid #D8D0BC;box-shadow:0 2px 8px rgba(58,53,48,0.06);}
