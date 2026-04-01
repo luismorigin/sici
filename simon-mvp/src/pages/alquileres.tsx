@@ -667,6 +667,9 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
         gateCompleted={gateCompleted}
         onGate={handleGate}
         petFilterActive={filters.acepta_mascotas}
+        isFavorite={sheetProperty ? favorites.has(sheetProperty.id) : false}
+        onToggleFavorite={sheetProperty ? () => toggleFavorite(sheetProperty.id) : undefined}
+        onShare={sheetProperty ? () => { trackShareClick(sheetProperty); window.open(buildShareWhatsAppUrl(sheetProperty), '_blank') } : undefined}
       />
 
       {isDesktop ? (
@@ -1052,13 +1055,14 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
                     key={item.data.id}
                     property={item.data}
                     isFirst={idx === 0}
+                    showHint={idx < 3}
                     isFavorite={favorites.has(item.data.id)}
                     favoritesCount={favorites.size}
                     isSpotlight={item.isSpotlight || false}
                     petFilterActive={filters.acepta_mascotas}
                     onToggleFavorite={() => toggleFavorite(item.data.id)}
                     onOpenInfo={() => openDetail(item.data)}
-                    onPhotoTap={(photoIdx) => openViewer(item.data, photoIdx)}
+                    onPhotoTap={() => openDetail(item.data)}
                     onShare={() => { trackShareClick(item.data); window.open(buildShareWhatsAppUrl(item.data), '_blank') }}
                   />
                 )
@@ -1889,9 +1893,9 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
 
 // ===== MOBILE PROPERTY CARD (full-screen) =====
 function MobilePropertyCard({
-  property: p, isFirst, isFavorite, favoritesCount, isSpotlight, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare,
+  property: p, isFirst, showHint, isFavorite, favoritesCount, isSpotlight, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare,
 }: {
-  property: UnidadAlquiler; isFirst: boolean; isFavorite: boolean; favoritesCount: number; isSpotlight: boolean; petFilterActive?: boolean
+  property: UnidadAlquiler; isFirst: boolean; showHint?: boolean; isFavorite: boolean; favoritesCount: number; isSpotlight: boolean; petFilterActive?: boolean
   onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
@@ -1919,7 +1923,7 @@ function MobilePropertyCard({
 
   return (
     <div className={`alq-card${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}`} ref={cardRef}>
-      <PhotoCarousel photos={p.fotos_urls || []} isFirst={isFirst} onPhotoTap={onPhotoTap} />
+      <PhotoCarousel photos={p.fotos_urls || []} isFirst={isFirst} showHint={showHint} onPhotoTap={onPhotoTap} />
       {isSpotlight && (
         <div className="mc-spotlight-badge">Te compartieron este depto</div>
       )}
@@ -1942,15 +1946,15 @@ function MobilePropertyCard({
           </button>
           {onShare && (
             <button className="mc-btn mc-share" aria-label="Compartir por WhatsApp" onClick={onShare}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 20, height: 20 }}>
-                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
-              </svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg> Compartir
             </button>
           )}
           <button className="mc-btn mc-info" onClick={onOpenInfo}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
-            </svg> Detalles
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+              <polyline points="6 9 12 15 18 9"/>
+            </svg> Ver mas
           </button>
         </div>
         {p.agente_whatsapp && (
@@ -1979,13 +1983,13 @@ function MobilePropertyCard({
         .mc-badge.green { background: #3A6A48; color: #EDE8DC; border-color: #3A6A48; box-shadow: none; }
         .mc-badge.warn { border-color: #3A3530; color: #3A3530; background: rgba(58,53,48,0.04); font-weight: 600; box-shadow: none; }
         .alq-card.pet-confirmed { border-left: 3px solid rgba(168,85,247,0.4); }
-        .mc-razon { font-size: 12px; font-weight: 300; color: #7A7060; line-height: 1.5; margin-bottom: auto; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .mc-razon { font-size: 12px; font-weight: 300; color: #7A7060; line-height: 1.5; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; flex-shrink: 1; }
         .mc-actions { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid #D8D0BC; margin-top: 8px; }
         .mc-btn { display: flex; align-items: center; justify-content: center; gap: 5px; background: none; border: none; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
         .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
         .mc-btn.mc-share { color: #7A7060; }
-        .mc-btn.mc-info { color: #7A7060; font-size: 12px; letter-spacing: 0.5px; }
-        .mc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: #1EA952; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: 8px; min-height: 44px; transition: opacity 0.2s; }
+        .mc-btn.mc-info { color: #4A4438; font-size: 12px; letter-spacing: 0.5px; background: rgba(216,208,188,0.45); border-radius: 20px; padding: 8px 14px; font-weight: 500; }
+        .mc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: #1EA952; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: auto; min-height: 44px; transition: opacity 0.2s; flex-shrink: 0; }
         .mc-wsp-cta:active { opacity: 0.85; }
         .mc-btn.shake { animation: mcShake 0.3s ease; }
         @keyframes mcShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
@@ -2003,7 +2007,7 @@ function MobilePropertyCard({
 }
 
 // ===== PHOTO CAROUSEL (native scroll-snap) =====
-function PhotoCarousel({ photos, isFirst, onPhotoTap }: { photos: string[]; isFirst: boolean; onPhotoTap?: (index: number) => void }) {
+function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap }: { photos: string[]; isFirst: boolean; showHint?: boolean; onPhotoTap?: (index: number) => void }) {
   const [currentIdx, setCurrentIdx] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
@@ -2088,14 +2092,14 @@ function PhotoCarousel({ photos, isFirst, onPhotoTap }: { photos: string[]; isFi
           ))}
         </div>
       )}
-      {isFirst && total > 1 && (
+      {(showHint ?? isFirst) && total > 1 && (
         <div className="pc-swipe-hint">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{width:20,height:20}}><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           Desliza para mas fotos
         </div>
       )}
       <style jsx>{`
-        .pc-zone { flex: 0 0 55%; position: relative; overflow: hidden; }
+        .pc-zone { flex: 0 0 50%; position: relative; overflow: hidden; }
         .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 24px; background: linear-gradient(transparent, #EDE8DC); pointer-events: none; z-index: 2; }
         .pc-scroll { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .pc-scroll::-webkit-scrollbar { display: none; }
@@ -2239,19 +2243,112 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
   )
 }
 
+// ===== BOTTOM SHEET GALLERY =====
+function BottomSheetGallery({ photos }: { photos: string[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [currentIdx, setCurrentIdx] = useState(0)
+  const total = photos.length
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const handleScroll = () => {
+      const idx = Math.round(el.scrollLeft / el.clientWidth)
+      setCurrentIdx(Math.min(idx, total - 1))
+    }
+    el.addEventListener('scroll', handleScroll, { passive: true })
+    return () => el.removeEventListener('scroll', handleScroll)
+  }, [total])
+
+  return (
+    <div className="bsg-wrap">
+      <div className="bsg-scroll" ref={scrollRef}>
+        {photos.map((url, i) => (
+          <div key={i} className="bsg-slide">
+            <img src={url} alt={`Foto ${i + 1}`} loading={i < 2 ? 'eager' : 'lazy'} draggable={false} />
+          </div>
+        ))}
+      </div>
+      {total > 1 && (
+        <div className="bsg-counter">{currentIdx + 1} / {total}</div>
+      )}
+      {total > 1 && (
+        <div className="bsg-dots">
+          {photos.slice(0, 8).map((_, i) => (
+            <span key={i} className={`bsg-dot ${i === currentIdx ? 'active' : ''}`} />
+          ))}
+          {total > 8 && <span className="bsg-dot-more">+{total - 8}</span>}
+        </div>
+      )}
+      <style jsx>{`
+        .bsg-wrap{position:relative;background:#141414;}
+        .bsg-scroll{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+        .bsg-scroll::-webkit-scrollbar{display:none;}
+        .bsg-slide{flex:0 0 100%;scroll-snap-align:start;aspect-ratio:4/3;overflow:hidden;}
+        .bsg-slide img{width:100%;height:100%;object-fit:cover;display:block;-webkit-user-drag:none;}
+        .bsg-counter{position:absolute;bottom:12px;right:12px;background:rgba(20,20,20,0.75);color:#EDE8DC;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:4px 10px;border-radius:100px;}
+        .bsg-dots{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:5px;align-items:center;}
+        .bsg-dot{width:6px;height:6px;border-radius:50%;background:rgba(237,232,220,0.35);transition:background 0.2s;}
+        .bsg-dot.active{background:#EDE8DC;}
+        .bsg-dot-more{font-size:10px;color:rgba(237,232,220,0.6);font-family:'DM Sans',sans-serif;}
+      `}</style>
+    </div>
+  )
+}
+
 // ===== BOTTOM SHEET =====
-function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive }: {
+function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive, isFavorite, onToggleFavorite, onShare }: {
   open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; petFilterActive?: boolean
+  isFavorite?: boolean; onToggleFavorite?: () => void; onShare?: () => void
 }) {
   const [showGate, setShowGate] = useState(false)
   const [gateName, setGateName] = useState('')
   const [gateTel, setGateTel] = useState('')
   const [gateEmail, setGateEmail] = useState('')
+  const [descExpanded, setDescExpanded] = useState(false)
+
+  // Gesture dismiss (swipe down)
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const touchStartY = useRef(0)
+  const touchDeltaY = useRef(0)
+  const isDragging = useRef(false)
+
+  function handleTouchStart(e: React.TouchEvent) {
+    const el = sheetRef.current
+    if (!el || isDesktop) return
+    // Only activate if scrolled to top
+    if (el.scrollTop <= 0) {
+      touchStartY.current = e.touches[0].clientY
+      isDragging.current = true
+      touchDeltaY.current = 0
+    }
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!isDragging.current || !sheetRef.current) return
+    const delta = e.touches[0].clientY - touchStartY.current
+    if (delta < 0) { touchDeltaY.current = 0; sheetRef.current.style.transform = ''; return }
+    touchDeltaY.current = delta
+    sheetRef.current.style.transform = `translateY(${delta * 0.6}px)`
+    sheetRef.current.style.transition = 'none'
+  }
+
+  function handleTouchEnd() {
+    if (!isDragging.current || !sheetRef.current) return
+    isDragging.current = false
+    sheetRef.current.style.transition = ''
+    if (touchDeltaY.current > 120) {
+      sheetRef.current.style.transform = ''
+      onClose()
+    } else {
+      sheetRef.current.style.transform = ''
+    }
+  }
 
   // Reset gate form when property changes
   const propId = property?.id
-  useEffect(() => { setShowGate(false) }, [propId])
+  useEffect(() => { setShowGate(false); setDescExpanded(false) }, [propId])
 
   if (!property) return null
   const p = property
@@ -2289,7 +2386,8 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
   const hasGPS = p.latitud && p.longitud
 
   return (
-    <div className={`bs ${open ? 'open' : ''} ${isDesktop ? 'bs-desktop' : ''}`}>
+    <div className={`bs ${open ? 'open' : ''} ${isDesktop ? 'bs-desktop' : ''}`} ref={sheetRef}
+      onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       <div className="bs-handle" />
       {/* Header negro — nombre, precio, zona, fecha, WhatsApp */}
       <div className="bs-dark-header">
@@ -2304,7 +2402,16 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
               )}
             </div>
           </div>
-          <button className="bs-close" aria-label="Cerrar detalle" onClick={onClose}>&times;</button>
+          <div className="bs-header-actions">
+            {onToggleFavorite && (
+              <button className={`bs-fav ${isFavorite ? 'active' : ''}`} aria-label="Guardar favorito" onClick={onToggleFavorite}>
+                <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+              </button>
+            )}
+            <button className="bs-close" aria-label="Cerrar detalle" onClick={onClose}>&times;</button>
+          </div>
         </div>
         {p.agente_whatsapp && (
           <a href={buildLeadWhatsAppUrl(p, `Hola, vi ${p.nombre_edificio || p.nombre_proyecto || 'el departamento'} en Simon y me gustaria mas informacion${p.url ? '\n' + p.url : ''}`, 'bottom_sheet')} onClick={() => trackWhatsAppClick(p, 'bottom_sheet')} target="_blank" rel="noopener noreferrer" className="bs-wsp-cta">
@@ -2314,7 +2421,19 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
             Consultar por WhatsApp
           </a>
         )}
+        {onShare && (
+          <button className="bs-share-btn" onClick={onShare}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+            Compartir
+          </button>
+        )}
       </div>
+      {/* Galería de fotos horizontal */}
+      {p.fotos_urls && p.fotos_urls.length > 0 && (
+        <BottomSheetGallery photos={p.fotos_urls} />
+      )}
       {/* Body blanco — características, amenidades, ubicación, anuncio */}
       <div className="bs-section">
         <div className="bs-sl"><span className="bs-sl-dot" />Caracteristicas</div>
@@ -2332,6 +2451,15 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         <div className="bs-section">
           <div className="bs-sl"><span className="bs-sl-dot" />Amenidades</div>
           <div className="bs-aw">{p.amenities_lista.map((a, i) => <span key={i} className="bs-at">{a}</span>)}</div>
+        </div>
+      )}
+      {p.descripcion && (
+        <div className="bs-section">
+          <div className="bs-sl"><span className="bs-sl-dot" />Sobre esta propiedad</div>
+          <div className={`bs-desc ${descExpanded ? 'expanded' : ''}`}>{p.descripcion}</div>
+          {p.descripcion.length > 150 && !descExpanded && (
+            <button className="bs-desc-more" onClick={() => setDescExpanded(true)}>Ver mas</button>
+          )}
         </div>
       )}
       {hasGPS && (
@@ -2382,12 +2510,15 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         .bs.open{transform:translateY(0);}
         .bs-desktop{max-width:480px;left:auto;right:0;border-radius:20px 0 0 0;height:100vh;max-height:100vh;}
         .bs-desktop.open{transform:translateY(0);}
-        .bs-handle{width:36px;height:4px;background:rgba(237,232,220,0.3);border-radius:2px;margin:12px auto 0;}
+        .bs-handle{width:48px;height:4px;background:rgba(154,142,122,0.5);border-radius:2px;margin:12px auto 0;}
         .bs-dark-header{background:#141414;padding:0 24px 20px;border-radius:20px 20px 14px 14px;}
         .bs-dh-top{display:flex;align-items:flex-start;justify-content:space-between;padding-top:16px;}
         .bs-title{font-family:'Figtree',sans-serif;font-size:22px;font-weight:500;color:#EDE8DC;}
         .bs-price{font-family:'DM Sans',sans-serif;font-size:28px;font-weight:500;color:#EDE8DC;margin-top:4px;font-variant-numeric:tabular-nums;}
         .bs-price span{font-size:14px;color:#9A8E7A;font-weight:400;}
+        .bs-header-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+        .bs-fav{width:44px;height:44px;border-radius:50%;border:none;background:transparent;color:#9A8E7A;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+        .bs-fav.active svg{filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4));}
         .bs-close{width:44px;height:44px;border-radius:50%;border:none;background:transparent;color:#9A8E7A;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;}
         .bs-published{font-size:13px;color:#9A8E7A;font-family:'DM Sans',sans-serif;margin-top:6px;}
         .bs-section{padding:16px 24px;}
@@ -2395,6 +2526,8 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         .bs-sl-dot{width:6px;height:6px;border-radius:50%;background:#3A6A48;flex-shrink:0;}
         .bs-wsp-cta{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#1EA952;border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;min-height:44px;transition:opacity 0.2s;margin-top:16px;}
         .bs-wsp-cta:active{opacity:0.85;}
+        .bs-share-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;background:transparent;border:1px solid rgba(237,232,220,0.2);border-radius:10px;color:#9A8E7A;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;cursor:pointer;margin-top:8px;transition:opacity 0.2s;}
+        .bs-share-btn:active{opacity:0.7;}
         .bs-wsp-agent{font-weight:400;opacity:0.8;}
         .bs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
         .bs-feat{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border-radius:14px;background:#FAFAF8;border:1px solid #D8D0BC;box-shadow:0 2px 8px rgba(58,53,48,0.06);}
@@ -2414,6 +2547,9 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         .bs-gate-input::placeholder{color:#7A7060}
         .bs-gate-submit{width:100%;padding:14px;background:#141414;color:#EDE8DC;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer}
         .bs-gate-submit:disabled{opacity:0.4;cursor:default}
+        .bs-desc{font-size:14px;font-weight:300;color:#3A3530;font-family:'DM Sans',sans-serif;line-height:1.6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
+        .bs-desc.expanded{-webkit-line-clamp:unset;display:block;}
+        .bs-desc-more{background:none;border:none;color:#3A6A48;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;padding:4px 0;margin-top:4px;}
         .bs-gmaps-link{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#D8D0BC;border-radius:10px;color:#141414;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;transition:opacity 0.2s;}
         .bs-gmaps-link:active{opacity:0.85;}
       `}</style>

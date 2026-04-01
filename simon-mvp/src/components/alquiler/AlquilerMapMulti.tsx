@@ -1,6 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import 'leaflet.markercluster/dist/MarkerCluster.css'
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
+import 'leaflet.markercluster'
 import { dormLabel } from '@/lib/format-utils'
 
 interface Property {
@@ -27,6 +30,7 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<L.Map | null>(null)
   const markersRef = useRef<Map<number, L.Marker>>(new Map())
+  const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null)
 
   const makeIcon = useCallback((price: string, isSelected: boolean) => {
     return L.divIcon({
@@ -60,6 +64,7 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
       mapInstance.current = null
     }
     markersRef.current.clear()
+    clusterGroupRef.current = null
 
     const validProps = properties.filter(p => p.latitud && p.longitud)
     if (validProps.length === 0) return
@@ -74,6 +79,32 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
 
+    const clusterGroup = L.markerClusterGroup({
+      maxClusterRadius: 45,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      iconCreateFunction: (cluster) => {
+        const count = cluster.getChildCount()
+        return L.divIcon({
+          html: `<div style="
+            background:#141414;
+            color:#EDE8DC;
+            width:36px;height:36px;
+            border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            font-size:13px;font-weight:600;
+            font-family:'DM Sans',sans-serif;
+            box-shadow:0 2px 8px rgba(0,0,0,0.25);
+            border:2px solid #D8D0BC;
+          ">${count}</div>`,
+          className: '',
+          iconSize: [36, 36],
+          iconAnchor: [18, 18],
+        })
+      },
+    })
+
     validProps.forEach(p => {
       const name = p.nombre_edificio || p.nombre_proyecto || 'Depto'
       const price = 'Bs ' + p.precio_mensual_bob.toLocaleString('es-BO')
@@ -81,7 +112,6 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
       const icon = makeIcon(price, false)
 
       const marker = L.marker([p.latitud!, p.longitud!], { icon })
-        .addTo(map)
         .on('click', () => onSelectProperty(p.id))
 
       marker.bindTooltip(`
@@ -92,8 +122,12 @@ export default function AlquilerMapMulti({ properties, onSelectProperty, selecte
         </div>
       `, { direction: 'top', offset: [0, -10] })
 
+      clusterGroup.addLayer(marker)
       markersRef.current.set(p.id, marker)
     })
+
+    map.addLayer(clusterGroup)
+    clusterGroupRef.current = clusterGroup
 
     if (validProps.length > 1) {
       const bounds = L.latLngBounds(validProps.map(p => [p.latitud!, p.longitud!] as [number, number]))
