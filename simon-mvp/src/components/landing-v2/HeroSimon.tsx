@@ -13,7 +13,6 @@ export default function HeroSimon() {
           priority
           className="object-cover object-center hidden md:block"
         />
-        {/* Arena overlay gradient left-to-right */}
         {/* Desktop: left-to-right reveal */}
         <div
           className="absolute inset-0 z-[1] hidden md:block"
@@ -28,12 +27,10 @@ export default function HeroSimon() {
             )`,
           }}
         />
-        {/* Mobile: almost solid, foto insinuada */}
+        {/* Mobile: solid arena */}
         <div
           className="absolute inset-0 z-[1] md:hidden"
-          style={{
-            background: `#EDE8DC`,
-          }}
+          style={{ background: '#EDE8DC' }}
         />
       </div>
 
@@ -42,7 +39,7 @@ export default function HeroSimon() {
         {/* Pre-headline */}
         <p className="font-s-body font-normal text-[13px] text-s-piedra tracking-[0.5px] uppercase mb-7 flex items-center gap-2.5">
           <PulseDot />
-          Inteligencia inmobiliaria · Santa Cruz
+          El mercado inmobiliario de Equipetrol, ordenado.
         </p>
 
         {/* Headline */}
@@ -50,18 +47,19 @@ export default function HeroSimon() {
           className="font-s-display font-medium text-s-negro leading-[1.05] mb-6 max-w-[820px]"
           style={{ fontSize: 'clamp(36px, 5vw, 64px)', letterSpacing: '-1.5px' }}
         >
-          ¿Sabés realmente<br />
-          cuánto vale<br />
-          <span className="text-s-tinta">lo que estás mirando?</span>
+          Vas a tomar una decisión<br />
+          de miles de dólares.<br />
+          <span className="text-s-tinta">¿Con qué información?</span>
         </h1>
 
         {/* Body */}
         <p
-          className="font-s-body font-light text-s-tinta leading-relaxed max-w-[480px] mb-10"
+          className="font-s-body font-light text-s-tinta leading-relaxed max-w-[520px] mb-10"
           style={{ fontSize: 'clamp(16px, 1.8vw, 19px)' }}
         >
-          Simon analiza el mercado de Equipetrol con datos reales y actualizados todos los días.
-          Sin portales desactualizados. Sin consejos de alguien que tiene algo que venderte.
+          Simon recopila alquileres de tres fuentes cada noche y los pone en un solo lugar
+          con precios comparables, filtros que funcionan y contexto de zona. Para que vos
+          decidas, no el que tiene algo que ganar.
         </p>
 
         {/* CTAs */}
@@ -94,7 +92,7 @@ export default function HeroSimon() {
           </div>
           <div className="flex items-center gap-2 font-s-body text-[13px] text-s-piedra font-normal">
             <span className="w-1.5 h-1.5 rounded-full bg-s-salvia flex-shrink-0" />
-            144 alquileres activos
+            180+ alquileres activos
           </div>
         </div>
       </div>

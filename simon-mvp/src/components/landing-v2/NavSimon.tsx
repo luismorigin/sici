@@ -35,8 +35,8 @@ export default function NavSimon() {
         {/* Links — hidden mobile */}
         <ul className="hidden md:flex items-center gap-8 list-none m-0 p-0">
           <li>
-            <Link href="/mercado/equipetrol" prefetch={false} className="font-s-body font-normal text-sm text-s-tinta no-underline hover:text-s-negro transition-colors">
-              Mercado
+            <Link href="/alquileres" prefetch={false} className="font-s-body font-normal text-sm text-s-tinta no-underline hover:text-s-negro transition-colors">
+              Alquileres
             </Link>
           </li>
           <li>
@@ -45,8 +45,8 @@ export default function NavSimon() {
             </Link>
           </li>
           <li>
-            <Link href="/alquileres" prefetch={false} className="font-s-body font-normal text-sm text-s-tinta no-underline hover:text-s-negro transition-colors">
-              Alquileres
+            <Link href="/mercado/equipetrol" prefetch={false} className="font-s-body font-normal text-sm text-s-tinta no-underline hover:text-s-negro transition-colors">
+              Mercado
             </Link>
           </li>
         </ul>

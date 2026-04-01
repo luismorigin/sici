@@ -26,10 +26,10 @@ export default function LandingV2({
   return (
     <>
       <Head>
-        <title>Simon — Inteligencia Inmobiliaria | Equipetrol</title>
+        <title>Simon — El mercado inmobiliario de Equipetrol, ordenado</title>
         <meta
           name="description"
-          content="Encontra tu departamento ideal en Equipetrol. Inteligencia artificial que analiza el mercado y te muestra las mejores opciones con datos verificados."
+          content="Alquileres y ventas de Equipetrol en un solo lugar. Tres fuentes, precios comparables, filtros que funcionan y contexto de zona. Actualizado todos los días."
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
@@ -46,11 +46,7 @@ export default function LandingV2({
             tcActual={snapshot.tc_actual}
             heroMetrics={heroMetrics}
           />
-          <ProductosSection
-            heroMetrics={heroMetrics}
-            microzonas={microzonas}
-            zonasAlquiler={zonasAlquiler}
-          />
+          <ProductosSection />
           <ProblemaSection />
           <ComoFuncionaSection />
         </main>

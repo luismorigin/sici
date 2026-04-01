@@ -1,46 +1,45 @@
 export default function ComoFuncionaSection() {
   const pasos = [
     {
-      num: '01 — DATO',
-      titulo: 'Datos reales del mercado',
-      desc: 'Simon recopila publicaciones activas todos los días. Sabe qué hay disponible, a cuánto, y cómo se mueve el precio en cada microzona de Equipetrol.',
+      num: '1',
+      titulo: 'Data',
+      desc: 'Cada noche Simon recopila de Century 21, Remax y Bien Inmuebles. Los anuncios que ya no existen salen, los nuevos entran. Lo que ves es lo que hay hoy.',
     },
     {
-      num: '02 — INTERPRETACIÓN',
-      titulo: 'Qué significa para vos',
-      desc: 'No te da una tabla de Excel. Te muestra si el precio está bien para la zona, si está inflado, cuántas opciones hay — con el contexto del mercado real detrás.',
+      num: '2',
+      titulo: 'Contexto',
+      desc: 'Cada departamento tiene el precio mediano de su zona al lado. Sabés si está por arriba, por abajo o en el promedio. Sin preguntarle a nadie — el dato está ahí.',
     },
     {
-      num: '03 — ACCIÓN',
-      titulo: 'Decidís con información real',
-      desc: 'Alquilar, comprar, esperar o negociar. Simon te da los datos que necesitás para tomar la decisión — sin rodeos, sin que nadie te venda nada.',
+      num: '3',
+      titulo: 'Acción',
+      desc: 'Filtrá por lo que te importa, compará hasta 3 lado a lado, y contactá al broker por WhatsApp con un mensaje pre-armado. Del feed a la conversación en minutos.',
     },
   ]
 
   return (
     <section className="bg-s-arena px-6 md:px-12 py-24">
       <div className="max-w-[1100px] mx-auto">
-        <p className="font-s-body font-normal text-xs text-s-piedra tracking-[0.5px] uppercase mb-12">
-          Cómo funciona
-        </p>
+        <h2
+          className="font-s-display font-medium text-s-negro mb-14"
+          style={{ fontSize: 'clamp(22px, 3vw, 36px)', letterSpacing: '-0.5px' }}
+        >
+          Del dato al WhatsApp en tres pasos
+        </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3">
-          {pasos.map((p, i) => (
-            <div
-              key={p.num}
-              className={`${
-                i < pasos.length - 1
-                  ? 'pr-0 md:pr-9 pb-7 md:pb-0 border-b md:border-b-0 md:border-r border-s-arena-mid'
-                  : 'pr-0'
-              } ${i > 0 ? 'pl-0 md:pl-9 pt-7 md:pt-0' : ''}`}
-            >
-              <p className="font-s-body font-light text-[11px] text-s-piedra tracking-[0.5px] mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
+          {pasos.map((p) => (
+            <div key={p.num}>
+              <div
+                className="font-s-display font-medium text-s-arena-mid leading-none mb-4"
+                style={{ fontSize: '48px', letterSpacing: '-2px' }}
+              >
                 {p.num}
-              </p>
-              <h3 className="font-s-display font-medium text-xl text-s-negro tracking-tight mb-2.5">
+              </div>
+              <h3 className="font-s-display font-medium text-xl text-s-negro tracking-tight mb-3">
                 {p.titulo}
               </h3>
-              <p className="font-s-body font-light text-sm text-s-tinta leading-relaxed">
+              <p className="font-s-body font-light text-[15px] text-s-tinta leading-relaxed">
                 {p.desc}
               </p>
             </div>
