@@ -791,7 +791,7 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
                           favoritesCount={favorites.size}
                           onToggleFavorite={() => toggleFavorite(spotlightProperty.id)}
                           onOpenInfo={() => openDetail(spotlightProperty)}
-                          onPhotoTap={(photoIdx) => openViewer(spotlightProperty, photoIdx)}
+                          onPhotoTap={() => openDetail(spotlightProperty)}
                           onShare={() => { trackShareClick(spotlightProperty); window.open(buildShareWhatsAppUrl(spotlightProperty), '_blank') }}
                         />
                       </div>
@@ -826,7 +826,7 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
                           isFirst={idx === 0}
                           onToggleFavorite={() => toggleFavorite(p.id)}
                           onOpenInfo={() => openDetail(p)}
-                          onPhotoTap={(photoIdx) => openViewer(p, photoIdx)}
+                          onPhotoTap={() => openDetail(p)}
                           onShare={() => { trackShareClick(p); window.open(buildShareWhatsAppUrl(p), '_blank') }}
                         />
                       </Fragment>
@@ -2260,6 +2260,10 @@ function BottomSheetGallery({ photos }: { photos: string[] }) {
     return () => el.removeEventListener('scroll', handleScroll)
   }, [total])
 
+  function goTo(idx: number) {
+    scrollRef.current?.scrollTo({ left: idx * scrollRef.current.clientWidth, behavior: 'smooth' })
+  }
+
   return (
     <div className="bsg-wrap">
       <div className="bsg-scroll" ref={scrollRef}>
@@ -2269,6 +2273,16 @@ function BottomSheetGallery({ photos }: { photos: string[] }) {
           </div>
         ))}
       </div>
+      {total > 1 && currentIdx > 0 && (
+        <button className="bsg-arrow bsg-arrow-left" onClick={() => goTo(currentIdx - 1)} aria-label="Foto anterior">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{width:16,height:16}}><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+      )}
+      {total > 1 && currentIdx < total - 1 && (
+        <button className="bsg-arrow bsg-arrow-right" onClick={() => goTo(currentIdx + 1)} aria-label="Foto siguiente">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{width:16,height:16}}><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      )}
       {total > 1 && (
         <div className="bsg-counter">{currentIdx + 1} / {total}</div>
       )}
@@ -2286,6 +2300,11 @@ function BottomSheetGallery({ photos }: { photos: string[] }) {
         .bsg-scroll::-webkit-scrollbar{display:none;}
         .bsg-slide{flex:0 0 100%;scroll-snap-align:start;aspect-ratio:4/3;overflow:hidden;}
         .bsg-slide img{width:100%;height:100%;object-fit:cover;display:block;-webkit-user-drag:none;}
+        .bsg-arrow{display:none;position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;background:rgba(20,20,20,0.6);border:1px solid rgba(255,255,255,0.15);cursor:pointer;align-items:center;justify-content:center;z-index:2;transition:opacity 0.2s;}
+        .bsg-arrow:hover{background:rgba(20,20,20,0.8);}
+        .bsg-arrow-left{left:10px;}
+        .bsg-arrow-right{right:10px;}
+        @media (min-width:768px){.bsg-arrow{display:flex;}}
         .bsg-counter{position:absolute;bottom:12px;right:12px;background:rgba(20,20,20,0.75);color:#EDE8DC;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:4px 10px;border-radius:100px;}
         .bsg-dots{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:5px;align-items:center;}
         .bsg-dot{width:6px;height:6px;border-radius:50%;background:rgba(237,232,220,0.35);transition:background 0.2s;}
