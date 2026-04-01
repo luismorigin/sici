@@ -667,6 +667,8 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
         gateCompleted={gateCompleted}
         onGate={handleGate}
         petFilterActive={filters.acepta_mascotas}
+        isFavorite={sheetProperty ? favorites.has(sheetProperty.id) : false}
+        onToggleFavorite={sheetProperty ? () => toggleFavorite(sheetProperty.id) : undefined}
       />
 
       {isDesktop ? (
@@ -2294,9 +2296,10 @@ function BottomSheetGallery({ photos }: { photos: string[] }) {
 }
 
 // ===== BOTTOM SHEET =====
-function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive }: {
+function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive, isFavorite, onToggleFavorite }: {
   open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; petFilterActive?: boolean
+  isFavorite?: boolean; onToggleFavorite?: () => void
 }) {
   const [showGate, setShowGate] = useState(false)
   const [gateName, setGateName] = useState('')
@@ -2397,7 +2400,16 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
               )}
             </div>
           </div>
-          <button className="bs-close" aria-label="Cerrar detalle" onClick={onClose}>&times;</button>
+          <div className="bs-header-actions">
+            {onToggleFavorite && (
+              <button className={`bs-fav ${isFavorite ? 'active' : ''}`} aria-label="Guardar favorito" onClick={onToggleFavorite}>
+                <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+              </button>
+            )}
+            <button className="bs-close" aria-label="Cerrar detalle" onClick={onClose}>&times;</button>
+          </div>
         </div>
         {p.agente_whatsapp && (
           <a href={buildLeadWhatsAppUrl(p, `Hola, vi ${p.nombre_edificio || p.nombre_proyecto || 'el departamento'} en Simon y me gustaria mas informacion${p.url ? '\n' + p.url : ''}`, 'bottom_sheet')} onClick={() => trackWhatsAppClick(p, 'bottom_sheet')} target="_blank" rel="noopener noreferrer" className="bs-wsp-cta">
@@ -2485,6 +2497,9 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         .bs-title{font-family:'Figtree',sans-serif;font-size:22px;font-weight:500;color:#EDE8DC;}
         .bs-price{font-family:'DM Sans',sans-serif;font-size:28px;font-weight:500;color:#EDE8DC;margin-top:4px;font-variant-numeric:tabular-nums;}
         .bs-price span{font-size:14px;color:#9A8E7A;font-weight:400;}
+        .bs-header-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+        .bs-fav{width:44px;height:44px;border-radius:50%;border:none;background:transparent;color:#9A8E7A;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+        .bs-fav.active svg{filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4));}
         .bs-close{width:44px;height:44px;border-radius:50%;border:none;background:transparent;color:#9A8E7A;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;}
         .bs-published{font-size:13px;color:#9A8E7A;font-family:'DM Sans',sans-serif;margin-top:6px;}
         .bs-section{padding:16px 24px;}
