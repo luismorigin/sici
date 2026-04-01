@@ -2306,6 +2306,7 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
   const [gateName, setGateName] = useState('')
   const [gateTel, setGateTel] = useState('')
   const [gateEmail, setGateEmail] = useState('')
+  const [descExpanded, setDescExpanded] = useState(false)
 
   // Gesture dismiss (swipe down)
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -2347,7 +2348,7 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
 
   // Reset gate form when property changes
   const propId = property?.id
-  useEffect(() => { setShowGate(false) }, [propId])
+  useEffect(() => { setShowGate(false); setDescExpanded(false) }, [propId])
 
   if (!property) return null
   const p = property
@@ -2452,6 +2453,15 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
           <div className="bs-aw">{p.amenities_lista.map((a, i) => <span key={i} className="bs-at">{a}</span>)}</div>
         </div>
       )}
+      {p.descripcion && (
+        <div className="bs-section">
+          <div className="bs-sl"><span className="bs-sl-dot" />Sobre esta propiedad</div>
+          <div className={`bs-desc ${descExpanded ? 'expanded' : ''}`}>{p.descripcion}</div>
+          {p.descripcion.length > 150 && !descExpanded && (
+            <button className="bs-desc-more" onClick={() => setDescExpanded(true)}>Ver mas</button>
+          )}
+        </div>
+      )}
       {hasGPS && (
         <div className="bs-section">
           <a
@@ -2537,6 +2547,9 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         .bs-gate-input::placeholder{color:#7A7060}
         .bs-gate-submit{width:100%;padding:14px;background:#141414;color:#EDE8DC;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer}
         .bs-gate-submit:disabled{opacity:0.4;cursor:default}
+        .bs-desc{font-size:14px;font-weight:300;color:#3A3530;font-family:'DM Sans',sans-serif;line-height:1.6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
+        .bs-desc.expanded{-webkit-line-clamp:unset;display:block;}
+        .bs-desc-more{background:none;border:none;color:#3A6A48;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;padding:4px 0;margin-top:4px;}
         .bs-gmaps-link{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#D8D0BC;border-radius:10px;color:#141414;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;transition:opacity 0.2s;}
         .bs-gmaps-link:active{opacity:0.85;}
       `}</style>
