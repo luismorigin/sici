@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import Image from 'next/image'
 import type { GetStaticProps } from 'next'
 import { type UnidadAlquiler, type FiltrosAlquiler, buscarUnidadesAlquiler } from '@/lib/supabase'
 import { ZONAS_ALQUILER_UI, displayZona } from '@/lib/zonas'
@@ -55,7 +56,7 @@ const ORDEN_OPTIONS: Array<{ value: FiltrosAlquiler['orden']; label: string }> =
 const MAX_SLIDER_PRICE = 18000
 
 const MAX_FAVORITES = 3
-const FILTER_CARD_POSITION = 3
+const FILTER_CARD_POSITION = 2
 
 const formatPrice = formatPriceBob
 
@@ -957,7 +958,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
                   }
                 }, 50)
               }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
                 {isFiltered && <div className="alq-filter-dot" />}
               </button>
             </div>
@@ -2131,15 +2132,17 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap }: { photos: stri
             onTouchMove={() => { isDragging.current = true }}
             onClick={() => { if (!isDragging.current && onPhotoTap && url) onPhotoTap(currentIdx) }}
           >
-            {/* First photo of first card uses real <img> for LCP priority */}
+            {/* First photo of first card uses next/image for LCP: WebP + resize */}
             {useRealImg && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={url}
                 alt=""
-                fetchPriority="high"
+                fill
+                sizes="100vw"
+                priority
                 draggable={false}
                 className="pc-slide-img"
+                style={{ objectFit: 'cover' }}
               />
             )}
           </div>
