@@ -178,29 +178,37 @@ function getSessionId(): string {
   return sid
 }
 
-// Build lead-tracked WhatsApp URL (goes through /api/lead-alquiler for tracking)
-function buildLeadWhatsAppUrl(p: UnidadAlquiler, msg: string, fuente: string, preguntas?: string[]) {
+// Track WhatsApp lead via POST (immune to prefetch/bots) then open WhatsApp
+function handleWhatsAppLead(e: React.MouseEvent, p: UnidadAlquiler, msg: string, fuente: string, preguntas?: string[]) {
+  e.preventDefault()
   const phone = p.agente_whatsapp?.replace(/\D/g, '') || ''
   const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
-  const params = new URLSearchParams({
-    phone,
-    msg,
-    prop_id: String(p.id),
-    nombre: name,
-    zona: p.zona || '',
-    precio: String(p.precio_mensual_bob),
-    dorms: String(p.dormitorios),
-    broker_nombre: p.agente_nombre || '',
-    fuente,
-    sid: getSessionId(),
-  })
-  if (preguntas && preguntas.length > 0) {
-    params.set('preguntas', JSON.stringify(preguntas))
-  }
-  if (typeof window !== 'undefined' && localStorage.getItem('simon_debug') === '1') {
-    params.set('debug', '1')
-  }
-  return `/api/lead-alquiler?${params.toString()}`
+  const finalPhone = phone.startsWith('591') ? phone : `591${phone}`
+  const whatsappUrl = `https://wa.me/${finalPhone}${msg ? `?text=${encodeURIComponent(msg)}` : ''}`
+
+  // Open WhatsApp immediately (must be in click handler for popup blocker)
+  window.open(whatsappUrl, '_blank')
+
+  // Fire-and-forget POST to register lead
+  trackWhatsAppClick(p, fuente)
+  fetch('/api/lead-alquiler', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      phone,
+      msg,
+      prop_id: p.id,
+      nombre: name,
+      zona: p.zona || '',
+      precio: p.precio_mensual_bob,
+      dorms: p.dormitorios,
+      broker_nombre: p.agente_nombre || '',
+      fuente,
+      preguntas: preguntas && preguntas.length > 0 ? preguntas : undefined,
+      debug: typeof window !== 'undefined' && localStorage.getItem('simon_debug') === '1' ? '1' : undefined,
+      sid: getSessionId(),
+    }),
+  }).catch(() => { /* fire and forget */ })
 }
 
 // Build WhatsApp share URL for sharing a property with friends (NOT lead tracking)
@@ -1542,7 +1550,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
           <div className="mfc-m-actions">
             <button className="mfc-m-btn-detail" onClick={onOpenDetail}>Ver detalles</button>
             {sp.agente_whatsapp && (
-              <a href={buildLeadWhatsAppUrl(sp, `Hola, vi ${spName} en Simon y me interesa${sp.url ? '\n' + sp.url : ''}`, 'map_card_mobile')} onClick={() => trackWhatsAppClick(sp, 'map_card_mobile')} target="_blank" rel="noopener noreferrer" className="mfc-m-btn-wsp">WhatsApp</a>
+              <a href="#" onClick={(e) => handleWhatsAppLead(e, sp, `Hola, vi ${spName} en Simon y me interesa${sp.url ? '\n' + sp.url : ''}`, 'map_card_mobile')} className="mfc-m-btn-wsp">WhatsApp</a>
             )}
           </div>
         </div>
@@ -1662,7 +1670,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
         <div className="map-float-actions">
           <button className="map-float-btn-detail" onClick={onOpenDetail}>Ver detalles</button>
           {sp.agente_whatsapp && (
-            <a href={buildLeadWhatsAppUrl(sp, `Hola, vi ${spName} en Simon y me interesa${sp.url ? '\n' + sp.url : ''}`, 'map_card')} onClick={() => trackWhatsAppClick(sp, 'map_card')} target="_blank" rel="noopener noreferrer" className="map-float-btn-wsp">WhatsApp</a>
+            <a href="#" onClick={(e) => handleWhatsAppLead(e, sp, `Hola, vi ${spName} en Simon y me interesa${sp.url ? '\n' + sp.url : ''}`, 'map_card')} className="map-float-btn-wsp">WhatsApp</a>
           )}
         </div>
       </div>
@@ -1839,7 +1847,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
           <button className="dc-info-btn" onClick={onOpenInfo}>Ver detalles</button>
         </div>
         {p.agente_whatsapp && (
-          <a href={buildLeadWhatsAppUrl(p, `Hola, vi este alquiler en Simon y me interesa: ${displayName} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_desktop')} onClick={() => trackWhatsAppClick(p, 'card_desktop')} target="_blank" rel="noopener noreferrer" className="dc-wsp-cta">
+          <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi este alquiler en Simon y me interesa: ${displayName} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_desktop')} className="dc-wsp-cta">
             <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 16, height: 16 }}>
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
             </svg>
@@ -1958,7 +1966,7 @@ function MobilePropertyCard({
           </button>
         </div>
         {p.agente_whatsapp && (
-          <a href={buildLeadWhatsAppUrl(p, `Hola, vi este alquiler en Simon y me interesa: ${p.nombre_edificio || p.nombre_proyecto || 'Departamento'} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_mobile')} onClick={() => trackWhatsAppClick(p, 'card_mobile')} target="_blank" rel="noopener noreferrer" className="mc-wsp-cta">
+          <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi este alquiler en Simon y me interesa: ${p.nombre_edificio || p.nombre_proyecto || 'Departamento'} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_mobile')} className="mc-wsp-cta">
             <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 18, height: 18 }}>
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
             </svg>
@@ -2433,7 +2441,7 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
           </div>
         </div>
         {p.agente_whatsapp && (
-          <a href={buildLeadWhatsAppUrl(p, `Hola, vi ${p.nombre_edificio || p.nombre_proyecto || 'el departamento'} en Simon y me gustaria mas informacion${p.url ? '\n' + p.url : ''}`, 'bottom_sheet')} onClick={() => trackWhatsAppClick(p, 'bottom_sheet')} target="_blank" rel="noopener noreferrer" className="bs-wsp-cta">
+          <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi ${p.nombre_edificio || p.nombre_proyecto || 'el departamento'} en Simon y me gustaria mas informacion${p.url ? '\n' + p.url : ''}`, 'bottom_sheet')} className="bs-wsp-cta">
             <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 18, height: 18 }}>
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
             </svg>
