@@ -279,9 +279,62 @@ if (!localStorage.getItem(MIGRATION_KEY)) {
 
 ---
 
+## 11. Discovery Remax: moneda USD no se convertía a BOB
+
+### Problema (fix 2 Apr 2026)
+El nodo "Procesar Alquileres" del workflow Remax pasaba `prop.precio_bob` (campo `price.amount` del API) directo a `p_precio_mensual_bob`. Pero para listings con `currency_id = 2` (USD), `price.amount` contiene el monto en USD, no BOB.
+
+**Resultado:** 26 propiedades Remax con `moneda_original = 'USD'` tenían `precio_mensual_bob = precio_mensual_usd` (mismo número). El feed mostraba "Bs 646/mes" cuando el depto cuesta Bs 4.500/mes.
+
+### Evidencia
+- `price.amount = price.price_in_dollars` (idénticos) para `currency_id = 2`
+- Valores como `502.87 × 6.96 = 3,500 Bs` exacto confirman que dueños piden en BOB y Remax convierte a USD
+- 18.2% del feed visible afectado (25/137 props activas)
+- Bug existía desde dic 2025 (fecha_creacion de las props más antiguas)
+
+### Fix
+**Workflow n8n** (nodo "Procesar Alquileres"):
+```javascript
+// Antes (buggy):
+p_precio_mensual_bob: prop.precio_bob,
+p_precio_mensual_usd: prop.precio_usd,
+
+// Después:
+p_precio_mensual_bob: prop.moneda_original === 'USD'
+    ? Math.round(prop.precio_usd * 6.96 * 100) / 100
+    : prop.precio_bob,
+p_precio_mensual_usd: prop.moneda_original === 'BOB'
+    ? Math.round(prop.precio_bob / 6.96 * 100) / 100
+    : prop.precio_usd,
+```
+
+**Backfill** (26 rows):
+```sql
+UPDATE propiedades_v2
+SET precio_mensual_bob = ROUND(precio_mensual_usd * 6.96, 2)
+WHERE tipo_operacion = 'alquiler'
+  AND fuente = 'remax'
+  AND moneda_original = 'USD'
+  AND precio_mensual_bob = precio_mensual_usd
+  AND precio_mensual_usd > 0;
+```
+
+### Impacto colateral
+- Promedio mercado alquiler subdeclarado ~14% (Bs 4.936 → Bs 5.635 corregido)
+- Slider precio, ordenamiento, WhatsApp leads, Market Pulse contaminados
+- Villa Brígida (36%) y Eq. Norte (19%) las zonas más afectadas proporcionalmente
+
+### Lección
+- **Siempre verificar qué contiene cada campo del API según la moneda.** `price.amount` no siempre es BOB.
+- El nodo "Extraer Propiedades" ya detectaba `moneda_original` correctamente (`currency_id === 1 ? 'BOB' : 'USD'`), pero "Procesar Alquileres" no usaba esa info para convertir.
+- **Patrón:** si un extractor detecta moneda, el nodo de preparación DEBE normalizar ambas columnas (BOB y USD) antes de pasar a la función SQL.
+
+---
+
 ## Checklist para agregar nueva fuente (alquiler o venta)
 
-1. [ ] Verificar si la fuente tiene `fecha_publicacion` propia
+1. [ ] Verificar moneda del API y convertir USD↔BOB en el nodo de preparación (Learning 11)
+2. [ ] Verificar si la fuente tiene `fecha_publicacion` propia
 2. [ ] Si NO tiene → asegurar que discovery preserve `fecha_discovery` en UPDATE
 3. [ ] Documentar paths JSON (fotos, agente, teléfono, precio)
 4. [ ] Verificar valor exacto de `fuente` en BD
