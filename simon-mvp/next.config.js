@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'cdn.21online.lat' },
+      { protocol: 'https', hostname: 'intramax.bo' },
+      { protocol: 'https', hostname: 'www.bieninmuebles.com.bo' },
+    ],
+  },
   reactStrictMode: true,
   eslint: {
     // Lint errors in legacy code — don't block production builds
