@@ -4,7 +4,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import type { GetStaticProps } from 'next'
-import { type UnidadAlquiler, type FiltrosAlquiler } from '@/lib/supabase'
+import { type UnidadAlquiler, type FiltrosAlquiler, buscarUnidadesAlquiler } from '@/lib/supabase'
 import { ZONAS_ALQUILER_UI, displayZona } from '@/lib/zonas'
 import { dormLabel, formatPriceBob } from '@/lib/format-utils'
 import { fbqTrack } from '@/lib/meta-pixel'
@@ -247,10 +247,10 @@ function useIsDesktop() {
 }
 
 // ===== MAIN PAGE =====
-export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
+export default function AlquileresPage({ seo, initialProperties }: { seo: AlquileresSEO; initialProperties: UnidadAlquiler[] }) {
   const router = useRouter()
   const isDesktop = useIsDesktop()
-  const [properties, setProperties] = useState<UnidadAlquiler[]>([])
+  const [properties, setProperties] = useState<UnidadAlquiler[]>(initialProperties)
   const [loading, setLoading] = useState(true)
   const [spotlightId, setSpotlightId] = useState<number | null>(null)
   const [fetchedSpotlight, setFetchedSpotlight] = useState<UnidadAlquiler | null>(null)
@@ -288,6 +288,11 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
   const [isFiltered, setIsFiltered] = useState(false)
   const [totalCount, setTotalCount] = useState(0)
   const [loadError, setLoadError] = useState(false)
+
+  // UTM contextual banner
+  const [bannerDismissed, setBannerDismissed] = useState(false)
+  const utmContent = router.query.utm_content as string | undefined
+  const showZonaBanner = utmContent === 'pieza03' && !bannerDismissed && !isFiltered
 
   // Analytics: session-level metrics
   const analyticsRef = useRef({ startTime: Date.now(), maxCardIdx: 0, hasInteracted: false, viewedIds: new Set<number>() })
@@ -455,6 +460,12 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
     const count = await fetchProperties(defaultFilters)
     showToast(`${count} alquileres · sin filtros`)
     feedRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function handleBannerZona(slug: string) {
+    applyFilters({ ...filters, zonas_permitidas: [slug] })
+    setBannerDismissed(true)
+    trackEvent('banner_zona_click', { zona: slug, utm_content: utmContent })
   }
 
   const handleMapSelect = useCallback((id: number) => {
@@ -633,7 +644,7 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
     <>
       <AlquileresHead seo={seo} />
       {/* Preload first photo for faster LCP */}
-      {!loading && properties.length > 0 && properties[0].fotos_urls?.[0] && (
+      {properties.length > 0 && properties[0].fotos_urls?.[0] && (
         <Head>
           <link rel="preload" as="image" href={properties[0].fotos_urls[0]} fetchPriority="high" />
         </Head>
@@ -816,6 +827,21 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
                     </div>
                   </div>
                 )}
+                {/* UTM contextual banner — desktop */}
+                {showZonaBanner && (
+                  <div className="utm-zona-banner">
+                    <div className="utm-zona-text">
+                      <span className="utm-zona-title">Equipetrol tiene 5 microzonas con precios distintos</span>
+                      <span className="utm-zona-sub">Filtrá por la tuya</span>
+                    </div>
+                    <div className="utm-zona-chips">
+                      {ZONAS_ALQUILER_UI.filter(z => z.id !== 'equipetrol_3er_anillo' && z.id !== 'sin_zona').map(z => (
+                        <button key={z.id} className="utm-zona-chip" onClick={() => handleBannerZona(z.id)}>{z.label}</button>
+                      ))}
+                    </div>
+                    <button className="utm-zona-close" onClick={() => setBannerDismissed(true)}>&times;</button>
+                  </div>
+                )}
                 <div className="desktop-grid">
                   {gridProperties.map((p, idx) => {
                     const showDivider = filters.acepta_mascotas && idx > 0 && gridProperties[idx - 1]?.acepta_mascotas === true && p.acepta_mascotas !== true
@@ -957,6 +983,19 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
             {filters.con_parqueo && <span className="alq-chip">Parqueo</span>}
             <button className="alq-chip alq-chip-clear" onClick={() => { resetFilters(); setChipsExpanded(false) }}>&times; Todo</button>
           </div>
+
+          {/* UTM contextual banner — mobile */}
+          {showZonaBanner && (
+            <div className="utm-zona-banner-mobile">
+              <div className="utm-zona-text-m">Equipetrol tiene <strong>5 microzonas</strong> con precios distintos</div>
+              <div className="utm-zona-chips-m">
+                {ZONAS_ALQUILER_UI.filter(z => z.id !== 'equipetrol_3er_anillo' && z.id !== 'sin_zona').map(z => (
+                  <button key={z.id} className="utm-zona-chip-m" onClick={() => handleBannerZona(z.id)}>{z.label}</button>
+                ))}
+              </div>
+              <button className="utm-zona-close-m" onClick={() => setBannerDismissed(true)}>&times;</button>
+            </div>
+          )}
 
           {/* Compare banner — only shows with 1+ favorites */}
           {favorites.size >= 1 && (
@@ -1345,6 +1384,26 @@ export default function AlquileresPage({ seo }: { seo: AlquileresSEO }) {
           .alq-fav-count { transition: none; }
           .cc-pip { transition: none; }
         }
+
+        /* ===== UTM ZONA BANNER — DESKTOP ===== */
+        .utm-zona-banner { display:flex; align-items:center; gap:16px; padding:14px 20px; margin-bottom:20px; background:rgba(58,106,72,0.06); border:1px solid rgba(58,106,72,0.2); border-radius:14px; font-family:'DM Sans',sans-serif }
+        .utm-zona-text { display:flex; flex-direction:column; gap:2px; flex-shrink:0 }
+        .utm-zona-title { font-size:14px; color:#3A3530; font-weight:500 }
+        .utm-zona-sub { font-size:12px; color:#7A7060 }
+        .utm-zona-chips { display:flex; gap:8px; flex-wrap:wrap }
+        .utm-zona-chip { padding:7px 16px; border-radius:100px; border:1px solid #D8D0BC; background:#FAFAF8; color:#3A3530; font-size:13px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; transition:all 0.15s; white-space:nowrap }
+        .utm-zona-chip:hover { background:#141414; color:#EDE8DC; border-color:#141414 }
+        .utm-zona-close { background:none; border:none; color:#7A7060; font-size:20px; cursor:pointer; padding:4px 8px; flex-shrink:0; line-height:1 }
+        .utm-zona-close:hover { color:#3A3530 }
+
+        /* ===== UTM ZONA BANNER — MOBILE ===== */
+        .utm-zona-banner-mobile { position:fixed; top:max(52px, calc(env(safe-area-inset-top) + 48px)); left:12px; right:12px; z-index:49; padding:14px 16px; background:rgba(250,250,248,0.95); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid #D8D0BC; border-radius:14px; font-family:'DM Sans',sans-serif; box-shadow:0 4px 20px rgba(58,53,48,0.08) }
+        .utm-zona-text-m { font-size:13px; color:#3A3530; margin-bottom:10px; line-height:1.4 }
+        .utm-zona-text-m strong { color:#141414; font-weight:500 }
+        .utm-zona-chips-m { display:flex; gap:6px; flex-wrap:wrap }
+        .utm-zona-chip-m { padding:6px 14px; border-radius:100px; border:1px solid #D8D0BC; background:#FAFAF8; color:#3A3530; font-size:12px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; transition:all 0.15s }
+        .utm-zona-chip-m:active { background:#141414; color:#EDE8DC; border-color:#141414 }
+        .utm-zona-close-m { position:absolute; top:8px; right:10px; background:none; border:none; color:#7A7060; font-size:18px; cursor:pointer; padding:4px; line-height:1 }
       `}</style>
     </>
   )
@@ -2762,11 +2821,15 @@ function AlquileresHead({ seo }: { seo: AlquileresSEO }) {
   )
 }
 
-// ===== getStaticProps — SEO data =====
-export const getStaticProps: GetStaticProps<{ seo: AlquileresSEO }> = async () => {
-  const data = await fetchMercadoAlquilerData()
+// ===== getStaticProps — SEO data + first 8 properties for LCP =====
+export const getStaticProps: GetStaticProps<{ seo: AlquileresSEO; initialProperties: UnidadAlquiler[] }> = async () => {
+  const [data, initialProperties] = await Promise.all([
+    fetchMercadoAlquilerData(),
+    buscarUnidadesAlquiler({ orden: 'recientes', limite: 8, solo_con_fotos: true }).catch(() => [] as UnidadAlquiler[]),
+  ])
   return {
     props: {
+      initialProperties,
       seo: {
         totalUnidades: data.kpis.totalUnidades,
         rentaMedianaBs: data.kpis.rentaMedianaBs,
