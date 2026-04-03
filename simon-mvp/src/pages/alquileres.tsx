@@ -194,6 +194,7 @@ function handleWhatsAppLead(e: React.MouseEvent, p: UnidadAlquiler, msg: string,
   trackWhatsAppClick(p, fuente)
   fetch('/api/lead-alquiler', {
     method: 'POST',
+    keepalive: true,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       phone,
