@@ -1969,7 +1969,7 @@ function MobilePropertyCard({
 
   return (
     <div className={`alq-card${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}`} ref={cardRef}>
-      <PhotoCarousel photos={p.fotos_urls || []} isFirst={isFirst} showHint={showHint} onPhotoTap={onPhotoTap} />
+      <PhotoCarousel photos={p.fotos_urls || []} isFirst={isFirst} showHint={showHint} onPhotoTap={onPhotoTap} propertyId={p.id} />
       {isSpotlight && (
         <div className="mc-spotlight-badge">Te compartieron este depto</div>
       )}
@@ -2053,10 +2053,11 @@ function MobilePropertyCard({
 }
 
 // ===== PHOTO CAROUSEL (native scroll-snap) =====
-function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap }: { photos: string[]; isFirst: boolean; showHint?: boolean; onPhotoTap?: (index: number) => void }) {
+function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap, propertyId }: { photos: string[]; isFirst: boolean; showHint?: boolean; onPhotoTap?: (index: number) => void; propertyId?: number }) {
   const [currentIdx, setCurrentIdx] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
+  const swipedRef = useRef(false)
   const total = photos.length || 1
   // Only load current slide + 1 neighbor to save bandwidth
   const [maxLoaded, setMaxLoaded] = useState(isFirst ? 2 : 0)
@@ -2091,6 +2092,11 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap }: { photos: stri
         setCurrentIdx(idx)
         // Preload next slide
         setMaxLoaded(prev => Math.max(prev, idx + 2))
+        // Track first swipe per card (indicates photo interest)
+        if (idx > 0 && !swipedRef.current) {
+          swipedRef.current = true
+          trackEvent('swipe_photos', { property_id: propertyId, photo_index: idx, total_photos: total, source: 'card' })
+        }
         ticking = false
       })
     }
@@ -2292,9 +2298,10 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
 }
 
 // ===== BOTTOM SHEET GALLERY =====
-function BottomSheetGallery({ photos }: { photos: string[] }) {
+function BottomSheetGallery({ photos, propertyId }: { photos: string[]; propertyId?: number }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [currentIdx, setCurrentIdx] = useState(0)
+  const swipedRef = useRef(false)
   const total = photos.length
 
   useEffect(() => {
@@ -2303,10 +2310,14 @@ function BottomSheetGallery({ photos }: { photos: string[] }) {
     const handleScroll = () => {
       const idx = Math.round(el.scrollLeft / el.clientWidth)
       setCurrentIdx(Math.min(idx, total - 1))
+      if (idx > 0 && !swipedRef.current) {
+        swipedRef.current = true
+        trackEvent('swipe_photos', { property_id: propertyId, photo_index: idx, total_photos: total, source: 'bottom_sheet' })
+      }
     }
     el.addEventListener('scroll', handleScroll, { passive: true })
     return () => el.removeEventListener('scroll', handleScroll)
-  }, [total])
+  }, [total, propertyId])
 
   function goTo(idx: number) {
     scrollRef.current?.scrollTo({ left: idx * scrollRef.current.clientWidth, behavior: 'smooth' })
@@ -2499,7 +2510,7 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
       </div>
       {/* Galería de fotos horizontal */}
       {p.fotos_urls && p.fotos_urls.length > 0 && (
-        <BottomSheetGallery photos={p.fotos_urls} />
+        <BottomSheetGallery photos={p.fotos_urls} propertyId={p.id} />
       )}
       {/* Body blanco — características, amenidades, ubicación, anuncio */}
       <div className="bs-section">
