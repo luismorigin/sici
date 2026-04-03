@@ -6,6 +6,14 @@ Modos:
   ux        — todos los eventos sin filtro UTM, funnel, dispositivo, página
   overview  — todo junto: fuentes, nuevo vs recurrente, comparación período anterior
 
+Cortes de datos (NO comparar directamente antes/después):
+  27 feb 2026 — click_whatsapp pre-27feb inflado (bug: disparaba en render)
+  3 abr 2026  — session_alquiler/bounce_no_action pre-3abr inflados 1.7x (multi-fire)
+  3 abr 2026  — view_photos eliminado (código muerto), reemplazado por swipe_photos
+  3 abr 2026  — agregados reset_filters, lead_gate
+  3 abr 2026  — keepalive fix: BD sub-reportaba leads pre-3abr
+  Ver docs/meta/GA4_EVENTOS.md sección "Cortes de datos" para detalle completo.
+
 Requiere:
   pip install google-analytics-data google-auth
   Service account key en ~/.credentials/ga4-key.json
