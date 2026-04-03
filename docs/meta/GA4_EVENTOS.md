@@ -9,7 +9,7 @@
 
 ## Eventos por pagina
 
-### `/alquileres` — 16 eventos
+### `/alquileres` — 17 eventos
 
 #### Conversiones
 
@@ -22,11 +22,11 @@
 | Evento | Trigger | Params | Notas |
 |--------|---------|--------|-------|
 | `page_enter_alquiler` | Cargar pagina | — | Marca inicio de sesion |
-| `session_alquiler` | `beforeunload` | `duration_seconds`, `properties_viewed`, `filters_applied`, `whatsapp_clicks` | Resumen de sesion completa |
-| `bounce_no_action` | Salir sin interactuar | `duration_seconds` | Sesion sin clicks significativos |
+| `session_alquiler` | `visibilitychange` → hidden (una sola vez) | `duration_seconds`, `max_scroll_depth`, `cards_viewed`, `total_cards`, `had_interaction` | Resumen de sesion. Fix 3 abr 2026: ahora single-fire (antes se disparaba en cada cambio de tab, inflaba 1.7x) |
+| `bounce_no_action` | Salir sin interactuar (>3s) | `duration_seconds` | Fix 3 abr 2026: eliminados falsos positivos por cambio de tab momentaneo |
 | `view_property` | Ver card / swipe mobile | `property_id`, `property_name`, `position` | Cada card vista |
 | `open_detail` | Abrir bottom sheet | `property_id`, `property_name` | Detalle expandido |
-| `view_photos` | Abrir galeria fotos | `property_id`, `fotos_count` | Indica interes alto |
+| `swipe_photos` | Primer swipe de fotos en card o bottom sheet | `property_id`, `photo_index`, `total_photos`, `source` | source: `card`, `bottom_sheet`. Reemplaza `view_photos` (eliminado 3 abr 2026) |
 | `apply_filters` | Aplicar filtros | `zonas`, `dorms`, `precio_max`, `total_results` | Que buscan los usuarios |
 | `no_results` | Filtros sin resultados | `zonas`, `dorms`, `precio_max` | Demanda no cubierta |
 | `toggle_favorite` | Agregar/quitar favorito | `property_id`, `action`, `total_favs` | action: `add` / `remove` |
@@ -36,6 +36,8 @@
 | `open_map_mobile` | Abrir mapa en mobile | — | Engagement mobile |
 | `share_alquiler` | Compartir propiedad | `property_id`, `zone`, `price`, `dorms` | Viralidad |
 | `open_shared_alquiler` | Abrir link compartido | `property_id` | Tracking de links compartidos |
+| `reset_filters` | Limpiar filtros aplicados | `results_count` | Abandonar busqueda filtrada. Agregado 3 abr 2026 |
+| `lead_gate` | Completar gate "Ver anuncio original" | `property_id`, `property_name`, `zona` | Lead con nombre/tel/correo. Agregado 3 abr 2026 |
 
 ### `/ventas` — 10 eventos
 
@@ -101,6 +103,18 @@
 | `ViewContent` Meta Pixel en ventas | `/ventas` | Cuando se activen campanas de venta | Media |
 | Scroll depth custom | `/mercado/*` | Si Clarity no es suficiente | Baja |
 | Unificar `trackEvent` en alquileres | `/alquileres` | Refactor menor, no urgente | Baja |
+
+## Cortes de datos
+
+Fechas donde los eventos cambiaron y los datos antes/despues NO son comparables directamente:
+
+| Fecha | Cambio | Efecto en datos |
+|-------|--------|-----------------|
+| 27 feb 2026 | Fix bug `click_whatsapp` en render | Pre-27 feb: clicks inflados (se disparaba en cada render). Usar `leads_alquiler` como fuente de verdad |
+| 3 abr 2026 | `session_alquiler` single-fire | Pre-3 abr: sesiones infladas ~1.7x (se re-disparaba en cada `visibilitychange`). `bounce_no_action` tenia falsos positivos |
+| 3 abr 2026 | `view_photos` eliminado, reemplazado por `swipe_photos` | `view_photos` siempre fue 0 (codigo muerto). `swipe_photos` es el primer dato real de interaccion con fotos |
+| 3 abr 2026 | Agregados `reset_filters`, `lead_gate` | Sin datos anteriores para estos eventos |
+| 3 abr 2026 | `keepalive: true` en fetch de leads WA | Pre-3 abr: BD sub-reportaba leads vs GA4 (~83% perdidos en mobile). Post-fix deberian converger |
 
 ## Verificacion
 
