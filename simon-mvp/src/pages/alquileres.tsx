@@ -42,7 +42,6 @@ function formatFechaCortaSEO(dateStr: string): string {
 // Leaflet: dynamic import SSR-safe
 const MapComponent = dynamic(() => import('@/components/alquiler/AlquilerMap'), { ssr: false })
 const MapMultiComponent = dynamic(() => import('@/components/alquiler/AlquilerMapMulti'), { ssr: false })
-const PhotoViewer = dynamic(() => import('@/components/alquiler/PhotoViewer'), { ssr: false })
 const CompareSheet = dynamic(() => import('@/components/alquiler/CompareSheet'), { ssr: false })
 
 // ===== CONSTANTS =====
@@ -276,11 +275,6 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   const [chipsExpanded, setChipsExpanded] = useState(false)
   const [compareOpen, setCompareOpen] = useState(false)
-  const [viewerOpen, setViewerOpen] = useState(false)
-  const [viewerPhotos, setViewerPhotos] = useState<string[]>([])
-  const [viewerIndex, setViewerIndex] = useState(0)
-  const [viewerName, setViewerName] = useState('')
-  const [viewerSubtitle, setViewerSubtitle] = useState('')
 
   const [filters, setFilters] = useState<FiltrosAlquiler>({
     orden: 'recientes',
@@ -297,7 +291,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   const showZonaBanner = utmContent === 'pieza03' && !bannerDismissed && !isFiltered
 
   // Analytics: session-level metrics
-  const analyticsRef = useRef({ startTime: Date.now(), maxCardIdx: 0, hasInteracted: false, viewedIds: new Set<number>() })
+  const analyticsRef = useRef({ startTime: Date.now(), maxCardIdx: 0, hasInteracted: false, sessionSent: false, viewedIds: new Set<number>() })
   const fetchGenRef = useRef(0) // increments on each fetchProperties call to cancel stale background loads
 
   // Persist favorites to localStorage
@@ -395,6 +389,8 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   useEffect(() => {
     function sendSessionMetrics() {
       const a = analyticsRef.current
+      if (a.sessionSent) return
+      a.sessionSent = true
       const duration = Math.round((Date.now() - a.startTime) / 1000)
       trackEvent('session_alquiler', {
         duration_seconds: duration,
@@ -462,6 +458,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     const count = await fetchProperties(defaultFilters)
     showToast(`${count} alquileres · sin filtros`)
     feedRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+    trackEvent('reset_filters', { results_count: count })
   }
 
   function handleBannerZona(slug: string) {
@@ -517,6 +514,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     try { localStorage.setItem('alquileres_gate_v1', JSON.stringify({ nombre, telefono, correo, ts: new Date().toISOString() })) } catch {}
     setGateCompleted(true)
     window.open(url, '_blank')
+    trackEvent('lead_gate', { property_id: sheetProperty?.id, property_name: sheetProperty?.nombre_edificio || sheetProperty?.nombre_proyecto, zona: sheetProperty?.zona })
     // Fire and forget — save lead to DB
     const prop = sheetProperty
     fetch('/api/lead-gate', {
@@ -544,16 +542,6 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     })
   }
 
-  function openViewer(p: UnidadAlquiler, photoIndex: number) {
-    if (!p.fotos_urls?.length) return
-    setViewerPhotos(p.fotos_urls)
-    setViewerIndex(photoIndex)
-    setViewerName(p.nombre_edificio || p.nombre_proyecto || 'Departamento')
-    setViewerSubtitle(`${displayZona(p.zona)} · ${p.area_m2}m² · ${dormLabel(p.dormitorios)}`)
-    setViewerOpen(true)
-    analyticsRef.current.hasInteracted = true
-    trackEvent('view_photos', { property_id: p.id, property_name: p.nombre_edificio || p.nombre_proyecto || '', fotos_count: p.fotos_urls.length })
-  }
 
   const activeFilterCount = useMemo(() => {
     let c = 0
@@ -666,17 +654,6 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         properties={favoriteProperties}
         onClose={() => setCompareOpen(false)}
       />
-
-      {/* Photo viewer */}
-      {viewerOpen && (
-        <PhotoViewer
-          photos={viewerPhotos}
-          initialIndex={viewerIndex}
-          buildingName={viewerName}
-          subtitle={viewerSubtitle}
-          onClose={() => setViewerOpen(false)}
-        />
-      )}
 
       {/* Bottom sheet overlay */}
       {sheetOpen && <div className="alq-sheet-overlay" onClick={() => setSheetOpen(false)} />}
