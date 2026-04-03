@@ -137,6 +137,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Meta Pixel eventos** | `docs/meta/META_PIXEL_EVENTOS.md` — Lead, Contact, ViewContent, Search |
 | **Clarity tracking** | `docs/meta/CLARITY_TRACKING.md` — heatmaps, recordings, config |
 | **LLM Enrichment README** | `scripts/llm-enrichment/README.md` |
+| **GA4 Metrics Script** | `scripts/check_ga4_metrics.py` — consulta GA4 API (campaign/ux/overview), property 523288591. Comando: `/metrics` |
 
 ## Simon Brand (repo externo)
 
