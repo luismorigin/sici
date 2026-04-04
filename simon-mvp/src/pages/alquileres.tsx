@@ -633,10 +633,10 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   return (
     <>
       <AlquileresHead seo={seo} />
-      {/* Preload first photo for faster LCP */}
-      {properties.length > 0 && properties[0].fotos_urls?.[0] && (
+      {/* Preload first photo for faster LCP — use Next.js image URL for cache hit */}
+      {initialProperties.length > 0 && initialProperties[0].fotos_urls?.[0] && (
         <Head>
-          <link rel="preload" as="image" href={properties[0].fotos_urls[0]} fetchPriority="high" />
+          <link rel="preload" as="image" href={`/_next/image?url=${encodeURIComponent(initialProperties[0].fotos_urls[0])}&w=640&q=75`} fetchPriority="high" />
         </Head>
       )}
 
@@ -2122,7 +2122,7 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap, propertyId }: { 
                 src={url}
                 alt=""
                 fill
-                sizes="100vw"
+                sizes="(max-width: 767px) 100vw, 50vw"
                 priority
                 draggable={false}
                 className="pc-slide-img"
