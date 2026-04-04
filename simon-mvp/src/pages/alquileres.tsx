@@ -43,6 +43,7 @@ function formatFechaCortaSEO(dateStr: string): string {
 const MapComponent = dynamic(() => import('@/components/alquiler/AlquilerMap'), { ssr: false })
 const MapMultiComponent = dynamic(() => import('@/components/alquiler/AlquilerMapMulti'), { ssr: false })
 const CompareSheet = dynamic(() => import('@/components/alquiler/CompareSheet'), { ssr: false })
+const SimonChatWidget = dynamic(() => import('@/components/simon-chat/SimonChatWidget'), { ssr: false })
 
 // ===== CONSTANTS =====
 
@@ -701,6 +702,16 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         open={compareOpen}
         properties={favoriteProperties}
         onClose={() => setCompareOpen(false)}
+      />
+
+      {/* Simon Chat Bot */}
+      <SimonChatWidget
+        properties={properties}
+        sheetOpen={sheetOpen}
+        onOpenDetail={(id) => {
+          const prop = properties.find(p => p.id === id)
+          if (prop) openDetail(prop)
+        }}
       />
 
       {/* Bottom sheet overlay */}
