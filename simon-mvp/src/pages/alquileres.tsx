@@ -265,6 +265,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     } catch {}
   }, [])
   const [activeCardIndex, setActiveCardIndex] = useState(0)
+  const activeCardIdxRef = useRef(0)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sheetProperty, setSheetProperty] = useState<UnidadAlquiler | null>(null)
   const [gateCompleted, setGateCompleted] = useState(false)
@@ -312,9 +313,13 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
       requestAnimationFrame(() => {
         if (!el) { ticking = false; return }
         const idx = Math.round(el.scrollTop / el.clientHeight)
-        setActiveCardIndex(idx)
         // Level 1+3: track view_property + scroll_depth
         if (idx > analyticsRef.current.maxCardIdx) analyticsRef.current.maxCardIdx = idx
+        // Only trigger re-render when card actually changes
+        if (idx !== activeCardIdxRef.current) {
+          activeCardIdxRef.current = idx
+          setActiveCardIndex(idx)
+        }
         ticking = false
       })
     }
