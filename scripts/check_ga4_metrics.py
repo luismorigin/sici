@@ -5,6 +5,7 @@ Modos:
   campaign  — tráfico paid por pieza/UTM (default legacy)
   ux        — todos los eventos sin filtro UTM, funnel, dispositivo, página
   overview  — todo junto: fuentes, nuevo vs recurrente, comparación período anterior
+  retention — señales PMF: returning users, organic growth, engagement depth
 
 Cortes de datos (NO comparar directamente antes/después):
   27 feb 2026 — click_whatsapp pre-27feb inflado (bug: disparaba en render)
@@ -19,12 +20,13 @@ Requiere:
   Service account key en ~/.credentials/ga4-key.json
 
 Uso:
-  python check_ga4_metrics.py                          → campaign, 7 días
-  python check_ga4_metrics.py --mode ux --days 2       → UX últimos 2 días
-  python check_ga4_metrics.py --mode overview           → overview 7 días
-  python check_ga4_metrics.py pieza03 --days 3          → campaign, solo pieza03
-  python check_ga4_metrics.py --list                    → listar piezas conocidas
-  python check_ga4_metrics.py --json                    → output JSON (para consumo programático)
+  /metrics                          → retention (PMF signals), 28 dias
+  /metrics --mode campaign          → paid por pieza, 7 dias
+  /metrics --mode ux --days 2       → UX ultimos 2 dias
+  /metrics --mode overview          → overview 7 dias
+  /metrics video03 --days 3         → campaign, solo pieza03
+  /metrics --list                   → listar piezas conocidas
+  /metrics --json                   → output JSON
 """
 
 import argparse
@@ -312,6 +314,128 @@ def query_overview(client, days):
     }
 
 
+# ======================== RETENTION MODE ========================
+
+RETENTION_EVENTS = [
+    "click_whatsapp", "open_detail", "apply_filters", "view_property",
+    "swipe_photos", "lead_gate", "session_alquiler",
+]
+
+
+def query_retention(client, days):
+    """Señales PMF: returning users trend, organic growth, engagement by user type."""
+
+    # 1. New vs Returning by week — core retention trend
+    nr_by_week = _run(client,
+        dimensions=[Dimension(name="isoWeek"), Dimension(name="newVsReturning")],
+        metrics=[
+            Metric(name="sessions"),
+            Metric(name="activeUsers"),
+            Metric(name="averageSessionDuration"),
+        ],
+        days=days,
+        order_bys=[OrderBy(dimension=OrderBy.DimensionOrderBy(dimension_name="isoWeek"))],
+        limit=200,
+    )
+
+    # 2. Returning users × source/medium — is organic/direct returning growing?
+    returning_filter = FilterExpression(
+        filter=Filter(
+            field_name="newVsReturning",
+            string_filter=Filter.StringFilter(
+                value="returning",
+                match_type=Filter.StringFilter.MatchType.EXACT,
+            ),
+        )
+    )
+    returning_by_source = _run(client,
+        dimensions=[Dimension(name="sessionSource"), Dimension(name="sessionMedium")],
+        metrics=[
+            Metric(name="sessions"),
+            Metric(name="activeUsers"),
+            Metric(name="averageSessionDuration"),
+        ],
+        days=days,
+        filters=returning_filter,
+        order_bys=[OrderBy(metric=OrderBy.MetricOrderBy(metric_name="sessions"), desc=True)],
+    )
+
+    # 3. Key events × new vs returning — do returning users engage more?
+    events_filter = FilterExpression(
+        or_group=FilterExpressionList(
+            expressions=[
+                FilterExpression(filter=Filter(
+                    field_name="eventName",
+                    string_filter=Filter.StringFilter(
+                        value=ev,
+                        match_type=Filter.StringFilter.MatchType.EXACT,
+                    ),
+                ))
+                for ev in RETENTION_EVENTS
+            ]
+        )
+    )
+    events_by_type = _run(client,
+        dimensions=[Dimension(name="newVsReturning"), Dimension(name="eventName")],
+        metrics=[Metric(name="eventCount"), Metric(name="activeUsers")],
+        days=days, filters=events_filter, limit=200,
+    )
+
+    # 4. Organic + direct sessions by week — PMF signal: growing without spend
+    organic_direct_filter = FilterExpression(
+        or_group=FilterExpressionList(
+            expressions=[
+                FilterExpression(filter=Filter(
+                    field_name="sessionMedium",
+                    string_filter=Filter.StringFilter(
+                        value="organic",
+                        match_type=Filter.StringFilter.MatchType.EXACT,
+                    ),
+                )),
+                FilterExpression(filter=Filter(
+                    field_name="sessionMedium",
+                    string_filter=Filter.StringFilter(
+                        value="(none)",
+                        match_type=Filter.StringFilter.MatchType.EXACT,
+                    ),
+                )),
+                FilterExpression(filter=Filter(
+                    field_name="sessionMedium",
+                    string_filter=Filter.StringFilter(
+                        value="referral",
+                        match_type=Filter.StringFilter.MatchType.EXACT,
+                    ),
+                )),
+            ]
+        )
+    )
+    organic_by_week = _run(client,
+        dimensions=[Dimension(name="isoWeek"), Dimension(name="sessionMedium")],
+        metrics=[Metric(name="sessions"), Metric(name="activeUsers")],
+        days=days, filters=organic_direct_filter,
+        order_bys=[OrderBy(dimension=OrderBy.DimensionOrderBy(dimension_name="isoWeek"))],
+        limit=200,
+    )
+
+    # 5. Comparison: returning users this period vs previous
+    nr_comparison = _run_comparison(client,
+        dimensions=[Dimension(name="newVsReturning")],
+        metrics=[
+            Metric(name="sessions"),
+            Metric(name="activeUsers"),
+        ],
+        days=days,
+    )
+
+    return {
+        "nr_by_week": nr_by_week,
+        "returning_by_source": returning_by_source,
+        "events_by_type": events_by_type,
+        "organic_by_week": organic_by_week,
+        "nr_comparison": nr_comparison,
+    }
+
+
 # ======================== DISPLAY ========================
 
 def _rows_to_dicts(response, dim_names, metric_names):
@@ -489,6 +613,212 @@ def print_ux(data, days):
     print()
 
 
+def print_retention(data, days):
+    print()
+    print("=" * 70)
+    print(f"  SIMON -- Retention & PMF Signals (ultimos {days} dias)")
+    print("=" * 70)
+
+    if days < 14:
+        print()
+        print("  NOTA: Con menos de 14 dias no hay tendencia semanal confiable.")
+        print("  Los datos son un snapshot, no una tendencia. Usar --days 28 para PMF.")
+
+    # 1. New vs Returning by week
+    print()
+    print("RETENCION POR SEMANA (new vs returning)")
+    print("-" * 70)
+    nr_rows = _rows_to_dicts(data["nr_by_week"],
+        ["week", "type"], ["sessions", "users", "duration"])
+
+    weeks = sorted(set(r["week"] for r in nr_rows))
+    print(f"  {'Semana':<10} {'New ses':>8} {'Ret ses':>8} {'Ret %':>7} {'New usr':>8} {'Ret usr':>8} {'Ret dur':>8}")
+    print(f"  {'-'*8:<10} {'-'*8:>8} {'-'*8:>8} {'-'*7:>7} {'-'*8:>8} {'-'*8:>8} {'-'*8:>8}")
+
+    for week in weeks:
+        new = next((r for r in nr_rows if r["week"] == week and r["type"] == "new"), None)
+        ret = next((r for r in nr_rows if r["week"] == week and r["type"] == "returning"), None)
+        ns = new["sessions"] if new else 0
+        rs = ret["sessions"] if ret else 0
+        nu = new["users"] if new else 0
+        ru = ret["users"] if ret else 0
+        rd = ret["duration"] if ret else 0
+        total = ns + rs
+        pct = (rs / total * 100) if total > 0 else 0
+        print(f"  W{week:<9} {ns:>8} {rs:>8} {pct:>6.1f}% {nu:>8} {ru:>8} {rd:>7.1f}s")
+
+    # PMF verdict on retention trend
+    if len(weeks) >= 2:
+        first_week = weeks[0]
+        last_week = weeks[-1]
+        first_ret = next((r for r in nr_rows if r["week"] == first_week and r["type"] == "returning"), None)
+        last_ret = next((r for r in nr_rows if r["week"] == last_week and r["type"] == "returning"), None)
+        first_total = sum(r["sessions"] for r in nr_rows if r["week"] == first_week)
+        last_total = sum(r["sessions"] for r in nr_rows if r["week"] == last_week)
+        first_pct = ((first_ret["sessions"] / first_total * 100) if first_ret and first_total else 0)
+        last_pct = ((last_ret["sessions"] / last_total * 100) if last_ret and last_total else 0)
+        delta = last_pct - first_pct
+        arrow = "+" if delta > 0 else "-" if delta < 0 else "="
+        print(f"\n  Tendencia: {first_pct:.1f}% -> {last_pct:.1f}% ({arrow}{abs(delta):.1f}pp)")
+        if last_pct >= 10:
+            print("  [OK] Senal PMF: returning >10%")
+        elif last_pct >= 5:
+            print("  [..] Traccion temprana (5-10%), seguir midiendo")
+        else:
+            print("  [!!] Returning <5% -- producto no retiene aun")
+
+    # 2. Returning by source
+    print()
+    print("RETURNING USERS POR FUENTE")
+    print("-" * 70)
+    src_rows = _rows_to_dicts(data["returning_by_source"],
+        ["source", "medium"], ["sessions", "users", "duration"])
+    if not src_rows:
+        print("  Sin returning users en este período.")
+    else:
+        print(f"  {'Fuente':<20} {'Medio':<12} {'Ses':>6} {'Usr':>6} {'Dur':>7}")
+        print(f"  {'-'*18:<20} {'-'*10:<12} {'-'*6:>6} {'-'*6:>6} {'-'*7:>7}")
+        for r in src_rows[:10]:
+            print(f"  {r['source'][:20]:<20} {r['medium'][:12]:<12} {r['sessions']:>6} {r['users']:>6} {r['duration']:>7.1f}")
+
+    # 3. Engagement: returning vs new on key events
+    print()
+    print("ENGAGEMENT POR TIPO DE USUARIO")
+    print("-" * 70)
+    ev_rows = _rows_to_dicts(data["events_by_type"],
+        ["type", "event"], ["count", "users"])
+
+    by_type = {}
+    for r in ev_rows:
+        if r["type"] and r["type"] not in ("(not set)", ""):
+            by_type.setdefault(r["type"], {})[r["event"]] = r
+
+    types = sorted(by_type.keys())
+    print(f"  {'Evento':<25}", end="")
+    for t in types:
+        print(f" {t + ' (ev)':>12} {t + ' (usr)':>12}", end="")
+    print()
+    print(f"  {'-'*23:<25}", end="")
+    for t in types:
+        print(f" {'-'*12:>12} {'-'*12:>12}", end="")
+    print()
+
+    for ev in RETENTION_EVENTS:
+        print(f"  {ev:<25}", end="")
+        for t in types:
+            r = by_type.get(t, {}).get(ev, {"count": 0, "users": 0})
+            print(f" {r['count']:>12} {r['users']:>12}", end="")
+        print()
+
+    # Events per user comparison
+    print()
+    for ev in ["click_whatsapp", "open_detail", "view_property"]:
+        for t in types:
+            r = by_type.get(t, {}).get(ev)
+            if r and r["users"] > 0:
+                rate = r["count"] / r["users"]
+                print(f"  {ev} / {t} user: {rate:.2f}")
+
+    # 4. Organic + direct by week
+    print()
+    print("TRAFICO NO-PAID POR SEMANA (organic + direct + referral)")
+    print("-" * 70)
+    org_rows = _rows_to_dicts(data["organic_by_week"],
+        ["week", "medium"], ["sessions", "users"])
+
+    org_weeks = sorted(set(r["week"] for r in org_rows))
+    mediums = ["organic", "(none)", "referral"]
+    medium_labels = {"organic": "Organic", "(none)": "Direct", "referral": "Referral"}
+
+    print(f"  {'Semana':<10}", end="")
+    for m in mediums:
+        print(f" {medium_labels.get(m, m):>10}", end="")
+    print(f" {'Total':>10}")
+    print(f"  {'-'*8:<10}", end="")
+    for m in mediums:
+        print(f" {'-'*10:>10}", end="")
+    print(f" {'-'*10:>10}")
+
+    week_totals = []
+    for week in org_weeks:
+        print(f"  W{week:<9}", end="")
+        total = 0
+        for m in mediums:
+            r = next((r for r in org_rows if r["week"] == week and r["medium"] == m), None)
+            val = r["sessions"] if r else 0
+            total += val
+            print(f" {val:>10}", end="")
+        print(f" {total:>10}")
+        week_totals.append(total)
+
+    if len(week_totals) >= 2 and week_totals[0] > 0:
+        growth = (week_totals[-1] - week_totals[0]) / week_totals[0] * 100
+        arrow = "+" if growth > 0 else "-"
+        print(f"\n  Tendencia no-paid: {arrow}{abs(growth):.0f}% (W{org_weeks[0]} -> W{org_weeks[-1]})")
+        if growth > 0:
+            print("  [OK] Senal PMF: trafico no-paid creciendo")
+        else:
+            print("  [!!] Trafico no-paid no crece -- depende de ads")
+
+    # 5. Comparison with previous period
+    print()
+    print("RETURNING: ESTE PERIODO VS ANTERIOR")
+    print("-" * 70)
+    comp = data["nr_comparison"]
+    if comp.rows and len(comp.rows) >= 2:
+        # _run_comparison returns 2 metrics per date range (sessions, users)
+        # With 2 date ranges: metric_values has 4 values [ses_current, usr_current, ses_previous, usr_previous]
+        comp_rows = []
+        for row in comp.rows:
+            t = row.dimension_values[0].value
+            if not t:
+                continue
+            vals = [v.value for v in row.metric_values]
+            try:
+                comp_rows.append({
+                    "type": t,
+                    "ses_current": int(vals[0]) if len(vals) > 0 else 0,
+                    "usr_current": int(vals[1]) if len(vals) > 1 else 0,
+                    "ses_previous": int(vals[2]) if len(vals) > 2 else 0,
+                    "usr_previous": int(vals[3]) if len(vals) > 3 else 0,
+                })
+            except (ValueError, IndexError):
+                pass
+
+        # Deduplicate (GA4 may return dupes)
+        seen = set()
+        unique = []
+        for r in comp_rows:
+            if r["type"] not in seen:
+                seen.add(r["type"])
+                unique.append(r)
+        comp_rows = unique
+
+        print(f"  {'Tipo':<15} {'Ses actual':>10} {'Ses anter':>10} {'Cambio':>10} {'Usr actual':>10} {'Usr anter':>10}")
+        print(f"  {'-'*13:<15} {'-'*10:>10} {'-'*10:>10} {'-'*10:>10} {'-'*10:>10} {'-'*10:>10}")
+        for r in comp_rows:
+            sc = r["ses_current"]
+            sp = r["ses_previous"]
+            change = f"{(sc - sp) / sp * 100:+.0f}%" if sp > 0 else "n/a"
+            print(f"  {r['type']:<15} {sc:>10} {sp:>10} {change:>10} {r['usr_current']:>10} {r['usr_previous']:>10}")
+    else:
+        print("  Sin datos de comparacion.")
+
+    # Final PMF summary
+    print()
+    print("=" * 70)
+    print("  RESUMEN PMF")
+    print("=" * 70)
+    print("  Senales a buscar:")
+    print("  1. Returning sessions >10% del total")
+    print("  2. Trafico no-paid (direct+organic) creciendo semana a semana")
+    print("  3. Returning users con mayor tasa de WA click que new users")
+    print("  4. Returning user duration > new user duration")
+    print()
+
+    print()
+
+
 def print_overview(data, ux_data, days):
     print()
     print("=" * 70)
@@ -604,7 +934,7 @@ def print_overview(data, ux_data, days):
 
 # ======================== JSON OUTPUT ========================
 
-def to_json(mode, campaign_data=None, ux_data=None, overview_data=None, days=7):
+def to_json(mode, campaign_data=None, ux_data=None, overview_data=None, retention_data=None, days=7):
     """Output all data as JSON for programmatic consumption."""
     output = {"mode": mode, "days": days}
 
@@ -643,6 +973,18 @@ def to_json(mode, campaign_data=None, ux_data=None, overview_data=None, days=7):
                 ["page"], ["sessions", "views", "duration", "bounce"]),
         }
 
+    if retention_data:
+        output["retention"] = {
+            "nr_by_week": _rows_to_dicts(retention_data["nr_by_week"],
+                ["week", "type"], ["sessions", "users", "duration"]),
+            "returning_by_source": _rows_to_dicts(retention_data["returning_by_source"],
+                ["source", "medium"], ["sessions", "users", "duration"]),
+            "events_by_type": _rows_to_dicts(retention_data["events_by_type"],
+                ["type", "event"], ["count", "users"]),
+            "organic_by_week": _rows_to_dicts(retention_data["organic_by_week"],
+                ["week", "medium"], ["sessions", "users"]),
+        }
+
     print(json_lib.dumps(output, ensure_ascii=False, indent=2))
 
 
@@ -650,13 +992,25 @@ def to_json(mode, campaign_data=None, ux_data=None, overview_data=None, days=7):
 
 def main():
     parser = argparse.ArgumentParser(description="Métricas GA4 para Simón")
-    parser.add_argument("piece", nargs="?", help="UTM content de la pieza (ej: pieza03)")
-    parser.add_argument("--mode", choices=["campaign", "ux", "overview"], default="campaign",
-                        help="Modo: campaign (paid por pieza), ux (funnel/dispositivo), overview (todo)")
-    parser.add_argument("--days", type=int, default=7, help="Días hacia atrás (default: 7)")
+    parser.add_argument("piece", nargs="?", help="UTM content de la pieza (ej: pieza03). Implica --mode campaign")
+    parser.add_argument("--mode", choices=["retention", "campaign", "ux", "overview"],
+                        help="Modo: retention (PMF, default), campaign (paid), ux (funnel), overview (todo)")
+    parser.add_argument("--days", type=int, help="Dias hacia atras (default: 28 retention, 7 otros)")
     parser.add_argument("--list", action="store_true", help="Listar piezas conocidas")
     parser.add_argument("--json", action="store_true", help="Output JSON")
     args = parser.parse_args()
+
+    # Si pasan una pieza, forzar campaign mode
+    if args.piece and not args.mode:
+        args.mode = "campaign"
+
+    # Default mode = retention
+    if not args.mode:
+        args.mode = "retention"
+
+    # Default days: 28 para retention, 7 para el resto
+    if not args.days:
+        args.days = 28 if args.mode == "retention" else 7
 
     if args.list:
         print("\nPiezas conocidas:")
@@ -696,6 +1050,13 @@ def main():
                 print_overview(overview, ux, args.days)
                 print()
                 print_campaign(campaign, args.days, args.piece)
+
+        elif args.mode == "retention":
+            data = query_retention(client, args.days)
+            if args.json:
+                to_json("retention", retention_data=data, days=args.days)
+            else:
+                print_retention(data, args.days)
 
     except Exception as e:
         print(f"Error consultando GA4: {e}", file=sys.stderr)
