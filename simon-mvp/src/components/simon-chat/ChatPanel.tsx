@@ -5,7 +5,7 @@ import ChatMessage from './ChatMessage'
 import ChatQuickReplies from './ChatQuickReplies'
 import ChatTypingIndicator from './ChatTypingIndicator'
 import { WELCOME_MESSAGE } from './chat-constants'
-import { getSessionId, generateMsgId } from './chat-utils'
+import { getSessionId, generateMsgId, trackChatEvent } from './chat-utils'
 import { colors, spacing } from '@/lib/simon-design-tokens'
 
 interface Props {
@@ -14,23 +14,69 @@ interface Props {
   onOpenDetail?: (id: number) => void
 }
 
+const STORAGE_KEY = 'simon_chat_messages'
+const STORAGE_STRIKES = 'simon_chat_strikes'
+
+function loadMessages(): ChatMessageType[] {
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    }
+  } catch {}
+  return [{
+    id: generateMsgId(),
+    role: 'assistant',
+    text: WELCOME_MESSAGE.text,
+    quick_replies: WELCOME_MESSAGE.quick_replies,
+    timestamp: Date.now(),
+  }]
+}
+
+function loadStrikes(): number {
+  try {
+    return parseInt(sessionStorage.getItem(STORAGE_STRIKES) || '0', 10)
+  } catch { return 0 }
+}
+
 export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) {
-  const [messages, setMessages] = useState<ChatMessageType[]>([
-    {
-      id: generateMsgId(),
-      role: 'assistant',
-      text: WELCOME_MESSAGE.text,
-      quick_replies: WELCOME_MESSAGE.quick_replies,
-      timestamp: Date.now(),
-    },
-  ])
+  const [messages, setMessages] = useState<ChatMessageType[]>(loadMessages)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [blocked, setBlocked] = useState(false)
-  const strikeCount = useRef(0)
+  const [blocked, setBlocked] = useState(() => loadStrikes() >= 3)
+  const strikeCount = useRef(loadStrikes())
   const MAX_STRIKES = 3
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  // Persist messages to sessionStorage
+  useEffect(() => {
+    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages)) } catch {}
+  }, [messages])
+
+  // Back button closes chat instead of navigating away (mobile)
+  useEffect(() => {
+    history.pushState({ simonChat: true }, '')
+    const onPop = (e: PopStateEvent) => {
+      if (e.state?.simonChat) return // ignore our own push
+      onClose()
+      history.pushState({ simonChat: true }, '') // re-push so back works again
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [onClose])
+
+  // iOS keyboard: scroll input into view when focused
+  useEffect(() => {
+    const vv = (window as any).visualViewport
+    if (!vv) return
+    const onResize = () => {
+      inputRef.current?.scrollIntoView({ block: 'nearest' })
+    }
+    vv.addEventListener('resize', onResize)
+    return () => vv.removeEventListener('resize', onResize)
+  }, [])
 
   // Auto-scroll on new message
   useEffect(() => {
@@ -56,6 +102,7 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setLoading(true)
+    trackChatEvent('chat_message', { message_length: trimmed.length })
 
     try {
       // Build history (last 10 turns, text only)
@@ -63,6 +110,9 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
         .filter(m => m.role === 'user' || m.role === 'assistant')
         .slice(-10)
         .map(m => ({ role: m.role, content: m.text }))
+
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 15_000)
 
       const res = await fetch('/api/chat-alquileres', {
         method: 'POST',
@@ -72,7 +122,9 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
           history,
           session_id: getSessionId(),
         }),
+        signal: controller.signal,
       })
+      clearTimeout(timeout)
 
       const data: ChatApiResponse = await res.json()
 
@@ -91,6 +143,7 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
       // Check abuse warning — 3 strikes and blocked
       if (data.response.abuse_warning) {
         strikeCount.current++
+        try { sessionStorage.setItem(STORAGE_STRIKES, String(strikeCount.current)) } catch {}
         if (strikeCount.current >= MAX_STRIKES) {
           setBlocked(true)
           const blockMsg: ChatMessageType = {
@@ -103,20 +156,46 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
         }
       }
 
-      // Handle WhatsApp action
+      // Handle WhatsApp action + register lead
       if (data.response.action === 'open_whatsapp' && data.response.whatsapp_context) {
-        const { broker_phone, message } = data.response.whatsapp_context
+        const { property_id, broker_phone, message } = data.response.whatsapp_context
         const phone = broker_phone.replace(/[^0-9]/g, '')
         const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
         window.open(waUrl, '_blank')
+
+        // Fire-and-forget lead registration
+        const prop = properties.find(p => p.id === property_id)
+        if (prop) {
+          fetch('/api/lead-alquiler', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            keepalive: true,
+            body: JSON.stringify({
+              phone: broker_phone,
+              msg: message,
+              prop_id: prop.id,
+              nombre: prop.nombre_edificio || prop.nombre_proyecto || '',
+              zona: prop.zona,
+              precio: prop.precio_mensual_bob,
+              dorms: prop.dormitorios,
+              broker_nombre: prop.agente_nombre || '',
+              fuente: 'chat-bot',
+              sid: getSessionId(),
+            }),
+          }).catch(() => {}) // fire-and-forget
+          trackChatEvent('chat_lead', { property_id: prop.id, zona: prop.zona, fuente: 'chat-bot' })
+        }
       }
 
-    } catch {
+    } catch (err: any) {
+      const isTimeout = err?.name === 'AbortError'
       const errorMsg: ChatMessageType = {
         id: generateMsgId(),
         role: 'assistant',
-        text: 'No pude procesar tu mensaje. Intentá de nuevo.',
-        quick_replies: ['Intentar de nuevo'],
+        text: isTimeout
+          ? 'La respuesta tardó demasiado. Intentá de nuevo o usá los filtros de la página.'
+          : 'No pude procesar tu mensaje. Intentá de nuevo.',
+        quick_replies: ['Intentar de nuevo', 'Ver todas las opciones'],
         timestamp: Date.now(),
       }
       setMessages(prev => [...prev, errorMsg])

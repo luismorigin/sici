@@ -3,6 +3,7 @@ import type { SimonChatWidgetProps } from './chat-types'
 import ChatPanel from './ChatPanel'
 import { colors, spacing } from '@/lib/simon-design-tokens'
 import { Z_CHAT_BUBBLE, Z_CHAT_PANEL } from './chat-constants'
+import { trackChatEvent } from './chat-utils'
 
 export default function SimonChatWidget({ properties, onOpenDetail, sheetOpen }: SimonChatWidgetProps) {
   const [open, setOpen] = useState(false)
@@ -25,6 +26,7 @@ export default function SimonChatWidget({ properties, onOpenDetail, sheetOpen }:
   const handleOpen = () => {
     if (!mounted) setMounted(true)
     setOpen(true)
+    trackChatEvent('chat_open')
   }
 
   // Hide chat when sheet is open (sheet shows on top)

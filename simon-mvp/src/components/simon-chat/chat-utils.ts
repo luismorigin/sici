@@ -88,3 +88,16 @@ export function getSessionId(): string {
 export function generateMsgId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
 }
+
+// ── GA4 tracking (respects debug mode) ───────────────────────────────────────
+
+function isDebug(): boolean {
+  return typeof window !== 'undefined' && localStorage.getItem('simon_debug') === '1'
+}
+
+export function trackChatEvent(name: string, params?: Record<string, any>) {
+  if (isDebug()) return
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', name, params)
+  }
+}
