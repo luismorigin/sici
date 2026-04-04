@@ -70,6 +70,7 @@ KEY_EVENTS_ALQUILER = [
     "bounce_no_action", "no_results", "session_alquiler",
     "open_map_mobile", "select_map_pin", "banner_zona_click",
     "page_enter_alquiler", "reset_filters", "lead_gate",
+    "chat_open", "chat_message", "chat_lead",
 ]
 
 KEY_EVENTS_VENTA = [
