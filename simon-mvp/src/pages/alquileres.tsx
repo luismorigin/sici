@@ -289,6 +289,12 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   // UTM contextual banner
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const bannerDismissedRef = useRef(false)
+
+  // Filter nudge pill (show once per session after 15+ cards without interaction)
+  const [nudgeVisible, setNudgeVisible] = useState(false)
+  const nudgeDismissedRef = useRef(false)
+  const hasOpenedDetailRef = useRef(false)
+  const isFilteredRef = useRef(false)
   const utmContent = router.query.utm_content as string | undefined
   const showZonaBanner = utmContent === 'pieza03' && !bannerDismissed && !isFiltered
 
@@ -300,6 +306,9 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   useEffect(() => {
     try { localStorage.setItem('alq_favorites', JSON.stringify(Array.from(favorites))) } catch {}
   }, [favorites])
+
+  // Keep isFilteredRef in sync for scroll handler (avoids stale closure)
+  useEffect(() => { isFilteredRef.current = isFiltered }, [isFiltered])
 
   const feedRef = useRef<HTMLDivElement>(null)
 
@@ -320,6 +329,13 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         if (idx >= 1 && !bannerDismissedRef.current) {
           bannerDismissedRef.current = true
           setBannerDismissed(true)
+        }
+        // Filter nudge: show once after 15+ cards without detail/filter interaction
+        if (idx >= 15 && !nudgeDismissedRef.current && !hasOpenedDetailRef.current && !isFilteredRef.current) {
+          nudgeDismissedRef.current = true
+          setNudgeVisible(true)
+          trackEvent('nudge_filter_shown', { card_index: idx })
+          setTimeout(() => setNudgeVisible(false), 5000)
         }
         // Only trigger re-render when card actually changes
         if (idx !== activeCardIdxRef.current) {
@@ -543,6 +559,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     setSheetProperty(p)
     setSheetOpen(true)
     analyticsRef.current.hasInteracted = true
+    hasOpenedDetailRef.current = true
     trackEvent('open_detail', { property_id: p.id, property_name: p.nombre_edificio || p.nombre_proyecto || '' })
     fbqTrack('ViewContent', {
       content_type: 'product',
@@ -554,6 +571,23 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     })
   }
 
+  function dismissNudge() {
+    setNudgeVisible(false)
+    trackEvent('nudge_filter_dismiss')
+  }
+
+  function tapNudge() {
+    setNudgeVisible(false)
+    trackEvent('nudge_filter_tap')
+    const filterIdx = Math.min(FILTER_CARD_POSITION, feedItems.length - 1)
+    setActiveCardIndex(filterIdx)
+    setTimeout(() => {
+      if (feedRef.current) {
+        feedRef.current.scrollTo({ top: filterIdx * feedRef.current.clientHeight, behavior: 'smooth' })
+      }
+      setChipsExpanded(true)
+    }, 50)
+  }
 
   const activeFilterCount = useMemo(() => {
     let c = 0
@@ -1008,6 +1042,15 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
             </svg>
           </button>
 
+          {/* Filter nudge pill — appears once after 15+ cards without interaction */}
+          {nudgeVisible && (
+            <div className="alq-nudge-pill" onClick={tapNudge}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{width:14,height:14,flexShrink:0}}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              <span>Filtra por zona o precio</span>
+              <button className="alq-nudge-x" onClick={(e) => { e.stopPropagation(); dismissNudge() }}>&times;</button>
+            </div>
+          )}
+
           {/* Full-screen mobile map */}
           {mobileMapOpen && (
             <div className="alq-mobile-map-overlay">
@@ -1354,6 +1397,25 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
           background: #FAFAF8; border: 1px solid #D8D0BC;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .alq-nudge-pill {
+          position: fixed; bottom: max(90px, calc(env(safe-area-inset-bottom) + 80px));
+          left: 50%; transform: translateX(-50%); z-index: 100;
+          display: flex; align-items: center; gap: 8px;
+          background: #3A6A48; color: #EDE8DC;
+          padding: 12px 16px 12px 18px; border-radius: 100px;
+          font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+          letter-spacing: 0.3px; cursor: pointer;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+          animation: nudgeIn 0.3s ease-out;
+        }
+        .alq-nudge-x {
+          background: none; border: none; color: rgba(237,232,220,0.6);
+          font-size: 18px; line-height: 1; cursor: pointer; padding: 0 0 0 4px;
+        }
+        @keyframes nudgeIn {
+          from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+          to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
         .alq-mobile-map-overlay {
           position: fixed; inset: 0; z-index: 300; background: #EDE8DC;
