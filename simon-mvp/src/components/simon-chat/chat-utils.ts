@@ -101,3 +101,48 @@ export function trackChatEvent(name: string, params?: Record<string, any>) {
     (window as any).gtag('event', name, params)
   }
 }
+
+// ── Parse search intent from user message (for chat_search event) ────────────
+
+export function parseSearchIntent(text: string): Record<string, any> | null {
+  const lower = text.toLowerCase()
+
+  // Skip greetings/meta
+  if (/^(hola|buenas|hey|hi|gracias|ok|dale|cómo estás|como estas)[\s!?.,]*$/i.test(lower.trim())) {
+    return null
+  }
+
+  const intent: Record<string, any> = {}
+
+  // Dormitorios
+  const dormMatch = lower.match(/(\d)\s*(dorm|hab|cuarto|dormitorio)|estudio|monoambiente/)
+  if (dormMatch) {
+    intent.dorms = dormMatch[1] ? parseInt(dormMatch[1]) : 0
+  }
+
+  // Presupuesto
+  const priceMatch = lower.match(/(\d[\d.,]*)\s*(bs|bolivianos)/i)
+  if (priceMatch) {
+    intent.precio_max = parseInt(priceMatch[1].replace(/[.,]/g, ''))
+  }
+  const priceUsdMatch = lower.match(/(\d[\d.,]*)\s*(usd|dólares|dolares)/i)
+  if (priceUsdMatch) {
+    intent.precio_max_usd = parseInt(priceUsdMatch[1].replace(/[.,]/g, ''))
+  }
+
+  // Zona
+  if (lower.includes('sirari')) intent.zona = 'Sirari'
+  else if (lower.includes('eq') && lower.includes('norte')) intent.zona = 'Equipetrol Norte'
+  else if (lower.includes('eq') && lower.includes('centro')) intent.zona = 'Equipetrol Centro'
+  else if (lower.includes('eq') && lower.includes('oeste')) intent.zona = 'Equipetrol Oeste'
+  else if (lower.includes('equipetrol')) intent.zona = 'Equipetrol'
+
+  // Deal-breakers
+  if (lower.includes('mascota') || lower.includes('pet')) intent.mascotas = true
+  if (lower.includes('amoblado') || lower.includes('amueblado')) intent.amoblado = true
+  if (lower.includes('parqueo') || lower.includes('parking') || lower.includes('estacionamiento')) intent.parqueo = true
+  if (lower.includes('piscina') || lower.includes('pool')) intent.piscina = true
+
+  // Only track if there's at least one search signal
+  return Object.keys(intent).length > 0 ? intent : null
+}

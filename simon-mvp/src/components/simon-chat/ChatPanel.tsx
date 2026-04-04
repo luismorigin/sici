@@ -5,7 +5,7 @@ import ChatMessage from './ChatMessage'
 import ChatQuickReplies from './ChatQuickReplies'
 import ChatTypingIndicator from './ChatTypingIndicator'
 import { WELCOME_MESSAGE } from './chat-constants'
-import { getSessionId, generateMsgId, trackChatEvent } from './chat-utils'
+import { getSessionId, generateMsgId, trackChatEvent, parseSearchIntent } from './chat-utils'
 import { colors, spacing } from '@/lib/simon-design-tokens'
 
 interface Props {
@@ -103,6 +103,8 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
     setInput('')
     setLoading(true)
     trackChatEvent('chat_message', { message_length: trimmed.length })
+    const searchIntent = parseSearchIntent(trimmed)
+    if (searchIntent) trackChatEvent('chat_search', searchIntent)
 
     try {
       // Build history (last 10 turns, text only)
@@ -270,7 +272,15 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
             key={msg.id}
             message={msg}
             properties={properties}
-            onOpenDetail={onOpenDetail}
+            onOpenDetail={(id) => {
+              const prop = properties.find(p => p.id === id)
+              trackChatEvent('chat_click_property', {
+                property_id: id,
+                property_name: prop?.nombre_edificio || prop?.nombre_proyecto || '',
+                zona: prop?.zona || '',
+              })
+              onOpenDetail?.(id)
+            }}
           />
         ))}
         {loading && <ChatTypingIndicator />}

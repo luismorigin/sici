@@ -40,6 +40,8 @@
 | `lead_gate` | Completar gate "Ver anuncio original" | `property_id`, `property_name`, `zona` | Lead con nombre/tel/correo. Agregado 3 abr 2026 |
 | `chat_open` | Usuario abre el chat bot | — | Agregado 4 abr 2026 |
 | `chat_message` | Usuario envia mensaje al bot | `message_length` | Agregado 4 abr 2026 |
+| `chat_search` | Mensaje con intent de busqueda | `dorms`, `precio_max`, `zona`, `amoblado`, `mascotas`, `parqueo`, `piscina` | Solo params detectados. Nivel 3: qué busca la gente |
+| `chat_click_property` | Click en card de propiedad desde el chat | `property_id`, `property_name`, `zona` | Nivel 2: bot → feed. Agregado 4 abr 2026 |
 | `chat_lead` | WhatsApp lead desde el chat bot | `property_id`, `zona`, `fuente` | fuente siempre 'chat-bot'. Agregado 4 abr 2026 |
 | `nudge_filter_shown` | Pill "Filtra por zona o precio" aparece | `card_index` | Se muestra 1 vez/sesion tras 15+ cards sin open_detail ni filtro. Agregado 4 abr 2026 |
 | `nudge_filter_tap` | Usuario toca el pill | — | Scrollea a filter card y abre chips |
