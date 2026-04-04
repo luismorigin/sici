@@ -288,6 +288,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
 
   // UTM contextual banner
   const [bannerDismissed, setBannerDismissed] = useState(false)
+  const bannerDismissedRef = useRef(false)
   const utmContent = router.query.utm_content as string | undefined
   const showZonaBanner = utmContent === 'pieza03' && !bannerDismissed && !isFiltered
 
@@ -315,6 +316,11 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         const idx = Math.round(el.scrollTop / el.clientHeight)
         // Level 1+3: track view_property + scroll_depth
         if (idx > analyticsRef.current.maxCardIdx) analyticsRef.current.maxCardIdx = idx
+        // Auto-dismiss UTM banner on first scroll (once)
+        if (idx >= 1 && !bannerDismissedRef.current) {
+          bannerDismissedRef.current = true
+          setBannerDismissed(true)
+        }
         // Only trigger re-render when card actually changes
         if (idx !== activeCardIdxRef.current) {
           activeCardIdxRef.current = idx
@@ -468,6 +474,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
 
   function handleBannerZona(slug: string) {
     applyFilters({ ...filters, zonas_permitidas: [slug] })
+    bannerDismissedRef.current = true
     setBannerDismissed(true)
     trackEvent('banner_zona_click', { zona: slug, utm_content: utmContent })
   }
@@ -825,7 +832,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
                         <button key={z.id} className="utm-zona-chip" onClick={() => handleBannerZona(z.id)}>{z.label}</button>
                       ))}
                     </div>
-                    <button className="utm-zona-close" onClick={() => setBannerDismissed(true)}>&times;</button>
+                    <button className="utm-zona-close" onClick={() => { bannerDismissedRef.current = true; setBannerDismissed(true) }}>&times;</button>
                   </div>
                 )}
                 <div className="desktop-grid">
@@ -979,7 +986,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
                   <button key={z.id} className="utm-zona-chip-m" onClick={() => handleBannerZona(z.id)}>{z.label}</button>
                 ))}
               </div>
-              <button className="utm-zona-close-m" onClick={() => setBannerDismissed(true)}>&times;</button>
+              <button className="utm-zona-close-m" onClick={() => { bannerDismissedRef.current = true; setBannerDismissed(true) }}>&times;</button>
             </div>
           )}
 
