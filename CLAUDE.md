@@ -138,6 +138,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Clarity tracking** | `docs/meta/CLARITY_TRACKING.md` — heatmaps, recordings, config |
 | **LLM Enrichment README** | `scripts/llm-enrichment/README.md` |
 | **GA4 Metrics Script** | `scripts/check_ga4_metrics.py` — consulta GA4 API (campaign/ux/overview), property 523288591. Comando: `/metrics` |
+| **Performance Learnings** | `docs/performance/PERFORMANCE_LEARNINGS.md` — LCP, INP, tracking GA4, scroll handlers, React.memo, preload |
 
 ## Simon Brand (repo externo)
 
