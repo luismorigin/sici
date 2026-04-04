@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, Fragment } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo, Fragment } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
@@ -324,7 +324,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
 
   // Level 1: track view_property when mobile card snaps into view
   useEffect(() => {
-    if (isDesktop || !mobileProperties.length) return
+    if (isDesktop || !properties.length) return
     const item = feedItems[activeCardIndex]
     if (item?.type === 'property' && !analyticsRef.current.viewedIds.has(item.data.id)) {
       analyticsRef.current.viewedIds.add(item.data.id)
@@ -616,19 +616,21 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   }, [properties, spotlightProperty, spotlightId])
 
   // Mobile: feed items with filter card at position 3, spotlight first
-  const feedItems: Array<{ type: 'property'; data: UnidadAlquiler; isSpotlight?: boolean } | { type: 'filter' }> = []
-  let filterInserted = false
-  // If spotlight, put it first and exclude from normal list
-  const mobileProperties = spotlightProperty
-    ? [spotlightProperty, ...properties.filter(p => p.id !== spotlightId)]
-    : properties
-  mobileProperties.forEach((p, i) => {
-    feedItems.push({ type: 'property', data: p, isSpotlight: i === 0 && !!spotlightProperty })
-    if (i === FILTER_CARD_POSITION - 1 && !filterInserted) { feedItems.push({ type: 'filter' }); filterInserted = true }
-  })
-  if (mobileProperties.length > 0 && !filterInserted) {
-    feedItems.push({ type: 'filter' })
-  }
+  const feedItems = useMemo(() => {
+    const items: Array<{ type: 'property'; data: UnidadAlquiler; isSpotlight?: boolean } | { type: 'filter' }> = []
+    let filterInserted = false
+    const mobileProps = spotlightProperty
+      ? [spotlightProperty, ...properties.filter(p => p.id !== spotlightId)]
+      : properties
+    mobileProps.forEach((p, i) => {
+      items.push({ type: 'property', data: p, isSpotlight: i === 0 && !!spotlightProperty })
+      if (i === FILTER_CARD_POSITION - 1 && !filterInserted) { items.push({ type: 'filter' }); filterInserted = true }
+    })
+    if (mobileProps.length > 0 && !filterInserted) {
+      items.push({ type: 'filter' })
+    }
+    return items
+  }, [properties, spotlightProperty, spotlightId])
 
   return (
     <>
@@ -1938,7 +1940,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
 }
 
 // ===== MOBILE PROPERTY CARD (full-screen) =====
-function MobilePropertyCard({
+const MobilePropertyCard = memo(function MobilePropertyCard({
   property: p, isFirst, showHint, isFavorite, favoritesCount, isSpotlight, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare,
 }: {
   property: UnidadAlquiler; isFirst: boolean; showHint?: boolean; isFavorite: boolean; favoritesCount: number; isSpotlight: boolean; petFilterActive?: boolean
@@ -2050,7 +2052,14 @@ function MobilePropertyCard({
       `}</style>
     </div>
   )
-}
+}, (prev, next) =>
+  prev.property.id === next.property.id &&
+  prev.isFavorite === next.isFavorite &&
+  prev.favoritesCount === next.favoritesCount &&
+  prev.isFirst === next.isFirst &&
+  prev.isSpotlight === next.isSpotlight &&
+  prev.petFilterActive === next.petFilterActive
+)
 
 // ===== PHOTO CAROUSEL (native scroll-snap) =====
 function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap, propertyId }: { photos: string[]; isFirst: boolean; showHint?: boolean; onPhotoTap?: (index: number) => void; propertyId?: number }) {
