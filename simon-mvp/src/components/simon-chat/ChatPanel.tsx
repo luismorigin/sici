@@ -78,8 +78,13 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
     return () => vv.removeEventListener('resize', onResize)
   }, [])
 
-  // Auto-scroll on new message
+  // Auto-scroll on new message (skip initial welcome)
+  const isFirstRender = useRef(true)
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
