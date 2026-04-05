@@ -38,6 +38,14 @@
 | `open_shared_alquiler` | Abrir link compartido | `property_id` | Tracking de links compartidos |
 | `reset_filters` | Limpiar filtros aplicados | `results_count` | Abandonar busqueda filtrada. Agregado 3 abr 2026 |
 | `lead_gate` | Completar gate "Ver anuncio original" | `property_id`, `property_name`, `zona` | Lead con nombre/tel/correo. Agregado 3 abr 2026 |
+| `chat_open` | Usuario abre el chat bot | — | Agregado 4 abr 2026 |
+| `chat_message` | Usuario envia mensaje al bot | `message_length` | Agregado 4 abr 2026 |
+| `chat_search` | Mensaje con intent de busqueda | `dorms`, `precio_max`, `zona`, `amoblado`, `mascotas`, `parqueo`, `piscina` | Solo params detectados. Nivel 3: qué busca la gente |
+| `chat_click_property` | Click en card de propiedad desde el chat | `property_id`, `property_name`, `zona` | Nivel 2: bot → feed. Agregado 4 abr 2026 |
+| `chat_lead` | WhatsApp lead desde el chat bot | `property_id`, `zona`, `fuente` | fuente siempre 'chat-bot'. Agregado 4 abr 2026 |
+| `nudge_filter_shown` | Pill "Filtra por zona o precio" aparece | `card_index` | Se muestra 1 vez/sesion tras 15+ cards sin open_detail ni filtro. Agregado 4 abr 2026 |
+| `nudge_filter_tap` | Usuario toca el pill | — | Scrollea a filter card y abre chips |
+| `nudge_filter_dismiss` | Usuario cierra el pill con X | — | Auto-dismiss a los 5s no genera evento |
 
 ### `/ventas` — 10 eventos
 
@@ -115,6 +123,7 @@ Fechas donde los eventos cambiaron y los datos antes/despues NO son comparables 
 | 3 abr 2026 | `view_photos` eliminado, reemplazado por `swipe_photos` | `view_photos` siempre fue 0 (codigo muerto). `swipe_photos` es el primer dato real de interaccion con fotos |
 | 3 abr 2026 | Agregados `reset_filters`, `lead_gate` | Sin datos anteriores para estos eventos |
 | 3 abr 2026 | `keepalive: true` en fetch de leads WA | Pre-3 abr: BD sub-reportaba leads vs GA4 (~83% perdidos en mobile). Post-fix deberian converger |
+| 4 abr 2026 | Agregados `nudge_filter_shown/tap/dismiss` | Pill aparece tras 15+ cards sin interaccion. Sin datos anteriores |
 
 ## Verificacion
 

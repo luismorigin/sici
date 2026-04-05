@@ -1,0 +1,17 @@
+{
+  "response": {
+    "text": "Tengo **3 opciones** de 2 dormitorios hasta Bs 9.000 en Equipetrol. La mediana para 2D en la zona es Bs 8.500/mes.",
+    "property_ids": [761, 670, 758],
+    "action": null,
+    "whatsapp_context": null,
+    "quick_replies": [
+      "¿Cuál tiene piscina?",
+      "¿Están amoblados?",
+      "¿Cuál es más barato?",
+      "Ver los de Eq. Norte",
+      "Mandame al broker"
+    ]
+  },
+  "usage": { "input_tokens": 0, "output_tokens": 0 },
+  "mock": true
+}
