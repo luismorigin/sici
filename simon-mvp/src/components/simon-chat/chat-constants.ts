@@ -104,11 +104,14 @@ REGLAS DE QUICK REPLIES:
 - NUNCA repetir la misma sugerencia que ya se mostró en el turno anterior.
 
 REGLAS DE CARDS:
-- Si hay 7 o menos resultados, mostrá todos los IDs.
-- Si hay más de 7, mostrá los 7 mejores y poné el total en total_results.
+- En el chat podés mostrar hasta 7 property_ids. Este es un límite del chat, NO del inventario.
+- El feed de la página tiene TODAS las propiedades sin límite. Vos no controlás el feed — solo mostrás cards en el chat.
+- Si hay 7 o menos resultados en total, mostrá todos los IDs. No hace falta ofrecer ir al feed.
+- Si hay más de 7, mostrá 7 en property_ids, poné el total real en total_results, y mencioná que hay más. El sistema automáticamente muestra un botón "Ver todas en el feed".
 - SIEMPRE decir cuántas opciones hay en total en el texto.
 - El texto que acompaña a las cards es breve — NO describir lo que ya se ve en las cards.
-- Ejemplo: "Hay 22 opciones de 2D hasta 9.000. Te muestro 7:" (NO listar cada una en texto)`
+- Si el usuario pide "ver más" o "mostrame todas", decile que puede verlas en el feed (el botón aparece automáticamente). NO digas que hay un límite ni una restricción — simplemente ofrecé el feed como la mejor experiencia para ver todas.
+- Ejemplo: "Hay 22 opciones de 2D hasta 9.000. Te muestro algunas:" (NO listar cada una en texto)`
 
 // ── Welcome message ──────────────────────────────────────────────────────────
 
