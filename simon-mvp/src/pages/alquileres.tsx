@@ -712,6 +712,21 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
           const prop = properties.find(p => p.id === id)
           if (prop) openDetail(prop)
         }}
+        onApplyFilters={(chatFilters) => {
+          if (!chatFilters) return
+          const newFilters: FiltrosAlquiler = {
+            ...filters,
+            dormitorios: chatFilters.dormitorios ?? filters.dormitorios,
+            precio_mensual_max: chatFilters.precio_mensual_max ?? filters.precio_mensual_max,
+            precio_mensual_min: chatFilters.precio_mensual_min ?? filters.precio_mensual_min,
+            amoblado: chatFilters.amoblado ?? filters.amoblado,
+            acepta_mascotas: chatFilters.acepta_mascotas ?? filters.acepta_mascotas,
+            con_parqueo: chatFilters.con_parqueo ?? filters.con_parqueo,
+            zonas_permitidas: chatFilters.zonas_permitidas ?? filters.zonas_permitidas,
+          }
+          applyFilters(newFilters)
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }}
       />
 
       {/* Bottom sheet overlay */}

@@ -1,4 +1,4 @@
-import type { ChatMessage as ChatMessageType } from './chat-types'
+import type { ChatMessage as ChatMessageType, ChatBotResponse } from './chat-types'
 import type { UnidadAlquiler } from '@/lib/supabase'
 import ChatPropertyCard from './ChatPropertyCard'
 import { colors } from '@/lib/simon-design-tokens'
@@ -7,6 +7,7 @@ interface Props {
   message: ChatMessageType
   properties: UnidadAlquiler[]
   onOpenDetail?: (id: number) => void
+  onApplyFilters?: (filters: ChatBotResponse['filter_context']) => void
 }
 
 // Simple **bold** parser
@@ -20,12 +21,15 @@ function renderText(text: string) {
   })
 }
 
-export default function ChatMessage({ message, properties, onOpenDetail }: Props) {
+export default function ChatMessage({ message, properties, onOpenDetail, onApplyFilters }: Props) {
   const isBot = message.role === 'assistant'
 
   const matchedProperties = (message.property_ids || [])
     .map(id => properties.find(p => p.id === id))
     .filter((p): p is UnidadAlquiler => p !== undefined)
+
+  const totalResults = message.total_results || 0
+  const showViewAll = totalResults > matchedProperties.length && message.filter_context
 
   return (
     <div style={{
@@ -56,6 +60,30 @@ export default function ChatMessage({ message, properties, onOpenDetail }: Props
           {matchedProperties.map(p => (
             <ChatPropertyCard key={p.id} property={p} onOpenDetail={onOpenDetail} />
           ))}
+
+          {/* "Ver todas en el feed" button */}
+          {showViewAll && (
+            <button
+              onClick={() => onApplyFilters?.(message.filter_context)}
+              style={{
+                width: '100%',
+                marginTop: 8,
+                padding: '10px 16px',
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 14, fontWeight: 500,
+                color: colors.arena,
+                background: colors.negro,
+                border: 'none',
+                borderRadius: 10,
+                cursor: 'pointer',
+                transition: 'opacity 0.2s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
+              Ver las {totalResults} en el feed
+            </button>
+          )}
         </div>
       )}
     </div>

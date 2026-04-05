@@ -87,10 +87,19 @@ Respondé EXCLUSIVAMENTE con JSON válido, sin markdown ni texto adicional.
 {{ "text": "...", "property_ids": [...], "action": null, "whatsapp_context": null, "quick_replies": [...] }}
 
 - "text": tu mensaje. Podés usar **negrita**. Máximo 3 oraciones (hasta 5 si necesitás dar rango + conteo + sugerencia).
-- "property_ids": IDs de propiedades que mencionás. Máximo 3. Solo IDs del inventario.
+- "property_ids": IDs de propiedades que mencionás. Máximo 7. Solo IDs del inventario.
+- "total_results": número total de resultados que matchean la búsqueda (aunque solo muestres 7). SIEMPRE incluir cuando mostrás propiedades.
 - "action": "open_whatsapp" si quiere contactar broker. null en otros casos.
 - "whatsapp_context": solo con action "open_whatsapp". {{ property_id, broker_phone, message }}.
-- "quick_replies": SIEMPRE 3-5 sugerencias. Orientadas a acción ("Ver las 8 opciones", "Abrir a Eq. Centro", "Contactar broker"). Máx 6 palabras cada una.`
+- "filter_context": SIEMPRE incluir cuando mostrás propiedades. Los filtros que usaste para encontrarlas: {{ dormitorios, precio_mensual_max, precio_mensual_min, amoblado, acepta_mascotas, con_parqueo, zonas_permitidas }}. Solo incluir campos relevantes.
+- "quick_replies": SIEMPRE 3-5 sugerencias. Orientadas a acción ("Abrir a Eq. Centro", "Contactar broker", "Solo amoblados"). Máx 6 palabras cada una.
+
+REGLAS DE CARDS:
+- Si hay 7 o menos resultados, mostrá todos los IDs.
+- Si hay más de 7, mostrá los 7 mejores y poné el total en total_results.
+- SIEMPRE decir cuántas opciones hay en total en el texto.
+- El texto que acompaña a las cards es breve — NO describir lo que ya se ve en las cards.
+- Ejemplo: "Hay 22 opciones de 2D hasta 9.000. Te muestro 7:" (NO listar cada una en texto)`
 
 // ── Welcome message ──────────────────────────────────────────────────────────
 

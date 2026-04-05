@@ -5,7 +5,7 @@ import { colors, spacing } from '@/lib/simon-design-tokens'
 import { Z_CHAT_BUBBLE, Z_CHAT_PANEL } from './chat-constants'
 import { trackChatEvent } from './chat-utils'
 
-export default function SimonChatWidget({ properties, onOpenDetail, sheetOpen }: SimonChatWidgetProps) {
+export default function SimonChatWidget({ properties, onOpenDetail, onApplyFilters, sheetOpen }: SimonChatWidgetProps) {
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false) // mount once, keep alive
   const [openedFromChat, setOpenedFromChat] = useState(false) // track if sheet was opened from chat
@@ -52,6 +52,10 @@ export default function SimonChatWidget({ properties, onOpenDetail, sheetOpen }:
             onOpenDetail={(id) => {
               setOpenedFromChat(true)
               onOpenDetail?.(id)
+            }}
+            onApplyFilters={(filters) => {
+              setOpen(false)
+              onApplyFilters?.(filters)
             }}
           />
         </div>

@@ -8,10 +8,13 @@ import { WELCOME_MESSAGE } from './chat-constants'
 import { getSessionId, generateMsgId, trackChatEvent, parseSearchIntent } from './chat-utils'
 import { colors, spacing } from '@/lib/simon-design-tokens'
 
+import type { ChatBotResponse } from './chat-types'
+
 interface Props {
   properties: UnidadAlquiler[]
   onClose: () => void
   onOpenDetail?: (id: number) => void
+  onApplyFilters?: (filters: ChatBotResponse['filter_context']) => void
 }
 
 const STORAGE_KEY = 'simon_chat_messages'
@@ -40,7 +43,7 @@ function loadStrikes(): number {
   } catch { return 0 }
 }
 
-export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) {
+export default function ChatPanel({ properties, onClose, onOpenDetail, onApplyFilters }: Props) {
   const [messages, setMessages] = useState<ChatMessageType[]>(loadMessages)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -140,8 +143,10 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
         role: 'assistant',
         text: data.response.text,
         property_ids: data.response.property_ids,
+        total_results: data.response.total_results,
         action: data.response.action,
         whatsapp_context: data.response.whatsapp_context,
+        filter_context: data.response.filter_context,
         quick_replies: data.response.quick_replies,
         timestamp: Date.now(),
       }
@@ -284,6 +289,10 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
                 zona: prop?.zona || '',
               })
               onOpenDetail?.(id)
+            }}
+            onApplyFilters={(filters) => {
+              trackChatEvent('chat_view_all_feed', { total: msg.total_results })
+              onApplyFilters?.(filters)
             }}
           />
         ))}

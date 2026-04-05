@@ -4,12 +4,22 @@ import type { UnidadAlquiler } from '@/lib/supabase'
 
 export interface ChatBotResponse {
   text: string                          // Mensaje principal (puede tener **bold**)
-  property_ids?: number[]               // IDs para renderizar cards
-  action?: 'open_whatsapp' | 'show_comparison' | null
+  property_ids?: number[]               // IDs para renderizar cards (max 7)
+  total_results?: number                // Total de resultados (si hay más de los mostrados)
+  action?: 'open_whatsapp' | 'show_comparison' | 'apply_filters' | null
   whatsapp_context?: {
     property_id: number
     broker_phone: string
     message: string                     // Mensaje pre-armado para WA
+  }
+  filter_context?: {                    // Cuando hay más resultados de los mostrados
+    dormitorios?: number
+    precio_mensual_max?: number
+    precio_mensual_min?: number
+    amoblado?: boolean
+    acepta_mascotas?: boolean
+    con_parqueo?: boolean
+    zonas_permitidas?: string[]
   }
   quick_replies?: string[]              // 3-5 sugerencias contextuales
   abuse_warning?: boolean               // true when user is being abusive
@@ -22,8 +32,10 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   text: string
   property_ids?: number[]
+  total_results?: number
   action?: ChatBotResponse['action']
   whatsapp_context?: ChatBotResponse['whatsapp_context']
+  filter_context?: ChatBotResponse['filter_context']
   quick_replies?: string[]
   timestamp: number
 }
@@ -48,5 +60,6 @@ export interface ChatApiResponse {
 export interface SimonChatWidgetProps {
   properties: UnidadAlquiler[]
   onOpenDetail?: (id: number) => void
+  onApplyFilters?: (filters: ChatBotResponse['filter_context']) => void
   sheetOpen?: boolean  // parent tells us when detail sheet is open
 }
