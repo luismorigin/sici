@@ -228,49 +228,48 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
       height: '100%', background: colors.arena,
       fontFamily: "'DM Sans', sans-serif",
     }}>
-      {/* Header */}
+      {/* Header — WhatsApp-style navbar, always fixed */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 16px',
-        borderBottom: `1px solid ${colors.arenaMid}`,
-        background: colors.blanco,
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '10px 12px',
+        background: colors.negro,
         flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: '50%',
-            background: colors.salvia, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontSize: 14, fontWeight: 600,
-          }}>S</div>
-          <div>
-            <div style={{ fontFamily: "'Figtree', sans-serif", fontSize: 15, fontWeight: 500, color: colors.negro }}>
-              Simón
-            </div>
-            <div style={{ fontSize: 11, color: colors.piedra, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{
-                width: 6, height: 6, borderRadius: '50%', background: colors.salvia, display: 'inline-block',
-              }} />
-              Asesor de alquileres
-            </div>
-          </div>
-        </div>
         <button
           onClick={onClose}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 20, color: colors.piedra, padding: 4,
-            lineHeight: 1,
+            padding: 4, display: 'flex', alignItems: 'center',
           }}
           aria-label="Cerrar chat"
         >
-          ✕
+          <svg width="20" height="20" viewBox="0 0 24 24" fill={colors.arena}>
+            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+          </svg>
         </button>
+        <div style={{
+          width: 32, height: 32, borderRadius: '50%',
+          background: colors.salvia, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#fff', fontSize: 13, fontWeight: 600, flexShrink: 0,
+        }}>S</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "'Figtree', sans-serif", fontSize: 15, fontWeight: 500, color: colors.arena }}>
+            Simón
+          </div>
+          <div style={{ fontSize: 11, color: colors.darkLabel, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{
+              width: 5, height: 5, borderRadius: '50%', background: '#4CAF50', display: 'inline-block',
+            }} />
+            Asesor de alquileres
+          </div>
+        </div>
       </div>
 
-      {/* Messages */}
+      {/* Messages — only this scrolls */}
       <div style={{
-        flex: 1, overflowY: 'auto', padding: 16,
-        display: 'flex', flexDirection: 'column', gap: 12,
+        flex: 1, overflowY: 'auto', overflowX: 'hidden',
+        padding: '12px 14px',
+        display: 'flex', flexDirection: 'column', gap: 10,
       }}>
         {messages.map(msg => (
           <ChatMessage
@@ -300,58 +299,59 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
       }}>
         {/* Quick replies */}
         {!loading && !blocked && quickReplies.length > 0 && (
-          <div style={{ padding: '8px 16px 0' }}>
+          <div style={{ padding: '6px 14px 0' }}>
             <ChatQuickReplies replies={quickReplies} onSelect={sendMessage} />
           </div>
         )}
-        {/* Input */}
+        {/* Input row */}
         <div style={{
-          display: 'flex', gap: 8, padding: '8px 16px 12px',
+          display: 'flex', gap: 8, padding: '6px 14px 10px',
+          alignItems: 'flex-end',
         }}>
-        <textarea
-          ref={inputRef}
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={blocked}
-          placeholder={blocked ? 'Chat desactivado' : 'Escribí tu consulta...'}
-          rows={1}
-          style={{
-            flex: 1,
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: 14, color: colors.negro,
-            background: colors.arena,
-            border: `1px solid ${colors.arenaMid}`,
-            borderRadius: spacing.borderRadius.container,
-            padding: '10px 14px',
-            outline: 'none',
-            resize: 'none',
-            lineHeight: 1.4,
-            maxHeight: 100,
-          }}
-          onInput={(e) => {
-            const el = e.currentTarget
-            el.style.height = 'auto'
-            el.style.height = Math.min(el.scrollHeight, 100) + 'px'
-          }}
-        />
-        <button
-          onClick={() => sendMessage(input)}
-          disabled={!input.trim() || loading || blocked}
-          style={{
-            width: 42, height: 42, borderRadius: spacing.borderRadius.button,
-            background: input.trim() && !loading ? colors.negro : colors.arenaMid,
-            border: 'none', cursor: input.trim() && !loading ? 'pointer' : 'default',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, alignSelf: 'flex-end',
-            transition: 'background 0.2s',
-          }}
-          aria-label="Enviar mensaje"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill={colors.arena}>
-            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-          </svg>
-        </button>
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={blocked}
+            placeholder={blocked ? 'Chat desactivado' : 'Escribí tu consulta...'}
+            rows={1}
+            style={{
+              flex: 1,
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 14, color: colors.negro,
+              background: colors.arena,
+              border: `1px solid ${colors.arenaMid}`,
+              borderRadius: 24,
+              padding: '10px 16px',
+              outline: 'none',
+              resize: 'none',
+              lineHeight: 1.4,
+              maxHeight: 100,
+            }}
+            onInput={(e) => {
+              const el = e.currentTarget
+              el.style.height = 'auto'
+              el.style.height = Math.min(el.scrollHeight, 100) + 'px'
+            }}
+          />
+          <button
+            onClick={() => sendMessage(input)}
+            disabled={!input.trim() || loading || blocked}
+            style={{
+              width: 40, height: 40, borderRadius: '50%',
+              background: input.trim() && !loading ? colors.negro : colors.arenaMid,
+              border: 'none', cursor: input.trim() && !loading ? 'pointer' : 'default',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+              transition: 'background 0.2s',
+            }}
+            aria-label="Enviar mensaje"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill={colors.arena}>
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>

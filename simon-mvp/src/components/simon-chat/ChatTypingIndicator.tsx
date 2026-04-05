@@ -2,15 +2,12 @@ import { colors } from '@/lib/simon-design-tokens'
 
 export default function ChatTypingIndicator() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 0' }}>
-      <div style={{
-        width: 28, height: 28, borderRadius: '50%',
-        background: colors.salvia, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 13, flexShrink: 0, color: '#fff', fontWeight: 600,
-      }}>S</div>
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', padding: '4px 0',
+    }}>
       <div style={{
         background: colors.blanco, border: `1px solid ${colors.arenaMid}`,
-        borderRadius: '14px 14px 14px 4px', padding: '10px 14px',
+        borderRadius: '4px 12px 12px 12px', padding: '10px 14px',
         display: 'flex', gap: 4, alignItems: 'center',
       }}>
         {[0, 1, 2].map(i => (

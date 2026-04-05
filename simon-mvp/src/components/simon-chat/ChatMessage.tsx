@@ -9,7 +9,7 @@ interface Props {
   onOpenDetail?: (id: number) => void
 }
 
-// Simple **bold** parser — no full markdown needed
+// Simple **bold** parser
 function renderText(text: string) {
   const parts = text.split(/(\*\*[^*]+\*\*)/)
   return parts.map((part, i) => {
@@ -23,7 +23,6 @@ function renderText(text: string) {
 export default function ChatMessage({ message, properties, onOpenDetail }: Props) {
   const isBot = message.role === 'assistant'
 
-  // Look up property objects by ID
   const matchedProperties = (message.property_ids || [])
     .map(id => properties.find(p => p.id === id))
     .filter((p): p is UnidadAlquiler => p !== undefined)
@@ -34,38 +33,26 @@ export default function ChatMessage({ message, properties, onOpenDetail }: Props
       flexDirection: 'column',
       alignItems: isBot ? 'flex-start' : 'flex-end',
       gap: 4,
-      maxWidth: '85%',
-      alignSelf: isBot ? 'flex-start' : 'flex-end',
     }}>
-      <div style={{ display: 'flex', gap: 8, alignItems: isBot ? 'flex-start' : 'flex-end' }}>
-        {/* Bot avatar */}
-        {isBot && (
-          <div style={{
-            width: 28, height: 28, borderRadius: '50%',
-            background: colors.salvia, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 13, flexShrink: 0, color: '#fff', fontWeight: 600, marginTop: 2,
-          }}>S</div>
-        )}
-
-        {/* Bubble */}
-        <div style={{
-          fontFamily: "'DM Sans', sans-serif",
-          fontSize: 14, lineHeight: 1.55,
-          color: colors.negro,
-          padding: '10px 14px',
-          borderRadius: isBot ? '14px 14px 14px 4px' : '14px 14px 4px 14px',
-          background: isBot ? colors.blanco : `${colors.salvia}18`,
-          border: `1px solid ${isBot ? colors.arenaMid : `${colors.salvia}30`}`,
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-        }}>
-          {renderText(message.text)}
-        </div>
+      {/* Bubble — no avatar, WhatsApp style */}
+      <div style={{
+        fontFamily: "'DM Sans', sans-serif",
+        fontSize: 14, lineHeight: 1.55,
+        color: colors.negro,
+        padding: '8px 12px',
+        borderRadius: isBot ? '4px 12px 12px 12px' : '12px 4px 12px 12px',
+        background: isBot ? colors.blanco : `${colors.salvia}18`,
+        border: `1px solid ${isBot ? colors.arenaMid : `${colors.salvia}30`}`,
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+        maxWidth: '88%',
+      }}>
+        {renderText(message.text)}
       </div>
 
       {/* Property cards */}
       {matchedProperties.length > 0 && (
-        <div style={{ width: '100%', paddingLeft: isBot ? 36 : 0 }}>
+        <div style={{ width: '100%', maxWidth: '88%' }}>
           {matchedProperties.map(p => (
             <ChatPropertyCard key={p.id} property={p} onOpenDetail={onOpenDetail} />
           ))}
