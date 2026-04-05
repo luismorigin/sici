@@ -289,20 +289,25 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
           />
         ))}
         {loading && <ChatTypingIndicator />}
-        {/* Quick replies inside messages area — right after last message */}
-        {!loading && !blocked && quickReplies.length > 0 && (
-          <ChatQuickReplies replies={quickReplies} onSelect={sendMessage} />
-        )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
+      {/* Bottom fixed block: quick replies + input (WhatsApp-style) */}
       <div style={{
-        display: 'flex', gap: 8, padding: '12px 16px',
+        flexShrink: 0,
         borderTop: `1px solid ${colors.arenaMid}`,
         background: colors.blanco,
-        flexShrink: 0,
       }}>
+        {/* Quick replies */}
+        {!loading && !blocked && quickReplies.length > 0 && (
+          <div style={{ padding: '8px 16px 0' }}>
+            <ChatQuickReplies replies={quickReplies} onSelect={sendMessage} />
+          </div>
+        )}
+        {/* Input */}
+        <div style={{
+          display: 'flex', gap: 8, padding: '8px 16px 12px',
+        }}>
         <textarea
           ref={inputRef}
           value={input}
@@ -347,6 +352,7 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
           </svg>
         </button>
+        </div>
       </div>
     </div>
   )
