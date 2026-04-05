@@ -292,6 +292,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       botResponse.property_ids = botResponse.property_ids.filter(id => validIds.has(id))
     }
 
+    // Correct total_results with real count from cached listings
+    if (botResponse.filter_context) {
+      const fc = botResponse.filter_context
+      const matched = listings.filter(l => {
+        if (fc.dormitorios !== undefined && fc.dormitorios !== null && l.dormitorios !== fc.dormitorios) return false
+        if (fc.precio_mensual_max && l.precio_mensual_bob > fc.precio_mensual_max) return false
+        if (fc.precio_mensual_min && l.precio_mensual_bob < fc.precio_mensual_min) return false
+        if (fc.amoblado && l.amoblado !== 'si') return false
+        if (fc.acepta_mascotas && l.acepta_mascotas !== true) return false
+        if (fc.con_parqueo && (l.estacionamientos || 0) < 1) return false
+        if (fc.zonas_permitidas?.length && !fc.zonas_permitidas.some(z => l.zona.toLowerCase().includes(z.toLowerCase()))) return false
+        return true
+      })
+      botResponse.total_results = matched.length
+    }
+
     // Validate WhatsApp action — strip if broker phone is missing
     if (botResponse.action === 'open_whatsapp' && botResponse.whatsapp_context) {
       const propId = botResponse.whatsapp_context.property_id
