@@ -70,13 +70,7 @@ Desde migración 184, los nombres en BD son los nombres display definitivos (ya 
 
 Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 
-**Descripción geográfica de zonas (para bot, informes, contenido):**
-- **Equipetrol Centro:** Entre el 2do y 3er anillo. Canal Isuto al este, calle Nicolás Ortiz al oeste (límite con Eq. Oeste). La zona más consolidada, mayor oferta.
-- **Equipetrol Norte:** Pasando el 3er anillo hacia el norte, entre 3er y 4to anillo. Zona financiera, condominios modernos.
-- **Villa Brigida:** Entre Equipetrol Norte y Canal Isuto, entre 3er y 4to anillo. Condominios nuevos, la zona más accesible en precio.
-- **Sirari:** Al oeste, entre 3er y 4to anillo. Más tranquilo, residencial, desarrolladoras premium.
-- **Equipetrol Oeste:** Al oeste de Eq. Centro, entre 2do y 3er anillo, desde calle Nicolás Ortiz hasta Avenida Busch. Barrio Faremafu. Mixto — premium y universitario.
-- **Eq. 3er Anillo:** Sobre el 3er anillo mismo. Franja comercial, muy pocas opciones de alquiler.
+**Descripción geográfica + perfiles:** ver `docs/canonical/ZONAS_EQUIPETROL.md`
 
 **Nombres legacy (aliases en `zonas.ts` para backwards compatibility):** `Equipetrol`, `Faremafu`, `Equipetrol Norte/Norte`, `Equipetrol Norte/Sur`, `Equipetrol Franja`, `Villa Brígida` (con tilde).
 
@@ -114,6 +108,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Metodologia Fiduciaria** | `docs/canonical/METODOLOGIA_FIDUCIARIA_PARTE_*.md` |
 | **Pipeline Alquiler Canonical** | `docs/canonical/pipeline_alquiler_canonical.md` |
 | **Filtros Calidad Mercado** | `docs/reports/FILTROS_CALIDAD_MERCADO.md` |
+| **Zonas Equipetrol** | `docs/canonical/ZONAS_EQUIPETROL.md` — descripción geográfica, perfiles, nombres BD |
 | **Learnings Alquiler** | `docs/alquiler/LEARNINGS_PIPELINE_ALQUILER.md` |
 | **Alquileres queries** | `docs/canonical/ALQUILERES_QUERIES.md` |
 | **Fichas tecnicas proyectos** | `docs/fichas/` — data de desarrollador (inventario, precios, equipamiento) no disponible en portales |
