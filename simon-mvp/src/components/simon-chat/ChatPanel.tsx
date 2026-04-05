@@ -319,7 +319,7 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
             style={{
               flex: 1,
               fontFamily: "'DM Sans', sans-serif",
-              fontSize: 14, color: colors.negro,
+              fontSize: 16, color: colors.negro,
               background: colors.arena,
               border: `1px solid ${colors.arenaMid}`,
               borderRadius: 24,
