@@ -12,6 +12,7 @@ export default function ChatQuickReplies({ replies, onSelect }: Props) {
     <div style={{
       display: 'flex', gap: 8, flexWrap: 'wrap',
       padding: '4px 0 8px',
+      overflow: 'hidden',
     }}>
       {replies.map((text, i) => (
         <button
@@ -26,7 +27,7 @@ export default function ChatQuickReplies({ replies, onSelect }: Props) {
             borderRadius: spacing.borderRadius.pill,
             padding: '7px 14px',
             cursor: 'pointer',
-            whiteSpace: 'nowrap',
+            whiteSpace: 'normal',
             transition: 'opacity 0.2s',
           }}
           onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}

@@ -289,15 +289,12 @@ export default function ChatPanel({ properties, onClose, onOpenDetail }: Props) 
           />
         ))}
         {loading && <ChatTypingIndicator />}
+        {/* Quick replies inside messages area — right after last message */}
+        {!loading && !blocked && quickReplies.length > 0 && (
+          <ChatQuickReplies replies={quickReplies} onSelect={sendMessage} />
+        )}
         <div ref={messagesEndRef} />
       </div>
-
-      {/* Quick replies */}
-      {!loading && !blocked && quickReplies.length > 0 && (
-        <div style={{ padding: '0 16px', flexShrink: 0 }}>
-          <ChatQuickReplies replies={quickReplies} onSelect={sendMessage} />
-        </div>
-      )}
 
       {/* Input */}
       <div style={{
