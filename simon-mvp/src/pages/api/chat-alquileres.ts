@@ -21,6 +21,59 @@ const anthropic = new Anthropic({
 
 const MOCK_MODE = process.env.MOCK_CLAUDE === 'true'
 
+// ── Usage tracking (in-memory, resets on deploy) ─────────────────────────────
+
+interface DailyUsage {
+  date: string
+  messages: number
+  input_tokens: number
+  output_tokens: number
+  errors: number
+  sessions: Set<string>
+}
+
+const usageByDay = new Map<string, DailyUsage>()
+
+function trackUsage(sessionId: string, input: number, output: number, isError = false) {
+  const today = new Date().toISOString().slice(0, 10)
+  let day = usageByDay.get(today)
+  if (!day) {
+    day = { date: today, messages: 0, input_tokens: 0, output_tokens: 0, errors: 0, sessions: new Set() }
+    usageByDay.set(today, day)
+    // Keep only last 7 days
+    const keys = Array.from(usageByDay.keys()).sort()
+    while (keys.length > 7) { usageByDay.delete(keys.shift()!); }
+  }
+  day.messages++
+  day.input_tokens += input
+  day.output_tokens += output
+  if (isError) day.errors++
+  day.sessions.add(sessionId)
+}
+
+function getUsageStats() {
+  const days = Array.from(usageByDay.values())
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(d => ({
+      date: d.date,
+      messages: d.messages,
+      sessions: d.sessions.size,
+      input_tokens: d.input_tokens,
+      output_tokens: d.output_tokens,
+      errors: d.errors,
+      cost_usd: +(d.input_tokens * 0.80 / 1_000_000 + d.output_tokens * 4.00 / 1_000_000).toFixed(4),
+    }))
+  const total = days.reduce((acc, d) => ({
+    messages: acc.messages + d.messages,
+    sessions: acc.sessions + d.sessions,
+    input_tokens: acc.input_tokens + d.input_tokens,
+    output_tokens: acc.output_tokens + d.output_tokens,
+    errors: acc.errors + d.errors,
+    cost_usd: +(acc.cost_usd + d.cost_usd).toFixed(4),
+  }), { messages: 0, sessions: 0, input_tokens: 0, output_tokens: 0, errors: 0, cost_usd: 0 })
+  return { days, total }
+}
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 const supabase = supabaseUrl ? createClient(supabaseUrl, supabaseKey) : null
@@ -133,6 +186,11 @@ async function getListings(): Promise<UnidadAlquiler[]> {
 // ── Handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // GET → return usage stats (for /admin/salud)
+  if (req.method === 'GET') {
+    return res.status(200).json(getUsageStats())
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -250,6 +308,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    // Track usage
+    trackUsage(session_id, completion.usage.input_tokens, completion.usage.output_tokens)
+
     const apiResponse: ChatApiResponse = {
       response: botResponse,
       usage: {
@@ -262,6 +323,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   } catch (error: any) {
     console.error('[chat-alquileres] Error:', error)
+    trackUsage(session_id, 0, 0, true)
     return res.status(500).json({
       response: {
         text: 'Tuve un problema procesando tu consulta. Probá de nuevo en un momento.',

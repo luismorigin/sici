@@ -83,6 +83,7 @@ export default function DashboardSalud() {
   const [colas, setColas] = useState<ColasHITL | null>(null)
   const [tcStats, setTCStats] = useState<TCStats | null>(null)
   const [workflows, setWorkflows] = useState<WorkflowHealth[]>([])
+  const [chatStats, setChatStats] = useState<{ total: { messages: number; sessions: number; input_tokens: number; output_tokens: number; errors: number; cost_usd: number }; days: Array<{ date: string; messages: number; sessions: number; cost_usd: number }> } | null>(null)
 
   const fetchInitiated = useRef(false)
 
@@ -172,7 +173,8 @@ export default function DashboardSalud() {
         fetchProyectosStats(),
         fetchColasHITL(),
         fetchTCStats(),
-        fetchWorkflowHealth()
+        fetchWorkflowHealth(),
+        fetchChatStats(),
       ])
 
       setLastUpdate(new Date())
@@ -181,6 +183,13 @@ export default function DashboardSalud() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function fetchChatStats() {
+    try {
+      const res = await fetch('/api/chat-alquileres')
+      if (res.ok) setChatStats(await res.json())
+    } catch { /* silently fail — bot might not be deployed */ }
   }
 
   async function fetchPropiedadesStats() {
@@ -849,6 +858,48 @@ export default function DashboardSalud() {
                     </Link>
                   </div>
                 </div>
+              )}
+            </div>
+
+            {/* Simón Bot */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <span>💬</span> Simón Bot
+              </h2>
+              {chatStats ? (
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Mensajes (hoy)</span>
+                    <span className="font-semibold">{chatStats.days.find(d => d.date === new Date().toISOString().slice(0, 10))?.messages ?? 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Sesiones (hoy)</span>
+                    <span className="font-semibold">{chatStats.days.find(d => d.date === new Date().toISOString().slice(0, 10))?.sessions ?? 0}</span>
+                  </div>
+                  <div className="flex justify-between pt-3 border-t">
+                    <span className="text-slate-600">Total mensajes</span>
+                    <span className="font-semibold">{chatStats.total.messages}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Total sesiones</span>
+                    <span className="font-semibold">{chatStats.total.sessions}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Tokens (in/out)</span>
+                    <span className="text-slate-500">{(chatStats.total.input_tokens / 1000).toFixed(1)}K / {(chatStats.total.output_tokens / 1000).toFixed(1)}K</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Errores</span>
+                    <span className={chatStats.total.errors > 0 ? 'text-red-600 font-semibold' : 'text-slate-500'}>{chatStats.total.errors}</span>
+                  </div>
+                  <div className="flex justify-between pt-3 border-t">
+                    <span className="text-slate-600">Costo estimado</span>
+                    <span className="font-semibold text-green-600">${chatStats.total.cost_usd.toFixed(4)}</span>
+                  </div>
+                  <p className="text-xs text-slate-400 pt-1">In-memory — se resetea con cada deploy</p>
+                </div>
+              ) : (
+                <p className="text-slate-500 text-sm">Bot no activo</p>
               )}
             </div>
 
