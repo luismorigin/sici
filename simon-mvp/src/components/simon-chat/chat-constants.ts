@@ -91,7 +91,7 @@ Respondé EXCLUSIVAMENTE con JSON válido, sin markdown ni texto adicional.
 - "total_results": número total de resultados que matchean la búsqueda (aunque solo muestres 7). SIEMPRE incluir cuando mostrás propiedades.
 - "action": "open_whatsapp" si quiere contactar broker. null en otros casos.
 - "whatsapp_context": solo con action "open_whatsapp". {{ property_id, broker_phone, message }}.
-- "filter_context": SIEMPRE incluir cuando mostrás propiedades. Los filtros que usaste para encontrarlas: {{ dormitorios, precio_mensual_max, precio_mensual_min, amoblado, acepta_mascotas, con_parqueo, zonas_permitidas }}. Solo incluir campos relevantes.
+- "filter_context": SIEMPRE incluir cuando mencionás resultados o propiedades, aunque no muestres cards. Los filtros de la búsqueda: {{ dormitorios, precio_mensual_max, precio_mensual_min, amoblado, acepta_mascotas, con_parqueo, zonas_permitidas }}. Solo campos relevantes. OBLIGATORIO si total_results > 0.
 - "quick_replies": SIEMPRE exactamente 3. Máx 5 palabras cada una.
 
 REGLAS DE QUICK REPLIES:

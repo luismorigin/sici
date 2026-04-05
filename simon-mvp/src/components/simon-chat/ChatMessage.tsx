@@ -29,7 +29,7 @@ export default function ChatMessage({ message, properties, onOpenDetail, onApply
     .filter((p): p is UnidadAlquiler => p !== undefined)
 
   const totalResults = message.total_results || 0
-  const showViewAll = totalResults > matchedProperties.length && message.filter_context
+  const showViewAll = totalResults > 0 && message.filter_context
 
   return (
     <div style={{
@@ -60,31 +60,32 @@ export default function ChatMessage({ message, properties, onOpenDetail, onApply
           {matchedProperties.map(p => (
             <ChatPropertyCard key={p.id} property={p} onOpenDetail={onOpenDetail} />
           ))}
-
-          {/* "Ver todas en el feed" button */}
-          {showViewAll && (
-            <button
-              onClick={() => onApplyFilters?.(message.filter_context)}
-              style={{
-                width: '100%',
-                marginTop: 8,
-                padding: '10px 16px',
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: 14, fontWeight: 500,
-                color: colors.arena,
-                background: colors.negro,
-                border: 'none',
-                borderRadius: 10,
-                cursor: 'pointer',
-                transition: 'opacity 0.2s',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-            >
-              Ver las {totalResults} en el feed
-            </button>
-          )}
         </div>
+      )}
+
+      {/* "Ver todas en el feed" button — appears with or without cards */}
+      {showViewAll && (
+        <button
+          onClick={() => onApplyFilters?.(message.filter_context)}
+          style={{
+            maxWidth: '88%',
+            width: '100%',
+            marginTop: 4,
+            padding: '10px 16px',
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 14, fontWeight: 500,
+            color: colors.arena,
+            background: colors.negro,
+            border: 'none',
+            borderRadius: 10,
+            cursor: 'pointer',
+            transition: 'opacity 0.2s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+        >
+          Ver las {totalResults} en el feed
+        </button>
       )}
     </div>
   )
