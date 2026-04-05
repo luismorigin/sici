@@ -308,9 +308,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       botResponse.total_results = matched.length
 
       // Replace TOTAL_OPTIONS placeholder with real count
-      if (botResponse.text.includes('TOTAL_OPTIONS')) {
-        botResponse.text = botResponse.text.replace(/TOTAL_OPTIONS/g, String(matched.length))
-      }
+      botResponse.text = botResponse.text.replace(/TOTAL_OPTIONS/g, String(matched.length))
+      // Also replace any number Claude invented near "opciones/opción"
+      botResponse.text = botResponse.text.replace(/(\d+)\s*(opciones|opción)/g, `${matched.length} $2`)
     }
 
     // Validate WhatsApp action — strip if broker phone is missing
