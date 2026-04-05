@@ -70,6 +70,14 @@ Desde migración 184, los nombres en BD son los nombres display definitivos (ya 
 
 Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 
+**Descripción geográfica de zonas (para bot, informes, contenido):**
+- **Equipetrol Centro:** Entre el 2do y 3er anillo. Canal Isuto al este, calle Nicolás Ortiz al oeste (límite con Eq. Oeste). La zona más consolidada, mayor oferta.
+- **Equipetrol Norte:** Pasando el 3er anillo hacia el norte, entre 3er y 4to anillo. Zona financiera, condominios modernos.
+- **Villa Brigida:** Entre Equipetrol Norte y Canal Isuto, entre 3er y 4to anillo. Condominios nuevos, la zona más accesible en precio.
+- **Sirari:** Al oeste, entre 3er y 4to anillo. Más tranquilo, residencial, desarrolladoras premium.
+- **Equipetrol Oeste:** Al oeste de Eq. Centro, entre 2do y 3er anillo, desde calle Nicolás Ortiz hasta Avenida Busch. Barrio Faremafu. Mixto — premium y universitario.
+- **Eq. 3er Anillo:** Sobre el 3er anillo mismo. Franja comercial, muy pocas opciones de alquiler.
+
 **Nombres legacy (aliases en `zonas.ts` para backwards compatibility):** `Equipetrol`, `Faremafu`, `Equipetrol Norte/Norte`, `Equipetrol Norte/Sur`, `Equipetrol Franja`, `Villa Brígida` (con tilde).
 
 **En queries:** Usar nombres de BD directos (columna izquierda). `lib/zonas.ts` mapea BD → display via `displayZona()` y `getZonaLabel()`.
@@ -137,7 +145,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Meta Pixel eventos** | `docs/meta/META_PIXEL_EVENTOS.md` — Lead, Contact, ViewContent, Search |
 | **Clarity tracking** | `docs/meta/CLARITY_TRACKING.md` — heatmaps, recordings, config |
 | **LLM Enrichment README** | `scripts/llm-enrichment/README.md` |
-| **GA4 Metrics Script** | `scripts/check_ga4_metrics.py` — consulta GA4 API (campaign/ux/overview), property 523288591. Comando: `/metrics` |
+| **GA4 Metrics Script** | `scripts/check_ga4_metrics.py` — consulta GA4 API. Default: retention/PMF (28d). Modos: retention/campaign/ux/overview. Comando: `/metrics` |
 | **Performance Learnings** | `docs/performance/PERFORMANCE_LEARNINGS.md` — LCP, INP, tracking GA4, scroll handlers, React.memo, preload |
 
 ## Simon Brand (repo externo)
