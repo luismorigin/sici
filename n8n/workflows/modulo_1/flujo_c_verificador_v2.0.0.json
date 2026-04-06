@@ -1,0 +1,503 @@
+{
+  "name": "Flujo C - Verificador Venta v2.0.0",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "v20-trigger-6am",
+      "name": "Trigger 6:00 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-896, 576]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Verificador Venta v2.0: pending (tiempo) + audit (contenido)\nWITH pending AS (\n  SELECT id, url, fuente, codigo_propiedad, status,\n    primera_ausencia_at,\n    EXTRACT(DAY FROM NOW() - primera_ausencia_at)::INTEGER as dias_desde_ausencia,\n    'pending' as origen\n  FROM propiedades_v2\n  WHERE status = 'inactivo_pending'::estado_propiedad\n    AND tipo_operacion = 'venta'\n),\naudit AS (\n  SELECT id, url, fuente, codigo_propiedad, status,\n    NULL::timestamptz as primera_ausencia_at,\n    0 as dias_desde_ausencia,\n    'audit' as origen\n  FROM propiedades_v2\n  WHERE status = 'completado'\n    AND tipo_operacion = 'venta'\n    AND es_activa = true\n    AND fuente IN ('century21', 'remax')\n  ORDER BY RANDOM()\n  LIMIT 150\n)\nSELECT * FROM pending\nUNION ALL\nSELECT * FROM audit\nORDER BY origen, dias_desde_ausencia DESC;",
+        "options": {}
+      },
+      "id": "v20-query-pending-audit",
+      "name": "Query Pendientes + Audit",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-672, 576],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-results",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "exists",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "v20-if-hay-props",
+      "name": "Hay propiedades?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-448, 576]
+    },
+    {
+      "parameters": {
+        "jsCode": "const timestamp = new Date().toISOString();\nreturn [{\n  json: {\n    status: 'completed',\n    message: 'No hay ventas pendientes ni audit',\n    total_procesadas: 0,\n    pending_confirmadas: 0,\n    audit_c21_terminadas: 0,\n    audit_remax_terminadas: 0,\n    skipped: 0,\n    timestamp\n  }\n}];"
+      },
+      "id": "v20-sin-pendientes",
+      "name": "Sin pendientes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [224, 752]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "v20-split",
+      "name": "Split propiedades",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [-224, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prop = $input.first().json;\nif (prop.origen === 'audit') {\n  return [{ json: { ...prop, _needsHttp: true } }];\n} else {\n  return [{ json: { ...prop, _needsHttp: false } }];\n}"
+      },
+      "id": "v20-router-origen",
+      "name": "Router origen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, 240]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "needs-http",
+              "leftValue": "={{ $json._needsHttp }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "v20-if-http",
+      "name": "Necesita HTTP?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [224, 240]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "maxRedirects": 0
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "v20-http-get",
+      "name": "HTTP GET Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [448, 128],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "amount": 1.5
+      },
+      "id": "v20-wait",
+      "name": "Wait 1.5s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [672, 128],
+      "webhookId": "v20-wait-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================================\n// Verificador Venta v2.0 - Procesar respuesta\n// Pending: auto-confirmación por tiempo (2 días)\n// Audit: verificar status code (C21: 404, Remax: 302)\n// ============================================================================\n\nconst item = $input.first();\nconst originalData = item.json;\n\nlet propiedadData;\ntry {\n  propiedadData = $('Router origen').first().json;\n} catch(e) {\n  propiedadData = originalData;\n}\n\nconst origen = propiedadData.origen;\nconst fuente = propiedadData.fuente;\nconst diasDesdeAusencia = propiedadData.dias_desde_ausencia || 0;\nconst primeraAusenciaAt = propiedadData.primera_ausencia_at;\n\nconst MAX_DIAS_PENDING = 2;\n\nlet action = 'skip';\nlet newStatus = null;\nlet reason = '';\nlet razonInactiva = 'aviso_terminado';\n\n// ============================================================================\n// PENDING: solo auto-confirmación por tiempo\n// ============================================================================\nif (origen === 'pending') {\n  if (!primeraAusenciaAt) {\n    action = 'skip';\n    reason = 'ERROR: primera_ausencia_at es NULL';\n  } else if (diasDesdeAusencia >= MAX_DIAS_PENDING) {\n    action = 'confirm';\n    newStatus = 'inactivo_confirmed';\n    razonInactiva = 'aviso_terminado';\n    reason = `Auto-confirmado: ${diasDesdeAusencia} días ausente (límite: ${MAX_DIAS_PENDING})`;\n  } else {\n    action = 'skip';\n    reason = `Esperando: día ${diasDesdeAusencia}/${MAX_DIAS_PENDING}`;\n  }\n}\n\n// ============================================================================\n// AUDIT: verificar status code (C21: 404, Remax: 302)\n// ============================================================================\nelse if (origen === 'audit') {\n  const statusCode = originalData.statusCode || 0;\n  const isError = !!originalData.error;\n\n  if (isError) {\n    action = 'skip';\n    reason = `Audit: error HTTP - skip`;\n\n  } else if (fuente === 'century21') {\n    if (statusCode === 404) {\n      action = 'confirm';\n      newStatus = 'inactivo_confirmed';\n      razonInactiva = 'audit_c21_terminado';\n      reason = `Audit C21: HTTP 404 - Aviso terminado`;\n    } else {\n      action = 'skip';\n      reason = `Audit C21: HTTP ${statusCode} - página activa`;\n    }\n\n  } else if (fuente === 'remax') {\n    if (statusCode === 301 || statusCode === 302) {\n      action = 'confirm';\n      newStatus = 'inactivo_confirmed';\n      razonInactiva = 'audit_remax_redirect';\n      reason = `Audit Remax: redirect HTTP ${statusCode} detectado`;\n    } else {\n      action = 'skip';\n      reason = `Audit Remax: HTTP ${statusCode} - página activa`;\n    }\n\n  } else {\n    action = 'skip';\n    reason = `Audit: fuente ${fuente} no soportada`;\n  }\n}\n\nreturn [{\n  json: {\n    id: propiedadData.id,\n    url: propiedadData.url,\n    fuente: fuente,\n    codigo_propiedad: propiedadData.codigo_propiedad,\n    primera_ausencia_at: primeraAusenciaAt,\n    action,\n    newStatus,\n    reason,\n    razonInactiva,\n    origen,\n    diasDesdeAusencia,\n    maxDiasPending: MAX_DIAS_PENDING,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "v20-procesar-respuesta",
+      "name": "Procesar respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [896, 240]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-confirm",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "confirm",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "v20-confirmar-baja",
+      "name": "Confirmar baja?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1120, 240]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE propiedades_v2\nSET\n  status = 'inactivo_confirmed',\n  es_activa = FALSE,\n  fecha_inactivacion = COALESCE(primera_ausencia_at, NOW()),\n  razon_inactiva = '{{ $json.razonInactiva }}',\n  fecha_actualizacion = NOW()\nWHERE id = {{ $json.id }}\n  AND es_activa = TRUE\nRETURNING id, url, status, fecha_inactivacion, razon_inactiva,\n  '{{ $json.action }}' as action,\n  '{{ $json.razonInactiva }}' as \"razonInactiva\",\n  '{{ $json.origen }}' as origen,\n  '{{ $json.fuente }}' as fuente;",
+        "options": {}
+      },
+      "id": "v20-update-confirmed",
+      "name": "UPDATE inactivo_confirmed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1344, 128],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nreturn [{ json: { ...item.json, logged: true, logType: 'skipped' } }];"
+      },
+      "id": "v20-log-skipped",
+      "name": "Log skipped",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1344, 352]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "results",
+        "options": {}
+      },
+      "id": "v20-agregar-resultados",
+      "name": "Agregar resultados",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [-224, 576]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================================\n// Verificador Venta v2.0 - Resumen final\n// ============================================================================\n\nconst results = $input.first().json.results || [];\n\nlet pending_confirmadas = 0;\nlet audit_c21 = 0;\nlet audit_remax = 0;\nlet skipped = 0;\n\nfor (const r of results) {\n  if (r.action === 'confirm' && r.origen === 'pending') pending_confirmadas++;\n  else if (r.action === 'confirm' && r.razonInactiva === 'audit_c21_terminado') audit_c21++;\n  else if (r.action === 'confirm' && r.razonInactiva === 'audit_remax_redirect') audit_remax++;\n  else skipped++;\n}\n\nreturn [{\n  json: {\n    status: 'completed',\n    flujo: 'Verificador Venta v2.0',\n    timestamp: new Date().toISOString(),\n    total_procesadas: results.length,\n    pending_confirmadas,\n    audit_c21_terminadas: audit_c21,\n    audit_remax_terminadas: audit_remax,\n    total_confirmadas: pending_confirmadas + audit_c21 + audit_remax,\n    skipped,\n    detalles: results\n      .filter(r => r.action === 'confirm')\n      .map(r => `#${r.id} (${r.fuente}): ${r.razonInactiva || r.razon_inactiva || 'confirmado'}`)\n  }\n}];"
+      },
+      "id": "v20-resumen",
+      "name": "Generar resumen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, 576]
+    },
+    {
+      "parameters": {},
+      "id": "v20-merge",
+      "name": "Merge outputs",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [224, 576]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT registrar_ejecucion_workflow(\n  'verificador_venta',\n  'success',\n  {{ $json.total_procesadas || 0 }},\n  {{ $json.total_confirmadas || 0 }},\n  0,\n  NULL,\n  '{{ JSON.stringify({ pending: $json.pending_confirmadas || 0, audit_c21: $json.audit_c21_terminadas || 0, audit_remax: $json.audit_remax_terminadas || 0, skipped: $json.skipped || 0 }) }}'::jsonb\n);",
+        "options": {}
+      },
+      "id": "v20-registrar-ejecucion",
+      "name": "PG: Registrar Ejecución",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [448, 576],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger 6:00 AM": {
+      "main": [
+        [
+          {
+            "node": "Query Pendientes + Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Pendientes + Audit": {
+      "main": [
+        [
+          {
+            "node": "Hay propiedades?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hay propiedades?": {
+      "main": [
+        [
+          {
+            "node": "Split propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sin pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sin pendientes": {
+      "main": [
+        [
+          {
+            "node": "Merge outputs",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Split propiedades": {
+      "main": [
+        [
+          {
+            "node": "Agregar resultados",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Router origen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router origen": {
+      "main": [
+        [
+          {
+            "node": "Necesita HTTP?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Necesita HTTP?": {
+      "main": [
+        [
+          {
+            "node": "HTTP GET Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Procesar respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP GET Check": {
+      "main": [
+        [
+          {
+            "node": "Wait 1.5s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1.5s": {
+      "main": [
+        [
+          {
+            "node": "Procesar respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar respuesta": {
+      "main": [
+        [
+          {
+            "node": "Confirmar baja?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar baja?": {
+      "main": [
+        [
+          {
+            "node": "UPDATE inactivo_confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UPDATE inactivo_confirmed": {
+      "main": [
+        [
+          {
+            "node": "Split propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log skipped": {
+      "main": [
+        [
+          {
+            "node": "Split propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agregar resultados": {
+      "main": [
+        [
+          {
+            "node": "Generar resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar resumen": {
+      "main": [
+        [
+          {
+            "node": "Merge outputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge outputs": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecución",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/La_Paz",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
+  },
+  "tags": []
+}

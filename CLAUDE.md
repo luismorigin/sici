@@ -157,7 +157,7 @@ Leer por path absoluto, no copiar. Si hay divergencia con sici, **simon-brand ga
 2:15 AM  Enrichment LLM (Haiku 4.5, prompt v4.1) → llm_output en datos_json_enrichment
 3:00 AM  Merge v2.6.0 → campos consolidados + TC paralelo + LLM (dormitorios, estado_construccion, nombre_edificio híbrido, solo_tc_paralelo, es_multiproyecto, tipo_cambio_detectado)
 4:00 AM  Matching → id_proyecto_master + nombre_edificio (migración 170)
-6:00 AM  Verificador ausencias (solo Remax, LIMIT 200)
+6:00 AM  Verificador venta v2.0 (pending 2d + audit HTTP: C21 404, Remax 302, 150/noche)
 9:00 AM  Auditoria + Snapshots absorcion
 ```
 
