@@ -16,7 +16,8 @@ export default function ChatPropertyCard({ property: p, onOpenDetail }: Props) {
     e.stopPropagation() // don't trigger card click (openDetail)
     if (!brokerPhone) return
     const phone = brokerPhone.replace(/[^0-9]/g, '')
-    const msg = `Hola, vi ${name} en simonbo.com y me interesa. ¿Está disponible?`
+    const precio = `Bs ${Math.round(p.precio_mensual_bob).toLocaleString()}/mes`
+    const msg = `Hola, vi este alquiler en Simon y me interesa: ${name} - ${precio}${p.url ? '\n' + p.url : ''}`
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
 
     // Fire-and-forget lead
