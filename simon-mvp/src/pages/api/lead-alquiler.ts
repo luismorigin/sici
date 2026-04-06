@@ -74,6 +74,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(200).json({ ok: true, whatsapp_url: whatsappUrl, dedup: true })
           }
         }
+
+        // Session debounce: si mismo session_id generó lead en <5s, marcar
+        let isDebounce = false
+        const safeSid = sid && sid.length <= 50 ? sid : null
+        if (safeSid) {
+          const { data: recentSession } = await supabase
+            .from('leads_alquiler')
+            .select('id')
+            .eq('session_id', safeSid)
+            .gte('created_at', new Date(Date.now() - 5_000).toISOString())
+            .limit(1)
+          if (recentSession && recentSession.length > 0) {
+            isDebounce = true
+          }
+        }
+
         const { error } = await supabase.from('leads_alquiler').insert({
           propiedad_id: safePropId,
           nombre_propiedad: nombre.slice(0, 200) || null,
@@ -85,7 +101,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           fuente: fuente.slice(0, 50) || 'card',
           preguntas_enviadas: preguntasArr.length > 0 ? preguntasArr : null,
           es_test: debug === '1' || debug === true,
-          session_id: sid && sid.length <= 50 ? sid : null,
+          session_id: safeSid,
+          es_debounce: isDebounce,
         })
         if (error) console.error('Error registrando lead alquiler:', error)
       } catch (err) {

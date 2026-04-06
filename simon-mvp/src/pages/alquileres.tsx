@@ -144,12 +144,16 @@ async function fetchFromAPI(filtros: FiltrosAlquiler & { offset?: number }, spot
 
 // Track WhatsApp click — call only from onClick handlers, not from render
 // 30s cooldown per property to prevent duplicate events from double-clicks
+// 5s global cooldown to prevent bulk clicks inflating GA4
 const _waCooldown = new Map<number, number>()
+let _lastWaClick = 0
 function trackWhatsAppClick(p: UnidadAlquiler, fuente: string) {
   const now = Date.now()
+  if (now - _lastWaClick < 5_000) return // session debounce: max 1 event per 5s
   const last = _waCooldown.get(p.id) || 0
   if (now - last < 30_000) return // skip duplicate within 30s
   _waCooldown.set(p.id, now)
+  _lastWaClick = now
   trackEvent('click_whatsapp', {
     property_id: p.id,
     property_name: p.nombre_edificio || p.nombre_proyecto || 'Departamento',
