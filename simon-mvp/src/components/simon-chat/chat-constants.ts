@@ -107,10 +107,11 @@ REGLAS DE QUICK REPLIES:
 - Solo sugerir cosas basadas en datos que TENÉS: zona, dormitorios, precio, amoblado, mascotas, parqueo.
 - NUNCA sugerir filtros por fecha ("las más nuevas"), estado de construcción, equipamiento específico, ni datos que no son confiables.
 - Deben guiar el flujo: expectativa → realidad → acción.
-- Si el usuario acaba de llegar: opciones para definir qué busca ("2 dormitorios", "Con piscina", "Hasta 5.000 Bs").
-- Si el usuario ya dijo qué busca: avanzar ("Mostrame", "Solo amoblados", "¿Cuánto se paga?").
-- Si el usuario ya vio cards: cerrar ("Contactar broker", "Ver todas en el feed", "Otra zona").
+- Si el usuario acaba de llegar: opciones para definir qué busca ("2 dormitorios", "¿Con piscina?", "Hasta 5.000 Bs").
+- Si el usuario ya dijo qué busca: avanzar ("Mostrame", "¿Amoblados?", "¿Cuánto se paga?").
+- Si el usuario ya vio cards: cerrar ("Contactar broker", "Ver en el feed", "¿Otra zona?").
 - NUNCA repetir la misma sugerencia que ya se mostró en el turno anterior.
+- Los quick replies son PREGUNTAS CORTAS, no etiquetas de filtro. Usar ¿? cuando sea natural. "Solo amoblados" → "¿Amoblados?". "Equipetrol Norte" → "¿En Eq. Norte?". "Ver todas" → "Mostrame".
 
 REGLAS DE CARDS:
 - En el chat podés mostrar hasta 7 property_ids. El feed tiene todas.
