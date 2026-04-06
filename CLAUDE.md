@@ -166,7 +166,7 @@ Leer por path absoluto, no copiar. Si hay divergencia con sici, **simon-brand ga
 1:30 AM  Discovery C21 + Remax
 2:30 AM  Discovery Bien Inmuebles + Enrichment LLM (Haiku 4.5, prompt v2.0 + PROYECTOS CONOCIDOS)
 3:30 AM  Merge alquiler (enrichment-first, sin TC paralelo)
-7:00 AM  Verificador alquiler
+7:00 AM  Verificador alquiler v2.0 (pending 2d + audit HTTP: C21 404, Remax 302, 60/noche)
 ```
 
 ## Estructura Clave

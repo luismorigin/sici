@@ -331,6 +331,34 @@ WHERE tipo_operacion = 'alquiler'
 
 ---
 
+## 12. Verificador alquiler — v1.0 bugs y upgrade a v2.0 (6 Abr 2026)
+
+### Bugs v1.0
+- **Remax discovery no seteaba `primera_ausencia_at`** al marcar ausentes → 38 props atrapadas en `inactivo_pending` para siempre (verificador las skipeaba por NULL). C21 y BI sí lo tenían (commit `ed1a9a2`), Remax se escapó.
+- **HTTP HEAD no sirve como señal**: C21 devuelve 200 con "Aviso terminado", Remax 200 con redirect a home, BI 200 con página vacía. Ninguno da 404 con HEAD.
+- **`statusCode === 200` → reactivate**: reactivó 11 props que estaban genuinamente terminadas.
+- **Ghost detection roto**: `fecha_discovery < NOW() - 14 days` nunca matchea porque discovery pisa `fecha_discovery = NOW()` cada noche.
+- **`MAX_DIAS_PENDING = 7`**: demasiado largo, venta ya usaba 2.
+
+### Fix discovery Remax
+Agregar `primera_ausencia_at = COALESCE(primera_ausencia_at, NOW())` al UPDATE de "Marcar Ausentes" en `flujo_discovery_remax_alquiler_v1.0.0.json`. Backfill: `UPDATE SET primera_ausencia_at = fecha_discovery WHERE status = 'inactivo_pending' AND primera_ausencia_at IS NULL`.
+
+### Verificador v2.0 (`flujo_c_verificador_alquiler_v2.0.0.json`)
+Dos capas de detección:
+- **Pending (tiempo)**: props marcadas `inactivo_pending` por discovery → auto-confirma a los 2 días sin HTTP.
+- **Audit (HTTP status code)**: 60 props `completado` aleatorias/noche, HTTP GET sin follow redirects:
+  - C21: HTTP 404 + statusMessage "Aviso terminado" → `inactivo_confirmed` (razon: `audit_c21_terminado`)
+  - Remax: HTTP 302 redirect a `remax.bo` → `inactivo_confirmed` (razon: `audit_remax_redirect`)
+  - BI: no detectable (páginas PHP idénticas, contenido JS dinámico) → manual
+
+### Lección
+- **HTTP status code sin follow redirects** es más confiable que parsear body. C21 devuelve 404, Remax 302 — ambos definitivos.
+- **BI es opaco**: `getCatalogo` API no tiene campo de status, `property.php` devuelve HTML idéntico para activas y terminadas (contenido cargado por JS). Único approach sería headless browser.
+- **Discovery es la fuente de verdad para reactivación**. El verificador NUNCA reactiva — si la prop reaparece en el portal, discovery la rescata.
+- **`razon_inactiva` diferenciada** permite revertir selectivamente: `WHERE razon_inactiva LIKE 'audit_%'`.
+
+---
+
 ## Checklist para agregar nueva fuente (alquiler o venta)
 
 1. [ ] Verificar moneda del API y convertir USD↔BOB en el nodo de preparación (Learning 11)
