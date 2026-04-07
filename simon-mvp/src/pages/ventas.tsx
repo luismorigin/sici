@@ -319,6 +319,14 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
             </svg> Ver mas
           </button>
         </div>
+        {p.agente_telefono && (
+          <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi ${p.proyecto} en Simon y me gustaría más información\n${p.url || ''}`)}`}
+            target="_blank" rel="noopener noreferrer" className="vc-wsp-cta"
+            onClick={() => trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'card_desktop' })}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+            Consultar por WhatsApp
+          </a>
+        )}
       </div>
     </div>
   )
@@ -1368,7 +1376,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .vf-reset:hover { border-color:rgba(237,232,220,0.25); color:#EDE8DC }
 
         /* ===== DESKTOP VENTA CARD ===== */
-        .vc { background:#1e1e1e; border:1px solid rgba(237,232,220,0.08); border-radius:14px; overflow:hidden; transition:all 0.25s cubic-bezier(0.4,0,0.2,1) }
+        .vc { background:#1e1e1e; border:1px solid rgba(237,232,220,0.08); border-radius:14px; overflow:hidden; transition:all 0.25s cubic-bezier(0.4,0,0.2,1); display:flex; flex-direction:column }
         .vc:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,0.3) }
         .vc-photo { height:220px; background-size:cover; background-position:center; background-color:#2a2a2a; position:relative }
         @keyframes vcShimmer { 0%,100%{background-color:#2a2a2a} 50%{background-color:#333} }
@@ -1384,7 +1392,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .vc-fav.active { background:rgba(224,85,85,0.15) }
         .vc-share { position:absolute; top:10px; left:58px; width:40px; height:40px; border-radius:50%; background:rgba(20,20,20,0.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.15s; z-index:3 }
         .vc-share:hover { transform:scale(1.1); background:rgba(20,20,20,0.7) }
-        .vc-body { padding:16px }
+        .vc-body { padding:16px; flex:1; display:flex; flex-direction:column }
         .vc-name { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; line-height:1.2; margin-bottom:2px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap }
         .vc-reciente { font-size:11px; font-weight:500; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px }
         .vc-zona { font-size:12px; color:#9A8E7A; letter-spacing:0.5px; margin-bottom:10px }
@@ -1399,6 +1407,8 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .vc-act-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
         .vc-act-detail { color:#EDE8DC; background:rgba(237,232,220,0.08); border-radius:10px; padding:6px 14px; font-weight:500 }
         .vc-act-detail:hover { background:rgba(237,232,220,0.15) }
+        .vc-wsp-cta { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:10px; background:#1EA952; border:none; border-radius:10px; color:#fff; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; text-decoration:none; margin-top:auto; transition:opacity 0.2s }
+        .vc-wsp-cta:hover { opacity:0.9 }
 
         /* ===== STATES ===== */
         .ventas-status { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:300px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:15px; text-align:center }
