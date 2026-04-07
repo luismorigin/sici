@@ -22,13 +22,16 @@ AND (es_multiproyecto = false OR es_multiproyecto IS NULL)
 -- 5. Área mínima 20m² (segundo filtro contra parqueos mal clasificados)
 AND area_total_m2 >= 20
 
--- 6. Antigüedad máxima: 300 días para entregados, 730 para preventa
+-- 6a. Antigüedad máxima VENTA: 300 días para entregados, 730 para preventa
 AND (
   CASE WHEN COALESCE(estado_construccion::text, '') IN ('preventa', 'en_construccion', 'en_pozo')
     THEN CURRENT_DATE - COALESCE(fecha_publicacion, fecha_discovery::date) <= 730
     ELSE CURRENT_DATE - COALESCE(fecha_publicacion, fecha_discovery::date) <= 300
   END
 )
+
+-- 6b. Antigüedad máxima ALQUILER: 150 días (migración 207)
+AND CURRENT_DATE - COALESCE(fecha_publicacion::timestamp, fecha_creacion)::date <= 150
 ```
 
 ## Nomenclatura de zonas (Mar 2026)
@@ -97,9 +100,19 @@ Los queries de mercado filtran por `status IN ('completado', 'actualizado')`. Lo
 
 **Nota:** Queries a `market_absorption_snapshots` ahora deben filtrar `zona = 'global'` para obtener los agregados globales (filas por zona son adicionales desde mig. 200).
 
+## Cobertura temporal de las vistas canónicas
+
+| Vista | Antigüedad máxima | Motivo |
+|-------|-------------------|--------|
+| `v_mercado_venta` | 300 días (entregados), 730 días (preventa) | Ciclo de venta largo, preventa puede durar 2 años |
+| `v_mercado_alquiler` | **150 días** (migración 207) | Vida mediana C21 34d, Remax 73d. Un alquiler activo >150d es inventario estancado que contamina promedios |
+
+**IMPORTANTE:** `v_mercado_alquiler` solo muestra listings de hasta 150 días. Si necesitás analizar inventario estancado (>150d), consultá `propiedades_v2` directo con tus propios filtros. El RPC `buscar_unidades_alquiler()` (feed público) usa el mismo corte de 150 días.
+
 ## Referencia
 
 Estos filtros son los mismos que usa:
 - `buscar_unidades_reales()` (función SQL de búsqueda)
+- `buscar_unidades_alquiler()` (feed alquileres — 150 días)
 - `/admin/proyectos/[id]` (editor admin por proyecto)
 - Cualquier query que el usuario ve en el dashboard
