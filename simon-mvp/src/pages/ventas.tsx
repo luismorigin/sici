@@ -615,8 +615,9 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 }
 
 // ===== Bottom Sheet =====
-function BottomSheet({ property: p, isOpen, onClose, gateCompleted, onGate, isDesktop }: {
-  property: UnidadVenta | null; isOpen: boolean; onClose: () => void
+function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop }: {
+  property: UnidadVenta | null; isOpen: boolean; onClose: () => void; onShare?: () => void
+  isFavorite?: boolean; onToggleFavorite?: () => void
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; isDesktop: boolean
 }) {
   const [gateName, setGateName] = useState('')
@@ -666,7 +667,16 @@ function BottomSheet({ property: p, isOpen, onClose, gateCompleted, onGate, isDe
                 )}
               </div>
             </div>
-            <button className="bs-close" onClick={onClose}>&times;</button>
+            <div className="bs-header-actions">
+              {onToggleFavorite && (
+                <button className={`bs-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
+                  <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                </button>
+              )}
+              <button className="bs-close" onClick={onClose}>&times;</button>
+            </div>
           </div>
           {p.agente_telefono && (
             <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi ${p.proyecto} en Simon y me gustaría más información\n${p.url || ''}`)}`}
@@ -675,6 +685,14 @@ function BottomSheet({ property: p, isOpen, onClose, gateCompleted, onGate, isDe
               <svg viewBox="0 0 24 24" width="18" height="18" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
               Consultar por WhatsApp
             </a>
+          )}
+          {onShare && (
+            <button className="bs-share-btn" onClick={onShare}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+              Compartir
+            </button>
           )}
           <div className="bs-price-detail">{Math.round(p.precio_m2) > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m² · ` : ''}USD oficial</div>
         </div>
@@ -1046,6 +1064,9 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
       {/* Bottom Sheet */}
       <BottomSheet property={sheetProperty} isOpen={sheetOpen}
         onClose={() => { setSheetOpen(false); setSheetProperty(null) }}
+        onShare={sheetProperty ? () => shareProperty(sheetProperty) : undefined}
+        isFavorite={sheetProperty ? favorites.has(sheetProperty.id) : false}
+        onToggleFavorite={sheetProperty ? () => toggleFavorite(sheetProperty.id) : undefined}
         gateCompleted={gateCompleted} onGate={handleGate} isDesktop={isDesktop} />
 
       {isDesktop ? (
@@ -1216,12 +1237,12 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .ventas-map-container { height:calc(100vh - 80px); border-radius:14px; overflow:hidden; border:1px solid #D8D0BC; position:relative }
 
         /* Map float card — desktop */
-        .mfc-desktop { position:absolute; bottom:20px; left:20px; z-index:1000; background:#FAFAF8; border:1px solid #D8D0BC; border-radius:14px; overflow:hidden; box-shadow:0 8px 32px rgba(58,53,48,0.15); display:flex; width:380px; animation:mfcIn 0.2s ease-out }
+        .mfc-desktop { position:absolute; bottom:20px; left:20px; z-index:1000; background:#1a1a1a; border:1px solid rgba(237,232,220,0.1); border-radius:14px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.4); display:flex; width:380px; animation:mfcIn 0.2s ease-out }
         /* Map float card — mobile */
-        .mfc-mobile { position:absolute; bottom:12px; left:12px; right:12px; z-index:1000; background:#FAFAF8; border:1px solid #D8D0BC; border-radius:14px; overflow:hidden; box-shadow:0 8px 32px rgba(58,53,48,0.15); display:flex; animation:mfcIn 0.2s ease-out }
+        .mfc-mobile { position:absolute; bottom:12px; left:12px; right:12px; z-index:1000; background:#1a1a1a; border:1px solid rgba(237,232,220,0.1); border-radius:14px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.4); display:flex; animation:mfcIn 0.2s ease-out }
         @keyframes mfcIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
         .mfc-close { position:absolute; top:8px; right:8px; z-index:10; width:28px; height:28px; border-radius:50%; background:rgba(20,20,20,0.6); border:none; color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center }
-        .mfc-photo { width:130px; min-width:130px; background-size:cover; background-position:center; background-color:#D8D0BC; position:relative }
+        .mfc-photo { width:130px; min-width:130px; background-size:cover; background-position:center; background-color:#2a2a2a; position:relative }
         .mfc-nav { position:absolute; top:50%; transform:translateY(-50%); width:28px; height:28px; border-radius:50%; background:rgba(20,20,20,0.6); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:3 }
         .mfc-nav-prev { left:4px }
         .mfc-nav-next { right:4px }
@@ -1230,11 +1251,11 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .mfc-fav.active { background:rgba(224,85,85,0.15) }
         .mfc-fav svg { width:16px; height:16px }
         .mfc-body { flex:1; padding:14px }
-        .mfc-name { font-family:'Figtree',sans-serif; font-size:18px; color:#141414; line-height:1.2; margin-bottom:4px; font-weight:500 }
-        .mfc-specs { font-size:12px; color:#7A7060; margin-bottom:8px; font-family:'DM Sans',sans-serif }
-        .mfc-price { font-family:'DM Sans',sans-serif; font-size:22px; color:#141414; line-height:1; font-weight:500; font-variant-numeric:tabular-nums }
-        .mfc-m2 { font-size:11px; color:#7A7060; margin-bottom:10px; font-family:'DM Sans',sans-serif }
-        .mfc-detail { width:100%; padding:8px; background:transparent; border:1px solid #D8D0BC; color:#3A3530; font-family:'DM Sans',sans-serif; font-size:12px; cursor:pointer; border-radius:10px }
+        .mfc-name { font-family:'Figtree',sans-serif; font-size:18px; color:#EDE8DC; line-height:1.2; margin-bottom:4px; font-weight:500 }
+        .mfc-specs { font-size:12px; color:#9A8E7A; margin-bottom:8px; font-family:'DM Sans',sans-serif }
+        .mfc-price { font-family:'DM Sans',sans-serif; font-size:22px; color:#EDE8DC; line-height:1; font-weight:500; font-variant-numeric:tabular-nums }
+        .mfc-m2 { font-size:11px; color:#9A8E7A; margin-bottom:10px; font-family:'DM Sans',sans-serif }
+        .mfc-detail { width:100%; padding:8px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.1); color:#EDE8DC; font-family:'DM Sans',sans-serif; font-size:12px; cursor:pointer; border-radius:10px }
 
         /* View mode toggle */
         .vm-toggle { display:flex; gap:4px; margin-bottom:20px; background:#FAFAF8; border:1px solid #D8D0BC; border-radius:10px; padding:4px; width:fit-content }
@@ -1250,10 +1271,10 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .mt-filter-dot { position:absolute; top:6px; right:6px; width:8px; height:8px; background:#3A6A48; border-radius:50% }
         .mt-counter { position:fixed; bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px)); right:16px; z-index:50; font-size:12px; color:#7A7060; font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums }
         .mt-map-btn { position:fixed; bottom:max(140px, calc(env(safe-area-inset-bottom) + 130px)); right:20px; z-index:100; width:48px; height:48px; border-radius:50%; background:rgba(20,20,20,0.7); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.2) }
-        .mt-map-overlay { position:fixed; inset:0; z-index:300; background:#EDE8DC; display:flex; flex-direction:column }
-        .mt-map-header { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; padding-top:max(12px, env(safe-area-inset-top)); background:#EDE8DC; border-bottom:1px solid #D8D0BC }
-        .mt-map-title { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#141414 }
-        .mt-map-close { width:36px; height:36px; border-radius:50%; border:1px solid #D8D0BC; background:transparent; color:#7A7060; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer }
+        .mt-map-overlay { position:fixed; inset:0; z-index:300; background:#141414; display:flex; flex-direction:column }
+        .mt-map-header { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; padding-top:max(12px, env(safe-area-inset-top)); background:#141414; border-bottom:1px solid rgba(237,232,220,0.1) }
+        .mt-map-title { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC }
+        .mt-map-close { width:36px; height:36px; border-radius:10px; border:none; background:rgba(237,232,220,0.08); color:#9A8E7A; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer }
         .mt-map-body { flex:1; position:relative; overflow:hidden }
         .mt-map-body .venta-map { position:absolute; inset:0 }
 
@@ -1406,9 +1427,14 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .bs .bs-handle + .bs-dark-header { padding-top:16px }
         .bs-dh-top { display:flex; align-items:flex-start; justify-content:space-between }
         .bs-title { font-family:'Figtree',sans-serif; font-size:22px; font-weight:500; color:#EDE8DC }
+        .bs-header-actions { display:flex; align-items:center; gap:4px; flex-shrink:0 }
+        .bs-fav { width:44px; height:44px; border-radius:50%; border:none; background:transparent; color:#9A8E7A; display:flex; align-items:center; justify-content:center; cursor:pointer }
+        .bs-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
         .bs-close { width:44px; height:44px; border-radius:50%; border:none; background:transparent; color:#9A8E7A; font-size:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0 }
         .bs-wsp-cta { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:14px; background:#1EA952; border:none; border-radius:10px; color:#fff; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:500; text-decoration:none; min-height:44px; transition:opacity 0.2s; margin-top:16px }
         .bs-wsp-cta:active { opacity:0.85 }
+        .bs-share-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; background:transparent; border:1px solid rgba(237,232,220,0.15); border-radius:10px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:400; cursor:pointer; margin-top:8px; transition:opacity 0.2s }
+        .bs-share-btn:active { opacity:0.7 }
         .bs::-webkit-scrollbar { display:none }
         .bs-published { font-size:13px; color:#9A8E7A; font-family:'DM Sans',sans-serif; margin-top:2px }
         .bs-section { padding:18px 24px; border-bottom:1px solid rgba(237,232,220,0.08) }
