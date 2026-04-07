@@ -283,7 +283,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
         </>)}
       </div>
       <div className="vc-body">
-        <div className="vc-name">{p.proyecto}</div>
+        <div className="vc-name">{p.proyecto}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="vc-reciente">Publicación reciente</span>}</div>
         <div className="vc-zona">{displayZona(p.zona)} <span className="vc-id">#{p.id}</span></div>
         <div className="vc-price-block">
           <div className="vc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
@@ -301,8 +301,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
           p.piso ? `Piso ${p.piso}` : null,
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
-          p.dias_en_mercado !== null && p.dias_en_mercado <= 7 ? 'Nuevo' : null,
-        ].filter(Boolean).join('  ·  ')}</div>
+                  ].filter(Boolean).join('  ·  ')}</div>
         <div className="vc-actions">
           <button className={`vc-act-btn vc-act-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
             <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
@@ -411,7 +410,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
 
       {/* Content zone (45%) */}
       <div className="mc-content">
-        <div className="mc-name">{p.proyecto}</div>
+        <div className="mc-name">{p.proyecto}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="mc-reciente">Publicación reciente</span>}</div>
         <div className="mc-zona">{displayZona(p.zona)} <span className="mc-id">#{p.id}</span></div>
         <div className="mc-price-block">
           <div className="mc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
@@ -429,8 +428,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
           p.piso ? `Piso ${p.piso}` : null,
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
-          p.dias_en_mercado !== null && p.dias_en_mercado <= 7 ? 'Nuevo' : null,
-        ].filter(Boolean).join('  ·  ')}</div>
+                  ].filter(Boolean).join('  ·  ')}</div>
         <div className="mc-actions">
           <button className={`mc-btn mc-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
             <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
@@ -1316,12 +1314,13 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
 
         /* Content zone (45%) */
         .mc-content { flex:1; padding:0 24px 20px; padding-bottom:max(20px, calc(env(safe-area-inset-bottom) + 8px)); display:flex; flex-direction:column; overflow:hidden }
-        .mc-name { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1.1; margin-bottom:2px; padding-top:8px }
+        .mc-name { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1.1; margin-bottom:2px; padding-top:8px; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap }
+        .mc-reciente { font-size:11px; font-weight:500; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px }
         .mc-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; margin-bottom:12px; font-family:'DM Sans',sans-serif }
         .mc-price-block { border-left:3px solid #3A6A48; padding-left:14px; margin-bottom:8px }
         .mc-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
-        .mc-specs { font-size:13px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300; line-height:1.4 }
-        .mc-specs-2 { font-size:13px; color:#EDE8DC; font-family:'DM Sans',sans-serif; margin-bottom:auto; font-weight:300 }
+        .mc-specs { font-size:15px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300; line-height:1.4 }
+        .mc-specs-2 { font-size:15px; color:#EDE8DC; font-family:'DM Sans',sans-serif; margin-bottom:auto; font-weight:300 }
         .mc-wsp { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:12px; background:#1EA952; border:none; border-radius:10px; color:#fff; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; text-decoration:none; margin-top:auto; min-height:44px; flex-shrink:0 }
         .mc-wsp:active { opacity:0.85 }
         .mc-actions { display:flex; align-items:center; gap:12px; padding-top:10px; border-top:1px solid rgba(237,232,220,0.1); margin-top:8px }
@@ -1386,13 +1385,14 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .vc-share { position:absolute; top:10px; left:58px; width:40px; height:40px; border-radius:50%; background:rgba(20,20,20,0.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.15s; z-index:3 }
         .vc-share:hover { transform:scale(1.1); background:rgba(20,20,20,0.7) }
         .vc-body { padding:16px }
-        .vc-name { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; line-height:1.2; margin-bottom:2px }
+        .vc-name { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; line-height:1.2; margin-bottom:2px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap }
+        .vc-reciente { font-size:11px; font-weight:500; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px }
         .vc-zona { font-size:12px; color:#9A8E7A; letter-spacing:0.5px; margin-bottom:10px }
         .vc-id { color:rgba(237,232,220,0.3); font-size:12px; margin-left:4px; letter-spacing:0 }
         .vc-price-block { border-left:3px solid #3A6A48; padding-left:12px; margin-bottom:8px }
         .vc-price { font-family:'DM Sans',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:4px; font-variant-numeric:tabular-nums }
-        .vc-specs { font-size:13px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300 }
-        .vc-specs-2 { font-size:13px; color:#EDE8DC; font-family:'DM Sans',sans-serif; margin-bottom:10px; font-weight:300 }
+        .vc-specs { font-size:15px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300 }
+        .vc-specs-2 { font-size:15px; color:#EDE8DC; font-family:'DM Sans',sans-serif; margin-bottom:10px; font-weight:300 }
         .vc-actions { border-top:1px solid rgba(237,232,220,0.08); padding-top:10px; margin-top:auto; display:flex; align-items:center; gap:12px }
         .vc-act-btn { display:flex; align-items:center; justify-content:center; gap:5px; background:none; border:none; color:#9A8E7A; font-size:12px; font-family:'DM Sans',sans-serif; cursor:pointer; padding:6px; min-height:36px; transition:color 0.15s }
         .vc-act-btn:hover { color:#EDE8DC }
