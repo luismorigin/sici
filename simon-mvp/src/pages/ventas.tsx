@@ -44,7 +44,7 @@ const VentaMap = dynamic(() => import('@/components/venta/VentaMap'), { ssr: fal
 const MIN_PRICE = 30000
 const MAX_PRICE = 400000
 const PRICE_STEP = 10000
-const FILTER_CARD_POSITION = 3
+const FILTER_CARD_POSITION = 1
 const VIRTUAL_WINDOW = 3
 const ORDEN_OPTIONS: Array<{ value: FiltrosVentaSimple['orden']; label: string }> = [
   { value: 'recientes', label: 'Recientes' },
@@ -281,47 +281,44 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
           {photoIdx < photos.length - 1 && <button className="vc-nav vc-nav-next" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}><ChevronRight /></button>}
           <div className="vc-photo-count">{photoIdx + 1}/{photos.length}</div>
         </>)}
-        <button className={`vc-fav ${isFavorite ? 'active' : ''}`} onClick={e => { e.stopPropagation(); onToggleFavorite() }}><HeartIcon filled={isFavorite} /></button>
-        <button className="vc-share" onClick={e => { e.stopPropagation(); onShare() }}><ShareIcon /></button>
       </div>
       <div className="vc-body">
         <div className="vc-name">{p.proyecto}</div>
         <div className="vc-zona">{displayZona(p.zona)} <span className="vc-id">#{p.id}</span></div>
-        <div className="vc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
-        <div className="vc-m2">$us {Math.round(p.precio_m2).toLocaleString('en-US')}/m²</div>
-        <div className="vc-usd-note">USD oficial</div>
-        <div className="vc-specs">{[
-          p.area_m2 > 0 ? `${Math.round(p.area_m2)}m²` : null,
-          p.dormitorios !== null ? (p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`) : null,
-          p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
-          p.piso ? `${p.piso}° piso` : null,
-        ].filter(Boolean).join(' · ')}</div>
-        <div className="vc-badges">
-          {p.dias_en_mercado !== null && p.dias_en_mercado <= 7 && <span className="vc-badge green">Nuevo</span>}
-          {p.precio_negociable && <span className="vc-badge">Negociable</span>}
-          {p.plan_pagos_desarrollador && <span className="vc-badge">Plan pagos</span>}
-          {p.descuento_contado_pct && p.descuento_contado_pct > 0 && <span className="vc-badge">-{p.descuento_contado_pct}% ctdo</span>}
-          {p.estado_construccion === 'preventa' && <span className="vc-badge">{p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa'}</span>}
-          {p.parqueo_incluido && <span className="vc-badge">Parqueo incl.</span>}
-          {p.baulera_incluido && <span className="vc-badge">Baulera incl.</span>}
+        <div className="vc-price-block">
+          <div className="vc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
+          <div className="vc-specs">{[
+            p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
+            p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
+            p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
+          ].filter(Boolean).join(' · ')}</div>
         </div>
-        {amenities.length > 0 && (
-          <div className="vc-features">
-            <svg className="vc-features-icon icon-building" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 21h18M3 7v14M21 7v14M6 21V10M10 21V10M14 21V10M18 21V10M3 7l9-4 9 4"/></svg>
-            <span>{amenities.slice(0, 3).join(' · ')}</span>
-            {amenities.length > 3 && <span className="vc-features-count">+{amenities.length - 3}</span>}
-          </div>
-        )}
-        {equipamiento.length > 0 && (
-          <div className="vc-features">
-            <svg className="vc-features-icon icon-unit" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            <span>{equipamiento.slice(0, 3).join(' · ')}</span>
-            {equipamiento.length > 3 && <span className="vc-features-count">+{equipamiento.length - 3}</span>}
-          </div>
-        )}
+        <div className="vc-specs-2">{[
+          p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²` : null,
+          p.estado_construccion === 'preventa'
+            ? (p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa')
+            : 'Entrega inmediata',
+          p.piso ? `Piso ${p.piso}` : null,
+          p.parqueo_incluido ? 'Parqueo incl.' : null,
+          p.baulera_incluido ? 'Baulera incl.' : null,
+          p.dias_en_mercado !== null && p.dias_en_mercado <= 7 ? 'Nuevo' : null,
+        ].filter(Boolean).join('  ·  ')}</div>
         <div className="vc-actions">
-          <button className="vc-details-btn" onClick={onDetails}>Ver detalles</button>
-          {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="vc-ver">Ver original &#8599;</a>}
+          <button className={`vc-act-btn vc-act-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
+            <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </button>
+          <button className="vc-act-btn" onClick={onShare}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg> Compartir
+          </button>
+          <button className="vc-act-btn vc-act-detail" onClick={onDetails}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+              <polyline points="6 9 12 15 18 9"/>
+            </svg> Ver mas
+          </button>
         </div>
       </div>
     </div>
@@ -429,8 +426,11 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
           p.estado_construccion === 'preventa'
             ? (p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa')
             : 'Entrega inmediata',
+          p.piso ? `Piso ${p.piso}` : null,
+          p.parqueo_incluido ? 'Parqueo incl.' : null,
+          p.baulera_incluido ? 'Baulera incl.' : null,
           p.dias_en_mercado !== null && p.dias_en_mercado <= 7 ? 'Nuevo' : null,
-        ].filter(Boolean).join('   ·   ')}</div>
+        ].filter(Boolean).join('  ·  ')}</div>
         <div className="mc-actions">
           <button className={`mc-btn mc-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
             <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
@@ -842,7 +842,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
   const [properties, setProperties] = useState<UnidadVenta[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
-  const [filters, setFilters] = useState<FiltrosVentaSimple>({})
+  const [filters, setFilters] = useState<FiltrosVentaSimple>({ orden: 'recientes' })
   const [isFiltered, setIsFiltered] = useState(false)
   const [totalCount, setTotalCount] = useState(0)
   const [unfilteredCount, setUnfilteredCount] = useState(0)
@@ -1224,17 +1224,17 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         @media (max-width: 767px) { body { overflow: hidden; } }
 
         /* ===== DESKTOP LAYOUT ===== */
-        .ventas-desktop { display:flex; min-height:100vh; font-family:'DM Sans',sans-serif; color:#141414 }
-        .ventas-sidebar { width:320px; min-width:320px; background:#EDE8DC; border-right:1px solid #D8D0BC; position:fixed; top:0; left:0; bottom:0; overflow-y:auto; z-index:10 }
+        .ventas-desktop { display:flex; min-height:100vh; font-family:'DM Sans',sans-serif; color:#EDE8DC }
+        .ventas-sidebar { width:320px; min-width:320px; background:#141414; border-right:1px solid rgba(237,232,220,0.08); position:fixed; top:0; left:0; bottom:0; overflow-y:auto; z-index:10 }
         .ventas-sidebar-header { padding:24px 20px 12px; display:flex; align-items:baseline; gap:12px }
-        .ventas-logo { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#141414; text-decoration:none }
-        .ventas-label { font-size:11px; letter-spacing:0.5px; color:#7A7060; font-weight:600 }
+        .ventas-logo { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; text-decoration:none }
+        .ventas-label { font-size:11px; letter-spacing:0.5px; color:#9A8E7A; font-weight:600 }
         .ventas-sidebar-count { padding:8px 20px 20px }
-        .ventas-count-num { font-family:'Figtree',sans-serif; font-size:48px; font-weight:500; color:#141414; display:block; line-height:1; font-variant-numeric:tabular-nums }
-        .ventas-count-text { font-size:13px; color:#7A7060 }
-        .ventas-main { margin-left:320px; flex:1; padding:24px; min-height:100vh }
+        .ventas-count-num { font-family:'Figtree',sans-serif; font-size:48px; font-weight:500; color:#EDE8DC; display:block; line-height:1; font-variant-numeric:tabular-nums }
+        .ventas-count-text { font-size:13px; color:#9A8E7A }
+        .ventas-main { margin-left:320px; flex:1; padding:24px; min-height:100vh; background:#1a1a1a }
         .ventas-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:24px }
-        .ventas-map-container { height:calc(100vh - 80px); border-radius:14px; overflow:hidden; border:1px solid #D8D0BC; position:relative }
+        .ventas-map-container { height:calc(100vh - 80px); border-radius:14px; overflow:hidden; border:1px solid rgba(237,232,220,0.08); position:relative }
 
         /* Map float card — desktop */
         .mfc-desktop { position:absolute; bottom:20px; left:20px; z-index:1000; background:#1a1a1a; border:1px solid rgba(237,232,220,0.1); border-radius:14px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.4); display:flex; width:380px; animation:mfcIn 0.2s ease-out }
@@ -1258,9 +1258,9 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .mfc-detail { width:100%; padding:8px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.1); color:#EDE8DC; font-family:'DM Sans',sans-serif; font-size:12px; cursor:pointer; border-radius:10px }
 
         /* View mode toggle */
-        .vm-toggle { display:flex; gap:4px; margin-bottom:20px; background:#FAFAF8; border:1px solid #D8D0BC; border-radius:10px; padding:4px; width:fit-content }
-        .vm-btn { display:flex; align-items:center; gap:6px; padding:8px 16px; border:none; border-radius:8px; background:transparent; color:#7A7060; font-family:'DM Sans',sans-serif; font-size:12px; cursor:pointer; transition:all 0.15s }
-        .vm-btn.active { background:rgba(58,106,72,0.08); color:#141414; font-weight:600 }
+        .vm-toggle { display:flex; gap:4px; margin-bottom:20px; background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.1); border-radius:10px; padding:4px; width:fit-content }
+        .vm-btn { display:flex; align-items:center; gap:6px; padding:8px 16px; border:none; border-radius:8px; background:transparent; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:12px; cursor:pointer; transition:all 0.15s }
+        .vm-btn.active { background:rgba(237,232,220,0.1); color:#EDE8DC; font-weight:600 }
 
         /* ===== MOBILE TIKTOK LAYOUT ===== */
         .mt-top-bar { position:fixed; top:0; left:0; right:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:10px 16px; padding-top:max(10px, env(safe-area-inset-top)); pointer-events:none }
@@ -1307,12 +1307,12 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
 
         /* Desktop spotlight */
         .ds-spotlight { margin-bottom:32px }
-        .ds-spotlight-banner { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; margin-bottom:16px; background:#FAFAF8; border-left:3px solid #3A6A48; border-radius:0 14px 14px 0; font-family:'DM Sans',sans-serif; font-size:14px; color:#3A3530 }
-        .ds-spotlight-close { background:none; border:none; color:#7A7060; font-size:20px; cursor:pointer; padding:0 4px }
-        .ds-spotlight-close:hover { color:#141414 }
+        .ds-spotlight-banner { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; margin-bottom:16px; background:rgba(237,232,220,0.06); border-left:3px solid #3A6A48; border-radius:0 14px 14px 0; font-family:'DM Sans',sans-serif; font-size:14px; color:#EDE8DC }
+        .ds-spotlight-close { background:none; border:none; color:#9A8E7A; font-size:20px; cursor:pointer; padding:0 4px }
+        .ds-spotlight-close:hover { color:#EDE8DC }
         .ds-spotlight-sep { display:flex; align-items:center; gap:16px; margin-top:24px }
-        .ds-spotlight-line { flex:1; height:1px; background:#D8D0BC }
-        .ds-spotlight-text { font-size:12px; color:#7A7060; font-family:'DM Sans',sans-serif; letter-spacing:0.5px; white-space:nowrap; text-transform:uppercase }
+        .ds-spotlight-line { flex:1; height:1px; background:rgba(237,232,220,0.08) }
+        .ds-spotlight-text { font-size:12px; color:#9A8E7A; font-family:'DM Sans',sans-serif; letter-spacing:0.5px; white-space:nowrap; text-transform:uppercase }
 
         /* Content zone (45%) */
         .mc-content { flex:1; padding:0 24px 20px; padding-bottom:max(20px, calc(env(safe-area-inset-bottom) + 8px)); display:flex; flex-direction:column; overflow:hidden }
@@ -1321,7 +1321,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .mc-price-block { border-left:3px solid #3A6A48; padding-left:14px; margin-bottom:8px }
         .mc-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
         .mc-specs { font-size:13px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300; line-height:1.4 }
-        .mc-specs-2 { font-size:13px; color:rgba(237,232,220,0.4); font-family:'DM Sans',sans-serif; margin-bottom:auto; font-weight:300 }
+        .mc-specs-2 { font-size:13px; color:#EDE8DC; font-family:'DM Sans',sans-serif; margin-bottom:auto; font-weight:300 }
         .mc-wsp { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:12px; background:#1EA952; border:none; border-radius:10px; color:#fff; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; text-decoration:none; margin-top:auto; min-height:44px; flex-shrink:0 }
         .mc-wsp:active { opacity:0.85 }
         .mc-actions { display:flex; align-items:center; gap:12px; padding-top:10px; border-top:1px solid rgba(237,232,220,0.1); margin-top:8px }
@@ -1329,52 +1329,52 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         @keyframes mcShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
 
         /* ===== MOBILE FILTER CARD (full-screen) ===== */
-        .mfc { height:100vh; height:100dvh; scroll-snap-align:start; scroll-snap-stop:always; background:#EDE8DC; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:60px 28px 20px; padding-bottom:max(20px, calc(env(safe-area-inset-bottom) + 8px)); font-family:'DM Sans',sans-serif; overflow-y:auto }
+        .mfc { height:100vh; height:100dvh; scroll-snap-align:start; scroll-snap-stop:always; background:#141414; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:60px 28px 20px; padding-bottom:max(20px, calc(env(safe-area-inset-bottom) + 8px)); font-family:'DM Sans',sans-serif; overflow-y:auto }
         .mfc-header { display:flex; align-items:baseline; gap:8px; margin-bottom:6px }
-        .mfc-count { font-family:'Figtree',sans-serif; font-size:40px; font-weight:500; color:#141414; line-height:1; font-variant-numeric:tabular-nums }
-        .mfc-sub { font-size:15px; font-weight:400; color:#7A7060; font-family:'DM Sans',sans-serif }
+        .mfc-count { font-family:'Figtree',sans-serif; font-size:40px; font-weight:500; color:#EDE8DC; line-height:1; font-variant-numeric:tabular-nums }
+        .mfc-sub { font-size:15px; font-weight:400; color:#9A8E7A; font-family:'DM Sans',sans-serif }
         .mfc-divider { display:flex; align-items:center; gap:12px; width:100%; margin-bottom:14px }
-        .mfc-line { flex:1; height:1px; background:#D8D0BC }
-        .mfc-text { font-size:12px; letter-spacing:0.5px; color:#3A3530; font-weight:600; text-transform:uppercase }
+        .mfc-line { flex:1; height:1px; background:rgba(237,232,220,0.1) }
+        .mfc-text { font-size:12px; letter-spacing:0.5px; color:#9A8E7A; font-weight:600; text-transform:uppercase }
         .mfc-filters { width:100%; max-width:320px; margin-bottom:12px }
-        .mfc-cta { display:block; width:100%; max-width:320px; padding:15px; background:#141414; border:1px solid #141414; color:#EDE8DC; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; cursor:pointer; margin-bottom:10px; border-radius:10px; transition:all 0.3s }
+        .mfc-cta { display:block; width:100%; max-width:320px; padding:15px; background:#EDE8DC; border:1px solid #EDE8DC; color:#141414; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; cursor:pointer; margin-bottom:10px; border-radius:10px; transition:all 0.3s }
         .mfc-cta:active { transform:scale(0.97) }
-        .mfc-reset { display:block; width:100%; max-width:320px; padding:11px; background:transparent; border:1px solid #D8D0BC; color:#7A7060; font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer; margin-bottom:8px; border-radius:10px }
-        .mfc-skip { font-size:13px; color:#7A7060; font-weight:300; font-family:'DM Sans',sans-serif }
+        .mfc-reset { display:block; width:100%; max-width:320px; padding:11px; background:transparent; border:1px solid rgba(237,232,220,0.12); color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer; margin-bottom:8px; border-radius:10px }
+        .mfc-skip { font-size:13px; color:rgba(237,232,220,0.4); font-weight:300; font-family:'DM Sans',sans-serif }
 
         /* ===== FILTER COMPONENTS (shared) ===== */
-        .vf-wrap { padding:0 20px 20px; border-top:1px solid #D8D0BC; padding-top:16px }
+        .vf-wrap { padding:0 20px 20px; border-top:1px solid rgba(237,232,220,0.08); padding-top:16px }
         .vf-group { margin-bottom:14px; text-align:left }
-        .vf-label { font-size:12px; letter-spacing:0.5px; color:#3A3530; margin-bottom:7px; font-weight:600; font-family:'DM Sans',sans-serif; text-transform:uppercase; display:flex; align-items:center; gap:6px }
+        .vf-label { font-size:12px; letter-spacing:0.5px; color:#9A8E7A; margin-bottom:7px; font-weight:600; font-family:'DM Sans',sans-serif; text-transform:uppercase; display:flex; align-items:center; gap:6px }
         .vf-label::before { content:''; width:6px; height:6px; border-radius:50%; background:#3A6A48; flex-shrink:0 }
         .vf-zona-btns { display:flex; flex-wrap:wrap; gap:7px }
-        .vf-zona-btn { padding:7px 14px; border-radius:100px; border:1px solid #D8D0BC; background:#FAFAF8; color:#3A3530; font-size:13px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s }
-        .vf-zona-btn:hover { border-color:#7A7060; color:#141414 }
-        .vf-zona-btn.active { border:2px solid #3A6A48; color:#141414; background:#FAFAF8; font-weight:600; box-shadow:0 2px 8px rgba(58,106,72,0.12) }
+        .vf-zona-btn { padding:7px 14px; border-radius:100px; border:1px solid rgba(237,232,220,0.12); background:transparent; color:#9A8E7A; font-size:13px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s }
+        .vf-zona-btn:hover { border-color:rgba(237,232,220,0.25); color:#EDE8DC }
+        .vf-zona-btn.active { border:2px solid #3A6A48; color:#EDE8DC; background:rgba(58,106,72,0.15); font-weight:600 }
         .vf-btn-row { display:flex; gap:8px }
-        .vf-btn { flex:1; padding:10px 4px; border-radius:10px; border:1px solid #D8D0BC; background:#FAFAF8; color:#3A3530; font-size:13px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s; text-align:center }
-        .vf-btn:hover { border-color:#7A7060; color:#141414 }
-        .vf-btn.active { border:2px solid #3A6A48; color:#141414; background:#FAFAF8; font-weight:600; box-shadow:0 2px 8px rgba(58,106,72,0.12) }
-        .vf-range-display { font-size:14px; color:#141414; margin-bottom:10px; text-align:right; font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums }
+        .vf-btn { flex:1; padding:10px 4px; border-radius:10px; border:1px solid rgba(237,232,220,0.12); background:transparent; color:#9A8E7A; font-size:13px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s; text-align:center }
+        .vf-btn:hover { border-color:rgba(237,232,220,0.25); color:#EDE8DC }
+        .vf-btn.active { border:2px solid #3A6A48; color:#EDE8DC; background:rgba(58,106,72,0.15); font-weight:600 }
+        .vf-range-display { font-size:14px; color:#EDE8DC; margin-bottom:10px; text-align:right; font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums }
         .vf-range-wrap { position:relative; height:28px }
         .vf-slider { position:absolute; top:0; left:0; width:100%; -webkit-appearance:none; appearance:none; background:transparent; pointer-events:none; height:28px }
-        .vf-slider::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#FAFAF8; cursor:pointer; pointer-events:all; border:2px solid #141414; position:relative; z-index:2 }
-        .vf-slider::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#FAFAF8; cursor:pointer; pointer-events:all; border:2px solid #141414 }
-        .vf-slider::-webkit-slider-runnable-track { height:2px; background:#D8D0BC; border-radius:2px }
-        .vf-slider::-moz-range-track { height:2px; background:#D8D0BC; border-radius:2px }
+        .vf-slider::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#EDE8DC; cursor:pointer; pointer-events:all; border:2px solid #3A6A48; position:relative; z-index:2 }
+        .vf-slider::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#EDE8DC; cursor:pointer; pointer-events:all; border:2px solid #3A6A48 }
+        .vf-slider::-webkit-slider-runnable-track { height:2px; background:rgba(237,232,220,0.15); border-radius:2px }
+        .vf-slider::-moz-range-track { height:2px; background:rgba(237,232,220,0.15); border-radius:2px }
         .vf-slider-min { z-index:1 }
         .vf-slider-max { z-index:2 }
-        .vf-tc-note { font-size:12px; color:#7A7060; font-family:'DM Sans',sans-serif; margin-top:8px; text-align:right }
-        .vf-reset { width:100%; max-width:340px; padding:10px; background:transparent; border:1px solid #D8D0BC; border-radius:10px; color:#7A7060; font-size:12px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s }
-        .vf-reset:hover { border-color:#3A3530; color:#3A3530 }
+        .vf-tc-note { font-size:12px; color:#9A8E7A; font-family:'DM Sans',sans-serif; margin-top:8px; text-align:right }
+        .vf-reset { width:100%; max-width:340px; padding:10px; background:transparent; border:1px solid rgba(237,232,220,0.12); border-radius:10px; color:#9A8E7A; font-size:12px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s }
+        .vf-reset:hover { border-color:rgba(237,232,220,0.25); color:#EDE8DC }
 
         /* ===== DESKTOP VENTA CARD ===== */
-        .vc { background:#FAFAF8; border:1px solid #D8D0BC; border-radius:14px; overflow:hidden; transition:all 0.25s cubic-bezier(0.4,0,0.2,1) }
-        .vc:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(58,53,48,0.08) }
-        .vc-photo { height:220px; background-size:cover; background-position:center; background-color:#D8D0BC; position:relative }
-        @keyframes vcShimmer { 0%,100%{background-color:#D8D0BC} 50%{background-color:#EDE8DC} }
+        .vc { background:#1e1e1e; border:1px solid rgba(237,232,220,0.08); border-radius:14px; overflow:hidden; transition:all 0.25s cubic-bezier(0.4,0,0.2,1) }
+        .vc:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,0.3) }
+        .vc-photo { height:220px; background-size:cover; background-position:center; background-color:#2a2a2a; position:relative }
+        @keyframes vcShimmer { 0%,100%{background-color:#2a2a2a} 50%{background-color:#333} }
         .vc-photo:not([style*="background-image"]) { animation:vcShimmer 1.5s ease-in-out infinite }
-        .vc-nofoto { display:flex; align-items:center; justify-content:center; height:100%; color:#7A7060; font-size:13px; font-family:'DM Sans',sans-serif }
+        .vc-nofoto { display:flex; align-items:center; justify-content:center; height:100%; color:#9A8E7A; font-size:13px; font-family:'DM Sans',sans-serif }
         .vc-nav { position:absolute; top:50%; transform:translateY(-50%); width:36px; height:36px; border-radius:50%; background:rgba(20,20,20,0.6); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s; z-index:3 }
         .vc-nav:hover { background:rgba(20,20,20,0.85) }
         .vc-nav-prev { left:8px }
@@ -1386,30 +1386,23 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .vc-share { position:absolute; top:10px; left:58px; width:40px; height:40px; border-radius:50%; background:rgba(20,20,20,0.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.15s; z-index:3 }
         .vc-share:hover { transform:scale(1.1); background:rgba(20,20,20,0.7) }
         .vc-body { padding:16px }
-        .vc-name { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#141414; line-height:1.2; margin-bottom:2px }
-        .vc-zona { font-size:12px; color:#7A7060; letter-spacing:0.5px; margin-bottom:10px }
-        .vc-id { color:#7A7060; font-size:12px; margin-left:4px; letter-spacing:0 }
-        .vc-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#141414; line-height:1; margin-bottom:4px; font-variant-numeric:tabular-nums }
-        .vc-m2 { font-size:14px; color:#3A3530; margin-bottom:2px }
-        .vc-usd-note { font-size:12px; color:#7A7060; font-family:'DM Sans',sans-serif; margin-bottom:8px }
-        .vc-specs { font-size:12px; color:#3A3530; margin-bottom:10px; font-family:'DM Sans',sans-serif; display:flex; gap:8px; flex-wrap:wrap }
-        .vc-badges { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px }
-        .vc-badge { font-size:12px; font-weight:500; padding:3px 8px; border-radius:100px; border:1px solid #D8D0BC; color:#3A3530; font-family:'DM Sans',sans-serif }
-        .vc-badge.green { border-color:#3A6A48; color:#EDE8DC; background:#3A6A48 }
-        .vc-features { font-size:12px; color:#7A7060; font-family:'DM Sans',sans-serif; display:flex; align-items:center; gap:7px; margin-bottom:5px; line-height:1.4 }
-        .vc-features-icon { flex-shrink:0 }
-        .vc-features-icon.icon-building { color:#7A7060 }
-        .vc-features-icon.icon-unit { color:#3A6A48 }
-        .vc-features-count { color:#3A6A48; flex-shrink:0 }
-        .vc-actions { border-top:1px solid #D8D0BC; padding-top:12px; margin-top:2px; display:flex; gap:8px }
-        .vc-details-btn { flex:1; padding:8px; background:transparent; border:1px solid #D8D0BC; color:#3A3530; font-family:'DM Sans',sans-serif; font-size:12px; cursor:pointer; border-radius:10px; transition:all 0.2s }
-        .vc-details-btn:hover { border-color:#3A3530; color:#141414 }
-        .vc-ver { flex:1; padding:8px; background:rgba(58,53,48,0.03); border:1px solid #D8D0BC; color:#3A3530; font-family:'DM Sans',sans-serif; font-size:12px; text-align:center; text-decoration:none; border-radius:10px; transition:all 0.2s; font-weight:500 }
-        .vc-ver:hover { background:rgba(58,53,48,0.08) }
+        .vc-name { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC; line-height:1.2; margin-bottom:2px }
+        .vc-zona { font-size:12px; color:#9A8E7A; letter-spacing:0.5px; margin-bottom:10px }
+        .vc-id { color:rgba(237,232,220,0.3); font-size:12px; margin-left:4px; letter-spacing:0 }
+        .vc-price-block { border-left:3px solid #3A6A48; padding-left:12px; margin-bottom:8px }
+        .vc-price { font-family:'DM Sans',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:4px; font-variant-numeric:tabular-nums }
+        .vc-specs { font-size:13px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300 }
+        .vc-specs-2 { font-size:13px; color:#EDE8DC; font-family:'DM Sans',sans-serif; margin-bottom:10px; font-weight:300 }
+        .vc-actions { border-top:1px solid rgba(237,232,220,0.08); padding-top:10px; margin-top:auto; display:flex; align-items:center; gap:12px }
+        .vc-act-btn { display:flex; align-items:center; justify-content:center; gap:5px; background:none; border:none; color:#9A8E7A; font-size:12px; font-family:'DM Sans',sans-serif; cursor:pointer; padding:6px; min-height:36px; transition:color 0.15s }
+        .vc-act-btn:hover { color:#EDE8DC }
+        .vc-act-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
+        .vc-act-detail { color:#EDE8DC; background:rgba(237,232,220,0.08); border-radius:10px; padding:6px 14px; font-weight:500 }
+        .vc-act-detail:hover { background:rgba(237,232,220,0.15) }
 
         /* ===== STATES ===== */
-        .ventas-status { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:300px; color:#7A7060; font-family:'DM Sans',sans-serif; font-size:15px; text-align:center }
-        .ventas-status button { margin-top:12px; padding:8px 20px; background:#141414; color:#EDE8DC; border:none; border-radius:10px; cursor:pointer; font-weight:600; font-size:14px }
+        .ventas-status { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:300px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:15px; text-align:center }
+        .ventas-status button { margin-top:12px; padding:8px 20px; background:#EDE8DC; color:#141414; border:none; border-radius:10px; cursor:pointer; font-weight:600; font-size:14px }
 
         /* ===== TOAST ===== */
         .ventas-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#141414; color:#EDE8DC; padding:10px 24px; border-radius:100px; font-size:13px; font-family:'DM Sans',sans-serif; z-index:100; font-weight:600 }
