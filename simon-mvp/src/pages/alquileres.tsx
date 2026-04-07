@@ -1351,17 +1351,17 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         }
         .alq-top-bar > * { pointer-events: auto; }
         .alq-top-bar-left {
-          display: flex; align-items: center; gap: 10px;
+          display: flex; align-items: center; gap: 8px;
           background: rgba(237,232,220,0.92); backdrop-filter: blur(8px);
-          padding: 8px 16px; border-radius: 100px;
-          border: 1px solid rgba(216,208,188,0.6);
+          padding: 6px 14px; border-radius: 10px;
+          border: none;
         }
         .alq-home-link { display: flex; align-items: center; gap: 8px; text-decoration: none; }
-        .alq-logo { font-family: 'Figtree', sans-serif; font-size: 18px; font-weight: 500; color: #141414; }
-        .alq-label { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; text-transform: uppercase; font-family: 'DM Sans', sans-serif; }
+        .alq-logo { font-family: 'Figtree', sans-serif; font-size: 15px; font-weight: 500; color: #141414; }
+        .alq-label { font-size: 11px; color: #7A7060; letter-spacing: 0.5px; text-transform: uppercase; font-family: 'DM Sans', sans-serif; }
         .alq-filter-btn {
-          width: 44px; height: 44px; border-radius: 50%;
-          border: 1px solid rgba(216,208,188,0.6); background: rgba(237,232,220,0.92); backdrop-filter: blur(8px); color: #141414;
+          width: 38px; height: 38px; border-radius: 10px;
+          border: none; background: rgba(237,232,220,0.92); backdrop-filter: blur(8px); color: #141414;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
         .alq-filter-pill {
@@ -1423,8 +1423,8 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         /* Mobile map button */
         .alq-map-floating {
           position: fixed; bottom: max(140px, calc(env(safe-area-inset-bottom) + 130px)); right: 20px;
-          z-index: 100; width: 48px; height: 48px; border-radius: 50%;
-          background: #FAFAF8; border: 1px solid #D8D0BC;
+          z-index: 100; width: 48px; height: 48px; border-radius: 10px;
+          background: rgba(237,232,220,0.92); backdrop-filter: blur(8px); border: none;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
@@ -1458,8 +1458,8 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         }
         .alq-mobile-map-title { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #141414; }
         .alq-mobile-map-close {
-          width: 36px; height: 36px; border-radius: 50%;
-          border: 1px solid #D8D0BC; background: transparent;
+          width: 36px; height: 36px; border-radius: 10px;
+          border: none; background: rgba(216,208,188,0.5);
           color: #7A7060; font-size: 20px;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
@@ -1627,7 +1627,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
         .df-label { font-size: 12px; font-weight: 600; color: #3A3530; letter-spacing: 0.5px; margin-bottom: 8px; font-family: 'DM Sans', sans-serif; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
         .df-dot { width: 6px; height: 6px; border-radius: 50%; background: #3A6A48; flex-shrink: 0; }
         .df-zona-btns { display: flex; flex-wrap: wrap; gap: 6px; }
-        .df-zona-btn { padding: 6px 12px; border: 1px solid #D8D0BC; background: #FAFAF8; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 100px; transition: all 0.2s; }
+        .df-zona-btn { padding: 6px 12px; border: 1px solid #D8D0BC; background: #FAFAF8; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; transition: all 0.2s; }
         .df-zona-btn.active { border-color: #3A6A48; border-width: 2px; color: #141414; background: #FAFAF8; font-weight: 600; box-shadow: 0 2px 8px rgba(58,106,72,0.12); }
         .df-dorm-btns { display: flex; gap: 8px; }
         .df-dorm-btn { flex: 1; padding: 9px; border: 1px solid #D8D0BC; background: #FAFAF8; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; transition: all 0.2s; }
@@ -1959,49 +1959,58 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
             <div className="dc-photo-count">{photoIdx + 1}/{photos.length}</div>
           </>
         )}
-        {/* Fav + Share buttons on photo */}
-        <button className={`dc-fav-btn ${isFavorite ? 'active' : ''}`} aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'} onClick={(e) => { e.stopPropagation(); handleFav() }}>
-          <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-          </svg>
-        </button>
-        {onShare && (
-          <button className="dc-share-btn" aria-label="Compartir por WhatsApp" onClick={(e) => { e.stopPropagation(); onShare() }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
-              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-            </svg>
-          </button>
-        )}
       </div>
 
       {/* Content */}
       <div className="dc-content">
-        <div className="dc-name">{displayName}</div>
+        <div className="dc-name">{displayName}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="dc-reciente">Publicación reciente</span>}</div>
         <div className="dc-zona">{displayZona(p.zona)} <span className="dc-id">#{p.id}</span></div>
-        <div className="dc-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
-        <div className="dc-specs">
-          {p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · ${p.piso}° piso` : ''}
+        <div className="dc-price-block">
+          <div className="dc-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
+          <div className="dc-specs">
+            {p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · Piso ${p.piso}` : ''}
+          </div>
         </div>
-        <div className="dc-badges">
-          {badges.slice(0, 4).map((b, i) => (
-            <span key={i} className={`dc-badge ${b.color}`}>{b.text}</span>
-          ))}
+        <div className="dc-specs-2">
+          {(p.amoblado === 'si' || p.amoblado === 'semi') && <span className="dc-highlight gold">{p.amoblado === 'si' ? 'Amoblado' : 'Semi-amoblado'}</span>}
+          {p.acepta_mascotas && <span className="dc-highlight green">Mascotas</span>}
+          {[
+            p.estacionamientos && p.estacionamientos > 0 ? `${p.estacionamientos} parqueo` : null,
+            p.baulera ? 'Baulera' : null,
+            p.monto_expensas_bob && p.monto_expensas_bob > 0 ? `Expensas Bs ${p.monto_expensas_bob}` : null,
+          ].filter(Boolean).map((t, i) => <span key={i}>{i > 0 || p.amoblado || p.acepta_mascotas ? '  ·  ' : ''}{t}</span>)}
         </div>
         <div className="dc-actions">
-          <button className="dc-info-btn" onClick={onOpenInfo}>Ver detalles</button>
+          <button className={`dc-act-btn dc-act-fav ${isFavorite ? 'active' : ''}`} onClick={handleFav}>
+            <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </button>
+          {onShare && (
+            <button className="dc-act-btn" onClick={onShare}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg> Compartir
+            </button>
+          )}
+          <button className="dc-act-btn dc-act-detail" onClick={onOpenInfo}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+              <polyline points="6 9 12 15 18 9"/>
+            </svg> Ver mas
+          </button>
         </div>
         {p.agente_whatsapp && (
           <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi este alquiler en Simon y me interesa: ${displayName} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_desktop')} className="dc-wsp-cta">
             <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 16, height: 16 }}>
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
             </svg>
-            WhatsApp
+            Consultar por WhatsApp
           </a>
         )}
       </div>
 
       <style jsx>{`
-        .dc-card { background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; overflow: hidden; transition: transform 0.25s, box-shadow 0.25s; }
+        .dc-card { background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; overflow: hidden; transition: transform 0.25s, box-shadow 0.25s; display: flex; flex-direction: column; }
         .dc-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(58,53,48,0.08); }
         .dc-photo { height: 220px; background-size: cover; background-position: center; background-color: #D8D0BC; position: relative; animation: dcShimmer 1.5s ease-in-out infinite; }
         @keyframes dcShimmer { 0%,100%{background-color:#D8D0BC} 50%{background-color:#EDE8DC} }
@@ -2009,29 +2018,28 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
         .dc-prev { left: 8px; }
         .dc-next { right: 8px; }
         .dc-photo-count { position: absolute; top: 10px; right: 10px; background: rgba(20,20,20,0.6); padding: 3px 10px; border-radius: 100px; font-size: 12px; color: rgba(255,255,255,0.8); font-family: 'DM Sans', sans-serif; }
-        .dc-fav-btn { position: absolute; top: 10px; left: 10px; width: 44px; height: 44px; border-radius: 50%; background: rgba(20,20,20,0.5); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
-        .dc-fav-btn:hover { transform: scale(1.1); }
-        .dc-fav-btn.active { background: rgba(224,85,85,0.15); }
-        .dc-share-btn { position: absolute; top: 10px; left: 62px; width: 44px; height: 44px; border-radius: 50%; background: rgba(20,20,20,0.5); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
-        .dc-share-btn:hover { transform: scale(1.1); background: rgba(20,20,20,0.7); }
-        .dc-content { padding: 16px; }
-        .dc-name { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #141414; line-height: 1.2; margin-bottom: 2px; }
+        .dc-content { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+        .dc-name { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #141414; line-height: 1.2; margin-bottom: 2px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+        .dc-reciente { font-size: 11px; font-weight: 500; color: #3A6A48; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; }
         .dc-zona { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
         .dc-id { color: #7A7060; font-size: 12px; margin-left: 4px; letter-spacing: 0; }
-        .dc-price { font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 500; color: #141414; line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
-        .dc-price span { font-size: 16px; color: #7A7060; }
-        .dc-specs { font-size: 12px; color: #3A3530; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
-        .dc-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
-        .dc-badge { font-size: 12px; font-weight: 500; padding: 3px 8px; border-radius: 100px; border: 1px solid #D8D0BC; color: #3A3530; font-family: 'DM Sans', sans-serif; }
-        .dc-badge.gold { background: #141414; color: #EDE8DC; border-color: #141414; }
-        .dc-badge.purple { background: #3A6A48; color: #EDE8DC; border-color: #3A6A48; }
-        .dc-badge.green { background: #3A6A48; color: #EDE8DC; border-color: #3A6A48; }
-        .dc-badge.warn { border-color: #3A3530; color: #3A3530; background: rgba(58,53,48,0.04); }
+        .dc-price-block { border-left: 3px solid #3A6A48; padding-left: 12px; margin-bottom: 8px; }
+        .dc-price { font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 500; color: #141414; line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+        .dc-price span { font-size: 14px; color: #7A7060; }
+        .dc-specs { font-size: 15px; font-weight: 300; color: #3A3530; font-family: 'DM Sans', sans-serif; }
+        .dc-specs-2 { font-size: 14px; font-weight: 300; color: #7A7060; font-family: 'DM Sans', sans-serif; margin-bottom: 10px; display: flex; align-items: center; flex-wrap: wrap; }
+        .dc-highlight { font-weight: 500; color: #3A3530; margin-right: 4px; }
+        .dc-highlight::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+        .dc-highlight.gold::before { background: #141414; }
+        .dc-highlight.green::before { background: #3A6A48; }
         .dc-card.pet-confirmed { border-left: 3px solid rgba(168,85,247,0.4); }
-        .dc-actions { display: flex; gap: 8px; border-top: 1px solid #D8D0BC; padding-top: 12px; }
-        .dc-info-btn { flex: 1; padding: 8px; background: transparent; border: 1px solid #D8D0BC; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; transition: all 0.2s; }
-        .dc-info-btn:hover { border-color: #7A7060; color: #141414; }
-        .dc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: #1EA952; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-decoration: none; margin-top: 8px; transition: opacity 0.2s; }
+        .dc-actions { display: flex; align-items: center; gap: 12px; border-top: 1px solid #D8D0BC; padding-top: 10px; margin-top: auto; }
+        .dc-act-btn { display: flex; align-items: center; justify-content: center; gap: 5px; background: none; border: none; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 6px; min-height: 36px; transition: color 0.15s; }
+        .dc-act-btn:hover { color: #141414; }
+        .dc-act-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
+        .dc-act-detail { color: #4A4438; background: rgba(216,208,188,0.45); border-radius: 10px; padding: 6px 14px; font-weight: 500; }
+        .dc-act-detail:hover { background: rgba(216,208,188,0.65); }
+        .dc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: #1EA952; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; text-decoration: none; margin-top: auto; padding-top: 10px; transition: opacity 0.2s; }
         .dc-wsp-cta:hover { opacity: 0.9; }
         @media (prefers-reduced-motion: reduce) {
           .dc-photo { animation: none; }
@@ -2080,12 +2088,20 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
         <div className="mc-spotlight-badge">Te compartieron este depto</div>
       )}
       <div className="mc-content">
-        <div className="mc-name">{displayName}</div>
+        <div className="mc-name">{displayName}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="mc-reciente">Publicación reciente</span>}</div>
         <div className="mc-zona">{displayZona(p.zona)} <span className="mc-id">#{p.id}</span></div>
-        <div className="mc-price">{formatPrice(p.precio_mensual_bob)}/mes</div>
-        <div className="mc-specs">{p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · ${p.piso}°` : ''}</div>
-        <div className="mc-badges">
-          {badges.slice(0, 4).map((b, i) => <span key={i} className={`mc-badge ${b.color}`}>{b.text}</span>)}
+        <div className="mc-price-block">
+          <div className="mc-price">{formatPrice(p.precio_mensual_bob)}/mes</div>
+          <div className="mc-specs">{p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · Piso ${p.piso}` : ''}</div>
+        </div>
+        <div className="mc-specs-2">
+          {(p.amoblado === 'si' || p.amoblado === 'semi') && <span className="mc-highlight gold">{p.amoblado === 'si' ? 'Amoblado' : 'Semi-amoblado'}</span>}
+          {p.acepta_mascotas && <span className="mc-highlight green">Mascotas</span>}
+          {[
+            p.estacionamientos && p.estacionamientos > 0 ? `${p.estacionamientos} parqueo` : null,
+            p.baulera ? 'Baulera' : null,
+            p.monto_expensas_bob && p.monto_expensas_bob > 0 ? `Expensas Bs ${p.monto_expensas_bob}` : null,
+          ].filter(Boolean).map((t, i) => <span key={i}>{i > 0 || p.amoblado || p.acepta_mascotas ? '  ·  ' : ''}{t}</span>)}
         </div>
         {p.descripcion && (
           <div className="mc-razon">&ldquo;{p.descripcion.slice(0, 120)}{p.descripcion.length > 120 ? '...' : ''}&rdquo;</div>
@@ -2123,24 +2139,25 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
       <style jsx>{`
         .alq-card { height: 100vh; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #EDE8DC; }
         .mc-content { flex: 1; padding: 0 24px 20px; padding-bottom: max(20px, calc(env(safe-area-inset-bottom) + 8px)); display: flex; flex-direction: column; overflow: hidden; }
-        .mc-name { font-family: 'Figtree', sans-serif; font-size: 22px; font-weight: 500; color: #141414; line-height: 1.1; margin-bottom: 3px; padding-top: 16px; }
-        .mc-zona { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; margin-bottom: 8px; font-family: 'DM Sans', sans-serif; }
+        .mc-name { font-family: 'Figtree', sans-serif; font-size: 24px; font-weight: 500; color: #141414; line-height: 1.1; margin-bottom: 2px; padding-top: 12px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+        .mc-reciente { font-size: 11px; font-weight: 500; color: #3A6A48; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; }
+        .mc-zona { font-size: 13px; color: #7A7060; letter-spacing: 0.3px; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
         .mc-id { color: #7A7060; font-size: 12px; margin-left: 4px; letter-spacing: 0; }
-        .mc-price { font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 500; color: #141414; line-height: 1; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
-        .mc-specs { font-size: 13px; font-weight: 300; color: #3A3530; margin-bottom: 12px; font-family: 'DM Sans', sans-serif; }
-        .mc-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-        .mc-badge { font-size: 12px; font-weight: 500; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 100px; border: 1px solid #D8D0BC; color: #3A3530; background: #FAFAF8; font-family: 'DM Sans', sans-serif; box-shadow: 0 1px 4px rgba(58,53,48,0.06); }
-        .mc-badge.gold { background: #141414; color: #EDE8DC; border-color: #141414; box-shadow: none; }
-        .mc-badge.purple { background: #3A6A48; color: #EDE8DC; border-color: #3A6A48; box-shadow: none; }
-        .mc-badge.green { background: #3A6A48; color: #EDE8DC; border-color: #3A6A48; box-shadow: none; }
-        .mc-badge.warn { border-color: #3A3530; color: #3A3530; background: rgba(58,53,48,0.04); font-weight: 600; box-shadow: none; }
+        .mc-price-block { border-left: 3px solid #3A6A48; padding-left: 14px; margin-bottom: 8px; }
+        .mc-price { font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 500; color: #141414; line-height: 1; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+        .mc-specs { font-size: 15px; font-weight: 300; color: #3A3530; font-family: 'DM Sans', sans-serif; }
+        .mc-specs-2 { font-size: 15px; font-weight: 300; color: #7A7060; font-family: 'DM Sans', sans-serif; margin-bottom: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 0; }
+        .mc-highlight { font-weight: 500; color: #3A3530; margin-right: 4px; }
+        .mc-highlight::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+        .mc-highlight.gold::before { background: #141414; }
+        .mc-highlight.green::before { background: #3A6A48; }
         .alq-card.pet-confirmed { border-left: 3px solid rgba(168,85,247,0.4); }
         .mc-razon { font-size: 12px; font-weight: 300; color: #7A7060; line-height: 1.5; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; flex-shrink: 1; }
         .mc-actions { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid #D8D0BC; margin-top: 8px; }
         .mc-btn { display: flex; align-items: center; justify-content: center; gap: 5px; background: none; border: none; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
         .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
         .mc-btn.mc-share { color: #7A7060; }
-        .mc-btn.mc-info { color: #4A4438; font-size: 12px; letter-spacing: 0.5px; background: rgba(216,208,188,0.45); border-radius: 20px; padding: 8px 14px; font-weight: 500; }
+        .mc-btn.mc-info { color: #4A4438; font-size: 12px; letter-spacing: 0.3px; background: rgba(216,208,188,0.45); border-radius: 10px; padding: 8px 14px; font-weight: 500; }
         .mc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: #1EA952; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: auto; min-height: 44px; transition: opacity 0.2s; flex-shrink: 0; }
         .mc-wsp-cta:active { opacity: 0.85; }
         .mc-btn.shake { animation: mcShake 0.3s ease; }
@@ -2377,19 +2394,19 @@ function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltere
       {isFiltered && <button className="mfc-reset" onClick={onReset}>Quitar filtros · ver todas</button>}
       <div className="mfc-skip">segui explorando &darr;</div>
       <style jsx>{`
-        .mfc { display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;padding:60px 28px 20px;padding-bottom:max(20px,calc(env(safe-area-inset-bottom) + 8px));height:100vh;height:100dvh;scroll-snap-align:start;background:#EDE8DC; }
+        .mfc { display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;padding:60px 28px 20px;padding-bottom:max(20px,calc(env(safe-area-inset-bottom) + 8px));height:100vh;height:100dvh;scroll-snap-align:start;background:#EDE8DC;overflow-y:auto; }
         .mfc-header { display:flex;align-items:baseline;gap:8px;margin-bottom:6px; }
         .mfc-count { font-family:'Figtree',sans-serif;font-size:40px;font-weight:500;color:#141414;line-height:1;font-variant-numeric:tabular-nums; }
         .mfc-sub { font-size:15px;font-weight:400;color:#7A7060;font-family:'DM Sans',sans-serif; }
-        .mfc-divider { display:flex;align-items:center;gap:12px;margin-bottom:20px; }
+        .mfc-divider { display:flex;align-items:center;gap:12px;margin-bottom:14px; }
         .mfc-line { flex:1;height:1px;background:#D8D0BC; }
         .mfc-divider-text { font-size:12px;color:#3A3530;letter-spacing:0.5px;font-family:'DM Sans',sans-serif;text-transform:uppercase; }
         .mfc-filters { width:100%;max-width:320px;margin-bottom:16px; }
-        .mfc-group { margin-bottom:14px;text-align:left; }
+        .mfc-group { margin-bottom:12px;text-align:left; }
         .mfc-gl { font-size:12px;font-weight:600;color:#3A3530;letter-spacing:0.5px;margin-bottom:7px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px; }
         .mfc-dot { width:6px;height:6px;border-radius:50%;background:#3A6A48;flex-shrink:0; }
         .mfc-zonas { display:flex;flex-wrap:wrap;gap:7px; }
-        .mfc-zb { padding:7px 14px;border:1px solid #D8D0BC;background:#FAFAF8;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:100px;transition:all 0.2s; }
+        .mfc-zb { padding:7px 14px;border:1px solid #D8D0BC;background:#FAFAF8;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:10px;transition:all 0.2s; }
         .mfc-zb.active { border-color:#3A6A48;border-width:2px;color:#141414;background:#FAFAF8;font-weight:600;box-shadow:0 2px 8px rgba(58,106,72,0.12); }
         .mfc-dorms { display:flex;gap:8px; }
         .mfc-db { flex:1;padding:10px;border:1px solid #D8D0BC;background:#FAFAF8;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:10px;transition:all 0.2s; }
@@ -2712,7 +2729,8 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         .bs-fav.active svg{filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4));}
         .bs-close{width:44px;height:44px;border-radius:50%;border:none;background:transparent;color:#9A8E7A;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;}
         .bs-published{font-size:13px;color:#9A8E7A;font-family:'DM Sans',sans-serif;margin-top:6px;}
-        .bs-section{padding:16px 24px;}
+        .bs-section{padding:18px 24px;border-bottom:1px solid rgba(216,208,188,0.5);}
+        .bs-section:last-child{border-bottom:none;}
         .bs-sl{font-size:12px;font-weight:600;color:#7A7060;letter-spacing:0.5px;margin-bottom:12px;font-family:'DM Sans',sans-serif;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
         .bs-sl-dot{width:6px;height:6px;border-radius:50%;background:#3A6A48;flex-shrink:0;}
         .bs-wsp-cta{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#1EA952;border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;min-height:44px;transition:opacity 0.2s;margin-top:16px;}
@@ -2721,7 +2739,7 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         .bs-share-btn:active{opacity:0.7;}
         .bs-wsp-agent{font-weight:400;opacity:0.8;}
         .bs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-        .bs-feat{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border-radius:14px;background:#FAFAF8;border:1px solid #D8D0BC;box-shadow:0 2px 8px rgba(58,53,48,0.06);}
+        .bs-feat{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:12px;background:#FAFAF8;border:1px solid #D8D0BC;box-shadow:0 2px 8px rgba(58,53,48,0.06);}
         .bs-fi{width:20px;height:20px;color:#7A7060;}
         .bs-fl{font-size:13px;font-weight:300;color:#7A7060;text-align:center;font-family:'DM Sans',sans-serif;}
         .bs-fv{font-size:15px;font-weight:300;color:#141414;font-family:'DM Sans',sans-serif;}
@@ -2729,7 +2747,7 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         .bs-feat.hl .bs-fl{color:#141414;}
         .bs-feat.hl .bs-fv{color:#141414;font-weight:600;}
         .bs-aw{display:flex;flex-wrap:wrap;gap:6px;}
-        .bs-at{font-size:15px;font-weight:300;padding:4px 10px;border-radius:100px;background:#FAFAF8;border:1px solid #D8D0BC;color:#3A3530;font-family:'DM Sans',sans-serif;}
+        .bs-at{font-size:14px;font-weight:300;padding:5px 12px;border-radius:10px;background:#FAFAF8;border:1px solid #D8D0BC;color:#3A3530;font-family:'DM Sans',sans-serif;}
         .bs-ver-anuncio{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:transparent;border:1px solid #D8D0BC;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;border-radius:10px;transition:background 0.2s;cursor:pointer;}
         .bs-ver-anuncio:hover{background:rgba(58,106,72,0.12);}
         .bs-gate{display:flex;flex-direction:column;gap:12px}
@@ -2741,7 +2759,7 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         .bs-desc{font-size:14px;font-weight:300;color:#3A3530;font-family:'DM Sans',sans-serif;line-height:1.6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
         .bs-desc.expanded{-webkit-line-clamp:unset;display:block;}
         .bs-desc-more{background:none;border:none;color:#3A6A48;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;padding:4px 0;margin-top:4px;}
-        .bs-gmaps-link{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#D8D0BC;border-radius:10px;color:#141414;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;transition:opacity 0.2s;}
+        .bs-gmaps-link{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:rgba(216,208,188,0.4);border-radius:10px;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;transition:opacity 0.2s;}
         .bs-gmaps-link:active{opacity:0.85;}
       `}</style>
     </div>
