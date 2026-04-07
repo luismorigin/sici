@@ -44,7 +44,8 @@ const VentaMap = dynamic(() => import('@/components/venta/VentaMap'), { ssr: fal
 const MIN_PRICE = 30000
 const MAX_PRICE = 400000
 const PRICE_STEP = 10000
-const FILTER_CARD_POSITION = 1
+const FILTER_CARD_POSITION = 1 // legacy — kept for reference
+
 const VIRTUAL_WINDOW = 3
 const ORDEN_OPTIONS: Array<{ value: FiltrosVentaSimple['orden']; label: string }> = [
   { value: 'recientes', label: 'Recientes' },
@@ -421,11 +422,12 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
         <div className="mc-name">{p.proyecto}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="mc-reciente">Publicación reciente</span>}</div>
         <div className="mc-zona">{displayZona(p.zona)} <span className="mc-id">#{p.id}</span></div>
         <div className="mc-price-block">
-          <div className="mc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
+          <div className="mc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="mc-tc">(T.C. oficial)</span></div>
           <div className="mc-specs">{[
             p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
             p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
             p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
+            p.piso ? `Piso ${p.piso}` : null,
           ].filter(Boolean).join(' · ')}</div>
         </div>
         <div className="mc-specs-2">{[
@@ -433,7 +435,6 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
           p.estado_construccion === 'preventa'
             ? (p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa')
             : 'Entrega inmediata',
-          p.piso ? `Piso ${p.piso}` : null,
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
@@ -446,22 +447,23 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
           <button className="mc-btn mc-share" onClick={onShare}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-            </svg> Compartir
+            </svg>
           </button>
           <button className="mc-btn mc-info" onClick={onDetails}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
+          {p.agente_telefono && (
+            <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi este departamento en Simon y me interesa: ${p.proyecto} - $us ${Math.round(p.precio_usd).toLocaleString('en-US')}${p.url ? '\n' + p.url : ''}`)}`}
+              target="_blank" rel="noopener noreferrer" className="mc-btn mc-wsp-inline"
+              onClick={() => trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'card_mobile' })}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="#1EA952"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+              Consultar por WSP
+            </a>
+          )}
         </div>
-        {p.agente_telefono && (
-          <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi este departamento en Simon y me interesa: ${p.proyecto} - $$us {Math.round(p.precio_usd).toLocaleString('en-US')}${p.url ? '\n' + p.url : ''}`)}`}
-            target="_blank" rel="noopener noreferrer" className="mc-wsp"
-            onClick={() => trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'card_mobile' })}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
-            Consultar por WhatsApp
-          </a>
-        )}
+        <a href="/landing-v2" className="mc-branding">simonbo.com</a>
       </div>
     </div>
   )
@@ -503,6 +505,89 @@ function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onRe
       <button className="mfc-cta" onClick={apply}>APLICAR FILTROS</button>
       {isFiltered && <button className="mfc-reset" onClick={onReset}>Quitar filtros · ver todas</button>}
       <div className="mfc-skip">seguí explorando &darr;</div>
+    </div>
+  )
+}
+
+// ===== Mobile Filter Overlay (TikTok/Airbnb style) =====
+function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset }: {
+  isOpen: boolean; onClose: () => void
+  totalCount: number; filteredCount: number; isFiltered: boolean
+  onApply: (f: FiltrosVentaSimple) => void; onReset: () => void
+}) {
+  const [minPrice, setMinPrice] = useState(MIN_PRICE)
+  const [maxPrice, setMaxPrice] = useState(MAX_PRICE)
+  const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set())
+  const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set())
+  const [entrega, setEntrega] = useState('')
+  const [orden, setOrden] = useState<FiltrosVentaSimple['orden']>('recientes')
+  const [previewCount, setPreviewCount] = useState<number | null>(null)
+  const previewRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isFirstRender = useRef(true)
+
+  const currentFilters = useMemo(() =>
+    buildFilters(minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden),
+    [minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden]
+  )
+
+  // Debounced preview count
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return }
+    if (!isOpen) return
+    if (previewRef.current) clearTimeout(previewRef.current)
+    previewRef.current = setTimeout(async () => {
+      try {
+        const result = await fetchFromAPI(currentFilters)
+        setPreviewCount(result.total)
+      } catch {}
+    }, 400)
+    return () => { if (previewRef.current) clearTimeout(previewRef.current) }
+  }, [currentFilters, isOpen])
+
+  // Reset preview when overlay opens
+  useEffect(() => {
+    if (isOpen) { setPreviewCount(null); isFirstRender.current = true }
+  }, [isOpen])
+
+  function handleMinPrice(v: number) { setMinPrice(Math.min(v, maxPrice - PRICE_STEP)) }
+  function handleMaxPrice(v: number) { setMaxPrice(Math.max(v, minPrice + PRICE_STEP)) }
+  function toggleZona(db: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(db)) n.delete(db); else n.add(db); return n }) }
+  function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); return n }) }
+
+  function handleApply() {
+    onApply(currentFilters)
+    onClose()
+  }
+  function handleReset() {
+    setMinPrice(MIN_PRICE); setMaxPrice(MAX_PRICE)
+    setSelectedDorms(new Set()); setSelectedZonas(new Set())
+    setEntrega(''); setOrden('recientes')
+    onReset()
+    onClose()
+  }
+
+  if (!isOpen) return null
+
+  const displayCount = previewCount !== null ? previewCount : (isFiltered ? filteredCount : totalCount)
+
+  return (
+    <div className="fo-overlay">
+      <div className="fo-header">
+        <button className="fo-close" onClick={onClose}>&times;</button>
+        <span className="fo-title">Filtros</span>
+        <span className="fo-count">{displayCount} deptos</span>
+      </div>
+      <div className="fo-body">
+        <FilterControls minPrice={minPrice} maxPrice={maxPrice} selectedDorms={selectedDorms} selectedZonas={selectedZonas}
+          entrega={entrega} orden={orden} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
+          onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={v => setEntrega(v)} onOrden={v => setOrden(v)} />
+      </div>
+      <div className="fo-footer">
+        {isFiltered && <button className="fo-reset" onClick={handleReset}>Quitar filtros</button>}
+        <button className="fo-apply" onClick={handleApply}>
+          VER {displayCount} RESULTADOS
+        </button>
+      </div>
     </div>
   )
 }
@@ -659,48 +744,39 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
     <>
       <div className={`bs-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} />
       <div className={`bs ${isOpen ? 'open' : ''} ${isDesktop ? 'bs-desktop' : ''}`}>
-        <div className="bs-handle" />
-        {/* Header negro — nombre, precio, zona, WhatsApp */}
-        <div className="bs-dark-header">
-          <div className="bs-dh-top">
-            <div>
-              <div className="bs-title">{p.proyecto}</div>
-              <div className="bs-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
-              <div className="bs-published">
-                {displayZona(p.zona)}
-                {p.dias_en_mercado !== null && p.dias_en_mercado >= 0 && (
-                  <> · {p.dias_en_mercado === 0 ? 'Publicado hoy' : p.dias_en_mercado === 1 ? 'Hace 1 día' : `Hace ${p.dias_en_mercado} días`}</>
-                )}
-              </div>
-            </div>
-            <div className="bs-header-actions">
-              {onToggleFavorite && (
-                <button className={`bs-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
-                  <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                  </svg>
-                </button>
-              )}
-              <button className="bs-close" onClick={onClose}>&times;</button>
-            </div>
-          </div>
-          {p.agente_telefono && (
-            <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi ${p.proyecto} en Simon y me gustaría más información\n${p.url || ''}`)}`}
-              target="_blank" rel="noopener noreferrer" className="bs-wsp-cta"
-              onClick={() => trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'detail_sheet' })}>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
-              Consultar por WhatsApp
-            </a>
-          )}
-          {onShare && (
-            <button className="bs-share-btn" onClick={onShare}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
-                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+        {/* Floating close + fav — always visible */}
+        <div className="bs-floating-actions">
+          {onToggleFavorite && (
+            <button className={`bs-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
+              <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
               </svg>
-              Compartir
             </button>
           )}
-          <div className="bs-price-detail">{Math.round(p.precio_m2) > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m² · ` : ''}USD oficial</div>
+          <button className="bs-close" onClick={onClose}>&times;</button>
+        </div>
+        {/* Header — styled like feed card */}
+        <div className="bs-dark-header">
+          <div className="bs-h-name">
+            {p.proyecto}
+            {p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="bs-h-reciente">Reciente</span>}
+          </div>
+          <div className="bs-h-zona">{displayZona(p.zona)} · #{p.id}</div>
+          <div className="bs-h-price-block">
+            <div className="bs-h-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span></div>
+            <div className="bs-h-specs">{[
+              p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
+              p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
+              p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
+              p.piso ? `Piso ${p.piso}` : null,
+            ].filter(Boolean).join(' · ')}</div>
+            <div className="bs-h-sub">{[
+              p.precio_m2 > 0 ? `$us ${Math.round(p.precio_m2).toLocaleString('en-US')}/m²` : null,
+              p.estado_construccion === 'preventa'
+                ? (p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa')
+                : 'Entrega inmediata',
+            ].filter(Boolean).join(' · ')}</div>
+          </div>
         </div>
           {/* Galería de fotos horizontal */}
           {p.fotos_urls && p.fotos_urls.length > 0 && (
@@ -832,6 +908,26 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
               )}
             </div>
           )}
+
+          {/* Sticky footer CTA */}
+          <div className="bs-sticky-footer">
+            {p.agente_telefono && (
+              <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi ${p.proyecto} en Simon y me gustaría más información\n${p.url || ''}`)}`}
+                target="_blank" rel="noopener noreferrer" className="bs-wsp-cta"
+                onClick={() => trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'detail_sheet' })}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+                Consultar por WSP
+              </a>
+            )}
+            {onShare && (
+              <button className="bs-share-btn" onClick={onShare}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                </svg>
+                Compartir
+              </button>
+            )}
+          </div>
       </div>
     </>
   )
@@ -869,6 +965,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
+  const [filterOverlayOpen, setFilterOverlayOpen] = useState(false)
   // Spotlight
   const [spotlightId, setSpotlightId] = useState<number | null>(null)
   const [fetchedSpotlight, setFetchedSpotlight] = useState<UnidadVenta | null>(null)
@@ -967,6 +1064,25 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
     return c
   }, [filters])
 
+  // Search pill summary text
+  const searchPillText = useMemo(() => {
+    if (!isFiltered) return 'Comienza tu búsqueda'
+    const parts: string[] = []
+    if (filters.zonas_permitidas?.length) {
+      const zonas = filters.zonas_permitidas.map(z => {
+        const found = ZONAS_CANONICAS.find(zc => zc.db === z)
+        return found ? found.labelCorto : z
+      })
+      parts.push(zonas.join(', '))
+    }
+    if (filters.dormitorios_lista?.length) {
+      const d = filters.dormitorios_lista
+      parts.push(d.map(x => x === 0 ? 'Mono' : x === 3 ? '3+' : `${x}d`).join(','))
+    }
+    if (filters.precio_max && filters.precio_max < MAX_PRICE) parts.push(`<${formatPriceK(filters.precio_max)}`)
+    return parts.length > 0 ? parts.join(' · ') : `${activeFilterCount} filtros`
+  }, [isFiltered, filters, activeFilterCount])
+
   // Persist favorites
   useEffect(() => { try { const s = localStorage.getItem('ventas_favorites_v1'); if (s) setFavorites(new Set(JSON.parse(s))) } catch {} }, [])
   useEffect(() => { if (favorites.size > 0) localStorage.setItem('ventas_favorites_v1', JSON.stringify([...favorites])) }, [favorites])
@@ -1033,18 +1149,15 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
     setActiveCardIndex(0)
   }
 
-  // Build feed items (mobile): spotlight first, then property cards + filter card
+  // Build feed items (mobile): spotlight first, then property cards (filter card removed — now overlay)
   const feedItems = useMemo(() => {
-    const items: Array<{ type: 'property'; data: UnidadVenta; isSpotlight?: boolean } | { type: 'filter' }> = []
-    let filterInserted = false
+    const items: Array<{ type: 'property'; data: UnidadVenta; isSpotlight?: boolean }> = []
     const mobileProps = spotlightProperty
       ? [spotlightProperty, ...properties.filter(p => p.id !== spotlightId)]
       : properties
     mobileProps.forEach((p, i) => {
       items.push({ type: 'property', data: p, isSpotlight: i === 0 && !!spotlightProperty })
-      if (i === FILTER_CARD_POSITION - 1 && !filterInserted) { items.push({ type: 'filter' }); filterInserted = true }
     })
-    if (mobileProps.length > 0 && !filterInserted) items.push({ type: 'filter' })
     return items
   }, [properties, spotlightProperty, spotlightId])
 
@@ -1145,28 +1258,21 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
       ) : (
         /* ===== MOBILE TIKTOK FEED ===== */
         <>
-          {/* Top bar — pills flotantes (inmersivo) */}
+          {/* Top bar — search pill (Airbnb/TikTok style) */}
           <div className="mt-top-bar">
-            <a href="/landing-v2" className="mt-top-bar-left">
-              <svg width={18} height={18} viewBox="0 0 64 64" fill="none" style={{flexShrink:0}}>
-                <circle cx="32" cy="34" r="28" fill="#EDE8DC"/>
-                <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
-                <circle cx="32" cy="15" r="3" fill="#141414"/>
+            <button className="mt-search-pill" onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay_venta') }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,opacity:0.8}}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
-              <span className="mt-logo">Simon</span>
-            </a>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button className="mt-filter-btn" onClick={() => {
-                const filterIdx = feedItems.findIndex(i => i.type === 'filter')
-                if (filterIdx >= 0 && feedRef.current) {
-                  feedRef.current.scrollTo({ top: filterIdx * feedRef.current.clientHeight, behavior: 'smooth' })
-                }
-              }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                {isFiltered && <div className="mt-filter-dot" />}
-              </button>
-            </div>
+              <span className="mt-search-text">{searchPillText}</span>
+              {isFiltered && <div className="mt-search-dot" />}
+            </button>
           </div>
+
+          {/* Filter overlay */}
+          <FilterOverlay isOpen={filterOverlayOpen} onClose={() => setFilterOverlayOpen(false)}
+            totalCount={unfilteredCount || totalCount} filteredCount={properties.length}
+            isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} />
 
           {/* Card counter */}
           {properties.length > 0 && (
@@ -1208,12 +1314,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
             {feedItems.map((item, idx) => {
               const isNearby = Math.abs(idx - activeCardIndex) <= VIRTUAL_WINDOW
               if (!isNearby) {
-                return <div key={item.type === 'filter' ? 'filter-ph' : `ph-${(item as any).data.id}`}
-                  className="mc-placeholder" />
-              }
-              if (item.type === 'filter') {
-                return <MobileFilterCard key="filter" totalCount={unfilteredCount || totalCount} filteredCount={properties.length}
-                  isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} />
+                return <div key={`ph-${item.data.id}`} className="mc-placeholder" />
               }
               const p = item.data
               return <MobileVentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
@@ -1269,12 +1370,24 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .vm-btn.active { background:rgba(237,232,220,0.1); color:#EDE8DC; font-weight:600 }
 
         /* ===== MOBILE TIKTOK LAYOUT ===== */
-        .mt-top-bar { position:fixed; top:0; left:0; right:0; z-index:50; display:flex; align-items:center; justify-content:space-between; padding:10px 16px; padding-top:max(10px, env(safe-area-inset-top)); pointer-events:none }
+        .mt-top-bar { position:fixed; top:0; left:0; right:0; z-index:50; display:flex; align-items:center; justify-content:center; padding:10px 16px; padding-top:max(10px, env(safe-area-inset-top)); pointer-events:none }
         .mt-top-bar > * { pointer-events:auto }
-        .mt-top-bar-left { display:flex; align-items:center; gap:8px; background:rgba(20,20,20,0.55); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); padding:6px 14px; border-radius:10px; border:none; text-decoration:none }
-        .mt-logo { font-family:'Figtree',sans-serif; font-size:15px; font-weight:500; color:rgba(237,232,220,0.85); letter-spacing:0.3px }
-        .mt-filter-btn { width:38px; height:38px; border-radius:10px; border:none; background:rgba(20,20,20,0.55); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:rgba(237,232,220,0.85); display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative }
-        .mt-filter-dot { position:absolute; top:6px; right:6px; width:8px; height:8px; background:#3A6A48; border-radius:50% }
+        .mt-search-pill { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.15); padding:8px 16px; border-radius:100px; border:none; cursor:pointer; position:relative; max-width:80vw }
+        .mt-search-text { font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; color:rgba(255,255,255,0.7); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:0.2px }
+        .mt-search-dot { position:absolute; top:5px; right:5px; width:6px; height:6px; background:#3A6A48; border-radius:50% }
+
+        /* ===== FILTER OVERLAY (full-screen takeover) ===== */
+        .fo-overlay { position:fixed; inset:0; z-index:200; background:#141414; display:flex; flex-direction:column; animation:foSlideUp 0.3s ease-out }
+        @keyframes foSlideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+        .fo-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; padding-top:max(16px, calc(env(safe-area-inset-top) + 8px)); border-bottom:1px solid rgba(237,232,220,0.08) }
+        .fo-close { width:36px; height:36px; border-radius:50%; border:none; background:rgba(237,232,220,0.08); color:#9A8E7A; font-size:22px; display:flex; align-items:center; justify-content:center; cursor:pointer }
+        .fo-title { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC }
+        .fo-count { font-size:14px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-variant-numeric:tabular-nums }
+        .fo-body { flex:1; overflow-y:auto; padding:20px }
+        .fo-footer { padding:16px 20px; padding-bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px)); border-top:1px solid rgba(237,232,220,0.08); display:flex; gap:10px }
+        .fo-reset { flex:0 0 auto; padding:14px 20px; background:transparent; border:1px solid rgba(237,232,220,0.12); border-radius:10px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer }
+        .fo-apply { flex:1; padding:14px; background:#EDE8DC; border:none; border-radius:10px; color:#141414; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; cursor:pointer }
+        .fo-apply:active { transform:scale(0.97) }
         .mt-counter { position:fixed; bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px)); right:16px; z-index:50; font-size:12px; color:#7A7060; font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums }
         .mt-map-btn { position:fixed; bottom:max(140px, calc(env(safe-area-inset-bottom) + 130px)); right:20px; z-index:100; width:48px; height:48px; border-radius:50%; background:rgba(20,20,20,0.7); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.2) }
         .mt-map-overlay { position:fixed; inset:0; z-index:300; background:#141414; display:flex; flex-direction:column }
@@ -1291,9 +1404,10 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .mc { height:100vh; height:100dvh; scroll-snap-align:start; scroll-snap-stop:always; position:relative; overflow:hidden; display:flex; flex-direction:column; background:#141414 }
         .mc-placeholder { height:100vh; height:100dvh; scroll-snap-align:start; background:#141414 }
 
-        /* Photo zone (50%) */
-        .mc-photo-zone { flex:0 0 50%; position:relative; overflow:hidden }
+        /* Photo zone (60%) */
+        .mc-photo-zone { flex:0 0 60%; position:relative; overflow:hidden }
         .mc-photo-zone::after { content:''; position:absolute; bottom:0; left:0; right:0; height:80px; background:linear-gradient(transparent, #141414); pointer-events:none; z-index:2 }
+        .mc-photo-zone::before { content:''; position:absolute; top:0; left:0; right:0; height:70px; background:linear-gradient(rgba(0,0,0,0.35), transparent); pointer-events:none; z-index:3 }
         .mc-photo-scroll { display:flex; height:100%; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none }
         .mc-photo-scroll::-webkit-scrollbar { display:none }
         .mc-slide { flex:0 0 100%; height:100%; background-size:cover; background-position:center; background-color:#D8D0BC; scroll-snap-align:start; position:relative; overflow:hidden }
@@ -1321,17 +1435,18 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .ds-spotlight-text { font-size:12px; color:#9A8E7A; font-family:'DM Sans',sans-serif; letter-spacing:0.5px; white-space:nowrap; text-transform:uppercase }
 
         /* Content zone (45%) */
-        .mc-content { flex:1; padding:0 24px 20px; padding-bottom:max(20px, calc(env(safe-area-inset-bottom) + 8px)); display:flex; flex-direction:column; overflow:hidden }
+        .mc-content { flex:1; padding:0 24px 8px; padding-bottom:max(8px, calc(env(safe-area-inset-bottom) + 4px)); display:flex; flex-direction:column; overflow:hidden }
         .mc-name { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1.1; margin-bottom:2px; padding-top:8px; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap }
         .mc-reciente { font-size:11px; font-weight:500; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px }
         .mc-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; margin-bottom:12px; font-family:'DM Sans',sans-serif }
         .mc-price-block { border-left:3px solid #3A6A48; padding-left:14px; margin-bottom:8px }
         .mc-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
+        .mc-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.3); letter-spacing:0.2px }
         .mc-specs { font-size:15px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300; line-height:1.4 }
         .mc-specs-2 { font-size:15px; color:#EDE8DC; font-family:'DM Sans',sans-serif; margin-bottom:auto; font-weight:300 }
-        .mc-wsp { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:12px; background:#1EA952; border:none; border-radius:10px; color:#fff; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; text-decoration:none; margin-top:auto; min-height:44px; flex-shrink:0 }
-        .mc-wsp:active { opacity:0.85 }
-        .mc-actions { display:flex; align-items:center; gap:12px; padding-top:10px; border-top:1px solid rgba(237,232,220,0.1); margin-top:8px }
+        .mc-wsp-inline { display:flex; align-items:center; gap:5px; text-decoration:none; color:#1EA952; font-size:12px; font-weight:500; margin-left:auto }
+        .mc-actions { display:flex; align-items:center; gap:10px; padding-top:8px; border-top:1px solid rgba(237,232,220,0.1); margin-top:auto }
+        .mc-branding { display:block; text-align:center; font-family:'DM Sans',sans-serif; font-size:11px; color:rgba(237,232,220,0.25); text-decoration:none; padding-top:6px; letter-spacing:0.3px }
         .mc-btn.mc-fav.shake { animation:mcShake 0.3s ease }
         @keyframes mcShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
 
@@ -1420,23 +1535,27 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         /* ===== BOTTOM SHEET ===== */
         .bs-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:500; opacity:0; pointer-events:none; transition:opacity 0.3s }
         .bs-overlay.open { opacity:1; pointer-events:auto }
-        .bs { position:fixed; bottom:0; left:0; right:0; max-height:80vh; background:#1a1a1a; border-radius:20px 20px 0 0; z-index:501; transform:translateY(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1); overflow-y:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; font-family:'DM Sans',sans-serif; color:#EDE8DC; padding-bottom:max(20px, env(safe-area-inset-bottom)) }
+        .bs { position:fixed; inset:0; background:#1a1a1a; border-radius:0; z-index:501; transform:translateY(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1); overflow-y:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; font-family:'DM Sans',sans-serif; color:#EDE8DC }
         .bs.open { transform:translateY(0) }
-        .bs-desktop { left:auto; right:0; top:0; bottom:0; max-height:100vh; width:480px; max-width:100%; border-radius:0; border-left:1px solid rgba(237,232,220,0.1); transform:translateX(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1) }
+        .bs-desktop { left:auto; right:0; top:0; bottom:0; width:480px; max-width:100%; border-radius:0; border-left:1px solid rgba(237,232,220,0.1); transform:translateX(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1) }
         .bs-desktop.open { transform:translateX(0) }
-        .bs-handle { width:40px; height:4px; background:rgba(237,232,220,0.3); border-radius:2px; margin:10px auto 0; position:relative; z-index:2 }
-        .bs-desktop .bs-handle { display:none }
-        .bs-dark-header { background:#141414; padding:0 24px 20px; border-radius:20px 20px 14px 14px }
-        .bs .bs-handle + .bs-dark-header { padding-top:16px }
-        .bs-dh-top { display:flex; align-items:flex-start; justify-content:space-between }
-        .bs-title { font-family:'Figtree',sans-serif; font-size:22px; font-weight:500; color:#EDE8DC }
-        .bs-header-actions { display:flex; align-items:center; gap:4px; flex-shrink:0 }
-        .bs-fav { width:44px; height:44px; border-radius:50%; border:none; background:transparent; color:#9A8E7A; display:flex; align-items:center; justify-content:center; cursor:pointer }
+        .bs-floating-actions { position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:flex-end; gap:4px; padding:8px 16px; padding-top:max(8px, calc(env(safe-area-inset-top) + 4px)) }
+        .bs-dark-header { background:#141414; padding:0 24px 20px }
+        .bs-h-name { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1.1; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap }
+        .bs-h-reciente { font-size:11px; font-weight:500; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px }
+        .bs-h-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; margin-bottom:12px; font-family:'DM Sans',sans-serif; margin-top:2px }
+        .bs-h-price-block { border-left:3px solid #3A6A48; padding-left:14px }
+        .bs-h-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
+        .bs-h-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.3); letter-spacing:0.2px }
+        .bs-h-specs { font-size:15px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300; line-height:1.4 }
+        .bs-h-sub { font-size:14px; color:#EDE8DC; font-family:'DM Sans',sans-serif; font-weight:300; margin-top:4px }
+        .bs-fav { width:40px; height:40px; border-radius:50%; border:none; background:rgba(20,20,20,0.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#9A8E7A; display:flex; align-items:center; justify-content:center; cursor:pointer }
         .bs-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
-        .bs-close { width:44px; height:44px; border-radius:50%; border:none; background:transparent; color:#9A8E7A; font-size:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0 }
-        .bs-wsp-cta { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:14px; background:#1EA952; border:none; border-radius:10px; color:#fff; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:500; text-decoration:none; min-height:44px; transition:opacity 0.2s; margin-top:16px }
+        .bs-close { width:40px; height:40px; border-radius:50%; border:none; background:rgba(20,20,20,0.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#EDE8DC; font-size:22px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0 }
+        .bs-sticky-footer { position:sticky; bottom:0; z-index:502; display:flex; gap:8px; padding:12px 20px; padding-bottom:max(12px, calc(env(safe-area-inset-bottom) + 8px)); background:#1a1a1a; border-top:1px solid rgba(237,232,220,0.08) }
+        .bs-wsp-cta { display:flex; align-items:center; justify-content:center; gap:8px; flex:1; padding:12px; background:#1EA952; border:none; border-radius:10px; color:#fff; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; text-decoration:none; min-height:44px; transition:opacity 0.2s }
         .bs-wsp-cta:active { opacity:0.85 }
-        .bs-share-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; background:transparent; border:1px solid rgba(237,232,220,0.15); border-radius:10px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:400; cursor:pointer; margin-top:8px; transition:opacity 0.2s }
+        .bs-share-btn { display:flex; align-items:center; justify-content:center; gap:6px; padding:12px 16px; background:transparent; border:1px solid rgba(237,232,220,0.15); border-radius:10px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:400; cursor:pointer; transition:opacity 0.2s }
         .bs-share-btn:active { opacity:0.7 }
         .bs::-webkit-scrollbar { display:none }
         .bs-published { font-size:13px; color:#9A8E7A; font-family:'DM Sans',sans-serif; margin-top:2px }
