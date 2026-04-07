@@ -287,11 +287,12 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
         <div className="vc-name">{p.proyecto}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="vc-reciente">Publicación reciente</span>}</div>
         <div className="vc-zona">{displayZona(p.zona)} <span className="vc-id">#{p.id}</span></div>
         <div className="vc-price-block">
-          <div className="vc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')}</div>
+          <div className="vc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="vc-tc">(T.C. oficial)</span></div>
           <div className="vc-specs">{[
             p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
             p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
             p.banos !== null ? `${p.banos} baño${p.banos !== 1 ? 's' : ''}` : null,
+            p.piso ? `Piso ${p.piso}` : null,
           ].filter(Boolean).join(' · ')}</div>
         </div>
         <div className="vc-specs-2">{[
@@ -299,7 +300,6 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
           p.estado_construccion === 'preventa'
             ? (p.fecha_entrega ? `Preventa · ${formatFechaEntrega(p.fecha_entrega)}` : 'Preventa')
             : 'Entrega inmediata',
-          p.piso ? `Piso ${p.piso}` : null,
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
@@ -319,15 +319,15 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
+          {p.agente_telefono && (
+            <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi ${p.proyecto} en Simon y me gustaría más información\n${p.url || ''}`)}`}
+              target="_blank" rel="noopener noreferrer" className="vc-act-btn vc-act-wsp"
+              onClick={() => trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'card_desktop' })}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="#1EA952"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+              Consultar por WSP
+            </a>
+          )}
         </div>
-        {p.agente_telefono && (
-          <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi ${p.proyecto} en Simon y me gustaría más información\n${p.url || ''}`)}`}
-            target="_blank" rel="noopener noreferrer" className="vc-wsp-cta"
-            onClick={() => trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'card_desktop' })}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
-            Consultar por WhatsApp
-          </a>
-        )}
       </div>
     </div>
   )
@@ -1228,7 +1228,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
                 </div>
                 <VentaCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
                   onToggleFavorite={() => toggleFavorite(spotlightProperty.id)} onShare={() => shareProperty(spotlightProperty)}
-                  onPhotoTap={(idx) => openViewer(spotlightProperty, idx)} onDetails={() => openSheet(spotlightProperty)} />
+                  onPhotoTap={() => openSheet(spotlightProperty)} onDetails={() => openSheet(spotlightProperty)} />
                 <div className="ds-spotlight-sep">
                   <span className="ds-spotlight-line" /><span className="ds-spotlight-text">Explorar más departamentos</span><span className="ds-spotlight-line" />
                 </div>
@@ -1239,7 +1239,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
                 {(spotlightProperty ? properties.filter(p => p.id !== spotlightId) : properties).map((p, idx) => (
                   <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)} isFirst={idx === 0}
                     onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
-                    onPhotoTap={(idx) => openViewer(p, idx)} onDetails={() => openSheet(p)} />
+                    onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)} />
                 ))}
               </div>
             )}
@@ -1514,16 +1514,16 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .vc-id { color:rgba(237,232,220,0.3); font-size:12px; margin-left:4px; letter-spacing:0 }
         .vc-price-block { border-left:3px solid #3A6A48; padding-left:12px; margin-bottom:8px }
         .vc-price { font-family:'DM Sans',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:4px; font-variant-numeric:tabular-nums }
+        .vc-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.3); letter-spacing:0.2px }
         .vc-specs { font-size:15px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300 }
         .vc-specs-2 { font-size:15px; color:#EDE8DC; font-family:'DM Sans',sans-serif; margin-bottom:10px; font-weight:300 }
-        .vc-actions { border-top:1px solid rgba(237,232,220,0.08); padding-top:10px; margin-top:auto; display:flex; align-items:center; gap:12px }
-        .vc-act-btn { display:flex; align-items:center; justify-content:center; gap:5px; background:none; border:none; color:#9A8E7A; font-size:12px; font-family:'DM Sans',sans-serif; cursor:pointer; padding:6px; min-height:36px; transition:color 0.15s }
+        .vc-actions { border-top:1px solid rgba(237,232,220,0.08); padding-top:8px; margin-top:auto; display:flex; align-items:center; gap:10px }
+        .vc-act-btn { display:flex; align-items:center; gap:4px; background:none; border:none; color:#9A8E7A; font-size:11px; font-family:'DM Sans',sans-serif; cursor:pointer; padding:4px 0; transition:color 0.15s; text-decoration:none }
         .vc-act-btn:hover { color:#EDE8DC }
         .vc-act-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
-        .vc-act-detail { color:#EDE8DC; background:rgba(237,232,220,0.08); border-radius:10px; padding:6px 14px; font-weight:500 }
-        .vc-act-detail:hover { background:rgba(237,232,220,0.15) }
-        .vc-wsp-cta { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:10px; background:#1EA952; border:none; border-radius:10px; color:#fff; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; text-decoration:none; margin-top:auto; transition:opacity 0.2s }
-        .vc-wsp-cta:hover { opacity:0.9 }
+        .vc-act-detail { color:rgba(237,232,220,0.7) }
+        .vc-act-wsp { color:#1EA952; margin-left:auto }
+        .vc-act-wsp:hover { color:#25D366 }
 
         /* ===== STATES ===== */
         .ventas-status { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:300px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:15px; text-align:center }
