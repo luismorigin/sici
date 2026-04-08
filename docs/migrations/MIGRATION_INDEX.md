@@ -211,6 +211,9 @@
 | 203 | fix_vista_alquiler_precio_mensual | **Fix `v_mercado_alquiler` precio_mensual.** Antes: `precio_mensual_usd AS precio_mensual` (confiaba en valor pre-calculado, podía estar mal — ej: ID 1146 tenía USD 71.84 con TC implícito 48.72). Ahora: `ROUND(precio_mensual_bob / 6.96, 2)::numeric(10,2)` — derivado de BOB (fuente de verdad). Fix dato corrupto ID 1146. Snapshots futuros corregidos, históricos intactos. Frontend no afectado (usa `precio_mensual_bob` directo) |
 | 204 | excluir_fuera_de_zona | **Exclusión sistémica fuera de polígonos.** Triggers venta + alquiler ahora marcan `status='excluida_zona'` cuando GPS cae fuera de todos los polígonos y no hay proyecto master con zona válida. Backfill ~16 props existentes. Excepción: props en borde con proyecto master con zona válida no se excluyen |
 | 205 | fix_descripcion_alquiler | **Fix descripción en `buscar_unidades_alquiler()`.** COALESCE no incluía `llm_output.descripcion_limpia` — único path donde alquiler almacena descripciones. Venta las tiene en root de enrichment, alquiler solo en llm_output. 1 línea agregada al COALESCE |
+| 206 | leads_alquiler_debounce | **Debounce leads alquiler.** Agrega `session_id` y `es_debounce` a `leads_alquiler`. Endpoint marca `es_debounce=true` si mismo session_id generó lead en <5s. Métricas filtran `es_debounce=false` |
+| 207 | vista_alquiler_filtro_150d | **Filtro 150d en `v_mercado_alquiler`.** Vista pre-aplica `dias_en_mercado <= 150` para excluir inventario estancado |
+| 208 | leads_alquiler_bot_filter | **Filtro bots Meta + utm_source.** Agrega `user_agent`, `es_bot`, `utm_source` a `leads_alquiler`. Endpoint detecta bots Meta por user-agent (6 patterns) y captura utm_source para distinguir orgánico vs paid. Lead 104 marcado como bot |
 
 **⚠️ Post-migración 191 — Deploy requerido en n8n:**
 La migración 191 corrige datos existentes pero el extractor C21 sigue generando falsos positivos.
