@@ -67,7 +67,7 @@ export default function SimonChatWidget({ properties, onOpenDetail, onApplyFilte
           onClick={() => open ? setOpen(false) : handleOpen()}
           style={{
             position: 'fixed',
-            bottom: 24, right: 16,
+            bottom: 80, right: 16,
             zIndex: Z_CHAT_BUBBLE,
             width: 56, height: 56,
             borderRadius: '50%',

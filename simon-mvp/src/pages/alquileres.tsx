@@ -281,6 +281,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   const [chipsExpanded, setChipsExpanded] = useState(false)
   const [compareOpen, setCompareOpen] = useState(false)
+  const [filterOverlayOpen, setFilterOverlayOpen] = useState(false)
 
   const [filters, setFilters] = useState<FiltrosAlquiler>({
     orden: 'recientes',
@@ -584,14 +585,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   function tapNudge() {
     setNudgeVisible(false)
     trackEvent('nudge_filter_tap')
-    const filterIdx = Math.min(FILTER_CARD_POSITION, feedItems.length - 1)
-    setActiveCardIndex(filterIdx)
-    setTimeout(() => {
-      if (feedRef.current) {
-        feedRef.current.scrollTo({ top: filterIdx * feedRef.current.clientHeight, behavior: 'smooth' })
-      }
-      setChipsExpanded(true)
-    }, 50)
+    setFilterOverlayOpen(true)
   }
 
   const activeFilterCount = useMemo(() => {
@@ -606,6 +600,25 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     if (filters.con_parqueo) c++
     return c
   }, [filters])
+
+  // Search pill summary text
+  const searchPillText = useMemo(() => {
+    if (!isFiltered) return 'Comienza tu búsqueda'
+    const parts: string[] = []
+    if (filters.zonas_permitidas?.length) {
+      const zonas = filters.zonas_permitidas.map(z => {
+        const found = ZONAS_ALQUILER_UI.find(zu => zu.id === z)
+        return found ? found.label : z
+      })
+      parts.push(zonas.join(', '))
+    }
+    if (filters.dormitorios_lista?.length) {
+      const d = filters.dormitorios_lista
+      parts.push(d.map(x => x === 0 ? 'Mono' : x === 3 ? '3+' : `${x}d`).join(','))
+    }
+    if (filters.precio_mensual_max) parts.push(`<${formatPrice(filters.precio_mensual_max)}`)
+    return parts.length > 0 ? parts.join(' · ') : `${activeFilterCount} filtros`
+  }, [isFiltered, filters, activeFilterCount])
 
   // Resolve favorite properties from current data
   const favoriteProperties = useMemo(() => {
@@ -666,20 +679,15 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     return properties.filter(p => p.id !== spotlightId)
   }, [properties, spotlightProperty, spotlightId])
 
-  // Mobile: feed items with filter card at position 3, spotlight first
+  // Mobile: feed items (no filter card — overlay replaces it), spotlight first
   const feedItems = useMemo(() => {
-    const items: Array<{ type: 'property'; data: UnidadAlquiler; isSpotlight?: boolean } | { type: 'filter' }> = []
-    let filterInserted = false
+    const items: Array<{ type: 'property'; data: UnidadAlquiler; isSpotlight?: boolean }> = []
     const mobileProps = spotlightProperty
       ? [spotlightProperty, ...properties.filter(p => p.id !== spotlightId)]
       : properties
     mobileProps.forEach((p, i) => {
       items.push({ type: 'property', data: p, isSpotlight: i === 0 && !!spotlightProperty })
-      if (i === FILTER_CARD_POSITION - 1 && !filterInserted) { items.push({ type: 'filter' }); filterInserted = true }
     })
-    if (mobileProps.length > 0 && !filterInserted) {
-      items.push({ type: 'filter' })
-    }
     return items
   }, [properties, spotlightProperty, spotlightId])
 
@@ -989,57 +997,27 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
       ) : (
         /* ==================== MOBILE LAYOUT (TikTok feed) ==================== */
         <>
-          {/* Top bar */}
+          {/* Top bar — search pill (Airbnb/TikTok style) */}
           <div className="alq-top-bar">
-            <a href="/landing-v2" className="alq-top-bar-left alq-home-link" onClick={(e) => { e.stopPropagation() }}>
-              <svg width={18} height={18} viewBox="0 0 64 64" fill="none" style={{flexShrink:0}}>
-                <circle cx="32" cy="34" r="28" fill="#141414"/>
-                <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
-                <circle cx="32" cy="15" r="3" fill="#EDE8DC"/>
+            <button className="alq-search-pill" onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay') }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
-              <span className="alq-logo">Simon</span>
-            </a>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {isFiltered && (
-                <button className="alq-filter-pill" onClick={() => setChipsExpanded(!chipsExpanded)}>
-                  {chipsExpanded ? 'Ocultar' : `${activeFilterCount} filtros`}
-                </button>
-              )}
-              <button className="alq-filter-btn" aria-label="Abrir filtros" onClick={() => {
-                const filterIdx = Math.min(FILTER_CARD_POSITION, feedItems.length - 1)
-                setActiveCardIndex(filterIdx)
-                setTimeout(() => {
-                  if (feedRef.current) {
-                    feedRef.current.scrollTo({ top: filterIdx * feedRef.current.clientHeight, behavior: 'smooth' })
-                  }
-                }, 50)
-              }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                {isFiltered && <div className="alq-filter-dot" />}
-              </button>
-            </div>
+              <span className="alq-search-text">{searchPillText}</span>
+              {isFiltered && <div className="alq-search-dot" />}
+            </button>
           </div>
 
-          {/* Expandable filter chips panel */}
-          <div className={`alq-chips-panel ${chipsExpanded ? 'open' : ''}`}>
-            {filters.zonas_permitidas?.map(z => {
-              const zona = ZONAS_ALQUILER_UI.find(zu => zu.id === z)
-              return zona ? <span key={z} className="alq-chip">{zona.label} <button onClick={() => {
-                const newZonas = filters.zonas_permitidas!.filter(x => x !== z)
-                applyFilters({ ...filters, zonas_permitidas: newZonas.length > 0 ? newZonas : undefined })
-              }}>&times;</button></span> : null
-            })}
-            {filters.precio_mensual_max && <span className="alq-chip">&le; {formatPrice(filters.precio_mensual_max)}</span>}
-            {filters.dormitorios_lista?.map(d => (
-              <span key={`dorm-${d}`} className="alq-chip">{d === 0 ? 'Estudio' : d === 3 ? '3+ dorm' : `${d} dorm`}</span>
-            ))}
-            {!filters.dormitorios_lista?.length && filters.dormitorios !== undefined && <span className="alq-chip">{filters.dormitorios === 0 ? 'Estudio' : `${filters.dormitorios} dorm`}</span>}
-            {!filters.dormitorios_lista?.length && filters.dormitorios_min !== undefined && <span className="alq-chip">{filters.dormitorios_min}+ dorm</span>}
-            {filters.amoblado && <span className="alq-chip">Amoblado</span>}
-            {filters.acepta_mascotas && <span className="alq-chip">Mascotas</span>}
-            {filters.con_parqueo && <span className="alq-chip">Parqueo</span>}
-            <button className="alq-chip alq-chip-clear" onClick={() => { resetFilters(); setChipsExpanded(false) }}>&times; Todo</button>
-          </div>
+          {/* Filter overlay */}
+          <FilterOverlay
+            isOpen={filterOverlayOpen}
+            onClose={() => setFilterOverlayOpen(false)}
+            totalCount={totalCount}
+            filteredCount={properties.length}
+            isFiltered={isFiltered}
+            onApply={(f) => { applyFilters(f); setFilterOverlayOpen(false) }}
+            onReset={() => { resetFilters(); setFilterOverlayOpen(false) }}
+          />
 
           {/* UTM contextual banner — mobile */}
           {showZonaBanner && (
@@ -1147,21 +1125,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
                 const WINDOW = 3
                 const isNearby = Math.abs(idx - activeCardIndex) <= WINDOW
                 if (!isNearby) {
-                  // Placeholder preserves scroll position (must match card height + snap)
-                  return <div key={item.type === 'filter' ? 'filter' : item.data.id} style={{ height: '100dvh', scrollSnapAlign: 'start', background: '#EDE8DC' }} />
-                }
-                if (item.type === 'filter') {
-                  return (
-                    <MobileFilterCard
-                      key="filter"
-                      totalCount={totalCount}
-                      filteredCount={properties.length}
-                      currentFilters={filters}
-                      isFiltered={isFiltered}
-                      onApply={applyFilters}
-                      onReset={resetFilters}
-                    />
-                  )
+                  return <div key={item.data.id} style={{ height: '100dvh', scrollSnapAlign: 'start', background: '#EDE8DC' }} />
                 }
                 return (
                   <MobilePropertyCard
@@ -1345,53 +1309,26 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         .alq-feed::-webkit-scrollbar { display: none; }
         .alq-top-bar {
           position: fixed; top: 0; left: 0; right: 0; z-index: 50;
-          display: flex; align-items: center; justify-content: space-between;
+          display: flex; align-items: center; justify-content: center;
           padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top));
           pointer-events: none;
         }
         .alq-top-bar > * { pointer-events: auto; }
-        .alq-top-bar-left {
+        .alq-search-pill {
           display: flex; align-items: center; gap: 8px;
-          background: rgba(237,232,220,0.92); backdrop-filter: blur(8px);
-          padding: 6px 14px; border-radius: 10px;
-          border: none;
+          background: rgba(255,255,255,0.15); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+          padding: 8px 16px; border-radius: 100px;
+          border: none; cursor: pointer; position: relative; max-width: 80vw;
         }
-        .alq-home-link { display: flex; align-items: center; gap: 8px; text-decoration: none; }
-        .alq-logo { font-family: 'Figtree', sans-serif; font-size: 15px; font-weight: 500; color: #141414; }
-        .alq-label { font-size: 11px; color: #7A7060; letter-spacing: 0.5px; text-transform: uppercase; font-family: 'DM Sans', sans-serif; }
-        .alq-filter-btn {
-          width: 38px; height: 38px; border-radius: 10px;
-          border: none; background: rgba(237,232,220,0.92); backdrop-filter: blur(8px); color: #141414;
-          display: flex; align-items: center; justify-content: center; cursor: pointer;
+        .alq-search-text {
+          font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+          color: rgba(255,255,255,0.85); white-space: nowrap; overflow: hidden;
+          text-overflow: ellipsis; letter-spacing: 0.2px;
         }
-        .alq-filter-pill {
-          padding: 6px 14px; border-radius: 100px;
-          background: rgba(237,232,220,0.92); backdrop-filter: blur(8px);
-          border: 1px solid rgba(216,208,188,0.6);
-          color: #3A6A48; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
-          letter-spacing: 0.5px; cursor: pointer;
+        .alq-search-dot {
+          position: absolute; top: 5px; right: 5px;
+          width: 6px; height: 6px; background: #3A6A48; border-radius: 50%;
         }
-        .alq-filter-dot {
-          position: absolute; top: 6px; right: 6px; width: 8px; height: 8px;
-          border-radius: 50%; background: #3A6A48;
-        }
-        .alq-filter-btn { position: relative; }
-        .alq-chips-panel {
-          position: fixed; top: max(56px, calc(env(safe-area-inset-top) + 48px)); left: 0; right: 0; z-index: 49;
-          display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px;
-          background: rgba(237,232,220,0.97);
-          transform: translateY(-100%); opacity: 0; transition: transform 0.25s ease-out, opacity 0.2s;
-          pointer-events: none;
-        }
-        .alq-chips-panel.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
-        .alq-chip {
-          flex-shrink: 0; display: flex; align-items: center; gap: 4px;
-          padding: 6px 12px; border-radius: 100px; font-size: 12px;
-          background: rgba(58,106,72,0.08); border: 1px solid rgba(58,106,72,0.2);
-          color: #3A6A48; font-family: 'DM Sans', sans-serif; white-space: nowrap;
-        }
-        .alq-chip button { background: none; border: none; color: #3A6A48; font-size: 14px; cursor: pointer; padding: 0; line-height: 1; }
-        .alq-chip-clear { background: rgba(58,53,48,0.04); border-color: #D8D0BC; color: #7A7060; cursor: pointer; }
         .alq-compare-banner-wrap {
           position: fixed; top: max(64px, calc(env(safe-area-inset-top) + 56px)); left: 50%; transform: translateX(-50%);
           z-index: 100; display: flex; align-items: center; gap: 0;
@@ -1640,6 +1577,142 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
         .df-cta { display: block; width: 100%; padding: 12px; background: #141414; border: none; color: #EDE8DC; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; border-radius: 10px; transition: opacity 0.2s; }
         .df-cta:hover { opacity: 0.9; }
         .df-reset { display: block; width: 100%; padding: 10px; background: transparent; border: 1px solid #D8D0BC; color: #7A7060; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; }
+      `}</style>
+    </div>
+  )
+}
+
+// ===== FILTER OVERLAY (full-screen, replaces MobileFilterCard in feed) =====
+function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset }: {
+  isOpen: boolean; onClose: () => void
+  totalCount: number; filteredCount: number; isFiltered: boolean
+  onApply: (f: FiltrosAlquiler) => void; onReset: () => void
+}) {
+  const [maxPrice, setMaxPrice] = useState(MAX_SLIDER_PRICE)
+  const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set())
+  const [amoblado, setAmoblado] = useState(false)
+  const [mascotas, setMascotas] = useState(false)
+  const [conParqueo, setConParqueo] = useState(false)
+  const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set())
+  const [orden, setOrden] = useState<FiltrosAlquiler['orden']>('recientes')
+  const [previewCount, setPreviewCount] = useState<number | null>(null)
+  const previewRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isFirstRender = useRef(true)
+
+  const buildFilters = useCallback((): FiltrosAlquiler => {
+    const f: FiltrosAlquiler = { orden: orden || 'recientes', limite: 200, solo_con_fotos: true }
+    if (maxPrice < MAX_SLIDER_PRICE) f.precio_mensual_max = maxPrice
+    if (selectedDorms.size > 0) f.dormitorios_lista = Array.from(selectedDorms)
+    if (amoblado) f.amoblado = true
+    if (mascotas) f.acepta_mascotas = true
+    if (conParqueo) f.con_parqueo = true
+    if (selectedZonas.size > 0) f.zonas_permitidas = Array.from(selectedZonas)
+    return f
+  }, [maxPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden])
+
+  // Debounced preview count
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return }
+    if (!isOpen) return
+    if (previewRef.current) clearTimeout(previewRef.current)
+    previewRef.current = setTimeout(async () => {
+      try {
+        const { data } = await fetchFromAPI({ ...buildFilters(), limite: 200 })
+        setPreviewCount(data.length)
+      } catch { /* best effort */ }
+    }, 400)
+    return () => { if (previewRef.current) clearTimeout(previewRef.current) }
+  }, [buildFilters, isOpen])
+
+  // Reset preview when overlay opens
+  useEffect(() => {
+    if (isOpen) { setPreviewCount(null); isFirstRender.current = true }
+  }, [isOpen])
+
+  function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); return n }) }
+  function toggleZona(id: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n }) }
+
+  function handleApply() { onApply(buildFilters()) }
+  function handleReset() {
+    setMaxPrice(MAX_SLIDER_PRICE); setSelectedDorms(new Set()); setSelectedZonas(new Set())
+    setAmoblado(false); setMascotas(false); setConParqueo(false); setOrden('recientes')
+    onReset()
+  }
+
+  if (!isOpen) return null
+
+  const displayCount = previewCount !== null ? previewCount : (isFiltered ? filteredCount : totalCount)
+
+  return (
+    <div className="fo-overlay">
+      <div className="fo-header">
+        <button className="fo-close" onClick={onClose}>&times;</button>
+        <span className="fo-title">Filtros</span>
+        <span className="fo-count">{displayCount} deptos</span>
+      </div>
+      <div className="fo-body">
+        {/* Microzonas */}
+        <div className="fo-group"><div className="fo-label"><span className="fo-dot" />MICROZONA</div>
+          <div className="fo-zonas">{ZONAS_ALQUILER_UI.filter(z => z.id !== 'sin_zona').map(z => (
+            <button key={z.id} className={`fo-zona-btn ${selectedZonas.has(z.id) ? 'active' : ''}`} onClick={() => toggleZona(z.id)}>{z.label}</button>
+          ))}</div>
+        </div>
+        {/* Budget */}
+        <div className="fo-group"><div className="fo-label"><span className="fo-dot" />PRESUPUESTO MAXIMO</div>
+          <input type="range" className="fo-slider" min={2000} max={MAX_SLIDER_PRICE} step={500} value={maxPrice} onChange={e => setMaxPrice(parseInt(e.target.value))} />
+          <div className="fo-slider-val">{formatPrice(maxPrice)}/mes</div>
+        </div>
+        {/* Dorms */}
+        <div className="fo-group"><div className="fo-label"><span className="fo-dot" />DORMITORIOS</div>
+          <div className="fo-dorms">{[0,1,2,3].map(d => (
+            <button key={d} className={`fo-dorm-btn ${selectedDorms.has(d) ? 'active' : ''}`} onClick={() => toggleDorm(d)}>{d === 0 ? 'Mono' : d === 3 ? '3+' : d}</button>
+          ))}</div>
+        </div>
+        {/* Toggles */}
+        <div className="fo-group"><div className="fo-dorms">
+          <button className={`fo-dorm-btn fo-amoblado ${amoblado ? 'active' : ''}`} onClick={() => setAmoblado(!amoblado)}>Amoblado</button>
+          <button className={`fo-dorm-btn fo-mascotas ${mascotas ? 'active' : ''}`} onClick={() => setMascotas(!mascotas)}>Mascotas</button>
+          <button className={`fo-dorm-btn ${conParqueo ? 'active' : ''}`} onClick={() => setConParqueo(!conParqueo)}>Parqueo</button>
+        </div></div>
+        {/* Orden */}
+        <div className="fo-group"><div className="fo-label"><span className="fo-dot" />ORDENAR POR</div>
+          <div className="fo-dorms">{ORDEN_OPTIONS.map(o => (
+            <button key={o.value} className={`fo-dorm-btn ${orden === o.value ? 'active' : ''}`} onClick={() => setOrden(o.value)}>{o.label}</button>
+          ))}</div>
+        </div>
+      </div>
+      <div className="fo-footer">
+        {isFiltered && <button className="fo-reset" onClick={handleReset}>Quitar filtros</button>}
+        <button className="fo-apply" onClick={handleApply}>
+          VER {displayCount} RESULTADOS
+        </button>
+      </div>
+      <style jsx>{`
+        .fo-overlay{position:fixed;inset:0;z-index:200;background:#EDE8DC;display:flex;flex-direction:column;animation:foSlideUp 0.3s ease-out;}
+        @keyframes foSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+        .fo-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;padding-top:max(16px, calc(env(safe-area-inset-top) + 8px));border-bottom:1px solid #D8D0BC;}
+        .fo-close{width:36px;height:36px;border-radius:50%;border:none;background:rgba(20,20,20,0.06);color:#7A7060;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+        .fo-title{font-family:'Figtree',sans-serif;font-size:18px;font-weight:500;color:#141414;}
+        .fo-count{font-family:'DM Sans',sans-serif;font-size:13px;color:#7A7060;}
+        .fo-body{flex:1;overflow-y:auto;padding:20px;}
+        .fo-footer{padding:16px 20px;padding-bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px));border-top:1px solid #D8D0BC;display:flex;gap:10px;}
+        .fo-reset{flex:0 0 auto;padding:14px 20px;background:transparent;border:1px solid #D8D0BC;border-radius:10px;color:#7A7060;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;}
+        .fo-apply{flex:1;padding:14px;background:#141414;border:none;border-radius:10px;color:#EDE8DC;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;}
+        .fo-apply:active{transform:scale(0.97);}
+        .fo-group{margin-bottom:18px;}
+        .fo-label{font-size:12px;font-weight:600;color:#3A3530;letter-spacing:0.5px;margin-bottom:8px;font-family:'DM Sans',sans-serif;text-transform:uppercase;display:flex;align-items:center;gap:6px;}
+        .fo-dot{width:6px;height:6px;border-radius:50%;background:#3A6A48;flex-shrink:0;}
+        .fo-zonas{display:flex;flex-wrap:wrap;gap:7px;}
+        .fo-zona-btn{padding:8px 16px;border:1px solid #D8D0BC;background:#FAFAF8;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:10px;transition:all 0.2s;}
+        .fo-zona-btn.active{border-color:#3A6A48;border-width:2px;color:#141414;background:#FAFAF8;font-weight:600;box-shadow:0 2px 8px rgba(58,106,72,0.12);}
+        .fo-dorms{display:flex;gap:8px;}
+        .fo-dorm-btn{flex:1;padding:12px;border:1px solid #D8D0BC;background:#FAFAF8;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;border-radius:10px;transition:all 0.2s;}
+        .fo-dorm-btn.active{border-color:#3A6A48;border-width:2px;color:#141414;background:#FAFAF8;font-weight:600;box-shadow:0 2px 8px rgba(58,106,72,0.12);}
+        .fo-mascotas.active{background:#3A6A48;color:#EDE8DC;border-color:#3A6A48;box-shadow:none;}
+        .fo-amoblado.active{background:#141414;color:#EDE8DC;border-color:#141414;box-shadow:none;}
+        .fo-slider{width:100%;-webkit-appearance:none;appearance:none;height:3px;background:#D8D0BC;border-radius:2px;outline:none;}
+        .fo-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#FAFAF8;border:2px solid #141414;cursor:pointer;}
+        .fo-slider-val{text-align:right;font-size:15px;color:#141414;margin-top:6px;font-weight:600;font-family:'DM Sans',sans-serif;font-variant-numeric:tabular-nums;}
       `}</style>
     </div>
   )
@@ -1998,15 +2071,15 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
+          {p.agente_whatsapp && (
+            <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi este alquiler en Simon y me interesa: ${displayName} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_desktop')} className="dc-wsp-inline">
+              <svg viewBox="0 0 24 24" fill="#1EA952" style={{ width: 14, height: 14 }}>
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              WhatsApp
+            </a>
+          )}
         </div>
-        {p.agente_whatsapp && (
-          <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi este alquiler en Simon y me interesa: ${displayName} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_desktop')} className="dc-wsp-cta">
-            <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 16, height: 16 }}>
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-            </svg>
-            Consultar por WhatsApp
-          </a>
-        )}
       </div>
 
       <style jsx>{`
@@ -2039,8 +2112,8 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
         .dc-act-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
         .dc-act-detail { color: #4A4438; background: rgba(216,208,188,0.45); border-radius: 10px; padding: 6px 14px; font-weight: 500; }
         .dc-act-detail:hover { background: rgba(216,208,188,0.65); }
-        .dc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: #1EA952; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; text-decoration: none; margin-top: auto; padding-top: 10px; transition: opacity 0.2s; }
-        .dc-wsp-cta:hover { opacity: 0.9; }
+        .dc-wsp-inline { display: flex; align-items: center; gap: 5px; margin-left: auto; color: #1EA952; font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 600; text-decoration: none; padding: 6px; min-height: 36px; transition: opacity 0.15s; }
+        .dc-wsp-inline:hover { opacity: 0.7; }
         @media (prefers-reduced-motion: reduce) {
           .dc-photo { animation: none; }
           .dc-card { transition: none; }
@@ -2124,21 +2197,22 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
+          {p.agente_whatsapp && (
+            <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi este alquiler en Simon y me interesa: ${p.nombre_edificio || p.nombre_proyecto || 'Departamento'} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_mobile')} className="mc-wsp-inline-mobile">
+              <svg viewBox="0 0 24 24" fill="#fff" style={{width:14,height:14}}>
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              Consultar por WSP
+            </a>
+          )}
         </div>
-        {p.agente_whatsapp && (
-          <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi este alquiler en Simon y me interesa: ${p.nombre_edificio || p.nombre_proyecto || 'Departamento'} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_mobile')} className="mc-wsp-cta">
-            <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 18, height: 18 }}>
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-            </svg>
-            Consultar por WhatsApp
-          </a>
-        )}
+        <a href="/landing-v2" className="mc-brand">simonbo.com</a>
       </div>
       {isFirst && <div className="mc-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" style={{width:18,height:18}}><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>}
 
       <style jsx>{`
         .alq-card { height: 100vh; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #EDE8DC; }
-        .mc-content { flex: 1; padding: 0 24px 20px; padding-bottom: max(20px, calc(env(safe-area-inset-bottom) + 8px)); display: flex; flex-direction: column; overflow: hidden; }
+        .mc-content { flex: 0 0 auto; padding: 0 24px 8px; padding-bottom: max(8px, calc(env(safe-area-inset-bottom) + 4px)); display: flex; flex-direction: column; }
         .mc-name { font-family: 'Figtree', sans-serif; font-size: 24px; font-weight: 500; color: #141414; line-height: 1.1; margin-bottom: 2px; padding-top: 12px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
         .mc-reciente { font-size: 11px; font-weight: 500; color: #3A6A48; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; }
         .mc-zona { font-size: 13px; color: #7A7060; letter-spacing: 0.3px; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
@@ -2153,13 +2227,14 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
         .mc-highlight.green::before { background: #3A6A48; }
         .alq-card.pet-confirmed { border-left: 3px solid rgba(168,85,247,0.4); }
         .mc-razon { font-size: 12px; font-weight: 300; color: #7A7060; line-height: 1.5; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; flex-shrink: 1; }
-        .mc-actions { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid #D8D0BC; margin-top: 8px; }
-        .mc-btn { display: flex; align-items: center; justify-content: center; gap: 5px; background: none; border: none; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; }
+        .mc-actions { display: flex; align-items: center; gap: 10px; padding-top: 8px; border-top: 1px solid #D8D0BC; margin-top: auto; }
+        .mc-btn { display: flex; align-items: center; gap: 4px; background: none; border: none; color: #7A7060; font-size: 11px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 4px 0; min-width: 36px; min-height: 36px; }
         .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
         .mc-btn.mc-share { color: #7A7060; }
-        .mc-btn.mc-info { color: #4A4438; font-size: 12px; letter-spacing: 0.3px; background: rgba(216,208,188,0.45); border-radius: 10px; padding: 8px 14px; font-weight: 500; }
-        .mc-wsp-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: #1EA952; border: none; border-radius: 10px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; margin-top: auto; min-height: 44px; transition: opacity 0.2s; flex-shrink: 0; }
-        .mc-wsp-cta:active { opacity: 0.85; }
+        .mc-btn.mc-info { color: #EDE8DC; font-size: 10px; background: #141414; padding: 4px 10px; font-weight: 500; border-radius: 8px; min-width: 0; min-height: 0; }
+        .mc-wsp-inline-mobile { margin-left: auto; background: #1EA952; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; text-decoration: none; padding: 6px 12px; border-radius: 10px; display: flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap; }
+        .mc-wsp-inline-mobile:active { opacity: 0.85; }
+        .mc-brand { display: block; text-align: center; font-family: 'DM Sans', sans-serif; font-size: 11px; color: rgba(58,53,48,0.5); text-decoration: none; margin-top: 2px; letter-spacing: 0.3px; }
         .mc-btn.shake { animation: mcShake 0.3s ease; }
         @keyframes mcShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
         .mc-spotlight-badge { position: absolute; top: max(56px, calc(env(safe-area-inset-top) + 50px)); left: 16px; z-index: 10; background: rgba(250,250,248,0.92); border-left: 3px solid #3A6A48; padding: 8px 14px; border-radius: 0 14px 14px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #3A3530; letter-spacing: 0.3px; }
@@ -2168,7 +2243,7 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
         @media (prefers-reduced-motion: reduce) {
           .mc-btn.shake { animation: none; }
           .mc-scroll-hint { animation: none; }
-          .mc-wsp-cta { transition: none; }
+          .mc-wsp-inline-mobile { transition: none; }
         }
       `}</style>
     </div>
@@ -2283,7 +2358,8 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap, propertyId }: { 
         </div>
       )}
       <style jsx>{`
-        .pc-zone { flex: 0 0 50%; position: relative; overflow: hidden; }
+        .pc-zone { flex: 1 1 60%; min-height: 0; position: relative; overflow: hidden; }
+        .pc-zone::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 70px; background: linear-gradient(rgba(0,0,0,0.3), transparent); pointer-events: none; z-index: 2; }
         .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 24px; background: linear-gradient(transparent, #EDE8DC); pointer-events: none; z-index: 2; }
         .pc-scroll { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .pc-scroll::-webkit-scrollbar { display: none; }
@@ -2597,46 +2673,31 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
     <div className={`bs ${open ? 'open' : ''} ${isDesktop ? 'bs-desktop' : ''}`} ref={sheetRef}
       onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       <div className="bs-handle" />
-      {/* Header negro — nombre, precio, zona, fecha, WhatsApp */}
-      <div className="bs-dark-header">
-        <div className="bs-dh-top">
-          <div>
-            <div className="bs-title">{displayName}</div>
-            <div className="bs-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
-            <div className="bs-published">
-              {displayZona(p.zona)}
-              {p.dias_en_mercado !== null && p.dias_en_mercado >= 0 && (
-                <> · {p.dias_en_mercado === 0 ? 'Publicado hoy' : p.dias_en_mercado === 1 ? 'Hace 1 día' : `Hace ${p.dias_en_mercado} días`}</>
-              )}
-            </div>
-          </div>
-          <div className="bs-header-actions">
-            {onToggleFavorite && (
-              <button className={`bs-fav ${isFavorite ? 'active' : ''}`} aria-label="Guardar favorito" onClick={onToggleFavorite}>
-                <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-              </button>
-            )}
-            <button className="bs-close" aria-label="Cerrar detalle" onClick={onClose}>&times;</button>
-          </div>
-        </div>
-        {p.agente_whatsapp && (
-          <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi ${p.nombre_edificio || p.nombre_proyecto || 'el departamento'} en Simon y me gustaria mas informacion${p.url ? '\n' + p.url : ''}`, 'bottom_sheet')} className="bs-wsp-cta">
-            <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 18, height: 18 }}>
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      {/* Sticky close + fav bar */}
+      <div className="bs-sticky-top">
+        {onToggleFavorite && (
+          <button className={`bs-sticky-fav ${isFavorite ? 'active' : ''}`} aria-label="Guardar favorito" onClick={onToggleFavorite}>
+            <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
-            Consultar por WhatsApp
-          </a>
-        )}
-        {onShare && (
-          <button className="bs-share-btn" onClick={onShare}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
-              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-            </svg>
-            Compartir
           </button>
         )}
+        <button className="bs-sticky-close" aria-label="Cerrar detalle" onClick={onClose}>&times;</button>
+      </div>
+      {/* Header — building name, zone, price with accent, specs */}
+      <div className="bs-header-redesign">
+        <div className="bs-hr-name">{displayName}</div>
+        <div className="bs-hr-sub">{displayZona(p.zona)} <span className="bs-hr-id">#{p.id}</span>
+          {p.dias_en_mercado !== null && p.dias_en_mercado >= 0 && (
+            <> · {p.dias_en_mercado === 0 ? 'Publicado hoy' : p.dias_en_mercado === 1 ? 'Hace 1 día' : `Hace ${p.dias_en_mercado} días`}</>
+          )}
+        </div>
+        <div className="bs-hr-price-block">
+          <div className="bs-hr-price">{formatPrice(p.precio_mensual_bob)}<span>/mes</span></div>
+        </div>
+        <div className="bs-hr-specs">
+          {dormLabel(p.dormitorios)} · {p.area_m2}m² · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · Piso ${p.piso}` : ''}
+        </div>
       </div>
       {/* Galería de fotos horizontal */}
       {p.fotos_urls && p.fotos_urls.length > 0 && (
@@ -2712,32 +2773,58 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
           )}
         </div>
       )}
+      {/* Sticky footer: WSP + Compartir */}
+      <div className="bs-sticky-footer">
+        {p.agente_whatsapp && (
+          <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi ${p.nombre_edificio || p.nombre_proyecto || 'el departamento'} en Simon y me gustaria mas informacion${p.url ? '\n' + p.url : ''}`, 'bottom_sheet')} className="bs-footer-wsp">
+            <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 16, height: 16 }}>
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            Consultar por WSP
+          </a>
+        )}
+        {onShare && (
+          <button className="bs-footer-share" onClick={onShare}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+            Compartir
+          </button>
+        )}
+      </div>
       <style jsx>{`
-        .bs { position:fixed;bottom:0;left:0;right:0;z-index:501;background:#EDE8DC;border-radius:20px 20px 0 0;max-height:80vh;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:max(20px,env(safe-area-inset-bottom)); }
+        .bs { position:fixed;inset:0;z-index:501;background:#141414;border-radius:0;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none; }
         .bs::-webkit-scrollbar{display:none;}
         .bs.open{transform:translateY(0);}
-        .bs-desktop{max-width:480px;left:auto;right:0;border-radius:20px 0 0 0;height:100vh;max-height:100vh;}
+        .bs-desktop{max-width:480px;left:auto;right:0;top:0;bottom:0;border-radius:20px 0 0 0;height:100vh;max-height:100vh;}
         .bs-desktop.open{transform:translateY(0);}
-        .bs-handle{width:48px;height:4px;background:rgba(154,142,122,0.5);border-radius:2px;margin:12px auto 0;}
-        .bs-dark-header{background:#141414;padding:0 24px 20px;border-radius:20px 20px 14px 14px;}
-        .bs-dh-top{display:flex;align-items:flex-start;justify-content:space-between;padding-top:16px;}
-        .bs-title{font-family:'Figtree',sans-serif;font-size:22px;font-weight:500;color:#EDE8DC;}
-        .bs-price{font-family:'DM Sans',sans-serif;font-size:28px;font-weight:500;color:#EDE8DC;margin-top:4px;font-variant-numeric:tabular-nums;}
-        .bs-price span{font-size:14px;color:#9A8E7A;font-weight:400;}
-        .bs-header-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;}
-        .bs-fav{width:44px;height:44px;border-radius:50%;border:none;background:transparent;color:#9A8E7A;display:flex;align-items:center;justify-content:center;cursor:pointer;}
-        .bs-fav.active svg{filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4));}
-        .bs-close{width:44px;height:44px;border-radius:50%;border:none;background:transparent;color:#9A8E7A;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;}
-        .bs-published{font-size:13px;color:#9A8E7A;font-family:'DM Sans',sans-serif;margin-top:6px;}
-        .bs-section{padding:18px 24px;border-bottom:1px solid rgba(216,208,188,0.5);}
+        .bs-handle{display:none;}
+        .bs-desktop .bs-handle{display:block;width:48px;height:4px;background:rgba(154,142,122,0.5);border-radius:2px;margin:12px auto 0;}
+        /* Sticky close + fav */
+        .bs-sticky-top{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:8px 16px;padding-top:max(8px,calc(env(safe-area-inset-top) + 4px));background:transparent;pointer-events:none;}
+        .bs-sticky-top>*{pointer-events:auto;}
+        .bs-sticky-close{width:40px;height:40px;border-radius:50%;border:none;background:rgba(20,20,20,0.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#EDE8DC;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;}
+        .bs-sticky-fav{width:40px;height:40px;border-radius:50%;border:none;background:rgba(20,20,20,0.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#9A8E7A;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+        .bs-sticky-fav.active svg{filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4));}
+        /* Header redesign */
+        .bs-header-redesign{padding:0 24px 20px;background:#141414;}
+        .bs-hr-name{font-family:'Figtree',sans-serif;font-size:24px;font-weight:500;color:#EDE8DC;line-height:1.15;margin-bottom:4px;}
+        .bs-hr-sub{font-size:13px;color:#9A8E7A;font-family:'DM Sans',sans-serif;margin-bottom:10px;}
+        .bs-hr-id{color:#9A8E7A;font-size:12px;margin-left:2px;}
+        .bs-hr-price-block{border-left:3px solid #3A6A48;padding-left:12px;margin-bottom:8px;}
+        .bs-hr-price{font-family:'DM Sans',sans-serif;font-size:28px;font-weight:500;color:#EDE8DC;line-height:1;font-variant-numeric:tabular-nums;}
+        .bs-hr-price span{font-size:14px;color:#9A8E7A;font-weight:400;}
+        .bs-hr-specs{font-size:15px;font-weight:300;color:#9A8E7A;font-family:'DM Sans',sans-serif;}
+        /* Sticky footer */
+        .bs-sticky-footer{position:sticky;bottom:0;background:#EDE8DC;border-top:1px solid #D8D0BC;padding:12px 24px;padding-bottom:max(12px,calc(env(safe-area-inset-bottom) + 4px));display:flex;gap:10px;z-index:10;}
+        .bs-footer-wsp{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;background:#1EA952;border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;text-decoration:none;min-height:44px;transition:opacity 0.2s;}
+        .bs-footer-wsp:active{opacity:0.85;}
+        .bs-footer-share{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 16px;background:transparent;border:1px solid #D8D0BC;border-radius:10px;color:#7A7060;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity 0.2s;}
+        .bs-footer-share:active{opacity:0.7;}
+        .bs-section{padding:18px 24px;border-bottom:1px solid rgba(216,208,188,0.5);background:#EDE8DC;}
         .bs-section:last-child{border-bottom:none;}
         .bs-sl{font-size:12px;font-weight:600;color:#7A7060;letter-spacing:0.5px;margin-bottom:12px;font-family:'DM Sans',sans-serif;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
         .bs-sl-dot{width:6px;height:6px;border-radius:50%;background:#3A6A48;flex-shrink:0;}
-        .bs-wsp-cta{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#1EA952;border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;min-height:44px;transition:opacity 0.2s;margin-top:16px;}
-        .bs-wsp-cta:active{opacity:0.85;}
-        .bs-share-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;background:transparent;border:1px solid rgba(237,232,220,0.2);border-radius:10px;color:#9A8E7A;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;cursor:pointer;margin-top:8px;transition:opacity 0.2s;}
-        .bs-share-btn:active{opacity:0.7;}
-        .bs-wsp-agent{font-weight:400;opacity:0.8;}
         .bs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
         .bs-feat{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:12px;background:#FAFAF8;border:1px solid #D8D0BC;box-shadow:0 2px 8px rgba(58,53,48,0.06);}
         .bs-fi{width:20px;height:20px;color:#7A7060;}
