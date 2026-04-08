@@ -805,9 +805,8 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
           <main className="desktop-main" ref={viewMode === 'grid' ? feedRef : undefined}
             style={viewMode === 'map' ? { overflow: 'hidden', display: 'flex', flexDirection: 'column' } : undefined}>
             {/* View toggle bar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #D8D0BC', flexShrink: 0, position: 'sticky', top: 0, background: '#EDE8DC', zIndex: 10, paddingTop: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid rgba(216,208,188,0.3)', flexShrink: 0, position: 'sticky', top: 0, background: 'transparent', zIndex: 10, paddingTop: 8 }}>
               <div style={{ fontSize: 13, color: '#7A7060', display: 'flex', alignItems: 'center', gap: 12 }}>
-                {properties.length} resultado{properties.length !== 1 ? 's' : ''}
                 {favorites.size >= 2 && (
                   <button onClick={() => openCompare()} style={{ padding: '6px 16px', background: '#141414', color: '#EDE8DC', border: 'none', borderRadius: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.5 }}>
                     Comparar {favorites.size} favoritos
@@ -2106,12 +2105,12 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
         .dc-highlight.gold::before { background: #141414; }
         .dc-highlight.green::before { background: #3A6A48; }
         .dc-card.pet-confirmed { border-left: 3px solid rgba(168,85,247,0.4); }
-        .dc-actions { display: flex; align-items: center; gap: 12px; border-top: 1px solid #D8D0BC; padding-top: 10px; margin-top: auto; }
-        .dc-act-btn { display: flex; align-items: center; justify-content: center; gap: 5px; background: none; border: none; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 6px; min-height: 36px; transition: color 0.15s; }
+        .dc-actions { display: flex; align-items: center; gap: 10px; border-top: 1px solid #D8D0BC; padding-top: 8px; margin-top: auto; }
+        .dc-act-btn { display: flex; align-items: center; gap: 4px; background: none; border: none; color: #7A7060; font-size: 11px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 4px 0; transition: color 0.15s; text-decoration: none; }
         .dc-act-btn:hover { color: #141414; }
         .dc-act-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
-        .dc-act-detail { color: #4A4438; background: rgba(216,208,188,0.45); border-radius: 10px; padding: 6px 14px; font-weight: 500; }
-        .dc-act-detail:hover { background: rgba(216,208,188,0.65); }
+        .dc-act-detail { color: #EDE8DC; background: #141414; padding: 4px 10px; font-weight: 500; border-radius: 8px; font-size: 10px; }
+        .dc-act-detail:hover { background: #3A3530; }
         .dc-wsp-inline { display: flex; align-items: center; gap: 5px; margin-left: auto; color: #1EA952; font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 600; text-decoration: none; padding: 6px; min-height: 36px; transition: opacity 0.15s; }
         .dc-wsp-inline:hover { opacity: 0.7; }
         @media (prefers-reduced-motion: reduce) {
