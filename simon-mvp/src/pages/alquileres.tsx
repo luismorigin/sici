@@ -2111,7 +2111,7 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
         .dc-act-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
         .dc-act-detail { color: #EDE8DC; background: #141414; padding: 6px 12px; font-weight: 500; border-radius: 8px; font-size: 12px; }
         .dc-act-detail:hover { background: #3A3530; }
-        .dc-wsp-inline { display: flex; align-items: center; gap: 5px; color: #1EA952; font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 600; text-decoration: none; padding: 6px 0; min-height: 36px; transition: opacity 0.15s; }
+        .dc-wsp-inline { display: flex; align-items: center; gap: 5px; color: #1EA952; font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 600; text-decoration: none; padding: 6px 14px; background: rgba(30,169,82,0.1); border-radius: 10px; min-height: 36px; transition: opacity 0.15s; }
         .dc-wsp-inline:hover { opacity: 0.7; }
         @media (prefers-reduced-motion: reduce) {
           .dc-photo { animation: none; }
@@ -2231,7 +2231,7 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
         .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
         .mc-btn.mc-share { color: #7A7060; }
         .mc-btn.mc-info { color: #EDE8DC; font-size: 12px; background: #141414; padding: 6px 12px; font-weight: 500; border-radius: 8px; min-width: 0; min-height: 0; }
-        .mc-wsp-inline-mobile { display: flex; align-items: center; gap: 5px; color: #1EA952; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-decoration: none; padding: 6px 0; cursor: pointer; white-space: nowrap; min-height: 36px; }
+        .mc-wsp-inline-mobile { display: flex; align-items: center; gap: 5px; color: #1EA952; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-decoration: none; padding: 6px 14px; background: rgba(30,169,82,0.1); border-radius: 10px; cursor: pointer; white-space: nowrap; min-height: 36px; }
         .mc-wsp-inline-mobile:active { opacity: 0.7; }
         .mc-brand { display: block; text-align: center; font-family: 'DM Sans', sans-serif; font-size: 11px; color: rgba(58,53,48,0.5); text-decoration: none; margin-top: 2px; letter-spacing: 0.3px; }
         .mc-btn.shake { animation: mcShake 0.3s ease; }
