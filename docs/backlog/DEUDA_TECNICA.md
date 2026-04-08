@@ -92,3 +92,15 @@ Source of truth de marca: repo `simon-brand` (github.com/luismorigin/simon-brand
 | 5 | Eliminar `premium-theme.ts` | PENDIENTE | Solo cuando no queden imports |
 | 6 | Limpiar hex hardcodeados en JSX | PENDIENTE | `bg-[#0a0a0a]` → `bg-s-negro`, etc. Gradual |
 | 11 | Subir docs actualizados al Knowledge de Claude.ai | PENDIENTE | `simon-decisions.md` + `simon-comunicacion.md` + `simon-design-tokens.ts` al proyecto "Simon Brand System" |
+
+## Alquileres TBT / code-splitting — NO URGENTE (8 Abr 2026)
+
+**Contexto:** Lighthouse mobile pasó de 53 → 92 con el refactor de performance (`b0dd372`). TBT quedó en ~350ms (13 long tasks). Score actual es 92 — excelente.
+
+**Causa del TBT:** `alquileres.tsx` sigue siendo ~2,900 líneas en un solo componente. Hydration de React parsea todo de golpe. GA4 + Meta Pixel agregan trabajo al main thread.
+
+**Solución potencial:**
+- Code-split componentes pesados (BottomSheet, FilterOverlay, DesktopFilters) con `next/dynamic`
+- O migrar a App Router con streaming SSR (React Server Components)
+
+**Prioridad: BAJA.** Score 92 es excelente para Core Web Vitals. El TBT no afecta UX perceptible. Solo revisitar si el score baja de 80 o si se agregan features pesados a la página.
