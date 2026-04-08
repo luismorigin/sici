@@ -296,7 +296,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const bannerDismissedRef = useRef(false)
 
-  // Filter nudge pill (show once per session after 15+ cards without interaction)
+  // Filter nudge pill (show once per session after 6+ cards without interaction)
   const [nudgeVisible, setNudgeVisible] = useState(false)
   const nudgeDismissedRef = useRef(false)
   const hasOpenedDetailRef = useRef(false)
@@ -337,7 +337,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
           setBannerDismissed(true)
         }
         // Filter nudge: show once after 15+ cards without detail/filter interaction
-        if (idx >= 15 && !nudgeDismissedRef.current && !hasOpenedDetailRef.current && !isFilteredRef.current) {
+        if (idx >= 6 && !nudgeDismissedRef.current && !hasOpenedDetailRef.current && !isFilteredRef.current) {
           nudgeDismissedRef.current = true
           setNudgeVisible(true)
           trackEvent('nudge_filter_shown', { card_index: idx })
@@ -1049,7 +1049,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
             </svg>
           </button>
 
-          {/* Filter nudge pill — appears once after 15+ cards without interaction */}
+          {/* Filter nudge pill — appears once after 6+ cards without interaction */}
           {nudgeVisible && (
             <div className="alq-nudge-pill" onClick={tapNudge}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{width:14,height:14,flexShrink:0}}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
