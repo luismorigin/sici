@@ -1437,12 +1437,12 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         /* Content zone (45%) */
         .mc-content { flex:1; padding:0 24px 8px; padding-bottom:max(8px, calc(env(safe-area-inset-bottom) + 4px)); display:flex; flex-direction:column; overflow:hidden }
         .mc-name { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1.1; margin-bottom:2px; padding-top:8px; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap }
-        .mc-reciente { font-size:11px; font-weight:500; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px }
+        .mc-reciente { font-size:11px; font-weight:600; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px; background:rgba(58,106,72,0.15); padding:2px 8px; border-radius:4px }
         .mc-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; margin-bottom:12px; font-family:'DM Sans',sans-serif }
         .mc-price-block { border-left:3px solid #3A6A48; padding-left:14px; margin-bottom:8px }
         .mc-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
         .mc-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.3); letter-spacing:0.2px }
-        .mc-specs { font-size:15px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300; line-height:1.4 }
+        .mc-specs { font-size:15px; color:#C8C0B0; font-family:'DM Sans',sans-serif; font-weight:400; line-height:1.4 }
         .mc-specs-2 { font-size:15px; color:#EDE8DC; font-family:'DM Sans',sans-serif; margin-bottom:auto; font-weight:300 }
         .mc-wsp-inline { display:flex; align-items:center; gap:5px; text-decoration:none; color:#fff; font-size:12px; font-weight:600; background:#1EA952; border-radius:10px; padding:8px 14px }
         .mc-actions { display:flex; align-items:center; justify-content:space-between; padding-top:8px; border-top:1px solid rgba(237,232,220,0.1); margin-top:auto; min-height:36px }
