@@ -966,6 +966,11 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
   const [filterOverlayOpen, setFilterOverlayOpen] = useState(false)
+  // Filter nudge pill (show once per session after 6+ cards without interaction)
+  const [nudgeVisible, setNudgeVisible] = useState(false)
+  const nudgeDismissedRef = useRef(false)
+  const hasOpenedDetailRef = useRef(false)
+  const isFilteredRef = useRef(false)
   // Spotlight
   const [spotlightId, setSpotlightId] = useState<number | null>(null)
   const [fetchedSpotlight, setFetchedSpotlight] = useState<UnidadVenta | null>(null)
@@ -973,6 +978,9 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
   const router = useRouter()
   const fetchGenRef = useRef(0)
   const feedRef = useRef<HTMLDivElement>(null)
+
+  // Keep isFilteredRef in sync for scroll handler (avoids stale closure)
+  useEffect(() => { isFilteredRef.current = isFiltered }, [isFiltered])
 
   // Check gate status from localStorage
   useEffect(() => {
@@ -1016,7 +1024,19 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
     trackEvent('view_photos_venta', { property_id: p.id, property_name: p.proyecto, fotos_count: p.fotos_urls.length })
   }
 
+  function dismissNudge() {
+    setNudgeVisible(false)
+    trackEvent('nudge_filter_dismiss_venta')
+  }
+
+  function tapNudge() {
+    setNudgeVisible(false)
+    trackEvent('nudge_filter_tap_venta')
+    setFilterOverlayOpen(true)
+  }
+
   function openSheet(p: UnidadVenta) {
+    hasOpenedDetailRef.current = true
     setSheetProperty(p)
     setSheetOpen(true)
     trackEvent('open_detail_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd) })
@@ -1099,6 +1119,13 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         if (!el) { ticking = false; return }
         const idx = Math.round(el.scrollTop / el.clientHeight)
         setActiveCardIndex(idx)
+        // Filter nudge: show once after 6+ cards without detail/filter interaction
+        if (idx >= 6 && !nudgeDismissedRef.current && !hasOpenedDetailRef.current && !isFilteredRef.current) {
+          nudgeDismissedRef.current = true
+          setNudgeVisible(true)
+          trackEvent('nudge_filter_shown_venta', { card_index: idx })
+          setTimeout(() => setNudgeVisible(false), 5000)
+        }
         ticking = false
       })
     }
@@ -1286,6 +1313,15 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
             </svg>
           </button>
 
+          {/* Filter nudge pill — appears once after 6+ cards without interaction */}
+          {nudgeVisible && (
+            <div className="vt-nudge-pill" onClick={tapNudge}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{width:14,height:14,flexShrink:0}}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              <span>Filtra por zona o precio</span>
+              <button className="vt-nudge-x" onClick={(e) => { e.stopPropagation(); dismissNudge() }}>&times;</button>
+            </div>
+          )}
+
           {/* Full-screen mobile map */}
           {mobileMapOpen && (
             <div className="mt-map-overlay">
@@ -1390,6 +1426,9 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .fo-apply:active { transform:scale(0.97) }
         .mt-counter { position:fixed; bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px)); right:16px; z-index:50; font-size:12px; color:#7A7060; font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums }
         .mt-map-btn { position:fixed; bottom:max(140px, calc(env(safe-area-inset-bottom) + 130px)); right:20px; z-index:100; width:48px; height:48px; border-radius:50%; background:rgba(20,20,20,0.7); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.2) }
+        .vt-nudge-pill { position:fixed; bottom:max(90px, calc(env(safe-area-inset-bottom) + 80px)); left:50%; transform:translateX(-50%); z-index:100; display:flex; align-items:center; gap:8px; background:#3A6A48; color:#EDE8DC; padding:12px 16px 12px 18px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.3px; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,0.18); animation:vtNudgeIn 0.3s ease-out }
+        .vt-nudge-x { background:none; border:none; color:rgba(237,232,220,0.6); font-size:18px; line-height:1; cursor:pointer; padding:0 0 0 4px }
+        @keyframes vtNudgeIn { from{opacity:0;transform:translateX(-50%) translateY(12px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
         .mt-map-overlay { position:fixed; inset:0; z-index:300; background:#141414; display:flex; flex-direction:column }
         .mt-map-header { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; padding-top:max(12px, env(safe-area-inset-top)); background:#141414; border-bottom:1px solid rgba(237,232,220,0.1) }
         .mt-map-title { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC }
