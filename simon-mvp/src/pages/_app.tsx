@@ -1,4 +1,5 @@
 import '@/styles/globals.css'
+import '@/styles/alquileres.css'
 import type { AppProps } from 'next/app'
 import dynamic from 'next/dynamic'
 import Script from 'next/script'

@@ -56,7 +56,6 @@ const ORDEN_OPTIONS: Array<{ value: FiltrosAlquiler['orden']; label: string }> =
 const MAX_SLIDER_PRICE = 18000
 
 const MAX_FAVORITES = 3
-const FILTER_CARD_POSITION = 2
 
 const formatPrice = formatPriceBob
 
@@ -258,10 +257,24 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   const router = useRouter()
   const isDesktop = useIsDesktop()
   const [properties, setProperties] = useState<UnidadAlquiler[]>(initialProperties)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [spotlightId, setSpotlightId] = useState<number | null>(null)
   const [fetchedSpotlight, setFetchedSpotlight] = useState<UnidadAlquiler | null>(null)
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
+
+  // Body styles — scoped to this page (cleanup on unmount)
+  useEffect(() => {
+    document.body.style.background = '#EDE8DC'
+    const mq = window.matchMedia('(max-width: 767px)')
+    function applyOverflow() { document.body.style.overflow = mq.matches ? 'hidden' : '' }
+    applyOverflow()
+    mq.addEventListener('change', applyOverflow)
+    return () => {
+      document.body.style.background = ''
+      document.body.style.overflow = ''
+      mq.removeEventListener('change', applyOverflow)
+    }
+  }, [])
 
   // Restore favorites from localStorage after hydration
   useEffect(() => {
@@ -290,8 +303,15 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     solo_con_fotos: true,
   })
   const [isFiltered, setIsFiltered] = useState(false)
-  const [totalCount, setTotalCount] = useState(0)
+  const [totalCount, setTotalCount] = useState(seo.totalUnidades || initialProperties.length)
   const [loadError, setLoadError] = useState(false)
+
+  // Defer heavy widgets until after hydration to reduce TBT
+  const [widgetsReady, setWidgetsReady] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setWidgetsReady(true), 2000)
+    return () => clearTimeout(t)
+  }, [])
 
   // UTM contextual banner
   const [bannerDismissed, setBannerDismissed] = useState(false)
@@ -410,12 +430,18 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     }
   }, [])
 
+  // Defer full fetch — ISR gives us 8 properties for instant LCP,
+  // then load all 200 after the page becomes interactive (avoids competing with LCP image)
   useEffect(() => {
-    async function init() {
-      await fetchProperties(filters)
-    }
-    init()
     trackEvent('page_enter_alquiler', {})
+    const doFetch = () => fetchProperties(filters)
+    if (typeof requestIdleCallback !== 'undefined') {
+      const id = requestIdleCallback(doFetch, { timeout: 3000 })
+      return () => cancelIdleCallback(id)
+    } else {
+      const t = setTimeout(doFetch, 1500)
+      return () => clearTimeout(t)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -702,10 +728,6 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         </Head>
       )}
 
-      <style jsx global>{`
-        body { background: #EDE8DC; }
-        @media (max-width: 767px) { body { overflow: hidden; } }
-      `}</style>
 
       {/* Toast */}
       <div className={`alq-toast ${toastVisible ? 'show' : ''}`}>{toastMessage}</div>
@@ -717,8 +739,8 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         onClose={() => setCompareOpen(false)}
       />
 
-      {/* Simon Chat Bot */}
-      <SimonChatWidget
+      {/* Simon Chat Bot — deferred to avoid TBT during initial load */}
+      {widgetsReady && <SimonChatWidget
         properties={properties}
         sheetOpen={sheetOpen}
         onOpenDetail={(id) => {
@@ -740,7 +762,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
           applyFilters(newFilters)
           window.scrollTo({ top: 0, behavior: 'smooth' })
         }}
-      />
+      />}
 
       {/* Bottom sheet overlay */}
       {sheetOpen && <div className="alq-sheet-overlay" onClick={() => setSheetOpen(false)} />}
@@ -1149,284 +1171,6 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         </>
       )}
 
-      <style jsx>{`
-        /* ========== TOAST ========== */
-        .alq-toast {
-          position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 600;
-          background: #141414; color: #EDE8DC; padding: 10px 24px; border-radius: 100px;
-          font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif;
-          opacity: 0; transition: opacity 0.3s; pointer-events: none;
-        }
-        .alq-toast.show { opacity: 1; }
-        .alq-sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 500; }
-
-        /* ========== DESKTOP ========== */
-        .desktop-layout {
-          display: flex; height: 100vh; overflow: hidden;
-          font-family: 'DM Sans', sans-serif;
-        }
-        .desktop-sidebar {
-          width: 320px; min-width: 320px; height: 100vh;
-          background: #EDE8DC; border-right: 1px solid #D8D0BC;
-          padding: 32px 28px; overflow-y: auto;
-          display: flex; flex-direction: column;
-        }
-        .desktop-sidebar-header { margin-bottom: 32px; }
-        .desktop-logo {
-          font-family: 'Figtree', sans-serif; font-size: 32px; font-weight: 500;
-          color: #141414; text-decoration: none; display: block;
-        }
-        .desktop-label { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; margin-top: 2px; text-transform: uppercase; font-family: 'DM Sans', sans-serif; }
-        .desktop-sidebar-count { margin-bottom: 28px; }
-        .desktop-count-num {
-          font-family: 'Figtree', sans-serif; font-size: 48px; font-weight: 500;
-          color: #141414; line-height: 1; display: block; font-variant-numeric: tabular-nums;
-        }
-        .desktop-count-label { font-size: 13px; color: #7A7060; }
-        .desktop-fav-summary {
-          margin-top: auto; padding-top: 20px; border-top: 1px solid #D8D0BC;
-          display: flex; align-items: center; justify-content: space-between;
-          color: #3A6A48; font-size: 13px;
-        }
-        .desktop-fav-info { display: flex; align-items: center; gap: 8px; }
-        .desktop-fav-clear {
-          background: none; border: none; color: #7A7060; font-size: 16px;
-          cursor: pointer; padding: 0 4px; line-height: 1; transition: color 0.2s;
-        }
-        .desktop-fav-clear:hover { color: #141414; }
-        .desktop-compare-btn {
-          padding: 6px 14px; border-radius: 10px; border: 1px solid #D8D0BC;
-          background: rgba(58,106,72,0.08); color: #3A6A48; font-size: 12px; font-weight: 600;
-          cursor: pointer; font-family: 'DM Sans', sans-serif; letter-spacing: 0.5px;
-          transition: background 0.2s;
-        }
-        .desktop-compare-btn:hover { background: rgba(58,106,72,0.15); }
-
-        .desktop-main {
-          flex: 1; height: 100vh; overflow-y: auto; padding: 32px; background: #EDE8DC;
-          scrollbar-width: thin; scrollbar-color: #D8D0BC transparent;
-        }
-        .desktop-main::-webkit-scrollbar { width: 6px; }
-        .desktop-main::-webkit-scrollbar-track { background: transparent; }
-        .desktop-main::-webkit-scrollbar-thumb { background: #D8D0BC; border-radius: 3px; }
-        .desktop-grid {
-          display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-          gap: 24px; max-width: 1200px;
-        }
-        .alq-pet-divider {
-          grid-column: 1 / -1; text-align: center; padding: 20px 0 8px;
-          color: #7A7060; font-size: 12px; letter-spacing: 0.5px;
-          border-top: 1px solid #D8D0BC; font-family: 'DM Sans', sans-serif;
-        }
-        .desktop-loading {
-          display: flex; align-items: center; justify-content: center; height: 300px;
-          color: #7A7060; font-size: 15px;
-        }
-
-        /* ========== SPOTLIGHT (shared property) ========== */
-        .alq-spotlight { margin-bottom: 32px; }
-        .alq-spotlight-banner {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 12px 16px; margin-bottom: 16px;
-          background: #FAFAF8; border-left: 3px solid #3A6A48;
-          border-radius: 0 14px 14px 0;
-          font-family: 'DM Sans', sans-serif; font-size: 14px; color: #3A3530;
-        }
-        .alq-spotlight-banner button {
-          background: none; border: none; color: #7A7060;
-          font-size: 20px; cursor: pointer; padding: 4px 8px; line-height: 1;
-        }
-        .alq-spotlight-banner button:hover { color: #141414; }
-        .alq-spotlight-content { display: flex; gap: 24px; margin-bottom: 24px; }
-        .alq-spotlight-card { width: 400px; flex-shrink: 0; }
-        .alq-spotlight-map {
-          flex: 1; min-height: 280px; border-radius: 14px; overflow: hidden;
-          border: 1px solid #D8D0BC;
-        }
-        .alq-spotlight-separator { display: flex; align-items: center; gap: 16px; }
-        .alq-spotlight-line { flex: 1; height: 1px; background: #D8D0BC; }
-        .alq-spotlight-text {
-          font-family: 'DM Sans', sans-serif; font-size: 12px;
-          color: #7A7060; letter-spacing: 0.5px; text-transform: uppercase;
-          white-space: nowrap;
-        }
-
-        /* ========== MAP FLOATING CARD ========== */
-        /* ========== MAP FAVORITES STRIP ========== */
-        .map-fav-strip {
-          position: absolute; bottom: 12px; right: 12px; z-index: 1000;
-          display: flex; align-items: center; gap: 8px;
-          background: rgba(250,250,248,0.92); backdrop-filter: blur(8px);
-          padding: 8px 12px; border-radius: 14px;
-          border: 1px solid #D8D0BC;
-          max-width: calc(100% - 340px - 24px);
-        }
-        .map-fav-label {
-          display: flex; align-items: center; gap: 4px;
-          font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; color: #3A6A48;
-          flex-shrink: 0;
-        }
-        .map-fav-chip {
-          display: flex; align-items: center; gap: 8px;
-          background: #FAFAF8; border: 1px solid #D8D0BC;
-          border-radius: 10px; padding: 4px 8px 4px 4px; cursor: pointer;
-          transition: border-color 0.2s; flex-shrink: 0;
-        }
-        .map-fav-chip:hover { border-color: #3A6A48; }
-        .map-fav-chip.selected { border-color: #3A6A48; }
-        .map-fav-chip-img {
-          width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0;
-          background-size: cover; background-position: center; background-color: #D8D0BC;
-        }
-        .map-fav-chip-info { min-width: 0; }
-        .map-fav-chip-name {
-          font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: #141414;
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;
-        }
-        .map-fav-chip-price {
-          font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; color: #141414;
-          font-variant-numeric: tabular-nums;
-        }
-        .map-fav-chip-remove {
-          flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
-          background: rgba(58,53,48,0.06); border: none; color: #7A7060;
-          font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-        }
-        .map-fav-chip-remove:hover { background: rgba(58,53,48,0.12); color: #141414; }
-        .map-fav-compare {
-          flex-shrink: 0; padding: 6px 14px; background: #141414; border: none; border-radius: 10px;
-          color: #EDE8DC; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
-          cursor: pointer; transition: opacity 0.2s;
-        }
-        .map-fav-compare:hover { opacity: 0.85; }
-
-        /* ========== MOBILE ========== */
-        .alq-feed {
-          height: 100vh; height: 100dvh;
-          overflow-y: scroll; scroll-snap-type: y mandatory;
-          -webkit-overflow-scrolling: touch; scrollbar-width: none;
-        }
-        .alq-feed::-webkit-scrollbar { display: none; }
-        .alq-top-bar {
-          position: fixed; top: 0; left: 0; right: 0; z-index: 50;
-          display: flex; align-items: center; justify-content: center;
-          padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top));
-          pointer-events: none;
-        }
-        .alq-top-bar > * { pointer-events: auto; }
-        .alq-search-pill {
-          display: flex; align-items: center; gap: 8px;
-          background: rgba(255,255,255,0.15); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-          padding: 8px 16px; border-radius: 100px;
-          border: none; cursor: pointer; position: relative; max-width: 80vw;
-        }
-        .alq-search-text {
-          font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
-          color: rgba(255,255,255,0.85); white-space: nowrap; overflow: hidden;
-          text-overflow: ellipsis; letter-spacing: 0.2px;
-        }
-        .alq-search-dot {
-          position: absolute; top: 5px; right: 5px;
-          width: 6px; height: 6px; background: #3A6A48; border-radius: 50%;
-        }
-        .alq-compare-banner-wrap {
-          position: fixed; top: max(64px, calc(env(safe-area-inset-top) + 56px)); left: 50%; transform: translateX(-50%);
-          z-index: 100; display: flex; align-items: center; gap: 0;
-          border-radius: 100px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-          animation: alqBannerIn 0.3s ease-out;
-        }
-        .alq-compare-banner {
-          display: flex; align-items: center; gap: 8px;
-          background: #141414; color: #EDE8DC; border: none; border-radius: 100px 0 0 100px;
-          padding: 12px 16px 12px 24px; cursor: pointer;
-          font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
-        }
-        .alq-compare-banner-clear {
-          background: #3A3530; color: #EDE8DC; border: none; border-radius: 0 100px 100px 0;
-          padding: 12px 16px 12px 12px; cursor: pointer; font-size: 18px; font-weight: 700; line-height: 1;
-          font-family: 'DM Sans', sans-serif; border-left: 1px solid rgba(237,232,220,0.15);
-        }
-        @keyframes alqBannerIn { from { opacity: 0; transform: translateX(-50%) translateY(-12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
-        .alq-compare-banner-text { white-space: nowrap; }
-        .alq-fav-count {
-          position: absolute; top: -4px; right: -4px;
-          width: 18px; height: 18px; border-radius: 50%;
-          background: #3A6A48; color: #EDE8DC; font-size: 12px; font-weight: 600;
-          display: flex; align-items: center; justify-content: center;
-          opacity: 0; transform: scale(0); transition: all 0.3s;
-        }
-        .alq-fav-count.show { opacity: 1; transform: scale(1); }
-
-        /* Mobile map button */
-        .alq-map-floating {
-          position: fixed; bottom: max(140px, calc(env(safe-area-inset-bottom) + 130px)); right: 20px;
-          z-index: 100; width: 48px; height: 48px; border-radius: 10px;
-          background: rgba(237,232,220,0.92); backdrop-filter: blur(8px); border: none;
-          display: flex; align-items: center; justify-content: center; cursor: pointer;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .alq-nudge-pill {
-          position: fixed; bottom: max(90px, calc(env(safe-area-inset-bottom) + 80px));
-          left: 50%; transform: translateX(-50%); z-index: 100;
-          display: flex; align-items: center; gap: 8px;
-          background: #3A6A48; color: #EDE8DC;
-          padding: 12px 16px 12px 18px; border-radius: 100px;
-          font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
-          letter-spacing: 0.3px; cursor: pointer;
-          box-shadow: 0 4px 16px rgba(0,0,0,0.18);
-          animation: nudgeIn 0.3s ease-out;
-        }
-        .alq-nudge-x {
-          background: none; border: none; color: rgba(237,232,220,0.6);
-          font-size: 18px; line-height: 1; cursor: pointer; padding: 0 0 0 4px;
-        }
-        @keyframes nudgeIn {
-          from { opacity: 0; transform: translateX(-50%) translateY(12px); }
-          to { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
-        .alq-mobile-map-overlay {
-          position: fixed; inset: 0; z-index: 300; background: #EDE8DC;
-          display: flex; flex-direction: column;
-        }
-        .alq-mobile-map-header {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 12px 20px; padding-top: max(12px, env(safe-area-inset-top));
-          background: #EDE8DC; border-bottom: 1px solid #D8D0BC;
-        }
-        .alq-mobile-map-title { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #141414; }
-        .alq-mobile-map-close {
-          width: 36px; height: 36px; border-radius: 10px;
-          border: none; background: rgba(216,208,188,0.5);
-          color: #7A7060; font-size: 20px;
-          display: flex; align-items: center; justify-content: center; cursor: pointer;
-        }
-        .alq-mobile-map-body { flex: 1; position: relative; }
-        @media (prefers-reduced-motion: reduce) {
-          .alq-toast { transition: none; }
-          .alq-fav-count { transition: none; }
-          .cc-pip { transition: none; }
-        }
-
-        /* ===== UTM ZONA BANNER — DESKTOP ===== */
-        .utm-zona-banner { display:flex; align-items:center; gap:16px; padding:14px 20px; margin-bottom:20px; background:rgba(58,106,72,0.06); border:1px solid rgba(58,106,72,0.2); border-radius:14px; font-family:'DM Sans',sans-serif }
-        .utm-zona-text { display:flex; flex-direction:column; gap:2px; flex-shrink:0 }
-        .utm-zona-title { font-size:14px; color:#3A3530; font-weight:500 }
-        .utm-zona-sub { font-size:12px; color:#7A7060 }
-        .utm-zona-chips { display:flex; gap:8px; flex-wrap:wrap }
-        .utm-zona-chip { padding:7px 16px; border-radius:100px; border:1px solid #D8D0BC; background:#FAFAF8; color:#3A3530; font-size:13px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; transition:all 0.15s; white-space:nowrap }
-        .utm-zona-chip:hover { background:#141414; color:#EDE8DC; border-color:#141414 }
-        .utm-zona-close { background:none; border:none; color:#7A7060; font-size:20px; cursor:pointer; padding:4px 8px; flex-shrink:0; line-height:1 }
-        .utm-zona-close:hover { color:#3A3530 }
-
-        /* ===== UTM ZONA BANNER — MOBILE ===== */
-        .utm-zona-banner-mobile { position:fixed; top:max(52px, calc(env(safe-area-inset-top) + 48px)); left:12px; right:12px; z-index:49; padding:14px 16px; background:rgba(250,250,248,0.95); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid #D8D0BC; border-radius:14px; font-family:'DM Sans',sans-serif; box-shadow:0 4px 20px rgba(58,53,48,0.08) }
-        .utm-zona-text-m { font-size:13px; color:#3A3530; margin-bottom:10px; line-height:1.4 }
-        .utm-zona-text-m strong { color:#141414; font-weight:500 }
-        .utm-zona-chips-m { display:flex; gap:6px; flex-wrap:wrap }
-        .utm-zona-chip-m { padding:6px 14px; border-radius:100px; border:1px solid #D8D0BC; background:#FAFAF8; color:#3A3530; font-size:12px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; transition:all 0.15s }
-        .utm-zona-chip-m:active { background:#141414; color:#EDE8DC; border-color:#141414 }
-        .utm-zona-close-m { position:absolute; top:8px; right:10px; background:none; border:none; color:#7A7060; font-size:18px; cursor:pointer; padding:4px; line-height:1 }
-      `}</style>
     </>
   )
 }
@@ -1558,26 +1302,6 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
 
       {isFiltered && <button className="df-reset" onClick={onReset}>Quitar filtros</button>}
 
-      <style jsx>{`
-        .df-wrap { flex: 1; }
-        .df-group { margin-bottom: 18px; }
-        .df-label { font-size: 12px; font-weight: 600; color: #3A3530; letter-spacing: 0.5px; margin-bottom: 8px; font-family: 'DM Sans', sans-serif; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
-        .df-dot { width: 6px; height: 6px; border-radius: 50%; background: #3A6A48; flex-shrink: 0; }
-        .df-zona-btns { display: flex; flex-wrap: wrap; gap: 6px; }
-        .df-zona-btn { padding: 6px 12px; border: 1px solid #D8D0BC; background: #FAFAF8; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; transition: all 0.2s; }
-        .df-zona-btn.active { border-color: #3A6A48; border-width: 2px; color: #141414; background: #FAFAF8; font-weight: 600; box-shadow: 0 2px 8px rgba(58,106,72,0.12); }
-        .df-dorm-btns { display: flex; gap: 8px; }
-        .df-dorm-btn { flex: 1; padding: 9px; border: 1px solid #D8D0BC; background: #FAFAF8; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; transition: all 0.2s; }
-        .df-dorm-btn.active { border-color: #3A6A48; border-width: 2px; color: #141414; background: #FAFAF8; font-weight: 600; box-shadow: 0 2px 8px rgba(58,106,72,0.12); }
-        .df-mascotas.active { background: #3A6A48; color: #EDE8DC; border-color: #3A6A48; box-shadow: none; }
-        .df-amoblado.active { background: #141414; color: #EDE8DC; border-color: #141414; box-shadow: none; }
-        .df-slider { width: 100%; -webkit-appearance: none; appearance: none; height: 2px; background: #D8D0BC; border-radius: 2px; outline: none; }
-        .df-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #FAFAF8; border: 2px solid #141414; cursor: pointer; }
-        .df-slider-val { text-align: right; font-size: 13px; color: #141414; margin-top: 6px; font-weight: 500; font-variant-numeric: tabular-nums; }
-        .df-cta { display: block; width: 100%; padding: 12px; background: #141414; border: none; color: #EDE8DC; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; margin-bottom: 10px; border-radius: 10px; transition: opacity 0.2s; }
-        .df-cta:hover { opacity: 0.9; }
-        .df-reset { display: block; width: 100%; padding: 10px; background: transparent; border: 1px solid #D8D0BC; color: #7A7060; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; }
-      `}</style>
     </div>
   )
 }
@@ -1644,76 +1368,49 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   const displayCount = previewCount !== null ? previewCount : (isFiltered ? filteredCount : totalCount)
 
   return (
-    <div className="fo-overlay">
-      <div className="fo-header">
-        <button className="fo-close" onClick={onClose}>&times;</button>
-        <span className="fo-title">Filtros</span>
-        <span className="fo-count">{displayCount} deptos</span>
+    <div className="afo-overlay">
+      <div className="afo-header">
+        <button className="afo-close" onClick={onClose}>&times;</button>
+        <span className="afo-title">Filtros</span>
+        <span className="afo-count">{displayCount} deptos</span>
       </div>
-      <div className="fo-body">
+      <div className="afo-body">
         {/* Microzonas */}
-        <div className="fo-group"><div className="fo-label"><span className="fo-dot" />MICROZONA</div>
-          <div className="fo-zonas">{ZONAS_ALQUILER_UI.filter(z => z.id !== 'sin_zona').map(z => (
-            <button key={z.id} className={`fo-zona-btn ${selectedZonas.has(z.id) ? 'active' : ''}`} onClick={() => toggleZona(z.id)}>{z.label}</button>
+        <div className="afo-group"><div className="afo-label"><span className="afo-dot" />MICROZONA</div>
+          <div className="afo-zonas">{ZONAS_ALQUILER_UI.filter(z => z.id !== 'sin_zona').map(z => (
+            <button key={z.id} className={`afo-zona-btn ${selectedZonas.has(z.id) ? 'active' : ''}`} onClick={() => toggleZona(z.id)}>{z.label}</button>
           ))}</div>
         </div>
         {/* Budget */}
-        <div className="fo-group"><div className="fo-label"><span className="fo-dot" />PRESUPUESTO MAXIMO</div>
-          <input type="range" className="fo-slider" min={2000} max={MAX_SLIDER_PRICE} step={500} value={maxPrice} onChange={e => setMaxPrice(parseInt(e.target.value))} />
-          <div className="fo-slider-val">{formatPrice(maxPrice)}/mes</div>
+        <div className="afo-group"><div className="afo-label"><span className="afo-dot" />PRESUPUESTO MAXIMO</div>
+          <input type="range" className="afo-slider" min={2000} max={MAX_SLIDER_PRICE} step={500} value={maxPrice} onChange={e => setMaxPrice(parseInt(e.target.value))} />
+          <div className="afo-slider-val">{formatPrice(maxPrice)}/mes</div>
         </div>
         {/* Dorms */}
-        <div className="fo-group"><div className="fo-label"><span className="fo-dot" />DORMITORIOS</div>
-          <div className="fo-dorms">{[0,1,2,3].map(d => (
-            <button key={d} className={`fo-dorm-btn ${selectedDorms.has(d) ? 'active' : ''}`} onClick={() => toggleDorm(d)}>{d === 0 ? 'Mono' : d === 3 ? '3+' : d}</button>
+        <div className="afo-group"><div className="afo-label"><span className="afo-dot" />DORMITORIOS</div>
+          <div className="afo-dorms">{[0,1,2,3].map(d => (
+            <button key={d} className={`afo-dorm-btn ${selectedDorms.has(d) ? 'active' : ''}`} onClick={() => toggleDorm(d)}>{d === 0 ? 'Mono' : d === 3 ? '3+' : d}</button>
           ))}</div>
         </div>
         {/* Toggles */}
-        <div className="fo-group"><div className="fo-dorms">
-          <button className={`fo-dorm-btn fo-amoblado ${amoblado ? 'active' : ''}`} onClick={() => setAmoblado(!amoblado)}>Amoblado</button>
-          <button className={`fo-dorm-btn fo-mascotas ${mascotas ? 'active' : ''}`} onClick={() => setMascotas(!mascotas)}>Mascotas</button>
-          <button className={`fo-dorm-btn ${conParqueo ? 'active' : ''}`} onClick={() => setConParqueo(!conParqueo)}>Parqueo</button>
+        <div className="afo-group"><div className="afo-dorms">
+          <button className={`afo-dorm-btn afo-amoblado ${amoblado ? 'active' : ''}`} onClick={() => setAmoblado(!amoblado)}>Amoblado</button>
+          <button className={`afo-dorm-btn afo-mascotas ${mascotas ? 'active' : ''}`} onClick={() => setMascotas(!mascotas)}>Mascotas</button>
+          <button className={`afo-dorm-btn ${conParqueo ? 'active' : ''}`} onClick={() => setConParqueo(!conParqueo)}>Parqueo</button>
         </div></div>
         {/* Orden */}
-        <div className="fo-group"><div className="fo-label"><span className="fo-dot" />ORDENAR POR</div>
-          <div className="fo-dorms">{ORDEN_OPTIONS.map(o => (
-            <button key={o.value} className={`fo-dorm-btn ${orden === o.value ? 'active' : ''}`} onClick={() => setOrden(o.value)}>{o.label}</button>
+        <div className="afo-group"><div className="afo-label"><span className="afo-dot" />ORDENAR POR</div>
+          <div className="afo-dorms">{ORDEN_OPTIONS.map(o => (
+            <button key={o.value} className={`afo-dorm-btn ${orden === o.value ? 'active' : ''}`} onClick={() => setOrden(o.value)}>{o.label}</button>
           ))}</div>
         </div>
       </div>
-      <div className="fo-footer">
-        {isFiltered && <button className="fo-reset" onClick={handleReset}>Quitar filtros</button>}
-        <button className="fo-apply" onClick={handleApply}>
+      <div className="afo-footer">
+        {isFiltered && <button className="afo-reset" onClick={handleReset}>Quitar filtros</button>}
+        <button className="afo-apply" onClick={handleApply}>
           VER {displayCount} RESULTADOS
         </button>
       </div>
-      <style jsx>{`
-        .fo-overlay{position:fixed;inset:0;z-index:200;background:#EDE8DC;display:flex;flex-direction:column;animation:foSlideUp 0.3s ease-out;}
-        @keyframes foSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-        .fo-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;padding-top:max(16px, calc(env(safe-area-inset-top) + 8px));border-bottom:1px solid #D8D0BC;}
-        .fo-close{width:36px;height:36px;border-radius:50%;border:none;background:rgba(20,20,20,0.06);color:#7A7060;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
-        .fo-title{font-family:'Figtree',sans-serif;font-size:18px;font-weight:500;color:#141414;}
-        .fo-count{font-family:'DM Sans',sans-serif;font-size:13px;color:#7A7060;}
-        .fo-body{flex:1;overflow-y:auto;padding:20px;}
-        .fo-footer{padding:16px 20px;padding-bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px));border-top:1px solid #D8D0BC;display:flex;gap:10px;}
-        .fo-reset{flex:0 0 auto;padding:14px 20px;background:transparent;border:1px solid #D8D0BC;border-radius:10px;color:#7A7060;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;}
-        .fo-apply{flex:1;padding:14px;background:#141414;border:none;border-radius:10px;color:#EDE8DC;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;}
-        .fo-apply:active{transform:scale(0.97);}
-        .fo-group{margin-bottom:18px;}
-        .fo-label{font-size:12px;font-weight:600;color:#3A3530;letter-spacing:0.5px;margin-bottom:8px;font-family:'DM Sans',sans-serif;text-transform:uppercase;display:flex;align-items:center;gap:6px;}
-        .fo-dot{width:6px;height:6px;border-radius:50%;background:#3A6A48;flex-shrink:0;}
-        .fo-zonas{display:flex;flex-wrap:wrap;gap:7px;}
-        .fo-zona-btn{padding:8px 16px;border:1px solid #D8D0BC;background:#FAFAF8;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:10px;transition:all 0.2s;}
-        .fo-zona-btn.active{border-color:#3A6A48;border-width:2px;color:#141414;background:#FAFAF8;font-weight:600;box-shadow:0 2px 8px rgba(58,106,72,0.12);}
-        .fo-dorms{display:flex;gap:8px;}
-        .fo-dorm-btn{flex:1;padding:12px;border:1px solid #D8D0BC;background:#FAFAF8;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;border-radius:10px;transition:all 0.2s;}
-        .fo-dorm-btn.active{border-color:#3A6A48;border-width:2px;color:#141414;background:#FAFAF8;font-weight:600;box-shadow:0 2px 8px rgba(58,106,72,0.12);}
-        .fo-mascotas.active{background:#3A6A48;color:#EDE8DC;border-color:#3A6A48;box-shadow:none;}
-        .fo-amoblado.active{background:#141414;color:#EDE8DC;border-color:#141414;box-shadow:none;}
-        .fo-slider{width:100%;-webkit-appearance:none;appearance:none;height:3px;background:#D8D0BC;border-radius:2px;outline:none;}
-        .fo-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#FAFAF8;border:2px solid #141414;cursor:pointer;}
-        .fo-slider-val{text-align:right;font-size:15px;color:#141414;margin-top:6px;font-weight:600;font-family:'DM Sans',sans-serif;font-variant-numeric:tabular-nums;}
-      `}</style>
     </div>
   )
 }
@@ -1771,83 +1468,6 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
             )}
           </div>
         </div>
-        <style jsx>{`
-          .mfc-mobile {
-            position: absolute; bottom: 12px; left: 12px; right: 12px; z-index: 1000;
-            background: #FAFAF8; border: 1px solid #D8D0BC;
-            border-radius: 14px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-            display: flex; flex-direction: row;
-            animation: mfcSlideUp 0.25s ease-out;
-          }
-          @keyframes mfcSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-          .mfc-m-close {
-            position: absolute; top: 6px; right: 6px; z-index: 2;
-            width: 24px; height: 24px; border-radius: 50%; background: rgba(20,20,20,0.7);
-            border: none; color: rgba(255,255,255,0.8); font-size: 14px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-          }
-          .mfc-m-photo {
-            width: 140px; min-height: 150px; flex-shrink: 0;
-            background-size: cover; background-position: center; background-color: #D8D0BC;
-            position: relative;
-          }
-          .mfc-m-fav {
-            position: absolute; top: 6px; left: 6px; z-index: 2;
-            width: 30px; height: 30px; border-radius: 50%; background: rgba(20,20,20,0.6);
-            border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
-          }
-          .mfc-m-fav.active { background: rgba(224,85,85,0.15); }
-          .map-float-photo-count {
-            position: absolute; bottom: 6px; right: 6px;
-            display: flex; align-items: center; gap: 3px;
-            background: rgba(20,20,20,0.7); padding: 2px 8px; border-radius: 100px;
-            font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.85);
-            font-family: 'DM Sans', sans-serif;
-          }
-          .mfp-nav {
-            position: absolute; top: 50%; transform: translateY(-50%);
-            width: 26px; height: 26px; border-radius: 50%; background: rgba(20,20,20,0.6);
-            border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
-            z-index: 2;
-          }
-          .mfp-prev { left: 4px; }
-          .mfp-next { right: 4px; }
-          .mfc-m-body {
-            flex: 1; padding: 12px 14px; display: flex; flex-direction: column; justify-content: center;
-            min-width: 0;
-          }
-          .mfc-m-name {
-            font-family: 'Figtree', sans-serif; font-size: 18px; font-weight: 500;
-            color: #141414; line-height: 1.2; margin-bottom: 3px;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-          }
-          .mfc-m-specs {
-            font-size: 12px; color: #7A7060; letter-spacing: 0.3px;
-            margin-bottom: 4px; font-family: 'DM Sans', sans-serif;
-          }
-          .mfc-m-price {
-            font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 500;
-            color: #141414; line-height: 1; margin-bottom: 6px; font-variant-numeric: tabular-nums;
-          }
-          .mfc-m-price span { font-size: 13px; color: #7A7060; }
-          .mfc-m-badges { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
-          .mfc-m-badge {
-            font-size: 12px; padding: 2px 6px; border-radius: 100px;
-            border: 1px solid #D8D0BC; color: #3A3530;
-            font-family: 'DM Sans', sans-serif;
-          }
-          .mfc-m-actions { display: flex; gap: 6px; }
-          .mfc-m-btn-detail {
-            flex: 1; padding: 7px; background: transparent; border: 1px solid #D8D0BC;
-            color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px;
-            font-weight: 500; cursor: pointer; border-radius: 10px;
-          }
-          .mfc-m-btn-wsp {
-            flex: 1; padding: 7px; background: #1EA952; border: none; border-radius: 10px;
-            color: #fff; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
-            text-decoration: none; text-align: center;
-          }
-        `}</style>
       </div>
     )
   }
@@ -1891,89 +1511,12 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
           )}
         </div>
       </div>
-      <style jsx>{`
-        .map-float-card {
-          position: absolute; bottom: 20px; left: 20px; z-index: 1000;
-          width: 320px; background: #FAFAF8; border: 1px solid #D8D0BC;
-          border-radius: 14px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-          animation: mapFloatIn 0.25s ease-out;
-        }
-        @keyframes mapFloatIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        .map-float-close {
-          position: absolute; top: 8px; right: 8px; z-index: 2;
-          width: 28px; height: 28px; border-radius: 50%; background: rgba(20,20,20,0.7);
-          border: none; color: rgba(255,255,255,0.8); font-size: 16px; cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .map-float-fav {
-          position: absolute; top: 8px; left: 8px; z-index: 2;
-          width: 36px; height: 36px; border-radius: 50%; background: rgba(20,20,20,0.6);
-          border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
-          transition: transform 0.15s;
-        }
-        .map-float-fav:hover { transform: scale(1.1); }
-        .map-float-fav.active { background: rgba(224,85,85,0.15); }
-        .map-float-photo {
-          height: 140px; background-size: cover; background-position: center; background-color: #D8D0BC;
-          position: relative;
-        }
-        .map-float-photo-count {
-          position: absolute; bottom: 8px; right: 8px;
-          display: flex; align-items: center; gap: 4px;
-          background: rgba(20,20,20,0.7); padding: 4px 10px; border-radius: 100px;
-          font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.85);
-          font-family: 'DM Sans', sans-serif;
-        }
-        .mfp-nav {
-          position: absolute; top: 50%; transform: translateY(-50%);
-          width: 32px; height: 32px; border-radius: 50%; background: rgba(20,20,20,0.6);
-          border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
-          z-index: 2; transition: background 0.15s;
-        }
-        .mfp-nav:hover { background: rgba(20,20,20,0.85); }
-        .mfp-prev { left: 6px; }
-        .mfp-next { right: 6px; }
-        .map-float-body { padding: 14px 16px; }
-        .map-float-name {
-          font-family: 'Figtree', sans-serif; font-size: 19px; font-weight: 500;
-          color: #141414; line-height: 1.2; margin-bottom: 2px;
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .map-float-zona {
-          font-size: 12px; color: #7A7060; letter-spacing: 0.5px;
-          margin-bottom: 8px; font-family: 'DM Sans', sans-serif;
-        }
-        .map-float-price {
-          font-family: 'DM Sans', sans-serif; font-size: 26px; font-weight: 500;
-          color: #141414; line-height: 1; margin-bottom: 8px; font-variant-numeric: tabular-nums;
-        }
-        .map-float-price span { font-size: 14px; color: #7A7060; }
-        .map-float-badges { display: flex; gap: 5px; margin-bottom: 10px; }
-        .map-float-badge {
-          font-size: 12px; padding: 3px 8px; border-radius: 100px;
-          border: 1px solid #D8D0BC; color: #3A3530;
-          font-family: 'DM Sans', sans-serif;
-        }
-        .map-float-actions { display: flex; gap: 8px; }
-        .map-float-btn-detail {
-          flex: 1; padding: 9px; background: transparent; border: 1px solid #D8D0BC;
-          color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px;
-          font-weight: 500; cursor: pointer; border-radius: 10px; transition: all 0.2s;
-        }
-        .map-float-btn-detail:hover { border-color: #7A7060; color: #141414; }
-        .map-float-btn-wsp {
-          flex: 1; padding: 9px; background: #1EA952; border: none; border-radius: 10px;
-          color: #fff; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
-          text-decoration: none; text-align: center; transition: opacity 0.2s;
-        }
-        .map-float-btn-wsp:hover { opacity: 0.9; }
-      `}</style>
     </div>
   )
 }
 
 // ===== DESKTOP CARD =====
-function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare, isFirst }: {
+const DesktopCard = memo(function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare, isFirst }: {
   property: UnidadAlquiler; isFavorite: boolean; favoritesCount: number; petFilterActive?: boolean
   onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void; isFirst?: boolean
 }) {
@@ -2082,47 +1625,15 @@ function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive,
         </div>
       </div>
 
-      <style jsx>{`
-        .dc-card { background: #FAFAF8; border: 1px solid #D8D0BC; border-radius: 14px; overflow: hidden; transition: transform 0.25s, box-shadow 0.25s; display: flex; flex-direction: column; }
-        .dc-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(58,53,48,0.08); }
-        .dc-photo { height: 220px; background-size: cover; background-position: center; background-color: #D8D0BC; position: relative; animation: dcShimmer 1.5s ease-in-out infinite; }
-        @keyframes dcShimmer { 0%,100%{background-color:#D8D0BC} 50%{background-color:#EDE8DC} }
-        .dc-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(20,20,20,0.6); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .dc-prev { left: 8px; }
-        .dc-next { right: 8px; }
-        .dc-photo-count { position: absolute; top: 10px; right: 10px; background: rgba(20,20,20,0.6); padding: 3px 10px; border-radius: 100px; font-size: 12px; color: rgba(255,255,255,0.8); font-family: 'DM Sans', sans-serif; }
-        .dc-content { padding: 16px; flex: 1; display: flex; flex-direction: column; }
-        .dc-name { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #141414; line-height: 1.2; margin-bottom: 2px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-        .dc-reciente { font-size: 11px; font-weight: 500; color: #3A6A48; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; }
-        .dc-zona { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
-        .dc-id { color: #7A7060; font-size: 12px; margin-left: 4px; letter-spacing: 0; }
-        .dc-price-block { border-left: 3px solid #3A6A48; padding-left: 12px; margin-bottom: 8px; }
-        .dc-price { font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 500; color: #141414; line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
-        .dc-price span { font-size: 14px; color: #7A7060; }
-        .dc-specs { font-size: 15px; font-weight: 300; color: #3A3530; font-family: 'DM Sans', sans-serif; }
-        .dc-specs-2 { font-size: 14px; font-weight: 300; color: #7A7060; font-family: 'DM Sans', sans-serif; margin-bottom: 10px; display: flex; align-items: center; flex-wrap: wrap; }
-        .dc-highlight { font-weight: 500; color: #3A3530; margin-right: 4px; }
-        .dc-highlight::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-        .dc-highlight.gold::before { background: #141414; }
-        .dc-highlight.green::before { background: #3A6A48; }
-        .dc-card.pet-confirmed { border-left: 3px solid rgba(168,85,247,0.4); }
-        .dc-actions { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #D8D0BC; padding-top: 8px; margin-top: auto; min-height: 36px; }
-        .dc-act-btn { display: flex; align-items: center; gap: 4px; background: none; border: none; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 6px 0; transition: color 0.15s; text-decoration: none; min-height: 36px; }
-        .dc-act-btn:hover { color: #141414; }
-        .dc-act-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
-        .dc-act-detail { color: #EDE8DC; background: #141414; padding: 6px 12px; font-weight: 500; border-radius: 8px; font-size: 12px; }
-        .dc-act-detail:hover { background: #3A3530; }
-        .dc-wsp-inline { display: flex; align-items: center; gap: 5px; color: #1EA952; font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 600; text-decoration: none; padding: 6px 14px; background: rgba(30,169,82,0.1); border-radius: 10px; min-height: 36px; transition: opacity 0.15s; }
-        .dc-wsp-inline:hover { opacity: 0.7; }
-        @media (prefers-reduced-motion: reduce) {
-          .dc-photo { animation: none; }
-          .dc-card { transition: none; }
-          .dc-fav-btn { transition: none; }
-        }
-      `}</style>
     </div>
   )
-}
+}, (prev, next) =>
+  prev.property === next.property &&
+  prev.isFavorite === next.isFavorite &&
+  prev.favoritesCount === next.favoritesCount &&
+  prev.isFirst === next.isFirst &&
+  prev.petFilterActive === next.petFilterActive
+)
 
 // ===== MOBILE PROPERTY CARD (full-screen) =====
 const MobilePropertyCard = memo(function MobilePropertyCard({
@@ -2158,18 +1669,18 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
     <div className={`alq-card${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}`} ref={cardRef}>
       <PhotoCarousel photos={p.fotos_urls || []} isFirst={isFirst} showHint={showHint} onPhotoTap={onPhotoTap} propertyId={p.id} />
       {isSpotlight && (
-        <div className="mc-spotlight-badge">Te compartieron este depto</div>
+        <div className="amc-spotlight-badge">Te compartieron este depto</div>
       )}
-      <div className="mc-content">
-        <div className="mc-name">{displayName}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="mc-reciente">Publicación reciente</span>}</div>
-        <div className="mc-zona">{displayZona(p.zona)} <span className="mc-id">#{p.id}</span></div>
-        <div className="mc-price-block">
-          <div className="mc-price">{formatPrice(p.precio_mensual_bob)}/mes</div>
-          <div className="mc-specs">{p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · Piso ${p.piso}` : ''}</div>
+      <div className="amc-content">
+        <div className="amc-name">{displayName}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="amc-reciente">Publicación reciente</span>}</div>
+        <div className="amc-zona">{displayZona(p.zona)} <span className="amc-id">#{p.id}</span></div>
+        <div className="amc-price-block">
+          <div className="amc-price">{formatPrice(p.precio_mensual_bob)}/mes</div>
+          <div className="amc-specs">{p.area_m2}m² · {dormLabel(p.dormitorios)} · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · Piso ${p.piso}` : ''}</div>
         </div>
-        <div className="mc-specs-2">
-          {(p.amoblado === 'si' || p.amoblado === 'semi') && <span className="mc-highlight gold">{p.amoblado === 'si' ? 'Amoblado' : 'Semi-amoblado'}</span>}
-          {p.acepta_mascotas && <span className="mc-highlight green">Mascotas</span>}
+        <div className="amc-specs-2">
+          {(p.amoblado === 'si' || p.amoblado === 'semi') && <span className="amc-highlight gold">{p.amoblado === 'si' ? 'Amoblado' : 'Semi-amoblado'}</span>}
+          {p.acepta_mascotas && <span className="amc-highlight green">Mascotas</span>}
           {[
             p.estacionamientos && p.estacionamientos > 0 ? `${p.estacionamientos} parqueo` : null,
             p.baulera ? 'Baulera' : null,
@@ -2177,28 +1688,28 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
           ].filter(Boolean).map((t, i) => <span key={i}>{i > 0 || p.amoblado || p.acepta_mascotas ? '  ·  ' : ''}{t}</span>)}
         </div>
         {p.descripcion && (
-          <div className="mc-razon">&ldquo;{p.descripcion.slice(0, 120)}{p.descripcion.length > 120 ? '...' : ''}&rdquo;</div>
+          <div className="amc-razon">&ldquo;{p.descripcion.slice(0, 120)}{p.descripcion.length > 120 ? '...' : ''}&rdquo;</div>
         )}
-        <div className="mc-actions">
-          <button className={`mc-btn mc-fav ${isFavorite ? 'active' : ''} ${shakeBtn ? 'shake' : ''}`} aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'} onClick={handleFavorite}>
+        <div className="amc-actions">
+          <button className={`amc-btn amc-fav ${isFavorite ? 'active' : ''} ${shakeBtn ? 'shake' : ''}`} aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'} onClick={handleFavorite}>
             <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
           {onShare && (
-            <button className="mc-btn mc-share" aria-label="Compartir por WhatsApp" onClick={onShare}>
+            <button className="amc-btn amc-share" aria-label="Compartir por WhatsApp" onClick={onShare}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
                 <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
               </svg> Compartir
             </button>
           )}
-          <button className="mc-btn mc-info" onClick={onOpenInfo}>
+          <button className="amc-btn amc-info" onClick={onOpenInfo}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
           {p.agente_whatsapp && (
-            <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi este alquiler en Simon y me interesa: ${p.nombre_edificio || p.nombre_proyecto || 'Departamento'} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_mobile')} className="mc-wsp-inline-mobile">
+            <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi este alquiler en Simon y me interesa: ${p.nombre_edificio || p.nombre_proyecto || 'Departamento'} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_mobile')} className="amc-wsp-inline-mobile">
               <svg viewBox="0 0 24 24" fill="#1EA952" style={{width:14,height:14}}>
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
               </svg>
@@ -2206,46 +1717,10 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
             </a>
           )}
         </div>
-        <a href="/landing-v2" className="mc-brand">simonbo.com</a>
+        <a href="/landing-v2" className="amc-brand">simonbo.com</a>
       </div>
-      {isFirst && <div className="mc-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" style={{width:18,height:18}}><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>}
+      {isFirst && <div className="amc-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" style={{width:18,height:18}}><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>}
 
-      <style jsx>{`
-        .alq-card { height: 100vh; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #EDE8DC; }
-        .mc-content { flex: 0 0 auto; padding: 0 24px 8px; padding-bottom: max(8px, calc(env(safe-area-inset-bottom) + 4px)); display: flex; flex-direction: column; }
-        .mc-name { font-family: 'Figtree', sans-serif; font-size: 24px; font-weight: 500; color: #141414; line-height: 1.1; margin-bottom: 2px; padding-top: 12px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-        .mc-reciente { font-size: 11px; font-weight: 500; color: #3A6A48; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; }
-        .mc-zona { font-size: 13px; color: #7A7060; letter-spacing: 0.3px; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
-        .mc-id { color: #7A7060; font-size: 12px; margin-left: 4px; letter-spacing: 0; }
-        .mc-price-block { border-left: 3px solid #3A6A48; padding-left: 14px; margin-bottom: 8px; }
-        .mc-price { font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 500; color: #141414; line-height: 1; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
-        .mc-specs { font-size: 15px; font-weight: 300; color: #3A3530; font-family: 'DM Sans', sans-serif; }
-        .mc-specs-2 { font-size: 15px; font-weight: 300; color: #7A7060; font-family: 'DM Sans', sans-serif; margin-bottom: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 0; }
-        .mc-highlight { font-weight: 500; color: #3A3530; margin-right: 4px; }
-        .mc-highlight::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-        .mc-highlight.gold::before { background: #141414; }
-        .mc-highlight.green::before { background: #3A6A48; }
-        .alq-card.pet-confirmed { border-left: 3px solid rgba(168,85,247,0.4); }
-        .mc-razon { font-size: 12px; font-weight: 300; color: #7A7060; line-height: 1.5; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; flex-shrink: 1; }
-        .mc-actions { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 1px solid #D8D0BC; margin-top: auto; min-height: 36px; }
-        .mc-btn { display: flex; align-items: center; gap: 4px; background: none; border: none; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 6px 0; min-width: 36px; min-height: 36px; }
-        .mc-btn.mc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
-        .mc-btn.mc-share { color: #7A7060; }
-        .mc-btn.mc-info { color: #EDE8DC; font-size: 12px; background: #141414; padding: 6px 12px; font-weight: 500; border-radius: 8px; min-width: 0; min-height: 0; }
-        .mc-wsp-inline-mobile { display: flex; align-items: center; gap: 5px; color: #1EA952; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-decoration: none; padding: 6px 14px; background: rgba(30,169,82,0.1); border-radius: 10px; cursor: pointer; white-space: nowrap; min-height: 36px; }
-        .mc-wsp-inline-mobile:active { opacity: 0.7; }
-        .mc-brand { display: block; text-align: center; font-family: 'DM Sans', sans-serif; font-size: 11px; color: rgba(58,53,48,0.5); text-decoration: none; margin-top: 2px; letter-spacing: 0.3px; }
-        .mc-btn.shake { animation: mcShake 0.3s ease; }
-        @keyframes mcShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
-        .mc-spotlight-badge { position: absolute; top: max(56px, calc(env(safe-area-inset-top) + 50px)); left: 16px; z-index: 10; background: rgba(250,250,248,0.92); border-left: 3px solid #3A6A48; padding: 8px 14px; border-radius: 0 14px 14px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #3A3530; letter-spacing: 0.3px; }
-        .mc-scroll-hint { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); z-index: 10; animation: mcBounce 2s infinite; opacity: 0.25; }
-        @keyframes mcBounce { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-5px)} }
-        @media (prefers-reduced-motion: reduce) {
-          .mc-btn.shake { animation: none; }
-          .mc-scroll-hint { animation: none; }
-          .mc-wsp-inline-mobile { transition: none; }
-        }
-      `}</style>
     </div>
   )
 }, (prev, next) =>
@@ -2357,148 +1832,6 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap, propertyId }: { 
           Desliza para mas fotos
         </div>
       )}
-      <style jsx>{`
-        .pc-zone { flex: 1 1 60%; min-height: 0; position: relative; overflow: hidden; }
-        .pc-zone::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 70px; background: linear-gradient(rgba(0,0,0,0.3), transparent); pointer-events: none; z-index: 2; }
-        .pc-zone::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 24px; background: linear-gradient(transparent, #EDE8DC); pointer-events: none; z-index: 2; }
-        .pc-scroll { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-        .pc-scroll::-webkit-scrollbar { display: none; }
-        .pc-slide { flex: 0 0 100%; height: 100%; background-size: cover; background-position: center; background-color: #D8D0BC; scroll-snap-align: start; animation: imgShimmer 1.5s ease-in-out infinite; position: relative; overflow: hidden; }
-        .pc-slide-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; pointer-events: none; }
-        @keyframes imgShimmer { 0%,100%{background-color:#D8D0BC} 50%{background-color:#EDE8DC} }
-        .pc-counter { position: absolute; bottom: 36px; right: 16px; z-index: 5; background: rgba(20,20,20,0.75); padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 5px; font-family: 'DM Sans', sans-serif; }
-        .pc-dots { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 5; }
-        .pc-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(20,20,20,0.25); transition: all 0.25s; }
-        .pc-dot.active { background: #141414; width: 20px; border-radius: 3px; }
-        .pc-swipe-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 10; display: flex; align-items: center; gap: 8px; background: rgba(20,20,20,0.65); padding: 10px 20px; border-radius: 100px; color: rgba(255,255,255,0.8); font-size: 13px; font-family: 'DM Sans', sans-serif; pointer-events: none; animation: pcFade 3s ease-in-out forwards; }
-        @keyframes pcFade { 0%{opacity:0} 15%{opacity:1} 70%{opacity:1} 100%{opacity:0} }
-        @media (prefers-reduced-motion: reduce) {
-          .pc-slide { animation: none; }
-          .pc-swipe-hint { animation: none; opacity: 0.7; }
-          .pc-dot { transition: none; }
-        }
-      `}</style>
-    </div>
-  )
-}
-
-// ===== MOBILE FILTER CARD =====
-function MobileFilterCard({ totalCount, filteredCount, currentFilters, isFiltered, onApply, onReset }: {
-  totalCount: number; filteredCount: number; currentFilters: FiltrosAlquiler; isFiltered: boolean
-  onApply: (f: FiltrosAlquiler) => void; onReset: () => void
-}) {
-  const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
-  const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set())
-  const [amoblado, setAmoblado] = useState(currentFilters.amoblado || false)
-  const [mascotas, setMascotas] = useState(currentFilters.acepta_mascotas || false)
-  const [conParqueo, setConParqueo] = useState(currentFilters.con_parqueo || false)
-  const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set(currentFilters.zonas_permitidas || []))
-  const [orden, setOrden] = useState<FiltrosAlquiler['orden']>(currentFilters.orden || 'recientes')
-  const [previewCount, setPreviewCount] = useState<number | null>(null)
-  const previewRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isFirstRender = useRef(true)
-  const [isDirty, setIsDirty] = useState(false)
-
-  // Build filters from current local state
-  const buildFilters = useCallback((): FiltrosAlquiler => {
-    const f: FiltrosAlquiler = { orden: orden || 'recientes', limite: 200, solo_con_fotos: true }
-    if (maxPrice < MAX_SLIDER_PRICE) f.precio_mensual_max = maxPrice
-    if (selectedDorms.size > 0) f.dormitorios_lista = Array.from(selectedDorms)
-    if (amoblado) f.amoblado = true
-    if (mascotas) f.acepta_mascotas = true
-    if (conParqueo) f.con_parqueo = true
-    if (selectedZonas.size > 0) f.zonas_permitidas = Array.from(selectedZonas)
-    return f
-  }, [maxPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden])
-
-  // Preview count: debounced RPC call as filters change
-  useEffect(() => {
-    if (isFirstRender.current) { isFirstRender.current = false; return }
-    setIsDirty(true)
-    if (previewRef.current) clearTimeout(previewRef.current)
-    previewRef.current = setTimeout(async () => {
-      const f = buildFilters()
-      const { data } = await fetchFromAPI({ ...f, limite: 200 })
-      const total = data.length
-      setPreviewCount(total)
-    }, 400)
-    return () => { if (previewRef.current) clearTimeout(previewRef.current) }
-  }, [buildFilters])
-
-  function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); return n }) }
-  function toggleZona(id: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n }) }
-  function handleApply() {
-    setIsDirty(false)
-    onApply(buildFilters())
-  }
-
-  return (
-    <div className="alq-card mfc" id="filterCard">
-      {/* Compact header: count + label */}
-      <div className="mfc-header">
-        <span className="mfc-count">{previewCount !== null ? previewCount : (isFiltered ? filteredCount : totalCount)}</span>
-        <span className="mfc-sub">{previewCount !== null || isFiltered ? `de ${totalCount} alquileres` : 'alquileres en Equipetrol'}</span>
-      </div>
-      <div className="mfc-divider"><span className="mfc-line"/><span className="mfc-divider-text">Filtra</span><span className="mfc-line"/></div>
-
-      <div className="mfc-filters">
-        <div className="mfc-group"><div className="mfc-gl"><span className="mfc-dot"/>MICROZONA</div>
-          <div className="mfc-zonas">{ZONAS_ALQUILER_UI.filter(z => z.id !== 'sin_zona').map(z => <button key={z.id} className={`mfc-zb ${selectedZonas.has(z.id)?'active':''}`} onClick={()=>toggleZona(z.id)}>{z.label}</button>)}</div>
-        </div>
-        <div className="mfc-group"><div className="mfc-gl"><span className="mfc-dot"/>PRESUPUESTO MAXIMO</div>
-          <input type="range" className="mfc-slider" min={2000} max={MAX_SLIDER_PRICE} step={500} value={maxPrice} onChange={e=>setMaxPrice(parseInt(e.target.value))}/>
-          <div className="mfc-sv">{formatPrice(maxPrice)}/mes</div>
-        </div>
-        <div className="mfc-group"><div className="mfc-gl"><span className="mfc-dot"/>DORMITORIOS</div>
-          <div className="mfc-dorms">{[0,1,2,3].map(d=><button key={d} className={`mfc-db ${selectedDorms.has(d)?'active':''}`} onClick={()=>toggleDorm(d)}>{d===0?'Mono':d===3?'3+':d}</button>)}</div>
-        </div>
-        <div className="mfc-group"><div className="mfc-dorms">
-          <button className={`mfc-db mfc-amoblado ${amoblado?'active':''}`} onClick={()=>setAmoblado(!amoblado)}>Amoblado</button>
-          <button className={`mfc-db mfc-mascotas ${mascotas?'active':''}`} onClick={()=>setMascotas(!mascotas)}>Mascotas</button>
-          <button className={`mfc-db ${conParqueo?'active':''}`} onClick={()=>setConParqueo(!conParqueo)}>Parqueo</button>
-        </div></div>
-        <div className="mfc-group"><div className="mfc-gl"><span className="mfc-dot"/>ORDENAR POR</div>
-          <div className="mfc-dorms">{ORDEN_OPTIONS.map(o=><button key={o.value} className={`mfc-db ${orden===o.value?'active':''}`} onClick={()=>setOrden(o.value)}>{o.label}</button>)}</div>
-        </div>
-      </div>
-      <button className={`mfc-cta ${isDirty ? 'mfc-cta-dirty' : ''}`} onClick={handleApply}>
-        {isDirty
-          ? `APLICAR FILTROS${previewCount !== null ? ` · ${previewCount}` : ''}`
-          : `FILTRAR${previewCount !== null ? ` · ${previewCount}` : ''}`
-        }
-      </button>
-      {isFiltered && <button className="mfc-reset" onClick={onReset}>Quitar filtros · ver todas</button>}
-      <div className="mfc-skip">segui explorando &darr;</div>
-      <style jsx>{`
-        .mfc { display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;padding:60px 28px 20px;padding-bottom:max(20px,calc(env(safe-area-inset-bottom) + 8px));height:100vh;height:100dvh;scroll-snap-align:start;background:#EDE8DC;overflow-y:auto; }
-        .mfc-header { display:flex;align-items:baseline;gap:8px;margin-bottom:6px; }
-        .mfc-count { font-family:'Figtree',sans-serif;font-size:40px;font-weight:500;color:#141414;line-height:1;font-variant-numeric:tabular-nums; }
-        .mfc-sub { font-size:15px;font-weight:400;color:#7A7060;font-family:'DM Sans',sans-serif; }
-        .mfc-divider { display:flex;align-items:center;gap:12px;margin-bottom:14px; }
-        .mfc-line { flex:1;height:1px;background:#D8D0BC; }
-        .mfc-divider-text { font-size:12px;color:#3A3530;letter-spacing:0.5px;font-family:'DM Sans',sans-serif;text-transform:uppercase; }
-        .mfc-filters { width:100%;max-width:320px;margin-bottom:16px; }
-        .mfc-group { margin-bottom:12px;text-align:left; }
-        .mfc-gl { font-size:12px;font-weight:600;color:#3A3530;letter-spacing:0.5px;margin-bottom:7px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px; }
-        .mfc-dot { width:6px;height:6px;border-radius:50%;background:#3A6A48;flex-shrink:0; }
-        .mfc-zonas { display:flex;flex-wrap:wrap;gap:7px; }
-        .mfc-zb { padding:7px 14px;border:1px solid #D8D0BC;background:#FAFAF8;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:10px;transition:all 0.2s; }
-        .mfc-zb.active { border-color:#3A6A48;border-width:2px;color:#141414;background:#FAFAF8;font-weight:600;box-shadow:0 2px 8px rgba(58,106,72,0.12); }
-        .mfc-dorms { display:flex;gap:8px; }
-        .mfc-db { flex:1;padding:10px;border:1px solid #D8D0BC;background:#FAFAF8;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:10px;transition:all 0.2s; }
-        .mfc-db.active { border-color:#3A6A48;border-width:2px;color:#141414;background:#FAFAF8;font-weight:600;box-shadow:0 2px 8px rgba(58,106,72,0.12); }
-        .mfc-mascotas.active { background:#3A6A48;color:#EDE8DC;border-color:#3A6A48; }
-        .mfc-amoblado.active { background:#141414;color:#EDE8DC;border-color:#141414; }
-        .mfc-slider { width:100%;-webkit-appearance:none;appearance:none;height:3px;background:#D8D0BC;border-radius:2px;outline:none; }
-        .mfc-slider::-webkit-slider-thumb { -webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#FAFAF8;border:2px solid #141414;cursor:pointer; }
-        .mfc-sv { text-align:right;font-size:15px;color:#141414;margin-top:4px;font-weight:600;font-family:'DM Sans',sans-serif;font-variant-numeric:tabular-nums; }
-        .mfc-cta { display:block;width:100%;max-width:320px;padding:15px;background:rgba(20,20,20,0.08);border:1px solid #D8D0BC;color:#7A7060;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;margin-bottom:10px;border-radius:10px;transition:all 0.3s; }
-        .mfc-cta:active { transform:scale(0.97); }
-        .mfc-cta-dirty { background:#141414;border-color:#141414;color:#EDE8DC;animation:mfc-pulse 1.5s ease-in-out infinite; }
-        @keyframes mfc-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(20,20,20,0.3)} 50%{box-shadow:0 0 16px 4px rgba(20,20,20,0.2)} }
-        .mfc-reset { display:block;width:100%;max-width:320px;padding:11px;background:transparent;border:1px solid #D8D0BC;color:#7A7060;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;margin-bottom:8px;border-radius:10px; }
-        .mfc-skip { font-size:13px;color:#7A7060;font-weight:300;font-family:'DM Sans',sans-serif; }
-      `}</style>
     </div>
   )
 }
@@ -2559,23 +1892,6 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
           {total > 8 && <span className="bsg-dot-more">+{total - 8}</span>}
         </div>
       )}
-      <style jsx>{`
-        .bsg-wrap{position:relative;background:#141414;}
-        .bsg-scroll{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
-        .bsg-scroll::-webkit-scrollbar{display:none;}
-        .bsg-slide{flex:0 0 100%;scroll-snap-align:start;aspect-ratio:4/3;overflow:hidden;}
-        .bsg-slide img{width:100%;height:100%;object-fit:cover;display:block;-webkit-user-drag:none;}
-        .bsg-arrow{display:none;position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;background:rgba(20,20,20,0.6);border:1px solid rgba(255,255,255,0.15);cursor:pointer;align-items:center;justify-content:center;z-index:2;transition:opacity 0.2s;}
-        .bsg-arrow:hover{background:rgba(20,20,20,0.8);}
-        .bsg-arrow-left{left:10px;}
-        .bsg-arrow-right{right:10px;}
-        @media (min-width:768px){.bsg-arrow{display:flex;}}
-        .bsg-counter{position:absolute;bottom:12px;right:12px;background:rgba(20,20,20,0.75);color:#EDE8DC;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:4px 10px;border-radius:100px;}
-        .bsg-dots{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:5px;align-items:center;}
-        .bsg-dot{width:6px;height:6px;border-radius:50%;background:rgba(237,232,220,0.35);transition:background 0.2s;}
-        .bsg-dot.active{background:#EDE8DC;}
-        .bsg-dot-more{font-size:10px;color:rgba(237,232,220,0.6);font-family:'DM Sans',sans-serif;}
-      `}</style>
     </div>
   )
 }
@@ -2792,63 +2108,6 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
           </button>
         )}
       </div>
-      <style jsx>{`
-        .bs { position:fixed;inset:0;z-index:501;background:#141414;border-radius:0;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none; }
-        .bs::-webkit-scrollbar{display:none;}
-        .bs.open{transform:translateY(0);}
-        .bs-desktop{max-width:480px;left:auto;right:0;top:0;bottom:0;border-radius:20px 0 0 0;height:100vh;max-height:100vh;}
-        .bs-desktop.open{transform:translateY(0);}
-        .bs-handle{display:none;}
-        .bs-desktop .bs-handle{display:block;width:48px;height:4px;background:rgba(154,142,122,0.5);border-radius:2px;margin:12px auto 0;}
-        /* Sticky close + fav */
-        .bs-sticky-top{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:8px 16px;padding-top:max(8px,calc(env(safe-area-inset-top) + 4px));background:transparent;pointer-events:none;}
-        .bs-sticky-top>*{pointer-events:auto;}
-        .bs-sticky-close{width:40px;height:40px;border-radius:50%;border:none;background:rgba(20,20,20,0.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#EDE8DC;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;}
-        .bs-sticky-fav{width:40px;height:40px;border-radius:50%;border:none;background:rgba(20,20,20,0.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#9A8E7A;display:flex;align-items:center;justify-content:center;cursor:pointer;}
-        .bs-sticky-fav.active svg{filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4));}
-        /* Header redesign */
-        .bs-header-redesign{padding:0 24px 20px;background:#141414;}
-        .bs-hr-name{font-family:'Figtree',sans-serif;font-size:24px;font-weight:500;color:#EDE8DC;line-height:1.15;margin-bottom:4px;}
-        .bs-hr-sub{font-size:13px;color:#9A8E7A;font-family:'DM Sans',sans-serif;margin-bottom:10px;}
-        .bs-hr-id{color:#9A8E7A;font-size:12px;margin-left:2px;}
-        .bs-hr-price-block{border-left:3px solid #3A6A48;padding-left:12px;margin-bottom:8px;}
-        .bs-hr-price{font-family:'DM Sans',sans-serif;font-size:28px;font-weight:500;color:#EDE8DC;line-height:1;font-variant-numeric:tabular-nums;}
-        .bs-hr-price span{font-size:14px;color:#9A8E7A;font-weight:400;}
-        .bs-hr-specs{font-size:15px;font-weight:300;color:#9A8E7A;font-family:'DM Sans',sans-serif;}
-        /* Sticky footer */
-        .bs-sticky-footer{position:sticky;bottom:0;background:#EDE8DC;border-top:1px solid #D8D0BC;padding:12px 24px;padding-bottom:max(12px,calc(env(safe-area-inset-bottom) + 4px));display:flex;gap:10px;z-index:10;}
-        .bs-footer-wsp{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;background:#1EA952;border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;text-decoration:none;min-height:44px;transition:opacity 0.2s;}
-        .bs-footer-wsp:active{opacity:0.85;}
-        .bs-footer-share{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 16px;background:transparent;border:1px solid #D8D0BC;border-radius:10px;color:#7A7060;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity 0.2s;}
-        .bs-footer-share:active{opacity:0.7;}
-        .bs-section{padding:18px 24px;border-bottom:1px solid rgba(216,208,188,0.5);background:#EDE8DC;}
-        .bs-section:last-child{border-bottom:none;}
-        .bs-sl{font-size:12px;font-weight:600;color:#7A7060;letter-spacing:0.5px;margin-bottom:12px;font-family:'DM Sans',sans-serif;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
-        .bs-sl-dot{width:6px;height:6px;border-radius:50%;background:#3A6A48;flex-shrink:0;}
-        .bs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-        .bs-feat{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:12px;background:#FAFAF8;border:1px solid #D8D0BC;box-shadow:0 2px 8px rgba(58,53,48,0.06);}
-        .bs-fi{width:20px;height:20px;color:#7A7060;}
-        .bs-fl{font-size:13px;font-weight:300;color:#7A7060;text-align:center;font-family:'DM Sans',sans-serif;}
-        .bs-fv{font-size:15px;font-weight:300;color:#141414;font-family:'DM Sans',sans-serif;}
-        .bs-feat.hl{border-color:#D8D0BC;background:rgba(58,53,48,0.03);}
-        .bs-feat.hl .bs-fl{color:#141414;}
-        .bs-feat.hl .bs-fv{color:#141414;font-weight:600;}
-        .bs-aw{display:flex;flex-wrap:wrap;gap:6px;}
-        .bs-at{font-size:14px;font-weight:300;padding:5px 12px;border-radius:10px;background:#FAFAF8;border:1px solid #D8D0BC;color:#3A3530;font-family:'DM Sans',sans-serif;}
-        .bs-ver-anuncio{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:transparent;border:1px solid #D8D0BC;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;border-radius:10px;transition:background 0.2s;cursor:pointer;}
-        .bs-ver-anuncio:hover{background:rgba(58,106,72,0.12);}
-        .bs-gate{display:flex;flex-direction:column;gap:12px}
-        .bs-gate-title{font-size:14px;color:#7A7060;margin-bottom:4px}
-        .bs-gate-input{width:100%;padding:12px 14px;background:#EDE8DC;border:1px solid #D8D0BC;border-radius:10px;color:#141414;font-family:'DM Sans',sans-serif;font-size:15px;box-sizing:border-box}
-        .bs-gate-input::placeholder{color:#7A7060}
-        .bs-gate-submit{width:100%;padding:14px;background:#141414;color:#EDE8DC;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer}
-        .bs-gate-submit:disabled{opacity:0.4;cursor:default}
-        .bs-desc{font-size:14px;font-weight:300;color:#3A3530;font-family:'DM Sans',sans-serif;line-height:1.6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
-        .bs-desc.expanded{-webkit-line-clamp:unset;display:block;}
-        .bs-desc-more{background:none;border:none;color:#3A6A48;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;padding:4px 0;margin-top:4px;}
-        .bs-gmaps-link{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:rgba(216,208,188,0.4);border-radius:10px;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;transition:opacity 0.2s;}
-        .bs-gmaps-link:active{opacity:0.85;}
-      `}</style>
     </div>
   )
 }
@@ -2862,11 +2121,6 @@ function CardCounter({ total, active }: { total: number; active: number }) {
       {Array.from({ length: maxPips }).map((_, i) => (
         <div key={i} className={`cc-pip ${i === active ? 'active' : ''}`} />
       ))}
-      <style jsx>{`
-        .cc{position:fixed;top:50%;right:10px;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;align-items:center;gap:3px;}
-        .cc-pip{width:3px;height:10px;border-radius:2px;background:rgba(58,53,48,0.12);transition:all 0.3s;}
-        .cc-pip.active{background:#3A6A48;height:22px;}
-      `}</style>
     </div>
   )
 }
