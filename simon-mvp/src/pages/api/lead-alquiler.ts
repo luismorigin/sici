@@ -8,6 +8,20 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+const META_BOT_PATTERNS = [
+  'facebookexternalhit',
+  'facebot',
+  'facebookbot',
+  'metainspector',
+  'facebookcatalog',
+  'meta-externalagent',
+]
+
+function isMetaBot(userAgent: string): boolean {
+  const ua = userAgent.toLowerCase()
+  return META_BOT_PATTERNS.some(p => ua.includes(p))
+}
+
 function parseBody(req: NextApiRequest) {
   // POST JSON body
   const b = req.body || {}
@@ -24,6 +38,7 @@ function parseBody(req: NextApiRequest) {
     preguntas: b.preguntas,
     debug: b.debug,
     sid: typeof b.sid === 'string' ? b.sid : '',
+    utm_source: typeof b.utm_source === 'string' ? b.utm_source : '',
   }
 }
 
@@ -33,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { phone, msg, prop_id, nombre, zona, precio, dorms, broker_nombre, fuente, preguntas, debug, sid } = parseBody(req)
+    const { phone, msg, prop_id, nombre, zona, precio, dorms, broker_nombre, fuente, preguntas, debug, sid, utm_source } = parseBody(req)
 
     if (!phone) {
       return res.status(400).json({ error: 'Falta número de teléfono' })
@@ -90,6 +105,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
 
+        const userAgent = (req.headers['user-agent'] || '').slice(0, 500)
+        const esBot = isMetaBot(userAgent)
+
         const { error } = await supabase.from('leads_alquiler').insert({
           propiedad_id: safePropId,
           nombre_propiedad: nombre.slice(0, 200) || null,
@@ -103,6 +121,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           es_test: debug === '1' || debug === true,
           session_id: safeSid,
           es_debounce: isDebounce,
+          user_agent: userAgent || null,
+          es_bot: esBot,
+          utm_source: utm_source.slice(0, 100) || null,
         })
         if (error) console.error('Error registrando lead alquiler:', error)
       } catch (err) {

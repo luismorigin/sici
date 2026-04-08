@@ -193,6 +193,7 @@ export default function ChatPanel({ properties, onClose, onOpenDetail, onApplyFi
               broker_nombre: prop.agente_nombre || '',
               fuente: 'chat-bot',
               sid: getSessionId(),
+              utm_source: new URLSearchParams(window.location.search).get('utm_source') || undefined,
             }),
           }).catch(() => {}) // fire-and-forget
           trackChatEvent('chat_lead', { property_id: prop.id, zona: prop.zona, fuente: 'chat-bot' })

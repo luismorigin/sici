@@ -36,6 +36,7 @@ export default function ChatPropertyCard({ property: p, onOpenDetail }: Props) {
         broker_nombre: p.agente_nombre || '',
         fuente: 'chat-bot-card',
         sid: getSessionId(),
+        utm_source: new URLSearchParams(window.location.search).get('utm_source') || undefined,
       }),
     }).catch(() => {})
     trackChatEvent('chat_lead', { property_id: p.id, zona: p.zona, fuente: 'chat-bot-card' })
