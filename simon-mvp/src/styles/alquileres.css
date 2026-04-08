@@ -188,6 +188,16 @@
   position: absolute; top: 5px; right: 5px;
   width: 6px; height: 6px; background: #3A6A48; border-radius: 50%;
 }
+.alq-context-badge {
+  position: fixed; left: 16px; top: max(52px, calc(env(safe-area-inset-top) + 46px)); z-index: 45;
+  font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
+  color: rgba(255,255,255,0.85); letter-spacing: 0.3px;
+  background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  padding: 5px 10px; border-radius: 100px;
+  pointer-events: none;
+  animation: ctxFadeIn 0.6s ease-out;
+}
+@keyframes ctxFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Compare Banner */
 .alq-compare-banner-wrap {
@@ -220,7 +230,7 @@
 
 /* Map Floating + Nudge */
 .alq-map-floating {
-  position: fixed; bottom: max(140px, calc(env(safe-area-inset-bottom) + 130px)); right: 20px;
+  position: fixed; bottom: max(200px, calc(env(safe-area-inset-bottom) + 190px)); right: 20px;
   z-index: 100; width: 48px; height: 48px; border-radius: 10px;
   background: rgba(237,232,220,0.92); backdrop-filter: blur(8px); border: none;
   display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -512,6 +522,7 @@
 
 /* Mobile Property Card (mc-*) */
 .alq-card { height: 100vh; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #EDE8DC; }
+.alq-card.alq-card-first { height: 88dvh; }
 .amc-content { flex: 0 0 auto; padding: 0 24px 8px; padding-bottom: max(8px, calc(env(safe-area-inset-bottom) + 4px)); display: flex; flex-direction: column; }
 .amc-name { font-family: 'Figtree', sans-serif; font-size: 24px; font-weight: 500; color: #141414; line-height: 1.1; margin-bottom: 2px; padding-top: 12px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .amc-reciente { font-size: 11px; font-weight: 500; color: #3A6A48; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; }
