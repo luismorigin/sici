@@ -77,3 +77,38 @@ No bloquea nada — puede cerrar e ignorar.
 - No mostrar prompt en primera visita
 - No hacer app nativa (web mobile suficiente por ahora)
 - Cada fase se testea y commitea antes de avanzar a la siguiente
+
+---
+
+## Ideas Backlog (8 Abr 2026)
+
+### Idea A: Botón "Reportar" propiedad
+- **Qué:** Botón discreto en cards y bottom sheet (ícono + "Reportar") que abre modal con checkboxes:
+  - Precio desactualizado
+  - Contenido inapropiado
+  - Ubicación incorrecta
+  - Información incorrecta
+  - Foto en baja calidad
+  - Propiedad sin imagen
+- **Por qué:** Mejora calidad de datos con crowdsourcing. Genera confianza en el usuario (siente que puede influir). Señal valiosa para pipeline de verificación.
+- **Scope:** Ventas + Alquileres (cards mobile/desktop + bottom sheet)
+- **BD:** Tabla `reportes_propiedad` (user anónimo/logueado, propiedad_id, motivos[], timestamp)
+- **Prioridad:** Media — bajo esfuerzo, alto valor de datos
+
+### Idea B: Sistema de alertas de precio/similares
+- **Qué:** Botón "Avisame" en bottom sheet o card con opciones:
+  - "Avisame cuando baje de precio"
+  - "Avisame cuando haya propiedades similares nuevas"
+- **Por qué:** Re-engagement directo. Convierte visita pasiva en lead recurrente. Alta intención de compra/alquiler.
+- **Dependencia:** Requiere Fase 1 (Google OAuth) o al menos captura de email/WhatsApp
+- **Conecta con:** Fase 6 de este documento (alertas de propiedades)
+- **Prioridad:** Alta — moat fuerte, retención directa
+
+### Idea C: Comparativo express con corazones (push engagement)
+- **Qué:** Impulsar el uso de corazones para desbloquear comparación express automática. Cuando el usuario marca 2-3 favoritos, mostrar CTA o abrir comparativo directo.
+- **Por qué:** Los favoritos ya existen pero el usuario no sabe que puede comparar. El comparativo express tiene alto valor percibido (ahorra horas de research). Es el gancho natural para login (Fase 4).
+- **Posibles implementaciones:**
+  - Nudge pill al 2do corazón: "Compará tus favoritos"
+  - Badge/counter visible sobre ícono de favoritos
+  - Auto-abrir CompareSheet al 3er corazón (con dismiss)
+- **Prioridad:** Alta — ya construido, solo falta empujar al usuario hacia él
