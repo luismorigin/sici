@@ -184,6 +184,21 @@
   color: rgba(255,255,255,0.85); white-space: nowrap; overflow: hidden;
   text-overflow: ellipsis; letter-spacing: 0.2px;
 }
+.alq-search-pill.pulse { animation: pillBounce 0.5s ease-in-out 2; }
+.alq-search-pill.pulse::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 100px;
+  border: 2px solid rgba(237,232,220,0.6);
+  animation: pillRing 1s ease-out 3;
+  pointer-events: none;
+}
+@keyframes pillRing {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+@keyframes pillBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
 .alq-search-dot {
   position: absolute; top: 5px; right: 5px;
   width: 6px; height: 6px; background: #3A6A48; border-radius: 50%;

@@ -317,7 +317,10 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const bannerDismissedRef = useRef(false)
 
-  // Bot nudge pill (show once after 5s of inactivity — no scroll, no detail, no filter)
+  // Search pill pulse (4-7s: draws attention to filters after swipe hint fades)
+  const [pillPulse, setPillPulse] = useState(false)
+
+  // Bot nudge pill (show once after 8s of inactivity — no scroll, no detail, no filter)
   const [nudgeVisible, setNudgeVisible] = useState(false)
   const nudgeDismissedRef = useRef(false)
   const hasOpenedDetailRef = useRef(false)
@@ -338,18 +341,14 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   // Keep isFilteredRef in sync for scroll handler (avoids stale closure)
   useEffect(() => { isFilteredRef.current = isFiltered }, [isFiltered])
 
-  // Bot nudge: show after 5s if user hasn't interacted (mobile only)
+  // Search pill pulse: 4-6.5s after load if user hasn't interacted
   useEffect(() => {
     if (isDesktop || loading) return
-    const timer = setTimeout(() => {
-      if (!hasScrolledRef.current && !hasOpenedDetailRef.current && !isFilteredRef.current && !nudgeDismissedRef.current) {
-        nudgeDismissedRef.current = true
-        setNudgeVisible(true)
-        trackEvent('nudge_bot_shown')
-        setTimeout(() => setNudgeVisible(false), 6000)
-      }
-    }, 8000)
-    return () => clearTimeout(timer)
+    const onTimer = setTimeout(() => {
+      if (!hasScrolledRef.current && !isFilteredRef.current) setPillPulse(true)
+    }, 4000)
+    const offTimer = setTimeout(() => setPillPulse(false), 6500)
+    return () => { clearTimeout(onTimer); clearTimeout(offTimer) }
   }, [isDesktop, loading])
 
   const feedRef = useRef<HTMLDivElement>(null)
@@ -372,8 +371,15 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
           bannerDismissedRef.current = true
           setBannerDismissed(true)
         }
-        // Mark that user has scrolled (disables inactivity nudge)
+        // Mark that user has scrolled
         hasScrolledRef.current = true
+        // Bot nudge: show once after 3+ cards without detail/filter interaction
+        if (idx >= 3 && !nudgeDismissedRef.current && !hasOpenedDetailRef.current && !isFilteredRef.current) {
+          nudgeDismissedRef.current = true
+          setNudgeVisible(true)
+          trackEvent('nudge_bot_shown', { card_index: idx })
+          setTimeout(() => setNudgeVisible(false), 6000)
+        }
         // Only trigger re-render when card actually changes
         if (idx !== activeCardIdxRef.current) {
           activeCardIdxRef.current = idx
@@ -1031,7 +1037,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         <>
           {/* Top bar — search pill (Airbnb/TikTok style) */}
           <div className="alq-top-bar">
-            <button className="alq-search-pill" onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay') }}>
+            <button className={`alq-search-pill${pillPulse ? ' pulse' : ''}`} onClick={() => { setPillPulse(false); setFilterOverlayOpen(true); trackEvent('open_filter_overlay') }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
@@ -1046,6 +1052,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
               {properties.length} deptos en alquiler · Equipetrol
             </div>
           )}
+
 
           {/* Filter overlay */}
           <FilterOverlay
