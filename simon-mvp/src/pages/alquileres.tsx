@@ -379,7 +379,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
           nudgeDismissedRef.current = true
           setNudgeVisible(true)
           trackEvent('nudge_bot_shown', { card_index: idx })
-          setTimeout(() => setNudgeVisible(false), 6000)
+          setTimeout(() => setNudgeVisible(false), 3000)
         }
         // Only trigger re-render when card actually changes
         if (idx !== activeCardIdxRef.current) {
