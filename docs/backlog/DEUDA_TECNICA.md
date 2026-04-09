@@ -104,3 +104,19 @@ Source of truth de marca: repo `simon-brand` (github.com/luismorigin/simon-brand
 - O migrar a App Router con streaming SSR (React Server Components)
 
 **Prioridad: BAJA.** Score 92 es excelente para Core Web Vitals. El TBT no afecta UX perceptible. Solo revisitar si el score baja de 80 o si se agregan features pesados a la página.
+
+## Pin first card hardcodeado — CONSCIENTE (8 Abr 2026)
+
+**Contexto:** Experimento CRO top-of-funnel. La primera card del feed `/alquileres` está pinneada a IDs `[1350, 1349, 1333]` con fallback en cascada (`alquileres.tsx`, constante `PINNED_FIRST_IDS`).
+
+**Implicaciones:**
+1. **Hardcodeado**: Si los 3 IDs se dan de baja, el feed vuelve al sort natural (sin efecto negativo)
+2. **Flash en carga**: ISR renderiza la primera prop por recientes → deferred fetch carga 123 props → pin reordena → scroll reset. Causa flash visual (~300ms) y +0.3s en LCP (1.2s → 1.5s). Sigue dentro del umbral verde de Core Web Vitals (<2.5s)
+3. **Preload mismatch**: El `<link rel="preload">` apunta a la foto de `initialProperties[0]` (ISR), no a la del pin. La foto del pin se carga sin preload
+
+**Solución futura (si escala):**
+- Mover IDs pinneados a un campo `pin_feed` en admin o tabla de config
+- Precargar foto del pin en `getStaticProps` para eliminar flash y recuperar LCP
+- O: hacer el pin en el server (SQL ORDER BY) para eliminar el reorder client-side
+
+**Prioridad: BAJA.** El trade-off CRO (mejor primera impresión) justifica +0.3s de LCP. Revisitar si se necesita rotar pins frecuentemente o si LCP sube de 2s.
