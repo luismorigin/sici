@@ -124,6 +124,7 @@ Fechas donde los eventos cambiaron y los datos antes/despues NO son comparables 
 | 3 abr 2026 | Agregados `reset_filters`, `lead_gate` | Sin datos anteriores para estos eventos |
 | 3 abr 2026 | `keepalive: true` en fetch de leads WA | Pre-3 abr: BD sub-reportaba leads vs GA4 (~83% perdidos en mobile). Post-fix deberian converger |
 | 4 abr 2026 | Agregados `nudge_filter_shown/tap/dismiss` | Pill aparece tras 15+ cards sin interaccion. Sin datos anteriores |
+| 8 abr 2026 | `utm_source` en `leads_alquiler` | Pre-8 abr: `utm_source=NULL` para todos los leads (no se capturaba). Split paid/orgánico confiable solo desde esta fecha |
 
 ## Verificacion
 

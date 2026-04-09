@@ -13,6 +13,8 @@ Cortes de datos (NO comparar directamente antes/después):
   3 abr 2026  — view_photos eliminado (código muerto), reemplazado por swipe_photos
   3 abr 2026  — agregados reset_filters, lead_gate
   3 abr 2026  — keepalive fix: BD sub-reportaba leads pre-3abr
+  8 abr 2026  — utm_source en leads_alquiler: paid vs orgánico confiable desde esta fecha.
+               Leads pre-8abr con utm_source=NULL pueden ser paid o orgánico (indistinguible).
   Ver docs/meta/GA4_EVENTOS.md sección "Cortes de datos" para detalle completo.
 
 Requiere:
@@ -49,6 +51,9 @@ from google.oauth2 import service_account
 
 PROPERTY_ID = "523288591"
 KEY_PATH = r"C:\Users\LUCHO\.credentials\ga4-key.json"
+
+# Supabase (read-only pooler for leads_alquiler)
+DB_CONN = "postgresql://claude_readonly.chaosoiyoeyjuwtwckix:supabasesegura123@aws-1-sa-east-1.pooler.supabase.com:6543/postgres"
 
 PIEZAS = {
     "video07": "P7 — Se renueva cada mes",
@@ -611,7 +616,102 @@ def print_ux(data, days):
             print(f" {cnt:>10}", end="")
         print()
 
+    # Leads BD (intenciones WhatsApp)
+    _print_leads_bd(days)
+
     print()
+
+
+def _print_leads_bd(days):
+    """Query leads_alquiler and print daily intenciones + props unicas."""
+    try:
+        import psycopg2
+    except ImportError:
+        print("\n  (pip install psycopg2-binary para ver leads BD)")
+        return
+
+    try:
+        conn = psycopg2.connect(DB_CONN)
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT DATE(created_at - INTERVAL '4 hours') as fecha,
+                   COUNT(*) as intenciones,
+                   COUNT(DISTINCT propiedad_id) as props_unicas
+            FROM leads_alquiler
+            WHERE created_at >= NOW() - INTERVAL '%s days'
+              AND (es_test = false OR es_test IS NULL)
+              AND (es_debounce = false OR es_debounce IS NULL)
+            GROUP BY DATE(created_at - INTERVAL '4 hours')
+            ORDER BY fecha
+        """ % int(days))
+        rows = cur.fetchall()
+
+        cur.execute("""
+            SELECT fuente, COUNT(*) as n, COUNT(DISTINCT propiedad_id) as props
+            FROM leads_alquiler
+            WHERE created_at >= NOW() - INTERVAL '%s days'
+              AND (es_test = false OR es_test IS NULL)
+              AND (es_debounce = false OR es_debounce IS NULL)
+            GROUP BY fuente ORDER BY n DESC
+        """ % int(days))
+        by_fuente = cur.fetchall()
+
+        cur.execute("""
+            SELECT COALESCE(utm_source, 'orgánico') as canal,
+                   COUNT(*) as n, COUNT(DISTINCT propiedad_id) as props
+            FROM leads_alquiler
+            WHERE created_at >= NOW() - INTERVAL '%s days'
+              AND (es_test = false OR es_test IS NULL)
+              AND (es_debounce = false OR es_debounce IS NULL)
+            GROUP BY COALESCE(utm_source, 'orgánico') ORDER BY n DESC
+        """ % int(days))
+        by_canal = cur.fetchall()
+
+        conn.close()
+    except Exception as e:
+        print(f"\n  (Error BD: {e})")
+        return
+
+    if not rows:
+        print("\n  (Sin leads en BD para el periodo)")
+        return
+
+    print()
+    print("LEADS BD — Intenciones WhatsApp (fuente de verdad)")
+    print("-" * 70)
+    print(f"  {'Fecha':<14} {'Intenciones':>12} {'Props únicas':>13}")
+    print(f"  {'-'*12:<14} {'-'*12:>12} {'-'*13:>13}")
+
+    total_int = 0
+    total_props = 0
+    for fecha, intenciones, props in rows:
+        total_int += intenciones
+        total_props += props
+        print(f"  {str(fecha):<14} {intenciones:>12} {props:>13}")
+
+    n_days = max(len(rows), 1)
+    print(f"  {'-'*12:<14} {'-'*12:>12} {'-'*13:>13}")
+    print(f"  {'TOTAL':<14} {total_int:>12} {total_props:>13}")
+    print(f"  {'Promedio/día':<14} {total_int/n_days:>12.1f} {total_props/n_days:>13.1f}")
+
+    print()
+    print("  Por fuente:")
+    for fuente, n, props in by_fuente:
+        print(f"    {fuente:<20} {n:>4} intenciones  {props:>4} props")
+
+    print()
+    print("  Paid vs orgánico:")
+    has_null_utm = False
+    for canal, n, props in by_canal:
+        if canal == 'orgánico':
+            has_null_utm = True
+            label = 'orgánico (o sin UTM)'
+        else:
+            label = canal
+        print(f"    {label:<25} {n:>4} intenciones  {props:>4} props")
+    if has_null_utm:
+        print("    CORTE: utm_source se captura desde 8 abr 2026.")
+        print("      Leads anteriores sin UTM pueden ser paid (indistinguible).")
 
 
 def print_retention(data, days):
