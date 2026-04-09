@@ -317,10 +317,15 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const bannerDismissedRef = useRef(false)
 
-  // Filter nudge pill (show once per session after 6+ cards without interaction)
+  // Search pill pulse (4-7s: draws attention to filters after swipe hint fades)
+  const [pillPulse, setPillPulse] = useState(false)
+
+  // Bot nudge pill (show once after 8s of inactivity — no scroll, no detail, no filter)
   const [nudgeVisible, setNudgeVisible] = useState(false)
   const nudgeDismissedRef = useRef(false)
   const hasOpenedDetailRef = useRef(false)
+  const hasScrolledRef = useRef(false)
+  const programmaticScrollRef = useRef(false)
   const isFilteredRef = useRef(false)
   const utmContent = router.query.utm_content as string | undefined
   const showZonaBanner = utmContent === 'pieza03' && !bannerDismissed && !isFiltered
@@ -336,6 +341,16 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
 
   // Keep isFilteredRef in sync for scroll handler (avoids stale closure)
   useEffect(() => { isFilteredRef.current = isFiltered }, [isFiltered])
+
+  // Search pill pulse: 4-6.5s after load if user hasn't interacted
+  useEffect(() => {
+    if (isDesktop || loading) return
+    const onTimer = setTimeout(() => {
+      if (!hasScrolledRef.current && !isFilteredRef.current) setPillPulse(true)
+    }, 4000)
+    const offTimer = setTimeout(() => setPillPulse(false), 6500)
+    return () => { clearTimeout(onTimer); clearTimeout(offTimer) }
+  }, [isDesktop, loading])
 
   const feedRef = useRef<HTMLDivElement>(null)
 
@@ -357,12 +372,14 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
           bannerDismissedRef.current = true
           setBannerDismissed(true)
         }
-        // Filter nudge: show once after 15+ cards without detail/filter interaction
-        if (idx >= 6 && !nudgeDismissedRef.current && !hasOpenedDetailRef.current && !isFilteredRef.current) {
+        // Mark that user has scrolled (ignore programmatic scrolls)
+        if (!programmaticScrollRef.current) hasScrolledRef.current = true
+        // Bot nudge: show once after 3+ cards without detail/filter interaction
+        if (idx >= 3 && !nudgeDismissedRef.current && !hasOpenedDetailRef.current && !isFilteredRef.current) {
           nudgeDismissedRef.current = true
           setNudgeVisible(true)
-          trackEvent('nudge_filter_shown', { card_index: idx })
-          setTimeout(() => setNudgeVisible(false), 5000)
+          trackEvent('nudge_bot_shown', { card_index: idx })
+          setTimeout(() => setNudgeVisible(false), 6000)
         }
         // Only trigger re-render when card actually changes
         if (idx !== activeCardIdxRef.current) {
@@ -434,7 +451,14 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   // then load all 200 after the page becomes interactive (avoids competing with LCP image)
   useEffect(() => {
     trackEvent('page_enter_alquiler', {})
-    const doFetch = () => fetchProperties(filters)
+    const doFetch = async () => {
+      await fetchProperties(filters)
+      programmaticScrollRef.current = true
+      requestAnimationFrame(() => {
+        feedRef.current?.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+        setTimeout(() => { programmaticScrollRef.current = false }, 100)
+      })
+    }
     if (typeof requestIdleCallback !== 'undefined') {
       const id = requestIdleCallback(doFetch, { timeout: 3000 })
       return () => cancelIdleCallback(id)
@@ -606,13 +630,13 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
 
   function dismissNudge() {
     setNudgeVisible(false)
-    trackEvent('nudge_filter_dismiss')
+    trackEvent('nudge_bot_dismiss')
   }
 
   function tapNudge() {
     setNudgeVisible(false)
-    trackEvent('nudge_filter_tap')
-    setFilterOverlayOpen(true)
+    trackEvent('nudge_bot_tap')
+    window.dispatchEvent(new Event('simon-open-chat'))
   }
 
   const activeFilterCount = useMemo(() => {
@@ -706,17 +730,33 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     return properties.filter(p => p.id !== spotlightId)
   }, [properties, spotlightProperty, spotlightId])
 
-  // Mobile: feed items (no filter card — overlay replaces it), spotlight first
+  // Pinned first card: first available ID wins, rest stay in natural order
+  const PINNED_FIRST_IDS = [1350, 1349, 1333]
+
+  // Mobile: feed items — spotlight first, then pin, then natural order
   const feedItems = useMemo(() => {
     const items: Array<{ type: 'property'; data: UnidadAlquiler; isSpotlight?: boolean }> = []
-    const mobileProps = spotlightProperty
-      ? [spotlightProperty, ...properties.filter(p => p.id !== spotlightId)]
-      : properties
+    let mobileProps: UnidadAlquiler[]
+    if (spotlightProperty) {
+      mobileProps = [spotlightProperty, ...properties.filter(p => p.id !== spotlightId)]
+    } else if (!isFiltered) {
+      const pinIdx = PINNED_FIRST_IDS.reduce<number>((found, id) => {
+        if (found >= 0) return found
+        return properties.findIndex(p => Number(p.id) === id)
+      }, -1)
+      if (pinIdx > 0) {
+        mobileProps = [properties[pinIdx], ...properties.slice(0, pinIdx), ...properties.slice(pinIdx + 1)]
+      } else {
+        mobileProps = properties
+      }
+    } else {
+      mobileProps = properties
+    }
     mobileProps.forEach((p, i) => {
       items.push({ type: 'property', data: p, isSpotlight: i === 0 && !!spotlightProperty })
     })
     return items
-  }, [properties, spotlightProperty, spotlightId])
+  }, [properties, spotlightProperty, spotlightId, isFiltered])
 
   return (
     <>
@@ -1021,7 +1061,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         <>
           {/* Top bar — search pill (Airbnb/TikTok style) */}
           <div className="alq-top-bar">
-            <button className="alq-search-pill" onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay') }}>
+            <button className={`alq-search-pill${pillPulse ? ' pulse' : ''}`} onClick={() => { setPillPulse(false); setFilterOverlayOpen(true); trackEvent('open_filter_overlay') }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
@@ -1029,6 +1069,14 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
               {isFiltered && <div className="alq-search-dot" />}
             </button>
           </div>
+
+          {/* Context badge — overlaid on first card photo */}
+          {activeCardIndex === 0 && !loading && properties.length > 0 && (
+            <div className="alq-context-badge">
+              {properties.length} deptos en alquiler · Equipetrol
+            </div>
+          )}
+
 
           {/* Filter overlay */}
           <FilterOverlay
@@ -1072,11 +1120,11 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
             </svg>
           </button>
 
-          {/* Filter nudge pill — appears once after 6+ cards without interaction */}
+          {/* Bot nudge pill — appears once after 5s of inactivity */}
           {nudgeVisible && (
             <div className="alq-nudge-pill" onClick={tapNudge}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{width:14,height:14,flexShrink:0}}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-              <span>Filtra por zona o precio</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{width:14,height:14,flexShrink:0}}><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+              <span>Preguntale a Simón que buscás</span>
               <button className="alq-nudge-x" onClick={(e) => { e.stopPropagation(); dismissNudge() }}>&times;</button>
             </div>
           )}
@@ -1147,7 +1195,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
                 const WINDOW = 3
                 const isNearby = Math.abs(idx - activeCardIndex) <= WINDOW
                 if (!isNearby) {
-                  return <div key={item.data.id} style={{ height: '100dvh', scrollSnapAlign: 'start', background: '#EDE8DC' }} />
+                  return <div key={item.data.id} style={{ height: idx === 0 ? '88dvh' : '100dvh', scrollSnapAlign: 'start', background: '#EDE8DC' }} />
                 }
                 return (
                   <MobilePropertyCard
@@ -1666,7 +1714,7 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
   const displayName = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
 
   return (
-    <div className={`alq-card${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}`} ref={cardRef}>
+    <div className={`alq-card${isFirst ? ' alq-card-first' : ''}${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}`} ref={cardRef}>
       <PhotoCarousel photos={p.fotos_urls || []} isFirst={isFirst} showHint={showHint} onPhotoTap={onPhotoTap} propertyId={p.id} />
       {isSpotlight && (
         <div className="amc-spotlight-badge">Te compartieron este depto</div>

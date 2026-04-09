@@ -29,6 +29,14 @@ export default function SimonChatWidget({ properties, onOpenDetail, onApplyFilte
     trackChatEvent('chat_open')
   }
 
+  // Allow external components to open chat via custom event
+  useEffect(() => {
+    const handler = () => handleOpen()
+    window.addEventListener('simon-open-chat', handler)
+    return () => window.removeEventListener('simon-open-chat', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Hide chat when sheet is open (sheet shows on top)
   const visible = open && !sheetOpen
 
@@ -67,7 +75,7 @@ export default function SimonChatWidget({ properties, onOpenDetail, onApplyFilte
           onClick={() => open ? setOpen(false) : handleOpen()}
           style={{
             position: 'fixed',
-            bottom: 80, right: 16,
+            bottom: 140, right: 16,
             zIndex: Z_CHAT_BUBBLE,
             width: 56, height: 56,
             borderRadius: '50%',
