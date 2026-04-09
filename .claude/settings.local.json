@@ -85,7 +85,15 @@
       "Bash(do echo:*)",
       "Bash(git checkout:*)",
       "Bash(mv:*)",
-      "Bash(xargs basename:*)"
+      "Bash(xargs basename:*)",
+      "Bash(for f:*)",
+      "Read(//c/Users/LUCHO/Desktop/Censo inmobiliario/sici/simon-mvp/src/pages/**)",
+      "Bash(ipconfig)",
+      "Bash(python3 -c \":*)",
+      "Bash(npx skills:*)",
+      "Bash(taskkill //PID 58144 //F)",
+      "Bash(rm -rf .next)",
+      "Bash(npx playwright:*)"
     ]
   }
 }
