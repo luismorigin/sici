@@ -325,6 +325,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   const nudgeDismissedRef = useRef(false)
   const hasOpenedDetailRef = useRef(false)
   const hasScrolledRef = useRef(false)
+  const programmaticScrollRef = useRef(false)
   const isFilteredRef = useRef(false)
   const utmContent = router.query.utm_content as string | undefined
   const showZonaBanner = utmContent === 'pieza03' && !bannerDismissed && !isFiltered
@@ -371,8 +372,8 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
           bannerDismissedRef.current = true
           setBannerDismissed(true)
         }
-        // Mark that user has scrolled
-        hasScrolledRef.current = true
+        // Mark that user has scrolled (ignore programmatic scrolls)
+        if (!programmaticScrollRef.current) hasScrolledRef.current = true
         // Bot nudge: show once after 3+ cards without detail/filter interaction
         if (idx >= 3 && !nudgeDismissedRef.current && !hasOpenedDetailRef.current && !isFilteredRef.current) {
           nudgeDismissedRef.current = true
@@ -450,7 +451,14 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   // then load all 200 after the page becomes interactive (avoids competing with LCP image)
   useEffect(() => {
     trackEvent('page_enter_alquiler', {})
-    const doFetch = () => fetchProperties(filters)
+    const doFetch = async () => {
+      await fetchProperties(filters)
+      programmaticScrollRef.current = true
+      requestAnimationFrame(() => {
+        feedRef.current?.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+        setTimeout(() => { programmaticScrollRef.current = false }, 100)
+      })
+    }
     if (typeof requestIdleCallback !== 'undefined') {
       const id = requestIdleCallback(doFetch, { timeout: 3000 })
       return () => cancelIdleCallback(id)
@@ -722,17 +730,33 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     return properties.filter(p => p.id !== spotlightId)
   }, [properties, spotlightProperty, spotlightId])
 
-  // Mobile: feed items (no filter card — overlay replaces it), spotlight first
+  // Pinned first card: first available ID wins, rest stay in natural order
+  const PINNED_FIRST_IDS = [1350, 1349, 1333]
+
+  // Mobile: feed items — spotlight first, then pin, then natural order
   const feedItems = useMemo(() => {
     const items: Array<{ type: 'property'; data: UnidadAlquiler; isSpotlight?: boolean }> = []
-    const mobileProps = spotlightProperty
-      ? [spotlightProperty, ...properties.filter(p => p.id !== spotlightId)]
-      : properties
+    let mobileProps: UnidadAlquiler[]
+    if (spotlightProperty) {
+      mobileProps = [spotlightProperty, ...properties.filter(p => p.id !== spotlightId)]
+    } else if (!isFiltered) {
+      const pinIdx = PINNED_FIRST_IDS.reduce<number>((found, id) => {
+        if (found >= 0) return found
+        return properties.findIndex(p => Number(p.id) === id)
+      }, -1)
+      if (pinIdx > 0) {
+        mobileProps = [properties[pinIdx], ...properties.slice(0, pinIdx), ...properties.slice(pinIdx + 1)]
+      } else {
+        mobileProps = properties
+      }
+    } else {
+      mobileProps = properties
+    }
     mobileProps.forEach((p, i) => {
       items.push({ type: 'property', data: p, isSpotlight: i === 0 && !!spotlightProperty })
     })
     return items
-  }, [properties, spotlightProperty, spotlightId])
+  }, [properties, spotlightProperty, spotlightId, isFiltered])
 
   return (
     <>

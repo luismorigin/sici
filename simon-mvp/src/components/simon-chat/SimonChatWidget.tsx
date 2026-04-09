@@ -34,7 +34,8 @@ export default function SimonChatWidget({ properties, onOpenDetail, onApplyFilte
     const handler = () => handleOpen()
     window.addEventListener('simon-open-chat', handler)
     return () => window.removeEventListener('simon-open-chat', handler)
-  })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Hide chat when sheet is open (sheet shows on top)
   const visible = open && !sheetOpen

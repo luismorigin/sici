@@ -207,7 +207,7 @@
   position: fixed; left: 16px; top: max(52px, calc(env(safe-area-inset-top) + 46px)); z-index: 45;
   font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
   color: rgba(255,255,255,0.85); letter-spacing: 0.3px;
-  background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  background: rgba(0,0,0,0.45);
   padding: 5px 10px; border-radius: 100px;
   pointer-events: none;
   animation: ctxFadeIn 0.6s ease-out;
