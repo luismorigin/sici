@@ -301,6 +301,8 @@ Las paginas editores siguen el patron: **tipos → constantes → hook → compo
 
 Flujo produccion: `simonbo.com (/) → /ventas` (feed simple). Funnel premium legacy: `/filtros-v2 → /formulario-v2 → /resultados-v2` (accesible por URL directa).
 
+**Flujo alquileres:** `/alquileres` → cards (mobile TikTok / desktop grid) → bottom sheet detalle → WhatsApp broker. El bottom sheet incluye: galería, características, amenidades, descripción, Google Maps, **mini estudio de mercado** (mediana zona+dorms, diff %, rango), **propiedades similares** (scroll horizontal thumbnails, tap para swap), **preguntas seleccionables para el broker** (max 3, se incluyen en mensaje WA), ver anuncio original (gate), sticky footer WA+compartir. Comparativo Express separado accesible desde 2+ favoritos (CompareSheet).
+
 - **Fonts:** Figtree (display) + DM Sans (body) — brand v1.4, DM Mono eliminada
 - **Colores:** Arena (#EDE8DC), Negro (#141414), Salvia (#3A6A48) — ver `simon-design-tokens.ts`
 - **Google Analytics:** `G-Q8CRRJD6SL` — `simonbo.com?debug=1` desactiva GA
