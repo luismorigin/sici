@@ -1,13 +1,8 @@
--- ============================================================================
--- buscar_unidades_alquiler(p_filtros JSONB)
--- Canonical export from production — 20 Mar 2026
--- ============================================================================
--- Query Layer principal para ALQUILER. Expande slugs UI a nombres sucios de BD,
--- soporta multiselect dormitorios (3+ = >=3), fotos multi-fuente (C21/Remax/BI),
--- filtro 150 días, OFFSET para paginación server-side.
--- Filtro mascotas: incluye NULL (sin dato), excluye solo false. Confirmadas primero.
--- Última migración: 163 (alquiler_filtro_150_dias)
--- ============================================================================
+-- Migración 209: Fix agente C21 en buscar_unidades_alquiler
+-- Bug: 103 propiedades C21 alquiler sin datos de agente en resultados
+-- Causa: COALESCE chains no incluían formato C21 (asesorNombre, telefono)
+--        Los datos ya existen en datos_json_discovery desde el discovery
+-- Fix: agregar fallbacks para keys C21 en agente_nombre, agente_telefono, agente_whatsapp
 
 CREATE OR REPLACE FUNCTION public.buscar_unidades_alquiler(p_filtros jsonb DEFAULT '{}'::jsonb)
  RETURNS TABLE(id integer, nombre_edificio text, nombre_proyecto text, desarrollador text, zona text, dormitorios integer, banos numeric, area_m2 numeric, precio_mensual_bob numeric, precio_mensual_usd numeric, amoblado text, acepta_mascotas boolean, deposito_meses numeric, servicios_incluidos jsonb, contrato_minimo_meses integer, monto_expensas_bob numeric, piso integer, estacionamientos integer, baulera boolean, latitud numeric, longitud numeric, fotos_urls text[], fotos_count integer, url text, fuente text, agente_nombre text, agente_telefono text, agente_whatsapp text, dias_en_mercado integer, estado_construccion text, id_proyecto_master integer, amenities_lista text[], equipamiento_lista text[], descripcion text)
@@ -30,7 +25,6 @@ AS $function$
           CROSS JOIN LATERAL (
               SELECT unnest(
                   CASE zona_ui
-                      -- Migración 184: nombres display definitivos + aliases legacy
                       WHEN 'equipetrol_centro'    THEN ARRAY['Equipetrol Centro', 'Equipetrol', 'Equipetrol Centro']
                       WHEN 'equipetrol_norte'     THEN ARRAY['Equipetrol Norte', 'Equipetrol Norte/Norte', 'Equipetrol Norte/Sur']
                       WHEN 'sirari'               THEN ARRAY['Sirari']
@@ -152,7 +146,6 @@ AS $function$
               p.datos_json_discovery->>'telefono'
           )::TEXT,
 
-          -- FIX: usar fecha_creacion en vez de fecha_discovery (BI pisa fecha_discovery cada noche)
           (CURRENT_DATE - COALESCE(p.fecha_publicacion, p.fecha_creacion::date))::INTEGER,
 
           COALESCE(p.estado_construccion::TEXT, 'no_especificado'),
@@ -253,8 +246,6 @@ AS $function$
                     AND p.datos_json_discovery->>'nomb_img' != '')
             )
         )
-        -- v163: reducido de 180 a 150 dias (vida mediana C21=34d, Remax=73d)
-        -- FIX: usar fecha_creacion en vez de fecha_discovery
         AND CURRENT_DATE - COALESCE(p.fecha_publicacion, p.fecha_creacion::date) <= 150
         AND p.precio_mensual_usd > 0
 
@@ -262,7 +253,6 @@ AS $function$
           CASE WHEN (p_filtros->>'acepta_mascotas')::boolean IS TRUE AND p.acepta_mascotas = true THEN 0 ELSE 1 END,
           CASE WHEN p_filtros->>'orden' = 'precio_desc' THEN p.precio_mensual_bob END DESC NULLS LAST,
           CASE WHEN p_filtros->>'orden' = 'precio_asc' THEN p.precio_mensual_bob END ASC NULLS LAST,
-          -- FIX: usar fecha_creacion en vez de fecha_discovery
           CASE WHEN p_filtros->>'orden' IS NULL OR p_filtros->>'orden' = 'recientes'
                THEN COALESCE(p.fecha_publicacion, p.fecha_creacion::date) END DESC NULLS LAST,
           p.id DESC
