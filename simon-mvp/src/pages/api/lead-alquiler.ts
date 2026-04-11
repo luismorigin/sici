@@ -39,6 +39,8 @@ function parseBody(req: NextApiRequest) {
     debug: b.debug,
     sid: typeof b.sid === 'string' ? b.sid : '',
     utm_source: typeof b.utm_source === 'string' ? b.utm_source : '',
+    utm_content: typeof b.utm_content === 'string' ? b.utm_content : '',
+    utm_campaign: typeof b.utm_campaign === 'string' ? b.utm_campaign : '',
   }
 }
 
@@ -48,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { phone, msg, prop_id, nombre, zona, precio, dorms, broker_nombre, fuente, preguntas, debug, sid, utm_source } = parseBody(req)
+    const { phone, msg, prop_id, nombre, zona, precio, dorms, broker_nombre, fuente, preguntas, debug, sid, utm_source, utm_content, utm_campaign } = parseBody(req)
 
     if (!phone) {
       return res.status(400).json({ error: 'Falta número de teléfono' })
@@ -124,6 +126,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           user_agent: userAgent || null,
           es_bot: esBot,
           utm_source: utm_source.slice(0, 100) || null,
+          utm_content: utm_content.slice(0, 100) || null,
+          utm_campaign: utm_campaign.slice(0, 200) || null,
         })
         if (error) console.error('Error registrando lead alquiler:', error)
       } catch (err) {

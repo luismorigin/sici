@@ -194,6 +194,8 @@ export default function ChatPanel({ properties, onClose, onOpenDetail, onApplyFi
               fuente: 'chat-bot',
               sid: getSessionId(),
               utm_source: new URLSearchParams(window.location.search).get('utm_source') || undefined,
+              utm_content: new URLSearchParams(window.location.search).get('utm_content') || undefined,
+              utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign') || undefined,
             }),
           }).catch(() => {}) // fire-and-forget
           trackChatEvent('chat_lead', { property_id: prop.id, zona: prop.zona, fuente: 'chat-bot' })

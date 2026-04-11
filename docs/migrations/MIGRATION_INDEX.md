@@ -215,6 +215,7 @@
 | 207 | vista_alquiler_filtro_150d | **Filtro 150d en `v_mercado_alquiler`.** Vista pre-aplica `dias_en_mercado <= 150` para excluir inventario estancado |
 | 208 | leads_alquiler_bot_filter | **Filtro bots Meta + utm_source.** Agrega `user_agent`, `es_bot`, `utm_source` a `leads_alquiler`. Endpoint detecta bots Meta por user-agent (6 patterns) y captura utm_source para distinguir orgánico vs paid. Lead 104 marcado como bot |
 | 209 | fix_agente_c21_alquiler | **Fix agente C21 en `buscar_unidades_alquiler()`.** COALESCE chains no incluían formato C21 (`asesorNombre`, `telefono`, `whatsapp` en `datos_json_discovery`). 103 props C21 alquiler sin datos de broker. Remax/BI ya funcionaban. 3 fallbacks agregados, 0 re-enrichment necesario |
+| 210 | leads_alquiler_utm_completo | **UTM completo en leads_alquiler.** Agrega `utm_content` (pieza) y `utm_campaign` a `leads_alquiler`. Complementa migración 208 (utm_source). Permite cruzar leads BD por pieza vs GA4. Corte: datos confiables desde fecha de deploy |
 
 **⚠️ Post-migración 191 — Deploy requerido en n8n:**
 La migración 191 corrige datos existentes pero el extractor C21 sigue generando falsos positivos.

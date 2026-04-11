@@ -15,6 +15,8 @@ Cortes de datos (NO comparar directamente antes/después):
   3 abr 2026  — keepalive fix: BD sub-reportaba leads pre-3abr
   8 abr 2026  — utm_source en leads_alquiler: paid vs orgánico confiable desde esta fecha.
                Leads pre-8abr con utm_source=NULL pueden ser paid o orgánico (indistinguible).
+  11 abr 2026 — utm_content y utm_campaign en leads_alquiler (migración 210).
+               Cruce BD por pieza confiable desde esta fecha. Leads anteriores: sin pieza.
   Ver docs/meta/GA4_EVENTOS.md sección "Cortes de datos" para detalle completo.
 
 Requiere:
@@ -514,6 +516,9 @@ def print_campaign(data, days, piece_filter):
             if ev not in key_events:
                 print(f"    {ev:<28} {cnt:>6}")
 
+    # BD leads with GA4 cross-reference
+    _print_leads_bd_campaign(days, data["events"])
+
     print()
 
 
@@ -622,54 +627,83 @@ def print_ux(data, days):
     print()
 
 
-def _print_leads_bd(days):
-    """Query leads_alquiler and print daily intenciones + props unicas."""
+def _get_leads_conn():
+    """Get psycopg2 connection to leads_alquiler. Returns (conn, cur) or (None, None)."""
     try:
         import psycopg2
     except ImportError:
         print("\n  (pip install psycopg2-binary para ver leads BD)")
+        return None, None
+    try:
+        conn = psycopg2.connect(DB_CONN)
+        return conn, conn.cursor()
+    except Exception as e:
+        print(f"\n  (Error BD: {e})")
+        return None, None
+
+
+_LEADS_WHERE = """
+    created_at >= NOW() - INTERVAL '%s days'
+    AND (es_test = false OR es_test IS NULL)
+    AND (es_debounce = false OR es_debounce IS NULL)
+    AND (es_bot = false OR es_bot IS NULL)
+"""
+
+
+def _print_leads_bd(days):
+    """Query leads_alquiler and print daily intenciones + props unicas."""
+    conn, cur = _get_leads_conn()
+    if not conn:
         return
 
     try:
-        conn = psycopg2.connect(DB_CONN)
-        cur = conn.cursor()
+        # Daily breakdown
         cur.execute("""
             SELECT DATE(created_at - INTERVAL '4 hours') as fecha,
                    COUNT(*) as intenciones,
                    COUNT(DISTINCT propiedad_id) as props_unicas
             FROM leads_alquiler
-            WHERE created_at >= NOW() - INTERVAL '%s days'
-              AND (es_test = false OR es_test IS NULL)
-              AND (es_debounce = false OR es_debounce IS NULL)
+            WHERE %s
             GROUP BY DATE(created_at - INTERVAL '4 hours')
             ORDER BY fecha
-        """ % int(days))
+        """ % _LEADS_WHERE % int(days))
         rows = cur.fetchall()
 
+        # By fuente (card, detail, compare, chat-bot)
         cur.execute("""
             SELECT fuente, COUNT(*) as n, COUNT(DISTINCT propiedad_id) as props
             FROM leads_alquiler
-            WHERE created_at >= NOW() - INTERVAL '%s days'
-              AND (es_test = false OR es_test IS NULL)
-              AND (es_debounce = false OR es_debounce IS NULL)
+            WHERE %s
             GROUP BY fuente ORDER BY n DESC
-        """ % int(days))
+        """ % _LEADS_WHERE % int(days))
         by_fuente = cur.fetchall()
 
+        # Paid vs organic (utm_source)
         cur.execute("""
-            SELECT COALESCE(utm_source, 'orgánico') as canal,
+            SELECT COALESCE(utm_source, 'sin UTM') as canal,
                    COUNT(*) as n, COUNT(DISTINCT propiedad_id) as props
             FROM leads_alquiler
-            WHERE created_at >= NOW() - INTERVAL '%s days'
-              AND (es_test = false OR es_test IS NULL)
-              AND (es_debounce = false OR es_debounce IS NULL)
-            GROUP BY COALESCE(utm_source, 'orgánico') ORDER BY n DESC
-        """ % int(days))
+            WHERE %s
+            GROUP BY COALESCE(utm_source, 'sin UTM') ORDER BY n DESC
+        """ % _LEADS_WHERE % int(days))
         by_canal = cur.fetchall()
+
+        # By pieza (utm_content) — available post-migration 210
+        cur.execute("""
+            SELECT COALESCE(utm_content, 'sin pieza') as pieza,
+                   COALESCE(utm_source, 'sin UTM') as canal,
+                   COUNT(*) as n, COUNT(DISTINCT propiedad_id) as props
+            FROM leads_alquiler
+            WHERE %s
+            GROUP BY COALESCE(utm_content, 'sin pieza'), COALESCE(utm_source, 'sin UTM')
+            ORDER BY n DESC
+        """ % _LEADS_WHERE % int(days))
+        by_pieza = cur.fetchall()
 
         conn.close()
     except Exception as e:
         print(f"\n  (Error BD: {e})")
+        conn.close()
         return
 
     if not rows:
@@ -695,23 +729,206 @@ def _print_leads_bd(days):
     print(f"  {'Promedio/día':<14} {total_int/n_days:>12.1f} {total_props/n_days:>13.1f}")
 
     print()
-    print("  Por fuente:")
+    print("  Por fuente (UI origin):")
     for fuente, n, props in by_fuente:
         print(f"    {fuente:<20} {n:>4} intenciones  {props:>4} props")
 
     print()
-    print("  Paid vs orgánico:")
+    print("  Paid vs orgánico (utm_source):")
     has_null_utm = False
     for canal, n, props in by_canal:
-        if canal == 'orgánico':
+        if canal == 'sin UTM':
             has_null_utm = True
-            label = 'orgánico (o sin UTM)'
-        else:
-            label = canal
-        print(f"    {label:<25} {n:>4} intenciones  {props:>4} props")
+        print(f"    {canal:<25} {n:>4} intenciones  {props:>4} props")
+
+    # Show by pieza if any have utm_content
+    has_pieza = any(p[0] != 'sin pieza' for p in by_pieza)
+    if has_pieza:
+        print()
+        print("  Por pieza (utm_content):")
+        for pieza, canal, n, props in by_pieza:
+            name = PIEZAS.get(pieza, pieza)
+            print(f"    {name[:25]:<25} {canal:<12} {n:>4} leads  {props:>4} props")
+
     if has_null_utm:
-        print("    CORTE: utm_source se captura desde 8 abr 2026.")
-        print("      Leads anteriores sin UTM pueden ser paid (indistinguible).")
+        print()
+        print("  CORTES DE DATOS:")
+        print("    utm_source:  confiable desde 8 abr 2026")
+        print("    utm_content: confiable desde migración 210")
+        print("    Leads anteriores sin UTM pueden ser paid (indistinguible)")
+
+
+def _print_leads_bd_campaign(days, ga4_events_data):
+    """Campaign-specific leads: BD leads by piece + GA4 vs BD comparison."""
+    conn, cur = _get_leads_conn()
+    if not conn:
+        return
+
+    try:
+        # Daily: GA4 click_whatsapp vs BD leads
+        cur.execute("""
+            SELECT DATE(created_at - INTERVAL '4 hours') as fecha,
+                   COUNT(*) as total,
+                   COUNT(*) FILTER (WHERE utm_source IS NOT NULL) as con_utm,
+                   COUNT(*) FILTER (WHERE utm_source IS NULL) as sin_utm
+            FROM leads_alquiler
+            WHERE %s
+            GROUP BY DATE(created_at - INTERVAL '4 hours')
+            ORDER BY fecha
+        """ % _LEADS_WHERE % int(days))
+        daily = cur.fetchall()
+
+        # By piece (utm_content) — the money query
+        cur.execute("""
+            SELECT COALESCE(utm_content, 'sin pieza') as pieza,
+                   COUNT(*) as leads,
+                   COUNT(DISTINCT propiedad_id) as props,
+                   COUNT(*) FILTER (WHERE utm_source IN ('facebook', 'instagram', 'meta')) as paid,
+                   COUNT(*) FILTER (WHERE utm_source IS NULL) as sin_utm,
+                   COUNT(*) FILTER (WHERE utm_source NOT IN ('facebook', 'instagram', 'meta') AND utm_source IS NOT NULL) as otro
+            FROM leads_alquiler
+            WHERE %s
+            GROUP BY COALESCE(utm_content, 'sin pieza')
+            ORDER BY leads DESC
+        """ % _LEADS_WHERE % int(days))
+        by_piece = cur.fetchall()
+
+        # By campaign (utm_campaign)
+        cur.execute("""
+            SELECT COALESCE(utm_campaign, 'sin campaña') as campaign,
+                   COUNT(*) as leads,
+                   COUNT(DISTINCT propiedad_id) as props
+            FROM leads_alquiler
+            WHERE %s
+            GROUP BY COALESCE(utm_campaign, 'sin campaña')
+            ORDER BY leads DESC
+        """ % _LEADS_WHERE % int(days))
+        by_campaign = cur.fetchall()
+
+        # Top properties that received leads
+        cur.execute("""
+            SELECT propiedad_id, nombre_propiedad, zona, precio_bob, dormitorios,
+                   COUNT(*) as leads, fuente
+            FROM leads_alquiler
+            WHERE %s AND propiedad_id IS NOT NULL
+            GROUP BY propiedad_id, nombre_propiedad, zona, precio_bob, dormitorios, fuente
+            ORDER BY leads DESC
+            LIMIT 10
+        """ % _LEADS_WHERE % int(days))
+        top_props = cur.fetchall()
+
+        conn.close()
+    except Exception as e:
+        print(f"\n  (Error BD: {e})")
+        conn.close()
+        return
+
+    # Extract GA4 click_whatsapp counts by piece for comparison
+    ga4_wa_by_piece = {}
+    if ga4_events_data:
+        events_rows = _rows_to_dicts(ga4_events_data,
+            ["event", "piece"], ["count"])
+        for r in events_rows:
+            if r["event"] == "click_whatsapp" and r["piece"] and r["piece"] != "(not set)":
+                ga4_wa_by_piece[r["piece"]] = r["count"]
+
+    total_bd = sum(r[1] for r in daily) if daily else 0
+    total_ga4_wa = sum(ga4_wa_by_piece.values())
+
+    print()
+    print("=" * 70)
+    print("  LEADS BD vs GA4 — Cruce de conversiones")
+    print("=" * 70)
+
+    # Summary comparison
+    print()
+    print("RESUMEN")
+    print("-" * 70)
+    print(f"  GA4 click_whatsapp (eventos):  {total_ga4_wa:>6}")
+    print(f"  BD leads_alquiler (reales):    {total_bd:>6}")
+    if total_ga4_wa > 0 and total_bd > 0:
+        ratio = total_bd / total_ga4_wa * 100
+        diff = total_ga4_wa - total_bd
+        print(f"  Diferencia GA4 - BD:           {diff:>+6}  ({ratio:.0f}% de GA4 llegan a BD)")
+        if diff > 0:
+            print("  (Normal: GA4 cuenta el evento JS, BD solo si el POST llega al server)")
+        elif diff < 0:
+            print("  (BD > GA4: posible adblock bloqueando GA4 pero no el POST)")
+
+    # Daily comparison
+    if daily:
+        print()
+        print("LEADS BD POR DÍA")
+        print("-" * 70)
+        print(f"  {'Fecha':<14} {'Total':>6} {'Paid':>6} {'Sin UTM':>8} {'Orgánico':>9}")
+        print(f"  {'-'*12:<14} {'-'*6:>6} {'-'*6:>6} {'-'*8:>8} {'-'*9:>9}")
+        for fecha, total, con_utm, sin_utm in daily:
+            organic = con_utm  # con_utm incluye paid + organic con UTM
+            print(f"  {str(fecha):<14} {total:>6} {con_utm:>6} {sin_utm:>8}")
+        total_con = sum(r[2] for r in daily)
+        total_sin = sum(r[3] for r in daily)
+        print(f"  {'-'*12:<14} {'-'*6:>6} {'-'*6:>6} {'-'*8:>8}")
+        print(f"  {'TOTAL':<14} {total_bd:>6} {total_con:>6} {total_sin:>8}")
+
+    # By piece: GA4 vs BD side by side
+    print()
+    print("POR PIEZA — GA4 click_whatsapp vs BD leads")
+    print("-" * 70)
+    print(f"  {'Pieza':<25} {'GA4 WA':>7} {'BD leads':>9} {'BD paid':>8} {'BD s/UTM':>9} {'Props':>6}")
+    print(f"  {'-'*23:<25} {'-'*7:>7} {'-'*9:>9} {'-'*8:>8} {'-'*9:>9} {'-'*6:>6}")
+
+    # Merge GA4 pieces + BD pieces
+    all_pieces = set(ga4_wa_by_piece.keys())
+    bd_by_piece = {}
+    for pieza, leads, props, paid, sin_utm, otro in by_piece:
+        bd_by_piece[pieza] = {"leads": leads, "props": props, "paid": paid, "sin_utm": sin_utm, "otro": otro}
+        if pieza != 'sin pieza':
+            all_pieces.add(pieza)
+
+    for piece in sorted(all_pieces):
+        name = PIEZAS.get(piece, piece)[:25]
+        ga4 = ga4_wa_by_piece.get(piece, 0)
+        bd = bd_by_piece.get(piece, {})
+        bd_leads = bd.get("leads", 0)
+        bd_paid = bd.get("paid", 0)
+        bd_sin = bd.get("sin_utm", 0)
+        bd_props = bd.get("props", 0)
+        print(f"  {name:<25} {ga4:>7} {bd_leads:>9} {bd_paid:>8} {bd_sin:>9} {bd_props:>6}")
+
+    # Show "sin pieza" (organic/direct traffic without utm_content)
+    if 'sin pieza' in bd_by_piece:
+        sp = bd_by_piece['sin pieza']
+        print(f"  {'(sin pieza/orgánico)':<25} {'—':>7} {sp['leads']:>9} {sp['paid']:>8} {sp['sin_utm']:>9} {sp['props']:>6}")
+
+    # By campaign
+    has_campaign = any(c[0] != 'sin campaña' for c in by_campaign)
+    if has_campaign:
+        print()
+        print("POR CAMPAÑA (utm_campaign)")
+        print("-" * 70)
+        for campaign, leads, props in by_campaign:
+            print(f"  {campaign[:40]:<40} {leads:>4} leads  {props:>4} props")
+
+    # Top properties
+    if top_props:
+        print()
+        print("TOP PROPIEDADES CON LEADS")
+        print("-" * 70)
+        print(f"  {'ID':>6} {'Nombre':<30} {'Zona':<16} {'Bs':>7} {'D':>2} {'Leads':>5}")
+        print(f"  {'-'*6:>6} {'-'*28:<30} {'-'*14:<16} {'-'*7:>7} {'-'*2:>2} {'-'*5:>5}")
+        for pid, nombre, zona, precio, dorms, leads, fuente in top_props:
+            n = (nombre or '—')[:30]
+            z = (zona or '—')[:16]
+            p = f"{int(precio):,}" if precio else '—'
+            d = str(dorms) if dorms is not None else '—'
+            print(f"  {pid:>6} {n:<30} {z:<16} {p:>7} {d:>2} {leads:>5}")
+
+    # Data quality notes
+    print()
+    print("  CORTES DE DATOS:")
+    print("    utm_source:  confiable desde 8 abr 2026")
+    print("    utm_content: confiable desde migración 210 (post-deploy)")
+    print("    Leads con 'sin UTM' pre-8 abr pueden ser paid")
 
 
 def print_retention(data, days):

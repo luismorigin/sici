@@ -99,6 +99,8 @@ function handleWhatsAppLead(e: React.MouseEvent, p: UnidadAlquiler, msg: string,
       debug: typeof window !== 'undefined' && localStorage.getItem('simon_debug') === '1' ? '1' : undefined,
       sid: getSessionId(),
       utm_source: new URLSearchParams(window.location.search).get('utm_source') || undefined,
+      utm_content: new URLSearchParams(window.location.search).get('utm_content') || undefined,
+      utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign') || undefined,
     }),
   }).catch(() => {})
 }
