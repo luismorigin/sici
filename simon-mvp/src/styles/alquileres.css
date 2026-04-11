@@ -665,6 +665,40 @@
 .bs-gmaps-link{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:rgba(216,208,188,0.4);border-radius:10px;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;text-decoration:none;transition:opacity 0.2s;}
 .bs-gmaps-link:active{opacity:0.85;}
 
+/* Bottom Sheet — Mini Market Study (bs-mkt-*) */
+.bs-mkt{display:flex;flex-direction:column;gap:10px;}
+.bs-mkt-row{display:flex;justify-content:space-between;align-items:center;}
+.bs-mkt-label{font-size:14px;color:#7A7060;font-family:'DM Sans',sans-serif;}
+.bs-mkt-value{font-size:14px;font-weight:500;color:#141414;font-family:'DM Sans',sans-serif;font-variant-numeric:tabular-nums;}
+.bs-mkt-badge{font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;padding:2px 8px;border-radius:6px;}
+.bs-mkt-badge.below{color:#3A6A48;background:rgba(58,106,72,0.1);}
+.bs-mkt-badge.above{color:#7A7060;background:rgba(122,112,96,0.1);}
+.bs-mkt-count{font-size:12px;color:#9A8E7A;font-family:'DM Sans',sans-serif;margin-top:2px;}
+
+/* Bottom Sheet — Similar Properties (bs-sim-*) */
+.bs-sim-scroll{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none;}
+.bs-sim-scroll::-webkit-scrollbar{display:none;}
+.bs-sim-card{flex-shrink:0;width:140px;border-radius:12px;background:#FAFAF8;border:1px solid #D8D0BC;overflow:hidden;scroll-snap-align:start;cursor:pointer;text-align:left;transition:border-color 0.15s;-webkit-tap-highlight-color:transparent;padding:0;}
+.bs-sim-card:active{border-color:#3A6A48;}
+.bs-sim-thumb{width:140px;height:100px;object-fit:cover;display:block;background:#D8D0BC;}
+.bs-sim-nophoto{background:#D8D0BC;}
+.bs-sim-info{padding:10px;}
+.bs-sim-name{font-size:13px;font-weight:500;color:#141414;font-family:'DM Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bs-sim-price{font-size:14px;font-weight:600;color:#141414;font-family:'DM Sans',sans-serif;margin-top:2px;font-variant-numeric:tabular-nums;}
+.bs-sim-specs{font-size:12px;color:#7A7060;font-family:'DM Sans',sans-serif;margin-top:2px;}
+
+/* Bottom Sheet — Broker Questions (bs-q-*) */
+.bs-q-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.bs-q-header .bs-sl{margin-bottom:0;}
+.bs-q-hint{font-size:11px;color:#7A7060;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+.bs-q-list{display:flex;flex-direction:column;gap:6px;}
+.bs-q-item{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:#FAFAF8;border:1px solid #D8D0BC;cursor:pointer;text-align:left;transition:border-color 0.15s,background 0.15s;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;}
+.bs-q-item.selected{border-color:#3A6A48;border-width:2px;background:#FAFAF8;padding:9px 11px;}
+.bs-q-item.disabled{opacity:0.35;cursor:default;}
+.bs-q-check{width:18px;height:18px;min-width:18px;border-radius:4px;border:1.5px solid #D8D0BC;display:flex;align-items:center;justify-content:center;transition:background 0.15s,border-color 0.15s;}
+.bs-q-check.checked{background:#141414;border-color:#141414;}
+.bs-q-text{font-size:13px;font-weight:300;color:#3A3530;line-height:1.4;}
+
 /* Card Counter (cc-*) */
 .cc{position:fixed;top:50%;right:10px;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;align-items:center;gap:3px;}
 .cc-pip{width:3px;height:10px;border-radius:2px;background:rgba(58,53,48,0.12);transition:all 0.3s;}

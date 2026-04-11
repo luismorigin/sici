@@ -817,6 +817,8 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         isFavorite={sheetProperty ? favorites.has(sheetProperty.id) : false}
         onToggleFavorite={sheetProperty ? () => toggleFavorite(sheetProperty.id) : undefined}
         onShare={sheetProperty ? () => { trackShareClick(sheetProperty); window.open(buildShareWhatsAppUrl(sheetProperty), '_blank') } : undefined}
+        properties={properties}
+        onSwapProperty={(p) => setSheetProperty(p)}
       />
 
       {isDesktop ? (
@@ -1945,16 +1947,18 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 }
 
 // ===== BOTTOM SHEET =====
-function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive, isFavorite, onToggleFavorite, onShare }: {
+function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive, isFavorite, onToggleFavorite, onShare, properties, onSwapProperty }: {
   open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; petFilterActive?: boolean
   isFavorite?: boolean; onToggleFavorite?: () => void; onShare?: () => void
+  properties?: UnidadAlquiler[]; onSwapProperty?: (p: UnidadAlquiler) => void
 }) {
   const [showGate, setShowGate] = useState(false)
   const [gateName, setGateName] = useState('')
   const [gateTel, setGateTel] = useState('')
   const [gateEmail, setGateEmail] = useState('')
   const [descExpanded, setDescExpanded] = useState(false)
+  const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
 
   // Gesture dismiss (swipe down)
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -1994,9 +1998,65 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
     }
   }
 
-  // Reset gate form when property changes
+  // Reset gate form + questions when property changes
   const propId = property?.id
-  useEffect(() => { setShowGate(false); setDescExpanded(false) }, [propId])
+  useEffect(() => {
+    setShowGate(false); setDescExpanded(false); setSelectedQs(new Set())
+    sheetRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [propId])
+
+  // --- Broker questions (adapted from CompareSheet) ---
+  const MAX_QS = 3
+  const brokerQuestions = useMemo(() => {
+    if (!property) return []
+    const qs: string[] = []
+    qs.push('Condiciones de ingreso: adelanto, garantia y comision del broker')
+    qs.push('Se puede negociar el precio con contrato de 12+ meses?')
+    qs.push('La garantia se devuelve al finalizar el contrato? En que condiciones?')
+    if (!property.contrato_minimo_meses) qs.push('Cual es el contrato minimo?')
+    if (!property.monto_expensas_bob) qs.push('Expensas incluidas o aparte? Cuanto son?')
+    if (!property.servicios_incluidos || !Array.isArray(property.servicios_incluidos) || property.servicios_incluidos.length === 0) qs.push('Que servicios incluye? (agua, luz, wifi, gas)')
+    if (!property.deposito_meses) qs.push('Cuantos meses de deposito requiere?')
+    if (property.acepta_mascotas === null) qs.push('Se aceptan mascotas?')
+    qs.push('Fecha de disponibilidad para mudarse?')
+    return qs
+  }, [property?.id, property?.contrato_minimo_meses, property?.monto_expensas_bob, property?.servicios_incluidos, property?.deposito_meses, property?.acepta_mascotas])
+
+  // --- Similar properties in same zona + dorms ---
+  const similarProps = useMemo(() => {
+    if (!property || !properties || properties.length === 0) return []
+    return properties
+      .filter(q => q.zona === property.zona && q.dormitorios === property.dormitorios && q.id !== property.id && q.fotos_urls?.length > 0)
+      .sort((a, b) => Math.abs(a.precio_mensual_bob - property.precio_mensual_bob) - Math.abs(b.precio_mensual_bob - property.precio_mensual_bob))
+      .slice(0, 4)
+  }, [property?.id, property?.zona, property?.dormitorios, property?.precio_mensual_bob, properties])
+
+  // --- Market data for this property's zona + dorms ---
+  const marketData = useMemo(() => {
+    if (!property || !properties || properties.length === 0) return null
+    const comparables = properties.filter(
+      q => q.zona === property.zona && q.dormitorios === property.dormitorios && q.id !== property.id
+    )
+    if (comparables.length < 2) return null
+    const prices = comparables.map(q => q.precio_mensual_bob).sort((a, b) => a - b)
+    const pctl = (sorted: number[], pct: number) => {
+      const idx = (sorted.length - 1) * pct
+      const lo = Math.floor(idx), hi = Math.ceil(idx)
+      return lo === hi ? sorted[lo] : Math.round(sorted[lo] * (hi - idx) + sorted[hi] * (idx - lo))
+    }
+    const mediana = pctl(prices, 0.5)
+    const diffPct = Math.round(((property.precio_mensual_bob - mediana) / mediana) * 100)
+    return { mediana, min: prices[0], max: prices[prices.length - 1], count: comparables.length, diffPct }
+  }, [property?.id, property?.zona, property?.dormitorios, property?.precio_mensual_bob, properties])
+
+  function toggleQuestion(idx: number) {
+    setSelectedQs(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) { next.delete(idx) }
+      else if (next.size < MAX_QS) { next.add(idx) }
+      return next
+    })
+  }
 
   if (!property) return null
   const p = property
@@ -2110,6 +2170,81 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
           </a>
         </div>
       )}
+      {/* --- Mini Market Study --- */}
+      {marketData && (
+        <div className="bs-section">
+          <div className="bs-sl"><span className="bs-sl-dot" />Mercado en {displayZona(p.zona)}</div>
+          <div className="bs-mkt">
+            <div className="bs-mkt-row">
+              <span className="bs-mkt-label">Mediana {dormLabel(p.dormitorios)}</span>
+              <span className="bs-mkt-value">{formatPrice(marketData.mediana)}/mes</span>
+            </div>
+            <div className="bs-mkt-row">
+              <span className="bs-mkt-label">Este depto</span>
+              <span className={`bs-mkt-badge ${marketData.diffPct <= 0 ? 'below' : 'above'}`}>
+                {marketData.diffPct <= 0 ? `${Math.abs(marketData.diffPct)}% bajo mediana` : `${marketData.diffPct}% sobre mediana`}
+              </span>
+            </div>
+            <div className="bs-mkt-row">
+              <span className="bs-mkt-label">Rango</span>
+              <span className="bs-mkt-value">{formatPrice(marketData.min)} — {formatPrice(marketData.max)}</span>
+            </div>
+            <div className="bs-mkt-count">{marketData.count} propiedades similares disponibles</div>
+          </div>
+        </div>
+      )}
+      {/* --- Similar Properties --- */}
+      {similarProps.length > 0 && (
+        <div className="bs-section">
+          <div className="bs-sl"><span className="bs-sl-dot" />Tambien en {displayZona(p.zona)}</div>
+          <div className="bs-sim-scroll">
+            {similarProps.map(sp => {
+              const spName = sp.nombre_edificio || sp.nombre_proyecto || 'Departamento'
+              return (
+                <button key={sp.id} className="bs-sim-card" onClick={() => onSwapProperty?.(sp)}>
+                  {sp.fotos_urls?.[0] ? (
+                    <img src={`/_next/image?url=${encodeURIComponent(sp.fotos_urls[0])}&w=256&q=60`}
+                         alt={spName} className="bs-sim-thumb" loading="lazy" />
+                  ) : (
+                    <div className="bs-sim-thumb bs-sim-nophoto" />
+                  )}
+                  <div className="bs-sim-info">
+                    <div className="bs-sim-name">{spName}</div>
+                    <div className="bs-sim-price">{formatPrice(sp.precio_mensual_bob)}/mes</div>
+                    <div className="bs-sim-specs">{sp.area_m2}m² · {dormLabel(sp.dormitorios)}</div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+      {/* --- Preguntas para el broker --- */}
+      {brokerQuestions.length > 0 && (
+        <div className="bs-section">
+          <div className="bs-q-header">
+            <div className="bs-sl"><span className="bs-sl-dot" />Preguntas para el broker</div>
+            <span className="bs-q-hint">
+              {selectedQs.size > 0 ? `${selectedQs.size}/${MAX_QS} — se incluyen en WhatsApp` : `Selecciona hasta ${MAX_QS}`}
+            </span>
+          </div>
+          <div className="bs-q-list">
+            {brokerQuestions.map((q, i) => {
+              const isSelected = selectedQs.has(i)
+              const isDisabled = !isSelected && selectedQs.size >= MAX_QS
+              return (
+                <button key={i} className={`bs-q-item ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
+                  onClick={() => toggleQuestion(i)}>
+                  <span className={`bs-q-check ${isSelected ? 'checked' : ''}`}>
+                    {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="#EDE8DC" strokeWidth="3" style={{width:10,height:10}}><path d="M5 12l5 5L20 7"/></svg>}
+                  </span>
+                  <span className="bs-q-text">{q}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
       {p.url && (
         <div className="bs-section">
           {!showGate ? (
@@ -2140,7 +2275,15 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
       {/* Sticky footer: WSP + Compartir */}
       <div className="bs-sticky-footer">
         {p.agente_whatsapp && (
-          <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi ${p.nombre_edificio || p.nombre_proyecto || 'el departamento'} en Simon y me gustaria mas informacion${p.url ? '\n' + p.url : ''}`, 'bottom_sheet')} className="bs-footer-wsp">
+          <a href="#" onClick={(e) => {
+            const selectedTexts = Array.from(selectedQs).sort().map(idx => brokerQuestions[idx]).filter(Boolean)
+            let msg = `Hola, vi ${p.nombre_edificio || p.nombre_proyecto || 'el departamento'} en Simon y me gustaria mas informacion`
+            if (selectedTexts.length > 0) {
+              msg += `\n\nAntes, me gustaria saber:\n${selectedTexts.map(t => `— ${t}`).join('\n')}`
+            }
+            if (p.url) msg += '\n' + p.url
+            handleWhatsAppLead(e, p, msg, 'bottom_sheet', selectedTexts.length > 0 ? selectedTexts : undefined)
+          }} className="bs-footer-wsp">
             <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 16, height: 16 }}>
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
             </svg>
