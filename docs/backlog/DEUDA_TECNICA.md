@@ -120,3 +120,31 @@ Source of truth de marca: repo `simon-brand` (github.com/luismorigin/simon-brand
 - O: hacer el pin en el server (SQL ORDER BY) para eliminar el reorder client-side
 
 **Prioridad: BAJA.** El trade-off CRO (mejor primera impresión) justifica +0.3s de LCP. Revisitar si se necesita rotar pins frecuentemente o si LCP sube de 2s.
+
+## Bottom Sheet Comparativo Express — TRACKING PENDIENTE (10 Abr 2026)
+
+**Contexto:** Se agregaron 3 secciones al bottom sheet de `/alquileres`: mini estudio de mercado, propiedades similares (scroll horizontal con swap), y preguntas seleccionables para el broker (se incluyen en mensaje WA). Objetivo: subir send rate de WhatsApp (0/7 confirmado pre-cambio).
+
+**Qué ya se mide (sin cambios):**
+- `leads_alquiler` con `fuente = 'bottom_sheet'` — clicks WA desde el sheet
+- `preguntas_enviadas` — se guarda cuando el usuario selecciona preguntas
+
+**Query de seguimiento (correr ~17 Abr 2026):**
+```sql
+SELECT DATE(created_at - INTERVAL '4 hours') as fecha,
+  COUNT(*) as leads_total,
+  COUNT(*) FILTER (WHERE preguntas_enviadas IS NOT NULL) as con_preguntas
+FROM leads_alquiler WHERE fuente = 'bottom_sheet'
+  AND (es_test = false OR es_test IS NULL)
+  AND (es_debounce = false OR es_debounce IS NULL)
+  AND created_at >= '2026-04-10'
+GROUP BY 1 ORDER BY 1;
+```
+
+**Tracking adicional (agregar si los datos iniciales son prometedores):**
+- `view_market_context` — cuando la sección de mercado se hace visible (intersection observer)
+- `tap_similar_property` — cuando toca un similar para swap
+
+**Validación cualitativa:** Contactar a 1-2 brokers top y preguntarles si ahora los mensajes llegan con preguntas. Comparar con el 0/7 pre-cambio.
+
+**Prioridad: MEDIA.** Esperar 1 semana de datos antes de agregar más tracking.
