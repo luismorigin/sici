@@ -214,6 +214,7 @@
 | 206 | leads_alquiler_debounce | **Debounce leads alquiler.** Agrega `session_id` y `es_debounce` a `leads_alquiler`. Endpoint marca `es_debounce=true` si mismo session_id generó lead en <5s. Métricas filtran `es_debounce=false` |
 | 207 | vista_alquiler_filtro_150d | **Filtro 150d en `v_mercado_alquiler`.** Vista pre-aplica `dias_en_mercado <= 150` para excluir inventario estancado |
 | 208 | leads_alquiler_bot_filter | **Filtro bots Meta + utm_source.** Agrega `user_agent`, `es_bot`, `utm_source` a `leads_alquiler`. Endpoint detecta bots Meta por user-agent (6 patterns) y captura utm_source para distinguir orgánico vs paid. Lead 104 marcado como bot |
+| 209 | fix_agente_c21_alquiler | **Fix agente C21 en `buscar_unidades_alquiler()`.** COALESCE chains no incluían formato C21 (`asesorNombre`, `telefono`, `whatsapp` en `datos_json_discovery`). 103 props C21 alquiler sin datos de broker. Remax/BI ya funcionaban. 3 fallbacks agregados, 0 re-enrichment necesario |
 
 **⚠️ Post-migración 191 — Deploy requerido en n8n:**
 La migración 191 corrige datos existentes pero el extractor C21 sigue generando falsos positivos.
