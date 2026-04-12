@@ -706,10 +706,11 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 }
 
 // ===== Bottom Sheet =====
-function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop }: {
+function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty }: {
   property: UnidadVenta | null; isOpen: boolean; onClose: () => void; onShare?: () => void
   isFavorite?: boolean; onToggleFavorite?: () => void
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; isDesktop: boolean
+  properties?: UnidadVenta[]; onSwapProperty?: (p: UnidadVenta) => void
 }) {
   const [gateName, setGateName] = useState('')
   const [gateTel, setGateTel] = useState('')
@@ -723,6 +724,14 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
     setDescExpanded(false)
     setShowGate(false)
   }, [propId])
+
+  const similarProps = useMemo(() => {
+    if (!p || !properties || properties.length === 0) return []
+    return properties
+      .filter(q => q.zona === p.zona && q.dormitorios === p.dormitorios && q.id !== p.id && q.fotos_urls?.length > 0)
+      .sort((a, b) => Math.abs(a.precio_usd - p.precio_usd) - Math.abs(b.precio_usd - p.precio_usd))
+      .slice(0, 4)
+  }, [p?.id, p?.zona, p?.dormitorios, p?.precio_usd, properties])
 
   if (!p) return null
 
@@ -743,7 +752,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
   return (
     <>
       <div className={`bs-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} />
-      <div className={`bs ${isOpen ? 'open' : ''} ${isDesktop ? 'bs-desktop' : ''}`}>
+      <div className={`bs bs-venta ${isOpen ? 'open' : ''} ${isDesktop ? 'bs-desktop' : ''}`}>
         {/* Floating close + fav — always visible */}
         <div className="bs-floating-actions">
           {onToggleFavorite && (
@@ -872,6 +881,30 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
               <div className="bs-agent">
                 <span className="bs-agent-name">{p.agente_nombre}</span>
                 {p.agente_oficina && <span className="bs-agent-office"> · {p.agente_oficina}</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Propiedades similares */}
+          {similarProps.length > 0 && (
+            <div className="bs-section">
+              <div className="bs-sl"><span className="bs-sl-dot" />También en {displayZona(p.zona)}</div>
+              <div className="bs-sim-scroll">
+                {similarProps.map(sp => (
+                  <button key={sp.id} className="bs-sim-card" onClick={() => onSwapProperty?.(sp)}>
+                    {sp.fotos_urls?.[0] ? (
+                      <img src={`/_next/image?url=${encodeURIComponent(sp.fotos_urls[0])}&w=256&q=60`}
+                           alt={sp.proyecto} className="bs-sim-thumb" loading="lazy" />
+                    ) : (
+                      <div className="bs-sim-thumb bs-sim-nophoto" />
+                    )}
+                    <div className="bs-sim-info">
+                      <div className="bs-sim-name">{sp.proyecto}</div>
+                      <div className="bs-sim-price">$us {Math.round(sp.precio_usd).toLocaleString('en-US')}</div>
+                      <div className="bs-sim-specs">{Math.round(sp.area_m2)}m² · {sp.dormitorios === 0 ? 'Mono' : `${sp.dormitorios} dorm`}</div>
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
           )}
@@ -1213,7 +1246,8 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         onShare={sheetProperty ? () => shareProperty(sheetProperty) : undefined}
         isFavorite={sheetProperty ? favorites.has(sheetProperty.id) : false}
         onToggleFavorite={sheetProperty ? () => toggleFavorite(sheetProperty.id) : undefined}
-        gateCompleted={gateCompleted} onGate={handleGate} isDesktop={isDesktop} />
+        gateCompleted={gateCompleted} onGate={handleGate} isDesktop={isDesktop}
+        properties={properties} onSwapProperty={(p) => setSheetProperty(p)} />
 
       {isDesktop ? (
         /* ===== DESKTOP (unchanged) ===== */
@@ -1571,74 +1605,70 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         /* ===== TOAST ===== */
         .ventas-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#141414; color:#EDE8DC; padding:10px 24px; border-radius:100px; font-size:13px; font-family:'DM Sans',sans-serif; z-index:100; font-weight:600 }
 
-        /* ===== BOTTOM SHEET ===== */
+        /* ===== BOTTOM SHEET (ventas dark theme — .bs-venta overrides alquileres.css) ===== */
         .bs-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:500; opacity:0; pointer-events:none; transition:opacity 0.3s }
         .bs-overlay.open { opacity:1; pointer-events:auto }
-        .bs { position:fixed; inset:0; background:#1a1a1a; border-radius:0; z-index:501; transform:translateY(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1); overflow-y:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; font-family:'DM Sans',sans-serif; color:#EDE8DC }
-        .bs.open { transform:translateY(0) }
-        .bs-desktop { left:auto; right:0; top:0; bottom:0; width:480px; max-width:100%; border-radius:0; border-left:1px solid rgba(237,232,220,0.1); transform:translateX(100%); transition:transform 0.35s cubic-bezier(0.32,0.72,0,1) }
-        .bs-desktop.open { transform:translateX(0) }
-        .bs-floating-actions { position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:flex-end; gap:4px; padding:8px 16px; padding-top:max(8px, calc(env(safe-area-inset-top) + 4px)) }
-        .bs-dark-header { background:#141414; padding:0 24px 20px }
-        .bs-h-name { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1.1; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap }
-        .bs-h-reciente { font-size:11px; font-weight:500; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px }
-        .bs-h-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; margin-bottom:12px; font-family:'DM Sans',sans-serif; margin-top:2px }
-        .bs-h-price-block { border-left:3px solid #3A6A48; padding-left:14px }
-        .bs-h-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
-        .bs-h-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.3); letter-spacing:0.2px }
-        .bs-h-specs { font-size:15px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300; line-height:1.4 }
-        .bs-h-sub { font-size:14px; color:#EDE8DC; font-family:'DM Sans',sans-serif; font-weight:300; margin-top:4px }
-        .bs-fav { width:40px; height:40px; border-radius:50%; border:none; background:rgba(20,20,20,0.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#9A8E7A; display:flex; align-items:center; justify-content:center; cursor:pointer }
-        .bs-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
-        .bs-close { width:40px; height:40px; border-radius:50%; border:none; background:rgba(20,20,20,0.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#EDE8DC; font-size:22px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0 }
-        .bs-sticky-footer { position:sticky; bottom:0; z-index:502; display:flex; gap:8px; padding:12px 20px; padding-bottom:max(12px, calc(env(safe-area-inset-bottom) + 8px)); background:#1a1a1a; border-top:1px solid rgba(237,232,220,0.08) }
-        .bs-wsp-cta { display:flex; align-items:center; justify-content:center; gap:8px; flex:1; padding:12px; background:#1EA952; border:none; border-radius:10px; color:#fff; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; text-decoration:none; min-height:44px; transition:opacity 0.2s }
-        .bs-wsp-cta:active { opacity:0.85 }
-        .bs-share-btn { display:flex; align-items:center; justify-content:center; gap:6px; padding:12px 16px; background:transparent; border:1px solid rgba(237,232,220,0.15); border-radius:10px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:400; cursor:pointer; transition:opacity 0.2s }
-        .bs-share-btn:active { opacity:0.7 }
-        .bs::-webkit-scrollbar { display:none }
-        .bs-published { font-size:13px; color:#9A8E7A; font-family:'DM Sans',sans-serif; margin-top:2px }
-        .bs-section { padding:18px 24px; border-bottom:1px solid rgba(237,232,220,0.08) }
-        .bs-section-border { border-bottom:1px solid #D8D0BC }
-        .bs-zona { font-size:14px; color:#9A8E7A; letter-spacing:0.5px }
-        .bs-id { color:#7A7060; font-size:12px; margin-left:4px; letter-spacing:0 }
-        .bs-location { display:inline-flex; align-items:center; gap:6px; color:#3A6A48; font-size:13px; text-decoration:none; margin-top:6px }
-        .bs-gmaps-link { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:14px; background:rgba(237,232,220,0.08); border-radius:10px; color:#EDE8DC; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:500; text-decoration:none; transition:opacity 0.2s }
-        .bs-gmaps-link:active { opacity:0.85 }
-        .bs-sl { font-size:12px; font-weight:600; color:#9A8E7A; letter-spacing:0.5px; margin-bottom:12px; font-family:'DM Sans',sans-serif; text-transform:uppercase; display:flex; align-items:center; gap:8px }
-        .bs-sl-dot { width:6px; height:6px; border-radius:50%; background:#3A6A48; flex-shrink:0 }
-        .bs-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px }
-        .bs-feat { display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 8px; border-radius:14px; background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.1); box-shadow:none }
-        .bs-fi { width:20px; height:20px; color:#9A8E7A }
-        .bs-fv { font-size:15px; font-weight:300; color:#EDE8DC; font-family:'DM Sans',sans-serif }
-        .bs-fl { font-size:13px; font-weight:300; color:#9A8E7A; text-align:center; font-family:'DM Sans',sans-serif }
-        .bs-feat.hl { border-color:rgba(237,232,220,0.15); background:rgba(237,232,220,0.08) }
-        .bs-feat.hl .bs-fl { color:#EDE8DC }
-        .bs-feat.hl .bs-fv { color:#EDE8DC; font-weight:600 }
-        .bs-aw { display:flex; flex-wrap:wrap; gap:6px }
-        .bs-at { font-size:15px; font-weight:300; padding:4px 10px; border-radius:100px; background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.1); color:#EDE8DC; font-family:'DM Sans',sans-serif }
-        .bs-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; font-variant-numeric:tabular-nums }
-        .bs-price-detail { font-size:13px; color:#9A8E7A; font-family:'DM Sans',sans-serif; margin-top:8px }
-        .bs-badges { display:flex; flex-wrap:wrap; gap:8px }
-        .bs-badge { font-size:12px; padding:4px 10px; border-radius:100px; border:1px solid rgba(237,232,220,0.15); color:#9A8E7A; font-family:'DM Sans',sans-serif; background:transparent }
-        .bs-badge.gold { border-color:rgba(237,232,220,0.25); color:#EDE8DC; background:rgba(237,232,220,0.08) }
-        .bs-section-title { font-size:12px; letter-spacing:0.5px; color:#3A3530; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:8px; text-transform:uppercase }
-        .bs-tags { display:flex; flex-wrap:wrap; gap:8px }
-        .bs-tag { font-size:15px; padding:4px 10px; border-radius:100px; background:#FAFAF8; border:1px solid #D8D0BC; color:#3A3530; font-weight:300 }
-        .bs-desc { font-size:14px; color:#9A8E7A; line-height:1.6; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; font-weight:300 }
-        .bs-desc.expanded { -webkit-line-clamp:unset; display:block }
-        .bs-desc-more { background:none; border:none; color:#3A6A48; font-size:13px; cursor:pointer; padding:4px 0 0; margin-top:4px; font-family:'DM Sans',sans-serif; font-weight:500 }
-        .bs-agent { font-size:14px; margin-bottom:10px }
-        .bs-agent-name { color:#EDE8DC }
-        .bs-agent-office { color:#9A8E7A }
-        .bs-wsp { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:14px; background:#1EA952; border:none; border-radius:10px; color:#fff; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:500; text-decoration:none; min-height:44px; margin-top:16px }
-        .bs-ver-original { width:100%; padding:14px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.1); color:#EDE8DC; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:15px; cursor:pointer; font-weight:500; display:flex; align-items:center; justify-content:center; gap:8px }
-        .bs-gate { display:flex; flex-direction:column; gap:12px }
-        .bs-gate-title { font-size:14px; color:#9A8E7A; margin-bottom:4px }
-        .bs-gate-input { width:100%; padding:12px 14px; background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.12); border-radius:10px; color:#EDE8DC; font-family:'DM Sans',sans-serif; font-size:15px; box-sizing:border-box }
-        .bs-gate-input::placeholder { color:#9A8E7A }
-        .bs-gate-submit { width:100%; padding:14px; background:#EDE8DC; color:#141414; border:none; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:500; cursor:pointer }
-        .bs-gate-submit:disabled { opacity:0.4; cursor:default }
+
+        /* Base structure (ventas-specific, not in alquileres.css) */
+        .bs-venta.bs { background:#1a1a1a; color:#EDE8DC; padding-bottom:72px }
+        .bs-venta .bs-floating-actions { position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:flex-end; gap:4px; padding:8px 16px; padding-top:max(8px, calc(env(safe-area-inset-top) + 4px)) }
+        .bs-venta .bs-fav { width:40px; height:40px; border-radius:50%; border:none; background:rgba(20,20,20,0.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#9A8E7A; display:flex; align-items:center; justify-content:center; cursor:pointer }
+        .bs-venta .bs-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
+        .bs-venta .bs-close { width:40px; height:40px; border-radius:50%; border:none; background:rgba(20,20,20,0.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#EDE8DC; font-size:22px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0 }
+
+        /* Dark header */
+        .bs-venta .bs-dark-header { background:#141414; padding:0 24px 20px }
+        .bs-venta .bs-h-name { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1.1; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap }
+        .bs-venta .bs-h-reciente { font-size:11px; font-weight:500; color:#3A6A48; font-family:'DM Sans',sans-serif; letter-spacing:0.3px }
+        .bs-venta .bs-h-zona { font-size:13px; color:#9A8E7A; letter-spacing:0.3px; margin-bottom:12px; font-family:'DM Sans',sans-serif; margin-top:2px }
+        .bs-venta .bs-h-price-block { border-left:3px solid #3A6A48; padding-left:14px }
+        .bs-venta .bs-h-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
+        .bs-venta .bs-h-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.3); letter-spacing:0.2px }
+        .bs-venta .bs-h-specs { font-size:15px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300; line-height:1.4 }
+        .bs-venta .bs-h-sub { font-size:14px; color:#EDE8DC; font-family:'DM Sans',sans-serif; font-weight:300; margin-top:4px }
+
+        /* Content sections — override alquileres.css arena backgrounds */
+        .bs-venta .bs-section { background:#1a1a1a; border-bottom:1px solid rgba(237,232,220,0.08) }
+        .bs-venta .bs-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px }
+        .bs-venta .bs-feat { background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.1); box-shadow:none }
+        .bs-venta .bs-fi { color:#9A8E7A }
+        .bs-venta .bs-fv { color:#EDE8DC }
+        .bs-venta .bs-fl { color:#9A8E7A }
+        .bs-venta .bs-feat.hl { border-color:rgba(237,232,220,0.15); background:rgba(237,232,220,0.08) }
+        .bs-venta .bs-feat.hl .bs-fl { color:#EDE8DC }
+        .bs-venta .bs-feat.hl .bs-fv { color:#EDE8DC; font-weight:600 }
+        .bs-venta .bs-aw { display:flex; flex-wrap:wrap; gap:6px }
+        .bs-venta .bs-at { background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.1); color:#EDE8DC }
+        .bs-venta .bs-sl { color:#9A8E7A }
+        .bs-venta .bs-badges { display:flex; flex-wrap:wrap; gap:8px }
+        .bs-venta .bs-badge { border:1px solid rgba(237,232,220,0.15); color:#9A8E7A; background:transparent }
+        .bs-venta .bs-badge.gold { border-color:rgba(237,232,220,0.25); color:#EDE8DC; background:rgba(237,232,220,0.08) }
+        .bs-venta .bs-desc { color:#9A8E7A }
+        .bs-venta .bs-agent { font-size:14px; margin-bottom:10px }
+        .bs-venta .bs-agent-name { color:#EDE8DC }
+        .bs-venta .bs-agent-office { color:#9A8E7A }
+        .bs-venta .bs-gmaps-link { background:rgba(237,232,220,0.08); border:none; color:#EDE8DC }
+        .bs-venta .bs-ver-original { width:100%; padding:14px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.1); color:#EDE8DC; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:15px; cursor:pointer; font-weight:500; display:flex; align-items:center; justify-content:center; gap:8px }
+        .bs-venta .bs-gate { display:flex; flex-direction:column; gap:12px }
+        .bs-venta .bs-gate-title { font-size:14px; color:#9A8E7A; margin-bottom:4px }
+        .bs-venta .bs-gate-input { background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.12); color:#EDE8DC }
+        .bs-venta .bs-gate-input::placeholder { color:#9A8E7A }
+        .bs-venta .bs-gate-submit { background:#EDE8DC; color:#141414 }
+
+        /* Sticky footer */
+        .bs-venta .bs-sticky-footer { position:sticky; bottom:0; z-index:502; display:flex; gap:8px; padding:12px 20px; padding-bottom:max(12px, calc(env(safe-area-inset-bottom) + 8px)); background:#1a1a1a; border-top:1px solid rgba(237,232,220,0.08) }
+        .bs-venta .bs-wsp-cta { display:flex; align-items:center; justify-content:center; gap:8px; flex:1; padding:12px; background:#1EA952; border:none; border-radius:10px; color:#fff; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; text-decoration:none; min-height:44px; transition:opacity 0.2s }
+        .bs-venta .bs-wsp-cta:active { opacity:0.85 }
+        .bs-venta .bs-share-btn { display:flex; align-items:center; justify-content:center; gap:6px; padding:12px 16px; background:transparent; border:1px solid rgba(237,232,220,0.15); border-radius:10px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:400; cursor:pointer; transition:opacity 0.2s }
+
+        /* Similar properties */
+        .bs-venta .bs-sim-card { background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.1) }
+        .bs-venta .bs-sim-card:active { border-color:#3A6A48 }
+        .bs-venta .bs-sim-thumb { background:#2a2a2a }
+        .bs-venta .bs-sim-nophoto { background:#2a2a2a }
+        .bs-venta .bs-sim-name { color:#EDE8DC }
+        .bs-venta .bs-sim-price { color:#EDE8DC }
+        .bs-venta .bs-sim-specs { color:#9A8E7A }
 
       `}</style>
     </>
