@@ -62,6 +62,14 @@ BAÑOS:
 - Si el portal dice un número y el texto no lo contradice → mantener el del portal
 - Rango válido: 0-6
 
+AMOBLADO:
+- Amoblado = muebles sueltos que se pueden retirar: camas, sofás, mesas, sillas de comedor, escritorios
+- NO cuenta como amoblado: roperos empotrados, cocina equipada, aire acondicionado (son fijos del departamento)
+- Si la descripción dice "amoblado", "amueblado", "furnished" → "si"
+- Si dice "semi-amoblado" o "semi amueblado" → "semi"
+- Si la descripción NO menciona amoblado ni ningún sinónimo → "no"
+- Solo devolver null si hay ambigüedad genuina (muy raro)
+
 ═══════════════════════════════════════
 
 Devuelve SOLO este JSON (sin explicaciones, sin markdown):
@@ -95,6 +103,13 @@ Devuelve SOLO este JSON (sin explicaciones, sin markdown):
 ---
 
 ## Changelog
+
+### v2.1 (2026-04-13) — Amoblado default "no"
+
+- **Instrucción AMOBLADO explícita**: si la descripción no menciona amoblado → "no" (antes: null)
+- Definición clara: amoblado = muebles sueltos (camas, sofás, mesas). Roperos empotrados, cocina equipada y AC NO cuentan
+- Basado en auditoría de 35 props con amoblado=NULL: 33/35 (94%) resultaron ser no amoblados tras verificación manual
+- Impacto: elimina ~28% de NULLs en campo amoblado para props nuevas
 
 ### v2.0 (2026-03-28) — Nombre edificio + Confianza + Proyectos conocidos
 
