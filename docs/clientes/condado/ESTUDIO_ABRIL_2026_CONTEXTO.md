@@ -321,7 +321,31 @@ Se redactó un mensaje combinando ambos temas (estudio + landing). Sin emojis ni
 
 ---
 
-## 10. PENDIENTES
+## 10. DECISIÓN: HERRAMIENTAS REUTILIZABLES (Opción B)
+
+En vez de queries ad-hoc, construir un módulo TypeScript en `scripts/estudio-mercado/` donde cada sección del HTML = una herramienta reutilizable. Parámetros genéricos (`id_proyecto_master`, `zona`) — sirve para cualquier desarrolladora, no solo Condado.
+
+**Fase 1 (ahora, con Condado como primer caso):**
+- Módulo TS que consulta BD y genera data para cada sección del HTML
+- Herramientas: panorama, competidores, posición proyecto, yield segmentado, rotación observada, escasez
+- Lógica adaptada de Simon Advisor (`tool-executor.ts`): scoring, market position, scarcity levels
+- Output: HTML autocontenido con design system Condado VI
+
+**Fase 2 (backlog):**
+- Mini-advisor conversacional para desarrolladoras (Claude API sobre las herramientas de Fase 1)
+- Potencial producto API vendible
+
+**Por qué ahora y no después:**
+- Tenemos el caso concreto (Condado 15 Abr) — no es diseño especulativo
+- Advisor ya validó la lógica — no partimos de cero
+- Cada cliente nuevo reutiliza todo — Condado paga el desarrollo, el segundo cliente es ganancia
+- Las herramientas mejoran con cada estudio que hagamos
+
+Ver `docs/backlog/DEUDA_TECNICA.md` sección "Herramientas de estudio de mercado".
+
+---
+
+## 11. PENDIENTES
 
 - [x] Respuesta de Adolfo: inventario confirmado igual, 0 ventas
 - [ ] Contactar vendedor Terrazzo para inventario actualizado
@@ -329,16 +353,16 @@ Se redactó un mensaje combinando ambos temas (estudio + landing). Sin emojis ni
 - [x] Migración 211 ejecutada
 - [x] COMMENT ON TABLE ejecutados en BD
 - [ ] Verificar primer snapshot v3 (14 Abr 9AM)
-- [ ] Crear CLAUDE.md de simon-advisor (Lucho tiene el texto, él lo crea)
-- [ ] Construir HTML v2 del estudio
-- [ ] Correr queries finales con data fresca para el HTML
+- [ ] Crear CLAUDE.md de simon-advisor (Lucho tiene el texto)
+- [ ] Construir módulo `scripts/estudio-mercado/` con herramientas reutilizables
+- [ ] Generar HTML v2 del estudio con las herramientas
 
 ---
 
-## 11. CÓMO ARRANCAR LA PRÓXIMA CONVERSACIÓN
+## 12. CÓMO ARRANCAR LA PRÓXIMA CONVERSACIÓN
 
 Decir algo como:
 
-"Revisá la memoria `estudio_condado_abril.md`. Necesito construir el HTML v2 del estudio de mercado de Condado VI. La migración 211 ya se ejecutó, Adolfo confirmó inventario igual (14 uds, 0 ventas). Verificá el primer snapshot v3 y después arrancá a tirar las queries finales para armar las secciones del HTML."
+"Leé `docs/clientes/condado/ESTUDIO_ABRIL_2026_CONTEXTO.md`. Necesito construir las herramientas de estudio de mercado en `scripts/estudio-mercado/` (Opción B) y generar el HTML v2 para Condado VI. La migración 211 ya se ejecutó. Adolfo confirmó 14 uds, 0 ventas. Usá la lógica de Simon Advisor (`C:\Users\LUCHO\Desktop\Censo inmobiliario\simon-advisor\src\lib\tool-executor.ts`) como referencia para scoring, escasez y yield. Cada sección del HTML debe ser una herramienta reutilizable para otros clientes."
 
-Con eso la próxima sesión tiene: inventario, competencia, decisiones, secciones, design system, y sabe qué queries tirar.
+Con eso la próxima sesión tiene: inventario, competencia, decisiones, secciones, design system, lógica de Advisor como referencia, y el approach de herramientas reutilizables.

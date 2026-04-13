@@ -50,7 +50,7 @@
 - `explicar_precio` — sin llamadas desde frontend/API
 - `analisis_mercado_fiduciario` — sin llamadas desde frontend/API (ver arriba)
 
-## Snapshots absorción — RESUELTO (23-24 Mar 2026)
+## Snapshots absorción — CORREGIDO (13 Abr 2026)
 
 **Problemas resueltos:**
 1. ~~Verificador excluía C21~~ → v5.1 eliminó `AND fuente = 'remax'` (131 props confirmadas)
@@ -58,10 +58,33 @@
 3. ~~Snapshot global sin granularidad por zona~~ → Migración 200 agrega `zona` + `venta_pending_30d` (~26 filas/día)
 4. ~~Snapshot sin filtros canónicos~~ → Fix 24 Mar: duplicado_de, es_multiproyecto, tipo_propiedad_original, zona NOT NULL, 300d cutoff
 5. ~~Market Pulse sin absorción~~ → Dashboard integra KPI card, tabla por zona, 2 charts serie temporal
+6. ~~Asimetría filtros inventario/absorbidas~~ → Migración 211 (13 Abr): quitar 300d de inventario, alinear filtros en absorbidas, `primera_ausencia_at IS NOT NULL`, mediana en $/m², columnas nuevas (absorbidas_entrega/preventa, roi_amoblado/no_amoblado). filter_version=3. Backfill v2 absorbidas. Doc canónico: `docs/canonical/ABSORCION_LIMITACIONES.md`
 
 **Deuda residual:**
 - `MEDIA_ZONA_USD_M2` en extractores n8n sigue hardcodeado — podría leerse de snapshots por zona ahora que existen
 - ~~`market.tsx` usa `MICROZONA_DISPLAY` con nombres legacy~~ **RESUELTO 24 Mar 2026:** refactorizado a `displayZona()` de `lib/zonas.ts`, query usa `zona` en vez de `microzona`, eliminados `MICROZONA_DISPLAY`, `getZonaLabel`, `ZONA_DISPLAY_TO_SNAPSHOT`
+- `/admin/market` (Market Pulse Dashboard) consume snapshots pero no filtra por `filter_version` — debería mostrar solo v3 cuando tenga suficiente historia
+
+## Herramientas de estudio de mercado — PENDIENTE (13 Abr 2026)
+
+**Contexto:** Simon Advisor (`../simon-advisor/`) tiene funciones de análisis (scoring, escasez, yield, deep dive) pero son TypeScript acopladas a su app. SICI necesita sus propias herramientas SQL para generar estudios de mercado para desarrolladoras, reutilizables entre clientes.
+
+**Funciones propuestas (SQL en `sql/functions/query_layer/`):**
+- `estudio_panorama_mercado(zona?)` — inventario, precios, medianas por zona+dorms
+- `estudio_competidores(zona, id_proyecto_master)` — seguimiento de proyectos con unidades activas, cambio vs período anterior
+- `estudio_posicion_proyecto(id_proyecto_master)` — posición vs mercado, escasez, score (lógica de Advisor adaptada)
+- `estudio_yield_segmentado(zona?, dorms?)` — yield por amoblado/no amoblado con n mínimo
+- `estudio_rotacion_observada(zona?, dias?)` — props que salieron del mercado verificadas una por una, sin tasa inflada
+
+**Diseño:** parámetros genéricos (id_proyecto_master, zona) — sirven para cualquier desarrolladora, no solo Condado. Construís las funciones una vez, cambiás el ID del proyecto y tenés el estudio.
+
+**Referencia de lógica:** `simon-advisor/src/lib/tool-executor.ts` — Investment Score (6 factores ponderados), Market Position (segmentado preventa/entrega), Scarcity (4 niveles), Yield (mediana, ajuste preventa).
+
+**Prioridad: ALTA.** Se construyen con el estudio de Condado abril como primer caso real (Opción B: módulo TypeScript en `scripts/estudio-mercado/`).
+
+**Roadmap:**
+1. **Fase 1 (ahora):** Módulo TS en SICI que encapsula las herramientas + genera HTML del estudio. Cada sección del HTML = una herramienta reutilizable. Primer cliente: Condado VI.
+2. **Fase 2 (backlog):** Mini-advisor para desarrolladoras. Capa conversacional (Claude API) sobre las herramientas de Fase 1. Interfaz orientada al desarrollador/promotor, no al inversionista. Potencial producto API vendible a desarrolladoras.
 
 ## Refactor ventas /ventas — Deuda del Bloque 1 (18 Mar 2026)
 
