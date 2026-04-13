@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Estudio de Mercado — Condado VI Plaza Italia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --marfil: #EDE8DC;
+  --white: #FAFAF8;
+  --ebano: #141414;
+  --carbon: #141414;
+  --piedra: #3A3530;
+  --piedra-light: #7A7060;
+  --caramelo: #3A6A48;
+  --caramelo-dark: #3A6A48;
+  --arena: #D8D0BC;
+  --arena-text: #7A7060;
+  --caramelo-10: rgba(58,106,72,0.10);
+  --caramelo-15: rgba(58,106,72,0.15);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  color: var(--carbon);
+  background: var(--marfil);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* NAV */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(20,20,20,0.97);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  transform: translateY(-100%);
+  transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+  border-bottom: 1px solid rgba(58,106,72,0.2);
+}
+.nav.visible { transform: translateY(0); }
+.nav-inner {
+  max-width: 1200px; margin: 0 auto; padding: 0 32px;
+  display: flex; align-items: center; height: 52px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.nav-inner::-webkit-scrollbar { display: none; }
+.nav-brand {
+  font-family: 'Figtree', sans-serif; font-size: 15px;
+  color: var(--marfil); white-space: nowrap; margin-right: 32px; flex-shrink: 0;
+}
+.nav-link {
+  font-size: 12px; font-weight: 500; color: var(--arena);
+  text-decoration: none; letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 16px 14px; white-space: nowrap; transition: color 0.3s;
+  flex-shrink: 0; position: relative;
+}
+.nav-link:hover, .nav-link.active { color: var(--caramelo); }
+.nav-link.active::after {
+  content: ''; position: absolute; bottom: 0; left: 14px; right: 14px;
+  height: 2px; background: var(--caramelo);
+}
+
+/* SECTIONS */
+.section {
+  min-height: 100vh; padding: 100px 32px;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.section-inner { max-width: 1100px; margin: 0 auto; width: 100%; }
+.bg-marfil { background: var(--marfil); }
+.bg-white { background: var(--white); }
+.bg-ebano { background: var(--ebano); color: var(--marfil); }
+
+/* TYPOGRAPHY */
+.badge {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  letter-spacing: 3px; text-transform: uppercase; color: var(--caramelo-dark);
+  border: 1px solid var(--caramelo); padding: 6px 18px; margin-bottom: 28px;
+}
+.bg-ebano .badge { border-color: rgba(58,106,72,0.5); }
+.section-title {
+  font-family: 'Figtree', sans-serif; font-size: 36px; font-weight: 500;
+  color: var(--carbon); margin-bottom: 10px; letter-spacing: -0.3px; line-height: 1.2;
+}
+.bg-ebano .section-title { color: var(--marfil); }
+.section-subtitle {
+  font-size: 17px; color: var(--piedra); margin-bottom: 48px; line-height: 1.5;
+}
+.bg-ebano .section-subtitle { color: var(--piedra-light); }
+.bg-ebano table.data { color: var(--marfil); }
+.bg-ebano table.data thead tr { background: rgba(255,255,255,0.08); }
+.bg-ebano table.data td { border-bottom-color: rgba(255,255,255,0.08); }
+.bg-ebano table.data .strong { color: var(--marfil); }
+.bg-ebano table.data .muted { color: var(--piedra-light); }
+.bg-ebano table.data tbody tr:hover { background: rgba(58,106,72,0.12); }
+.bg-ebano table.data tr.highlight { background: rgba(58,106,72,0.12); }
+.bg-ebano table.data tr.highlight td { color: var(--caramelo); }
+.bg-ebano .cat-badge { color: var(--marfil); }
+.bg-ebano .cat-promedio { background: rgba(58,106,72,0.2); color: var(--caramelo); }
+.bg-ebano .cat-oportunidad { background: rgba(58,106,72,0.3); color: #8FBF9A; }
+.bg-ebano .cat-bajo_promedio { background: rgba(58,106,72,0.2); color: #8FBF9A; }
+.bg-ebano .cat-sobre_promedio { background: rgba(255,255,255,0.08); color: var(--piedra-light); }
+.bg-ebano .cat-premium { background: rgba(255,255,255,0.12); color: var(--marfil); }
+.bg-ebano .takeaway { color: var(--piedra-light); border-top-color: rgba(255,255,255,0.08); }
+.bg-ebano .yield-card { border-color: rgba(255,255,255,0.1); }
+.bg-ebano .yield-card.attractive { border-color: var(--caramelo); }
+.bg-ebano .yield-tipo { color: var(--marfil); }
+.bg-ebano .yield-value.high { color: var(--caramelo); }
+.bg-ebano .yield-value.low { color: var(--piedra-light); }
+.bg-ebano .yield-rent { color: var(--piedra-light); }
+.bg-ebano .yield-detail { color: var(--piedra-light); border-top-color: rgba(255,255,255,0.08); }
+
+/* REVEAL */
+.reveal {
+  opacity: 0; transform: translateY(30px);
+  transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1);
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+
+/* HERO */
+.hero {
+  min-height: 100vh; display: flex; flex-direction: column;
+  justify-content: center; align-items: center; text-align: center;
+  padding: 60px 32px; background: var(--ebano); position: relative;
+}
+.hero-panel {
+  position: relative; z-index: 1;
+  background: rgba(250,247,242,0.92); backdrop-filter: blur(14px);
+  padding: 64px 72px; max-width: 640px; width: 100%;
+}
+.hero-badge {
+  font-size: 12px; font-weight: 500; letter-spacing: 4px; text-transform: uppercase;
+  color: var(--caramelo-dark); border: 1px solid var(--caramelo);
+  padding: 8px 24px; margin-bottom: 40px; display: inline-block;
+}
+.hero h1 {
+  font-family: 'Figtree', sans-serif; font-size: clamp(36px, 5vw, 52px);
+  font-weight: 500; color: var(--carbon); letter-spacing: -0.5px; margin-bottom: 8px;
+}
+.hero-sub {
+  font-family: 'Figtree', sans-serif; font-size: clamp(18px, 2.5vw, 24px);
+  font-weight: 400; color: var(--caramelo-dark); margin-bottom: 48px;
+}
+.hero-line { width: 60px; height: 1px; background: var(--caramelo); margin: 0 auto 40px; }
+.hero-meta { font-size: 14px; color: var(--piedra); line-height: 2.2; }
+.hero-meta strong { color: var(--carbon); font-weight: 500; }
+
+/* KPIs */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 32px 24px; }
+.kpi { text-align: center; }
+.kpi-value {
+  font-family: 'Figtree', sans-serif; font-size: 54px; font-weight: 500;
+  color: var(--carbon); line-height: 1.1; margin-bottom: 8px;
+}
+.kpi-value.accent { color: var(--caramelo-dark); }
+.kpi-label { font-size: 14px; color: var(--piedra); letter-spacing: 0.5px; }
+
+/* CHARTS */
+.chart-container { position: relative; width: 100%; margin: 24px 0; }
+.chart-container canvas { max-height: 400px; }
+.chart-note { font-size: 14px; color: var(--piedra); font-style: italic; margin-top: 16px; }
+
+/* TABLES */
+.table-wrap { overflow-x: auto; margin: 16px 0; }
+table.data { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.data thead tr { background: var(--carbon); color: var(--marfil); }
+table.data th {
+  font-weight: 600; text-align: left; padding: 12px 14px;
+  font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap;
+}
+table.data td { padding: 10px 14px; border-bottom: 1px solid var(--arena); vertical-align: middle; }
+table.data tbody tr:hover { background: var(--caramelo-10); }
+table.data tr.highlight { background: var(--caramelo-10); }
+table.data tr.highlight td { font-weight: 600; color: var(--caramelo-dark); }
+table.data .muted { color: var(--arena-text); }
+table.data .strong { color: var(--carbon); font-weight: 600; }
+
+/* YIELD CARDS */
+.yield-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+.yield-card {
+  border: 1px solid var(--arena); padding: 24px;
+  transition: border-color 0.3s;
+}
+.yield-card.attractive { border-color: var(--caramelo); }
+.yield-value {
+  font-family: 'Figtree', sans-serif; font-size: 40px; font-weight: 500; margin-bottom: 6px;
+}
+.yield-value.high { color: var(--caramelo-dark); }
+.yield-value.low { color: var(--piedra); }
+.yield-tipo { font-size: 15px; font-weight: 600; color: var(--carbon); margin-bottom: 6px; }
+.yield-rent { font-size: 14px; color: var(--piedra); }
+.yield-detail { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--arena); font-size: 14px; color: var(--piedra); line-height: 1.8; }
+
+/* COMPARE GRID */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--arena); }
+.compare-col { padding: 32px; }
+.compare-col:first-child { border-right: 1px solid var(--arena); }
+.compare-header { font-family: 'Figtree', sans-serif; font-size: 24px; font-weight: 500; margin-bottom: 24px; }
+.compare-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--arena); font-size: 15px; }
+.compare-row:last-child { border-bottom: none; }
+.compare-key { color: var(--piedra); }
+.compare-val { font-weight: 600; }
+.compare-val.wins { color: var(--carbon); }
+.compare-val.loses { color: var(--arena-text); }
+
+/* GAP INDICATOR */
+.gap-indicator {
+  display: flex; align-items: center; gap: 24px; margin: 32px 0;
+  padding: 32px; border: 2px solid var(--caramelo); background: var(--caramelo-10);
+}
+.gap-number {
+  font-family: 'Figtree', sans-serif; font-size: 64px; font-weight: 500;
+  color: var(--caramelo-dark); line-height: 1;
+}
+.gap-text { font-size: 17px; color: var(--carbon); line-height: 1.5; }
+.gap-text strong { color: var(--caramelo-dark); }
+
+/* TIMELINE */
+.timeline { position: relative; padding-left: 40px; }
+.timeline::before {
+  content: ''; position: absolute; left: 12px; top: 0; bottom: 0;
+  width: 1px; background: var(--arena);
+}
+.tl-block { margin-bottom: 48px; position: relative; }
+.tl-dot {
+  position: absolute; left: -34px; top: 4px;
+  width: 12px; height: 12px; border: 2px solid var(--caramelo); background: var(--marfil);
+}
+.tl-block.urgente .tl-dot { background: var(--caramelo); }
+.tl-period { font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; }
+.tl-period.urgente { color: var(--caramelo-dark); }
+.tl-period.corto { color: var(--carbon); }
+.tl-period.mediano { color: var(--piedra); }
+.tl-card {
+  border: 1px solid var(--arena); padding: 16px 20px; margin-bottom: 12px;
+  background: var(--white);
+}
+.tl-card-title { font-size: 16px; font-weight: 600; color: var(--carbon); }
+
+/* TC SLIDER */
+.tc-slider-wrap { margin: 32px 0 48px; text-align: center; }
+.tc-slider-label { font-size: 14px; color: var(--piedra); margin-bottom: 12px; }
+.tc-slider-value {
+  font-family: 'Figtree', sans-serif; font-size: 48px; font-weight: 500;
+  color: var(--carbon); margin-bottom: 16px;
+}
+.tc-slider {
+  -webkit-appearance: none; appearance: none; width: 100%; max-width: 600px;
+  height: 4px; background: var(--arena); outline: none; border-radius: 2px;
+}
+.tc-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 24px; height: 24px;
+  background: var(--caramelo); cursor: pointer; border: 3px solid var(--white);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.tc-slider::-moz-range-thumb {
+  width: 24px; height: 24px; background: var(--caramelo); cursor: pointer;
+  border: 3px solid var(--white); box-shadow: 0 1px 4px rgba(0,0,0,0.15); border-radius: 0;
+}
+.tc-impact-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin: 32px 0; }
+.tc-impact-card { text-align: center; padding: 24px 16px; border: 1px solid var(--arena); background: var(--white); }
+.tc-impact-value { font-family: 'Figtree', sans-serif; font-size: 36px; font-weight: 500; color: var(--carbon); margin-bottom: 4px; }
+.tc-impact-label { font-size: 13px; color: var(--piedra); letter-spacing: 0.5px; }
+
+/* SIGNAL BADGES */
+.signal { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; padding: 3px 10px; text-transform: uppercase; }
+.signal-nuevo { background: rgba(58,106,72,0.12); color: #3A6A48; }
+.signal-activo { background: var(--caramelo-10); color: var(--caramelo-dark); }
+.signal-prolongado { background: rgba(58,53,48,0.1); color: var(--piedra); }
+.signal-estancado { background: rgba(58,53,48,0.18); color: var(--piedra); }
+
+/* SCARCITY LEVELS */
+.scarcity { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1px; padding: 4px 12px; text-transform: uppercase; }
+.scarcity-critica { background: var(--caramelo); color: var(--white); }
+.scarcity-alta { background: var(--caramelo-dark); color: var(--white); }
+.scarcity-media { background: var(--arena); color: var(--carbon); }
+.scarcity-baja { background: var(--arena); color: var(--arena-text); }
+
+/* CATEGORY BADGES */
+.cat-badge { display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; padding: 4px 14px; }
+.cat-oportunidad { background: rgba(58,106,72,0.12); color: #3A6A48; }
+.cat-bajo_promedio { background: rgba(58,106,72,0.08); color: #3A6A48; }
+.cat-promedio { background: var(--caramelo-10); color: var(--caramelo-dark); }
+.cat-sobre_promedio { background: rgba(140,132,122,0.15); color: var(--piedra); }
+.cat-premium { background: var(--carbon); color: var(--marfil); }
+
+/* FILTER PILLS */
+.rot-pill {
+  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+  color: var(--piedra); background: var(--white); border: 1px solid var(--arena);
+  padding: 8px 20px; cursor: pointer; border-radius: 100px;
+  transition: all 0.25s ease-out; display: inline-flex; align-items: center; gap: 8px;
+}
+.rot-pill:hover { border-color: var(--caramelo); color: var(--carbon); }
+.rot-pill.active {
+  background: var(--caramelo); color: var(--white); border-color: var(--caramelo);
+}
+.rot-pill-count {
+  font-size: 12px; font-weight: 600; background: rgba(0,0,0,0.08);
+  padding: 2px 8px; border-radius: 100px; min-width: 24px; text-align: center;
+}
+.rot-pill.active .rot-pill-count { background: rgba(255,255,255,0.2); }
+
+/* FOOTER */
+.footer { background: var(--carbon); color: var(--piedra-light); padding: 80px 32px; }
+.footer-inner { max-width: 1100px; margin: 0 auto; }
+.footer-brand {
+  text-align: center; margin-top: 40px; padding-top: 40px;
+  border-top: 1px solid rgba(58,106,72,0.25);
+}
+.footer-brand span { font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: var(--piedra-light); }
+
+/* TAKEAWAY */
+.takeaway {
+  font-size: 16px; font-style: italic; color: var(--piedra);
+  margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--arena); line-height: 1.6;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .section { padding: 60px 20px; }
+  .hero-panel { padding: 40px 28px; max-width: 92%; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+  .kpi-value { font-size: 40px; }
+  .compare-grid { grid-template-columns: 1fr; }
+  .compare-col:first-child { border-right: none; border-bottom: 1px solid var(--arena); }
+  .yield-grid { grid-template-columns: 1fr; }
+  .section-title { font-size: 28px; }
+  .nav-link { padding: 16px 10px; font-size: 11px; }
+  .tc-impact-grid { grid-template-columns: 1fr; }
+  .gap-indicator { flex-direction: column; text-align: center; }
+  .gap-number { font-size: 48px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav" id="mainNav">
+  <div class="nav-inner">
+    <div class="nav-brand">Condado VI Plaza Italia</div>
+    <a href="#metodologia" class="nav-link">Metodologia</a><a href="#panorama" class="nav-link">Panorama</a><a href="#zoom" class="nav-link">Zona</a><a href="#demanda" class="nav-link">Oferta</a><a href="#posicion" class="nav-link">Posicion</a><a href="#competidores" class="nav-link">Competencia</a><a href="#visibilidad" class="nav-link">Visibilidad</a><a href="#rotacion" class="nav-link">Rotacion</a><a href="#yield" class="nav-link">Yield</a><a href="#simulacion" class="nav-link">Simulacion</a><a href="#recomendaciones" class="nav-link">Acciones</a>
+  </div>
+</nav>
+
+<section class="hero" id="hero">
+  <div class="hero-panel">
+    <div class="hero-badge">Estudio de Mercado</div>
+    <h1>Condado VI Plaza Italia</h1>
+    <div class="hero-sub">Constructora Condado</div>
+    <div class="hero-line"></div>
+    <div class="hero-meta">
+      <strong>Abril 2026</strong><br>
+      Corte de datos: 13 de abril de 2026<br>
+      Zona: Equipetrol Centro<br>
+      Elaborado por <strong>Simon</strong> — Inteligencia Inmobiliaria
+    </div>
+  </div>
+</section>
+
+<section class="section bg-white" id="metodologia">
+  <div class="section-inner reveal">
+    <div class="badge">Metodologia</div>
+    <div class="section-title">Como leemos el mercado</div>
+    <div class="section-subtitle">
+      Este estudio usa datos de portales inmobiliarios (Century21, Remax) procesados por Simon.
+      Las metricas se calculan con medianas (no promedios) para reducir el impacto de valores extremos.
+      Los precios se normalizan al tipo de cambio paralelo vigente (Bs 9.28) para comparabilidad.
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-value accent">314</div>
+        <div class="kpi-label">Unidades activas</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">58</div>
+        <div class="kpi-label">Proyectos en Equipetrol Centro</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">Bs 9.28</div>
+        <div class="kpi-label">TC paralelo (Binance)</div>
+      </div>
+    </div>
+    <p class="takeaway">
+      Los datos provienen de listings activos en Century21 y Remax. Esto representa la oferta visible
+      en portales, no necesariamente el inventario total de cada proyecto. El tiempo en mercado
+      corresponde a la antig&uuml;edad del anuncio publicado, no a cu&aacute;nto tiempo lleva
+      el proyecto vendiendo. Estas limitaciones aplican por igual a todos los proyectos analizados.
+    </p>
+  </div>
+</section>
+
+<section class="section bg-marfil" id="panorama">
+  <div class="section-inner reveal">
+    <div class="badge">Panorama</div>
+    <div class="section-title">El mercado de Equipetrol</div>
+    <div class="section-subtitle">314 unidades activas en 5 zonas. Mediana general: $2,044/m².</div>
+    <div class="kpi-grid" style="margin-bottom:48px">
+      <div class="kpi">
+        <div class="kpi-value accent">$2,044</div>
+        <div class="kpi-label">Mediana $/m²</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">$117,172</div>
+        <div class="kpi-label">Ticket mediana</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">314</div>
+        <div class="kpi-label">Unidades</div>
+      </div>
+    </div>
+    <div class="chart-container" style="height:275px">
+      <canvas id="chartZonas"></canvas>
+    </div>
+    
+<script>
+(function() {
+  const ctx = document.getElementById('chartZonas');
+  if (!ctx) return;
+  const medianLine = 2044;
+  const medianPlugin = {
+    id: 'medianLine',
+    afterDraw: function(chart) {
+      if (!medianLine) return;
+      const xScale = chart.scales.x;
+      const ctx2 = chart.ctx;
+      const x = xScale.getPixelForValue(medianLine);
+      ctx2.save();
+      ctx2.beginPath();
+      ctx2.setLineDash([6, 4]);
+      ctx2.strokeStyle = '#3A6A48';
+      ctx2.lineWidth = 2;
+      ctx2.moveTo(x, chart.chartArea.top);
+      ctx2.lineTo(x, chart.chartArea.bottom);
+      ctx2.stroke();
+      ctx2.setLineDash([]);
+      ctx2.fillStyle = '#3A6A48';
+      ctx2.font = "500 12px 'DM Sans'";
+      ctx2.textAlign = 'center';
+      ctx2.fillText('Mediana $' + medianLine.toLocaleString(), x, chart.chartArea.top - 8);
+      ctx2.restore();
+    }
+  };
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ["Eq. Centro","Sirari","V. Brigida","Eq. Oeste","Eq. Norte"],
+      datasets: [{
+        data: [2137,2052,1921,1929,2519],
+        backgroundColor: ["#3A6A48","#D8D0BC","#D8D0BC","#D8D0BC","#D8D0BC"],
+        borderWidth: 0,
+        barThickness: 32
+      }]
+    },
+    plugins: [medianPlugin],
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 24 } },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { callback: v => '$' + v.toLocaleString(), color: '#3A3530', font: { family: 'DM Sans', size: 12 } },
+          grid: { color: '#D8D0BC' }
+        },
+        y: {
+          afterFit: function(axis) { axis.width = 120; },
+          ticks: { color: '#141414', font: { family: 'DM Sans', size: 13, weight: 500 } },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+})();
+</script>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Zona</th><th>Uds</th><th>$/m² med.</th><th>Ticket med.</th><th>Area prom.</th></tr></thead>
+        <tbody>
+          <tr class="highlight">
+            <td class="strong">Equipetrol Centro</td><td>114</td><td>$2,137</td>
+            <td>$132,742</td><td>79m²</td>
+          </tr><tr>
+            <td class="strong">Sirari</td><td>77</td><td>$2,052</td>
+            <td>$115,746</td><td>79m²</td>
+          </tr><tr>
+            <td class="strong">Villa Brigida</td><td>53</td><td>$1,921</td>
+            <td>$113,358</td><td>64m²</td>
+          </tr><tr>
+            <td class="strong">Equipetrol Oeste</td><td>48</td><td>$1,929</td>
+            <td>$116,346</td><td>66m²</td>
+          </tr><tr>
+            <td class="strong">Equipetrol Norte</td><td>22</td><td>$2,519</td>
+            <td>$136,530</td><td>70m²</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section bg-white" id="zoom">
+  <div class="section-inner reveal">
+    <div class="badge">Equipetrol Centro</div>
+    <div class="section-title">Inventario por tipologia</div>
+    <div class="section-subtitle">114 unidades activas. Las barras destacadas corresponden a las tipologias de Condado VI Plaza Italia.</div>
+    <div class="chart-container" style="height:300px">
+      <canvas id="chartDorms"></canvas>
+    </div>
+    
+<script>
+(function() {
+  const ctx = document.getElementById('chartDorms');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ["Mono","1D","2D","3D","4D"],
+      datasets: [{
+        data: [18,50,34,10,2],
+        backgroundColor: ["#D8D0BC","#3A6A48","#3A6A48","#3A6A48","#D8D0BC"],
+        borderWidth: 0,
+        barThickness: 48
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { color: '#141414', font: { family: 'DM Sans', size: 13, weight: 500 } },
+          grid: { display: false }
+        },
+        y: {
+          ticks: { color: '#3A3530', font: { family: 'DM Sans', size: 12 } },
+          grid: { color: '#D8D0BC' }
+        }
+      }
+    }
+  });
+})();
+</script>
+  </div>
+</section>
+
+<section class="section bg-marfil" id="demanda">
+  <div class="section-inner reveal">
+    <div class="badge">Oferta</div>
+    <div class="section-title">Escasez por tipologia</div>
+    <div class="section-subtitle">Concentracion de la oferta activa en Equipetrol Centro. Las tipologias con menos unidades listadas tienen menor competencia directa.</div>
+    <div class="yield-grid">
+      
+      <div class="yield-card">
+        <div class="yield-tipo">Mono</div>
+        <div class="yield-value low">18</div>
+        <div class="yield-rent">15.8% del inventario</div>
+        <div style="margin-top:12px"><span class="scarcity scarcity-media">MEDIA</span></div>
+      </div>
+      <div class="yield-card">
+        <div class="yield-tipo">1D</div>
+        <div class="yield-value low">50</div>
+        <div class="yield-rent">43.9% del inventario</div>
+        <div style="margin-top:12px"><span class="scarcity scarcity-baja">BAJA</span></div>
+      </div>
+      <div class="yield-card">
+        <div class="yield-tipo">2D</div>
+        <div class="yield-value low">34</div>
+        <div class="yield-rent">29.8% del inventario</div>
+        <div style="margin-top:12px"><span class="scarcity scarcity-baja">BAJA</span></div>
+      </div>
+      <div class="yield-card attractive">
+        <div class="yield-tipo">3D</div>
+        <div class="yield-value high">10</div>
+        <div class="yield-rent">8.8% del inventario</div>
+        <div style="margin-top:12px"><span class="scarcity scarcity-alta">ALTA</span></div>
+      </div>
+      <div class="yield-card attractive">
+        <div class="yield-tipo">4D</div>
+        <div class="yield-value high">2</div>
+        <div class="yield-rent">1.8% del inventario</div>
+        <div style="margin-top:12px"><span class="scarcity scarcity-critica">CRITICA</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section bg-ebano" id="posicion">
+  <div class="section-inner reveal">
+    <div class="badge">Posicion</div>
+    <div class="section-title">Donde esta Condado VI Plaza Italia</div>
+    <div class="section-subtitle">
+      A $2,200/m² normalizado, el proyecto esta +3.0% vs la mediana de Equipetrol Centro ($2,137/m²).
+      Percentil 54 — por encima de la mitad del mercado.
+    </div>
+    <div style="text-align:center;margin-bottom:48px">
+      <span class="cat-badge cat-promedio">Promedio</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Tipologia</th><th>Proyecto $/m²</th><th>Mediana zona</th><th>Diferencia</th><th>Categoria</th><th>Oferta zona</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="strong">1D</td>
+            <td>$2,200</td><td>$2,185</td>
+            <td>+0.7%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            <td>50 uds</td>
+          </tr><tr>
+            <td class="strong">2D</td>
+            <td>$2,200</td><td>$2,041</td>
+            <td>+7.8%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            <td>34 uds</td>
+          </tr><tr>
+            <td class="strong">3D</td>
+            <td>$2,200</td><td>$2,168</td>
+            <td>+1.5%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            <td>10 uds</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section bg-white" id="competidores">
+  <div class="section-inner reveal">
+    <div class="badge">Competencia</div>
+    <div class="section-title">Mapa competitivo</div>
+    <div class="section-subtitle">58 proyectos activos en Equipetrol Centro (mostrando los de 3+ unidades). Ordenados por precio. Tamano del punto = unidades.</div>
+    <div class="chart-container" style="height:400px">
+      <canvas id="chartScatter"></canvas>
+    </div>
+    
+<script>
+(function() {
+  const ctx = document.getElementById('chartScatter');
+  if (!ctx) return;
+  const points = [{"x":104,"y":3053,"label":"Uptown NUU","uds":4,"r":12,"isProject":false},{"x":94,"y":2797,"label":"Sky Plaza Italia","uds":3,"r":9,"isProject":false},{"x":75,"y":2739,"label":"Sky Tower","uds":6,"r":18,"isProject":false},{"x":43,"y":2716,"label":"Luxe Suites","uds":5,"r":15,"isProject":false},{"x":60,"y":2433,"label":"Edificio Spazios","uds":5,"r":15,"isProject":false},{"x":201,"y":2213,"label":"Atrium","uds":8,"r":20,"isProject":false},{"x":71,"y":2200,"label":"Condado VI Plaza Italia","uds":3,"r":9,"isProject":true},{"x":208,"y":2055,"label":"Sky Level","uds":7,"r":20,"isProject":false},{"x":72,"y":1792,"label":"Hh Once","uds":4,"r":12,"isProject":false},{"x":110,"y":1762,"label":"HH Once Equipetrol","uds":6,"r":18,"isProject":false}];
+  new Chart(ctx, {
+    type: 'bubble',
+    data: {
+      datasets: [{
+        data: points.map(p => ({ x: p.x, y: p.y, r: p.r })),
+        backgroundColor: points.map(p => p.isProject ? '#3A6A48' : '#D8D0BC'),
+        borderColor: points.map(p => p.isProject ? '#3A6A48' : '#3A3530'),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = points[ctx.dataIndex];
+              return [p.label, p.uds + ' unidades', '$' + p.y.toLocaleString() + '/m\u00B2', p.x + ' dias med.'];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Dias en mercado (mediana)', color: '#3A3530', font: { family: 'DM Sans', size: 12 } },
+          ticks: { color: '#3A3530', font: { family: 'DM Sans', size: 11 } },
+          grid: { color: '#D8D0BC' }
+        },
+        y: {
+          title: { display: true, text: '$/m\u00B2', color: '#3A3530', font: { family: 'DM Sans', size: 12 } },
+          ticks: { callback: v => '$' + v.toLocaleString(), color: '#3A3530', font: { family: 'DM Sans', size: 11 } },
+          grid: { color: '#D8D0BC' }
+        }
+      }
+    }
+  });
+})();
+</script>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Proyecto</th><th>Uds</th><th>$/m²</th><th>Signal</th></tr></thead>
+        <tbody>
+          <tr style="background:rgba(58,53,48,0.04)">
+            <td class="strong">Uptown NUU</td><td>4</td>
+            <td>$3,053</td>
+            <td><span class="signal signal-prolongado">PROLONGADO</span></td>
+          </tr><tr style="background:rgba(58,53,48,0.04)">
+            <td class="strong">Sky Plaza Italia</td><td>3</td>
+            <td>$2,797</td>
+            <td><span class="signal signal-prolongado">PROLONGADO</span></td>
+          </tr><tr>
+            <td class="strong">Sky Tower</td><td>6</td>
+            <td>$2,739</td>
+            <td><span class="signal signal-activo">ACTIVO</span></td>
+          </tr><tr>
+            <td class="strong">Luxe Suites</td><td>5</td>
+            <td>$2,716</td>
+            <td><span class="signal signal-nuevo">NUEVO</span></td>
+          </tr><tr>
+            <td class="strong">Edificio Spazios</td><td>5</td>
+            <td>$2,433</td>
+            <td><span class="signal signal-activo">ACTIVO</span></td>
+          </tr><tr style="background:rgba(58,53,48,0.08)">
+            <td class="strong">Atrium</td><td>8</td>
+            <td>$2,213</td>
+            <td><span class="signal signal-estancado">ESTANCADO</span></td>
+          </tr><tr class="highlight">
+            <td class="strong">Condado VI Plaza Italia</td><td>3</td>
+            <td>$2,200</td>
+            <td><span class="signal signal-activo">ACTIVO</span></td>
+          </tr><tr style="background:rgba(58,53,48,0.08)">
+            <td class="strong">Sky Level</td><td>7</td>
+            <td>$2,055</td>
+            <td><span class="signal signal-estancado">ESTANCADO</span></td>
+          </tr><tr>
+            <td class="strong">Hh Once</td><td>4</td>
+            <td>$1,792</td>
+            <td><span class="signal signal-activo">ACTIVO</span></td>
+          </tr><tr style="background:rgba(58,53,48,0.04)">
+            <td class="strong">HH Once Equipetrol</td><td>6</td>
+            <td>$1,762</td>
+            <td><span class="signal signal-prolongado">PROLONGADO</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:16px 28px;margin-top:20px;font-size:13px;color:var(--piedra)">
+      <div><span class="signal signal-nuevo">NUEVO</span> &lt; 45 dias publicado</div>
+      <div><span class="signal signal-activo">ACTIVO</span> 45 a 90 dias</div>
+      <div><span class="signal signal-prolongado">PROLONGADO</span> 90 a 150 dias</div>
+      <div><span class="signal signal-estancado">ESTANCADO</span> +150 dias</div>
+    </div>
+    <p class="chart-note" style="margin-top:16px">Signal = tiempo que llevan publicados los anuncios en portales, no velocidad de venta.</p>
+  </div>
+</section>
+
+<section class="section bg-marfil" id="visibilidad">
+  <div class="section-inner reveal">
+    <div class="badge">Visibilidad</div>
+    <div class="section-title">Tu inventario vs lo que ve el mercado</div>
+    <div class="section-subtitle">
+      De 14 unidades disponibles, solo 4 aparecen en portales inmobiliarios.
+      10 unidades son invisibles para compradores que buscan online.
+    </div>
+    <div class="gap-indicator">
+      <div class="gap-number">71%</div>
+      <div class="gap-text">
+        <strong>10 de 14 unidades</strong> no aparecen en ningun portal.
+        Los compradores que buscan en Century21 o Remax no pueden encontrarlas.
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Tipologia</th><th>Inventario real</th><th>En portales</th><th>Invisibles</th></tr></thead>
+        <tbody>
+          <tr>
+              <td class="strong">1D</td>
+              <td>4</td><td>3</td>
+              <td class="strong">1</td>
+            </tr><tr>
+              <td class="strong">2D</td>
+              <td>7</td><td>0</td>
+              <td class="strong">7</td>
+            </tr><tr>
+              <td class="strong">3D</td>
+              <td>3</td><td>1</td>
+              <td class="strong">2</td>
+            </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <p style="margin-top:32px;font-size:15px;font-weight:600;color:var(--carbon)">Listings activos en portales:</p>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Fuente</th><th>Broker</th><th>Dorms</th><th>Area</th><th>$/m²</th><th>Dias</th><th>Nota</th><th>Link</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>remax</td><td>Juan Jose Cruz Garcia</td><td>1D</td>
+            <td>62.21m²</td><td>$2,252</td><td>244d</td>
+            <td></td>
+            <td><a href="https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120045032-82" target="_blank" rel="noopener" style="color:var(--caramelo);text-decoration:underline;font-size:13px">Ver anuncio</a></td>
+          </tr><tr>
+            <td>remax</td><td>Juan Jose Cruz Garcia</td><td>3D</td>
+            <td>144.31m²</td><td>$2,200</td><td>61d</td>
+            <td><span style="font-size:12px;color:var(--caramelo)">Multiproyecto — muestra varias tipologias</span></td>
+            <td><a href="https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-equipetrolnoroeste-120045032-106" target="_blank" rel="noopener" style="color:var(--caramelo);text-decoration:underline;font-size:13px">Ver anuncio</a></td>
+          </tr><tr>
+            <td>century21</td><td>Erick Marcelo Cirbian Tejerina</td><td>1D</td>
+            <td>62.21m²</td><td>$2,200</td><td>53d</td>
+            <td></td>
+            <td><a href="https://c21.com.bo/propiedad/100914_departamento-en-venta-condado-park-6" target="_blank" rel="noopener" style="color:var(--caramelo);text-decoration:underline;font-size:13px">Ver anuncio</a></td>
+          </tr><tr>
+            <td>century21</td><td>Roland Ortiz Suárez</td><td>1D</td>
+            <td>62m²</td><td>$2,141</td><td>71d</td>
+            <td></td>
+            <td><a href="https://c21.com.bo/propiedad/101617_departamento-en-venta-de-1-dormitorio" target="_blank" rel="noopener" style="color:var(--caramelo);text-decoration:underline;font-size:13px">Ver anuncio</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <p class="chart-note" style="margin-top:12px">
+      Los listings multiproyecto anuncian el edificio completo (varias tipologias en un solo aviso).
+      Aunque aparecen como una unidad en nuestro conteo, su alcance real es mayor.
+    </p>
+  </div>
+</section>
+
+<section class="section bg-white" id="rotacion">
+  <div class="section-inner reveal">
+    <div class="badge">Rotacion</div>
+    <div class="section-title">Que salio del mercado</div>
+    <div class="section-subtitle">
+      En los ultimos 30 dias, 56 propiedades dejaron de aparecer en portales en Equipetrol Centro.
+      Esto puede significar venta, retiro del listing, o expiracion — no necesariamente venta confirmada.
+    </div>
+    
+    
+    
+    <div style="border:1px solid var(--arena);padding:24px;margin-bottom:32px;background:var(--white);border-radius:14px">
+      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:16px">Lectura de las salidas</div>
+      <p style="font-size:15px;color:var(--carbon);line-height:1.7;margin-bottom:12px">La mediana de las que salieron es <strong>$2,100/m²</strong>, similar a las activas ($2,137). Las salidas se distribuyen parejo en el rango de precios.</p><p style="font-size:15px;color:var(--carbon);line-height:1.7;margin-bottom:12px">Proyectos de la tabla de competidores con salidas: <strong>Luxe Suites</strong> (6), <strong>Condado VI Plaza Italia</strong> (3), <strong>HH Once Equipetrol</strong> (3), <strong>Sky Plaza Italia</strong> (2), <strong>Atrium</strong> (2).</p><p style="font-size:15px;color:var(--carbon);line-height:1.7;margin-bottom:12px"><span style="color:var(--caramelo);font-weight:600">Atencion:</span> 3 salida(s) corresponden a Condado VI Plaza Italia. Verificar si son ventas reales o listings expirados.</p>
+      <p style="font-size:13px;color:var(--piedra);line-height:1.6;margin-top:16px;padding-top:12px;border-top:1px solid var(--arena)">
+        Estas salidas incluyen ventas, retiros de listing y expiraciones — no distinguimos la causa.
+        Los patrones (que tipologia sale, a que precio) son indicativos, no conclusivos.
+      </p>
+    </div>
+    <div class="yield-grid" style="margin-bottom:32px">
+      <div class="yield-card attractive" style="cursor:pointer" onclick="filterRotacion(1)">
+        <div class="yield-tipo">1D</div>
+        <div class="yield-value high">25</div>
+        <div class="yield-rent">45% de las salidas</div>
+      </div><div class="yield-card" style="cursor:pointer" onclick="filterRotacion(2)">
+        <div class="yield-tipo">2D</div>
+        <div class="yield-value low">18</div>
+        <div class="yield-rent">32% de las salidas</div>
+      </div><div class="yield-card" style="cursor:pointer" onclick="filterRotacion(0)">
+        <div class="yield-tipo">Mono</div>
+        <div class="yield-value low">11</div>
+        <div class="yield-rent">20% de las salidas</div>
+      </div><div class="yield-card" style="cursor:pointer" onclick="filterRotacion(3)">
+        <div class="yield-tipo">3D</div>
+        <div class="yield-value low">2</div>
+        <div class="yield-rent">4% de las salidas</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+      <button class="rot-pill active" onclick="filterRotacion('all')" data-rotfilter="all">Todas <span class="rot-pill-count">56</span></button>
+      <button class="rot-pill" onclick="filterRotacion(1)" data-rotfilter="1">1D <span class="rot-pill-count">25</span></button><button class="rot-pill" onclick="filterRotacion(2)" data-rotfilter="2">2D <span class="rot-pill-count">18</span></button><button class="rot-pill" onclick="filterRotacion(0)" data-rotfilter="0">Mono <span class="rot-pill-count">11</span></button><button class="rot-pill" onclick="filterRotacion(3)" data-rotfilter="3">3D <span class="rot-pill-count">2</span></button>
+    </div>
+    <div id="rotacionToggle" style="margin-bottom:16px">
+      <button onclick="toggleRotacionTable()" style="font-size:14px;color:var(--caramelo);cursor:pointer;border:1px solid var(--caramelo);background:none;padding:8px 20px;font-family:'DM Sans',sans-serif;font-weight:500;transition:background 0.2s" onmouseover="this.style.background='var(--caramelo-10)'" onmouseout="this.style.background='none'">
+        Ver detalle de las 56 salidas
+      </button>
+    </div>
+    <div id="rotacionTable" style="display:none">
+      <div class="table-wrap">
+        <table class="data" id="rotacionDataTable">
+          <thead><tr><th>Proyecto</th><th>Dorms</th><th>Area</th><th>$/m²</th><th>Fecha salida</th></tr></thead>
+          <tbody>
+            <tr data-dorms="0">
+              <td class="strong">Sky Tower</td>
+              <td>Mono</td><td>36m²</td>
+              <td>$2,850</td><td>2026-04-10</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Edificio Kenya</td>
+              <td>1D</td><td>61m²</td>
+              <td>$1,202</td><td>2026-04-10</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Sin nombre</td>
+              <td>2D</td><td>116m²</td>
+              <td>$1,671</td><td>2026-04-10</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Sky Tower</td>
+              <td>1D</td><td>36m²</td>
+              <td>$2,933</td><td>2026-04-09</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Condominio ZENIT</td>
+              <td>1D</td><td>41m²</td>
+              <td>$2,171</td><td>2026-04-09</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Hh Once</td>
+              <td>1D</td><td>40m²</td>
+              <td>$1,625</td><td>2026-04-07</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Edificio Baruc Uno</td>
+              <td>2D</td><td>80m²</td>
+              <td>$1,571</td><td>2026-04-06</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Luxe Suites</td>
+              <td>2D</td><td>71.2m²</td>
+              <td>$2,809</td><td>2026-04-04</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Domus Infinity</td>
+              <td>1D</td><td>50.8m²</td>
+              <td>$1,707</td><td>2026-04-04</td>
+            </tr><tr data-dorms="3">
+              <td class="strong">Impera Forest</td>
+              <td>3D</td><td>137.5m²</td>
+              <td>$2,099</td><td>2026-04-04</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Sky Collection Equipetrol</td>
+              <td>2D</td><td>73.26m²</td>
+              <td>$2,184</td><td>2026-04-04</td>
+            </tr><tr data-dorms="0">
+              <td class="strong">Luxe Suites</td>
+              <td>Mono</td><td>34.5m²</td>
+              <td>$2,822</td><td>2026-04-04</td>
+            </tr><tr data-dorms="0">
+              <td class="strong">Uptown NUU</td>
+              <td>Mono</td><td>40m²</td>
+              <td>$2,100</td><td>2026-04-04</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Edificio Gold</td>
+              <td>2D</td><td>58.45m²</td>
+              <td>$2,089</td><td>2026-04-03</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Sin nombre</td>
+              <td>2D</td><td>81m²</td>
+              <td>$2,444</td><td>2026-04-02</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">HH Once Equipetrol</td>
+              <td>1D</td><td>64m²</td>
+              <td>$1,822</td><td>2026-04-01</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">HH Chuubi</td>
+              <td>2D</td><td>109m²</td>
+              <td>$1,772</td><td>2026-04-01</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">HH Chuubi</td>
+              <td>1D</td><td>53m²</td>
+              <td>$1,747</td><td>2026-04-01</td>
+            </tr><tr data-dorms="0">
+              <td class="strong">HH Once Equipetrol</td>
+              <td>Mono</td><td>70m²</td>
+              <td>$2,065</td><td>2026-04-01</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">HH Chuubi</td>
+              <td>1D</td><td>55m²</td>
+              <td>$1,650</td><td>2026-04-01</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">HH Chuubi</td>
+              <td>1D</td><td>103m²</td>
+              <td>$1,269</td><td>2026-04-01</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">HH Once Equipetrol</td>
+              <td>1D</td><td>61m²</td>
+              <td>$1,844</td><td>2026-04-01</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Luxe Tower</td>
+              <td>1D</td><td>97m²</td>
+              <td>$2,242</td><td>2026-04-01</td>
+            </tr><tr data-dorms="0">
+              <td class="strong">Sky Lux</td>
+              <td>Mono</td><td>32m²</td>
+              <td>$1,212</td><td>2026-04-01</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Luxe Tower</td>
+              <td>1D</td><td>63m²</td>
+              <td>$2,100</td><td>2026-03-31</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Nano Smart</td>
+              <td>2D</td><td>62.41m²</td>
+              <td>$2,446</td><td>2026-03-31</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Nomad by Smart Studio</td>
+              <td>1D</td><td>50.54m²</td>
+              <td>$1,583</td><td>2026-03-31</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Atrium</td>
+              <td>2D</td><td>95m²</td>
+              <td>$1,774</td><td>2026-03-31</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Edificio Klug</td>
+              <td>2D</td><td>73.69m²</td>
+              <td>$2,115</td><td>2026-03-31</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Mediterraneo 2</td>
+              <td>2D</td><td>84.2m²</td>
+              <td>$1,146</td><td>2026-03-31</td>
+            </tr><tr data-dorms="0">
+              <td class="strong">SMART STUDIO EQUIPE 1.0</td>
+              <td>Mono</td><td>36m²</td>
+              <td>$1,616</td><td>2026-03-31</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Sin nombre</td>
+              <td>1D</td><td>65m²</td>
+              <td>$2,245</td><td>2026-03-31</td>
+            </tr><tr data-dorms="0">
+              <td class="strong">Luxe Suites</td>
+              <td>Mono</td><td>34.5m²</td>
+              <td>$2,551</td><td>2026-03-30</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Atrium</td>
+              <td>1D</td><td>46m²</td>
+              <td>$2,514</td><td>2026-03-28</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Garden Equipetrol</td>
+              <td>1D</td><td>46.86m²</td>
+              <td>$2,132</td><td>2026-03-27</td>
+            </tr><tr data-dorms="0">
+              <td class="strong">Sky Elite</td>
+              <td>Mono</td><td>36m²</td>
+              <td>$3,488</td><td>2026-03-27</td>
+            </tr><tr data-dorms="0">
+              <td class="strong">Sky Plaza Italia</td>
+              <td>Mono</td><td>44.65m²</td>
+              <td>$1,882</td><td>2026-03-26</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Edificio Gold</td>
+              <td>2D</td><td>58.45m²</td>
+              <td>$2,089</td><td>2026-03-26</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Stratto Up</td>
+              <td>1D</td><td>47m²</td>
+              <td>$2,194</td><td>2026-03-25</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Condado VI Plaza Italia</td>
+              <td>2D</td><td>86.73m²</td>
+              <td>$2,200</td><td>2026-03-25</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Sky Plaza Italia</td>
+              <td>2D</td><td>87.62m²</td>
+              <td>$2,200</td><td>2026-03-25</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Luxe Suites</td>
+              <td>1D</td><td>91m²</td>
+              <td>$1,734</td><td>2026-03-24</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Condado VI Plaza Italia</td>
+              <td>1D</td><td>61.21m²</td>
+              <td>$2,500</td><td>2026-03-24</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Macororo 12</td>
+              <td>1D</td><td>47.62m²</td>
+              <td>$3,142</td><td>2026-03-23</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Edificio Fragata</td>
+              <td>2D</td><td>125m²</td>
+              <td>$4,417</td><td>2026-03-22</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Gold</td>
+              <td>2D</td><td>58.45m²</td>
+              <td>$2,089</td><td>2026-03-22</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Sky Level</td>
+              <td>1D</td><td>52m²</td>
+              <td>$1,911</td><td>2026-03-22</td>
+            </tr><tr data-dorms="0">
+              <td class="strong">Luxe Suites</td>
+              <td>Mono</td><td>34.5m²</td>
+              <td>$2,058</td><td>2026-03-22</td>
+            </tr><tr data-dorms="3">
+              <td class="strong">Condado VI Plaza Italia</td>
+              <td>3D</td><td>144.31m²</td>
+              <td>$2,252</td><td>2026-03-20</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Nano Smart</td>
+              <td>1D</td><td>41.01m²</td>
+              <td>$2,242</td><td>2026-03-20</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Sky Level</td>
+              <td>2D</td><td>88.5m²</td>
+              <td>$1,911</td><td>2026-03-20</td>
+            </tr><tr data-dorms="2">
+              <td class="strong">Madero Residence</td>
+              <td>2D</td><td>131m²</td>
+              <td>$2,721</td><td>2026-03-20</td>
+            </tr><tr data-dorms="0">
+              <td class="strong">Luxe Suites</td>
+              <td>Mono</td><td>34.5m²</td>
+              <td>$2,707</td><td>2026-03-20</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Domus Insignia</td>
+              <td>1D</td><td>47.34m²</td>
+              <td>$1,874</td><td>2026-03-19</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Aqua Tower</td>
+              <td>1D</td><td>56m²</td>
+              <td>$2,810</td><td>2026-03-17</td>
+            </tr><tr data-dorms="1">
+              <td class="strong">Domus Infinity</td>
+              <td>1D</td><td>48.25m²</td>
+              <td>$2,335</td><td>2026-03-16</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <script>
+    function toggleRotacionTable() {
+      const t = document.getElementById('rotacionTable');
+      const btn = document.querySelector('#rotacionToggle button');
+      if (t.style.display === 'none') {
+        t.style.display = 'block';
+        btn.textContent = 'Ocultar detalle';
+      } else {
+        t.style.display = 'none';
+        btn.textContent = 'Ver detalle de las 56 salidas';
+      }
+    }
+    function filterRotacion(dorms) {
+      const rows = document.querySelectorAll('#rotacionDataTable tbody tr');
+      const btns = document.querySelectorAll('[data-rotfilter]');
+      btns.forEach(b => b.classList.remove('active'));
+      if (dorms === 'all') {
+        rows.forEach(r => r.style.display = '');
+        document.querySelector('[data-rotfilter="all"]').classList.add('active');
+      } else {
+        rows.forEach(r => {
+          r.style.display = r.dataset.dorms == dorms ? '' : 'none';
+        });
+        const btn = document.querySelector('[data-rotfilter="' + dorms + '"]');
+        if (btn) btn.classList.add('active');
+      }
+      // Auto-open table when filtering
+      document.getElementById('rotacionTable').style.display = 'block';
+      document.querySelector('#rotacionToggle button').textContent = 'Ocultar detalle';
+    }
+    </script>
+    <p class="takeaway">
+      Nota: Una propiedad que sale del portal puede haber sido vendida, retirada por el broker,
+      o haber expirado. Presentamos los datos observados sin inferir la causa.
+    </p>
+  </div>
+</section>
+
+<section class="section bg-ebano" id="yield">
+  <div class="section-inner reveal">
+    <div class="badge">Rentabilidad</div>
+    <div class="section-title">Alquiler y retorno</div>
+    <div class="section-subtitle">
+      Yield bruto anual por tipologia en Equipetrol Centro. Mediana de rentas mensuales en USD.
+      El premium por amoblado es un diferencial clave para el comprador-inversor.
+    </div>
+    <div class="yield-grid">
+      
+      <div class="yield-card attractive">
+        <div class="yield-tipo">Mono</div>
+        <div class="yield-value high">6.5%</div>
+        <div class="yield-rent">
+          Amoblado: $460/mes (n=8)
+          
+          
+        </div>
+        <div class="yield-detail">
+          Ticket venta mediana: $84,918<br>
+          Retorno amoblado: 15.4 anos
+          
+        </div>
+      </div>
+      <div class="yield-card attractive">
+        <div class="yield-tipo">1D</div>
+        <div class="yield-value high">6.0%</div>
+        <div class="yield-rent">
+          Amoblado: $528/mes (n=16)
+          <br>Sin amoblar: $611/mes (n=2)
+          <br>Premium amoblado: <strong>-13.6%</strong>
+        </div>
+        <div class="yield-detail">
+          Ticket venta mediana: $106,221<br>
+          Retorno amoblado: 16.8 anos
+          <br>Retorno sin amoblar: 14.5 anos
+        </div>
+      </div>
+      <div class="yield-card attractive">
+        <div class="yield-tipo">2D</div>
+        <div class="yield-value high">7.2%</div>
+        <div class="yield-rent">
+          Amoblado: $1,149/mes (n=10)
+          <br>Sin amoblar: $833/mes (n=6)
+          <br>Premium amoblado: <strong>+37.9%</strong>
+        </div>
+        <div class="yield-detail">
+          Ticket venta mediana: $190,855<br>
+          Retorno amoblado: 13.8 anos
+          <br>Retorno sin amoblar: 19.1 anos
+        </div>
+      </div>
+      <div class="yield-card attractive">
+        <div class="yield-tipo">3D</div>
+        <div class="yield-value high">5.5%</div>
+        <div class="yield-rent">
+          Amoblado: $1,688/mes (n=4)
+          
+          
+        </div>
+        <div class="yield-detail">
+          Ticket venta mediana: $365,224<br>
+          Retorno amoblado: 18 anos
+          
+        </div>
+      </div>
+    </div>
+    <p class="takeaway" style="color:var(--piedra-light)">
+      Yield bruto = (renta mensual &times; 12) / precio venta. No incluye vacancias, mantenimiento, impuestos ni gastos de condominio.
+      Las medianas son mas robustas que promedios pero con muestras chicas (n&lt;10) deben leerse con cautela.
+    </p>
+  </div>
+</section>
+
+<section class="section bg-marfil" id="simulacion">
+  <div class="section-inner reveal">
+    <div class="badge">Simulacion</div>
+    <div class="section-title">Sensibilidad de precio</div>
+    <div class="section-subtitle">
+      Como cambia la posicion competitiva de Condado VI Plaza Italia con diferentes precios por m² y tipos de cambio.
+      Referencia: medianas de Equipetrol Centro por tipologia.
+    </div>
+    <div class="table-wrap" style="margin-bottom:24px">
+      <table class="data">
+        <thead><tr><th>Tipologia</th><th>Mediana zona</th></tr></thead>
+        <tbody>
+          <tr><td class="strong">1D</td><td>$106,221</td></tr><tr><td class="strong">2D</td><td>$190,855</td></tr><tr><td class="strong">3D</td><td>$365,224</td></tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div style="margin-bottom:48px">
+      <h3 style="font-family:'Figtree',sans-serif;font-size:22px;font-weight:500;margin-bottom:16px">
+        Escenario: $1,550/m² @ TC 6.96
+      </h3>
+      <div class="kpi-grid" style="margin-bottom:24px">
+        <div class="kpi">
+          <div class="kpi-value" style="font-size:36px">$143,092</div>
+          <div class="kpi-label">Ticket promedio norm.</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-value" style="font-size:36px">-25.5%</div>
+          <div class="kpi-label">vs mediana zona</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Dpto</th><th>Dorms</th><th>m²</th><th>Ticket USD</th><th>Normalizado</th><th>vs Mediana</th><th>Posicion</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="strong">101</td><td>1D</td><td>62.21</td>
+              <td>$96,426</td><td>$96,426</td>
+              <td>-9.2%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">102</td><td>2D</td><td>87.62</td>
+              <td>$135,811</td><td>$135,811</td>
+              <td>-28.8%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">103</td><td>2D</td><td>86.73</td>
+              <td>$134,432</td><td>$134,432</td>
+              <td>-29.6%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">201</td><td>1D</td><td>62.21</td>
+              <td>$96,426</td><td>$96,426</td>
+              <td>-9.2%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">202</td><td>2D</td><td>87.62</td>
+              <td>$135,811</td><td>$135,811</td>
+              <td>-28.8%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">205</td><td>3D</td><td>144.31</td>
+              <td>$223,681</td><td>$223,681</td>
+              <td>-38.8%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">301</td><td>1D</td><td>62.21</td>
+              <td>$96,426</td><td>$96,426</td>
+              <td>-9.2%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">302</td><td>2D</td><td>87.62</td>
+              <td>$135,811</td><td>$135,811</td>
+              <td>-28.8%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">303</td><td>2D</td><td>86.73</td>
+              <td>$134,432</td><td>$134,432</td>
+              <td>-29.6%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">305</td><td>3D</td><td>144.31</td>
+              <td>$223,681</td><td>$223,681</td>
+              <td>-38.8%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">401</td><td>1D</td><td>62.21</td>
+              <td>$96,426</td><td>$96,426</td>
+              <td>-9.2%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">405</td><td>3D</td><td>144.31</td>
+              <td>$223,681</td><td>$223,681</td>
+              <td>-38.8%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">502</td><td>2D</td><td>87.62</td>
+              <td>$135,811</td><td>$135,811</td>
+              <td>-28.8%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">503</td><td>2D</td><td>86.73</td>
+              <td>$134,432</td><td>$134,432</td>
+              <td>-29.6%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div style="margin-bottom:48px">
+      <h3 style="font-family:'Figtree',sans-serif;font-size:22px;font-weight:500;margin-bottom:16px">
+        Escenario: $1,550/m² @ TC 9.28
+      </h3>
+      <div class="kpi-grid" style="margin-bottom:24px">
+        <div class="kpi">
+          <div class="kpi-value" style="font-size:36px">$190,789</div>
+          <div class="kpi-label">Ticket promedio norm.</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-value accent" style="font-size:36px">-0.7%</div>
+          <div class="kpi-label">vs mediana zona</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Dpto</th><th>Dorms</th><th>m²</th><th>Ticket USD</th><th>Normalizado</th><th>vs Mediana</th><th>Posicion</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="strong">101</td><td>1D</td><td>62.21</td>
+              <td>$96,426</td><td>$128,568</td>
+              <td>+21.0%</td><td><span class="cat-badge cat-premium">Premium</span></td>
+            </tr><tr>
+              <td class="strong">102</td><td>2D</td><td>87.62</td>
+              <td>$135,811</td><td>$181,081</td>
+              <td>-5.1%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">103</td><td>2D</td><td>86.73</td>
+              <td>$134,432</td><td>$179,243</td>
+              <td>-6.1%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">201</td><td>1D</td><td>62.21</td>
+              <td>$96,426</td><td>$128,568</td>
+              <td>+21.0%</td><td><span class="cat-badge cat-premium">Premium</span></td>
+            </tr><tr>
+              <td class="strong">202</td><td>2D</td><td>87.62</td>
+              <td>$135,811</td><td>$181,081</td>
+              <td>-5.1%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">205</td><td>3D</td><td>144.31</td>
+              <td>$223,681</td><td>$298,241</td>
+              <td>-18.3%</td><td><span class="cat-badge cat-bajo_promedio">Bajo promedio</span></td>
+            </tr><tr>
+              <td class="strong">301</td><td>1D</td><td>62.21</td>
+              <td>$96,426</td><td>$128,568</td>
+              <td>+21.0%</td><td><span class="cat-badge cat-premium">Premium</span></td>
+            </tr><tr>
+              <td class="strong">302</td><td>2D</td><td>87.62</td>
+              <td>$135,811</td><td>$181,081</td>
+              <td>-5.1%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">303</td><td>2D</td><td>86.73</td>
+              <td>$134,432</td><td>$179,243</td>
+              <td>-6.1%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">305</td><td>3D</td><td>144.31</td>
+              <td>$223,681</td><td>$298,241</td>
+              <td>-18.3%</td><td><span class="cat-badge cat-bajo_promedio">Bajo promedio</span></td>
+            </tr><tr>
+              <td class="strong">401</td><td>1D</td><td>62.21</td>
+              <td>$96,426</td><td>$128,568</td>
+              <td>+21.0%</td><td><span class="cat-badge cat-premium">Premium</span></td>
+            </tr><tr>
+              <td class="strong">405</td><td>3D</td><td>144.31</td>
+              <td>$223,681</td><td>$298,241</td>
+              <td>-18.3%</td><td><span class="cat-badge cat-bajo_promedio">Bajo promedio</span></td>
+            </tr><tr>
+              <td class="strong">502</td><td>2D</td><td>87.62</td>
+              <td>$135,811</td><td>$181,081</td>
+              <td>-5.1%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">503</td><td>2D</td><td>86.73</td>
+              <td>$134,432</td><td>$179,243</td>
+              <td>-6.1%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div style="margin-bottom:48px">
+      <h3 style="font-family:'Figtree',sans-serif;font-size:22px;font-weight:500;margin-bottom:16px">
+        Escenario: $1,650/m² @ TC 6.96
+      </h3>
+      <div class="kpi-grid" style="margin-bottom:24px">
+        <div class="kpi">
+          <div class="kpi-value" style="font-size:36px">$152,324</div>
+          <div class="kpi-label">Ticket promedio norm.</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-value" style="font-size:36px">-20.7%</div>
+          <div class="kpi-label">vs mediana zona</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Dpto</th><th>Dorms</th><th>m²</th><th>Ticket USD</th><th>Normalizado</th><th>vs Mediana</th><th>Posicion</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="strong">101</td><td>1D</td><td>62.21</td>
+              <td>$102,647</td><td>$102,647</td>
+              <td>-3.4%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">102</td><td>2D</td><td>87.62</td>
+              <td>$144,573</td><td>$144,573</td>
+              <td>-24.2%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">103</td><td>2D</td><td>86.73</td>
+              <td>$143,105</td><td>$143,105</td>
+              <td>-25.0%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">201</td><td>1D</td><td>62.21</td>
+              <td>$102,647</td><td>$102,647</td>
+              <td>-3.4%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">202</td><td>2D</td><td>87.62</td>
+              <td>$144,573</td><td>$144,573</td>
+              <td>-24.2%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">205</td><td>3D</td><td>144.31</td>
+              <td>$238,112</td><td>$238,112</td>
+              <td>-34.8%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">301</td><td>1D</td><td>62.21</td>
+              <td>$102,647</td><td>$102,647</td>
+              <td>-3.4%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">302</td><td>2D</td><td>87.62</td>
+              <td>$144,573</td><td>$144,573</td>
+              <td>-24.2%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">303</td><td>2D</td><td>86.73</td>
+              <td>$143,105</td><td>$143,105</td>
+              <td>-25.0%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">305</td><td>3D</td><td>144.31</td>
+              <td>$238,112</td><td>$238,112</td>
+              <td>-34.8%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">401</td><td>1D</td><td>62.21</td>
+              <td>$102,647</td><td>$102,647</td>
+              <td>-3.4%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">405</td><td>3D</td><td>144.31</td>
+              <td>$238,112</td><td>$238,112</td>
+              <td>-34.8%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">502</td><td>2D</td><td>87.62</td>
+              <td>$144,573</td><td>$144,573</td>
+              <td>-24.2%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr><tr>
+              <td class="strong">503</td><td>2D</td><td>86.73</td>
+              <td>$143,105</td><td>$143,105</td>
+              <td>-25.0%</td><td><span class="cat-badge cat-oportunidad">Oportunidad</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div style="margin-bottom:48px">
+      <h3 style="font-family:'Figtree',sans-serif;font-size:22px;font-weight:500;margin-bottom:16px">
+        Escenario: $1,650/m² @ TC 9.28
+      </h3>
+      <div class="kpi-grid" style="margin-bottom:24px">
+        <div class="kpi">
+          <div class="kpi-value" style="font-size:36px">$203,098</div>
+          <div class="kpi-label">Ticket promedio norm.</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-value accent" style="font-size:36px">+5.7%</div>
+          <div class="kpi-label">vs mediana zona</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Dpto</th><th>Dorms</th><th>m²</th><th>Ticket USD</th><th>Normalizado</th><th>vs Mediana</th><th>Posicion</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="strong">101</td><td>1D</td><td>62.21</td>
+              <td>$102,647</td><td>$136,863</td>
+              <td>+28.8%</td><td><span class="cat-badge cat-premium">Premium</span></td>
+            </tr><tr>
+              <td class="strong">102</td><td>2D</td><td>87.62</td>
+              <td>$144,573</td><td>$192,764</td>
+              <td>+1.0%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">103</td><td>2D</td><td>86.73</td>
+              <td>$143,105</td><td>$190,807</td>
+              <td>+0.0%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">201</td><td>1D</td><td>62.21</td>
+              <td>$102,647</td><td>$136,863</td>
+              <td>+28.8%</td><td><span class="cat-badge cat-premium">Premium</span></td>
+            </tr><tr>
+              <td class="strong">202</td><td>2D</td><td>87.62</td>
+              <td>$144,573</td><td>$192,764</td>
+              <td>+1.0%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">205</td><td>3D</td><td>144.31</td>
+              <td>$238,112</td><td>$317,483</td>
+              <td>-13.1%</td><td><span class="cat-badge cat-bajo_promedio">Bajo promedio</span></td>
+            </tr><tr>
+              <td class="strong">301</td><td>1D</td><td>62.21</td>
+              <td>$102,647</td><td>$136,863</td>
+              <td>+28.8%</td><td><span class="cat-badge cat-premium">Premium</span></td>
+            </tr><tr>
+              <td class="strong">302</td><td>2D</td><td>87.62</td>
+              <td>$144,573</td><td>$192,764</td>
+              <td>+1.0%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">303</td><td>2D</td><td>86.73</td>
+              <td>$143,105</td><td>$190,807</td>
+              <td>+0.0%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">305</td><td>3D</td><td>144.31</td>
+              <td>$238,112</td><td>$317,483</td>
+              <td>-13.1%</td><td><span class="cat-badge cat-bajo_promedio">Bajo promedio</span></td>
+            </tr><tr>
+              <td class="strong">401</td><td>1D</td><td>62.21</td>
+              <td>$102,647</td><td>$136,863</td>
+              <td>+28.8%</td><td><span class="cat-badge cat-premium">Premium</span></td>
+            </tr><tr>
+              <td class="strong">405</td><td>3D</td><td>144.31</td>
+              <td>$238,112</td><td>$317,483</td>
+              <td>-13.1%</td><td><span class="cat-badge cat-bajo_promedio">Bajo promedio</span></td>
+            </tr><tr>
+              <td class="strong">502</td><td>2D</td><td>87.62</td>
+              <td>$144,573</td><td>$192,764</td>
+              <td>+1.0%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr><tr>
+              <td class="strong">503</td><td>2D</td><td>86.73</td>
+              <td>$143,105</td><td>$190,807</td>
+              <td>+0.0%</td><td><span class="cat-badge cat-promedio">Promedio</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section bg-white" id="recomendaciones">
+  <div class="section-inner reveal">
+    <div class="badge">Acciones</div>
+    <div class="section-title">Que hacer y cuando</div>
+    <div class="section-subtitle">Recomendaciones priorizadas basadas en los datos del estudio.</div>
+    <div class="timeline">
+      
+      <div class="tl-block urgente">
+        <div class="tl-dot"></div>
+        <div class="tl-period urgente">Inmediato</div>
+        <div class="tl-card">
+          <div class="tl-card-title">Publicar inventario completo en portales</div>
+          <div class="tl-card-body" style="display:block">10 de 14 unidades son invisibles. Los 2D no aparecen en ningun portal. Esta es la accion de mayor impacto inmediato.</div>
+        </div>
+      </div>
+      <div class="tl-block">
+        <div class="tl-dot"></div>
+        <div class="tl-period corto">Corto plazo</div>
+        <div class="tl-card">
+          <div class="tl-card-title">Comunicar potencial de renta al comprador-inversor</div>
+          <div class="tl-card-body" style="display:block">El premium por amoblar un 2D es de +37.9%. El equipamiento de linea blanca de Condado VI Plaza Italia facilita capturar ese diferencial.</div>
+        </div>
+      </div>
+      <div class="tl-block">
+        <div class="tl-dot"></div>
+        <div class="tl-period mediano">Mediano plazo</div>
+        <div class="tl-card">
+          <div class="tl-card-title">Monitorear competidores estancados</div>
+          <div class="tl-card-body" style="display:block">Proyectos con >150 dias pueden ajustar precios. Seguir de cerca para detectar oportunidades de reposicionamiento.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer style="background:#141414;color:#7A7060;padding:80px 32px" id="footer">
+  <div style="max-width:1100px;margin:0 auto">
+    <div style="text-align:center">
+      <!-- Simon Norte symbol -->
+      <svg width="48" height="48" viewBox="0 0 64 64" style="margin-bottom:20px">
+        <circle cx="32" cy="34" r="28" fill="#EDE8DC"/>
+        <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
+        <circle cx="32" cy="15" r="3" fill="#141414"/>
+      </svg>
+      <div style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;color:#EDE8DC;letter-spacing:0.3px;margin-bottom:4px">
+        Simon
+      </div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:12px;color:#7A7060;letter-spacing:0.5px;margin-bottom:24px">
+        Inteligencia Inmobiliaria
+      </div>
+      <div style="width:40px;height:1px;background:#3A6A48;margin:0 auto 24px;opacity:0.5"></div>
+      <p style="font-size:13px;color:#7A7060;line-height:1.8;max-width:500px;margin:0 auto">
+        Estudio generado el 13 de abril de 2026
+        con datos de Century21, Remax y Bien Inmuebles.<br>
+        TC paralelo Binance P2P: Bs 9.28 &middot; TC oficial: Bs 6.96
+      </p>
+      <p style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#3A6A48;margin-top:20px;letter-spacing:0.3px">
+        simonbo.com
+      </p>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Reveal on scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// Nav show/hide
+let lastScroll = 0;
+const nav = document.getElementById('mainNav');
+window.addEventListener('scroll', () => {
+  const y = window.scrollY;
+  if (y > 400) {
+    nav.classList.toggle('visible', y < lastScroll || y < 500);
+  } else {
+    nav.classList.remove('visible');
+  }
+  lastScroll = y;
+}, { passive: true });
+
+// Nav active state
+const sections = document.querySelectorAll('.section, .hero');
+const navLinks = document.querySelectorAll('.nav-link');
+const navObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const link = document.querySelector('.nav-link[href="#' + e.target.id + '"]');
+      if (link) link.classList.add('active');
+    }
+  });
+}, { threshold: 0.3 });
+sections.forEach(s => navObserver.observe(s));
+</script>
+</body>
+</html>

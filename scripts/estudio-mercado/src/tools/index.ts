@@ -1,0 +1,8 @@
+export { panoramaMercado } from './panorama-mercado.js'
+export { posicionCompetitiva } from './posicion-competitiva.js'
+export { competidores } from './competidores.js'
+export { demandaTipologia } from './demanda-tipologia.js'
+export { simulacionPrecio } from './simulacion-precio.js'
+export { visibilidadPortales } from './visibilidad-portales.js'
+export { yieldInversor } from './yield-inversor.js'
+export { rotacionObservada } from './rotacion-observada.js'
