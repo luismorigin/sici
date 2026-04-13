@@ -50,6 +50,8 @@ Las 5 activas (156, 309, 385, 158, 452) tienen valores plausibles — no requier
 
 **Fix one-time pendiente:** Reactivar las 11 props Remax confirmadas como falsos positivos.
 
+**Análisis técnico completo:** `docs/bugs/BUG_FALSOS_POSITIVOS_REMAX.md` — 3 hipótesis testeadas, root cause, SQL fix, archivos con líneas.
+
 ## UX Completado
 
 - [x] **Leyenda de símbolos en resultados** - Banner colapsable en resultsV2.tsx explicando: incluido, sin confirmar, parqueos, baulera, piso, plan pagos, TC paralelo, descuento, negociable
