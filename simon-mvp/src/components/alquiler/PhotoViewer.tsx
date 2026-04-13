@@ -1,5 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
+function SafeImg({ src, alt, className, draggable, style }: { src: string; alt: string; className?: string; draggable?: boolean; style?: React.CSSProperties }) {
+  const [err, setErr] = useState(false)
+  if (err) return <div className="pv-no-photo">Foto no disponible</div>
+  return <img src={src} alt={alt} className={className} draggable={draggable} style={style} onError={() => setErr(true)} />
+}
+
 interface PhotoViewerProps {
   photos: string[]
   initialIndex: number
@@ -95,7 +101,7 @@ export default function PhotoViewer({ photos, initialIndex, buildingName, subtit
         {photos.map((url, i) => (
           <div key={i} className="pv-slide">
             {url ? (
-              <img src={url} alt={`${buildingName} - Foto ${i + 1}`} draggable={false} />
+              <SafeImg src={url} alt={`${buildingName} - Foto ${i + 1}`} draggable={false} />
             ) : (
               <div className="pv-no-photo">Sin foto</div>
             )}

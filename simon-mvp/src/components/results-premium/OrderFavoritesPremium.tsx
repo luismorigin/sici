@@ -56,7 +56,7 @@ export default function OrderFavoritesPremium({ properties, onComplete, onClose 
             >
               <div className="w-16 h-16 bg-white/5 overflow-hidden flex-shrink-0">
                 {prop.fotos_urls?.[0] ? (
-                  <img src={prop.fotos_urls[0]} alt="" className="w-full h-full object-cover" />
+                  <img src={prop.fotos_urls[0]} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-white/30">Sin foto</div>
                 )}

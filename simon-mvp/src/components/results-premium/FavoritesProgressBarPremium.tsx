@@ -69,7 +69,7 @@ export default function FavoritesProgressBarPremium({
             {selectedProperties.slice(0, 3).map((prop, i) => (
               <div key={prop.id} className="w-10 h-10 bg-white/10 overflow-hidden border border-[#c9a959]/30">
                 {prop.fotos_urls?.[0] ? (
-                  <img src={prop.fotos_urls[0]} alt="" className="w-full h-full object-cover" />
+                  <img src={prop.fotos_urls[0]} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{i + 1}</div>
                 )}

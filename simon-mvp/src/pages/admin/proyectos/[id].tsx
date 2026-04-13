@@ -709,6 +709,7 @@ export default function EditarProyecto() {
                               src={foto.url}
                               alt={`Foto ${idx + 1}`}
                               className="w-full h-full object-cover"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                             />
                           </button>
                           <button
@@ -1000,6 +1001,7 @@ export default function EditarProyecto() {
                                         src={foto.url}
                                         alt={`Foto ${idx + 1}`}
                                         className="w-full h-full object-cover"
+                                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                                       />
                                     </button>
                                     {!yaAdoptada && (
@@ -1148,6 +1150,7 @@ export default function EditarProyecto() {
               alt="Foto del proyecto"
               className="max-w-full max-h-full object-contain"
               onClick={(e) => e.stopPropagation()}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
             />
           </div>
         )}

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { UnidadAlquiler } from '@/lib/supabase'
 import { colors, spacing } from '@/lib/simon-design-tokens'
 import { trackChatEvent, getSessionId } from './chat-utils'
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export default function ChatPropertyCard({ property: p, onOpenDetail }: Props) {
+  const [imgError, setImgError] = useState(false)
   const name = p.nombre_edificio || p.nombre_proyecto || 'Sin nombre'
   const photoUrl = p.fotos_urls?.[0] || null
   const brokerPhone = p.agente_whatsapp || p.agente_telefono || null
@@ -60,7 +62,7 @@ export default function ChatPropertyCard({ property: p, onOpenDetail }: Props) {
       onMouseLeave={e => (e.currentTarget.style.borderColor = colors.arenaMid)}
     >
       {/* Photo thumbnail */}
-      {photoUrl && (
+      {photoUrl && !imgError && (
         <div style={{
           width: 56, height: 56, borderRadius: 8, overflow: 'hidden', flexShrink: 0,
           background: colors.arenaMid,
@@ -70,6 +72,7 @@ export default function ChatPropertyCard({ property: p, onOpenDetail }: Props) {
             alt={name}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             loading="lazy"
+            onError={() => setImgError(true)}
           />
         </div>
       )}

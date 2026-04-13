@@ -668,6 +668,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
                       src={selectedProp.fotos_urls[0]}
                       alt={selectedProp.proyecto}
                       className="w-full h-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                     />
                     {/* Indicador de más fotos */}
                     {selectedProp.fotos_urls.length > 1 && (
@@ -794,6 +795,7 @@ export default function MapaResultados({ propiedades, selectedIds, maxSelected, 
               src={selectedProp.fotos_urls[photoIndex]}
               alt={`${selectedProp.proyecto} - Foto ${photoIndex + 1}`}
               className="max-w-full max-h-full object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
             />
           </div>
 

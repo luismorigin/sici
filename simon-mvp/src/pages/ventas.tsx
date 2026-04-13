@@ -390,7 +390,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
               onClick={() => onPhotoTap(i)}>
               {useRealImg && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={url} alt="" fetchPriority="high" draggable={false} className="mc-slide-img" />
+                <img src={url} alt="" fetchPriority="high" draggable={false} className="mc-slide-img" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
               )}
             </div>
             )
@@ -659,7 +659,7 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
         {photos.map((url, i) => (
           <div key={i} className="bsg-slide">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt={`Foto ${i + 1}`} loading={i < 2 ? 'eager' : 'lazy'} draggable={false} />
+            <img src={url} alt={`Foto ${i + 1}`} loading={i < 2 ? 'eager' : 'lazy'} draggable={false} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
           </div>
         ))}
       </div>
@@ -919,7 +919,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
                   <button key={sp.id} className="bs-sim-card" onClick={() => onSwapProperty?.(sp)}>
                     {sp.fotos_urls?.[0] ? (
                       <img src={`/_next/image?url=${encodeURIComponent(sp.fotos_urls[0])}&w=256&q=60`}
-                           alt={sp.proyecto} className="bs-sim-thumb" loading="lazy" />
+                           alt={sp.proyecto} className="bs-sim-thumb" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     ) : (
                       <div className="bs-sim-thumb bs-sim-nophoto" />
                     )}

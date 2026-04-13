@@ -1,7 +1,15 @@
+import { useState } from 'react'
+
 /**
  * Property photo gallery + lightbox overlay
  * Extracted from propiedades/[id].tsx lines 1502-1570, 3219-3294
  */
+
+function SafeImg({ src, alt, className, onClick, title, draggable }: { src: string; alt: string; className: string; onClick?: React.MouseEventHandler<HTMLImageElement>; title?: string; draggable?: boolean }) {
+  const [err, setErr] = useState(false)
+  if (err) return <div className={className} style={{ background: '#e2e8f0' }} />
+  return <img src={src} alt={alt} className={className} onClick={onClick} title={title} draggable={draggable} onError={() => setErr(true)} />
+}
 
 interface PropertyGalleryProps {
   fotos: string[]
@@ -19,7 +27,7 @@ export default function PropertyGallery({ fotos, fotoActual, setFotoActual, ligh
         <div className="relative w-full h-48 bg-slate-200 rounded-lg overflow-hidden">
           {fotos.length > 0 ? (
             <>
-              <img
+              <SafeImg
                 src={fotos[fotoActual]}
                 alt={`Foto ${fotoActual + 1}`}
                 className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
@@ -68,7 +76,7 @@ export default function PropertyGallery({ fotos, fotoActual, setFotoActual, ligh
                 }`}
                 title="Click para ver en pantalla completa"
               >
-                <img src={foto} alt={`Mini ${idx + 1}`} className="w-full h-full object-cover" />
+                <SafeImg src={foto} alt={`Mini ${idx + 1}`} className="w-full h-full object-cover" />
               </button>
             ))}
             {fotos.length > 6 && (
@@ -106,7 +114,7 @@ export default function PropertyGallery({ fotos, fotoActual, setFotoActual, ligh
             </button>
           )}
 
-          <img
+          <SafeImg
             src={fotos[lightboxIndex]}
             alt={`Foto ${lightboxIndex + 1} de ${fotos.length}`}
             className="max-h-[90vh] max-w-[90vw] object-contain"
@@ -136,7 +144,7 @@ export default function PropertyGallery({ fotos, fotoActual, setFotoActual, ligh
                     idx === lightboxIndex ? 'border-white opacity-100' : 'border-transparent opacity-60 hover:opacity-100'
                   }`}
                 >
-                  <img src={foto} alt={`Mini ${idx + 1}`} className="w-full h-full object-cover" />
+                  <SafeImg src={foto} alt={`Mini ${idx + 1}`} className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>

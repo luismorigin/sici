@@ -95,6 +95,7 @@ export default function LightboxPremium({ propiedad, initialIndex = 0, onClose }
           alt={`${propiedad.proyecto} - Foto ${photoIndex + 1}`}
           className="max-w-full max-h-full object-contain"
           draggable={false}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
         />
       </div>
 
@@ -131,7 +132,7 @@ export default function LightboxPremium({ propiedad, initialIndex = 0, onClose }
                 i === photoIndex ? 'border-[#c9a959]' : 'border-white/20 hover:border-white/50'
               }`}
             >
-              <img src={foto} alt="" className="w-full h-full object-cover" />
+              <img src={foto} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
             </button>
           ))}
           {fotos.length > 8 && (

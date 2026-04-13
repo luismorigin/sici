@@ -566,6 +566,7 @@ export default function PropertyCardPremium({
               alt={propiedad.proyecto}
               className="w-full h-full object-cover cursor-pointer"
               onClick={() => onOpenLightbox?.(propiedad, fotoIndex)}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
             />
             {fotos.length > 1 && (
               <>

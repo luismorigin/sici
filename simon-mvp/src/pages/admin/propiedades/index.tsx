@@ -1259,6 +1259,7 @@ export default function AdminPropiedades() {
                           src={prop.fotos_urls[0]}
                           alt={prop.proyecto}
                           className="w-full h-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-slate-400">

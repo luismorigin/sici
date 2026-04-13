@@ -1919,7 +1919,7 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
       <div className="bsg-scroll" ref={scrollRef}>
         {photos.map((url, i) => (
           <div key={i} className="bsg-slide">
-            <img src={url} alt={`Foto ${i + 1}`} loading={i < 2 ? 'eager' : 'lazy'} draggable={false} />
+            <img src={url} alt={`Foto ${i + 1}`} loading={i < 2 ? 'eager' : 'lazy'} draggable={false} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
           </div>
         ))}
       </div>
@@ -2206,7 +2206,7 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
                 <button key={sp.id} className="bs-sim-card" onClick={() => onSwapProperty?.(sp)}>
                   {sp.fotos_urls?.[0] ? (
                     <img src={`/_next/image?url=${encodeURIComponent(sp.fotos_urls[0])}&w=256&q=60`}
-                         alt={spName} className="bs-sim-thumb" loading="lazy" />
+                         alt={spName} className="bs-sim-thumb" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                   ) : (
                     <div className="bs-sim-thumb bs-sim-nophoto" />
                   )}

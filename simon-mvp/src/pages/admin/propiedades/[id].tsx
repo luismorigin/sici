@@ -690,7 +690,7 @@ export default function EditarPropiedad() {
                 <div className="w-full h-56 bg-gray-200 relative">
                   {e.fotos.length > 0 ? (
                     <>
-                      <img src={e.fotos[e.fotoActual]} alt={e.nombreEdificio} className="w-full h-full object-cover" />
+                      <img src={e.fotos[e.fotoActual]} alt={e.nombreEdificio} className="w-full h-full object-cover" onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none' }} />
                       <span className="absolute top-3 right-3 text-sm font-bold bg-blue-600 text-white px-3 py-1 rounded-full shadow">#1 Match</span>
                       {e.fotos.length > 1 && (
                         <>
