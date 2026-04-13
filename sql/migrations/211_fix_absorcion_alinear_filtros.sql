@@ -1,24 +1,43 @@
--- ============================================================================
--- snapshot_absorcion_mercado()
--- Canonical export from production — 13 Abr 2026
--- ============================================================================
--- SECURITY DEFINER. Cron 9 AM diario via auditoría n8n.
--- Dos loops:
---   1. Global (zona='global'): venta + alquiler + ROI cruzado (4 filas/día)
---   2. Por zona (solo venta): inventario, absorción, precios (~20 filas/día)
--- Columnas: venta_pending_30d, venta_absorbidas_entrega/preventa, roi_amoblado/no_amoblado
--- Usa precio_normalizado() para TC paralelo en venta.
--- venta_usd_m2 = MEDIANA (no promedio) desde migración 211.
--- Última migración: 211 (fix_absorcion_alinear_filtros)
+-- Migración 211: Fix absorción — alinear filtros inventario/absorbidas + nuevas métricas
 --
--- CAMBIOS migración 211:
---   - Inventario activo: SIN filtro 300d (mide mercado real)
---   - Absorbidas/pending: filtros de calidad alineados con inventario
---   - primera_ausencia_at IS NOT NULL (excluir curación admin)
---   - Nuevas columnas: absorbidas por estado, yield por amoblado
---   - filter_version = 3
--- ============================================================================
+-- PROBLEMA: snapshot_absorcion_mercado() tenía asimetría de filtros:
+--   - Inventario activo: filtro 300d + duplicados + multiproyecto + parqueos + zona
+--   - Absorbidas: SOLO inactivo_confirmed + primera_ausencia_at 30d (sin los demás filtros)
+--   Esto inflaba artificialmente la tasa de absorción.
+--
+-- CAMBIOS:
+--   1. Inventario activo: quitar filtro 300d fijo (estudios de mercado necesitan todo el inventario)
+--   2. Absorbidas: alinear con mismos filtros de calidad + primera_ausencia_at IS NOT NULL
+--   3. Pending: mismos filtros de calidad
+--   4. Nuevas columnas: absorbidas por estado construcción, yield por amoblado
+--   5. venta_usd_m2: cambiar de AVG a PERCENTILE_CONT(0.5) (mediana, más robusto)
+--   6. filter_version = 3 para nueva serie
+--
+-- BACKFILL: recalcular absorbidas de filter_version=2 con filtros correctos
+--
+-- NO TOCA: v_mercado_venta, v_mercado_alquiler, buscar_unidades_*, frontend
 
+BEGIN;
+
+-- =============================================================
+-- PASO 1: Agregar columnas nuevas a market_absorption_snapshots
+-- =============================================================
+ALTER TABLE market_absorption_snapshots
+  ADD COLUMN IF NOT EXISTS venta_absorbidas_entrega INTEGER,
+  ADD COLUMN IF NOT EXISTS venta_absorbidas_preventa INTEGER,
+  ADD COLUMN IF NOT EXISTS roi_amoblado NUMERIC(5,2),
+  ADD COLUMN IF NOT EXISTS roi_no_amoblado NUMERIC(5,2),
+  ADD COLUMN IF NOT EXISTS anos_retorno_amoblado NUMERIC(5,1),
+  ADD COLUMN IF NOT EXISTS anos_retorno_no_amoblado NUMERIC(5,1);
+
+COMMENT ON COLUMN market_absorption_snapshots.venta_absorbidas_entrega IS 'Absorbidas entrega inmediata (últimos 30d)';
+COMMENT ON COLUMN market_absorption_snapshots.venta_absorbidas_preventa IS 'Absorbidas preventa/en_construccion (últimos 30d)';
+COMMENT ON COLUMN market_absorption_snapshots.roi_amoblado IS 'Yield bruto anual con mediana alquiler amoblado';
+COMMENT ON COLUMN market_absorption_snapshots.roi_no_amoblado IS 'Yield bruto anual con mediana alquiler no amoblado';
+
+-- =============================================================
+-- PASO 2: Reescribir snapshot_absorcion_mercado() — filter_version 3
+-- =============================================================
 CREATE OR REPLACE FUNCTION public.snapshot_absorcion_mercado()
  RETURNS TABLE(dormitorios_out integer, zona_out text, insertado boolean)
  LANGUAGE plpgsql
@@ -335,6 +354,7 @@ BEGIN
         AND (es_multiproyecto = false OR es_multiproyecto IS NULL)
         AND COALESCE(tipo_propiedad_original, '') NOT IN ('baulera','parqueo','garaje','deposito');
 
+      -- Skip zona/dorm combos sin inventario
       IF v_venta_activas = 0 OR v_venta_activas IS NULL THEN
         CONTINUE;
       END IF;
@@ -478,3 +498,89 @@ BEGIN
   END LOOP;
 END;
 $function$;
+
+-- =============================================================
+-- PASO 3: Backfill — recalcular absorbidas de filter_version=2
+-- =============================================================
+-- Para cada snapshot v2, recalcular absorbidas aplicando:
+--   1. Filtros de calidad (duplicado, multiproyecto, parqueo)
+--   2. primera_ausencia_at IS NOT NULL (excluir curación admin)
+--   3. Mantener inventario activo como estaba (fue conteo real del día)
+
+UPDATE market_absorption_snapshots s
+SET
+  venta_absorbidas_30d = sub.absorbidas_clean,
+  venta_absorbidas_entrega = sub.abs_entrega,
+  venta_absorbidas_preventa = sub.abs_preventa,
+  venta_tasa_absorcion = CASE
+    WHEN (s.venta_activas + sub.absorbidas_clean) > 0
+    THEN ROUND(100.0 * sub.absorbidas_clean / (s.venta_activas + sub.absorbidas_clean), 2)
+    ELSE 0
+  END,
+  venta_meses_inventario = CASE
+    WHEN sub.absorbidas_clean > 0
+    THEN ROUND(s.venta_activas::NUMERIC / sub.absorbidas_clean, 1)
+    ELSE NULL
+  END
+FROM (
+  SELECT
+    s2.fecha, s2.dormitorios, s2.zona,
+    COUNT(*) FILTER (
+      WHERE p.duplicado_de IS NULL
+        AND (p.es_multiproyecto = false OR p.es_multiproyecto IS NULL)
+        AND COALESCE(p.tipo_propiedad_original, '') NOT IN ('baulera','parqueo','garaje','deposito')
+        AND p.zona IS NOT NULL
+        AND p.primera_ausencia_at IS NOT NULL
+    ) AS absorbidas_clean,
+    COUNT(*) FILTER (
+      WHERE p.duplicado_de IS NULL
+        AND (p.es_multiproyecto = false OR p.es_multiproyecto IS NULL)
+        AND COALESCE(p.tipo_propiedad_original, '') NOT IN ('baulera','parqueo','garaje','deposito')
+        AND p.zona IS NOT NULL
+        AND p.primera_ausencia_at IS NOT NULL
+        AND COALESCE(p.estado_construccion::text, '') NOT IN ('preventa', 'en_construccion', 'en_pozo')
+    ) AS abs_entrega,
+    COUNT(*) FILTER (
+      WHERE p.duplicado_de IS NULL
+        AND (p.es_multiproyecto = false OR p.es_multiproyecto IS NULL)
+        AND COALESCE(p.tipo_propiedad_original, '') NOT IN ('baulera','parqueo','garaje','deposito')
+        AND p.zona IS NOT NULL
+        AND p.primera_ausencia_at IS NOT NULL
+        AND COALESCE(p.estado_construccion::text, '') IN ('preventa', 'en_construccion', 'en_pozo')
+    ) AS abs_preventa
+  FROM market_absorption_snapshots s2
+  LEFT JOIN propiedades_v2 p ON
+    p.tipo_operacion = 'venta'
+    AND p.status = 'inactivo_confirmed'
+    AND p.fuente IN ('century21', 'remax')
+    AND p.precio_usd > 0
+    AND p.area_total_m2 >= 20
+    AND p.dormitorios = s2.dormitorios
+    AND p.primera_ausencia_at >= s2.fecha - INTERVAL '30 days'
+    AND p.primera_ausencia_at < s2.fecha + INTERVAL '1 day'
+    AND (s2.zona = 'global' OR p.zona = s2.zona)
+  WHERE s2.filter_version = 2
+  GROUP BY s2.fecha, s2.dormitorios, s2.zona
+) sub
+WHERE s.fecha = sub.fecha
+  AND s.dormitorios = sub.dormitorios
+  AND s.zona = sub.zona
+  AND s.filter_version = 2;
+
+-- =============================================================
+-- PASO 4: Verificar
+-- =============================================================
+SELECT 'Columnas nuevas' as check_type,
+  COUNT(*) FILTER (WHERE venta_absorbidas_entrega IS NOT NULL) as con_entrega,
+  COUNT(*) FILTER (WHERE roi_amoblado IS NOT NULL) as con_roi_amob
+FROM market_absorption_snapshots;
+
+SELECT 'Backfill v2' as check_type,
+  filter_version, COUNT(*) as filas,
+  ROUND(AVG(venta_tasa_absorcion), 1) as avg_tasa
+FROM market_absorption_snapshots
+WHERE zona = 'global'
+GROUP BY filter_version
+ORDER BY filter_version;
+
+COMMIT;
