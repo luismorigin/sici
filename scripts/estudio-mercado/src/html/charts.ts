@@ -20,7 +20,7 @@ function shortZona(zona: string): string {
   return ZONA_SHORT[zona] ?? zona
 }
 
-export function barChartZonas(data: ZonaStat[], canvasId: string, medianaGlobal?: number): string {
+export function barChartZonas(data: ZonaStat[], canvasId: string, medianaGlobal?: number, proyectoM2?: number, proyectoNombre?: string): string {
   const labels = data.map(z => shortZona(z.zona))
   const values = data.map(z => z.medianaM2)
 
@@ -30,26 +30,46 @@ export function barChartZonas(data: ZonaStat[], canvasId: string, medianaGlobal?
   const ctx = document.getElementById('${canvasId}');
   if (!ctx) return;
   const medianLine = ${medianaGlobal ? medianaGlobal : 0};
-  const medianPlugin = {
-    id: 'medianLine',
+  const proyectoLine = ${proyectoM2 ? proyectoM2 : 0};
+  const proyectoNombre = '${proyectoNombre ?? ''}';
+  const linesPlugin = {
+    id: 'refLines',
     afterDraw: function(chart) {
-      if (!medianLine) return;
       const xScale = chart.scales.x;
       const ctx2 = chart.ctx;
-      const x = xScale.getPixelForValue(medianLine);
       ctx2.save();
-      ctx2.beginPath();
-      ctx2.setLineDash([6, 4]);
-      ctx2.strokeStyle = '${CARAMELO_DARK}';
-      ctx2.lineWidth = 2;
-      ctx2.moveTo(x, chart.chartArea.top);
-      ctx2.lineTo(x, chart.chartArea.bottom);
-      ctx2.stroke();
-      ctx2.setLineDash([]);
-      ctx2.fillStyle = '${CARAMELO_DARK}';
-      ctx2.font = "500 12px 'DM Sans'";
-      ctx2.textAlign = 'center';
-      ctx2.fillText('Mediana $' + medianLine.toLocaleString(), x, chart.chartArea.top - 8);
+      // Mediana global
+      if (medianLine) {
+        const x = xScale.getPixelForValue(medianLine);
+        ctx2.beginPath();
+        ctx2.setLineDash([6, 4]);
+        ctx2.strokeStyle = '${CARAMELO_DARK}';
+        ctx2.lineWidth = 2;
+        ctx2.moveTo(x, chart.chartArea.top);
+        ctx2.lineTo(x, chart.chartArea.bottom);
+        ctx2.stroke();
+        ctx2.setLineDash([]);
+        ctx2.fillStyle = '${CARAMELO_DARK}';
+        ctx2.font = "500 11px 'DM Sans'";
+        ctx2.textAlign = 'center';
+        ctx2.fillText('Mediana $' + medianLine.toLocaleString(), x, chart.chartArea.top - 8);
+      }
+      // Proyecto
+      if (proyectoLine) {
+        const x2 = xScale.getPixelForValue(proyectoLine);
+        ctx2.beginPath();
+        ctx2.setLineDash([3, 3]);
+        ctx2.strokeStyle = '${CARBON}';
+        ctx2.lineWidth = 2;
+        ctx2.moveTo(x2, chart.chartArea.top);
+        ctx2.lineTo(x2, chart.chartArea.bottom);
+        ctx2.stroke();
+        ctx2.setLineDash([]);
+        ctx2.fillStyle = '${CARBON}';
+        ctx2.font = "600 11px 'DM Sans'";
+        ctx2.textAlign = 'center';
+        ctx2.fillText(proyectoNombre + ' $' + proyectoLine.toLocaleString(), x2, chart.chartArea.bottom + 16);
+      }
       ctx2.restore();
     }
   };
@@ -64,12 +84,12 @@ export function barChartZonas(data: ZonaStat[], canvasId: string, medianaGlobal?
         barThickness: 32
       }]
     },
-    plugins: [medianPlugin],
+    plugins: [linesPlugin],
     options: {
       indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
-      layout: { padding: { top: 24 } },
+      layout: { padding: { top: 24, bottom: proyectoLine ? 24 : 0 } },
       plugins: { legend: { display: false } },
       scales: {
         x: {

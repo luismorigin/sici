@@ -346,7 +346,7 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
 <nav class="nav" id="mainNav">
   <div class="nav-inner">
     <div class="nav-brand">Condado VI Plaza Italia</div>
-    <a href="#metodologia" class="nav-link">Metodologia</a><a href="#panorama" class="nav-link">Panorama</a><a href="#zoom" class="nav-link">Zona</a><a href="#demanda" class="nav-link">Oferta</a><a href="#posicion" class="nav-link">Posicion</a><a href="#competidores" class="nav-link">Competencia</a><a href="#visibilidad" class="nav-link">Visibilidad</a><a href="#rotacion" class="nav-link">Rotacion</a><a href="#yield" class="nav-link">Yield</a><a href="#simulacion" class="nav-link">Simulacion</a><a href="#recomendaciones" class="nav-link">Acciones</a>
+    <a href="#metodologia" class="nav-link">Metodologia</a><a href="#panorama" class="nav-link">Panorama</a><a href="#zoom" class="nav-link">Zona</a><a href="#demanda" class="nav-link">Oferta</a><a href="#posicion" class="nav-link">Posicion</a><a href="#diferenciador" class="nav-link">Producto</a><a href="#competidores" class="nav-link">Competencia</a><a href="#visibilidad" class="nav-link">Visibilidad</a><a href="#rotacion" class="nav-link">Rotacion</a><a href="#yield" class="nav-link">Yield</a><a href="#simulacion" class="nav-link">Simulacion</a><a href="#recomendaciones" class="nav-link">Acciones</a>
   </div>
 </nav>
 
@@ -425,26 +425,46 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
   const ctx = document.getElementById('chartZonas');
   if (!ctx) return;
   const medianLine = 2046;
-  const medianPlugin = {
-    id: 'medianLine',
+  const proyectoLine = 2200;
+  const proyectoNombre = 'Condado';
+  const linesPlugin = {
+    id: 'refLines',
     afterDraw: function(chart) {
-      if (!medianLine) return;
       const xScale = chart.scales.x;
       const ctx2 = chart.ctx;
-      const x = xScale.getPixelForValue(medianLine);
       ctx2.save();
-      ctx2.beginPath();
-      ctx2.setLineDash([6, 4]);
-      ctx2.strokeStyle = '#3A6A48';
-      ctx2.lineWidth = 2;
-      ctx2.moveTo(x, chart.chartArea.top);
-      ctx2.lineTo(x, chart.chartArea.bottom);
-      ctx2.stroke();
-      ctx2.setLineDash([]);
-      ctx2.fillStyle = '#3A6A48';
-      ctx2.font = "500 12px 'DM Sans'";
-      ctx2.textAlign = 'center';
-      ctx2.fillText('Mediana $' + medianLine.toLocaleString(), x, chart.chartArea.top - 8);
+      // Mediana global
+      if (medianLine) {
+        const x = xScale.getPixelForValue(medianLine);
+        ctx2.beginPath();
+        ctx2.setLineDash([6, 4]);
+        ctx2.strokeStyle = '#3A6A48';
+        ctx2.lineWidth = 2;
+        ctx2.moveTo(x, chart.chartArea.top);
+        ctx2.lineTo(x, chart.chartArea.bottom);
+        ctx2.stroke();
+        ctx2.setLineDash([]);
+        ctx2.fillStyle = '#3A6A48';
+        ctx2.font = "500 11px 'DM Sans'";
+        ctx2.textAlign = 'center';
+        ctx2.fillText('Mediana $' + medianLine.toLocaleString(), x, chart.chartArea.top - 8);
+      }
+      // Proyecto
+      if (proyectoLine) {
+        const x2 = xScale.getPixelForValue(proyectoLine);
+        ctx2.beginPath();
+        ctx2.setLineDash([3, 3]);
+        ctx2.strokeStyle = '#141414';
+        ctx2.lineWidth = 2;
+        ctx2.moveTo(x2, chart.chartArea.top);
+        ctx2.lineTo(x2, chart.chartArea.bottom);
+        ctx2.stroke();
+        ctx2.setLineDash([]);
+        ctx2.fillStyle = '#141414';
+        ctx2.font = "600 11px 'DM Sans'";
+        ctx2.textAlign = 'center';
+        ctx2.fillText(proyectoNombre + ' $' + proyectoLine.toLocaleString(), x2, chart.chartArea.bottom + 16);
+      }
       ctx2.restore();
     }
   };
@@ -459,12 +479,12 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
         barThickness: 32
       }]
     },
-    plugins: [medianPlugin],
+    plugins: [linesPlugin],
     options: {
       indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
-      layout: { padding: { top: 24 } },
+      layout: { padding: { top: 24, bottom: proyectoLine ? 24 : 0 } },
       plugins: { legend: { display: false } },
       scales: {
         x: {
@@ -626,6 +646,106 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+</section>
+
+<section class="section bg-white" id="diferenciador">
+  <div class="section-inner reveal">
+    <div class="badge">Producto</div>
+    <div class="section-title">Tu producto vs el mercado</div>
+    <div class="section-subtitle">Que diferencia a Condado VI Plaza Italia de la competencia en Equipetrol Centro.</div>
+
+    <!-- Tamaño por tipología -->
+    <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:16px">Tamano por tipologia</div>
+    <div class="yield-grid" style="margin-bottom:32px">
+      
+      <div class="yield-card attractive">
+        <div class="yield-tipo">1D (4 uds)</div>
+        <div class="yield-value high" style="font-size:36px">62.2m²</div>
+        <div class="yield-rent">
+          Mediana 1D en Equipetrol: 49.7m²<br>
+          Mediana 1D todas las zonas: 50m²
+        </div>
+        <div style="font-size:15px;font-weight:600;color:var(--caramelo);margin-top:8px">+25% vs 1D del mercado</div>
+      </div>
+      <div class="yield-card">
+        <div class="yield-tipo">2D (7 uds)</div>
+        <div class="yield-value" style="font-size:36px">87.2m²</div>
+        <div class="yield-rent">
+          Mediana 2D en Equipetrol: 88.1m²<br>
+          Mediana 2D todas las zonas: 85.7m²
+        </div>
+        <div style="font-size:13px;color:var(--piedra);margin-top:8px">Comparable al mercado</div>
+      </div>
+      <div class="yield-card attractive">
+        <div class="yield-tipo">3D (3 uds)</div>
+        <div class="yield-value high" style="font-size:36px">144.3m²</div>
+        <div class="yield-rent">
+          Mediana 3D en Equipetrol: 163m²<br>
+          Mediana 3D todas las zonas: 163m²
+        </div>
+        <div style="font-size:15px;font-weight:600;color:var(--caramelo);margin-top:8px">-11% vs 3D del mercado</div>
+      </div>
+    </div>
+
+    <!-- Equipamiento scorecard -->
+    <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:16px">Equipamiento de unidad</div>
+    <div class="table-wrap" style="margin-bottom:32px">
+      <table class="data" style="text-align:center">
+        <thead><tr><th style="text-align:left">Item</th><th style="color:var(--caramelo)">Condado</th><th>Atrium</th><th>HH Once</th><th>Luxe S.</th><th>Sky Tower</th></tr></thead>
+        <tbody>
+          <tr><td style="text-align:left">Aire acondicionado</td><td style="color:var(--caramelo)">&#9679;</td><td>&#9679;</td><td style="color:var(--arena)">&#9675;</td><td>&#9679;</td><td>&#9679;</td></tr>
+          <tr><td style="text-align:left">Cocina encimera</td><td style="color:var(--caramelo)">&#9679;</td><td>&#9679;</td><td>&#9679;</td><td>&#9679;</td><td>&#9679;</td></tr>
+          <tr><td style="text-align:left">Horno empotrado</td><td style="color:var(--caramelo)">&#9679;</td><td>&#9679;</td><td style="color:var(--arena)">&#9675;</td><td>&#9679;</td><td style="color:var(--arena)">&#9675;</td></tr>
+          <tr style="background:var(--caramelo-10)"><td style="text-align:left"><strong>Heladera</strong></td><td style="color:var(--caramelo)">&#9679;</td><td style="color:var(--arena)">&#9675;</td><td style="color:var(--arena)">&#9675;</td><td>&#9679;</td><td>&#9679;</td></tr>
+          <tr style="background:var(--caramelo-10)"><td style="text-align:left"><strong>Lavadora / Secadora</strong></td><td style="color:var(--caramelo)">&#9679;</td><td style="color:var(--arena)">&#9675;</td><td style="color:var(--arena)">&#9675;</td><td>&#9679;</td><td style="color:var(--arena)">&#9675;</td></tr>
+          <tr style="background:var(--caramelo-10)"><td style="text-align:left"><strong>Lavavajillas</strong></td><td style="color:var(--caramelo)">&#9679;</td><td style="color:var(--arena)">&#9675;</td><td style="color:var(--arena)">&#9675;</td><td style="color:var(--arena)">&#9675;</td><td style="color:var(--arena)">&#9675;</td></tr>
+          <tr><td style="text-align:left">Calefon</td><td style="color:var(--caramelo)">&#9679;</td><td>&#9679;</td><td style="color:var(--arena)">&#9675;</td><td>&#9679;</td><td>&#9679;</td></tr>
+          <tr><td style="text-align:left">Closets</td><td style="color:var(--caramelo)">&#9679;</td><td>&#9679;</td><td>&#9679;</td><td>&#9679;</td><td>&#9679;</td></tr>
+          <tr><td style="text-align:left">Box bano vidrio</td><td style="color:var(--caramelo)">&#9679;</td><td>&#9679;</td><td>&#9679;</td><td>&#9679;</td><td>&#9679;</td></tr>
+          <tr style="border-top:2px solid var(--carbon);font-weight:700"><td style="text-align:left">TOTAL</td><td style="color:var(--caramelo)">9/9</td><td>6/9</td><td>3/9</td><td>8/9</td><td>6/9</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:13px;color:var(--piedra)">Las filas destacadas son los items que diferencian a Condado VI Plaza Italia. Unico proyecto con lavavajillas en la zona.</p>
+
+    <!-- Amenidades -->
+    <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-top:40px;margin-bottom:16px">Amenidades del edificio</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--arena);border-radius:14px;overflow:hidden;margin-bottom:24px">
+      <div style="padding:24px;background:var(--marfil)">
+        <div style="font-size:15px;font-weight:600;color:var(--carbon);margin-bottom:12px">Condado VI Plaza Italia</div>
+        <div style="font-size:14px;color:var(--piedra);line-height:2">
+          Piscina<br>Gimnasio<br>Seguridad 24/7<br>Churrasquera<br>Salon de eventos<br>Terraza<br>Ascensor
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--carbon);margin-top:12px">7 amenidades</div>
+      </div>
+      <div style="padding:24px">
+        <div style="font-size:15px;font-weight:600;color:var(--carbon);margin-bottom:12px">Competidores premium</div>
+        <div style="font-size:14px;color:var(--piedra);line-height:2">
+          Todo lo anterior +<br>Sauna / Jacuzzi<br>Co-working<br>Pet Friendly<br>Recepcion<br>Sala de juegos<br>Estacionamiento visitas
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--piedra);margin-top:12px">11-15 amenidades</div>
+      </div>
+    </div>
+
+    <!-- Resumen -->
+    <div style="padding:20px;border-radius:14px;background:var(--marfil);margin-top:24px">
+      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:12px">Resumen</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;font-size:14px;color:var(--carbon);line-height:1.6">
+        <div>
+          <strong style="color:var(--caramelo)">Fortaleza</strong><br>
+          Equipamiento de unidad superior (9/9). Unico con lavavajillas. Linea blanca completa facilita alquiler amoblado.
+        </div>
+        <div>
+          <strong style="color:var(--caramelo)">Fortaleza</strong><br>
+          1D de 62m² — 27% mas grande que la mediana del mercado (49m²). Es un diferenciador no comunicado en portales.
+        </div>
+        <div>
+          <strong style="color:var(--piedra)">Debilidad</strong><br>
+          Menos amenidades que competidores premium (7 vs 11-15). Sin sauna, co-working ni pet friendly.
+        </div>
+      </div>
     </div>
   </div>
 </section>

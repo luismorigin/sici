@@ -105,7 +105,7 @@ export function renderPanorama(e: EstudioCompleto): string {
     <div class="chart-container" style="height:${Math.max(250, zonas.length * 55)}px">
       <canvas id="chartZonas"></canvas>
     </div>
-    ${barChartZonas(zonas, 'chartZonas', e.panorama.medianaM2Global)}
+    ${barChartZonas(zonas, 'chartZonas', e.panorama.medianaM2Global, e.posicion.proyectoM2, e.config.projectName.split(' ')[0])}
     <div class="table-wrap">
       <table class="data">
         <thead><tr><th>Zona</th><th>Uds</th><th>$/m² med.</th><th>Ticket med.</th><th>Area prom.</th></tr></thead>
@@ -188,6 +188,110 @@ export function renderPosicion(e: EstudioCompleto): string {
           </tr>`).join('')}
         </tbody>
       </table>
+    </div>
+  </div>
+</section>`
+}
+
+// ───── 6b. DIFERENCIADOR DE PRODUCTO ─────
+export function renderDiferenciador(e: EstudioCompleto): string {
+  // Calcular diff de tamaño por tipología vs mercado
+  const dormTypes = [...new Set(e.config.inventory.map(u => u.dorms))].sort()
+
+  // Get market medians from panorama data (zona-filtered)
+  const zonaRows = e.panorama.byZona.find(z => z.zona === e.config.zona)
+  if (!zonaRows) return ''
+
+  return `
+<section class="section bg-white" id="diferenciador">
+  <div class="section-inner reveal">
+    <div class="badge">Producto</div>
+    <div class="section-title">Tu producto vs el mercado</div>
+    <div class="section-subtitle">Que diferencia a ${e.config.projectName} de la competencia en ${e.config.zona}.</div>
+
+    <!-- Tamaño por tipología -->
+    <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:16px">Tamano por tipologia</div>
+    <div class="yield-grid" style="margin-bottom:32px">
+      ${dormTypes.map(dorms => {
+        const units = e.config.inventory.filter(u => u.dorms === dorms)
+        const condadoM2 = Math.round((units.reduce((s, u) => s + u.m2, 0) / units.length) * 10) / 10
+        // Mediana m2 del mercado para esta tipología (hardcoded from BD query — TODO: add to tool)
+        const zonaM2Map: Record<number, number> = { 1: 49.7, 2: 88.1, 3: 163.0 }
+        const globalM2Map: Record<number, number> = { 1: 50.0, 2: 85.7, 3: 163.0 }
+        const mercadoM2 = zonaM2Map[dorms] ?? 0
+        const globalM2 = globalM2Map[dorms] ?? 0
+        const diffPct = mercadoM2 > 0 ? Math.round(((condadoM2 - mercadoM2) / mercadoM2) * 100) : 0
+        const isDiff = Math.abs(diffPct) > 10
+        return `
+      <div class="yield-card${isDiff ? ' attractive' : ''}">
+        <div class="yield-tipo">${dormLabel(dorms)} (${units.length} uds)</div>
+        <div class="yield-value${isDiff ? ' high' : ''}" style="font-size:36px">${condadoM2}m\u00B2</div>
+        <div class="yield-rent">
+          Mediana ${dormLabel(dorms)} en ${e.config.zona.split(' ')[0]}: ${mercadoM2}m\u00B2<br>
+          Mediana ${dormLabel(dorms)} todas las zonas: ${globalM2}m\u00B2
+        </div>
+        ${isDiff ? `<div style="font-size:15px;font-weight:600;color:var(--caramelo);margin-top:8px">${diffPct > 0 ? '+' : ''}${diffPct}% vs ${dormLabel(dorms)} del mercado</div>` : `<div style="font-size:13px;color:var(--piedra);margin-top:8px">Comparable al mercado</div>`}
+      </div>`
+      }).join('')}
+    </div>
+
+    <!-- Equipamiento scorecard -->
+    <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:16px">Equipamiento de unidad</div>
+    <div class="table-wrap" style="margin-bottom:32px">
+      <table class="data" style="text-align:center">
+        <thead><tr><th style="text-align:left">Item</th><th style="color:var(--caramelo)">${e.config.projectName.split(' ')[0]}</th><th>Atrium</th><th>HH Once</th><th>Luxe S.</th><th>Sky Tower</th></tr></thead>
+        <tbody>
+          <tr><td style="text-align:left">Aire acondicionado</td><td style="color:var(--caramelo)">&#9679;</td><td>&#9679;</td><td style="color:var(--arena)">&#9675;</td><td>&#9679;</td><td>&#9679;</td></tr>
+          <tr><td style="text-align:left">Cocina encimera</td><td style="color:var(--caramelo)">&#9679;</td><td>&#9679;</td><td>&#9679;</td><td>&#9679;</td><td>&#9679;</td></tr>
+          <tr><td style="text-align:left">Horno empotrado</td><td style="color:var(--caramelo)">&#9679;</td><td>&#9679;</td><td style="color:var(--arena)">&#9675;</td><td>&#9679;</td><td style="color:var(--arena)">&#9675;</td></tr>
+          <tr style="background:var(--caramelo-10)"><td style="text-align:left"><strong>Heladera</strong></td><td style="color:var(--caramelo)">&#9679;</td><td style="color:var(--arena)">&#9675;</td><td style="color:var(--arena)">&#9675;</td><td>&#9679;</td><td>&#9679;</td></tr>
+          <tr style="background:var(--caramelo-10)"><td style="text-align:left"><strong>Lavadora / Secadora</strong></td><td style="color:var(--caramelo)">&#9679;</td><td style="color:var(--arena)">&#9675;</td><td style="color:var(--arena)">&#9675;</td><td>&#9679;</td><td style="color:var(--arena)">&#9675;</td></tr>
+          <tr style="background:var(--caramelo-10)"><td style="text-align:left"><strong>Lavavajillas</strong></td><td style="color:var(--caramelo)">&#9679;</td><td style="color:var(--arena)">&#9675;</td><td style="color:var(--arena)">&#9675;</td><td style="color:var(--arena)">&#9675;</td><td style="color:var(--arena)">&#9675;</td></tr>
+          <tr><td style="text-align:left">Calefon</td><td style="color:var(--caramelo)">&#9679;</td><td>&#9679;</td><td style="color:var(--arena)">&#9675;</td><td>&#9679;</td><td>&#9679;</td></tr>
+          <tr><td style="text-align:left">Closets</td><td style="color:var(--caramelo)">&#9679;</td><td>&#9679;</td><td>&#9679;</td><td>&#9679;</td><td>&#9679;</td></tr>
+          <tr><td style="text-align:left">Box bano vidrio</td><td style="color:var(--caramelo)">&#9679;</td><td>&#9679;</td><td>&#9679;</td><td>&#9679;</td><td>&#9679;</td></tr>
+          <tr style="border-top:2px solid var(--carbon);font-weight:700"><td style="text-align:left">TOTAL</td><td style="color:var(--caramelo)">9/9</td><td>6/9</td><td>3/9</td><td>8/9</td><td>6/9</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:13px;color:var(--piedra)">Las filas destacadas son los items que diferencian a ${e.config.projectName}. Unico proyecto con lavavajillas en la zona.</p>
+
+    <!-- Amenidades -->
+    <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-top:40px;margin-bottom:16px">Amenidades del edificio</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--arena);border-radius:14px;overflow:hidden;margin-bottom:24px">
+      <div style="padding:24px;background:var(--marfil)">
+        <div style="font-size:15px;font-weight:600;color:var(--carbon);margin-bottom:12px">${e.config.projectName}</div>
+        <div style="font-size:14px;color:var(--piedra);line-height:2">
+          Piscina<br>Gimnasio<br>Seguridad 24/7<br>Churrasquera<br>Salon de eventos<br>Terraza<br>Ascensor
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--carbon);margin-top:12px">7 amenidades</div>
+      </div>
+      <div style="padding:24px">
+        <div style="font-size:15px;font-weight:600;color:var(--carbon);margin-bottom:12px">Competidores premium</div>
+        <div style="font-size:14px;color:var(--piedra);line-height:2">
+          Todo lo anterior +<br>Sauna / Jacuzzi<br>Co-working<br>Pet Friendly<br>Recepcion<br>Sala de juegos<br>Estacionamiento visitas
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--piedra);margin-top:12px">11-15 amenidades</div>
+      </div>
+    </div>
+
+    <!-- Resumen -->
+    <div style="padding:20px;border-radius:14px;background:var(--marfil);margin-top:24px">
+      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:12px">Resumen</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;font-size:14px;color:var(--carbon);line-height:1.6">
+        <div>
+          <strong style="color:var(--caramelo)">Fortaleza</strong><br>
+          Equipamiento de unidad superior (9/9). Unico con lavavajillas. Linea blanca completa facilita alquiler amoblado.
+        </div>
+        <div>
+          <strong style="color:var(--caramelo)">Fortaleza</strong><br>
+          1D de 62m\u00B2 — 27% mas grande que la mediana del mercado (49m\u00B2). Es un diferenciador no comunicado en portales.
+        </div>
+        <div>
+          <strong style="color:var(--piedra)">Debilidad</strong><br>
+          Menos amenidades que competidores premium (7 vs 11-15). Sin sauna, co-working ni pet friendly.
+        </div>
+      </div>
     </div>
   </div>
 </section>`

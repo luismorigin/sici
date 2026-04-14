@@ -2,7 +2,7 @@ import type { EstudioCompleto } from '../types.js'
 import { getCSS } from './design-system.js'
 import {
   renderHero, renderMetodologia, renderPanorama, renderZoomZona,
-  renderDemanda, renderPosicion, renderCompetidores, renderVisibilidad,
+  renderDemanda, renderPosicion, renderDiferenciador, renderCompetidores, renderVisibilidad,
   renderRotacion, renderYield, renderSimulacion, renderRecomendaciones,
 } from './sections.js'
 
@@ -17,6 +17,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'zoom', label: 'Zona' },
   { id: 'demanda', label: 'Oferta' },
   { id: 'posicion', label: 'Posicion' },
+  { id: 'diferenciador', label: 'Producto' },
   { id: 'competidores', label: 'Competencia' },
   { id: 'visibilidad', label: 'Visibilidad' },
   { id: 'rotacion', label: 'Rotacion' },
@@ -121,6 +122,7 @@ export function assembleHTML(estudio: EstudioCompleto): string {
     renderZoomZona(estudio),
     renderDemanda(estudio),
     renderPosicion(estudio),
+    renderDiferenciador(estudio),
     renderCompetidores(estudio),
     renderVisibilidad(estudio),
     renderRotacion(estudio),
