@@ -174,6 +174,9 @@ export interface YieldTipologia {
   dorms: number
   rentaAmobladoUsd: number | null
   rentaNoAmobladoUsd: number | null
+  rentaM2AmobladoUsd: number | null  // renta/m² mensual amoblado
+  rentaM2NoAmobladoUsd: number | null
+  medianaAreaAlquiler: number | null  // m² mediano de los alquileres
   premiumAmobladoPct: number | null
   nAmoblado: number
   nNoAmoblado: number
@@ -208,6 +211,12 @@ export interface RetiroBatch {
   broker: string | null
 }
 
+export interface NuevasResumen {
+  total: number
+  byDorms: Array<{ dorms: number; count: number; pct: number; medianaM2: number }>
+  medianaM2: number
+}
+
 export interface RotacionObservadaResult {
   zona: string
   dias: number
@@ -216,6 +225,7 @@ export interface RotacionObservadaResult {
   retirosBatch: RetiroBatch[]
   totalIndividuales: number
   totalBatch: number
+  nuevas: NuevasResumen
 }
 
 // --- All results combined ---

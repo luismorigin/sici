@@ -439,10 +439,17 @@ export function renderRotacion(e: EstudioCompleto): string {
     <div class="yield-grid" style="margin-bottom:32px">
       ${sorted.map(([d, count]) => {
         const pct = r.totalIndividuales > 0 ? Math.round((count / r.totalIndividuales) * 100) : 0
+        const dormsProps = indiv.filter(p => p.dorms === d)
+        const dormsM2 = dormsProps.filter(p => p.precioM2 > 0).map(p => p.precioM2).sort((a, b) => a - b)
+        const dormsDias = dormsProps.filter(p => p.diasEnMercado > 0).map(p => p.diasEnMercado).sort((a, b) => a - b)
+        const medM2 = dormsM2.length > 0 ? dormsM2[Math.floor(dormsM2.length / 2)] : 0
+        const medDias = dormsDias.length > 0 ? dormsDias[Math.floor(dormsDias.length / 2)] : 0
         return `<div class="yield-card${pct >= 40 ? ' attractive' : ''}" style="cursor:pointer" onclick="filterRotacion(${d})">
         <div class="yield-tipo">${dormLabel(d)}</div>
         <div class="yield-value${pct >= 40 ? ' high' : ' low'}">${count}</div>
-        <div class="yield-rent">${pct}% de las salidas individuales</div>
+        <div class="yield-rent">${pct}% de las salidas</div>
+        ${medM2 > 0 ? `<div style="font-size:13px;color:var(--piedra);margin-top:8px">${fmt(medM2)}/m\u00B2 med.</div>` : ''}
+        ${medDias > 0 ? `<div style="font-size:13px;color:var(--piedra)">${medDias}d publicado med.</div>` : ''}
       </div>`
       }).join('')}
     </div>
@@ -501,9 +508,64 @@ export function renderRotacion(e: EstudioCompleto): string {
     }
     </` + `script>`
     })()}` : '<p class="takeaway">No se detectaron salidas en este periodo.</p>'}
-    <p class="takeaway">
+    <!-- Qué entró al mercado -->
+    ${r.nuevas.total > 0 ? `
+    <div style="margin-top:48px;padding-top:40px;border-top:2px solid var(--arena)">
+      <div class="badge">Nuevas</div>
+      <div class="section-title" style="font-size:28px">Que entro al mercado</div>
+      <div class="section-subtitle" style="margin-bottom:28px">
+        ${r.nuevas.total} propiedades nuevas aparecieron en portales en los ultimos ${r.dias} dias en ${r.zona}.
+        ${r.nuevas.total > r.totalIndividuales
+          ? `Entraron mas de las que salieron — el mercado crece.`
+          : r.nuevas.total < r.totalIndividuales
+          ? `Salieron mas de las que entraron — el inventario se contrae.`
+          : `Entraron las mismas que salieron — el mercado se mantiene estable.`}
+      </div>
+
+      <!-- Nuevas vs Salidas -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:28px">
+        <div style="padding:24px;border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-family:'Figtree',sans-serif;font-size:36px;font-weight:500;color:var(--caramelo)">${r.nuevas.total}</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">Nuevas entradas</div>
+        </div>
+        <div style="padding:24px;border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-family:'Figtree',sans-serif;font-size:36px;font-weight:500;color:var(--carbon)">${r.totalIndividuales}</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">Salidas individuales</div>
+        </div>
+        <div style="padding:24px;border-radius:14px;text-align:center;background:var(--white);border:1px solid ${r.nuevas.total >= r.totalIndividuales ? 'var(--caramelo)' : 'var(--arena)'}">
+          <div style="font-family:'Figtree',sans-serif;font-size:36px;font-weight:500;color:${r.nuevas.total >= r.totalIndividuales ? 'var(--caramelo)' : 'var(--piedra)'}">${r.nuevas.total >= r.totalIndividuales ? '+' : ''}${r.nuevas.total - r.totalIndividuales}</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">Balance neto</div>
+        </div>
+      </div>
+
+      <!-- Nuevas por tipología -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px">
+        ${r.nuevas.byDorms.map(d => `
+        <div style="padding:16px;border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-size:14px;font-weight:600;color:var(--carbon)">${dormLabel(d.dorms)}</div>
+          <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">${d.count}</div>
+          <div style="font-size:12px;color:var(--piedra)">${d.pct}% de las nuevas</div>
+          ${d.medianaM2 > 0 ? `<div style="font-size:13px;color:var(--piedra);margin-top:8px">${fmt(d.medianaM2)}/m\u00B2 med.</div>` : ''}
+        </div>`).join('')}
+      </div>
+
+      ${r.nuevas.medianaM2 > 0 ? `
+      <div style="padding:16px 20px;border-radius:14px;background:var(--white);font-size:14px;color:var(--piedra)">
+        Las nuevas entran con mediana de <strong style="color:var(--carbon)">${fmt(r.nuevas.medianaM2)}/m\u00B2</strong>
+        ${(() => {
+          const diffNuevas = Math.round(((r.nuevas.medianaM2 - e.posicion.medianaZonaM2) / e.posicion.medianaZonaM2) * 100)
+          return diffNuevas > 5
+            ? `— ${diffNuevas}% por encima de la mediana activa. Los nuevos proyectos apuntan a un segmento mas alto.`
+            : diffNuevas < -5
+            ? `— ${Math.abs(diffNuevas)}% por debajo de la mediana activa. La oferta nueva es mas accesible.`
+            : `— alineada con la mediana activa. Sin cambio de tendencia en precios.`
+        })()}
+      </div>` : ''}
+    </div>` : ''}
+
+    <p class="takeaway" style="margin-top:32px">
       Nota: Una propiedad que sale del portal puede haber sido vendida, retirada por el broker,
-      o haber expirado. Presentamos los datos observados sin inferir la causa.
+      o haber expirado. Las entradas corresponden a nuevos listings detectados por primera vez.
     </p>
   </div>
 </section>`
@@ -546,6 +608,75 @@ export function renderYield(e: EstudioCompleto): string {
       Yield bruto = (renta mensual &times; 12) / precio venta. No incluye vacancias, mantenimiento, impuestos ni gastos de condominio.
       Las medianas son mas robustas que promedios pero con muestras chicas (n&lt;10) deben leerse con cautela.
     </p>
+
+    <!-- Condado yield comparison -->
+    ${(() => {
+      const TC_OFICIAL = 6.96
+      const dormTypes = [...new Set(e.config.inventory.map(u => u.dorms))].sort()
+      const condadoYield = dormTypes.map(dorms => {
+        const units = e.config.inventory.filter(u => u.dorms === dorms)
+        const avgTicket = Math.round(units.reduce((s, u) => s + u.precioUsd, 0) / units.length)
+        const ticketNorm = e.config.tcDetectado === 'paralelo'
+          ? Math.round(avgTicket * e.tc.paralelo / TC_OFICIAL)
+          : avgTicket
+        const avgM2 = Math.round((units.reduce((s, u) => s + u.m2, 0) / units.length) * 10) / 10
+        const yieldData = items.find(d => d.dorms === dorms)
+
+        // Renta directa del mercado
+        const rentaAmob = yieldData?.rentaAmobladoUsd ?? null
+        const rentaM2Amob = yieldData?.rentaM2AmobladoUsd ?? null
+        const medianaAreaAlq = yieldData?.medianaAreaAlquiler ?? null
+
+        // Si hay diferencia de tamaño >20%, usar renta/m² estimada
+        const sizeDiff = medianaAreaAlq && medianaAreaAlq > 0 ? Math.abs(avgM2 - medianaAreaAlq) / medianaAreaAlq : 0
+        const usarRentaM2 = sizeDiff > 0.2 && rentaM2Amob
+
+        const rentaEstimada = usarRentaM2 ? Math.round(rentaM2Amob * avgM2) : rentaAmob
+        const rentaLabel = usarRentaM2 ? 'estimada por m\u00B2' : 'mediana mercado'
+
+        const yieldAmob = rentaEstimada && ticketNorm > 0 ? Math.round((rentaEstimada * 12 / ticketNorm) * 1000) / 10 : null
+        const retornoAmob = rentaEstimada && rentaEstimada > 0 ? Math.round((ticketNorm / (rentaEstimada * 12)) * 10) / 10 : null
+
+        return { dorms, units: units.length, avgTicket, ticketNorm, avgM2, rentaEstimada, rentaAmob, rentaM2Amob, rentaLabel, yieldAmob, retornoAmob, medianaAreaAlq, usarRentaM2, sizeDiff }
+      }).filter(d => d.rentaEstimada)
+
+      if (condadoYield.length === 0) return ''
+
+      return `
+    <div style="margin-top:48px;padding-top:40px;border-top:1px solid rgba(255,255,255,0.08)">
+      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:20px">Retorno — ${e.config.projectName}</div>
+      <div style="font-size:15px;color:var(--piedra-light);margin-bottom:28px;line-height:1.6">
+        Yield estimado usando los precios reales de ${e.config.projectName} ($${e.config.precioM2Billete}/m\u00B2)
+        y las rentas del mercado en ${e.config.zona}.
+        Cuando el area del dpto difiere >20% de la mediana de alquiler, se estima la renta por m\u00B2.
+      </div>
+
+      <div class="yield-grid">
+        ${condadoYield.map(d => {
+          const isHigh = (d.yieldAmob ?? 0) >= 5
+          return `
+        <div class="yield-card${isHigh ? ' attractive' : ''}">
+          <div class="yield-tipo">${dormLabel(d.dorms)} (${d.units} uds, ${d.avgM2}m\u00B2)</div>
+          <div class="yield-value${isHigh ? ' high' : ' low'}">${(d.yieldAmob ?? 0).toFixed(1)}%</div>
+          <div class="yield-rent">
+            Ticket: ${fmt(d.avgTicket)} billete${d.ticketNorm !== d.avgTicket ? ` (${fmt(d.ticketNorm)} norm.)` : ''}
+            <br>Renta amoblada: <strong>${fmt(d.rentaEstimada!)}/mes</strong> (${d.rentaLabel})
+            ${d.rentaM2Amob ? `<br>Renta/m\u00B2: $${d.rentaM2Amob.toFixed(2)}/m\u00B2/mes` : ''}
+          </div>
+          <div class="yield-detail">
+            Yield: ${(d.yieldAmob ?? 0).toFixed(1)}% &middot; Retorno: ${d.retornoAmob} a\u00F1os
+            ${d.usarRentaM2 ? `<br><span style="font-size:12px;color:var(--piedra-light)">Nota: los alquileres de ${dormLabel(d.dorms)} en la zona tienen mediana ${d.medianaAreaAlq}m\u00B2 vs ${d.avgM2}m\u00B2 de ${e.config.projectName}. Se uso renta/m\u00B2 ($${d.rentaM2Amob!.toFixed(2)}) para estimar.</span>` : ''}
+          </div>
+        </div>`
+        }).join('')}
+      </div>
+
+      <div style="font-size:14px;color:var(--piedra-light);margin-top:20px;line-height:1.6;padding:16px 20px;border:1px solid rgba(255,255,255,0.08);border-radius:14px">
+        ${e.config.projectName} entrega con linea blanca completa (heladera, lavadora, secadora, lavavajillas).
+        Esto facilita al comprador-inversor poner a alquilar amoblado y capturar el premium sobre la renta sin amoblar.
+      </div>
+    </div>`
+    })()}
   </div>
 </section>`
 }

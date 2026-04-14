@@ -1,5 +1,5 @@
-import { queryRotacion } from '../db.js'
-import type { RotacionObservadaResult, PropRotada, RetiroBatch } from '../types.js'
+import { queryRotacion, queryNuevas, median } from '../db.js'
+import type { RotacionObservadaResult, PropRotada, RetiroBatch, NuevasResumen } from '../types.js'
 
 const TC_OFICIAL = 6.96
 const BATCH_MIN = 3 // 3+ props del mismo proyecto el mismo día = retiro batch
@@ -85,6 +85,50 @@ export async function rotacionObservada(
     .map(item => item.prop)
     .sort((a, b) => b.fechaSalida.localeCompare(a.fechaSalida))
 
+  // Nuevas entradas al mercado
+  const rawNuevas = await queryNuevas(zona, dias)
+  const nuevasM2 = rawNuevas
+    .map((r: any) => {
+      const area = parseFloat(r.area_total_m2) || 0
+      const precioUsd = parseFloat(r.precio_usd) || 0
+      const tcDet = r.tipo_cambio_detectado ?? 'no_especificado'
+      const pNorm = tcDet === 'paralelo' ? Math.round(precioUsd * tcParalelo / TC_OFICIAL) : precioUsd
+      return area > 0 ? pNorm / area : 0
+    })
+    .filter((m2: number) => m2 > 0)
+
+  const nuevasByDorm = new Map<number, any[]>()
+  for (const r of rawNuevas) {
+    const arr = nuevasByDorm.get(r.dormitorios) ?? []
+    arr.push(r)
+    nuevasByDorm.set(r.dormitorios, arr)
+  }
+
+  const nuevas: NuevasResumen = {
+    total: rawNuevas.length,
+    byDorms: [...nuevasByDorm.entries()]
+      .map(([dorms, props]) => {
+        const m2s = props
+          .map((r: any) => {
+            const area = parseFloat(r.area_total_m2) || 0
+            const precioUsd = parseFloat(r.precio_usd) || 0
+            const tcDet = r.tipo_cambio_detectado ?? 'no_especificado'
+            const pNorm = tcDet === 'paralelo' ? Math.round(precioUsd * tcParalelo / TC_OFICIAL) : precioUsd
+            return area > 0 ? pNorm / area : 0
+          })
+          .filter((m2: number) => m2 > 0)
+          .sort((a: number, b: number) => a - b)
+        return {
+          dorms,
+          count: props.length,
+          pct: rawNuevas.length > 0 ? Math.round((props.length / rawNuevas.length) * 100) : 0,
+          medianaM2: m2s.length > 0 ? Math.round(m2s[Math.floor(m2s.length / 2)]) : 0,
+        }
+      })
+      .sort((a, b) => b.count - a.count),
+    medianaM2: Math.round(median(nuevasM2)),
+  }
+
   return {
     zona,
     dias,
@@ -93,5 +137,6 @@ export async function rotacionObservada(
     retirosBatch,
     totalIndividuales: salidasIndividuales.length,
     totalBatch: batchIds.size,
+    nuevas,
   }
 }

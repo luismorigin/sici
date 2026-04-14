@@ -210,6 +210,32 @@ export async function queryRotacion(zona: string, dias: number): Promise<any[]> 
   })
 }
 
+export async function queryNuevas(zona: string, dias: number): Promise<any[]> {
+  const sb = getSupabase()
+  const fechaDesde = new Date()
+  fechaDesde.setDate(fechaDesde.getDate() - dias)
+
+  const { data, error } = await sb
+    .from('propiedades_v2')
+    .select('id, nombre_edificio, dormitorios, area_total_m2, precio_usd, tipo_cambio_detectado, zona, fecha_creacion')
+    .eq('tipo_operacion', 'venta')
+    .in('status', ['completado', 'actualizado', 'nueva', 'pendiente_enriquecimiento'])
+    .is('duplicado_de', null)
+    .eq('zona', zona)
+    .gt('precio_usd', 0)
+    .gte('area_total_m2', 20)
+    .gte('fecha_creacion', fechaDesde.toISOString())
+    .limit(500)
+  if (error) throw new Error(`queryNuevas: ${error.message}`)
+
+  return (data ?? []).filter((r: any) => {
+    if (r.es_multiproyecto === true) return false
+    const tipo = r.tipo_propiedad_original ?? ''
+    if (['baulera', 'parqueo', 'garaje', 'deposito'].includes(tipo)) return false
+    return true
+  })
+}
+
 // --- Utility ---
 
 export function median(values: number[]): number {

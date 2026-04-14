@@ -940,19 +940,27 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
       <div class="yield-card attractive" style="cursor:pointer" onclick="filterRotacion(1)">
         <div class="yield-tipo">1D</div>
         <div class="yield-value high">18</div>
-        <div class="yield-rent">49% de las salidas individuales</div>
+        <div class="yield-rent">49% de las salidas</div>
+        <div style="font-size:13px;color:var(--piedra);margin-top:8px">$2,132/m² med.</div>
+        <div style="font-size:13px;color:var(--piedra)">85d publicado med.</div>
       </div><div class="yield-card" style="cursor:pointer" onclick="filterRotacion(2)">
         <div class="yield-tipo">2D</div>
         <div class="yield-value low">11</div>
-        <div class="yield-rent">30% de las salidas individuales</div>
+        <div class="yield-rent">30% de las salidas</div>
+        <div style="font-size:13px;color:var(--piedra);margin-top:8px">$2,089/m² med.</div>
+        <div style="font-size:13px;color:var(--piedra)">57d publicado med.</div>
       </div><div class="yield-card" style="cursor:pointer" onclick="filterRotacion(0)">
         <div class="yield-tipo">Mono</div>
         <div class="yield-value low">6</div>
-        <div class="yield-rent">16% de las salidas individuales</div>
+        <div class="yield-rent">16% de las salidas</div>
+        <div style="font-size:13px;color:var(--piedra);margin-top:8px">$2,551/m² med.</div>
+        <div style="font-size:13px;color:var(--piedra)">38d publicado med.</div>
       </div><div class="yield-card" style="cursor:pointer" onclick="filterRotacion(3)">
         <div class="yield-tipo">3D</div>
         <div class="yield-value low">2</div>
-        <div class="yield-rent">5% de las salidas individuales</div>
+        <div class="yield-rent">5% de las salidas</div>
+        <div style="font-size:13px;color:var(--piedra);margin-top:8px">$2,252/m² med.</div>
+        <div style="font-size:13px;color:var(--piedra)">219d publicado med.</div>
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
@@ -1153,9 +1161,71 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
       document.querySelector('#rotacionToggle button').textContent = 'Ocultar detalle';
     }
     </script>
-    <p class="takeaway">
+    <!-- Qué entró al mercado -->
+    
+    <div style="margin-top:48px;padding-top:40px;border-top:2px solid var(--arena)">
+      <div class="badge">Nuevas</div>
+      <div class="section-title" style="font-size:28px">Que entro al mercado</div>
+      <div class="section-subtitle" style="margin-bottom:28px">
+        32 propiedades nuevas aparecieron en portales en los ultimos 30 dias en Equipetrol Centro.
+        Salieron mas de las que entraron — el inventario se contrae.
+      </div>
+
+      <!-- Nuevas vs Salidas -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:28px">
+        <div style="padding:24px;border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-family:'Figtree',sans-serif;font-size:36px;font-weight:500;color:var(--caramelo)">32</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">Nuevas entradas</div>
+        </div>
+        <div style="padding:24px;border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-family:'Figtree',sans-serif;font-size:36px;font-weight:500;color:var(--carbon)">37</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">Salidas individuales</div>
+        </div>
+        <div style="padding:24px;border-radius:14px;text-align:center;background:var(--white);border:1px solid var(--arena)">
+          <div style="font-family:'Figtree',sans-serif;font-size:36px;font-weight:500;color:var(--piedra)">-5</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">Balance neto</div>
+        </div>
+      </div>
+
+      <!-- Nuevas por tipología -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px">
+        
+        <div style="padding:16px;border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-size:14px;font-weight:600;color:var(--carbon)">1D</div>
+          <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">14</div>
+          <div style="font-size:12px;color:var(--piedra)">44% de las nuevas</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:8px">$2,134/m² med.</div>
+        </div>
+        <div style="padding:16px;border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-size:14px;font-weight:600;color:var(--carbon)">Mono</div>
+          <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">9</div>
+          <div style="font-size:12px;color:var(--piedra)">28% de las nuevas</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:8px">$2,086/m² med.</div>
+        </div>
+        <div style="padding:16px;border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-size:14px;font-weight:600;color:var(--carbon)">2D</div>
+          <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">6</div>
+          <div style="font-size:12px;color:var(--piedra)">19% de las nuevas</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:8px">$1,805/m² med.</div>
+        </div>
+        <div style="padding:16px;border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-size:14px;font-weight:600;color:var(--carbon)">3D</div>
+          <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">3</div>
+          <div style="font-size:12px;color:var(--piedra)">9% de las nuevas</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:8px">$2,433/m² med.</div>
+        </div>
+      </div>
+
+      
+      <div style="padding:16px 20px;border-radius:14px;background:var(--white);font-size:14px;color:var(--piedra)">
+        Las nuevas entran con mediana de <strong style="color:var(--carbon)">$2,036/m²</strong>
+        — 7% por debajo de la mediana activa. La oferta nueva es mas accesible.
+      </div>
+    </div>
+
+    <p class="takeaway" style="margin-top:32px">
       Nota: Una propiedad que sale del portal puede haber sido vendida, retirada por el broker,
-      o haber expirado. Presentamos los datos observados sin inferir la causa.
+      o haber expirado. Las entradas corresponden a nuevos listings detectados por primera vez.
     </p>
   </div>
 </section>
@@ -1217,6 +1287,52 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
       Yield bruto = (renta mensual &times; 12) / precio venta. No incluye vacancias, mantenimiento, impuestos ni gastos de condominio.
       Las medianas son mas robustas que promedios pero con muestras chicas (n&lt;10) deben leerse con cautela.
     </p>
+
+    <!-- Condado yield comparison -->
+    
+    <div style="margin-top:48px;padding-top:40px;border-top:1px solid rgba(255,255,255,0.08)">
+      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:20px">Retorno — Condado VI Plaza Italia</div>
+      <div style="font-size:15px;color:var(--piedra-light);margin-bottom:28px;line-height:1.6">
+        Yield estimado usando los precios reales de Condado VI Plaza Italia ($1650/m²)
+        y las rentas del mercado en Equipetrol Centro.
+        Cuando el area del dpto difiere >20% de la mediana de alquiler, se estima la renta por m².
+      </div>
+
+      <div class="yield-grid">
+        
+        <div class="yield-card attractive">
+          <div class="yield-tipo">1D (4 uds, 62.2m²)</div>
+          <div class="yield-value high">6.7%</div>
+          <div class="yield-rent">
+            Ticket: $102,647 billete ($136,892 norm.)
+            <br>Renta amoblada: <strong>$766/mes</strong> (estimada por m²)
+            <br>Renta/m²: $12.32/m²/mes
+          </div>
+          <div class="yield-detail">
+            Yield: 6.7% &middot; Retorno: 14.9 años
+            <br><span style="font-size:12px;color:var(--piedra-light)">Nota: los alquileres de 1D en la zona tienen mediana 45m² vs 62.2m² de Condado VI Plaza Italia. Se uso renta/m² ($12.32) para estimar.</span>
+          </div>
+        </div>
+        <div class="yield-card attractive">
+          <div class="yield-tipo">2D (7 uds, 87.2m²)</div>
+          <div class="yield-value high">7.2%</div>
+          <div class="yield-rent">
+            Ticket: $143,944 billete ($191,967 norm.)
+            <br>Renta amoblada: <strong>$1,149/mes</strong> (mediana mercado)
+            <br>Renta/m²: $12.54/m²/mes
+          </div>
+          <div class="yield-detail">
+            Yield: 7.2% &middot; Retorno: 13.9 años
+            
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:14px;color:var(--piedra-light);margin-top:20px;line-height:1.6;padding:16px 20px;border:1px solid rgba(255,255,255,0.08);border-radius:14px">
+        Condado VI Plaza Italia entrega con linea blanca completa (heladera, lavadora, secadora, lavavajillas).
+        Esto facilita al comprador-inversor poner a alquilar amoblado y capturar el premium sobre la renta sin amoblar.
+      </div>
+    </div>
   </div>
 </section>
 

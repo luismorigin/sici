@@ -21,6 +21,15 @@ export async function yieldInversor(zona: string): Promise<YieldInversorResult> 
     const rentaAmob = alqAmob.length >= MIN_MUESTRA ? Math.round(median(alqAmob.map(r => r.precio_mensual))) : null
     const rentaNoAmob = alqNoAmob.length >= MIN_MUESTRA ? Math.round(median(alqNoAmob.map(r => r.precio_mensual))) : null
 
+    // Renta por m² (no requiere MIN_MUESTRA — se usa para estimaciones por tamaño)
+    const rentaM2Amob = alqAmob.length >= 3
+      ? Math.round(median(alqAmob.map(r => r.area_total_m2 > 0 ? r.precio_mensual / r.area_total_m2 : 0).filter(v => v > 0)) * 100) / 100
+      : null
+    const rentaM2NoAmob = alqNoAmob.length >= 3
+      ? Math.round(median(alqNoAmob.map(r => r.area_total_m2 > 0 ? r.precio_mensual / r.area_total_m2 : 0).filter(v => v > 0)) * 100) / 100
+      : null
+    const medianaAreaAlq = alqDorm.length > 0 ? Math.round(median(alqDorm.map(r => r.area_total_m2))) : null
+
     const premiumPct = rentaAmob && rentaNoAmob && rentaNoAmob > 0
       ? Math.round(((rentaAmob - rentaNoAmob) / rentaNoAmob) * 1000) / 10
       : null
@@ -42,6 +51,9 @@ export async function yieldInversor(zona: string): Promise<YieldInversorResult> 
     return {
       dorms,
       rentaAmobladoUsd: rentaAmob,
+      rentaM2AmobladoUsd: rentaM2Amob,
+      rentaM2NoAmobladoUsd: rentaM2NoAmob,
+      medianaAreaAlquiler: medianaAreaAlq,
       rentaNoAmobladoUsd: rentaNoAmob,
       premiumAmobladoPct: premiumPct,
       nAmoblado: alqAmob.length,
