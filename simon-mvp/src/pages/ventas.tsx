@@ -1093,6 +1093,17 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
     try { if (localStorage.getItem('ventas_gate_v1')) setGateCompleted(true) } catch {}
   }, [])
 
+  // Deep-link: parse ?edificio= from URL → pre-apply building filter
+  useEffect(() => {
+    const edificioParam = router.query.edificio
+    if (edificioParam && typeof edificioParam === 'string') {
+      const f = buildFilters(MIN_PRICE, MAX_PRICE, new Set(), new Set(), '', 'recientes', edificioParam)
+      setFilters(f)
+      setIsFiltered(true)
+      fetchProperties(f)
+    }
+  }, [router.query.edificio]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Spotlight: parse ?id= from URL
   useEffect(() => {
     const idParam = router.query.id

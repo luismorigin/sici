@@ -696,6 +696,17 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     return () => el.removeEventListener('scroll', close)
   }, [chipsExpanded])
 
+  // Deep-link: parse ?edificio= from URL → pre-apply building filter
+  useEffect(() => {
+    const edificioParam = router.query.edificio
+    if (edificioParam && typeof edificioParam === 'string') {
+      const f: FiltrosAlquiler = { orden: 'recientes', limite: 200, solo_con_fotos: true, proyecto: edificioParam }
+      setFilters(f)
+      setIsFiltered(true)
+      fetchProperties(f)
+    }
+  }, [router.query.edificio]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Parse ?id= query param for spotlight (shared property)
   useEffect(() => {
     const idParam = router.query.id
