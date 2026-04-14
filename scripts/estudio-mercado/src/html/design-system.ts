@@ -129,11 +129,41 @@ body {
 .reveal-delay-3 { transition-delay: 0.3s; }
 .reveal-delay-4 { transition-delay: 0.4s; }
 
+/* SIMON SYMBOL ANIMATION */
+@keyframes symbolCircle {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes symbolNorte {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.4); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes symbolFadeUp {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.simon-symbol .sym-circle { transform: scale(0); animation: symbolCircle 500ms cubic-bezier(0.34,1.56,0.64,1) 300ms forwards; }
+.simon-symbol .sym-norte-outer { transform: scale(0); transform-origin: 32px 15px; animation: symbolNorte 350ms cubic-bezier(0.34,1.56,0.64,1) 700ms forwards; }
+.simon-symbol .sym-norte-inner { transform: scale(0); transform-origin: 32px 15px; animation: symbolNorte 350ms cubic-bezier(0.34,1.56,0.64,1) 700ms forwards; }
+.hero-panel .hero-badge { opacity: 0; animation: symbolFadeUp 450ms ease-out 1050ms forwards; }
+.hero-panel h1 { opacity: 0; animation: symbolFadeUp 450ms ease-out 1200ms forwards; }
+.hero-panel .hero-sub { opacity: 0; animation: symbolFadeUp 450ms ease-out 1350ms forwards; }
+.hero-panel .hero-line { opacity: 0; animation: symbolFadeUp 300ms ease-out 1500ms forwards; }
+.hero-panel .hero-meta { opacity: 0; animation: symbolFadeUp 450ms ease-out 1600ms forwards; }
+
 /* HERO */
 .hero {
   min-height: 100vh; display: flex; flex-direction: column;
   justify-content: center; align-items: center; text-align: center;
-  padding: 60px 32px; background: var(--ebano); position: relative;
+  padding: 60px 32px; position: relative;
+  background: var(--ebano);
+  background-size: cover; background-position: center;
+}
+.hero.has-bg::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(20,20,20,0.55); pointer-events: none;
 }
 .hero-panel {
   position: relative; z-index: 1;

@@ -26,18 +26,25 @@ function categoryBadge(cat: MarketCategory): string {
 
 // ───── 1. HERO ─────
 export function renderHero(config: ClientConfig): string {
+  const bgUrl = 'https://simonbo.com/condado-vi/balcon-plaza-v2.png'
   return `
-<section class="hero" id="hero">
-  <div class="hero-panel">
-    <div class="hero-badge">Estudio de Mercado</div>
-    <h1>${config.projectName}</h1>
-    <div class="hero-sub">${config.projectSubtitle ?? config.developerName}</div>
-    <div class="hero-line"></div>
-    <div class="hero-meta">
-      <strong>${config.fecha}</strong><br>
+<section class="hero has-bg" id="hero" style="background-image:url('${bgUrl}')">
+  <div class="hero-panel" style="background:rgba(20,20,20,0.75);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:14px;padding:64px 56px;max-width:600px">
+    <!-- Simon symbol animated -->
+    <svg class="simon-symbol" width="48" height="48" viewBox="0 0 64 64" style="margin-bottom:28px">
+      <circle class="sym-circle" cx="32" cy="34" r="28" fill="#EDE8DC"/>
+      <circle class="sym-norte-outer" cx="32" cy="15" r="6" fill="#3A6A48"/>
+      <circle class="sym-norte-inner" cx="32" cy="15" r="3" fill="#141414"/>
+    </svg>
+    <div class="hero-badge" style="border-color:rgba(58,106,72,0.5);color:#3A6A48">Estudio de Mercado</div>
+    <h1 style="color:#EDE8DC">${config.projectName}</h1>
+    <div class="hero-sub" style="color:#3A6A48">${config.projectSubtitle ?? config.developerName}</div>
+    <div class="hero-line" style="background:#3A6A48"></div>
+    <div class="hero-meta" style="color:#7A7060">
+      <strong style="color:#EDE8DC">${config.fecha}</strong><br>
       ${config.fechaCorte ? `Corte de datos: ${config.fechaCorte}<br>` : ''}
       Zona: ${config.zona}<br>
-      Elaborado por <strong>Simon</strong> — Inteligencia Inmobiliaria
+      Elaborado por <strong style="color:#EDE8DC">Simon</strong> — Inteligencia Inmobiliaria
     </div>
   </div>
 </section>`

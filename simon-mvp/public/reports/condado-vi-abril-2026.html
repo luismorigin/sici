@@ -125,11 +125,41 @@ body {
 .reveal-delay-3 { transition-delay: 0.3s; }
 .reveal-delay-4 { transition-delay: 0.4s; }
 
+/* SIMON SYMBOL ANIMATION */
+@keyframes symbolCircle {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes symbolNorte {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.4); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes symbolFadeUp {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.simon-symbol .sym-circle { transform: scale(0); animation: symbolCircle 500ms cubic-bezier(0.34,1.56,0.64,1) 300ms forwards; }
+.simon-symbol .sym-norte-outer { transform: scale(0); transform-origin: 32px 15px; animation: symbolNorte 350ms cubic-bezier(0.34,1.56,0.64,1) 700ms forwards; }
+.simon-symbol .sym-norte-inner { transform: scale(0); transform-origin: 32px 15px; animation: symbolNorte 350ms cubic-bezier(0.34,1.56,0.64,1) 700ms forwards; }
+.hero-panel .hero-badge { opacity: 0; animation: symbolFadeUp 450ms ease-out 1050ms forwards; }
+.hero-panel h1 { opacity: 0; animation: symbolFadeUp 450ms ease-out 1200ms forwards; }
+.hero-panel .hero-sub { opacity: 0; animation: symbolFadeUp 450ms ease-out 1350ms forwards; }
+.hero-panel .hero-line { opacity: 0; animation: symbolFadeUp 300ms ease-out 1500ms forwards; }
+.hero-panel .hero-meta { opacity: 0; animation: symbolFadeUp 450ms ease-out 1600ms forwards; }
+
 /* HERO */
 .hero {
   min-height: 100vh; display: flex; flex-direction: column;
   justify-content: center; align-items: center; text-align: center;
-  padding: 60px 32px; background: var(--ebano); position: relative;
+  padding: 60px 32px; position: relative;
+  background: var(--ebano);
+  background-size: cover; background-position: center;
+}
+.hero.has-bg::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(20,20,20,0.55); pointer-events: none;
 }
 .hero-panel {
   position: relative; z-index: 1;
@@ -350,17 +380,23 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
   </div>
 </nav>
 
-<section class="hero" id="hero">
-  <div class="hero-panel">
-    <div class="hero-badge">Estudio de Mercado</div>
-    <h1>Condado VI Plaza Italia</h1>
-    <div class="hero-sub">Constructora Condado</div>
-    <div class="hero-line"></div>
-    <div class="hero-meta">
-      <strong>Abril 2026</strong><br>
+<section class="hero has-bg" id="hero" style="background-image:url('https://simonbo.com/condado-vi/balcon-plaza-v2.png')">
+  <div class="hero-panel" style="background:rgba(20,20,20,0.75);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:14px;padding:64px 56px;max-width:600px">
+    <!-- Simon symbol animated -->
+    <svg class="simon-symbol" width="48" height="48" viewBox="0 0 64 64" style="margin-bottom:28px">
+      <circle class="sym-circle" cx="32" cy="34" r="28" fill="#EDE8DC"/>
+      <circle class="sym-norte-outer" cx="32" cy="15" r="6" fill="#3A6A48"/>
+      <circle class="sym-norte-inner" cx="32" cy="15" r="3" fill="#141414"/>
+    </svg>
+    <div class="hero-badge" style="border-color:rgba(58,106,72,0.5);color:#3A6A48">Estudio de Mercado</div>
+    <h1 style="color:#EDE8DC">Condado VI Plaza Italia</h1>
+    <div class="hero-sub" style="color:#3A6A48">Constructora Condado</div>
+    <div class="hero-line" style="background:#3A6A48"></div>
+    <div class="hero-meta" style="color:#7A7060">
+      <strong style="color:#EDE8DC">Abril 2026</strong><br>
       Corte de datos: 13 de abril de 2026<br>
       Zona: Equipetrol Centro<br>
-      Elaborado por <strong>Simon</strong> — Inteligencia Inmobiliaria
+      Elaborado por <strong style="color:#EDE8DC">Simon</strong> — Inteligencia Inmobiliaria
     </div>
   </div>
 </section>
