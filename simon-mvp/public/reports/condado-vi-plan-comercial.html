@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Plan Comercial — Condado VI Plaza Italia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --marfil: #EDE8DC; --white: #FAFAF8; --ebano: #141414; --carbon: #141414;
+  --piedra: #3A3530; --piedra-light: #7A7060; --caramelo: #3A6A48;
+  --caramelo-dark: #3A6A48; --arena: #D8D0BC; --arena-text: #7A7060;
+  --caramelo-10: rgba(58,106,72,0.10); --caramelo-15: rgba(58,106,72,0.15);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; color: var(--carbon); background: var(--marfil); -webkit-font-smoothing: antialiased; }
+.section { min-height: 100vh; padding: 100px 32px; display: flex; flex-direction: column; justify-content: center; }
+.section-inner { max-width: 1000px; margin: 0 auto; width: 100%; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--caramelo-dark); border: 1px solid var(--caramelo); padding: 6px 18px; margin-bottom: 28px; }
+.section-title { font-family: 'Figtree', sans-serif; font-size: 36px; font-weight: 500; color: var(--carbon); margin-bottom: 10px; letter-spacing: -0.3px; line-height: 1.2; }
+.section-subtitle { font-size: 17px; color: var(--piedra); margin-bottom: 48px; line-height: 1.5; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; }
+.kpi { text-align: center; padding: 24px; border-radius: 14px; background: var(--white); }
+.kpi-value { font-family: 'Figtree', sans-serif; font-size: 42px; font-weight: 500; color: var(--carbon); line-height: 1.1; margin-bottom: 8px; }
+.kpi-value.accent { color: var(--caramelo); }
+.kpi-label { font-size: 14px; color: var(--piedra); }
+table.data { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.data thead tr { background: var(--carbon); color: var(--marfil); }
+table.data th { font-weight: 600; text-align: left; padding: 12px 14px; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
+table.data td { padding: 10px 14px; border-bottom: 1px solid var(--arena); }
+.timeline { position: relative; padding-left: 40px; }
+.timeline::before { content: ''; position: absolute; left: 12px; top: 0; bottom: 0; width: 1px; background: var(--arena); }
+.tl-block { margin-bottom: 40px; position: relative; }
+.tl-dot { position: absolute; left: -34px; top: 4px; width: 12px; height: 12px; border: 2px solid var(--caramelo); background: var(--marfil); }
+.tl-period { font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--caramelo); margin-bottom: 12px; }
+.card { padding: 24px; border-radius: 14px; background: var(--white); border: 1px solid var(--arena); margin-bottom: 16px; }
+.card-title { font-size: 16px; font-weight: 600; color: var(--carbon); margin-bottom: 8px; }
+.card-body { font-size: 14px; color: var(--piedra); line-height: 1.7; }
+.highlight-box { padding: 24px; border-radius: 14px; border: 2px solid var(--caramelo); background: rgba(58,106,72,0.05); margin-bottom: 24px; }
+@media (max-width: 768px) {
+  .section { padding: 60px 20px; }
+  .kpi-value { font-size: 32px; }
+  .section-title { font-size: 28px; }
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="section" style="background:var(--ebano);color:var(--marfil);text-align:center">
+  <div class="section-inner">
+    <div class="badge" style="border-color:rgba(58,106,72,0.5)">Propuesta comercial</div>
+    <div class="section-title" style="color:var(--marfil);font-size:clamp(36px,5vw,52px)">Condado VI Plaza Italia</div>
+    <div style="font-family:'Figtree',sans-serif;font-size:clamp(18px,2.5vw,24px);color:var(--caramelo);margin-bottom:48px">Plan de marketing y comercializacion</div>
+    <div style="width:60px;height:1px;background:var(--caramelo);margin:0 auto 40px"></div>
+    <div style="font-size:14px;color:var(--piedra-light);line-height:2.2">
+      <strong style="color:var(--marfil)">Abril 2026</strong><br>
+      Elaborado por <strong style="color:var(--marfil)">Simon</strong> — Inteligencia Inmobiliaria
+    </div>
+  </div>
+</section>
+
+<!-- EL PROBLEMA -->
+<section class="section" style="background:var(--white)">
+  <div class="section-inner">
+    <div class="badge">Diagnostico</div>
+    <div class="section-title">El problema no es el precio</div>
+    <div class="section-subtitle">Condado VI tiene 14 unidades sin vender y 0 ventas desde marzo. Pero los datos muestran que el precio esta dentro de la mediana del mercado.</div>
+    <div class="kpi-grid" style="margin-bottom:40px">
+      <div class="kpi"><div class="kpi-value">14</div><div class="kpi-label">Unidades disponibles</div></div>
+      <div class="kpi"><div class="kpi-value accent">0</div><div class="kpi-label">Ventas desde marzo</div></div>
+      <div class="kpi"><div class="kpi-value">71%</div><div class="kpi-label">Inventario invisible</div></div>
+      <div class="kpi"><div class="kpi-value">+4%</div><div class="kpi-label">$/m² vs mediana zona</div></div>
+    </div>
+    <div class="highlight-box">
+      <div style="font-size:15px;color:var(--carbon);line-height:1.7">
+        <strong>Solo 4 de 14 unidades aparecen en portales inmobiliarios</strong> — y las 4 son de 1 dormitorio.
+        Los 7 departamentos de 2D y los 3 de 3D son completamente invisibles para el comprador que busca online.
+        Sin visibilidad no se puede evaluar si el precio es correcto.
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-title">Diferenciadores no comunicados</div>
+        <div class="card-body">
+          1D de 62m² (25% mas grande que la mediana).<br>
+          Equipamiento 9/9 — unico con lavavajillas.<br>
+          Entrega inmediata con linea blanca completa.
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Competidor directo: Atrium</div>
+        <div class="card-body">
+          171+ dias en mercado, 7 unidades activas.<br>
+          $/m² similar en 1D, 19% mas barato en 2D.<br>
+          Pero sin lavadora, secadora ni lavavajillas.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LA PROPUESTA -->
+<section class="section" style="background:var(--marfil)">
+  <div class="section-inner">
+    <div class="badge">Propuesta</div>
+    <div class="section-title">$1,600/m² + marketing</div>
+    <div class="section-subtitle">En vez de ceder $100/m² en descuento sin garantia de impacto, reducir $50/m² y destinar la diferencia a una campana de marketing de 14 meses.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-radius:14px;overflow:hidden;margin-bottom:40px">
+      <div style="padding:32px;text-align:center;background:var(--carbon)">
+        <div style="font-family:'Figtree',sans-serif;font-size:42px;font-weight:500;color:var(--marfil)">$1,600</div>
+        <div style="font-size:14px;color:var(--piedra-light);margin-top:4px">/m² billete</div>
+        <div style="font-size:13px;color:var(--piedra-light);margin-top:4px">$2,133/m² normalizado</div>
+      </div>
+      <div style="padding:32px;text-align:center;background:var(--white)">
+        <div style="font-family:'Figtree',sans-serif;font-size:42px;font-weight:500;color:var(--caramelo)">$50</div>
+        <div style="font-size:14px;color:var(--piedra);margin-top:4px">/m² a marketing</div>
+      </div>
+      <div style="padding:32px;text-align:center;background:var(--white);border-left:1px solid var(--arena)">
+        <div style="font-family:'Figtree',sans-serif;font-size:42px;font-weight:500;color:var(--carbon)">$64,622</div>
+        <div style="font-size:14px;color:var(--piedra);margin-top:4px">Presupuesto total</div>
+      </div>
+    </div>
+    <div style="font-size:14px;color:var(--piedra);line-height:1.7;padding:20px;border-radius:14px;background:var(--white)">
+      El presupuesto sale de: $50 × 1,292m² (area total de las 14 unidades). No es un gasto adicional
+      — es parte del precio de venta redirigido a generar demanda en vez de cedido como descuento.
+    </div>
+  </div>
+</section>
+
+<!-- SETUP -->
+<section class="section" style="background:var(--white)">
+  <div class="section-inner">
+    <div class="badge">Fase 1</div>
+    <div class="section-title">Setup inicial — $7,500</div>
+    <div class="section-subtitle">Activos que quedan para Proinco y para futuros proyectos, no solo para Condado VI.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px">
+      <div class="card">
+        <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">$1,500</div>
+        <div class="card-title" style="margin-top:8px">Marca Proinco</div>
+        <div class="card-body">Logo, identidad visual, manual de marca. Activo reutilizable.</div>
+      </div>
+      <div class="card">
+        <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">$1,500</div>
+        <div class="card-title" style="margin-top:8px">Pagina web Proinco</div>
+        <div class="card-body">Sitio institucional con catalogo de proyectos. Activo reutilizable.</div>
+      </div>
+      <div class="card">
+        <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">$3,000</div>
+        <div class="card-title" style="margin-top:8px">Plan comercial</div>
+        <div class="card-body">Estrategia, calendario de contenido, KPIs, segmentacion de audiencia.</div>
+      </div>
+      <div class="card">
+        <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">$500</div>
+        <div class="card-title" style="margin-top:8px">Landing Condado VI</div>
+        <div class="card-body">Pagina de proyecto con galeria, planos, formulario. Ya cotizada.</div>
+      </div>
+      <div class="card">
+        <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">$1,000</div>
+        <div class="card-title" style="margin-top:8px">Fotos + video</div>
+        <div class="card-body">Sesion profesional de departamentos reales equipados y areas comunes.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- OPERACION MENSUAL -->
+<section class="section" style="background:var(--marfil)">
+  <div class="section-inner">
+    <div class="badge">Fase 2</div>
+    <div class="section-title">Operacion mensual — $3,900/mes</div>
+    <div class="section-subtitle">14.6 meses de campana sostenida. Cada venta directa extiende ~1.2 meses adicionales.</div>
+    <div style="overflow-x:auto;margin-bottom:32px">
+      <table class="data">
+        <thead><tr><th>Item</th><th>Mensual</th><th>Que entrega</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">Meta Ads</td><td>$1,000</td><td>Trafico segmentado: familias, inversores, profesionales en Santa Cruz. Retargeting a visitantes de landing.</td></tr>
+          <tr><td style="font-weight:600">MKT redes sociales</td><td>$1,000</td><td>Contenido organico para Instagram/Facebook/TikTok. Gestion de perfiles Proinco y Condado VI.</td></tr>
+          <tr><td style="font-weight:600">UGC video</td><td>$500</td><td>Videos mensuales estilo Reels/TikTok: recorridos, testimoniales, lifestyle del edificio.</td></tr>
+          <tr><td style="font-weight:600">Produccion video</td><td>$300</td><td>Edicion profesional, renders complementarios, material para brokers.</td></tr>
+          <tr><td style="font-weight:600">Bot calificador</td><td>$100</td><td>Atiende consultas 24/7, filtra leads por interes real, programa visitas automaticamente.</td></tr>
+          <tr><td style="font-weight:600">Lider comercial/MKT</td><td>$1,000</td><td>Coordina campana, analiza datos, ajusta estrategia, contacto con brokers y desarrolladora.</td></tr>
+          <tr style="background:var(--caramelo-10);font-weight:700"><td>TOTAL</td><td>$3,900</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-value">$57,122</div><div class="kpi-label">Disponible para operacion</div></div>
+      <div class="kpi"><div class="kpi-value accent">14.6</div><div class="kpi-label">Meses de campana</div></div>
+      <div class="kpi"><div class="kpi-value">&lt;1/mes</div><div class="kpi-label">Ventas necesarias</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- TIMELINE -->
+<section class="section" style="background:var(--white)">
+  <div class="section-inner">
+    <div class="badge">Ejecucion</div>
+    <div class="section-title">Timeline</div>
+    <div class="section-subtitle">De setup a optimizacion en 4 fases.</div>
+    <div class="timeline">
+      <div class="tl-block">
+        <div class="tl-dot" style="background:var(--caramelo)"></div>
+        <div class="tl-period">Mes 1 — Setup</div>
+        <div class="card">
+          <div class="card-body">Crear marca Proinco. Sesion de fotos y video. Lanzar landing Condado VI. Configurar Meta Ads y bot. Primer contenido en redes.</div>
+        </div>
+      </div>
+      <div class="tl-block">
+        <div class="tl-dot" style="background:var(--caramelo)"></div>
+        <div class="tl-period">Mes 2-3 — Traccion</div>
+        <div class="card">
+          <div class="card-body">Campana activa de Meta Ads. Contenido semanal en redes. Primeros leads del bot. Reunion mensual con brokers para alinear mensajes. Medir: leads, visitas, costo por lead.</div>
+        </div>
+      </div>
+      <div class="tl-block">
+        <div class="tl-dot"></div>
+        <div class="tl-period">Mes 4-6 — Optimizacion</div>
+        <div class="card">
+          <div class="card-body">Ajustar segmentacion de ads segun datos. Evaluar que tipologia genera mas interes. Activar incentivos de cierre si hay leads calificados (expensas, reserva). Primera venta directa esperada.</div>
+        </div>
+      </div>
+      <div class="tl-block">
+        <div class="tl-dot"></div>
+        <div class="tl-period">Mes 7-14 — Escala</div>
+        <div class="card">
+          <div class="card-body">Campana estabilizada. UGC con testimoniales de primeros compradores. Cada venta directa retroalimenta el presupuesto (+$4,500 por comision ahorrada = +1.2 meses). Evaluar si se necesita ajustar precio o ampliar campaña.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MODELO DUAL -->
+<section class="section" style="background:var(--marfil)">
+  <div class="section-inner">
+    <div class="badge">Modelo</div>
+    <div class="section-title">Venta dual: brokers + directo</div>
+    <div class="section-subtitle">Mantener los brokers actuales y abrir un canal directo financiado por el presupuesto de marketing.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:14px;overflow:hidden;margin-bottom:32px">
+      <div style="padding:28px;background:var(--white)">
+        <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--piedra);margin-bottom:16px">Canal brokers</div>
+        <div style="font-size:15px;color:var(--carbon);line-height:1.8">
+          Mantienen exclusividad por unidad<br>
+          Precio: $1,650/m²<br>
+          Comision: 3-4%<br>
+          Responsables de sus leads
+        </div>
+      </div>
+      <div style="padding:28px;background:var(--white);border-left:2px solid var(--caramelo)">
+        <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:16px">Canal directo (nuevo)</div>
+        <div style="font-size:15px;color:var(--carbon);line-height:1.8">
+          Trafico propio (ads + redes)<br>
+          Precio: $1,600/m²<br>
+          Sin comision de broker<br>
+          Bot + landing + visita directa
+        </div>
+      </div>
+    </div>
+    <div class="highlight-box">
+      <div style="font-size:14px;font-weight:600;color:var(--caramelo);margin-bottom:8px">Riesgo a considerar</div>
+      <div style="font-size:14px;color:var(--piedra);line-height:1.7">
+        Los brokers podrian retirar listings si perciben competencia directa. Mitigacion: cada broker mantiene
+        exclusividad sobre unidades especificas, el canal directo opera sobre las demas. Revisar contrato actual
+        antes de implementar.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ESCENARIO FINANCIERO -->
+<section class="section" style="background:var(--white)">
+  <div class="section-inner">
+    <div class="badge">Financiero</div>
+    <div class="section-title">Escenario de retorno</div>
+    <div class="section-subtitle">Cada venta directa ahorra la comision del broker y extiende la campana.</div>
+    <div style="overflow-x:auto;margin-bottom:32px">
+      <table class="data">
+        <thead><tr><th>Ventas directas</th><th>Comision ahorrada</th><th>Meses extra</th><th>Total campana</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>$0</td><td>0</td><td>14.6 meses</td></tr>
+          <tr><td>2</td><td>~$9,000</td><td>+2.3</td><td>16.9 meses</td></tr>
+          <tr style="background:var(--caramelo-10)"><td style="font-weight:600">4</td><td style="font-weight:600">~$18,000</td><td style="font-weight:600">+4.6</td><td style="font-weight:600;color:var(--caramelo)">19.2 meses</td></tr>
+          <tr><td>6</td><td>~$27,000</td><td>+6.9</td><td>21.5 meses</td></tr>
+          <tr><td>8</td><td>~$36,000</td><td>+9.2</td><td>23.8 meses</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="font-size:14px;color:var(--piedra);line-height:1.7">
+      Calculo basado en ticket promedio de ~$150K y comision de 3%. Con 4 ventas directas la campana
+      se extiende a casi 20 meses — suficiente para colocar las 14 unidades sin presupuesto adicional.
+    </div>
+  </div>
+</section>
+
+<!-- METRICAS -->
+<section class="section" style="background:var(--marfil)">
+  <div class="section-inner">
+    <div class="badge">Metricas</div>
+    <div class="section-title">Como medimos el exito</div>
+    <div class="section-subtitle">KPIs mensuales para ajustar la campana en tiempo real.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
+      <div class="card">
+        <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--caramelo)">Leads/mes</div>
+        <div class="card-body">Contactos calificados que llegan por ads, redes o bot. Target: 20+ leads/mes a partir del mes 2.</div>
+      </div>
+      <div class="card">
+        <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">Visitas/mes</div>
+        <div class="card-body">Personas que visitan el departamento fisicamente. Target: 5+ visitas/mes a partir del mes 3.</div>
+      </div>
+      <div class="card">
+        <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">Costo/lead</div>
+        <div class="card-body">Inversion en ads dividido por leads. Benchmark inmobiliario LATAM: $15-50 por lead calificado.</div>
+      </div>
+      <div class="card">
+        <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">Conversion</div>
+        <div class="card-body">Leads que se convierten en visita y visitas que se convierten en venta. Se mide desde el mes 3.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DIFERENCIADORES -->
+<section class="section" style="background:var(--ebano);color:var(--marfil)">
+  <div class="section-inner">
+    <div class="badge" style="border-color:rgba(58,106,72,0.5)">Mensaje</div>
+    <div class="section-title" style="color:var(--marfil)">Que comunicamos</div>
+    <div class="section-subtitle" style="color:var(--piedra-light)">Los diferenciadores que el mercado no ve hoy, basados en datos del estudio de mercado.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px">
+      <div style="padding:24px;border-radius:14px;border:1px solid rgba(255,255,255,0.08)">
+        <div style="font-family:'Figtree',sans-serif;font-size:36px;font-weight:500;color:var(--caramelo)">+25%</div>
+        <div style="font-size:15px;font-weight:600;color:var(--marfil);margin:8px 0">1D mas grande</div>
+        <div style="font-size:14px;color:var(--piedra-light);line-height:1.6">62m² vs 50m² del mercado. El comprador paga por metros, no por etiqueta.</div>
+      </div>
+      <div style="padding:24px;border-radius:14px;border:1px solid rgba(255,255,255,0.08)">
+        <div style="font-family:'Figtree',sans-serif;font-size:36px;font-weight:500;color:var(--caramelo)">9/9</div>
+        <div style="font-size:15px;font-weight:600;color:var(--marfil);margin:8px 0">Equipamiento completo</div>
+        <div style="font-size:14px;color:var(--piedra-light);line-height:1.6">Unico con lavavajillas. Lavadora, secadora, A/C, heladera incluidos.</div>
+      </div>
+      <div style="padding:24px;border-radius:14px;border:1px solid rgba(255,255,255,0.08)">
+        <div style="font-family:'Figtree',sans-serif;font-size:36px;font-weight:500;color:var(--caramelo)">+38%</div>
+        <div style="font-size:15px;font-weight:600;color:var(--marfil);margin:8px 0">Premium alquiler 2D</div>
+        <div style="font-size:14px;color:var(--piedra-light);line-height:1.6">La renta amoblada vs sin amoblar. La linea blanca facilita capturar ese diferencial.</div>
+      </div>
+      <div style="padding:24px;border-radius:14px;border:1px solid rgba(255,255,255,0.08)">
+        <div style="font-family:'Figtree',sans-serif;font-size:36px;font-weight:500;color:var(--marfil)">Hoy</div>
+        <div style="font-size:15px;font-weight:600;color:var(--marfil);margin:8px 0">Entrega inmediata</div>
+        <div style="font-size:14px;color:var(--piedra-light);line-height:1.6">Mientras competidores estan en preventa, Condado VI ya esta listo para habitar.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer style="background:#141414;color:#7A7060;padding:80px 32px">
+  <div style="max-width:1000px;margin:0 auto;text-align:center">
+    <svg width="48" height="48" viewBox="0 0 64 64" style="margin-bottom:20px">
+      <circle cx="32" cy="34" r="28" fill="#EDE8DC"/>
+      <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
+      <circle cx="32" cy="15" r="3" fill="#141414"/>
+    </svg>
+    <div style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;color:#EDE8DC;margin-bottom:4px">Simon</div>
+    <div style="font-size:12px;color:#7A7060;letter-spacing:0.5px;margin-bottom:24px">Inteligencia Inmobiliaria</div>
+    <div style="width:40px;height:1px;background:#3A6A48;margin:0 auto 24px;opacity:0.5"></div>
+    <p style="font-size:13px;color:#7A7060;line-height:1.8">
+      Propuesta comercial basada en datos del estudio de mercado de abril 2026.<br>
+      Documento de trabajo — sujeto a aprobacion del desarrollador.
+    </p>
+    <p style="font-size:13px;font-weight:500;color:#3A6A48;margin-top:20px">simonbo.com</p>
+  </div>
+</footer>
+
+</body>
+</html>
