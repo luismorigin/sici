@@ -383,6 +383,49 @@ export function renderDiferenciador(e: EstudioCompleto): string {
         </div>
       </div>
     </div>
+
+    <!-- Seguimiento Terrazzo -->
+    <div style="margin-top:48px;padding-top:40px;border-top:2px solid var(--arena)">
+      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:8px">Seguimiento</div>
+      <div style="font-size:28px;font-weight:500;font-family:'Figtree',sans-serif;color:var(--carbon);margin-bottom:8px">Terrazzo</div>
+      <div style="font-size:15px;color:var(--piedra);margin-bottom:28px">Vecino directo — frente a Plaza Italia, misma calle. Vende directo (sin portales). Datos del catalogo del desarrollador.</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:14px;overflow:hidden;margin-bottom:24px">
+        <div style="padding:24px;background:var(--marfil)">
+          <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--piedra);margin-bottom:16px">Marzo 2026</div>
+          <div style="font-size:14px;color:var(--carbon);line-height:2">
+            10 tipos en catalogo<br>
+            14 disponibles / 6 vendidas<br>
+            $/m\u00B2: $1,500–$1,600 billete
+          </div>
+        </div>
+        <div style="padding:24px;background:var(--white)">
+          <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:16px">Abril 2026</div>
+          <div style="font-size:14px;color:var(--carbon);line-height:2">
+            12 tipos en catalogo<br>
+            ~22 disponibles / ~18 vendidas<br>
+            $/m\u00B2: $1,500–$1,750 billete
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div style="padding:20px;border-radius:14px;background:var(--marfil);text-align:center">
+          <div style="font-family:'Figtree',sans-serif;font-size:36px;font-weight:500;color:var(--caramelo)">8</div>
+          <div style="font-size:13px;color:var(--piedra)">Unidades antes disponibles ahora VENDIDO</div>
+        </div>
+        <div style="padding:20px;border-radius:14px;background:var(--marfil);text-align:center">
+          <div style="font-family:'Figtree',sans-serif;font-size:36px;font-weight:500;color:var(--carbon)">+7-13%</div>
+          <div style="font-size:13px;color:var(--piedra)">Aumento de precios en unidades disponibles</div>
+        </div>
+      </div>
+
+      <div style="font-size:13px;color:var(--piedra);line-height:1.7;padding:16px;border-radius:14px;background:var(--marfil)">
+        El catalogo de abril incluye tipos que no aparecian en marzo. No se puede confirmar si las ventas
+        marcadas en tipos nuevos son de este periodo o anteriores. Los 8 cambios de estado (disponible a vendido)
+        corresponden a unidades que si aparecian en ambos catalogos.
+      </div>
+    </div>
   </div>
 </section>`
 }
