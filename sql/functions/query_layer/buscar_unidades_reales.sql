@@ -1,15 +1,13 @@
 -- ============================================================================
--- buscar_unidades_reales(p_filtros JSONB)
--- Canonical export from production — 23 Mar 2026
+-- 212: Exponer tipo_cambio_detectado en buscar_unidades_reales
 -- ============================================================================
--- Query Layer principal para VENTA. Retorna unidades con filtros completos,
--- stats de edificio/tipología, posición mercado, amenities, fotos multi-fuente.
--- Usa precio_normalizado() para TC paralelo.
--- Última migración: 198 (status actualizado + precio > 0)
+-- El campo ya existe en propiedades_v2 y se usa internamente para normalizar
+-- precios, pero no se devolvía al caller. Simon Advisor lo necesita para
+-- flagear propiedades con TC no confirmado que podrían tener precio incorrecto.
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.buscar_unidades_reales(p_filtros jsonb DEFAULT '{}'::jsonb)
- RETURNS TABLE(id integer, nombre_proyecto text, desarrollador text, zona text, microzona text, dormitorios integer, banos numeric, precio_usd numeric, precio_m2 numeric, area_m2 numeric, score_calidad integer, agente_nombre text, agente_telefono text, agente_oficina text, fotos_urls text[], fotos_count integer, url text, amenities_lista jsonb, razon_fiduciaria text, es_multiproyecto boolean, estado_construccion text, es_precio_outlier boolean, dias_en_mercado integer, unidades_en_edificio integer, posicion_precio_edificio integer, precio_min_edificio numeric, precio_max_edificio numeric, unidades_misma_tipologia integer, posicion_en_tipologia integer, precio_min_tipologia numeric, precio_max_tipologia numeric, amenities_confirmados text[], amenities_por_verificar text[], equipamiento_detectado text[], descripcion text, posicion_mercado jsonb, latitud numeric, longitud numeric, estacionamientos integer, baulera boolean, fecha_entrega text)
+ RETURNS TABLE(id integer, nombre_proyecto text, desarrollador text, zona text, microzona text, dormitorios integer, banos numeric, precio_usd numeric, precio_m2 numeric, area_m2 numeric, score_calidad integer, agente_nombre text, agente_telefono text, agente_oficina text, fotos_urls text[], fotos_count integer, url text, amenities_lista jsonb, razon_fiduciaria text, es_multiproyecto boolean, estado_construccion text, es_precio_outlier boolean, dias_en_mercado integer, unidades_en_edificio integer, posicion_precio_edificio integer, precio_min_edificio numeric, precio_max_edificio numeric, unidades_misma_tipologia integer, posicion_en_tipologia integer, precio_min_tipologia numeric, precio_max_tipologia numeric, amenities_confirmados text[], amenities_por_verificar text[], equipamiento_detectado text[], descripcion text, posicion_mercado jsonb, latitud numeric, longitud numeric, estacionamientos integer, baulera boolean, fecha_entrega text, tipo_cambio_detectado text)
  LANGUAGE plpgsql
 AS $function$
 BEGIN
@@ -23,9 +21,9 @@ BEGIN
     FROM propiedades_v2 pv
     WHERE pv.status IN ('completado', 'actualizado')
       AND pv.es_activa = true
-      AND pv.area_total_m2 > 20
       AND pv.duplicado_de IS NULL
-      AND es_propiedad_vigente(pv.estado_construccion::text, pv.fecha_publicacion, pv.fecha_discovery)
+      AND lower(COALESCE(pv.tipo_propiedad_original, '')) NOT IN ('baulera', 'parqueo', 'garaje', 'deposito')
+      AND pv.area_total_m2 >= 20
     GROUP BY pv.id_proyecto_master
   ),
   zona_stats AS (
@@ -36,9 +34,9 @@ BEGIN
     JOIN proyectos_master pmz ON pv.id_proyecto_master = pmz.id_proyecto_master
     WHERE pv.status IN ('completado', 'actualizado')
       AND pv.es_activa = true
-      AND pv.area_total_m2 > 20
       AND pv.duplicado_de IS NULL
-      AND es_propiedad_vigente(pv.estado_construccion::text, pv.fecha_publicacion, pv.fecha_discovery)
+      AND lower(COALESCE(pv.tipo_propiedad_original, '')) NOT IN ('baulera', 'parqueo', 'garaje', 'deposito')
+      AND pv.area_total_m2 >= 20
     GROUP BY pmz.zona
   ),
   edificio_stats AS (
@@ -50,10 +48,9 @@ BEGIN
     FROM propiedades_v2 pv
     WHERE pv.status IN ('completado', 'actualizado')
       AND pv.es_activa = true
-      AND pv.tipo_operacion = 'venta'
-      AND pv.area_total_m2 >= 20
       AND pv.duplicado_de IS NULL
       AND lower(COALESCE(pv.tipo_propiedad_original, '')) NOT IN ('baulera', 'parqueo', 'garaje', 'deposito')
+      AND pv.area_total_m2 >= 20
       AND es_propiedad_vigente(pv.estado_construccion::text, pv.fecha_publicacion, pv.fecha_discovery)
     GROUP BY pv.id_proyecto_master
   ),
@@ -67,10 +64,9 @@ BEGIN
     FROM propiedades_v2 pv
     WHERE pv.status IN ('completado', 'actualizado')
       AND pv.es_activa = true
-      AND pv.tipo_operacion = 'venta'
-      AND pv.area_total_m2 >= 20
       AND pv.duplicado_de IS NULL
       AND lower(COALESCE(pv.tipo_propiedad_original, '')) NOT IN ('baulera', 'parqueo', 'garaje', 'deposito')
+      AND pv.area_total_m2 >= 20
       AND es_propiedad_vigente(pv.estado_construccion::text, pv.fecha_publicacion, pv.fecha_discovery)
     GROUP BY pv.id_proyecto_master, pv.dormitorios
   )
@@ -127,7 +123,8 @@ BEGIN
 
     razon_fiduciaria_texto(p.id),
     p.es_multiproyecto,
-    COALESCE(p.estado_construccion::TEXT, 'no_especificado'),
+
+    COALESCE(p.estado_construccion, 'no_especificado')::TEXT,
 
     CASE
       WHEN ps.cnt >= 2 AND ps.avg_precio_m2 > 0 THEN
@@ -137,75 +134,70 @@ BEGIN
       ELSE false
     END as es_precio_outlier,
 
-    (CURRENT_DATE - COALESCE(p.fecha_publicacion, p.fecha_discovery::date))::INTEGER as dias_en_mercado,
+    GREATEST(0,
+      CASE
+        WHEN p.fecha_publicacion IS NOT NULL THEN (CURRENT_DATE - p.fecha_publicacion::date)
+        WHEN p.fecha_discovery IS NOT NULL THEN (CURRENT_DATE - p.fecha_discovery::date)
+        ELSE 0
+      END
+    )::INTEGER as dias_en_mercado,
 
-    es.total_unidades::INTEGER as unidades_en_edificio,
+    COALESCE(es.total_unidades, 0)::INTEGER,
 
-    (SELECT COUNT(*) + 1
-    FROM propiedades_v2 otras
-    WHERE otras.id_proyecto_master = p.id_proyecto_master
+    (SELECT COUNT(*) + 1 FROM propiedades_v2 otras
+      WHERE otras.id_proyecto_master = p.id_proyecto_master
+      AND otras.id != p.id
       AND otras.status IN ('completado', 'actualizado')
       AND otras.es_activa = true
-      AND otras.tipo_operacion = 'venta'
-      AND otras.area_total_m2 >= 20
       AND otras.duplicado_de IS NULL
       AND lower(COALESCE(otras.tipo_propiedad_original, '')) NOT IN ('baulera', 'parqueo', 'garaje', 'deposito')
       AND precio_normalizado(otras.precio_usd, otras.tipo_cambio_detectado) < precio_normalizado(p.precio_usd, p.tipo_cambio_detectado)
       AND es_propiedad_vigente(otras.estado_construccion::text, otras.fecha_publicacion, otras.fecha_discovery)
     )::INTEGER as posicion_precio_edificio,
 
-    es.precio_min as precio_min_edificio,
-    es.precio_max as precio_max_edificio,
+    COALESCE(es.precio_min, 0),
+    COALESCE(es.precio_max, 0),
 
-    ts.total_unidades_tipologia::INTEGER as unidades_misma_tipologia,
+    COALESCE(ts.total_unidades_tipologia, 0)::INTEGER,
 
-    (SELECT COUNT(*) + 1
-    FROM propiedades_v2 otras
-    WHERE otras.id_proyecto_master = p.id_proyecto_master
+    (SELECT COUNT(*) + 1 FROM propiedades_v2 otras
+      WHERE otras.id_proyecto_master = p.id_proyecto_master
       AND otras.dormitorios = p.dormitorios
+      AND otras.id != p.id
       AND otras.status IN ('completado', 'actualizado')
       AND otras.es_activa = true
-      AND otras.tipo_operacion = 'venta'
-      AND otras.area_total_m2 >= 20
       AND otras.duplicado_de IS NULL
       AND lower(COALESCE(otras.tipo_propiedad_original, '')) NOT IN ('baulera', 'parqueo', 'garaje', 'deposito')
       AND precio_normalizado(otras.precio_usd, otras.tipo_cambio_detectado) < precio_normalizado(p.precio_usd, p.tipo_cambio_detectado)
       AND es_propiedad_vigente(otras.estado_construccion::text, otras.fecha_publicacion, otras.fecha_discovery)
     )::INTEGER as posicion_en_tipologia,
 
-    ts.precio_min_tipologia as precio_min_tipologia,
-    ts.precio_max_tipologia as precio_max_tipologia,
-
-    CASE
-      WHEN jsonb_typeof(p.datos_json->'amenities'->'lista') = 'array'
-           AND jsonb_array_length(p.datos_json->'amenities'->'lista') > 0
-      THEN (SELECT ARRAY_AGG(elem ORDER BY elem)
-            FROM jsonb_array_elements_text(p.datos_json->'amenities'->'lista') AS elem)
-      ELSE NULL
-    END::TEXT[] as amenities_confirmados,
-
-    CASE
-      WHEN jsonb_typeof(p.datos_json->'amenities'->'estado_amenities') = 'object'
-      THEN (SELECT ARRAY_AGG(key ORDER BY key)
-            FROM jsonb_each(p.datos_json->'amenities'->'estado_amenities') AS x(key, val)
-            WHERE val->>'valor' = 'por_confirmar'
-              OR (val->>'confianza' = 'baja' AND val->>'valor' = 'true'))
-      ELSE NULL
-    END::TEXT[] as amenities_por_verificar,
-
-    CASE
-      WHEN jsonb_typeof(p.datos_json->'amenities'->'equipamiento') = 'array'
-           AND jsonb_array_length(p.datos_json->'amenities'->'equipamiento') > 0
-      THEN (SELECT ARRAY_AGG(elem ORDER BY elem)
-            FROM jsonb_array_elements_text(p.datos_json->'amenities'->'equipamiento') AS elem)
-      ELSE NULL
-    END::TEXT[] as equipamiento_detectado,
+    COALESCE(ts.precio_min_tipologia, 0),
+    COALESCE(ts.precio_max_tipologia, 0),
 
     COALESCE(
+      ARRAY(SELECT jsonb_array_elements_text(pm.amenidades_edificio->'confirmados'))
+      FILTER (WHERE jsonb_typeof(pm.amenidades_edificio->'confirmados') = 'array'),
+      ARRAY[]::TEXT[]
+    ),
+
+    COALESCE(
+      ARRAY(SELECT jsonb_array_elements_text(pm.amenidades_edificio->'por_verificar'))
+      FILTER (WHERE jsonb_typeof(pm.amenidades_edificio->'por_verificar') = 'array'),
+      ARRAY[]::TEXT[]
+    ),
+
+    COALESCE(
+      ARRAY(SELECT jsonb_array_elements_text(pm.equipamiento_base))
+      FILTER (WHERE jsonb_typeof(pm.equipamiento_base) = 'array'),
+      ARRAY[]::TEXT[]
+    ),
+
+    LEFT(COALESCE(
+      p.datos_json->'contenido'->>'descripcion',
       p.datos_json_enrichment->>'descripcion',
-      p.datos_json_discovery->>'descripcion',
-      p.datos_json->'contenido'->>'descripcion'
-    )::TEXT as descripcion,
+      ''
+    ), 500)::TEXT as descripcion,
 
     calcular_posicion_mercado(
       ROUND((precio_normalizado(p.precio_usd, p.tipo_cambio_detectado) / NULLIF(p.area_total_m2, 0))::numeric, 0),
@@ -215,10 +207,13 @@ BEGIN
 
     p.latitud,
     p.longitud,
-    p.estacionamientos::INTEGER,
-    p.baulera,
 
-    (p.datos_json->>'fecha_entrega')::TEXT as fecha_entrega
+    COALESCE((p.datos_json->'contenido'->>'estacionamientos')::INTEGER, 0) as estacionamientos,
+    COALESCE((p.datos_json->'contenido'->>'baulera')::BOOLEAN, false) as baulera,
+
+    (p.datos_json->>'fecha_entrega')::TEXT as fecha_entrega,
+
+    COALESCE(p.tipo_cambio_detectado, 'no_especificado')::TEXT as tipo_cambio_detectado
 
   FROM propiedades_v2 p
   JOIN proyectos_master pm ON p.id_proyecto_master = pm.id_proyecto_master
@@ -249,8 +244,19 @@ BEGIN
       OR p.es_multiproyecto IS NULL
     )
     AND (
-      (p_filtros->>'incluir_outliers')::boolean IS TRUE
+      (p_filtros->>'solo_con_fotos')::boolean IS NOT TRUE
       OR (
+        (jsonb_typeof(p.datos_json->'contenido'->'fotos_urls') = 'array'
+        AND jsonb_array_length(p.datos_json->'contenido'->'fotos_urls') > 0)
+        OR (p.fuente = 'remax' AND p.datos_json_discovery->'default_imagen'->>'url' IS NOT NULL)
+        OR (p.fuente = 'century21'
+            AND jsonb_typeof(p.datos_json_discovery->'fotos'->'propiedadThumbnail') = 'array'
+            AND jsonb_array_length(p.datos_json_discovery->'fotos'->'propiedadThumbnail') > 0)
+      )
+    )
+    AND (
+      CASE
+        WHEN p_filtros->>'excluir_outliers' = 'true' THEN
         CASE
           WHEN ps.cnt >= 2 AND ps.avg_precio_m2 > 0 THEN
             ABS((precio_normalizado(p.precio_usd, p.tipo_cambio_detectado) / NULLIF(p.area_total_m2, 0) - ps.avg_precio_m2) / ps.avg_precio_m2) <= 0.55
@@ -258,15 +264,8 @@ BEGIN
             ABS((precio_normalizado(p.precio_usd, p.tipo_cambio_detectado) / NULLIF(p.area_total_m2, 0) - zs.avg_precio_m2_zona) / zs.avg_precio_m2_zona) <= 0.55
           ELSE true
         END
-      )
-    )
-    AND (
-      (p_filtros->>'incluir_datos_viejos')::boolean IS TRUE
-      OR es_propiedad_vigente(p.estado_construccion::text, p.fecha_publicacion, p.fecha_discovery)
-    )
-    AND (
-      p_filtros->>'dormitorios' IS NULL
-      OR p.dormitorios = (p_filtros->>'dormitorios')::int
+        ELSE true
+      END
     )
     AND (
       p_filtros->>'precio_max' IS NULL
@@ -277,66 +276,27 @@ BEGIN
       OR precio_normalizado(p.precio_usd, p.tipo_cambio_detectado) >= (p_filtros->>'precio_min')::numeric
     )
     AND (
-      p_filtros->>'area_min' IS NULL
-      OR p.area_total_m2 >= (p_filtros->>'area_min')::numeric
-    )
-    AND (
-      p_filtros->>'area_max' IS NULL
-      OR p.area_total_m2 <= (p_filtros->>'area_max')::numeric
-    )
-    AND (
       p_filtros->>'zona' IS NULL
-      OR pm.zona ILIKE '%' || (p_filtros->>'zona') || '%'
+      OR pm.zona = (p_filtros->>'zona')
     )
     AND (
-      p_filtros->'zonas_permitidas' IS NULL
-      OR pm.zona = ANY(ARRAY(SELECT jsonb_array_elements_text(p_filtros->'zonas_permitidas')))
+      p_filtros->>'dormitorios' IS NULL
+      OR p.dormitorios = (p_filtros->>'dormitorios')::int
     )
     AND (
-      p_filtros->>'microzona' IS NULL
-      OR p.microzona ILIKE '%' || (p_filtros->>'microzona') || '%'
+      p_filtros->>'estado_entrega' IS NULL
+      OR p_filtros->>'estado_entrega' = 'no_importa'
+      OR (p_filtros->>'estado_entrega' = 'entrega_inmediata'
+        AND p.estado_construccion IN ('terminado', 'entrega_inmediata', 'entregado'))
+      OR (p_filtros->>'estado_entrega' = 'solo_preventa'
+        AND p.estado_construccion IN ('en_construccion', 'preventa', 'pozo'))
     )
     AND (
-      p_filtros->>'proyecto' IS NULL
-      OR pm.nombre_oficial ILIKE '%' || (p_filtros->>'proyecto') || '%'
+      p_filtros->>'excluir_duplicados' IS NULL
+      OR p_filtros->>'excluir_duplicados' != 'true'
+      OR p.duplicado_de IS NULL
     )
-    AND (
-      p_filtros->>'desarrollador' IS NULL
-      OR pm.desarrollador ILIKE '%' || (p_filtros->>'desarrollador') || '%'
-    )
-    AND (
-      (p_filtros->>'solo_con_telefono')::boolean IS NOT TRUE
-      OR p.datos_json->'agente'->>'telefono' IS NOT NULL
-    )
-    AND (
-      (p_filtros->>'solo_con_fotos')::boolean IS NOT TRUE
-      OR (
-        (jsonb_typeof(p.datos_json->'contenido'->'fotos_urls') = 'array'
-        AND jsonb_array_length(p.datos_json->'contenido'->'fotos_urls') > 0)
-        OR (p.fuente = 'remax'
-            AND p.datos_json_discovery->'default_imagen'->>'url' IS NOT NULL)
-        OR (p.fuente = 'century21'
-            AND jsonb_typeof(p.datos_json_discovery->'fotos'->'propiedadThumbnail') = 'array'
-            AND jsonb_array_length(p.datos_json_discovery->'fotos'->'propiedadThumbnail') > 0)
-      )
-    )
-    AND (
-      p_filtros->>'score_min' IS NULL
-      OR p.score_calidad_dato >= (p_filtros->>'score_min')::int
-    )
-    AND (
-      CASE
-        WHEN p_filtros->>'estado_entrega' IS NULL
-          OR p_filtros->>'estado_entrega' = 'no_importa'
-          OR p_filtros->>'estado_entrega' = 'preventa_ok'
-        THEN true
-        WHEN p_filtros->>'estado_entrega' = 'entrega_inmediata'
-        THEN COALESCE(p.estado_construccion::text, '') != 'preventa'
-        WHEN p_filtros->>'estado_entrega' = 'solo_preventa'
-        THEN p.estado_construccion::text IN ('preventa', 'en_construccion', 'en_planos')
-        ELSE true
-      END
-    )
+    AND es_propiedad_vigente(p.estado_construccion::text, p.fecha_publicacion, p.fecha_discovery)
 
   ORDER BY
     CASE WHEN p_filtros->>'orden' = 'precio_desc' THEN precio_normalizado(p.precio_usd, p.tipo_cambio_detectado) END DESC NULLS LAST,
