@@ -336,38 +336,69 @@ export function renderRotacion(e: EstudioCompleto): string {
       // Salidas del propio proyecto
       const propiasSalidas = r.props.filter(p => (p.nombreEdificio ?? '').toLowerCase().includes(e.config.projectName.split(' ')[0].toLowerCase()))
 
-      const insights: string[] = []
+      // Precio comparison
+      const diff = medianaM2Salidas > 0 && medianaM2Zona > 0
+        ? Math.round(((medianaM2Salidas - medianaM2Zona) / medianaM2Zona) * 100)
+        : 0
+      const diffLabel = diff < -10 ? 'Segmento accesible' : diff > 10 ? 'Segmento premium' : 'Parejo'
 
-      if (medianaM2Salidas > 0 && medianaM2Zona > 0) {
-        const diff = Math.round(((medianaM2Salidas - medianaM2Zona) / medianaM2Zona) * 100)
-        if (diff < -10) {
-          insights.push(`La mediana de las que salieron es <strong>${fmt(medianaM2Salidas)}/m\u00B2</strong>, un ${Math.abs(diff)}% por debajo de las activas (${fmt(medianaM2Zona)}). Las salidas se concentran en el segmento mas accesible.`)
-        } else if (diff > 10) {
-          insights.push(`La mediana de las que salieron es <strong>${fmt(medianaM2Salidas)}/m\u00B2</strong>, un ${diff}% por encima de las activas (${fmt(medianaM2Zona)}). Hay movimiento tambien en el segmento premium.`)
-        } else {
-          insights.push(`La mediana de las que salieron es <strong>${fmt(medianaM2Salidas)}/m\u00B2</strong>, similar a las activas (${fmt(medianaM2Zona)}). Las salidas se distribuyen parejo en el rango de precios.`)
-        }
-      }
-
-      if (compSorted.length > 0) {
-        const compList = compSorted.slice(0, 5).map(([name, count]) => `<strong>${name}</strong> (${count})`).join(', ')
-        insights.push(`Proyectos de la tabla de competidores con salidas: ${compList}.`)
-      }
-
-      if (propiasSalidas.length > 0) {
-        insights.push(`<span style="color:var(--caramelo);font-weight:600">Atencion:</span> ${propiasSalidas.length} salida(s) corresponden a ${e.config.projectName}. Verificar si son ventas reales o listings expirados.`)
-      }
+      // Competitor details
+      const compCards = compSorted.slice(0, 4).map(([name]) => {
+        const props = r.props.filter(p => p.nombreEdificio === name)
+        const dorms = [...new Set(props.map(p => p.dorms))].sort().map(d => dormLabel(d)).join(', ')
+        const prices = props.filter(p => p.precioM2 > 0).map(p => p.precioM2)
+        const sortedPrices = [...prices].sort((a, b) => a - b)
+        const medPrice = sortedPrices.length > 0 ? sortedPrices[Math.floor(sortedPrices.length / 2)] : 0
+        return { name, count: props.length, dorms, medPrice }
+      })
 
       return `
-    ${insights.length > 0 ? `
-    <div style="border:1px solid var(--arena);padding:24px;margin-bottom:32px;background:var(--white);border-radius:14px">
-      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:16px">Lectura de las salidas</div>
-      ${insights.map(i => `<p style="font-size:15px;color:var(--carbon);line-height:1.7;margin-bottom:12px">${i}</p>`).join('')}
-      <p style="font-size:13px;color:var(--piedra);line-height:1.6;margin-top:16px;padding-top:12px;border-top:1px solid var(--arena)">
-        Estas salidas incluyen ventas, retiros de listing y expiraciones — no distinguimos la causa.
-        Los patrones (que tipologia sale, a que precio) son indicativos, no conclusivos.
-      </p>
-    </div>` : ''}
+    <div style="margin-bottom:32px">
+      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:20px">Lectura de las salidas</div>
+
+      <!-- Row 1: KPI cards -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+        <div style="padding:20px;border:1px solid var(--arena);border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-family:'Figtree',sans-serif;font-size:32px;font-weight:500;color:var(--carbon)">${fmt(medianaM2Salidas)}</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">$/m\u00B2 mediana salidas</div>
+        </div>
+        <div style="padding:20px;border:1px solid var(--arena);border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-family:'Figtree',sans-serif;font-size:32px;font-weight:500;color:var(--carbon)">${fmt(medianaM2Zona)}</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">$/m\u00B2 mediana activas</div>
+        </div>
+        <div style="padding:20px;border:1px solid ${Math.abs(diff) > 10 ? 'var(--caramelo)' : 'var(--arena)'};border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-family:'Figtree',sans-serif;font-size:32px;font-weight:500;color:var(--caramelo)">${diff > 0 ? '+' : ''}${diff}%</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">${diffLabel}</div>
+        </div>
+      </div>
+
+      ${compCards.length > 0 ? `
+      <!-- Row 2: Competidores con salidas -->
+      <div style="font-size:13px;font-weight:500;color:var(--piedra);margin-bottom:12px;letter-spacing:0.5px">COMPETIDORES CON SALIDAS</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px">
+        ${compCards.map(c => `
+        <div style="padding:16px;border:1px solid var(--arena);border-radius:14px;background:var(--white)">
+          <div style="font-size:15px;font-weight:600;color:var(--carbon);margin-bottom:8px">${c.name}</div>
+          <div style="font-size:28px;font-weight:500;font-family:'Figtree',sans-serif;color:var(--carbon)">${c.count}</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">${c.dorms} &middot; ${fmt(c.medPrice)}/m\u00B2 med.</div>
+        </div>`).join('')}
+      </div>` : ''}
+
+      ${propiasSalidas.length > 0 ? `
+      <!-- Row 3: Alerta proyecto propio -->
+      <div style="padding:16px 20px;border:2px solid var(--caramelo);border-radius:14px;background:rgba(58,106,72,0.05);display:flex;align-items:flex-start;gap:16px;margin-bottom:24px">
+        <div style="font-size:24px;line-height:1">!</div>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--caramelo);margin-bottom:6px">${propiasSalidas.length} salida(s) de ${e.config.projectName}</div>
+          ${propiasSalidas.map(p => `<div style="font-size:14px;color:var(--carbon)">${dormLabel(p.dorms)} &middot; ${p.areaM2}m\u00B2 &middot; ${fmt(p.precioM2)}/m\u00B2 &middot; ${p.fechaSalida}</div>`).join('')}
+          <div style="font-size:13px;color:var(--piedra);margin-top:8px">Verificar si fue venta real o listing retirado/expirado</div>
+        </div>
+      </div>` : ''}
+
+      <div style="font-size:12px;color:var(--piedra);padding-top:12px;border-top:1px solid var(--arena)">
+        Salidas = listings que dejaron de aparecer en portales. Puede ser venta, retiro o expiracion. Datos indicativos.
+      </div>
+    </div>
     <div class="yield-grid" style="margin-bottom:32px">
       ${sorted.map(([d, count]) => {
         const pct = Math.round((count / total) * 100)

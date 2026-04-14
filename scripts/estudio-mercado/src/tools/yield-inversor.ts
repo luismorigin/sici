@@ -17,8 +17,9 @@ export async function yieldInversor(zona: string): Promise<YieldInversorResult> 
     const alqNoAmob = alqDorm.filter(r => r.amoblado === 'no')
 
     const medianaVenta = median(ventasDorm.map(r => r.precio_norm))
-    const rentaAmob = alqAmob.length >= 2 ? Math.round(median(alqAmob.map(r => r.precio_mensual))) : null
-    const rentaNoAmob = alqNoAmob.length >= 2 ? Math.round(median(alqNoAmob.map(r => r.precio_mensual))) : null
+    const MIN_MUESTRA = 5
+    const rentaAmob = alqAmob.length >= MIN_MUESTRA ? Math.round(median(alqAmob.map(r => r.precio_mensual))) : null
+    const rentaNoAmob = alqNoAmob.length >= MIN_MUESTRA ? Math.round(median(alqNoAmob.map(r => r.precio_mensual))) : null
 
     const premiumPct = rentaAmob && rentaNoAmob && rentaNoAmob > 0
       ? Math.round(((rentaAmob - rentaNoAmob) / rentaNoAmob) * 1000) / 10

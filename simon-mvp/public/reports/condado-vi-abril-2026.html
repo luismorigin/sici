@@ -825,14 +825,66 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
     </div>
     
     
-    
-    <div style="border:1px solid var(--arena);padding:24px;margin-bottom:32px;background:var(--white);border-radius:14px">
-      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:16px">Lectura de las salidas</div>
-      <p style="font-size:15px;color:var(--carbon);line-height:1.7;margin-bottom:12px">La mediana de las que salieron es <strong>$2,089/m²</strong>, similar a las activas ($2,137). Las salidas se distribuyen parejo en el rango de precios.</p><p style="font-size:15px;color:var(--carbon);line-height:1.7;margin-bottom:12px">Proyectos de la tabla de competidores con salidas:<br>&nbsp;&nbsp;&bull; <strong>Luxe Suites</strong>: 4 salida(s), Mono, 1D, 2D, $1,734–$2,822/m²<br>&nbsp;&nbsp;&bull; <strong>HH Once Equipetrol</strong>: 3 salida(s), Mono, 1D, $1,822–$2,065/m²<br>&nbsp;&nbsp;&bull; <strong>Sky Level</strong>: 2 salida(s), 1D, 2D, $1,911–$1,911/m²<br>&nbsp;&nbsp;&bull; <strong>Condado VI Plaza Italia</strong>: 1 salida(s), 3D, $2,252/m²<br>&nbsp;&nbsp;&bull; <strong>Sky Plaza Italia</strong>: 1 salida(s), Mono, $1,882/m²</p><p style="font-size:15px;color:var(--carbon);line-height:1.7;margin-bottom:12px"><span style="color:var(--caramelo);font-weight:600">Atencion — 1 salida(s) de Condado VI Plaza Italia:</span><br>&nbsp;&nbsp;&bull; ID 427: 3D, 144.31m², $2,252/m², salida 2026-03-20<br>Verificar con el desarrollador si fueron ventas reales o listings que expiraron/se retiraron.</p>
-      <p style="font-size:13px;color:var(--piedra);line-height:1.6;margin-top:16px;padding-top:12px;border-top:1px solid var(--arena)">
-        Estas salidas incluyen ventas, retiros de listing y expiraciones — no distinguimos la causa.
-        Los patrones (que tipologia sale, a que precio) son indicativos, no conclusivos.
-      </p>
+    <div style="margin-bottom:32px">
+      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:20px">Lectura de las salidas</div>
+
+      <!-- Row 1: KPI cards -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+        <div style="padding:20px;border:1px solid var(--arena);border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-family:'Figtree',sans-serif;font-size:32px;font-weight:500;color:var(--carbon)">$2,089</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">$/m² mediana salidas</div>
+        </div>
+        <div style="padding:20px;border:1px solid var(--arena);border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-family:'Figtree',sans-serif;font-size:32px;font-weight:500;color:var(--carbon)">$2,137</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">$/m² mediana activas</div>
+        </div>
+        <div style="padding:20px;border:1px solid var(--arena);border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-family:'Figtree',sans-serif;font-size:32px;font-weight:500;color:var(--caramelo)">-2%</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">Parejo</div>
+        </div>
+      </div>
+
+      
+      <!-- Row 2: Competidores con salidas -->
+      <div style="font-size:13px;font-weight:500;color:var(--piedra);margin-bottom:12px;letter-spacing:0.5px">COMPETIDORES CON SALIDAS</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px">
+        
+        <div style="padding:16px;border:1px solid var(--arena);border-radius:14px;background:var(--white)">
+          <div style="font-size:15px;font-weight:600;color:var(--carbon);margin-bottom:8px">Luxe Suites</div>
+          <div style="font-size:28px;font-weight:500;font-family:'Figtree',sans-serif;color:var(--carbon)">4</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">Mono, 1D, 2D &middot; $2,809/m² med.</div>
+        </div>
+        <div style="padding:16px;border:1px solid var(--arena);border-radius:14px;background:var(--white)">
+          <div style="font-size:15px;font-weight:600;color:var(--carbon);margin-bottom:8px">HH Once Equipetrol</div>
+          <div style="font-size:28px;font-weight:500;font-family:'Figtree',sans-serif;color:var(--carbon)">3</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">Mono, 1D &middot; $1,844/m² med.</div>
+        </div>
+        <div style="padding:16px;border:1px solid var(--arena);border-radius:14px;background:var(--white)">
+          <div style="font-size:15px;font-weight:600;color:var(--carbon);margin-bottom:8px">Sky Level</div>
+          <div style="font-size:28px;font-weight:500;font-family:'Figtree',sans-serif;color:var(--carbon)">2</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">1D, 2D &middot; $1,911/m² med.</div>
+        </div>
+        <div style="padding:16px;border:1px solid var(--arena);border-radius:14px;background:var(--white)">
+          <div style="font-size:15px;font-weight:600;color:var(--carbon);margin-bottom:8px">Condado VI Plaza Italia</div>
+          <div style="font-size:28px;font-weight:500;font-family:'Figtree',sans-serif;color:var(--carbon)">1</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">3D &middot; $2,252/m² med.</div>
+        </div>
+      </div>
+
+      
+      <!-- Row 3: Alerta proyecto propio -->
+      <div style="padding:16px 20px;border:2px solid var(--caramelo);border-radius:14px;background:rgba(58,106,72,0.05);display:flex;align-items:flex-start;gap:16px;margin-bottom:24px">
+        <div style="font-size:24px;line-height:1">!</div>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--caramelo);margin-bottom:6px">1 salida(s) de Condado VI Plaza Italia</div>
+          <div style="font-size:14px;color:var(--carbon)">3D &middot; 144.31m² &middot; $2,252/m² &middot; 2026-03-20</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:8px">Verificar si fue venta real o listing retirado/expirado</div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;color:var(--piedra);padding-top:12px;border-top:1px solid var(--arena)">
+        Salidas = listings que dejaron de aparecer en portales. Puede ser venta, retiro o expiracion. Datos indicativos.
+      </div>
     </div>
     <div class="yield-grid" style="margin-bottom:32px">
       <div class="yield-card attractive" style="cursor:pointer" onclick="filterRotacion(1)">
@@ -1107,13 +1159,13 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
         <div class="yield-value high">6.0%</div>
         <div class="yield-rent">
           Amoblado: $528/mes (n=16)
-          <br>Sin amoblar: $611/mes (n=2)
-          <br>Premium amoblado: <strong>-13.6%</strong>
+          
+          
         </div>
         <div class="yield-detail">
           Ticket venta mediana: $106,221<br>
           Retorno amoblado: 16.8 anos
-          <br>Retorno sin amoblar: 14.5 anos
+          
         </div>
       </div>
       <div class="yield-card attractive">
@@ -1128,20 +1180,6 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
           Ticket venta mediana: $190,855<br>
           Retorno amoblado: 13.8 anos
           <br>Retorno sin amoblar: 19.1 anos
-        </div>
-      </div>
-      <div class="yield-card attractive">
-        <div class="yield-tipo">3D</div>
-        <div class="yield-value high">5.5%</div>
-        <div class="yield-rent">
-          Amoblado: $1,688/mes (n=4)
-          
-          
-        </div>
-        <div class="yield-detail">
-          Ticket venta mediana: $365,224<br>
-          Retorno amoblado: 18 anos
-          
         </div>
       </div>
     </div>
