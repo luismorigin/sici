@@ -6,12 +6,16 @@ const TC_OFICIAL = 6.96
 export async function rotacionObservada(
   zona: string,
   dias: number = 30,
-  tcParalelo: number = 9.28
+  tcParalelo: number = 9.28,
+  falsosPositivosIds: number[] = []
 ): Promise<RotacionObservadaResult> {
   const raw = await queryRotacion(zona, dias)
+  const excludeSet = new Set(falsosPositivosIds)
 
   // Filtros de calidad ya aplicados en queryRotacion (alineados con migración 211)
+  // Excluir falsos positivos confirmados por HTTP check
   const props: PropRotada[] = raw
+    .filter((r: any) => !excludeSet.has(r.id))
     .map((r: any) => {
       const area = parseFloat(r.area_total_m2) || 0
       const precioUsd = parseFloat(r.precio_usd) || 0

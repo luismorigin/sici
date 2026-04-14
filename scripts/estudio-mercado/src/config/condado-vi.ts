@@ -13,6 +13,15 @@ export const condadoVI: ClientConfig = {
   // Escenarios solicitados por Adolfo: $1,550 y $1,650 a diferentes TCs
   precioEscenarios: [1550, 1650],
   tcEscenarios: [6.96, 9.28],
+  // Falsos positivos del verificador confirmados por HTTP check 13 Abr 2026
+  // Remax (11): HTTP 200 = siguen activas. C21 (3): HTTP 200/301 = siguen activas.
+  // Ver docs/bugs/BUG_FALSOS_POSITIVOS_REMAX.md
+  falsosPositivosIds: [
+    // Remax
+    53, 56, 68, 905, 921, 980, 1160, 1183, 1307, 1309, 1310,
+    // C21
+    617, 907, 496,
+  ],
   inventory: [
     { piso: 1, dpto: '101', m2: 62.21, dorms: 1, precioUsd: 102646.50 },
     { piso: 1, dpto: '102', m2: 87.62, dorms: 2, precioUsd: 144573.00 },

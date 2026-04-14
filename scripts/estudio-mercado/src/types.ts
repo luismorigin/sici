@@ -30,6 +30,7 @@ export interface ClientConfig {
   colors?: Partial<DesignTokens>
   precioEscenarios?: number[] // $/m2 scenarios for simulation
   tcEscenarios?: number[]     // TC scenarios for simulation
+  falsosPositivosIds?: number[] // IDs confirmados como falsos positivos del verificador (excluir de rotación)
 }
 
 export interface DesignTokens {

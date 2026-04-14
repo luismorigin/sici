@@ -46,7 +46,7 @@ async function main() {
     simulacionPrecio(config, tc),
     visibilidadPortales(config, tc),
     yieldInversor(config.zona),
-    rotacionObservada(config.zona, 30, tc.paralelo),
+    rotacionObservada(config.zona, 30, tc.paralelo, config.falsosPositivosIds ?? []),
   ])
 
   console.log(`  - Panorama: ${panorama.totalUnidades} unidades en ${panorama.byZona.length} zonas`)

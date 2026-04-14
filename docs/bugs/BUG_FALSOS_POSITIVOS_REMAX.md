@@ -116,7 +116,7 @@ WHERE id IN (53, 56, 68, 905, 921, 980, 1160, 1183, 1307, 1309, 1310)
 ```
 **NO ejecutar hasta confirmar que el proceso que las pisa está identificado y corregido**, o se van a volver a inactivar la noche siguiente.
 
-5. **Backlog C21:** Verificar cuando el servidor vuelva si tiene el mismo problema (18 URLs pendientes de check).
+5. **C21 VERIFICADO (13 Abr):** De 18 URLs pendientes, 3 son falsos positivos (IDs 617 Atrium, 907 Smart Studio, 496 Klug — HTTP 200/301). El bug afecta a ambas fuentes, no solo Remax. Total: 14 falsos positivos de 59 salidas (24% error rate).
 
 ## Impacto en estudios de mercado
 
