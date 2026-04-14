@@ -672,8 +672,10 @@ export function renderYield(e: EstudioCompleto): string {
       </div>
 
       <div style="font-size:14px;color:var(--piedra-light);margin-top:20px;line-height:1.6;padding:16px 20px;border:1px solid rgba(255,255,255,0.08);border-radius:14px">
-        ${e.config.projectName} entrega con linea blanca completa (heladera, lavadora, secadora, lavavajillas).
-        Esto facilita al comprador-inversor poner a alquilar amoblado y capturar el premium sobre la renta sin amoblar.
+        ${e.config.projectName} entrega con linea blanca completa (heladera, lavadora, secadora, lavavajillas),
+        lo que reduce la inversion inicial para alquilar amoblado. Sin embargo, el yield mostrado no incluye
+        el costo de amoblar (muebles, menaje, decoracion) ni vacancias, mantenimiento, impuestos o gastos de condominio.
+        El retorno real del primer a&ntilde;o sera menor al yield bruto mostrado.
       </div>
     </div>`
     })()}
