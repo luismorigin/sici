@@ -686,47 +686,57 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
 </script>
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th>Proyecto</th><th>Uds</th><th>$/m²</th><th>Signal</th></tr></thead>
+        <thead><tr><th>Proyecto</th><th>Uds</th><th>$/m²</th><th>Estado</th><th>Signal</th></tr></thead>
         <tbody>
           <tr style="background:rgba(58,53,48,0.04)">
             <td class="strong">Uptown NUU</td><td>4</td>
             <td>$3,053</td>
+            <td style="font-size:13px">Entrega inmediata</td>
             <td><span class="signal signal-prolongado">PROLONGADO</span></td>
           </tr><tr style="background:rgba(58,53,48,0.04)">
             <td class="strong">Sky Tower</td><td>7</td>
             <td>$2,779</td>
+            <td style="font-size:13px">Preventa</td>
             <td><span class="signal signal-prolongado">PROLONGADO</span></td>
           </tr><tr>
             <td class="strong">Luxe Suites</td><td>5</td>
             <td>$2,716</td>
+            <td style="font-size:13px">Entrega inmediata</td>
             <td><span class="signal signal-nuevo">NUEVO</span></td>
           </tr><tr style="background:rgba(58,53,48,0.04)">
             <td class="strong">Sky Plaza Italia</td><td>4</td>
             <td>$2,499</td>
+            <td style="font-size:13px">Entrega inmediata</td>
             <td><span class="signal signal-prolongado">PROLONGADO</span></td>
           </tr><tr>
             <td class="strong">Madero Residence</td><td>3</td>
             <td>$2,486</td>
+            <td style="font-size:13px">Entrega inmediata</td>
             <td><span class="signal signal-activo">ACTIVO</span></td>
           </tr><tr>
             <td class="strong">Edificio Spazios</td><td>5</td>
             <td>$2,433</td>
+            <td style="font-size:13px">Entrega inmediata</td>
             <td><span class="signal signal-activo">ACTIVO</span></td>
           </tr><tr style="background:rgba(58,53,48,0.08)">
             <td class="strong">Atrium</td><td>9</td>
             <td>$2,213</td>
+            <td style="font-size:13px">Entrega inmediata</td>
             <td><span class="signal signal-estancado">ESTANCADO</span></td>
           </tr><tr class="highlight">
             <td class="strong">Condado VI Plaza Italia</td><td>3</td>
             <td>$2,200</td>
+            <td style="font-size:13px">Entrega inmediata</td>
             <td><span class="signal signal-activo">ACTIVO</span></td>
           </tr><tr style="background:rgba(58,53,48,0.08)">
             <td class="strong">Sky Level</td><td>6</td>
             <td>$2,055</td>
+            <td style="font-size:13px">Preventa</td>
             <td><span class="signal signal-estancado">ESTANCADO</span></td>
           </tr><tr>
             <td class="strong">Hh Once</td><td>4</td>
             <td>$1,792</td>
+            <td style="font-size:13px">Entrega inmediata</td>
             <td><span class="signal signal-activo">ACTIVO</span></td>
           </tr>
         </tbody>
@@ -815,7 +825,7 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
   </div>
 </section>
 
-<section class="section bg-white" id="rotacion">
+<section class="section bg-marfil" id="rotacion">
   <div class="section-inner reveal">
     <div class="badge">Rotacion</div>
     <div class="section-title">Que salio del mercado</div>
@@ -827,42 +837,45 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
     
     <div style="margin-bottom:32px">
       <!-- Resumen: individuales vs retiros -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">
-        <div style="padding:24px;border:1px solid var(--caramelo);border-radius:14px;text-align:center;background:var(--white)">
-          <div style="font-family:'Figtree',sans-serif;font-size:42px;font-weight:500;color:var(--carbon)">37</div>
-          <div style="font-size:14px;color:var(--piedra);margin-top:4px">Salidas individuales</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:32px;border-radius:14px;overflow:hidden">
+        <div style="padding:32px;text-align:center;background:var(--carbon)">
+          <div style="font-family:'Figtree',sans-serif;font-size:48px;font-weight:500;color:var(--marfil)">37</div>
+          <div style="font-size:14px;color:var(--piedra-light);margin-top:6px">Salidas individuales</div>
         </div>
-        <div style="padding:24px;border:1px solid var(--arena);border-radius:14px;text-align:center;background:var(--white)">
-          <div style="font-family:'Figtree',sans-serif;font-size:42px;font-weight:500;color:var(--piedra)">7</div>
-          <div style="font-size:14px;color:var(--piedra);margin-top:4px">Retiros de proyecto (2 eventos)</div>
+        <div style="padding:32px;text-align:center;background:var(--white);border:1px solid var(--arena);border-left:none">
+          <div style="font-family:'Figtree',sans-serif;font-size:48px;font-weight:500;color:var(--piedra)">7</div>
+          <div style="font-size:14px;color:var(--piedra);margin-top:6px">Retiros de proyecto (2 eventos)</div>
         </div>
       </div>
 
       
       <!-- Retiros batch -->
-      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--piedra);margin-bottom:12px">Retiros de proyecto</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:28px">
-        
-        <div style="padding:16px;border:1px solid var(--arena);border-radius:14px;background:var(--white);border-left:3px solid var(--arena)">
-          <div style="font-size:15px;font-weight:600;color:var(--carbon)">HH Chuubi</div>
-          <div style="font-size:28px;font-weight:500;font-family:'Figtree',sans-serif;color:var(--piedra);margin:4px 0">4 uds</div>
-          <div style="font-size:13px;color:var(--piedra)">1D, 2D &middot; 2026-04-01</div>
-          <div style="font-size:12px;color:var(--piedra);margin-top:4px">Broker: Fernando Lamas Varanda</div>
-          <div style="font-size:11px;color:var(--piedra);margin-top:6px;font-style:italic">Mismo proyecto, mismo dia — retiro de listings, no ventas individuales</div>
+      <div style="padding:24px;border-radius:14px;background:var(--white);margin-bottom:32px">
+        <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--piedra);margin-bottom:16px">Retiros de proyecto</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+          
+          <div style="padding:20px;border-radius:14px;background:var(--marfil);border-left:3px solid var(--arena)">
+            <div style="font-size:15px;font-weight:600;color:var(--carbon)">HH Chuubi</div>
+            <div style="font-size:32px;font-weight:500;font-family:'Figtree',sans-serif;color:var(--piedra);margin:6px 0">4 uds</div>
+            <div style="font-size:13px;color:var(--piedra)">1D, 2D &middot; 2026-04-01</div>
+            <div style="font-size:12px;color:var(--piedra);margin-top:4px">Broker: Fernando Lamas Varanda</div>
+          </div>
+          <div style="padding:20px;border-radius:14px;background:var(--marfil);border-left:3px solid var(--arena)">
+            <div style="font-size:15px;font-weight:600;color:var(--carbon)">HH Once Equipetrol</div>
+            <div style="font-size:32px;font-weight:500;font-family:'Figtree',sans-serif;color:var(--piedra);margin:6px 0">3 uds</div>
+            <div style="font-size:13px;color:var(--piedra)">Mono, 1D &middot; 2026-04-01</div>
+            <div style="font-size:12px;color:var(--piedra);margin-top:4px">Broker: Fernando Lamas Varanda</div>
+          </div>
         </div>
-        <div style="padding:16px;border:1px solid var(--arena);border-radius:14px;background:var(--white);border-left:3px solid var(--arena)">
-          <div style="font-size:15px;font-weight:600;color:var(--carbon)">HH Once Equipetrol</div>
-          <div style="font-size:28px;font-weight:500;font-family:'Figtree',sans-serif;color:var(--piedra);margin:4px 0">3 uds</div>
-          <div style="font-size:13px;color:var(--piedra)">Mono, 1D &middot; 2026-04-01</div>
-          <div style="font-size:12px;color:var(--piedra);margin-top:4px">Broker: Fernando Lamas Varanda</div>
-          <div style="font-size:11px;color:var(--piedra);margin-top:6px;font-style:italic">Mismo proyecto, mismo dia — retiro de listings, no ventas individuales</div>
-        </div>
+        <div style="font-size:12px;color:var(--piedra);margin-top:12px;font-style:italic">Mismo proyecto, mismo dia — retiro de listings, no ventas individuales</div>
       </div>
 
       <!-- Lectura de salidas individuales -->
+      <div style="padding:28px;border-radius:14px;background:var(--white);margin-bottom:32px">
       <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:20px">Salidas individuales</div>
 
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+      
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
         <div style="padding:20px;border:1px solid var(--arena);border-radius:14px;text-align:center;background:var(--white)">
           <div style="font-family:'Figtree',sans-serif;font-size:32px;font-weight:500;color:var(--carbon)">$2,100</div>
           <div style="font-size:13px;color:var(--piedra);margin-top:4px">$/m² mediana salidas</div>
@@ -874,6 +887,10 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
         <div style="padding:20px;border:1px solid var(--arena);border-radius:14px;text-align:center;background:var(--white)">
           <div style="font-family:'Figtree',sans-serif;font-size:32px;font-weight:500;color:var(--caramelo)">-4%</div>
           <div style="font-size:13px;color:var(--piedra);margin-top:4px">Parejo</div>
+        </div>
+        <div style="padding:20px;border:1px solid var(--arena);border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-family:'Figtree',sans-serif;font-size:32px;font-weight:500;color:var(--carbon)">65d</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">Dias publicado (mediana)</div>
         </div>
       </div>
 
@@ -914,9 +931,9 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
       </div>
 
       <div style="font-size:12px;color:var(--piedra);padding-top:12px;border-top:1px solid var(--arena)">
-        Salidas individuales = listings que dejaron de aparecer uno a uno. Retiros de proyecto = 2+ listings del mismo edificio el mismo dia (broker retiró cartera). Datos indicativos.
+        Salidas individuales = listings que dejaron de aparecer uno a uno. Datos indicativos.
       </div>
-    </div>
+      </div>
 
     <!-- Cards tipología (solo individuales) -->
     <div class="yield-grid" style="margin-bottom:32px">
@@ -950,156 +967,156 @@ table.data .strong { color: var(--carbon); font-weight: 600; }
     <div id="rotacionTable" style="display:none">
       <div class="table-wrap">
         <table class="data" id="rotacionDataTable">
-          <thead><tr><th>Proyecto</th><th>Dorms</th><th>Area</th><th>$/m²</th><th>Fecha salida</th></tr></thead>
+          <thead><tr><th>Proyecto</th><th>Dorms</th><th>Area</th><th>$/m²</th><th>Dias publicado</th><th>Fecha salida</th></tr></thead>
           <tbody>
             <tr data-dorms="1">
               <td class="strong">Edificio Kenya</td>
               <td>1D</td><td>61m²</td>
-              <td>$1,202</td><td>2026-04-10</td>
+              <td>$1,202</td><td>120d</td><td>2026-04-10</td>
             </tr><tr data-dorms="1">
               <td class="strong">Condominio ZENIT</td>
               <td>1D</td><td>41m²</td>
-              <td>$2,171</td><td>2026-04-09</td>
+              <td>$2,171</td><td>85d</td><td>2026-04-09</td>
             </tr><tr data-dorms="1">
               <td class="strong">Sky Tower</td>
               <td>1D</td><td>36m²</td>
-              <td>$2,933</td><td>2026-04-09</td>
+              <td>$2,933</td><td>182d</td><td>2026-04-09</td>
             </tr><tr data-dorms="1">
               <td class="strong">Hh Once</td>
               <td>1D</td><td>40m²</td>
-              <td>$1,625</td><td>2026-04-07</td>
+              <td>$1,625</td><td>65d</td><td>2026-04-07</td>
             </tr><tr data-dorms="2">
               <td class="strong">Edificio Baruc Uno</td>
               <td>2D</td><td>80m²</td>
-              <td>$1,571</td><td>2026-04-06</td>
+              <td>$1,571</td><td>122d</td><td>2026-04-06</td>
             </tr><tr data-dorms="2">
               <td class="strong">Sky Collection Equipetrol</td>
               <td>2D</td><td>73.26m²</td>
-              <td>$2,184</td><td>2026-04-04</td>
+              <td>$2,184</td><td>63d</td><td>2026-04-04</td>
             </tr><tr data-dorms="1">
               <td class="strong">Domus Infinity</td>
               <td>1D</td><td>50.8m²</td>
-              <td>$1,707</td><td>2026-04-04</td>
+              <td>$1,707</td><td>124d</td><td>2026-04-04</td>
             </tr><tr data-dorms="2">
               <td class="strong">Luxe Suites</td>
               <td>2D</td><td>71.2m²</td>
-              <td>$2,809</td><td>2026-04-04</td>
+              <td>$2,809</td><td>200d</td><td>2026-04-04</td>
             </tr><tr data-dorms="0">
               <td class="strong">Luxe Suites</td>
               <td>Mono</td><td>34.5m²</td>
-              <td>$2,822</td><td>2026-04-04</td>
+              <td>$2,822</td><td>38d</td><td>2026-04-04</td>
             </tr><tr data-dorms="3">
               <td class="strong">Impera Forest</td>
               <td>3D</td><td>137.5m²</td>
-              <td>$2,099</td><td>2026-04-04</td>
+              <td>$2,099</td><td>80d</td><td>2026-04-04</td>
             </tr><tr data-dorms="0">
               <td class="strong">Uptown NUU</td>
               <td>Mono</td><td>40m²</td>
-              <td>$2,100</td><td>2026-04-04</td>
+              <td>$2,100</td><td>26d</td><td>2026-04-04</td>
             </tr><tr data-dorms="2">
               <td class="strong">Edificio Gold</td>
               <td>2D</td><td>58.45m²</td>
-              <td>$2,089</td><td>2026-04-03</td>
+              <td>$2,089</td><td>43d</td><td>2026-04-03</td>
             </tr><tr data-dorms="1">
               <td class="strong">Luxe Tower</td>
               <td>1D</td><td>97m²</td>
-              <td>$2,242</td><td>2026-04-01</td>
+              <td>$2,242</td><td>72d</td><td>2026-04-01</td>
             </tr><tr data-dorms="0">
               <td class="strong">Sky Lux</td>
               <td>Mono</td><td>32m²</td>
-              <td>$1,212</td><td>2026-04-01</td>
+              <td>$1,212</td><td>37d</td><td>2026-04-01</td>
             </tr><tr data-dorms="2">
               <td class="strong">Nano Smart</td>
               <td>2D</td><td>62.41m²</td>
-              <td>$2,446</td><td>2026-03-31</td>
+              <td>$2,446</td><td>182d</td><td>2026-03-31</td>
             </tr><tr data-dorms="1">
               <td class="strong">Nomad by Smart Studio</td>
               <td>1D</td><td>50.54m²</td>
-              <td>$1,583</td><td>2026-03-31</td>
+              <td>$1,583</td><td>105d</td><td>2026-03-31</td>
             </tr><tr data-dorms="2">
               <td class="strong">Mediterraneo 2</td>
               <td>2D</td><td>84.2m²</td>
-              <td>$1,146</td><td>2026-03-31</td>
+              <td>$1,146</td><td>57d</td><td>2026-03-31</td>
             </tr><tr data-dorms="1">
               <td class="strong">Luxe Tower</td>
               <td>1D</td><td>63m²</td>
-              <td>$2,100</td><td>2026-03-31</td>
+              <td>$2,100</td><td>294d</td><td>2026-03-31</td>
             </tr><tr data-dorms="0">
               <td class="strong">Luxe Suites</td>
               <td>Mono</td><td>34.5m²</td>
-              <td>$2,551</td><td>2026-03-30</td>
+              <td>$2,551</td><td>17d</td><td>2026-03-30</td>
             </tr><tr data-dorms="1">
               <td class="strong">Garden Equipetrol</td>
               <td>1D</td><td>46.86m²</td>
-              <td>$2,132</td><td>2026-03-27</td>
+              <td>$2,132</td><td>72d</td><td>2026-03-27</td>
             </tr><tr data-dorms="0">
               <td class="strong">Sky Elite</td>
               <td>Mono</td><td>36m²</td>
-              <td>$3,488</td><td>2026-03-27</td>
+              <td>$3,488</td><td>45d</td><td>2026-03-27</td>
             </tr><tr data-dorms="0">
               <td class="strong">Sky Plaza Italia</td>
               <td>Mono</td><td>44.65m²</td>
-              <td>$1,882</td><td>2026-03-26</td>
+              <td>$1,882</td><td>182d</td><td>2026-03-26</td>
             </tr><tr data-dorms="2">
               <td class="strong">Edificio Gold</td>
               <td>2D</td><td>58.45m²</td>
-              <td>$2,089</td><td>2026-03-26</td>
+              <td>$2,089</td><td>35d</td><td>2026-03-26</td>
             </tr><tr data-dorms="1">
               <td class="strong">Stratto Up</td>
               <td>1D</td><td>47m²</td>
-              <td>$2,194</td><td>2026-03-25</td>
+              <td>$2,194</td><td>716d</td><td>2026-03-25</td>
             </tr><tr data-dorms="1">
               <td class="strong">Luxe Suites</td>
               <td>1D</td><td>91m²</td>
-              <td>$1,734</td><td>2026-03-24</td>
+              <td>$1,734</td><td>62d</td><td>2026-03-24</td>
             </tr><tr data-dorms="1">
               <td class="strong">Macororo 12</td>
               <td>1D</td><td>47.62m²</td>
-              <td>$3,142</td><td>2026-03-23</td>
+              <td>$3,142</td><td>182d</td><td>2026-03-23</td>
             </tr><tr data-dorms="2">
               <td class="strong">Edificio Aura Concept</td>
               <td>2D</td><td>72m²</td>
-              <td>$2,000</td><td>2026-03-22</td>
+              <td>$2,000</td><td>27d</td><td>2026-03-22</td>
             </tr><tr data-dorms="2">
               <td class="strong">Edificio Fragata</td>
               <td>2D</td><td>125m²</td>
-              <td>$4,417</td><td>2026-03-22</td>
+              <td>$4,417</td><td>212d</td><td>2026-03-22</td>
             </tr><tr data-dorms="2">
               <td class="strong">Gold</td>
               <td>2D</td><td>58.45m²</td>
-              <td>$2,089</td><td>2026-03-22</td>
+              <td>$2,089</td><td>31d</td><td>2026-03-22</td>
             </tr><tr data-dorms="1">
               <td class="strong">Sky Level</td>
               <td>1D</td><td>52m²</td>
-              <td>$1,911</td><td>2026-03-22</td>
+              <td>$1,911</td><td>30d</td><td>2026-03-22</td>
             </tr><tr data-dorms="3">
               <td class="strong">Condado VI Plaza Italia</td>
               <td>3D</td><td>144.31m²</td>
-              <td>$2,252</td><td>2026-03-20</td>
+              <td>$2,252</td><td>219d</td><td>2026-03-20</td>
             </tr><tr data-dorms="1">
               <td class="strong">Nano Smart</td>
               <td>1D</td><td>41.01m²</td>
-              <td>$2,242</td><td>2026-03-20</td>
+              <td>$2,242</td><td>29d</td><td>2026-03-20</td>
             </tr><tr data-dorms="1">
               <td class="strong">Sky Level</td>
               <td>1D</td><td>52m²</td>
-              <td>$1,500</td><td>2026-03-20</td>
+              <td>$1,500</td><td>28d</td><td>2026-03-20</td>
             </tr><tr data-dorms="2">
               <td class="strong">Sky Level</td>
               <td>2D</td><td>88.5m²</td>
-              <td>$1,911</td><td>2026-03-20</td>
+              <td>$1,911</td><td>28d</td><td>2026-03-20</td>
             </tr><tr data-dorms="1">
               <td class="strong">Domus Insignia</td>
               <td>1D</td><td>47.34m²</td>
-              <td>$1,874</td><td>2026-03-19</td>
+              <td>$1,874</td><td>14d</td><td>2026-03-19</td>
             </tr><tr data-dorms="1">
               <td class="strong">Aqua Tower</td>
               <td>1D</td><td>56m²</td>
-              <td>$2,810</td><td>2026-03-17</td>
+              <td>$2,810</td><td>48d</td><td>2026-03-17</td>
             </tr><tr data-dorms="1">
               <td class="strong">Domus Infinity</td>
               <td>1D</td><td>48.25m²</td>
-              <td>$2,335</td><td>2026-03-16</td>
+              <td>$2,335</td><td>91d</td><td>2026-03-16</td>
             </tr>
           </tbody>
         </table>

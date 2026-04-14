@@ -208,7 +208,7 @@ export function renderCompetidores(e: EstudioCompleto): string {
     ${scatterCompetidores(comp.top, e.config.projectName, 'chartScatter')}
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th>Proyecto</th><th>Uds</th><th>$/m²</th><th>Signal</th></tr></thead>
+        <thead><tr><th>Proyecto</th><th>Uds</th><th>$/m²</th><th>Estado</th><th>Signal</th></tr></thead>
         <tbody>
           ${comp.top.map(c => {
             const isProject = c.proyecto === e.config.projectName
@@ -216,9 +216,11 @@ export function renderCompetidores(e: EstudioCompleto): string {
               : c.signal === 'PROLONGADO' ? ' style="background:rgba(58,53,48,0.04)"'
               : ''
             const rowClass = isProject ? ' class="highlight"' : ''
+            const estadoLabel = (c.estado === 'entrega_inmediata' || c.estado === 'nuevo_a_estrenar') ? 'Entrega inmediata' : (c.estado === 'preventa' || c.estado === 'en_construccion' || c.estado === 'en_pozo') ? 'Preventa' : '—'
             return `<tr${isProject ? rowClass : signalClass}>
             <td class="strong">${c.proyecto}</td><td>${c.uds}</td>
             <td>${fmt(c.medianaM2)}</td>
+            <td style="font-size:13px">${estadoLabel}</td>
             <td>${signalBadge(c.signal)}</td>
           </tr>`
           }).join('')}
@@ -300,7 +302,7 @@ export function renderVisibilidad(e: EstudioCompleto): string {
 export function renderRotacion(e: EstudioCompleto): string {
   const r = e.rotacion
   return `
-<section class="section bg-white" id="rotacion">
+<section class="section bg-marfil" id="rotacion">
   <div class="section-inner reveal">
     <div class="badge">Rotacion</div>
     <div class="section-title">Que salio del mercado</div>
@@ -352,35 +354,42 @@ export function renderRotacion(e: EstudioCompleto): string {
       return `
     <div style="margin-bottom:32px">
       <!-- Resumen: individuales vs retiros -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">
-        <div style="padding:24px;border:1px solid var(--caramelo);border-radius:14px;text-align:center;background:var(--white)">
-          <div style="font-family:'Figtree',sans-serif;font-size:42px;font-weight:500;color:var(--carbon)">${r.totalIndividuales}</div>
-          <div style="font-size:14px;color:var(--piedra);margin-top:4px">Salidas individuales</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:32px;border-radius:14px;overflow:hidden">
+        <div style="padding:32px;text-align:center;background:var(--carbon)">
+          <div style="font-family:'Figtree',sans-serif;font-size:48px;font-weight:500;color:var(--marfil)">${r.totalIndividuales}</div>
+          <div style="font-size:14px;color:var(--piedra-light);margin-top:6px">Salidas individuales</div>
         </div>
-        <div style="padding:24px;border:1px solid var(--arena);border-radius:14px;text-align:center;background:var(--white)">
-          <div style="font-family:'Figtree',sans-serif;font-size:42px;font-weight:500;color:var(--piedra)">${r.totalBatch}</div>
-          <div style="font-size:14px;color:var(--piedra);margin-top:4px">Retiros de proyecto (${batches.length} evento${batches.length !== 1 ? 's' : ''})</div>
+        <div style="padding:32px;text-align:center;background:var(--white);border:1px solid var(--arena);border-left:none">
+          <div style="font-family:'Figtree',sans-serif;font-size:48px;font-weight:500;color:var(--piedra)">${r.totalBatch}</div>
+          <div style="font-size:14px;color:var(--piedra);margin-top:6px">Retiros de proyecto (${batches.length} evento${batches.length !== 1 ? 's' : ''})</div>
         </div>
       </div>
 
       ${batches.length > 0 ? `
       <!-- Retiros batch -->
-      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--piedra);margin-bottom:12px">Retiros de proyecto</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:28px">
-        ${batches.map(b => `
-        <div style="padding:16px;border:1px solid var(--arena);border-radius:14px;background:var(--white);border-left:3px solid var(--arena)">
-          <div style="font-size:15px;font-weight:600;color:var(--carbon)">${b.proyecto}</div>
-          <div style="font-size:28px;font-weight:500;font-family:'Figtree',sans-serif;color:var(--piedra);margin:4px 0">${b.count} uds</div>
-          <div style="font-size:13px;color:var(--piedra)">${b.dorms} &middot; ${b.fecha}</div>
-          ${b.broker ? `<div style="font-size:12px;color:var(--piedra);margin-top:4px">Broker: ${b.broker}</div>` : ''}
-          <div style="font-size:11px;color:var(--piedra);margin-top:6px;font-style:italic">Mismo proyecto, mismo dia — retiro de listings, no ventas individuales</div>
-        </div>`).join('')}
+      <div style="padding:24px;border-radius:14px;background:var(--white);margin-bottom:32px">
+        <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--piedra);margin-bottom:16px">Retiros de proyecto</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+          ${batches.map(b => `
+          <div style="padding:20px;border-radius:14px;background:var(--marfil);border-left:3px solid var(--arena)">
+            <div style="font-size:15px;font-weight:600;color:var(--carbon)">${b.proyecto}</div>
+            <div style="font-size:32px;font-weight:500;font-family:'Figtree',sans-serif;color:var(--piedra);margin:6px 0">${b.count} uds</div>
+            <div style="font-size:13px;color:var(--piedra)">${b.dorms} &middot; ${b.fecha}</div>
+            ${b.broker ? `<div style="font-size:12px;color:var(--piedra);margin-top:4px">Broker: ${b.broker}</div>` : ''}
+          </div>`).join('')}
+        </div>
+        <div style="font-size:12px;color:var(--piedra);margin-top:12px;font-style:italic">Mismo proyecto, mismo dia — retiro de listings, no ventas individuales</div>
       </div>` : ''}
 
       <!-- Lectura de salidas individuales -->
+      <div style="padding:28px;border-radius:14px;background:var(--white);margin-bottom:32px">
       <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:20px">Salidas individuales</div>
 
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+      ${(() => {
+        const diasList = indiv.filter(p => p.diasEnMercado > 0).map(p => p.diasEnMercado).sort((a, b) => a - b)
+        const medianaDias = diasList.length > 0 ? diasList[Math.floor(diasList.length / 2)] : 0
+        return `
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
         <div style="padding:20px;border:1px solid var(--arena);border-radius:14px;text-align:center;background:var(--white)">
           <div style="font-family:'Figtree',sans-serif;font-size:32px;font-weight:500;color:var(--carbon)">${fmt(medianaM2Salidas)}</div>
           <div style="font-size:13px;color:var(--piedra);margin-top:4px">$/m\u00B2 mediana salidas</div>
@@ -393,7 +402,12 @@ export function renderRotacion(e: EstudioCompleto): string {
           <div style="font-family:'Figtree',sans-serif;font-size:32px;font-weight:500;color:var(--caramelo)">${diff > 0 ? '+' : ''}${diff}%</div>
           <div style="font-size:13px;color:var(--piedra);margin-top:4px">${diffLabel}</div>
         </div>
-      </div>
+        <div style="padding:20px;border:1px solid var(--arena);border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-family:'Figtree',sans-serif;font-size:32px;font-weight:500;color:var(--carbon)">${medianaDias}d</div>
+          <div style="font-size:13px;color:var(--piedra);margin-top:4px">Dias publicado (mediana)</div>
+        </div>
+      </div>`
+      })()}
 
       ${compCards.length > 0 ? `
       <div style="font-size:13px;font-weight:500;color:var(--piedra);margin-bottom:12px;letter-spacing:0.5px">COMPETIDORES CON SALIDAS</div>
@@ -417,9 +431,9 @@ export function renderRotacion(e: EstudioCompleto): string {
       </div>` : ''}
 
       <div style="font-size:12px;color:var(--piedra);padding-top:12px;border-top:1px solid var(--arena)">
-        Salidas individuales = listings que dejaron de aparecer uno a uno. Retiros de proyecto = 2+ listings del mismo edificio el mismo dia (broker retiró cartera). Datos indicativos.
+        Salidas individuales = listings que dejaron de aparecer uno a uno. Datos indicativos.
       </div>
-    </div>
+      </div>
 
     <!-- Cards tipología (solo individuales) -->
     <div class="yield-grid" style="margin-bottom:32px">
@@ -444,12 +458,12 @@ export function renderRotacion(e: EstudioCompleto): string {
     <div id="rotacionTable" style="display:none">
       <div class="table-wrap">
         <table class="data" id="rotacionDataTable">
-          <thead><tr><th>Proyecto</th><th>Dorms</th><th>Area</th><th>$/m²</th><th>Fecha salida</th></tr></thead>
+          <thead><tr><th>Proyecto</th><th>Dorms</th><th>Area</th><th>$/m²</th><th>Dias publicado</th><th>Fecha salida</th></tr></thead>
           <tbody>
             ${indiv.map((p: PropRotada) => `<tr data-dorms="${p.dorms}">
               <td class="strong">${p.nombreEdificio ?? 'Sin nombre'}</td>
               <td>${dormLabel(p.dorms)}</td><td>${p.areaM2}m²</td>
-              <td>${fmt(p.precioM2)}</td><td>${p.fechaSalida}</td>
+              <td>${fmt(p.precioM2)}</td><td>${p.diasEnMercado}d</td><td>${p.fechaSalida}</td>
             </tr>`).join('')}
           </tbody>
         </table>

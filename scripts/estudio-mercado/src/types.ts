@@ -101,6 +101,7 @@ export interface CompetidorInfo {
   medianaM2: number
   medianaDias: number
   signal: 'NUEVO' | 'ACTIVO' | 'PROLONGADO' | 'ESTANCADO'
+  estado: string | null // 'preventa' | 'entrega_inmediata' | etc
 }
 
 export interface CompetidoresResult {
