@@ -196,13 +196,25 @@ export interface PropRotada {
   precioM2: number
   diasEnMercado: number
   fechaSalida: string
+  broker: string | null
+}
+
+export interface RetiroBatch {
+  proyecto: string
+  fecha: string
+  count: number
+  dorms: string  // "Mono, 1D, 2D"
+  broker: string | null
 }
 
 export interface RotacionObservadaResult {
   zona: string
   dias: number
   totalRotadas: number
-  props: PropRotada[]
+  salidasIndividuales: PropRotada[]
+  retirosBatch: RetiroBatch[]
+  totalIndividuales: number
+  totalBatch: number
 }
 
 // --- All results combined ---

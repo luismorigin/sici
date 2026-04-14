@@ -305,58 +305,81 @@ export function renderRotacion(e: EstudioCompleto): string {
     <div class="badge">Rotacion</div>
     <div class="section-title">Que salio del mercado</div>
     <div class="section-subtitle">
-      En los ultimos ${r.dias} dias, ${r.totalRotadas} propiedades dejaron de aparecer en portales en ${r.zona}.
-      Esto puede significar venta, retiro del listing, o expiracion — no necesariamente venta confirmada.
+      En los ultimos ${r.dias} dias, ${r.totalRotadas} propiedades dejaron de aparecer en portales en ${r.zona}:
+      ${r.totalIndividuales} salidas individuales y ${r.totalBatch} en retiros de proyecto (${r.retirosBatch.length} evento${r.retirosBatch.length !== 1 ? 's' : ''} donde un broker retiro multiples listings el mismo dia).
     </div>
-    ${r.props.length > 0 ? `
+    ${r.totalRotadas > 0 ? `
     ${(() => {
+      const indiv = r.salidasIndividuales
+      const batches = r.retirosBatch
+
+      // Tipología breakdown de individuales
       const byDorm = new Map<number, number>()
-      for (const p of r.props) byDorm.set(p.dorms, (byDorm.get(p.dorms) ?? 0) + 1)
+      for (const p of indiv) byDorm.set(p.dorms, (byDorm.get(p.dorms) ?? 0) + 1)
       const sorted = [...byDorm.entries()].sort((a, b) => b[1] - a[1])
-      const total = r.props.length
       const dormTypes = sorted.map(([d]) => d)
-      const sortedProps = [...r.props].sort((a, b) => b.fechaSalida.localeCompare(a.fechaSalida))
 
-      // --- Mini análisis ---
-      const preciosM2 = r.props.filter(p => p.precioM2 > 0).map(p => p.precioM2)
-      const medianaM2Salidas = preciosM2.length > 0 ? preciosM2.sort((a, b) => a - b)[Math.floor(preciosM2.length / 2)] : 0
+      // Análisis sobre individuales (no batch)
+      const preciosM2 = indiv.filter(p => p.precioM2 > 0).map(p => p.precioM2)
+      const medianaM2Salidas = preciosM2.length > 0 ? [...preciosM2].sort((a, b) => a - b)[Math.floor(preciosM2.length / 2)] : 0
       const medianaM2Zona = e.posicion.medianaZonaM2
-
-      // Competidores directos que perdieron unidades
-      const competidorNames = new Set(e.competidores.top.map(c => c.proyecto))
-      const salidasCompetidores = new Map<string, number>()
-      for (const p of r.props) {
-        const name = p.nombreEdificio ?? 'Sin nombre'
-        if (competidorNames.has(name)) {
-          salidasCompetidores.set(name, (salidasCompetidores.get(name) ?? 0) + 1)
-        }
-      }
-      const compSorted = [...salidasCompetidores.entries()].sort((a, b) => b[1] - a[1])
-
-      // Salidas del propio proyecto
-      const propiasSalidas = r.props.filter(p => (p.nombreEdificio ?? '').toLowerCase().includes(e.config.projectName.split(' ')[0].toLowerCase()))
-
-      // Precio comparison
       const diff = medianaM2Salidas > 0 && medianaM2Zona > 0
         ? Math.round(((medianaM2Salidas - medianaM2Zona) / medianaM2Zona) * 100)
         : 0
       const diffLabel = diff < -10 ? 'Segmento accesible' : diff > 10 ? 'Segmento premium' : 'Parejo'
 
-      // Competitor details
-      const compCards = compSorted.slice(0, 4).map(([name]) => {
-        const props = r.props.filter(p => p.nombreEdificio === name)
+      // Competidores con salidas individuales
+      const competidorNames = new Set(e.competidores.top.map(c => c.proyecto))
+      const compMap = new Map<string, typeof indiv>()
+      for (const p of indiv) {
+        const name = p.nombreEdificio ?? 'Sin nombre'
+        if (competidorNames.has(name)) {
+          const arr = compMap.get(name) ?? []
+          arr.push(p)
+          compMap.set(name, arr)
+        }
+      }
+      const compCards = [...compMap.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 4).map(([name, props]) => {
         const dorms = [...new Set(props.map(p => p.dorms))].sort().map(d => dormLabel(d)).join(', ')
-        const prices = props.filter(p => p.precioM2 > 0).map(p => p.precioM2)
-        const sortedPrices = [...prices].sort((a, b) => a - b)
-        const medPrice = sortedPrices.length > 0 ? sortedPrices[Math.floor(sortedPrices.length / 2)] : 0
+        const prices = props.filter(p => p.precioM2 > 0).map(p => p.precioM2).sort((a, b) => a - b)
+        const medPrice = prices.length > 0 ? prices[Math.floor(prices.length / 2)] : 0
         return { name, count: props.length, dorms, medPrice }
       })
 
+      // Salidas del propio proyecto (en individuales)
+      const propiasSalidas = indiv.filter(p => (p.nombreEdificio ?? '').toLowerCase().includes(e.config.projectName.split(' ')[0].toLowerCase()))
+
       return `
     <div style="margin-bottom:32px">
-      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:20px">Lectura de las salidas</div>
+      <!-- Resumen: individuales vs retiros -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">
+        <div style="padding:24px;border:1px solid var(--caramelo);border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-family:'Figtree',sans-serif;font-size:42px;font-weight:500;color:var(--carbon)">${r.totalIndividuales}</div>
+          <div style="font-size:14px;color:var(--piedra);margin-top:4px">Salidas individuales</div>
+        </div>
+        <div style="padding:24px;border:1px solid var(--arena);border-radius:14px;text-align:center;background:var(--white)">
+          <div style="font-family:'Figtree',sans-serif;font-size:42px;font-weight:500;color:var(--piedra)">${r.totalBatch}</div>
+          <div style="font-size:14px;color:var(--piedra);margin-top:4px">Retiros de proyecto (${batches.length} evento${batches.length !== 1 ? 's' : ''})</div>
+        </div>
+      </div>
 
-      <!-- Row 1: KPI cards -->
+      ${batches.length > 0 ? `
+      <!-- Retiros batch -->
+      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--piedra);margin-bottom:12px">Retiros de proyecto</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:28px">
+        ${batches.map(b => `
+        <div style="padding:16px;border:1px solid var(--arena);border-radius:14px;background:var(--white);border-left:3px solid var(--arena)">
+          <div style="font-size:15px;font-weight:600;color:var(--carbon)">${b.proyecto}</div>
+          <div style="font-size:28px;font-weight:500;font-family:'Figtree',sans-serif;color:var(--piedra);margin:4px 0">${b.count} uds</div>
+          <div style="font-size:13px;color:var(--piedra)">${b.dorms} &middot; ${b.fecha}</div>
+          ${b.broker ? `<div style="font-size:12px;color:var(--piedra);margin-top:4px">Broker: ${b.broker}</div>` : ''}
+          <div style="font-size:11px;color:var(--piedra);margin-top:6px;font-style:italic">Mismo proyecto, mismo dia — retiro de listings, no ventas individuales</div>
+        </div>`).join('')}
+      </div>` : ''}
+
+      <!-- Lectura de salidas individuales -->
+      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:20px">Salidas individuales</div>
+
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
         <div style="padding:20px;border:1px solid var(--arena);border-radius:14px;text-align:center;background:var(--white)">
           <div style="font-family:'Figtree',sans-serif;font-size:32px;font-weight:500;color:var(--carbon)">${fmt(medianaM2Salidas)}</div>
@@ -373,7 +396,6 @@ export function renderRotacion(e: EstudioCompleto): string {
       </div>
 
       ${compCards.length > 0 ? `
-      <!-- Row 2: Competidores con salidas -->
       <div style="font-size:13px;font-weight:500;color:var(--piedra);margin-bottom:12px;letter-spacing:0.5px">COMPETIDORES CON SALIDAS</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px">
         ${compCards.map(c => `
@@ -385,37 +407,38 @@ export function renderRotacion(e: EstudioCompleto): string {
       </div>` : ''}
 
       ${propiasSalidas.length > 0 ? `
-      <!-- Row 3: Alerta proyecto propio -->
       <div style="padding:16px 20px;border:2px solid var(--caramelo);border-radius:14px;background:rgba(58,106,72,0.05);display:flex;align-items:flex-start;gap:16px;margin-bottom:24px">
         <div style="font-size:24px;line-height:1">!</div>
         <div>
           <div style="font-size:14px;font-weight:600;color:var(--caramelo);margin-bottom:6px">${propiasSalidas.length} salida(s) de ${e.config.projectName}</div>
-          ${propiasSalidas.map(p => `<div style="font-size:14px;color:var(--carbon)">${dormLabel(p.dorms)} &middot; ${p.areaM2}m\u00B2 &middot; ${fmt(p.precioM2)}/m\u00B2 &middot; ${p.fechaSalida}</div>`).join('')}
+          ${propiasSalidas.map(p => `<div style="font-size:14px;color:var(--carbon)">#${p.id} &middot; ${dormLabel(p.dorms)} &middot; ${p.areaM2}m\u00B2 &middot; ${fmt(p.precioM2)}/m\u00B2 &middot; ${p.fechaSalida}${p.broker ? ` &middot; ${p.broker}` : ''}</div>`).join('')}
           <div style="font-size:13px;color:var(--piedra);margin-top:8px">Verificar si fue venta real o listing retirado/expirado</div>
         </div>
       </div>` : ''}
 
       <div style="font-size:12px;color:var(--piedra);padding-top:12px;border-top:1px solid var(--arena)">
-        Salidas = listings que dejaron de aparecer en portales. Puede ser venta, retiro o expiracion. Datos indicativos.
+        Salidas individuales = listings que dejaron de aparecer uno a uno. Retiros de proyecto = 2+ listings del mismo edificio el mismo dia (broker retiró cartera). Datos indicativos.
       </div>
     </div>
+
+    <!-- Cards tipología (solo individuales) -->
     <div class="yield-grid" style="margin-bottom:32px">
       ${sorted.map(([d, count]) => {
-        const pct = Math.round((count / total) * 100)
+        const pct = r.totalIndividuales > 0 ? Math.round((count / r.totalIndividuales) * 100) : 0
         return `<div class="yield-card${pct >= 40 ? ' attractive' : ''}" style="cursor:pointer" onclick="filterRotacion(${d})">
         <div class="yield-tipo">${dormLabel(d)}</div>
         <div class="yield-value${pct >= 40 ? ' high' : ' low'}">${count}</div>
-        <div class="yield-rent">${pct}% de las salidas</div>
+        <div class="yield-rent">${pct}% de las salidas individuales</div>
       </div>`
       }).join('')}
     </div>
     <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
-      <button class="rot-pill active" onclick="filterRotacion('all')" data-rotfilter="all">Todas <span class="rot-pill-count">${total}</span></button>
+      <button class="rot-pill active" onclick="filterRotacion('all')" data-rotfilter="all">Todas <span class="rot-pill-count">${r.totalIndividuales}</span></button>
       ${dormTypes.map(d => `<button class="rot-pill" onclick="filterRotacion(${d})" data-rotfilter="${d}">${dormLabel(d)} <span class="rot-pill-count">${byDorm.get(d)}</span></button>`).join('')}
     </div>
     <div id="rotacionToggle" style="margin-bottom:16px">
-      <button onclick="toggleRotacionTable()" style="font-size:14px;color:var(--caramelo);cursor:pointer;border:1px solid var(--caramelo);background:none;padding:8px 20px;font-family:'DM Sans',sans-serif;font-weight:500;transition:background 0.2s" onmouseover="this.style.background='var(--caramelo-10)'" onmouseout="this.style.background='none'">
-        Ver detalle de las ${total} salidas
+      <button onclick="toggleRotacionTable()" style="font-size:14px;color:var(--caramelo);cursor:pointer;border:1px solid var(--caramelo);background:none;padding:8px 20px;font-family:'DM Sans',sans-serif;font-weight:500;transition:background 0.2s;border-radius:100px" onmouseover="this.style.background='var(--caramelo-10)'" onmouseout="this.style.background='none'">
+        Ver detalle de las ${r.totalIndividuales} salidas individuales
       </button>
     </div>
     <div id="rotacionTable" style="display:none">
@@ -423,7 +446,7 @@ export function renderRotacion(e: EstudioCompleto): string {
         <table class="data" id="rotacionDataTable">
           <thead><tr><th>Proyecto</th><th>Dorms</th><th>Area</th><th>$/m²</th><th>Fecha salida</th></tr></thead>
           <tbody>
-            ${sortedProps.map((p: PropRotada) => `<tr data-dorms="${p.dorms}">
+            ${indiv.map((p: PropRotada) => `<tr data-dorms="${p.dorms}">
               <td class="strong">${p.nombreEdificio ?? 'Sin nombre'}</td>
               <td>${dormLabel(p.dorms)}</td><td>${p.areaM2}m²</td>
               <td>${fmt(p.precioM2)}</td><td>${p.fechaSalida}</td>
@@ -441,7 +464,7 @@ export function renderRotacion(e: EstudioCompleto): string {
         btn.textContent = 'Ocultar detalle';
       } else {
         t.style.display = 'none';
-        btn.textContent = 'Ver detalle de las ${total} salidas';
+        btn.textContent = 'Ver detalle de las ${r.totalIndividuales} salidas individuales';
       }
     }
     function filterRotacion(dorms) {

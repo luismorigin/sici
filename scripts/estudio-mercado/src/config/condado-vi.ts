@@ -17,8 +17,8 @@ export const condadoVI: ClientConfig = {
   // Remax (11): HTTP 200 = siguen activas. C21 (3): HTTP 200/301 = siguen activas.
   // Ver docs/bugs/BUG_FALSOS_POSITIVOS_REMAX.md
   falsosPositivosIds: [
-    // Remax
-    53, 56, 68, 905, 921, 980, 1160, 1183, 1307, 1309, 1310,
+    // Remax (HTTP 200 = siguen activas)
+    53, 56, 68, 423, 905, 921, 980, 1160, 1183, 1307, 1309, 1310,
     // C21
     617, 907, 496,
   ],

@@ -189,7 +189,7 @@ export async function queryRotacion(zona: string, dias: number): Promise<any[]> 
 
   const { data, error } = await sb
     .from('propiedades_v2')
-    .select('id, nombre_edificio, dormitorios, area_total_m2, precio_usd, tipo_cambio_detectado, tipo_propiedad_original, es_multiproyecto, primera_ausencia_at, fecha_publicacion, fecha_creacion, zona')
+    .select('id, nombre_edificio, dormitorios, area_total_m2, precio_usd, tipo_cambio_detectado, tipo_propiedad_original, es_multiproyecto, primera_ausencia_at, fecha_publicacion, fecha_creacion, zona, datos_json_enrichment')
     .eq('tipo_operacion', 'venta')
     .eq('status', 'inactivo_confirmed')
     .eq('zona', zona)
