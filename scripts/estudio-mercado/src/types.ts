@@ -145,6 +145,7 @@ export interface SimulacionEscenario {
 export interface SimulacionPrecioResult {
   escenarios: SimulacionEscenario[]
   medianasReferencia: Record<number, number> // dorms -> mediana ticket zona
+  medianasM2Referencia: Record<number, number> // dorms -> mediana $/m² zona
 }
 
 export interface ListingVisible {

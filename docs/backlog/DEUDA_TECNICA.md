@@ -171,3 +171,9 @@ GROUP BY 1 ORDER BY 1;
 **Validación cualitativa:** Contactar a 1-2 brokers top y preguntarles si ahora los mensajes llegan con preguntas. Comparar con el 0/7 pre-cambio.
 
 **Prioridad: MEDIA.** Esperar 1 semana de datos antes de agregar más tracking.
+
+## Filtro por nombre de edificio en feeds (14 Abr 2026)
+
+Agregar filtro por nombre de edificio/proyecto en `/ventas` y `/alquileres`. Hoy solo se filtra por zona, dormitorios y precio. Poder buscar "Atrium" o "Condado" y ver solo las unidades de ese proyecto. Útil para seguimiento de competidores y para compradores que ya saben qué edificio les interesa.
+
+**Prioridad: BAJA.** Nice to have, no bloquea nada.

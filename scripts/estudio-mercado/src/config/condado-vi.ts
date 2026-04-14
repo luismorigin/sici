@@ -10,9 +10,9 @@ export const condadoVI: ClientConfig = {
   tcDetectado: 'paralelo',
   fecha: 'Abril 2026',
   fechaCorte: '13 de abril de 2026',
-  // Escenarios solicitados por Adolfo: $1,550 y $1,650 a diferentes TCs
-  precioEscenarios: [1550, 1650],
-  tcEscenarios: [6.96, 9.28],
+  // Escenario actual, propuesto por Adolfo, alternativa MKT
+  precioEscenarios: [1650, 1550, 1600],
+  tcEscenarios: [9.28],
   // Falsos positivos del verificador confirmados por HTTP check 13 Abr 2026
   // Remax (11): HTTP 200 = siguen activas. C21 (3): HTTP 200/301 = siguen activas.
   // Ver docs/bugs/BUG_FALSOS_POSITIVOS_REMAX.md

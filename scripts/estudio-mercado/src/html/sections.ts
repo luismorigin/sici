@@ -293,6 +293,89 @@ export function renderDiferenciador(e: EstudioCompleto): string {
         </div>
       </div>
     </div>
+
+    <!-- Comparativa directa vs Atrium -->
+    <div style="margin-top:48px;padding-top:40px;border-top:2px solid var(--arena)">
+      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:8px">Comparativa directa</div>
+      <div style="font-size:28px;font-weight:500;font-family:'Figtree',sans-serif;color:var(--carbon);margin-bottom:8px">${e.config.projectName} vs Atrium</div>
+      <div style="font-size:15px;color:var(--piedra);margin-bottom:28px">Atrium es el competidor directo mas relevante: misma zona, entrega inmediata, tipologias similares. 7 unidades activas, 171+ dias en mercado.</div>
+
+      <!-- Tabla comparativa por tipología -->
+      <div class="table-wrap" style="margin-bottom:28px">
+        <table class="data" style="text-align:center">
+          <thead><tr><th style="text-align:left">Tipologia</th><th colspan="2">${e.config.projectName.split(' ')[0]}</th><th colspan="2">Atrium</th><th>Diferencia</th></tr></thead>
+          <thead><tr><th style="text-align:left"></th><th>m\u00B2</th><th>$/m\u00B2</th><th>m\u00B2</th><th>$/m\u00B2</th><th>$/m\u00B2</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="text-align:left" class="strong">1D</td>
+              <td>62.1</td><td style="color:var(--caramelo)">$2,171</td>
+              <td>45.7</td><td>$2,152</td>
+              <td style="font-weight:600;color:var(--caramelo)">+1% &middot; comparable</td>
+            </tr>
+            <tr>
+              <td style="text-align:left" class="strong">2D</td>
+              <td>86.7</td><td style="color:var(--carbon)">$2,200</td>
+              <td>84.0</td><td>$1,845</td>
+              <td style="font-weight:600;color:var(--piedra)">+19% &middot; Condado mas caro</td>
+            </tr>
+            <tr>
+              <td style="text-align:left" class="strong">3D</td>
+              <td>144.3</td><td style="color:var(--carbon)">$2,200</td>
+              <td colspan="2" style="color:var(--piedra)">No tiene</td>
+              <td style="color:var(--piedra)">Sin comparacion</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Insights -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+        <div style="padding:20px;border-radius:14px;background:var(--marfil)">
+          <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:8px">1 Dormitorio</div>
+          <div style="font-size:14px;color:var(--piedra);line-height:1.7">
+            El $/m\u00B2 es practicamente igual (+1%). La diferencia de ticket ($135K vs $98K) es 100% por tamano: Condado tiene <strong>36% mas metros</strong> (62 vs 46m\u00B2). Comercialmente parece mas caro, tecnicamente no lo es.
+          </div>
+        </div>
+        <div style="padding:20px;border-radius:14px;background:var(--marfil)">
+          <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:8px">2 Dormitorios</div>
+          <div style="font-size:14px;color:var(--piedra);line-height:1.7">
+            Tamano similar (87 vs 84m\u00B2) pero Condado cobra <strong>19% mas por m\u00B2</strong> ($2,200 vs $1,845). La diferencia se justifica por equipamiento (lavavajillas, lavadora, secadora) que Atrium no incluye.
+          </div>
+        </div>
+      </div>
+
+      <!-- Equipamiento lado a lado -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--arena);border-radius:14px;overflow:hidden;margin-bottom:24px">
+        <div style="padding:20px;background:var(--marfil)">
+          <div style="font-size:14px;font-weight:600;color:var(--caramelo);margin-bottom:12px">${e.config.projectName.split(' ')[0]} — Equip. 9/9</div>
+          <div style="font-size:13px;color:var(--piedra);line-height:2">
+            A/C &middot; Cocina &middot; Horno &middot; <strong style="color:var(--carbon)">Heladera</strong> &middot; <strong style="color:var(--carbon)">Lavadora</strong> &middot; <strong style="color:var(--carbon)">Secadora</strong> &middot; <strong style="color:var(--carbon)">Lavavajillas</strong> &middot; Calefon &middot; Closets
+          </div>
+        </div>
+        <div style="padding:20px">
+          <div style="font-size:14px;font-weight:600;color:var(--piedra);margin-bottom:12px">Atrium — Equip. 6/9</div>
+          <div style="font-size:13px;color:var(--piedra);line-height:2">
+            A/C &middot; Cocina &middot; Horno &middot; <span style="color:var(--arena)">~~Heladera~~</span> &middot; <span style="color:var(--arena)">~~Lavadora~~</span> &middot; <span style="color:var(--arena)">~~Secadora~~</span> &middot; <span style="color:var(--arena)">~~Lavavajillas~~</span> &middot; Calefon &middot; Closets
+          </div>
+        </div>
+      </div>
+
+      <!-- Amenidades lado a lado -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--arena);border-radius:14px;overflow:hidden">
+        <div style="padding:20px;background:var(--marfil)">
+          <div style="font-size:14px;font-weight:600;color:var(--piedra);margin-bottom:12px">${e.config.projectName.split(' ')[0]} — 7 amenidades</div>
+          <div style="font-size:13px;color:var(--piedra);line-height:2">
+            Piscina &middot; Gimnasio &middot; Seguridad 24/7 &middot; Churrasquera &middot; Salon &middot; Terraza &middot; Ascensor
+          </div>
+        </div>
+        <div style="padding:20px">
+          <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:12px">Atrium — 11 amenidades</div>
+          <div style="font-size:13px;color:var(--piedra);line-height:2">
+            Todo lo anterior + <strong style="color:var(--carbon)">Sauna/Jacuzzi</strong> &middot; <strong style="color:var(--carbon)">Pet Friendly</strong> &middot; <strong style="color:var(--carbon)">Co-working</strong> &middot; <strong style="color:var(--carbon)">Espacio Zen</strong>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>`
 }
@@ -795,51 +878,214 @@ export function renderSimulacion(e: EstudioCompleto): string {
   const refs = e.simulacion.medianasReferencia
   const dormTypes = [...new Set(e.config.inventory.map(u => u.dorms))].sort()
 
+  const actual = sims.find(s => s.precioM2 === e.config.precioM2Billete)
+  // Separar propuesto ($1,550) y alternativa MKT ($1,600)
+  const otherSims = sims.filter(s => s.precioM2 !== e.config.precioM2Billete)
+  const propuesto = otherSims.find(s => s.precioM2 === Math.min(...otherSims.map(o => o.precioM2)))
+  const mktSim = otherSims.find(s => s !== propuesto)
+  const diffPrecioM2 = actual && propuesto ? actual.precioM2 - propuesto.precioM2 : 0
+
+  // Labels
+  const getLabel = (s: SimulacionEscenario) => {
+    if (s.precioM2 === e.config.precioM2Billete) return 'Escenario actual'
+    if (s === mktSim) return 'Alternativa: reducir + destinar a MKT'
+    return 'Escenario propuesto'
+  }
+
+  // Solo mostrar actual y propuesto en el loop principal, MKT va aparte
+  const mainSims = sims.filter(s => s !== mktSim)
+
   return `
 <section class="section bg-marfil" id="simulacion">
   <div class="section-inner reveal">
     <div class="badge">Simulacion</div>
     <div class="section-title">Sensibilidad de precio</div>
     <div class="section-subtitle">
-      Como cambia la posicion competitiva de ${e.config.projectName} con diferentes precios por m² y tipos de cambio.
-      Referencia: medianas de ${e.config.zona} por tipologia.
+      Tres escenarios para ${e.config.projectName}: mantener $${e.config.precioM2Billete}/m\u00B2,
+      ajustar a $${propuesto?.precioM2.toLocaleString() ?? '—'}/m\u00B2,
+      o reducir a $${mktSim?.precioM2.toLocaleString() ?? '—'}/m\u00B2 y destinar la diferencia a marketing.
+      TC paralelo: Bs ${sims[0].tc.toFixed(2)}.
     </div>
-    <div class="table-wrap" style="margin-bottom:24px">
-      <table class="data">
-        <thead><tr><th>Tipologia</th><th>Mediana zona</th></tr></thead>
-        <tbody>
-          ${dormTypes.map(d => `<tr><td class="strong">${dormLabel(d)}</td><td>${fmt(refs[d] ?? 0)}</td></tr>`).join('')}
-        </tbody>
-      </table>
+
+    <!-- Referencia mercado -->
+    <div style="font-size:13px;font-weight:500;color:var(--piedra);margin-bottom:12px;letter-spacing:0.5px">MEDIANAS DE REFERENCIA EN ${e.config.zona.toUpperCase()}</div>
+    <div style="display:flex;gap:16px;margin-bottom:32px;flex-wrap:wrap">
+      ${dormTypes.map(d => `<div style="padding:12px 20px;border-radius:14px;background:var(--white);font-size:14px">
+        <strong>${dormLabel(d)}</strong>: ${fmt(e.simulacion.medianasM2Referencia[d] ?? 0)}/m\u00B2 &middot; ${fmt(refs[d] ?? 0)} ticket
+      </div>`).join('')}
     </div>
-    ${sims.map((s: SimulacionEscenario) => `
-    <div style="margin-bottom:48px">
-      <h3 style="font-family:'Figtree',sans-serif;font-size:22px;font-weight:500;margin-bottom:16px">
-        Escenario: $${s.precioM2.toLocaleString()}/m² @ TC ${s.tc.toFixed(2)}
-      </h3>
-      <div class="kpi-grid" style="margin-bottom:24px">
-        <div class="kpi">
-          <div class="kpi-value" style="font-size:36px">${fmt(s.promedioTicket)}</div>
-          <div class="kpi-label">Ticket promedio norm.</div>
+
+    ${mainSims.map((s: SimulacionEscenario) => {
+      const label = getLabel(s)
+      const isActual = s.precioM2 === e.config.precioM2Billete
+      return `
+    <div style="margin-bottom:40px;padding:28px;border-radius:14px;background:var(--white);border:${isActual ? '2px solid var(--caramelo)' : '1px solid var(--arena)'}">
+      ${(() => {
+        const TC_O = 6.96
+        const normM2 = e.config.tcDetectado === 'paralelo' ? Math.round(s.precioM2 * s.tc / TC_O) : s.precioM2
+        return `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+        <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:${isActual ? 'var(--caramelo)' : 'var(--piedra)'}">${label}</div>
+        <div style="font-family:'Figtree',sans-serif;font-size:24px;font-weight:500;color:var(--carbon)">$${s.precioM2.toLocaleString()}/m\u00B2 billete</div>
+        <div style="font-size:15px;color:var(--piedra)">(${fmt(normM2)}/m\u00B2 normalizado)</div>
+      </div>`
+      })()}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div style="padding:16px;border-radius:14px;background:var(--marfil);text-align:center">
+          <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">${fmt(s.promedioTicket)}</div>
+          <div style="font-size:13px;color:var(--piedra)">Ticket promedio normalizado</div>
         </div>
-        <div class="kpi">
-          <div class="kpi-value${Math.abs(s.promedioDiff) <= 10 ? ' accent' : ''}" style="font-size:36px">${fmtPct(s.promedioDiff)}</div>
-          <div class="kpi-label">vs mediana zona</div>
+        <div style="padding:16px;border-radius:14px;background:var(--marfil);text-align:center">
+          <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:${Math.abs(s.promedioDiff) <= 10 ? 'var(--caramelo)' : 'var(--carbon)'}">${fmtPct(s.promedioDiff)}</div>
+          <div style="font-size:13px;color:var(--piedra)">vs mediana zona</div>
         </div>
       </div>
-      <div class="table-wrap">
-        <table class="data">
-          <thead><tr><th>Dpto</th><th>Dorms</th><th>m²</th><th>Ticket USD</th><th>Normalizado</th><th>vs Mediana</th><th>Posicion</th></tr></thead>
-          <tbody>
-            ${s.byUnit.map(u => `<tr>
-              <td class="strong">${u.dpto}</td><td>${dormLabel(u.dorms)}</td><td>${u.m2}</td>
-              <td>${fmt(u.ticketUsd)}</td><td>${fmt(u.ticketNorm)}</td>
-              <td>${fmtPct(u.diffVsMediana)}</td><td>${categoryBadge(u.categoria)}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
+      <div style="margin-top:16px">
+        <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.textContent=this.nextElementSibling.style.display==='none'?'Ver detalle por unidad':'Ocultar detalle'" style="font-size:14px;color:var(--caramelo);cursor:pointer;border:1px solid var(--caramelo);background:none;padding:8px 20px;font-family:'DM Sans',sans-serif;font-weight:500;border-radius:100px;transition:background 0.2s" onmouseover="this.style.background='var(--caramelo-10)'" onmouseout="this.style.background='none'">Ver detalle por unidad</button>
+        <div style="display:none;margin-top:16px">
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>Dpto</th><th>Dorms</th><th>m\u00B2</th><th>Ticket billete</th><th>Normalizado</th><th>$/m\u00B2 vs med.</th><th>Posicion</th></tr></thead>
+              <tbody>
+                ${s.byUnit.map(u => `<tr>
+                  <td class="strong">${u.dpto}</td><td>${dormLabel(u.dorms)}</td><td>${u.m2}</td>
+                  <td>${fmt(u.ticketUsd)}</td><td>${fmt(u.ticketNorm)}</td>
+                  <td>${fmtPct(u.diffVsMediana)}</td><td>${categoryBadge(u.categoria)}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>`).join('')}
+    </div>`}).join('')}
+
+    ${actual && propuesto ? `
+    <!-- Impacto en dinero -->
+    <div style="padding:28px;border-radius:14px;background:var(--white);border:1px solid var(--arena)">
+      <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo);margin-bottom:20px">Impacto del ajuste</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px">
+        <div style="padding:16px;border-radius:14px;background:var(--marfil);text-align:center">
+          <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">-$${diffPrecioM2}/m\u00B2</div>
+          <div style="font-size:13px;color:var(--piedra)">Reduccion por m\u00B2</div>
+        </div>
+        <div style="padding:16px;border-radius:14px;background:var(--marfil);text-align:center">
+          <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">${fmt(Math.round(actual.promedioTicket - propuesto.promedioTicket))}</div>
+          <div style="font-size:13px;color:var(--piedra)">Menos por unidad (prom.)</div>
+        </div>
+        <div style="padding:16px;border-radius:14px;background:var(--marfil);text-align:center">
+          <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">${fmt(Math.round((actual.promedioTicket - propuesto.promedioTicket) * e.config.inventory.length))}</div>
+          <div style="font-size:13px;color:var(--piedra)">Total ${e.config.inventory.length} unidades</div>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.textContent=this.nextElementSibling.style.display==='none'?'Ver detalle por unidad':'Ocultar detalle'" style="font-size:14px;color:var(--caramelo);cursor:pointer;border:1px solid var(--caramelo);background:none;padding:8px 20px;font-family:'DM Sans',sans-serif;font-weight:500;border-radius:100px;transition:background 0.2s" onmouseover="this.style.background='var(--caramelo-10)'" onmouseout="this.style.background='none'">Ver detalle por unidad</button>
+        <div style="display:none;margin-top:16px">
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>Dpto</th><th>Dorms</th><th>m\u00B2</th><th>Actual</th><th>Propuesto</th><th>Diferencia</th></tr></thead>
+              <tbody>
+                ${actual.byUnit.map((u, i) => {
+                  const prop = propuesto.byUnit[i]
+                  return `<tr>
+                  <td class="strong">${u.dpto}</td><td>${dormLabel(u.dorms)}</td><td>${u.m2}</td>
+                  <td>${fmt(u.ticketUsd)}</td><td>${fmt(prop.ticketUsd)}</td>
+                  <td style="color:var(--piedra)">-${fmt(u.ticketUsd - prop.ticketUsd)}</td>
+                </tr>`}).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:14px;color:var(--piedra);margin-top:20px;line-height:1.6;padding-top:16px;border-top:1px solid var(--arena)">
+        <strong>Consideraciones:</strong> Un ajuste de precio puede mejorar la velocidad de colocacion al posicionar
+        las unidades mas cerca o por debajo de la mediana del mercado. Sin embargo, no hay datos suficientes para
+        cuantificar el impacto en velocidad de venta — la rotacion observada no distingue entre ventas y retiros.
+        El analisis muestra unicamente el cambio en posicion competitiva y el impacto financiero directo.
+      </div>
+    </div>` : ''}
+
+    ${actual && mktSim ? `
+    <!-- Alternativa MKT -->
+    <div style="padding:28px;border-radius:14px;background:var(--white);border:2px solid var(--caramelo);margin-top:32px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <div style="font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--caramelo)">Alternativa: reducir + destinar a marketing</div>
+      </div>
+      ${(() => {
+        const TC_O = 6.96
+        const mktNormM2 = e.config.tcDetectado === 'paralelo' ? Math.round(mktSim.precioM2 * mktSim.tc / TC_O) : mktSim.precioM2
+        return `<div style="font-size:15px;color:var(--piedra);margin-bottom:24px;line-height:1.6">
+        En vez de bajar de $${actual.precioM2.toLocaleString()} a $${propuesto?.precioM2.toLocaleString()}/m\u00B2 (ceder $${diffPrecioM2}/m\u00B2),
+        reducir solo a <strong style="color:var(--carbon)">$${mktSim.precioM2.toLocaleString()}/m\u00B2 billete (${fmt(mktNormM2)}/m\u00B2 normalizado)</strong>
+        y destinar los $${actual.precioM2 - mktSim.precioM2}/m\u00B2 de diferencia a marketing y visibilidad.
+      </div>`
+      })()}
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px">
+        <div style="padding:16px;border-radius:14px;background:var(--marfil);text-align:center">
+          <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--caramelo)">$${actual.precioM2 - mktSim.precioM2}/m\u00B2</div>
+          <div style="font-size:13px;color:var(--piedra)">Destinado a MKT</div>
+        </div>
+        <div style="padding:16px;border-radius:14px;background:var(--marfil);text-align:center">
+          ${(() => {
+            const avgM2 = Math.round(e.config.inventory.reduce((s, u) => s + u.m2, 0) / e.config.inventory.length)
+            const mktPorUnidad = (actual.precioM2 - mktSim.precioM2) * avgM2
+            return `<div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">${fmt(mktPorUnidad)}</div>
+          <div style="font-size:13px;color:var(--piedra)">MKT por unidad (prom. ${avgM2}m\u00B2)</div>`
+          })()}
+        </div>
+        <div style="padding:16px;border-radius:14px;background:var(--marfil);text-align:center">
+          ${(() => {
+            const totalMkt = e.config.inventory.reduce((s, u) => s + (actual.precioM2 - mktSim.precioM2) * u.m2, 0)
+            return `<div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">${fmt(Math.round(totalMkt))}</div>
+          <div style="font-size:13px;color:var(--piedra)">Total MKT (${e.config.inventory.length} uds)</div>`
+          })()}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div style="padding:16px;border-radius:14px;background:var(--marfil);text-align:center">
+          <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:var(--carbon)">${fmt(mktSim.promedioTicket)}</div>
+          <div style="font-size:13px;color:var(--piedra)">Ticket promedio norm.</div>
+        </div>
+        <div style="padding:16px;border-radius:14px;background:var(--marfil);text-align:center">
+          <div style="font-family:'Figtree',sans-serif;font-size:28px;font-weight:500;color:${Math.abs(mktSim.promedioDiff) <= 10 ? 'var(--caramelo)' : 'var(--carbon)'}">${fmtPct(mktSim.promedioDiff)}</div>
+          <div style="font-size:13px;color:var(--piedra)">$/m\u00B2 vs mediana zona</div>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.textContent=this.nextElementSibling.style.display==='none'?'Ver detalle por unidad':'Ocultar detalle'" style="font-size:14px;color:var(--caramelo);cursor:pointer;border:1px solid var(--caramelo);background:none;padding:8px 20px;font-family:'DM Sans',sans-serif;font-weight:500;border-radius:100px;transition:background 0.2s" onmouseover="this.style.background='var(--caramelo-10)'" onmouseout="this.style.background='none'">Ver detalle por unidad</button>
+        <div style="display:none;margin-top:16px">
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>Dpto</th><th>Dorms</th><th>m\u00B2</th><th>Ticket billete</th><th>Normalizado</th><th>$/m\u00B2 vs med.</th><th>Posicion</th></tr></thead>
+              <tbody>
+                ${mktSim.byUnit.map(u => `<tr>
+                  <td class="strong">${u.dpto}</td><td>${dormLabel(u.dorms)}</td><td>${u.m2}</td>
+                  <td>${fmt(u.ticketUsd)}</td><td>${fmt(u.ticketNorm)}</td>
+                  <td>${fmtPct(u.diffVsMediana)}</td><td>${categoryBadge(u.categoria)}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:14px;color:var(--piedra);margin-top:20px;line-height:1.6;padding-top:16px;border-top:1px solid var(--arena)">
+        Este escenario mantiene una posicion competitiva similar al actual pero genera un presupuesto de marketing
+        con la diferencia de precio. Ese presupuesto puede destinarse a: fotos profesionales, landing web,
+        publicacion en portales adicionales, o material para brokers. El impacto en visibilidad es directo
+        — hoy ${e.visibilidad.gapPct}% del inventario es invisible en portales.
+      </div>
+    </div>` : ''}
+
+    <!-- Nota sobre comparación comercial vs técnica -->
+    <div style="padding:20px;border-radius:14px;background:var(--white);border-left:3px solid var(--caramelo);margin-top:32px">
+      <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:8px">Comparacion comercial vs tecnica</div>
+      <div style="font-size:14px;color:var(--piedra);line-height:1.7">
+        La posicion competitiva de arriba compara por <strong>$/m\u00B2</strong> — la forma tecnica correcta.
+        Pero en la practica, los compradores comparan <strong>tickets por tipologia</strong>: "cuanto cuesta un 1 dormitorio".
+        En esa comparacion, ${e.config.projectName} aparece mas caro porque sus unidades son mas grandes
+        que la mediana del mercado (especialmente el 1D con ${e.config.inventory.find(u => u.dorms === 1)?.m2 ?? '—'}m\u00B2
+        vs ~50m\u00B2 del mercado). El valor por m\u00B2 es comparable, pero el ticket total es mayor.
+        Comunicar el tamano como diferenciador es clave para que el comprador entienda por que paga mas.
+      </div>
+    </div>
   </div>
 </section>`
 }
@@ -848,36 +1094,52 @@ export function renderSimulacion(e: EstudioCompleto): string {
 export function renderRecomendaciones(e: EstudioCompleto): string {
   const recs: Array<{ period: string; cls: string; title: string; body: string }> = []
 
-  // Dynamic recommendations based on data
-  if (e.visibilidad.gapPct > 50) {
-    recs.push({
-      period: 'Inmediato', cls: 'urgente',
-      title: 'Publicar inventario completo en portales',
-      body: `${e.visibilidad.invisibles} de ${e.visibilidad.totalInventario} unidades son invisibles. Los ${dormLabel(e.config.inventory.find(u => !Object.keys(e.visibilidad.visiblesPorDorms).map(Number).includes(u.dorms))?.dorms ?? 2)} no aparecen en ningun portal. Esta es la accion de mayor impacto inmediato.`,
-    })
-  }
+  // INMEDIATO
+  recs.push({
+    period: 'Inmediato', cls: 'urgente',
+    title: 'Reuniones mensuales con brokers',
+    body: `Hoy ${e.visibilidad.visiblesEnPortal} listings visibles de ${e.visibilidad.totalInventario} unidades — los brokers publican una por exclusividad, lo cual es normal. Pero no hay retroalimentacion. Establecer reuniones mensuales para: revisar que se muestra del edificio, como se promociona, reporte de leads recibidos y visitas realizadas. Sin esa informacion no se puede ajustar la estrategia.`,
+  })
 
-  if (e.posicion.categoriaGlobal === 'sobre_promedio' || e.posicion.categoriaGlobal === 'premium') {
-    recs.push({
-      period: 'Corto plazo', cls: 'corto',
-      title: 'Diferenciarse por equipamiento y entrega',
-      body: `El precio esta ${fmtPct(e.posicion.diffPctGlobal)} sobre la mediana. Justificar con: entrega inmediata (vs preventa de competidores), equipamiento completo, y condiciones de financiamiento.`,
-    })
-  }
+  recs.push({
+    period: 'Inmediato', cls: 'urgente',
+    title: 'Comunicar el tamano del 1D como diferenciador',
+    body: `Los 1D de ${e.config.projectName} tienen ${e.config.inventory.find(u => u.dorms === 1)?.m2 ?? 62}m\u00B2 — 25% mas grande que la mediana del mercado (50m\u00B2). Los listings actuales no mencionan esto. El comprador ve "1 dormitorio" y compara ticket contra dptos mas chicos. Incluir esto en el material que se entrega a los brokers.`,
+  })
+
+  // CORTO PLAZO
+  recs.push({
+    period: 'Corto plazo', cls: 'corto',
+    title: 'Fotos profesionales de departamentos equipados',
+    body: `${e.config.projectName} entrega con linea blanca completa (9/9 equipamiento) pero los listings actuales no lo muestran. Una sesion de fotos profesional de un dpto real equipado es el material mas potente para brokers, landing y redes.`,
+  })
+
+  recs.push({
+    period: 'Corto plazo', cls: 'corto',
+    title: 'Evaluar presupuesto de marketing con escenario $1,600/m\u00B2',
+    body: `Reducir $50/m\u00B2 genera ~$64K para una campana de 14+ meses: Meta Ads, contenido redes, UGC video, landing web. El impacto en visibilidad es directo — hoy ${e.visibilidad.gapPct}% del inventario no existe para el comprador online. Ver seccion Simulacion.`,
+  })
 
   const yieldAmob2d = e.yield.byDorms.find(d => d.dorms === 2)
   if (yieldAmob2d?.premiumAmobladoPct && yieldAmob2d.premiumAmobladoPct > 20) {
     recs.push({
       period: 'Corto plazo', cls: 'corto',
-      title: 'Comunicar potencial de renta al comprador-inversor',
-      body: `El premium por amoblar un 2D es de ${fmtPct(yieldAmob2d.premiumAmobladoPct)}. El equipamiento de linea blanca de ${e.config.projectName} facilita capturar ese diferencial.`,
+      title: 'Posicionar los 2D para comprador-inversor',
+      body: `En el mercado de alquiler de la zona, los 2D amoblados tienen una renta ${fmtPct(yieldAmob2d.premiumAmobladoPct)} mayor que los sin amoblar. La linea blanca incluida en ${e.config.projectName} reduce la inversion necesaria para amoblar. Esto es un argumento comercial para el comprador-inversor, aunque el retorno real depende de vacancias, costos de amoblar y gastos que no se incluyen en este estudio.`,
     })
   }
 
+  // MEDIANO PLAZO
   recs.push({
     period: 'Mediano plazo', cls: 'mediano',
-    title: 'Monitorear competidores estancados',
-    body: `Proyectos con >150 dias pueden ajustar precios. Seguir de cerca para detectar oportunidades de reposicionamiento.`,
+    title: 'Mejorar amenidades del edificio',
+    body: `${e.config.projectName} tiene 7 amenidades vs 11-15 de competidores premium. Evaluar agregar: pet friendly (sin costo estructural, solo reglamento), co-working (amueblar un espacio existente), o mejoras en areas comunes. Cada amenidad agregada acerca el producto al segmento premium sin cambiar precio.`,
+  })
+
+  recs.push({
+    period: 'Mediano plazo', cls: 'mediano',
+    title: 'Explorar pet friendly como diferenciador rapido',
+    body: `Varios competidores (Atrium, HH Once, Spazios, Luxe, Sky Tower) ya son pet friendly. Es una politica de reglamento, no requiere inversion. Permite acceder a un segmento de compradores que filtra por este criterio.`,
   })
 
   return `

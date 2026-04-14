@@ -17,12 +17,14 @@ export async function simulacionPrecio(
 ): Promise<SimulacionPrecioResult> {
   const rows = await queryVenta(config.zona)
 
-  // Medianas de referencia por dorms
+  // Medianas de referencia por dorms (ticket y $/m²)
   const dormTypes = [...new Set(config.inventory.map(u => u.dorms))]
   const medianasReferencia: Record<number, number> = {}
+  const medianasM2Referencia: Record<number, number> = {}
   for (const d of dormTypes) {
     const dormsRows = rows.filter(r => r.dormitorios === d)
     medianasReferencia[d] = Math.round(median(dormsRows.map(r => r.precio_norm)))
+    medianasM2Referencia[d] = Math.round(median(dormsRows.map(r => r.precio_m2)))
   }
 
   const precioEscenarios = config.precioEscenarios ?? [config.precioM2Billete]
@@ -34,13 +36,16 @@ export async function simulacionPrecio(
     for (const tcVal of tcEscenarios) {
       const byUnit = config.inventory.map(u => {
         const ticketUsd = Math.round(u.m2 * precioM2)
-        // Normalize: if paralelo TC, the buyer pays in billete but the market comparison uses norm
         const ticketNorm = config.tcDetectado === 'paralelo'
           ? Math.round(ticketUsd * tcVal / TC_OFICIAL)
           : ticketUsd
-        const medianaRef = medianasReferencia[u.dorms] ?? 0
-        const diffVsMediana = medianaRef > 0
-          ? Math.round(((ticketNorm - medianaRef) / medianaRef) * 1000) / 10
+        // Comparar por $/m² (no ticket) para que el tamaño no distorsione
+        const precioM2Norm = config.tcDetectado === 'paralelo'
+          ? Math.round(precioM2 * tcVal / TC_OFICIAL)
+          : precioM2
+        const medianaM2Ref = medianasM2Referencia[u.dorms] ?? 0
+        const diffVsMediana = medianaM2Ref > 0
+          ? Math.round(((precioM2Norm - medianaM2Ref) / medianaM2Ref) * 1000) / 10
           : 0
         return {
           dpto: u.dpto,
@@ -66,5 +71,5 @@ export async function simulacionPrecio(
     }
   }
 
-  return { escenarios, medianasReferencia }
+  return { escenarios, medianasReferencia, medianasM2Referencia }
 }
