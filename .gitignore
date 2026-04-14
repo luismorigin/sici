@@ -30,3 +30,18 @@ scripts/llm-enrichment/output/
 
 # Logs
 *.log
+
+# Binarios pesados (docs van en Google Drive)
+*.pdf
+*.pptx
+
+# Python cache
+__pycache__/
+
+# Test artifacts
+simon-mvp/test-results/
+
+# Lock files auxiliares (solo simon-mvp/package-lock.json importa)
+/package-lock.json
+skills-lock.json
+scripts/*/package-lock.json

@@ -321,7 +321,25 @@ Se redactó un mensaje combinando ambos temas (estudio + landing). Sin emojis ni
 
 ---
 
-## 10. DECISIÓN: HERRAMIENTAS REUTILIZABLES (Opción B)
+## 10. SIMULACIÓN DE PRECIO: $1,550/m² + TC BANCO CENTRAL
+
+Adolfo pidió incluir un análisis con precio de $1,550/m² (vs actual $1,650) aplicando el TC referencial del Banco Central.
+
+**Aclaración importante — hay 3 tipos de cambio distintos:**
+- **TC Oficial**: 6.96 — fijado por el gobierno, operaciones bancarias formales
+- **TC Paralelo (Binance)**: ~9.45 — el que SICI usa como referencia en `precio_normalizado()` porque refleja el mercado real
+- **TC Referencial del Banco Central**: valor distinto al oficial y al paralelo. Es el que Adolfo quiere usar. Hay que buscarlo al momento de hacer el estudio.
+
+**Análisis necesario:**
+1. Buscar TC referencial del Banco Central vigente
+2. Tabla de tickets por tipología × escenario ($1,650/$1,550 × TC paralelo/referencial)
+3. Impacto en posición competitiva de Condado vs mercado
+4. Impacto en yield para el inversionista
+5. Sección interactiva tipo slider doble (precio × TC) como evolución del slider TC del v1
+
+---
+
+## 11. DECISIÓN: HERRAMIENTAS REUTILIZABLES (Opción B)
 
 En vez de queries ad-hoc, construir un módulo TypeScript en `scripts/estudio-mercado/` donde cada sección del HTML = una herramienta reutilizable. Parámetros genéricos (`id_proyecto_master`, `zona`) — sirve para cualquier desarrolladora, no solo Condado.
 
@@ -363,6 +381,6 @@ Ver `docs/backlog/DEUDA_TECNICA.md` sección "Herramientas de estudio de mercado
 
 Decir algo como:
 
-"Leé `docs/clientes/condado/ESTUDIO_ABRIL_2026_CONTEXTO.md`. Necesito construir las herramientas de estudio de mercado en `scripts/estudio-mercado/` (Opción B) y generar el HTML v2 para Condado VI. La migración 211 ya se ejecutó. Adolfo confirmó 14 uds, 0 ventas. Usá la lógica de Simon Advisor (`C:\Users\LUCHO\Desktop\Censo inmobiliario\simon-advisor\src\lib\tool-executor.ts`) como referencia para scoring, escasez y yield. Cada sección del HTML debe ser una herramienta reutilizable para otros clientes."
+"Leé `docs/clientes/condado/ESTUDIO_ABRIL_2026_CONTEXTO.md`. Necesito construir herramientas de estudio de mercado para desarrolladoras inmobiliarias en `scripts/estudio-mercado/` y generar el HTML v2 para Condado VI. Las herramientas deben responder las preguntas de una desarrolladora: posición competitiva de su proyecto, demanda por tipología en su zona, seguimiento de competidores, simulación de precio, visibilidad en portales vs inventario real, yield para el comprador-inversor. Simon Advisor es solo una referencia de lógica (scoring, percentiles) pero el diseño tiene que partir del problema de la desarrolladora, no del inversionista. Cada herramienta debe ser reutilizable para otros edificios/clientes cambiando parámetros. Verificá que el snapshot v3 corrió bien."
 
-Con eso la próxima sesión tiene: inventario, competencia, decisiones, secciones, design system, lógica de Advisor como referencia, y el approach de herramientas reutilizables.
+Con eso la próxima sesión tiene: contexto completo, enfoque correcto (desarrolladora, no inversionista), y el approach de herramientas reutilizables.
