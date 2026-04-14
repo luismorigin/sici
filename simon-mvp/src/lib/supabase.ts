@@ -510,6 +510,7 @@ export interface FiltrosAlquiler {
   solo_con_fotos?: boolean
   orden?: 'precio_asc' | 'precio_desc' | 'recientes'
   limite?: number
+  proyecto?: string
 }
 
 export async function buscarUnidadesAlquiler(filtros: FiltrosAlquiler): Promise<UnidadAlquiler[]> {
@@ -1942,6 +1943,7 @@ export interface FiltrosVentaSimple {
   estado_entrega?: 'entrega_inmediata' | 'solo_preventa'
   orden?: 'precio_asc' | 'precio_desc' | 'recientes'
   solo_con_fotos?: boolean
+  proyecto?: string
 }
 
 export interface UnidadVenta {

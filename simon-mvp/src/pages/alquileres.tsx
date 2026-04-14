@@ -307,6 +307,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   const [isFiltered, setIsFiltered] = useState(false)
   const [totalCount, setTotalCount] = useState(seo.totalUnidades || initialProperties.length)
   const [loadError, setLoadError] = useState(false)
+  const [proyectoNames, setProyectoNames] = useState<string[]>([])
 
   // Defer heavy widgets until after hydration to reduce TBT
   const [widgetsReady, setWidgetsReady] = useState(false)
@@ -448,6 +449,14 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
       return 0
     }
   }, [])
+
+  // Extract unique building names from initial (unfiltered) load for datalist
+  const proyectoNamesRef = useRef(false)
+  useEffect(() => {
+    if (proyectoNamesRef.current || properties.length === 0 || isFiltered) return
+    proyectoNamesRef.current = true
+    setProyectoNames([...new Set(properties.map(p => p.nombre_edificio || p.nombre_proyecto).filter(Boolean))].sort() as string[])
+  }, [properties, isFiltered])
 
   // Defer full fetch — ISR gives us 8 properties for instant LCP,
   // then load all 200 after the page becomes interactive (avoids competing with LCP image)
@@ -848,6 +857,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
               isFiltered={isFiltered}
               onApply={applyFilters}
               onReset={resetFilters}
+              proyectoNames={proyectoNames}
             />
             {/* Favorites summary */}
             {favorites.size > 0 && (
@@ -1091,6 +1101,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
             isFiltered={isFiltered}
             onApply={(f) => { applyFilters(f); setFilterOverlayOpen(false) }}
             onReset={() => { resetFilters(); setFilterOverlayOpen(false) }}
+            proyectoNames={proyectoNames}
           />
 
           {/* UTM contextual banner — mobile */}
@@ -1228,9 +1239,9 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
 }
 
 // ===== DESKTOP FILTERS (sidebar, auto-apply) =====
-function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
+function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyectoNames }: {
   currentFilters: FiltrosAlquiler; isFiltered: boolean
-  onApply: (f: FiltrosAlquiler) => void; onReset: () => void
+  onApply: (f: FiltrosAlquiler) => void; onReset: () => void; proyectoNames?: string[]
 }) {
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set())
@@ -1239,69 +1250,86 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
   const [conParqueo, setConParqueo] = useState(currentFilters.con_parqueo || false)
   const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set(currentFilters.zonas_permitidas || []))
   const [orden, setOrden] = useState<FiltrosAlquiler['orden']>(currentFilters.orden || 'recientes')
+  const [proyecto, setProyecto] = useState(currentFilters.proyecto || '')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Build filters object from current state
-  const buildFilters = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, parq: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden']) => {
+  const buildFilters = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, parq: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden'], proy?: string) => {
     const f: FiltrosAlquiler = { orden: ord || 'recientes', limite: 200, solo_con_fotos: true }
-    // Issue 1: only send precio_mensual_max when slider is NOT at maximum
     if (price < MAX_SLIDER_PRICE) f.precio_mensual_max = price
     if (dorms.size > 0) f.dormitorios_lista = Array.from(dorms)
     if (amob) f.amoblado = true
     if (masc) f.acepta_mascotas = true
     if (parq) f.con_parqueo = true
     if (zonas.size > 0) f.zonas_permitidas = Array.from(zonas)
+    if (proy?.trim()) f.proyecto = proy.trim()
     return f
   }, [])
 
   // Auto-apply with debounce
-  const autoApply = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, parq: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden']) => {
+  const autoApply = useCallback((price: number, dorms: Set<number>, amob: boolean, masc: boolean, parq: boolean, zonas: Set<string>, ord: FiltrosAlquiler['orden'], proy?: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      onApply(buildFilters(price, dorms, amob, masc, parq, zonas, ord))
+      onApply(buildFilters(price, dorms, amob, masc, parq, zonas, ord, proy))
     }, 400)
   }, [onApply, buildFilters])
 
   function toggleDorm(d: number) {
     setSelectedDorms(prev => {
       const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d)
-      autoApply(maxPrice, n, amoblado, mascotas, conParqueo, selectedZonas, orden)
+      autoApply(maxPrice, n, amoblado, mascotas, conParqueo, selectedZonas, orden, proyecto)
       return n
     })
   }
   function toggleZona(id: string) {
     setSelectedZonas(prev => {
       const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id)
-      autoApply(maxPrice, selectedDorms, amoblado, mascotas, conParqueo, n, orden)
+      autoApply(maxPrice, selectedDorms, amoblado, mascotas, conParqueo, n, orden, proyecto)
       return n
     })
   }
   function handlePriceChange(price: number) {
     setMaxPrice(price)
-    autoApply(price, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden)
+    autoApply(price, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden, proyecto)
   }
   function handleAmoblado() {
     const next = !amoblado
     setAmoblado(next)
-    autoApply(maxPrice, selectedDorms, next, mascotas, conParqueo, selectedZonas, orden)
+    autoApply(maxPrice, selectedDorms, next, mascotas, conParqueo, selectedZonas, orden, proyecto)
   }
   function handleMascotas() {
     const next = !mascotas
     setMascotas(next)
-    autoApply(maxPrice, selectedDorms, amoblado, next, conParqueo, selectedZonas, orden)
+    autoApply(maxPrice, selectedDorms, amoblado, next, conParqueo, selectedZonas, orden, proyecto)
   }
   function handleParqueo() {
     const next = !conParqueo
     setConParqueo(next)
-    autoApply(maxPrice, selectedDorms, amoblado, mascotas, next, selectedZonas, orden)
+    autoApply(maxPrice, selectedDorms, amoblado, mascotas, next, selectedZonas, orden, proyecto)
   }
   function handleOrden(o: FiltrosAlquiler['orden']) {
     setOrden(o)
-    autoApply(maxPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, o)
+    autoApply(maxPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, o, proyecto)
+  }
+  function handleProyecto(v: string) {
+    setProyecto(v)
+    autoApply(maxPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden, v)
   }
 
   return (
     <div className="df-wrap">
+      {/* Edificio search */}
+      <div className="df-group">
+        <div className="df-label"><span className="df-dot" />EDIFICIO</div>
+        <input type="text" className="df-search" placeholder="Buscar edificio..." value={proyecto}
+          onChange={e => handleProyecto(e.target.value)} list="df-proyectos" autoComplete="off" />
+        {proyectoNames && proyectoNames.length > 0 && (
+          <datalist id="df-proyectos">
+            {proyectoNames.map(n => <option key={n} value={n} />)}
+          </datalist>
+        )}
+      </div>
+
       {/* Microzonas */}
       <div className="df-group">
         <div className="df-label"><span className="df-dot" />MICROZONA</div>
@@ -1359,10 +1387,10 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
 }
 
 // ===== FILTER OVERLAY (full-screen, replaces MobileFilterCard in feed) =====
-function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset }: {
+function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset, proyectoNames }: {
   isOpen: boolean; onClose: () => void
   totalCount: number; filteredCount: number; isFiltered: boolean
-  onApply: (f: FiltrosAlquiler) => void; onReset: () => void
+  onApply: (f: FiltrosAlquiler) => void; onReset: () => void; proyectoNames?: string[]
 }) {
   const [maxPrice, setMaxPrice] = useState(MAX_SLIDER_PRICE)
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set())
@@ -1371,6 +1399,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   const [conParqueo, setConParqueo] = useState(false)
   const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set())
   const [orden, setOrden] = useState<FiltrosAlquiler['orden']>('recientes')
+  const [proyecto, setProyecto] = useState('')
   const [previewCount, setPreviewCount] = useState<number | null>(null)
   const previewRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isFirstRender = useRef(true)
@@ -1383,8 +1412,9 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
     if (mascotas) f.acepta_mascotas = true
     if (conParqueo) f.con_parqueo = true
     if (selectedZonas.size > 0) f.zonas_permitidas = Array.from(selectedZonas)
+    if (proyecto.trim()) f.proyecto = proyecto.trim()
     return f
-  }, [maxPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden])
+  }, [maxPrice, selectedDorms, amoblado, mascotas, conParqueo, selectedZonas, orden, proyecto])
 
   // Debounced preview count
   useEffect(() => {
@@ -1411,7 +1441,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   function handleApply() { onApply(buildFilters()) }
   function handleReset() {
     setMaxPrice(MAX_SLIDER_PRICE); setSelectedDorms(new Set()); setSelectedZonas(new Set())
-    setAmoblado(false); setMascotas(false); setConParqueo(false); setOrden('recientes')
+    setAmoblado(false); setMascotas(false); setConParqueo(false); setOrden('recientes'); setProyecto('')
     onReset()
   }
 
@@ -1427,6 +1457,16 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
         <span className="afo-count">{displayCount} deptos</span>
       </div>
       <div className="afo-body">
+        {/* Edificio search */}
+        <div className="afo-group"><div className="afo-label"><span className="afo-dot" />EDIFICIO</div>
+          <input type="text" className="afo-search" placeholder="Buscar edificio..." value={proyecto}
+            onChange={e => setProyecto(e.target.value)} list="afo-proyectos" autoComplete="off" />
+          {proyectoNames && proyectoNames.length > 0 && (
+            <datalist id="afo-proyectos">
+              {proyectoNames.map(n => <option key={n} value={n} />)}
+            </datalist>
+          )}
+        </div>
         {/* Microzonas */}
         <div className="afo-group"><div className="afo-label"><span className="afo-dot" />MICROZONA</div>
           <div className="afo-zonas">{ZONAS_ALQUILER_UI.filter(z => z.id !== 'sin_zona').map(z => (
@@ -1579,7 +1619,7 @@ const DesktopCard = memo(function DesktopCard({ property: p, isFavorite, favorit
 
   // Lazy load: only render image when card enters viewport
   useEffect(() => {
-    if (isFirst) return
+    if (isFirst) { setVisible(true); return }
     const el = cardRef.current
     if (!el) return
     const obs = new IntersectionObserver(([entry]) => {
@@ -1797,7 +1837,7 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap, propertyId }: { 
 
   // Lazy: only start loading when card enters viewport
   useEffect(() => {
-    if (isFirst) return // first card loads immediately
+    if (isFirst) { setMaxLoaded(2); return }
     const el = zoneRef.current
     if (!el) return
     const obs = new IntersectionObserver(([entry]) => {

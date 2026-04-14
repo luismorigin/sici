@@ -120,6 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (filtros.orden) rpcFiltros.orden = filtros.orden
     if (filtros.zonas_permitidas?.length) rpcFiltros.zonas_permitidas = filtros.zonas_permitidas
     if (filtros.estado_entrega) rpcFiltros.estado_entrega = filtros.estado_entrega
+    if (filtros.proyecto?.trim()) rpcFiltros.proyecto = filtros.proyecto.trim()
 
     const dataResult = await supabase.rpc('buscar_unidades_simple', { p_filtros: rpcFiltros })
 

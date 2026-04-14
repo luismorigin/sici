@@ -117,7 +117,7 @@ async function fetchFromAPI(
 // ===== Build filters =====
 function buildFilters(
   minP: number, maxP: number, dorms: Set<number>, zonas: Set<string>,
-  entrega: string, orden: FiltrosVentaSimple['orden']
+  entrega: string, orden: FiltrosVentaSimple['orden'], proyecto?: string
 ): FiltrosVentaSimple {
   const f: FiltrosVentaSimple = { solo_con_fotos: true }
   if (minP > MIN_PRICE) f.precio_min = minP
@@ -137,6 +137,7 @@ function buildFilters(
   if (zonas.size > 0) f.zonas_permitidas = [...zonas]
   if (entrega) f.estado_entrega = entrega as FiltrosVentaSimple['estado_entrega']
   if (orden) f.orden = orden
+  if (proyecto?.trim()) f.proyecto = proyecto.trim()
   return f
 }
 
@@ -159,12 +160,21 @@ const ChevronRight = () => (
 )
 
 // ===== Shared filter UI =====
-function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, onMinPrice, onMaxPrice, onToggleZona, onToggleDorm, onEntrega, onOrden }: {
-  minPrice: number; maxPrice: number; selectedDorms: Set<number>; selectedZonas: Set<string>; entrega: string; orden: FiltrosVentaSimple['orden']
-  onMinPrice: (v: number) => void; onMaxPrice: (v: number) => void; onToggleZona: (db: string) => void; onToggleDorm: (d: number) => void; onEntrega: (v: string) => void; onOrden: (v: FiltrosVentaSimple['orden']) => void
+function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, proyecto, proyectoNames, onMinPrice, onMaxPrice, onToggleZona, onToggleDorm, onEntrega, onOrden, onProyecto }: {
+  minPrice: number; maxPrice: number; selectedDorms: Set<number>; selectedZonas: Set<string>; entrega: string; orden: FiltrosVentaSimple['orden']; proyecto: string; proyectoNames?: string[]
+  onMinPrice: (v: number) => void; onMaxPrice: (v: number) => void; onToggleZona: (db: string) => void; onToggleDorm: (d: number) => void; onEntrega: (v: string) => void; onOrden: (v: FiltrosVentaSimple['orden']) => void; onProyecto: (v: string) => void
 }) {
   return (
     <>
+      <div className="vf-group"><div className="vf-label">EDIFICIO</div>
+        <input type="text" className="vf-search" placeholder="Buscar edificio..." value={proyecto}
+          onChange={e => onProyecto(e.target.value)} list="vf-proyectos" autoComplete="off" />
+        {proyectoNames && proyectoNames.length > 0 && (
+          <datalist id="vf-proyectos">
+            {proyectoNames.map(n => <option key={n} value={n} />)}
+          </datalist>
+        )}
+      </div>
       <div className="vf-group"><div className="vf-label">ZONA</div>
         <div className="vf-zona-btns">
           {ZONAS_CANONICAS.map(z => (
@@ -212,9 +222,9 @@ function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entr
 }
 
 // ===== Desktop Filters =====
-function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
+function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyectoNames }: {
   currentFilters: FiltrosVentaSimple; isFiltered: boolean
-  onApply: (f: FiltrosVentaSimple) => void; onReset: () => void
+  onApply: (f: FiltrosVentaSimple) => void; onReset: () => void; proyectoNames?: string[]
 }) {
   const [minPrice, setMinPrice] = useState(currentFilters.precio_min || MIN_PRICE)
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_max || MAX_PRICE)
@@ -222,27 +232,29 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset }: {
   const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set(currentFilters.zonas_permitidas || []))
   const [entrega, setEntrega] = useState(currentFilters.estado_entrega || '')
   const [orden, setOrden] = useState<FiltrosVentaSimple['orden']>(currentFilters.orden || 'recientes')
+  const [proyecto, setProyecto] = useState(currentFilters.proyecto || '')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const autoApply = useCallback((mnP: number, mxP: number, dorms: Set<number>, zonas: Set<string>, ent: string, ord: FiltrosVentaSimple['orden']) => {
+  const autoApply = useCallback((mnP: number, mxP: number, dorms: Set<number>, zonas: Set<string>, ent: string, ord: FiltrosVentaSimple['orden'], proy?: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      onApply(buildFilters(mnP, mxP, dorms, zonas, ent, ord))
+      onApply(buildFilters(mnP, mxP, dorms, zonas, ent, ord, proy))
     }, 400)
   }, [onApply])
 
-  function toggleZona(db: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(db)) n.delete(db); else n.add(db); autoApply(minPrice, maxPrice, selectedDorms, n, entrega, orden); return n }) }
-  function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); autoApply(minPrice, maxPrice, n, selectedZonas, entrega, orden); return n }) }
-  function handleMinPrice(v: number) { const c = Math.min(v, maxPrice - PRICE_STEP); setMinPrice(c); autoApply(c, maxPrice, selectedDorms, selectedZonas, entrega, orden) }
-  function handleMaxPrice(v: number) { const c = Math.max(v, minPrice + PRICE_STEP); setMaxPrice(c); autoApply(minPrice, c, selectedDorms, selectedZonas, entrega, orden) }
-  function handleEntrega(v: string) { setEntrega(v); autoApply(minPrice, maxPrice, selectedDorms, selectedZonas, v, orden) }
-  function handleOrden(v: FiltrosVentaSimple['orden']) { setOrden(v); autoApply(minPrice, maxPrice, selectedDorms, selectedZonas, entrega, v) }
+  function toggleZona(db: string) { setSelectedZonas(prev => { const n = new Set(prev); if (n.has(db)) n.delete(db); else n.add(db); autoApply(minPrice, maxPrice, selectedDorms, n, entrega, orden, proyecto); return n }) }
+  function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); autoApply(minPrice, maxPrice, n, selectedZonas, entrega, orden, proyecto); return n }) }
+  function handleMinPrice(v: number) { const c = Math.min(v, maxPrice - PRICE_STEP); setMinPrice(c); autoApply(c, maxPrice, selectedDorms, selectedZonas, entrega, orden, proyecto) }
+  function handleMaxPrice(v: number) { const c = Math.max(v, minPrice + PRICE_STEP); setMaxPrice(c); autoApply(minPrice, c, selectedDorms, selectedZonas, entrega, orden, proyecto) }
+  function handleEntrega(v: string) { setEntrega(v); autoApply(minPrice, maxPrice, selectedDorms, selectedZonas, v, orden, proyecto) }
+  function handleOrden(v: FiltrosVentaSimple['orden']) { setOrden(v); autoApply(minPrice, maxPrice, selectedDorms, selectedZonas, entrega, v, proyecto) }
+  function handleProyecto(v: string) { setProyecto(v); autoApply(minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, v) }
 
   return (
     <div className="vf-wrap">
       <FilterControls minPrice={minPrice} maxPrice={maxPrice} selectedDorms={selectedDorms} selectedZonas={selectedZonas}
-        entrega={entrega} orden={orden} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
-        onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={handleEntrega} onOrden={handleOrden} />
+        entrega={entrega} orden={orden} proyecto={proyecto} proyectoNames={proyectoNames} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
+        onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={handleEntrega} onOrden={handleOrden} onProyecto={handleProyecto} />
       {isFiltered && <button className="vf-reset" onClick={onReset}>Quitar filtros</button>}
     </div>
   )
@@ -260,7 +272,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
   const [visible, setVisible] = useState(!!isFirst)
 
   useEffect(() => {
-    if (isFirst) return
+    if (isFirst) { setVisible(true); return }
     const el = cardRef.current
     if (!el) return
     const obs = new IntersectionObserver(([entry]) => {
@@ -347,7 +359,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
 
   // Lazy: only start loading when card enters viewport
   useEffect(() => {
-    if (isFirst) return
+    if (isFirst) { setMaxLoaded(2); return }
     const el = zoneRef.current
     if (!el) return
     const obs = new IntersectionObserver(([entry]) => {
@@ -470,9 +482,9 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
 }
 
 // ===== Mobile Filter Card (full-screen, snaps in feed) =====
-function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onReset }: {
+function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onReset, proyectoNames }: {
   totalCount: number; filteredCount: number; isFiltered: boolean
-  onApply: (f: FiltrosVentaSimple) => void; onReset: () => void
+  onApply: (f: FiltrosVentaSimple) => void; onReset: () => void; proyectoNames?: string[]
 }) {
   const [minPrice, setMinPrice] = useState(MIN_PRICE)
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE)
@@ -480,6 +492,7 @@ function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onRe
   const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set())
   const [entrega, setEntrega] = useState('')
   const [orden, setOrden] = useState<FiltrosVentaSimple['orden']>('recientes')
+  const [proyecto, setProyecto] = useState('')
 
   function handleMinPrice(v: number) { setMinPrice(Math.min(v, maxPrice - PRICE_STEP)) }
   function handleMaxPrice(v: number) { setMaxPrice(Math.max(v, minPrice + PRICE_STEP)) }
@@ -487,7 +500,7 @@ function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onRe
   function toggleDorm(d: number) { setSelectedDorms(prev => { const n = new Set(prev); if (n.has(d)) n.delete(d); else n.add(d); return n }) }
 
   function apply() {
-    onApply(buildFilters(minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden))
+    onApply(buildFilters(minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, proyecto))
   }
 
   return (
@@ -499,8 +512,8 @@ function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onRe
       <div className="mfc-divider"><span className="mfc-line" /><span className="mfc-text">Filtra</span><span className="mfc-line" /></div>
       <div className="mfc-filters">
         <FilterControls minPrice={minPrice} maxPrice={maxPrice} selectedDorms={selectedDorms} selectedZonas={selectedZonas}
-          entrega={entrega} orden={orden} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
-          onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={v => setEntrega(v)} onOrden={v => setOrden(v)} />
+          entrega={entrega} orden={orden} proyecto={proyecto} proyectoNames={proyectoNames} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
+          onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={v => setEntrega(v)} onOrden={v => setOrden(v)} onProyecto={v => setProyecto(v)} />
       </div>
       <button className="mfc-cta" onClick={apply}>APLICAR FILTROS</button>
       {isFiltered && <button className="mfc-reset" onClick={onReset}>Quitar filtros · ver todas</button>}
@@ -510,10 +523,10 @@ function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onRe
 }
 
 // ===== Mobile Filter Overlay (TikTok/Airbnb style) =====
-function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset }: {
+function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset, proyectoNames }: {
   isOpen: boolean; onClose: () => void
   totalCount: number; filteredCount: number; isFiltered: boolean
-  onApply: (f: FiltrosVentaSimple) => void; onReset: () => void
+  onApply: (f: FiltrosVentaSimple) => void; onReset: () => void; proyectoNames?: string[]
 }) {
   const [minPrice, setMinPrice] = useState(MIN_PRICE)
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE)
@@ -521,13 +534,14 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set())
   const [entrega, setEntrega] = useState('')
   const [orden, setOrden] = useState<FiltrosVentaSimple['orden']>('recientes')
+  const [proyecto, setProyecto] = useState('')
   const [previewCount, setPreviewCount] = useState<number | null>(null)
   const previewRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isFirstRender = useRef(true)
 
   const currentFilters = useMemo(() =>
-    buildFilters(minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden),
-    [minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden]
+    buildFilters(minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, proyecto),
+    [minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, proyecto]
   )
 
   // Debounced preview count
@@ -561,7 +575,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   function handleReset() {
     setMinPrice(MIN_PRICE); setMaxPrice(MAX_PRICE)
     setSelectedDorms(new Set()); setSelectedZonas(new Set())
-    setEntrega(''); setOrden('recientes')
+    setEntrega(''); setOrden('recientes'); setProyecto('')
     onReset()
     onClose()
   }
@@ -579,8 +593,8 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
       </div>
       <div className="fo-body">
         <FilterControls minPrice={minPrice} maxPrice={maxPrice} selectedDorms={selectedDorms} selectedZonas={selectedZonas}
-          entrega={entrega} orden={orden} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
-          onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={v => setEntrega(v)} onOrden={v => setOrden(v)} />
+          entrega={entrega} orden={orden} proyecto={proyecto} proyectoNames={proyectoNames} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
+          onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={v => setEntrega(v)} onOrden={v => setOrden(v)} onProyecto={v => setProyecto(v)} />
       </div>
       <div className="fo-footer">
         {isFiltered && <button className="fo-reset" onClick={handleReset}>Quitar filtros</button>}
@@ -1056,6 +1070,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
+  const [proyectoNames, setProyectoNames] = useState<string[]>([])
   const [filterOverlayOpen, setFilterOverlayOpen] = useState(false)
   // Filter nudge pill (show once per session after 6+ cards without interaction)
   const [nudgeVisible, setNudgeVisible] = useState(false)
@@ -1232,7 +1247,10 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
       const result = await fetchFromAPI(f || filters)
       if (gen !== fetchGenRef.current) return 0
       setProperties(result.data); setTotalCount(result.total)
-      if (!f || Object.keys(f).length === 0) setUnfilteredCount(result.total)
+      if (!f || Object.keys(f).length === 0) {
+        setUnfilteredCount(result.total)
+        setProyectoNames([...new Set(result.data.map(p => p.proyecto).filter(Boolean))].sort())
+      }
       return result.total
     } catch (err) {
       if (gen !== fetchGenRef.current) return 0
@@ -1319,7 +1337,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
               <span className="ventas-count-num">{properties.length}</span>
               <span className="ventas-count-text">{isFiltered ? `de ${unfilteredCount} departamentos` : 'departamentos en Equipetrol'}</span>
             </div>
-            <DesktopFilters currentFilters={filters} isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} />
+            <DesktopFilters currentFilters={filters} isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
           </aside>
           <main className="ventas-main">
             {/* View mode toggle */}
@@ -1391,7 +1409,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
           {/* Filter overlay */}
           <FilterOverlay isOpen={filterOverlayOpen} onClose={() => setFilterOverlayOpen(false)}
             totalCount={unfilteredCount || totalCount} filteredCount={properties.length}
-            isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} />
+            isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
 
           {/* Card counter */}
           {properties.length > 0 && (
@@ -1600,6 +1618,9 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .vf-group { margin-bottom:14px; text-align:left }
         .vf-label { font-size:12px; letter-spacing:0.5px; color:#9A8E7A; margin-bottom:7px; font-weight:600; font-family:'DM Sans',sans-serif; text-transform:uppercase; display:flex; align-items:center; gap:6px }
         .vf-label::before { content:''; width:6px; height:6px; border-radius:50%; background:#3A6A48; flex-shrink:0 }
+        .vf-search { width:100%; padding:9px 12px; border-radius:10px; border:1px solid rgba(237,232,220,0.12); background:transparent; color:#EDE8DC; font-size:14px; font-family:'DM Sans',sans-serif; outline:none; transition:border-color 0.2s }
+        .vf-search::placeholder { color:#7A7060 }
+        .vf-search:focus { border-color:#3A6A48 }
         .vf-zona-btns { display:flex; flex-wrap:wrap; gap:7px }
         .vf-zona-btn { padding:7px 14px; border-radius:100px; border:1px solid rgba(237,232,220,0.12); background:transparent; color:#9A8E7A; font-size:13px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s }
         .vf-zona-btn:hover { border-color:rgba(237,232,220,0.25); color:#EDE8DC }

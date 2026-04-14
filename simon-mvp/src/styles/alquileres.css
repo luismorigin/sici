@@ -316,6 +316,9 @@
 .df-group { margin-bottom: 18px; }
 .df-label { font-size: 12px; font-weight: 600; color: #3A3530; letter-spacing: 0.5px; margin-bottom: 8px; font-family: 'DM Sans', sans-serif; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
 .df-dot { width: 6px; height: 6px; border-radius: 50%; background: #3A6A48; flex-shrink: 0; }
+.df-search { width: 100%; padding: 8px 12px; border-radius: 10px; border: 1px solid #D8D0BC; background: #FAFAF8; color: #3A3530; font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+.df-search::placeholder { color: #9A8E7A; }
+.df-search:focus { border-color: #3A6A48; }
 .df-zona-btns { display: flex; flex-wrap: wrap; gap: 6px; }
 .df-zona-btn { padding: 6px 12px; border: 1px solid #D8D0BC; background: #FAFAF8; color: #3A3530; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; border-radius: 10px; transition: all 0.2s; }
 .df-zona-btn.active { border-color: #3A6A48; border-width: 2px; color: #141414; background: #FAFAF8; font-weight: 600; box-shadow: 0 2px 8px rgba(58,106,72,0.12); }
@@ -346,6 +349,9 @@
 .afo-group{margin-bottom:18px;}
 .afo-label{font-size:12px;font-weight:600;color:#3A3530;letter-spacing:0.5px;margin-bottom:8px;font-family:'DM Sans',sans-serif;text-transform:uppercase;display:flex;align-items:center;gap:6px;}
 .afo-dot{width:6px;height:6px;border-radius:50%;background:#3A6A48;flex-shrink:0;}
+.afo-search{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #D8D0BC;background:#FAFAF8;color:#3A3530;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;box-sizing:border-box;}
+.afo-search::placeholder{color:#9A8E7A;}
+.afo-search:focus{border-color:#3A6A48;}
 .afo-zonas{display:flex;flex-wrap:wrap;gap:7px;}
 .afo-zona-btn{padding:8px 16px;border:1px solid #D8D0BC;background:#FAFAF8;color:#3A3530;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-radius:10px;transition:all 0.2s;}
 .afo-zona-btn.active{border-color:#3A6A48;border-width:2px;color:#141414;background:#FAFAF8;font-weight:600;box-shadow:0 2px 8px rgba(58,106,72,0.12);}

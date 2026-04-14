@@ -78,6 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (filtros.con_parqueo) rpcFiltros.con_parqueo = true
     if (filtros.orden) rpcFiltros.orden = filtros.orden
     if (filtros.zonas_permitidas?.length) rpcFiltros.zonas_permitidas = filtros.zonas_permitidas
+    if (filtros.proyecto?.trim()) rpcFiltros.proyecto = filtros.proyecto.trim()
 
     // Fetch data
     const dataResult = await supabase.rpc('buscar_unidades_alquiler', { p_filtros: rpcFiltros })
