@@ -110,8 +110,8 @@ Source of truth de marca: repo `simon-brand` (github.com/luismorigin/simon-brand
 |---|-------|--------|-------|
 | 1 | Actualizar `SIMON_BRAND_GUIDELINES.md` | **SIGUIENTE** | Reemplazar paleta vieja con v1.4 |
 | 2 | ~~Migrar `/alquileres` a tokens `s-*`~~ | HECHO | `198027e` — doc: `docs/simon/ALQUILERES_UI_DECISIONS.md` |
-| 3 | Migrar `/ventas` a tokens `s-*` | PENDIENTE | Feed, filtros, galería, mapa |
-| 4 | Migrar `/mercado` a tokens `s-*` | PENDIENTE | Dashboard público, SEO |
+| 3 | Migrar `/ventas` a tokens `s-*` | BAJA | Visualmente ya usa paleta correcta (negro/arena/salvia). Solo falta reemplazar 79 hex hardcodeados → tokens. Cambio cosmético de mantenibilidad, cero cambio visual. Hacer oportunista cuando se toque `/ventas` por otra razón |
+| 4 | ~~Migrar `/mercado` a tokens `s-*`~~ | DESCARTADO | `/mercado` será rediseñada para ser AI-driven. Migrar tokens ahora es trabajo que se tira en el rediseño |
 | 5 | Eliminar `premium-theme.ts` | PENDIENTE | Solo cuando no queden imports |
 | 6 | Limpiar hex hardcodeados en JSX | PENDIENTE | `bg-[#0a0a0a]` → `bg-s-negro`, etc. Gradual |
 | 11 | Subir docs actualizados al Knowledge de Claude.ai | PENDIENTE | `simon-decisions.md` + `simon-comunicacion.md` + `simon-design-tokens.ts` al proyecto "Simon Brand System" |

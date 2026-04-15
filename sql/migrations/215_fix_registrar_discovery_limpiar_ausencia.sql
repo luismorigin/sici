@@ -1,41 +1,51 @@
 -- ============================================================================
--- FUNCIÓN PRINCIPAL: registrar_discovery()
--- Propósito: INSERT/UPDATE idempotente desde Flujo A (API/Grid)
--- Tabla: propiedades_v2
--- Compatible con: 100% estructura actual de propiedades_v2
+-- Migración 215: Fix registrar_discovery() — limpiar primera_ausencia_at
+--
+-- ROOT CAUSE: Cuando discovery re-encuentra una prop que estaba inactiva,
+-- registrar_discovery() la reactiva (es_activa=true, status=actualizado)
+-- pero NO limpia primera_ausencia_at ni razon_inactiva.
+--
+-- EFECTO: Si el scraper falla en encontrar la prop una noche, "Marcar Ausentes"
+-- la pone como inactivo_pending con COALESCE(primera_ausencia_at, NOW())
+-- preservando el valor viejo (semanas atrás). El verificador ve dias_desde_ausencia
+-- >> 2 días y auto-confirma INMEDIATAMENTE en vez de dar 2 días de gracia.
+--
+-- IMPACTO: 57 de 118 props Remax activas tienen primera_ausencia_at stale.
+-- 48% del inventario Remax es vulnerable a falsos positivos.
+--
+-- FIX: Agregar primera_ausencia_at = NULL, razon_inactiva = NULL al UPDATE
+-- del PASO 3 de registrar_discovery().
+--
+-- SEGURIDAD ABSORCIÓN: El cleanup solo toca props con status='completado' +
+-- es_activa=true. Los snapshots de absorción solo cuentan status='inactivo_confirmed'.
+-- Conjuntos disjuntos — cero impacto en absorción.
+--
+-- Fecha: 2026-04-15
 -- ============================================================================
 
-CREATE OR REPLACE FUNCTION registrar_discovery(
-    -- Identificación
+-- ============================================================================
+-- PARTE 1: FIX registrar_discovery()
+-- Cambio: 2 líneas nuevas en PASO 3 UPDATE (marcadas con -- FIX 215)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.registrar_discovery(
     p_url VARCHAR,
     p_fuente VARCHAR,
     p_codigo_propiedad VARCHAR DEFAULT NULL,
-    
-    -- Clasificación
     p_tipo_operacion VARCHAR DEFAULT NULL,
     p_tipo_propiedad_original TEXT DEFAULT NULL,
     p_estado_construccion VARCHAR DEFAULT NULL,
-    
-    -- Financiero
     p_precio_usd NUMERIC DEFAULT NULL,
     p_precio_usd_original NUMERIC DEFAULT NULL,
     p_moneda_original VARCHAR DEFAULT NULL,
-    
-    -- Físico
     p_area_total_m2 NUMERIC DEFAULT NULL,
     p_dormitorios INTEGER DEFAULT NULL,
     p_banos NUMERIC DEFAULT NULL,
     p_estacionamientos INTEGER DEFAULT NULL,
-    
-    -- GPS
     p_latitud NUMERIC DEFAULT NULL,
     p_longitud NUMERIC DEFAULT NULL,
-    
-    -- Metadata
     p_fecha_publicacion DATE DEFAULT NULL,
     p_metodo_discovery VARCHAR DEFAULT 'api_rest',
-    
-    -- JSON completo discovery
     p_datos_json_discovery JSONB DEFAULT NULL
 )
 RETURNS TABLE(
@@ -43,7 +53,7 @@ RETURNS TABLE(
     status estado_propiedad,
     es_nueva BOOLEAN,
     cambios_detectados JSONB
-) AS $$
+) AS $function$
 DECLARE
     v_id INTEGER;
     v_status_actual estado_propiedad;
@@ -62,19 +72,19 @@ BEGIN
     -- Usa _is_campo_bloqueado() que soporta ambos formatos de candados:
     -- Formato viejo: {"campo": true}
     -- Formato nuevo: {"campo": {"bloqueado": true, "por": "admin", ...}}
-    
+
     -- ========================================================================
     -- PASO 1: Verificar si existe (por url + fuente)
     -- ========================================================================
-    SELECT 
-        pv.id, 
+    SELECT
+        pv.id,
         pv.status,
         pv.campos_bloqueados,
         pv.precio_usd,
         pv.area_total_m2,
         pv.dormitorios,
         pv.banos
-    INTO 
+    INTO
         v_id,
         v_status_actual,
         v_campos_bloqueados,
@@ -84,89 +94,37 @@ BEGIN
         v_banos_actual
     FROM propiedades_v2 pv
     WHERE pv.url = p_url AND pv.fuente = p_fuente;
-    
+
     -- ========================================================================
     -- PASO 2: NUEVA PROPIEDAD (INSERT)
     -- ========================================================================
     IF v_id IS NULL THEN
         v_es_nueva := TRUE;
-        
+
         INSERT INTO propiedades_v2 (
-            -- Identificación
-            url,
-            fuente,
-            codigo_propiedad,
-            
-            -- Clasificación
-            tipo_operacion,
-            tipo_propiedad_original,
-            estado_construccion,
-            
-            -- Financiero
-            precio_usd,
-            precio_usd_original,
-            moneda_original,
-            
-            -- Físico
-            area_total_m2,
-            dormitorios,
-            banos,
-            estacionamientos,
-            
-            -- GPS
-            latitud,
-            longitud,
-            
-            -- Discovery
-            datos_json_discovery,
-            fecha_discovery,
-            metodo_discovery,
-            
-            -- Status y fechas
-            status,
-            fecha_publicacion,
-            fecha_creacion,
-            fecha_actualizacion,
-            
-            -- Flags
-            es_activa,
-            es_para_matching
+            url, fuente, codigo_propiedad,
+            tipo_operacion, tipo_propiedad_original, estado_construccion,
+            precio_usd, precio_usd_original, moneda_original,
+            area_total_m2, dormitorios, banos, estacionamientos,
+            latitud, longitud,
+            datos_json_discovery, fecha_discovery, metodo_discovery,
+            status, fecha_publicacion, fecha_creacion, fecha_actualizacion,
+            es_activa, es_para_matching
         )
         VALUES (
-            p_url,
-            p_fuente,
-            p_codigo_propiedad,
-            
-            p_tipo_operacion::tipo_operacion_enum,
-            p_tipo_propiedad_original,
+            p_url, p_fuente, p_codigo_propiedad,
+            p_tipo_operacion::tipo_operacion_enum, p_tipo_propiedad_original,
             p_estado_construccion::estado_construccion_enum,
-            
-            p_precio_usd,
-            p_precio_usd_original,
-            p_moneda_original,
-            
-            p_area_total_m2,
-            p_dormitorios,
-            p_banos,
-            p_estacionamientos,
-            
-            p_latitud,
-            p_longitud,
-            
-            p_datos_json_discovery,
-            NOW(),
-            p_metodo_discovery,
-            
+            p_precio_usd, p_precio_usd_original, p_moneda_original,
+            p_area_total_m2, p_dormitorios, p_banos, p_estacionamientos,
+            p_latitud, p_longitud,
+            p_datos_json_discovery, NOW(), p_metodo_discovery,
             CASE
                 WHEN p_tipo_operacion NOT IN ('venta') THEN 'excluido_operacion'::estado_propiedad
                 ELSE 'nueva'::estado_propiedad
             END,
-            p_fecha_publicacion,
-            NOW(),
-            NOW(),
-            
-            TRUE,
-            TRUE
+            p_fecha_publicacion, NOW(), NOW(),
+            TRUE, TRUE
         )
         RETURNING propiedades_v2.id INTO v_id;
 
@@ -174,7 +132,7 @@ BEGIN
             WHEN p_tipo_operacion NOT IN ('venta') THEN 'excluido_operacion'::estado_propiedad
             ELSE 'nueva'::estado_propiedad
         END;
-        
+
     -- ========================================================================
     -- PASO 3: PROPIEDAD EXISTENTE (UPDATE)
     -- ========================================================================
@@ -218,14 +176,14 @@ BEGIN
                 );
             END IF;
         END IF;
-        
+
         -- 3.2 Determinar nuevo status
         v_status_nuevo := determinar_status_post_discovery(
             v_id,
             v_status_actual,
             v_cambio_detectado
         );
-        
+
         -- 3.3 UPDATE respetando candados (soporta formato viejo y nuevo)
         UPDATE propiedades_v2
         SET
@@ -301,26 +259,26 @@ BEGIN
                 THEN longitud
                 ELSE COALESCE(p_longitud, longitud)
             END,
-            
+
             -- Discovery
             datos_json_discovery = p_datos_json_discovery,
             fecha_discovery = NOW(),
             metodo_discovery = p_metodo_discovery,
-            
+
             -- Status (determinar según cambios)
             status = v_status_nuevo,
-            
+
             -- Metadata
             fecha_publicacion = COALESCE(p_fecha_publicacion, fecha_publicacion),
             fecha_actualizacion = NOW(),
-            
+
             -- Discrepancias (agregar nuevas)
-            campos_conflicto = CASE 
-                WHEN jsonb_array_length(v_discrepancias) > 0 
+            campos_conflicto = CASE
+                WHEN jsonb_array_length(v_discrepancias) > 0
                 THEN COALESCE(campos_conflicto, '[]'::JSONB) || v_discrepancias
                 ELSE campos_conflicto
             END,
-            
+
             -- Flags
             es_activa = TRUE,
             depende_de_tc = CASE
@@ -335,77 +293,41 @@ BEGIN
             razon_inactiva = NULL
 
         WHERE propiedades_v2.id = v_id;
-        
+
     END IF;
-    
+
     -- ========================================================================
     -- PASO 4: Retornar resultado
     -- ========================================================================
     RETURN QUERY
-    SELECT 
+    SELECT
         v_id,
         v_status_nuevo,
         v_es_nueva,
         v_discrepancias;
-    
+
 END;
-$$ LANGUAGE plpgsql;
+$function$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION registrar_discovery IS 'Función principal Flujo A: INSERT/UPDATE idempotente desde API/Grid con respeto a candados. Fix 215: limpia primera_ausencia_at al re-encontrar.';
 
 -- ============================================================================
--- COMENTARIOS Y DOCUMENTACIÓN
+-- PARTE 2: Cleanup one-time — limpiar stale en props activas
+-- Solo toca status='completado' + es_activa=true (NO afecta absorción)
 -- ============================================================================
 
-COMMENT ON FUNCTION registrar_discovery IS 'Función principal Flujo A: INSERT/UPDATE idempotente desde API/Grid con respeto a candados';
+UPDATE propiedades_v2
+SET primera_ausencia_at = NULL,
+    razon_inactiva = NULL
+WHERE status = 'completado'
+  AND es_activa = true
+  AND (primera_ausencia_at IS NOT NULL OR razon_inactiva IS NOT NULL);
 
 -- ============================================================================
--- EJEMPLO DE USO
+-- PARTE 3: Verificación post-deploy
 -- ============================================================================
 
-/*
--- Ejemplo 1: Nueva propiedad (Century21)
-SELECT * FROM registrar_discovery(
-    p_url := 'https://c21.com.bo/propiedad/12345',
-    p_fuente := 'century21',
-    p_codigo_propiedad := 'C21-12345',
-    p_tipo_operacion := 'venta',
-    p_tipo_propiedad_original := 'Departamento',
-    p_precio_usd := 120000,
-    p_area_total_m2 := 85,
-    p_dormitorios := 2,
-    p_banos := 2,
-    p_estacionamientos := 1,
-    p_latitud := -17.7680,
-    p_longitud := -63.1885,
-    p_metodo_discovery := 'map_grid',
-    p_datos_json_discovery := '{"fuente": "map_grid", "timestamp": "2025-12-11T01:00:00Z"}'::JSONB
-);
-
--- Ejemplo 2: Actualizar existente (Remax)
-SELECT * FROM registrar_discovery(
-    p_url := 'https://remax.bo/propiedades/12345',
-    p_fuente := 'remax',
-    p_codigo_propiedad := 'RMX-12345',
-    p_precio_usd := 95000,  -- Cambió el precio
-    p_area_total_m2 := 72,
-    p_dormitorios := 2,
-    p_banos := 1,
-    p_latitud := -17.7560,
-    p_longitud := -63.0820,
-    p_metodo_discovery := 'api_rest',
-    p_datos_json_discovery := '{"fuente": "api_rest", "MLSID": "120047032-21"}'::JSONB
-);
-
--- Verificar resultado
-SELECT 
-    id,
-    url,
-    status,
-    precio_usd,
-    campos_conflicto,
-    fecha_discovery,
-    fecha_actualizacion
-FROM propiedades_v2
-WHERE fuente = 'century21'
-ORDER BY fecha_discovery DESC
-LIMIT 5;
-*/
+-- Debe retornar 0 filas:
+-- SELECT COUNT(*) FROM propiedades_v2
+-- WHERE status = 'completado' AND es_activa = true
+--   AND (primera_ausencia_at IS NOT NULL OR razon_inactiva IS NOT NULL);

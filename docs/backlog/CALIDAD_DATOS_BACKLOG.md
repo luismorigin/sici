@@ -29,28 +29,15 @@ Las 5 activas (156, 309, 385, 158, 452) tienen valores plausibles — no requier
 - [x] Filtro `tipo_operacion = 'venta'` en función `buscar_unidades_reales()` (migración 026)
 - [x] Filtro `area >= 20m²` para excluir parqueos/bauleras mal clasificados (migración 026)
 - [x] ~~Detectar duplicados por proyecto + área + dormitorios con precios muy diferentes~~ — Investigado 23 Mar: 19 pares, 63% son problemas de TC detection (no duplicados reales). Cross-source price variance es comportamiento normal. Cerrado.
-- [ ] Auditar `tipo_cambio_detectado = NULL` en props activas de venta (causa raíz de las anomalías de precio detectadas arriba)
+- [x] ~~Auditar `tipo_cambio_detectado = NULL` en props activas de venta~~ — Migración 216 (15 Abr): 83 props backfilled (77 merge pre-v2.4 + 6 post). 28→oficial, 1→paralelo (ID 186, precio corregido), 54→no_especificado
 
-## CRITICO: Falsos positivos Remax — Props activas marcadas inactivo_confirmed (13 Abr 2026)
+## RESUELTO: Falsos positivos verificador — primera_ausencia_at stale (15 Abr 2026, migración 215)
 
-**Impacto:** 11 de 23 props Remax marcadas como `inactivo_confirmed` en Eq. Centro (últimos 30d) siguen activas en el portal (HTTP 200). Contamina rotación, absorción, conteos de mercado. Tasa de falsos positivos: ~48%.
+**Root cause:** `registrar_discovery()` no limpiaba `primera_ausencia_at` al re-encontrar props inactivas. Scraper intermitente + `COALESCE(primera_ausencia_at, NOW())` en "Marcar Ausentes" preservaba valores de semanas atrás → verificador auto-confirmaba inmediatamente. 57/118 Remax activas (48%) tenían datos stale.
 
-**IDs confirmados:** 53, 56, 68, 905, 921, 980, 1160, 1183, 1307, 1309, 1310
+**Fix:** Migración 215 — `primera_ausencia_at = NULL, razon_inactiva = NULL` en `registrar_discovery()` PASO 3 + cleanup one-time. Cero impacto en absorción (conjuntos disjuntos: cleanup toca `completado`, absorción cuenta `inactivo_confirmed`).
 
-**Root cause:** Race condition entre pipelines. La lógica de reactivación en `determinar_status_post_discovery()` es correcta (`inactivo_confirmed` → `actualizado`), y discovery las re-encuentra (`fecha_discovery` actualizada). Pero `fecha_actualizacion` es 5h posterior a `fecha_discovery` — otro proceso las vuelve a inactivar el mismo día.
-
-**Investigar:**
-1. Revisar ejecuciones n8n del 12 Abr entre 09:00-15:00 — qué workflow corrió a las 14:06 y pisó el status
-2. Si es merge: verificar si `merge_discovery_enrichment()` pisa `es_activa`/`status` de vuelta a inactivo
-3. Si es verificador: verificar si corre dos veces al día
-
-**Historial:** Este problema se ha tocado 4 veces (Feb 11, Mar 22 BUG-001, Mar 23 mig 199, Abr 6 Verificador v2.0). Cada vez se descubre una capa nueva.
-
-**Backlog C21:** Servidor caído al momento del test batch (18 URLs sin verificar). Verificar cuando vuelva si tiene el mismo problema.
-
-**Fix one-time pendiente:** Reactivar las 11 props Remax confirmadas como falsos positivos.
-
-**Análisis técnico completo:** `docs/bugs/BUG_FALSOS_POSITIVOS_REMAX.md` — 3 hipótesis testeadas, root cause, SQL fix, archivos con líneas.
+**Análisis técnico completo:** `docs/bugs/BUG_FALSOS_POSITIVOS_REMAX.md`
 
 ## UX Completado
 

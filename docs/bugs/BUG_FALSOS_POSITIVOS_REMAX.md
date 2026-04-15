@@ -97,30 +97,38 @@ No hay registro en `workflow_executions` de qué corrió a las 14:06. Puede ser:
 
 Cada vez se descubre una capa nueva del problema.
 
-## Next steps para fix
+## ROOT CAUSE CONFIRMADO (15 Abr 2026) — Migración 215
 
-1. **Revisar ejecuciones n8n del 12 Abr entre 09:00-15:00** — qué workflow corrió a las 14:06 y pisó el status. Buscar en el dashboard de n8n.
+**Causa raíz:** `registrar_discovery()` no limpia `primera_ausencia_at` ni `razon_inactiva` al re-encontrar una prop inactiva. Esto crea una cadena:
 
-2. **Si es merge:** Verificar si `merge_discovery_enrichment()` tiene lógica que pisa `es_activa` o `status` de vuelta a `inactivo_confirmed`. Exportar con `pg_get_functiondef()`.
+1. Prop va ausente → `primera_ausencia_at = NOW()` (e.g. 20 Mar)
+2. Verificador auto-confirma tras 2 días → `inactivo_confirmed`
+3. Discovery la re-encuentra → `es_activa = true`, `status = actualizado`, **pero `primera_ausencia_at` queda = 20 Mar**
+4. Merge → `status = completado`
+5. Scraper la pierde una noche (paginación intermitente) → "Marcar Ausentes": `inactivo_pending`, `COALESCE(primera_ausencia_at, NOW()) = 20 Mar` (preserva valor viejo)
+6. Verificador: `dias_desde_ausencia = 26 días` → auto-confirma **inmediatamente** en vez de dar 2 días
 
-3. **Si es verificador:** Verificar si corre dos veces al día (schedule en n8n).
+**Descartado:**
+- Merge: NO toca `es_activa` ni pone `inactivo_confirmed` (solo procesa `nueva`/`actualizado` → `completado`)
+- Discovery "Marcar Ausentes": correctamente excluye `inactivo_confirmed` de urlsBD y del UPDATE
+- Verificador doble: cron es `0 6 * * *` (1x/día), coincide con timestamps 10:00 UTC
 
-4. **Fix one-time:** Reactivar las 11 props confirmadas:
-```sql
-UPDATE propiedades_v2
-SET status = 'completado', es_activa = TRUE,
-    primera_ausencia_at = NULL, razon_inactiva = NULL,
-    fecha_actualizacion = NOW()
-WHERE id IN (53, 56, 68, 905, 921, 980, 1160, 1183, 1307, 1309, 1310)
-  AND status = 'inactivo_confirmed';
-```
-**NO ejecutar hasta confirmar que el proceso que las pisa está identificado y corregido**, o se van a volver a inactivar la noche siguiente.
+**Datos al momento del fix:**
+- 57/118 Remax activas (48%) tenían `primera_ausencia_at` stale (24-26 días)
+- 2/286 C21 afectadas (0.7%)
+- 6 props auto-confirmadas como falso positivo solo el 15 Abr
 
-5. **C21 VERIFICADO (13 Abr):** De 18 URLs pendientes, 3 son falsos positivos (IDs 617 Atrium, 907 Smart Studio, 496 Klug — HTTP 200/301). El bug afecta a ambas fuentes, no solo Remax. Total: 14 falsos positivos de 59 salidas (24% error rate).
+**Fix (migración 215):**
+1. `registrar_discovery()`: agregar `primera_ausencia_at = NULL, razon_inactiva = NULL` en PASO 3
+2. Cleanup one-time: limpiar 59 props activas con datos stale
+
+**Seguridad absorción:** Verificado — absorption snapshots solo cuentan `status = 'inactivo_confirmed'`. El cleanup toca `status = 'completado'`. Conjuntos disjuntos.
+
+**Estado:** RESUELTO (pendiente deploy migración 215)
 
 ## Impacto en estudios de mercado
 
-La rotación reportada (56 salidas en 30d en Eq. Centro) está inflada ~30-50% por estos falsos positivos. Las herramientas de `scripts/estudio-mercado/` incluyen caveats pero los datos subyacentes son menos confiables de lo esperado.
+La rotación reportada (56 salidas en 30d en Eq. Centro) está inflada ~30-50% por estos falsos positivos. Las herramientas de `scripts/estudio-mercado/` incluyen caveats pero los datos subyacentes son menos confiables de lo esperado. Post-fix, la absorción debería estabilizarse en ~2 semanas (30d rolling window).
 
 ## Archivos relevantes
 
