@@ -187,9 +187,9 @@ function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entr
         <div className="vf-range-display">{formatPriceK(minPrice)} — {formatPriceK(maxPrice)}</div>
         <div className="vf-range-wrap">
           <input type="range" className="vf-slider vf-slider-min" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
-            value={minPrice} onChange={e => onMinPrice(parseInt(e.target.value))} />
+            value={minPrice} aria-label="Precio mínimo" onChange={e => onMinPrice(parseInt(e.target.value))} />
           <input type="range" className="vf-slider vf-slider-max" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
-            value={maxPrice} onChange={e => onMaxPrice(parseInt(e.target.value))} />
+            value={maxPrice} aria-label="Precio máximo" onChange={e => onMaxPrice(parseInt(e.target.value))} />
         </div>
         <div className="vf-tc-note">Precios en USD oficial · TC Bs 6.96</div>
       </div>
@@ -316,17 +316,17 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
         <div className="vc-actions">
-          <button className={`vc-act-btn vc-act-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
+          <button className={`vc-act-btn vc-act-fav ${isFavorite ? 'active' : ''}`} aria-label="Favorito" onClick={onToggleFavorite}>
             <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
-          <button className="vc-act-btn" onClick={onShare}>
+          <button className="vc-act-btn" aria-label="Compartir" onClick={onShare}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
             </svg> Compartir
           </button>
-          <button className="vc-act-btn vc-act-detail" onClick={onDetails}>
+          <button className="vc-act-btn vc-act-detail" aria-label="Ver detalles" onClick={onDetails}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
@@ -402,7 +402,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
               onClick={() => onPhotoTap(i)}>
               {useRealImg && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={url} alt="" fetchPriority="high" draggable={false} className="mc-slide-img" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                <img src={`/_next/image?url=${encodeURIComponent(url)}&w=640&q=75`} alt="" fetchPriority="high" draggable={false} className="mc-slide-img" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
               )}
             </div>
             )
@@ -451,12 +451,12 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
         <div className="mc-actions">
-          <button className={`mc-btn mc-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
+          <button className={`mc-btn mc-fav ${isFavorite ? 'active' : ''}`} aria-label="Favorito" onClick={onToggleFavorite}>
             <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
-          <button className="mc-btn mc-share" onClick={onShare}>
+          <button className="mc-btn mc-share" aria-label="Compartir" onClick={onShare}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
             </svg>
@@ -587,7 +587,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   return (
     <div className="fo-overlay">
       <div className="fo-header">
-        <button className="fo-close" onClick={onClose}>&times;</button>
+        <button className="fo-close" aria-label="Cerrar filtros" onClick={onClose}>&times;</button>
         <span className="fo-title">Filtros</span>
         <span className="fo-count">{displayCount} deptos</span>
       </div>
@@ -1311,10 +1311,10 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
   return (
     <>
       <VentasHead seo={seo} />
-      {/* Preload first photo for faster LCP */}
+      {/* Preload first photo for faster LCP — use /_next/image to hit optimized pipeline */}
       {properties.length > 0 && properties[0].fotos_urls?.[0] && (
         <Head>
-          <link rel="preload" as="image" href={properties[0].fotos_urls[0]} fetchPriority="high" />
+          <link rel="preload" as="image" href={`/_next/image?url=${encodeURIComponent(properties[0].fotos_urls[0])}&w=640&q=75`} fetchPriority="high" />
         </Head>
       )}
 
@@ -1372,7 +1372,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
               <div className="ds-spotlight">
                 <div className="ds-spotlight-banner">
                   <span>Te compartieron este departamento</span>
-                  <button className="ds-spotlight-close" onClick={() => setSpotlightId(null)}>&times;</button>
+                  <button className="ds-spotlight-close" aria-label="Cerrar destacado" onClick={() => setSpotlightId(null)}>&times;</button>
                 </div>
                 <VentaCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
                   onToggleFavorite={() => toggleFavorite(spotlightProperty.id)} onShare={() => shareProperty(spotlightProperty)}
@@ -1405,7 +1405,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         </div>
       ) : (
         /* ===== MOBILE TIKTOK FEED ===== */
-        <>
+        <main>
           {/* Top bar — search pill (Airbnb/TikTok style) */}
           <div className="mt-top-bar">
             <button className="mt-search-pill" onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay_venta') }}>
@@ -1439,7 +1439,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
             <div className="vt-nudge-pill" onClick={tapNudge}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{width:14,height:14,flexShrink:0}}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
               <span>Filtra por zona o precio</span>
-              <button className="vt-nudge-x" onClick={(e) => { e.stopPropagation(); dismissNudge() }}>&times;</button>
+              <button className="vt-nudge-x" aria-label="Cerrar sugerencia" onClick={(e) => { e.stopPropagation(); dismissNudge() }}>&times;</button>
             </div>
           )}
 
@@ -1448,7 +1448,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
             <div className="mt-map-overlay">
               <div className="mt-map-header">
                 <span className="mt-map-title">Mapa de Ventas</span>
-                <button className="mt-map-close" onClick={() => { setMobileMapOpen(false); setMapSelectedId(null) }}>&times;</button>
+                <button className="mt-map-close" aria-label="Cerrar mapa" onClick={() => { setMobileMapOpen(false); setMapSelectedId(null) }}>&times;</button>
               </div>
               <div className="mt-map-body">
                 <VentaMap properties={properties} onSelectProperty={(id) => setMapSelectedId(id)} selectedId={mapSelectedId} />
@@ -1480,7 +1480,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
                 onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)} />
             })}
           </div>
-        </>
+        </main>
       )}
 
       <style jsx global>{`
@@ -1492,7 +1492,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .ventas-sidebar { width:320px; min-width:320px; background:#141414; border-right:1px solid rgba(237,232,220,0.08); position:fixed; top:0; left:0; bottom:0; overflow-y:auto; z-index:10 }
         .ventas-sidebar-header { padding:24px 20px 12px; display:flex; align-items:baseline; gap:12px }
         .ventas-logo { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; text-decoration:none }
-        .ventas-label { font-size:11px; letter-spacing:0.5px; color:#9A8E7A; font-weight:600 }
+        .ventas-label { font-size:11px; letter-spacing:0.5px; color:#B8AD9E; font-weight:600 }
         .ventas-sidebar-count { padding:8px 20px 20px }
         .ventas-count-num { font-family:'Figtree',sans-serif; font-size:48px; font-weight:500; color:#EDE8DC; display:block; line-height:1; font-variant-numeric:tabular-nums }
         .ventas-count-text { font-size:13px; color:#9A8E7A }
@@ -1537,7 +1537,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .fo-overlay { position:fixed; inset:0; z-index:200; background:#141414; display:flex; flex-direction:column; animation:foSlideUp 0.3s ease-out }
         @keyframes foSlideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
         .fo-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; padding-top:max(16px, calc(env(safe-area-inset-top) + 8px)); border-bottom:1px solid rgba(237,232,220,0.08) }
-        .fo-close { width:36px; height:36px; border-radius:50%; border:none; background:rgba(237,232,220,0.08); color:#9A8E7A; font-size:22px; display:flex; align-items:center; justify-content:center; cursor:pointer }
+        .fo-close { width:44px; height:44px; border-radius:50%; border:none; background:rgba(237,232,220,0.08); color:#B8AD9E; font-size:22px; display:flex; align-items:center; justify-content:center; cursor:pointer }
         .fo-title { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC }
         .fo-count { font-size:14px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-variant-numeric:tabular-nums }
         .fo-body { flex:1; overflow-y:auto; padding:20px }
@@ -1553,7 +1553,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .mt-map-overlay { position:fixed; inset:0; z-index:300; background:#141414; display:flex; flex-direction:column }
         .mt-map-header { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; padding-top:max(12px, env(safe-area-inset-top)); background:#141414; border-bottom:1px solid rgba(237,232,220,0.1) }
         .mt-map-title { font-family:'Figtree',sans-serif; font-size:20px; font-weight:500; color:#EDE8DC }
-        .mt-map-close { width:36px; height:36px; border-radius:10px; border:none; background:rgba(237,232,220,0.08); color:#9A8E7A; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer }
+        .mt-map-close { width:44px; height:44px; border-radius:10px; border:none; background:rgba(237,232,220,0.08); color:#B8AD9E; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer }
         .mt-map-body { flex:1; position:relative; overflow:hidden }
         .mt-map-body .venta-map { position:absolute; inset:0 }
 
@@ -1637,16 +1637,16 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         .vf-zona-btn:hover { border-color:rgba(237,232,220,0.25); color:#EDE8DC }
         .vf-zona-btn.active { border:2px solid #3A6A48; color:#EDE8DC; background:rgba(58,106,72,0.15); font-weight:600 }
         .vf-btn-row { display:flex; gap:8px }
-        .vf-btn { flex:1; padding:10px 4px; border-radius:10px; border:1px solid rgba(237,232,220,0.12); background:transparent; color:#9A8E7A; font-size:13px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s; text-align:center }
+        .vf-btn { flex:1; padding:12px 8px; border-radius:10px; border:1px solid rgba(237,232,220,0.12); background:transparent; color:#9A8E7A; font-size:13px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s; text-align:center; min-height:44px }
         .vf-btn:hover { border-color:rgba(237,232,220,0.25); color:#EDE8DC }
         .vf-btn.active { border:2px solid #3A6A48; color:#EDE8DC; background:rgba(58,106,72,0.15); font-weight:600 }
         .vf-range-display { font-size:14px; color:#EDE8DC; margin-bottom:10px; text-align:right; font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums }
         .vf-range-wrap { position:relative; height:28px }
         .vf-slider { position:absolute; top:0; left:0; width:100%; -webkit-appearance:none; appearance:none; background:transparent; pointer-events:none; height:28px }
-        .vf-slider::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#EDE8DC; cursor:pointer; pointer-events:all; border:2px solid #3A6A48; position:relative; z-index:2 }
-        .vf-slider::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#EDE8DC; cursor:pointer; pointer-events:all; border:2px solid #3A6A48 }
-        .vf-slider::-webkit-slider-runnable-track { height:2px; background:rgba(237,232,220,0.15); border-radius:2px }
-        .vf-slider::-moz-range-track { height:2px; background:rgba(237,232,220,0.15); border-radius:2px }
+        .vf-slider::-webkit-slider-thumb { -webkit-appearance:none; width:24px; height:24px; border-radius:50%; background:#EDE8DC; cursor:pointer; pointer-events:all; border:2px solid #3A6A48; position:relative; z-index:2 }
+        .vf-slider::-moz-range-thumb { width:24px; height:24px; border-radius:50%; background:#EDE8DC; cursor:pointer; pointer-events:all; border:2px solid #3A6A48 }
+        .vf-slider::-webkit-slider-runnable-track { height:3px; background:rgba(237,232,220,0.25); border-radius:2px }
+        .vf-slider::-moz-range-track { height:3px; background:rgba(237,232,220,0.25); border-radius:2px }
         .vf-slider-min { z-index:1 }
         .vf-slider-max { z-index:2 }
         .vf-tc-note { font-size:12px; color:#9A8E7A; font-family:'DM Sans',sans-serif; margin-top:8px; text-align:right }
@@ -1910,19 +1910,23 @@ function VentasHead({ seo }: { seo: VentasSEO }) {
       <meta name="description" content={description} />
       <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <meta name="theme-color" content="#EDE8DC" />
+      <meta name="theme-color" content="#141414" />
       <link rel="canonical" href={url} />
 
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:type" content="website" />
       <meta property="og:url" content={url} />
+      <meta property="og:image" content="https://simonbo.com/skyline-equipetrol.jpg" />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
       <meta property="og:site_name" content="Simon — Inteligencia Inmobiliaria" />
       <meta property="og:locale" content="es_BO" />
 
-      <meta name="twitter:card" content="summary" />
+      <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
+      <meta name="twitter:image" content="https://simonbo.com/skyline-equipetrol.jpg" />
 
       <script
         type="application/ld+json"
