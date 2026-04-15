@@ -113,6 +113,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Learnings Alquiler** | `docs/alquiler/LEARNINGS_PIPELINE_ALQUILER.md` |
 | **Alquileres queries** | `docs/canonical/ALQUILERES_QUERIES.md` |
 | **Fichas tecnicas proyectos** | `docs/fichas/` — data de desarrollador (inventario, precios, equipamiento) no disponible en portales |
+| **Estudios mercado SaaS** | `docs/backlog/ESTUDIOS_MERCADO_SAAS.md` — roadmap producto recurrente. Framework: `scripts/estudio-mercado/` (8 tools + HTML generator, 1 cliente activo) |
 | **Sistema TC y precios** | `docs/architecture/TIPO_CAMBIO_SICI.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
