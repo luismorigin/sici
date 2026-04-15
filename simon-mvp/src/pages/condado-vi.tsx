@@ -19,7 +19,7 @@ const dmSans = DM_Sans({
 })
 
 // ─── WhatsApp helpers ────────────────────────────────────
-const WA_NUMBER = '59177030100'
+const WA_NUMBER = '59178440188'
 const waLink = (msg: string) =>
   `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`
 const WA_GENERAL = waLink('Hola, me interesa Condado VI Plaza Italia')
