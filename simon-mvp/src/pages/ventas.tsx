@@ -752,16 +752,24 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
 
   const brokerQuestions = useMemo(() => {
     if (!p) return []
+    const isPreventa = p.estado_construccion === 'preventa'
     const qs: string[] = []
     qs.push('El precio es negociable?')
-    qs.push('Cuales son los costos de cierre? (notaria, impuestos, transferencia)')
-    qs.push('Se puede coordinar una visita?')
-    if (p.estado_construccion === 'preventa' || p.plan_pagos_desarrollador) qs.push('Cual es el plan de pagos? Cuantas cuotas?')
-    if (!p.plan_pagos_desarrollador && p.estado_construccion !== 'preventa') qs.push('Acepta financiamiento bancario?')
-    if (p.estado_construccion !== 'preventa') qs.push('Cuanto son las expensas mensuales?')
+    if (isPreventa) {
+      qs.push('Cual es el plan de pagos? Cuantas cuotas?')
+      if (!p.fecha_entrega) qs.push('Cual es la fecha estimada de entrega?')
+      qs.push('Se puede visitar el showroom o ver el avance de obra?')
+      qs.push('Que incluye el precio? (parqueo, baulera, acabados)')
+    } else {
+      qs.push('Cuales son los costos de cierre? (notaria, impuestos, transferencia)')
+      qs.push('Se puede coordinar una visita?')
+      if (p.plan_pagos_desarrollador) qs.push('Cual es el plan de pagos? Cuantas cuotas?')
+      if (!p.plan_pagos_desarrollador) qs.push('Acepta financiamiento bancario?')
+      qs.push('Cuanto son las expensas mensuales?')
+    }
     if (p.solo_tc_paralelo) qs.push('A que tipo de cambio se cierra? Se congela al reservar?')
     return qs
-  }, [p?.id, p?.estado_construccion, p?.plan_pagos_desarrollador, p?.solo_tc_paralelo])
+  }, [p?.id, p?.estado_construccion, p?.plan_pagos_desarrollador, p?.solo_tc_paralelo, p?.fecha_entrega])
 
   function toggleQuestion(idx: number) {
     setSelectedQs(prev => {
