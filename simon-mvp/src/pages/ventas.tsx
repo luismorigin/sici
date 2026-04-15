@@ -290,8 +290,8 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
         onClick={() => { if (hasPhotos) onPhotoTap(photoIdx) }}>
         {!hasPhotos && <div className="vc-nofoto">Sin fotos</div>}
         {photos.length > 1 && (<>
-          {photoIdx > 0 && <button className="vc-nav vc-nav-prev" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
-          {photoIdx < photos.length - 1 && <button className="vc-nav vc-nav-next" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}><ChevronRight /></button>}
+          {photoIdx > 0 && <button className="vc-nav vc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
+          {photoIdx < photos.length - 1 && <button className="vc-nav vc-nav-next" aria-label="Foto siguiente" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}><ChevronRight /></button>}
           <div className="vc-photo-count">{photoIdx + 1}/{photos.length}</div>
         </>)}
       </div>
@@ -615,13 +615,13 @@ function MapFloatCard({ property: p, isFavorite, onClose, onOpenDetail, onToggle
   const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
   return (
     <div className={mobile ? 'mfc-mobile' : 'mfc-desktop'}>
-      <button className="mfc-close" onClick={onClose}>&times;</button>
+      <button className="mfc-close" aria-label="Cerrar" onClick={onClose}>&times;</button>
       <div className="mfc-photo" style={photos[photoIdx] ? { backgroundImage: `url('${photos[photoIdx]}')` } : undefined}>
         {photos.length > 1 && (<>
-          {photoIdx > 0 && <button className="mfc-nav mfc-nav-prev" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}>
+          {photoIdx > 0 && <button className="mfc-nav mfc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#fff" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
           </button>}
-          {photoIdx < photos.length - 1 && <button className="mfc-nav mfc-nav-next" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}>
+          {photoIdx < photos.length - 1 && <button className="mfc-nav mfc-nav-next" aria-label="Foto siguiente" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#fff" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
           </button>}
           <div className="mfc-count">{photoIdx + 1}/{photos.length}</div>
@@ -795,13 +795,13 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
         {/* Floating close + fav — always visible */}
         <div className="bs-floating-actions">
           {onToggleFavorite && (
-            <button className={`bs-fav ${isFavorite ? 'active' : ''}`} onClick={onToggleFavorite}>
+            <button className={`bs-fav ${isFavorite ? 'active' : ''}`} aria-label="Favorito" onClick={onToggleFavorite}>
               <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
               </svg>
             </button>
           )}
-          <button className="bs-close" onClick={onClose}>&times;</button>
+          <button className="bs-close" aria-label="Cerrar detalles" onClick={onClose}>&times;</button>
         </div>
         {/* Header — styled like feed card */}
         <div className="bs-dark-header">
@@ -930,7 +930,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
               <div className="bs-sl"><span className="bs-sl-dot" />También en {displayZona(p.zona)}</div>
               <div className="bs-sim-scroll">
                 {similarProps.map(sp => (
-                  <button key={sp.id} className="bs-sim-card" onClick={() => onSwapProperty?.(sp)}>
+                  <button key={sp.id} className="bs-sim-card" aria-label={`Ver ${sp.proyecto}`} onClick={() => onSwapProperty?.(sp)}>
                     {sp.fotos_urls?.[0] ? (
                       <img src={`/_next/image?url=${encodeURIComponent(sp.fotos_urls[0])}&w=256&q=60`}
                            alt={sp.proyecto} className="bs-sim-thumb" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
@@ -1505,13 +1505,13 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
         /* Map float card — mobile */
         .mfc-mobile { position:absolute; bottom:12px; left:12px; right:12px; z-index:1000; background:#1a1a1a; border:1px solid rgba(237,232,220,0.1); border-radius:14px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.4); display:flex; animation:mfcIn 0.2s ease-out }
         @keyframes mfcIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
-        .mfc-close { position:absolute; top:8px; right:8px; z-index:10; width:28px; height:28px; border-radius:50%; background:rgba(20,20,20,0.6); border:none; color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center }
+        .mfc-close { position:absolute; top:8px; right:8px; z-index:10; width:44px; height:44px; border-radius:50%; background:rgba(20,20,20,0.6); border:none; color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center }
         .mfc-photo { width:130px; min-width:130px; background-size:cover; background-position:center; background-color:#2a2a2a; position:relative }
-        .mfc-nav { position:absolute; top:50%; transform:translateY(-50%); width:28px; height:28px; border-radius:50%; background:rgba(20,20,20,0.6); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:3 }
+        .mfc-nav { position:absolute; top:50%; transform:translateY(-50%); width:40px; height:40px; border-radius:50%; background:rgba(20,20,20,0.6); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:3 }
         .mfc-nav-prev { left:4px }
         .mfc-nav-next { right:4px }
         .mfc-count { position:absolute; bottom:6px; right:6px; background:rgba(20,20,20,0.75); color:rgba(255,255,255,0.8); font-size:10px !important; padding:2px 6px; border-radius:8px; font-family:'DM Sans',sans-serif; line-height:1.2 }
-        .mfc-fav { position:absolute; top:6px; left:6px; width:32px; height:32px; border-radius:50%; background:rgba(20,20,20,0.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:3 }
+        .mfc-fav { position:absolute; top:6px; left:6px; width:44px; height:44px; border-radius:50%; background:rgba(20,20,20,0.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:3 }
         .mfc-fav.active { background:rgba(224,85,85,0.15) }
         .mfc-fav svg { width:16px; height:16px }
         .mfc-body { flex:1; padding:14px }
