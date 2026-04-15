@@ -1053,14 +1053,14 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
 }
 
 // ===== Page =====
-export default function VentasPage({ seo }: { seo: VentasSEO }) {
-  const [properties, setProperties] = useState<UnidadVenta[]>([])
-  const [loading, setLoading] = useState(true)
+export default function VentasPage({ seo, initialProperties = [] }: { seo: VentasSEO; initialProperties: UnidadVenta[] }) {
+  const [properties, setProperties] = useState<UnidadVenta[]>(initialProperties)
+  const [loading, setLoading] = useState(initialProperties.length === 0)
   const [loadError, setLoadError] = useState(false)
   const [filters, setFilters] = useState<FiltrosVentaSimple>({ orden: 'recientes' })
   const [isFiltered, setIsFiltered] = useState(false)
-  const [totalCount, setTotalCount] = useState(0)
-  const [unfilteredCount, setUnfilteredCount] = useState(0)
+  const [totalCount, setTotalCount] = useState(initialProperties.length)
+  const [unfilteredCount, setUnfilteredCount] = useState(initialProperties.length)
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
   const [toastMsg, setToastMsg] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
@@ -1078,7 +1078,7 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
-  const [proyectoNames, setProyectoNames] = useState<string[]>([])
+  const [proyectoNames, setProyectoNames] = useState<string[]>(() => [...new Set(initialProperties.map(p => p.proyecto).filter(Boolean))].sort())
   const [filterOverlayOpen, setFilterOverlayOpen] = useState(false)
   // Filter nudge pill (show once per session after 6+ cards without interaction)
   const [nudgeVisible, setNudgeVisible] = useState(false)
@@ -1277,7 +1277,8 @@ export default function VentasPage({ seo }: { seo: VentasSEO }) {
     } finally { if (gen === fetchGenRef.current) setLoading(false) }
   }, [filters])
 
-  useEffect(() => { fetchProperties() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Only fetch on mount if no SSG data (fallback) or if spotlight needs fetching
+  useEffect(() => { if (initialProperties.length === 0 || spotlightId) fetchProperties() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function applyFilters(newFilters: FiltrosVentaSimple) {
     setFilters(newFilters); setIsFiltered(true)
@@ -1944,9 +1945,69 @@ function VentasHead({ seo }: { seo: VentasSEO }) {
   )
 }
 
-// ===== getStaticProps — SEO data =====
-export const getStaticProps: GetStaticProps<{ seo: VentasSEO }> = async () => {
+// ===== getStaticProps — SEO data + initial properties =====
+export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties: UnidadVenta[] }> = async () => {
+  const { supabase } = await import('@/lib/supabase')
   const data = await fetchMercadoData()
+
+  // Fetch initial properties (default filters: recientes, solo_con_fotos)
+  let initialProperties: UnidadVenta[] = []
+  try {
+    if (!supabase) throw new Error('Supabase not configured')
+    const { data: rows } = await supabase.rpc('buscar_unidades_simple', {
+      p_filtros: { limite: 500, solo_con_fotos: true, orden: 'recientes' }
+    })
+    if (rows) {
+      initialProperties = rows.map((p: any) => ({
+        id: p.id,
+        proyecto: p.nombre_proyecto || 'Sin proyecto',
+        desarrollador: p.desarrollador || null,
+        zona: p.zona || 'Sin zona',
+        microzona: p.microzona || null,
+        dormitorios: p.dormitorios ?? 0,
+        banos: p.banos ? parseFloat(String(p.banos)) : null,
+        precio_usd: parseFloat(String(p.precio_usd)) || 0,
+        precio_m2: parseFloat(String(p.precio_m2)) || 0,
+        area_m2: parseFloat(String(p.area_m2)) || 0,
+        score_calidad: p.score_calidad ?? null,
+        agente_nombre: p.agente_nombre || null,
+        agente_telefono: p.agente_telefono || null,
+        agente_oficina: p.agente_oficina || null,
+        fotos_urls: p.fotos_urls || [],
+        fotos_count: p.fotos_count || 0,
+        url: p.url || '',
+        amenities_lista: p.amenities_lista || [],
+        es_multiproyecto: p.es_multiproyecto || false,
+        estado_construccion: p.estado_construccion || 'no_especificado',
+        dias_en_mercado: p.dias_en_mercado ?? null,
+        amenities_confirmados: p.amenities_confirmados || [],
+        amenities_por_verificar: p.amenities_por_verificar || [],
+        equipamiento_detectado: p.equipamiento_detectado || [],
+        descripcion: p.descripcion || null,
+        latitud: p.latitud ? parseFloat(String(p.latitud)) : null,
+        longitud: p.longitud ? parseFloat(String(p.longitud)) : null,
+        estacionamientos: p.estacionamientos ?? null,
+        baulera: p.baulera ?? null,
+        fecha_entrega: p.fecha_entrega || null,
+        piso: p.piso || null,
+        plan_pagos_desarrollador: p.plan_pagos_desarrollador ?? null,
+        acepta_permuta: p.acepta_permuta ?? null,
+        solo_tc_paralelo: p.solo_tc_paralelo ?? null,
+        precio_negociable: p.precio_negociable ?? null,
+        descuento_contado_pct: p.descuento_contado_pct ?? null,
+        parqueo_incluido: p.parqueo_incluido ?? null,
+        parqueo_precio_adicional: p.parqueo_precio_adicional ?? null,
+        baulera_incluido: p.baulera_incluido ?? null,
+        baulera_precio_adicional: p.baulera_precio_adicional ?? null,
+        plan_pagos_cuotas: p.plan_pagos_cuotas ?? null,
+        plan_pagos_texto: p.plan_pagos_texto || null,
+        fuente: p.fuente || '',
+      }))
+    }
+  } catch (err) {
+    console.error('getStaticProps: error fetching initial properties', err)
+  }
+
   return {
     props: {
       seo: {
@@ -1968,6 +2029,7 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO }> = async () => {
           medianaPrecioM2: z.medianaPrecioM2,
         })),
       },
+      initialProperties,
     },
     revalidate: 21600, // 6 hours
   }
