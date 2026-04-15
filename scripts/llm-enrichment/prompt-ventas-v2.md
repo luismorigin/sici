@@ -1,7 +1,7 @@
-# Prompt LLM Enrichment — Ventas v4.0
+# Prompt LLM Enrichment — Ventas v4.1
 
 > Modelo: claude-haiku-4-5-20251001 o claude-sonnet-4-6 | temperature: 0 | max_tokens: 1500
-> Evolución: v1.0 → v2.0 → v3.0 → v3.1 → v3.2 → v4.0 (2026-03-16)
+> Evolución: v1.0 → v2.0 → v3.0 → v3.1 → v3.2 → v4.0 → v4.1 (2026-04-15)
 
 ---
 
@@ -74,13 +74,14 @@ ESTADO_CONSTRUCCION:
 - CUIDADO: "amoblado" o "equipado" SOLOS no implican entrega_inmediata
 
 TIPO_CAMBIO_DETECTADO:
-- "paralelo": "TC paralelo", "al paralelo", "dólares o paralelo", "solo dólares", "tc del día", "pago en dólares", "blue", "dólar blue", "al blue", "USDT", "cripto"
-- "oficial": "TC 7", "al cambio Bs.7", "TC oficial", "tipo de cambio 7", precio listado SOLO en Bs/bolivianos sin mención de USD
-- "no_especificado": si no hay mención de TC ni forma de pago. NUNCA devolver null — usar "no_especificado"
+- "paralelo": evidencia EXPLÍCITA en descripción: "TC paralelo", "al paralelo", "dólares o paralelo", "solo dólares", "tc del día", "pago en dólares", "blue", "dólar blue", "al blue", "USDT", "cripto"
+- "oficial": evidencia EXPLÍCITA en descripción: "TC 7", "al cambio Bs.7", "TC oficial", "tipo de cambio 7", "(TC 7)", "al cambio oficial", "cambio 6.96"
+- "no_especificado": DEFAULT. Si no hay mención explícita de TC en la descripción. NUNCA devolver null — usar "no_especificado"
 - CLAVE: "solo dólares", "pago en dólares", "blue", "dólar blue", "USDT", "cripto" = PARALELO
-- CLAVE: "TC 7" o "cambio 6.96" = OFICIAL
-- CLAVE: Precio en "Bs" o "bolivianos" sin mención de dólares = OFICIAL (tasa BCB fija)
+- CLAVE: "TC 7", "(TC 7)", "cambio 6.96", "TC oficial" = OFICIAL
+- CLAVE: La moneda del portal (USD, BOB, Bs) NO indica tipo de cambio. Portales como Remax listan en BOB independientemente del TC real del vendedor. Solo el TEXTO de la descripción puede confirmar oficial o paralelo.
 - CLAVE: "$us X" sin más contexto = "no_especificado" (moneda sola no indica TC)
+- CLAVE: Precio en "Bs" o "bolivianos" sin mención explícita de TC = "no_especificado" (NO asumir oficial)
 
 PARQUEO_INCLUIDO:
 - true: "incluye parqueo", "con parqueo" sin precio aparte
@@ -153,6 +154,13 @@ Devuelve SOLO este JSON (sin explicaciones, sin markdown):
 ---
 
 ## Changelog
+
+### v4.1 (2026-04-15) — TC más conservador
+
+Cambios desde v4.0:
+- **TIPO_CAMBIO_DETECTADO**: eliminar regla "Bs sin mención USD = oficial". Moneda del portal (BOB/USD) NO indica TC. Solo texto explícito en descripción ("TC 7", "TC oficial", etc.) puede confirmar oficial o paralelo. Default es `no_especificado`.
+- **Motivación**: auditoría encontró 14 falsos positivos donde LLM decía "oficial alta" sin evidencia en descripción. Remax lista en BOB independientemente del TC real del vendedor.
+- **Impacto**: ~24 props que eran "oficial" pasan a "no_especificado". Props con evidencia explícita ("TC 7", "(TC 7)") no cambian.
 
 ### v4.0 (2026-03-16) — Dormitorios + Baños + Secciones Input
 
