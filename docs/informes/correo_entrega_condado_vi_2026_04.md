@@ -3,18 +3,22 @@
 **Estado:** Listo para enviar
 **Destinatario:** laam.altamirano@gmail.com
 **CC:** nadinealtamiranomedina@gmail.com
-**Adjuntos:**
-- `condado-vi-abril-2026.html` (estudio interactivo, abrir en Chrome)
 
 ---
 
-**Asunto:** Informe de Mercado Condado VI — Abril 2026
+**Asunto:** Informe de Mercado + Landing Condado VI — Abril 2026
 
 ---
 
 Hola equipo,
 
-Les comparto el informe de mercado de abril. Esta vez va como HTML interactivo — abran el archivo adjunto en Chrome para la mejor experiencia (gráficos, tablas interactivas y links directos a cada edificio competidor en nuestra plataforma).
+Les comparto el informe de mercado de abril y la primera versión de la landing web.
+
+**Informe de mercado — Abril 2026**
+
+https://simonbo.com/reports/condado-vi-abril-2026.html
+
+Esta vez va como página interactiva — abran el link en Chrome para la mejor experiencia (gráficos, tablas interactivas y links directos a cada edificio competidor en nuestra plataforma).
 
 **Principales hallazgos de este mes:**
 
@@ -27,6 +31,14 @@ Les comparto el informe de mercado de abril. Esta vez va como HTML interactivo �
 - La absorción del mercado se recalculó con metodología corregida. Los datos anteriores estaban inflados — el informe detalla las limitaciones y presenta los números con los caveats correspondientes.
 
 **Novedad:** Cada competidor en las tablas tiene un link directo (icono ↗) que abre Simon filtrado a ese edificio, con fotos y precios actualizados en tiempo real.
+
+**Landing web Condado VI**
+
+https://simonbo.com/condado-vi
+
+La landing está montada momentáneamente en los servidores de Simón. Faltan las fotos que les habíamos solicitado y la revisión de textos de parte de ustedes. Para que el proceso sea fluido y sigamos dentro del alcance acordado, tienen disponibles 2 rondas de revisión para ajustes de textos y cambios menores.
+
+---
 
 Con este informe cerramos el tercer mes del monitoreo que acordamos (marzo, abril, mayo). El de mayo lo tienen alrededor del 15. Si les interesa continuar después de esa entrega, coordinamos alcance y condiciones.
 
