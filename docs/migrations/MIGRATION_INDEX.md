@@ -222,6 +222,9 @@
 | 214 | merge_alquiler_guardrail_monoambiente | **Guardrail monoambiente en merge alquiler.** LLM clasificaba monos como 1D |
 | 215 | fix_registrar_discovery_limpiar_ausencia | **Fix verificador falsos positivos.** `registrar_discovery()` no limpiaba `primera_ausencia_at` al re-encontrar props → verificador auto-confirmaba con fecha stale (semanas). Fix: `primera_ausencia_at = NULL, razon_inactiva = NULL` en PASO 3. Cleanup: 59 props activas con datos stale. Cero impacto absorción (conjuntos disjuntos). Root cause del bug 48% falsos positivos Remax |
 | 216 | backfill_tipo_cambio_detectado_null | **Backfill `tipo_cambio_detectado` NULL.** 83 props activas (77 de merge pre-v2.4 + 6 post). Aplica lógica merge v2.5+: LLM upgrade con confianza alta. 28→oficial, 1→paralelo (precio corregido), 54→no_especificado. Sin riesgo |
+| 217 | fix_gps_false_positives_bulk | Fix GPS falsos positivos bulk |
+| 218 | gps_matching_penalize_dense_zones | GPS matching penalizar zonas densas |
+| 219 | buscar_unidades_simple_tc_sospechoso | **TC sospechoso en `buscar_unidades_simple()`.** Agrega `tc_sospechoso BOOLEAN` al RETURN TABLE. CTE `medianas_tc` calcula mediana $/m² por grupo (zona+dorms+estado) con ≥3 props TC conocido. Flag = true si `tipo_cambio_detectado='no_especificado'` Y precio/m² >30% debajo de mediana. LEFT JOIN para no afectar props sin grupo. ~8 props afectadas (2.5% del feed) |
 
 **⚠️ Post-migración 191 — Deploy requerido en n8n:**
 La migración 191 corrige datos existentes pero el extractor C21 sigue generando falsos positivos.

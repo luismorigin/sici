@@ -87,6 +87,7 @@ function mapRow(p: RawUnidadSimpleRow) {
     plan_pagos_cuotas: p.plan_pagos_cuotas ?? null,
     plan_pagos_texto: p.plan_pagos_texto || null,
     fuente: p.fuente || '',
+    tc_sospechoso: p.tc_sospechoso ?? false,
   }
 }
 

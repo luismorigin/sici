@@ -162,6 +162,7 @@ export interface RawUnidadSimpleRow {
   plan_pagos_cuotas: unknown | null
   plan_pagos_texto: string | null
   fuente: string | null
+  tc_sospechoso: boolean | null
 }
 
 // === Direct queries (obtenerMetricasMercado) ===

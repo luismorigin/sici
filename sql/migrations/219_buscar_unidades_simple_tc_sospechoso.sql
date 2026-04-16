@@ -1,12 +1,11 @@
--- buscar_unidades_simple(p_filtros JSONB)
--- Versión simplificada de buscar_unidades_reales() para el feed /ventas.
--- Elimina: razon_fiduciaria_texto(), calcular_posicion_mercado(),
---          CTEs de stats (proyecto/zona/edificio/tipologia),
---          subqueries de ranking, es_precio_outlier.
--- Mantiene: todos los filtros de calidad, fotos multi-source, amenidades, agente.
--- Fix vs original: status IN ('completado','actualizado') en vez de solo 'completado'.
--- Creada: 18 Mar 2026
--- Migración 219: tc_sospechoso (no_especificado + >30% debajo mediana grupo)
+-- Migración 219: Agregar tc_sospechoso a buscar_unidades_simple()
+-- Calcula un booleano que indica si la propiedad tiene tipo_cambio_detectado = 'no_especificado'
+-- y su precio/m2 está >30% por debajo de la mediana de su grupo (zona + dormitorios + estado_construccion).
+-- Grupo de referencia: solo props con TC conocido (paralelo u oficial), mínimo 3 props.
+-- Hoy aplica a ~8 props (2.5% del feed).
+-- DROP + CREATE porque Postgres no permite cambiar RETURN TABLE con REPLACE.
+
+DROP FUNCTION IF EXISTS public.buscar_unidades_simple(jsonb);
 
 CREATE OR REPLACE FUNCTION public.buscar_unidades_simple(p_filtros jsonb DEFAULT '{}'::jsonb)
 RETURNS TABLE(

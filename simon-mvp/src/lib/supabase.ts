@@ -1990,4 +1990,5 @@ export interface UnidadVenta {
   plan_pagos_cuotas: unknown | null
   plan_pagos_texto: string | null
   fuente: string
+  tc_sospechoso: boolean
 }

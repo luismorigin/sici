@@ -289,6 +289,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
       <div className="vc-photo" style={hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')`, cursor: 'pointer' } : undefined}
         onClick={() => { if (hasPhotos) onPhotoTap(photoIdx) }}>
         {!hasPhotos && <div className="vc-nofoto">Sin fotos</div>}
+        {p.tc_sospechoso && <div className="vc-tc-badge">Confirmar tipo de cambio</div>}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="vc-nav vc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
           {photoIdx < photos.length - 1 && <button className="vc-nav vc-nav-next" aria-label="Foto siguiente" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}><ChevronRight /></button>}
@@ -428,6 +429,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
 
       {/* Spotlight badge */}
       {isSpotlight && <div className="mc-spotlight">Te compartieron este depto</div>}
+      {p.tc_sospechoso && <div className="mc-tc-badge">Confirmar tipo de cambio</div>}
 
       {/* Content zone (45%) */}
       <div className="mc-content">
@@ -819,7 +821,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
           </div>
           <div className="bs-h-zona">{displayZona(p.zona)} · #{p.id}</div>
           <div className="bs-h-price-block">
-            <div className="bs-h-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span></div>
+            <div className="bs-h-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span>{p.tc_sospechoso && <span className="bs-tc-badge">Confirmar tipo de cambio</span>}</div>
             <div className="bs-h-specs">{[
               p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
               p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
@@ -1593,6 +1595,7 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
         .mc-btn.mc-share { color:#9A8E7A }
         .mc-btn.mc-info { color:rgba(237,232,220,0.85); font-size:12px; letter-spacing:0.3px; background:rgba(237,232,220,0.08); border-radius:10px; padding:8px 14px; font-weight:500 }
         .mc-spotlight { position:absolute; top:max(56px, calc(env(safe-area-inset-top) + 50px)); left:16px; z-index:10; background:rgba(250,250,248,0.95); border-left:3px solid #3A6A48; padding:8px 14px; border-radius:0 8px 8px 0; font-family:'DM Sans',sans-serif; font-size:12px; color:#141414; letter-spacing:0.3px }
+        .mc-tc-badge { position:absolute; top:max(56px, calc(env(safe-area-inset-top) + 50px)); right:16px; z-index:10; background:rgba(180,130,20,0.9); color:#fff; padding:6px 12px; border-radius:4px; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:500; letter-spacing:0.2px }
 
         /* Desktop spotlight */
         .ds-spotlight { margin-bottom:32px }
@@ -1674,6 +1677,7 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
         .vc-nav-prev { left:8px }
         .vc-nav-next { right:8px }
         .vc-photo-count { position:absolute; top:10px; right:10px; background:rgba(20,20,20,0.75); color:rgba(255,255,255,0.8); font-size:11px; padding:3px 8px; border-radius:100px; font-family:'DM Sans',sans-serif }
+        .vc-tc-badge { position:absolute; bottom:10px; left:10px; background:rgba(180,130,20,0.9); color:#fff; font-size:11px; font-weight:500; padding:4px 10px; border-radius:4px; font-family:'DM Sans',sans-serif; letter-spacing:0.2px; z-index:3 }
         .vc-fav { position:absolute; top:10px; left:10px; width:40px; height:40px; border-radius:50%; background:rgba(20,20,20,0.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.15s; z-index:3 }
         .vc-fav:hover { transform:scale(1.1) }
         .vc-fav.active { background:rgba(224,85,85,0.15) }
@@ -1723,6 +1727,7 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
         .bs-venta .bs-h-price-block { border-left:3px solid #3A6A48; padding-left:14px }
         .bs-venta .bs-h-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
         .bs-venta .bs-h-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.3); letter-spacing:0.2px }
+        .bs-tc-badge { display:inline-block; margin-left:10px; background:rgba(180,130,20,0.9); color:#fff; font-size:10px; font-weight:500; padding:3px 8px; border-radius:3px; vertical-align:middle; letter-spacing:0.2px }
         .bs-venta .bs-h-specs { font-size:15px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300; line-height:1.4 }
         .bs-venta .bs-h-sub { font-size:14px; color:#EDE8DC; font-family:'DM Sans',sans-serif; font-weight:300; margin-top:4px }
 
@@ -2002,6 +2007,7 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
         plan_pagos_cuotas: p.plan_pagos_cuotas ?? null,
         plan_pagos_texto: p.plan_pagos_texto || null,
         fuente: p.fuente || '',
+        tc_sospechoso: p.tc_sospechoso ?? false,
       }))
     }
   } catch (err) {
