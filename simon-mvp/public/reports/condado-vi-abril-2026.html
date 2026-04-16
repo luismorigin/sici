@@ -1423,6 +1423,18 @@ table.data .strong a:hover::after { color: var(--caramelo); }
       </div>
     </div>
     <script>
+    function toggleBrokerGuide() {
+      const panel = document.getElementById('brokerGuidePanel');
+      const btn = document.getElementById('brokerGuideBtn');
+      if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        btn.textContent = 'Ocultar guia';
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        panel.style.display = 'none';
+        btn.textContent = 'Ver guia completa de gestion de brokers';
+      }
+    }
     function toggleRotacionTable() {
       const t = document.getElementById('rotacionTable');
       const btn = document.querySelector('#rotacionToggle button');
@@ -2061,7 +2073,262 @@ table.data .strong a:hover::after { color: var(--caramelo); }
         <div class="tl-period urgente">Inmediato</div>
         <div class="tl-card">
           <div class="tl-card-title">Reuniones mensuales con brokers</div>
-          <div class="tl-card-body" style="display:block">Hoy 4 listings visibles de 14 unidades — los brokers publican una por exclusividad, lo cual es normal. Pero no hay retroalimentacion. Establecer reuniones mensuales para: revisar que se muestra del edificio, como se promociona, reporte de leads recibidos y visitas realizadas. Sin esa informacion no se puede ajustar la estrategia.</div>
+          <div class="tl-card-body" style="display:block">
+            <p style="margin-bottom:16px">Hoy 4 listings visibles de 14 unidades — los brokers publican una por exclusividad, lo cual es normal. Pero no hay retroalimentacion. Sin un ritmo de contacto minimo, no hay forma de saber que pasa con el 71% del inventario que no se ve en portales.</p>
+
+            <div style="background:var(--caramelo-10);border-radius:16px;padding:28px 24px;margin-bottom:20px">
+              <div style="font-family:'Figtree',sans-serif;font-size:15px;font-weight:600;color:var(--carbon);margin-bottom:16px;letter-spacing:0.3px">Cadencia recomendada</div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px">
+                <div style="background:var(--white);border-radius:12px;padding:20px">
+                  <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--caramelo);margin-bottom:8px">Semanal</div>
+                  <div style="font-size:15px;font-weight:500;color:var(--carbon);margin-bottom:4px">Check-in por WhatsApp</div>
+                  <div style="font-size:13px;color:var(--piedra-light)">5-10 min. Mensaje corto: como va la semana, si hubo consultas, si necesita material. No es una auditoria — es mantenerse presente.</div>
+                </div>
+                <div style="background:var(--white);border-radius:12px;padding:20px">
+                  <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--caramelo);margin-bottom:8px">Mensual</div>
+                  <div style="font-size:15px;font-weight:500;color:var(--carbon);margin-bottom:4px">Reunion presencial con datos</div>
+                  <div style="font-size:13px;color:var(--piedra-light)">45-60 min. Revisar actividad del mes, objeciones frecuentes, posicion de Condado VI vs competencia, y definir 2-3 acciones concretas.</div>
+                </div>
+                <div style="background:var(--white);border-radius:12px;padding:20px">
+                  <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--caramelo);margin-bottom:8px">Cada 1-2 meses</div>
+                  <div style="font-size:15px;font-weight:500;color:var(--carbon);margin-bottom:4px">Almuerzo informal</div>
+                  <div style="font-size:13px;color:var(--piedra-light)">Sin agenda de trabajo. Construir relacion personal — en Santa Cruz, la lealtad comercial se consolida en el trato cercano.</div>
+                </div>
+              </div>
+
+              <div style="font-family:'Figtree',sans-serif;font-size:15px;font-weight:600;color:var(--carbon);margin-bottom:12px;letter-spacing:0.3px">Por que importa</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:0">
+                <div style="font-size:13px;color:var(--piedra);line-height:1.6"><span style="color:var(--caramelo);font-weight:600">&#10003;</span> &nbsp;Los brokers priorizan los proyectos donde tienen mejor material y respuesta rapida</div>
+                <div style="font-size:13px;color:var(--piedra);line-height:1.6"><span style="color:var(--caramelo);font-weight:600">&#10003;</span> &nbsp;Sin seguimiento, no hay datos de objeciones — y sin datos no se puede ajustar la estrategia</div>
+                <div style="font-size:13px;color:var(--piedra);line-height:1.6"><span style="color:var(--caramelo);font-weight:600">&#10003;</span> &nbsp;Compartir el estudio de mercado le da autoridad al broker frente a sus clientes</div>
+                <div style="font-size:13px;color:var(--piedra);line-height:1.6"><span style="color:var(--caramelo);font-weight:600">&#10003;</span> &nbsp;Una reunion mensual bien preparada rinde mas que dos reuniones improvisadas</div>
+              </div>
+            </div>
+
+            <div style="margin-bottom:12px">
+              <button onclick="toggleBrokerGuide()" id="brokerGuideBtn" style="font-size:14px;color:var(--caramelo);cursor:pointer;border:1px solid var(--caramelo);background:none;padding:10px 24px;font-family:'DM Sans',sans-serif;font-weight:500;transition:background 0.2s;border-radius:100px" onmouseover="this.style.background='var(--caramelo-10)'" onmouseout="this.style.background='none'">
+                Ver guia completa de gestion de brokers
+              </button>
+            </div>
+
+            <div id="brokerGuidePanel" style="display:none;margin-top:20px">
+
+              <!-- Seccion 1: Contexto -->
+              <div style="border-top:1px solid var(--arena);padding-top:28px;margin-bottom:32px">
+                <div style="font-family:'Figtree',sans-serif;font-size:18px;font-weight:600;color:var(--carbon);margin-bottom:16px">Como operan los brokers en Santa Cruz</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                  <div style="font-size:14px;color:var(--piedra);line-height:1.7;padding:16px;background:var(--white);border-radius:12px">
+                    <strong style="color:var(--carbon)">Trabajan con 15-30 listings a la vez.</strong> Tu edificio es uno mas en su cartera. Si no les das material y atencion, muestran al competidor que si lo hizo.
+                  </div>
+                  <div style="font-size:14px;color:var(--piedra);line-height:1.7;padding:16px;background:var(--white);border-radius:12px">
+                    <strong style="color:var(--carbon)">No reportan proactivamente.</strong> En Bolivia no hay MLS ni sistemas de tracking centralizados. Si no preguntas, no te enteras de las consultas, visitas ni objeciones.
+                  </div>
+                  <div style="font-size:14px;color:var(--piedra);line-height:1.7;padding:16px;background:var(--white);border-radius:12px">
+                    <strong style="color:var(--carbon)">La relacion personal pesa.</strong> La comision motiva, pero el trato cercano es lo que hace que prioricen un proyecto sobre otro cuando tienen un cliente indeciso.
+                  </div>
+                  <div style="font-size:14px;color:var(--piedra);line-height:1.7;padding:16px;background:var(--white);border-radius:12px">
+                    <strong style="color:var(--carbon)">WhatsApp es su oficina.</strong> Todo pasa por ahi. El email es decorativo. Las reuniones presenciales son para temas importantes.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Seccion 2: Check-in semanal -->
+              <div style="margin-bottom:32px">
+                <div style="font-family:'Figtree',sans-serif;font-size:18px;font-weight:600;color:var(--carbon);margin-bottom:6px">Check-in semanal por WhatsApp</div>
+                <div style="font-size:13px;color:var(--piedra-light);margin-bottom:16px">El contacto minimo para no desaparecer del radar. Lunes o martes.</div>
+                <div style="background:var(--white);border-radius:12px;padding:20px;margin-bottom:16px;border-left:3px solid var(--caramelo)">
+                  <div style="font-size:14px;color:var(--piedra);line-height:1.7;font-style:italic">"Hola [nombre], buen inicio de semana. ¿Como viene la semana? ¿Tuviste alguna consulta por Condado? Cualquier cosa que necesites me avisas."</div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                  <div style="font-size:13px;color:var(--piedra);line-height:1.6"><strong style="color:var(--carbon)">Buscar saber:</strong> si mostro departamentos, si tuvo consultas sin respuesta, si necesita material.</div>
+                  <div style="font-size:13px;color:var(--piedra);line-height:1.6"><strong style="color:var(--carbon)">Evitar:</strong> presionar por resultados, mandar mensajes largos, o desaparecer 3 semanas y despues pedir explicaciones.</div>
+                </div>
+              </div>
+
+              <!-- Seccion 3: Reunion mensual agenda -->
+              <div style="margin-bottom:32px">
+                <div style="font-family:'Figtree',sans-serif;font-size:18px;font-weight:600;color:var(--carbon);margin-bottom:6px">Agenda de la reunion mensual</div>
+                <div style="font-size:13px;color:var(--piedra-light);margin-bottom:16px">Presencial en la oficina del broker. Ir a ellos, no pedirles que vengan. Mandar agenda 24h antes.</div>
+                <div style="display:grid;gap:12px">
+                  <div style="display:flex;gap:14px;align-items:flex-start;background:var(--white);border-radius:12px;padding:16px 20px">
+                    <div style="min-width:32px;height:32px;background:var(--caramelo-10);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--caramelo)">1</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:2px">Situacion general <span style="font-weight:400;color:var(--piedra-light);font-size:12px">5 min</span></div>
+                      <div style="font-size:13px;color:var(--piedra)">¿Como esta el mercado? ¿Que estan pidiendo los clientes?</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:14px;align-items:flex-start;background:var(--white);border-radius:12px;padding:16px 20px">
+                    <div style="min-width:32px;height:32px;background:var(--caramelo-10);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--caramelo)">2</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:2px">Datos del mercado <span style="font-weight:400;color:var(--piedra-light);font-size:12px">10 min</span></div>
+                      <div style="font-size:13px;color:var(--piedra)">Compartir este estudio: movimientos, nuevos competidores, posicion de Condado VI. Le da al broker argumentos con respaldo.</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:14px;align-items:flex-start;background:var(--white);border-radius:12px;padding:16px 20px">
+                    <div style="min-width:32px;height:32px;background:var(--caramelo-10);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--caramelo)">3</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:2px">Actividad del mes <span style="font-weight:400;color:var(--piedra-light);font-size:12px">10 min</span></div>
+                      <div style="font-size:13px;color:var(--piedra)">Visitas, consultas, cotizaciones. ¿Que unidades generaron interes? ¿Hubo negociacion seria?</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:14px;align-items:flex-start;background:var(--white);border-radius:12px;padding:16px 20px">
+                    <div style="min-width:32px;height:32px;background:var(--caramelo-10);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--caramelo)">4</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:2px">Objeciones frecuentes <span style="font-weight:400;color:var(--piedra-light);font-size:12px">10 min</span></div>
+                      <div style="font-size:13px;color:var(--piedra)">Las 2-3 objeciones del mes. Armar la respuesta juntos — no imponer. Si el broker tiene la respuesta lista, cierra mas.</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:14px;align-items:flex-start;background:var(--white);border-radius:12px;padding:16px 20px">
+                    <div style="min-width:32px;height:32px;background:var(--caramelo-10);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--caramelo)">5</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:2px">Material y herramientas <span style="font-weight:400;color:var(--piedra-light);font-size:12px">5 min</span></div>
+                      <div style="font-size:13px;color:var(--piedra)">¿Fotos actualizadas? ¿Listings bien cargados? ¿Necesita brochure, video o plano de alguna unidad?</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:14px;align-items:flex-start;background:var(--white);border-radius:12px;padding:16px 20px">
+                    <div style="min-width:32px;height:32px;background:var(--caramelo-10);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--caramelo)">6</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:2px">Proximos pasos <span style="font-weight:400;color:var(--piedra-light);font-size:12px">5 min</span></div>
+                      <div style="font-size:13px;color:var(--piedra)">2-3 compromisos concretos con fecha. "Vos haces X para el viernes, yo te mando Y el jueves."</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Seccion 4: Kit del broker -->
+              <div style="margin-bottom:32px">
+                <div style="font-family:'Figtree',sans-serif;font-size:18px;font-weight:600;color:var(--carbon);margin-bottom:6px">Material para el broker</div>
+                <div style="font-size:13px;color:var(--piedra-light);margin-bottom:16px">Si el broker tiene que buscar informacion para responder una pregunta del cliente, ya se perdio la oportunidad. Darle todo listo.</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                  <div style="background:var(--white);border-radius:12px;padding:16px 20px">
+                    <div style="font-size:13px;font-weight:600;color:var(--caramelo);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Inmediato</div>
+                    <ul style="font-size:13px;color:var(--piedra);line-height:2;list-style:none;padding:0">
+                      <li>&#9744; Ficha tecnica por unidad (plano, m², precio, equipamiento)</li>
+                      <li>&#9744; Galeria fotos profesionales en Drive compartido</li>
+                      <li>&#9744; Tarjeta con 3 argumentos clave de Condado VI</li>
+                      <li>&#9744; Tabla de yield para comprador-inversor</li>
+                      <li>&#9744; Comparativa honesta con 2-3 competidores</li>
+                    </ul>
+                  </div>
+                  <div style="background:var(--white);border-radius:12px;padding:16px 20px">
+                    <div style="font-size:13px;font-weight:600;color:var(--piedra-light);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Mes 2-3</div>
+                    <ul style="font-size:13px;color:var(--piedra);line-height:2;list-style:none;padding:0">
+                      <li>&#9744; Video walk-through de cada tipologia</li>
+                      <li>&#9744; Testimonial de propietario o inquilino</li>
+                      <li>&#9744; Fotos de areas de amenidades</li>
+                      <li>&#9744; Guia de financiamiento (si aplica)</li>
+                    </ul>
+                  </div>
+                </div>
+                <div style="margin-top:16px;background:var(--caramelo-10);border-radius:12px;padding:16px 20px">
+                  <div style="font-size:14px;color:var(--piedra);line-height:1.7"><strong style="color:var(--carbon)">Los 3 argumentos clave de Condado VI:</strong></div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px">
+                    <div style="background:var(--white);border-radius:10px;padding:14px;text-align:center">
+                      <div style="font-size:22px;font-weight:600;color:var(--caramelo);font-family:'Figtree',sans-serif">62 m²</div>
+                      <div style="font-size:12px;color:var(--piedra);margin-top:4px">en 1D — 25% mas grande que la mediana del mercado</div>
+                    </div>
+                    <div style="background:var(--white);border-radius:10px;padding:14px;text-align:center">
+                      <div style="font-size:22px;font-weight:600;color:var(--caramelo);font-family:'Figtree',sans-serif">10/10</div>
+                      <div style="font-size:12px;color:var(--piedra);margin-top:4px">equipamiento — unico con lavavajillas y linea blanca completa</div>
+                    </div>
+                    <div style="background:var(--white);border-radius:10px;padding:14px;text-align:center">
+                      <div style="font-size:22px;font-weight:600;color:var(--caramelo);font-family:'Figtree',sans-serif">Hoy</div>
+                      <div style="font-size:12px;color:var(--piedra);margin-top:4px">entrega inmediata — sin riesgo de demoras de construccion</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Seccion 5: Tacticas -->
+              <div style="margin-bottom:32px">
+                <div style="font-family:'Figtree',sans-serif;font-size:18px;font-weight:600;color:var(--carbon);margin-bottom:16px">Tacticas que marcan la diferencia</div>
+                <div style="display:grid;gap:12px">
+                  <div style="background:var(--white);border-radius:12px;padding:20px;display:flex;gap:16px;align-items:flex-start">
+                    <div style="font-size:24px;min-width:36px;text-align:center">&#9889;</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:4px">Responder en menos de 1 hora</div>
+                      <div style="font-size:13px;color:var(--piedra);line-height:1.6">Cuando el broker consulta ("¿tiene parqueo el 302?"), esta con el cliente en ese momento. Si no hay respuesta rapida, muestra otro edificio.</div>
+                    </div>
+                  </div>
+                  <div style="background:var(--white);border-radius:12px;padding:20px;display:flex;gap:16px;align-items:flex-start">
+                    <div style="font-size:24px;min-width:36px;text-align:center">&#128273;</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:4px">Visitas sin friccion</div>
+                      <div style="font-size:13px;color:var(--piedra);line-height:1.6">Departamento modelo listo, llave accesible (idealmente copia para el broker). "Dejame coordinar con el administrador" = cliente perdido.</div>
+                    </div>
+                  </div>
+                  <div style="background:var(--white);border-radius:12px;padding:20px;display:flex;gap:16px;align-items:flex-start">
+                    <div style="font-size:24px;min-width:36px;text-align:center">&#128176;</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:4px">Hacer visible la comision</div>
+                      <div style="font-size:13px;color:var(--piedra);line-height:1.6">En la reunion mensual, recordar los numeros: 1D = $3,078, 2D = $4,337, 3D = $7,143 por venta (al 3%). Es motivacion, no presion.</div>
+                    </div>
+                  </div>
+                  <div style="background:var(--white);border-radius:12px;padding:20px;display:flex;gap:16px;align-items:flex-start">
+                    <div style="font-size:24px;min-width:36px;text-align:center">&#127942;</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:4px">Bonus por velocidad (opcional)</div>
+                      <div style="font-size:13px;color:var(--piedra);line-height:1.6">"+0.5% si cierra antes del [fecha]" o "+$500 por la proxima venta". Costo bajo ($500-1,500) pero genera urgencia real.</div>
+                    </div>
+                  </div>
+                  <div style="background:var(--white);border-radius:12px;padding:20px;display:flex;gap:16px;align-items:flex-start">
+                    <div style="font-size:24px;min-width:36px;text-align:center">&#129309;</div>
+                    <div>
+                      <div style="font-size:14px;font-weight:600;color:var(--carbon);margin-bottom:4px">Transparencia si hay venta directa</div>
+                      <div style="font-size:13px;color:var(--piedra);line-height:1.6">Si se agrega un canal de marketing directo: definir que unidades son del broker y cuales son directas. Nunca vender directo una unidad que el broker esta cotizando. La confianza se pierde una sola vez.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Seccion 6: Señales de alerta -->
+              <div style="margin-bottom:32px">
+                <div style="font-family:'Figtree',sans-serif;font-size:18px;font-weight:600;color:var(--carbon);margin-bottom:16px">Señales de alerta</div>
+                <div style="display:grid;gap:10px">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;background:var(--white);border-radius:12px;padding:14px 20px">
+                    <div style="font-size:13px;color:var(--piedra)"><strong style="color:var(--carbon)">Broker no responde en 48h</strong> — ya no estas en su radar. Visita presencial, no otro WhatsApp.</div>
+                    <div style="font-size:13px;color:var(--piedra)"><strong style="color:var(--carbon)">0 visitas en 30 dias</strong> — no esta mostrando el edificio. Reunion directa: "¿que necesitas para poder mostrarlo?"</div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;background:var(--white);border-radius:12px;padding:14px 20px">
+                    <div style="font-size:13px;color:var(--piedra)"><strong style="color:var(--carbon)">Listings con fotos viejas</strong> — el proyecto no le importa. Enviar fotos nuevas y pedir que actualice.</div>
+                    <div style="font-size:13px;color:var(--piedra)"><strong style="color:var(--carbon)">Siempre las mismas objeciones</strong> — hay un problema real. Analizar en serio, no descartar.</div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;background:var(--white);border-radius:12px;padding:14px 20px">
+                    <div style="font-size:13px;color:var(--piedra)"><strong style="color:var(--carbon)">Broker pide bajar precio</strong> — no tiene argumentos de venta. Darle argumentos, no ceder precio.</div>
+                    <div style="font-size:13px;color:var(--piedra)"><strong style="color:var(--carbon)">Mucha actividad, 0 cierres</strong> — hay un cuello de botella. Participar en la proxima negociacion seria.</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Seccion 7: Calendario -->
+              <div style="margin-bottom:16px">
+                <div style="font-family:'Figtree',sans-serif;font-size:18px;font-weight:600;color:var(--carbon);margin-bottom:16px">Calendario sugerido — primer mes</div>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+                  <div style="background:var(--white);border-radius:12px;padding:16px;text-align:center">
+                    <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--caramelo);margin-bottom:8px">Semana 1</div>
+                    <div style="font-size:13px;color:var(--piedra);line-height:1.5">Llamar a cada broker. Verificar listings en portales. Armar kit basico.</div>
+                  </div>
+                  <div style="background:var(--white);border-radius:12px;padding:16px;text-align:center">
+                    <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--caramelo);margin-bottom:8px">Semana 2</div>
+                    <div style="font-size:13px;color:var(--piedra);line-height:1.5">Entregar kit basico. Primer check-in WhatsApp.</div>
+                  </div>
+                  <div style="background:var(--white);border-radius:12px;padding:16px;text-align:center">
+                    <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--caramelo);margin-bottom:8px">Semana 3</div>
+                    <div style="font-size:13px;color:var(--piedra);line-height:1.5">Check-in WhatsApp. Preparar datos para reunion.</div>
+                  </div>
+                  <div style="background:var(--white);border-radius:12px;padding:16px;text-align:center">
+                    <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--caramelo);margin-bottom:8px">Semana 4</div>
+                    <div style="font-size:13px;color:var(--piedra);line-height:1.5">Reunion mensual con datos. Almuerzo informal despues.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="background:var(--caramelo-10);border-radius:12px;padding:20px;text-align:center;margin-top:24px">
+                <div style="font-size:14px;color:var(--piedra);line-height:1.7;font-style:italic;max-width:640px;margin:0 auto">"El broker que vende Condado VI deberia sentir que es el proyecto donde mas lo apoyan, donde mas rapido le responden, y donde mejor equipado esta para vender. Si se logra eso, va a ser el primer edificio que muestre cuando un cliente le pregunte ¿que me recomendas?"</div>
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
       <div class="tl-block urgente">
