@@ -225,6 +225,7 @@
 | 217 | fix_gps_false_positives_bulk | Fix GPS falsos positivos bulk |
 | 218 | gps_matching_penalize_dense_zones | GPS matching penalizar zonas densas |
 | 219 | buscar_unidades_simple_tc_sospechoso | **TC sospechoso en `buscar_unidades_simple()`.** Agrega `tc_sospechoso BOOLEAN` al RETURN TABLE. CTE `medianas_tc` calcula mediana $/m² por grupo (zona+dorms+estado) con ≥3 props TC conocido. Flag = true si `tipo_cambio_detectado='no_especificado'` Y precio/m² >30% debajo de mediana. LEFT JOIN para no afectar props sin grupo. ~8 props afectadas (2.5% del feed) |
+| 220 | advisor_property_snapshot | **Snapshot diario para Simon Advisor.** Tabla `advisor_property_snapshot` (PK: snapshot_date+property_id), función `generate_advisor_snapshot()` idempotente, pg_cron a 9:15 AM. Pre-computa: rankings edificio/tipología por $/m2, posición mercado segment-aware (preventa vs entrega), yield alquiler (zona+dorms con fallback zona). ~320 filas/día. Doble uso: cache Advisor (0.5s vs 5s) + serie histórica (tracking precios, absorción, plusvalía) |
 
 **⚠️ Post-migración 191 — Deploy requerido en n8n:**
 La migración 191 corrige datos existentes pero el extractor C21 sigue generando falsos positivos.
