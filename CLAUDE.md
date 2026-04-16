@@ -125,6 +125,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Meta Pixel & eventos** | `docs/meta/META_PIXEL_EVENTOS.md` — Pixel ID, eventos Tier 1-2 implementados, Tier 3 backlog, CAPI futuro |
 | **Producto informe mercado** | `docs/backlog/PRODUCTO_INFORME_MERCADO.md` |
 | **Límites data fiduciaria** | `docs/canonical/LIMITES_DATA_FIDUCIARIA.md` — qué puede aseverar Simón y qué no, matriz verde/amarillo/rojo, guía por perfil (comprador vs inversionista) |
+| **TC sospechoso criterios** | `docs/canonical/TC_SOSPECHOSO_CRITERIOS.md` — badge "Confirmar tipo de cambio" en /ventas, criterio 30% debajo mediana grupo, cómo modificar |
 | **Refactor ventas (completado)** | `docs/refactor/VENTAS_SIMPLIFICADO.md` — bloques 1-7 completados, 5d pendiente |
 | **Auditoría UX alquileres (antigua)** | `docs/refactor/AUDITORIA_UX_ALQUILERES.md` — 5 mejoras + 5 insights + 6 debilidades |
 | **Auditoría UX mobile alquileres** | `docs/design/UX_AUDIT_MOBILE_ALQUILERES.md` — 7 hallazgos + 8 commits implementados (1 abril 2026) |
