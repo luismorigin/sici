@@ -124,6 +124,29 @@ Equipetrol tiene volumen bajo de casas (~15-40 listings) y terrenos (~10-30 list
 - [ ] Matching condicional: departamento → `proyectos_master`, casa en condominio → `condominios_master`, terreno/casa individual → sin matching
 - [ ] Absorcion de mercado por tipo
 
+### Fase 5 — Casas en alquiler y anticrético en Equipetrol (futuro)
+**Objetivo:** Extender el pipeline a operaciones distintas a venta para casas.
+**Motivación:** Las casas en alquiler (mensualidad) y anticrético (contrato pre-pagado) son un segmento relevante en Equipetrol — complementa la data de ventas con dinámica de rentas/anticréticos para estudios más completos.
+
+**Scope:**
+- [ ] Discovery C21 casas alquiler (`tipo_casa` + `operacion_alquiler`)
+- [ ] Discovery Remax casas alquiler (`/api/search/casa/` con filtro alquiler)
+- [ ] Discovery C21/Remax casas anticrético (validar que los portales lo listen como operación separada)
+- [ ] Enrichment específico: campos de alquiler (`precio_mensual_bob`, `amoblado`, `acepta_mascotas`, `servicios_incluidos`, `contrato_minimo_meses`, `deposito_meses`) y anticrético (`monto_total_anticretico`, `duracion_contrato_meses`)
+- [ ] Filtros: precio mensual, amoblado, mascotas (alquiler); monto total, duración (anticrético)
+- [ ] Feed público condicional — mismo `/ventas/casas` agrega tab alquiler/anticrético, o rutas separadas `/alquileres/casas`, `/anticretico/casas`
+- [ ] Absorción por operación (cuánto dura un alquiler de casa en mercado vs venta)
+
+**Dependencias:**
+- Verificar que C21 y Remax publiquen casas en alquiler con volumen relevante en Equipetrol (estimado: 5-15 props)
+- Evaluar si el anticrético merece pipeline propio o se integra con alquiler (pregunta de negocio)
+- Definir si el pipeline es compartido con deptos alquiler existente o paralelo (probablemente paralelo, como el de venta)
+
+**Riesgos/caveats:**
+- Volumen posiblemente muy bajo (casas en alquiler/anticrético son segmento chico)
+- Remax mezcla alquileres de casas dentro del endpoint `/casa/` (venta) — ya lo filtramos como `excluido_operacion`. Para Fase 5 habría que invertir: capturarlos explícitamente
+- El TC en anticrético es siempre en Bs, no USD — adaptar merge ligero
+
 ## 5. Diseno tecnico
 
 ### 5.1 Schema BD
