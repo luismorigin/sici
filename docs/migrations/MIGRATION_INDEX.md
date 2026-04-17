@@ -226,6 +226,7 @@
 | 218 | gps_matching_penalize_dense_zones | GPS matching penalizar zonas densas |
 | 219 | buscar_unidades_simple_tc_sospechoso | **TC sospechoso en `buscar_unidades_simple()`.** Agrega `tc_sospechoso BOOLEAN` al RETURN TABLE. CTE `medianas_tc` calcula mediana $/m² por grupo (zona+dorms+estado) con ≥3 props TC conocido. Flag = true si `tipo_cambio_detectado='no_especificado'` Y precio/m² >30% debajo de mediana. LEFT JOIN para no afectar props sin grupo. ~8 props afectadas (2.5% del feed) |
 | 220 | advisor_property_snapshot | **Snapshot diario para Simon Advisor.** Tabla `advisor_property_snapshot` (PK: snapshot_date+property_id), función `generate_advisor_snapshot()` idempotente, pg_cron a 9:15 AM. Pre-computa: rankings edificio/tipología por $/m2, posición mercado segment-aware (preventa vs entrega), yield alquiler (zona+dorms con fallback zona). ~320 filas/día. Doble uso: cache Advisor (0.5s vs 5s) + serie histórica (tracking precios, absorción, plusvalía) |
+| 221 | casas_terrenos_schema | **Casas y Terrenos Fase 1.** 3 columnas nuevas (`area_terreno_m2`, `frente_m`, `fondo_m`). Filtro `tipo_propiedad_original NOT IN ('casa','terreno','lote')` en 5 funciones de matching (`generar_matches_por_nombre/url/fuzzy/trigram/gps`) para skipear casas/terrenos que no tienen `proyectos_master`. PRD: `docs/backlog/CASAS_TERRENOS_PRD.md` |
 
 **⚠️ Post-migración 191 — Deploy requerido en n8n:**
 La migración 191 corrige datos existentes pero el extractor C21 sigue generando falsos positivos.

@@ -36,6 +36,7 @@ BEGIN
         FROM propiedades_v2 p
         WHERE p.id_proyecto_master IS NULL
           AND p.status IN ('completado', 'actualizado')
+          AND LOWER(COALESCE(p.tipo_propiedad_original, '')) NOT IN ('casa', 'terreno', 'lote')
     )
     SELECT
         pcn.id,

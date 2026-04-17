@@ -42,6 +42,7 @@ BEGIN
           AND p.url IS NOT NULL
           AND p.status IN ('completado', 'actualizado')
           AND p.es_para_matching = true
+          AND LOWER(COALESCE(p.tipo_propiedad_original, '')) NOT IN ('casa', 'terreno', 'lote')
           AND (p.campos_bloqueados IS NULL
                OR NOT (p.campos_bloqueados::jsonb ? 'id_proyecto_master'))
     ),

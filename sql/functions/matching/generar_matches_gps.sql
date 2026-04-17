@@ -72,6 +72,7 @@ BEGIN
           AND p.status IN ('completado', 'actualizado')
           AND p.es_para_matching = TRUE
           AND p.zona IS NOT NULL
+          AND LOWER(COALESCE(p.tipo_propiedad_original, '')) NOT IN ('casa', 'terreno', 'lote')
     ),
     -- Seleccionar el proyecto más cercano por propiedad
     matches_cercanos AS (

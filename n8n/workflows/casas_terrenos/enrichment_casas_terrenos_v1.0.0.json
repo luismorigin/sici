@@ -1,0 +1,292 @@
+{
+  "name": "enrichment_casas_terrenos_v1.0.0",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "ct-enr-trigger",
+      "name": "Trigger 2:30 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-1200, 0],
+      "notes": "Enrichment casas/terrenos (después de discovery 1:15 AM)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT obtener_tc_actuales() as tc",
+        "options": {}
+      },
+      "id": "ct-enr-config",
+      "name": "Cargar TC",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-1000, 0],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "TC oficial y paralelo para conversión BOB→USD"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, url, fuente, tipo_propiedad_original, precio_usd_original, moneda_original, area_total_m2, area_terreno_m2, dormitorios, banos, latitud, longitud, zona FROM propiedades_v2 WHERE status = 'nueva' AND LOWER(tipo_propiedad_original) IN ('casa','terreno','lote') AND zona IS NOT NULL AND datos_json_enrichment IS NULL ORDER BY fecha_discovery DESC LIMIT 10",
+        "options": {}
+      },
+      "id": "ct-enr-query",
+      "name": "Query Casas/Terrenos Pendientes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-800, 0],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "Props con zona (dentro Equipetrol) y sin enrichment"
+    },
+    {
+      "parameters": {
+        "options": {"batchSize": 1}
+      },
+      "id": "ct-enr-split",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [-600, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.firecrawl.dev/v1/scrape",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "firecrawlApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ url: $json.url, formats: ['markdown', 'rawHtml'], onlyMainContent: true, waitFor: 3000 }) }}",
+        "options": {
+          "response": {"response": {"fullResponse": true}},
+          "timeout": 80000
+        }
+      },
+      "id": "ct-enr-firecrawl",
+      "name": "Firecrawl Scrape",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-400, 0],
+      "alwaysOutputData": true,
+      "credentials": {
+        "firecrawlApi": {
+          "id": "1txYWUirJjoOvK41",
+          "name": "Firecrawl account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "HTML renderizado vía Firecrawl (espera JS 2s)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer descripción — estrategias por fuente (basado en flujo_enrichment_llm_alquiler v2)\nconst item = $('Split In Batches').item.json;\nconst input = $input.first();\nconst response = input?.json?.body || input?.json || {};\nconst scrape = response?.data || response;\nconst html = scrape?.rawHtml || '';\nconst markdown = scrape?.markdown || '';\n\nlet descripcion = '';\nlet titulo = '';\nlet metodo = 'none';\n\nif (item.fuente === 'remax') {\n  // Remax: parsear atributo data-page=\"...\" del HTML\n  if (html && html.length > 500) {\n    try {\n      const match = html.match(/data-page=\"([^\"]*?)\"/i);\n      if (match && match[1]) {\n        const jsonString = match[1]\n          .replace(/&quot;/g, '\"')\n          .replace(/&amp;/g, '&')\n          .replace(/&lt;/g, '<')\n          .replace(/&gt;/g, '>');\n        const data = JSON.parse(jsonString);\n        const listing = data.props?.listing || data.props?.property || null;\n        if (listing) {\n          titulo = listing.title || '';\n          descripcion = listing.description_website || listing.description || '';\n          metodo = 'data-page';\n        }\n      }\n    } catch (e) { console.log('Remax data-page error: ' + e.message); }\n  }\n  // Fallback: markdown\n  if (!descripcion || descripcion.length < 20) {\n    if (markdown && markdown.length >= 50) {\n      descripcion = markdown.substring(0, 3000);\n      metodo = 'markdown_fallback';\n    }\n  }\n} else if (item.fuente === 'century21') {\n  // C21: usar markdown directo\n  if (markdown && markdown.length >= 50) {\n    descripcion = markdown.substring(0, 3000);\n    metodo = 'markdown';\n  }\n}\n\n// Armar contenido final\nlet contenido = descripcion;\nif (item.fuente === 'remax' && titulo && metodo === 'data-page') {\n  contenido = 'TÍTULO: ' + titulo + '\\n\\nDESCRIPCIÓN:\\n' + descripcion.substring(0, 3000);\n}\n\nif (contenido.length > 3000) contenido = contenido.substring(0, 3000);\n\nconsole.log(`Prop ${item.id} (${item.fuente}): método=${metodo}, descripción=${contenido.length} chars`);\n\nreturn [{ json: { ...item, descripcion: contenido, metodo_extraccion: metodo, firecrawl_error: contenido.length === 0 } }];"
+      },
+      "id": "ct-enr-extract",
+      "name": "Extraer Descripción",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-200, 0],
+      "notes": "Parsing JSON-LD + __NEXT_DATA__ para descripción"
+    },
+    {
+      "parameters": {"amount": 2},
+      "id": "ct-enr-wait",
+      "name": "Wait 2s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "webhookId": "ct-enr-wait-001"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": false, "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "is-terreno",
+              "leftValue": "={{ ($json.tipo_propiedad_original || '').toLowerCase() }}",
+              "rightValue": "terreno",
+              "operator": {"type": "string", "operation": "contains"}
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "ct-enr-route",
+      "name": "IF Terreno",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [200, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Prompt Terrenos v1.0\nconst p = $input.first().json;\n\nconst prompt = `Eres un extractor de datos inmobiliarios para Santa Cruz de la Sierra, Bolivia.\nExtraes datos de anuncios de TERRENOS EN VENTA.\nREGLA ABSOLUTA: NUNCA inventes datos. Si no aparece en el texto, devuelve null.\n\nLos listings de terrenos suelen ser breves. Extrae solo lo que el texto confirme.\n\n===============================\nDATOS PORTAL:\n- URL: ${p.url}\n- Fuente: ${p.fuente}\n- Precio original: ${p.precio_usd_original} ${p.moneda_original}\n- Area terreno (portal): ${p.area_terreno_m2 || 'no especificada'} m2\n\nDESCRIPCION:\n${p.descripcion || '(sin descripcion)'}\n===============================\n\nINSTRUCCIONES:\n\nAREA_TERRENO_M2: Si la descripcion menciona area diferente al portal, usar la del texto. Si confirma, repetir. null si no se menciona.\n\nFRENTE_M/FONDO_M: Buscar \"X metros de frente/fondo\", \"Xm x Ym\". null si no se mencionan.\n\nUSO_SUELO: \"residencial\" | \"comercial\" | \"mixto\" | \"no_especificado\" (DEFAULT).\n\nTIENE_CONSTRUCCION: true si hay edificacion existente, false si es terreno limpio, null si no se puede determinar.\n\nSERVICIOS_DISPONIBLES: Array de: \"agua\", \"luz\", \"gas\", \"alcantarillado\", \"pavimento\", \"telefono\", \"internet\". Solo lo que el texto CONFIRME. DEFAULT: [].\n\nTOPOGRAFIA: \"plano\" | \"pendiente\" | \"irregular\" | \"no_especificado\" (DEFAULT).\n\nTIPO_CAMBIO_DETECTADO: \"paralelo\" (TC paralelo, solo dolares, blue, USDT), \"oficial\" (TC 7, TC oficial, cambio 6.96), \"no_especificado\" (DEFAULT). La moneda del portal NO indica TC.\n\nZONA_MENCIONADA_EN_TEXTO: Detectar si la descripcion menciona una zona DIFERENTE a Equipetrol (el GPS del portal puede ser incorrecto).\n- Equipetrol: Eq. Centro, Eq. Norte, Sirari, Villa Brigida, Eq. Oeste, Eq. 3er Anillo → devolver null (zona correcta)\n- Otras zonas Santa Cruz: \"cotoca\", \"urubo\", \"norte\", \"sur\", \"oeste\", \"este\", \"zona norte\", \"zona sur\", \"zona este\", \"4to anillo\", \"5to anillo\", \"doble via la guardia\" → devolver el nombre detectado\n- Si NO menciona zona especifica o es Equipetrol → null\n- IMPORTANTE: solo devolver valor si la descripcion menciona EXPLICITAMENTE una zona fuera de Equipetrol\n\nPLAN_PAGOS: tiene_plan_pagos, plan_pagos_texto, descuento_contado_pct, acepta_permuta, precio_negociable, solo_tc_paralelo (todos DEFAULT false o null).\n\nDESCRIPCION_LIMPIA: sin contacto ni emojis. null si <30 chars.\n\n===============================\n\nDevuelve SOLO este JSON:\n{\n  \"area_terreno_m2\": number | null,\n  \"frente_m\": number | null,\n  \"fondo_m\": number | null,\n  \"uso_suelo\": \"residencial\" | \"comercial\" | \"mixto\" | \"no_especificado\",\n  \"tiene_construccion\": boolean | null,\n  \"servicios_disponibles\": string[],\n  \"topografia\": \"plano\" | \"pendiente\" | \"irregular\" | \"no_especificado\",\n  \"tipo_cambio_detectado\": \"paralelo\" | \"oficial\" | \"no_especificado\",\n  \"tipo_cambio_confianza\": \"alta\" | \"media\" | \"baja\" | null,\n  \"zona_mencionada_en_texto\": string | null,\n  \"plan_pagos\": {\n    \"tiene_plan_pagos\": boolean,\n    \"plan_pagos_texto\": string | null,\n    \"descuento_contado_pct\": number | null,\n    \"acepta_permuta\": boolean,\n    \"precio_negociable\": boolean,\n    \"solo_tc_paralelo\": boolean\n  },\n  \"descripcion_limpia\": string | null\n}`;\n\nreturn [{ json: { ...p, prompt, tipo_prompt: 'terreno' } }];"
+      },
+      "id": "ct-enr-prompt-terreno",
+      "name": "Build Prompt Terreno",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, -100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Prompt Casas v1.0\nconst p = $input.first().json;\n\nconst prompt = `Eres un extractor de datos inmobiliarios para Santa Cruz de la Sierra, Bolivia.\nExtraes datos de anuncios de CASAS EN VENTA.\nREGLA ABSOLUTA: NUNCA inventes datos. Si no aparece en el texto, devuelve null.\n\nUna casa se valora por sus ESPACIOS, no solo por dormitorios. Presta especial atencion a ambientes adicionales como escritorio, galeria, sala de juegos, cuarto de servicio, etc.\n\n===============================\nDATOS PORTAL:\n- URL: ${p.url}\n- Fuente: ${p.fuente}\n- Precio original: ${p.precio_usd_original} ${p.moneda_original}\n- Area construida: ${p.area_total_m2 || 'no especificada'} m2\n- Area terreno: ${p.area_terreno_m2 || 'no especificada'} m2\n- Dormitorios (portal): ${p.dormitorios || 'no especificados'}\n- Banos (portal): ${p.banos || 'no especificados'}\n\nDESCRIPCION:\n${p.descripcion || '(sin descripcion)'}\n===============================\n\nINSTRUCCIONES:\n\nDORMITORIOS: Incluye suite master. Si portal y texto no contradicen, mantener portal. Rango 0-10.\n\nBANOS: \"medio bano\"/\"toilette\" = 0.5. Rango 0-10.\n\nAREA_TERRENO_M2: solo si se menciona explicitamente. null si no.\n\nNIVELES: 1-5. \"2 plantas\" = 2. null si no se menciona.\n\nGARAGE: {cubierto: bool, vehiculos: int} o null.\n\nCUARTO_SERVICIO: true si menciona \"dependencia\", \"cuarto de empleada\", \"cuarto de servicio\". DEFAULT false.\nCUARTO_SERVICIO_CON_BANO: true si tiene bano propio. DEFAULT false.\n\nPISCINA: true si piscina propia (no comunitaria). DEFAULT false.\nJARDIN: true si jardin/patio verde propio. DEFAULT false.\n\nAMBIENTES_ADICIONALES: Array de: \"escritorio\", \"sala_juegos\", \"galeria\", \"lavanderia\", \"sala_estar\", \"terraza\", \"quincho\", \"deposito\", \"sala_tv\", \"vestidor\", \"bodega\". Solo lo que el texto CONFIRME. DEFAULT [].\n\nESTADO_PROPIEDAD: \"nueva\" | \"usada\" | \"remodelada\" | \"para_demolicion\" | null.\n\nESTADO_CONSTRUCCION: \"entrega_inmediata\" | \"preventa\" | null.\n\nTIPO_CAMBIO_DETECTADO: \"paralelo\" (TC paralelo, solo dolares, blue), \"oficial\" (TC 7, TC oficial), \"no_especificado\" (DEFAULT).\n\nZONA_MENCIONADA_EN_TEXTO: Detectar si la descripcion menciona una zona DIFERENTE a Equipetrol (el GPS del portal puede ser incorrecto).\n- Equipetrol: Eq. Centro, Eq. Norte, Sirari, Villa Brigida, Eq. Oeste, Eq. 3er Anillo → devolver null (zona correcta)\n- Otras zonas Santa Cruz: \"cotoca\", \"urubo\", \"norte\", \"sur\", \"oeste\", \"este\", \"zona norte\", \"zona sur\", \"zona este\", \"4to anillo\", \"5to anillo\", \"doble via la guardia\" → devolver el nombre detectado\n- Si NO menciona zona especifica o es Equipetrol → null\n- IMPORTANTE: solo devolver valor si la descripcion menciona EXPLICITAMENTE una zona fuera de Equipetrol\n\nPLAN_PAGOS: tiene_plan_pagos, plan_pagos_texto, descuento_contado_pct, acepta_permuta, precio_negociable, solo_tc_paralelo (DEFAULT false/null).\n\nAMENITIES_CONFIRMADOS: del CONDOMINIO o barrio cerrado (piscina comunitaria, seguridad, etc). DEFAULT [].\n\nEQUIPAMIENTO_DETECTADO: \"cocina_equipada\", \"aire_acondicionado\", \"calefon\", \"chapa_digital\", \"paneles_solares\". DEFAULT [].\n\nDESCRIPCION_LIMPIA: sin contacto ni emojis. null si <30 chars.\n\n===============================\n\nDevuelve SOLO este JSON:\n{\n  \"dormitorios\": number | null,\n  \"banos\": number | null,\n  \"area_terreno_m2\": number | null,\n  \"niveles\": number | null,\n  \"garage\": {\"cubierto\": boolean, \"vehiculos\": number} | null,\n  \"cuarto_servicio\": boolean,\n  \"cuarto_servicio_con_bano\": boolean,\n  \"piscina\": boolean,\n  \"jardin\": boolean,\n  \"ambientes_adicionales\": string[],\n  \"estado_propiedad\": \"nueva\" | \"usada\" | \"remodelada\" | \"para_demolicion\" | null,\n  \"estado_construccion\": \"entrega_inmediata\" | \"preventa\" | null,\n  \"estado_construccion_confianza\": \"alta\" | \"media\" | \"baja\" | null,\n  \"tipo_cambio_detectado\": \"paralelo\" | \"oficial\" | \"no_especificado\",\n  \"tipo_cambio_confianza\": \"alta\" | \"media\" | \"baja\" | null,\n  \"zona_mencionada_en_texto\": string | null,\n  \"plan_pagos\": {\n    \"tiene_plan_pagos\": boolean,\n    \"plan_pagos_texto\": string | null,\n    \"descuento_contado_pct\": number | null,\n    \"acepta_permuta\": boolean,\n    \"precio_negociable\": boolean,\n    \"solo_tc_paralelo\": boolean\n  },\n  \"amenities_confirmados\": string[],\n  \"equipamiento_detectado\": string[],\n  \"descripcion_limpia\": string | null\n}`;\n\nreturn [{ json: { ...p, prompt, tipo_prompt: 'casa' } }];"
+      },
+      "id": "ct-enr-prompt-casa",
+      "name": "Build Prompt Casa",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1500, temperature: 0, messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "x-api-key", "value": "={{$env.ANTHROPIC_API_KEY}}"},
+            {"name": "anthropic-version", "value": "2023-06-01"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "options": {"timeout": 30000}
+      },
+      "id": "ct-enr-llm",
+      "name": "Anthropic LLM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse & validate LLM response\nconst itemInput = $input.first().json;\n// Solo UNA de las dos ramas corrió — try/catch porque $() tira error si el nodo no ejecutó\nlet upstream = null;\ntry { upstream = $('Build Prompt Casa').first().json; } catch (e) {}\nif (!upstream) {\n  try { upstream = $('Build Prompt Terreno').first().json; } catch (e) {}\n}\nif (!upstream) upstream = {};\nconst tipo_prompt = upstream.tipo_prompt || 'casa';\n\nconst text = itemInput?.content?.[0]?.text || '';\nconst tokens = (itemInput?.usage?.input_tokens || 0) + (itemInput?.usage?.output_tokens || 0);\n\nlet jsonStr = text;\nconst jsonMatch = text.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\nif (jsonMatch) jsonStr = jsonMatch[1].trim();\nelse {\n  const braceMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (braceMatch) jsonStr = braceMatch[0];\n}\n\nlet datos_llm, errores = [], requiere_revision = false;\ntry {\n  datos_llm = JSON.parse(jsonStr);\n} catch (e) {\n  errores.push('json_parse_error: ' + e.message);\n  requiere_revision = true;\n  datos_llm = null;\n}\n\nif (datos_llm) {\n  const VALID_TC = ['paralelo', 'oficial', 'no_especificado'];\n  if (datos_llm.tipo_cambio_detectado && !VALID_TC.includes(datos_llm.tipo_cambio_detectado)) {\n    errores.push('tipo_cambio_invalido');\n    datos_llm.tipo_cambio_detectado = 'no_especificado';\n  }\n\n  if (tipo_prompt === 'casa') {\n    const VALID_ESTADOS = ['entrega_inmediata', 'preventa'];\n    if (datos_llm.estado_construccion && !VALID_ESTADOS.includes(datos_llm.estado_construccion)) {\n      errores.push('estado_construccion_invalido');\n      datos_llm.estado_construccion = null;\n    }\n    if (datos_llm.dormitorios != null && (datos_llm.dormitorios < 0 || datos_llm.dormitorios > 10)) {\n      errores.push('dormitorios_fuera_rango'); datos_llm.dormitorios = null;\n    }\n    if (datos_llm.banos != null && (datos_llm.banos < 0 || datos_llm.banos > 10)) {\n      errores.push('banos_fuera_rango'); datos_llm.banos = null;\n    }\n    if (datos_llm.niveles != null && (datos_llm.niveles < 1 || datos_llm.niveles > 5)) {\n      errores.push('niveles_fuera_rango'); datos_llm.niveles = null;\n    }\n    if (!Array.isArray(datos_llm.ambientes_adicionales)) datos_llm.ambientes_adicionales = [];\n    if (!Array.isArray(datos_llm.amenities_confirmados)) datos_llm.amenities_confirmados = [];\n    if (!Array.isArray(datos_llm.equipamiento_detectado)) datos_llm.equipamiento_detectado = [];\n  } else {\n    if (datos_llm.area_terreno_m2 != null && (datos_llm.area_terreno_m2 < 20 || datos_llm.area_terreno_m2 > 50000)) {\n      errores.push('area_terreno_fuera_rango'); datos_llm.area_terreno_m2 = null;\n    }\n    if (datos_llm.frente_m != null && (datos_llm.frente_m < 3 || datos_llm.frente_m > 500)) {\n      errores.push('frente_fuera_rango'); datos_llm.frente_m = null;\n    }\n    if (datos_llm.fondo_m != null && (datos_llm.fondo_m < 3 || datos_llm.fondo_m > 500)) {\n      errores.push('fondo_fuera_rango'); datos_llm.fondo_m = null;\n    }\n    if (!Array.isArray(datos_llm.servicios_disponibles)) datos_llm.servicios_disponibles = [];\n  }\n\n  if (errores.length > 2) requiere_revision = true;\n}\n\nreturn [{\n  json: {\n    ...upstream,\n    descripcion: upstream.descripcion || '',\n    tipo_prompt,\n    datos_llm,\n    tokens_usados: tokens,\n    errores,\n    requiere_revision\n  }\n}];"
+      },
+      "id": "ct-enr-parse",
+      "name": "Parsear y Validar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge ligero: TC conversion + campos escalares\nconst item = $input.first().json;\nconst tcData = $('Cargar TC').first().json.tc;\nconst tcOficial = parseFloat(tcData?.oficial?.valor) || 6.96;\nconst tcParalelo = parseFloat(tcData?.paralelo?.valor) || 9.34;\n\nconst llm = item.datos_llm || {};\nconst tipoTC = llm.tipo_cambio_detectado || 'no_especificado';\n\nlet precio_usd = null;\nlet tc_usado = null;\nlet depende_de_tc = false;\n\nif (item.moneda_original === 'BOB' && item.precio_usd_original) {\n  const bob = parseFloat(item.precio_usd_original);\n  if (tipoTC === 'paralelo') {\n    precio_usd = Math.round(bob / tcParalelo * 100) / 100;\n    tc_usado = tcParalelo;\n    depende_de_tc = true;\n  } else {\n    precio_usd = Math.round(bob / tcOficial * 100) / 100;\n    tc_usado = tcOficial;\n    depende_de_tc = (tipoTC === 'oficial');\n  }\n} else if (item.moneda_original === 'USD') {\n  precio_usd = parseFloat(item.precio_usd_original);\n}\n\nconst area_terreno = llm.area_terreno_m2 || item.area_terreno_m2 || null;\nconst frente = item.tipo_prompt === 'terreno' ? (llm.frente_m || null) : null;\nconst fondo = item.tipo_prompt === 'terreno' ? (llm.fondo_m || null) : null;\n\nconst datos_json_enrichment = {\n  llm_output: llm,\n  llm_metadata: {\n    modelo: 'claude-haiku-4-5-20251001',\n    tokens: item.tokens_usados,\n    fecha: new Date().toISOString(),\n    version: 'v1.0',\n    tipo_prompt: item.tipo_prompt,\n    requiere_revision: item.requiere_revision,\n    errores_validacion: item.errores\n  },\n  descripcion: item.descripcion,\n  tc_conversion: {\n    moneda_original: item.moneda_original,\n    precio_bob_original: item.moneda_original === 'BOB' ? item.precio_usd_original : null,\n    tc_detectado: tipoTC,\n    tc_usado: tc_usado,\n    precio_usd_calculado: precio_usd\n  }\n};\n\n// Detectar zona fuera de Equipetrol — GPS del portal puede estar mal\nconst zonaDetectada = llm.zona_mencionada_en_texto;\nconst statusFinal = zonaDetectada ? 'excluida_zona' : 'completado';\nconst razonInactiva = zonaDetectada ? ('LLM detectó zona: ' + zonaDetectada + ' (GPS portal en Equipetrol)') : null;\n\nreturn [{\n  json: {\n    id: item.id,\n    precio_usd,\n    tipo_cambio_usado: tc_usado,\n    tipo_cambio_detectado: tipoTC,\n    depende_de_tc,\n    area_terreno_m2: area_terreno,\n    frente_m: frente,\n    fondo_m: fondo,\n    dormitorios: item.tipo_prompt === 'casa' ? (llm.dormitorios ?? item.dormitorios) : null,\n    banos: item.tipo_prompt === 'casa' ? (llm.banos ?? item.banos) : null,\n    estado_construccion: llm.estado_construccion || null,\n    datos_json_enrichment: JSON.stringify(datos_json_enrichment),\n    status_final: statusFinal,\n    razon_inactiva: razonInactiva\n  }\n}];"
+      },
+      "id": "ct-enr-merge",
+      "name": "Merge Ligero",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE propiedades_v2 SET precio_usd = $2, tipo_cambio_usado = $3, tipo_cambio_detectado = $4, depende_de_tc = $5, area_terreno_m2 = COALESCE($6, area_terreno_m2), frente_m = $7, fondo_m = $8, dormitorios = COALESCE($9, dormitorios), banos = COALESCE($10, banos), estado_construccion = CASE WHEN $11::text IS NOT NULL THEN $11::estado_construccion_enum ELSE estado_construccion END, datos_json_enrichment = $12::jsonb, fecha_enrichment = NOW(), fecha_merge = NOW(), fecha_actualizacion = NOW(), status = $13::estado_propiedad, razon_inactiva = $14 WHERE id = $1",
+        "options": {
+          "queryReplacement": "={{ [$json.id, $json.precio_usd, $json.tipo_cambio_usado, $json.tipo_cambio_detectado, $json.depende_de_tc, $json.area_terreno_m2, $json.frente_m, $json.fondo_m, $json.dormitorios, $json.banos, $json.estado_construccion, $json.datos_json_enrichment, $json.status_final, $json.razon_inactiva] }}"
+        }
+      },
+      "id": "ct-enr-update",
+      "name": "UPDATE propiedades_v2",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1200, 0],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "Merge ligero + status=completado"
+    },
+    {
+      "parameters": {
+        "jsCode": "const all = $input.all().map(i => i.json);\nconst total = all.length;\nconsole.log(`=== ENRICHMENT CASAS/TERRENOS COMPLETADO ===\\nProps procesadas: ${total}`);\nreturn [{ json: { timestamp: new Date().toISOString(), workflow: 'enrichment_casas_terrenos', version: '1.0.0', total_procesadas: total, status: 'completado' } }];"
+      },
+      "id": "ct-enr-resumen",
+      "name": "Resumen Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 0],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT registrar_ejecucion_workflow('enrichment_casas_terrenos', 'success', {{ $json.total_procesadas || 0 }}, {{ $json.total_procesadas || 0 }}, 0, NULL, '{}'::jsonb);",
+        "options": {}
+      },
+      "id": "ct-enr-reg-exec",
+      "name": "PG: Registrar Ejecución",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1600, 0],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "executeOnce": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger 2:30 AM": {"main": [[{"node": "Cargar TC", "type": "main", "index": 0}]]},
+    "Cargar TC": {"main": [[{"node": "Query Casas/Terrenos Pendientes", "type": "main", "index": 0}]]},
+    "Query Casas/Terrenos Pendientes": {"main": [[{"node": "Split In Batches", "type": "main", "index": 0}]]},
+    "Split In Batches": {"main": [[{"node": "Resumen Final", "type": "main", "index": 0}], [{"node": "Firecrawl Scrape", "type": "main", "index": 0}]]},
+    "Firecrawl Scrape": {"main": [[{"node": "Extraer Descripción", "type": "main", "index": 0}]]},
+    "Extraer Descripción": {"main": [[{"node": "Wait 2s", "type": "main", "index": 0}]]},
+    "Wait 2s": {"main": [[{"node": "IF Terreno", "type": "main", "index": 0}]]},
+    "IF Terreno": {"main": [[{"node": "Build Prompt Terreno", "type": "main", "index": 0}], [{"node": "Build Prompt Casa", "type": "main", "index": 0}]]},
+    "Build Prompt Terreno": {"main": [[{"node": "Anthropic LLM", "type": "main", "index": 0}]]},
+    "Build Prompt Casa": {"main": [[{"node": "Anthropic LLM", "type": "main", "index": 0}]]},
+    "Anthropic LLM": {"main": [[{"node": "Parsear y Validar", "type": "main", "index": 0}]]},
+    "Parsear y Validar": {"main": [[{"node": "Merge Ligero", "type": "main", "index": 0}]]},
+    "Merge Ligero": {"main": [[{"node": "UPDATE propiedades_v2", "type": "main", "index": 0}]]},
+    "UPDATE propiedades_v2": {"main": [[{"node": "Split In Batches", "type": "main", "index": 0}]]},
+    "Resumen Final": {"main": [[{"node": "PG: Registrar Ejecución", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/La_Paz",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
+  },
+  "tags": [{"name": "enrichment"}, {"name": "casas_terrenos"}]
+}

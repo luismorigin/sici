@@ -122,6 +122,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Backlog calidad datos** | `docs/backlog/CALIDAD_DATOS_BACKLOG.md` |
 | **Deuda tecnica** | `docs/backlog/DEUDA_TECNICA.md` |
 | **Retención usuarios** | `docs/backlog/RETENCION_USUARIOS.md` — Google OAuth, favoritos BD, alertas email (6 fases) |
+| **Casas y Terrenos PRD** | `docs/backlog/CASAS_TERRENOS_PRD.md` — Fases 1-2 completadas, pipeline independiente, feed público pendiente (Fase 3) |
 | **Meta Pixel & eventos** | `docs/meta/META_PIXEL_EVENTOS.md` — Pixel ID, eventos Tier 1-2 implementados, Tier 3 backlog, CAPI futuro |
 | **Producto informe mercado** | `docs/backlog/PRODUCTO_INFORME_MERCADO.md` |
 | **Límites data fiduciaria** | `docs/canonical/LIMITES_DATA_FIDUCIARIA.md` — qué puede aseverar Simón y qué no, matriz verde/amarillo/rojo, guía por perfil (comprador vs inversionista) |
@@ -172,6 +173,18 @@ Leer por path absoluto, no copiar. Si hay divergencia con sici, **simon-brand ga
 7:00 AM  Verificador alquiler v2.0 (pending 2d + audit HTTP: C21 404, Remax 302, 60/noche)
 ```
 
+### Casas y Terrenos (pipeline independiente, migracion 221)
+```
+1:15 AM  Discovery C21 + Remax (tipo_casa + tipo_terreno) → propiedades_v2
+2:30 AM  Enrichment casas/terrenos (all-in-one: Firecrawl + Haiku 4.5 + merge ligero)
+         - Prompt por tipo: casas v1 (19 campos) / terrenos v1 (11 campos)
+         - TC dinamico via obtener_tc_actuales() (Binance)
+         - Feature zona_mencionada_en_texto: marca excluida_zona si LLM detecta zona fuera Equipetrol
+         - Status → 'completado' (sin matching, sin merge ventas)
+```
+**Volumen esperado:** ~20 props Equipetrol entre casas+terrenos. NO pasa por flujo_b ni merge ventas.
+**Workflows:** `n8n/workflows/casas_terrenos/`
+
 ## Estructura Clave
 
 ```
@@ -191,12 +204,13 @@ sici/
 │   ├── helpers/         → precio_normalizado, campo_bloqueado, normalize_nombre, vigente
 │   └── triggers/        → proteger_amenities, matchear_alquiler, asignar_zona_alquiler
 ├── sql/migrations/      → migraciones — ver docs/migrations/MIGRATION_INDEX.md
-├── scripts/llm-enrichment/  → LLM enrichment ventas: prompt v4.1 + script test/backfill + README
+├── scripts/llm-enrichment/  → LLM enrichment: ventas v4.1, alquiler v2.0, casas v1.0, terrenos v1.0
 ├── geodata/             → microzonas_equipetrol_v4.geojson
 ├── n8n/workflows/
 │   ├── modulo_1/        → Discovery, Enrichment, Merge, Verificador (venta)
 │   ├── modulo_2/        → Matching, Auditoria, TC dinamico
-│   └── alquiler/        → Pipeline completo alquiler (6 workflows)
+│   ├── alquiler/        → Pipeline completo alquiler (6 workflows)
+│   └── casas_terrenos/  → Pipeline casas/terrenos (discovery C21 + Remax + enrichment all-in-one)
 ├── docs/                → Documentacion activa + canonical
 │   ├── backlog/         → pendientes: calidad datos, deuda tecnica, retencion, matching alquiler
 │   ├── canonical/       → docs canonicos: merge, pipeline alquiler, metodologia fiduciaria

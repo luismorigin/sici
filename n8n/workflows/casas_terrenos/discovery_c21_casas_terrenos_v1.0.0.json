@@ -1,0 +1,602 @@
+{
+  "name": "discovery_c21_casas_terrenos_v1.0.0",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "15 1 * * *"
+            }
+          ]
+        }
+      },
+      "id": "ct-c21-trigger",
+      "name": "Trigger 1:15 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -752,
+        448
+      ],
+      "notes": "Ejecución diaria a las 1:15 AM (después de deptos)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === GENERADOR DE CUADRANTES C21 — CASAS + TERRENOS ===\n// Grid geográfico Equipetrol × 2 tipos de propiedad\n// PRD: docs/backlog/CASAS_TERRENOS_PRD.md\n\nconst LAT_SUR = -17.775;\nconst LAT_NORTE = -17.750;\nconst LON_OESTE = -63.205;\nconst LON_ESTE = -63.185;\nconst STEP = 0.010;\n\nconst cookieId = 'sici_ct_' + Math.random().toString(36).substring(2, 15);\nconst cookie = `PHPSESSID=${cookieId}`;\n\n// C21: tipo_casa-o-terreno combinado da 404. Requests separadas.\nconst TIPOS = ['casa', 'terreno'];\n\nconst cuadrantes = [];\nlet gridId = 1;\n\nfor (const tipo of TIPOS) {\n  for (let lat = LAT_SUR; lat < LAT_NORTE; lat += STEP) {\n    for (let lon = LON_OESTE; lon < LON_ESTE; lon += STEP) {\n      const south = lat;\n      const west = lon;\n      const north = lat + STEP;\n      const east = lon + STEP;\n      \n      const coordString = `coordenadas_${north.toFixed(6)},${east.toFixed(6)},${south.toFixed(6)},${west.toFixed(6)}`;\n      \n      cuadrantes.push({\n        json: {\n          grid_id: gridId++,\n          tipo_url: tipo,\n          path_coordenadas: coordString,\n          cookie: cookie,\n          fuente: 'century21'\n        }\n      });\n    }\n  }\n}\n\nconsole.log(`Generados ${cuadrantes.length} cuadrantes (${TIPOS.length} tipos × grid)`);\nreturn cuadrantes;"
+      },
+      "id": "ct-c21-cuadrantes",
+      "name": "Generar Cuadrantes Grid",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        448
+      ],
+      "notes": "~12 cuadrantes: 6 grid × 2 tipos (casa, terreno)"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "ct-c21-split",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -304,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://c21.com.bo/v/resultados/tipo_{{ $json.tipo_url }}/operacion_venta/layout_mapa/{{ $json.path_coordenadas }},15?json=true",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "accept-language",
+              "value": "es-US,es-419;q=0.9,es;q=0.8,en;q=0.7"
+            },
+            {
+              "name": "sec-fetch-dest",
+              "value": "empty"
+            },
+            {
+              "name": "sec-fetch-mode",
+              "value": "cors"
+            },
+            {
+              "name": "sec-fetch-site",
+              "value": "same-origin"
+            },
+            {
+              "name": "cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "ct-c21-http",
+      "name": "HTTP Request Grid",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -80,
+        624
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "alwaysOutputData": true,
+      "notes": "URL: tipo_casa o tipo_terreno (dinámico)"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "ct-c21-wait",
+      "name": "Wait 2s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        144,
+        624
+      ],
+      "webhookId": "ct-c21-wait-001",
+      "notes": "Rate limit: 2s entre requests"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === EXTRAER PROPIEDADES DEL RESPONSE — CASAS/TERRENOS ===\n// Parsing idéntico a deptos (misma estructura JSON C21)\nconst response = $input.first().json;\n\nlet propiedades = [];\nif (Array.isArray(response)) {\n  propiedades = response;\n} else if (response.results) {\n  propiedades = response.results;\n} else if (response.datas && response.datas.results) {\n  propiedades = response.datas.results;\n}\n\nif (!propiedades || propiedades.length === 0) {\n  return [];\n}\n\nreturn propiedades.map(prop => {\n  const moneda = prop.moneda || 'USD';\n  const precioOriginal = prop.precio || null;\n  \n  let precioUsd = null;\n  if (precioOriginal !== null && moneda === 'USD') {\n    precioUsd = precioOriginal;\n  }\n  \n  return {\n    json: {\n      url: `https://c21.com.bo${prop.urlCorrectaPropiedad || '/propiedad/' + prop.id}`,\n      fuente: 'century21',\n      codigo_propiedad: String(prop.id),\n      latitud: parseFloat(prop.lat) || null,\n      longitud: parseFloat(prop.lon) || null,\n      tipo_operacion: prop.tipoOperacion || null,\n      precio_usd: precioUsd,\n      precio_amount: precioOriginal,\n      moneda_original: moneda,\n      area_total_m2: prop.m2C != null && prop.m2C > 0 ? Number(prop.m2C) : null,\n      area_terreno_m2: prop.m2T != null && prop.m2T > 0 ? Number(prop.m2T) : null,\n      dormitorios: prop.recamaras || null,\n      banos: prop.banos || null,\n      estacionamientos: prop.estacionamientos || null,\n      tipo_propiedad_original: prop.tipoPropiedad || null,\n      fecha_publicacion: prop.fechaAlta || null,\n      datos_json_discovery: prop,\n      metodo_discovery: 'map_grid'\n    }\n  };\n});"
+      },
+      "id": "ct-c21-extraer",
+      "name": "Extraer Propiedades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        624
+      ],
+      "alwaysOutputData": true,
+      "notes": "Mismo parsing que deptos — JSON C21 es idéntico"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "propiedades",
+        "include": "allFieldsExceptDefault",
+        "options": {}
+      },
+      "id": "ct-c21-aggregate",
+      "name": "Aggregate Snapshot",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        576,
+        448
+      ],
+      "notes": "Fin de fase SNAPSHOT"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, url, status FROM propiedades_v2 WHERE fuente = 'century21' AND status NOT IN ('inactivo_confirmed') AND tipo_operacion = 'venta' AND LOWER(tipo_propiedad_original) IN ('casa', 'terreno', 'lote')",
+        "options": {}
+      },
+      "id": "ct-c21-urls-bd",
+      "name": "Obtener URLs Activas BD",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        800,
+        448
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "Solo casas/terrenos C21"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PREPARAR COMPARACIÓN ===\n\nconst snapshot = $('Aggregate Snapshot').first().json.propiedades || [];\nconst propiedadesBD = $('Obtener URLs Activas BD').all().map(item => item.json);\n\nconst snapshotDedup = new Map();\nfor (const prop of snapshot) {\n  snapshotDedup.set(prop.url, prop);\n}\n\nconst urlsSnapshot = new Set(snapshotDedup.keys());\nconst urlsBD = new Map(propiedadesBD.map(p => [p.url, { id: p.id, status: p.status }]));\n\nconst nuevas = [];\nconst existentes = [];\nconst ausentes = [];\n\nfor (const [url, prop] of snapshotDedup) {\n  if (!urlsBD.has(url)) {\n    nuevas.push(prop);\n  } else {\n    existentes.push({\n      ...prop,\n      _id_bd: urlsBD.get(url).id,\n      _status_bd: urlsBD.get(url).status\n    });\n  }\n}\n\nfor (const [url, info] of urlsBD) {\n  if (!urlsSnapshot.has(url)) {\n    if (!['inactivo_pending', 'inactivo_confirmed'].includes(info.status)) {\n      ausentes.push({\n        id: info.id,\n        url: url,\n        status_actual: info.status\n      });\n    }\n  }\n}\n\nreturn [{\n  json: {\n    nuevas: nuevas,\n    existentes: existentes,\n    ausentes: ausentes,\n    stats: {\n      total_snapshot: snapshotDedup.size,\n      total_bd: urlsBD.size,\n      nuevas: nuevas.length,\n      existentes: existentes.length,\n      ausentes: ausentes.length\n    }\n  }\n}];"
+      },
+      "id": "ct-c21-comparar",
+      "name": "Preparar Comparación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        448
+      ],
+      "notes": "Deduplicación + Clasificación"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === LOG STATS ===\nconst stats = $input.first().json.stats;\n\nconsole.log(`\n=== COMPARACIÓN DISCOVERY C21 CASAS/TERRENOS ===\nSnapshot (deduplicado): ${stats.total_snapshot}\nBD activas: ${stats.total_bd}\n---\nNuevas: ${stats.nuevas}\nExistentes: ${stats.existentes}\nAusentes: ${stats.ausentes}\n=================================================\n`);\n\nreturn $input.all();"
+      },
+      "id": "ct-c21-log",
+      "name": "Log Stats",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        448
+      ],
+      "notes": "Fin de fase COMPARACIÓN"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === UNIFICAR PROPIEDADES PARA DISCOVERY ===\nconst data = $input.first().json;\nconst nuevas = data.nuevas || [];\nconst existentes = data.existentes || [];\nconst todas = [...nuevas, ...existentes].filter(p => p.url);\n\nif (todas.length === 0) {\n  return [{ json: { skip: true, message: 'No hay propiedades para procesar' } }];\n}\n\nfunction quitarAcentos(texto) {\n  if (!texto) return null;\n  return texto\n    .toLowerCase()\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\");\n}\n\nfunction safeNum(v) { return v != null && v !== '' ? Number(v) : null; }\n\nreturn todas.map(prop => ({\n  json: {\n    p_url: prop.url,\n    p_fuente: prop.fuente || 'century21',\n    p_codigo_propiedad: prop.codigo_propiedad || null,\n    p_tipo_operacion: quitarAcentos(prop.tipo_operacion),\n    p_tipo_propiedad_original: prop.tipo_propiedad_original || null,\n    p_precio_usd: safeNum(prop.precio_usd),\n    p_precio_usd_original: safeNum(prop.precio_amount),\n    p_moneda_original: prop.moneda_original || null,\n    p_area_total_m2: safeNum(prop.area_total_m2),\n    p_dormitorios: safeNum(prop.dormitorios),\n    p_banos: safeNum(prop.banos),\n    p_estacionamientos: safeNum(prop.estacionamientos),\n    p_latitud: safeNum(prop.latitud),\n    p_longitud: safeNum(prop.longitud),\n    p_fecha_publicacion: prop.fecha_publicacion || null,\n    p_metodo_discovery: prop.metodo_discovery || 'map_grid',\n    p_datos_json_discovery: prop.datos_json_discovery ? JSON.stringify(prop.datos_json_discovery) : '{}',\n    p_area_terreno_m2: safeNum(prop.area_terreno_m2)\n  }\n}));"
+      },
+      "id": "ct-c21-procesar",
+      "name": "Procesar Propiedades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        336
+      ],
+      "notes": "Mapeo para registrar_discovery()"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ct-c21-if-props",
+      "name": "IF Propiedades",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM registrar_discovery(\n  p_url := $1,\n  p_fuente := $2,\n  p_codigo_propiedad := $3,\n  p_tipo_operacion := $4,\n  p_tipo_propiedad_original := $5,\n  p_precio_usd := $6,\n  p_precio_usd_original := $7,\n  p_moneda_original := $8,\n  p_area_total_m2 := $9,\n  p_dormitorios := $10,\n  p_banos := $11,\n  p_estacionamientos := $12,\n  p_latitud := $13,\n  p_longitud := $14,\n  p_fecha_publicacion := $15,\n  p_metodo_discovery := $16,\n  p_datos_json_discovery := $17::jsonb,\n  p_area_terreno_m2 := $18\n)",
+        "options": {
+          "queryReplacement": "={{ [$json.p_url, $json.p_fuente, $json.p_codigo_propiedad, $json.p_tipo_operacion, $json.p_tipo_propiedad_original, $json.p_precio_usd, $json.p_precio_usd_original, $json.p_moneda_original, $json.p_area_total_m2, $json.p_dormitorios, $json.p_banos, $json.p_estacionamientos, $json.p_latitud, $json.p_longitud, $json.p_fecha_publicacion, $json.p_metodo_discovery, $json.p_datos_json_discovery, $json.p_area_terreno_m2] }}"
+        }
+      },
+      "id": "ct-c21-registrar",
+      "name": "Registrar Discovery",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1904,
+        336
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "17 parámetros — misma RPC que deptos"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PROCESAR AUSENTES ===\n\nconst ausentes = $input.first().json.ausentes;\n\nif (ausentes.length === 0) {\n  return [{ json: { skip: true, message: 'No hay propiedades ausentes' } }];\n}\n\nreturn ausentes.map(prop => ({\n  json: {\n    id: prop.id,\n    url: prop.url,\n    status_actual: prop.status_actual\n  }\n}));"
+      },
+      "id": "ct-c21-ausentes",
+      "name": "Procesar Ausentes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        640
+      ],
+      "notes": "UPDATE directo"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ct-c21-if-ausentes",
+      "name": "IF Ausentes",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE propiedades_v2 SET status = 'inactivo_pending', fecha_discovery = NOW(), primera_ausencia_at = COALESCE(primera_ausencia_at, NOW()) WHERE id = $1 AND tipo_operacion = 'venta' AND LOWER(tipo_propiedad_original) IN ('casa', 'terreno', 'lote') AND status NOT IN ('inactivo_pending', 'inactivo_confirmed')",
+        "options": {
+          "queryReplacement": "={{ [$json.id] }}"
+        }
+      },
+      "id": "ct-c21-marcar",
+      "name": "Marcar Ausentes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1904,
+        640
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "UPDATE → inactivo_pending (solo casas/terrenos)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === RESUMEN FINAL ===\nconst stats = $('Log Stats').first().json.stats;\n\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  fuente: 'century21',\n  tipo: 'casas_terrenos',\n  workflow: 'Discovery Casas/Terrenos C21',\n  version: '1.0.0',\n  resultados: {\n    snapshot_total: stats.total_snapshot,\n    bd_activas: stats.total_bd,\n    nuevas_insertadas: stats.nuevas,\n    existentes_actualizadas: stats.existentes,\n    ausentes_marcadas: stats.ausentes\n  },\n  status: 'completado'\n};\n\nconsole.log('=== DISCOVERY C21 CASAS/TERRENOS COMPLETADO ===');\nconsole.log(JSON.stringify(resumen, null, 2));\n\nreturn [{ json: resumen }];"
+      },
+      "id": "ct-c21-resumen",
+      "name": "Resumen Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2128,
+        448
+      ],
+      "notes": "Log final"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT registrar_ejecucion_workflow(\n  'discovery_casas_terrenos_c21',\n  'success',\n  {{ $json.resultados.snapshot_total || 0 }},\n  {{ $json.resultados.nuevas_insertadas || 0 }},\n  0,\n  NULL,\n  '{{ JSON.stringify({ existentes: $json.resultados.existentes_actualizadas || 0, ausentes: $json.resultados.ausentes_marcadas || 0 }) }}'::jsonb\n);",
+        "options": {}
+      },
+      "id": "ct-c21-reg-exec",
+      "name": "PG: Registrar Ejecución",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2352,
+        448
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Registrar ejecución del workflow"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger 1:15 AM": {
+      "main": [
+        [
+          {
+            "node": "Generar Cuadrantes Grid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Cuadrantes Grid": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request Grid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request Grid": {
+      "main": [
+        [
+          {
+            "node": "Wait 2s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2s": {
+      "main": [
+        [
+          {
+            "node": "Extraer Propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Propiedades": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Obtener URLs Activas BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener URLs Activas BD": {
+      "main": [
+        [
+          {
+            "node": "Preparar Comparación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Comparación": {
+      "main": [
+        [
+          {
+            "node": "Log Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Stats": {
+      "main": [
+        [
+          {
+            "node": "Procesar Propiedades",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Procesar Ausentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Propiedades": {
+      "main": [
+        [
+          {
+            "node": "IF Propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Propiedades": {
+      "main": [
+        [
+          {
+            "node": "Registrar Discovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Discovery": {
+      "main": [
+        [
+          {
+            "node": "Resumen Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Ausentes": {
+      "main": [
+        [
+          {
+            "node": "IF Ausentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Ausentes": {
+      "main": [
+        [
+          {
+            "node": "Marcar Ausentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar Ausentes": {
+      "main": [
+        [
+          {
+            "node": "Resumen Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumen Final": {
+      "main": [
+        [
+          {
+            "node": "PG: Registrar Ejecución",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "America/La_Paz",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "meta": {
+    "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
+  },
+  "tags": [
+    {
+      "name": "discovery"
+    },
+    {
+      "name": "casas_terrenos"
+    },
+    {
+      "name": "century21"
+    }
+  ]
+}

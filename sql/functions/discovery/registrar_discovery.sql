@@ -36,7 +36,10 @@ CREATE OR REPLACE FUNCTION registrar_discovery(
     p_metodo_discovery VARCHAR DEFAULT 'api_rest',
     
     -- JSON completo discovery
-    p_datos_json_discovery JSONB DEFAULT NULL
+    p_datos_json_discovery JSONB DEFAULT NULL,
+
+    -- Terreno (Fase 1 casas/terrenos, migración 221)
+    p_area_terreno_m2 NUMERIC DEFAULT NULL
 )
 RETURNS TABLE(
     id INTEGER,
@@ -130,7 +133,10 @@ BEGIN
             
             -- Flags
             es_activa,
-            es_para_matching
+            es_para_matching,
+
+            -- Terreno
+            area_terreno_m2
         )
         VALUES (
             p_url,
@@ -166,7 +172,9 @@ BEGIN
             NOW(),
             
             TRUE,
-            TRUE
+            TRUE,
+
+            p_area_terreno_m2
         )
         RETURNING propiedades_v2.id INTO v_id;
 
@@ -301,7 +309,10 @@ BEGIN
                 THEN longitud
                 ELSE COALESCE(p_longitud, longitud)
             END,
-            
+
+            -- Terreno (sin candado, solo casas/terrenos lo usan)
+            area_terreno_m2 = COALESCE(p_area_terreno_m2, area_terreno_m2),
+
             -- Discovery
             datos_json_discovery = p_datos_json_discovery,
             fecha_discovery = NOW(),
