@@ -108,6 +108,35 @@ Equipetrol tiene volumen bajo de casas (~15-40 listings) y terrenos (~10-30 list
 - Evaluar si el card de casa necesita badges para ambientes adicionales (piscina, cuarto servicio, etc.)
 - Definir cómo mostrar TC en el feed (mostrar solo USD normalizado o también badge "TC paralelo"?)
 
+### Admin Dashboard — pendiente ⏳
+**Objetivo:** Panel admin para seguimiento y edición de casas/terrenos, alineado con los panels existentes de ventas y alquileres.
+
+**Justificación:** Las casas/terrenos tienen campos únicos (area_terreno, frente, fondo, niveles, ambientes_adicionales, cuarto_servicio, piscina, jardín, uso_suelo, topografía, servicios_disponibles) que no existen en los editores actuales de deptos. El admin necesita revisar, corregir errores del LLM y mantener candados (`campos_bloqueados`) igual que en ventas.
+
+**Scope:**
+- [ ] Ruta `/admin/casas-terrenos` — listado con filtros (tipo, zona, status, precio, con/sin descripción)
+- [ ] Ruta `/admin/casas-terrenos/[id]` — editor por tipo con renderizado condicional:
+  - **Casa**: dormitorios, baños, niveles, garage, piscina, jardín, cuarto servicio, ambientes_adicionales (chips), amenities, equipamiento, estado_propiedad, plan_pagos
+  - **Terreno**: area_terreno, frente, fondo, uso_suelo, tiene_construccion, servicios_disponibles (toggles), topografía, plan_pagos
+- [ ] Candados (`campos_bloqueados`) para campos tipo-específicos nuevos (area_terreno, frente, fondo, niveles, etc.)
+- [ ] Galería de fotos + lightbox (cuando Fase 2 extraiga fotos)
+- [ ] Descripción original + descripción limpia LLM side-by-side para validar
+- [ ] Badge de `excluida_zona` si el LLM detectó otra zona — con CTA "confirmar exclusión" o "override y volver a completado"
+- [ ] Badge de TC detectado (oficial/paralelo/no_especificado) con link para corregir
+- [ ] Supervisor HITL para casos edge:
+  - Props con `zona_mencionada_en_texto != null` pero el admin sabe que es Equipetrol
+  - Props con `tipo_propiedad_original` mal categorizado en portal (C21 dice casa, pero el LLM detectó terreno)
+  - Props con `descripcion_limpia = null` (Firecrawl falló)
+
+**Reusa:**
+- Patrón `tipos → constantes → hook → componentes → pagina orquestadora` de `/admin/propiedades/[id]` (ver `hooks/usePropertyEditor.ts`)
+- `LockPanel`, `LockIcon`, `PropertyGallery` components (adaptados o copiados)
+- Hook nuevo: `useCasaTerrenoEditor` (similar a `usePropertyEditor`)
+
+**Dependencias:**
+- Esperar volumen (~2-3 semanas captura nocturna) para tener backlog real
+- Decidir si viven como ruta separada `/admin/casas-terrenos` o tab en `/admin/propiedades` (probablemente separada por campos muy distintos)
+
 ### Auditoría Slack — pendiente ⏳
 **Objetivo:** Enterarse por Slack si los workflows casas/terrenos fallan o dejan de capturar data.
 
