@@ -112,6 +112,10 @@
 | Scroll depth custom | `/mercado/*` | Si Clarity no es suficiente | Baja |
 | Unificar `trackEvent` en alquileres | `/alquileres` | Refactor menor, no urgente | Baja |
 
+### Verificación pendiente
+
+- **`bounce_no_action` post-fix (18 abr 2026)** — medir en GA4 a partir del 20 abr 2026 (48h post-deploy). Filtrar `event_name=bounce_no_action` en Explore, ventana últimos 2 días. Esperado: 15-25% de sesiones de `/alquileres`. Si sigue en 0 → revisar si algún otro handler está marcando `hasInteracted=true` automáticamente. Si sale >40% → revisar si el umbral `duration > 3` es muy laxo.
+
 ## Cortes de datos
 
 Fechas donde los eventos cambiaron y los datos antes/despues NO son comparables directamente:
