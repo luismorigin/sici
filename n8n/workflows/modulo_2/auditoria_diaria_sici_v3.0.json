@@ -12,24 +12,30 @@
           ]
         }
       },
-      "id": "46073d44-d5ca-4b1c-9cf9-07050d10ebbc",
+      "id": "d691008c-568f-4a7f-9e5f-6df07ef8df27",
       "name": "Schedule: 9:00 AM",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [-1328, 192],
+      "position": [
+        -2208,
+        384
+      ],
       "notes": "Ejecuta todos los días a las 9:00 AM (Bolivia UTC-4)"
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT\n    -- Estados (todos)\n    COUNT(*) as total,\n    COUNT(*) FILTER (WHERE status = 'completado') as completadas,\n    COUNT(*) FILTER (WHERE status = 'nueva') as nuevas,\n    COUNT(*) FILTER (WHERE status = 'inactivo_pending') as inactivo_pending,\n    COUNT(*) FILTER (WHERE status = 'inactivo_confirmed') as inactivo_confirmed,\n    COUNT(*) FILTER (WHERE status = 'excluido_operacion') as excluidas_operacion,\n\n    -- Matching\n    COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL AND status = 'completado') as matcheadas,\n    COUNT(*) FILTER (WHERE id_proyecto_master IS NULL AND status = 'completado') as sin_match,\n    COUNT(*) FILTER (WHERE nombre_edificio IS NOT NULL AND nombre_edificio != '' AND status = 'completado') as con_nombre,\n    COUNT(*) FILTER (WHERE zona IS NOT NULL AND zona != '' AND status = 'completado') as con_zona,\n\n    -- Pendientes enrich (nuevas venta)\n    COUNT(*) FILTER (WHERE status = 'nueva' AND tipo_operacion = 'venta') as pendientes_enrich,\n\n    -- Actividad 24h\n    COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '24 hours') as creadas_24h,\n    COUNT(*) FILTER (WHERE fecha_enrichment >= NOW() - INTERVAL '24 hours') as enriquecidas_24h,\n\n    -- Calidad: Scores (solo completadas)\n    COUNT(*) FILTER (WHERE score_calidad_dato >= 95 AND status = 'completado') as score_alto,\n    COUNT(*) FILTER (WHERE score_calidad_dato >= 85 AND score_calidad_dato < 95 AND status = 'completado') as score_medio,\n    COUNT(*) FILTER (WHERE score_calidad_dato < 85 AND status = 'completado') as score_bajo,\n\n    -- Calidad: Campos faltantes (solo completadas)\n    COUNT(*) FILTER (WHERE (zona IS NULL OR zona = '') AND status = 'completado') as sin_zona,\n    COUNT(*) FILTER (WHERE dormitorios IS NULL AND status = 'completado') as sin_dormitorios,\n    COUNT(*) FILTER (WHERE (nombre_edificio IS NULL OR nombre_edificio = '') AND status = 'completado') as sin_nombre,\n    COUNT(*) FILTER (WHERE precio_usd IS NULL AND status = 'completado') as sin_precio,\n\n    -- Revisión humana: Discrepancias merge\n    COUNT(*) FILTER (WHERE (\n      (discrepancias_detectadas->'gps'->>'flag' IS NOT NULL AND discrepancias_detectadas->'gps'->>'flag' != 'null') OR\n      (discrepancias_detectadas->'area'->>'flag' IS NOT NULL AND discrepancias_detectadas->'area'->>'flag' != 'null') OR\n      (discrepancias_detectadas->'precio'->>'flag' IS NOT NULL AND discrepancias_detectadas->'precio'->>'flag' != 'null')\n    )) as discrepancias_merge,\n\n    -- Excluidas matching\n    COUNT(*) FILTER (WHERE es_para_matching = false AND status = 'completado') as excluidas_matching,\n\n    -- Alquiler (v3.0)\n    COUNT(*) FILTER (WHERE tipo_operacion = 'alquiler' AND status = 'completado') as alq_completadas,\n    COUNT(*) FILTER (WHERE tipo_operacion = 'alquiler' AND fecha_creacion >= NOW() - INTERVAL '24 hours') as alq_creadas_24h,\n    COUNT(*) FILTER (WHERE tipo_operacion = 'alquiler' AND datos_json_enrichment->'llm_output' IS NOT NULL) as alq_llm_enriched,\n    COUNT(*) FILTER (WHERE tipo_operacion = 'alquiler' AND id_proyecto_master IS NOT NULL AND status = 'completado') as alq_matcheadas,\n\n    -- LLM Enrichment Venta (v3.0)\n    COUNT(*) FILTER (WHERE datos_json_enrichment->'llm_output' IS NOT NULL AND tipo_operacion = 'venta') as llm_enriched_venta,\n    COUNT(*) FILTER (WHERE datos_json_enrichment->'llm_output' IS NULL AND tipo_operacion = 'venta' AND datos_json_enrichment IS NOT NULL AND LENGTH(datos_json_enrichment->>'descripcion') >= 30) as llm_pendientes_venta,\n\n    -- Health: timestamps\n    MAX(fecha_enrichment) as ultimo_enrichment,\n    MAX(fecha_merge) as ultimo_merge,\n    ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(fecha_enrichment))) / 3600, 1) as horas_sin_enrichment,\n    ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(fecha_merge))) / 3600, 1) as horas_sin_merge,\n\n    -- Health: Discovery (hubo nuevas en 26h?)\n    CASE WHEN COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '26 hours') > 0 THEN true ELSE false END as discovery_ok,\n\n    -- Health: TC Dinámico (workflow corrió en 26h?)\n    (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN true ELSE false END\n     FROM workflow_executions WHERE workflow_name = 'tc_dinamico_binance') as tc_dinamico_ok,\n\n    -- Health: Enrichment LLM Venta (v3.0)\n    (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN true ELSE false END\n     FROM workflow_executions WHERE workflow_name = 'enrichment_llm_venta') as enrichment_llm_venta_ok,\n    (SELECT ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(finished_at))) / 3600, 1)\n     FROM workflow_executions WHERE workflow_name = 'enrichment_llm_venta') as horas_sin_enrichment_llm,\n\n    -- Health: Pipeline Alquiler (v3.0)\n    (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN true ELSE false END\n     FROM workflow_executions WHERE workflow_name IN ('discovery_remax_alquiler', 'discovery_c21_alquiler')) as discovery_alquiler_ok,\n    (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN true ELSE false END\n     FROM workflow_executions WHERE workflow_name = 'enrichment_alquiler') as enrichment_alquiler_ok,\n    (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN true ELSE false END\n     FROM workflow_executions WHERE workflow_name = 'merge_alquiler') as merge_alquiler_ok,\n    (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN true ELSE false END\n     FROM workflow_executions WHERE workflow_name = 'verificador_alquiler') as verificador_alquiler_ok\n\n  FROM propiedades_v2",
+        "query": "  SELECT\n      -- Estados (todos)\n      COUNT(*) as total,\n      COUNT(*) FILTER (WHERE status = 'completado') as completadas,\n      COUNT(*) FILTER (WHERE status = 'nueva') as nuevas,\n      COUNT(*) FILTER (WHERE status = 'inactivo_pending') as inactivo_pending,\n      COUNT(*) FILTER (WHERE status = 'inactivo_confirmed') as inactivo_confirmed,\n      COUNT(*) FILTER (WHERE status = 'excluido_operacion') as excluidas_operacion,\n\n      -- Matching\n      COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL AND status = 'completado') as matcheadas,\n      COUNT(*) FILTER (WHERE id_proyecto_master IS NULL AND status = 'completado') as sin_match,\n      COUNT(*) FILTER (WHERE nombre_edificio IS NOT NULL AND nombre_edificio != '' AND status = 'completado') as con_nombre,\n      COUNT(*) FILTER (WHERE zona IS NOT NULL AND zona != '' AND status = 'completado') as con_zona,\n\n      -- Pendientes enrich (nuevas venta)\n      COUNT(*) FILTER (WHERE status = 'nueva' AND tipo_operacion = 'venta') as pendientes_enrich,\n\n      -- Actividad 24h\n      COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '24 hours') as creadas_24h,\n      COUNT(*) FILTER (WHERE fecha_enrichment >= NOW() - INTERVAL '24 hours') as enriquecidas_24h,\n\n      -- Calidad: Scores (solo completadas)\n      COUNT(*) FILTER (WHERE score_calidad_dato >= 95 AND status = 'completado') as score_alto,\n      COUNT(*) FILTER (WHERE score_calidad_dato >= 85 AND score_calidad_dato < 95 AND status = 'completado') as score_medio,\n      COUNT(*) FILTER (WHERE score_calidad_dato < 85 AND status = 'completado') as score_bajo,\n\n      -- Calidad: Campos faltantes (solo completadas)\n      COUNT(*) FILTER (WHERE (zona IS NULL OR zona = '') AND status = 'completado') as sin_zona,\n      COUNT(*) FILTER (WHERE dormitorios IS NULL AND status = 'completado') as sin_dormitorios,\n      COUNT(*) FILTER (WHERE (nombre_edificio IS NULL OR nombre_edificio = '') AND status = 'completado') as sin_nombre,\n      COUNT(*) FILTER (WHERE precio_usd IS NULL AND status = 'completado') as sin_precio,\n\n      -- Revisión humana: Discrepancias merge\n      COUNT(*) FILTER (WHERE (\n        (discrepancias_detectadas->'gps'->>'flag' IS NOT NULL AND discrepancias_detectadas->'gps'->>'flag' != 'null') OR\n        (discrepancias_detectadas->'area'->>'flag' IS NOT NULL AND discrepancias_detectadas->'area'->>'flag' != 'null') OR\n        (discrepancias_detectadas->'precio'->>'flag' IS NOT NULL AND discrepancias_detectadas->'precio'->>'flag' != 'null')\n      )) as discrepancias_merge,\n\n      -- Excluidas matching\n      COUNT(*) FILTER (WHERE es_para_matching = false AND status = 'completado') as excluidas_matching,\n\n      -- Alquiler (v3.0)\n      COUNT(*) FILTER (WHERE tipo_operacion = 'alquiler' AND status = 'completado') as alq_completadas,\n      COUNT(*) FILTER (WHERE tipo_operacion = 'alquiler' AND fecha_creacion >= NOW() - INTERVAL '24 hours') as alq_creadas_24h,\n      COUNT(*) FILTER (WHERE tipo_operacion = 'alquiler' AND datos_json_enrichment->'llm_output' IS NOT NULL) as alq_llm_enriched,\n      COUNT(*) FILTER (WHERE tipo_operacion = 'alquiler' AND id_proyecto_master IS NOT NULL AND status = 'completado') as alq_matcheadas,\n\n      -- LLM Enrichment Venta (v3.0)\n      COUNT(*) FILTER (WHERE datos_json_enrichment->'llm_output' IS NOT NULL AND tipo_operacion = 'venta') as llm_enriched_venta,\n      COUNT(*) FILTER (WHERE datos_json_enrichment->'llm_output' IS NULL AND tipo_operacion = 'venta' AND datos_json_enrichment IS NOT NULL AND\n  LENGTH(datos_json_enrichment->>'descripcion') >= 30) as llm_pendientes_venta,\n\n      -- Casas/Terrenos (v3.1)\n      COUNT(*) FILTER (WHERE LOWER(tipo_propiedad_original) IN ('casa','terreno','lote') AND status = 'completado') as ct_completadas,\n      COUNT(*) FILTER (WHERE LOWER(tipo_propiedad_original) IN ('casa','terreno','lote') AND fecha_creacion >= NOW() - INTERVAL '24 hours') as\n  ct_creadas_24h,\n      COUNT(*) FILTER (WHERE LOWER(tipo_propiedad_original) IN ('casa','terreno','lote') AND status = 'excluida_zona') as ct_excluida_zona,\n\n      -- Health: timestamps\n      MAX(fecha_enrichment) as ultimo_enrichment,\n      MAX(fecha_merge) as ultimo_merge,\n      ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(fecha_enrichment))) / 3600, 1) as horas_sin_enrichment,\n      ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(fecha_merge))) / 3600, 1) as horas_sin_merge,\n\n      -- Health: Discovery (hubo nuevas en 26h?)\n      CASE WHEN COUNT(*) FILTER (WHERE fecha_creacion >= NOW() - INTERVAL '26 hours') > 0 THEN true ELSE false END as discovery_ok,\n\n      -- Health: TC Dinámico (workflow corrió en 26h?)\n      (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN true ELSE false END\n       FROM workflow_executions WHERE workflow_name = 'tc_dinamico_binance') as tc_dinamico_ok,\n\n      -- Health: Enrichment LLM Venta (v3.0)\n      (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN true ELSE false END\n       FROM workflow_executions WHERE workflow_name = 'enrichment_llm_venta') as enrichment_llm_venta_ok,\n      (SELECT ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(finished_at))) / 3600, 1)\n       FROM workflow_executions WHERE workflow_name = 'enrichment_llm_venta') as horas_sin_enrichment_llm,\n\n      -- Health: Pipeline Alquiler (v3.0)\n      (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN true ELSE false END\n       FROM workflow_executions WHERE workflow_name IN ('discovery_remax_alquiler', 'discovery_c21_alquiler')) as discovery_alquiler_ok,\n      (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN true ELSE false END\n       FROM workflow_executions WHERE workflow_name = 'enrichment_alquiler') as enrichment_alquiler_ok,\n      (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN true ELSE false END\n       FROM workflow_executions WHERE workflow_name = 'merge_alquiler') as merge_alquiler_ok,\n      (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN true ELSE false END\n       FROM workflow_executions WHERE workflow_name = 'verificador_alquiler') as verificador_alquiler_ok,\n\n      -- Health: Pipeline Casas/Terrenos (v3.1)\n      (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN true ELSE false END\n       FROM workflow_executions WHERE workflow_name IN ('discovery_casas_terrenos_c21', 'discovery_casas_terrenos_remax')) as discovery_casas_terrenos_ok,\n      (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN true ELSE false END\n       FROM workflow_executions WHERE workflow_name = 'enrichment_casas_terrenos') as enrichment_casas_terrenos_ok\n\n    FROM propiedades_v2\n",
         "options": {}
       },
-      "id": "25d09d82-9b0d-4825-8dda-b99ba805ddeb",
+      "id": "8b994ee0-8d0e-4836-b317-7e2a00d4a243",
       "name": "PG: Stats Propiedades",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [-1104, 192],
+      "position": [
+        -1984,
+        384
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -44,11 +50,14 @@
         "query": "SELECT\n    COUNT(*) as sugerencias_total,\n    COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours') as sugerencias_24h,\n    COUNT(*) FILTER (WHERE estado = 'aprobado' AND fecha_revision >= NOW() - INTERVAL '24 hours') as aprobadas_24h,\n    COUNT(*) FILTER (WHERE estado = 'rechazado' AND fecha_revision >= NOW() - INTERVAL '24 hours') as rechazadas_24h,\n    COUNT(*) FILTER (WHERE estado = 'pendiente') as pendientes_matching,\n\n    -- Health: Matching Nocturno (corrió en últimas 26h)\n    (SELECT CASE WHEN MAX(finished_at) >= NOW() - INTERVAL '26 hours' THEN 1 ELSE 0 END\n     FROM workflow_executions\n     WHERE workflow_name = 'matching_nocturno'\n    ) as matching_nocturno_hoy\n\n  FROM matching_sugerencias",
         "options": {}
       },
-      "id": "1ec91ab6-5dd0-4c5b-9c32-b7e34e123b0b",
+      "id": "d0a7698a-d8e0-4ccd-bd4f-3fc4245861be",
       "name": "PG: Stats Matching",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [-880, 192],
+      "position": [
+        -1760,
+        384
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -63,11 +72,14 @@
         "query": "SELECT\n    COUNT(*) as total,\n    COUNT(*) FILTER (WHERE activo = true) as activos,\n    COUNT(*) FILTER (WHERE gps_verificado_google = true) as gps_verificado,\n    COUNT(*) FILTER (WHERE google_place_id IS NOT NULL) as con_place_id,\n    COUNT(*) FILTER (WHERE activo = true AND desarrollador IS NOT NULL) as con_desarrollador,\n    COUNT(*) FILTER (WHERE activo = true AND desarrollador IS NULL) as sin_desarrollador,\n    COALESCE((SELECT COUNT(*) FROM proyectos_pendientes_google WHERE estado = 'pendiente'), 0) as pendientes_google\n  FROM proyectos_master",
         "options": {}
       },
-      "id": "e46a5b16-1c4c-447b-bbc0-3a4685b40f8e",
+      "id": "19837b25-7e28-46a1-8c91-1322aa445e6c",
       "name": "PG: Stats Proyectos",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [-656, 192],
+      "position": [
+        -1536,
+        384
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -82,11 +94,14 @@
         "query": "SELECT\n    (SELECT COUNT(*) FROM propiedades_v2 WHERE id_proyecto_master IS NULL AND status = 'completado' AND es_para_matching = TRUE) as huerfanas_activas\n  FROM propiedades_v2 LIMIT 1",
         "options": {}
       },
-      "id": "fa0c0a88-d6fc-4f3a-a30b-63852cca3801",
+      "id": "76d0ddf2-93c4-4ff9-ae20-f203bf7c54ef",
       "name": "PG: Stats Sin Match",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [-432, 192],
+      "position": [
+        -1312,
+        384
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -101,11 +116,14 @@
         "query": "SELECT\n  (SELECT valor FROM config_global WHERE clave = 'tipo_cambio_paralelo') as tc_paralelo,\n  (SELECT valor FROM config_global WHERE clave = 'tipo_cambio_oficial') as tc_oficial,\n  (SELECT MAX(fecha_cambio) FROM auditoria_tipo_cambio) as ultimo_cambio_tc,\n  (SELECT COUNT(*) FROM tc_binance_historial WHERE timestamp >= NOW() - INTERVAL '24 hours') as consultas_binance_24h,\n  (SELECT MAX(timestamp) FROM tc_binance_historial) as ultima_consulta_binance",
         "options": {}
       },
-      "id": "c30c1e28-e478-4a7b-b919-4b144f29679b",
+      "id": "0e9990ec-e70b-4837-a526-988c4fa5a7ae",
       "name": "PG: Stats TC",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [-16, 192],
+      "position": [
+        -896,
+        384
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -117,14 +135,17 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT\n  CASE WHEN workflow_name IN ('discovery_century21', 'discovery_remax') THEN 'discovery'\n       WHEN workflow_name IN ('discovery_c21_alquiler', 'discovery_remax_alquiler') THEN 'discovery_alquiler'\n       WHEN workflow_name IN ('discovery_casas_terrenos_c21', 'discovery_casas_terrenos_remax') THEN 'discovery_casas_terrenos'\n       ELSE workflow_name END as workflow_name,\n  MAX(finished_at) as last_run,\n  BOOL_OR(finished_at >= NOW() - INTERVAL '26 hours') as ran_last_26h\nFROM workflow_executions\nWHERE workflow_name IN (\n  'discovery_century21', 'discovery_remax',\n  'enrichment', 'enrichment_llm_venta', 'merge', 'matching_nocturno',\n  'discovery_c21_alquiler', 'discovery_remax_alquiler',\n  'enrichment_alquiler', 'merge_alquiler', 'verificador_alquiler',\n  'discovery_casas_terrenos_c21', 'discovery_casas_terrenos_remax', 'enrichment_casas_terrenos',\n  'auditoria_diaria', 'tc_dinamico_binance', 'verificador'\n)\nGROUP BY CASE WHEN workflow_name IN ('discovery_century21', 'discovery_remax') THEN 'discovery'\n              WHEN workflow_name IN ('discovery_c21_alquiler', 'discovery_remax_alquiler') THEN 'discovery_alquiler'\n              WHEN workflow_name IN ('discovery_casas_terrenos_c21', 'discovery_casas_terrenos_remax') THEN 'discovery_casas_terrenos'\n              ELSE workflow_name END;",
+        "query": "SELECT\n    CASE WHEN workflow_name IN ('discovery_century21', 'discovery_remax') THEN 'discovery'\n         WHEN workflow_name IN ('discovery_c21_alquiler', 'discovery_remax_alquiler') THEN 'discovery_alquiler'\n         WHEN workflow_name IN ('discovery_casas_terrenos_c21', 'discovery_casas_terrenos_remax') THEN\n  'discovery_casas_terrenos'\n         ELSE workflow_name END as workflow_name,\n    MAX(finished_at) as last_run,\n    BOOL_OR(finished_at >= NOW() - INTERVAL '26 hours') as ran_last_26h\n  FROM workflow_executions\n  WHERE workflow_name IN (\n    'discovery_century21', 'discovery_remax',\n    'enrichment', 'enrichment_llm_venta', 'merge', 'matching_nocturno',\n    'discovery_c21_alquiler', 'discovery_remax_alquiler',\n    'enrichment_alquiler', 'merge_alquiler', 'verificador_alquiler',\n    'discovery_casas_terrenos_c21', 'discovery_casas_terrenos_remax', 'enrichment_casas_terrenos',\n    'auditoria_diaria', 'tc_dinamico_binance', 'verificador'\n  )\n  GROUP BY CASE WHEN workflow_name IN ('discovery_century21', 'discovery_remax') THEN 'discovery'\n                WHEN workflow_name IN ('discovery_c21_alquiler', 'discovery_remax_alquiler') THEN 'discovery_alquiler'\n                WHEN workflow_name IN ('discovery_casas_terrenos_c21', 'discovery_casas_terrenos_remax') THEN\n  'discovery_casas_terrenos'\n                ELSE workflow_name END;",
         "options": {}
       },
-      "id": "c1737ef9-6e87-41a4-8724-5d734ace664e",
+      "id": "1dc70910-97e3-49e2-827a-a399dfad32d1",
       "name": "PG: Stats Workflows",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [224, 192],
+      "position": [
+        -656,
+        384
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -136,26 +157,32 @@
     },
     {
       "parameters": {
-        "jsCode": "// =====================================================\n// AUDITORÍA DIARIA SICI v3.0 - Mobile Friendly\n// =====================================================\n// Cambios v3.0:\n//   - Agregado LLM Enrichment Venta (stats + health)\n//   - Agregado pipelines alquiler a workflows\n//   - Limpiados health hardcodeados (Export 7AM, Super 8PM)\n//   - Limpiadas referencias a sin_match_exportados\n//   - Simplificado Stats Sin Match\n\nconst statsProp = $('PG: Stats Propiedades').first().json;\nconst statsMatch = $('PG: Stats Matching').first().json;\nconst statsProy = $('PG: Stats Proyectos').first().json;\nconst statsSinMatch = $('PG: Stats Sin Match').first().json;\nconst statsTC = $('PG: Stats TC').first().json;\n\nlet enriqStats;\ntry {\n  enriqStats = $('PG: Stats Enriquecimiento').first().json;\n} catch (e) {\n  enriqStats = { nuevos_agregados: 0, total_pendientes: 0, alta_prioridad: 0 };\n}\n\nconst enriqNuevos = parseInt(enriqStats?.nuevos_agregados) || 0;\nconst enriqPendientes = parseInt(enriqStats?.total_pendientes) || 0;\nconst enriqAltaPrioridad = parseInt(enriqStats?.alta_prioridad) || 0;\n\n// ===== PROPIEDADES =====\nconst total = parseInt(statsProp.total) || 0;\nconst completadas = parseInt(statsProp.completadas) || 0;\nconst nuevas = parseInt(statsProp.nuevas) || 0;\nconst inactivoPending = parseInt(statsProp.inactivo_pending) || 0;\nconst inactivoConfirmed = parseInt(statsProp.inactivo_confirmed) || 0;\nconst excluidasOp = parseInt(statsProp.excluidas_operacion) || 0;\nconst matcheadas = parseInt(statsProp.matcheadas) || 0;\nconst sinMatch = parseInt(statsProp.sin_match) || 0;\nconst conNombre = parseInt(statsProp.con_nombre) || 0;\nconst pendientesEnrich = parseInt(statsProp.pendientes_enrich) || 0;\nconst creadas24h = parseInt(statsProp.creadas_24h) || 0;\nconst enriquecidas24h = parseInt(statsProp.enriquecidas_24h) || 0;\n\nconst pctMatch = completadas > 0 ? ((matcheadas / completadas) * 100).toFixed(1) : 0;\nconst pctNombre = completadas > 0 ? ((conNombre / completadas) * 100).toFixed(1) : 0;\nconst pctHuerfanas = completadas > 0 ? ((sinMatch / completadas) * 100).toFixed(1) : 0;\n\n// ===== ALQUILER (v3.0) =====\nconst alqCompletadas = parseInt(statsProp.alq_completadas) || 0;\nconst alqCreadas24h = parseInt(statsProp.alq_creadas_24h) || 0;\nconst alqLlmEnriched = parseInt(statsProp.alq_llm_enriched) || 0;\nconst alqMatcheadas = parseInt(statsProp.alq_matcheadas) || 0;\nconst alqPctMatch = alqCompletadas > 0 ? ((alqMatcheadas / alqCompletadas) * 100).toFixed(1) : 0;\n\n// ===== LLM ENRICHMENT (v3.0) =====\nconst llmEnrichedVenta = parseInt(statsProp.llm_enriched_venta) || 0;\nconst llmPendientesVenta = parseInt(statsProp.llm_pendientes_venta) || 0;\nconst enrichmentLlmOk = statsProp.enrichment_llm_venta_ok === true || statsProp.enrichment_llm_venta_ok === 'true';\nconst horasSinEnrichmentLlm = parseFloat(statsProp.horas_sin_enrichment_llm) || 0;\n\n// ===== CALIDAD =====\nconst scoreAlto = parseInt(statsProp.score_alto) || 0;\nconst scoreMedio = parseInt(statsProp.score_medio) || 0;\nconst scoreBajo = parseInt(statsProp.score_bajo) || 0;\nconst totalScores = scoreAlto + scoreMedio + scoreBajo;\nconst pctAlto = totalScores > 0 ? Math.round((scoreAlto / totalScores) * 100) : 0;\nconst pctMedio = totalScores > 0 ? Math.round((scoreMedio / totalScores) * 100) : 0;\nconst pctBajo = totalScores > 0 ? Math.round((scoreBajo / totalScores) * 100) : 0;\n\nconst sinZona = parseInt(statsProp.sin_zona) || 0;\nconst sinDorms = parseInt(statsProp.sin_dormitorios) || 0;\nconst sinNombreField = parseInt(statsProp.sin_nombre) || 0;\nconst sinPrecio = parseInt(statsProp.sin_precio) || 0;\nconst discrepanciasMerge = parseInt(statsProp.discrepancias_merge) || 0;\n\n// ===== MATCHING =====\nconst sugerencias24h = parseInt(statsMatch.sugerencias_24h) || 0;\nconst aprobadas24h = parseInt(statsMatch.aprobadas_24h) || 0;\nconst rechazadas24h = parseInt(statsMatch.rechazadas_24h) || 0;\nconst pendientesMatching = parseInt(statsMatch.pendientes_matching) || 0;\nconst matchingNocturnoHoy = parseInt(statsMatch.matching_nocturno_hoy) || 0;\nconst totalSugerencias = parseInt(statsMatch.sugerencias_total) || 0;\n\nconst tasaAprobacion = (aprobadas24h + rechazadas24h) > 0\n  ? Math.round((aprobadas24h / (aprobadas24h + rechazadas24h)) * 100) + '%'\n  : 'N/A';\n\n// ===== SIN MATCH =====\nconst huerfanasActivas = parseInt(statsSinMatch.huerfanas_activas) || 0;\n\n// ===== PROYECTOS =====\nconst proyTotal = parseInt(statsProy.total) || 0;\nconst proyGpsVerificado = parseInt(statsProy.gps_verificado) || 0;\nconst proyConPlaceId = parseInt(statsProy.con_place_id) || 0;\nconst proyPendientesGoogle = parseInt(statsProy.pendientes_google) || 0;\nconst proyActivos = parseInt(statsProy.activos) || 0;\nconst pctGpsVerificado = proyActivos > 0 ? ((proyGpsVerificado / proyActivos) * 100).toFixed(1) : 0;\nconst proyConDesarrollador = parseInt(statsProy.con_desarrollador) || 0;\nconst proySinDesarrollador = parseInt(statsProy.sin_desarrollador) || 0;\nconst pctSinDesarrollador = proyActivos > 0 ? ((proySinDesarrollador / proyActivos) * 100).toFixed(1) : 0;\n\n// ===== TC DINÁMICO =====\nconst tcParalelo = statsTC.tc_paralelo || 'N/A';\nconst tcOficial = statsTC.tc_oficial || 'N/A';\nconst consultasBinance24h = parseInt(statsTC.consultas_binance_24h) || 0;\n\n// ===== HEALTH CHECK =====\nconst discoveryOk = statsProp.discovery_ok === true || statsProp.discovery_ok === 'true';\nconst tcDinamicoOk = statsProp.tc_dinamico_ok === true || statsProp.tc_dinamico_ok === 'true';\nconst horasSinEnrichment = parseFloat(statsProp.horas_sin_enrichment) || 0;\nconst horasSinMerge = parseFloat(statsProp.horas_sin_merge) || 0;\nconst enrichmentOk = horasSinEnrichment < 26;\nconst mergeOk = horasSinMerge < 26;\nconst matchingNocturnoOk = matchingNocturnoHoy > 0;\n\n// ===== HEALTH ALQUILER (v3.0) =====\nconst discoveryAlqOk = statsProp.discovery_alquiler_ok === true || statsProp.discovery_alquiler_ok === 'true';\nconst enrichmentAlqOk = statsProp.enrichment_alquiler_ok === true || statsProp.enrichment_alquiler_ok === 'true';\nconst mergeAlqOk = statsProp.merge_alquiler_ok === true || statsProp.merge_alquiler_ok === 'true';\nconst verificadorAlqOk = statsProp.verificador_alquiler_ok === true || statsProp.verificador_alquiler_ok === 'true';\n\n// ===== ALERTAS =====\nconst alertItems = [];\nif (huerfanasActivas > 0) alertItems.push(`${huerfanasActivas} huerfanas`);\nif (discrepanciasMerge > 0) alertItems.push(`${discrepanciasMerge} discrepancias`);\nif (pctBajo > 5) alertItems.push(`${pctBajo}% baja`);\nif (enriqAltaPrioridad > 5) alertItems.push(`${enriqAltaPrioridad} sin dev`);\nif (parseFloat(pctHuerfanas) > 5) alertItems.push(`${pctHuerfanas}% sin match`);\nif (parseFloat(pctSinDesarrollador) > 10) alertItems.push(`${pctSinDesarrollador}% proy sin dev`);\nif (sinPrecio > 10) alertItems.push(`${sinPrecio} sin precio`);\nif (!enrichmentLlmOk) alertItems.push('LLM enrich no corrio');\nif (!discoveryAlqOk) alertItems.push('discovery alq no corrio');\nif (!enrichmentAlqOk) alertItems.push('enrich alq no corrio');\nif (!mergeAlqOk) alertItems.push('merge alq no corrio');\nif (llmPendientesVenta > 50) alertItems.push(`${llmPendientesVenta} pend LLM`);\n\nconst alertasTexto = alertItems.length > 0 ? alertItems.join(' · ') : 'Sin alertas';\n\n// ===== EMOJIS =====\nconst ok = '\\u2705';\nconst warn = '\\u26A0\\uFE0F';\nconst no = '\\u274C';\n\n// ===== FECHA =====\nconst fecha = new Date().toLocaleDateString('es-BO', {\n  day: '2-digit',\n  month: 'short',\n  year: 'numeric'\n}).replace('.', '');\n\n// ===== CONSTRUIR MENSAJE =====\nconst mensaje = `*SICI Auditoria  ${fecha}*\\n    ${alertasTexto}\\n\\n    *PROPIEDADES*\\n    ${completadas} completadas / ${total} total\\n    ${matcheadas} matcheadas (${pctMatch}%)\\n    ${sinMatch} sin match  ${excluidasOp} excluidas\\n    +${creadas24h} creadas  +${enriquecidas24h} enriquecidas\\n\\n    *CALIDAD*\\n    Alto ${scoreAlto} (${pctAlto}%)  Medio ${scoreMedio} (${pctMedio}%)  Bajo ${scoreBajo} (${pctBajo}%)\\n    Faltantes: zona ${sinZona}  dorms ${sinDorms}  nombre ${sinNombreField}  precio ${sinPrecio}\\n\\n    *MATCHING*\\n    24h: ${sugerencias24h} -> ${aprobadas24h} ok  ${rechazadas24h} no\\n    Tasa: ${tasaAprobacion}  Pendientes: ${pendientesMatching}\\n    Nocturno 4AM: ${matchingNocturnoOk ? ok : warn}\\n\\n    *REVISION HUMANA*\\n    Matching: ${pendientesMatching}  Huerfanas: ${huerfanasActivas}\\n    Discrepancias: ${discrepanciasMerge}\\n\\n    *ALQUILER*\\n    ${alqCompletadas} completadas  ${alqMatcheadas} matcheadas (${alqPctMatch}%)\\n    +${alqCreadas24h} creadas 24h  ${alqLlmEnriched} LLM enriched\\n\\n    *LLM ENRICHMENT*\\n    Venta: ${llmEnrichedVenta} enriquecidas  ${llmPendientesVenta} pendientes\\n    Enrichment LLM 2:15AM: ${enrichmentLlmOk ? ok : warn} (${horasSinEnrichmentLlm}h)\\n\\n    *PROYECTOS*\\n    ${proyTotal} total  GPS: ${proyGpsVerificado} (${pctGpsVerificado}%)\\n    Con dev: ${proyConDesarrollador}  Sin dev: ${proySinDesarrollador} (${pctSinDesarrollador}%)\\n    Place ID: ${proyConPlaceId}  Pend Google: ${proyPendientesGoogle}\\n\\n    *ENRIQUECIMIENTO PM*\\n    Sin desarrollador: ${enriqPendientes}\\n    Alta prioridad: ${enriqAltaPrioridad}  Nuevos: ${enriqNuevos}\\n\\n    *TC DINAMICO*\\n    Paralelo: ${tcParalelo}  Oficial: ${tcOficial}\\n    Binance 24h: ${consultasBinance24h}  ${tcDinamicoOk ? ok : warn}\\n\\n    *HEALTH — Venta*\\n    ${discoveryOk ? ok : warn} Discovery  ${enrichmentOk ? ok : warn} Enrich  ${enrichmentLlmOk ? ok : warn} LLM  ${mergeOk ? ok : warn} Merge  ${matchingNocturnoOk ? ok : warn} Matching\\n    *HEALTH — Alquiler*\\n    ${discoveryAlqOk ? ok : warn} Discovery  ${enrichmentAlqOk ? ok : warn} Enrich  ${mergeAlqOk ? ok : warn} Merge  ${verificadorAlqOk ? ok : warn} Verificador\\n    *HEALTH — Global*\\n    ${tcDinamicoOk ? ok : warn} TC Dinamico\\n\\n    _${totalSugerencias} sugerencias  SICI v3.0_`;\n\n// ===== SNAPSHOT para BD =====\nconst snapshot = {\n  fecha: new Date().toISOString().split('T')[0],\n  props_total: total,\n  props_completadas: completadas,\n  props_nuevas: nuevas,\n  props_nuevas_venta: pendientesEnrich,\n  props_inactivas: inactivoPending + inactivoConfirmed,\n  props_inactivo_pending: inactivoPending,\n  props_inactivo_confirmed: inactivoConfirmed,\n  props_matcheadas: matcheadas,\n  props_sin_match: sinMatch,\n  props_con_nombre: conNombre,\n  props_con_zona: completadas - sinZona,\n  props_creadas_24h: creadas24h,\n  props_enriquecidas_24h: enriquecidas24h,\n  pct_match_completadas: parseFloat(pctMatch),\n  pct_nombre_completadas: parseFloat(pctNombre),\n  pct_huerfanas: parseFloat(pctHuerfanas),\n  score_alto: scoreAlto,\n  score_medio: scoreMedio,\n  score_bajo: scoreBajo,\n  pct_alto: pctAlto,\n  pct_medio: pctMedio,\n  pct_bajo: pctBajo,\n  sin_zona: sinZona,\n  sin_dormitorios: sinDorms,\n  sin_nombre: sinNombreField,\n  sin_precio: sinPrecio,\n  discrepancias_merge: discrepanciasMerge,\n  excluidas_matching: 0,\n  alq_completadas: alqCompletadas,\n  alq_creadas_24h: alqCreadas24h,\n  alq_llm_enriched: alqLlmEnriched,\n  alq_matcheadas: alqMatcheadas,\n  llm_enriched_venta: llmEnrichedVenta,\n  llm_pendientes_venta: llmPendientesVenta,\n  match_total: totalSugerencias,\n  match_24h: sugerencias24h,\n  match_aprobadas_24h: aprobadas24h,\n  match_rechazadas_24h: rechazadas24h,\n  match_pendientes: pendientesMatching,\n  huerfanas_activas: huerfanasActivas,\n  tasa_aprobacion_24h: tasaAprobacion === 'N/A' ? null : parseInt(tasaAprobacion),\n  proy_total: proyTotal,\n  proy_activos: proyActivos,\n  proy_gps_verificado: proyGpsVerificado,\n  proy_con_place_id: proyConPlaceId,\n  proy_pendientes_google: proyPendientesGoogle,\n  proy_con_desarrollador: proyConDesarrollador,\n  proy_sin_desarrollador: proySinDesarrollador,\n  pct_sin_desarrollador: parseFloat(pctSinDesarrollador),\n  pct_gps_verificado: parseFloat(pctGpsVerificado),\n  horas_sin_enrichment: horasSinEnrichment,\n  horas_sin_merge: horasSinMerge,\n  horas_sin_enrichment_llm: horasSinEnrichmentLlm,\n  matching_nocturno_ok: matchingNocturnoOk,\n  discovery_ok: discoveryOk,\n  enrichment_ok: enrichmentOk,\n  enrichment_llm_ok: enrichmentLlmOk,\n  merge_ok: mergeOk,\n  tc_dinamico_ok: tcDinamicoOk\n};\n\nreturn {\n  json: {\n    mensaje,\n    slack_payload: {\n      text: mensaje\n    },\n    snapshot,\n    alertas: alertItems,\n    tieneAlertas: alertItems.length > 0\n  }\n};"
+        "jsCode": "\n  // =====================================================\n  // AUDITORÍA DIARIA SICI v3.1 - Mobile Friendly\n  // =====================================================\n  // Cambios v3.1:\n  //   - Agregado pipeline casas/terrenos (health + alertas + sección)\n  // Cambios v3.0:\n  //   - Agregado LLM Enrichment Venta (stats + health)\n  //   - Agregado pipelines alquiler a workflows\n  //   - Limpiados health hardcodeados (Export 7AM, Super 8PM)\n  //   - Limpiadas referencias a sin_match_exportados\n  //   - Simplificado Stats Sin Match\n\n  const statsProp = $('PG: Stats Propiedades').first().json;\n  const statsMatch = $('PG: Stats Matching').first().json;\n  const statsProy = $('PG: Stats Proyectos').first().json;\n  const statsSinMatch = $('PG: Stats Sin Match').first().json;\n  const statsTC = $('PG: Stats TC').first().json;\n\n  let enriqStats;\n  try {\n    enriqStats = $('PG: Stats Enriquecimiento').first().json;\n  } catch (e) {\n    enriqStats = { nuevos_agregados: 0, total_pendientes: 0, alta_prioridad: 0 };\n  }\n\n  const enriqNuevos = parseInt(enriqStats?.nuevos_agregados) || 0;\n  const enriqPendientes = parseInt(enriqStats?.total_pendientes) || 0;\n  const enriqAltaPrioridad = parseInt(enriqStats?.alta_prioridad) || 0;\n\n  // ===== PROPIEDADES =====\n  const total = parseInt(statsProp.total) || 0;\n  const completadas = parseInt(statsProp.completadas) || 0;\n  const nuevas = parseInt(statsProp.nuevas) || 0;\n  const inactivoPending = parseInt(statsProp.inactivo_pending) || 0;\n  const inactivoConfirmed = parseInt(statsProp.inactivo_confirmed) || 0;\n  const excluidasOp = parseInt(statsProp.excluidas_operacion) || 0;\n  const matcheadas = parseInt(statsProp.matcheadas) || 0;\n  const sinMatch = parseInt(statsProp.sin_match) || 0;\n  const conNombre = parseInt(statsProp.con_nombre) || 0;\n  const pendientesEnrich = parseInt(statsProp.pendientes_enrich) || 0;\n  const creadas24h = parseInt(statsProp.creadas_24h) || 0;\n  const enriquecidas24h = parseInt(statsProp.enriquecidas_24h) || 0;\n\n  const pctMatch = completadas > 0 ? ((matcheadas / completadas) * 100).toFixed(1) : 0;\n  const pctNombre = completadas > 0 ? ((conNombre / completadas) * 100).toFixed(1) : 0;\n  const pctHuerfanas = completadas > 0 ? ((sinMatch / completadas) * 100).toFixed(1) : 0;\n\n  // ===== ALQUILER (v3.0) =====\n  const alqCompletadas = parseInt(statsProp.alq_completadas) || 0;\n  const alqCreadas24h = parseInt(statsProp.alq_creadas_24h) || 0;\n  const alqLlmEnriched = parseInt(statsProp.alq_llm_enriched) || 0;\n  const alqMatcheadas = parseInt(statsProp.alq_matcheadas) || 0;\n  const alqPctMatch = alqCompletadas > 0 ? ((alqMatcheadas / alqCompletadas) * 100).toFixed(1) : 0;\n\n  // ===== LLM ENRICHMENT (v3.0) =====\n  const llmEnrichedVenta = parseInt(statsProp.llm_enriched_venta) || 0;\n  const llmPendientesVenta = parseInt(statsProp.llm_pendientes_venta) || 0;\n  const enrichmentLlmOk = statsProp.enrichment_llm_venta_ok === true || statsProp.enrichment_llm_venta_ok === 'true';\n  const horasSinEnrichmentLlm = parseFloat(statsProp.horas_sin_enrichment_llm) || 0;\n\n  // ===== CALIDAD =====\n  const scoreAlto = parseInt(statsProp.score_alto) || 0;\n  const scoreMedio = parseInt(statsProp.score_medio) || 0;\n  const scoreBajo = parseInt(statsProp.score_bajo) || 0;\n  const totalScores = scoreAlto + scoreMedio + scoreBajo;\n  const pctAlto = totalScores > 0 ? Math.round((scoreAlto / totalScores) * 100) : 0;\n  const pctMedio = totalScores > 0 ? Math.round((scoreMedio / totalScores) * 100) : 0;\n  const pctBajo = totalScores > 0 ? Math.round((scoreBajo / totalScores) * 100) : 0;\n\n  const sinZona = parseInt(statsProp.sin_zona) || 0;\n  const sinDorms = parseInt(statsProp.sin_dormitorios) || 0;\n  const sinNombreField = parseInt(statsProp.sin_nombre) || 0;\n  const sinPrecio = parseInt(statsProp.sin_precio) || 0;\n  const discrepanciasMerge = parseInt(statsProp.discrepancias_merge) || 0;\n\n  // ===== MATCHING =====\n  const sugerencias24h = parseInt(statsMatch.sugerencias_24h) || 0;\n  const aprobadas24h = parseInt(statsMatch.aprobadas_24h) || 0;\n  const rechazadas24h = parseInt(statsMatch.rechazadas_24h) || 0;\n  const pendientesMatching = parseInt(statsMatch.pendientes_matching) || 0;\n  const matchingNocturnoHoy = parseInt(statsMatch.matching_nocturno_hoy) || 0;\n  const totalSugerencias = parseInt(statsMatch.sugerencias_total) || 0;\n\n  const tasaAprobacion = (aprobadas24h + rechazadas24h) > 0\n    ? Math.round((aprobadas24h / (aprobadas24h + rechazadas24h)) * 100) + '%'\n    : 'N/A';\n\n  // ===== SIN MATCH =====\n  const huerfanasActivas = parseInt(statsSinMatch.huerfanas_activas) || 0;\n\n  // ===== PROYECTOS =====\n  const proyTotal = parseInt(statsProy.total) || 0;\n  const proyGpsVerificado = parseInt(statsProy.gps_verificado) || 0;\n  const proyConPlaceId = parseInt(statsProy.con_place_id) || 0;\n  const proyPendientesGoogle = parseInt(statsProy.pendientes_google) || 0;\n  const proyActivos = parseInt(statsProy.activos) || 0;\n  const pctGpsVerificado = proyActivos > 0 ? ((proyGpsVerificado / proyActivos) * 100).toFixed(1) : 0;\n  const proyConDesarrollador = parseInt(statsProy.con_desarrollador) || 0;\n  const proySinDesarrollador = parseInt(statsProy.sin_desarrollador) || 0;\n  const pctSinDesarrollador = proyActivos > 0 ? ((proySinDesarrollador / proyActivos) * 100).toFixed(1) : 0;\n\n  // ===== TC DINÁMICO =====\n  const tcParalelo = statsTC.tc_paralelo || 'N/A';\n  const tcOficial = statsTC.tc_oficial || 'N/A';\n  const consultasBinance24h = parseInt(statsTC.consultas_binance_24h) || 0;\n\n  // ===== HEALTH CHECK =====\n  const discoveryOk = statsProp.discovery_ok === true || statsProp.discovery_ok === 'true';\n  const tcDinamicoOk = statsProp.tc_dinamico_ok === true || statsProp.tc_dinamico_ok === 'true';\n  const horasSinEnrichment = parseFloat(statsProp.horas_sin_enrichment) || 0;\n  const horasSinMerge = parseFloat(statsProp.horas_sin_merge) || 0;\n  const enrichmentOk = horasSinEnrichment < 26;\n  const mergeOk = horasSinMerge < 26;\n  const matchingNocturnoOk = matchingNocturnoHoy > 0;\n\n  // ===== HEALTH ALQUILER (v3.0) =====\n  const discoveryAlqOk = statsProp.discovery_alquiler_ok === true || statsProp.discovery_alquiler_ok === 'true';\n  const enrichmentAlqOk = statsProp.enrichment_alquiler_ok === true || statsProp.enrichment_alquiler_ok === 'true';\n  const mergeAlqOk = statsProp.merge_alquiler_ok === true || statsProp.merge_alquiler_ok === 'true';\n  const verificadorAlqOk = statsProp.verificador_alquiler_ok === true || statsProp.verificador_alquiler_ok === 'true';\n\n  // ===== HEALTH CASAS/TERRENOS (v3.1) =====\n  const discoveryCtOk = statsProp.discovery_casas_terrenos_ok === true || statsProp.discovery_casas_terrenos_ok ===\n  'true';\n  const enrichmentCtOk = statsProp.enrichment_casas_terrenos_ok === true || statsProp.enrichment_casas_terrenos_ok ===\n  'true';\n\n  // ===== CASAS/TERRENOS STATS (v3.1) =====\n  const ctCompletadas = parseInt(statsProp.ct_completadas) || 0;\n  const ctCreadas24h = parseInt(statsProp.ct_creadas_24h) || 0;\n  const ctExcluidaZona = parseInt(statsProp.ct_excluida_zona) || 0;\n\n  // ===== ALERTAS =====\n  const alertItems = [];\n  if (huerfanasActivas > 0) alertItems.push(`${huerfanasActivas} huerfanas`);\n  if (discrepanciasMerge > 0) alertItems.push(`${discrepanciasMerge} discrepancias`);\n  if (pctBajo > 5) alertItems.push(`${pctBajo}% baja`);\n  if (enriqAltaPrioridad > 5) alertItems.push(`${enriqAltaPrioridad} sin dev`);\n  if (parseFloat(pctHuerfanas) > 5) alertItems.push(`${pctHuerfanas}% sin match`);\n  if (parseFloat(pctSinDesarrollador) > 10) alertItems.push(`${pctSinDesarrollador}% proy sin dev`);\n  if (sinPrecio > 10) alertItems.push(`${sinPrecio} sin precio`);\n  if (!enrichmentLlmOk) alertItems.push('LLM enrich no corrio');\n  if (!discoveryAlqOk) alertItems.push('discovery alq no corrio');\n  if (!enrichmentAlqOk) alertItems.push('enrich alq no corrio');\n  if (!mergeAlqOk) alertItems.push('merge alq no corrio');\n  if (llmPendientesVenta > 50) alertItems.push(`${llmPendientesVenta} pend LLM`);\n  if (!discoveryCtOk) alertItems.push('discovery casas/terr no corrio');\n  if (!enrichmentCtOk) alertItems.push('enrich casas/terr no corrio');\n\n  const alertasTexto = alertItems.length > 0 ? alertItems.join(' · ') : 'Sin alertas';\n\n  // ===== EMOJIS =====\n  const ok = '\\u2705';\n  const warn = '\\u26A0\\uFE0F';\n  const no = '\\u274C';\n\n  // ===== FECHA =====\n  const fecha = new Date().toLocaleDateString('es-BO', {\n    day: '2-digit',\n    month: 'short',\n    year: 'numeric'\n  }).replace('.', '');\n\n  // ===== CONSTRUIR MENSAJE =====\n  const mensaje = `*SICI Auditoria  ${fecha}*\\n    ${alertasTexto}\\n\\n    *PROPIEDADES*\\n    ${completadas} completadas\n  / ${total} total\\n    ${matcheadas} matcheadas (${pctMatch}%)\\n    ${sinMatch} sin match  ${excluidasOp} excluidas\\n\n    +${creadas24h} creadas  +${enriquecidas24h} enriquecidas\\n\\n    *CALIDAD*\\n    Alto ${scoreAlto} (${pctAlto}%)\n  Medio ${scoreMedio} (${pctMedio}%)  Bajo ${scoreBajo} (${pctBajo}%)\\n    Faltantes: zona ${sinZona}  dorms ${sinDorms}\n    nombre ${sinNombreField}  precio ${sinPrecio}\\n\\n    *MATCHING*\\n    24h: ${sugerencias24h} -> ${aprobadas24h} ok\n  ${rechazadas24h} no\\n    Tasa: ${tasaAprobacion}  Pendientes: ${pendientesMatching}\\n    Nocturno 4AM:\n  ${matchingNocturnoOk ? ok : warn}\\n\\n    *REVISION HUMANA*\\n    Matching: ${pendientesMatching}  Huerfanas:\n  ${huerfanasActivas}\\n    Discrepancias: ${discrepanciasMerge}\\n\\n    *ALQUILER*\\n    ${alqCompletadas} completadas\n  ${alqMatcheadas} matcheadas (${alqPctMatch}%)\\n    +${alqCreadas24h} creadas 24h  ${alqLlmEnriched} LLM enriched\\n\\n\n    *CASAS/TERRENOS*\\n    ${ctCompletadas} completadas  +${ctCreadas24h} 24h  ${ctExcluidaZona} excluida_zona\\n\\n\n  *LLM ENRICHMENT*\\n    Venta: ${llmEnrichedVenta} enriquecidas  ${llmPendientesVenta} pendientes\\n    Enrichment LLM\n  2:15AM: ${enrichmentLlmOk ? ok : warn} (${horasSinEnrichmentLlm}h)\\n\\n    *PROYECTOS*\\n    ${proyTotal} total  GPS:\n  ${proyGpsVerificado} (${pctGpsVerificado}%)\\n    Con dev: ${proyConDesarrollador}  Sin dev: ${proySinDesarrollador}\n  (${pctSinDesarrollador}%)\\n    Place ID: ${proyConPlaceId}  Pend Google: ${proyPendientesGoogle}\\n\\n\n  *ENRIQUECIMIENTO PM*\\n    Sin desarrollador: ${enriqPendientes}\\n    Alta prioridad: ${enriqAltaPrioridad}  Nuevos:\n  ${enriqNuevos}\\n\\n    *TC DINAMICO*\\n    Paralelo: ${tcParalelo}  Oficial: ${tcOficial}\\n    Binance 24h:\n  ${consultasBinance24h}  ${tcDinamicoOk ? ok : warn}\\n\\n    *HEALTH — Venta*\\n    ${discoveryOk ? ok : warn} Discovery\n   ${enrichmentOk ? ok : warn} Enrich  ${enrichmentLlmOk ? ok : warn} LLM  ${mergeOk ? ok : warn} Merge\n  ${matchingNocturnoOk ? ok : warn} Matching\\n    *HEALTH — Alquiler*\\n    ${discoveryAlqOk ? ok : warn} Discovery\n  ${enrichmentAlqOk ? ok : warn} Enrich  ${mergeAlqOk ? ok : warn} Merge  ${verificadorAlqOk ? ok : warn} Verificador\\n\n     *HEALTH — Casas/Terrenos*\\n    ${discoveryCtOk ? ok : warn} Discovery  ${enrichmentCtOk ? ok : warn} Enrich\\n\n  *HEALTH — Global*\\n    ${tcDinamicoOk ? ok : warn} TC Dinamico\\n\\n    _${totalSugerencias} sugerencias  SICI v3.1_`;\n\n  // ===== SNAPSHOT para BD =====\n  const snapshot = {\n    fecha: new Date().toISOString().split('T')[0],\n    props_total: total,\n    props_completadas: completadas,\n    props_nuevas: nuevas,\n    props_nuevas_venta: pendientesEnrich,\n    props_inactivas: inactivoPending + inactivoConfirmed,\n    props_inactivo_pending: inactivoPending,\n    props_inactivo_confirmed: inactivoConfirmed,\n    props_matcheadas: matcheadas,\n    props_sin_match: sinMatch,\n    props_con_nombre: conNombre,\n    props_con_zona: completadas - sinZona,\n    props_creadas_24h: creadas24h,\n    props_enriquecidas_24h: enriquecidas24h,\n    pct_match_completadas: parseFloat(pctMatch),\n    pct_nombre_completadas: parseFloat(pctNombre),\n    pct_huerfanas: parseFloat(pctHuerfanas),\n    score_alto: scoreAlto,\n    score_medio: scoreMedio,\n    score_bajo: scoreBajo,\n    pct_alto: pctAlto,\n    pct_medio: pctMedio,\n    pct_bajo: pctBajo,\n    sin_zona: sinZona,\n    sin_dormitorios: sinDorms,\n    sin_nombre: sinNombreField,\n    sin_precio: sinPrecio,\n    discrepancias_merge: discrepanciasMerge,\n    excluidas_matching: 0,\n    alq_completadas: alqCompletadas,\n    alq_creadas_24h: alqCreadas24h,\n    alq_llm_enriched: alqLlmEnriched,\n    alq_matcheadas: alqMatcheadas,\n    llm_enriched_venta: llmEnrichedVenta,\n    llm_pendientes_venta: llmPendientesVenta,\n    ct_completadas: ctCompletadas,\n    ct_creadas_24h: ctCreadas24h,\n    ct_excluida_zona: ctExcluidaZona,\n    match_total: totalSugerencias,\n    match_24h: sugerencias24h,\n    match_aprobadas_24h: aprobadas24h,\n    match_rechazadas_24h: rechazadas24h,\n    match_pendientes: pendientesMatching,\n    huerfanas_activas: huerfanasActivas,\n    tasa_aprobacion_24h: tasaAprobacion === 'N/A' ? null : parseInt(tasaAprobacion),\n    proy_total: proyTotal,\n    proy_activos: proyActivos,\n    proy_gps_verificado: proyGpsVerificado,\n    proy_con_place_id: proyConPlaceId,\n    proy_pendientes_google: proyPendientesGoogle,\n    proy_con_desarrollador: proyConDesarrollador,\n    proy_sin_desarrollador: proySinDesarrollador,\n    pct_sin_desarrollador: parseFloat(pctSinDesarrollador),\n    pct_gps_verificado: parseFloat(pctGpsVerificado),\n    horas_sin_enrichment: horasSinEnrichment,\n    horas_sin_merge: horasSinMerge,\n    horas_sin_enrichment_llm: horasSinEnrichmentLlm,\n    matching_nocturno_ok: matchingNocturnoOk,\n    discovery_ok: discoveryOk,\n    enrichment_ok: enrichmentOk,\n    enrichment_llm_ok: enrichmentLlmOk,\n    merge_ok: mergeOk,\n    tc_dinamico_ok: tcDinamicoOk,\n    discovery_casas_terrenos_ok: discoveryCtOk,\n    enrichment_casas_terrenos_ok: enrichmentCtOk\n  };\n\n  return {\n    json: {\n      mensaje,\n      slack_payload: {\n        text: mensaje\n      },\n      snapshot,\n      alertas: alertItems,\n      tieneAlertas: alertItems.length > 0\n    }\n  };"
       },
-      "id": "5c38a24d-a1e4-4995-8415-c97a8e83c22c",
+      "id": "072374f5-9969-4d0c-8808-70e1e921da9b",
       "name": "Code: Consolidar Reporte",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [432, 192],
+      "position": [
+        -448,
+        384
+      ],
       "notes": "Consolidar métricas, construir mensaje Slack y preparar snapshot"
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO auditoria_snapshots (\n  fecha, props_total, props_completadas, props_nuevas, props_nuevas_venta,\n  props_inactivas, props_inactivo_pending, props_inactivo_confirmed,\n  props_matcheadas, props_sin_match, props_con_nombre, props_con_zona,\n  props_creadas_24h, props_enriquecidas_24h, pct_match_completadas, pct_nombre_completadas,\n  score_alto, score_medio, score_bajo, pct_alto, pct_medio, pct_bajo,\n  sin_zona, sin_dormitorios, sin_nombre, discrepancias_merge, excluidas_matching,\n  match_total, match_24h, match_aprobadas_24h, match_rechazadas_24h, match_pendientes,\n  pendientes_sinmatch, tasa_aprobacion_24h,\n  proy_total, proy_activos, proy_gps_verificado, proy_con_place_id, proy_pendientes_google,\n  pct_gps_verificado, horas_sin_enrichment, horas_sin_merge, matching_nocturno_ok,\n  discovery_ok, enrichment_ok, merge_ok, tc_dinamico_ok, export_7am_ok,\n  supervisor_match_ok, supervisor_sinmatch_ok\n) VALUES (\n  '{{ $json.snapshot.fecha }}',\n  {{ $json.snapshot.props_total }},\n  {{ $json.snapshot.props_completadas }},\n  {{ $json.snapshot.props_nuevas }},\n  {{ $json.snapshot.props_nuevas_venta }},\n  {{ $json.snapshot.props_inactivas }},\n  {{ $json.snapshot.props_inactivo_pending }},\n  {{ $json.snapshot.props_inactivo_confirmed }},\n  {{ $json.snapshot.props_matcheadas }},\n  {{ $json.snapshot.props_sin_match }},\n  {{ $json.snapshot.props_con_nombre }},\n  {{ $json.snapshot.props_con_zona }},\n  {{ $json.snapshot.props_creadas_24h }},\n  {{ $json.snapshot.props_enriquecidas_24h }},\n  {{ $json.snapshot.pct_match_completadas }},\n  {{ $json.snapshot.pct_nombre_completadas }},\n  {{ $json.snapshot.score_alto }},\n  {{ $json.snapshot.score_medio }},\n  {{ $json.snapshot.score_bajo }},\n  {{ $json.snapshot.pct_alto }},\n  {{ $json.snapshot.pct_medio }},\n  {{ $json.snapshot.pct_bajo }},\n  {{ $json.snapshot.sin_zona }},\n  {{ $json.snapshot.sin_dormitorios }},\n  {{ $json.snapshot.sin_nombre }},\n  {{ $json.snapshot.discrepancias_merge }},\n  {{ $json.snapshot.excluidas_matching }},\n  {{ $json.snapshot.match_total }},\n  {{ $json.snapshot.match_24h }},\n  {{ $json.snapshot.match_aprobadas_24h }},\n  {{ $json.snapshot.match_rechazadas_24h }},\n  {{ $json.snapshot.match_pendientes }},\n  {{ $json.snapshot.huerfanas_activas }},\n  {{ $json.snapshot.tasa_aprobacion_24h === null ? 'NULL' : $json.snapshot.tasa_aprobacion_24h }},\n  {{ $json.snapshot.proy_total }},\n  {{ $json.snapshot.proy_activos }},\n  {{ $json.snapshot.proy_gps_verificado }},\n  {{ $json.snapshot.proy_con_place_id }},\n  {{ $json.snapshot.proy_pendientes_google }},\n  {{ $json.snapshot.pct_gps_verificado }},\n  {{ $json.snapshot.horas_sin_enrichment }},\n  {{ $json.snapshot.horas_sin_merge }},\n  {{ $json.snapshot.matching_nocturno_ok }},\n  {{ $json.snapshot.discovery_ok }},\n  {{ $json.snapshot.enrichment_ok }},\n  {{ $json.snapshot.merge_ok }},\n  {{ $json.snapshot.tc_dinamico_ok }},\n  true,\n  true,\n  true\n)\nON CONFLICT (fecha) DO UPDATE SET\n  props_total = EXCLUDED.props_total,\n  props_completadas = EXCLUDED.props_completadas,\n  props_nuevas = EXCLUDED.props_nuevas,\n  props_nuevas_venta = EXCLUDED.props_nuevas_venta,\n  props_inactivas = EXCLUDED.props_inactivas,\n  props_inactivo_pending = EXCLUDED.props_inactivo_pending,\n  props_inactivo_confirmed = EXCLUDED.props_inactivo_confirmed,\n  props_matcheadas = EXCLUDED.props_matcheadas,\n  props_sin_match = EXCLUDED.props_sin_match,\n  props_con_nombre = EXCLUDED.props_con_nombre,\n  props_con_zona = EXCLUDED.props_con_zona,\n  props_creadas_24h = EXCLUDED.props_creadas_24h,\n  props_enriquecidas_24h = EXCLUDED.props_enriquecidas_24h,\n  pct_match_completadas = EXCLUDED.pct_match_completadas,\n  pct_nombre_completadas = EXCLUDED.pct_nombre_completadas,\n  score_alto = EXCLUDED.score_alto,\n  score_medio = EXCLUDED.score_medio,\n  score_bajo = EXCLUDED.score_bajo,\n  pct_alto = EXCLUDED.pct_alto,\n  pct_medio = EXCLUDED.pct_medio,\n  pct_bajo = EXCLUDED.pct_bajo,\n  sin_zona = EXCLUDED.sin_zona,\n  sin_dormitorios = EXCLUDED.sin_dormitorios,\n  sin_nombre = EXCLUDED.sin_nombre,\n  discrepancias_merge = EXCLUDED.discrepancias_merge,\n  excluidas_matching = EXCLUDED.excluidas_matching,\n  match_total = EXCLUDED.match_total,\n  match_24h = EXCLUDED.match_24h,\n  match_aprobadas_24h = EXCLUDED.match_aprobadas_24h,\n  match_rechazadas_24h = EXCLUDED.match_rechazadas_24h,\n  match_pendientes = EXCLUDED.match_pendientes,\n  pendientes_sinmatch = EXCLUDED.pendientes_sinmatch,\n  tasa_aprobacion_24h = EXCLUDED.tasa_aprobacion_24h,\n  proy_total = EXCLUDED.proy_total,\n  proy_activos = EXCLUDED.proy_activos,\n  proy_gps_verificado = EXCLUDED.proy_gps_verificado,\n  proy_con_place_id = EXCLUDED.proy_con_place_id,\n  proy_pendientes_google = EXCLUDED.proy_pendientes_google,\n  pct_gps_verificado = EXCLUDED.pct_gps_verificado,\n  horas_sin_enrichment = EXCLUDED.horas_sin_enrichment,\n  horas_sin_merge = EXCLUDED.horas_sin_merge,\n  matching_nocturno_ok = EXCLUDED.matching_nocturno_ok,\n  discovery_ok = EXCLUDED.discovery_ok,\n  enrichment_ok = EXCLUDED.enrichment_ok,\n  merge_ok = EXCLUDED.merge_ok,\n  tc_dinamico_ok = EXCLUDED.tc_dinamico_ok,\n  export_7am_ok = EXCLUDED.export_7am_ok,\n  supervisor_match_ok = EXCLUDED.supervisor_match_ok,\n  supervisor_sinmatch_ok = EXCLUDED.supervisor_sinmatch_ok",
+        "query": "INSERT INTO auditoria_snapshots (\n  fecha, props_total, props_completadas, props_nuevas, props_nuevas_venta,\n  props_inactivas, props_inactivo_pending, props_inactivo_confirmed,\n  props_matcheadas, props_sin_match, props_con_nombre, props_con_zona,\n  props_creadas_24h, props_enriquecidas_24h, pct_match_completadas, pct_nombre_completadas,\n  score_alto, score_medio, score_bajo, pct_alto, pct_medio, pct_bajo,\n  sin_zona, sin_dormitorios, sin_nombre, sin_precio, discrepancias_merge, excluidas_matching,\n  match_total, match_24h, match_aprobadas_24h, match_rechazadas_24h, match_pendientes,\n  pendientes_sinmatch, tasa_aprobacion_24h, pct_huerfanas,\n  proy_total, proy_activos, proy_gps_verificado, proy_con_place_id, proy_pendientes_google,\n  proy_con_desarrollador, proy_sin_desarrollador, pct_sin_desarrollador,\n  pct_gps_verificado, horas_sin_enrichment, horas_sin_merge, horas_sin_enrichment_llm,\n  matching_nocturno_ok,\n  discovery_ok, enrichment_ok, enrichment_llm_ok, merge_ok, tc_dinamico_ok,\n  alq_completadas, alq_creadas_24h, alq_llm_enriched, alq_matcheadas,\n  discovery_alquiler_ok, enrichment_alquiler_ok, merge_alquiler_ok, verificador_alquiler_ok,\n  llm_enriched_venta, llm_pendientes_venta,\n  ct_completadas, ct_creadas_24h, ct_excluida_zona,\n  discovery_casas_terrenos_ok, enrichment_casas_terrenos_ok,\n  export_7am_ok, supervisor_match_ok, supervisor_sinmatch_ok\n) VALUES (\n  '{{ $json.snapshot.fecha }}',\n  {{ $json.snapshot.props_total }},\n  {{ $json.snapshot.props_completadas }},\n  {{ $json.snapshot.props_nuevas }},\n  {{ $json.snapshot.props_nuevas_venta }},\n  {{ $json.snapshot.props_inactivas }},\n  {{ $json.snapshot.props_inactivo_pending }},\n  {{ $json.snapshot.props_inactivo_confirmed }},\n  {{ $json.snapshot.props_matcheadas }},\n  {{ $json.snapshot.props_sin_match }},\n  {{ $json.snapshot.props_con_nombre }},\n  {{ $json.snapshot.props_con_zona }},\n  {{ $json.snapshot.props_creadas_24h }},\n  {{ $json.snapshot.props_enriquecidas_24h }},\n  {{ $json.snapshot.pct_match_completadas }},\n  {{ $json.snapshot.pct_nombre_completadas }},\n  {{ $json.snapshot.score_alto }},\n  {{ $json.snapshot.score_medio }},\n  {{ $json.snapshot.score_bajo }},\n  {{ $json.snapshot.pct_alto }},\n  {{ $json.snapshot.pct_medio }},\n  {{ $json.snapshot.pct_bajo }},\n  {{ $json.snapshot.sin_zona }},\n  {{ $json.snapshot.sin_dormitorios }},\n  {{ $json.snapshot.sin_nombre }},\n  {{ $json.snapshot.sin_precio || 0 }},\n  {{ $json.snapshot.discrepancias_merge }},\n  {{ $json.snapshot.excluidas_matching }},\n  {{ $json.snapshot.match_total }},\n  {{ $json.snapshot.match_24h }},\n  {{ $json.snapshot.match_aprobadas_24h }},\n  {{ $json.snapshot.match_rechazadas_24h }},\n  {{ $json.snapshot.match_pendientes }},\n  {{ $json.snapshot.huerfanas_activas }},\n  {{ $json.snapshot.tasa_aprobacion_24h === null ? 'NULL' : $json.snapshot.tasa_aprobacion_24h }},\n  {{ $json.snapshot.pct_huerfanas || 0 }},\n  {{ $json.snapshot.proy_total }},\n  {{ $json.snapshot.proy_activos }},\n  {{ $json.snapshot.proy_gps_verificado }},\n  {{ $json.snapshot.proy_con_place_id }},\n  {{ $json.snapshot.proy_pendientes_google }},\n  {{ $json.snapshot.proy_con_desarrollador || 0 }},\n  {{ $json.snapshot.proy_sin_desarrollador || 0 }},\n  {{ $json.snapshot.pct_sin_desarrollador || 0 }},\n  {{ $json.snapshot.pct_gps_verificado }},\n  {{ $json.snapshot.horas_sin_enrichment }},\n  {{ $json.snapshot.horas_sin_merge }},\n  {{ $json.snapshot.horas_sin_enrichment_llm || 0 }},\n  {{ $json.snapshot.matching_nocturno_ok }},\n  {{ $json.snapshot.discovery_ok }},\n  {{ $json.snapshot.enrichment_ok }},\n  {{ $json.snapshot.enrichment_llm_ok || false }},\n  {{ $json.snapshot.merge_ok }},\n  {{ $json.snapshot.tc_dinamico_ok }},\n  {{ $json.snapshot.alq_completadas || 0 }},\n  {{ $json.snapshot.alq_creadas_24h || 0 }},\n  {{ $json.snapshot.alq_llm_enriched || 0 }},\n  {{ $json.snapshot.alq_matcheadas || 0 }},\n  {{ $json.snapshot.discovery_alquiler_ok || false }},\n  {{ $json.snapshot.enrichment_alquiler_ok || false }},\n  {{ $json.snapshot.merge_alquiler_ok || false }},\n  {{ $json.snapshot.verificador_alquiler_ok || false }},\n  {{ $json.snapshot.llm_enriched_venta || 0 }},\n  {{ $json.snapshot.llm_pendientes_venta || 0 }},\n  {{ $json.snapshot.ct_completadas || 0 }},\n  {{ $json.snapshot.ct_creadas_24h || 0 }},\n  {{ $json.snapshot.ct_excluida_zona || 0 }},\n  {{ $json.snapshot.discovery_casas_terrenos_ok || false }},\n  {{ $json.snapshot.enrichment_casas_terrenos_ok || false }},\n  true,\n  true,\n  true\n)\nON CONFLICT (fecha) DO UPDATE SET\n  props_total = EXCLUDED.props_total,\n  props_completadas = EXCLUDED.props_completadas,\n  props_nuevas = EXCLUDED.props_nuevas,\n  props_nuevas_venta = EXCLUDED.props_nuevas_venta,\n  props_inactivas = EXCLUDED.props_inactivas,\n  props_inactivo_pending = EXCLUDED.props_inactivo_pending,\n  props_inactivo_confirmed = EXCLUDED.props_inactivo_confirmed,\n  props_matcheadas = EXCLUDED.props_matcheadas,\n  props_sin_match = EXCLUDED.props_sin_match,\n  props_con_nombre = EXCLUDED.props_con_nombre,\n  props_con_zona = EXCLUDED.props_con_zona,\n  props_creadas_24h = EXCLUDED.props_creadas_24h,\n  props_enriquecidas_24h = EXCLUDED.props_enriquecidas_24h,\n  pct_match_completadas = EXCLUDED.pct_match_completadas,\n  pct_nombre_completadas = EXCLUDED.pct_nombre_completadas,\n  score_alto = EXCLUDED.score_alto,\n  score_medio = EXCLUDED.score_medio,\n  score_bajo = EXCLUDED.score_bajo,\n  pct_alto = EXCLUDED.pct_alto,\n  pct_medio = EXCLUDED.pct_medio,\n  pct_bajo = EXCLUDED.pct_bajo,\n  sin_zona = EXCLUDED.sin_zona,\n  sin_dormitorios = EXCLUDED.sin_dormitorios,\n  sin_nombre = EXCLUDED.sin_nombre,\n  sin_precio = EXCLUDED.sin_precio,\n  discrepancias_merge = EXCLUDED.discrepancias_merge,\n  excluidas_matching = EXCLUDED.excluidas_matching,\n  match_total = EXCLUDED.match_total,\n  match_24h = EXCLUDED.match_24h,\n  match_aprobadas_24h = EXCLUDED.match_aprobadas_24h,\n  match_rechazadas_24h = EXCLUDED.match_rechazadas_24h,\n  match_pendientes = EXCLUDED.match_pendientes,\n  pendientes_sinmatch = EXCLUDED.pendientes_sinmatch,\n  tasa_aprobacion_24h = EXCLUDED.tasa_aprobacion_24h,\n  pct_huerfanas = EXCLUDED.pct_huerfanas,\n  proy_total = EXCLUDED.proy_total,\n  proy_activos = EXCLUDED.proy_activos,\n  proy_gps_verificado = EXCLUDED.proy_gps_verificado,\n  proy_con_place_id = EXCLUDED.proy_con_place_id,\n  proy_pendientes_google = EXCLUDED.proy_pendientes_google,\n  proy_con_desarrollador = EXCLUDED.proy_con_desarrollador,\n  proy_sin_desarrollador = EXCLUDED.proy_sin_desarrollador,\n  pct_sin_desarrollador = EXCLUDED.pct_sin_desarrollador,\n  pct_gps_verificado = EXCLUDED.pct_gps_verificado,\n  horas_sin_enrichment = EXCLUDED.horas_sin_enrichment,\n  horas_sin_merge = EXCLUDED.horas_sin_merge,\n  horas_sin_enrichment_llm = EXCLUDED.horas_sin_enrichment_llm,\n  matching_nocturno_ok = EXCLUDED.matching_nocturno_ok,\n  discovery_ok = EXCLUDED.discovery_ok,\n  enrichment_ok = EXCLUDED.enrichment_ok,\n  enrichment_llm_ok = EXCLUDED.enrichment_llm_ok,\n  merge_ok = EXCLUDED.merge_ok,\n  tc_dinamico_ok = EXCLUDED.tc_dinamico_ok,\n  alq_completadas = EXCLUDED.alq_completadas,\n  alq_creadas_24h = EXCLUDED.alq_creadas_24h,\n  alq_llm_enriched = EXCLUDED.alq_llm_enriched,\n  alq_matcheadas = EXCLUDED.alq_matcheadas,\n  discovery_alquiler_ok = EXCLUDED.discovery_alquiler_ok,\n  enrichment_alquiler_ok = EXCLUDED.enrichment_alquiler_ok,\n  merge_alquiler_ok = EXCLUDED.merge_alquiler_ok,\n  verificador_alquiler_ok = EXCLUDED.verificador_alquiler_ok,\n  llm_enriched_venta = EXCLUDED.llm_enriched_venta,\n  llm_pendientes_venta = EXCLUDED.llm_pendientes_venta,\n  ct_completadas = EXCLUDED.ct_completadas,\n  ct_creadas_24h = EXCLUDED.ct_creadas_24h,\n  ct_excluida_zona = EXCLUDED.ct_excluida_zona,\n  discovery_casas_terrenos_ok = EXCLUDED.discovery_casas_terrenos_ok,\n  enrichment_casas_terrenos_ok = EXCLUDED.enrichment_casas_terrenos_ok,\n  export_7am_ok = EXCLUDED.export_7am_ok,\n  supervisor_match_ok = EXCLUDED.supervisor_match_ok,\n  supervisor_sinmatch_ok = EXCLUDED.supervisor_sinmatch_ok",
         "options": {}
       },
-      "id": "51e1f985-38a5-4eb4-83c3-d57e0b0ba9a7",
+      "id": "b177269b-033f-4328-96cc-9b5035032613",
       "name": "PG: Insert Snapshot",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [880, 384],
+      "position": [
+        0,
+        576
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -173,11 +200,14 @@
         "jsonBody": "={{ JSON.stringify($json.slack_payload) }}",
         "options": {}
       },
-      "id": "f2dbdf91-e713-4de1-ae5a-29fd402993cd",
+      "id": "3761b311-a10b-44f6-b719-35b6baa31e6f",
       "name": "Slack: Reporte Diario",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [880, 0],
+      "position": [
+        0,
+        192
+      ],
       "notes": "Enviar reporte consolidado a Slack"
     },
     {
@@ -186,11 +216,14 @@
         "query": "SELECT registrar_ejecucion_workflow(\n  'auditoria_diaria',\n  'success',\n  1,\n  1,\n  0,\n  NULL,\n  '{\"version\": \"3.0\"}'::jsonb\n);",
         "options": {}
       },
-      "id": "1f9af027-912a-4efe-b091-f75b3e838da6",
+      "id": "667d84a5-de02-4480-b9b8-d60dab4a5478",
       "name": "PG: Registrar Ejecución",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [880, 192],
+      "position": [
+        0,
+        384
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -205,11 +238,14 @@
         "query": "SELECT * FROM detectar_proyectos_sin_desarrollador()",
         "options": {}
       },
-      "id": "33d58387-c6f3-4be5-a506-744948429a67",
+      "id": "a432e92c-1e0d-4b78-b483-66ea404ee47b",
       "name": "PG: Stats Enriquecimiento",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [-432, 368],
+      "position": [
+        -1312,
+        560
+      ],
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
@@ -226,8 +262,11 @@
       },
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
-      "position": [-224, 192],
-      "id": "61cd6ff0-8b43-4a29-9467-42bf5f128ec5",
+      "position": [
+        -1104,
+        384
+      ],
+      "id": "231bb9ed-b73c-45a9-8962-e3b73ffd1dc6",
       "name": "Merge"
     },
     {
@@ -238,8 +277,11 @@
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [880, -192],
-      "id": "30cef137-8cfb-4f9d-b356-83c3eceffde6",
+      "position": [
+        0,
+        0
+      ],
+      "id": "15278f5c-5f80-4727-9593-03fc500ef7ea",
       "name": "PG: Snapshot Absorción Mercado",
       "credentials": {
         "postgres": {
@@ -254,94 +296,160 @@
     "Schedule: 9:00 AM": {
       "main": [
         [
-          {"node": "PG: Stats Propiedades", "type": "main", "index": 0}
+          {
+            "node": "PG: Stats Propiedades",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "PG: Stats Propiedades": {
       "main": [
         [
-          {"node": "PG: Stats Matching", "type": "main", "index": 0}
+          {
+            "node": "PG: Stats Matching",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "PG: Stats Matching": {
       "main": [
         [
-          {"node": "PG: Stats Proyectos", "type": "main", "index": 0}
+          {
+            "node": "PG: Stats Proyectos",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "PG: Stats Proyectos": {
       "main": [
         [
-          {"node": "PG: Stats Sin Match", "type": "main", "index": 0},
-          {"node": "PG: Stats Enriquecimiento", "type": "main", "index": 0}
+          {
+            "node": "PG: Stats Sin Match",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PG: Stats Enriquecimiento",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "PG: Stats Sin Match": {
       "main": [
         [
-          {"node": "Merge", "type": "main", "index": 0}
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "PG: Stats TC": {
       "main": [
         [
-          {"node": "PG: Stats Workflows", "type": "main", "index": 0}
+          {
+            "node": "PG: Stats Workflows",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "PG: Stats Workflows": {
       "main": [
         [
-          {"node": "Code: Consolidar Reporte", "type": "main", "index": 0}
+          {
+            "node": "Code: Consolidar Reporte",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Code: Consolidar Reporte": {
       "main": [
         [
-          {"node": "Slack: Reporte Diario", "type": "main", "index": 0},
-          {"node": "PG: Insert Snapshot", "type": "main", "index": 0},
-          {"node": "PG: Snapshot Absorción Mercado", "type": "main", "index": 0},
-          {"node": "PG: Registrar Ejecución", "type": "main", "index": 0}
+          {
+            "node": "Slack: Reporte Diario",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PG: Insert Snapshot",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PG: Snapshot Absorción Mercado",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PG: Registrar Ejecución",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Merge": {
       "main": [
         [
-          {"node": "PG: Stats TC", "type": "main", "index": 0}
+          {
+            "node": "PG: Stats TC",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "PG: Stats Enriquecimiento": {
       "main": [
         [
-          {"node": "Merge", "type": "main", "index": 1}
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
         ]
-      ]
-    },
-    "PG: Snapshot Absorción Mercado": {
-      "main": [
-        []
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
+    "binaryMode": "separate",
     "availableInMCP": false,
     "timeSavedMode": "fixed",
     "timezone": "America/La_Paz",
-    "callerPolicy": "workflowsFromSameOwner",
-    "binaryMode": "separate"
+    "callerPolicy": "workflowsFromSameOwner"
   },
+  "versionId": "f48774df-54c4-40c0-852c-5aec6dab3b51",
   "meta": {
-    "templateCredsSetupCompleted": true
+    "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
   },
-  "tags": []
+  "id": "33yXCUqS5vu2S0qb",
+  "tags": [
+    {
+      "updatedAt": "2025-12-18T13:23:45.918Z",
+      "createdAt": "2025-12-18T13:23:45.918Z",
+      "id": "obZptuoaE3ynlZQO",
+      "name": "SICI"
+    },
+    {
+      "updatedAt": "2025-12-30T19:45:44.663Z",
+      "createdAt": "2025-12-30T19:45:44.663Z",
+      "id": "EnrLY5KPKZeKFoCn",
+      "name": "Auditoría"
+    }
+  ]
 }
