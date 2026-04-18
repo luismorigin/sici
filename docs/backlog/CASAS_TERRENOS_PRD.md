@@ -108,6 +108,28 @@ Equipetrol tiene volumen bajo de casas (~15-40 listings) y terrenos (~10-30 list
 - Evaluar si el card de casa necesita badges para ambientes adicionales (piscina, cuarto servicio, etc.)
 - Definir cómo mostrar TC en el feed (mostrar solo USD normalizado o también badge "TC paralelo"?)
 
+### Verificador y Absorción — decisión tomada (18 Abr 2026)
+
+**Verificador:** ✅ NO hace falta uno específico.
+El `verificador_venta v2.0` existente (6:00 AM) ya procesa casas/terrenos porque su query filtra `tipo_operacion = 'venta'` sin filtrar por `tipo_propiedad_original`. El ciclo de vida funciona:
+- Discovery nocturno marca props como `inactivo_pending` cuando desaparecen del snapshot
+- Verificador venta hace HTTP audit (C21 404, Remax 302) → confirma baja a `inactivo_confirmed` o restaura a `completado`
+
+Evidencia validada: al 18 Abr hay 5 casas en `inactivo_pending` (Remax) listas para procesamiento por el verificador existente.
+
+**Snapshots de absorción:** ⏳ Backlog — esperar volumen.
+
+Razones para NO hacer ahora:
+- 19 props activas (13 casas + 6 terrenos dentro Equipetrol). Volumen insuficiente para métricas significativas.
+- Umbral mínimo recomendado: ~50 props por tipo. Con 19, 1 prop = 5% de absorción → varianza enorme, conclusiones falsas.
+- El snapshot existente `market_absorption_snapshots` (mig 193) es para deptos venta.
+
+Cuando extender a casas/terrenos:
+- [ ] Cuando haya ≥50 casas Y ≥30 terrenos activos (estimado 2-3 meses de captura nocturna)
+- [ ] Evaluar: agregar `tipo_propiedad` como dimensión al snapshot existente VS tabla separada `market_absorption_casas_terrenos`
+- [ ] Serie `filter_version='v1_casas_terrenos'` con fecha de corte documentada
+- [ ] Caveats específicos: rotación de casas es distinta a deptos (vida mediana probablemente mayor, 180+ días vs 300d deptos)
+
 ### Admin Dashboard — pendiente ⏳
 **Objetivo:** Panel admin para seguimiento y edición de casas/terrenos, alineado con los panels existentes de ventas y alquileres.
 
