@@ -402,7 +402,6 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     const item = feedItems[activeCardIndex]
     if (item?.type === 'property' && !analyticsRef.current.viewedIds.has(item.data.id)) {
       analyticsRef.current.viewedIds.add(item.data.id)
-      analyticsRef.current.hasInteracted = true
       trackEvent('view_property', { property_id: item.data.id, property_name: item.data.nombre_edificio || item.data.nombre_proyecto || '', position: activeCardIndex })
       fbqTrack('ViewContent', {
         content_type: 'product',
