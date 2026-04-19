@@ -79,6 +79,14 @@ export default function App({ Component, pageProps, router }: AppProps) {
     }
   }, [])
 
+  // Visitor UUID cross-session (Fase 1 modal WA captura). Solo en rutas públicas.
+  // Debug incluido: Lucho necesita trackear QA del flujo.
+  useEffect(() => {
+    if (router.pathname.startsWith('/admin')) return
+    if (router.pathname.startsWith('/broker')) return
+    import('@/lib/visitor').then(({ getVisitorId }) => { getVisitorId() }).catch(() => {})
+  }, [router.pathname])
+
   const page = needsAnimation ? (
     <AnimatePresenceWrapper routerKey={router.asPath}>
       <Component {...pageProps} />

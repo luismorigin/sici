@@ -10,6 +10,8 @@ import { ZONAS_ALQUILER_UI, displayZona } from '@/lib/zonas'
 import { dormLabel, formatPriceBob } from '@/lib/format-utils'
 import { fbqTrack } from '@/lib/meta-pixel'
 import { fetchMercadoAlquilerData, type MercadoAlquilerData } from '@/lib/mercado-alquiler-data'
+import { useWhatsAppCapture, triggerWhatsAppCapture } from '@/hooks/useWhatsAppCapture'
+import { buildAlquilerWaMessage } from '@/lib/wa-message'
 
 // --- SEO types ---
 interface AlquileresSEO {
@@ -141,83 +143,9 @@ async function fetchFromAPI(filtros: FiltrosAlquiler & { offset?: number }, spot
   }
 }
 
-// Track WhatsApp click — call only from onClick handlers, not from render
-// 30s cooldown per property to prevent duplicate events from double-clicks
-// 5s global cooldown to prevent bulk clicks inflating GA4
-const _waCooldown = new Map<number, number>()
-let _lastWaClick = 0
-function trackWhatsAppClick(p: UnidadAlquiler, fuente: string) {
-  const now = Date.now()
-  if (now - _lastWaClick < 5_000) return // session debounce: max 1 event per 5s
-  const last = _waCooldown.get(p.id) || 0
-  if (now - last < 30_000) return // skip duplicate within 30s
-  _waCooldown.set(p.id, now)
-  _lastWaClick = now
-  trackEvent('click_whatsapp', {
-    property_id: p.id,
-    property_name: p.nombre_edificio || p.nombre_proyecto || 'Departamento',
-    zone: p.zona || '',
-    price: p.precio_mensual_bob,
-    dorms: p.dormitorios,
-    broker_phone: p.agente_whatsapp?.replace(/\D/g, '') || '',
-    fuente,
-  })
-  fbqTrack('Lead', {
-    content_name: p.nombre_edificio || p.nombre_proyecto || 'Departamento',
-    content_category: 'alquiler',
-    value: p.precio_mensual_bob,
-    currency: 'BOB',
-    fuente,
-  })
-}
-
-// Anonymous session ID — one per browser session, not PII
-function getSessionId(): string {
-  if (typeof window === 'undefined') return ''
-  let sid = sessionStorage.getItem('simon_sid')
-  if (!sid) {
-    sid = crypto.randomUUID()
-    sessionStorage.setItem('simon_sid', sid)
-  }
-  return sid
-}
-
-// Track WhatsApp lead via POST (immune to prefetch/bots) then open WhatsApp
-function handleWhatsAppLead(e: React.MouseEvent, p: UnidadAlquiler, msg: string, fuente: string, preguntas?: string[]) {
-  e.preventDefault()
-  const phone = p.agente_whatsapp?.replace(/\D/g, '') || ''
-  const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
-  const finalPhone = phone.startsWith('591') ? phone : `591${phone}`
-  const whatsappUrl = `https://wa.me/${finalPhone}${msg ? `?text=${encodeURIComponent(msg)}` : ''}`
-
-  // Open WhatsApp immediately (must be in click handler for popup blocker)
-  window.open(whatsappUrl, '_blank')
-
-  // Fire-and-forget POST to register lead
-  trackWhatsAppClick(p, fuente)
-  fetch('/api/lead-alquiler', {
-    method: 'POST',
-    keepalive: true,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      phone,
-      msg,
-      prop_id: p.id,
-      nombre: name,
-      zona: p.zona || '',
-      precio: p.precio_mensual_bob,
-      dorms: p.dormitorios,
-      broker_nombre: p.agente_nombre || '',
-      fuente,
-      preguntas: preguntas && preguntas.length > 0 ? preguntas : undefined,
-      debug: typeof window !== 'undefined' && localStorage.getItem('simon_debug') === '1' ? '1' : undefined,
-      sid: getSessionId(),
-      utm_source: new URLSearchParams(window.location.search).get('utm_source') || undefined,
-      utm_content: new URLSearchParams(window.location.search).get('utm_content') || undefined,
-      utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign') || undefined,
-    }),
-  }).catch(() => { /* fire and forget */ })
-}
+// Alias para retrocompatibilidad interna — delega al hook vía dispatcher module-level.
+// Preserva el tracking legacy (click_whatsapp + Meta Pixel Lead) dentro del hook.
+const handleWhatsAppLead = triggerWhatsAppCapture
 
 // Build WhatsApp share URL for sharing a property with friends (NOT lead tracking)
 function buildShareWhatsAppUrl(p: UnidadAlquiler) {
@@ -257,6 +185,7 @@ function useIsDesktop() {
 // ===== MAIN PAGE =====
 export default function AlquileresPage({ seo, initialProperties }: { seo: AlquileresSEO; initialProperties: UnidadAlquiler[] }) {
   const router = useRouter()
+  const { modalElement: waModalElement } = useWhatsAppCapture()
   const isDesktop = useIsDesktop()
   const [properties, setProperties] = useState<UnidadAlquiler[]>(initialProperties)
   const [loading, setLoading] = useState(false)
@@ -1244,6 +1173,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         </>
       )}
 
+      {waModalElement}
     </>
   )
 }
@@ -1566,7 +1496,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
           <div className="mfc-m-actions">
             <button className="mfc-m-btn-detail" onClick={onOpenDetail}>Ver detalles</button>
             {sp.agente_whatsapp && (
-              <a href="#" onClick={(e) => handleWhatsAppLead(e, sp, `Hola, vi ${spName} en Simon y me interesa${sp.url ? '\n' + sp.url : ''}`, 'map_card_mobile')} className="mfc-m-btn-wsp">WhatsApp</a>
+              <a href="#" onClick={(e) => handleWhatsAppLead(e, sp, buildAlquilerWaMessage(sp), 'map_card_mobile')} className="mfc-m-btn-wsp">WhatsApp</a>
             )}
           </div>
         </div>
@@ -1609,7 +1539,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
         <div className="map-float-actions">
           <button className="map-float-btn-detail" onClick={onOpenDetail}>Ver detalles</button>
           {sp.agente_whatsapp && (
-            <a href="#" onClick={(e) => handleWhatsAppLead(e, sp, `Hola, vi ${spName} en Simon y me interesa${sp.url ? '\n' + sp.url : ''}`, 'map_card')} className="map-float-btn-wsp">WhatsApp</a>
+            <a href="#" onClick={(e) => handleWhatsAppLead(e, sp, buildAlquilerWaMessage(sp), 'map_card')} className="map-float-btn-wsp">WhatsApp</a>
           )}
         </div>
       </div>
@@ -1717,7 +1647,7 @@ const DesktopCard = memo(function DesktopCard({ property: p, isFavorite, favorit
             </svg> Ver mas
           </button>
           {p.agente_whatsapp && (
-            <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi este alquiler en Simon y me interesa: ${displayName} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_desktop')} className="dc-wsp-inline">
+            <a href="#" onClick={(e) => handleWhatsAppLead(e, p, buildAlquilerWaMessage(p), 'card_desktop')} className="dc-wsp-inline">
               <svg viewBox="0 0 24 24" fill="#1EA952" style={{ width: 14, height: 14 }}>
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
               </svg>
@@ -1811,7 +1741,7 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
             </svg> Ver mas
           </button>
           {p.agente_whatsapp && (
-            <a href="#" onClick={(e) => handleWhatsAppLead(e, p, `Hola, vi este alquiler en Simon y me interesa: ${p.nombre_edificio || p.nombre_proyecto || 'Departamento'} - ${formatPrice(p.precio_mensual_bob)}/mes${p.url ? '\n' + p.url : ''}`, 'card_mobile')} className="amc-wsp-inline-mobile">
+            <a href="#" onClick={(e) => handleWhatsAppLead(e, p, buildAlquilerWaMessage(p), 'card_mobile')} className="amc-wsp-inline-mobile">
               <svg viewBox="0 0 24 24" fill="#1EA952" style={{width:14,height:14}}>
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
               </svg>
@@ -2329,11 +2259,7 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         {p.agente_whatsapp && (
           <a href="#" onClick={(e) => {
             const selectedTexts = Array.from(selectedQs).sort().map(idx => brokerQuestions[idx]).filter(Boolean)
-            let msg = `Hola, vi ${p.nombre_edificio || p.nombre_proyecto || 'el departamento'} en Simon y me gustaria mas informacion`
-            if (selectedTexts.length > 0) {
-              msg += `\n\nAntes, me gustaria saber:\n${selectedTexts.map(t => `— ${t}`).join('\n')}`
-            }
-            if (p.url) msg += '\n' + p.url
+            const msg = buildAlquilerWaMessage(p, { preguntas: selectedTexts })
             handleWhatsAppLead(e, p, msg, 'bottom_sheet', selectedTexts.length > 0 ? selectedTexts : undefined)
           }} className="bs-footer-wsp">
             <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 16, height: 16 }}>

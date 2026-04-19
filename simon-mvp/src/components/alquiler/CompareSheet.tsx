@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { dormLabel } from '@/lib/format-utils'
-import { fbqTrack } from '@/lib/meta-pixel'
+import { triggerWhatsAppCapture } from '@/hooks/useWhatsAppCapture'
+import { buildAlquilerWaMessage } from '@/lib/wa-message'
 
 interface UnidadAlquiler {
   id: number
@@ -34,76 +35,6 @@ interface CompareSheetProps {
 }
 
 function fmt(n: number) { return n.toLocaleString('es-BO') }
-
-function trackEvent(name: string, params?: Record<string, any>) {
-  if (typeof window !== 'undefined' && (window as any).gtag) {
-    (window as any).gtag('event', name, params)
-  }
-}
-
-// 30s cooldown per property to prevent duplicate events from double-clicks
-// 5s global cooldown to prevent bulk clicks inflating GA4
-const _waCooldown = new Map<number, number>()
-let _lastWaClick = 0
-function trackWhatsAppClick(p: UnidadAlquiler, fuente: string) {
-  const now = Date.now()
-  if (now - _lastWaClick < 5_000) return // session debounce: max 1 event per 5s
-  const last = _waCooldown.get(p.id) || 0
-  if (now - last < 30_000) return
-  _waCooldown.set(p.id, now)
-  _lastWaClick = now
-  trackEvent('click_whatsapp', {
-    property_id: p.id,
-    property_name: p.nombre_edificio || p.nombre_proyecto || 'Departamento',
-    zone: p.zona || '',
-    price: p.precio_mensual_bob,
-    dorms: p.dormitorios,
-    broker_phone: p.agente_whatsapp?.replace(/\D/g, '') || '',
-    fuente,
-  })
-  fbqTrack('Lead', {
-    content_name: p.nombre_edificio || p.nombre_proyecto || 'Departamento',
-    content_category: 'alquiler',
-    value: p.precio_mensual_bob,
-    currency: 'BOB',
-    fuente,
-  })
-}
-
-function getSessionId(): string {
-  if (typeof window === 'undefined') return ''
-  let sid = sessionStorage.getItem('simon_sid')
-  if (!sid) { sid = crypto.randomUUID(); sessionStorage.setItem('simon_sid', sid) }
-  return sid
-}
-
-function handleWhatsAppLead(e: React.MouseEvent, p: UnidadAlquiler, msg: string, fuente: string, preguntas?: string[]) {
-  e.preventDefault()
-  const phone = p.agente_whatsapp?.replace(/\D/g, '') || ''
-  const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
-  const finalPhone = phone.startsWith('591') ? phone : `591${phone}`
-  const whatsappUrl = `https://wa.me/${finalPhone}${msg ? `?text=${encodeURIComponent(msg)}` : ''}`
-
-  window.open(whatsappUrl, '_blank')
-
-  trackWhatsAppClick(p, fuente)
-  fetch('/api/lead-alquiler', {
-    method: 'POST',
-    keepalive: true,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      phone, msg, prop_id: p.id, nombre: name,
-      zona: p.zona || '', precio: p.precio_mensual_bob,
-      dorms: p.dormitorios, broker_nombre: '', fuente,
-      preguntas: preguntas && preguntas.length > 0 ? preguntas : undefined,
-      debug: typeof window !== 'undefined' && localStorage.getItem('simon_debug') === '1' ? '1' : undefined,
-      sid: getSessionId(),
-      utm_source: new URLSearchParams(window.location.search).get('utm_source') || undefined,
-      utm_content: new URLSearchParams(window.location.search).get('utm_content') || undefined,
-      utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign') || undefined,
-    }),
-  }).catch(() => {})
-}
 
 export default function CompareSheet({ open, properties, onClose }: CompareSheetProps) {
   const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
@@ -229,6 +160,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
   }
 
   return (
+    <>
     <div className={`cs-overlay ${open ? 'open' : ''}`}>
       {/* Header */}
       <div className="cs-header">
@@ -420,18 +352,17 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
           <div className="cs-ctas">
             {props.map((p, i) => {
               const name = p.nombre_edificio || p.nombre_proyecto || `Depto ${i + 1}`
-              const selectedTexts = Array.from(selectedQs).sort().map(idx => askQuestions[idx]?.text).filter(Boolean)
-              let msgText = `Hola, vi el departamento de ${dormLabel(p.dormitorios)} en ${name} por Bs ${fmt(p.precio_mensual_bob)}/mes en Simon (simonbo.com). Quisiera coordinar una visita.`
-              if (selectedTexts.length > 0) {
-                msgText += `\n\nAntes, me gustaria saber:\n${selectedTexts.map(t => `— ${t}`).join('\n')}`
-              }
-              msgText += '\n\nGracias!'
+              const selectedTexts = Array.from(selectedQs).sort().map(idx => askQuestions[idx]?.text).filter(Boolean) as string[]
+              const msgText = buildAlquilerWaMessage(p, {
+                intro: 'Hola, vi este alquiler en Simon (simonbo.com) — estoy comparando varias opciones:',
+                preguntas: selectedTexts,
+              })
               return (
                 <div key={p.id} className="cs-cta-row">
                   <span className="cs-cta-letter">{String.fromCharCode(65 + i)}</span>
                   <span className="cs-cta-name">{name}</span>
                   {p.agente_whatsapp ? (
-                    <a href="#" onClick={(e) => handleWhatsAppLead(e, p, msgText, 'comparativo', selectedTexts.length > 0 ? selectedTexts : undefined)} className="cs-cta-btn">
+                    <a href="#" onClick={(e) => triggerWhatsAppCapture(e, p, msgText, 'comparativo', selectedTexts.length > 0 ? selectedTexts : undefined)} className="cs-cta-btn">
                       <svg viewBox="0 0 24 24" fill="#1EA952" style={{ width: 16, height: 16 }}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
                       WhatsApp
                     </a>
@@ -631,5 +562,6 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
         }
       `}</style>
     </div>
+    </>
   )
 }
