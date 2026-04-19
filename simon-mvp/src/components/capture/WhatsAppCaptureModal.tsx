@@ -11,7 +11,6 @@ interface Props {
   isSubmitting: boolean
   showSuccess: boolean
   onFilled?: () => void
-  onConsentToggle?: (next: boolean) => void
 }
 
 export default function WhatsAppCaptureModal({
@@ -23,17 +22,14 @@ export default function WhatsAppCaptureModal({
   isSubmitting,
   showSuccess,
   onFilled,
-  onConsentToggle,
 }: Props) {
   const [phoneValue, setPhoneValue] = useState('')
-  const [consent, setConsent] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // Reset al abrir — vacío para que browsers ofrezcan autofill de teléfonos
   useEffect(() => {
     if (isOpen) {
       setPhoneValue('')
-      setConsent(true)
       setError(null)
     }
   }, [isOpen])
@@ -64,18 +60,13 @@ export default function WhatsAppCaptureModal({
     }
     const normalized = normalizePhone(phoneValue)!
     setError(null)
-    onSubmit(normalized, consent)
+    onSubmit(normalized, true)
   }
 
   function handleBackdrop(e: React.MouseEvent) {
     if (e.target !== e.currentTarget) return
     if (isSubmitting) return
     onDismiss()
-  }
-
-  function handleConsentChange(next: boolean) {
-    setConsent(next)
-    onConsentToggle?.(next)
   }
 
   if (!isOpen) return null
@@ -142,37 +133,22 @@ export default function WhatsAppCaptureModal({
               onFirstChars={onFilled}
             />
 
-            <label className="flex items-start gap-3 mt-4 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => handleConsentChange(e.target.checked)}
-                disabled={isSubmitting}
-                className="mt-0.5 w-5 h-5 accent-[#3A6A48] cursor-pointer"
-              />
-              <span className="font-[var(--font-dm-sans)] text-sm text-[#3A3530] leading-snug">
-                Avísame si baja el precio o aparecen unidades nuevas
-              </span>
-            </label>
-
             <div className="flex flex-col sm:flex-row gap-2 mt-6">
               <button
                 type="button"
                 onClick={onSkip}
                 disabled={isSubmitting}
-                className="order-2 sm:order-1 min-h-[48px] px-4 py-3 rounded-xl border border-[#D8D0BC] bg-transparent text-[#3A3530] font-[var(--font-dm-sans)] text-sm hover:bg-[#D8D0BC]/40 transition disabled:opacity-60"
+                className="order-1 sm:order-1 min-h-[48px] px-4 py-3 rounded-xl bg-[#D8D0BC]/60 text-[#141414] font-[var(--font-dm-sans)] font-medium text-sm hover:bg-[#D8D0BC] transition disabled:opacity-60"
               >
-                Solo contactar al broker
+                Ir a WhatsApp sin dejar datos
               </button>
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="order-1 sm:order-2 flex-1 min-h-[48px] px-4 py-3 rounded-xl bg-[#141414] text-white font-[var(--font-dm-sans)] font-medium text-sm hover:bg-[#2a2a2a] transition disabled:opacity-60 disabled:cursor-not-allowed"
+                className="order-2 sm:order-2 flex-1 min-h-[48px] px-4 py-3 rounded-xl bg-[#141414] text-white font-[var(--font-dm-sans)] font-medium text-sm hover:bg-[#2a2a2a] transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isSubmitting
-                  ? 'Enviando…'
-                  : consent ? 'Contactar y recibir alertas' : 'Contactar al broker'}
+                {isSubmitting ? 'Enviando…' : 'Dejar WhatsApp y contactar'}
               </button>
             </div>
           </div>

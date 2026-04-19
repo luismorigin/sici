@@ -350,6 +350,10 @@ export function useWhatsAppCapture() {
         operacion: 'alquiler',
         source: cur.fuente,
       })
+      // Persistir dismiss en BD (sin abrir WA) para análisis cross-reference por visitor_uuid.
+      // Filtrable downstream con WHERE modal_action != 'dismissed' para leads "válidos".
+      const payload = buildPayload(cur.property, cur.msg, cur.fuente, cur.preguntas, 'dismissed', null, false)
+      postLead(payload).then((ok) => { if (!ok) savePendingLead(payload) })
     }
     setState(EMPTY_STATE)
   }, [isSubmitting])
@@ -368,12 +372,6 @@ export function useWhatsAppCapture() {
     trackEvent('wa_capture_filled', { operacion: 'alquiler' })
   }, [])
 
-  const handleConsentToggle = useCallback((next: boolean) => {
-    trackEvent(next ? 'wa_capture_consent_rechecked' : 'wa_capture_consent_unchecked', {
-      operacion: 'alquiler',
-    })
-  }, [])
-
   // ---------------------------------------------------------------------------
   // modalElement: render helper (el caller hace {modalElement})
   // ---------------------------------------------------------------------------
@@ -388,7 +386,6 @@ export function useWhatsAppCapture() {
       isSubmitting={isSubmitting}
       showSuccess={showSuccess}
       onFilled={handleFilled}
-      onConsentToggle={handleConsentToggle}
     />
   )
 

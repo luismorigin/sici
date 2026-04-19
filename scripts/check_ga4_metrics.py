@@ -647,6 +647,7 @@ _LEADS_WHERE = """
     AND (es_test = false OR es_test IS NULL)
     AND (es_debounce = false OR es_debounce IS NULL)
     AND (es_bot = false OR es_bot IS NULL)
+    AND (modal_action IS DISTINCT FROM 'dismissed')
 """
 
 
