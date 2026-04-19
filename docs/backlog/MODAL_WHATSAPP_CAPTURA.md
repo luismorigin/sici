@@ -1,8 +1,10 @@
 # PRD: Modal de captura de WhatsApp — Infraestructura de Monetización
 
 **Fecha:** 18 Abr 2026
-**Estado:** Aprobado para implementación. Listo para ejecutar Fase 1.
+**Estado:** Fase 1 deployada (18 Abr, commit `ddb58f0`). Iteración 1 UX deployada (19 Abr, commit `84b6343`). En validación (Fase 2).
 **Origen:** Idea inicial en `simon-advisor/docs/MODAL_WHATSAPP_PLAN.md`. Este doc reemplaza esa spec con el plan ejecutivo después de revisión estratégica.
+
+> **Nota:** el spec histórico abajo refleja el diseño original. Ver sección 15 al final para cambios aplicados en iteración 1 (copy, jerarquía visual, dismiss en BD).
 
 ---
 
@@ -533,3 +535,64 @@ GROUP BY 1 HAVING COUNT(*) > 1 ORDER BY 2 DESC;
 | Slack notif | No mencionada | Esencial (solo si consent=true) |
 | Promesa de alertas | "baja precio o similares en zona" | "baja precio o unidades nuevas en proyecto" (más cumplible) |
 | Sistema alertas backend | "2-4 semanas roadmap" | Manual al inicio (rara vez bajan precios), automatizar cuando volumen lo amerite |
+
+---
+
+## 15. Iteración 1 — Fix UX + dismiss en BD (19 Abr 2026)
+
+**Commit:** `84b6343` · **Trigger:** primer `/reporte-modal` post-deploy (19 Abr) mostró 56% dismiss rate en GA4 y **0 leads nuevos en BD** desde el deploy — a pesar de 40 `click_whatsapp` y 16 `wa_capture_shown`.
+
+### Diagnóstico
+
+Modal no estaba técnicamente roto (test manual confirmó que `submitted` funcionaba). El problema era UX:
+1. Jerarquía visual aplastaba el skip (submit `flex-1` negro gigante vs skip outline gris fantasma)
+2. Copy casi idéntico entre submit/skip cuando usuario destildaba consent ("Contactar al broker" vs "Solo contactar al broker")
+3. Checkbox consent agregaba ambigüedad sin valor real (si deja tel, implícitamente aceptó alertas)
+4. Mobile: skip abajo del submit → invisible → usuario gravita al X arriba-derecha
+
+Dismiss original no generaba row en BD (solo GA4) — útil como filtro pasivo, inútil para análisis granular o cross-reference por `visitor_uuid`.
+
+### Cambios aplicados
+
+| # | Archivo | Cambio |
+|---|---|---|
+| 1 | `components/capture/WhatsAppCaptureModal.tsx` | Skip copy: **"Ir a WhatsApp sin dejar datos"** (antes "Solo contactar al broker") |
+| 2 | idem | Submit copy fijo: **"Dejar WhatsApp y contactar"** (antes dinámico según checkbox) |
+| 3 | idem | Skip peso visual: `bg-[#D8D0BC]/60` + `text-[#141414]` + `font-medium` (antes outline gris) |
+| 4 | idem | Checkbox consent eliminado. `onSubmit(phone, true)` hardcoded — opt-in implícito al dejar tel |
+| 5 | idem | Mobile order: skip `order-1`, submit `order-2` (antes al revés) |
+| 6 | `hooks/useWhatsAppCapture.tsx` | `handleDismiss` ahora llama `postLead(..., 'dismissed', null, false)` **sin abrir WA**. Sigue sin llevar a WhatsApp — es "cerrar sin continuar" — pero registra intención para análisis |
+| 7 | idem | Removido `handleConsentToggle` + prop `onConsentToggle` del modal |
+| 8 | `scripts/check_ga4_metrics.py` | `_LEADS_WHERE` excluye `modal_action='dismissed'` para mantener consistencia histórica de "leads reales" |
+
+### Decisiones clave (reemplazan las del PRD original)
+
+- **`alert_consent` siempre `true` cuando usuario deja tel** (antes default ON con opción de destildar). El checkbox era ambigüedad innecesaria.
+- **`dismissed` SÍ persiste en BD** con `usuario_telefono=null`, `alert_consent=false`, sin abrir WA. Filtrable downstream con `WHERE modal_action != 'dismissed'` para leads "válidos".
+- **Backend (`/api/lead-alquiler`) no requiere cambios** — ya soportaba `dismissed` en el CHECK constraint, Slack notif ya filtra por `alert_consent && usuario_telefono`.
+
+### Query actualizada (`/reporte-modal`)
+
+```sql
+SELECT date_trunc('day', created_at AT TIME ZONE 'America/La_Paz')::date AS dia,
+  COUNT(*) AS total_intentos,
+  COUNT(*) FILTER (WHERE usuario_telefono IS NOT NULL) AS con_phone,
+  ROUND(100.0 * COUNT(*) FILTER (WHERE usuario_telefono IS NOT NULL) / NULLIF(COUNT(*), 0), 1) AS pct_captura,
+  COUNT(*) FILTER (WHERE modal_action = 'submitted') AS submitted,
+  COUNT(*) FILTER (WHERE modal_action = 'skipped') AS skipped,
+  COUNT(*) FILTER (WHERE modal_action = 'reused') AS reused,
+  COUNT(*) FILTER (WHERE modal_action = 'dismissed') AS dismissed,
+  ROUND(100.0 * COUNT(*) FILTER (WHERE modal_action = 'dismissed') / NULLIF(COUNT(*), 0), 1) AS pct_dismiss
+FROM leads_alquiler
+WHERE created_at >= NOW() - INTERVAL '7 days'
+  AND es_bot = false AND es_debounce = false AND modal_action IS NOT NULL
+GROUP BY 1 ORDER BY 1 DESC;
+```
+
+### Targets para re-evaluar Fase 2
+
+- Dismiss rate: <40% (baseline 18-19 Abr: 56%)
+- Captura (tel/total_intentos): ≥20%
+- Leads/día BD (excluyendo dismissed): recuperar baseline ~6.4/día pre-deploy
+
+Si no se cumplen en 48-72h → rollback `git revert 84b6343` (NO revertir `ddb58f0` — ese fue la infra base que sigue siendo válida).
