@@ -6,6 +6,8 @@ originSessionId: fde97c3e-cbbe-4e20-be3d-41c7a36fda85
 ---
 # Estudio de Mercado Condado VI — Abril 2026
 
+> **Estado (19 Abr 2026):** Estudio ENTREGADO. Cierre del acuerdo trimestral original ($250/mes × 3 meses). **No hay estudio de mayo comprometido** — mayo no era parte del acuerdo. Pendiente cobro del último mes (USD 250). Ver `PENDIENTES.md`.
+
 ## Contexto de la sesión (13 Abr 2026)
 
 Lucho necesita preparar el segundo estudio de mercado mensual para Condado VI (desarrolladora Constructora Condado, contacto Adolfo Altamirano). El primero se entregó el 12-13 de marzo 2026. Este se entrega el 15 de abril. Durante la sesión se descubrieron problemas serios en la métrica de absorción que llevaron a una migración correctiva (211) y a una reestructuración de cómo se presentan los datos.

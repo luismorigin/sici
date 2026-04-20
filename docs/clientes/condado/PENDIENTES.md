@@ -1,12 +1,24 @@
 # Pendientes — Condado / Proinco
 
-## 1. Enviar propuesta comercial a Adolfo
+> Última actualización: 19 Abr 2026
 
-**Destinatario:** Adolfo (hijo del fundador, contacto operativo en Proinco)
+## Estado del acuerdo original
+
+**Monitoreo trimestral: CERRADO.** Los 3 informes del acuerdo original ($250/mes × 3) están entregados — el de abril fue el último. **No hay estudio de mayo comprometido.**
+
+## Abiertos
+
+### 1. Cobrar último mes del estudio (USD 250)
+
+**Estado (20 Abr 2026):** En proceso de pago. Adolfo confirmó que están procesando el pago del último informe (abril). Verificar acreditación.
+
+**Acción:** Confirmar recepción del pago. Cuando acredite, cerrar este pendiente y avanzar con el envío de la propuesta comercial nueva.
+
+### 2. Enviar propuesta comercial a Adolfo
 
 **Estado:** Draft listo en `EMAIL_PROPUESTA_ABRIL_2026_DRAFT.md`. Pendiente retoques:
-- Confirmar email de Adolfo
-- Fechas concretas (reunión pasada, kick-off propuesto, deadline de respuesta)
+- Confirmar nombre + email de Adolfo en saludo
+- Fechas concretas (kick-off propuesto, deadline de respuesta)
 - Hostear los 3 HTMLs anexos en URLs públicas
 - Revisar tono final
 
@@ -19,16 +31,17 @@
 
 **Envío:** Martes/miércoles AM. Follow-up 48h si no responde.
 
-## 2. Cobrar último mes del estudio de mercado (impago)
+### 3. Landing web Condado VI
 
-**Estado:** Pendiente de cobro.
+**Estado:** Contratada USD 500. Adelanto Bs 1,750 recibido (18 Mar 2026). **Bloqueada por falta de material del cliente.**
 
-**Contexto:** Acuerdo original fue USD 250/mes × 3 meses = USD 750 total. El último mes del período no fue pagado todavía.
+**Pendiente del cliente:**
+- Planos de planta por tipología
+- Fotos reales (dptos + áreas comunes)
+- Revisión del texto propuesto
 
-**Acción:** Enviar recordatorio/factura del último mes pendiente. Coordinar con mismo contacto (Adolfo).
+## Pausados
 
-**Consideración:** Idealmente separar esta gestión de la propuesta comercial nueva. No mezclar ambas en el mismo email — el cobro pendiente puede enfriar la recepción de la propuesta. Orden recomendado:
-- Cobrar primero (email/mensaje específico pidiendo cierre del mes pendiente)
-- Enviar propuesta comercial después, cuando el saldo anterior esté resuelto
+### Proyecto Beni/Los Cusis
 
-Alternativa: si la relación está fluida, mencionarlo al final del email de propuesta como línea aparte ("Aprovecho para recordar que queda pendiente el cierre del último mes del estudio — USD 250. Cualquier detalle me avisan").
+**Estado:** Descartado por el momento (19 Abr 2026). Ya habían descartado parqueos mecanizados tras revisar el material enviado (PDF + infografía). El proyecto en general queda en pausa indefinida.
