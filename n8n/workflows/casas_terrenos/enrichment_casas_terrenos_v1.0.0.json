@@ -273,7 +273,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE propiedades_v2 SET precio_usd = $2, tipo_cambio_usado = $3, tipo_cambio_detectado = $4, depende_de_tc = $5, area_terreno_m2 = COALESCE($6, area_terreno_m2), frente_m = $7, fondo_m = $8, dormitorios = COALESCE($9, dormitorios), banos = COALESCE($10, banos), estado_construccion = CASE WHEN $11::text IS NOT NULL THEN $11::estado_construccion_enum ELSE estado_construccion END, datos_json_enrichment = $12::jsonb, fecha_enrichment = NOW(), fecha_merge = NOW(), fecha_actualizacion = NOW(), status = $13::estado_propiedad, razon_inactiva = $14 WHERE id = $1",
+        "query": "UPDATE propiedades_v2 SET precio_usd = $2::numeric, tipo_cambio_usado = $3::numeric, tipo_cambio_detectado = $4, depende_de_tc = $5::boolean, area_terreno_m2 = COALESCE($6::numeric, area_terreno_m2), frente_m = $7::numeric, fondo_m = $8::numeric, dormitorios = COALESCE($9::int, dormitorios), banos = COALESCE($10::int, banos), estado_construccion = CASE WHEN $11::text IS NOT NULL THEN $11::estado_construccion_enum ELSE estado_construccion END, datos_json_enrichment = $12::jsonb, fecha_enrichment = NOW(), fecha_merge = NOW(), fecha_actualizacion = NOW(), status = $13::estado_propiedad, razon_inactiva = $14 WHERE id = $1",
         "options": {
           "queryReplacement": "={{ [$json.id, $json.precio_usd, $json.tipo_cambio_usado, $json.tipo_cambio_detectado, $json.depende_de_tc, $json.area_terreno_m2, $json.frente_m, $json.fondo_m, $json.dormitorios, $json.banos, $json.estado_construccion, $json.datos_json_enrichment, $json.status_final, $json.razon_inactiva] }}"
         }
