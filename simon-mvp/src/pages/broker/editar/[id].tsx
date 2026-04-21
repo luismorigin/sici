@@ -139,9 +139,8 @@ const zonaToId = (zona: string): string => {
     'Equipetrol Centro': 'equipetrol',
     'Sirari': 'sirari',
     'Equipetrol Norte': 'equipetrol_norte',
-    'Villa Brígida': 'villa_brigida',
-    'Equipetrol Oeste': 'equipetrol_oeste',
-    'Equipetrol Oeste (Busch)': 'equipetrol_oeste'
+    'Villa Brigida': 'villa_brigida',
+    'Equipetrol Oeste': 'equipetrol_oeste'
   }
   return mapeo[zona] || zona
 }
