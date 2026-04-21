@@ -1,20 +1,14 @@
 # Pendientes — Condado / Proinco
 
-> Última actualización: 19 Abr 2026
+> Última actualización: 21 Abr 2026
 
 ## Estado del acuerdo original
 
-**Monitoreo trimestral: CERRADO.** Los 3 informes del acuerdo original ($250/mes × 3) están entregados — el de abril fue el último. **No hay estudio de mayo comprometido.**
+**Monitoreo trimestral: CERRADO Y PAGADO.** Los 3 informes del acuerdo original ($250/mes × 3 = USD 750) están entregados y cobrados. El último pago (abril, USD 250) se acreditó el 21 Abr 2026. **No hay estudio de mayo comprometido.**
 
 ## Abiertos
 
-### 1. Cobrar último mes del estudio (USD 250)
-
-**Estado (20 Abr 2026):** En proceso de pago. Adolfo confirmó que están procesando el pago del último informe (abril). Verificar acreditación.
-
-**Acción:** Confirmar recepción del pago. Cuando acredite, cerrar este pendiente y avanzar con el envío de la propuesta comercial nueva.
-
-### 2. Enviar propuesta comercial a Adolfo
+### 1. Enviar propuesta comercial a Adolfo
 
 **Estado:** Draft listo en `EMAIL_PROPUESTA_ABRIL_2026_DRAFT.md`. Pendiente retoques:
 - Confirmar nombre + email de Adolfo en saludo
@@ -31,7 +25,7 @@
 
 **Envío:** Martes/miércoles AM. Follow-up 48h si no responde.
 
-### 3. Landing web Condado VI
+### 2. Landing web Condado VI
 
 **Estado:** Contratada USD 500. Adelanto Bs 1,750 recibido (18 Mar 2026). **Bloqueada por falta de material del cliente.**
 
