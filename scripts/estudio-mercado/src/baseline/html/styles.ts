@@ -45,6 +45,7 @@ export const BASELINE_STYLES = `
 
   table { width: 100%; border-collapse: collapse; margin: 20px 0 24px; font-size: 14px; }
   th { text-align: left; font-weight: 600; padding: 10px 12px; background: var(--arena-dark); color: var(--negro); border-bottom: 2px solid var(--gris-200); font-family: 'Figtree', sans-serif; font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em; }
+  th.num { text-align: right; }
   td { padding: 9px 12px; border-bottom: 1px solid var(--gris-200); }
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
   td.n { color: var(--gris-600); font-size: 13px; }
