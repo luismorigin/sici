@@ -12,6 +12,10 @@ const SHORT_LABELS: Record<string, string> = {
   'Eq. 3er Anillo': 'Eq. 3er A.',
 }
 
+function dormShort(d: number): string {
+  return d === 0 ? 'Mono' : `${d}D`
+}
+
 // Umbral mínimo de n para reportar un segmento (aun marginal). <5 se omite totalmente.
 const MIN_N_REPORTAR = 5
 
@@ -53,7 +57,7 @@ export async function preciosZonaDorms(zonasIncluidas: string[]): Promise<Precio
   const rangosChart = segmentos
     .filter(s => !s.muestraMarginal)
     .map(s => ({
-      label: `${SHORT_LABELS[s.zona] ?? s.zona} · ${s.dorms}D`,
+      label: `${SHORT_LABELS[s.zona] ?? s.zona} · ${dormShort(s.dorms)}`,
       p25: s.p25,
       med: s.mediana,
       p75: s.p75,

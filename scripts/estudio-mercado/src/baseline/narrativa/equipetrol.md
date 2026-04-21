@@ -195,16 +195,16 @@ El mercado de alquiler de {{zonaLabel}} es considerablemente más chico en listi
 \* n < 20. Lectura marginal, reportar con cuidado. Solo las zonas con muestra ≥20 soportan comparaciones robustas. El resto se presenta para completitud del panorama.
 
 ## s8.caveat_amoblado
-Los listings de alquiler no declaran consistentemente si el departamento es amoblado. Del total del corpus, {{pctAmoblado}}% declara amoblado, {{pctSinDeclarar}}% no declara nada, {{pctNoAmoblado}}% declara no amoblado, {{pctSemi}}% semi. Mezclar los tres en un promedio produce un número que no representa ningún segmento.
+Los listings de alquiler declaran mayoritariamente su estado de amoblado, pero la declaración no es homogénea: {{pctAmoblado}}% se anuncia como amoblado, {{pctNoAmoblado}}% como no amoblado, {{pctSemi}}% semi y {{pctSinDeclarar}}% no declara. Mezclar los grupos en una sola renta mediana agregada produce un número que no representa a ningún segmento en particular.
 
 ## s8.anomalia_p1
-En 1 dormitorio, la renta mediana de listings que declaran "amoblado" (USD {{renta1DAmoblado}}) es <strong>menor</strong> que la de listings que declaran "no amoblado" (USD {{renta1DNoAmoblado}}). Es contraintuitivo. Dos hipótesis plausibles: (i) el segmento amoblado captura una subcategoría de producto más chico o de menor terminación no capturada en el filtro, (ii) la declaración "amoblado" en portales es inconsistente y mezcla semi-amoblados o equipamiento mínimo.
+El hallazgo más claro está en los <strong>monoambientes</strong>: la renta mediana declarada amoblada (USD {{renta0DAmoblado}}) y no amoblada (USD {{renta0DNoAmoblado}}) difieren en apenas {{diff0Pct}}%. En este segmento el equipamiento mínimo parece ser el default del mercado — casi todos los monoambientes llegan al portal con algún nivel de mobiliario básico, y la etiqueta "no amoblado" termina conviviendo con listings que en la práctica rondan la misma oferta.
 
 ## s8.anomalia_p2
-En 2 dormitorios, las tres categorías (amoblado USD {{renta2DAmoblado}} / no amoblado USD {{renta2DNoAmoblado}} / sin declarar USD {{renta2DSinDeclarar}}) son estadísticamente cercanas — sugiere que en tickets más altos la declaración del estado amoblado pesa menos en el precio que otras variables (ubicación específica, piso, terminaciones).
+En 1 dormitorio aparece la inversión: los listings que declaran "amoblado" tienen mediana USD {{renta1DAmoblado}}, <strong>menor</strong> que los que declaran "no amoblado" USD {{renta1DNoAmoblado}}. Contraintuitivo en teoría — el mobiliario debería agregar valor —, consistente con que "amoblado" en portales boliviano es una etiqueta imprecisa que mezcla producto más chico, más antiguo o con menor terminación. En 2 dormitorios la relación vuelve al orden esperado (amoblado USD {{renta2DAmoblado}} vs no amoblado USD {{renta2DNoAmoblado}}), pero con muestras chicas que obligan a leer la diferencia con cautela.
 
 ## s8.anomalia_cierre
-Para un inversionista interesado en renta, la conclusión operativa es: <strong>no usar los promedios de renta publicados de esta edición para calcular yield</strong>. Usar la tabla desagregada solo como referencia directa del segmento amoblado que mejor coincida con el producto evaluado, y siempre aplicar descuento típico de cierre (10-20% por debajo de publicado).
+Para un inversionista interesado en renta, la conclusión operativa es: <strong>no usar los promedios de renta publicados de esta edición para calcular yield</strong>. Usar la tabla desagregada solo como referencia directa del segmento que mejor coincida con el producto evaluado, y siempre aplicar descuento típico de cierre (10-20% por debajo de publicado).
 
 ---
 

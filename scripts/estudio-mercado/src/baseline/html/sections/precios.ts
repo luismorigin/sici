@@ -1,20 +1,6 @@
 import type { BaselineResult } from '../../types-baseline.js'
 import type { NarrativaRenderer } from '../../narrativa/loader.js'
-
-const ZONA_LONG: Record<string, string> = {
-  'Equipetrol Centro': 'Equipetrol Centro',
-  'Equipetrol Norte': 'Equipetrol Norte',
-  'Equipetrol Oeste': 'Equipetrol Oeste',
-  'Sirari': 'Sirari',
-  'Villa Brigida': 'Villa Brígida',
-}
-
-const DORM_LABEL: Record<number, string> = {
-  0: '0D',
-  1: '1D',
-  2: '2D',
-  3: '3D',
-}
+import { zonaLong, dormLabel } from '../labels.js'
 
 function renderDotPlot(data: BaselineResult): string {
   const segs = data.precios.rangosChart
@@ -82,10 +68,10 @@ export function renderPrecios(data: BaselineResult, narrativa: NarrativaRenderer
       const numClass = s.muestraMarginal ? ' n' : ''
       const nSuffix = s.muestraMarginal ? '*' : ''
       const zonaCell = idx === 0
-        ? `<td rowspan="${segs.length}"><strong>${ZONA_LONG[zona] ?? zona}</strong></td>`
+        ? `<td rowspan="${segs.length}"><strong>${zonaLong(zona)}</strong></td>`
         : ''
       filas.push(`    <tr>
-      ${zonaCell}<td>${DORM_LABEL[s.dorms] ?? s.dorms + 'D'}</td><td class="num${numClass}">${s.n}${nSuffix}</td><td class="num${numClass}">$${s.mediana.toLocaleString()}</td><td class="num${numClass}">$${s.p25.toLocaleString()} – $${s.p75.toLocaleString()}</td><td class="num${numClass}">$${s.medianaM2.toLocaleString()}</td>
+      ${zonaCell}<td>${dormLabel(s.dorms)}</td><td class="num${numClass}">${s.n}${nSuffix}</td><td class="num${numClass}">$${s.mediana.toLocaleString()}</td><td class="num${numClass}">$${s.p25.toLocaleString()} – $${s.p75.toLocaleString()}</td><td class="num${numClass}">$${s.medianaM2.toLocaleString()}</td>
     </tr>`)
     })
   }

@@ -22,7 +22,7 @@ const CATEGORIA_LABELS: Record<string, string> = {
   semi: 'Semi amoblado',
 }
 
-const DORMS_PARA_AMOBLADO = [1, 2, 3]
+const DORMS_PARA_AMOBLADO = [0, 1, 2, 3]
 
 export async function alquilerMultizona(zonasIncluidas: string[]): Promise<AlquilerMultizonaResult> {
   const rows = await queryAlquilerBaseline({ zonasIncluidas })

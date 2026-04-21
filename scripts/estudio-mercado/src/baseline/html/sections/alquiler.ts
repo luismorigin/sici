@@ -1,13 +1,6 @@
 import type { BaselineResult } from '../../types-baseline.js'
 import type { NarrativaRenderer } from '../../narrativa/loader.js'
-
-const ZONA_LONG: Record<string, string> = {
-  'Equipetrol Centro': 'Equipetrol Centro',
-  'Equipetrol Norte': 'Equipetrol Norte',
-  'Equipetrol Oeste': 'Equipetrol Oeste',
-  'Sirari': 'Sirari',
-  'Villa Brigida': 'Villa Brígida',
-}
+import { zonaLong, dormLabel } from '../labels.js'
 
 export function renderAlquiler(data: BaselineResult, narrativa: NarrativaRenderer): string {
   const comp = data.alquiler.composicionAmoblado
@@ -17,11 +10,13 @@ export function renderAlquiler(data: BaselineResult, narrativa: NarrativaRendere
   const pctSemi = comp.find(c => c.categoria === 'semi')?.pct ?? 0
 
   const dormsAmob = data.alquiler.porDormsAmoblado
+  const r0Amob = dormsAmob.find(d => d.dorms === 0 && d.categoria === 'amoblado')?.medianaRenta ?? 0
+  const r0NoAmob = dormsAmob.find(d => d.dorms === 0 && d.categoria === 'no_amoblado')?.medianaRenta ?? 0
   const r1Amob = dormsAmob.find(d => d.dorms === 1 && d.categoria === 'amoblado')?.medianaRenta ?? 0
   const r1NoAmob = dormsAmob.find(d => d.dorms === 1 && d.categoria === 'no_amoblado')?.medianaRenta ?? 0
   const r2Amob = dormsAmob.find(d => d.dorms === 2 && d.categoria === 'amoblado')?.medianaRenta ?? 0
   const r2NoAmob = dormsAmob.find(d => d.dorms === 2 && d.categoria === 'no_amoblado')?.medianaRenta ?? 0
-  const r2SinDec = dormsAmob.find(d => d.dorms === 2 && d.categoria === 'sin_declarar')?.medianaRenta ?? 0
+  const diff0Pct = r0NoAmob > 0 ? Math.abs(Math.round(((r0Amob - r0NoAmob) / r0NoAmob) * 100)) : 0
 
   const vars = {
     zonaLabel: data.config.zonaLabel,
@@ -31,18 +26,20 @@ export function renderAlquiler(data: BaselineResult, narrativa: NarrativaRendere
     pctSinDeclarar: pctSinDeclarar.toFixed(0),
     pctNoAmoblado: pctNoAmoblado.toFixed(0),
     pctSemi: pctSemi.toFixed(0),
+    renta0DAmoblado: r0Amob.toLocaleString(),
+    renta0DNoAmoblado: r0NoAmob.toLocaleString(),
+    diff0Pct,
     renta1DAmoblado: r1Amob.toLocaleString(),
     renta1DNoAmoblado: r1NoAmob.toLocaleString(),
     renta2DAmoblado: r2Amob.toLocaleString(),
     renta2DNoAmoblado: r2NoAmob.toLocaleString(),
-    renta2DSinDeclarar: r2SinDec.toLocaleString(),
   }
 
   const filasZona = data.alquiler.porZona
     .map(z => {
       const cls = z.muestraMarginal ? ' n' : ''
       const suf = z.muestraMarginal ? '*' : ''
-      return `    <tr><td>${ZONA_LONG[z.zona] ?? z.zona}</td><td class="num${cls}">${z.n}${suf}</td><td class="num${cls}">$${z.medianaRenta.toLocaleString()}</td><td class="num${cls}">$${z.avgRenta.toLocaleString()}</td></tr>`
+      return `    <tr><td>${zonaLong(z.zona)}</td><td class="num${cls}">${z.n}${suf}</td><td class="num${cls}">$${z.medianaRenta.toLocaleString()}</td><td class="num${cls}">$${z.avgRenta.toLocaleString()}</td></tr>`
     })
     .join('\n')
 
@@ -57,7 +54,7 @@ export function renderAlquiler(data: BaselineResult, narrativa: NarrativaRendere
   const filasDorms: string[] = []
   for (const [dorm, grupos] of [...dormGroups.entries()].sort((a, b) => a[0] - b[0])) {
     grupos.forEach((g, idx) => {
-      const dormCell = idx === 0 ? `<td rowspan="${grupos.length}">${dorm}D</td>` : ''
+      const dormCell = idx === 0 ? `<td rowspan="${grupos.length}">${dormLabel(dorm)}</td>` : ''
       filasDorms.push(`    <tr>${dormCell}<td>${g.label}</td><td class="num">${g.n}</td><td class="num">$${g.medianaRenta.toLocaleString()}</td></tr>`)
     })
   }

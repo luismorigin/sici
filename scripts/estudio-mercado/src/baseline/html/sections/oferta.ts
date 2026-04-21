@@ -1,13 +1,6 @@
 import type { BaselineResult } from '../../types-baseline.js'
 import type { NarrativaRenderer } from '../../narrativa/loader.js'
-
-const ZONA_LONG: Record<string, string> = {
-  'Equipetrol Centro': 'Equipetrol Centro',
-  'Equipetrol Norte': 'Equipetrol Norte',
-  'Equipetrol Oeste': 'Equipetrol Oeste',
-  'Sirari': 'Sirari',
-  'Villa Brigida': 'Villa Brígida',
-}
+import { zonaLong, dormLabel, dormLabelLong } from '../labels.js'
 
 export function renderOferta(data: BaselineResult, narrativa: NarrativaRenderer): string {
   const vars = { zonaLabel: data.config.zonaLabel }
@@ -19,7 +12,7 @@ export function renderOferta(data: BaselineResult, narrativa: NarrativaRenderer)
       const d1 = z.porDorms[1] ?? 0
       const d2 = z.porDorms[2] ?? 0
       const d3 = z.porDorms[3] ?? 0
-      return `    <tr><td>${ZONA_LONG[z.zona] ?? z.zona}</td><td class="num">${d0}</td><td class="num">${d1}</td><td class="num">${d2}</td><td class="num">${d3}</td><td class="num"><strong>${z.total}</strong></td></tr>`
+      return `    <tr><td>${zonaLong(z.zona)}</td><td class="num">${d0}</td><td class="num">${d1}</td><td class="num">${d2}</td><td class="num">${d3}</td><td class="num"><strong>${z.total}</strong></td></tr>`
     })
     .join('\n')
 
@@ -45,13 +38,13 @@ export function renderOferta(data: BaselineResult, narrativa: NarrativaRenderer)
       const m1 = z.medianaM2PorDorms[1] ?? 0
       const m2 = z.medianaM2PorDorms[2] ?? 0
       const m3 = z.medianaM2PorDorms[3] ?? 0
-      return `    <tr><td>${ZONA_LONG[z.zona] ?? z.zona}</td><td class="num">${m1}</td><td class="num">${m2}</td><td class="num">${m3}</td></tr>`
+      return `    <tr><td>${zonaLong(z.zona)}</td><td class="num">${m1}</td><td class="num">${m2}</td><td class="num">${m3}</td></tr>`
     })
     .join('\n')
 
   // Mix entrega/preventa (entrega incluye nuevo a estrenar)
   const mixRows = data.demanda.mixEstadoPorZona
-    .map(m => `    <tr><td>${ZONA_LONG[m.zona] ?? m.zona}</td><td class="num">${m.entrega}</td><td class="num">${m.preventa}</td><td class="num">${m.noEsp}</td><td class="num"><strong>${m.pctEntrega}%</strong></td></tr>`)
+    .map(m => `    <tr><td>${zonaLong(m.zona)}</td><td class="num">${m.entrega}</td><td class="num">${m.preventa}</td><td class="num">${m.noEsp}</td><td class="num"><strong>${m.pctEntrega}%</strong></td></tr>`)
     .join('\n')
 
   return `
@@ -62,7 +55,7 @@ export function renderOferta(data: BaselineResult, narrativa: NarrativaRenderer)
 
   <h3>Inventario por zona y dormitorios</h3>
   <table>
-    <tr><th>Zona</th><th class="num">0D</th><th class="num">1D</th><th class="num">2D</th><th class="num">3D</th><th class="num">Total</th></tr>
+    <tr><th>Zona</th><th class="num">Mono</th><th class="num">1D</th><th class="num">2D</th><th class="num">3D</th><th class="num">Total</th></tr>
 ${invRows}
 ${totalRow}
   </table>
