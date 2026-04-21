@@ -89,6 +89,15 @@ export const BASELINE_STYLES = `
   .toc li a:hover { color: var(--salvia); }
   .toc li span { color: var(--gris-400); font-size: 12px; }
 
+  /* Brand logo placements */
+  .cover-brand { margin-bottom: 28px; display: flex; align-items: center; }
+  .cta-brand { margin-bottom: 20px; }
+  .footer-brand {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 12px;
+  }
+  .footer-brand .firma { margin-bottom: 0; }
+
   /* CTA producto — funnel a estudios privados (sección antes de ficha) */
   .cta-producto {
     margin: 48px 0 32px; padding: 40px 44px;

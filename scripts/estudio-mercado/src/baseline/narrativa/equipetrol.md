@@ -246,10 +246,10 @@ Este baseline es la foto pública — la que ve tu comprador. Tu posición compe
 Pedir estudio privado
 
 ## cta.button_href
-https://simonbo.com/contacto?ref=baseline-equipetrol-{{edicionSlug}}
+https://wa.me/59176308808?text=Hola%2C%20vi%20el%20baseline%20de%20{{zonaLabel}}%20y%20quiero%20pedir%20informaci%C3%B3n%20sobre%20estudios%20privados.
 
 ## cta.meta
-También por <a href="mailto:estudios@simonbo.com">estudios@simonbo.com</a> o WhatsApp al +591 XXX XXXXX
+También por <a href="mailto:directorcasapatio@gmail.com">directorcasapatio@gmail.com</a> o WhatsApp directo al <a href="https://wa.me/59176308808">+591 7 630 8808</a>
 
 ---
 

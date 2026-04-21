@@ -116,6 +116,15 @@
   .toc li a:hover { color: var(--salvia); }
   .toc li span { color: var(--gris-400); font-size: 12px; }
 
+  /* Brand logo placements */
+  .cover-brand { margin-bottom: 28px; display: flex; align-items: center; }
+  .cta-brand { margin-bottom: 20px; }
+  .footer-brand {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 12px;
+  }
+  .footer-brand .firma { margin-bottom: 0; }
+
   /* CTA producto — funnel a estudios privados (sección antes de ficha) */
   .cta-producto {
     margin: 48px 0 32px; padding: 40px 44px;
@@ -384,6 +393,11 @@
 <!-- COVER -->
 <section class="cover" style="border-top:none;padding-top:24px;">
   <div class="top">
+    <div class="cover-brand"><svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Simón — Inteligencia Inmobiliaria">
+    <circle cx="32" cy="34" r="28" fill="#141414"/>
+    <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
+    <circle cx="32" cy="15" r="3" fill="#EDE8DC"/>
+  </svg></div>
     <div class="kicker">Simón · Inteligencia Inmobiliaria · Santa Cruz, Bolivia</div>
     <h1>Equipetrol.<br>Baseline de Inventario y Precios.</h1>
     <p class="subtitle">Una radiografía del mercado portal-observable de departamentos en los 5 submercados de Equipetrol al 20 de abril de 2026. Primera edición de una serie trimestral.</p>
@@ -1092,11 +1106,17 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
 
 <!-- CTA producto — funnel a estudios privados -->
 <aside class="cta-producto">
+  <div class="cta-brand"><svg width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Simón — Inteligencia Inmobiliaria">
+      <rect width="64" height="64" fill="#141414"/>
+      <circle cx="32" cy="34" r="28" fill="#EDE8DC"/>
+      <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
+      <circle cx="32" cy="15" r="3" fill="#141414"/>
+    </svg></div>
   <div class="kicker">Producto Simón · Estudios privados</div>
   <h3>¿Tu desarrollo en Equipetrol?</h3>
   <p>Este baseline es la foto pública — la que ve tu comprador. Tu posición competitiva requiere otro ángulo: inventario real, brecha vs desarrolladoras vecinas, simulación de escenarios de precio y metodología ampliada para comité de inversión. Simón produce estudios de mercado por encargo a desarrolladoras, con acceso al corpus completo (incluyendo inventario estancado) y con el foco puesto en tu proyecto.</p>
-  <a href="https://simonbo.com/contacto?ref=baseline-equipetrol-equipetrol-baseline-abril-2026" class="cta-button">Pedir estudio privado →</a>
-  <span class="cta-meta">También por <a href="mailto:estudios@simonbo.com">estudios@simonbo.com</a> o WhatsApp al +591 XXX XXXXX</span>
+  <a href="https://wa.me/59176308808?text=Hola%2C%20vi%20el%20baseline%20de%20Equipetrol%20y%20quiero%20pedir%20informaci%C3%B3n%20sobre%20estudios%20privados." class="cta-button">Pedir estudio privado →</a>
+  <span class="cta-meta">También por <a href="mailto:directorcasapatio@gmail.com">directorcasapatio@gmail.com</a> o WhatsApp directo al <a href="https://wa.me/59176308808">+591 7 630 8808</a></span>
 </aside>
 
 
@@ -1116,7 +1136,14 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
   </table>
 
   <footer>
-    <div class="firma">Simón · Inteligencia Inmobiliaria</div>
+    <div class="footer-brand">
+      <svg width="36" height="36" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Simón — Inteligencia Inmobiliaria">
+    <circle cx="32" cy="34" r="28" fill="#141414"/>
+    <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
+    <circle cx="32" cy="15" r="3" fill="#EDE8DC"/>
+  </svg>
+      <div class="firma">Simón · Inteligencia Inmobiliaria</div>
+    </div>
     <p>Santa Cruz de la Sierra, Bolivia. Este reporte es de distribución libre. Para consultas, estudios específicos por proyecto o acceso a metodología ampliada: <strong>simonbo.com</strong> · contacto directo por WhatsApp.</p>
     <p class="muted" style="margin-top:12px;">Documento generado a partir del corpus de SICI al 20 de abril de 2026. Los datos presentados son precios de publicación normalizados. Ninguna sección debe interpretarse como recomendación de inversión o valuación de propiedad específica.</p>
   </footer>

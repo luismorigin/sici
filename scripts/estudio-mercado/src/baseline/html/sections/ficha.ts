@@ -1,6 +1,7 @@
 import type { BaselineResult } from '../../types-baseline.js'
 import type { NarrativaRenderer } from '../../narrativa/loader.js'
 import { renderTemplate } from '../../narrativa/loader.js'
+import { renderSimonLogo } from '../brand.js'
 
 interface FichaItem { label: string; valor: string }
 
@@ -32,7 +33,10 @@ ${fichaRows}
   </table>
 
   <footer>
-    <div class="firma">${narrativa.render('footer.firma', vars)}</div>
+    <div class="footer-brand">
+      ${renderSimonLogo({ variant: 'trans', size: 36 })}
+      <div class="firma">${narrativa.render('footer.firma', vars)}</div>
+    </div>
     <p>${narrativa.render('footer.body', vars)}</p>
     <p class="muted" style="margin-top:12px;">${narrativa.render('footer.disclaimer', vars)}</p>
   </footer>
