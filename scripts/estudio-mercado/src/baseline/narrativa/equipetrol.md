@@ -125,7 +125,7 @@ La diferencia con {{totalVenta}} corresponde a unidades con estado nulo. El pred
 {{zonaLabel}} se divide en {{zonasCount}} submercados geográficos distintos. Cada uno tiene un perfil de producto, un rango de precio y un patrón de antigüedad del listado propios. Agregar los {{zonasCount}} en un solo promedio produce un número que no describe a ninguno.
 
 ## s4.tabla_nota
-\* Mediana de antigüedad del listado (1 dormitorio): días desde que este aviso fue publicado en el portal hasta la fecha de corte. No es velocidad de venta ni tiempo total en el mercado real — ver §2.
+\* Mediana de antigüedad del listado por dormitorios: días desde que este aviso fue publicado en el portal hasta la fecha de corte. Celdas vacías ("—") son segmentos con menos de 3 unidades, insuficiente para reportar. No es velocidad de venta ni tiempo total en el mercado real — ver §2.
 
 ## s4.excluidos
 Equipetrol 3er Anillo aparece con pocas unidades en el corpus. El tamaño es estadísticamente insuficiente para reportar como submercado propio. Se excluye de las tablas comparativas y de los agregados zonales.

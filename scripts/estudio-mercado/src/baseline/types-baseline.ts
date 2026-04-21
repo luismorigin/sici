@@ -25,7 +25,9 @@ export interface PanoramaZonaStat {
   inventario: number
   medianaM2: number
   medianaTicket: number
-  medianaDias1D: number            // antigüedad del listado, 1D
+  medianaDias1D: number            // legacy, se conserva para compat
+  medianaDiasGlobal: number        // mediana de antigüedad considerando todos los dorms
+  medianaDiasPorDorm: Record<number, number>  // antigüedad por dorm — 1D/2D/3D
   avgArea: number
 }
 

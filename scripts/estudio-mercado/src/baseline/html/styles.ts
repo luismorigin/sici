@@ -173,6 +173,26 @@ export const BASELINE_STYLES = `
     font-family: 'Figtree', sans-serif; font-weight: 600; color: var(--negro);
     font-variant-numeric: tabular-nums;
   }
+  .zona-tile .zt-days-label {
+    font-size: 10px; color: var(--gris-600); text-transform: uppercase;
+    letter-spacing: 0.06em; margin-top: 8px; font-weight: 500;
+  }
+  .zona-tile .zt-days {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 4px;
+  }
+  .zona-tile .zt-days > div {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 4px 0; background: var(--arena); border-top: 1px solid var(--gris-200);
+  }
+  .zona-tile .zt-days-dorm {
+    font-size: 9px; color: var(--gris-600); letter-spacing: 0.04em;
+    text-transform: uppercase; font-weight: 600;
+  }
+  .zona-tile .zt-days-val {
+    font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 14px;
+    color: var(--negro); font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+
   .zona-tiles-legend {
     display: flex; gap: 20px; align-items: center; margin-top: 4px;
     font-size: 11px; color: var(--gris-600); text-transform: uppercase;

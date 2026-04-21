@@ -21,6 +21,10 @@ function fullName(z: string): string {
   return ZONA_LONG[z] ?? z
 }
 
+function fmtDias(d: number | undefined): string {
+  return d && d > 0 ? String(d) : '—'
+}
+
 function renderZonaTiles(data: BaselineResult): string {
   const mixMap = new Map(data.demanda.mixEstadoPorZona.map(m => [m.zona, m]))
 
@@ -44,7 +48,12 @@ function renderZonaTiles(data: BaselineResult): string {
       <div class="zt-divider"></div>
       <div class="zt-row"><span class="zt-label">$/m² med.</span><span class="zt-val">$${z.medianaM2.toLocaleString()}</span></div>
       <div class="zt-row"><span class="zt-label">Ticket med.</span><span class="zt-val">$${(z.medianaTicket / 1000).toFixed(0)}K</span></div>
-      <div class="zt-row"><span class="zt-label">Antig. 1D</span><span class="zt-val">${z.medianaDias1D} d</span></div>
+      <div class="zt-days-label">Antigüedad listado (días)</div>
+      <div class="zt-days">
+        <div><span class="zt-days-dorm">1D</span><span class="zt-days-val">${fmtDias(z.medianaDiasPorDorm[1])}</span></div>
+        <div><span class="zt-days-dorm">2D</span><span class="zt-days-val">${fmtDias(z.medianaDiasPorDorm[2])}</span></div>
+        <div><span class="zt-days-dorm">3D</span><span class="zt-days-val">${fmtDias(z.medianaDiasPorDorm[3])}</span></div>
+      </div>
     </div>`
   }).join('\n')
 }
@@ -55,14 +64,20 @@ export function renderSubmercados(data: BaselineResult, narrativa: NarrativaRend
     zonasCount: data.panorama.totalZonas,
   }
 
+  const formatDias = (d: number) => d > 0 ? `${d} d` : '—'
   const filas = data.panorama.byZona.map(z => {
     const perfil = PERFILES_ATAJO[z.zona] ?? '—'
+    const d1 = z.medianaDiasPorDorm[1] ?? 0
+    const d2 = z.medianaDiasPorDorm[2] ?? 0
+    const d3 = z.medianaDiasPorDorm[3] ?? 0
     return `    <tr>
       <td><strong>${fullName(z.zona)}</strong></td>
       <td class="num">${z.inventario}</td>
       <td class="num">$${z.medianaM2.toLocaleString()}</td>
       <td class="num">$${z.medianaTicket.toLocaleString()}</td>
-      <td class="num">${z.medianaDias1D} d</td>
+      <td class="num">${formatDias(d1)}</td>
+      <td class="num">${formatDias(d2)}</td>
+      <td class="num">${formatDias(d3)}</td>
       <td>${perfil}</td>
     </tr>`
   }).join('\n')
@@ -120,12 +135,17 @@ export function renderSubmercados(data: BaselineResult, narrativa: NarrativaRend
   <h3>Tabla maestra de submercados</h3>
   <table>
     <tr>
-      <th>Submercado</th>
-      <th class="num">Inventario</th>
-      <th class="num">$/m² med.</th>
-      <th class="num">Ticket med.</th>
-      <th class="num">Antigüedad listado* (1D)</th>
-      <th>Perfil</th>
+      <th rowspan="2">Submercado</th>
+      <th class="num" rowspan="2">Inventario</th>
+      <th class="num" rowspan="2">$/m² med.</th>
+      <th class="num" rowspan="2">Ticket med.</th>
+      <th class="num" colspan="3">Antigüedad listado* (días)</th>
+      <th rowspan="2">Perfil</th>
+    </tr>
+    <tr>
+      <th class="num">1D</th>
+      <th class="num">2D</th>
+      <th class="num">3D</th>
     </tr>
 ${filas}
   </table>

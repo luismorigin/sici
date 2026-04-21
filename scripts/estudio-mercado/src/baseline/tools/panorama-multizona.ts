@@ -64,13 +64,22 @@ export async function panoramaMultizona(zonasIncluidas: string[]): Promise<Panor
 
   const byZona: PanoramaZonaStat[] = [...zonaMap.entries()]
     .map(([zona, props]) => {
-      const prop1D = props.filter(p => p.dormitorios === 1)
+      const medianaPorDorm = (d: number) => {
+        const seg = props.filter(p => p.dormitorios === d)
+        return seg.length >= 3 ? Math.round(median(seg.map(p => p.dias_en_mercado))) : 0
+      }
       return {
         zona,
         inventario: props.length,
         medianaM2: Math.round(median(props.map(p => p.precio_m2))),
         medianaTicket: Math.round(median(props.map(p => p.precio_norm))),
-        medianaDias1D: prop1D.length > 0 ? Math.round(median(prop1D.map(p => p.dias_en_mercado))) : 0,
+        medianaDias1D: medianaPorDorm(1),
+        medianaDiasGlobal: Math.round(median(props.map(p => p.dias_en_mercado))),
+        medianaDiasPorDorm: {
+          1: medianaPorDorm(1),
+          2: medianaPorDorm(2),
+          3: medianaPorDorm(3),
+        },
         avgArea: Math.round(props.reduce((s, p) => s + p.area_total_m2, 0) / props.length),
       }
     })

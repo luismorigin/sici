@@ -200,6 +200,26 @@
     font-family: 'Figtree', sans-serif; font-weight: 600; color: var(--negro);
     font-variant-numeric: tabular-nums;
   }
+  .zona-tile .zt-days-label {
+    font-size: 10px; color: var(--gris-600); text-transform: uppercase;
+    letter-spacing: 0.06em; margin-top: 8px; font-weight: 500;
+  }
+  .zona-tile .zt-days {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 4px;
+  }
+  .zona-tile .zt-days > div {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 4px 0; background: var(--arena); border-top: 1px solid var(--gris-200);
+  }
+  .zona-tile .zt-days-dorm {
+    font-size: 9px; color: var(--gris-600); letter-spacing: 0.04em;
+    text-transform: uppercase; font-weight: 600;
+  }
+  .zona-tile .zt-days-val {
+    font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 14px;
+    color: var(--negro); font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+
   .zona-tiles-legend {
     display: flex; gap: 20px; align-items: center; margin-top: 4px;
     font-size: 11px; color: var(--gris-600); text-transform: uppercase;
@@ -596,12 +616,17 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
   <h3>Tabla maestra de submercados</h3>
   <table>
     <tr>
-      <th>Submercado</th>
-      <th class="num">Inventario</th>
-      <th class="num">$/m² med.</th>
-      <th class="num">Ticket med.</th>
-      <th class="num">Antigüedad listado* (1D)</th>
-      <th>Perfil</th>
+      <th rowspan="2">Submercado</th>
+      <th class="num" rowspan="2">Inventario</th>
+      <th class="num" rowspan="2">$/m² med.</th>
+      <th class="num" rowspan="2">Ticket med.</th>
+      <th class="num" colspan="3">Antigüedad listado* (días)</th>
+      <th rowspan="2">Perfil</th>
+    </tr>
+    <tr>
+      <th class="num">1D</th>
+      <th class="num">2D</th>
+      <th class="num">3D</th>
     </tr>
     <tr>
       <td><strong>Equipetrol Centro</strong></td>
@@ -609,6 +634,8 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
       <td class="num">$2,142</td>
       <td class="num">$134,834</td>
       <td class="num">66 d</td>
+      <td class="num">81 d</td>
+      <td class="num">46 d</td>
       <td>Core, mayor volumen, entrega dominante</td>
     </tr>
     <tr>
@@ -617,6 +644,8 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
       <td class="num">$2,091</td>
       <td class="num">$117,448</td>
       <td class="num">37 d</td>
+      <td class="num">37 d</td>
+      <td class="num">79 d</td>
       <td>Premium, dominio preventa</td>
     </tr>
     <tr>
@@ -625,6 +654,8 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
       <td class="num">$1,941</td>
       <td class="num">$111,327</td>
       <td class="num">79 d</td>
+      <td class="num">78 d</td>
+      <td class="num">—</td>
       <td>Entry-level, emergente</td>
     </tr>
     <tr>
@@ -633,6 +664,8 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
       <td class="num">$2,006</td>
       <td class="num">$116,000</td>
       <td class="num">59 d</td>
+      <td class="num">77 d</td>
+      <td class="num">—</td>
       <td>Mixto: premium + universitario</td>
     </tr>
     <tr>
@@ -641,10 +674,12 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
       <td class="num">$2,177</td>
       <td class="num">$125,000</td>
       <td class="num">36 d</td>
+      <td class="num">59 d</td>
+      <td class="num">—</td>
       <td>Financiero, inventario chico</td>
     </tr>
   </table>
-  <p class="muted">\* Mediana de antigüedad del listado (1 dormitorio): días desde que este aviso fue publicado en el portal hasta la fecha de corte. No es velocidad de venta ni tiempo total en el mercado real — ver §2.</p>
+  <p class="muted">\* Mediana de antigüedad del listado por dormitorios: días desde que este aviso fue publicado en el portal hasta la fecha de corte. Celdas vacías ("—") son segmentos con menos de 3 unidades, insuficiente para reportar. No es velocidad de venta ni tiempo total en el mercado real — ver §2.</p>
 
   <h3>Los 5 submercados, lado a lado</h3>
   <p class="muted" style="margin-bottom:18px;">Una mini-ficha por zona con inventario, mix por estado de obra y precio mediano por metro cuadrado. Todos a la misma escala visual para comparar de un vistazo.</p>
@@ -663,7 +698,12 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
       <div class="zt-divider"></div>
       <div class="zt-row"><span class="zt-label">$/m² med.</span><span class="zt-val">$2,142</span></div>
       <div class="zt-row"><span class="zt-label">Ticket med.</span><span class="zt-val">$135K</span></div>
-      <div class="zt-row"><span class="zt-label">Antig. 1D</span><span class="zt-val">66 d</span></div>
+      <div class="zt-days-label">Antigüedad listado (días)</div>
+      <div class="zt-days">
+        <div><span class="zt-days-dorm">1D</span><span class="zt-days-val">66</span></div>
+        <div><span class="zt-days-dorm">2D</span><span class="zt-days-val">81</span></div>
+        <div><span class="zt-days-dorm">3D</span><span class="zt-days-val">46</span></div>
+      </div>
     </div>
     <div class="zona-tile">
       <div class="zt-name">Sirari</div>
@@ -678,7 +718,12 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
       <div class="zt-divider"></div>
       <div class="zt-row"><span class="zt-label">$/m² med.</span><span class="zt-val">$2,091</span></div>
       <div class="zt-row"><span class="zt-label">Ticket med.</span><span class="zt-val">$117K</span></div>
-      <div class="zt-row"><span class="zt-label">Antig. 1D</span><span class="zt-val">37 d</span></div>
+      <div class="zt-days-label">Antigüedad listado (días)</div>
+      <div class="zt-days">
+        <div><span class="zt-days-dorm">1D</span><span class="zt-days-val">37</span></div>
+        <div><span class="zt-days-dorm">2D</span><span class="zt-days-val">37</span></div>
+        <div><span class="zt-days-dorm">3D</span><span class="zt-days-val">79</span></div>
+      </div>
     </div>
     <div class="zona-tile">
       <div class="zt-name">Villa Brígida</div>
@@ -693,7 +738,12 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
       <div class="zt-divider"></div>
       <div class="zt-row"><span class="zt-label">$/m² med.</span><span class="zt-val">$1,941</span></div>
       <div class="zt-row"><span class="zt-label">Ticket med.</span><span class="zt-val">$111K</span></div>
-      <div class="zt-row"><span class="zt-label">Antig. 1D</span><span class="zt-val">79 d</span></div>
+      <div class="zt-days-label">Antigüedad listado (días)</div>
+      <div class="zt-days">
+        <div><span class="zt-days-dorm">1D</span><span class="zt-days-val">79</span></div>
+        <div><span class="zt-days-dorm">2D</span><span class="zt-days-val">78</span></div>
+        <div><span class="zt-days-dorm">3D</span><span class="zt-days-val">—</span></div>
+      </div>
     </div>
     <div class="zona-tile">
       <div class="zt-name">Equipetrol Oeste</div>
@@ -708,7 +758,12 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
       <div class="zt-divider"></div>
       <div class="zt-row"><span class="zt-label">$/m² med.</span><span class="zt-val">$2,006</span></div>
       <div class="zt-row"><span class="zt-label">Ticket med.</span><span class="zt-val">$116K</span></div>
-      <div class="zt-row"><span class="zt-label">Antig. 1D</span><span class="zt-val">59 d</span></div>
+      <div class="zt-days-label">Antigüedad listado (días)</div>
+      <div class="zt-days">
+        <div><span class="zt-days-dorm">1D</span><span class="zt-days-val">59</span></div>
+        <div><span class="zt-days-dorm">2D</span><span class="zt-days-val">77</span></div>
+        <div><span class="zt-days-dorm">3D</span><span class="zt-days-val">—</span></div>
+      </div>
     </div>
     <div class="zona-tile">
       <div class="zt-name">Equipetrol Norte</div>
@@ -723,7 +778,12 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
       <div class="zt-divider"></div>
       <div class="zt-row"><span class="zt-label">$/m² med.</span><span class="zt-val">$2,177</span></div>
       <div class="zt-row"><span class="zt-label">Ticket med.</span><span class="zt-val">$125K</span></div>
-      <div class="zt-row"><span class="zt-label">Antig. 1D</span><span class="zt-val">36 d</span></div>
+      <div class="zt-days-label">Antigüedad listado (días)</div>
+      <div class="zt-days">
+        <div><span class="zt-days-dorm">1D</span><span class="zt-days-val">36</span></div>
+        <div><span class="zt-days-dorm">2D</span><span class="zt-days-val">59</span></div>
+        <div><span class="zt-days-dorm">3D</span><span class="zt-days-val">—</span></div>
+      </div>
     </div>
   </div>
 
