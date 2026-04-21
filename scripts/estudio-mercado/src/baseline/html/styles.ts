@@ -89,6 +89,128 @@ export const BASELINE_STYLES = `
   .toc li a:hover { color: var(--salvia); }
   .toc li span { color: var(--gris-400); font-size: 12px; }
 
+  /* CTA producto — funnel a estudios privados (sección antes de ficha) */
+  .cta-producto {
+    margin: 48px 0 32px; padding: 40px 44px;
+    background: var(--negro); color: var(--arena);
+    border-top: 3px solid var(--salvia);
+  }
+  .cta-producto .kicker {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
+    color: #A7C8B1; font-weight: 600; margin-bottom: 14px;
+    font-family: 'Figtree', sans-serif;
+  }
+  .cta-producto h3 {
+    font-family: 'Figtree', sans-serif; color: var(--arena);
+    font-size: 28px; line-height: 1.2; margin: 0 0 16px; max-width: 22ch;
+  }
+  .cta-producto p {
+    font-size: 15px; color: #C8C2B0; max-width: 58ch; margin-bottom: 20px;
+  }
+  .cta-producto .cta-button {
+    display: inline-block; padding: 12px 24px;
+    background: var(--arena); color: var(--negro);
+    font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 14px;
+    text-decoration: none; letter-spacing: 0.02em;
+    transition: background 0.2s ease;
+  }
+  .cta-producto .cta-button:hover { background: white; }
+  .cta-producto .cta-meta {
+    display: block; margin-top: 16px; font-size: 12px; color: #8A8A8A;
+  }
+  .cta-producto .cta-meta a { color: #C8C2B0; text-decoration: underline; text-decoration-color: #5A5A5A; }
+
+  /* Small multiples — grilla de mini-fichas por zona (§4) */
+  .zona-tiles {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px;
+    margin: 28px 0 24px;
+  }
+  .zona-tile {
+    background: white; padding: 18px 16px; border-top: 2px solid var(--salvia);
+  }
+  .zona-tile .zt-name {
+    font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 13px;
+    color: var(--negro); margin-bottom: 8px; line-height: 1.2;
+  }
+  .zona-tile .zt-inv {
+    font-family: 'Figtree', sans-serif; font-size: 32px; font-weight: 700;
+    line-height: 1; color: var(--negro); font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .zona-tile .zt-unit {
+    font-size: 11px; color: var(--gris-400); margin-top: 2px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .zona-tile .zt-mixbar {
+    display: flex; height: 6px; margin: 12px 0 6px; background: var(--arena-dark);
+  }
+  .zona-tile .zt-mixbar > div { height: 100%; }
+  .zona-tile .zt-mixbar .mb-entrega { background: var(--salvia); }
+  .zona-tile .zt-mixbar .mb-preventa { background: #7BA687; }
+  .zona-tile .zt-mixbar .mb-noesp { background: #C8D9CE; }
+  .zona-tile .zt-mixlabel {
+    font-size: 10px; color: var(--gris-600);
+    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500;
+  }
+  .zona-tile .zt-divider {
+    border-top: 1px solid var(--gris-200); margin: 14px 0 10px;
+  }
+  .zona-tile .zt-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 12px; margin-top: 4px;
+  }
+  .zona-tile .zt-row .zt-label { color: var(--gris-600); }
+  .zona-tile .zt-row .zt-val {
+    font-family: 'Figtree', sans-serif; font-weight: 600; color: var(--negro);
+    font-variant-numeric: tabular-nums;
+  }
+  .zona-tiles-legend {
+    display: flex; gap: 20px; align-items: center; margin-top: 4px;
+    font-size: 11px; color: var(--gris-600); text-transform: uppercase;
+    letter-spacing: 0.06em; font-family: 'Figtree', sans-serif;
+  }
+  .zona-tiles-legend .swatch {
+    display: inline-block; width: 10px; height: 10px; margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  /* Dot plot — rangos P25/P75 + mediana (§6) */
+  .dotplot-wrap {
+    margin: 28px 0 12px; padding: 24px 24px 16px;
+    background: white; border-top: 2px solid var(--salvia);
+  }
+  .dotplot-wrap .chart-title {
+    font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 15px;
+    margin-bottom: 4px; color: var(--negro);
+  }
+  .dotplot-wrap .chart-subtitle {
+    font-size: 12px; color: var(--gris-600); margin-bottom: 20px;
+  }
+  .dotplot-row {
+    display: grid; grid-template-columns: 140px 1fr 110px;
+    align-items: center; gap: 12px;
+    padding: 10px 0; border-top: 1px solid var(--gris-200);
+  }
+  .dotplot-row:first-of-type { border-top: none; }
+  .dotplot-row .dp-label {
+    font-size: 12px; color: var(--negro); font-weight: 500;
+    font-family: 'Figtree', sans-serif;
+  }
+  .dotplot-row .dp-val {
+    font-size: 12px; text-align: right; color: var(--gris-600);
+    font-variant-numeric: tabular-nums;
+  }
+  .dotplot-row .dp-val strong { color: var(--negro); }
+  .dotplot-svg { width: 100%; height: 20px; }
+  .dotplot-axis {
+    display: grid; grid-template-columns: 140px 1fr 110px; gap: 12px;
+    font-size: 10px; color: var(--gris-400); margin-top: 12px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .dotplot-axis .dp-scale {
+    display: flex; justify-content: space-between;
+  }
+
   /* Progress bar — lectura */
   .read-progress {
     position: fixed; top: 0; left: 0; right: 0; height: 3px;
@@ -175,6 +297,13 @@ export const BASELINE_STYLES = `
     .kpi-hero .big { font-size: 64px; }
     .kpi-hero .big .currency { font-size: 32px; }
     .pull-quote { font-size: 18px; padding: 18px 22px; }
+    .zona-tiles { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .zona-tile .zt-inv { font-size: 26px; }
+    .dotplot-row { grid-template-columns: 110px 1fr 90px; gap: 8px; }
+    .dotplot-row .dp-label { font-size: 11px; }
+    .dotplot-axis { grid-template-columns: 110px 1fr 90px; gap: 8px; }
+    .cta-producto { padding: 28px 24px; }
+    .cta-producto h3 { font-size: 22px; }
   }
 
   @media (min-width: 721px) and (max-width: 1200px) {

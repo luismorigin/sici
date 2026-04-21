@@ -16,6 +16,55 @@ const DORM_LABEL: Record<number, string> = {
   3: '3D',
 }
 
+function renderDotPlot(data: BaselineResult): string {
+  const segs = data.precios.rangosChart
+  if (segs.length === 0) return ''
+
+  const allVals = segs.flatMap(s => [s.p25, s.p75])
+  const minVal = Math.floor(Math.min(...allVals) / 10000) * 10000
+  const maxVal = Math.ceil(Math.max(...allVals) / 10000) * 10000
+  const range = maxVal - minVal || 1
+
+  const xPct = (v: number) => ((v - minVal) / range) * 100
+
+  const rows = segs.map(s => {
+    const p25x = xPct(s.p25).toFixed(2)
+    const p75x = xPct(s.p75).toFixed(2)
+    const medx = xPct(s.med).toFixed(2)
+    const medK = `$${(s.med / 1000).toFixed(0)}K`
+
+    return `  <div class="dotplot-row">
+    <div class="dp-label">${s.label}</div>
+    <svg class="dotplot-svg" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="${p25x}" y1="10" x2="${p75x}" y2="10" stroke="#7BA687" stroke-width="1.5"/>
+      <circle cx="${p25x}" cy="10" r="2.2" fill="#8A8A8A"/>
+      <circle cx="${p75x}" cy="10" r="2.2" fill="#8A8A8A"/>
+      <circle cx="${medx}" cy="10" r="3.5" fill="#141414"/>
+    </svg>
+    <div class="dp-val">mediana <strong>${medK}</strong></div>
+  </div>`
+  }).join('\n')
+
+  const tickMid = Math.round((minVal + maxVal) / 2 / 10000) * 10000
+
+  return `
+<div class="dotplot-wrap">
+  <div class="chart-title">Rango de precios (P25 — P75) por zona y dormitorios</div>
+  <div class="chart-subtitle">USD normalizados · punto grande negro marca la mediana · puntos gris P25 y P75 · solo segmentos con n ≥ 20</div>
+${rows}
+  <div class="dotplot-axis">
+    <span></span>
+    <span class="dp-scale">
+      <span>$${(minVal / 1000).toFixed(0)}K</span>
+      <span>$${(tickMid / 1000).toFixed(0)}K</span>
+      <span>$${(maxVal / 1000).toFixed(0)}K</span>
+    </span>
+    <span></span>
+  </div>
+</div>
+`
+}
+
 export function renderPrecios(data: BaselineResult, narrativa: NarrativaRenderer): string {
   const vars = { zonaLabel: data.config.zonaLabel }
 
@@ -61,11 +110,7 @@ ${filas.join('\n')}
   </table>
   <p class="muted">${narrativa.render('s6.tabla_nota', vars)}</p>
 
-  <div class="chart-wrap">
-    <div class="chart-title">Rango de precios (P25 – P75) por zona y dormitorios</div>
-    <div class="chart-subtitle">USD normalizados · línea marca la mediana · solo segmentos con n ≥ 20</div>
-    <div class="chart-canvas-tall"><canvas id="chartPrecios"></canvas></div>
-  </div>
+${renderDotPlot(data)}
 
   <h3>Lectura</h3>
   <p>${narrativa.render('s6.lectura_p1', vars)}</p>

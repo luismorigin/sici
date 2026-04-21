@@ -116,6 +116,128 @@
   .toc li a:hover { color: var(--salvia); }
   .toc li span { color: var(--gris-400); font-size: 12px; }
 
+  /* CTA producto — funnel a estudios privados (sección antes de ficha) */
+  .cta-producto {
+    margin: 48px 0 32px; padding: 40px 44px;
+    background: var(--negro); color: var(--arena);
+    border-top: 3px solid var(--salvia);
+  }
+  .cta-producto .kicker {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
+    color: #A7C8B1; font-weight: 600; margin-bottom: 14px;
+    font-family: 'Figtree', sans-serif;
+  }
+  .cta-producto h3 {
+    font-family: 'Figtree', sans-serif; color: var(--arena);
+    font-size: 28px; line-height: 1.2; margin: 0 0 16px; max-width: 22ch;
+  }
+  .cta-producto p {
+    font-size: 15px; color: #C8C2B0; max-width: 58ch; margin-bottom: 20px;
+  }
+  .cta-producto .cta-button {
+    display: inline-block; padding: 12px 24px;
+    background: var(--arena); color: var(--negro);
+    font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 14px;
+    text-decoration: none; letter-spacing: 0.02em;
+    transition: background 0.2s ease;
+  }
+  .cta-producto .cta-button:hover { background: white; }
+  .cta-producto .cta-meta {
+    display: block; margin-top: 16px; font-size: 12px; color: #8A8A8A;
+  }
+  .cta-producto .cta-meta a { color: #C8C2B0; text-decoration: underline; text-decoration-color: #5A5A5A; }
+
+  /* Small multiples — grilla de mini-fichas por zona (§4) */
+  .zona-tiles {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px;
+    margin: 28px 0 24px;
+  }
+  .zona-tile {
+    background: white; padding: 18px 16px; border-top: 2px solid var(--salvia);
+  }
+  .zona-tile .zt-name {
+    font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 13px;
+    color: var(--negro); margin-bottom: 8px; line-height: 1.2;
+  }
+  .zona-tile .zt-inv {
+    font-family: 'Figtree', sans-serif; font-size: 32px; font-weight: 700;
+    line-height: 1; color: var(--negro); font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .zona-tile .zt-unit {
+    font-size: 11px; color: var(--gris-400); margin-top: 2px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .zona-tile .zt-mixbar {
+    display: flex; height: 6px; margin: 12px 0 6px; background: var(--arena-dark);
+  }
+  .zona-tile .zt-mixbar > div { height: 100%; }
+  .zona-tile .zt-mixbar .mb-entrega { background: var(--salvia); }
+  .zona-tile .zt-mixbar .mb-preventa { background: #7BA687; }
+  .zona-tile .zt-mixbar .mb-noesp { background: #C8D9CE; }
+  .zona-tile .zt-mixlabel {
+    font-size: 10px; color: var(--gris-600);
+    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500;
+  }
+  .zona-tile .zt-divider {
+    border-top: 1px solid var(--gris-200); margin: 14px 0 10px;
+  }
+  .zona-tile .zt-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 12px; margin-top: 4px;
+  }
+  .zona-tile .zt-row .zt-label { color: var(--gris-600); }
+  .zona-tile .zt-row .zt-val {
+    font-family: 'Figtree', sans-serif; font-weight: 600; color: var(--negro);
+    font-variant-numeric: tabular-nums;
+  }
+  .zona-tiles-legend {
+    display: flex; gap: 20px; align-items: center; margin-top: 4px;
+    font-size: 11px; color: var(--gris-600); text-transform: uppercase;
+    letter-spacing: 0.06em; font-family: 'Figtree', sans-serif;
+  }
+  .zona-tiles-legend .swatch {
+    display: inline-block; width: 10px; height: 10px; margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  /* Dot plot — rangos P25/P75 + mediana (§6) */
+  .dotplot-wrap {
+    margin: 28px 0 12px; padding: 24px 24px 16px;
+    background: white; border-top: 2px solid var(--salvia);
+  }
+  .dotplot-wrap .chart-title {
+    font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 15px;
+    margin-bottom: 4px; color: var(--negro);
+  }
+  .dotplot-wrap .chart-subtitle {
+    font-size: 12px; color: var(--gris-600); margin-bottom: 20px;
+  }
+  .dotplot-row {
+    display: grid; grid-template-columns: 140px 1fr 110px;
+    align-items: center; gap: 12px;
+    padding: 10px 0; border-top: 1px solid var(--gris-200);
+  }
+  .dotplot-row:first-of-type { border-top: none; }
+  .dotplot-row .dp-label {
+    font-size: 12px; color: var(--negro); font-weight: 500;
+    font-family: 'Figtree', sans-serif;
+  }
+  .dotplot-row .dp-val {
+    font-size: 12px; text-align: right; color: var(--gris-600);
+    font-variant-numeric: tabular-nums;
+  }
+  .dotplot-row .dp-val strong { color: var(--negro); }
+  .dotplot-svg { width: 100%; height: 20px; }
+  .dotplot-axis {
+    display: grid; grid-template-columns: 140px 1fr 110px; gap: 12px;
+    font-size: 10px; color: var(--gris-400); margin-top: 12px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .dotplot-axis .dp-scale {
+    display: flex; justify-content: space-between;
+  }
+
   /* Progress bar — lectura */
   .read-progress {
     position: fixed; top: 0; left: 0; right: 0; height: 3px;
@@ -202,6 +324,13 @@
     .kpi-hero .big { font-size: 64px; }
     .kpi-hero .big .currency { font-size: 32px; }
     .pull-quote { font-size: 18px; padding: 18px 22px; }
+    .zona-tiles { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .zona-tile .zt-inv { font-size: 26px; }
+    .dotplot-row { grid-template-columns: 110px 1fr 90px; gap: 8px; }
+    .dotplot-row .dp-label { font-size: 11px; }
+    .dotplot-axis { grid-template-columns: 110px 1fr 90px; gap: 8px; }
+    .cta-producto { padding: 28px 24px; }
+    .cta-producto h3 { font-size: 22px; }
   }
 
   @media (min-width: 721px) and (max-width: 1200px) {
@@ -503,16 +632,91 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
   </table>
   <p class="muted">\* Mediana de antigüedad del listado (1 dormitorio): días desde que este aviso fue publicado en el portal hasta la fecha de corte. No es velocidad de venta ni tiempo total en el mercado real — ver §2.</p>
 
-  <div class="chart-wrap">
-    <div class="chart-title">Inventario por submercado · split por estado de obra</div>
-    <div class="chart-subtitle">Unidades activas al corte · filtros de calidad aplicados</div>
-    <div class="chart-canvas"><canvas id="chartInventario"></canvas></div>
+  <h3>Los 5 submercados, lado a lado</h3>
+  <p class="muted" style="margin-bottom:18px;">Una mini-ficha por zona con inventario, mix por estado de obra y precio mediano por metro cuadrado. Todos a la misma escala visual para comparar de un vistazo.</p>
+
+  <div class="zona-tiles">
+    <div class="zona-tile">
+      <div class="zt-name">Equipetrol Centro</div>
+      <div class="zt-inv">120</div>
+      <div class="zt-unit">unidades</div>
+      <div class="zt-mixbar">
+        <div class="mb-entrega" style="width:72.5%"></div>
+        <div class="mb-preventa" style="width:20.8%"></div>
+        <div class="mb-noesp" style="width:6.7%"></div>
+      </div>
+      <div class="zt-mixlabel">73% entrega · 21% preventa</div>
+      <div class="zt-divider"></div>
+      <div class="zt-row"><span class="zt-label">$/m² med.</span><span class="zt-val">$2,142</span></div>
+      <div class="zt-row"><span class="zt-label">Ticket med.</span><span class="zt-val">$135K</span></div>
+      <div class="zt-row"><span class="zt-label">Antig. 1D</span><span class="zt-val">66 d</span></div>
+    </div>
+    <div class="zona-tile">
+      <div class="zt-name">Sirari</div>
+      <div class="zt-inv">77</div>
+      <div class="zt-unit">unidades</div>
+      <div class="zt-mixbar">
+        <div class="mb-entrega" style="width:40.3%"></div>
+        <div class="mb-preventa" style="width:55.8%"></div>
+        <div class="mb-noesp" style="width:3.9%"></div>
+      </div>
+      <div class="zt-mixlabel">40% entrega · 56% preventa</div>
+      <div class="zt-divider"></div>
+      <div class="zt-row"><span class="zt-label">$/m² med.</span><span class="zt-val">$2,091</span></div>
+      <div class="zt-row"><span class="zt-label">Ticket med.</span><span class="zt-val">$117K</span></div>
+      <div class="zt-row"><span class="zt-label">Antig. 1D</span><span class="zt-val">37 d</span></div>
+    </div>
+    <div class="zona-tile">
+      <div class="zt-name">Villa Brígida</div>
+      <div class="zt-inv">54</div>
+      <div class="zt-unit">unidades</div>
+      <div class="zt-mixbar">
+        <div class="mb-entrega" style="width:70.4%"></div>
+        <div class="mb-preventa" style="width:27.8%"></div>
+        <div class="mb-noesp" style="width:1.9%"></div>
+      </div>
+      <div class="zt-mixlabel">70% entrega · 28% preventa</div>
+      <div class="zt-divider"></div>
+      <div class="zt-row"><span class="zt-label">$/m² med.</span><span class="zt-val">$1,941</span></div>
+      <div class="zt-row"><span class="zt-label">Ticket med.</span><span class="zt-val">$111K</span></div>
+      <div class="zt-row"><span class="zt-label">Antig. 1D</span><span class="zt-val">79 d</span></div>
+    </div>
+    <div class="zona-tile">
+      <div class="zt-name">Equipetrol Oeste</div>
+      <div class="zt-inv">45</div>
+      <div class="zt-unit">unidades</div>
+      <div class="zt-mixbar">
+        <div class="mb-entrega" style="width:73.3%"></div>
+        <div class="mb-preventa" style="width:24.4%"></div>
+        <div class="mb-noesp" style="width:2.2%"></div>
+      </div>
+      <div class="zt-mixlabel">73% entrega · 24% preventa</div>
+      <div class="zt-divider"></div>
+      <div class="zt-row"><span class="zt-label">$/m² med.</span><span class="zt-val">$2,006</span></div>
+      <div class="zt-row"><span class="zt-label">Ticket med.</span><span class="zt-val">$116K</span></div>
+      <div class="zt-row"><span class="zt-label">Antig. 1D</span><span class="zt-val">59 d</span></div>
+    </div>
+    <div class="zona-tile">
+      <div class="zt-name">Equipetrol Norte</div>
+      <div class="zt-inv">27</div>
+      <div class="zt-unit">unidades</div>
+      <div class="zt-mixbar">
+        <div class="mb-entrega" style="width:77.8%"></div>
+        <div class="mb-preventa" style="width:22.2%"></div>
+        <div class="mb-noesp" style="width:0.0%"></div>
+      </div>
+      <div class="zt-mixlabel">78% entrega · 22% preventa</div>
+      <div class="zt-divider"></div>
+      <div class="zt-row"><span class="zt-label">$/m² med.</span><span class="zt-val">$2,177</span></div>
+      <div class="zt-row"><span class="zt-label">Ticket med.</span><span class="zt-val">$125K</span></div>
+      <div class="zt-row"><span class="zt-label">Antig. 1D</span><span class="zt-val">36 d</span></div>
+    </div>
   </div>
 
-  <div class="chart-wrap">
-    <div class="chart-title">Precio mediano por metro cuadrado</div>
-    <div class="chart-subtitle">USD normalizados al tipo de cambio oficial · agregado por submercado</div>
-    <div class="chart-canvas"><canvas id="chartM2"></canvas></div>
+  <div class="zona-tiles-legend">
+    <span><span class="swatch" style="background:#3A6A48"></span>Entrega</span>
+    <span><span class="swatch" style="background:#7BA687"></span>Preventa</span>
+    <span><span class="swatch" style="background:#C8D9CE"></span>No especificado</span>
   </div>
 
   <h3>Lectura por submercado</h3>
@@ -669,11 +873,81 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
   </table>
   <p class="muted">\* Filas con n < 20. Se reportan con valores atenuados para indicar muestra marginal. Interpretar con cautela; no extrapolar tendencias.</p>
 
-  <div class="chart-wrap">
-    <div class="chart-title">Rango de precios (P25 – P75) por zona y dormitorios</div>
-    <div class="chart-subtitle">USD normalizados · línea marca la mediana · solo segmentos con n ≥ 20</div>
-    <div class="chart-canvas-tall"><canvas id="chartPrecios"></canvas></div>
+
+<div class="dotplot-wrap">
+  <div class="chart-title">Rango de precios (P25 — P75) por zona y dormitorios</div>
+  <div class="chart-subtitle">USD normalizados · punto grande negro marca la mediana · puntos gris P25 y P75 · solo segmentos con n ≥ 20</div>
+  <div class="dotplot-row">
+    <div class="dp-label">Eq. Centro · 1D</div>
+    <svg class="dotplot-svg" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="13.05" y1="10" x2="41.98" y2="10" stroke="#7BA687" stroke-width="1.5"/>
+      <circle cx="13.05" cy="10" r="2.2" fill="#8A8A8A"/>
+      <circle cx="41.98" cy="10" r="2.2" fill="#8A8A8A"/>
+      <circle cx="21.95" cy="10" r="3.5" fill="#141414"/>
+    </svg>
+    <div class="dp-val">mediana <strong>$105K</strong></div>
   </div>
+  <div class="dotplot-row">
+    <div class="dp-label">Eq. Centro · 2D</div>
+    <svg class="dotplot-svg" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="52.60" y1="10" x2="98.67" y2="10" stroke="#7BA687" stroke-width="1.5"/>
+      <circle cx="52.60" cy="10" r="2.2" fill="#8A8A8A"/>
+      <circle cx="98.67" cy="10" r="2.2" fill="#8A8A8A"/>
+      <circle cx="76.06" cy="10" r="3.5" fill="#141414"/>
+    </svg>
+    <div class="dp-val">mediana <strong>$192K</strong></div>
+  </div>
+  <div class="dotplot-row">
+    <div class="dp-label">Sirari · 1D</div>
+    <svg class="dotplot-svg" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="12.61" y1="10" x2="26.70" y2="10" stroke="#7BA687" stroke-width="1.5"/>
+      <circle cx="12.61" cy="10" r="2.2" fill="#8A8A8A"/>
+      <circle cx="26.70" cy="10" r="2.2" fill="#8A8A8A"/>
+      <circle cx="20.36" cy="10" r="3.5" fill="#141414"/>
+    </svg>
+    <div class="dp-val">mediana <strong>$103K</strong></div>
+  </div>
+  <div class="dotplot-row">
+    <div class="dp-label">Sirari · 2D</div>
+    <svg class="dotplot-svg" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="38.79" y1="10" x2="69.52" y2="10" stroke="#7BA687" stroke-width="1.5"/>
+      <circle cx="38.79" cy="10" r="2.2" fill="#8A8A8A"/>
+      <circle cx="69.52" cy="10" r="2.2" fill="#8A8A8A"/>
+      <circle cx="55.63" cy="10" r="3.5" fill="#141414"/>
+    </svg>
+    <div class="dp-val">mediana <strong>$159K</strong></div>
+  </div>
+  <div class="dotplot-row">
+    <div class="dp-label">V. Brígida · 1D</div>
+    <svg class="dotplot-svg" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="5.35" y1="10" x2="27.10" y2="10" stroke="#7BA687" stroke-width="1.5"/>
+      <circle cx="5.35" cy="10" r="2.2" fill="#8A8A8A"/>
+      <circle cx="27.10" cy="10" r="2.2" fill="#8A8A8A"/>
+      <circle cx="17.88" cy="10" r="3.5" fill="#141414"/>
+    </svg>
+    <div class="dp-val">mediana <strong>$99K</strong></div>
+  </div>
+  <div class="dotplot-row">
+    <div class="dp-label">Eq. Oeste · 1D</div>
+    <svg class="dotplot-svg" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="1.26" y1="10" x2="48.21" y2="10" stroke="#7BA687" stroke-width="1.5"/>
+      <circle cx="1.26" cy="10" r="2.2" fill="#8A8A8A"/>
+      <circle cx="48.21" cy="10" r="2.2" fill="#8A8A8A"/>
+      <circle cx="25.00" cy="10" r="3.5" fill="#141414"/>
+    </svg>
+    <div class="dp-val">mediana <strong>$110K</strong></div>
+  </div>
+  <div class="dotplot-axis">
+    <span></span>
+    <span class="dp-scale">
+      <span>$70K</span>
+      <span>$150K</span>
+      <span>$230K</span>
+    </span>
+    <span></span>
+  </div>
+</div>
+
 
   <h3>Lectura</h3>
   <p>El rango intercuartílico en segmentos grandes (2D y 3D del core del mercado) puede llegar al 48% dentro del mismo producto en la misma zona. La dispersión refleja factores que no resuelven en un promedio: año de construcción, nivel de terminaciones, amenidades del edificio, piso y orientación.</p>
@@ -693,10 +967,10 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
     <tr><th>Proyecto</th><th>Zona</th><th>Desarrolladora</th><th>Fase</th><th class="num">Unidades</th></tr>
     <tr><td>Rhodium</td><td>Sirari</td><td>Elite Desarrollos</td><td>Preventa</td><td class="num">17</td></tr>
     <tr><td>Sky Eclipse</td><td>Eq. Oeste</td><td>Sky Properties</td><td>Entrega</td><td class="num">16</td></tr>
+    <tr><td>Condominio MARE</td><td>Sirari</td><td>Mariscal Construcciones</td><td>Preventa</td><td class="num">13</td></tr>
     <tr><td>HH Once Equipetrol</td><td>Eq. Centro</td><td>HH Desarrollos</td><td>Entrega</td><td class="num">11</td></tr>
     <tr><td>Lofty Island</td><td>Eq. Oeste</td><td>HH Desarrollos</td><td>Preventa</td><td class="num">9</td></tr>
     <tr><td>Stone 3</td><td>Villa Brígida</td><td>Stone Desarrollos</td><td>Preventa</td><td class="num">9</td></tr>
-    <tr><td>Condominio MARE</td><td>Sirari</td><td>Mariscal Construcciones</td><td>Preventa</td><td class="num">8</td></tr>
     <tr><td>Atrium</td><td>Eq. Centro</td><td>Sommet SRL</td><td>Entrega</td><td class="num">7</td></tr>
     <tr><td>Sky Tower</td><td>Eq. Centro</td><td>—</td><td>Preventa</td><td class="num">7</td></tr>
     <tr><td>Sky Moon</td><td>Eq. Norte</td><td>Sky Properties</td><td>Entrega</td><td class="num">7</td></tr>
@@ -711,7 +985,6 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
     <tr><td>INIZIO</td><td>Eq. Oeste</td><td>Inizio Desarrollos</td><td>Entrega</td><td class="num">5</td></tr>
     <tr><td>Uptown NUU</td><td>Eq. Centro</td><td>Grupo Providence</td><td>Entrega</td><td class="num">5</td></tr>
     <tr><td>PORTOBELLO 5</td><td>Villa Brígida</td><td>Port-Delux S.R.L.</td><td>Preventa</td><td class="num">5</td></tr>
-    <tr><td>Mare</td><td>Eq. Centro</td><td>Mare Desarrollos</td><td>Entrega</td><td class="num">5</td></tr>
   </table>
   <p class="muted">"No esp." indica estado de construcción sin declarar en el listado del portal — la unidad existe y es vigente, el dato de fase es el ausente.</p>
 
@@ -815,6 +1088,17 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
 
 
 
+<!-- CTA producto — funnel a estudios privados -->
+<aside class="cta-producto">
+  <div class="kicker">Producto Simón · Estudios privados</div>
+  <h3>¿Tu desarrollo en Equipetrol?</h3>
+  <p>Este baseline es la foto pública — la que ve tu comprador. Tu posición competitiva requiere otro ángulo: inventario real, brecha vs desarrolladoras vecinas, simulación de escenarios de precio y metodología ampliada para comité de inversión. Simón produce estudios de mercado por encargo a desarrolladoras, con acceso al corpus completo (incluyendo inventario estancado) y con el foco puesto en tu proyecto.</p>
+  <a href="https://simonbo.com/contacto?ref=baseline-equipetrol-equipetrol-baseline-abril-2026" class="cta-button">Pedir estudio privado →</a>
+  <span class="cta-meta">También por <a href="mailto:estudios@simonbo.com">estudios@simonbo.com</a> o WhatsApp al +591 XXX XXXXX</span>
+</aside>
+
+
+
 <!-- 10. FICHA EDITORIAL -->
 <section id="s10">
   <span class="section-num">10 · Ficha</span>
@@ -855,70 +1139,14 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
   Chart.defaults.color = NEGRO;
   Chart.defaults.font.size = 12;
 
-  const zonas = ["Eq. Centro","Sirari","V. Brígida","Eq. Oeste","Eq. Norte"];
+  // Antigüedad del listado por zona × dorms (§5)
+  const el = document.getElementById('chartDias');
+  if (!el) return;
 
-  // 1. Inventario con split por estado
-  new Chart(document.getElementById('chartInventario'), {
+  new Chart(el, {
     type: 'bar',
     data: {
-      labels: zonas,
-      datasets: [
-        { label: 'Entrega inmediata', data: [87,31,38,33,21], backgroundColor: SALVIA, borderWidth: 0 },
-        { label: 'Preventa', data: [25,43,15,11,6], backgroundColor: SALVIA_LIGHT, borderWidth: 0 },
-        { label: 'No especificado', data: [8,3,1,1,0], backgroundColor: SALVIA_PALE, borderWidth: 0 }
-      ]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { stacked: true, grid: { color: ARENA_DARK }, ticks: { color: GRIS } },
-        y: { stacked: true, grid: { display: false }, ticks: { color: NEGRO, font: { weight: 600 } } }
-      },
-      plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16 } },
-        tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.x + ' unidades' } }
-      }
-    }
-  });
-
-  // 2. $/m² por submercado
-  new Chart(document.getElementById('chartM2'), {
-    type: 'bar',
-    data: {
-      labels: ["Eq. Norte","Eq. Centro","Sirari","Eq. Oeste","V. Brígida"],
-      datasets: [{
-        data: [2177,2142,2091,2006,1941],
-        backgroundColor: SALVIA,
-        borderWidth: 0
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          beginAtZero: false,
-          min: 1800,
-          grid: { color: ARENA_DARK },
-          ticks: { color: GRIS, callback: (v) => '$' + v.toLocaleString() }
-        },
-        y: { grid: { display: false }, ticks: { color: NEGRO, font: { weight: 600 } } }
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: (ctx) => 'USD ' + ctx.parsed.x.toLocaleString() + ' / m²' } }
-      }
-    }
-  });
-
-  // 3. Días en mercado por zona × dorms
-  new Chart(document.getElementById('chartDias'), {
-    type: 'bar',
-    data: {
-      labels: zonas,
+      labels: ["Eq. Centro","Sirari","V. Brígida","Eq. Oeste","Eq. Norte"],
       datasets: [
         { label: '1 dorm', data: [66,37,79,59,36], backgroundColor: SALVIA, borderWidth: 0 },
         { label: '2 dorms', data: [81,37,78,77,59], backgroundColor: SALVIA_LIGHT, borderWidth: 0 },
@@ -939,67 +1167,6 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
       plugins: {
         legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16 } },
         tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y + ' días' } }
-      }
-    }
-  });
-
-  // 4. Rango P25-P75 con mediana por segmento (solo n >= 20)
-  const segmentos = [{"label":"Eq. Centro · 1D","p25":90884,"med":105127,"p75":137165},{"label":"Eq. Centro · 2D","p25":154159,"med":191690,"p75":227868},{"label":"Sirari · 1D","p25":90175,"med":102581,"p75":112721},{"label":"Sirari · 2D","p25":132060,"med":159000,"p75":181225},{"label":"V. Brígida · 1D","p25":78566,"med":98601,"p75":113367},{"label":"Eq. Oeste · 1D","p25":72022,"med":110000,"p75":147141}];
-
-  new Chart(document.getElementById('chartPrecios'), {
-    type: 'bar',
-    data: {
-      labels: segmentos.map(s => s.label),
-      datasets: [
-        {
-          label: 'Rango P25 — P75',
-          data: segmentos.map(s => [s.p25, s.p75]),
-          backgroundColor: SALVIA_PALE,
-          borderColor: SALVIA_LIGHT,
-          borderWidth: 1,
-          borderSkipped: false,
-          barPercentage: 0.6
-        },
-        {
-          label: 'Mediana',
-          type: 'scatter',
-          data: segmentos.map((s, i) => ({ x: s.med, y: i })),
-          backgroundColor: NEGRO,
-          borderColor: NEGRO,
-          pointRadius: 6,
-          pointStyle: 'rectRot',
-          pointBorderWidth: 0
-        }
-      ]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          beginAtZero: false,
-          min: 50000,
-          grid: { color: ARENA_DARK },
-          ticks: { color: GRIS, callback: (v) => '$' + (v / 1000) + 'K' }
-        },
-        y: {
-          type: 'category',
-          grid: { display: false },
-          ticks: { color: NEGRO, font: { weight: 600 } }
-        }
-      },
-      plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16, usePointStyle: true } },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              if (ctx.dataset.label === 'Mediana') return 'Mediana: USD ' + ctx.parsed.x.toLocaleString();
-              const v = ctx.parsed;
-              return 'P25–P75: USD ' + v._custom.min.toLocaleString() + ' — USD ' + v._custom.max.toLocaleString();
-            }
-          }
-        }
       }
     }
   });

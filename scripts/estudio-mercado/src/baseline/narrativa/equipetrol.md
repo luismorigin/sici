@@ -233,6 +233,26 @@ El ritmo de incorporación no es comercial: es el tiempo real que necesita la in
 
 ---
 
+## cta.kicker
+Producto Simón · Estudios privados
+
+## cta.title
+¿Tu desarrollo en {{zonaLabel}}?
+
+## cta.body
+Este baseline es la foto pública — la que ve tu comprador. Tu posición competitiva requiere otro ángulo: inventario real, brecha vs desarrolladoras vecinas, simulación de escenarios de precio y metodología ampliada para comité de inversión. Simón produce estudios de mercado por encargo a desarrolladoras, con acceso al corpus completo (incluyendo inventario estancado) y con el foco puesto en tu proyecto.
+
+## cta.button
+Pedir estudio privado
+
+## cta.button_href
+https://simonbo.com/contacto?ref=baseline-equipetrol-{{edicionSlug}}
+
+## cta.meta
+También por <a href="mailto:estudios@simonbo.com">estudios@simonbo.com</a> o WhatsApp al +591 XXX XXXXX
+
+---
+
 ## s10.ficha
 [
   {"label": "Reporte", "valor": "{{zonaLabel}} — Baseline de Inventario y Precios"},

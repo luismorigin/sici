@@ -21,6 +21,34 @@ function fullName(z: string): string {
   return ZONA_LONG[z] ?? z
 }
 
+function renderZonaTiles(data: BaselineResult): string {
+  const mixMap = new Map(data.demanda.mixEstadoPorZona.map(m => [m.zona, m]))
+
+  return data.panorama.byZona.map(z => {
+    const mix = mixMap.get(z.zona)
+    const total = mix ? mix.entrega + mix.preventa + mix.noEsp : 1
+    const pctEntrega = mix ? (mix.entrega / total) * 100 : 0
+    const pctPreventa = mix ? (mix.preventa / total) * 100 : 0
+    const pctNoEsp = mix ? (mix.noEsp / total) * 100 : 0
+
+    return `    <div class="zona-tile">
+      <div class="zt-name">${fullName(z.zona)}</div>
+      <div class="zt-inv">${z.inventario}</div>
+      <div class="zt-unit">unidades</div>
+      <div class="zt-mixbar">
+        <div class="mb-entrega" style="width:${pctEntrega.toFixed(1)}%"></div>
+        <div class="mb-preventa" style="width:${pctPreventa.toFixed(1)}%"></div>
+        <div class="mb-noesp" style="width:${pctNoEsp.toFixed(1)}%"></div>
+      </div>
+      <div class="zt-mixlabel">${Math.round(pctEntrega)}% entrega · ${Math.round(pctPreventa)}% preventa</div>
+      <div class="zt-divider"></div>
+      <div class="zt-row"><span class="zt-label">$/m² med.</span><span class="zt-val">$${z.medianaM2.toLocaleString()}</span></div>
+      <div class="zt-row"><span class="zt-label">Ticket med.</span><span class="zt-val">$${(z.medianaTicket / 1000).toFixed(0)}K</span></div>
+      <div class="zt-row"><span class="zt-label">Antig. 1D</span><span class="zt-val">${z.medianaDias1D} d</span></div>
+    </div>`
+  }).join('\n')
+}
+
 export function renderSubmercados(data: BaselineResult, narrativa: NarrativaRenderer): string {
   const vars = {
     zonaLabel: data.config.zonaLabel,
@@ -103,16 +131,17 @@ ${filas}
   </table>
   <p class="muted">${narrativa.render('s4.tabla_nota', vars)}</p>
 
-  <div class="chart-wrap">
-    <div class="chart-title">Inventario por submercado · split por estado de obra</div>
-    <div class="chart-subtitle">Unidades activas al corte · filtros de calidad aplicados</div>
-    <div class="chart-canvas"><canvas id="chartInventario"></canvas></div>
+  <h3>Los 5 submercados, lado a lado</h3>
+  <p class="muted" style="margin-bottom:18px;">Una mini-ficha por zona con inventario, mix por estado de obra y precio mediano por metro cuadrado. Todos a la misma escala visual para comparar de un vistazo.</p>
+
+  <div class="zona-tiles">
+${renderZonaTiles(data)}
   </div>
 
-  <div class="chart-wrap">
-    <div class="chart-title">Precio mediano por metro cuadrado</div>
-    <div class="chart-subtitle">USD normalizados al tipo de cambio oficial · agregado por submercado</div>
-    <div class="chart-canvas"><canvas id="chartM2"></canvas></div>
+  <div class="zona-tiles-legend">
+    <span><span class="swatch" style="background:#3A6A48"></span>Entrega</span>
+    <span><span class="swatch" style="background:#7BA687"></span>Preventa</span>
+    <span><span class="swatch" style="background:#C8D9CE"></span>No especificado</span>
   </div>
 
   <h3>Lectura por submercado</h3>

@@ -13,6 +13,7 @@ import { renderPrecios } from './sections/precios.js'
 import { renderConcentracion } from './sections/concentracion.js'
 import { renderAlquiler } from './sections/alquiler.js'
 import { renderLimites } from './sections/limites.js'
+import { renderCtaProducto } from './sections/cta-producto.js'
 import { renderFicha } from './sections/ficha.js'
 
 const PUBLIC_BASE_URL = 'https://simonbo.com'
@@ -183,6 +184,8 @@ ${renderConcentracion(data, narrativa)}
 ${renderAlquiler(data, narrativa)}
 
 ${renderLimites(data, narrativa)}
+
+${renderCtaProducto(data, narrativa)}
 
 ${renderFicha(data, narrativa)}
 
