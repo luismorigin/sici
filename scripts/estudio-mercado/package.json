@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate": "tsx src/generate.ts"
+    "generate": "tsx src/generate.ts",
+    "report:baseline": "tsx src/baseline/generate-baseline.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2",

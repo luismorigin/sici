@@ -1,0 +1,6 @@
+export { panoramaMultizona } from './panorama-multizona.js'
+export { demandaMultizona } from './demanda-multizona.js'
+export { preciosZonaDorms } from './precios-zona-dorms.js'
+export { topProyectos } from './top-proyectos.js'
+export { rotacionMultizona } from './rotacion-multizona.js'
+export { alquilerMultizona } from './alquiler-multizona.js'
