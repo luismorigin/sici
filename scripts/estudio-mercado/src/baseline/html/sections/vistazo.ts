@@ -26,6 +26,14 @@ export function renderVistazo(data: BaselineResult, narrativa: NarrativaRenderer
   <span class="section-num">03 · ${data.config.zonaLabel} de un vistazo</span>
   <h2>Los números macro del mercado</h2>
 
+  <div class="kpi-hero">
+    <div class="big"><span class="currency">$</span>${data.panorama.medianaM2Global.toLocaleString()}</div>
+    <div class="context">
+      <div class="kicker">Precio mediano por metro cuadrado</div>
+      <div class="desc">${data.panorama.totalVenta} departamentos portal-observables en ${data.panorama.totalZonas} submercados de ${data.config.zonaLabel} al ${data.config.fechaCorte}. Precio normalizado a USD al tipo de cambio oficial.</div>
+    </div>
+  </div>
+
   <div class="kpi-grid">
     <div class="kpi"><div class="label">Unidades en venta</div><div class="value">${data.panorama.totalVenta}</div><div class="sub">Portal-observables, al corte</div></div>
     <div class="kpi"><div class="label">Unidades en alquiler</div><div class="value">${data.panorama.totalAlquiler}</div><div class="sub">Activas ≤150 días</div></div>

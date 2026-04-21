@@ -30,17 +30,26 @@ Una radiografía del mercado portal-observable de departamentos en los {{zonasCo
 ## s1.tesis_1.title
 Tesis 1 — La antigüedad del listado es dual por producto, no por zona
 
+## s1.tesis_1.quote
+La antigüedad del listado corta más fuerte por tipo de unidad que por zona.
+
 ## s1.tesis_1.body
 Los segmentos de 1 dormitorio en {{tesis1_zonas_rapidas}} muestran antigüedad mediana de {{tesis1_dias_min}} a {{tesis1_dias_max}} días de listado publicado. Los segmentos de 2 y 3 dormitorios en {{tesis1_zonas_lentas}} superan los {{tesis1_dias_largos}} días, con casos que escalan a {{tesis1_dias_extremo}} días. Esto no mide velocidad de venta (ver §2) — sí indica que <strong>hay productos donde los listings se renuevan mucho más seguido que otros</strong>, y que esa variable corta más fuerte por tipo de unidad que por zona.
 
 ## s1.tesis_2.title
 Tesis 2 — La fase de delivery domina, pero Sirari es la excepción
 
+## s1.tesis_2.quote
+Sirari es el único submercado donde preventa supera a entrega inmediata.
+
 ## s1.tesis_2.body
 El {{tesis2_pct_entrega}}% del inventario activo está en entrega inmediata, {{tesis2_pct_preventa}}% en preventa. El mix no es parejo entre zonas: <strong>Sirari concentra la mayor proporción de preventa ({{tesis2_sirari_pct}}% de sus {{tesis2_sirari_uds}} unidades) y es el único submercado donde preventa supera a entrega</strong>. {{tesis2_otras_zonas_entrega}}. Es una foto de un ciclo donde el pipeline de construcción de los últimos 24 meses está aterrizando en la mayoría de {{zonaLabel}}, mientras Sirari todavía construye.
 
 ## s1.tesis_3.title
 Tesis 3 — Hay dos {{zonaLabel}}es en precio
+
+## s1.tesis_3.quote
+La variabilidad intrazonal es mayor que la interzonal.
 
 ## s1.tesis_3.body
 Precio mediano por metro cuadrado entre submercados va de USD {{tesis3_m2_min}} ({{tesis3_zona_min}}) a USD {{tesis3_m2_max}} ({{tesis3_zona_max}}) — un rango del {{tesis3_rango_pct}}%. Pero la desviación dentro de cada submercado (P25 a P75) llega al 30-48% en segmentos de 2 y 3 dormitorios. La variabilidad intrazonal es mayor que la interzonal. Comprar por zona sin leer producto es una estrategia de precio ciega.

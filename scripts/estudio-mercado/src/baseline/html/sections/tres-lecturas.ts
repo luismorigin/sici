@@ -91,12 +91,15 @@ export function renderTresLecturas(data: BaselineResult, narrativa: NarrativaRen
   <p class="lead">${narrativa.render('s1.lead', vars)}</p>
 
   <h3>${narrativa.render('s1.tesis_1.title', vars)}</h3>
+  <blockquote class="pull-quote">${narrativa.render('s1.tesis_1.quote', vars)}<span class="attrib">Tesis 01</span></blockquote>
   <p>${narrativa.render('s1.tesis_1.body', vars)}</p>
 
   <h3>${narrativa.render('s1.tesis_2.title', vars)}</h3>
+  <blockquote class="pull-quote">${narrativa.render('s1.tesis_2.quote', vars)}<span class="attrib">Tesis 02</span></blockquote>
   <p>${narrativa.render('s1.tesis_2.body', vars)}</p>
 
   <h3>${narrativa.render('s1.tesis_3.title', vars)}</h3>
+  <blockquote class="pull-quote">${narrativa.render('s1.tesis_3.quote', vars)}<span class="attrib">Tesis 03</span></blockquote>
   <p>${narrativa.render('s1.tesis_3.body', vars)}</p>
 
   <div class="caveat">

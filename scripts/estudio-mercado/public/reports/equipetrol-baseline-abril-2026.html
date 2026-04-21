@@ -4,6 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Equipetrol — Baseline de Inventario y Precios | Abril 2026</title>
+
+<meta name="description" content="Radiografía del mercado portal-observable de departamentos en los 5 submercados de Equipetrol al 20 de abril de 2026. 323 unidades en venta y 129 en alquiler analizadas. Publicación trimestral de Simón — Inteligencia Inmobiliaria.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Equipetrol — Baseline de Inventario y Precios | Abril 2026">
+<meta property="og:description" content="Radiografía del mercado portal-observable de departamentos en los 5 submercados de Equipetrol al 20 de abril de 2026. 323 unidades en venta y 129 en alquiler analizadas. Publicación trimestral de Simón — Inteligencia Inmobiliaria.">
+<meta property="og:url" content="https://simonbo.com/reports/equipetrol-baseline-abril-2026.html">
+<meta property="og:image" content="https://simonbo.com/og/equipetrol-baseline-abril-2026.svg">
+<meta property="og:locale" content="es_BO">
+<meta property="article:published_time" content="2026-04-20">
+<meta property="article:section" content="Mercado inmobiliario">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Equipetrol — Baseline de Inventario y Precios | Abril 2026">
+<meta name="twitter:description" content="Radiografía del mercado portal-observable de departamentos en los 5 submercados de Equipetrol al 20 de abril de 2026. 323 unidades en venta y 129 en alquiler analizadas. Publicación trimestral de Simón — Inteligencia Inmobiliaria.">
+<meta name="twitter:image" content="https://simonbo.com/og/equipetrol-baseline-abril-2026.svg">
+<link rel="canonical" href="https://simonbo.com/reports/equipetrol-baseline-abril-2026.html">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Equipetrol — Baseline de Inventario y Precios | Abril 2026","description":"Radiografía del mercado portal-observable de departamentos en los 5 submercados de Equipetrol al 20 de abril de 2026. 323 unidades en venta y 129 en alquiler analizadas. Publicación trimestral de Simón — Inteligencia Inmobiliaria.","image":"https://simonbo.com/og/equipetrol-baseline-abril-2026.svg","datePublished":"2026-04-20","author":{"@type":"Organization","name":"Simón — Inteligencia Inmobiliaria","url":"https://simonbo.com"},"publisher":{"@type":"Organization","name":"Simón — Inteligencia Inmobiliaria","url":"https://simonbo.com"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://simonbo.com/reports/equipetrol-baseline-abril-2026.html"}}</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -99,6 +116,79 @@
   .toc li a:hover { color: var(--salvia); }
   .toc li span { color: var(--gris-400); font-size: 12px; }
 
+  /* Progress bar — lectura */
+  .read-progress {
+    position: fixed; top: 0; left: 0; right: 0; height: 3px;
+    background: transparent; z-index: 100; pointer-events: none;
+  }
+  .read-progress .bar {
+    height: 100%; background: var(--salvia); width: 0%;
+    transition: width 0.08s ease-out;
+  }
+
+  /* Mini-ToC sticky lateral (desktop only) */
+  .mini-toc {
+    position: fixed; top: 100px; right: 24px; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: blur(6px);
+    padding: 14px 18px; font-size: 12px; max-width: 180px;
+    border-left: 2px solid var(--gris-200);
+    font-family: 'Figtree', sans-serif;
+  }
+  .mini-toc .title {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--gris-400); margin-bottom: 10px; font-weight: 600;
+  }
+  .mini-toc ol { list-style: none; padding: 0; margin: 0; }
+  .mini-toc li {
+    padding: 4px 0; font-size: 12px;
+    color: var(--gris-600); border-left: 2px solid transparent;
+    padding-left: 10px; margin-left: -2px; transition: all 0.2s ease;
+  }
+  .mini-toc li a { color: inherit; text-decoration: none; display: block; }
+  .mini-toc li:hover { color: var(--negro); }
+  .mini-toc li.active {
+    color: var(--salvia); border-left-color: var(--salvia); font-weight: 600;
+  }
+
+  /* KPI hero dramático — usar en una sola sección */
+  .kpi-hero {
+    margin: 32px 0 48px; padding: 48px 0 40px;
+    border-top: 2px solid var(--negro); border-bottom: 1px solid var(--gris-200);
+    display: grid; grid-template-columns: auto 1fr; gap: 48px; align-items: end;
+  }
+  .kpi-hero .big {
+    font-family: 'Figtree', sans-serif; font-weight: 700;
+    font-size: 96px; line-height: 0.95; letter-spacing: -0.03em;
+    color: var(--negro); font-variant-numeric: tabular-nums;
+  }
+  .kpi-hero .big .currency {
+    font-size: 48px; font-weight: 400; color: var(--gris-400);
+    vertical-align: top; margin-right: 6px;
+  }
+  .kpi-hero .context { padding-bottom: 12px; }
+  .kpi-hero .context .kicker {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--salvia); font-weight: 600; margin-bottom: 12px;
+  }
+  .kpi-hero .context .desc {
+    font-size: 17px; color: var(--negro-soft); line-height: 1.5;
+    max-width: 36ch;
+  }
+
+  /* Pull quote — tesis destacadas */
+  .pull-quote {
+    margin: 36px 0; padding: 24px 32px 24px 36px;
+    border-left: 4px solid var(--salvia);
+    font-family: 'Figtree', sans-serif; font-weight: 500;
+    font-size: 22px; line-height: 1.35; color: var(--negro);
+    letter-spacing: -0.01em; max-width: 32ch;
+  }
+  .pull-quote .attrib {
+    display: block; margin-top: 12px; font-size: 12px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--gris-400); font-weight: 600;
+  }
+
   @media (max-width: 720px) {
     .page { padding: 32px 24px; }
     .cover h1 { font-size: 36px; }
@@ -107,10 +197,57 @@
     h2 { font-size: 26px; }
     table { font-size: 13px; }
     th, td { padding: 7px 8px; }
+    .mini-toc { display: none; }
+    .kpi-hero { grid-template-columns: 1fr; gap: 20px; padding: 32px 0; }
+    .kpi-hero .big { font-size: 64px; }
+    .kpi-hero .big .currency { font-size: 32px; }
+    .pull-quote { font-size: 18px; padding: 18px 22px; }
+  }
+
+  @media (min-width: 721px) and (max-width: 1200px) {
+    /* ToC lateral se esconde en tablets donde el doc está centrado */
+    .mini-toc { display: none; }
+  }
+
+  /* Print — PDF export limpio */
+  @media print {
+    body { background: white; color: black; font-size: 11pt; }
+    .page { max-width: none; padding: 0; margin: 0; }
+    .read-progress, .mini-toc { display: none !important; }
+    section { page-break-inside: avoid; padding: 24px 0 8px; }
+    h2 { font-size: 22pt; }
+    h3 { font-size: 13pt; }
+    table { font-size: 10pt; }
+    .chart-wrap { page-break-inside: avoid; background: white; border-top: 1px solid #888; }
+    .caveat, .note { background: #f5f5f5 !important; border-left-color: #888 !important; }
+    .kpi-hero .big { font-size: 56pt; color: black; }
+    .pull-quote { border-left-color: #888; font-size: 14pt; }
+    a { color: black; text-decoration: none; }
+    .toc a::after { content: ""; }
   }
 </style>
 </head>
 <body>
+
+<div class="read-progress" aria-hidden="true"><div class="bar"></div></div>
+
+
+<nav class="mini-toc" aria-label="Navegación del reporte">
+  <div class="title">Secciones</div>
+  <ol>
+    <li><a href="#s1">01 · Resumen</a></li>
+    <li><a href="#s2">02 · Metodología</a></li>
+    <li><a href="#s3">03 · Vistazo</a></li>
+    <li><a href="#s4">04 · Submercados</a></li>
+    <li><a href="#s5">05 · Oferta</a></li>
+    <li><a href="#s6">06 · Precios</a></li>
+    <li><a href="#s7">07 · Concentración</a></li>
+    <li><a href="#s8">08 · Alquiler</a></li>
+    <li><a href="#s9">09 · Límites · Agenda</a></li>
+    <li><a href="#s10">10 · Ficha</a></li>
+  </ol>
+</nav>
+
 
 <div class="page">
 
@@ -155,12 +292,15 @@
   <p class="lead">Equipetrol no se comporta como una zona. Se comporta como 5 submercados con dinámicas divergentes que, agregados, producen promedios que esconden más de lo que revelan. Esta edición ofrece la lectura desagregada.</p>
 
   <h3>Tesis 1 — La antigüedad del listado es dual por producto, no por zona</h3>
+  <blockquote class="pull-quote">La antigüedad del listado corta más fuerte por tipo de unidad que por zona.<span class="attrib">Tesis 01</span></blockquote>
   <p>Los segmentos de 1 dormitorio en Equipetrol Norte y Sirari muestran antigüedad mediana de 36 a 37 días de listado publicado. Los segmentos de 2 y 3 dormitorios en Equipetrol Centro y Sirari superan los 79 días, con casos que escalan a 81 días. Esto no mide velocidad de venta (ver §2) — sí indica que <strong>hay productos donde los listings se renuevan mucho más seguido que otros</strong>, y que esa variable corta más fuerte por tipo de unidad que por zona.</p>
 
   <h3>Tesis 2 — La fase de delivery domina, pero Sirari es la excepción</h3>
+  <blockquote class="pull-quote">Sirari es el único submercado donde preventa supera a entrega inmediata.<span class="attrib">Tesis 02</span></blockquote>
   <p>El 65% del inventario activo está en entrega inmediata, 31% en preventa. El mix no es parejo entre zonas: <strong>Sirari concentra la mayor proporción de preventa (56% de sus 77 unidades) y es el único submercado donde preventa supera a entrega</strong>. Equipetrol Norte (78%) y Equipetrol Centro (73%) están dominados por entrega. Es una foto de un ciclo donde el pipeline de construcción de los últimos 24 meses está aterrizando en la mayoría de Equipetrol, mientras Sirari todavía construye.</p>
 
   <h3>Tesis 3 — Hay dos Equipetroles en precio</h3>
+  <blockquote class="pull-quote">La variabilidad intrazonal es mayor que la interzonal.<span class="attrib">Tesis 03</span></blockquote>
   <p>Precio mediano por metro cuadrado entre submercados va de USD 1,941 (Villa Brígida) a USD 2,177 (Equipetrol Norte) — un rango del 12%. Pero la desviación dentro de cada submercado (P25 a P75) llega al 30-48% en segmentos de 2 y 3 dormitorios. La variabilidad intrazonal es mayor que la interzonal. Comprar por zona sin leer producto es una estrategia de precio ciega.</p>
 
   <div class="caveat">
@@ -272,6 +412,14 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
 <section id="s3">
   <span class="section-num">03 · Equipetrol de un vistazo</span>
   <h2>Los números macro del mercado</h2>
+
+  <div class="kpi-hero">
+    <div class="big"><span class="currency">$</span>2,052</div>
+    <div class="context">
+      <div class="kicker">Precio mediano por metro cuadrado</div>
+      <div class="desc">323 departamentos portal-observables en 5 submercados de Equipetrol al 20 de abril de 2026. Precio normalizado a USD al tipo de cambio oficial.</div>
+    </div>
+  </div>
 
   <div class="kpi-grid">
     <div class="kpi"><div class="label">Unidades en venta</div><div class="value">323</div><div class="sub">Portal-observables, al corte</div></div>
@@ -855,6 +1003,43 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
       }
     }
   });
+})();
+</script>
+
+
+
+<script>
+(function () {
+  // Progress bar de lectura
+  const bar = document.querySelector('.read-progress .bar');
+  const updateBar = () => {
+    const docH = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = docH > 0 ? (window.scrollY / docH) * 100 : 0;
+    if (bar) bar.style.width = pct + '%';
+  };
+  window.addEventListener('scroll', updateBar, { passive: true });
+  updateBar();
+
+  // Mini-ToC active state con IntersectionObserver
+  const sections = document.querySelectorAll('section[id^="s"]');
+  const tocLinks = document.querySelectorAll('.mini-toc li');
+  const tocMap = new Map();
+  tocLinks.forEach(li => {
+    const a = li.querySelector('a');
+    if (a) tocMap.set(a.getAttribute('href').slice(1), li);
+  });
+
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        tocLinks.forEach(l => l.classList.remove('active'));
+        const li = tocMap.get(e.target.id);
+        if (li) li.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px', threshold: 0 });
+
+  sections.forEach(s => obs.observe(s));
 })();
 </script>
 

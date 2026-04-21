@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <style>
+      .title { font: 700 76px 'Figtree', 'Helvetica Neue', sans-serif; fill: #141414; letter-spacing: -0.02em; }
+      .subtitle { font: 500 28px 'Figtree', 'Helvetica Neue', sans-serif; fill: #5A5A5A; }
+      .kicker { font: 600 18px 'Figtree', 'Helvetica Neue', sans-serif; fill: #3A6A48; letter-spacing: 0.14em; text-transform: uppercase; }
+      .data-num { font: 700 140px 'Figtree', 'Helvetica Neue', sans-serif; fill: #141414; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+      .data-label { font: 500 22px 'Figtree', 'Helvetica Neue', sans-serif; fill: #5A5A5A; }
+      .brand { font: 600 18px 'Figtree', 'Helvetica Neue', sans-serif; fill: #141414; letter-spacing: 0.06em; }
+      .brand-accent { font: 400 18px 'Figtree', 'Helvetica Neue', sans-serif; fill: #8A8A8A; letter-spacing: 0.06em; }
+    </style>
+  </defs>
+
+  <!-- Background arena -->
+  <rect width="1200" height="630" fill="#EDE8DC"/>
+
+  <!-- Top accent bar -->
+  <rect x="0" y="0" width="1200" height="6" fill="#3A6A48"/>
+
+  <!-- Bottom brand line -->
+  <rect x="80" y="548" width="1040" height="1" fill="#D8D4C8"/>
+
+  <!-- Content: left block -->
+  <text x="80" y="140" class="kicker">Simón · Inteligencia Inmobiliaria</text>
+  <text x="80" y="230" class="title">Equipetrol.</text>
+  <text x="80" y="320" class="title">Baseline Abril 2026.</text>
+  <text x="80" y="380" class="subtitle">Inventario · Precios · Submercados</text>
+
+  <!-- Hero number -->
+  <text x="80" y="510" class="data-num">323</text>
+  <text x="420" y="460" class="data-label">departamentos</text>
+  <text x="420" y="490" class="data-label">portal-observables hoy</text>
+
+  <!-- Bottom footer -->
+  <text x="80" y="590" class="brand">SIMONBO.COM</text>
+  <text x="1120" y="590" class="brand-accent" text-anchor="end">Edición 01 · Santa Cruz, Bolivia</text>
+</svg>
