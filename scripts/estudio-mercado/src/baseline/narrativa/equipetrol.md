@@ -8,13 +8,13 @@
 ---
 
 ## hero.eyebrow
-Simón · Inteligencia Inmobiliaria · Santa Cruz, Bolivia
+Análisis trimestral para desarrolladoras e inversores · Santa Cruz, Bolivia
 
 ## hero.title
 {{zonaLabel}} no es una zona.<br>Son {{zonasCount}}.
 
 ## hero.subtitle
-Radiografía trimestral del inventario y precios portal-observables en los {{zonasCount}} submercados de {{zonaLabel}}. Primera edición — corte al {{fechaCorte}}, {{totalVenta}} unidades en venta y {{totalAlquiler}} en alquiler analizadas.
+{{totalVenta}} listings de venta y {{totalAlquiler}} de alquiler portal-observables en {{zonaLabel}} al {{fechaCorte}}, desagregados por submercado, tipología, fase de obra y antigüedad. Primera edición de una serie trimestral.
 
 ## hero.foot
 **{{edicion}}** · Edición 01
@@ -24,8 +24,14 @@ Radiografía trimestral del inventario y precios portal-observables en los {{zon
 
 ---
 
+## s1.reader_note_title
+Cómo leer este reporte
+
+## s1.reader_note_body
+Los números que siguen describen el <strong>inventario portal-observable</strong> — lo que está publicado en Century21 y Remax al {{fechaCorte}}. No es todo el mercado: una desarrolladora puede publicar solo parte de su inventario en portal (estrategia comercial), y hay ventas directas que nunca llegan al portal. Lo que este reporte captura con rigor es la <strong>vidriera pública</strong> — la oferta que un comprador ve cuando busca. Lo que no captura: inventario off-portal, velocidad real de venta, acuerdos directos entre desarrolladora y comprador. Para análisis exhaustivo de un proyecto específico (con data off-portal incluida), ver sección final — Simón hace estudios privados por encargo.
+
 ## s1.lead
-Tres cosas del mercado de {{zonaLabel}} que al juntar todo en un promedio desaparecen. Salen de cruzar los {{totalVenta}} listings activos de venta al {{fechaCorte}} — no son opinión, es lo que muestran los portales cuando los mirás desagregados.
+Tres cosas del mercado de {{zonaLabel}} que al juntar todo en un promedio desaparecen. Salen de cruzar los {{totalVenta}} listings activos de venta al {{fechaCorte}} — no son opinión, es lo que los portales muestran cuando se los mira desagregados.
 
 ## s1.tesis_1.title
 Los departamentos chicos se renuevan al doble de velocidad que los grandes.

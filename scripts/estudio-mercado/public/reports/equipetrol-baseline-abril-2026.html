@@ -115,6 +115,22 @@
   .toc li a:hover { color: var(--salvia); }
   .toc li span { color: var(--gris-400); font-size: 12px; }
 
+  /* Reader note — aviso honesto al inicio de §1 */
+  .reader-note {
+    margin: 24px 0 32px; padding: 20px 24px;
+    background: white; border-top: 3px solid var(--negro);
+    font-size: 14px;
+  }
+  .reader-note h4 {
+    font-family: 'Figtree', sans-serif; font-weight: 600;
+    font-size: 13px; color: var(--negro); letter-spacing: 0.04em;
+    text-transform: uppercase; margin: 0 0 12px;
+  }
+  .reader-note p {
+    font-size: 14px; color: var(--negro-soft); line-height: 1.55;
+    margin: 0; max-width: 78ch;
+  }
+
   /* Details expandibles — metodología y tabla precios */
   details.details-table {
     margin: 20px 0 24px; padding: 14px 18px;
@@ -553,9 +569,9 @@
     <circle cx="32" cy="15" r="6" fill="#3A6A48"/>
     <circle cx="32" cy="15" r="3" fill="#EDE8DC"/>
   </svg></div>
-    <div class="kicker">Simón · Inteligencia Inmobiliaria · Santa Cruz, Bolivia</div>
+    <div class="kicker">Análisis trimestral para desarrolladoras e inversores · Santa Cruz, Bolivia</div>
     <h1>Equipetrol no es una zona.<br>Son 5.</h1>
-    <p class="subtitle">Radiografía trimestral del inventario y precios portal-observables en los 5 submercados de Equipetrol. Primera edición — corte al 20 de abril de 2026, 319 unidades en venta y 121 en alquiler analizadas.</p>
+    <p class="subtitle">319 listings de venta y 121 de alquiler portal-observables en Equipetrol al 20 de abril de 2026, desagregados por submercado, tipología, fase de obra y antigüedad. Primera edición de una serie trimestral.</p>
   </div>
   <div class="foot">
     <span>**01 · Abril 2026** · Edición 01</span>
@@ -586,8 +602,14 @@
 <!-- 1. HALLAZGOS -->
 <section id="s1">
   <span class="section-num">01 · Hallazgos</span>
+
+  <aside class="reader-note">
+    <h4>Cómo leer este reporte</h4>
+    <p>Los números que siguen describen el <strong>inventario portal-observable</strong> — lo que está publicado en Century21 y Remax al 20 de abril de 2026. No es todo el mercado: una desarrolladora puede publicar solo parte de su inventario en portal (estrategia comercial), y hay ventas directas que nunca llegan al portal. Lo que este reporte captura con rigor es la <strong>vidriera pública</strong> — la oferta que un comprador ve cuando busca. Lo que no captura: inventario off-portal, velocidad real de venta, acuerdos directos entre desarrolladora y comprador. Para análisis exhaustivo de un proyecto específico (con data off-portal incluida), ver sección final — Simón hace estudios privados por encargo.</p>
+  </aside>
+
   <h2>Tres cosas que el agregado esconde</h2>
-  <p class="lead">Tres cosas del mercado de Equipetrol que al juntar todo en un promedio desaparecen. Salen de cruzar los 319 listings activos de venta al 20 de abril de 2026 — no son opinión, es lo que muestran los portales cuando los mirás desagregados.</p>
+  <p class="lead">Tres cosas del mercado de Equipetrol que al juntar todo en un promedio desaparecen. Salen de cruzar los 319 listings activos de venta al 20 de abril de 2026 — no son opinión, es lo que los portales muestran cuando se los mira desagregados.</p>
 
   <h3>Los departamentos chicos se renuevan al doble de velocidad que los grandes.</h3>
   <blockquote class="pull-quote">Elegís producto, no zona.<span class="attrib">Tesis 01</span></blockquote>

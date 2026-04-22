@@ -89,6 +89,22 @@ export const BASELINE_STYLES = `
   .toc li a:hover { color: var(--salvia); }
   .toc li span { color: var(--gris-400); font-size: 12px; }
 
+  /* Reader note — aviso honesto al inicio de §1 */
+  .reader-note {
+    margin: 24px 0 32px; padding: 20px 24px;
+    background: white; border-top: 3px solid var(--negro);
+    font-size: 14px;
+  }
+  .reader-note h4 {
+    font-family: 'Figtree', sans-serif; font-weight: 600;
+    font-size: 13px; color: var(--negro); letter-spacing: 0.04em;
+    text-transform: uppercase; margin: 0 0 12px;
+  }
+  .reader-note p {
+    font-size: 14px; color: var(--negro-soft); line-height: 1.55;
+    margin: 0; max-width: 78ch;
+  }
+
   /* Details expandibles — metodología y tabla precios */
   details.details-table {
     margin: 20px 0 24px; padding: 14px 18px;
