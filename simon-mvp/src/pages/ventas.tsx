@@ -265,9 +265,10 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 }
 
 // ===== Desktop VentaCard =====
-function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst }: {
+function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst, brokerMode, onAddToShortlist }: {
   property: UnidadVenta; isFavorite: boolean; isFirst?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
+  brokerMode?: boolean; onAddToShortlist?: () => void
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = p.fotos_urls?.length > 0 ? p.fotos_urls : []
@@ -331,6 +332,13 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
             </svg> Compartir
           </button>
+          {brokerMode && onAddToShortlist && (
+            <button className="vc-act-btn vc-act-shortlist" aria-label="Agregar a shortlist" onClick={onAddToShortlist}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg> Shortlist
+            </button>
+          )}
           <button className="vc-act-btn vc-act-detail" aria-label="Ver detalles" onClick={onDetails}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <polyline points="6 9 12 15 18 9"/>
@@ -351,9 +359,10 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
 }
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
-function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst }: {
+function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, brokerMode, onAddToShortlist }: {
   property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean; isFirst?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
+  brokerMode?: boolean; onAddToShortlist?: () => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -467,6 +476,13 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
             </svg>
           </button>
+          {brokerMode && onAddToShortlist && (
+            <button className="mc-btn mc-shortlist" aria-label="Agregar a shortlist" onClick={onAddToShortlist}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#3A6A48" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </button>
+          )}
           <button className="mc-btn mc-info" onClick={onDetails}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <polyline points="6 9 12 15 18 9"/>
@@ -1251,6 +1267,11 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
     navigator.clipboard.writeText(url).then(() => showToast('Link copiado')).catch(() => showToast('No se pudo copiar'))
     trackEvent('share_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona) })
   }
+  function addToShortlist(p: UnidadVenta) {
+    // S1: placeholder — persistencia real viene en S2
+    trackEvent('broker_add_to_shortlist', { property_id: p.id, broker_slug: broker?.slug })
+    showToast(`${p.proyecto} agregado a shortlist (demo)`)
+  }
   function openCompare() {
     trackEvent('open_compare_venta', { property_ids: Array.from(favorites).join(','), count: favorites.size })
     setCompareOpen(true)
@@ -1406,11 +1427,7 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
         gateCompleted={gateCompleted} onGate={handleGate} isDesktop={isDesktop}
         properties={properties} onSwapProperty={(p) => setSheetProperty(p)}
         brokerMode={brokerMode}
-        onAddToShortlist={(p) => {
-          // S1: placeholder — persistencia de shortlists viene en S2
-          trackEvent('broker_add_to_shortlist', { property_id: p.id, broker_slug: broker?.slug })
-          showToast(`${p.proyecto} agregado a shortlist (demo)`)
-        }} />
+        onAddToShortlist={addToShortlist} />
 
       {/* Compare banner — shows when 2+ favorites */}
       {favorites.size >= 2 && (
@@ -1478,7 +1495,8 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
                 </div>
                 <VentaCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
                   onToggleFavorite={() => toggleFavorite(spotlightProperty.id)} onShare={() => shareProperty(spotlightProperty)}
-                  onPhotoTap={() => openSheet(spotlightProperty)} onDetails={() => openSheet(spotlightProperty)} />
+                  onPhotoTap={() => openSheet(spotlightProperty)} onDetails={() => openSheet(spotlightProperty)}
+                  brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(spotlightProperty)} />
                 <div className="ds-spotlight-sep">
                   <span className="ds-spotlight-line" /><span className="ds-spotlight-text">Explorar más departamentos</span><span className="ds-spotlight-line" />
                 </div>
@@ -1489,7 +1507,8 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
                 {(spotlightProperty ? properties.filter(p => p.id !== spotlightId) : properties).map((p, idx) => (
                   <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)} isFirst={idx === 0}
                     onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
-                    onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)} />
+                    onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)}
+                    brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} />
                 ))}
               </div>
             )}
@@ -1579,7 +1598,8 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
               return <MobileVentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)}
                 isSpotlight={item.isSpotlight} isFirst={idx === 0}
                 onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
-                onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)} />
+                onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)}
+                brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} />
             })}
           </div>
         </main>
@@ -1693,6 +1713,7 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
         .mc-btn.mc-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
         .mc-btn.mc-share { color:#9A8E7A }
         .mc-btn.mc-info { color:rgba(237,232,220,0.85); font-size:12px; letter-spacing:0.3px; background:rgba(237,232,220,0.08); border-radius:10px; padding:8px 14px; font-weight:500 }
+        .mc-btn.mc-shortlist { background:rgba(58,106,72,0.15); border:1px solid rgba(58,106,72,0.4) }
         .mc-spotlight { position:absolute; top:max(56px, calc(env(safe-area-inset-top) + 50px)); left:16px; z-index:10; background:rgba(250,250,248,0.95); border-left:3px solid #3A6A48; padding:8px 14px; border-radius:0 8px 8px 0; font-family:'DM Sans',sans-serif; font-size:12px; color:#141414; letter-spacing:0.3px }
         .mc-tc-badge { position:absolute; top:max(56px, calc(env(safe-area-inset-top) + 50px)); right:16px; z-index:10; background:rgba(180,130,20,0.9); color:#fff; padding:6px 12px; border-radius:4px; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:500; letter-spacing:0.2px }
 
@@ -1798,6 +1819,7 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
         .vc-act-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
         .vc-act-detail { color:rgba(237,232,220,0.7) }
         .vc-act-wsp { color:#1EA952; font-weight:600 }
+        .vc-act-shortlist { color:#3A6A48; font-weight:600; background:rgba(58,106,72,0.08); border:1px solid rgba(58,106,72,0.25) }
         .vc-act-wsp:hover { color:#25D366 }
 
         /* ===== STATES ===== */
