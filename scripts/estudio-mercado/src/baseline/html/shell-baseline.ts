@@ -1,7 +1,6 @@
 import type { BaselineResult } from '../types-baseline.js'
 import type { NarrativaRenderer } from '../narrativa/loader.js'
 import { BASELINE_STYLES } from './styles.js'
-import { renderChartsScript } from './charts.js'
 
 import { renderCover } from './sections/cover.js'
 import { renderTresLecturas } from './sections/tres-lecturas.js'
@@ -152,7 +151,6 @@ ${renderMetaAndSchema(data, title)}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>${BASELINE_STYLES}</style>
 </head>
 <body>
@@ -190,8 +188,6 @@ ${renderCtaProducto(data, narrativa)}
 ${renderFicha(data, narrativa)}
 
 </div>
-
-${renderChartsScript(data)}
 
 ${renderInteractivityScript()}
 

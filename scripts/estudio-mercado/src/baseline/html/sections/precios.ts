@@ -83,24 +83,26 @@ export function renderPrecios(data: BaselineResult, narrativa: NarrativaRenderer
   <h2>Rangos reales, no promedios</h2>
   <p class="lead">${narrativa.render('s6.lead', vars)}</p>
 
-  <h3>Tabla maestra de precios por zona × dormitorios</h3>
-  <table>
-    <tr>
-      <th>Zona</th><th>Dorms</th>
-      <th class="num">n</th>
-      <th class="num">Mediana USD</th>
-      <th class="num">P25 – P75</th>
-      <th class="num">$/m² med.</th>
-    </tr>
-${filas.join('\n')}
-  </table>
-  <p class="muted">${narrativa.render('s6.tabla_nota', vars)}</p>
-
 ${renderDotPlot(data)}
 
   <h3>Lectura</h3>
   <p>${narrativa.render('s6.lectura_p1', vars)}</p>
   <p>${narrativa.render('s6.lectura_p2', vars)}</p>
+
+  <details class="details-table">
+    <summary>Ver tabla detallada por zona × dormitorios</summary>
+    <table>
+      <tr>
+        <th>Zona</th><th>Dorms</th>
+        <th class="num">n</th>
+        <th class="num">Mediana USD</th>
+        <th class="num">P25 – P75</th>
+        <th class="num">$/m² med.</th>
+      </tr>
+${filas.join('\n')}
+    </table>
+    <p class="muted">${narrativa.render('s6.tabla_nota', vars)}</p>
+  </details>
 </section>
 `
 }

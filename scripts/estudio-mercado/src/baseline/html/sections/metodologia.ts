@@ -75,13 +75,15 @@ export function renderMetodologia(data: BaselineResult, narrativa: NarrativaRend
   <p>${narrativa.render('s2.tc_explicacion_p1', vars)}</p>
   <p>${narrativa.render('s2.tc_explicacion_p2', vars)}</p>
 
-  <h4>Ejemplo — dos listings con el mismo "USD 150,000" publicado</h4>
-  <table>
-    <tr><th>Listing</th><th>Cómo se publica</th><th class="num">Precio publicado</th><th class="num">Precio normalizado</th></tr>
-    <tr><td>Depto A</td><td>USD al oficial</td><td class="num">$150,000</td><td class="num">$150,000</td></tr>
-    <tr><td>Depto B</td><td>USD billete (al paralelo)</td><td class="num">$150,000</td><td class="num"><strong>$${tcEjemplo}</strong></td></tr>
-  </table>
-  <p class="muted">${narrativa.render('s2.tc_ejemplo_nota', vars)}</p>
+  <details class="details-table">
+    <summary>Ver ejemplo numérico: dos listings con el mismo "USD 150,000" publicado</summary>
+    <table>
+      <tr><th>Listing</th><th>Cómo se publica</th><th class="num">Precio publicado</th><th class="num">Precio normalizado</th></tr>
+      <tr><td>Depto A</td><td>USD al oficial</td><td class="num">$150,000</td><td class="num">$150,000</td></tr>
+      <tr><td>Depto B</td><td>USD billete (al paralelo)</td><td class="num">$150,000</td><td class="num"><strong>$${tcEjemplo}</strong></td></tr>
+    </table>
+    <p class="muted">${narrativa.render('s2.tc_ejemplo_nota', vars)}</p>
+  </details>
 
   <p>${narrativa.render('s2.tc_cierre', vars)}</p>
 
@@ -93,35 +95,40 @@ export function renderMetodologia(data: BaselineResult, narrativa: NarrativaRend
   <h3>Antigüedad del listado — qué medimos y qué no</h3>
   <p>${narrativa.render('s2.antiguedad_intro', vars)}</p>
 
-  <table>
-    <tr>
-      <th>Métrica</th>
-      <th>Qué mide</th>
-      <th>Cuándo empieza a contar</th>
-    </tr>
-    <tr>
-      <td><strong>Antigüedad del listado</strong><br>(lo que este reporte publica)</td>
-      <td>Días que lleva publicado <em>este listing específico</em> en Century21 o Remax</td>
-      <td>Fecha de publicación del aviso actual en el portal</td>
-    </tr>
-    <tr>
-      <td><strong>Días en el mercado real</strong><br>(lo que NO medimos)</td>
-      <td>Tiempo total que el dueño lleva tratando de vender la propiedad</td>
-      <td>El día que el dueño decidió vender — independiente de si usó portal, qué agencia, o ninguna</td>
-    </tr>
-  </table>
+  <details class="details-table">
+    <summary>Ver tabla comparativa: antigüedad del listado vs días en el mercado real</summary>
+    <table>
+      <tr>
+        <th>Métrica</th>
+        <th>Qué mide</th>
+        <th>Cuándo empieza a contar</th>
+      </tr>
+      <tr>
+        <td><strong>Antigüedad del listado</strong><br>(lo que este reporte publica)</td>
+        <td>Días que lleva publicado <em>este listing específico</em> en Century21 o Remax</td>
+        <td>Fecha de publicación del aviso actual en el portal</td>
+      </tr>
+      <tr>
+        <td><strong>Días en el mercado real</strong><br>(lo que NO medimos)</td>
+        <td>Tiempo total que el dueño lleva tratando de vender la propiedad</td>
+        <td>El día que el dueño decidió vender — independiente de si usó portal, qué agencia, o ninguna</td>
+      </tr>
+    </table>
+  </details>
 
   <p>${narrativa.render('s2.antiguedad_body', vars)}</p>
 
   <p>${narrativa.render('s2.antiguedad_consecuencia', vars)}</p>
 
-  <h3>Otras definiciones operativas</h3>
-  <table>
-    <tr><th>Término</th><th>Cómo lo usamos</th></tr>
-    <tr><td><strong>Precio publicado</strong></td><td>Precio de publicación (ya normalizado al oficial para este reporte). No es precio de cierre. La brecha típica entre publicación y cierre es 5–15% en venta.</td></tr>
-    <tr><td><strong>$/m²</strong></td><td>Precio normalizado dividido por área construida total declarada.</td></tr>
-    <tr><td><strong>Mediana / P25 / P75</strong></td><td>Estadísticos de distribución. Se usan medianas (no medias) para reducir el efecto de outliers en muestras chicas.</td></tr>
-  </table>
+  <details class="details-table">
+    <summary>Otras definiciones operativas del reporte</summary>
+    <table>
+      <tr><th>Término</th><th>Cómo lo usamos</th></tr>
+      <tr><td><strong>Precio publicado</strong></td><td>Precio de publicación (ya normalizado al oficial para este reporte). No es precio de cierre. La brecha típica entre publicación y cierre es 5–15% en venta.</td></tr>
+      <tr><td><strong>$/m²</strong></td><td>Precio normalizado dividido por área construida total declarada.</td></tr>
+      <tr><td><strong>Mediana / P25 / P75</strong></td><td>Estadísticos de distribución. Se usan medianas (no medias) para reducir el efecto de outliers en muestras chicas.</td></tr>
+    </table>
+  </details>
 
   <h3>Fechas de corte</h3>
   <p>${narrativa.render('s2.fechas_corte', vars)}</p>

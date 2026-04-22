@@ -24,7 +24,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   :root {
     --arena: #EDE8DC;
@@ -115,6 +114,129 @@
   .toc li a { color: var(--negro); text-decoration: none; }
   .toc li a:hover { color: var(--salvia); }
   .toc li span { color: var(--gris-400); font-size: 12px; }
+
+  /* Details expandibles — metodología y tabla precios */
+  details.details-table {
+    margin: 20px 0 24px; padding: 14px 18px;
+    background: white; border-left: 3px solid var(--gris-200);
+    font-size: 14px;
+  }
+  details.details-table[open] { border-left-color: var(--salvia); padding-bottom: 18px; }
+  details.details-table summary {
+    cursor: pointer; font-family: 'Figtree', sans-serif; font-weight: 600;
+    font-size: 13px; color: var(--salvia); letter-spacing: 0.02em;
+    list-style: none; padding: 2px 0; user-select: none;
+  }
+  details.details-table summary::-webkit-details-marker { display: none; }
+  details.details-table summary::before {
+    content: '+ '; font-weight: 700; color: var(--salvia);
+    display: inline-block; width: 14px;
+  }
+  details.details-table[open] summary::before { content: '− '; }
+  details.details-table[open] summary { margin-bottom: 12px; border-bottom: 1px solid var(--gris-200); padding-bottom: 10px; }
+  details.details-table table { margin-top: 8px; }
+
+  /* §3 — Donut composición fuente */
+  .fuente-donut-wrap {
+    display: flex; align-items: center; gap: 32px; margin: 20px 0 24px;
+    padding: 20px 24px; background: white; border-top: 2px solid var(--salvia);
+  }
+  .fuente-donut { flex-shrink: 0; }
+  .fuente-donut .donut-total-num {
+    font-family: 'Figtree', sans-serif; font-weight: 700; font-size: 26px;
+    fill: var(--negro); font-variant-numeric: tabular-nums;
+  }
+  .fuente-donut .donut-total-label {
+    font-family: 'Figtree', sans-serif; font-size: 10px;
+    fill: var(--gris-400); text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .fuente-legend { list-style: none; padding: 0; margin: 0; flex: 1; }
+  .fuente-legend li {
+    display: grid; grid-template-columns: 18px 1fr auto auto;
+    align-items: center; gap: 10px; padding: 10px 0;
+    border-bottom: 1px dotted var(--gris-200); font-size: 14px;
+    max-width: none;
+  }
+  .fuente-legend li:last-child { border-bottom: none; }
+  .fuente-dot {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  }
+  .fuente-label { color: var(--negro); font-weight: 500; }
+  .fuente-num { font-variant-numeric: tabular-nums; color: var(--gris-600); font-size: 13px; }
+  .fuente-pct {
+    font-family: 'Figtree', sans-serif; font-weight: 700; color: var(--negro);
+    font-variant-numeric: tabular-nums; min-width: 46px; text-align: right;
+  }
+
+  /* §5 — Matriz consolidada: subtle divider entre grupos de columnas */
+  .matriz-oferta th[colspan] {
+    border-bottom: 1px solid var(--gris-200);
+  }
+  .matriz-oferta td.tot-cell {
+    border-right: 1px solid var(--gris-200);
+  }
+  .matriz-oferta th:nth-child(6), /* Total */
+  .matriz-oferta td.tot-cell {
+    background: rgba(0,0,0,0.02);
+  }
+
+  /* §7 — Proyectos bar chart table */
+  .proy-legend {
+    display: flex; gap: 18px; margin: 16px 0 20px; flex-wrap: wrap;
+    font-size: 11px; color: var(--gris-600); text-transform: uppercase;
+    letter-spacing: 0.06em; font-family: 'Figtree', sans-serif;
+  }
+  .proy-legend .sw {
+    display: inline-block; width: 10px; height: 10px; margin-right: 6px;
+    vertical-align: middle;
+  }
+  .proy-chart { margin: 16px 0 20px; }
+  .proy-zona-group {
+    margin-bottom: 14px; padding: 12px 16px; background: white;
+    border-top: 2px solid var(--salvia);
+  }
+  .proy-zona-group:last-child { margin-bottom: 0; }
+  .proy-zona-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 8px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--gris-200);
+  }
+  .proy-zona-name {
+    font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 13px;
+    color: var(--negro); letter-spacing: 0.02em;
+  }
+  .proy-zona-meta {
+    font-size: 10px; color: var(--gris-600);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .proy-row {
+    display: grid; grid-template-columns: 220px 1fr 36px;
+    gap: 14px; align-items: center; padding: 4px 0;
+    font-size: 12px;
+  }
+  .proy-name {
+    display: flex; flex-direction: row; align-items: baseline; gap: 6px;
+    min-width: 0;
+  }
+  .proy-name strong {
+    font-weight: 600; color: var(--negro); font-size: 12px;
+    font-family: 'Figtree', sans-serif;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .proy-dev {
+    font-size: 10px; color: var(--gris-600);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    flex-shrink: 1;
+  }
+  .proy-sindev { color: var(--gris-400); font-style: italic; }
+  .proy-bar-wrap {
+    background: var(--arena); height: 10px; position: relative;
+  }
+  .proy-bar { height: 100%; min-width: 2px; transition: width 0.3s ease; }
+  .proy-uds {
+    font-family: 'Figtree', sans-serif; font-weight: 700; font-size: 13px;
+    color: var(--negro); font-variant-numeric: tabular-nums; text-align: right;
+  }
 
   /* Brand logo placements */
   .cover-brand { margin-bottom: 28px; display: flex; align-items: center; }
@@ -360,6 +482,11 @@
     .dotplot-axis { grid-template-columns: 110px 1fr 90px; gap: 8px; }
     .cta-producto { padding: 28px 24px; }
     .cta-producto h3 { font-size: 22px; }
+    .proy-row { grid-template-columns: 1fr 40px; gap: 8px; }
+    .proy-bar-wrap { grid-column: 1 / -1; order: 3; height: 8px; }
+    .fuente-donut-wrap { flex-direction: column; gap: 16px; padding: 16px; }
+    .matriz-oferta { font-size: 11px; }
+    .matriz-oferta th, .matriz-oferta td { padding: 5px 4px; }
   }
 
   @media (min-width: 721px) and (max-width: 1200px) {
@@ -517,13 +644,15 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
   <p>Muchos brokers y desarrolladoras en Equipetrol publican precios en <strong>dólares al tipo de cambio paralelo</strong> (también llamado "dólar billete", "dólar al cambio libre" o "dólar físico"). Otros publican en <strong>dólares al oficial</strong>. El portal no siempre lo explicita, y el comprador tampoco siempre lo detecta.</p>
   <p><strong>El precio normalizado lleva todos los precios a una misma base: dólares equivalentes al tipo de cambio oficial.</strong> Es la única forma de comparar listings publicados en bases cambiarias distintas sin distorsión.</p>
 
-  <h4>Ejemplo — dos listings con el mismo "USD 150,000" publicado</h4>
-  <table>
-    <tr><th>Listing</th><th>Cómo se publica</th><th class="num">Precio publicado</th><th class="num">Precio normalizado</th></tr>
-    <tr><td>Depto A</td><td>USD al oficial</td><td class="num">$150,000</td><td class="num">$150,000</td></tr>
-    <tr><td>Depto B</td><td>USD billete (al paralelo)</td><td class="num">$150,000</td><td class="num"><strong>$203,836</strong></td></tr>
-  </table>
-  <p class="muted">Cálculo del Depto B: 150,000 × 9.46 ÷ 6.96 = $203,836. Los dos listings muestran el mismo "USD 150,000" en el anuncio, pero representan precios reales distintos — una diferencia del 35.9% que un comprador desinformado absorbe al cerrar la operación.</p>
+  <details class="details-table">
+    <summary>Ver ejemplo numérico: dos listings con el mismo "USD 150,000" publicado</summary>
+    <table>
+      <tr><th>Listing</th><th>Cómo se publica</th><th class="num">Precio publicado</th><th class="num">Precio normalizado</th></tr>
+      <tr><td>Depto A</td><td>USD al oficial</td><td class="num">$150,000</td><td class="num">$150,000</td></tr>
+      <tr><td>Depto B</td><td>USD billete (al paralelo)</td><td class="num">$150,000</td><td class="num"><strong>$203,836</strong></td></tr>
+    </table>
+    <p class="muted">Cálculo del Depto B: 150,000 × 9.46 ÷ 6.96 = $203,836. Los dos listings muestran el mismo "USD 150,000" en el anuncio, pero representan precios reales distintos — una diferencia del 35.9% que un comprador desinformado absorbe al cerrar la operación.</p>
+  </details>
 
   <p><strong>Todos los precios en USD de este reporte (tickets, medianas, P25/P75, $/m²) son precios normalizados.</strong> Cuando el reporte dice "mediana USD 105,000 para 1D en Equipetrol Centro", significa que esa es la mediana en dólares al oficial equivalente — ya sean listings originalmente al oficial o al paralelo, todos llevados a la misma base.</p>
 
@@ -535,35 +664,40 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
   <h3>Antigüedad del listado — qué medimos y qué no</h3>
   <p>Esta es una distinción que el mercado inmobiliario confunde con frecuencia, y que cualquier análisis serio debe presentar con precisión.</p>
 
-  <table>
-    <tr>
-      <th>Métrica</th>
-      <th>Qué mide</th>
-      <th>Cuándo empieza a contar</th>
-    </tr>
-    <tr>
-      <td><strong>Antigüedad del listado</strong><br>(lo que este reporte publica)</td>
-      <td>Días que lleva publicado <em>este listing específico</em> en Century21 o Remax</td>
-      <td>Fecha de publicación del aviso actual en el portal</td>
-    </tr>
-    <tr>
-      <td><strong>Días en el mercado real</strong><br>(lo que NO medimos)</td>
-      <td>Tiempo total que el dueño lleva tratando de vender la propiedad</td>
-      <td>El día que el dueño decidió vender — independiente de si usó portal, qué agencia, o ninguna</td>
-    </tr>
-  </table>
+  <details class="details-table">
+    <summary>Ver tabla comparativa: antigüedad del listado vs días en el mercado real</summary>
+    <table>
+      <tr>
+        <th>Métrica</th>
+        <th>Qué mide</th>
+        <th>Cuándo empieza a contar</th>
+      </tr>
+      <tr>
+        <td><strong>Antigüedad del listado</strong><br>(lo que este reporte publica)</td>
+        <td>Días que lleva publicado <em>este listing específico</em> en Century21 o Remax</td>
+        <td>Fecha de publicación del aviso actual en el portal</td>
+      </tr>
+      <tr>
+        <td><strong>Días en el mercado real</strong><br>(lo que NO medimos)</td>
+        <td>Tiempo total que el dueño lleva tratando de vender la propiedad</td>
+        <td>El día que el dueño decidió vender — independiente de si usó portal, qué agencia, o ninguna</td>
+      </tr>
+    </table>
+  </details>
 
   <p>SICI solo puede observar lo primero. La propiedad pudo haber estado antes en otra agencia, el broker puede haber <strong>borrado y republicado</strong> el aviso reiniciando el contador, o pudo haberse ofrecido por vías no-portal (Facebook, WhatsApp, referido vecinal). Nada de esto entra en nuestra data.</p>
 
   <p><strong>Consecuencia fiduciaria:</strong> todo número de antigüedad del listado que aparece en este reporte es un <em>piso</em> del tiempo real en venta. Una mediana de "35 días" significa que el dueño lleva al menos 35 días intentando vender — puede ser más, rara vez menos. Interpretarlo como "velocidad de venta" o "liquidez del mercado" sobreestima lo que la data soporta.</p>
 
-  <h3>Otras definiciones operativas</h3>
-  <table>
-    <tr><th>Término</th><th>Cómo lo usamos</th></tr>
-    <tr><td><strong>Precio publicado</strong></td><td>Precio de publicación (ya normalizado al oficial para este reporte). No es precio de cierre. La brecha típica entre publicación y cierre es 5–15% en venta.</td></tr>
-    <tr><td><strong>$/m²</strong></td><td>Precio normalizado dividido por área construida total declarada.</td></tr>
-    <tr><td><strong>Mediana / P25 / P75</strong></td><td>Estadísticos de distribución. Se usan medianas (no medias) para reducir el efecto de outliers en muestras chicas.</td></tr>
-  </table>
+  <details class="details-table">
+    <summary>Otras definiciones operativas del reporte</summary>
+    <table>
+      <tr><th>Término</th><th>Cómo lo usamos</th></tr>
+      <tr><td><strong>Precio publicado</strong></td><td>Precio de publicación (ya normalizado al oficial para este reporte). No es precio de cierre. La brecha típica entre publicación y cierre es 5–15% en venta.</td></tr>
+      <tr><td><strong>$/m²</strong></td><td>Precio normalizado dividido por área construida total declarada.</td></tr>
+      <tr><td><strong>Mediana / P25 / P75</strong></td><td>Estadísticos de distribución. Se usan medianas (no medias) para reducir el efecto de outliers en muestras chicas.</td></tr>
+    </table>
+  </details>
 
   <h3>Fechas de corte</h3>
   <p>Inventario, precios y antigüedad del listado: corte al <strong>20 de abril de 2026</strong>. El tipo de cambio paralelo usado para la normalización corresponde al snapshot de Binance P2P del 18 abr 2026 (9.46 Bs/USD), última captura disponible antes del corte. Las series históricas (cuando se utilicen en ediciones futuras) tendrán cortes metodológicos declarados.</p>
@@ -601,8 +735,29 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
   <p class="muted">La diferencia con 323 corresponde a unidades con estado nulo. El predominio de entrega inmediata (65%) sobre preventa (31%) sugiere un mercado en fase de delivery dominante, no de lanzamientos nuevos.</p>
 
   <h3>Composición por fuente</h3>
-  <div class="bar-row"><span>Century21</span><div class="bar-track"><div class="bar-fill" style="width:83.9%"></div></div><span class="bar-val">271 (83.9%)</span></div>
-  <div class="bar-row"><span>Remax</span><div class="bar-track"><div class="bar-fill" style="width:16.1%"></div></div><span class="bar-val">52 (16.1%)</span></div>
+  
+<div class="fuente-donut-wrap">
+  <svg viewBox="0 0 180 180" width="180" height="180" class="fuente-donut" aria-hidden="true">
+    <path d="M 90.00 20.00 A 70 70 0 1 1 30.66 52.86 L 54.40 67.72 A 42 42 0 1 0 90.00 48.00 Z" fill="#3A6A48"/><path d="M 30.66 52.86 A 70 70 0 0 1 90.00 20.00 L 90.00 48.00 A 42 42 0 0 0 54.40 67.72 Z" fill="#7BA687"/>
+    <text x="90" y="85" text-anchor="middle" class="donut-total-num">323</text>
+    <text x="90" y="102" text-anchor="middle" class="donut-total-label">listings</text>
+  </svg>
+  <ul class="fuente-legend">
+    <li>
+      <span class="fuente-dot" style="background:#3A6A48"></span>
+      <span class="fuente-label">Century21</span>
+      <span class="fuente-num">271</span>
+      <span class="fuente-pct">83.9%</span>
+    </li>
+    <li>
+      <span class="fuente-dot" style="background:#7BA687"></span>
+      <span class="fuente-label">Remax</span>
+      <span class="fuente-num">52</span>
+      <span class="fuente-pct">16.1%</span>
+    </li>
+  </ul>
+</div>
+
 </section>
 
 
@@ -834,49 +989,94 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
 <!-- 5. DISTRIBUCIÓN DE OFERTA -->
 <section id="s5">
   <span class="section-num">05 · Distribución de oferta</span>
-  <h2>Tipología, tamaño y fase de obra</h2>
+  <h2>Tipología y tamaño</h2>
 
-  <h3>Inventario por zona y dormitorios</h3>
-  <table>
-    <tr><th>Zona</th><th class="num">Mono</th><th class="num">1D</th><th class="num">2D</th><th class="num">3D</th><th class="num">Total</th></tr>
-    <tr><td>Equipetrol Centro</td><td class="num">19</td><td class="num">54</td><td class="num">34</td><td class="num">11</td><td class="num"><strong>120</strong></td></tr>
-    <tr><td>Sirari</td><td class="num">9</td><td class="num">32</td><td class="num">27</td><td class="num">7</td><td class="num"><strong>77</strong></td></tr>
-    <tr><td>Villa Brígida</td><td class="num">9</td><td class="num">24</td><td class="num">17</td><td class="num">2</td><td class="num"><strong>54</strong></td></tr>
-    <tr><td>Equipetrol Oeste</td><td class="num">11</td><td class="num">21</td><td class="num">11</td><td class="num">2</td><td class="num"><strong>45</strong></td></tr>
-    <tr><td>Equipetrol Norte</td><td class="num">4</td><td class="num">14</td><td class="num">8</td><td class="num">1</td><td class="num"><strong>27</strong></td></tr>
-    <tr style="background:var(--arena-dark);font-weight:600;"><td>Total Equipetrol</td><td class="num">52</td><td class="num">145</td><td class="num">97</td><td class="num">23</td><td class="num">323</td></tr>
-  </table>
-  <p class="muted">La oferta dominante es 1 dormitorio (45%) seguido por 2 dormitorios (30%). Los monoambientes (0 dorms) son 16% del total. Los 3 dormitorios representan 7% — señal clara de un mercado orientado al comprador joven-individual y al inversionista de producto pequeño. (La diferencia con 323 son unidades con dormitorios no declarados o fuera de rango.)</p>
-
-  <h3>Tamaño mediano por zona y dormitorios</h3>
   <p>Cada zona revela su estrategia de posicionamiento por el tamaño de producto que construye. Observar las columnas 1D y 3D permite distinguir entre zonas que polarizan producto (compacto chico + amplio grande) y zonas que convergen (tamaños intermedios en ambos extremos).</p>
-  <table>
-    <tr><th>Zona</th><th class="num">1D m²</th><th class="num">2D m²</th><th class="num">3D m²</th></tr>
-    <tr><td>Equipetrol Norte</td><td class="num">46</td><td class="num">101</td><td class="num">161</td></tr>
-    <tr><td>Sirari</td><td class="num">48</td><td class="num">78</td><td class="num">203</td></tr>
-    <tr><td>Villa Brígida</td><td class="num">49</td><td class="num">81</td><td class="num">138</td></tr>
-    <tr><td>Equipetrol Centro</td><td class="num">50</td><td class="num">87</td><td class="num">163</td></tr>
-    <tr><td>Equipetrol Oeste</td><td class="num">53</td><td class="num">101</td><td class="num">110</td></tr>
-  </table>
 
-  <h3>Antigüedad del listado por zona × dormitorios</h3>
-  <div class="chart-wrap">
-    <div class="chart-title">Mediana de días desde publicación del aviso hasta la fecha de corte</div>
-    <div class="chart-subtitle">No mide velocidad de venta ni tiempo real en el mercado — mide antigüedad del listado publicado. Ver §2.</div>
-    <div class="chart-canvas"><canvas id="chartDias"></canvas></div>
-  </div>
-
-  <h3>Mix entrega / preventa por zona</h3>
-  <table>
-    <tr><th>Zona</th><th class="num">Entrega*</th><th class="num">Preventa</th><th class="num">No esp.</th><th class="num">% Entrega</th></tr>
-    <tr><td>Equipetrol Norte</td><td class="num">21</td><td class="num">6</td><td class="num">0</td><td class="num"><strong>78%</strong></td></tr>
-    <tr><td>Equipetrol Centro</td><td class="num">87</td><td class="num">25</td><td class="num">8</td><td class="num"><strong>73%</strong></td></tr>
-    <tr><td>Equipetrol Oeste</td><td class="num">33</td><td class="num">11</td><td class="num">1</td><td class="num"><strong>73%</strong></td></tr>
-    <tr><td>Villa Brígida</td><td class="num">38</td><td class="num">15</td><td class="num">1</td><td class="num"><strong>70%</strong></td></tr>
-    <tr><td>Sirari</td><td class="num">31</td><td class="num">43</td><td class="num">3</td><td class="num"><strong>40%</strong></td></tr>
+  <table class="matriz-oferta">
+    <tr>
+      <th rowspan="2">Zona</th>
+      <th class="num" colspan="5">Inventario por dormitorios</th>
+      <th class="num" colspan="3">Tamaño mediano (m²)</th>
+    </tr>
+    <tr>
+      <th class="num">Mono</th>
+      <th class="num">1D</th>
+      <th class="num">2D</th>
+      <th class="num">3D</th>
+      <th class="num">Total</th>
+      <th class="num">1D</th>
+      <th class="num">2D</th>
+      <th class="num">3D</th>
+    </tr>
+    <tr>
+      <td><strong>Equipetrol Centro</strong></td>
+      <td class="num">19</td>
+      <td class="num">54</td>
+      <td class="num">34</td>
+      <td class="num">11</td>
+      <td class="num tot-cell"><strong>120</strong></td>
+      <td class="num n">50</td>
+      <td class="num n">87</td>
+      <td class="num n">163</td>
+    </tr>
+    <tr>
+      <td><strong>Sirari</strong></td>
+      <td class="num">9</td>
+      <td class="num">32</td>
+      <td class="num">27</td>
+      <td class="num">7</td>
+      <td class="num tot-cell"><strong>77</strong></td>
+      <td class="num n">48</td>
+      <td class="num n">78</td>
+      <td class="num n">203</td>
+    </tr>
+    <tr>
+      <td><strong>Villa Brígida</strong></td>
+      <td class="num">9</td>
+      <td class="num">24</td>
+      <td class="num">17</td>
+      <td class="num">2</td>
+      <td class="num tot-cell"><strong>54</strong></td>
+      <td class="num n">49</td>
+      <td class="num n">81</td>
+      <td class="num n">138</td>
+    </tr>
+    <tr>
+      <td><strong>Equipetrol Oeste</strong></td>
+      <td class="num">11</td>
+      <td class="num">21</td>
+      <td class="num">11</td>
+      <td class="num">2</td>
+      <td class="num tot-cell"><strong>45</strong></td>
+      <td class="num n">53</td>
+      <td class="num n">101</td>
+      <td class="num n">110</td>
+    </tr>
+    <tr>
+      <td><strong>Equipetrol Norte</strong></td>
+      <td class="num">4</td>
+      <td class="num">14</td>
+      <td class="num">8</td>
+      <td class="num">1</td>
+      <td class="num tot-cell"><strong>27</strong></td>
+      <td class="num n">46</td>
+      <td class="num n">101</td>
+      <td class="num n">161</td>
+    </tr>
+    <tr style="background:var(--arena-dark);font-weight:600;">
+      <td>Total Equipetrol</td>
+      <td class="num">52</td>
+      <td class="num">145</td>
+      <td class="num">97</td>
+      <td class="num">23</td>
+      <td class="num">323</td>
+      <td class="num n">—</td>
+      <td class="num n">—</td>
+      <td class="num n">—</td>
+    </tr>
   </table>
-  <p class="muted">* "Entrega" incluye tanto unidades declaradas como "entrega inmediata" como "nuevo a estrenar" — son equivalentes para el comprador (departamento listo, nunca habitado).</p>
-  <p>Sirari es el único submercado donde preventa supera claramente a entrega. Los otros están en fase de delivery dominante. Leído desde el pipeline: Sirari es donde más construcción está en curso hoy; los demás ya lo hicieron.</p>
+  <p class="muted">La oferta dominante es 1 dormitorio (45%) seguido por 2 dormitorios (30%). Los monoambientes son 16% del total. Los 3 dormitorios representan 7% — señal clara de un mercado orientado al comprador joven-individual y al inversionista de producto pequeño. (La diferencia con 323 son unidades con dormitorios no declarados o fuera de rango.)</p>
 </section>
 
 
@@ -886,66 +1086,6 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
   <span class="section-num">06 · Precios publicados</span>
   <h2>Rangos reales, no promedios</h2>
   <p class="lead">Las tablas de esta sección presentan medianas y rangos intercuartiles (P25 a P75) solo para segmentos donde el tamaño de muestra permite una lectura robusta. Los segmentos con n < 20 se reportan al nivel de agregación inmediatamente superior o se omiten.</p>
-
-  <h3>Tabla maestra de precios por zona × dormitorios</h3>
-  <table>
-    <tr>
-      <th>Zona</th><th>Dorms</th>
-      <th class="num">n</th>
-      <th class="num">Mediana USD</th>
-      <th class="num">P25 – P75</th>
-      <th class="num">$/m² med.</th>
-    </tr>
-    <tr>
-      <td rowspan="4"><strong>Equipetrol Centro</strong></td><td>Mono</td><td class="num n">19*</td><td class="num n">$84,483</td><td class="num n">$72,917 – $101,959</td><td class="num n">$2,230</td>
-    </tr>
-    <tr>
-      <td>1D</td><td class="num">54</td><td class="num">$105,127</td><td class="num">$90,884 – $137,165</td><td class="num">$2,208</td>
-    </tr>
-    <tr>
-      <td>2D</td><td class="num">34</td><td class="num">$191,690</td><td class="num">$154,159 – $227,868</td><td class="num">$2,033</td>
-    </tr>
-    <tr>
-      <td>3D</td><td class="num n">11*</td><td class="num n">$327,586</td><td class="num n">$240,604 – $472,221</td><td class="num n">$2,143</td>
-    </tr>
-    <tr>
-      <td rowspan="4"><strong>Sirari</strong></td><td>Mono</td><td class="num n">9*</td><td class="num n">$88,329</td><td class="num n">$73,381 – $98,400</td><td class="num n">$2,180</td>
-    </tr>
-    <tr>
-      <td>1D</td><td class="num">32</td><td class="num">$102,581</td><td class="num">$90,175 – $112,721</td><td class="num">$2,158</td>
-    </tr>
-    <tr>
-      <td>2D</td><td class="num">27</td><td class="num">$159,000</td><td class="num">$132,060 – $181,225</td><td class="num">$1,953</td>
-    </tr>
-    <tr>
-      <td>3D</td><td class="num n">7*</td><td class="num n">$397,270</td><td class="num n">$386,578 – $481,733</td><td class="num n">$1,961</td>
-    </tr>
-    <tr>
-      <td rowspan="3"><strong>Villa Brígida</strong></td><td>Mono</td><td class="num n">9*</td><td class="num n">$71,300</td><td class="num n">$66,279 – $73,492</td><td class="num n">$1,974</td>
-    </tr>
-    <tr>
-      <td>1D</td><td class="num">24</td><td class="num">$98,601</td><td class="num">$78,566 – $113,367</td><td class="num">$1,976</td>
-    </tr>
-    <tr>
-      <td>2D</td><td class="num n">17*</td><td class="num n">$133,309</td><td class="num n">$115,987 – $149,466</td><td class="num n">$1,670</td>
-    </tr>
-    <tr>
-      <td rowspan="3"><strong>Equipetrol Oeste</strong></td><td>Mono</td><td class="num n">11*</td><td class="num n">$87,768</td><td class="num n">$68,592 – $95,498</td><td class="num n">$1,935</td>
-    </tr>
-    <tr>
-      <td>1D</td><td class="num">21</td><td class="num">$110,000</td><td class="num">$72,022 – $147,141</td><td class="num">$2,085</td>
-    </tr>
-    <tr>
-      <td>2D</td><td class="num n">11*</td><td class="num n">$172,989</td><td class="num n">$130,417 – $221,427</td><td class="num n">$1,810</td>
-    </tr>
-    <tr>
-      <td rowspan="2"><strong>Equipetrol Norte</strong></td><td>1D</td><td class="num n">14*</td><td class="num n">$114,089</td><td class="num n">$71,874 – $134,317</td><td class="num n">$2,170</td>
-    </tr>
-    <tr>
-      <td>2D</td><td class="num n">8*</td><td class="num n">$234,195</td><td class="num n">$144,864 – $324,210</td><td class="num n">$2,728</td>
-    </tr>
-  </table>
-  <p class="muted">\* Filas con n < 20. Se reportan con valores atenuados para indicar muestra marginal. Interpretar con cautela; no extrapolar tendencias.</p>
 
 
 <div class="dotplot-wrap">
@@ -1026,6 +1166,68 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
   <h3>Lectura</h3>
   <p>El rango intercuartílico en segmentos grandes (2D y 3D del core del mercado) puede llegar al 48% dentro del mismo producto en la misma zona. La dispersión refleja factores que no resuelven en un promedio: año de construcción, nivel de terminaciones, amenidades del edificio, piso y orientación.</p>
   <p>En $/m², la paradoja del mercado es que zonas con inventario chico pueden publicar el precio por metro más alto. Monoambientes en zonas core suelen ser caros por metro pero accesibles por ticket absoluto. La lectura correcta combina ambas métricas, nunca una sola.</p>
+
+  <details class="details-table">
+    <summary>Ver tabla detallada por zona × dormitorios</summary>
+    <table>
+      <tr>
+        <th>Zona</th><th>Dorms</th>
+        <th class="num">n</th>
+        <th class="num">Mediana USD</th>
+        <th class="num">P25 – P75</th>
+        <th class="num">$/m² med.</th>
+      </tr>
+    <tr>
+      <td rowspan="4"><strong>Equipetrol Centro</strong></td><td>Mono</td><td class="num n">19*</td><td class="num n">$84,483</td><td class="num n">$72,917 – $101,959</td><td class="num n">$2,230</td>
+    </tr>
+    <tr>
+      <td>1D</td><td class="num">54</td><td class="num">$105,127</td><td class="num">$90,884 – $137,165</td><td class="num">$2,208</td>
+    </tr>
+    <tr>
+      <td>2D</td><td class="num">34</td><td class="num">$191,690</td><td class="num">$154,159 – $227,868</td><td class="num">$2,033</td>
+    </tr>
+    <tr>
+      <td>3D</td><td class="num n">11*</td><td class="num n">$327,586</td><td class="num n">$240,604 – $472,221</td><td class="num n">$2,143</td>
+    </tr>
+    <tr>
+      <td rowspan="4"><strong>Sirari</strong></td><td>Mono</td><td class="num n">9*</td><td class="num n">$88,329</td><td class="num n">$73,381 – $98,400</td><td class="num n">$2,180</td>
+    </tr>
+    <tr>
+      <td>1D</td><td class="num">32</td><td class="num">$102,581</td><td class="num">$90,175 – $112,721</td><td class="num">$2,158</td>
+    </tr>
+    <tr>
+      <td>2D</td><td class="num">27</td><td class="num">$159,000</td><td class="num">$132,060 – $181,225</td><td class="num">$1,953</td>
+    </tr>
+    <tr>
+      <td>3D</td><td class="num n">7*</td><td class="num n">$397,270</td><td class="num n">$386,578 – $481,733</td><td class="num n">$1,961</td>
+    </tr>
+    <tr>
+      <td rowspan="3"><strong>Villa Brígida</strong></td><td>Mono</td><td class="num n">9*</td><td class="num n">$71,300</td><td class="num n">$66,279 – $73,492</td><td class="num n">$1,974</td>
+    </tr>
+    <tr>
+      <td>1D</td><td class="num">24</td><td class="num">$98,601</td><td class="num">$78,566 – $113,367</td><td class="num">$1,976</td>
+    </tr>
+    <tr>
+      <td>2D</td><td class="num n">17*</td><td class="num n">$133,309</td><td class="num n">$115,987 – $149,466</td><td class="num n">$1,670</td>
+    </tr>
+    <tr>
+      <td rowspan="3"><strong>Equipetrol Oeste</strong></td><td>Mono</td><td class="num n">11*</td><td class="num n">$87,768</td><td class="num n">$68,592 – $95,498</td><td class="num n">$1,935</td>
+    </tr>
+    <tr>
+      <td>1D</td><td class="num">21</td><td class="num">$110,000</td><td class="num">$72,022 – $147,141</td><td class="num">$2,085</td>
+    </tr>
+    <tr>
+      <td>2D</td><td class="num n">11*</td><td class="num n">$172,989</td><td class="num n">$130,417 – $221,427</td><td class="num n">$1,810</td>
+    </tr>
+    <tr>
+      <td rowspan="2"><strong>Equipetrol Norte</strong></td><td>1D</td><td class="num n">14*</td><td class="num n">$114,089</td><td class="num n">$71,874 – $134,317</td><td class="num n">$2,170</td>
+    </tr>
+    <tr>
+      <td>2D</td><td class="num n">8*</td><td class="num n">$234,195</td><td class="num n">$144,864 – $324,210</td><td class="num n">$2,728</td>
+    </tr>
+    </table>
+    <p class="muted">\* Filas con n < 20. Se reportan con valores atenuados para indicar muestra marginal. Interpretar con cautela; no extrapolar tendencias.</p>
+  </details>
 </section>
 
 
@@ -1037,29 +1239,247 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
   <p class="lead">Esta sección presenta los proyectos individuales con mayor volumen de unidades activas en portales. No es un ranking de calidad ni una recomendación: es la foto de concentración del lado de la oferta.</p>
 
   <h3>Proyectos con 5 o más unidades activas</h3>
-  <table>
-    <tr><th>Proyecto</th><th>Zona</th><th>Desarrolladora</th><th>Fase</th><th class="num">Unidades</th></tr>
-    <tr><td>Rhodium</td><td>Sirari</td><td>Elite Desarrollos</td><td>Preventa</td><td class="num">17</td></tr>
-    <tr><td>Sky Eclipse</td><td>Eq. Oeste</td><td>Sky Properties</td><td>Entrega</td><td class="num">16</td></tr>
-    <tr><td>Condominio MARE</td><td>Sirari</td><td>Mariscal Construcciones</td><td>Preventa</td><td class="num">13</td></tr>
-    <tr><td>HH Once Equipetrol</td><td>Eq. Centro</td><td>HH Desarrollos</td><td>Entrega</td><td class="num">11</td></tr>
-    <tr><td>Lofty Island</td><td>Eq. Oeste</td><td>HH Desarrollos</td><td>Preventa</td><td class="num">9</td></tr>
-    <tr><td>Stone 3</td><td>Villa Brígida</td><td>Stone Desarrollos</td><td>Preventa</td><td class="num">9</td></tr>
-    <tr><td>Atrium</td><td>Eq. Centro</td><td>Sommet SRL</td><td>Entrega</td><td class="num">7</td></tr>
-    <tr><td>Sky Tower</td><td>Eq. Centro</td><td>—</td><td>Preventa</td><td class="num">7</td></tr>
-    <tr><td>Sky Moon</td><td>Eq. Norte</td><td>Sky Properties</td><td>Entrega</td><td class="num">7</td></tr>
-    <tr><td>Sky Level</td><td>Eq. Centro</td><td>Sky Properties</td><td>Preventa</td><td class="num">6</td></tr>
-    <tr><td>Uptown Drei</td><td>Eq. Oeste</td><td>Grupo Providence</td><td>Preventa</td><td class="num">6</td></tr>
-    <tr><td>La Riviera</td><td>Sirari</td><td>Clerhp Inversiones (G70)</td><td>Entrega</td><td class="num">6</td></tr>
-    <tr><td>Edificio Spazios</td><td>Eq. Centro</td><td>Constructora Alessia Spazios</td><td>Entrega</td><td class="num">6</td></tr>
-    <tr><td>Condominio Las Dalias</td><td>Sirari</td><td>Sommet SRL</td><td>Preventa</td><td class="num">5</td></tr>
-    <tr><td>Condado VI Plaza Italia</td><td>Eq. Centro</td><td>Constructora Condado</td><td>Entrega</td><td class="num">5</td></tr>
-    <tr><td>Edificio Sirari Palm</td><td>Sirari</td><td>Constructora: HPC S.R.L.</td><td>Entrega</td><td class="num">5</td></tr>
-    <tr><td>Luxe Suites</td><td>Eq. Centro</td><td>Luxe Design & Construction</td><td>Entrega</td><td class="num">5</td></tr>
-    <tr><td>INIZIO</td><td>Eq. Oeste</td><td>Inizio Desarrollos</td><td>Entrega</td><td class="num">5</td></tr>
-    <tr><td>Uptown NUU</td><td>Eq. Centro</td><td>Grupo Providence</td><td>Entrega</td><td class="num">5</td></tr>
-    <tr><td>PORTOBELLO 5</td><td>Villa Brígida</td><td>Port-Delux S.R.L.</td><td>Preventa</td><td class="num">5</td></tr>
-  </table>
+
+  <div class="proy-legend">
+    <span><span class="sw" style="background:#3A6A48"></span>Entrega</span>
+    <span><span class="sw" style="background:#7BA687"></span>Preventa</span>
+    <span><span class="sw" style="background:#C08A2E"></span>Mixto</span>
+    <span><span class="sw" style="background:#8A8A8A"></span>No especificado</span>
+  </div>
+
+  <div class="proy-chart">
+    <div class="proy-zona-group">
+      <div class="proy-zona-header">
+        <span class="proy-zona-name">Eq. Centro</span>
+        <span class="proy-zona-meta">8 proyectos · 52 unidades</span>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>HH Once Equipetrol</strong>
+          <span class="proy-dev">HH Desarrollos</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:64.7%;background:#3A6A48" title="Entrega"></div>
+        </div>
+        <div class="proy-uds">11</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Atrium</strong>
+          <span class="proy-dev">Sommet SRL</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:41.2%;background:#3A6A48" title="Entrega"></div>
+        </div>
+        <div class="proy-uds">7</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Sky Tower</strong>
+          <span class="proy-dev"><span class="proy-sindev">sin declarar</span></span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:41.2%;background:#7BA687" title="Preventa"></div>
+        </div>
+        <div class="proy-uds">7</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Sky Level</strong>
+          <span class="proy-dev">Sky Properties</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:35.3%;background:#7BA687" title="Preventa"></div>
+        </div>
+        <div class="proy-uds">6</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Edificio Spazios</strong>
+          <span class="proy-dev">Constructora Alessia Spazios</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:35.3%;background:#3A6A48" title="Entrega"></div>
+        </div>
+        <div class="proy-uds">6</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Condado VI Plaza Italia</strong>
+          <span class="proy-dev">Constructora Condado</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:29.4%;background:#3A6A48" title="Entrega"></div>
+        </div>
+        <div class="proy-uds">5</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Luxe Suites</strong>
+          <span class="proy-dev">Luxe Design & Construction</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:29.4%;background:#3A6A48" title="Entrega"></div>
+        </div>
+        <div class="proy-uds">5</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Uptown NUU</strong>
+          <span class="proy-dev">Grupo Providence</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:29.4%;background:#3A6A48" title="Entrega"></div>
+        </div>
+        <div class="proy-uds">5</div>
+      </div>
+    </div>
+    <div class="proy-zona-group">
+      <div class="proy-zona-header">
+        <span class="proy-zona-name">Sirari</span>
+        <span class="proy-zona-meta">5 proyectos · 46 unidades</span>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Rhodium</strong>
+          <span class="proy-dev">Elite Desarrollos</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:100.0%;background:#7BA687" title="Preventa"></div>
+        </div>
+        <div class="proy-uds">17</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Condominio MARE</strong>
+          <span class="proy-dev">Mariscal Construcciones</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:76.5%;background:#7BA687" title="Preventa"></div>
+        </div>
+        <div class="proy-uds">13</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>La Riviera</strong>
+          <span class="proy-dev">Clerhp Inversiones (G70)</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:35.3%;background:#3A6A48" title="Entrega"></div>
+        </div>
+        <div class="proy-uds">6</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Condominio Las Dalias</strong>
+          <span class="proy-dev">Sommet SRL</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:29.4%;background:#7BA687" title="Preventa"></div>
+        </div>
+        <div class="proy-uds">5</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Edificio Sirari Palm</strong>
+          <span class="proy-dev">Constructora: HPC S.R.L.</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:29.4%;background:#3A6A48" title="Entrega"></div>
+        </div>
+        <div class="proy-uds">5</div>
+      </div>
+    </div>
+    <div class="proy-zona-group">
+      <div class="proy-zona-header">
+        <span class="proy-zona-name">Eq. Oeste</span>
+        <span class="proy-zona-meta">4 proyectos · 36 unidades</span>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Sky Eclipse</strong>
+          <span class="proy-dev">Sky Properties</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:94.1%;background:#3A6A48" title="Entrega"></div>
+        </div>
+        <div class="proy-uds">16</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Lofty Island</strong>
+          <span class="proy-dev">HH Desarrollos</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:52.9%;background:#7BA687" title="Preventa"></div>
+        </div>
+        <div class="proy-uds">9</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Uptown Drei</strong>
+          <span class="proy-dev">Grupo Providence</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:35.3%;background:#7BA687" title="Preventa"></div>
+        </div>
+        <div class="proy-uds">6</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>INIZIO</strong>
+          <span class="proy-dev">Inizio Desarrollos</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:29.4%;background:#3A6A48" title="Entrega"></div>
+        </div>
+        <div class="proy-uds">5</div>
+      </div>
+    </div>
+    <div class="proy-zona-group">
+      <div class="proy-zona-header">
+        <span class="proy-zona-name">Villa Brígida</span>
+        <span class="proy-zona-meta">2 proyectos · 14 unidades</span>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Stone 3</strong>
+          <span class="proy-dev">Stone Desarrollos</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:52.9%;background:#7BA687" title="Preventa"></div>
+        </div>
+        <div class="proy-uds">9</div>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>PORTOBELLO 5</strong>
+          <span class="proy-dev">Port-Delux S.R.L.</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:29.4%;background:#7BA687" title="Preventa"></div>
+        </div>
+        <div class="proy-uds">5</div>
+      </div>
+    </div>
+    <div class="proy-zona-group">
+      <div class="proy-zona-header">
+        <span class="proy-zona-name">Eq. Norte</span>
+        <span class="proy-zona-meta">1 proyectos · 7 unidades</span>
+      </div>
+      <div class="proy-row">
+        <div class="proy-name">
+          <strong>Sky Moon</strong>
+          <span class="proy-dev">Sky Properties</span>
+        </div>
+        <div class="proy-bar-wrap">
+          <div class="proy-bar" style="width:41.2%;background:#3A6A48" title="Entrega"></div>
+        </div>
+        <div class="proy-uds">7</div>
+      </div>
+    </div>
+  </div>
+
   <p class="muted">"No esp." indica estado de construcción sin declarar en el listado del portal — la unidad existe y es vigente, el dato de fase es el ausente.</p>
 
   <h3>Concentración por desarrolladora</h3>
@@ -1211,57 +1631,6 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
 
 
 </div>
-
-
-<script>
-(function () {
-  if (typeof Chart === 'undefined') return;
-
-  const SALVIA = '#3A6A48';
-  const SALVIA_LIGHT = '#7BA687';
-  const SALVIA_PALE = '#C8D9CE';
-  const ARENA_DARK = '#DFD8C5';
-  const NEGRO = '#141414';
-  const GRIS = '#8A8A8A';
-
-  Chart.defaults.font.family = "'DM Sans', system-ui, sans-serif";
-  Chart.defaults.color = NEGRO;
-  Chart.defaults.font.size = 12;
-
-  // Antigüedad del listado por zona × dorms (§5)
-  const el = document.getElementById('chartDias');
-  if (!el) return;
-
-  new Chart(el, {
-    type: 'bar',
-    data: {
-      labels: ["Eq. Centro","Sirari","V. Brígida","Eq. Oeste","Eq. Norte"],
-      datasets: [
-        { label: '1 dorm', data: [66,37,79,59,36], backgroundColor: SALVIA, borderWidth: 0 },
-        { label: '2 dorms', data: [81,37,78,77,59], backgroundColor: SALVIA_LIGHT, borderWidth: 0 },
-        { label: '3 dorms', data: [46,79,0,0,0], backgroundColor: SALVIA_PALE, borderWidth: 0 }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { grid: { display: false }, ticks: { color: NEGRO, font: { weight: 600 } } },
-        y: {
-          beginAtZero: true,
-          grid: { color: ARENA_DARK },
-          ticks: { color: GRIS, callback: (v) => v + 'd' }
-        }
-      },
-      plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16 } },
-        tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y + ' días' } }
-      }
-    }
-  });
-})();
-</script>
-
 
 
 <script>

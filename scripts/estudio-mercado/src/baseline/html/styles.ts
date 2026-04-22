@@ -89,6 +89,129 @@ export const BASELINE_STYLES = `
   .toc li a:hover { color: var(--salvia); }
   .toc li span { color: var(--gris-400); font-size: 12px; }
 
+  /* Details expandibles — metodología y tabla precios */
+  details.details-table {
+    margin: 20px 0 24px; padding: 14px 18px;
+    background: white; border-left: 3px solid var(--gris-200);
+    font-size: 14px;
+  }
+  details.details-table[open] { border-left-color: var(--salvia); padding-bottom: 18px; }
+  details.details-table summary {
+    cursor: pointer; font-family: 'Figtree', sans-serif; font-weight: 600;
+    font-size: 13px; color: var(--salvia); letter-spacing: 0.02em;
+    list-style: none; padding: 2px 0; user-select: none;
+  }
+  details.details-table summary::-webkit-details-marker { display: none; }
+  details.details-table summary::before {
+    content: '+ '; font-weight: 700; color: var(--salvia);
+    display: inline-block; width: 14px;
+  }
+  details.details-table[open] summary::before { content: '− '; }
+  details.details-table[open] summary { margin-bottom: 12px; border-bottom: 1px solid var(--gris-200); padding-bottom: 10px; }
+  details.details-table table { margin-top: 8px; }
+
+  /* §3 — Donut composición fuente */
+  .fuente-donut-wrap {
+    display: flex; align-items: center; gap: 32px; margin: 20px 0 24px;
+    padding: 20px 24px; background: white; border-top: 2px solid var(--salvia);
+  }
+  .fuente-donut { flex-shrink: 0; }
+  .fuente-donut .donut-total-num {
+    font-family: 'Figtree', sans-serif; font-weight: 700; font-size: 26px;
+    fill: var(--negro); font-variant-numeric: tabular-nums;
+  }
+  .fuente-donut .donut-total-label {
+    font-family: 'Figtree', sans-serif; font-size: 10px;
+    fill: var(--gris-400); text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .fuente-legend { list-style: none; padding: 0; margin: 0; flex: 1; }
+  .fuente-legend li {
+    display: grid; grid-template-columns: 18px 1fr auto auto;
+    align-items: center; gap: 10px; padding: 10px 0;
+    border-bottom: 1px dotted var(--gris-200); font-size: 14px;
+    max-width: none;
+  }
+  .fuente-legend li:last-child { border-bottom: none; }
+  .fuente-dot {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  }
+  .fuente-label { color: var(--negro); font-weight: 500; }
+  .fuente-num { font-variant-numeric: tabular-nums; color: var(--gris-600); font-size: 13px; }
+  .fuente-pct {
+    font-family: 'Figtree', sans-serif; font-weight: 700; color: var(--negro);
+    font-variant-numeric: tabular-nums; min-width: 46px; text-align: right;
+  }
+
+  /* §5 — Matriz consolidada: subtle divider entre grupos de columnas */
+  .matriz-oferta th[colspan] {
+    border-bottom: 1px solid var(--gris-200);
+  }
+  .matriz-oferta td.tot-cell {
+    border-right: 1px solid var(--gris-200);
+  }
+  .matriz-oferta th:nth-child(6), /* Total */
+  .matriz-oferta td.tot-cell {
+    background: rgba(0,0,0,0.02);
+  }
+
+  /* §7 — Proyectos bar chart table */
+  .proy-legend {
+    display: flex; gap: 18px; margin: 16px 0 20px; flex-wrap: wrap;
+    font-size: 11px; color: var(--gris-600); text-transform: uppercase;
+    letter-spacing: 0.06em; font-family: 'Figtree', sans-serif;
+  }
+  .proy-legend .sw {
+    display: inline-block; width: 10px; height: 10px; margin-right: 6px;
+    vertical-align: middle;
+  }
+  .proy-chart { margin: 16px 0 20px; }
+  .proy-zona-group {
+    margin-bottom: 14px; padding: 12px 16px; background: white;
+    border-top: 2px solid var(--salvia);
+  }
+  .proy-zona-group:last-child { margin-bottom: 0; }
+  .proy-zona-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 8px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--gris-200);
+  }
+  .proy-zona-name {
+    font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 13px;
+    color: var(--negro); letter-spacing: 0.02em;
+  }
+  .proy-zona-meta {
+    font-size: 10px; color: var(--gris-600);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .proy-row {
+    display: grid; grid-template-columns: 220px 1fr 36px;
+    gap: 14px; align-items: center; padding: 4px 0;
+    font-size: 12px;
+  }
+  .proy-name {
+    display: flex; flex-direction: row; align-items: baseline; gap: 6px;
+    min-width: 0;
+  }
+  .proy-name strong {
+    font-weight: 600; color: var(--negro); font-size: 12px;
+    font-family: 'Figtree', sans-serif;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .proy-dev {
+    font-size: 10px; color: var(--gris-600);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    flex-shrink: 1;
+  }
+  .proy-sindev { color: var(--gris-400); font-style: italic; }
+  .proy-bar-wrap {
+    background: var(--arena); height: 10px; position: relative;
+  }
+  .proy-bar { height: 100%; min-width: 2px; transition: width 0.3s ease; }
+  .proy-uds {
+    font-family: 'Figtree', sans-serif; font-weight: 700; font-size: 13px;
+    color: var(--negro); font-variant-numeric: tabular-nums; text-align: right;
+  }
+
   /* Brand logo placements */
   .cover-brand { margin-bottom: 28px; display: flex; align-items: center; }
   .cta-brand { margin-bottom: 20px; }
@@ -333,6 +456,11 @@ export const BASELINE_STYLES = `
     .dotplot-axis { grid-template-columns: 110px 1fr 90px; gap: 8px; }
     .cta-producto { padding: 28px 24px; }
     .cta-producto h3 { font-size: 22px; }
+    .proy-row { grid-template-columns: 1fr 40px; gap: 8px; }
+    .proy-bar-wrap { grid-column: 1 / -1; order: 3; height: 8px; }
+    .fuente-donut-wrap { flex-direction: column; gap: 16px; padding: 16px; }
+    .matriz-oferta { font-size: 11px; }
+    .matriz-oferta th, .matriz-oferta td { padding: 5px 4px; }
   }
 
   @media (min-width: 721px) and (max-width: 1200px) {
