@@ -124,6 +124,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Indice migraciones** | `docs/migrations/MIGRATION_INDEX.md` |
 | **Backlog calidad datos** | `docs/backlog/CALIDAD_DATOS_BACKLOG.md` |
 | **Backlog RLS Supabase** | `docs/backlog/SUPABASE_RLS_BACKLOG.md` — remediación linter, DROP `_trash_*` programado 29 abr |
+| **Backlog Image Optimization** | `docs/backlog/IMAGE_OPTIMIZATION_VERCEL.md` — migrar `/_next/image?url=...` a URLs directas del CDN (cerrar gasto Vercel 5k/mes) |
 | **Seguridad Supabase (reglas)** | `docs/canonical/SEGURIDAD_SUPABASE.md` — checklists antes de RLS, DROP, API routes, views, funciones RPC |
 | **Deuda tecnica** | `docs/backlog/DEUDA_TECNICA.md` |
 | **Retención usuarios** | `docs/backlog/RETENCION_USUARIOS.md` — Google OAuth, favoritos BD, alertas email (6 fases) |
