@@ -122,6 +122,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Brand Guidelines** | Repo externo `simon-brand` — ver sección "Simon Brand (repo externo)" abajo |
 | **Indice migraciones** | `docs/migrations/MIGRATION_INDEX.md` |
 | **Backlog calidad datos** | `docs/backlog/CALIDAD_DATOS_BACKLOG.md` |
+| **Backlog RLS Supabase** | `docs/backlog/SUPABASE_RLS_BACKLOG.md` — remediación linter, DROP `_trash_*` programado 29 abr |
 | **Deuda tecnica** | `docs/backlog/DEUDA_TECNICA.md` |
 | **Retención usuarios** | `docs/backlog/RETENCION_USUARIOS.md` — Google OAuth, favoritos BD, alertas email (6 fases) |
 | **Casas y Terrenos PRD** | `docs/backlog/CASAS_TERRENOS_PRD.md` — Fases 1-2 completadas, pipeline independiente, feed público pendiente (Fase 3) |
