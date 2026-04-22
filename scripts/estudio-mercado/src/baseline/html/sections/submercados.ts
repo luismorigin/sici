@@ -1,5 +1,6 @@
 import type { BaselineResult } from '../../types-baseline.js'
 import type { NarrativaRenderer } from '../../narrativa/loader.js'
+import { renderMapa } from '../mapa.js'
 
 const ZONA_LONG: Record<string, string> = {
   'Equipetrol Centro': 'Equipetrol Centro',
@@ -143,6 +144,8 @@ export function renderSubmercados(data: BaselineResult, narrativa: NarrativaRend
   <span class="section-num">04 · Los submercados</span>
   <h2>${data.panorama.totalZonas} polígonos, ${data.panorama.totalZonas} dinámicas</h2>
   <p class="lead">${narrativa.render('s4.lead', vars)}</p>
+
+${renderMapa(data)}
 
   <h3>Tabla maestra de submercados</h3>
   <table>
