@@ -258,12 +258,29 @@ Las tablas `broker_shortlists` tienen lectura pública via `/b/[hash]` sin auth.
 
 | Semana | Entregable | Estado |
 |---|---|---|
-| **S0** | **Portar `CompareSheet` a `/ventas` público** (2-3 días) — feature standalone, deploy independiente, feedback de usuarios reales antes del MVP broker | Pendiente |
-| **S1** | `/broker/[slug]` funcional con feed + modo broker + botón ⭐ (UI no persiste) + RPC `buscar_acm` + ACM inline en sheet | Pendiente |
+| **S0** | `CompareSheet` en `/ventas` público — componente portado desde alquiler, 4 insights validados con data (TC sospechoso, mejor precio/m², valor por espacio, misma area distinto precio, parqueo diferenciador), cohort comparable strict (mismo dorms + mismo estado normalizado), limite 3 favoritos, banner "Comparar (N)" + boton × limpiar, filas ocultas cuando todas NULL | ✅ **Completado 2026-04-22** (commit `0de872b`) |
+| **S1** | `/broker/[slug]` funcional con feed + modo broker + botón ⭐ (UI no persiste) + RPC `buscar_acm` + ACM inline en sheet | ⏳ Pendiente — siguiente |
 | **S2** | Tablas shortlists + panel gestión + ruta pública `/b/[hash]` + demo end-to-end (reutiliza CompareSheet ya desplegado en S0) | Pendiente |
 | **S3** | Link a `/mercado/equipetrol` en la página broker + polish + creación de slugs para 3 founders + testing | Pendiente |
 
 **Hito de demo:** final de S2 ya hay producto demo-able (broker arma shortlist, manda link, cliente lo abre).
+
+### Handoff S0 → S1
+
+**S0 entregado:** CompareSheet vive en `/ventas` público. Feedback de usuarios reales comienza ahora.
+
+**Para arrancar S1 necesito:**
+
+1. **Luz verde del usuario** para arrancar build de `/broker/[slug]`.
+2. **Lista de slugs founding** — nombres de los 3 primeros brokers del Founding Program (pueden ser tentativos, los creo en BD manualmente). Formato sugerido: `martin-silva`, `ana-vargas`, `juan-perez`. Si no hay aún, arranco con slugs demo (`demo`, `test`).
+3. **Confirmación de branding** en `/broker/[slug]`: ¿muestro Simon en NavBar o escondo marca como el link compartido? Mi default: mostrar Simon porque el broker es usuario interno, no cliente.
+
+**Primer archivo que crearía en S1:**
+- `simon-mvp/src/pages/broker/[slug].tsx` — reutiliza el feed `/ventas` con prop `brokerMode={true}` + slug en URL.
+- `simon-mvp/src/hooks/useBrokerMode.ts` — context simple para prop drilling sin volver al feed.
+- Migración SQL para tabla `brokers` (slug, nombre, telefono, foto_url).
+
+**Tiempo S1:** 5-7 días de dev.
 
 ---
 
