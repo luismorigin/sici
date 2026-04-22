@@ -154,19 +154,18 @@ export const BASELINE_STYLES = `
     background: rgba(0,0,0,0.02);
   }
 
-  /* §4 — Mapa SVG de polígonos */
-  .mapa-wrap {
-    margin: 20px 0 28px; padding: 24px; background: white;
-    border-top: 2px solid var(--salvia);
+  /* §4 — Mapa SVG de polígonos (dentro de <details>) */
+  .mapa-details summary {
+    color: var(--negro) !important; font-size: 14px !important;
   }
-  .mapa-title {
-    font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 15px;
-    margin-bottom: 4px; color: var(--negro);
-  }
+  .mapa-details summary::before { color: var(--salvia); }
   .mapa-subtitle {
     font-size: 12px; color: var(--gris-600); margin-bottom: 16px;
   }
-  .mapa-svg { width: 100%; height: auto; display: block; }
+  .mapa-svg {
+    width: 100%; height: auto; display: block;
+    max-height: 600px; max-width: 640px; margin: 0 auto;
+  }
   .mapa-label-name {
     font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 13px;
     fill: var(--negro); letter-spacing: -0.01em;

@@ -111,9 +111,9 @@ export function renderMapa(data: BaselineResult): string {
   }).join('')
 
   return `
-<div class="mapa-wrap">
-  <div class="mapa-title">Los polígonos de los submercados</div>
-  <div class="mapa-subtitle">Delimitación GPS usada para asignar cada listing a una zona · orientación norte arriba</div>
+<details class="details-table mapa-details">
+  <summary>Ver mapa de los polígonos GPS</summary>
+  <div class="mapa-subtitle">Delimitación real usada para asignar cada listing a una zona · orientación norte arriba</div>
   <svg viewBox="0 0 ${W.toFixed(0)} ${H.toFixed(0)}" class="mapa-svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Mapa de los 6 submercados de Equipetrol">
     <rect width="${W.toFixed(0)}" height="${H.toFixed(0)}" fill="#F5F1E5"/>
 ${paths}
@@ -125,6 +125,6 @@ ${labels.join('\n')}
     </g>
   </svg>
   <div class="mapa-legend">${legend}</div>
-</div>
+</details>
 `
 }

@@ -180,19 +180,18 @@
     background: rgba(0,0,0,0.02);
   }
 
-  /* §4 — Mapa SVG de polígonos */
-  .mapa-wrap {
-    margin: 20px 0 28px; padding: 24px; background: white;
-    border-top: 2px solid var(--salvia);
+  /* §4 — Mapa SVG de polígonos (dentro de <details>) */
+  .mapa-details summary {
+    color: var(--negro) !important; font-size: 14px !important;
   }
-  .mapa-title {
-    font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 15px;
-    margin-bottom: 4px; color: var(--negro);
-  }
+  .mapa-details summary::before { color: var(--salvia); }
   .mapa-subtitle {
     font-size: 12px; color: var(--gris-600); margin-bottom: 16px;
   }
-  .mapa-svg { width: 100%; height: auto; display: block; }
+  .mapa-svg {
+    width: 100%; height: auto; display: block;
+    max-height: 600px; max-width: 640px; margin: 0 auto;
+  }
   .mapa-label-name {
     font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 13px;
     fill: var(--negro); letter-spacing: -0.01em;
@@ -810,9 +809,9 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
   <p class="lead">Equipetrol se divide en 5 submercados geográficos distintos. Cada uno tiene un perfil de producto, un rango de precio y un patrón de antigüedad del listado propios. Agregar los 5 en un solo promedio produce un número que no describe a ninguno.</p>
 
 
-<div class="mapa-wrap">
-  <div class="mapa-title">Los polígonos de los submercados</div>
-  <div class="mapa-subtitle">Delimitación GPS usada para asignar cada listing a una zona · orientación norte arriba</div>
+<details class="details-table mapa-details">
+  <summary>Ver mapa de los polígonos GPS</summary>
+  <div class="mapa-subtitle">Delimitación real usada para asignar cada listing a una zona · orientación norte arriba</div>
   <svg viewBox="0 0 840 1088" class="mapa-svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Mapa de los 6 submercados de Equipetrol">
     <rect width="840" height="1088" fill="#F5F1E5"/>
   <path d="M 690.5 1022.2 L 808.0 973.7 L 694.5 747.2 L 684.4 607.4 L 670.8 537.8 L 650.7 522.8 L 467.4 636.3 L 341.1 727.5 L 212.1 859.4 L 532.0 901.5 L 690.5 1022.2 Z" fill="#3A6A48" fill-opacity="0.65" stroke="#2A4F35" stroke-width="1.2" stroke-linejoin="round"/>
@@ -853,7 +852,7 @@ Esto mantiene paridad con lo que el lector ve en la landing pública de Simón y
     </g>
   </svg>
   <div class="mapa-legend"><span class="mapa-leg-item"><span class="mapa-leg-sw" style="background:#3A6A48;border:1px solid #2A4F35"></span>Equipetrol Centro</span><span class="mapa-leg-item"><span class="mapa-leg-sw" style="background:#7BA687;border:1px solid #5E8568"></span>Sirari</span><span class="mapa-leg-item"><span class="mapa-leg-sw" style="background:#C08A2E;border:1px solid #936823"></span>Equipetrol Norte</span><span class="mapa-leg-item"><span class="mapa-leg-sw" style="background:#A4654F;border:1px solid #7B4A3A"></span>Villa Brígida</span><span class="mapa-leg-item"><span class="mapa-leg-sw" style="background:#6B5B95;border:1px solid #4E4270"></span>Equipetrol Oeste</span><span class="mapa-leg-item"><span class="mapa-leg-sw" style="background:#B0AFA6;border:1px solid #858479"></span>Eq. 3er Anillo</span></div>
-</div>
+</details>
 
 
   <h3>Tabla maestra de submercados</h3>
