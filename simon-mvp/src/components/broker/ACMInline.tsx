@@ -77,6 +77,9 @@ export default function ACMInline({ propiedadId }: ACMInlineProps) {
     ? Math.round(((data.precio_m2 - data.cohort_precio_m2_mediana) / data.cohort_precio_m2_mediana) * 100)
     : 0
   const diasDelta = data.dias_en_mercado - data.cohort_mediana_dias
+  const tipologia = `${data.dormitorios === 0 ? 'monoambiente' : `${data.dormitorios} dormitorio${data.dormitorios === 1 ? '' : 's'}`}, ${data.estado_construccion === 'preventa' ? 'preventa' : 'entrega inmediata'}`
+  const uniqueM2Precios = new Set(data.historico_precios?.map(h => h.precio_usd) || [])
+  const cambiosPrecio = Math.max(0, uniqueM2Precios.size - 1)
 
   return (
     <div className="bs-section">
@@ -84,69 +87,71 @@ export default function ACMInline({ propiedadId }: ACMInlineProps) {
 
       {/* Precio/m² vs cohort */}
       <div className="bs-acm-row">
-        <div className="bs-acm-k">Precio/m²</div>
+        <div className="bs-acm-k">Precio por m²</div>
         <div className="bs-acm-v">{fmtM2(data.precio_m2)}</div>
         <div className={`bs-acm-sub ${m2Delta > 0 ? 'neg' : m2Delta < 0 ? 'pos' : ''}`}>
-          {m2Delta > 0 ? `+${m2Delta}%` : m2Delta < 0 ? `${m2Delta}%` : '='} vs mediana zona
+          {m2Delta === 0 ? 'Alineado con el promedio de la zona'
+            : m2Delta > 0 ? `${m2Delta}% sobre el promedio de la zona`
+            : `${Math.abs(m2Delta)}% debajo del promedio de la zona`}
         </div>
       </div>
 
-      {/* Percentil en cohort */}
+      {/* Posición en el mercado */}
       <div className="bs-acm-row">
-        <div className="bs-acm-k">Percentil</div>
-        <div className="bs-acm-v">P{data.percentil_en_cohort}</div>
-        <div className="bs-acm-sub">de {data.cohort_size} comparables ({data.dormitorios === 0 ? 'mono' : `${data.dormitorios} dorm`} {data.estado_construccion === 'preventa' ? 'preventa' : 'entrega'})</div>
+        <div className="bs-acm-k">Posición</div>
+        <div className="bs-acm-v">Más barata que el {100 - data.percentil_en_cohort}%</div>
+        <div className="bs-acm-sub">de {data.cohort_size} unidades similares ({tipologia}) en la zona</div>
       </div>
 
       {/* Tiempo en mercado */}
       <div className="bs-acm-row">
         <div className="bs-acm-k">Tiempo publicado</div>
-        <div className="bs-acm-v">{data.dias_en_mercado}d</div>
+        <div className="bs-acm-v">{data.dias_en_mercado} días</div>
         <div className="bs-acm-sub">
-          mediana cohort: {data.cohort_mediana_dias}d
-          {diasDelta > 30 ? ' · estancado' : diasDelta < -30 ? ' · reciente' : ''}
+          Promedio de la zona: {data.cohort_mediana_dias} días
+          {diasDelta > 30 ? ' · está estancada' : diasDelta < -30 ? ' · recién publicada' : ''}
         </div>
       </div>
 
       {/* Ranking torre */}
       {data.ranking_torre_pos && data.ranking_torre_total && data.ranking_torre_total >= 2 && (
         <div className="bs-acm-row">
-          <div className="bs-acm-k">Ranking torre</div>
-          <div className="bs-acm-v">{data.ranking_torre_pos} de {data.ranking_torre_total}</div>
-          <div className="bs-acm-sub">por precio/m² en el mismo proyecto</div>
+          <div className="bs-acm-k">En el mismo edificio</div>
+          <div className="bs-acm-v">#{data.ranking_torre_pos} de {data.ranking_torre_total}</div>
+          <div className="bs-acm-sub">más barata (considerando precio por m²)</div>
         </div>
       )}
 
       {/* Rango de valor estimado */}
       {data.rango_valor_low && data.rango_valor_high && (
         <div className="bs-acm-row">
-          <div className="bs-acm-k">Rango de valor</div>
+          <div className="bs-acm-k">Rango esperado</div>
           <div className="bs-acm-v">{fmtUSD(data.rango_valor_low)} – {fmtUSD(data.rango_valor_high)}</div>
-          <div className="bs-acm-sub">p25-p75 cohort × área</div>
+          <div className="bs-acm-sub">Según precios actuales del mercado para esta tipología</div>
         </div>
       )}
 
       {/* Yield estimado (solo si cohort alquiler >=5) */}
       {data.yield_low !== null && data.yield_high !== null && data.yield_cohort_size >= 5 && (
         <div className="bs-acm-row bs-acm-yield">
-          <div className="bs-acm-k">Yield estimado</div>
-          <div className="bs-acm-v">{data.yield_low}% – {data.yield_high}%</div>
-          <div className="bs-acm-sub">anual · basado en {data.yield_cohort_size} alquileres comparables</div>
+          <div className="bs-acm-k">Renta estimada</div>
+          <div className="bs-acm-v">{data.yield_low}% – {data.yield_high}% al año</div>
+          <div className="bs-acm-sub">Basado en {data.yield_cohort_size} alquileres similares</div>
           <div className="bs-acm-disclaimer">
-            Supone ocupación plena, sin descontar expensas ni gestión. Rango real típico: 1-2 puntos menos.
+            Asume ocupación plena. No descuenta expensas ni gestión. La renta real suele ser 1-2 puntos porcentuales menor.
           </div>
         </div>
       )}
 
       {/* Histórico de precio */}
-      {data.historico_precios && data.historico_precios.length >= 2 && (
+      {data.historico_precios && data.historico_precios.length >= 2 && cambiosPrecio > 0 && (
         <div className="bs-acm-row">
-          <div className="bs-acm-k">Histórico</div>
-          <div className="bs-acm-v">{data.historico_precios.length} puntos</div>
+          <div className="bs-acm-k">Historial de precio</div>
+          <div className="bs-acm-v">{cambiosPrecio} cambio{cambiosPrecio === 1 ? '' : 's'} de precio</div>
           <div className="bs-acm-sub">
-            desde {new Date(data.historico_precios[0].fecha).toLocaleDateString('es-BO', { month: 'short', year: '2-digit' })}
+            Desde {new Date(data.historico_precios[0].fecha).toLocaleDateString('es-BO', { month: 'long', year: 'numeric' })}
             {data.historico_precios[data.historico_precios.length - 1].precio_usd !== data.historico_precios[0].precio_usd && (
-              <> · {data.historico_precios[data.historico_precios.length - 1].precio_usd > data.historico_precios[0].precio_usd ? '↑' : '↓'} {Math.round(Math.abs(((data.historico_precios[data.historico_precios.length - 1].precio_usd - data.historico_precios[0].precio_usd) / data.historico_precios[0].precio_usd) * 100))}%</>
+              <> · {data.historico_precios[data.historico_precios.length - 1].precio_usd > data.historico_precios[0].precio_usd ? '↑ subió' : '↓ bajó'} {Math.round(Math.abs(((data.historico_precios[data.historico_precios.length - 1].precio_usd - data.historico_precios[0].precio_usd) / data.historico_precios[0].precio_usd) * 100))}% desde que lo trackeamos</>
             )}
           </div>
         </div>
