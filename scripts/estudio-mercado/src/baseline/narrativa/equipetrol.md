@@ -128,7 +128,7 @@ La diferencia con {{totalVenta}} corresponde a unidades con estado nulo. El pred
 \* Mediana de antigüedad del listado por dormitorios: días desde que este aviso fue publicado en el portal hasta la fecha de corte. Celdas vacías ("—") son segmentos con menos de 3 unidades, insuficiente para reportar. No es velocidad de venta ni tiempo total en el mercado real — ver §2.
 
 ## s4.excluidos
-Equipetrol 3er Anillo aparece con pocas unidades en el corpus. El tamaño es estadísticamente insuficiente para reportar como submercado propio. Se excluye de las tablas comparativas y de los agregados zonales.
+Equipetrol 3er Anillo — franja comercial sobre el 3er anillo entre Av. Busch y Av. La Salle — aparece con pocas unidades residenciales en el corpus. Es una zona de uso mayoritariamente comercial, con muestra estadísticamente insuficiente para reportar como submercado residencial propio. Se excluye de las tablas comparativas y de los agregados zonales.
 
 ### Perfiles por submercado (para §4 lectura)
 

@@ -4,14 +4,14 @@ Fuente de verdad: tabla `zonas_geograficas` (7 polígonos PostGIS, 6 nombres ún
 
 ## Descripción geográfica
 
-| Zona | Ubicación | Perfil |
-|------|-----------|--------|
-| **Equipetrol Centro** | Entre el 2do y 3er anillo. Canal Isuto al este, calle Nicolás Ortiz al oeste (límite con Eq. Oeste). | La zona más consolidada, mayor oferta. |
-| **Equipetrol Norte** | Pasando el 3er anillo hacia el norte, entre 3er y 4to anillo. | Zona financiera, condominios modernos. Rentas altas, inventario chico. |
-| **Villa Brigida** | Entre Equipetrol Norte y Canal Isuto, entre 3er y 4to anillo. | Condominios nuevos, la zona más accesible en precio. Emergente, absorción rápida. |
-| **Sirari** | Al oeste, entre 3er y 4to anillo. | Más tranquilo, residencial, desarrolladoras premium. |
-| **Equipetrol Oeste** | Al oeste de Eq. Centro, entre 2do y 3er anillo, desde calle Nicolás Ortiz hasta Avenida Busch. Barrio Faremafu. | Mixto — premium y universitario. |
-| **Eq. 3er Anillo** | Sobre el 3er anillo mismo. | Franja comercial, muy pocas opciones de alquiler. |
+| Zona | Ubicación precisa | Perfil |
+|------|-------------------|--------|
+| **Equipetrol Centro** | De Av. La Salle (Canal Isuto) a Calle Nicolás Ortiz, entre 2do y 3er anillo interno. | La más consolidada, mayor oferta. |
+| **Equipetrol Norte** | De Av. San Martín a Calle Doctor Jaime Román, del 3er anillo externo al 4to anillo. | Zona financiera, condominios modernos. Rentas altas, inventario chico. |
+| **Villa Brigida** | De Calle Doctor Jaime Román a Av. La Salle (Canal Isuto), del 3er anillo externo al 4to anillo. | Accesible en precio, condominios nuevos. Emergente, absorción rápida. |
+| **Sirari** | De Av. San Martín a Radial 26, del 3er anillo externo al 4to anillo. | Premium, residencial, desarrolladoras top. |
+| **Equipetrol Oeste** | De Calle Nicolás Ortiz a Av. Busch, entre 2do y 3er anillo interno. Barrio Faremafu. | Mixto — premium y universitario. |
+| **Eq. 3er Anillo** | Franja comercial sobre el 3er anillo, entre Av. Busch y Av. La Salle. | Comercial, muestra insuficiente para reporte por zona. |
 
 ## Nombres en BD
 

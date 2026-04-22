@@ -154,6 +154,14 @@ export const BASELINE_STYLES = `
     background: rgba(0,0,0,0.02);
   }
 
+  /* §4 — Geografía línea bajo cada h4 de perfil */
+  .geo-blurb {
+    font-size: 12px; color: var(--gris-600); font-style: italic;
+    margin: 4px 0 10px; padding: 6px 10px;
+    background: var(--arena-dark); border-left: 2px solid var(--salvia);
+    max-width: none;
+  }
+
   /* §7 — Proyectos bar chart table */
   .proy-legend {
     display: flex; gap: 18px; margin: 16px 0 20px; flex-wrap: wrap;

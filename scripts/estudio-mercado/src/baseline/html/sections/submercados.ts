@@ -17,6 +17,15 @@ const PERFILES_ATAJO: Record<string, string> = {
   'Equipetrol Norte': 'Financiero, inventario chico',
 }
 
+const GEOGRAFIA_ZONA: Record<string, string> = {
+  'Equipetrol Centro': 'De Av. La Salle (Canal Isuto) a Calle Nicolás Ortiz, entre 2do y 3er anillo interno.',
+  'Equipetrol Norte': 'De Av. San Martín a Calle Doctor Jaime Román, del 3er anillo externo al 4to anillo.',
+  'Villa Brigida': 'De Calle Doctor Jaime Román a Av. La Salle (Canal Isuto), del 3er anillo externo al 4to anillo.',
+  'Sirari': 'De Av. San Martín a Radial 26, del 3er anillo externo al 4to anillo.',
+  'Equipetrol Oeste': 'De Calle Nicolás Ortiz a Av. Busch, entre 2do y 3er anillo interno. Barrio Faremafu.',
+  'Eq. 3er Anillo': 'Franja comercial sobre el 3er anillo, entre Av. Busch y Av. La Salle.',
+}
+
 function fullName(z: string): string {
   return ZONA_LONG[z] ?? z
 }
@@ -114,8 +123,11 @@ export function renderSubmercados(data: BaselineResult, narrativa: NarrativaRend
 
     const key = `s4.perfil.${zona}`
     if (!narrativa.has(key)) return ''
+    const geo = GEOGRAFIA_ZONA[zona]
+    const geoLine = geo ? `<p class="geo-blurb">${geo}</p>` : ''
     return `    <div>
       <h4>${fullName(zona)}</h4>
+      ${geoLine}
       <p>${narrativa.render(key, perfilVars)}</p>
     </div>`
   }).filter(Boolean)
