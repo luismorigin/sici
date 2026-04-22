@@ -10,7 +10,7 @@ import { createClient } from '@supabase/supabase-js'
 import { isValidBolivianPhone, normalizePhone } from '@/lib/phone'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const META_BOT_PATTERNS = [
   'facebookexternalhit',
@@ -160,8 +160,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const dormsNum = dorms != null ? parseInt(String(dorms), 10) : NaN
 
     // Insert lead with server-side dedup (skip if same prop+phone in last 30s)
-    if (supabaseUrl && supabaseAnonKey) {
-      const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    // Usa service_role para bypassear RLS (tabla tiene PII, sin acceso anon).
+    if (supabaseUrl && supabaseServiceKey) {
+      const supabase = createClient(supabaseUrl, supabaseServiceKey)
       const safePropId = !isNaN(propIdNum) && propIdNum > 0 ? propIdNum : null
 
       try {
