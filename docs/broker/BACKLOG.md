@@ -136,6 +136,20 @@ Ideas, features y mejoras parqueadas para después del MVP.
 **Workaround:** fix manual por propiedad con UPDATE + `campos_bloqueados`. Ver sesión 2026-04-22.
 **Cuándo reactivar:** post-MVP broker, como sub-proyecto de calidad de datos.
 
+### tc_sospechoso no dispara en cohorts chicos (<3 props declaradas)
+**Tier:** edge case — aceptado para MVP
+**Agregado:** 2026-04-22
+**Rationale:** El criterio tc_sospechoso requiere `HAVING COUNT(*) >= 3` en el grupo de referencia (zona + dorms + estado, solo TC declarado). Cuando el cohort es muy chico, la mediana queda NULL y el badge no dispara aunque la prop esté claramente debajo del mercado.
+
+Caso concreto: Sky Level 1584 en Eq. Centro 2-dorm preventa. Al forzar manualmente su TC a 'no_especificado' (fix del detector), el grupo quedó con solo 2 props declaradas → no dispara.
+
+**Opciones futuras:**
+- B) Bajar HAVING a ≥2 — pragmatico, reduce rigor estadístico
+- C) Fallback a cohort más amplio (solo zona+dorms, o solo zona) si el específico es <3
+- D) Override manual por prop — nueva columna `tc_confirmar_override` (nullable) que fuerza/suprime el badge
+
+**Cuándo reactivar:** si aparecen más casos edge en feedback de brokers del Founding Program. Evaluar opción C como más robusta.
+
 ## Features data / metodología
 
 ### Yield a nivel edificio individual
