@@ -136,9 +136,9 @@ export default function ACMInline({ propiedadId }: ACMInlineProps) {
         <div className="bs-acm-row bs-acm-yield">
           <div className="bs-acm-k">Renta estimada</div>
           <div className="bs-acm-v">{data.yield_low}% – {data.yield_high}% al año</div>
-          <div className="bs-acm-sub">Basado en {data.yield_cohort_size} alquileres similares</div>
+          <div className="bs-acm-sub">Basado en {data.yield_cohort_size} alquileres similares <strong>no amoblados</strong></div>
           <div className="bs-acm-disclaimer">
-            Asume ocupación plena. No descuenta expensas ni gestión. La renta real suele ser 1-2 puntos porcentuales menor.
+            Asume ocupación plena. No descuenta expensas ni gestión. Amoblar puede sumar 15-30%, pero también suma costo de inversión.
           </div>
         </div>
       )}

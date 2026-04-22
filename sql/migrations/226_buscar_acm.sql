@@ -88,6 +88,8 @@ AS $$
       AND t.dormitorios = prop.p_dorms
   ),
   yield_cohort AS (
+    -- Solo no-amobladas (o sin reportar) — amobladas tienen premium 15-30%
+    -- que infla el yield artificialmente para propiedades de venta.
     SELECT
       COUNT(*)::INTEGER AS n,
       PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY a.precio_mensual)::NUMERIC AS alq_p25,
@@ -95,6 +97,7 @@ AS $$
     FROM v_mercado_alquiler a, prop
     WHERE a.zona = prop.p_zona
       AND a.dormitorios = prop.p_dorms
+      AND (a.amoblado IS NULL OR a.amoblado = 'no')
   ),
   historico AS (
     SELECT COALESCE(
