@@ -154,38 +154,6 @@ export const BASELINE_STYLES = `
     background: rgba(0,0,0,0.02);
   }
 
-  /* §4 — Mapa SVG de polígonos (dentro de <details>) */
-  .mapa-details summary {
-    color: var(--negro) !important; font-size: 14px !important;
-  }
-  .mapa-details summary::before { color: var(--salvia); }
-  .mapa-subtitle {
-    font-size: 12px; color: var(--gris-600); margin-bottom: 16px;
-  }
-  .mapa-svg {
-    width: 100%; height: auto; display: block;
-    max-height: 600px; max-width: 640px; margin: 0 auto;
-  }
-  .mapa-label-name {
-    font-family: 'Figtree', sans-serif; font-weight: 600; font-size: 13px;
-    fill: var(--negro); letter-spacing: -0.01em;
-    paint-order: stroke; stroke: white; stroke-width: 3px; stroke-linejoin: round;
-  }
-  .mapa-label-uds {
-    font-family: 'Figtree', sans-serif; font-weight: 500; font-size: 10px;
-    fill: var(--negro-soft); letter-spacing: 0.04em;
-    paint-order: stroke; stroke: white; stroke-width: 2.5px; stroke-linejoin: round;
-  }
-  .mapa-legend {
-    display: flex; flex-wrap: wrap; gap: 14px 20px; margin-top: 16px;
-    font-size: 11px; color: var(--gris-600);
-    font-family: 'Figtree', sans-serif; text-transform: uppercase; letter-spacing: 0.06em;
-  }
-  .mapa-leg-item { display: inline-flex; align-items: center; gap: 6px; }
-  .mapa-leg-sw {
-    display: inline-block; width: 12px; height: 12px; opacity: 0.75;
-  }
-
   /* §4 — Geografía línea bajo cada h4 de perfil */
   .geo-blurb {
     font-size: 12px; color: var(--gris-600); font-style: italic;
