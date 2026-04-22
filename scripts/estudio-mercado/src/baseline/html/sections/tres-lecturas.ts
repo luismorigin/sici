@@ -80,6 +80,9 @@ export function renderTresLecturas(data: BaselineResult, narrativa: NarrativaRen
   const vars = {
     zonaLabel: data.config.zonaLabel,
     zonasCount: data.panorama.totalZonas,
+    totalVenta: data.panorama.totalVenta,
+    totalAlquiler: data.panorama.totalAlquiler,
+    fechaCorte: data.config.fechaCorte,
     ...computeTesisVars(data),
   }
 

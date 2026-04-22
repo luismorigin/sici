@@ -25,34 +25,34 @@ Radiografía trimestral del inventario y precios portal-observables en los {{zon
 ---
 
 ## s1.lead
-Tres hallazgos que emergen al desagregar los {{totalVenta}} listings activos. No son conclusiones de inversión — son observaciones de mercado que el agregado promedio esconde.
+Tres cosas del mercado de {{zonaLabel}} que al juntar todo en un promedio desaparecen. Salen de cruzar los {{totalVenta}} listings activos de venta al {{fechaCorte}} — no son opinión, es lo que muestran los portales cuando los mirás desagregados.
 
 ## s1.tesis_1.title
-Un 1 dormitorio en Sirari lleva la mitad del tiempo listado que un 3 dormitorios en Villa Brígida.
+Los departamentos chicos se renuevan al doble de velocidad que los grandes.
 
 ## s1.tesis_1.quote
-La antigüedad del listado corta por producto, no por zona.
+Elegís producto, no zona.
 
 ## s1.tesis_1.body
-Los 1 dormitorio de {{tesis1_zonas_rapidas}} tienen antigüedad mediana de {{tesis1_dias_min}} a {{tesis1_dias_max}} días. Los 2 y 3 dormitorios de {{tesis1_zonas_lentas}} superan los {{tesis1_dias_largos}} días, con casos que llegan a {{tesis1_dias_extremo}}. La variable discriminante no es el barrio — es el tipo de unidad. Esto no mide velocidad de venta real (ver apéndice metodológico), pero sí señala que <strong>hay productos donde los listings se renuevan mucho más seguido que otros</strong>. Para el dev que elige qué construir, o el inversor que elige dónde entrar, la pregunta relevante pasó de "¿qué zona?" a "¿qué tipología?".
+Los números son directos. Un 1 dormitorio típico en {{tesis1_zonas_rapidas}} lleva entre {{tesis1_dias_min}} y {{tesis1_dias_max}} días publicado en el portal. Un 2 o 3 dormitorios en {{tesis1_zonas_lentas}} llega a {{tesis1_dias_largos}} días. Mismo barrio, mismos portales — el corte lo hace la tipología, no la ubicación. Los 1D rotan al doble de velocidad que los 3D. Importante: este número no mide cierres de venta, mide cuánto tiempo lleva un aviso publicado (ver apéndice), pero es proxy decente de la velocidad del ciclo. Si vas a construir o comprar para mover stock rápido, el producto que elegís te define la velocidad más que el barrio.
 
 ## s1.tesis_2.title
-Mientras 4 zonas entregan, una todavía construye: Sirari.
+Si buscás preventa en {{zonaLabel}} hoy, casi toda la oferta está en una zona: Sirari.
 
 ## s1.tesis_2.quote
-Sirari es la única zona donde preventa supera a entrega inmediata.
+4 zonas entregan. 1 construye.
 
 ## s1.tesis_2.body
-El {{tesis2_pct_entrega}}% del inventario activo está en entrega inmediata, {{tesis2_pct_preventa}}% en preventa. El mix no es parejo: <strong>Sirari concentra el {{tesis2_sirari_pct}}% de sus {{tesis2_sirari_uds}} unidades en preventa — el único submercado donde preventa supera a entrega.</strong> {{tesis2_otras_zonas_entrega}}. Foto del ciclo: el pipeline de construcción de los últimos 24 meses está aterrizando en el resto de {{zonaLabel}}, mientras Sirari todavía tiene un trimestre o dos de delivery por venir. El que compra preventa hoy en Sirari compra a precios anteriores al próximo reset de mercado.
+{{tesis2_pct_entrega}}% del inventario activo está listo para entrega inmediata. Solo Sirari invierte la lógica: de sus {{tesis2_sirari_uds}} unidades, el {{tesis2_sirari_pct}}% están en preventa. Es la única zona donde la preventa supera al stock terminado. {{tesis2_otras_zonas_entrega}}. Esto pasa porque el pipeline de construcción de los últimos 24 meses ya aterrizó en el resto de {{zonaLabel}} — los proyectos que empezaron en 2023-2024 hoy están entregando. Sirari está un trimestre o dos atrás en el ciclo. Si sos dev buscando dónde hay espacio para arrancar un proyecto nuevo sin chocar con inventario terminado, la foto es clara: el resto de {{zonaLabel}} está en fase de vaciado, Sirari está en fase de construcción.
 
 ## s1.tesis_3.title
-Comprar por zona es ciego: en Equipetrol Centro 2D, el rango P25-P75 va de $154k a $228k.
+Dos departamentos iguales en la misma zona pueden costar USD 70,000 de diferencia.
 
 ## s1.tesis_3.quote
-La variabilidad intrazonal es mayor que la interzonal.
+El edificio pesa más que el barrio.
 
 ## s1.tesis_3.body
-El precio mediano por m² entre submercados va de USD {{tesis3_m2_min}} ({{tesis3_zona_min}}) a USD {{tesis3_m2_max}} ({{tesis3_zona_max}}) — una brecha interzonal del {{tesis3_rango_pct}}%. Pero la brecha DENTRO de cada zona (P25 a P75) llega al 30-48% en segmentos de 2 y 3 dormitorios. Traducido: dos 2D en el mismo barrio pueden valer el uno 50% más que el otro. Factores que la zona no resuelve — año de construcción, piso, orientación, terminaciones, amenidades — dominan el precio por encima de la ubicación. Cualquier tesis "invertir en X zona" sin leer producto descarta el 80% de la información relevante.
+En Equipetrol Centro, un 2 dormitorios se vende desde USD 154,000 hasta USD 228,000. Misma zona, misma tipología, los dos activos hoy en portales. Diferencia: USD 74,000, un 48%. La brecha entre el barrio más caro y el más barato de {{zonaLabel}} es del {{tesis3_rango_pct}}% — la brecha DENTRO de un mismo barrio llega al 30-48%. Traducido simple: la ubicación importa, pero menos de lo que se cree. Lo que define el precio real es el edificio — año de construcción, piso, vista, amenidades, terminaciones, orientación. Decirle a alguien "en Equipetrol Centro los 2D valen USD 192k" es un promedio que en la realidad describe a muy pocas unidades. Cada listing es un caso propio. Si vas a fijar precio de un proyecto o a evaluar una compra, el comparable útil es edificio-a-edificio, no zona-a-zona.
 
 ## s1.caveat
 Esta edición no presenta tasas de absorción, meses de inventario, yields ni proyecciones de precio. La razón está explicada en la sección 9. La primera serie de absorción publicable se incorporará en la edición de julio 2026.
