@@ -1100,7 +1100,7 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
 }
 
 // ===== Page =====
-export default function VentasPage({ seo, initialProperties = [] }: { seo: VentasSEO; initialProperties: UnidadVenta[] }) {
+export default function VentasPage({ seo, initialProperties = [], brokerSlug: brokerSlugProp = null }: { seo: VentasSEO; initialProperties: UnidadVenta[]; brokerSlug?: string | null }) {
   const [properties, setProperties] = useState<UnidadVenta[]>(initialProperties)
   const [loading, setLoading] = useState(initialProperties.length === 0)
   const [loadError, setLoadError] = useState(false)
@@ -1141,10 +1141,9 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
   const fetchGenRef = useRef(0)
   const feedRef = useRef<HTMLDivElement>(null)
 
-  // Modo broker: activo cuando /ventas se accede via rewrite /broker/[slug].
-  // El rewrite en next.config.js mapea /broker/:slug -> /ventas?broker=:slug.
-  // Solo brokers validos activan el modo; si el slug no existe, modo normal.
-  const brokerSlug = typeof router.query.broker === 'string' ? router.query.broker : null
+  // Modo broker: activo cuando la pagina /broker/[slug] renderiza VentasPage
+  // con brokerSlug como prop. Solo brokers validos activan el modo.
+  const brokerSlug = brokerSlugProp
   const broker = useMemo(() => getBrokerBySlug(brokerSlug), [brokerSlug])
   const brokerMode = broker !== null
 
