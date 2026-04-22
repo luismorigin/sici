@@ -15,6 +15,12 @@ const nextConfig = {
   swcMinify: true,
   compress: true,
   poweredByHeader: false,
+  async rewrites() {
+    return [
+      // Broker demo: URL visible /broker/[slug] con feed /ventas en modo broker
+      { source: '/broker/:slug', destination: '/ventas?broker=:slug' },
+    ]
+  },
   async redirects() {
     return [
       { source: '/filtros', destination: '/filtros-v2', permanent: true },

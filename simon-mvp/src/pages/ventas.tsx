@@ -8,6 +8,8 @@ import type { UnidadVenta, FiltrosVentaSimple } from '@/lib/supabase'
 import { ZONAS_CANONICAS, displayZona } from '@/lib/zonas'
 import { trackEvent } from '@/lib/analytics'
 import { fetchMercadoData, type MercadoData } from '@/lib/mercado-data'
+import { getBrokerBySlug } from '@/lib/brokers-demo'
+import ACMInline from '@/components/broker/ACMInline'
 
 // --- SEO types ---
 interface VentasSEO {
@@ -724,11 +726,12 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 }
 
 // ===== Bottom Sheet =====
-function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty }: {
+function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty, brokerMode = false, onAddToShortlist }: {
   property: UnidadVenta | null; isOpen: boolean; onClose: () => void; onShare?: () => void
   isFavorite?: boolean; onToggleFavorite?: () => void
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; isDesktop: boolean
   properties?: UnidadVenta[]; onSwapProperty?: (p: UnidadVenta) => void
+  brokerMode?: boolean; onAddToShortlist?: (p: UnidadVenta) => void
 }) {
   const [gateName, setGateName] = useState('')
   const [gateTel, setGateTel] = useState('')
@@ -899,6 +902,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           </div>
 
+          {/* ACM inline — solo en modo broker */}
+          {brokerMode && <ACMInline propiedadId={p.id} />}
+
           {/* Amenidades */}
           {amenities.length > 0 && (
             <div className="bs-section">
@@ -960,8 +966,8 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Preguntas para el vendedor */}
-          {brokerQuestions.length > 0 && (
+          {/* Preguntas para el vendedor — oculto en modo broker (el broker es el que responde) */}
+          {!brokerMode && brokerQuestions.length > 0 && (
             <div className="bs-section">
               <div className="bs-q-header">
                 <div className="bs-sl"><span className="bs-sl-dot" />Preguntas para el vendedor</div>
@@ -1000,8 +1006,20 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Ver original (con gate) */}
-          {p.url && (
+          {/* Boton "Agregar a shortlist" — solo en modo broker */}
+          {brokerMode && (
+            <div className="bs-section">
+              <button className="bs-add-shortlist" onClick={() => onAddToShortlist?.(p)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:18,height:18}}>
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+                Agregar a shortlist
+              </button>
+            </div>
+          )}
+
+          {/* Ver original (con gate) — oculto en modo broker (el broker ve la URL directo al contactar) */}
+          {!brokerMode && p.url && (
             <div className="bs-section">
               {!showGate ? (
                 <button className="bs-ver-original" onClick={handleVerOriginal}>
@@ -1017,6 +1035,15 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
                     disabled={!gateName.trim() || !gateTel.trim() || !gateEmail.trim()}>Ver anuncio &#8599;</button>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* En modo broker, mostrar link directo al anuncio original sin gate */}
+          {brokerMode && p.url && (
+            <div className="bs-section">
+              <a href={p.url} target="_blank" rel="noopener noreferrer" className="bs-ver-original">
+                Ver anuncio original en {p.fuente === 'century21' ? 'Century21' : 'Remax'} &#8599;
+              </a>
             </div>
           )}
 
@@ -1097,6 +1124,13 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
   const router = useRouter()
   const fetchGenRef = useRef(0)
   const feedRef = useRef<HTMLDivElement>(null)
+
+  // Modo broker: activo cuando /ventas se accede via rewrite /broker/[slug].
+  // El rewrite en next.config.js mapea /broker/:slug -> /ventas?broker=:slug.
+  // Solo brokers validos activan el modo; si el slug no existe, modo normal.
+  const brokerSlug = typeof router.query.broker === 'string' ? router.query.broker : null
+  const broker = useMemo(() => getBrokerBySlug(brokerSlug), [brokerSlug])
+  const brokerMode = broker !== null
 
   // Keep isFilteredRef in sync for scroll handler (avoids stale closure)
   useEffect(() => { isFilteredRef.current = isFiltered }, [isFiltered])
@@ -1370,7 +1404,13 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
         isFavorite={sheetProperty ? favorites.has(sheetProperty.id) : false}
         onToggleFavorite={sheetProperty ? () => toggleFavorite(sheetProperty.id) : undefined}
         gateCompleted={gateCompleted} onGate={handleGate} isDesktop={isDesktop}
-        properties={properties} onSwapProperty={(p) => setSheetProperty(p)} />
+        properties={properties} onSwapProperty={(p) => setSheetProperty(p)}
+        brokerMode={brokerMode}
+        onAddToShortlist={(p) => {
+          // S1: placeholder — persistencia de shortlists viene en S2
+          trackEvent('broker_add_to_shortlist', { property_id: p.id, broker_slug: broker?.slug })
+          showToast(`${p.proyecto} agregado a shortlist (demo)`)
+        }} />
 
       {/* Compare banner — shows when 2+ favorites */}
       {favorites.size >= 2 && (
@@ -1389,6 +1429,14 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
         properties={favoriteProperties}
         onClose={() => setCompareOpen(false)}
       />
+
+      {/* Banner modo broker — visible arriba de todo cuando activo */}
+      {brokerMode && broker && (
+        <div className="vt-broker-banner">
+          <span className="vt-broker-banner-label">SIMON BROKER</span>
+          <span className="vt-broker-banner-name">{broker.nombre}</span>
+        </div>
+      )}
 
       {isDesktop ? (
         /* ===== DESKTOP (unchanged) ===== */
@@ -1601,6 +1649,9 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
         .fo-apply:active { transform:scale(0.97) }
         .mt-counter { position:fixed; bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px)); right:16px; z-index:50; font-size:12px; color:#7A7060; font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums }
         .mt-map-btn { position:fixed; bottom:max(140px, calc(env(safe-area-inset-bottom) + 130px)); right:20px; z-index:100; width:48px; height:48px; border-radius:50%; background:rgba(20,20,20,0.7); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.2) }
+        .vt-broker-banner { position:fixed; top:0; left:0; right:0; z-index:50; background:#3A6A48; color:#EDE8DC; padding:6px 16px; font-family:'DM Sans',sans-serif; font-size:12px; display:flex; align-items:center; justify-content:center; gap:10px; letter-spacing:0.5px }
+        .vt-broker-banner-label { font-weight:700; font-size:11px; opacity:0.85 }
+        .vt-broker-banner-name { font-weight:500 }
         .vt-compare-banner-wrap { position:fixed; bottom:max(24px, calc(env(safe-area-inset-bottom) + 16px)); left:50%; transform:translateX(-50%); z-index:150; display:flex; align-items:stretch; gap:6px; max-width:calc(100vw - 32px) }
         .vt-compare-banner { display:flex; align-items:center; gap:10px; padding:12px 20px; background:#141414; color:#EDE8DC; border:1px solid rgba(237,232,220,0.1); border-radius:100px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; letter-spacing:0.3px; cursor:pointer; box-shadow:0 6px 20px rgba(0,0,0,0.25); min-height:48px; white-space:nowrap; -webkit-tap-highlight-color:transparent }
         .vt-compare-banner:active { transform:scale(0.97) }
@@ -1800,7 +1851,9 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
         .bs-venta .bs-agent-name { color:#EDE8DC }
         .bs-venta .bs-agent-office { color:#9A8E7A }
         .bs-venta .bs-gmaps-link { background:rgba(237,232,220,0.08); border:none; color:#EDE8DC }
-        .bs-venta .bs-ver-original { width:100%; padding:14px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.1); color:#EDE8DC; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:15px; cursor:pointer; font-weight:500; display:flex; align-items:center; justify-content:center; gap:8px }
+        .bs-venta .bs-ver-original { width:100%; padding:14px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.1); color:#EDE8DC; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:15px; cursor:pointer; font-weight:500; display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none }
+        .bs-venta .bs-add-shortlist { width:100%; padding:14px; background:#3A6A48; border:none; color:#EDE8DC; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:15px; cursor:pointer; font-weight:600; letter-spacing:0.3px; display:flex; align-items:center; justify-content:center; gap:8px; -webkit-tap-highlight-color:transparent }
+        .bs-venta .bs-add-shortlist:active { transform:scale(0.98); opacity:0.9 }
         .bs-venta .bs-gate { display:flex; flex-direction:column; gap:12px }
         .bs-venta .bs-gate-title { font-size:14px; color:#9A8E7A; margin-bottom:4px }
         .bs-venta .bs-gate-input { background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.12); color:#EDE8DC }
