@@ -259,8 +259,8 @@ Las tablas `broker_shortlists` tienen lectura pública via `/b/[hash]` sin auth.
 | Semana | Entregable | Estado |
 |---|---|---|
 | **S0** | `CompareSheet` en `/ventas` público — componente portado desde alquiler, 4 insights validados con data (TC sospechoso, mejor precio/m², valor por espacio, misma area distinto precio, parqueo diferenciador), cohort comparable strict (mismo dorms + mismo estado normalizado), limite 3 favoritos, banner "Comparar (N)" + boton × limpiar, filas ocultas cuando todas NULL | ✅ **Completado 2026-04-22** (commit `0de872b`) |
-| **S1** | `/broker/[slug]` funcional con feed + modo broker + botón ⭐ (UI no persiste) + RPC `buscar_acm` + ACM inline en sheet | ⏳ Pendiente — siguiente |
-| **S2** | Tablas shortlists + panel gestión + ruta pública `/b/[hash]` + demo end-to-end (reutiliza CompareSheet ya desplegado en S0) | Pendiente |
+| **S1** | `/broker/[slug]` funcional con feed + modo broker + botón ⭐ (UI no persiste) + RPC `buscar_acm` + ACM inline en sheet | ✅ **Completado 2026-04-22** (commits `c6f3379`, `eb4e919`, `dc984c4`, `97f0917`, `da3bbd9`, `ed2a32d`, `e2f5717`) |
+| **S2** | Tablas shortlists + panel gestión + ruta pública `/b/[hash]` + demo end-to-end (reutiliza CompareSheet ya desplegado en S0) | ⏳ Pendiente — siguiente |
 | **S3** | Link a `/mercado/equipetrol` en la página broker + polish + creación de slugs para 3 founders + testing | Pendiente |
 
 **Hito de demo:** final de S2 ya hay producto demo-able (broker arma shortlist, manda link, cliente lo abre).
