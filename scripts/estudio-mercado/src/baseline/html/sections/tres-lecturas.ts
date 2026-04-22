@@ -84,10 +84,10 @@ export function renderTresLecturas(data: BaselineResult, narrativa: NarrativaRen
   }
 
   return `
-<!-- 1. RESUMEN EJECUTIVO -->
+<!-- 1. HALLAZGOS -->
 <section id="s1">
-  <span class="section-num">01 · Resumen ejecutivo</span>
-  <h2>Tres lecturas sobre un mercado de submercados</h2>
+  <span class="section-num">01 · Hallazgos</span>
+  <h2>Tres cosas que el agregado esconde</h2>
   <p class="lead">${narrativa.render('s1.lead', vars)}</p>
 
   <h3>${narrativa.render('s1.tesis_1.title', vars)}</h3>

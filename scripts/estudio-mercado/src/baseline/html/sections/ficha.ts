@@ -24,9 +24,9 @@ export function renderFicha(data: BaselineResult, narrativa: NarrativaRenderer):
     .join('\n')
 
   return `
-<!-- 10. FICHA EDITORIAL -->
+<!-- FICHA EDITORIAL -->
 <section id="s10">
-  <span class="section-num">10 · Ficha</span>
+  <span class="section-num">Ficha editorial</span>
   <h2>Ficha editorial</h2>
   <table>
 ${fichaRows}

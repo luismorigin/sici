@@ -52,9 +52,9 @@ export function renderOferta(data: BaselineResult, narrativa: NarrativaRenderer)
   const invNota = `La oferta dominante es 1 dormitorio (${pctD1}%) seguido por 2 dormitorios (${pctD2}%). Los monoambientes son ${pctD0}% del total. Los 3 dormitorios representan ${pctD3}% — señal clara de un mercado orientado al comprador joven-individual y al inversionista de producto pequeño. (La diferencia con ${data.panorama.totalVenta} son unidades con dormitorios no declarados o fuera de rango.)`
 
   return `
-<!-- 5. DISTRIBUCIÓN DE OFERTA -->
+<!-- 4. DISTRIBUCIÓN DE OFERTA -->
 <section id="s5">
-  <span class="section-num">05 · Distribución de oferta</span>
+  <span class="section-num">04 · Distribución de oferta</span>
   <h2>Tipología y tamaño</h2>
 
   <p>${narrativa.render('s5.tamano_nota', vars)}</p>

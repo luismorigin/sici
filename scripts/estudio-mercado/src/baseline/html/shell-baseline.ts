@@ -109,16 +109,16 @@ export function assembleBaselineHTML(data: BaselineResult, narrativa: NarrativaR
 <div class="toc">
   <h4>Contenidos</h4>
   <ol>
-    <li><a href="#s1">01 · Resumen ejecutivo y tesis del mercado</a><span>pág. 1</span></li>
-    <li><a href="#s2">02 · Metodología y universo observable</a><span>pág. 2</span></li>
-    <li><a href="#s3">03 · ${data.config.zonaLabel} de un vistazo</a><span>pág. 3</span></li>
-    <li><a href="#s4">04 · Los submercados</a><span>pág. 4</span></li>
-    <li><a href="#s5">05 · Distribución de oferta por tipología</a><span>pág. 6</span></li>
-    <li><a href="#s6">06 · Precios publicados</a><span>pág. 8</span></li>
-    <li><a href="#s7">07 · Concentración por desarrolladora</a><span>pág. 10</span></li>
-    <li><a href="#s8">08 · Mercado de alquiler</a><span>pág. 11</span></li>
-    <li><a href="#s9">09 · Lo que este reporte no afirma + Agenda próximas ediciones</a><span>pág. 12</span></li>
-    <li><a href="#s10">10 · Ficha editorial</a><span>pág. 13</span></li>
+    <li><a href="#s1">01 · Tres hallazgos</a><span>pág. 1</span></li>
+    <li><a href="#s3">02 · ${data.config.zonaLabel} de un vistazo</a><span>pág. 2</span></li>
+    <li><a href="#s4">03 · Los submercados</a><span>pág. 3</span></li>
+    <li><a href="#s5">04 · Distribución de oferta</a><span>pág. 4</span></li>
+    <li><a href="#s6">05 · Precios publicados</a><span>pág. 5</span></li>
+    <li><a href="#s7">06 · Concentración por desarrolladora</a><span>pág. 6</span></li>
+    <li><a href="#s8">07 · Mercado de alquiler</a><span>pág. 7</span></li>
+    <li><a href="#s9">08 · Lo que este reporte NO afirma</a><span>pág. 8</span></li>
+    <li><a href="#s2">Apéndice · Metodología</a><span>pág. 9</span></li>
+    <li><a href="#s10">Ficha editorial</a><span>pág. 10</span></li>
   </ol>
 </div>
 `
@@ -127,16 +127,16 @@ export function assembleBaselineHTML(data: BaselineResult, narrativa: NarrativaR
 <nav class="mini-toc" aria-label="Navegación del reporte">
   <div class="title">Secciones</div>
   <ol>
-    <li><a href="#s1">01 · Resumen</a></li>
-    <li><a href="#s2">02 · Metodología</a></li>
-    <li><a href="#s3">03 · Vistazo</a></li>
-    <li><a href="#s4">04 · Submercados</a></li>
-    <li><a href="#s5">05 · Oferta</a></li>
-    <li><a href="#s6">06 · Precios</a></li>
-    <li><a href="#s7">07 · Concentración</a></li>
-    <li><a href="#s8">08 · Alquiler</a></li>
-    <li><a href="#s9">09 · Límites · Agenda</a></li>
-    <li><a href="#s10">10 · Ficha</a></li>
+    <li><a href="#s1">01 · Hallazgos</a></li>
+    <li><a href="#s3">02 · Vistazo</a></li>
+    <li><a href="#s4">03 · Submercados</a></li>
+    <li><a href="#s5">04 · Oferta</a></li>
+    <li><a href="#s6">05 · Precios</a></li>
+    <li><a href="#s7">06 · Concentración</a></li>
+    <li><a href="#s8">07 · Alquiler</a></li>
+    <li><a href="#s9">08 · Límites</a></li>
+    <li><a href="#s2">Metodología</a></li>
+    <li><a href="#s10">Ficha</a></li>
   </ol>
 </nav>
 `
@@ -167,8 +167,6 @@ ${toc}
 
 ${renderTresLecturas(data, narrativa)}
 
-${renderMetodologia(data, narrativa)}
-
 ${renderVistazo(data, narrativa)}
 
 ${renderSubmercados(data, narrativa)}
@@ -184,6 +182,8 @@ ${renderAlquiler(data, narrativa)}
 ${renderLimites(data, narrativa)}
 
 ${renderCtaProducto(data, narrativa)}
+
+${renderMetodologia(data, narrativa)}
 
 ${renderFicha(data, narrativa)}
 

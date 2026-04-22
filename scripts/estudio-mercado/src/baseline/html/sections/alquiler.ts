@@ -60,9 +60,9 @@ export function renderAlquiler(data: BaselineResult, narrativa: NarrativaRendere
   }
 
   return `
-<!-- 8. ALQUILER -->
+<!-- 7. ALQUILER -->
 <section id="s8">
-  <span class="section-num">08 · Alquiler</span>
+  <span class="section-num">07 · Alquiler</span>
   <h2>Un mercado con menos datos y más ruido</h2>
   <p class="lead">${narrativa.render('s8.lead', vars)}</p>
 

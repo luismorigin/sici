@@ -20,9 +20,9 @@ export function renderVistazo(data: BaselineResult, narrativa: NarrativaRenderer
   const fuenteDonut = renderFuenteDonut(data.panorama.byFuente)
 
   return `
-<!-- 3. EQUIPETROL DE UN VISTAZO -->
+<!-- 2. EQUIPETROL DE UN VISTAZO -->
 <section id="s3">
-  <span class="section-num">03 · ${data.config.zonaLabel} de un vistazo</span>
+  <span class="section-num">02 · ${data.config.zonaLabel} de un vistazo</span>
   <h2>Los números macro del mercado</h2>
 
   <div class="kpi-hero">

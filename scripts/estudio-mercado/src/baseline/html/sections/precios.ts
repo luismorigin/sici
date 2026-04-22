@@ -77,9 +77,9 @@ export function renderPrecios(data: BaselineResult, narrativa: NarrativaRenderer
   }
 
   return `
-<!-- 6. PRECIOS PUBLICADOS -->
+<!-- 5. PRECIOS PUBLICADOS -->
 <section id="s6">
-  <span class="section-num">06 · Precios publicados</span>
+  <span class="section-num">05 · Precios publicados</span>
   <h2>Rangos reales, no promedios</h2>
   <p class="lead">${narrativa.render('s6.lead', vars)}</p>
 

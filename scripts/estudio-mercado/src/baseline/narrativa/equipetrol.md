@@ -11,10 +11,10 @@
 Simón · Inteligencia Inmobiliaria · Santa Cruz, Bolivia
 
 ## hero.title
-{{zonaLabel}}.<br>Baseline de Inventario y Precios.
+{{zonaLabel}} no es una zona.<br>Son {{zonasCount}}.
 
 ## hero.subtitle
-Una radiografía del mercado portal-observable de departamentos en los {{zonasCount}} submercados de {{zonaLabel}} al {{fechaCorte}}. Primera edición de una serie trimestral.
+Radiografía trimestral del inventario y precios portal-observables en los {{zonasCount}} submercados de {{zonaLabel}}. Primera edición — corte al {{fechaCorte}}, {{totalVenta}} unidades en venta y {{totalAlquiler}} en alquiler analizadas.
 
 ## hero.foot
 **{{edicion}}** · Edición 01
@@ -25,34 +25,34 @@ Una radiografía del mercado portal-observable de departamentos en los {{zonasCo
 ---
 
 ## s1.lead
-{{zonaLabel}} no se comporta como una zona. Se comporta como {{zonasCount}} submercados con dinámicas divergentes que, agregados, producen promedios que esconden más de lo que revelan. Esta edición ofrece la lectura desagregada.
+Tres hallazgos que emergen al desagregar los {{totalVenta}} listings activos. No son conclusiones de inversión — son observaciones de mercado que el agregado promedio esconde.
 
 ## s1.tesis_1.title
-Tesis 1 — La antigüedad del listado es dual por producto, no por zona
+Un 1 dormitorio en Sirari lleva la mitad del tiempo listado que un 3 dormitorios en Villa Brígida.
 
 ## s1.tesis_1.quote
-La antigüedad del listado corta más fuerte por tipo de unidad que por zona.
+La antigüedad del listado corta por producto, no por zona.
 
 ## s1.tesis_1.body
-Los segmentos de 1 dormitorio en {{tesis1_zonas_rapidas}} muestran antigüedad mediana de {{tesis1_dias_min}} a {{tesis1_dias_max}} días de listado publicado. Los segmentos de 2 y 3 dormitorios en {{tesis1_zonas_lentas}} superan los {{tesis1_dias_largos}} días, con casos que escalan a {{tesis1_dias_extremo}} días. Esto no mide velocidad de venta (ver §2) — sí indica que <strong>hay productos donde los listings se renuevan mucho más seguido que otros</strong>, y que esa variable corta más fuerte por tipo de unidad que por zona.
+Los 1 dormitorio de {{tesis1_zonas_rapidas}} tienen antigüedad mediana de {{tesis1_dias_min}} a {{tesis1_dias_max}} días. Los 2 y 3 dormitorios de {{tesis1_zonas_lentas}} superan los {{tesis1_dias_largos}} días, con casos que llegan a {{tesis1_dias_extremo}}. La variable discriminante no es el barrio — es el tipo de unidad. Esto no mide velocidad de venta real (ver apéndice metodológico), pero sí señala que <strong>hay productos donde los listings se renuevan mucho más seguido que otros</strong>. Para el dev que elige qué construir, o el inversor que elige dónde entrar, la pregunta relevante pasó de "¿qué zona?" a "¿qué tipología?".
 
 ## s1.tesis_2.title
-Tesis 2 — La fase de delivery domina, pero Sirari es la excepción
+Mientras 4 zonas entregan, una todavía construye: Sirari.
 
 ## s1.tesis_2.quote
-Sirari es el único submercado donde preventa supera a entrega inmediata.
+Sirari es la única zona donde preventa supera a entrega inmediata.
 
 ## s1.tesis_2.body
-El {{tesis2_pct_entrega}}% del inventario activo está en entrega inmediata, {{tesis2_pct_preventa}}% en preventa. El mix no es parejo entre zonas: <strong>Sirari concentra la mayor proporción de preventa ({{tesis2_sirari_pct}}% de sus {{tesis2_sirari_uds}} unidades) y es el único submercado donde preventa supera a entrega</strong>. {{tesis2_otras_zonas_entrega}}. Es una foto de un ciclo donde el pipeline de construcción de los últimos 24 meses está aterrizando en la mayoría de {{zonaLabel}}, mientras Sirari todavía construye.
+El {{tesis2_pct_entrega}}% del inventario activo está en entrega inmediata, {{tesis2_pct_preventa}}% en preventa. El mix no es parejo: <strong>Sirari concentra el {{tesis2_sirari_pct}}% de sus {{tesis2_sirari_uds}} unidades en preventa — el único submercado donde preventa supera a entrega.</strong> {{tesis2_otras_zonas_entrega}}. Foto del ciclo: el pipeline de construcción de los últimos 24 meses está aterrizando en el resto de {{zonaLabel}}, mientras Sirari todavía tiene un trimestre o dos de delivery por venir. El que compra preventa hoy en Sirari compra a precios anteriores al próximo reset de mercado.
 
 ## s1.tesis_3.title
-Tesis 3 — Hay dos {{zonaLabel}}es en precio
+Comprar por zona es ciego: en Equipetrol Centro 2D, el rango P25-P75 va de $154k a $228k.
 
 ## s1.tesis_3.quote
 La variabilidad intrazonal es mayor que la interzonal.
 
 ## s1.tesis_3.body
-Precio mediano por metro cuadrado entre submercados va de USD {{tesis3_m2_min}} ({{tesis3_zona_min}}) a USD {{tesis3_m2_max}} ({{tesis3_zona_max}}) — un rango del {{tesis3_rango_pct}}%. Pero la desviación dentro de cada submercado (P25 a P75) llega al 30-48% en segmentos de 2 y 3 dormitorios. La variabilidad intrazonal es mayor que la interzonal. Comprar por zona sin leer producto es una estrategia de precio ciega.
+El precio mediano por m² entre submercados va de USD {{tesis3_m2_min}} ({{tesis3_zona_min}}) a USD {{tesis3_m2_max}} ({{tesis3_zona_max}}) — una brecha interzonal del {{tesis3_rango_pct}}%. Pero la brecha DENTRO de cada zona (P25 a P75) llega al 30-48% en segmentos de 2 y 3 dormitorios. Traducido: dos 2D en el mismo barrio pueden valer el uno 50% más que el otro. Factores que la zona no resuelve — año de construcción, piso, orientación, terminaciones, amenidades — dominan el precio por encima de la ubicación. Cualquier tesis "invertir en X zona" sin leer producto descarta el 80% de la información relevante.
 
 ## s1.caveat
 Esta edición no presenta tasas de absorción, meses de inventario, yields ni proyecciones de precio. La razón está explicada en la sección 9. La primera serie de absorción publicable se incorporará en la edición de julio 2026.
@@ -198,10 +198,10 @@ El mercado de alquiler de {{zonaLabel}} es considerablemente más chico en listi
 Los listings de alquiler declaran mayoritariamente su estado de amoblado, pero la declaración no es homogénea: {{pctAmoblado}}% se anuncia como amoblado, {{pctNoAmoblado}}% como no amoblado, {{pctSemi}}% semi y {{pctSinDeclarar}}% no declara. Mezclar los grupos en una sola renta mediana agregada produce un número que no representa a ningún segmento en particular.
 
 ## s8.anomalia_p1
-El hallazgo más claro está en los <strong>monoambientes</strong>: la renta mediana declarada amoblada (USD {{renta0DAmoblado}}) y no amoblada (USD {{renta0DNoAmoblado}}) difieren en apenas {{diff0Pct}}%. En este segmento el equipamiento mínimo parece ser el default del mercado — casi todos los monoambientes llegan al portal con algún nivel de mobiliario básico, y la etiqueta "no amoblado" termina conviviendo con listings que en la práctica rondan la misma oferta.
+En <strong>monoambientes</strong>, las rentas medianas declaradas amoblada (USD {{renta0DAmoblado}}) y no amoblada (USD {{renta0DNoAmoblado}}) son casi idénticas en valor nominal. Controlando por m² (ambos grupos tienen mediana cercana a 37 m², así que no hay sesgo de tamaño), la prima real del mobiliario es de apenas <strong>~8.5% en renta por m²</strong>. Cifra modesta — la intuición del broker suele ser superior. <strong>Importante:</strong> no controlamos por año de construcción, piso ni amenidades del edificio; un monoambiente nuevo con amenidades puede caer a cualquiera de los dos grupos. La lectura operativa para el propietario: amueblar un monoambiente no sube la renta mucho; el retorno viene de reducir vacancia y facilitar rotación.
 
 ## s8.anomalia_p2
-En 1 dormitorio aparece la inversión: los listings que declaran "amoblado" tienen mediana USD {{renta1DAmoblado}}, <strong>menor</strong> que los que declaran "no amoblado" USD {{renta1DNoAmoblado}}. Contraintuitivo en teoría — el mobiliario debería agregar valor —, consistente con que "amoblado" en portales boliviano es una etiqueta imprecisa que mezcla producto más chico, más antiguo o con menor terminación. En 2 dormitorios la relación vuelve al orden esperado (amoblado USD {{renta2DAmoblado}} vs no amoblado USD {{renta2DNoAmoblado}}), pero con muestras chicas que obligan a leer la diferencia con cautela.
+En 1 dormitorio la relación se invierte: los listings "amoblados" tienen mediana USD {{renta1DAmoblado}}, <strong>menor</strong> que los "no amoblados" USD {{renta1DNoAmoblado}}. Contraintuitivo — el mobiliario debería agregar valor — y casi seguramente efecto de composición: el segmento amoblado en 1D captura un pool distinto (posiblemente unidades más viejas o con menor terminación) que el no amoblado. En 2 dormitorios la relación vuelve al orden esperado (amoblado USD {{renta2DAmoblado}} vs no amoblado USD {{renta2DNoAmoblado}}), pero muestra chica obliga a leer con cautela.
 
 ## s8.anomalia_cierre
 Para un inversionista interesado en renta, la conclusión operativa es: <strong>no usar los promedios de renta publicados de esta edición para calcular yield</strong>. Usar la tabla desagregada solo como referencia directa del segmento que mejor coincida con el producto evaluado, y siempre aplicar descuento típico de cierre (10-20% por debajo de publicado).
@@ -209,16 +209,16 @@ Para un inversionista interesado en renta, la conclusión operativa es: <strong>
 ---
 
 ## s9.lead
-Un analista serio exhibe sus límites. Esta sección lista las métricas que un lector podría esperar en un reporte de mercado inmobiliario, y por qué esta edición no las presenta.
+Un analista serio declara sus límites. Esta edición no publica:
 
 ## s9.no_presentamos
 [
-  {"titulo": "Tasa de absorción / Meses de inventario", "cuerpo": "La serie diaria de absorción disponible cambió de metodología el 14 de abril de 2026. La nueva serie (filter_version 3) tiene pocos días. Una métrica de absorción publicada requiere al menos 90 días de serie estable. Se incorporará en la edición de julio 2026."},
-  {"titulo": "Yield / Cap rate / Retorno de inversión", "cuerpo": "Calcular retorno requiere precios de cierre (no tenemos), rentas efectivas (no tenemos) y vacancia medida (no tenemos). El ratio entre precios publicados de venta y rentas publicadas es un indicador bruto con doble incertidumbre. No lo presentamos como retorno para no legitimar interpretaciones que los datos no sostienen."},
-  {"titulo": "Tasa de vacancia", "cuerpo": "Cero datos empíricos de vacancia en {{zonaLabel}}. Cualquier número publicado sería conjetura. Lo declaramos explícitamente."},
-  {"titulo": "Apreciación / Proyección de precios", "cuerpo": "SICI tiene menos de 3 meses de serie longitudinal de precios comparable. Proyectar apreciación con esa ventana es inválido. La primera serie año-sobre-año publicable será en enero 2027."},
-  {"titulo": "Precio de cierre real", "cuerpo": "Todo lo reportado son precios de publicación. La brecha típica entre publicación y cierre es 5-15% en venta y 10-20% en alquiler. Lo declaramos consistentemente a lo largo del documento."},
-  {"titulo": "Ranking de 'mejores zonas para invertir'", "cuerpo": "Un ranking de inversión requiere tesis de retorno. Sin retorno calculable (ver arriba), un ranking sería sugerir una conclusión que la data no sostiene. No publicamos rankings editoriales de zonas."}
+  {"titulo": "Tasa de absorción y meses de inventario", "cuerpo": "La serie actual tiene menos de 90 días. Incorporación prevista julio 2026."},
+  {"titulo": "Yield, cap rate o retorno de inversión", "cuerpo": "Requiere precio de cierre, renta efectiva y vacancia — tres variables que no tenemos."},
+  {"titulo": "Tasa de vacancia", "cuerpo": "Cero data empírica. Cualquier número sería conjetura."},
+  {"titulo": "Apreciación o proyección de precios", "cuerpo": "Menos de 3 meses de serie longitudinal comparable. YoY publicable enero 2027."},
+  {"titulo": "Precio de cierre real", "cuerpo": "Todo lo reportado es precio de publicación. Brecha típica al cierre: 5-15% venta, 10-20% alquiler."},
+  {"titulo": "Ranking de zonas para invertir", "cuerpo": "Sin retorno calculable, un ranking sería opinión disfrazada de análisis."}
 ]
 
 ## s9.agenda

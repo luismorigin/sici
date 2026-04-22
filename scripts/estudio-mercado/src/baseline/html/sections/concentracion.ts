@@ -73,9 +73,9 @@ ${filas}
   }).join('\n')
 
   return `
-<!-- 7. CONCENTRACIÓN POR DESARROLLADORA -->
+<!-- 6. CONCENTRACIÓN POR DESARROLLADORA -->
 <section id="s7">
-  <span class="section-num">07 · Concentración</span>
+  <span class="section-num">06 · Concentración</span>
   <h2>Quién construye qué, dónde</h2>
   <p class="lead">${narrativa.render('s7.lead', vars)}</p>
 

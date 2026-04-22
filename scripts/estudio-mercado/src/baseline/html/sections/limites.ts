@@ -20,23 +20,24 @@ export function renderLimites(data: BaselineResult, narrativa: NarrativaRenderer
   const agendaHTML = agenda.map(item => `    <tr><td>${item.edicion}</td><td>${item.fecha}</td><td>${item.incorpora}</td></tr>`).join('\n')
 
   return `
-<!-- 9. LO QUE NO AFIRMA + AGENDA -->
+<!-- 8. LO QUE NO AFIRMA + AGENDA -->
 <section id="s9">
-  <span class="section-num">09 · Límites · Agenda</span>
-  <h2>Lo que este reporte no afirma</h2>
+  <span class="section-num">08 · Límites</span>
+  <h2>Lo que este reporte NO afirma</h2>
   <p class="lead">${narrativa.render('s9.lead', vars)}</p>
 
   <div class="rojo-list">
-    <h4>No presentamos · con razón explícita</h4>
 ${noItemsHTML}
   </div>
 
-  <h2 style="margin-top:48px;">Agenda de próximas ediciones</h2>
-  <table>
-    <tr><th>Edición</th><th>Fecha estimada</th><th>Incorpora</th></tr>
+  <details class="details-table">
+    <summary>Ver agenda de próximas ediciones</summary>
+    <table>
+      <tr><th>Edición</th><th>Fecha estimada</th><th>Incorpora</th></tr>
 ${agendaHTML}
-  </table>
-  <p class="muted">${narrativa.render('s9.agenda_nota', vars)}</p>
+    </table>
+    <p class="muted">${narrativa.render('s9.agenda_nota', vars)}</p>
+  </details>
 </section>
 `
 }

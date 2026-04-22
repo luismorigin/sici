@@ -138,9 +138,9 @@ export function renderSubmercados(data: BaselineResult, narrativa: NarrativaRend
   const col2 = perfilesHTML.slice(mid).join('\n')
 
   return `
-<!-- 4. LOS SUBMERCADOS -->
+<!-- 3. LOS SUBMERCADOS -->
 <section id="s4">
-  <span class="section-num">04 · Los submercados</span>
+  <span class="section-num">03 · Los submercados</span>
   <h2>${data.panorama.totalZonas} polígonos, ${data.panorama.totalZonas} dinámicas</h2>
   <p class="lead">${narrativa.render('s4.lead', vars)}</p>
 

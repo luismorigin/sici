@@ -34,10 +34,11 @@ export function renderMetodologia(data: BaselineResult, narrativa: NarrativaRend
   }
 
   return `
-<!-- 2. METODOLOGÍA -->
+<!-- APÉNDICE · METODOLOGÍA -->
 <section id="s2">
-  <span class="section-num">02 · Metodología</span>
-  <h2>Qué miramos, qué no, con qué filtros</h2>
+  <span class="section-num">Apéndice · Metodología</span>
+  <h2>Cómo se hizo este reporte</h2>
+  <p class="lead">Para el lector que quiera auditar. Filtros aplicados, decisiones editoriales y fechas de corte que producen los números de las secciones anteriores.</p>
 
   <h3>Universo observable</h3>
   <p>${narrativa.render('s2.universo_p1', vars)}</p>

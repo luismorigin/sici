@@ -8,6 +8,8 @@ export function renderCover(data: BaselineResult, narrativa: NarrativaRenderer):
     zonasCount: data.panorama.totalZonas,
     fechaCorte: data.config.fechaCorte,
     edicion: data.config.edicion,
+    totalVenta: data.panorama.totalVenta,
+    totalAlquiler: data.panorama.totalAlquiler,
   }
 
   return `
