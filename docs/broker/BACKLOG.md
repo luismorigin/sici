@@ -126,6 +126,16 @@ Ideas, features y mejoras parqueadas para después del MVP.
 
 ---
 
+## Bugs / deuda técnica detectada
+
+### Detector TC sobre-atribuye 'oficial' cuando listing solo dice "USD"
+**Tier:** bug — investigar post-MVP
+**Agregado:** 2026-04-22
+**Rationale:** Props como Sky Level 1584 tienen descripción que solo dice "USD 141,000.00" sin calificar oficial/paralelo. El detector (regex + LLM upgrade merge v2.5.0) las marca como `tipo_cambio_detectado = 'oficial'` cuando deberían quedar `'no_especificado'`. Consecuencia: escapan al badge "Confirmar TC" aunque su precio esté claramente debajo de mediana.
+**Impacto estimado:** probablemente decenas de props en el feed. Requiere auditoría del detector + posible ajuste del prompt LLM.
+**Workaround:** fix manual por propiedad con UPDATE + `campos_bloqueados`. Ver sesión 2026-04-22.
+**Cuándo reactivar:** post-MVP broker, como sub-proyecto de calidad de datos.
+
 ## Features data / metodología
 
 ### Yield a nivel edificio individual
