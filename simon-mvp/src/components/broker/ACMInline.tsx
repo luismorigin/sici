@@ -59,7 +59,7 @@ export default function ACMInline({ propiedadId, tcSospechoso = false }: ACMInli
   if (loading) {
     return (
       <div className="bs-section">
-        <div className="bs-acm-label"><span className="bs-sl-dot" />Análisis de mercado</div>
+        <div className="bs-acm-label"><span className="bs-sl-dot" />Análisis Comparativo de Mercado</div>
         <div className="bs-acm-skeleton">Cargando...</div>
         <style jsx>{`
           .bs-acm-label { font-size:13px; font-weight:600; color:#7A7060; letter-spacing:0.5px; margin-bottom:14px; font-family:'DM Sans',sans-serif; text-transform:uppercase; display:flex; align-items:center; gap:8px }
@@ -85,7 +85,7 @@ export default function ACMInline({ propiedadId, tcSospechoso = false }: ACMInli
 
   return (
     <div className="bs-section">
-      <div className="bs-acm-label"><span className="bs-sl-dot" />Análisis de mercado</div>
+      <div className="bs-acm-label"><span className="bs-sl-dot" />Análisis Comparativo de Mercado</div>
 
       {/* Warning TC sospechoso — prioridad visual arriba del bloque */}
       {tcSospechoso && (
