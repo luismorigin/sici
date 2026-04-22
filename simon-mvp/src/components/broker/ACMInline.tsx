@@ -14,6 +14,7 @@ import type { ACMData } from '@/pages/api/acm'
 
 interface ACMInlineProps {
   propiedadId: number
+  tcSospechoso?: boolean
 }
 
 function fmtUSD(n: number): string {
@@ -24,7 +25,7 @@ function fmtM2(n: number): string {
   return '$' + Math.round(n).toLocaleString('en-US') + '/m²'
 }
 
-export default function ACMInline({ propiedadId }: ACMInlineProps) {
+export default function ACMInline({ propiedadId, tcSospechoso = false }: ACMInlineProps) {
   const [data, setData] = useState<ACMData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -85,6 +86,18 @@ export default function ACMInline({ propiedadId }: ACMInlineProps) {
   return (
     <div className="bs-section">
       <div className="bs-acm-label"><span className="bs-sl-dot" />Análisis de mercado</div>
+
+      {/* Warning TC sospechoso — prioridad visual arriba del bloque */}
+      {tcSospechoso && (
+        <div className="bs-acm-warn">
+          <div className="bs-acm-warn-title">⚠ Precio sospechoso — confirmar tipo de cambio</div>
+          <div className="bs-acm-warn-text">
+            Esta propiedad cotiza más del 28% debajo de la mediana de su tipología.
+            El precio podría estar en dólar paralelo no declarado. Verificar con el broker
+            antes de usar este análisis como referencia.
+          </div>
+        </div>
+      )}
 
       {/* Precio/m² vs cohort */}
       <div className="bs-acm-row">
@@ -169,6 +182,9 @@ export default function ACMInline({ propiedadId }: ACMInlineProps) {
         .bs-acm-sub.neg { color:#C97979 }
         .bs-acm-yield { background:rgba(200,180,120,0.04); margin:4px -16px; padding:10px 16px; border-radius:8px; border:1px solid rgba(200,180,120,0.15); border-bottom:1px solid rgba(200,180,120,0.15) !important }
         .bs-acm-disclaimer { grid-column:1 / 3; font-size:11px; color:#7A7060; margin-top:6px; font-style:italic; line-height:1.4 }
+        .bs-acm-warn { background:rgba(180,130,20,0.08); border:1px solid rgba(180,130,20,0.3); border-radius:10px; padding:12px 14px; margin-bottom:14px; font-family:'DM Sans',sans-serif }
+        .bs-acm-warn-title { font-size:13px; font-weight:600; color:#C9A04A; letter-spacing:0.2px; margin-bottom:6px }
+        .bs-acm-warn-text { font-size:12px; line-height:1.5; color:rgba(237,232,220,0.85) }
       `}</style>
     </div>
   )

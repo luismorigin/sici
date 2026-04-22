@@ -919,7 +919,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
           </div>
 
           {/* ACM inline — solo en modo broker */}
-          {brokerMode && <ACMInline propiedadId={p.id} />}
+          {brokerMode && <ACMInline propiedadId={p.id} tcSospechoso={p.tc_sospechoso} />}
 
           {/* Amenidades */}
           {amenities.length > 0 && (
