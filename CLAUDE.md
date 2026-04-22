@@ -53,6 +53,7 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 10. **Queries de mercado ad-hoc** — SIEMPRE usar `v_mercado_venta` o `v_mercado_alquiler` (migración 193, fix 203, filtro 150d migración 207). NUNCA escribir filtros canónicos a mano contra `propiedades_v2`. Las vistas pre-aplican todos los filtros y exponen `precio_m2`, `precio_norm`, `dias_en_mercado` (venta) y `precio_mensual` = `ROUND(precio_mensual_bob / 6.96, 2)` (alquiler, derivado de BOB — fuente de verdad). `v_mercado_alquiler` filtra a ≤150 días — para inventario estancado consultar `propiedades_v2` directo. En alquiler usar `precio_mensual_bob` para display en Bs, `precio_mensual` para cálculos en USD. NUNCA `precio_usd`.
 12. **Absorción de mercado** — `market_absorption_snapshots` tiene 3 series (`filter_version`): v1 (rota, no usar), v2 (absorbidas backfilled pero inventario con filtro 300d), v3 (limpia, desde 14 Abr 2026). Al presentar datos de absorción: (a) declarar qué `filter_version` se usa, (b) v3 necesita ≥90 días para ser estable — antes de eso presentar como "rotación observada" con caveats, (c) absorbida ≠ vendida (puede ser listing expirado o retirado), (d) NUNCA presentar "meses de inventario" como predicción. Ver `docs/canonical/ABSORCION_LIMITACIONES.md` para detalle completo de cortes de datos y qué es verde/amarillo/rojo.
 11. **Días en mercado (venta)** — NUNCA usar `fecha_discovery` para calcular antigüedad. `fecha_discovery` se pisa con `NOW()` cada noche por el pipeline. Usar `dias_en_mercado` de la vista (calcula `CURRENT_DATE - COALESCE(fecha_publicacion, fecha_discovery)`), o `fecha_publicacion` directo si se consulta `propiedades_v2`. `fecha_creacion` es proxy aceptable solo si `fecha_publicacion` es NULL.
+13. **Seguridad Supabase / RLS** — Antes de crear API routes con Supabase, habilitar RLS, dropear tablas, o crear views/funciones RPC: leer `docs/canonical/SEGURIDAD_SUPABASE.md`. Reglas clave: service_role en API server-side (nunca anon, nunca con prefijo `NEXT_PUBLIC_`), rename a `_trash_*` antes de DROP, grep + `pg_stat_user_tables` + `pg_depend` antes de RLS, views sin `SECURITY DEFINER`.
 
 ## Zonas Canonicas (6 zonas)
 
@@ -123,6 +124,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Indice migraciones** | `docs/migrations/MIGRATION_INDEX.md` |
 | **Backlog calidad datos** | `docs/backlog/CALIDAD_DATOS_BACKLOG.md` |
 | **Backlog RLS Supabase** | `docs/backlog/SUPABASE_RLS_BACKLOG.md` — remediación linter, DROP `_trash_*` programado 29 abr |
+| **Seguridad Supabase (reglas)** | `docs/canonical/SEGURIDAD_SUPABASE.md` — checklists antes de RLS, DROP, API routes, views, funciones RPC |
 | **Deuda tecnica** | `docs/backlog/DEUDA_TECNICA.md` |
 | **Retención usuarios** | `docs/backlog/RETENCION_USUARIOS.md` — Google OAuth, favoritos BD, alertas email (6 fases) |
 | **Casas y Terrenos PRD** | `docs/backlog/CASAS_TERRENOS_PRD.md` — Fases 1-2 completadas, pipeline independiente, feed público pendiente (Fase 3) |
