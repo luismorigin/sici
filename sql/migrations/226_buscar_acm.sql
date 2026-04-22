@@ -11,6 +11,9 @@
 -- Yield cohort = misma zona + mismos dormitorios (alquileres ≤150d)
 --
 -- Alimentación del ACM inline en sheet del modo broker (docs/broker/PRD.md F1.1).
+-- v2 (226): LANGUAGE sql puro para evitar conflictos PL/pgSQL variable/column.
+
+DROP FUNCTION IF EXISTS public.buscar_acm(INTEGER);
 
 CREATE OR REPLACE FUNCTION public.buscar_acm(p_propiedad_id INTEGER)
 RETURNS TABLE(
@@ -37,72 +40,63 @@ RETURNS TABLE(
   rango_valor_high NUMERIC,
   historico_precios JSONB
 )
-LANGUAGE plpgsql
+LANGUAGE sql
+STABLE
 AS $$
-DECLARE
-  v_prop_zona TEXT;
-  v_prop_dorms INTEGER;
-  v_prop_estado TEXT;
-  v_prop_proyecto INTEGER;
-  v_prop_precio_norm NUMERIC;
-  v_prop_area NUMERIC;
-  v_prop_precio_m2 NUMERIC;
-  v_prop_dias INTEGER;
-BEGIN
-  -- 1) Obtener datos base de la propiedad desde v_mercado_venta
-  SELECT zona, dormitorios, estado_construccion::TEXT, id_proyecto_master, precio_norm, area_total_m2, precio_m2, dias_en_mercado
-    INTO v_prop_zona, v_prop_dorms, v_prop_estado, v_prop_proyecto, v_prop_precio_norm, v_prop_area, v_prop_precio_m2, v_prop_dias
-  FROM v_mercado_venta
-  WHERE id = p_propiedad_id;
-
-  IF NOT FOUND THEN
-    RETURN;
-  END IF;
-
-  RETURN QUERY
-  WITH cohort AS (
-    SELECT v.id, v.precio_m2, v.dias_en_mercado
+  WITH prop AS (
+    SELECT
+      v.id,
+      v.zona AS p_zona,
+      v.dormitorios AS p_dorms,
+      v.estado_construccion::TEXT AS p_estado,
+      v.id_proyecto_master AS p_proyecto,
+      v.precio_norm AS p_precio_norm,
+      v.area_total_m2 AS p_area,
+      v.precio_m2 AS p_precio_m2,
+      v.dias_en_mercado AS p_dias
     FROM v_mercado_venta v
-    WHERE v.zona = v_prop_zona
-      AND v.dormitorios = v_prop_dorms
-      AND v.estado_construccion::TEXT = v_prop_estado
+    WHERE v.id = p_propiedad_id
+  ),
+  cohort AS (
+    SELECT v.precio_m2 AS c_precio_m2, v.dias_en_mercado AS c_dias
+    FROM v_mercado_venta v, prop
+    WHERE v.zona = prop.p_zona
+      AND v.dormitorios = prop.p_dorms
+      AND v.estado_construccion::TEXT = prop.p_estado
   ),
   cohort_stats AS (
     SELECT
       COUNT(*)::INTEGER AS n,
-      PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY c.precio_m2) AS mediana_m2,
-      PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY c.precio_m2) AS p25_m2,
-      PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY c.precio_m2) AS p75_m2,
-      PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY c.dias_en_mercado) AS mediana_dias
-    FROM cohort c
+      PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY c_precio_m2)::NUMERIC AS mediana_m2,
+      PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY c_precio_m2)::NUMERIC AS p25_m2,
+      PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY c_precio_m2)::NUMERIC AS p75_m2,
+      PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY c_dias)::NUMERIC AS mediana_dias
+    FROM cohort
   ),
   percentil AS (
-    -- Percentil de esta propiedad dentro del cohort (basado en precio_m2)
-    SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE c.precio_m2 <= v_prop_precio_m2) / NULLIF(COUNT(*), 0))::INTEGER AS pct
-    FROM cohort c
+    SELECT
+      ROUND(100.0 * COUNT(*) FILTER (WHERE c.c_precio_m2 <= prop.p_precio_m2) / NULLIF(COUNT(*), 0))::INTEGER AS pct
+    FROM cohort c, prop
   ),
   torre AS (
-    -- Ranking dentro del mismo proyecto (solo si hay id_proyecto_master y >=2 unidades)
     SELECT
       COUNT(*)::INTEGER AS total,
-      COUNT(*) FILTER (WHERE t.precio_m2 < v_prop_precio_m2)::INTEGER + 1 AS pos
-    FROM v_mercado_venta t
-    WHERE v_prop_proyecto IS NOT NULL
-      AND t.id_proyecto_master = v_prop_proyecto
-      AND t.dormitorios = v_prop_dorms
+      (COUNT(*) FILTER (WHERE t.precio_m2 < prop.p_precio_m2) + 1)::INTEGER AS pos
+    FROM v_mercado_venta t, prop
+    WHERE prop.p_proyecto IS NOT NULL
+      AND t.id_proyecto_master = prop.p_proyecto
+      AND t.dormitorios = prop.p_dorms
   ),
   yield_cohort AS (
-    -- Cohort alquiler: misma zona + mismos dorms (alquileres ≤150d ya filtrado por la vista)
     SELECT
       COUNT(*)::INTEGER AS n,
-      PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY a.precio_mensual) AS alq_p25,
-      PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY a.precio_mensual) AS alq_p75
-    FROM v_mercado_alquiler a
-    WHERE a.zona = v_prop_zona
-      AND a.dormitorios = v_prop_dorms
+      PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY a.precio_mensual)::NUMERIC AS alq_p25,
+      PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY a.precio_mensual)::NUMERIC AS alq_p75
+    FROM v_mercado_alquiler a, prop
+    WHERE a.zona = prop.p_zona
+      AND a.dormitorios = prop.p_dorms
   ),
   historico AS (
-    -- Ultimos cambios de precio (precios_historial)
     SELECT COALESCE(
       jsonb_agg(jsonb_build_object('fecha', h.fecha, 'precio_usd', h.precio_usd) ORDER BY h.fecha),
       '[]'::jsonb
@@ -112,36 +106,35 @@ BEGIN
   )
   SELECT
     p_propiedad_id,
-    ROUND(v_prop_precio_norm, 0),
-    ROUND(v_prop_precio_m2, 0),
-    ROUND(v_prop_area, 0),
-    v_prop_dorms,
-    v_prop_zona,
-    v_prop_estado,
-    v_prop_dias,
+    ROUND(prop.p_precio_norm, 0),
+    ROUND(prop.p_precio_m2, 0),
+    ROUND(prop.p_area, 0),
+    prop.p_dorms,
+    prop.p_zona,
+    prop.p_estado,
+    prop.p_dias,
     cs.n,
     ROUND(cs.mediana_m2, 0),
     ROUND(cs.p25_m2, 0),
     ROUND(cs.p75_m2, 0),
-    p.pct,
-    ROUND(cs.mediana_dias)::INTEGER,
+    pct.pct,
+    ROUND(cs.mediana_dias, 0)::INTEGER,
     CASE WHEN t.total >= 2 THEN t.pos END,
     CASE WHEN t.total >= 2 THEN t.total END,
     yc.n,
-    CASE WHEN yc.n >= 5 THEN ROUND((yc.alq_p25 * 12 / NULLIF(v_prop_precio_norm, 0) * 100)::NUMERIC, 1) END,
-    CASE WHEN yc.n >= 5 THEN ROUND((yc.alq_p75 * 12 / NULLIF(v_prop_precio_norm, 0) * 100)::NUMERIC, 1) END,
-    ROUND(cs.p25_m2 * v_prop_area, 0),
-    ROUND(cs.p75_m2 * v_prop_area, 0),
+    CASE WHEN yc.n >= 5 THEN ROUND((yc.alq_p25 * 12 / NULLIF(prop.p_precio_norm, 0) * 100), 1) END,
+    CASE WHEN yc.n >= 5 THEN ROUND((yc.alq_p75 * 12 / NULLIF(prop.p_precio_norm, 0) * 100), 1) END,
+    ROUND(cs.p25_m2 * prop.p_area, 0),
+    ROUND(cs.p75_m2 * prop.p_area, 0),
     h.data
-  FROM cohort_stats cs
-  CROSS JOIN percentil p
-  CROSS JOIN torre t
+  FROM prop
+  CROSS JOIN cohort_stats cs
+  CROSS JOIN percentil pct
+  LEFT JOIN torre t ON TRUE
   CROSS JOIN yield_cohort yc
   CROSS JOIN historico h;
-END;
 $$;
 
--- Permisos: claude_readonly y service_role pueden llamar
 GRANT EXECUTE ON FUNCTION public.buscar_acm(INTEGER) TO anon, authenticated, service_role;
 
 COMMENT ON FUNCTION public.buscar_acm(INTEGER) IS
