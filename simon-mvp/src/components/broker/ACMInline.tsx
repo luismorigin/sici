@@ -78,6 +78,7 @@ export default function ACMInline({ propiedadId }: ACMInlineProps) {
     : 0
   const diasDelta = data.dias_en_mercado - data.cohort_mediana_dias
   const tipologia = `${data.dormitorios === 0 ? 'monoambiente' : `${data.dormitorios} dormitorio${data.dormitorios === 1 ? '' : 's'}`}, ${data.estado_construccion === 'preventa' ? 'preventa' : 'entrega inmediata'}`
+  const tipologiaCorta = `${data.dormitorios === 0 ? 'monoambiente' : `${data.dormitorios} dorm`} ${data.estado_construccion === 'preventa' ? 'preventa' : 'entrega'}`
   const uniqueM2Precios = new Set(data.historico_precios?.map(h => h.precio_usd) || [])
   const cambiosPrecio = Math.max(0, uniqueM2Precios.size - 1)
 
@@ -90,9 +91,9 @@ export default function ACMInline({ propiedadId }: ACMInlineProps) {
         <div className="bs-acm-k">Precio por m²</div>
         <div className="bs-acm-v">{fmtM2(data.precio_m2)}</div>
         <div className={`bs-acm-sub ${m2Delta > 0 ? 'neg' : m2Delta < 0 ? 'pos' : ''}`}>
-          {m2Delta === 0 ? 'Alineado con el promedio de la zona'
-            : m2Delta > 0 ? `${m2Delta}% sobre el promedio de la zona`
-            : `${Math.abs(m2Delta)}% debajo del promedio de la zona`}
+          {m2Delta === 0 ? `Alineado con el promedio de ${tipologiaCorta} en la zona`
+            : m2Delta > 0 ? `${m2Delta}% sobre el promedio de ${tipologiaCorta} en la zona`
+            : `${Math.abs(m2Delta)}% debajo del promedio de ${tipologiaCorta} en la zona`}
         </div>
       </div>
 
@@ -108,7 +109,7 @@ export default function ACMInline({ propiedadId }: ACMInlineProps) {
         <div className="bs-acm-k">Tiempo publicado</div>
         <div className="bs-acm-v">{data.dias_en_mercado} días</div>
         <div className="bs-acm-sub">
-          Promedio de la zona: {data.cohort_mediana_dias} días
+          Promedio de {tipologiaCorta} en la zona: {data.cohort_mediana_dias} días
           {diasDelta > 30 ? ' · está estancada' : diasDelta < -30 ? ' · recién publicada' : ''}
         </div>
       </div>
