@@ -104,6 +104,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | Proposito | Archivo |
 |-----------|---------|
 | **Product Brief Simón** | `docs/producto/SIMON_PRODUCT_BRIEF.md` — superficies, estado producción vs construido, capacidades, limitaciones |
+| **Simon Broker (MVP en curso)** | `docs/broker/` — PRD, backlog, decisiones. MVP 3 semanas sin login, slug en URL (`/broker/[slug]`), shortlists compartibles + ACM inline + dashboard mercado interno |
 | **Arquitectura SICI** | `docs/arquitectura/SICI_ARQUITECTURA_MAESTRA.md` |
 | **Simon Arquitectura** | `docs/simon/SIMON_ARQUITECTURA_COGNITIVA.md` |
 | **Metodologia Fiduciaria** | `docs/canonical/METODOLOGIA_FIDUCIARIA_PARTE_*.md` |

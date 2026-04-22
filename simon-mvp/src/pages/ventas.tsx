@@ -39,12 +39,14 @@ function formatFechaCortaSEO(dateStr: string): string {
 
 const PhotoViewer = dynamic(() => import('@/components/alquiler/PhotoViewer'), { ssr: false })
 const VentaMap = dynamic(() => import('@/components/venta/VentaMap'), { ssr: false })
+const CompareSheet = dynamic(() => import('@/components/venta/CompareSheet'), { ssr: false })
 
 // ===== Constants =====
 const MIN_PRICE = 30000
 const MAX_PRICE = 400000
 const PRICE_STEP = 10000
 const FILTER_CARD_POSITION = 1 // legacy — kept for reference
+const MAX_FAVORITES = 3
 
 const VIRTUAL_WINDOW = 3
 const ORDEN_OPTIONS: Array<{ value: FiltrosVentaSimple['orden']; label: string }> = [
@@ -1064,6 +1066,7 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
   const [totalCount, setTotalCount] = useState(initialProperties.length)
   const [unfilteredCount, setUnfilteredCount] = useState(initialProperties.length)
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
+  const [compareOpen, setCompareOpen] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
   const [activeCardIndex, setActiveCardIndex] = useState(0)
@@ -1187,19 +1190,41 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
   }
   function toggleFavorite(id: number) {
     const isFav = favorites.has(id)
-    trackEvent('toggle_favorite_venta', { property_id: id, action: isFav ? 'remove' : 'add' })
+    if (!isFav && favorites.size >= MAX_FAVORITES) {
+      showToast(`Maximo ${MAX_FAVORITES} favoritos`)
+      return
+    }
+    trackEvent('toggle_favorite_venta', { property_id: id, action: isFav ? 'remove' : 'add', total_favs: isFav ? favorites.size - 1 : favorites.size + 1 })
     setFavorites(prev => {
       const n = new Set(prev)
-      if (n.has(id)) { n.delete(id); showToast('Quitado de favoritos') }
-      else { n.add(id); showToast('Agregado a favoritos') }
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
       return n
     })
+    if (isFav) {
+      showToast('Quitado de favoritos')
+    } else {
+      const newCount = favorites.size + 1
+      if (newCount >= 2) {
+        showToast(`${newCount}/${MAX_FAVORITES} · Podes comparar abajo`)
+      } else {
+        showToast(`Guardado · ${newCount}/${MAX_FAVORITES} favoritos`)
+      }
+    }
   }
   function shareProperty(p: UnidadVenta) {
     const url = `${window.location.origin}/ventas?id=${p.id}`
     navigator.clipboard.writeText(url).then(() => showToast('Link copiado')).catch(() => showToast('No se pudo copiar'))
     trackEvent('share_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona) })
   }
+  function openCompare() {
+    trackEvent('open_compare_venta', { property_ids: Array.from(favorites).join(','), count: favorites.size })
+    setCompareOpen(true)
+  }
+
+  const favoriteProperties = useMemo(() => {
+    return properties.filter(p => favorites.has(p.id))
+  }, [properties, favorites])
 
   const activeFilterCount = useMemo(() => {
     let c = 0
@@ -1346,6 +1371,24 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
         onToggleFavorite={sheetProperty ? () => toggleFavorite(sheetProperty.id) : undefined}
         gateCompleted={gateCompleted} onGate={handleGate} isDesktop={isDesktop}
         properties={properties} onSwapProperty={(p) => setSheetProperty(p)} />
+
+      {/* Compare banner — shows when 2+ favorites */}
+      {favorites.size >= 2 && (
+        <div className="vt-compare-banner-wrap">
+          <button className="vt-compare-banner" onClick={openCompare}>
+            <span className="vt-compare-banner-text">{favorites.size} favorito{favorites.size > 1 ? 's' : ''} · Comparar</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+          <button className="vt-compare-banner-clear" aria-label="Limpiar favoritos" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Favoritos limpiados') }}>&times;</button>
+        </div>
+      )}
+
+      {/* CompareSheet */}
+      <CompareSheet
+        open={compareOpen}
+        properties={favoriteProperties}
+        onClose={() => setCompareOpen(false)}
+      />
 
       {isDesktop ? (
         /* ===== DESKTOP (unchanged) ===== */
@@ -1558,6 +1601,11 @@ export default function VentasPage({ seo, initialProperties = [] }: { seo: Venta
         .fo-apply:active { transform:scale(0.97) }
         .mt-counter { position:fixed; bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px)); right:16px; z-index:50; font-size:12px; color:#7A7060; font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums }
         .mt-map-btn { position:fixed; bottom:max(140px, calc(env(safe-area-inset-bottom) + 130px)); right:20px; z-index:100; width:48px; height:48px; border-radius:50%; background:rgba(20,20,20,0.7); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.2) }
+        .vt-compare-banner-wrap { position:fixed; bottom:max(24px, calc(env(safe-area-inset-bottom) + 16px)); left:50%; transform:translateX(-50%); z-index:150; display:flex; align-items:stretch; gap:6px; max-width:calc(100vw - 32px) }
+        .vt-compare-banner { display:flex; align-items:center; gap:10px; padding:12px 20px; background:#141414; color:#EDE8DC; border:1px solid rgba(237,232,220,0.1); border-radius:100px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; letter-spacing:0.3px; cursor:pointer; box-shadow:0 6px 20px rgba(0,0,0,0.25); min-height:48px; white-space:nowrap; -webkit-tap-highlight-color:transparent }
+        .vt-compare-banner:active { transform:scale(0.97) }
+        .vt-compare-banner-text { font-variant-numeric:tabular-nums }
+        .vt-compare-banner-clear { width:48px; min-height:48px; background:#141414; border:1px solid rgba(237,232,220,0.1); border-radius:50%; color:rgba(237,232,220,0.6); font-size:20px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 20px rgba(0,0,0,0.25) }
         .vt-nudge-pill { position:fixed; bottom:max(90px, calc(env(safe-area-inset-bottom) + 80px)); left:50%; transform:translateX(-50%); z-index:100; display:flex; align-items:center; gap:8px; background:#3A6A48; color:#EDE8DC; padding:12px 16px 12px 18px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.3px; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,0.18); animation:vtNudgeIn 0.3s ease-out }
         .vt-nudge-x { background:none; border:none; color:rgba(237,232,220,0.6); font-size:18px; line-height:1; cursor:pointer; padding:0 0 0 4px }
         @keyframes vtNudgeIn { from{opacity:0;transform:translateX(-50%) translateY(12px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
