@@ -260,27 +260,86 @@ Las tablas `broker_shortlists` tienen lectura pública via `/b/[hash]` sin auth.
 |---|---|---|
 | **S0** | `CompareSheet` en `/ventas` público — componente portado desde alquiler, 4 insights validados con data (TC sospechoso, mejor precio/m², valor por espacio, misma area distinto precio, parqueo diferenciador), cohort comparable strict (mismo dorms + mismo estado normalizado), limite 3 favoritos, banner "Comparar (N)" + boton × limpiar, filas ocultas cuando todas NULL | ✅ **Completado 2026-04-22** (commit `0de872b`) |
 | **S1** | `/broker/[slug]` funcional con feed + modo broker + botón ⭐ (UI no persiste) + RPC `buscar_acm` + ACM inline en sheet | ✅ **Completado 2026-04-22** (commits `c6f3379`, `eb4e919`, `dc984c4`, `97f0917`, `da3bbd9`, `ed2a32d`, `e2f5717`) |
-| **S2** | Tablas shortlists + panel gestión + ruta pública `/b/[hash]` + demo end-to-end (reutiliza CompareSheet ya desplegado en S0) | ⏳ Pendiente — siguiente |
+| **S2** | Tablas shortlists + panel gestión + ruta pública `/b/[hash]` + flujo end-to-end completo (ver detalle abajo) | ✅ **Completado 2026-04-23** (rama `broker-s2-wip`, commit `500e552` + iteraciones) |
 | **S3** | Link a `/mercado/equipetrol` en la página broker + polish + creación de slugs para 3 founders + testing | Pendiente |
+
+### Detalle de S2 entregado (2026-04-23)
+
+**Backend:**
+- Migración **228**: tablas `broker_shortlists` + `broker_shortlist_items` con RLS, sin policy anon (PII), `claude_readonly` SELECT, `view_count` + `last_viewed_at` desde día 1, hash UNIQUE generado en server con `randomBytes(8).base64url`, trigger `updated_at`
+- Migración **229**: `precio_usd_snapshot NUMERIC` (RAW al armar shortlist) en items
+- Migración **230**: `precio_norm_snapshot NUMERIC` (NORMALIZADO al armar) en items
+- API routes `/api/broker/shortlists/{index,[id]}.ts` con `SUPABASE_SERVICE_ROLE_KEY` (bypassea RLS server-side)
+- Helpers: `lib/broker-shortlists.ts` (fetch wrappers), `lib/whatsapp.ts` (wa.me + mensaje default)
+
+**Modo broker en `/broker/[slug]`:**
+- Hook `useBrokerShortlists` (CRUD + abre WA al enviar)
+- Estrella verde reemplaza corazón rojo en cards (toggle marca/desmarca a shortlist)
+- Banner inferior **arena** "Enviar shortlist · N" cuando `favorites.size >= 1`
+- Banner superior **arena** con tipografía Figtree + acento verde salvia: identidad broker + chips:
+  - Toggle Grid/Mapa segmented (visible siempre, no se pierde con scroll)
+  - **Filtros · N** (abre overlay full-screen)
+  - **★ Solo seleccionadas · N** (filtra grid a marcadas)
+  - **+ Marcar las N visibles** (atajo para curar rápido con filtros aplicados)
+  - **Mis shortlists · N** (abre panel)
+- Modal "Enviar shortlist" con `createPortal` + estilos inline (escapa stacking context): nombre cliente + WhatsApp + mensaje editable (default precargado)
+- Panel "Mis shortlists enviadas" con copiar link / reenviar WA / editar / archivar
+- Editor `/broker/[slug]/shortlists/[id]` con thumbnails (foto 80×80 + nombre + zona + dorms + área + precio), reordenar ↑↓, comentario por propiedad, archivar
+- Sin límite de 3 favoritos en modo broker (límite sigue en `/ventas` público para CompareSheet)
+- Layout grid (no TikTok feed) en mobile broker — más eficiente para curar
+- Badges **Century 21** (dorado #BEAF87) y **RE/MAX** (rojo #DC1C2E) en cards SOLO en modo broker
+- Mensaje WA broker→agente del listing (B2B): identifica como broker, menciona franquicia o "broker independiente", incluye specs de la propiedad, link del anuncio original, abre puerta a alternativas
+
+**Página pública `/b/[hash]`:**
+- Reusa `VentasPage` con prop `publicShare` (oculta sidebar/filtros/spotlight/gate/preguntas/WA-agente/"También en zona", forza desktop-grid en mobile, agrega header arena con foto/nombre del broker + botón WhatsApp)
+- SSR con `Cache-Control: s-maxage=60, stale-while-revalidate=300` (CDN cachea, ediciones se reflejan rápido)
+- Tracking `view_count` + `last_viewed_at` server-side
+- `robots.txt`: `Disallow: /b/`, meta `noindex,nofollow` + header `X-Robots-Tag`
+- OG estático para preview en WhatsApp
+- Spotlight cuando se abre con `?id=X` (al compartir una propiedad específica)
+- Compartir cliente: abre WhatsApp directo (no Web Share API que falla en desktop) con link `/b/[hash]?id=X` y texto preview de la propiedad — el cliente elige a quién mandar
+- Botón **"Consultar"** WA en cada card y en el sheet — todos van al broker que comparte (no al agente del listing). Mensajes:
+  - Por propiedad individual: "Hola {Broker}, me interesa esta propiedad: {Proyecto}…"
+  - Desde comparativo (2-3 marcadas): "Hola {Broker}, estoy interesado en estas alternativas: • {Prop A} • {Prop B} • {Prop C} ¿Podemos coordinar?"
+- Mapa accesible vía toggle Grid/Mapa o FAB flotante en mobile + botón "← Volver a la lista" siempre visible al ver mapa
+- Comparativo Express dentro del shortlist: oculta preguntas al broker, "durante la visita" y CTAs WA por propiedad — solo CTA único "Consultar por WhatsApp" al broker que comparte
+
+**Snapshot de precios (badges en cards de `/b/[hash]`):**
+- Distingue **2 tipos de cambio** desde que el broker armó la shortlist:
+  - **Agente cambió precio en portal** (RAW se movió > 1%):
+    - bajó: badge verde "↓ Bajó de $us X"
+    - subió: badge gris "Antes era $us X"
+  - **TC paralelo se movió** (RAW igual, NORMALIZADO cambió > 1%):
+    - "↑ TC paralelo subió · ~$us X" / "↓ TC paralelo bajó · ~$us X" (azul info, font menor)
+- Compara `propiedades_v2.precio_usd` (RAW) actual vs `precio_usd_snapshot` (RAW al armar)
+- Display usa `precio_norm_snapshot` (lo que el cliente vio originalmente) — no marea con números mezclados
+- **Sin confusión por normalización**: el cliente siempre ve el precio normalizado actual; el badge solo agrega contexto sobre qué causó el delta
+
+**Aislamiento confirmado:** todos los cambios condicionados a `brokerMode` o `publicShareMode` (que es `true` solo cuando viene el prop `publicShare` desde `/b/[hash]`). El feed público `/ventas` y la página `/broker/[slug]` desktop mantienen su comportamiento original — no se rompió nada.
 
 **Hito de demo:** final de S2 ya hay producto demo-able (broker arma shortlist, manda link, cliente lo abre).
 
-### Handoff S0 → S1
+### Handoff S2 → S3
 
-**S0 entregado:** CompareSheet vive en `/ventas` público. Feedback de usuarios reales comienza ahora.
+**S2 entregado** (rama `broker-s2-wip`, commit `500e552` + iteraciones del 2026-04-23):
+- Migraciones 228, 229, 230 aplicadas en BD
+- Flujo end-to-end completo: broker arma shortlist en `/broker/demo` → modal envío → WhatsApp directo al cliente con link `/b/[hash]` → cliente abre, navega, marca corazones, compara, comparte propiedades individuales (link queda dentro del shortlist), consulta al broker por WhatsApp
+- Snapshot de precios distingue cambios del agente (badge verde/gris) vs movimientos del TC paralelo (badge azul info)
+- Diseño cleaner: banner arena con tipografía Figtree, segmented control Grid/Mapa, badges Century 21/RE/MAX en cards (solo broker), botón "Consultar" WA en cada card del cliente
+- BD verificada limpia (props de testing revertidas a valores originales)
 
-**Para arrancar S1 necesito:**
+**Para arrancar S3 necesito:**
 
-1. **Luz verde del usuario** para arrancar build de `/broker/[slug]`.
-2. **Lista de slugs founding** — nombres de los 3 primeros brokers del Founding Program (pueden ser tentativos, los creo en BD manualmente). Formato sugerido: `martin-silva`, `ana-vargas`, `juan-perez`. Si no hay aún, arranco con slugs demo (`demo`, `test`).
-3. **Confirmación de branding** en `/broker/[slug]`: ¿muestro Simon en NavBar o escondo marca como el link compartido? Mi default: mostrar Simon porque el broker es usuario interno, no cliente.
+1. **Luz verde del user** para mergear `broker-s2-wip` → `main` y deployar a producción Vercel
+2. **Lista de slugs founding** — nombres de los 3 primeros brokers del Founding Program. Formato sugerido: `martin-silva`, `ana-vargas`, `juan-perez`. Si vienen con franquicia (RE/MAX, Century 21), agregar `inmobiliaria: 'RE/MAX'` en `lib/brokers-demo.ts` (cuando exista tabla `brokers` real, viene de BD)
+3. **Verificar variables de entorno en Vercel**: `SUPABASE_SERVICE_ROLE_KEY` debe estar configurada (la usan las API routes del broker). Probablemente ya está porque otras features la usan, pero conviene confirmar antes del merge
+4. **Confirmación de prioridades S3**:
+   - Link a `/mercado/equipetrol` desde `/broker/[slug]` (1 día)
+   - Polish + creación de slugs reales en BD para los founders (1-2 días)
+   - Testing dirigido con los 3 founders en producción durante 1 semana
+   - Feedback loop activo para iterar antes de la Fase 2 (alquileres)
 
-**Primer archivo que crearía en S1:**
-- `simon-mvp/src/pages/broker/[slug].tsx` — reutiliza el feed `/ventas` con prop `brokerMode={true}` + slug en URL.
-- `simon-mvp/src/hooks/useBrokerMode.ts` — context simple para prop drilling sin volver al feed.
-- Migración SQL para tabla `brokers` (slug, nombre, telefono, foto_url).
-
-**Tiempo S1:** 5-7 días de dev.
+**Tiempo S3:** 3-4 días de dev + 1 semana de feedback con founders activos.
 
 ---
 

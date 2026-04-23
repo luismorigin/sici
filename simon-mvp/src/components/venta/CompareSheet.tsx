@@ -408,11 +408,17 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
         </div>
         )}
 
-        {/* CTA único al broker que comparte (solo publicShareMode) */}
-        {publicShareMode && publicShareBroker && (
+        {/* CTA único al broker que comparte (solo publicShareMode) — lista las propiedades comparadas */}
+        {publicShareMode && publicShareBroker && (() => {
+          const clienteLines = props.map(p => {
+            const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+            return `• ${p.proyecto} (${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
+          }).join('\n')
+          const msg = `Hola ${publicShareBroker.nombre}, estoy interesado en estas alternativas:\n\n${clienteLines}\n\n¿Podemos coordinar?`
+          return (
           <div className="csv-section">
             <a
-              href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${publicShareBroker.nombre}, comparé las propiedades que me enviaste y me gustaría conversar.`)}`}
+              href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`}
               target="_blank" rel="noopener noreferrer"
               style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, background:'#25D366', color:'#fff', padding:'14px 20px', borderRadius:10, textDecoration:'none', fontWeight:600, fontSize:15, fontFamily:"'DM Sans',sans-serif" }}
             >
@@ -420,7 +426,8 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
               Consultar por WhatsApp
             </a>
           </div>
-        )}
+          )
+        })()}
 
         {/* WhatsApp CTAs por propiedad — oculto en publicShareMode */}
         {!publicShareMode && (

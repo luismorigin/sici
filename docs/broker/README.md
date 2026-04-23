@@ -17,10 +17,12 @@ El broker que use Simon tiene que poder defender cualquier número del producto 
 
 ## Estado actual
 
-- **Fase:** scope MVP congelado (2026-04-22)
-- **Cronograma:** 3 semanas de build → demo con 3 brokers del Founding Program
-- **Target founding:** 15-25 brokers en 60-90 días
+- **Fase:** S0, S1 y S2 completados — listo para mergear `broker-s2-wip` → `main` y avanzar a S3
+- **Última actualización:** 2026-04-23
+- **Cronograma:** S3 (link a mercado + slugs founders + testing) pendiente — 3-4 días dev + 1 semana feedback
+- **Target founding:** 15-25 brokers en 60-90 días post-deploy
 - **Auth:** no al inicio (slug en URL). Se agrega cuando crezca la base o haya datos sensibles.
+- **Migraciones aplicadas:** 228 (tablas), 229 (snapshot RAW), 230 (snapshot normalizado)
 
 ## Cómo trabajar con esta carpeta
 

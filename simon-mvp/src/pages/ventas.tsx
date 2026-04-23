@@ -268,10 +268,13 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 }
 
 // ===== Desktop VentaCard =====
-function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst, brokerMode, onAddToShortlist, publicShareMode = false }: {
+function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null }: {
   property: UnidadVenta; isFavorite: boolean; isFirst?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
   brokerMode?: boolean; onAddToShortlist?: () => void; publicShareMode?: boolean
+  brokerInfo?: { nombre: string; inmobiliaria?: string | null } | null
+  publicShareBroker?: { nombre: string; telefono: string } | null
+  priceSnapshot?: { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null } | null
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = p.fotos_urls?.length > 0 ? p.fotos_urls : []
@@ -310,6 +313,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
         <div className="vc-zona">{displayZona(p.zona)} <span className="vc-id">#{p.id}</span></div>
         <div className="vc-price-block">
           <div className="vc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="vc-tc">(T.C. oficial)</span></div>
+          {(() => { const b = priceChangeBadge(priceSnapshot, p.precio_usd); return b ? <div className={`vc-price-change vc-price-change-${b.kind}`}>{b.label}</div> : null })()}
           <div className="vc-specs">{[
             p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
             p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
@@ -337,18 +341,27 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
               </svg>
             )}
           </button>
-          <button className="vc-act-btn" aria-label="Compartir" onClick={onShare}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
-              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-            </svg> Compartir
-          </button>
+          {!brokerMode && (
+            <button className="vc-act-btn" aria-label="Compartir" onClick={onShare}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg> Compartir
+            </button>
+          )}
           <button className="vc-act-btn vc-act-detail" aria-label="Ver detalles" onClick={onDetails}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
+          {publicShareMode && publicShareBroker && (
+            <a href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerMessage(p, publicShareBroker.nombre))}`}
+              target="_blank" rel="noopener noreferrer" className="vc-act-btn vc-act-wsp">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="#1EA952"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              Consultar
+            </a>
+          )}
           {!publicShareMode && p.agente_telefono && (
-            <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi ${p.proyecto} en Simon y me gustaría más información\n${p.url || ''}`)}`}
+            <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(buildAgentWaMessage(p, brokerInfo))}`}
               target="_blank" rel="noopener noreferrer" className="vc-act-btn vc-act-wsp"
               onClick={() => trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'card_desktop' })}>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="#1EA952"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -362,10 +375,13 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
 }
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
-function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, brokerMode, onAddToShortlist, publicShareMode = false }: {
+function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null }: {
   property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean; isFirst?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
   brokerMode?: boolean; onAddToShortlist?: () => void; publicShareMode?: boolean
+  brokerInfo?: { nombre: string; inmobiliaria?: string | null } | null
+  publicShareBroker?: { nombre: string; telefono: string } | null
+  priceSnapshot?: { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null } | null
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -454,6 +470,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
         <div className="mc-zona">{displayZona(p.zona)} <span className="mc-id">#{p.id}</span></div>
         <div className="mc-price-block">
           <div className="mc-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="mc-tc">(T.C. oficial)</span></div>
+          {(() => { const b = priceChangeBadge(priceSnapshot, p.precio_usd); return b ? <div className={`mc-price-change mc-price-change-${b.kind}`}>{b.label}</div> : null })()}
           <div className="mc-specs">{[
             p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
             p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
@@ -481,18 +498,22 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
               </svg>
             )}
           </button>
-          <button className="mc-btn mc-share" aria-label="Compartir" onClick={onShare}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
-              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-            </svg>
-          </button>
+          {!brokerMode && (
+            <button className="mc-btn mc-share" aria-label="Compartir" onClick={onShare}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+            </button>
+          )}
           <button className="mc-btn mc-info" onClick={onDetails}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
-          {!publicShareMode && p.agente_telefono && (
-            <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi este departamento en Simon y me interesa: ${p.proyecto} - $us ${Math.round(p.precio_usd).toLocaleString('en-US')}${p.url ? '\n' + p.url : ''}`)}`}
+          {((publicShareMode && publicShareBroker) || (!publicShareMode && p.agente_telefono)) && (
+            <a href={publicShareMode && publicShareBroker
+              ? `https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerMessage(p, publicShareBroker.nombre))}`
+              : `https://wa.me/${p.agente_telefono!.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(buildAgentWaMessage(p, brokerInfo))}`}
               target="_blank" rel="noopener noreferrer" className="mc-btn mc-wsp-inline"
               onClick={() => trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'card_mobile' })}>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -745,13 +766,16 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 }
 
 // ===== Bottom Sheet =====
-function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty, brokerMode = false, onAddToShortlist, publicShareBroker = null }: {
+function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty, brokerMode = false, onAddToShortlist, publicShareBroker = null, brokerInfo = null }: {
   property: UnidadVenta | null; isOpen: boolean; onClose: () => void; onShare?: () => void
   isFavorite?: boolean; onToggleFavorite?: () => void
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; isDesktop: boolean
   properties?: UnidadVenta[]; onSwapProperty?: (p: UnidadVenta) => void
   brokerMode?: boolean; onAddToShortlist?: (p: UnidadVenta) => void
   publicShareBroker?: { nombre: string; telefono: string } | null
+  // Datos del broker activo (cuando brokerMode=true). Se usa para personalizar
+  // el mensaje WA broker→broker (identificación + franquicia + link del anuncio).
+  brokerInfo?: { nombre: string; inmobiliaria?: string | null } | null
 }) {
   const publicShareMode = publicShareBroker !== null
   const [gateName, setGateName] = useState('')
@@ -1084,6 +1108,23 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
               </a>
             ) : p.agente_telefono && (
               <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent((() => {
+                const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+                const specs = `${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')}`
+
+                // Modo broker: copy B2B (identificación + franquicia + pedido + link del anuncio)
+                if (brokerMode && brokerInfo) {
+                  const identidad = brokerInfo.inmobiliaria
+                    ? `${brokerInfo.nombre} de ${brokerInfo.inmobiliaria}`
+                    : `${brokerInfo.nombre}, broker independiente`
+                  let msg = `Hola, soy ${identidad}. Trabajo en Equipetrol.\n\n`
+                  msg += `Tengo un cliente interesado en ${p.proyecto} (${specs}).\n\n`
+                  msg += `¿Sigue disponible?`
+                  if (p.url) msg += `\n\nAnuncio: ${p.url}`
+                  msg += `\n\nSi tenés alternativas parecidas, también me interesan.`
+                  return msg
+                }
+
+                // Modo público (cliente final): copy original
                 const selectedTexts = Array.from(selectedQs).sort().map(idx => brokerQuestions[idx]).filter(Boolean)
                 let msg = `Hola, vi ${p.proyecto} en Simon y me gustaria mas informacion`
                 if (selectedTexts.length > 0) msg += `\n\nAntes, me gustaria saber:\n${selectedTexts.map(t => `— ${t}`).join('\n')}`
@@ -1096,7 +1137,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
                 Whatsapp
               </a>
             )}
-            {onShare && (
+            {onShare && !brokerMode && (
               <button className="bs-share-btn" onClick={onShare}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
                   <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
@@ -1114,6 +1155,84 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
 function Toast({ message, visible }: { message: string; visible: boolean }) {
   if (!visible) return null
   return <div className="ventas-toast">{message}</div>
+}
+
+// Devuelve un badge informativo según qué cambió desde que el broker armó la shortlist:
+//
+//   1. AGENTE cambió el precio en el portal (RAW cambió):
+//        - bajó: verde "↓ Bajó de $us X" (oportunidad)
+//        - subió: gris "Antes era $us X" (transparencia)
+//
+//   2. TC PARALELO se movió (RAW igual, pero NORMALIZADO cambió):
+//        - subió: azul "↑ TC paralelo subió ~$us X"
+//        - bajó: azul "↓ TC paralelo bajó ~$us X"
+//
+//   3. Sin cambios significativos (<1%) → null
+//
+// El cliente siempre ve `p.precio_usd` (NORMALIZADO actual). El badge agrega
+// contexto sobre qué causó la diferencia con el precio que vio al recibir el link.
+function priceChangeBadge(snap: { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null } | null | undefined, normActual: number): { kind: 'agent-down' | 'agent-up' | 'tc-down' | 'tc-up'; label: string } | null {
+  if (!snap) return null
+  const { rawSnapshot, normSnapshot, rawActual } = snap
+  if (!rawSnapshot || !rawActual || !normSnapshot || rawSnapshot <= 0 || normSnapshot <= 0) return null
+  const fmt = (n: number) => '$us ' + Math.round(n).toLocaleString('en-US')
+
+  // Caso 1: el agente cambió el precio (RAW se movió)
+  const rawDiff = rawActual - rawSnapshot
+  const rawPct = Math.abs(rawDiff) / rawSnapshot
+  if (rawPct >= 0.01) {
+    if (rawDiff < 0) return { kind: 'agent-down', label: `↓ Bajó de ${fmt(normSnapshot)}` }
+    return { kind: 'agent-up', label: `Antes era ${fmt(normSnapshot)}` }
+  }
+
+  // Caso 2: RAW estable pero NORMALIZADO cambió → fue solo movimiento del TC paralelo
+  const normDiff = normActual - normSnapshot
+  const normPct = Math.abs(normDiff) / normSnapshot
+  if (normPct >= 0.01) {
+    const absDiff = Math.abs(normDiff)
+    if (normDiff < 0) return { kind: 'tc-down', label: `↓ TC paralelo bajó · ~${fmt(absDiff)}` }
+    return { kind: 'tc-up', label: `↑ TC paralelo subió · ~${fmt(absDiff)}` }
+  }
+
+  return null
+}
+
+// Mensaje WhatsApp del cliente del shortlist DIRIGIDO AL BROKER (no al agente del listing).
+// Usado en /b/[hash] para botones "Consultar por WA" en card o sheet.
+function buildClientToBrokerMessage(p: UnidadVenta, brokerName: string): string {
+  const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+  return `Hola ${brokerName}, me interesa esta propiedad:\n\n${p.proyecto} (${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})\n\n¿Podemos coordinar?`
+}
+
+// Mensaje WhatsApp del cliente al broker con LISTA de propiedades de interés.
+// Usado en CompareSheet (publicShareMode) cuando el cliente comparó 2+ y quiere consultar.
+function buildClientShortlistInterestMessage(props: UnidadVenta[], brokerName: string): string {
+  const lines = props.map(p => {
+    const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+    return `• ${p.proyecto} (${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
+  }).join('\n')
+  return `Hola ${brokerName}, estoy interesado en estas alternativas:\n\n${lines}\n\n¿Podemos coordinar?`
+}
+
+// Mensaje WhatsApp dirigido al agente del listing.
+// Si viene `brokerInfo` (estamos en /broker/[slug]) → copy B2B con identificación,
+// franquicia/independiente y link del anuncio. Si no, copy estándar de cliente final.
+function buildAgentWaMessage(p: UnidadVenta, brokerInfo: { nombre: string; inmobiliaria?: string | null } | null): string {
+  if (brokerInfo) {
+    const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+    const specs = `${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')}`
+    const identidad = brokerInfo.inmobiliaria
+      ? `${brokerInfo.nombre} de ${brokerInfo.inmobiliaria}`
+      : `${brokerInfo.nombre}, broker independiente`
+    let msg = `Hola, soy ${identidad}. Trabajo en Equipetrol.\n\n`
+    msg += `Tengo un cliente interesado en ${p.proyecto} (${specs}).\n\n`
+    msg += `¿Sigue disponible?`
+    if (p.url) msg += `\n\nAnuncio: ${p.url}`
+    msg += `\n\nSi tenés alternativas parecidas, también me interesan.`
+    return msg
+  }
+  // Modo público: copy original
+  return `Hola, vi ${p.proyecto} en Simon y me gustaría más información${p.url ? '\n' + p.url : ''}`
 }
 
 // Badge de la inmobiliaria de origen (solo visible al broker para identificar
@@ -1137,11 +1256,20 @@ export interface PublicShareData {
   broker: { slug: string; nombre: string; telefono: string; foto_url: string | null }
   items: UnidadVenta[]
   itemComments?: Record<number, string | null>
+  // Snapshot de precio (migraciones 229 + 230). Para cada propiedad:
+  //  - rawSnapshot: precio_usd RAW al armar (propiedades_v2.precio_usd) — detecta cambio del agente
+  //  - normSnapshot: precio NORMALIZADO al armar (v_mercado_venta.precio_usd) — para mostrar "Antes era $X"
+  //  - rawActual: precio_usd RAW actual — comparar contra rawSnapshot
+  // Lógica del badge: si abs(rawActual - rawSnapshot)/rawSnapshot > 1% → cambio del agente → mostrar badge
+  // Si solo cambió el normalizado pero no el raw, fue movimiento de TC → no mostrar.
+  priceSnapshots?: Record<number, { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null }>
 }
 
 // ===== Page =====
 export default function VentasPage({ seo, initialProperties = [], brokerSlug: brokerSlugProp = null, publicShare = null }: { seo: VentasSEO; initialProperties: UnidadVenta[]; brokerSlug?: string | null; publicShare?: PublicShareData | null }) {
   const publicShareMode = publicShare !== null
+  const publicShareBrokerProp: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null = publicShare ? publicShare.broker : null
+  const priceSnapshotsMap: Record<number, { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null }> | null = publicShare && publicShare.priceSnapshots ? publicShare.priceSnapshots : null
   const initialProps = publicShareMode ? publicShare!.items : initialProperties
   const [properties, setProperties] = useState<UnidadVenta[]>(initialProps)
   const [loading, setLoading] = useState(publicShareMode ? false : initialProperties.length === 0)
@@ -1188,6 +1316,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const brokerSlug = brokerSlugProp
   const broker = useMemo(() => getBrokerBySlug(brokerSlug), [brokerSlug])
   const brokerMode = broker !== null
+  const brokerInfoProp: { nombre: string; inmobiliaria?: string | null } | null = broker ? { nombre: broker.nombre, inmobiliaria: broker.inmobiliaria } : null
 
   // S2: shortlists del broker — selección actual = `favorites`, persistencia y envío via hook
   const brokerShortlists = useBrokerShortlists(broker)
@@ -1196,11 +1325,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   // Filtro broker: ver solo propiedades marcadas (útil cuando hay muchas + filtros cambiados)
   const [onlySelectedFilter, setOnlySelectedFilter] = useState(false)
 
-  // publicShareMode en mobile: el body tiene overflow:hidden por la media query del
-  // feed TikTok. En public share forzamos layout desktop-grid, entonces el body
-  // necesita overflow:auto para que scroll funcione.
+  // publicShareMode O brokerMode mobile: el body tiene overflow:hidden por la media
+  // query del feed TikTok. Cuando forzamos layout desktop-grid en mobile, hay que
+  // restaurar overflow:auto para que scroll funcione.
+  const needsBodyScroll = publicShareMode || (brokerMode && !isDesktop)
   useEffect(() => {
-    if (!publicShareMode) return
+    if (!needsBodyScroll) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'auto'
     document.documentElement.style.overflow = 'auto'
@@ -1208,7 +1338,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       document.body.style.overflow = prev
       document.documentElement.style.overflow = ''
     }
-  }, [publicShareMode])
+  }, [needsBodyScroll])
 
   // Keep isFilteredRef in sync for scroll handler (avoids stale closure)
   useEffect(() => { isFilteredRef.current = isFiltered }, [isFiltered])
@@ -1349,9 +1479,38 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     showToast(`${visibleNotMarked.length} propiedad${visibleNotMarked.length === 1 ? '' : 'es'} agregada${visibleNotMarked.length === 1 ? '' : 's'}`)
   }
   function shareProperty(p: UnidadVenta) {
-    const url = `${window.location.origin}/ventas?id=${p.id}`
-    navigator.clipboard.writeText(url).then(() => showToast('Link copiado')).catch(() => showToast('No se pudo copiar'))
-    trackEvent('share_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona) })
+    // En publicShareMode, el link queda dentro del shortlist del broker para no
+    // "filtrar" el lead a simonbo.com/ventas. En modo público o broker usamos /ventas.
+    const baseUrl = publicShareMode
+      ? `${window.location.origin}${window.location.pathname}`
+      : `${window.location.origin}/ventas`
+    const url = `${baseUrl}?id=${p.id}`
+    const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+    const text = `Mirá esta propiedad: ${p.proyecto} (${dorms}, ${Math.round(p.area_m2)}m², $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
+
+    trackEvent('share_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), source: publicShareMode ? 'public_share' : 'feed' })
+
+    // En publicShareMode (cliente del broker), abrir WhatsApp directo: el user
+    // elige a quién mandar al momento. Más confiable que Web Share API que
+    // suele fallar en desktop sin apps configuradas.
+    if (publicShareMode) {
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(text + '\n\n' + url)}`
+      window.open(waUrl, '_blank', 'noopener,noreferrer')
+      return
+    }
+
+    // En feed público: Web Share API si está, fallback a copy
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      navigator.share({ title: p.proyecto, text, url }).catch(() => {
+        if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => showToast('Link copiado'))
+      })
+      return
+    }
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => showToast('Link copiado')).catch(() => showToast('No se pudo copiar'))
+    } else {
+      window.prompt('Copiá el link:', url)
+    }
   }
   function addToShortlist(p: UnidadVenta) {
     // S2: el botón ⭐/Agregar a shortlist alterna favorite. La "selección actual" del
@@ -1529,7 +1688,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         properties={properties} onSwapProperty={(p) => setSheetProperty(p)}
         brokerMode={brokerMode}
         onAddToShortlist={addToShortlist}
-        publicShareBroker={publicShare?.broker || null} />
+        publicShareBroker={publicShareBrokerProp}
+        brokerInfo={brokerInfoProp} />
 
       {/* Banner inferior — modo broker: Enviar shortlist (1+) | público: Comparar (2+) */}
       {brokerMode && broker && favorites.size >= 1 && (
@@ -1580,14 +1740,43 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         open={compareOpen}
         properties={favoriteProperties}
         onClose={() => setCompareOpen(false)}
-        publicShareBroker={publicShare?.broker || null}
+        publicShareBroker={publicShareBrokerProp}
       />
 
       {/* Banner modo broker — visible arriba de todo cuando activo */}
       {brokerMode && broker && (
         <div className="vt-broker-banner">
-          <span className="vt-broker-banner-label">SIMON BROKER</span>
-          <span className="vt-broker-banner-name">{broker.nombre}</span>
+          <div className="vt-broker-banner-brand">
+            <span className="vt-broker-banner-logo">SIMON</span>
+            <span className="vt-broker-banner-divider">·</span>
+            <span className="vt-broker-banner-label">BROKER</span>
+            <span className="vt-broker-banner-name">{broker.nombre}</span>
+          </div>
+          {properties.length > 0 && (
+            <div className="vt-broker-viewmode" role="tablist" aria-label="Modo de vista">
+              <button
+                className={`vt-broker-vm-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                onClick={() => { setViewMode('grid'); trackEvent('switch_view_venta', { view_mode: 'grid', source: 'broker_banner' }) }}
+                aria-label="Ver lista" role="tab" aria-selected={viewMode === 'grid'}
+              >
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              </button>
+              <button
+                className={`vt-broker-vm-btn ${viewMode === 'map' ? 'active' : ''}`}
+                onClick={() => { setViewMode('map'); trackEvent('switch_view_venta', { view_mode: 'map', source: 'broker_banner' }) }}
+                aria-label="Ver mapa" role="tab" aria-selected={viewMode === 'map'}
+              >
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </button>
+            </div>
+          )}
+          <button
+            className="vt-broker-tool"
+            onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay_venta', { source: 'broker_banner' }) }}
+            title="Filtrar propiedades"
+          >
+            ⚙ Filtros{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+          </button>
           {favorites.size > 0 && (
             <button
               className={`vt-broker-tool ${onlySelectedFilter ? 'active' : ''}`}
@@ -1612,6 +1801,20 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         </div>
       )}
 
+      {/* FAB mapa en publicShareMode mobile — el toggle Grid|Mapa text se pierde con scroll */}
+      {publicShareMode && !isDesktop && viewMode === 'grid' && properties.length > 0 && (
+        <button
+          className="vt-public-map-fab"
+          onClick={() => setViewMode('map')}
+          aria-label="Ver mapa"
+        >
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          Mapa
+        </button>
+      )}
+
       {/* Header modo public share — header del broker que comparte la shortlist */}
       {publicShareMode && publicShare && (
         <div className="vt-public-share-header">
@@ -1634,10 +1837,15 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         </div>
       )}
 
-      {(isDesktop || publicShareMode) ? (
-        /* ===== DESKTOP (o public share en cualquier device — feed con grid simple, sin sidebar/mapa) ===== */
-        <div className={`ventas-desktop ${publicShareMode ? 'ventas-desktop-public' : ''}`}>
-          {!publicShareMode && (
+      {/* Filter overlay — montado siempre (lo dispara el search pill mobile o el chip Filtros del broker mobile) */}
+      <FilterOverlay isOpen={filterOverlayOpen} onClose={() => setFilterOverlayOpen(false)}
+        totalCount={unfilteredCount || totalCount} filteredCount={properties.length}
+        isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
+
+      {(isDesktop || publicShareMode || brokerMode) ? (
+        /* ===== DESKTOP (o public share / broker en cualquier device — feed con grid simple) ===== */
+        <div className={`ventas-desktop ${publicShareMode ? 'ventas-desktop-public' : ''} ${(brokerMode && !isDesktop) ? 'ventas-desktop-broker-mobile' : ''} ${brokerMode ? 'ventas-desktop-broker' : ''}`}>
+          {!publicShareMode && !(brokerMode && !isDesktop) && (
             <aside className="ventas-sidebar">
               <div className="ventas-sidebar-header">
                 <Link href="/landing-v2" className="ventas-logo">Simon</Link>
@@ -1651,8 +1859,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             </aside>
           )}
           <main className="ventas-main">
-            {/* View mode toggle — visible también en publicShareMode (cliente puede ver mapa) */}
-            {properties.length > 0 && (
+            {/* View mode toggle — oculto en publicShareMode mobile (FAB) y en brokerMode (banner verde) */}
+            {properties.length > 0 && !(publicShareMode && !isDesktop) && !brokerMode && (
               <div className="vm-toggle">
                 <button className={`vm-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => { setViewMode('grid'); trackEvent('switch_view_venta', { view_mode: 'grid' }) }}>
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -1667,8 +1875,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             {loadError && <div className="ventas-status"><p>No se pudo cargar.</p><button onClick={() => fetchProperties()}>Reintentar</button></div>}
             {loading && properties.length === 0 && !loadError && <div className="ventas-status">Cargando departamentos en venta...</div>}
             {!loading && properties.length === 0 && !loadError && <div className="ventas-status">{buildEmptyMessage(filters)}</div>}
-            {/* Desktop spotlight — oculto en publicShareMode */}
-            {!publicShareMode && spotlightProperty && (
+            {/* Desktop spotlight — visible también en publicShareMode (link compartido /b/[hash]?id=X) */}
+            {spotlightProperty && (
               <div className="ds-spotlight">
                 <div className="ds-spotlight-banner">
                   <span>Te compartieron este departamento</span>
@@ -1677,7 +1885,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 <VentaCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
                   onToggleFavorite={() => toggleFavorite(spotlightProperty.id)} onShare={() => shareProperty(spotlightProperty)}
                   onPhotoTap={() => openSheet(spotlightProperty)} onDetails={() => openSheet(spotlightProperty)}
-                  brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(spotlightProperty)} publicShareMode={publicShareMode} />
+                  brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(spotlightProperty)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[spotlightProperty.id] : null} />
                 <div className="ds-spotlight-sep">
                   <span className="ds-spotlight-line" /><span className="ds-spotlight-text">Explorar más departamentos</span><span className="ds-spotlight-line" />
                 </div>
@@ -1689,7 +1897,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)} isFirst={idx === 0}
                     onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
                     onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)}
-                    brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} />
+                    brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null} />
                 ))}
               </div>
             )}
@@ -1702,8 +1910,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 {mapSelectedId && (() => {
                   const sp = properties.find(x => x.id === mapSelectedId)
                   if (!sp) return null
-                  return <MapFloatCard property={sp} isFavorite={favorites.has(sp.id)} onClose={() => setMapSelectedId(null)} onOpenDetail={() => { setMapSelectedId(null); openSheet(sp) }} onToggleFavorite={() => toggleFavorite(sp.id)} />
+                  return <MapFloatCard property={sp} isFavorite={favorites.has(sp.id)} onClose={() => setMapSelectedId(null)} onOpenDetail={() => { setMapSelectedId(null); openSheet(sp) }} onToggleFavorite={() => toggleFavorite(sp.id)} mobile={!isDesktop || publicShareMode} />
                 })()}
+                <button className="vt-back-to-grid" onClick={() => { setViewMode('grid'); setMapSelectedId(null) }} aria-label="Volver a la lista">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ flexShrink: 0 }}><path d="M15 18l-6-6 6-6"/></svg>
+                  Volver a la lista
+                </button>
               </div>
             )}
           </main>
@@ -1721,11 +1933,6 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
               {isFiltered && <div className="mt-search-dot" />}
             </button>
           </div>
-
-          {/* Filter overlay */}
-          <FilterOverlay isOpen={filterOverlayOpen} onClose={() => setFilterOverlayOpen(false)}
-            totalCount={unfilteredCount || totalCount} filteredCount={properties.length}
-            isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
 
           {/* Card counter */}
           {properties.length > 0 && (
@@ -1783,7 +1990,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 isSpotlight={item.isSpotlight} isFirst={idx === 0}
                 onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
                 onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)}
-                brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} />
+                brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null} />
             })}
           </div>
         </main>
@@ -1797,6 +2004,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-desktop { display:flex; min-height:100vh; font-family:'DM Sans',sans-serif; color:#EDE8DC }
         .ventas-desktop-public .ventas-main { margin-left:0 !important; padding-top:80px !important }
         .ventas-desktop-public .ventas-grid { grid-template-columns:repeat(auto-fill,minmax(280px,1fr)) }
+        /* Broker en mobile: mismo layout que public share — grid simple sin sidebar */
+        .ventas-desktop-broker-mobile .ventas-main { margin-left:0 !important; padding-top:110px !important; padding:110px 12px 24px !important }
+        .ventas-desktop-broker-mobile .ventas-grid { grid-template-columns:1fr; gap:14px }
         .vt-public-share-header { position:fixed; top:0; left:0; right:0; z-index:50; background:#EDE8DC; color:#141414; padding:10px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid rgba(20,20,20,0.08); font-family:'DM Sans',sans-serif; box-shadow:0 1px 6px rgba(0,0,0,0.05) }
         .vpsh-broker { display:flex; align-items:center; gap:10px; min-width:0 }
         .vpsh-broker-photo { width:44px; height:44px; border-radius:50%; object-fit:cover; display:block }
@@ -1806,6 +2016,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vpsh-broker-name { font-size:15px; font-weight:600; font-family:'Figtree',sans-serif; color:#141414 }
         .vpsh-wa { display:inline-flex; align-items:center; gap:6px; background:#25D366; color:#fff; padding:8px 14px; border-radius:100px; text-decoration:none; font-size:13px; font-weight:600; -webkit-tap-highlight-color:transparent }
         .vpsh-wa:active { transform:scale(0.97) }
+        .vt-public-map-fab { position:fixed; bottom:max(20px, calc(env(safe-area-inset-bottom) + 16px)); left:16px; z-index:100; display:inline-flex; align-items:center; gap:8px; background:#141414; color:#EDE8DC; border:none; padding:14px 22px 14px 18px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; letter-spacing:0.3px; cursor:pointer; box-shadow:0 6px 22px rgba(0,0,0,0.35); -webkit-tap-highlight-color:transparent }
+        .vt-public-map-fab:active { transform:scale(0.96) }
         .ventas-sidebar { width:320px; min-width:320px; background:#141414; border-right:1px solid rgba(237,232,220,0.08); position:fixed; top:0; left:0; bottom:0; overflow-y:auto; z-index:10 }
         .ventas-sidebar-header { padding:24px 20px 12px; display:flex; align-items:baseline; gap:12px }
         .ventas-logo { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; text-decoration:none }
@@ -1816,13 +2028,15 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-main { margin-left:320px; flex:1; padding:24px; min-height:100vh; background:#1a1a1a }
         .ventas-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:24px }
         .ventas-map-container { height:calc(100vh - 80px); border-radius:14px; overflow:hidden; border:1px solid rgba(237,232,220,0.08); position:relative }
+        .vt-back-to-grid { position:absolute; top:14px; left:14px; z-index:1100; display:inline-flex; align-items:center; gap:6px; background:#141414; color:#EDE8DC; border:none; padding:10px 16px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.3px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.35); -webkit-tap-highlight-color:transparent }
+        .vt-back-to-grid:active { transform:scale(0.97) }
 
         /* Map float card — desktop */
         .mfc-desktop { position:absolute; bottom:20px; left:20px; z-index:1000; background:#1a1a1a; border:1px solid rgba(237,232,220,0.1); border-radius:14px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.4); display:flex; width:380px; animation:mfcIn 0.2s ease-out }
         /* Map float card — mobile */
         .mfc-mobile { position:absolute; bottom:12px; left:12px; right:12px; z-index:1000; background:#1a1a1a; border:1px solid rgba(237,232,220,0.1); border-radius:14px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.4); display:flex; animation:mfcIn 0.2s ease-out }
         @keyframes mfcIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
-        .mfc-close { position:absolute; top:8px; right:8px; z-index:10; width:44px; height:44px; border-radius:50%; background:rgba(20,20,20,0.6); border:none; color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center }
+        .mfc-close { position:absolute; top:8px; right:8px; z-index:10; width:36px; height:36px; border-radius:50%; background:#fff; border:none; color:#141414; font-size:22px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.4); font-weight:600; padding:0 }
         .mfc-photo { width:130px; min-width:130px; background-size:cover; background-position:center; background-color:#2a2a2a; position:relative }
         .mfc-nav { position:absolute; top:50%; transform:translateY(-50%); width:40px; height:40px; border-radius:50%; background:rgba(20,20,20,0.6); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:3 }
         .mfc-nav-prev { left:4px }
@@ -1864,25 +2078,40 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .fo-apply:active { transform:scale(0.97) }
         .mt-counter { position:fixed; bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px)); right:16px; z-index:50; font-size:12px; color:#7A7060; font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums }
         .mt-map-btn { position:fixed; bottom:max(140px, calc(env(safe-area-inset-bottom) + 130px)); right:20px; z-index:100; width:48px; height:48px; border-radius:50%; background:rgba(20,20,20,0.7); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.2) }
-        .vt-broker-banner { position:fixed; top:0; left:0; right:0; z-index:50; background:#3A6A48; color:#EDE8DC; padding:6px 16px; font-family:'DM Sans',sans-serif; font-size:12px; display:flex; align-items:center; justify-content:center; gap:10px; letter-spacing:0.5px }
-        .vt-broker-banner-label { font-weight:700; font-size:11px; opacity:0.85 }
-        .vt-broker-banner-name { font-weight:500 }
-        .vt-broker-banner-shortlists { margin-left:auto; background:rgba(237,232,220,0.18); border:1px solid rgba(237,232,220,0.35); color:#EDE8DC; padding:4px 10px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit }
+        .vt-broker-banner { position:fixed; top:0; left:0; right:0; z-index:60; background:#EDE8DC; color:#141414; padding:9px 18px; font-family:'DM Sans',sans-serif; display:flex; align-items:center; gap:12px; box-shadow:0 1px 0 rgba(20,20,20,0.08), 0 4px 14px rgba(20,20,20,0.06); border-bottom:1px solid rgba(20,20,20,0.06) }
+        .vt-broker-banner-brand { display:flex; align-items:baseline; gap:8px; min-width:0 }
+        .vt-broker-banner-logo { font-family:'Figtree',sans-serif; font-weight:700; font-size:15px; letter-spacing:0.6px; color:#141414 }
+        .vt-broker-banner-divider { opacity:0.3; font-size:14px; color:#141414 }
+        .vt-broker-banner-label { font-family:'DM Sans',sans-serif; font-weight:600; font-size:10px; letter-spacing:1.6px; text-transform:uppercase; color:#3A6A48 }
+        .vt-broker-banner-name { font-family:'Figtree',sans-serif; font-weight:500; font-size:13px; margin-left:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#141414 }
+        .vt-broker-viewmode { display:inline-flex; gap:0; background:rgba(20,20,20,0.06); border:1px solid rgba(20,20,20,0.1); border-radius:8px; padding:2px; flex-shrink:0 }
+        .vt-broker-vm-btn { background:transparent; border:none; color:rgba(20,20,20,0.5); padding:5px 11px; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; -webkit-tap-highlight-color:transparent }
+        .vt-broker-vm-btn:hover { color:rgba(20,20,20,0.85) }
+        .vt-broker-vm-btn.active { background:#141414; color:#EDE8DC }
+        /* Padding extra en el sidebar SOLO en brokerMode para que no quede tapado por el banner arena fijo */
+        .ventas-desktop-broker .ventas-sidebar { padding-top:48px }
+        /* Padding-top en el main desktop también, para que las cards no queden tapadas */
+        .ventas-desktop-broker .ventas-main { padding-top:70px }
+        .vt-broker-banner-shortlists { margin-left:auto; background:#141414; color:#EDE8DC; border:1px solid #141414; padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
         .vt-broker-banner-shortlists:active { transform:scale(0.96) }
-        .vt-broker-tool { background:rgba(237,232,220,0.12); border:1px solid rgba(237,232,220,0.3); color:#EDE8DC; padding:4px 10px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
+        .vt-broker-tool { background:rgba(20,20,20,0.04); border:1px solid rgba(20,20,20,0.18); color:#141414; padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
+        .vt-broker-tool:hover { background:rgba(20,20,20,0.09) }
         .vt-broker-tool:active { transform:scale(0.96) }
-        .vt-broker-tool.active { background:#EDE8DC; color:#3A6A48; border-color:#EDE8DC }
-        .vt-broker-tool-add { background:rgba(237,232,220,0.18) }
+        .vt-broker-tool.active { background:#141414; color:#EDE8DC; border-color:#141414 }
+        .vt-broker-tool-add { background:rgba(58,106,72,0.10); border-color:rgba(58,106,72,0.35); color:#3A6A48 }
+        .vt-broker-tool-add:hover { background:rgba(58,106,72,0.18) }
         @media (max-width: 768px) {
           .vt-broker-banner { flex-wrap:wrap; padding:6px 12px; gap:6px }
           .vt-broker-tool, .vt-broker-banner-shortlists { font-size:10px; padding:3px 8px }
         }
-        .vt-shortlist-banner { background:#3A6A48 !important; border-color:rgba(237,232,220,0.2) !important }
-        /* En mobile: banner shortlist arriba (debajo del banner SIMON BROKER) para no tapar acciones de cards TikTok */
+        .vt-shortlist-banner { background:#EDE8DC !important; color:#141414 !important; border:1px solid rgba(20,20,20,0.15) !important; box-shadow:0 6px 22px rgba(20,20,20,0.18) !important }
+        .vt-shortlist-banner svg { color:#141414 !important }
+        .vt-shortlist-banner-wrap .vt-compare-banner-clear { background:#EDE8DC !important; color:rgba(20,20,20,0.55) !important; border:1px solid rgba(20,20,20,0.15) !important; box-shadow:0 6px 22px rgba(20,20,20,0.18) !important }
+        /* Banner shortlist mobile: pegado abajo (igual que desktop) — el grid layout
+           del broker mobile permite scroll natural sin tapar contenido. */
         @media (max-width: 768px) {
-          .vt-shortlist-banner-wrap { bottom:auto !important; top:42px !important }
-          .vt-shortlist-banner-wrap .vt-compare-banner { padding:8px 14px !important; font-size:13px !important; min-height:36px !important }
-          .vt-shortlist-banner-wrap .vt-compare-banner-clear { width:36px !important; min-height:36px !important; font-size:18px !important }
+          .vt-shortlist-banner-wrap .vt-compare-banner { padding:10px 16px !important; font-size:13px !important; min-height:42px !important }
+          .vt-shortlist-banner-wrap .vt-compare-banner-clear { width:42px !important; min-height:42px !important; font-size:18px !important }
         }
         .vt-compare-banner-wrap { position:fixed; bottom:max(24px, calc(env(safe-area-inset-bottom) + 16px)); left:50%; transform:translateX(-50%); z-index:150; display:flex; align-items:stretch; gap:6px; max-width:calc(100vw - 32px) }
         .vt-compare-banner { display:flex; align-items:center; gap:10px; padding:12px 20px; background:#141414; color:#EDE8DC; border:1px solid rgba(237,232,220,0.1); border-radius:100px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; letter-spacing:0.3px; cursor:pointer; box-shadow:0 6px 20px rgba(0,0,0,0.25); min-height:48px; white-space:nowrap; -webkit-tap-highlight-color:transparent }
@@ -2023,6 +2252,14 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vc-zona { font-size:12px; color:#9A8E7A; letter-spacing:0.5px; margin-bottom:10px }
         .vc-id { color:rgba(237,232,220,0.3); font-size:12px; margin-left:4px; letter-spacing:0 }
         .vc-price-block { border-left:3px solid #3A6A48; padding-left:12px; margin-bottom:8px }
+        .vc-price-change { font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.3px; margin-top:4px; display:inline-block; padding:3px 8px; border-radius:4px }
+        .vc-price-change-agent-down { background:rgba(58,106,72,0.15); color:#5fb074 }
+        .vc-price-change-agent-up { background:rgba(237,232,220,0.08); color:rgba(237,232,220,0.55) }
+        .vc-price-change-tc-down, .vc-price-change-tc-up { background:rgba(125,160,200,0.15); color:#9DBFE0; font-weight:500; font-size:10px }
+        .mc-price-change { font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.3px; margin-top:6px; display:inline-block; padding:3px 8px; border-radius:4px }
+        .mc-price-change-agent-down { background:rgba(58,106,72,0.15); color:#5fb074 }
+        .mc-price-change-agent-up { background:rgba(237,232,220,0.08); color:rgba(237,232,220,0.55) }
+        .mc-price-change-tc-down, .mc-price-change-tc-up { background:rgba(125,160,200,0.15); color:#9DBFE0; font-weight:500; font-size:10px }
         .vc-price { font-family:'DM Sans',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:4px; font-variant-numeric:tabular-nums }
         .vc-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.3); letter-spacing:0.2px }
         .vc-specs { font-size:15px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300 }

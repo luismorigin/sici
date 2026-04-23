@@ -84,12 +84,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (errInsert || !shortlist) throw errInsert || new Error('insert failed')
 
+      // Snapshot de precio (migraciones 229 + 230):
+      //  - precio_usd_snapshot  = RAW (propiedades_v2.precio_usd) → detecta cambio del agente
+      //  - precio_norm_snapshot = NORMALIZADO (v_mercado_venta.precio_usd) → mostrar al cliente
+      // El badge dispara solo si el RAW cambió (cambio del agente, no movimiento TC).
+      const rawByPropId = new Map<number, number | null>()
+      const normByPropId = new Map<number, number | null>()
+      try {
+        const [rawRes, normRes] = await Promise.all([
+          supabase.from('propiedades_v2').select('id, precio_usd').in('id', payload.propiedad_ids),
+          supabase.from('v_mercado_venta').select('id, precio_usd').in('id', payload.propiedad_ids),
+        ])
+        for (const r of (rawRes.data || []) as Array<{ id: number; precio_usd: string | number | null }>) {
+          const v = r.precio_usd != null ? parseFloat(String(r.precio_usd)) : null
+          rawByPropId.set(r.id, Number.isFinite(v as number) ? (v as number) : null)
+        }
+        for (const r of (normRes.data || []) as Array<{ id: number; precio_usd: string | number | null }>) {
+          const v = r.precio_usd != null ? parseFloat(String(r.precio_usd)) : null
+          normByPropId.set(r.id, Number.isFinite(v as number) ? (v as number) : null)
+        }
+      } catch (snapErr) {
+        console.warn('[create shortlist] snapshot precio fallback:', snapErr)
+      }
+
       // Insertar items en el orden recibido
       const items = payload.propiedad_ids.map((pid, idx) => ({
         shortlist_id: shortlist.id,
         propiedad_id: pid,
         tipo_operacion: payload.tipo_operacion || 'venta',
         orden: idx,
+        precio_usd_snapshot: rawByPropId.get(pid) ?? null,
+        precio_norm_snapshot: normByPropId.get(pid) ?? null,
       }))
 
       const { error: errItems } = await supabase

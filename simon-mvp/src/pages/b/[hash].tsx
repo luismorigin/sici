@@ -126,18 +126,42 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const propIds = safeItems.map(i => i.propiedad_id)
   let properties: UnidadVenta[] = []
   let itemComments: Record<number, string | null> = {}
+  let priceSnapshots: Record<number, { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null }> = {}
   if (propIds.length > 0) {
-    const { data: rows } = await supabase.rpc('buscar_unidades_simple', {
-      p_filtros: { limite: 500, solo_con_fotos: false }
-    })
+    // 3 fuentes en paralelo:
+    //  - RPC buscar_unidades_simple → datos de display (incluye precio_usd normalizado actual)
+    //  - propiedades_v2.precio_usd  → RAW actual (para detectar cambio del agente vs TC)
+    //  - items ya tienen precio_usd_snapshot (raw) y precio_norm_snapshot (normalizado)
+    const [rpcRes, rawRes] = await Promise.all([
+      supabase.rpc('buscar_unidades_simple', { p_filtros: { limite: 500, solo_con_fotos: false } }),
+      supabase.from('propiedades_v2').select('id, precio_usd').in('id', propIds),
+    ])
+
     const indexed = new Map<number, RawUnidadSimpleRow>()
-    for (const r of (rows || []) as RawUnidadSimpleRow[]) indexed.set(r.id, r)
+    for (const r of (rpcRes.data || []) as RawUnidadSimpleRow[]) indexed.set(r.id, r)
     properties = safeItems
       .map(i => indexed.get(i.propiedad_id))
       .filter((r): r is RawUnidadSimpleRow => Boolean(r))
       .map(mapRow)
+
+    const rawActualByPropId = new Map<number, number | null>()
+    for (const r of (rawRes.data || []) as Array<{ id: number; precio_usd: string | number | null }>) {
+      const v = r.precio_usd != null ? parseFloat(String(r.precio_usd)) : null
+      rawActualByPropId.set(r.id, Number.isFinite(v as number) ? (v as number) : null)
+    }
+
     itemComments = safeItems.reduce<Record<number, string | null>>((acc, it) => {
       acc[it.propiedad_id] = it.comentario_broker
+      return acc
+    }, {})
+    priceSnapshots = safeItems.reduce<Record<number, { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null }>>((acc, it) => {
+      const rawSnap = (it as { precio_usd_snapshot?: number | string | null }).precio_usd_snapshot
+      const normSnap = (it as { precio_norm_snapshot?: number | string | null }).precio_norm_snapshot
+      acc[it.propiedad_id] = {
+        rawSnapshot: rawSnap != null ? parseFloat(String(rawSnap)) : null,
+        normSnapshot: normSnap != null ? parseFloat(String(normSnap)) : null,
+        rawActual: rawActualByPropId.get(it.propiedad_id) ?? null,
+      }
       return acc
     }, {})
   }
@@ -161,6 +185,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
         broker,
         items: properties,
         itemComments,
+        priceSnapshots,
       },
       shortlistTitle: `Selección de ${broker.nombre} para ${shortlist.cliente_nombre}`,
     },
