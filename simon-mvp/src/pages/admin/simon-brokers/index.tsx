@@ -7,7 +7,7 @@
 //
 // Protegido por useAdminAuth(['super_admin']) — mismo patrón que /admin/brokers.
 
-import { useEffect, useState, useCallback } from 'react'
+import { Fragment, useEffect, useState, useCallback } from 'react'
 import Head from 'next/head'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
@@ -55,6 +55,8 @@ export default function AdminSimonBrokers() {
   const [creating, setCreating] = useState(false)
   const [saving, setSaving] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState<Partial<BrokerAdmin>>({})
 
   // Form crear
   const [formNombre, setFormNombre] = useState('')
@@ -151,6 +153,54 @@ export default function AdminSimonBrokers() {
   const handleCopyURL = (slug: string) => {
     const url = publicBrokerURL(slug)
     navigator.clipboard?.writeText(url)
+  }
+
+  const startEdit = (b: BrokerAdmin) => {
+    setEditingId(b.id)
+    setEditDraft({
+      nombre: b.nombre,
+      telefono: b.telefono,
+      foto_url: b.foto_url,
+      inmobiliaria: b.inmobiliaria,
+      notas: b.notas,
+      fecha_proximo_cobro: b.fecha_proximo_cobro,
+    })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditDraft({})
+  }
+
+  const saveEdit = async (id: string) => {
+    setSaving(id)
+    setError(null)
+    try {
+      const headers = await getAuthHeaders()
+      const res = await fetch(`/api/admin/simon-brokers/${id}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: editDraft.nombre,
+          telefono: editDraft.telefono,
+          foto_url: editDraft.foto_url || null,
+          inmobiliaria: editDraft.inmobiliaria || null,
+          notas: editDraft.notas || null,
+          fecha_proximo_cobro: editDraft.fecha_proximo_cobro || null,
+        }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.error || `HTTP ${res.status}`)
+      }
+      setEditingId(null)
+      setEditDraft({})
+      await fetchBrokers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al guardar')
+    } finally {
+      setSaving(null)
+    }
   }
 
   if (authLoading) {
@@ -290,7 +340,8 @@ export default function AdminSimonBrokers() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {brokers.map((b) => (
-                    <tr key={b.id}>
+                    <Fragment key={b.id}>
+                    <tr>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           {b.foto_url
@@ -316,7 +367,7 @@ export default function AdminSimonBrokers() {
                       </td>
                       <td className="px-4 py-3 text-xs text-slate-500">{b.fecha_alta}</td>
                       <td className="px-4 py-3 text-right">
-                        <div className="inline-flex gap-1">
+                        <div className="inline-flex gap-1 flex-wrap justify-end">
                           <a
                             href={`/broker/${b.slug}`}
                             target="_blank"
@@ -332,6 +383,13 @@ export default function AdminSimonBrokers() {
                             title="Copiar URL al portapapeles"
                           >
                             Copiar URL
+                          </button>
+                          <button
+                            onClick={() => editingId === b.id ? cancelEdit() : startEdit(b)}
+                            className="text-xs border border-slate-300 rounded px-2 py-1 hover:bg-slate-50"
+                            title="Editar datos del broker"
+                          >
+                            {editingId === b.id ? 'Cerrar' : 'Editar'}
                           </button>
                           {b.status === 'activo' ? (
                             <button
@@ -353,6 +411,89 @@ export default function AdminSimonBrokers() {
                         </div>
                       </td>
                     </tr>
+                    {editingId === b.id && (
+                      <tr className="bg-slate-50">
+                        <td colSpan={5} className="px-4 py-4">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">Nombre</label>
+                              <input
+                                type="text"
+                                value={editDraft.nombre || ''}
+                                onChange={(e) => setEditDraft({ ...editDraft, nombre: e.target.value })}
+                                className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">WhatsApp</label>
+                              <input
+                                type="text"
+                                value={editDraft.telefono || ''}
+                                onChange={(e) => setEditDraft({ ...editDraft, telefono: e.target.value })}
+                                className="w-full border border-slate-300 rounded px-2 py-1 text-sm font-mono"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">Inmobiliaria</label>
+                              <input
+                                type="text"
+                                value={editDraft.inmobiliaria || ''}
+                                onChange={(e) => setEditDraft({ ...editDraft, inmobiliaria: e.target.value })}
+                                className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
+                                placeholder="RE/MAX Legacy (vacío = independiente)"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-600 mb-1">Próx. cobro (opcional)</label>
+                              <input
+                                type="date"
+                                value={editDraft.fecha_proximo_cobro || ''}
+                                onChange={(e) => setEditDraft({ ...editDraft, fecha_proximo_cobro: e.target.value || null })}
+                                className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <label className="block text-xs font-medium text-slate-600 mb-1">Foto URL</label>
+                              <input
+                                type="url"
+                                value={editDraft.foto_url || ''}
+                                onChange={(e) => setEditDraft({ ...editDraft, foto_url: e.target.value })}
+                                className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
+                                placeholder="https://..."
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <label className="block text-xs font-medium text-slate-600 mb-1">Notas admin</label>
+                              <textarea
+                                value={editDraft.notas || ''}
+                                onChange={(e) => setEditDraft({ ...editDraft, notas: e.target.value })}
+                                className="w-full border border-slate-300 rounded px-2 py-1 text-sm"
+                                rows={2}
+                              />
+                            </div>
+                            <div className="col-span-2 flex justify-end gap-2">
+                              <button
+                                onClick={cancelEdit}
+                                className="text-xs border border-slate-300 rounded px-3 py-1 hover:bg-white"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                onClick={() => saveEdit(b.id)}
+                                disabled={saving === b.id}
+                                className="text-xs bg-slate-900 text-white rounded px-3 py-1 hover:bg-slate-700 disabled:opacity-50"
+                              >
+                                {saving === b.id ? 'Guardando...' : 'Guardar'}
+                              </button>
+                            </div>
+                          </div>
+                          <p className="mt-2 text-xs text-slate-400">
+                            Slug no es editable (rompería URLs compartidas). Para cambiarlo: crear broker nuevo e inactivar el viejo.
+                          </p>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
