@@ -41,12 +41,25 @@ export default function ShortlistEditorPage({ broker }: PageProps) {
         setItems(d.items.sort((a, b) => a.orden - b.orden))
         setClienteNombre(d.cliente_nombre)
         setClienteTelefono(d.cliente_telefono)
-        setMensaje(d.mensaje_whatsapp || '')
+        // Si mensaje_whatsapp está vacío (shortlist vieja o guardada sin override),
+        // cargamos el template por defecto para que el broker pueda editarlo en vez
+        // de ver un textarea vacío.
+        const mensajeGuardado = (d.mensaje_whatsapp || '').trim()
+        if (mensajeGuardado) {
+          setMensaje(mensajeGuardado)
+        } else {
+          setMensaje(defaultShortlistMessage({
+            clienteNombre: d.cliente_nombre,
+            brokerNombre: broker.nombre,
+            shortlistUrl: publicShortlistURL(d.hash),
+            cantidadPropiedades: d.items.length,
+          }))
+        }
         setIsPublished(d.is_published)
       })
       .catch(err => setError(err instanceof Error ? err.message : 'Error cargando'))
       .finally(() => setLoading(false))
-  }, [id])
+  }, [id, broker.nombre])
 
   const shareUrl = useMemo(() => data ? publicShortlistURL(data.hash) : '', [data])
 
