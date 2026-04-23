@@ -105,7 +105,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | Proposito | Archivo |
 |-----------|---------|
 | **Product Brief Simón** | `docs/producto/SIMON_PRODUCT_BRIEF.md` — superficies, estado producción vs construido, capacidades, limitaciones |
-| **Simon Broker (MVP en curso)** | `docs/broker/` — PRD, backlog, decisiones. MVP 3 semanas sin login, slug en URL (`/broker/[slug]`), shortlists compartibles + ACM inline + dashboard mercado interno |
+| **Simon Broker (S2 mergeado, S3 pendiente)** | `docs/broker/` — PRD, backlog, decisiones. S0+S1+S2 en `main` (commit `4937695`, 23 Abr 2026): `/broker/[slug]` modo broker con estrella verde + chips Solo seleccionadas/Marcar todas + ACM inline, ruta pública `/b/[hash]` reusando feed `/ventas` con `publicShare`, badges precio (agente cambió vs TC se movió), mensajes WA broker→agente y cliente→broker. Migraciones 228/229/230 |
 | **Arquitectura SICI** | `docs/arquitectura/SICI_ARQUITECTURA_MAESTRA.md` |
 | **Simon Arquitectura** | `docs/simon/SIMON_ARQUITECTURA_COGNITIVA.md` |
 | **Metodologia Fiduciaria** | `docs/canonical/METODOLOGIA_FIDUCIARIA_PARTE_*.md` |
