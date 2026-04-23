@@ -58,6 +58,24 @@ Ideas, features y mejoras parqueadas para después del MVP.
 
 ## Features producto
 
+### Activación de broker en el momento (opción mini — tabla + admin sin auth)
+**Tier:** v1.2 — cola post Fase 2 alquileres
+**Agregado:** 2026-04-23
+**Rationale:** Problema comercial real: cuando cierra un broker en un café/reunión, hoy la activación requiere editar `lib/brokers-demo.ts` + commit + deploy Vercel (~5-10 min, frágil sin laptop/wifi). Eso pone en riesgo el momentum del cierre. La solución NO es auth + billing completo (tier v2, ver "Producto comercial abierto") — es solo mover el registro de broker de archivo a BD + UI rápido de creación. Mantiene el modelo slug público del MVP (cero fricción para el broker en el momento del cierre) y deja facturación fuera del producto (Google Sheet + QR por WhatsApp).
+
+**Alcance (~4-6h dev):**
+- Migrar `lib/brokers-demo.ts` → tabla Supabase `brokers_mvp` (mismos campos: slug, nombre, telefono, foto_url, inmobiliaria, status, fecha_alta)
+- Página `/admin/brokers/crear` (form 4 campos + slug)
+- SSR gate en `/broker/[slug]`: valida `status='activo'` en BD, si no → 404
+- Editor `/admin/brokers/[id]` (editar datos, toggle status, borrar)
+- Pagos: fuera del producto (Google Sheet + QR por WA, toggle manual de status cuando deja de pagar)
+
+**Flujo objetivo en el café:** abrir `/admin/brokers/crear` en celu → completar 4 campos (30 seg) → darle URL `simonbo.com/broker/<slug>` → broker operativo en el acto.
+
+**Cuándo reactivar:** inmediatamente después de Fase 2 alquileres (~2 semanas desde hoy). Si aparece oportunidad de cierre **antes** de terminar S3, hacer la opción mini en paralelo (no bloquea testing S3).
+
+**Cuándo NO basta con esta opción:** cuando haya ≥15 brokers activos + demanda externa (brokers desconocidos pidiendo acceso). Ahí se justifica el bloque completo "Producto comercial abierto" (auth real, billing admin, onboarding self-serve, notificaciones, rate limiting — ~2 días dev).
+
 ### Snapshot de precio en items del shortlist
 **Tier:** v1.1 — agregar antes de escalar a 10+ brokers
 **Agregado:** 2026-04-23
