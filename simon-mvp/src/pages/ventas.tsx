@@ -1798,6 +1798,16 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           <button className="vt-broker-banner-shortlists" onClick={() => setShortlistsPanelOpen(true)}>
             Mis shortlists{brokerShortlists.shortlists.length > 0 ? ` · ${brokerShortlists.shortlists.length}` : ''}
           </button>
+          <a
+            className="vt-broker-tool vt-broker-market-link"
+            href="/mercado/equipetrol"
+            target="_blank"
+            rel="noopener"
+            onClick={() => trackEvent('broker_open_mercado', { broker_slug: broker?.slug })}
+            title="Abrir dashboard de mercado de Equipetrol en pestaña nueva"
+          >
+            Ver mercado <span aria-hidden="true" className="vt-broker-market-arrow">↗</span>
+          </a>
         </div>
       )}
 
@@ -2100,6 +2110,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vt-broker-tool.active { background:#141414; color:#EDE8DC; border-color:#141414 }
         .vt-broker-tool-add { background:rgba(58,106,72,0.10); border-color:rgba(58,106,72,0.35); color:#3A6A48 }
         .vt-broker-tool-add:hover { background:rgba(58,106,72,0.18) }
+        .vt-broker-market-link { text-decoration:none; display:inline-flex; align-items:center; gap:4px }
+        .vt-broker-market-arrow { opacity:0.55; font-weight:500 }
         @media (max-width: 768px) {
           .vt-broker-banner { flex-wrap:wrap; padding:6px 12px; gap:6px }
           .vt-broker-tool, .vt-broker-banner-shortlists { font-size:10px; padding:3px 8px }
