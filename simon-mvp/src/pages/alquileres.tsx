@@ -635,6 +635,67 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     }
   }, [router.query.edificio]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Deep-link: parse filter query params (zonas, precio, dorms, area, flags) → pre-apply filters.
+  // Runs once when router is ready. Skips if ?edificio is present (handled above).
+  // Supported params: zonas, precio_min_bob, precio_max_bob, dormitorios, amoblado,
+  // mascotas, parqueo, area_min, area_max. Invalid values are silently ignored.
+  useEffect(() => {
+    if (!router.isReady) return
+    if (router.query.edificio) return
+
+    const q = router.query
+    const overrides: Partial<FiltrosAlquiler> = {}
+
+    const parsePositiveNum = (v: unknown): number | undefined => {
+      if (typeof v !== 'string') return undefined
+      const n = Number(v)
+      return Number.isFinite(n) && n > 0 ? n : undefined
+    }
+
+    // zonas: CSV of slug IDs (accepts kebab-case, normalized to snake_case)
+    if (typeof q.zonas === 'string') {
+      const validIds = new Set(ZONAS_ALQUILER_UI.map(z => z.id))
+      const zonas = q.zonas.split(',')
+        .map(s => s.trim().toLowerCase().replace(/-/g, '_'))
+        .filter(z => validIds.has(z))
+      if (zonas.length) overrides.zonas_permitidas = zonas
+    }
+
+    const pmin = parsePositiveNum(q.precio_min_bob)
+    if (pmin !== undefined) overrides.precio_mensual_min = pmin
+    const pmax = parsePositiveNum(q.precio_max_bob)
+    if (pmax !== undefined) overrides.precio_mensual_max = pmax
+
+    // dormitorios: CSV of non-negative integers (0 = monoambiente, 3 = "3+")
+    if (typeof q.dormitorios === 'string') {
+      const dorms = q.dormitorios.split(',')
+        .map(s => Number(s.trim()))
+        .filter(n => Number.isInteger(n) && n >= 0 && n <= 10)
+      if (dorms.length) overrides.dormitorios_lista = dorms
+    }
+
+    if (q.amoblado === 'si') overrides.amoblado = true
+    if (q.mascotas === 'true') overrides.acepta_mascotas = true
+    if (q.parqueo === 'true') overrides.con_parqueo = true
+
+    const amin = parsePositiveNum(q.area_min)
+    if (amin !== undefined) overrides.area_min = amin
+    const amax = parsePositiveNum(q.area_max)
+    if (amax !== undefined) overrides.area_max = amax
+
+    if (Object.keys(overrides).length === 0) return
+
+    const f: FiltrosAlquiler = {
+      orden: 'recientes',
+      limite: 200,
+      solo_con_fotos: true,
+      ...overrides,
+    }
+    setFilters(f)
+    setIsFiltered(true)
+    fetchProperties(f)
+  }, [router.isReady]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Parse ?id= query param for spotlight (shared property)
   useEffect(() => {
     const idParam = router.query.id

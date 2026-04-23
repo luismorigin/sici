@@ -506,6 +506,8 @@ export interface FiltrosAlquiler {
   amoblado?: boolean
   acepta_mascotas?: boolean
   con_parqueo?: boolean
+  area_min?: number             // m² mínima (migration 229)
+  area_max?: number             // m² máxima (migration 229)
   zonas_permitidas?: string[]   // IDs UI: 'equipetrol_centro', 'sirari', etc.
   solo_con_fotos?: boolean
   orden?: 'precio_asc' | 'precio_desc' | 'recientes'
@@ -533,6 +535,8 @@ export async function buscarUnidadesAlquiler(filtros: FiltrosAlquiler): Promise<
     if (filtros.amoblado) rpcFiltros.amoblado = true
     if (filtros.acepta_mascotas) rpcFiltros.acepta_mascotas = true
     if (filtros.con_parqueo) rpcFiltros.con_parqueo = true
+    if (filtros.area_min) rpcFiltros.area_min = filtros.area_min
+    if (filtros.area_max) rpcFiltros.area_max = filtros.area_max
     if (filtros.orden) rpcFiltros.orden = filtros.orden
 
     // Pasar zonas_permitidas como IDs UI — el RPC hace la expansión internamente
