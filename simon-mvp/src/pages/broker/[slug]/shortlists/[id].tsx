@@ -10,7 +10,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import Head from 'next/head'
 import type { GetServerSideProps } from 'next'
-import { getBrokerBySlug, isValidBrokerSlug, type Broker } from '@/lib/brokers-demo'
+import { getBrokerBySlug, type Broker } from '@/lib/simon-brokers'
 import { getShortlistById, updateShortlist, archiveShortlist, publicShortlistURL } from '@/lib/broker-shortlists'
 import { buildWhatsAppURL, defaultShortlistMessage } from '@/lib/whatsapp'
 import type { BrokerShortlistItem, BrokerShortlistWithItems } from '@/types/broker-shortlist'
@@ -259,7 +259,7 @@ export default function ShortlistEditorPage({ broker }: PageProps) {
 
 export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => {
   const slug = ctx.params?.slug as string | undefined
-  if (!isValidBrokerSlug(slug)) return { notFound: true }
-  const broker = getBrokerBySlug(slug)!
+  const broker = await getBrokerBySlug(slug)
+  if (!broker) return { notFound: true }
   return { props: { broker } }
 }

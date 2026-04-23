@@ -54,6 +54,10 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 12. **Absorción de mercado** — `market_absorption_snapshots` tiene 3 series (`filter_version`): v1 (rota, no usar), v2 (absorbidas backfilled pero inventario con filtro 300d), v3 (limpia, desde 14 Abr 2026). Al presentar datos de absorción: (a) declarar qué `filter_version` se usa, (b) v3 necesita ≥90 días para ser estable — antes de eso presentar como "rotación observada" con caveats, (c) absorbida ≠ vendida (puede ser listing expirado o retirado), (d) NUNCA presentar "meses de inventario" como predicción. Ver `docs/canonical/ABSORCION_LIMITACIONES.md` para detalle completo de cortes de datos y qué es verde/amarillo/rojo.
 11. **Días en mercado (venta)** — NUNCA usar `fecha_discovery` para calcular antigüedad. `fecha_discovery` se pisa con `NOW()` cada noche por el pipeline. Usar `dias_en_mercado` de la vista (calcula `CURRENT_DATE - COALESCE(fecha_publicacion, fecha_discovery)`), o `fecha_publicacion` directo si se consulta `propiedades_v2`. `fecha_creacion` es proxy aceptable solo si `fecha_publicacion` es NULL.
 13. **Seguridad Supabase / RLS** — Antes de crear API routes con Supabase, habilitar RLS, dropear tablas, o crear views/funciones RPC: leer `docs/canonical/SEGURIDAD_SUPABASE.md`. Reglas clave: service_role en API server-side (nunca anon, nunca con prefijo `NEXT_PUBLIC_`), rename a `_trash_*` antes de DROP, grep + `pg_stat_user_tables` + `pg_depend` antes de RLS, views sin `SECURITY DEFINER`.
+14. **Brokers — dos tablas distintas, NUNCA confundir**:
+    - `brokers` (legacy, pre-Simon Broker MVP) — sistema de captación B2B donde brokers suben **sus propias propiedades** al pipeline (`estado_verificacion`, `fuente_registro`, `total_propiedades`). **No se usa hoy** pero se mantiene por si se reactiva esa línea. Admin en `/admin/brokers`.
+    - `simon_brokers` (MVP Simon Broker, migración 231) — brokers que usan `/broker/[slug]` para **armar shortlists** y compartirlas con sus clientes por WA. Reemplaza el archivo hardcoded `lib/brokers-demo.ts` (eliminado S3). Admin en `/admin/simon-brokers`. Lib server-side `lib/simon-brokers.ts`.
+    - Ninguna FK entre ambas. Datos completamente separados.
 
 ## Zonas Canonicas (6 zonas)
 
@@ -296,7 +300,8 @@ Las paginas editores siguen el patron: **tipos → constantes → hook → compo
 | `/admin/propiedades/[id]` | Editor propiedad: candados, amenidades, pagos, galeria |
 | `/admin/proyectos` | Listado + crear proyectos |
 | `/admin/proyectos/[id]` | Editor proyecto: datos, inferir, propagar, tabla propiedades |
-| `/admin/brokers` | Gestion brokers B2B |
+| `/admin/brokers` | Gestion brokers B2B (tabla `brokers` legacy captación) |
+| `/admin/simon-brokers` | **Gestión brokers MVP Simon Broker** (tabla `simon_brokers`, migración 231) |
 | `/admin/supervisor` | Dashboard HITL (contadores) |
 | `/admin/supervisor/matching` | Revisar matches pendientes |
 | `/admin/supervisor/sin-match` | Asignar proyectos huerfanas |

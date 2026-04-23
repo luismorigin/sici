@@ -8,7 +8,7 @@ import type { UnidadVenta, FiltrosVentaSimple } from '@/lib/supabase'
 import { ZONAS_CANONICAS, displayZona } from '@/lib/zonas'
 import { trackEvent } from '@/lib/analytics'
 import { fetchMercadoData, type MercadoData } from '@/lib/mercado-data'
-import { getBrokerBySlug } from '@/lib/brokers-demo'
+import type { Broker } from '@/lib/simon-brokers'
 import ACMInline from '@/components/broker/ACMInline'
 import { useBrokerShortlists } from '@/hooks/useBrokerShortlists'
 import ShortlistSendModal from '@/components/broker/ShortlistSendModal'
@@ -1266,7 +1266,7 @@ export interface PublicShareData {
 }
 
 // ===== Page =====
-export default function VentasPage({ seo, initialProperties = [], brokerSlug: brokerSlugProp = null, publicShare = null }: { seo: VentasSEO; initialProperties: UnidadVenta[]; brokerSlug?: string | null; publicShare?: PublicShareData | null }) {
+export default function VentasPage({ seo, initialProperties = [], brokerSlug: brokerSlugProp = null, broker: brokerProp = null, publicShare = null }: { seo: VentasSEO; initialProperties: UnidadVenta[]; brokerSlug?: string | null; broker?: Broker | null; publicShare?: PublicShareData | null }) {
   const publicShareMode = publicShare !== null
   const publicShareBrokerProp: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null = publicShare ? publicShare.broker : null
   const priceSnapshotsMap: Record<number, { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null }> | null = publicShare && publicShare.priceSnapshots ? publicShare.priceSnapshots : null
@@ -1312,9 +1312,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const feedRef = useRef<HTMLDivElement>(null)
 
   // Modo broker: activo cuando la pagina /broker/[slug] renderiza VentasPage
-  // con brokerSlug como prop. Solo brokers validos activan el modo.
+  // con broker como prop (inyectado desde getStaticProps → lib/simon-brokers).
   const brokerSlug = brokerSlugProp
-  const broker = useMemo(() => getBrokerBySlug(brokerSlug), [brokerSlug])
+  const broker = brokerProp
   const brokerMode = broker !== null
   const brokerInfoProp: { nombre: string; inmobiliaria?: string | null } | null = broker ? { nombre: broker.nombre, inmobiliaria: broker.inmobiliaria } : null
 

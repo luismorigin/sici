@@ -5,7 +5,7 @@
 import { CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import type { Broker } from '@/lib/brokers-demo'
+import type { Broker } from '@/lib/simon-brokers'
 import type { BrokerShortlist } from '@/types/broker-shortlist'
 import { publicShortlistURL } from '@/lib/broker-shortlists'
 import { buildWhatsAppURL, defaultShortlistMessage } from '@/lib/whatsapp'

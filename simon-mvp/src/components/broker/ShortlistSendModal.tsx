@@ -5,7 +5,7 @@
 
 import { CSSProperties, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { Broker } from '@/lib/brokers-demo'
+import type { Broker } from '@/lib/simon-brokers'
 import { defaultShortlistMessage } from '@/lib/whatsapp'
 
 const TEMPLATE_PLACEHOLDER_URL = '__SHORTLIST_URL__'
