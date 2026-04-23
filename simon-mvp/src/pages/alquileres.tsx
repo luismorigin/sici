@@ -234,6 +234,8 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     solo_con_fotos: true,
   })
   const [isFiltered, setIsFiltered] = useState(false)
+  // Incrementa solo cuando deep-link aplica filtros via URL, para forzar remount de DesktopFilters/FilterOverlay con sus initializers leyendo currentFilters. Interacciones manuales del user NO incrementan esto.
+  const [filterComponentVersion, setFilterComponentVersion] = useState(0)
   const [totalCount, setTotalCount] = useState(seo.totalUnidades || initialProperties.length)
   const [loadError, setLoadError] = useState(false)
   const [proyectoNames, setProyectoNames] = useState<string[]>([])
@@ -391,6 +393,8 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   useEffect(() => {
     trackEvent('page_enter_alquiler', {})
     const doFetch = async () => {
+      // Skip if a URL-driven filter (?edificio, ?zonas=..., etc.) already fetched — avoids overwriting filtered results with a stale-closure baseline fetch.
+      if (isFilteredRef.current) return
       await fetchProperties(filters)
       programmaticScrollRef.current = true
       requestAnimationFrame(() => {
@@ -635,13 +639,15 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     }
   }, [router.query.edificio]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Deep-link: parse filter query params (zonas, precio, dorms, area, flags) → pre-apply filters.
-  // Runs once when router is ready. Skips if ?edificio is present (handled above).
-  // Supported params: zonas, precio_min_bob, precio_max_bob, dormitorios, amoblado,
+  // Deep-link: parse filter query params → pre-apply filters on first URL with params.
+  // Supported: zonas, precio_min_bob, precio_max_bob, dormitorios, amoblado,
   // mascotas, parqueo, area_min, area_max. Invalid values are silently ignored.
+  // Skips if ?edificio is present (handled by the effect above).
+  const deepLinkAppliedRef = useRef(false)
   useEffect(() => {
+    if (deepLinkAppliedRef.current) return
     if (!router.isReady) return
-    if (router.query.edificio) return
+    if (router.query.edificio) { deepLinkAppliedRef.current = true; return }
 
     const q = router.query
     const overrides: Partial<FiltrosAlquiler> = {}
@@ -652,7 +658,6 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
       return Number.isFinite(n) && n > 0 ? n : undefined
     }
 
-    // zonas: CSV of slug IDs (accepts kebab-case, normalized to snake_case)
     if (typeof q.zonas === 'string') {
       const validIds = new Set(ZONAS_ALQUILER_UI.map(z => z.id))
       const zonas = q.zonas.split(',')
@@ -666,7 +671,6 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     const pmax = parsePositiveNum(q.precio_max_bob)
     if (pmax !== undefined) overrides.precio_mensual_max = pmax
 
-    // dormitorios: CSV of non-negative integers (0 = monoambiente, 3 = "3+")
     if (typeof q.dormitorios === 'string') {
       const dorms = q.dormitorios.split(',')
         .map(s => Number(s.trim()))
@@ -683,6 +687,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     const amax = parsePositiveNum(q.area_max)
     if (amax !== undefined) overrides.area_max = amax
 
+    deepLinkAppliedRef.current = true
     if (Object.keys(overrides).length === 0) return
 
     const f: FiltrosAlquiler = {
@@ -693,8 +698,10 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     }
     setFilters(f)
     setIsFiltered(true)
+    isFilteredRef.current = true
+    setFilterComponentVersion(v => v + 1)
     fetchProperties(f)
-  }, [router.isReady]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Parse ?id= query param for spotlight (shared property)
   useEffect(() => {
@@ -853,6 +860,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
               <span className="desktop-count-label">{isFiltered ? `de ${totalCount} alquileres` : 'alquileres en Equipetrol'}</span>
             </div>
             <DesktopFilters
+              key={`df-${filterComponentVersion}`}
               currentFilters={filters}
               isFiltered={isFiltered}
               onApply={applyFilters}
@@ -1094,11 +1102,13 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
 
           {/* Filter overlay */}
           <FilterOverlay
+            key={`fo-${filterComponentVersion}`}
             isOpen={filterOverlayOpen}
             onClose={() => setFilterOverlayOpen(false)}
             totalCount={totalCount}
             filteredCount={properties.length}
             isFiltered={isFiltered}
+            currentFilters={filters}
             onApply={(f) => { applyFilters(f); setFilterOverlayOpen(false) }}
             onReset={() => { resetFilters(); setFilterOverlayOpen(false) }}
             proyectoNames={proyectoNames}
@@ -1245,7 +1255,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
   onApply: (f: FiltrosAlquiler) => void; onReset: () => void; proyectoNames?: string[]
 }) {
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
-  const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set())
+  const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set(currentFilters.dormitorios_lista || []))
   const [amoblado, setAmoblado] = useState(currentFilters.amoblado || false)
   const [mascotas, setMascotas] = useState(currentFilters.acepta_mascotas || false)
   const [conParqueo, setConParqueo] = useState(currentFilters.con_parqueo || false)
@@ -1388,19 +1398,20 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 }
 
 // ===== FILTER OVERLAY (full-screen, replaces MobileFilterCard in feed) =====
-function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset, proyectoNames }: {
+function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, currentFilters, onApply, onReset, proyectoNames }: {
   isOpen: boolean; onClose: () => void
   totalCount: number; filteredCount: number; isFiltered: boolean
+  currentFilters: FiltrosAlquiler
   onApply: (f: FiltrosAlquiler) => void; onReset: () => void; proyectoNames?: string[]
 }) {
-  const [maxPrice, setMaxPrice] = useState(MAX_SLIDER_PRICE)
-  const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set())
-  const [amoblado, setAmoblado] = useState(false)
-  const [mascotas, setMascotas] = useState(false)
-  const [conParqueo, setConParqueo] = useState(false)
-  const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set())
-  const [orden, setOrden] = useState<FiltrosAlquiler['orden']>('recientes')
-  const [proyecto, setProyecto] = useState('')
+  const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
+  const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set(currentFilters.dormitorios_lista || []))
+  const [amoblado, setAmoblado] = useState(currentFilters.amoblado || false)
+  const [mascotas, setMascotas] = useState(currentFilters.acepta_mascotas || false)
+  const [conParqueo, setConParqueo] = useState(currentFilters.con_parqueo || false)
+  const [selectedZonas, setSelectedZonas] = useState<Set<string>>(new Set(currentFilters.zonas_permitidas || []))
+  const [orden, setOrden] = useState<FiltrosAlquiler['orden']>(currentFilters.orden || 'recientes')
+  const [proyecto, setProyecto] = useState(currentFilters.proyecto || '')
   const [previewCount, setPreviewCount] = useState<number | null>(null)
   const previewRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isFirstRender = useRef(true)
