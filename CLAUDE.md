@@ -109,7 +109,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | Proposito | Archivo |
 |-----------|---------|
 | **Product Brief Simón** | `docs/producto/SIMON_PRODUCT_BRIEF.md` — superficies, estado producción vs construido, capacidades, limitaciones |
-| **Simon Broker (S2 mergeado, S3 pendiente)** | `docs/broker/` — PRD, backlog, decisiones. S0+S1+S2 en `main` (commit `4937695`, 23 Abr 2026): `/broker/[slug]` modo broker con estrella verde + chips Solo seleccionadas/Marcar todas + ACM inline, ruta pública `/b/[hash]` reusando feed `/ventas` con `publicShare`, badges precio (agente cambió vs TC se movió), mensajes WA broker→agente y cliente→broker. Migraciones 228/229/230 |
+| **Simon Broker (S3 mergeado, Fase 2 alquileres pendiente)** | `docs/broker/` — PRD, backlog, decisiones. MVP completo en `main` (merge S3 `05bc1eb`, 23 Abr 2026). Incluye: `/broker/[slug]` modo broker con estrella verde + chips + chip "Ver mercado ↗" + ACM inline, ruta pública `/b/[hash]` reusando feed `/ventas` con `publicShare` (inmobiliaria visible + WA con corazones marcados), badges precio (agente cambió vs TC se movió), mensajes WA broker→agente y cliente→broker. Tabla `simon_brokers` (migración 231) reemplaza `lib/brokers-demo.ts` — admin UI `/admin/simon-brokers` para crear/editar/pausar/eliminar brokers en ~30s durante reunión. Shortlists agrupadas por cliente + alerta "cliente existente" (Nivel 1). Migraciones 228/229/230/231. Fase 2 alquileres en `docs/broker/BACKLOG.md` |
 | **Arquitectura SICI** | `docs/arquitectura/SICI_ARQUITECTURA_MAESTRA.md` |
 | **Simon Arquitectura** | `docs/simon/SIMON_ARQUITECTURA_COGNITIVA.md` |
 | **Metodologia Fiduciaria** | `docs/canonical/METODOLOGIA_FIDUCIARIA_PARTE_*.md` |
