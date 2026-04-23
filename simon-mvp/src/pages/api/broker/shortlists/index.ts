@@ -8,7 +8,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { randomBytes } from 'crypto'
-import { isValidBrokerSlug } from '@/lib/brokers-demo'
+import { isValidBrokerSlug } from '@/lib/simon-brokers'
 import type { BrokerShortlist, CreateShortlistPayload } from '@/types/broker-shortlist'
 
 const supabase = createClient(
@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     if (req.method === 'GET') {
       const slug = String(req.query.slug || '')
-      if (!isValidBrokerSlug(slug)) {
+      if (!(await isValidBrokerSlug(slug))) {
         return res.status(400).json({ error: 'broker_slug inválido' })
       }
       const { data, error } = await supabase
@@ -55,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === 'POST') {
       const payload = req.body as CreateShortlistPayload
 
-      if (!payload?.broker_slug || !isValidBrokerSlug(payload.broker_slug)) {
+      if (!payload?.broker_slug || !(await isValidBrokerSlug(payload.broker_slug))) {
         return res.status(400).json({ error: 'broker_slug inválido' })
       }
       if (!payload.cliente_nombre?.trim()) {

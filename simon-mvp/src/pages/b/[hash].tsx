@@ -12,7 +12,7 @@ import type { GetServerSideProps } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import VentasPage, { getStaticProps as ventasGetStaticProps } from '../ventas'
 import type { PublicShareData } from '../ventas'
-import { getBrokerBySlug } from '@/lib/brokers-demo'
+import { getBrokerBySlug } from '@/lib/simon-brokers'
 import type { BrokerShortlist } from '@/types/broker-shortlist'
 import type { RawUnidadSimpleRow } from '@/types/db-responses'
 import type { UnidadVenta } from '@/lib/supabase'
@@ -111,7 +111,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
 
   if (errSL || !shortlist) return { notFound: true }
 
-  const broker = getBrokerBySlug(shortlist.broker_slug)
+  const broker = await getBrokerBySlug(shortlist.broker_slug)
   if (!broker) return { notFound: true }
 
   const { data: items, error: errItems } = await supabase

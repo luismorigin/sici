@@ -10,7 +10,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import Head from 'next/head'
 import type { GetServerSideProps } from 'next'
-import { getBrokerBySlug, isValidBrokerSlug, type Broker } from '@/lib/brokers-demo'
+import { getBrokerBySlug, type Broker } from '@/lib/simon-brokers'
 import { getShortlistById, updateShortlist, archiveShortlist, publicShortlistURL } from '@/lib/broker-shortlists'
 import { buildWhatsAppURL, defaultShortlistMessage } from '@/lib/whatsapp'
 import type { BrokerShortlistItem, BrokerShortlistWithItems } from '@/types/broker-shortlist'
@@ -41,12 +41,25 @@ export default function ShortlistEditorPage({ broker }: PageProps) {
         setItems(d.items.sort((a, b) => a.orden - b.orden))
         setClienteNombre(d.cliente_nombre)
         setClienteTelefono(d.cliente_telefono)
-        setMensaje(d.mensaje_whatsapp || '')
+        // Si mensaje_whatsapp está vacío (shortlist vieja o guardada sin override),
+        // cargamos el template por defecto para que el broker pueda editarlo en vez
+        // de ver un textarea vacío.
+        const mensajeGuardado = (d.mensaje_whatsapp || '').trim()
+        if (mensajeGuardado) {
+          setMensaje(mensajeGuardado)
+        } else {
+          setMensaje(defaultShortlistMessage({
+            clienteNombre: d.cliente_nombre,
+            brokerNombre: broker.nombre,
+            shortlistUrl: publicShortlistURL(d.hash),
+            cantidadPropiedades: d.items.length,
+          }))
+        }
         setIsPublished(d.is_published)
       })
       .catch(err => setError(err instanceof Error ? err.message : 'Error cargando'))
       .finally(() => setLoading(false))
-  }, [id])
+  }, [id, broker.nombre])
 
   const shareUrl = useMemo(() => data ? publicShortlistURL(data.hash) : '', [data])
 
@@ -259,7 +272,7 @@ export default function ShortlistEditorPage({ broker }: PageProps) {
 
 export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => {
   const slug = ctx.params?.slug as string | undefined
-  if (!isValidBrokerSlug(slug)) return { notFound: true }
-  const broker = getBrokerBySlug(slug)!
+  const broker = await getBrokerBySlug(slug)
+  if (!broker) return { notFound: true }
   return { props: { broker } }
 }

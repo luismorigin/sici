@@ -1,26 +1,32 @@
 // Pagina /broker/[slug] — renderiza VentasPage con modo broker activo.
-// Reemplaza el rewrite previo en next.config.js, que causaba bug Next
-// "attempted to hard navigate to the same URL" al interactuar con filtros.
-// Ver docs/broker/PRD.md F1.
+//
+// Data del broker viene de tabla `simon_brokers` (migración 231, via
+// lib/simon-brokers.ts). Antes venía de hardcoded `lib/brokers-demo.ts`.
+//
+// SSG con revalidate=60s → crear/pausar un broker en admin se refleja
+// en la página pública en ≤60s (aceptable para activación en el momento
+// del café con broker real).
 
 import VentasPage, { getStaticProps as ventasGetStaticProps } from '../ventas'
-import { BROKERS_DEMO, isValidBrokerSlug } from '@/lib/brokers-demo'
+import { listActiveSlugs, getBrokerBySlug, type Broker } from '@/lib/simon-brokers'
 import type { GetStaticPaths, GetStaticProps } from 'next'
 
 export default VentasPage
 
 export const getStaticPaths: GetStaticPaths = async () => {
+  const slugs = await listActiveSlugs()
   return {
-    paths: Object.keys(BROKERS_DEMO).map(slug => ({ params: { slug } })),
+    paths: slugs.map(slug => ({ params: { slug } })),
     fallback: 'blocking',
   }
 }
 
 export const getStaticProps: GetStaticProps = async (context) => {
   const slug = context.params?.slug as string | undefined
+  const broker: Broker | null = await getBrokerBySlug(slug)
 
-  if (!isValidBrokerSlug(slug)) {
-    return { notFound: true }
+  if (!broker) {
+    return { notFound: true, revalidate: 60 }
   }
 
   // Delegar a getStaticProps de ventas para obtener SEO + initial properties
@@ -31,8 +37,9 @@ export const getStaticProps: GetStaticProps = async (context) => {
       props: {
         ...(ventasResult.props as object),
         brokerSlug: slug,
+        broker,
       },
-      revalidate: (ventasResult as { revalidate?: number }).revalidate ?? 21600,
+      revalidate: 60,
     }
   }
 

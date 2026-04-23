@@ -17,7 +17,7 @@ import {
   publicShortlistURL,
 } from '@/lib/broker-shortlists'
 import { buildWhatsAppURL, defaultShortlistMessage } from '@/lib/whatsapp'
-import type { Broker } from '@/lib/brokers-demo'
+import type { Broker } from '@/lib/simon-brokers'
 import type { BrokerShortlist, CreateShortlistPayload } from '@/types/broker-shortlist'
 
 export interface UseBrokerShortlistsResult {
