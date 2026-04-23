@@ -58,6 +58,40 @@ Ideas, features y mejoras parqueadas para después del MVP.
 
 ## Features producto
 
+### Snapshot de precio en items del shortlist
+**Tier:** v1.1 — agregar antes de escalar a 10+ brokers
+**Agregado:** 2026-04-23
+**Rationale:** Hoy el shortlist es 100% live: cuando el cliente abre `/b/[hash]`, ve el precio actual de la BD, no el precio cuando el broker armó la shortlist. Esto crea problema cuando un vendedor ajusta precio entre el armado y la apertura del cliente:
+- Si baja: oportunidad perdida (broker no se entera, cliente lo ve solo)
+- Si sube: pérdida de credibilidad ("vos me dijiste $180k, dice $200k")
+
+**Solución técnica:**
+- Agregar columna `precio_usd_snapshot NUMERIC` a `broker_shortlist_items`
+- Llenar al INSERT con el precio actual de la propiedad
+- En `/b/[hash]`, comparar `precio_usd_snapshot` vs `precio_usd` actual:
+  - Si baja: badge verde "Bajó de $X → $Y"
+  - Si sube: badge gris "Antes $X → ahora $Y"
+  - Si igual: nada
+
+**Estimación:** 30-60 min de dev (migración + INSERT update + render badge).
+**Cuándo reactivar:** antes de escalar a 10+ brokers o si aparece el primer caso real en feedback.
+
+### Producto comercial abierto (registro público de brokers)
+**Tier:** v2 — bloque de features para self-serve
+**Agregado:** 2026-04-23
+**Rationale:** El MVP funciona para founding cerrado (15-25 brokers conocidos, slugs creados a mano). Para abrir registro público y escalar a 100+ brokers hace falta un bloque de features en conjunto:
+
+1. **Auth real** (email/password o magic link) — hoy solo slug en URL
+2. **Branding propio del broker** (logo + 1-2 colores en el link compartido) — hoy solo nombre + foto
+3. **Dashboard de métricas** (vistas por shortlist, propiedades más tocadas, conversiones) — hoy solo `view_count` en BD sin UI
+4. **Onboarding** (tour primer uso, formulario alta self-serve, página `/broker/signup`) — hoy creado a mano por el equipo
+5. **Notificaciones al broker** (email/WA cuando el cliente abre el link) — hoy reactivo, broker entra a "Mis shortlists" para chequear
+6. **Rate limiting + abuse protection** en API broker — hoy escritura abierta (riesgo aceptable solo en fase founding)
+
+**Estimación:** ~1 semana de dev en bloque, asumiendo el flow del MVP ya validado con feedback de founders.
+
+**Cuándo reactivar:** cuando product-market-fit esté validado con los 15-25 founders del MVP y haya señal real de demanda externa (brokers que no conocemos pidiendo acceso).
+
 ### PDF export del ACM
 **Tier:** v2
 **Agregado:** 2026-04-22

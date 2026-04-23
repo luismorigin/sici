@@ -7,6 +7,8 @@ export interface Broker {
   nombre: string
   telefono: string
   foto_url: string | null
+  // Franquicia o "Broker independiente". Si null/undefined → se asume independiente.
+  inmobiliaria?: string | null
 }
 
 export const BROKERS_DEMO: Record<string, Broker> = {
@@ -15,6 +17,7 @@ export const BROKERS_DEMO: Record<string, Broker> = {
     nombre: 'Demo Broker',
     telefono: '+59170000000',
     foto_url: null,
+    inmobiliaria: null, // null = "broker independiente" en el mensaje WA
   },
 }
 

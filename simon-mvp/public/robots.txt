@@ -32,4 +32,7 @@ Disallow: /admin/
 Disallow: /broker/
 Disallow: /api/
 
+# Shortlists compartidas — links privados broker→cliente
+Disallow: /b/
+
 Sitemap: https://simonbo.com/sitemap.xml
