@@ -6,7 +6,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireAdmin } from '@/lib/admin-api-auth'
-import { updateBroker, isValidPhoneFormat, type UpdateBrokerInput } from '@/lib/simon-brokers'
+import { updateBroker, deleteBroker, isValidPhoneFormat, type UpdateBrokerInput } from '@/lib/simon-brokers'
 
 const ALLOWED_STATUS = ['activo', 'pausado', 'inactivo'] as const
 type Status = typeof ALLOWED_STATUS[number]
@@ -55,7 +55,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json(updated)
     }
 
-    res.setHeader('Allow', 'PATCH')
+    if (req.method === 'DELETE') {
+      await deleteBroker(id)
+      return res.status(204).end()
+    }
+
+    res.setHeader('Allow', 'PATCH, DELETE')
     return res.status(405).json({ error: 'Method not allowed' })
   } catch (err) {
     console.error('[api/admin/simon-brokers/[id]]', err)

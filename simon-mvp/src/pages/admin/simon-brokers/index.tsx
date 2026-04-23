@@ -128,6 +128,29 @@ export default function AdminSimonBrokers() {
     }
   }
 
+  const handleDelete = async (b: BrokerAdmin) => {
+    const msg = `¿Eliminar definitivamente el broker "${b.nombre}" (/${b.slug})?\n\nATENCIÓN:\n- Esto elimina el broker de la BD (hard delete, no se puede deshacer).\n- Si tenía shortlists enviadas a clientes, los links /b/[hash] dejarán de funcionar.\n- Para deshabilitar sin perder histórico, usá "Pausar" en su lugar.`
+    if (!confirm(msg)) return
+    setSaving(b.id)
+    setError(null)
+    try {
+      const headers = await getAuthHeaders()
+      const res = await fetch(`/api/admin/simon-brokers/${b.id}`, {
+        method: 'DELETE',
+        headers,
+      })
+      if (!res.ok && res.status !== 204) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.error || `HTTP ${res.status}`)
+      }
+      await fetchBrokers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al eliminar')
+    } finally {
+      setSaving(null)
+    }
+  }
+
   const handleToggleStatus = async (b: BrokerAdmin, newStatus: BrokerAdmin['status']) => {
     setSaving(b.id)
     setError(null)
@@ -408,6 +431,14 @@ export default function AdminSimonBrokers() {
                               Activar
                             </button>
                           )}
+                          <button
+                            onClick={() => handleDelete(b)}
+                            disabled={saving === b.id}
+                            className="text-xs border border-red-300 text-red-700 rounded px-2 py-1 hover:bg-red-50 disabled:opacity-50"
+                            title="Eliminar permanentemente (hard delete)"
+                          >
+                            🗑
+                          </button>
                         </div>
                       </td>
                     </tr>

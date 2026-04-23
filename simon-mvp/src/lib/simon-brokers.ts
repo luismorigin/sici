@@ -164,6 +164,14 @@ export interface UpdateBrokerInput {
   notas?: string | null
 }
 
+export async function deleteBroker(id: string): Promise<void> {
+  const supa = getSupabaseAdmin()
+  const { error } = await supa.from('simon_brokers').delete().eq('id', id)
+  if (error) {
+    throw new Error(`deleteBroker failed: ${error.message}`)
+  }
+}
+
 export async function updateBroker(id: string, input: UpdateBrokerInput): Promise<BrokerAdmin> {
   const supa = getSupabaseAdmin()
   const payload: Record<string, unknown> = {}
