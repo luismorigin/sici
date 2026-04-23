@@ -52,6 +52,14 @@ const S: Record<string, CSSProperties> = {
   itemMeta: { fontSize: 12, color: '#6a6a6a' },
   itemViews: { color: '#3A6A48', fontWeight: 500 },
   itemActions: { display: 'flex', gap: 6, flexWrap: 'wrap' },
+  groupLabel: {
+    fontSize: 11, fontWeight: 600, letterSpacing: 0.8, textTransform: 'uppercase',
+    color: '#6a6a6a', padding: '4px 2px', marginTop: 4,
+  },
+  groupBadge: {
+    background: '#141414', color: '#EDE8DC', padding: '2px 8px',
+    borderRadius: 100, fontSize: 10, fontWeight: 600, marginLeft: 6,
+  },
   btnBase: {
     padding: '6px 10px', borderRadius: 6, fontSize: 12,
     fontWeight: 600, cursor: 'pointer', border: '1px solid transparent',
@@ -61,6 +69,98 @@ const S: Record<string, CSSProperties> = {
   btnGhost: { background: 'transparent', color: '#141414', borderColor: 'rgba(20,20,20,0.18)' },
   btnPrimary: { background: '#3A6A48', color: '#EDE8DC' },
   btnTrash: { background: 'transparent', color: '#b91c1c', borderColor: 'rgba(185,28,28,0.3)' },
+}
+
+/**
+ * Normaliza un teléfono para agrupar (solo dígitos).
+ * "+591 78519485" y "+59178519485" caen en el mismo grupo.
+ */
+export function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, '')
+}
+
+interface ClientGroup {
+  telefono: string
+  nombre: string
+  shortlists: BrokerShortlist[]
+}
+
+/**
+ * Agrupa shortlists por cliente (teléfono normalizado). Retorna grupos
+ * ordenados por actividad más reciente descendente.
+ */
+function groupByClient(shortlists: BrokerShortlist[]): ClientGroup[] {
+  const map = new Map<string, ClientGroup>()
+  for (const s of shortlists) {
+    const key = normalizePhone(s.cliente_telefono)
+    const existing = map.get(key)
+    if (existing) {
+      existing.shortlists.push(s)
+      // Usa el nombre más reciente (primera shortlist por orden descendente)
+    } else {
+      map.set(key, { telefono: s.cliente_telefono, nombre: s.cliente_nombre, shortlists: [s] })
+    }
+  }
+  // Ordenar shortlists dentro de cada grupo por created_at desc
+  for (const g of map.values()) {
+    g.shortlists.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    // El nombre del grupo es el de la shortlist más reciente
+    g.nombre = g.shortlists[0].cliente_nombre
+  }
+  // Ordenar grupos por shortlist más reciente
+  return Array.from(map.values()).sort((a, b) => {
+    const aLatest = new Date(a.shortlists[0].created_at).getTime()
+    const bLatest = new Date(b.shortlists[0].created_at).getTime()
+    return bLatest - aLatest
+  })
+}
+
+function renderGrouped(
+  shortlists: BrokerShortlist[],
+  broker: Broker,
+  handleCopyLink: (hash: string) => void,
+  handleResend: (s: BrokerShortlist) => void,
+  handleArchive: (s: BrokerShortlist) => void,
+) {
+  const groups = groupByClient(shortlists)
+  return (
+    <ul style={S.list}>
+      {groups.map(g => (
+        <li key={g.telefono} style={{ listStyle: 'none', marginBottom: 8 }}>
+          <div style={S.groupLabel}>
+            {g.nombre} · {g.telefono}
+            {g.shortlists.length > 1 && (
+              <span style={S.groupBadge}>{g.shortlists.length} envíos</span>
+            )}
+          </div>
+          <ul style={{ ...S.list, marginLeft: 0 }}>
+            {g.shortlists.map(s => (
+              <li key={s.id} style={S.item}>
+                <div style={S.itemMain}>
+                  <div style={S.itemName}>
+                    {new Date(s.created_at).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })}
+                    {' · '}
+                    <span style={{ fontWeight: 400, color: '#6a6a6a' }}>
+                      {s.mensaje_whatsapp ? 'con mensaje personalizado' : 'mensaje default'}
+                    </span>
+                  </div>
+                  {s.view_count > 0 && (
+                    <div style={{ ...S.itemMeta, ...S.itemViews }}>👁 {s.view_count} vista{s.view_count === 1 ? '' : 's'}</div>
+                  )}
+                </div>
+                <div style={S.itemActions}>
+                  <button style={{ ...S.btnBase, ...S.btnGhost }} onClick={() => handleCopyLink(s.hash)}>Copiar link</button>
+                  <button style={{ ...S.btnBase, ...S.btnPrimary }} onClick={() => handleResend(s)}>WhatsApp</button>
+                  <Link href={`/broker/${broker.slug}/shortlists/${s.id}`} style={{ ...S.btnBase, ...S.btnGhost }}>Editar</Link>
+                  <button style={{ ...S.btnBase, ...S.btnTrash }} onClick={() => handleArchive(s)} title="Archivar">✕</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 export default function ShortlistsPanel({ isOpen, onClose, broker, shortlists, loading, onArchive }: Props) {
@@ -114,27 +214,7 @@ export default function ShortlistsPanel({ isOpen, onClose, broker, shortlists, l
           </div>
         )}
 
-        <ul style={S.list}>
-          {shortlists.map(s => (
-            <li key={s.id} style={S.item}>
-              <div style={S.itemMain}>
-                <div style={S.itemName}>{s.cliente_nombre}</div>
-                <div style={S.itemMeta}>
-                  {s.cliente_telefono} · {new Date(s.created_at).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })}
-                  {s.view_count > 0 && (
-                    <span style={S.itemViews}> · 👁 {s.view_count} vista{s.view_count === 1 ? '' : 's'}</span>
-                  )}
-                </div>
-              </div>
-              <div style={S.itemActions}>
-                <button style={{ ...S.btnBase, ...S.btnGhost }} onClick={() => handleCopyLink(s.hash)}>Copiar link</button>
-                <button style={{ ...S.btnBase, ...S.btnPrimary }} onClick={() => handleResend(s)}>WhatsApp</button>
-                <Link href={`/broker/${broker.slug}/shortlists/${s.id}`} style={{ ...S.btnBase, ...S.btnGhost }}>Editar</Link>
-                <button style={{ ...S.btnBase, ...S.btnTrash }} onClick={() => handleArchive(s)} title="Archivar">✕</button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        {renderGrouped(shortlists, broker, handleCopyLink, handleResend, handleArchive)}
       </div>
     </div>,
     document.body

@@ -6,7 +6,12 @@
 import { CSSProperties, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Broker } from '@/lib/simon-brokers'
+import type { BrokerShortlist } from '@/types/broker-shortlist'
 import { defaultShortlistMessage } from '@/lib/whatsapp'
+
+function normalizePhone(p: string): string {
+  return p.replace(/\D/g, '')
+}
 
 const TEMPLATE_PLACEHOLDER_URL = '__SHORTLIST_URL__'
 
@@ -15,6 +20,7 @@ interface Props {
   onClose: () => void
   broker: Broker
   cantidadPropiedades: number
+  existingShortlists?: BrokerShortlist[]
   onConfirm: (data: { cliente_nombre: string; cliente_telefono: string; mensaje_whatsapp?: string }) => Promise<{ whatsappUrl: string }>
 }
 
@@ -72,7 +78,7 @@ const S: Record<string, CSSProperties> = {
   btnPrimary: { background: '#3A6A48', color: '#EDE8DC' },
 }
 
-export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPropiedades, onConfirm }: Props) {
+export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPropiedades, existingShortlists = [], onConfirm }: Props) {
   const [clienteNombre, setClienteNombre] = useState('')
   const [clienteTelefono, setClienteTelefono] = useState('')
   const [mensaje, setMensaje] = useState('')
@@ -89,6 +95,13 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
       cantidadPropiedades,
     })
   }, [clienteNombre, broker.nombre, cantidadPropiedades])
+
+  // Detectar si el teléfono ingresado ya tiene shortlists previas con este broker.
+  const existingClientMatches = useMemo(() => {
+    const normalized = normalizePhone(clienteTelefono)
+    if (normalized.length < 6) return []
+    return existingShortlists.filter(s => normalizePhone(s.cliente_telefono) === normalized)
+  }, [clienteTelefono, existingShortlists])
 
   useEffect(() => {
     if (isOpen) {
@@ -172,6 +185,17 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
             inputMode="tel"
           />
           <span style={S.help}>Incluí el código de país (Bolivia: +591)</span>
+          {existingClientMatches.length > 0 && (
+            <div style={{
+              marginTop: 8, padding: '10px 12px',
+              background: '#fff8e6', border: '1px solid rgba(217,119,6,0.35)',
+              borderRadius: 8, fontSize: 12, color: '#6a4b00', lineHeight: 1.4,
+            }}>
+              <strong>Cliente existente</strong> — ya armaste {existingClientMatches.length} shortlist{existingClientMatches.length === 1 ? '' : 's'} a este teléfono
+              {existingClientMatches[0].cliente_nombre && ` (${existingClientMatches[0].cliente_nombre})`}.
+              Esta va a crear otra separada — si querés actualizar la anterior, cerrá esto y editala desde &quot;Mis shortlists&quot;.
+            </div>
+          )}
         </div>
 
         <div style={S.field}>

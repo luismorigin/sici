@@ -1718,6 +1718,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           onClose={() => setShortlistModalOpen(false)}
           broker={broker}
           cantidadPropiedades={favorites.size}
+          existingShortlists={brokerShortlists.shortlists}
           onConfirm={handleSendShortlist}
         />
       )}
