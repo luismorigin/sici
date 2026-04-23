@@ -10,6 +10,9 @@ import { trackEvent } from '@/lib/analytics'
 import { fetchMercadoData, type MercadoData } from '@/lib/mercado-data'
 import { getBrokerBySlug } from '@/lib/brokers-demo'
 import ACMInline from '@/components/broker/ACMInline'
+import { useBrokerShortlists } from '@/hooks/useBrokerShortlists'
+import ShortlistSendModal from '@/components/broker/ShortlistSendModal'
+import ShortlistsPanel from '@/components/broker/ShortlistsPanel'
 
 // --- SEO types ---
 interface VentasSEO {
@@ -265,10 +268,10 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 }
 
 // ===== Desktop VentaCard =====
-function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst, brokerMode, onAddToShortlist }: {
+function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst, brokerMode, onAddToShortlist, publicShareMode = false }: {
   property: UnidadVenta; isFavorite: boolean; isFirst?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
-  brokerMode?: boolean; onAddToShortlist?: () => void
+  brokerMode?: boolean; onAddToShortlist?: () => void; publicShareMode?: boolean
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = p.fotos_urls?.length > 0 ? p.fotos_urls : []
@@ -295,6 +298,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
         onClick={() => { if (hasPhotos) onPhotoTap(photoIdx) }}>
         {!hasPhotos && <div className="vc-nofoto">Sin fotos</div>}
         {p.tc_sospechoso && <div className="vc-tc-badge">Confirmar tipo de cambio</div>}
+        {brokerMode && !publicShareMode && (() => { const fb = fuenteBadge(p.fuente); return fb ? <div className="vc-fuente-badge" style={{ background: fb.bg, color: fb.color }}>{fb.label}</div> : null })()}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="vc-nav vc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
           {photoIdx < photos.length - 1 && <button className="vc-nav vc-nav-next" aria-label="Foto siguiente" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}><ChevronRight /></button>}
@@ -322,29 +326,28 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
         <div className="vc-actions">
-          <button className={`vc-act-btn vc-act-fav ${isFavorite ? 'active' : ''}`} aria-label="Favorito" onClick={onToggleFavorite}>
-            <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
+          <button className={`vc-act-btn vc-act-fav ${brokerMode ? 'vc-act-star' : ''} ${isFavorite ? 'active' : ''}`} aria-label={brokerMode ? (isFavorite ? 'Quitar de shortlist' : 'Agregar a shortlist') : 'Favorito'} onClick={onToggleFavorite}>
+            {brokerMode ? (
+              <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'none'} stroke={isFavorite ? '#3A6A48' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            )}
           </button>
           <button className="vc-act-btn" aria-label="Compartir" onClick={onShare}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
             </svg> Compartir
           </button>
-          {brokerMode && onAddToShortlist && (
-            <button className="vc-act-btn vc-act-shortlist" aria-label="Agregar a shortlist" onClick={onAddToShortlist}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-              </svg> Shortlist
-            </button>
-          )}
           <button className="vc-act-btn vc-act-detail" aria-label="Ver detalles" onClick={onDetails}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
-          {p.agente_telefono && (
+          {!publicShareMode && p.agente_telefono && (
             <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi ${p.proyecto} en Simon y me gustaría más información\n${p.url || ''}`)}`}
               target="_blank" rel="noopener noreferrer" className="vc-act-btn vc-act-wsp"
               onClick={() => trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'card_desktop' })}>
@@ -359,10 +362,10 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
 }
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
-function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, brokerMode, onAddToShortlist }: {
+function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, brokerMode, onAddToShortlist, publicShareMode = false }: {
   property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean; isFirst?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
-  brokerMode?: boolean; onAddToShortlist?: () => void
+  brokerMode?: boolean; onAddToShortlist?: () => void; publicShareMode?: boolean
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -443,6 +446,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
       {/* Spotlight badge */}
       {isSpotlight && <div className="mc-spotlight">Te compartieron este depto</div>}
       {p.tc_sospechoso && <div className="mc-tc-badge">Confirmar tipo de cambio</div>}
+      {brokerMode && !publicShareMode && (() => { const fb = fuenteBadge(p.fuente); return fb ? <div className="mc-fuente-badge" style={{ background: fb.bg, color: fb.color }}>{fb.label}</div> : null })()}
 
       {/* Content zone (45%) */}
       <div className="mc-content">
@@ -466,29 +470,28 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
         <div className="mc-actions">
-          <button className={`mc-btn mc-fav ${isFavorite ? 'active' : ''}`} aria-label="Favorito" onClick={onToggleFavorite}>
-            <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
+          <button className={`mc-btn mc-fav ${brokerMode ? 'mc-star' : ''} ${isFavorite ? 'active' : ''}`} aria-label={brokerMode ? (isFavorite ? 'Quitar de shortlist' : 'Agregar a shortlist') : 'Favorito'} onClick={onToggleFavorite}>
+            {brokerMode ? (
+              <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'none'} stroke={isFavorite ? '#3A6A48' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            )}
           </button>
           <button className="mc-btn mc-share" aria-label="Compartir" onClick={onShare}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
             </svg>
           </button>
-          {brokerMode && onAddToShortlist && (
-            <button className="mc-btn mc-shortlist" aria-label="Agregar a shortlist" onClick={onAddToShortlist}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#3A6A48" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-              </svg>
-            </button>
-          )}
           <button className="mc-btn mc-info" onClick={onDetails}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
-          {p.agente_telefono && (
+          {!publicShareMode && p.agente_telefono && (
             <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, vi este departamento en Simon y me interesa: ${p.proyecto} - $us ${Math.round(p.precio_usd).toLocaleString('en-US')}${p.url ? '\n' + p.url : ''}`)}`}
               target="_blank" rel="noopener noreferrer" className="mc-btn mc-wsp-inline"
               onClick={() => trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'card_mobile' })}>
@@ -742,13 +745,15 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 }
 
 // ===== Bottom Sheet =====
-function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty, brokerMode = false, onAddToShortlist }: {
+function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty, brokerMode = false, onAddToShortlist, publicShareBroker = null }: {
   property: UnidadVenta | null; isOpen: boolean; onClose: () => void; onShare?: () => void
   isFavorite?: boolean; onToggleFavorite?: () => void
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; isDesktop: boolean
   properties?: UnidadVenta[]; onSwapProperty?: (p: UnidadVenta) => void
   brokerMode?: boolean; onAddToShortlist?: (p: UnidadVenta) => void
+  publicShareBroker?: { nombre: string; telefono: string } | null
 }) {
+  const publicShareMode = publicShareBroker !== null
   const [gateName, setGateName] = useState('')
   const [gateTel, setGateTel] = useState('')
   const [gateEmail, setGateEmail] = useState('')
@@ -826,10 +831,16 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
         {/* Floating close + fav — always visible */}
         <div className="bs-floating-actions">
           {onToggleFavorite && (
-            <button className={`bs-fav ${isFavorite ? 'active' : ''}`} aria-label="Favorito" onClick={onToggleFavorite}>
-              <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-              </svg>
+            <button className={`bs-fav ${brokerMode ? 'bs-star' : ''} ${isFavorite ? 'active' : ''}`} aria-label={brokerMode ? (isFavorite ? 'Quitar de shortlist' : 'Agregar a shortlist') : 'Favorito'} onClick={onToggleFavorite}>
+              {brokerMode ? (
+                <svg viewBox="0 0 24 24" fill={isFavorite ? '#3A6A48' : 'none'} stroke={isFavorite ? '#3A6A48' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+              )}
             </button>
           )}
           <button className="bs-close" aria-label="Cerrar detalles" onClick={onClose}>&times;</button>
@@ -948,8 +959,8 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Agente info */}
-          {p.agente_nombre && (
+          {/* Agente info — oculto en publicShareMode (cliente solo contacta al broker) */}
+          {!publicShareMode && p.agente_nombre && (
             <div className="bs-section">
               <div className="bs-agent">
                 <span className="bs-agent-name">{p.agente_nombre}</span>
@@ -958,8 +969,8 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Propiedades similares */}
-          {similarProps.length > 0 && (
+          {/* Propiedades similares — oculto en publicShareMode (cliente solo ve lo curado) */}
+          {!publicShareMode && similarProps.length > 0 && (
             <div className="bs-section">
               <div className="bs-sl"><span className="bs-sl-dot" />También en {displayZona(p.zona)}</div>
               <div className="bs-sim-scroll">
@@ -983,7 +994,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
           )}
 
           {/* Preguntas para el vendedor — oculto en modo broker (el broker es el que responde) */}
-          {!brokerMode && brokerQuestions.length > 0 && (
+          {!brokerMode && !publicShareMode && brokerQuestions.length > 0 && (
             <div className="bs-section">
               <div className="bs-q-header">
                 <div className="bs-sl"><span className="bs-sl-dot" />Preguntas para el vendedor</div>
@@ -1022,20 +1033,20 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Boton "Agregar a shortlist" — solo en modo broker */}
-          {brokerMode && (
+          {/* Boton "Agregar/Quitar de shortlist" — solo en modo broker, con feedback de estado */}
+          {brokerMode && onToggleFavorite && (
             <div className="bs-section">
-              <button className="bs-add-shortlist" onClick={() => onAddToShortlist?.(p)}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:18,height:18}}>
+              <button className={`bs-add-shortlist ${isFavorite ? 'bs-add-shortlist-active' : ''}`} onClick={onToggleFavorite}>
+                <svg viewBox="0 0 24 24" fill={isFavorite ? '#EDE8DC' : 'none'} stroke="currentColor" strokeWidth="2" style={{width:18,height:18}}>
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                 </svg>
-                Agregar a shortlist
+                {isFavorite ? 'Quitar de shortlist' : 'Agregar a shortlist'}
               </button>
             </div>
           )}
 
-          {/* Ver original (con gate) — oculto en modo broker (el broker ve la URL directo al contactar) */}
-          {!brokerMode && p.url && (
+          {/* Ver original (con gate) — oculto en modo broker y en publicShare (cliente confía en el broker) */}
+          {!brokerMode && !publicShareMode && p.url && (
             <div className="bs-section">
               {!showGate ? (
                 <button className="bs-ver-original" onClick={handleVerOriginal}>
@@ -1065,7 +1076,13 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
 
           {/* Sticky footer CTA */}
           <div className="bs-sticky-footer">
-            {p.agente_telefono && (
+            {publicShareMode && publicShareBroker ? (
+              <a href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${publicShareBroker.nombre}, me interesa: ${p.proyecto} (${p.dormitorios === 0 ? 'Mono' : p.dormitorios + ' dorm'}, ${Math.round(p.area_m2)}m², $us ${Math.round(p.precio_usd).toLocaleString('en-US')}).`)}`}
+                target="_blank" rel="noopener noreferrer" className="bs-wsp-cta">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                Consultar por WhatsApp
+              </a>
+            ) : p.agente_telefono && (
               <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent((() => {
                 const selectedTexts = Array.from(selectedQs).sort().map(idx => brokerQuestions[idx]).filter(Boolean)
                 let msg = `Hola, vi ${p.proyecto} en Simon y me gustaria mas informacion`
@@ -1099,15 +1116,40 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
   return <div className="ventas-toast">{message}</div>
 }
 
+// Badge de la inmobiliaria de origen (solo visible al broker para identificar
+// rápidamente qué portal listea cada propiedad). Colores institucionales:
+//  - Century 21: dorado característico
+//  - RE/MAX: rojo + azul (uso rojo)
+//  - Bien Inmuebles: azul corporativo (no aparece en venta hoy, queda preparado)
+function fuenteBadge(fuente: string | null | undefined): { label: string; color: string; bg: string } | null {
+  if (!fuente) return null
+  const f = fuente.toLowerCase()
+  if (f === 'century21' || f === 'c21') return { label: 'Century 21', color: '#000', bg: '#BEAF87' }
+  if (f === 'remax') return { label: 'RE/MAX', color: '#fff', bg: '#DC1C2E' }
+  if (f === 'bien_inmuebles' || f === 'bieninmuebles') return { label: 'Bien Inmuebles', color: '#fff', bg: '#1a4980' }
+  return null
+}
+
+// Public share: cuando /b/[hash] reusa este feed, pasa este prop para
+// (a) saltar fetch (la lista viene curada), (b) ocultar filtros/sidebar/spotlight/mapa,
+// (c) ocultar gate/preguntas/WA agente del sheet, (d) mostrar header con datos del broker.
+export interface PublicShareData {
+  broker: { slug: string; nombre: string; telefono: string; foto_url: string | null }
+  items: UnidadVenta[]
+  itemComments?: Record<number, string | null>
+}
+
 // ===== Page =====
-export default function VentasPage({ seo, initialProperties = [], brokerSlug: brokerSlugProp = null }: { seo: VentasSEO; initialProperties: UnidadVenta[]; brokerSlug?: string | null }) {
-  const [properties, setProperties] = useState<UnidadVenta[]>(initialProperties)
-  const [loading, setLoading] = useState(initialProperties.length === 0)
+export default function VentasPage({ seo, initialProperties = [], brokerSlug: brokerSlugProp = null, publicShare = null }: { seo: VentasSEO; initialProperties: UnidadVenta[]; brokerSlug?: string | null; publicShare?: PublicShareData | null }) {
+  const publicShareMode = publicShare !== null
+  const initialProps = publicShareMode ? publicShare!.items : initialProperties
+  const [properties, setProperties] = useState<UnidadVenta[]>(initialProps)
+  const [loading, setLoading] = useState(publicShareMode ? false : initialProperties.length === 0)
   const [loadError, setLoadError] = useState(false)
   const [filters, setFilters] = useState<FiltrosVentaSimple>({ orden: 'recientes' })
   const [isFiltered, setIsFiltered] = useState(false)
-  const [totalCount, setTotalCount] = useState(initialProperties.length)
-  const [unfilteredCount, setUnfilteredCount] = useState(initialProperties.length)
+  const [totalCount, setTotalCount] = useState(initialProps.length)
+  const [unfilteredCount, setUnfilteredCount] = useState(initialProps.length)
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
   const [compareOpen, setCompareOpen] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
@@ -1126,7 +1168,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
   const [mobileMapOpen, setMobileMapOpen] = useState(false)
   const [mapSelectedId, setMapSelectedId] = useState<number | null>(null)
-  const [proyectoNames, setProyectoNames] = useState<string[]>(() => [...new Set(initialProperties.map(p => p.proyecto).filter(Boolean))].sort())
+  const [proyectoNames, setProyectoNames] = useState<string[]>(() => [...new Set(initialProps.map(p => p.proyecto).filter(Boolean))].sort())
   const [filterOverlayOpen, setFilterOverlayOpen] = useState(false)
   // Filter nudge pill (show once per session after 6+ cards without interaction)
   const [nudgeVisible, setNudgeVisible] = useState(false)
@@ -1146,6 +1188,27 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const brokerSlug = brokerSlugProp
   const broker = useMemo(() => getBrokerBySlug(brokerSlug), [brokerSlug])
   const brokerMode = broker !== null
+
+  // S2: shortlists del broker — selección actual = `favorites`, persistencia y envío via hook
+  const brokerShortlists = useBrokerShortlists(broker)
+  const [shortlistModalOpen, setShortlistModalOpen] = useState(false)
+  const [shortlistsPanelOpen, setShortlistsPanelOpen] = useState(false)
+  // Filtro broker: ver solo propiedades marcadas (útil cuando hay muchas + filtros cambiados)
+  const [onlySelectedFilter, setOnlySelectedFilter] = useState(false)
+
+  // publicShareMode en mobile: el body tiene overflow:hidden por la media query del
+  // feed TikTok. En public share forzamos layout desktop-grid, entonces el body
+  // necesita overflow:auto para que scroll funcione.
+  useEffect(() => {
+    if (!publicShareMode) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'auto'
+    document.documentElement.style.overflow = 'auto'
+    return () => {
+      document.body.style.overflow = prev
+      document.documentElement.style.overflow = ''
+    }
+  }, [publicShareMode])
 
   // Keep isFilteredRef in sync for scroll handler (avoids stale closure)
   useEffect(() => { isFilteredRef.current = isFiltered }, [isFiltered])
@@ -1239,7 +1302,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   }
   function toggleFavorite(id: number) {
     const isFav = favorites.has(id)
-    if (!isFav && favorites.size >= MAX_FAVORITES) {
+    // Límite de 3 solo aplica al modo público (CompareSheet acepta hasta 3).
+    // En modo broker la "selección" puede ser tan grande como el broker quiera.
+    if (!brokerMode && !isFav && favorites.size >= MAX_FAVORITES) {
       showToast(`Maximo ${MAX_FAVORITES} favoritos`)
       return
     }
@@ -1251,15 +1316,37 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       return n
     })
     if (isFav) {
-      showToast('Quitado de favoritos')
+      showToast(brokerMode ? 'Quitado de la selección' : 'Quitado de favoritos')
     } else {
       const newCount = favorites.size + 1
-      if (newCount >= 2) {
+      if (brokerMode) {
+        showToast(`${newCount} ${newCount === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'}`)
+      } else if (newCount >= 2) {
         showToast(`${newCount}/${MAX_FAVORITES} · Podes comparar abajo`)
       } else {
         showToast(`Guardado · ${newCount}/${MAX_FAVORITES} favoritos`)
       }
     }
+  }
+  // Lista que se muestra: si filtro broker "solo seleccionadas" está ON,
+  // restringe a las marcadas. Útil para no perderse cuando hay 30+ marcadas.
+  const displayedProperties = useMemo(
+    () => (brokerMode && onlySelectedFilter) ? properties.filter(p => favorites.has(p.id)) : properties,
+    [brokerMode, onlySelectedFilter, properties, favorites]
+  )
+  const visibleNotMarked = useMemo(
+    () => brokerMode ? properties.filter(p => !favorites.has(p.id)) : [],
+    [brokerMode, properties, favorites]
+  )
+  function markAllVisible() {
+    if (visibleNotMarked.length === 0) return
+    trackEvent('broker_mark_all_visible', { count: visibleNotMarked.length, broker_slug: broker?.slug })
+    setFavorites(prev => {
+      const n = new Set(prev)
+      for (const p of properties) n.add(p.id)
+      return n
+    })
+    showToast(`${visibleNotMarked.length} propiedad${visibleNotMarked.length === 1 ? '' : 'es'} agregada${visibleNotMarked.length === 1 ? '' : 's'}`)
   }
   function shareProperty(p: UnidadVenta) {
     const url = `${window.location.origin}/ventas?id=${p.id}`
@@ -1267,9 +1354,21 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     trackEvent('share_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona) })
   }
   function addToShortlist(p: UnidadVenta) {
-    // S1: placeholder — persistencia real viene en S2
+    // S2: el botón ⭐/Agregar a shortlist alterna favorite. La "selección actual" del
+    // broker para mandar al cliente = el set de favoritos. Al confirmar el envío,
+    // se crea la shortlist en BD y se limpian los favoritos.
     trackEvent('broker_add_to_shortlist', { property_id: p.id, broker_slug: broker?.slug })
-    showToast(`${p.proyecto} agregado a shortlist (demo)`)
+    toggleFavorite(p.id)
+  }
+  async function handleSendShortlist(data: { cliente_nombre: string; cliente_telefono: string; mensaje_whatsapp?: string }) {
+    if (!broker) throw new Error('Broker no resuelto')
+    const propiedad_ids = Array.from(favorites)
+    if (propiedad_ids.length === 0) throw new Error('No hay propiedades seleccionadas')
+    trackEvent('broker_send_shortlist', { broker_slug: broker.slug, count: propiedad_ids.length })
+    const { whatsappUrl } = await brokerShortlists.createAndSend({ ...data, propiedad_ids })
+    setFavorites(new Set())
+    showToast('Shortlist enviada')
+    return { whatsappUrl }
   }
   function openCompare() {
     trackEvent('open_compare_venta', { property_ids: Array.from(favorites).join(','), count: favorites.size })
@@ -1359,7 +1458,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   }, [filters])
 
   // Only fetch on mount if no SSG data (fallback) or if spotlight needs fetching
-  useEffect(() => { if (initialProperties.length === 0 || spotlightId) fetchProperties() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (publicShareMode) return; if (initialProperties.length === 0 || spotlightId) fetchProperties() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function applyFilters(newFilters: FiltrosVentaSimple) {
     setFilters(newFilters); setIsFiltered(true)
@@ -1389,14 +1488,17 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   // Build feed items (mobile): spotlight first, then property cards (filter card removed — now overlay)
   const feedItems = useMemo(() => {
     const items: Array<{ type: 'property'; data: UnidadVenta; isSpotlight?: boolean }> = []
-    const mobileProps = spotlightProperty
-      ? [spotlightProperty, ...properties.filter(p => p.id !== spotlightId)]
+    const baseList = (brokerMode && onlySelectedFilter)
+      ? properties.filter(p => favorites.has(p.id))
       : properties
+    const mobileProps = spotlightProperty
+      ? [spotlightProperty, ...baseList.filter(p => p.id !== spotlightId)]
+      : baseList
     mobileProps.forEach((p, i) => {
       items.push({ type: 'property', data: p, isSpotlight: i === 0 && !!spotlightProperty })
     })
     return items
-  }, [properties, spotlightProperty, spotlightId])
+  }, [properties, favorites, brokerMode, onlySelectedFilter, spotlightProperty, spotlightId])
 
   return (
     <>
@@ -1422,14 +1524,24 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         onClose={() => { setSheetOpen(false); setSheetProperty(null) }}
         onShare={sheetProperty ? () => shareProperty(sheetProperty) : undefined}
         isFavorite={sheetProperty ? favorites.has(sheetProperty.id) : false}
-        onToggleFavorite={sheetProperty ? () => toggleFavorite(sheetProperty.id) : undefined}
+        onToggleFavorite={(sheetProperty && !publicShareMode) ? () => toggleFavorite(sheetProperty.id) : undefined}
         gateCompleted={gateCompleted} onGate={handleGate} isDesktop={isDesktop}
         properties={properties} onSwapProperty={(p) => setSheetProperty(p)}
         brokerMode={brokerMode}
-        onAddToShortlist={addToShortlist} />
+        onAddToShortlist={addToShortlist}
+        publicShareBroker={publicShare?.broker || null} />
 
-      {/* Compare banner — shows when 2+ favorites */}
-      {favorites.size >= 2 && (
+      {/* Banner inferior — modo broker: Enviar shortlist (1+) | público: Comparar (2+) */}
+      {brokerMode && broker && favorites.size >= 1 && (
+        <div className="vt-compare-banner-wrap vt-shortlist-banner-wrap">
+          <button className="vt-compare-banner vt-shortlist-banner" onClick={() => setShortlistModalOpen(true)}>
+            <span className="vt-compare-banner-text">Enviar shortlist · {favorites.size} {favorites.size === 1 ? 'propiedad' : 'propiedades'}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+          <button className="vt-compare-banner-clear" aria-label="Limpiar selección" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Selección limpiada') }}>&times;</button>
+        </div>
+      )}
+      {!brokerMode && favorites.size >= 2 && (
         <div className="vt-compare-banner-wrap">
           <button className="vt-compare-banner" onClick={openCompare}>
             <span className="vt-compare-banner-text">{favorites.size} favorito{favorites.size > 1 ? 's' : ''} · Comparar</span>
@@ -1439,11 +1551,36 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         </div>
       )}
 
+      {/* Modal Enviar shortlist — solo broker mode */}
+      {brokerMode && broker && (
+        <ShortlistSendModal
+          isOpen={shortlistModalOpen}
+          onClose={() => setShortlistModalOpen(false)}
+          broker={broker}
+          cantidadPropiedades={favorites.size}
+          onConfirm={handleSendShortlist}
+        />
+      )}
+
+      {/* Panel Mis shortlists enviadas — solo broker mode */}
+      {brokerMode && broker && (
+        <ShortlistsPanel
+          isOpen={shortlistsPanelOpen}
+          onClose={() => setShortlistsPanelOpen(false)}
+          broker={broker}
+          shortlists={brokerShortlists.shortlists}
+          loading={brokerShortlists.loading}
+          onArchive={brokerShortlists.archive}
+          onRefresh={brokerShortlists.refresh}
+        />
+      )}
+
       {/* CompareSheet */}
       <CompareSheet
         open={compareOpen}
         properties={favoriteProperties}
         onClose={() => setCompareOpen(false)}
+        publicShareBroker={publicShare?.broker || null}
       />
 
       {/* Banner modo broker — visible arriba de todo cuando activo */}
@@ -1451,25 +1588,70 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         <div className="vt-broker-banner">
           <span className="vt-broker-banner-label">SIMON BROKER</span>
           <span className="vt-broker-banner-name">{broker.nombre}</span>
+          {favorites.size > 0 && (
+            <button
+              className={`vt-broker-tool ${onlySelectedFilter ? 'active' : ''}`}
+              onClick={() => setOnlySelectedFilter(v => !v)}
+              title={onlySelectedFilter ? 'Mostrar todas las propiedades' : 'Ver solo las propiedades marcadas'}
+            >
+              ★ Solo seleccionadas · {favorites.size}
+            </button>
+          )}
+          {!onlySelectedFilter && visibleNotMarked.length > 0 && properties.length < 100 && (
+            <button
+              className="vt-broker-tool vt-broker-tool-add"
+              onClick={markAllVisible}
+              title="Agregar todas las propiedades visibles a la selección"
+            >
+              + Marcar las {visibleNotMarked.length} visibles
+            </button>
+          )}
+          <button className="vt-broker-banner-shortlists" onClick={() => setShortlistsPanelOpen(true)}>
+            Mis shortlists{brokerShortlists.shortlists.length > 0 ? ` · ${brokerShortlists.shortlists.length}` : ''}
+          </button>
         </div>
       )}
 
-      {isDesktop ? (
-        /* ===== DESKTOP (unchanged) ===== */
-        <div className="ventas-desktop">
-          <aside className="ventas-sidebar">
-            <div className="ventas-sidebar-header">
-              <Link href="/landing-v2" className="ventas-logo">Simon</Link>
-              <div className="ventas-label">VENTAS</div>
+      {/* Header modo public share — header del broker que comparte la shortlist */}
+      {publicShareMode && publicShare && (
+        <div className="vt-public-share-header">
+          <div className="vpsh-broker">
+            {publicShare.broker.foto_url
+              ? <img src={publicShare.broker.foto_url} alt={publicShare.broker.nombre} className="vpsh-broker-photo" />
+              : <div className="vpsh-broker-photo vpsh-broker-photo-ph">{publicShare.broker.nombre.charAt(0)}</div>}
+            <div className="vpsh-broker-info">
+              <div className="vpsh-broker-label">Selección de</div>
+              <div className="vpsh-broker-name">{publicShare.broker.nombre}</div>
             </div>
-            <div className="ventas-sidebar-count">
-              <span className="ventas-count-num">{properties.length}</span>
-              <span className="ventas-count-text">{isFiltered ? `de ${unfilteredCount} departamentos` : 'departamentos en Equipetrol'}</span>
-            </div>
-            <DesktopFilters currentFilters={filters} isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
-          </aside>
+          </div>
+          <a
+            href={`https://wa.me/${publicShare.broker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${publicShare.broker.nombre}, vi las propiedades que me enviaste.`)}`}
+            target="_blank" rel="noopener noreferrer" className="vpsh-wa"
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+            WhatsApp
+          </a>
+        </div>
+      )}
+
+      {(isDesktop || publicShareMode) ? (
+        /* ===== DESKTOP (o public share en cualquier device — feed con grid simple, sin sidebar/mapa) ===== */
+        <div className={`ventas-desktop ${publicShareMode ? 'ventas-desktop-public' : ''}`}>
+          {!publicShareMode && (
+            <aside className="ventas-sidebar">
+              <div className="ventas-sidebar-header">
+                <Link href="/landing-v2" className="ventas-logo">Simon</Link>
+                <div className="ventas-label">VENTAS</div>
+              </div>
+              <div className="ventas-sidebar-count">
+                <span className="ventas-count-num">{properties.length}</span>
+                <span className="ventas-count-text">{isFiltered ? `de ${unfilteredCount} departamentos` : 'departamentos en Equipetrol'}</span>
+              </div>
+              <DesktopFilters currentFilters={filters} isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
+            </aside>
+          )}
           <main className="ventas-main">
-            {/* View mode toggle */}
+            {/* View mode toggle — visible también en publicShareMode (cliente puede ver mapa) */}
             {properties.length > 0 && (
               <div className="vm-toggle">
                 <button className={`vm-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => { setViewMode('grid'); trackEvent('switch_view_venta', { view_mode: 'grid' }) }}>
@@ -1485,8 +1667,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             {loadError && <div className="ventas-status"><p>No se pudo cargar.</p><button onClick={() => fetchProperties()}>Reintentar</button></div>}
             {loading && properties.length === 0 && !loadError && <div className="ventas-status">Cargando departamentos en venta...</div>}
             {!loading && properties.length === 0 && !loadError && <div className="ventas-status">{buildEmptyMessage(filters)}</div>}
-            {/* Desktop spotlight */}
-            {spotlightProperty && (
+            {/* Desktop spotlight — oculto en publicShareMode */}
+            {!publicShareMode && spotlightProperty && (
               <div className="ds-spotlight">
                 <div className="ds-spotlight-banner">
                   <span>Te compartieron este departamento</span>
@@ -1495,21 +1677,24 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 <VentaCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
                   onToggleFavorite={() => toggleFavorite(spotlightProperty.id)} onShare={() => shareProperty(spotlightProperty)}
                   onPhotoTap={() => openSheet(spotlightProperty)} onDetails={() => openSheet(spotlightProperty)}
-                  brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(spotlightProperty)} />
+                  brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(spotlightProperty)} publicShareMode={publicShareMode} />
                 <div className="ds-spotlight-sep">
                   <span className="ds-spotlight-line" /><span className="ds-spotlight-text">Explorar más departamentos</span><span className="ds-spotlight-line" />
                 </div>
               </div>
             )}
-            {properties.length > 0 && viewMode === 'grid' && (
+            {displayedProperties.length > 0 && viewMode === 'grid' && (
               <div className="ventas-grid">
-                {(spotlightProperty ? properties.filter(p => p.id !== spotlightId) : properties).map((p, idx) => (
+                {(spotlightProperty ? displayedProperties.filter(p => p.id !== spotlightId) : displayedProperties).map((p, idx) => (
                   <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)} isFirst={idx === 0}
                     onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
                     onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)}
-                    brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} />
+                    brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} />
                 ))}
               </div>
+            )}
+            {brokerMode && onlySelectedFilter && displayedProperties.length === 0 && (
+              <div className="ventas-status">No hay propiedades marcadas que cumplan los filtros actuales.</div>
             )}
             {properties.length > 0 && viewMode === 'map' && (
               <div className="ventas-map-container">
@@ -1598,7 +1783,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 isSpotlight={item.isSpotlight} isFirst={idx === 0}
                 onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
                 onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)}
-                brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} />
+                brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} />
             })}
           </div>
         </main>
@@ -1610,6 +1795,17 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
 
         /* ===== DESKTOP LAYOUT ===== */
         .ventas-desktop { display:flex; min-height:100vh; font-family:'DM Sans',sans-serif; color:#EDE8DC }
+        .ventas-desktop-public .ventas-main { margin-left:0 !important; padding-top:80px !important }
+        .ventas-desktop-public .ventas-grid { grid-template-columns:repeat(auto-fill,minmax(280px,1fr)) }
+        .vt-public-share-header { position:fixed; top:0; left:0; right:0; z-index:50; background:#EDE8DC; color:#141414; padding:10px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid rgba(20,20,20,0.08); font-family:'DM Sans',sans-serif; box-shadow:0 1px 6px rgba(0,0,0,0.05) }
+        .vpsh-broker { display:flex; align-items:center; gap:10px; min-width:0 }
+        .vpsh-broker-photo { width:44px; height:44px; border-radius:50%; object-fit:cover; display:block }
+        .vpsh-broker-photo-ph { background:#3A6A48; color:#EDE8DC; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:18px }
+        .vpsh-broker-info { min-width:0; line-height:1.2 }
+        .vpsh-broker-label { font-size:10px; color:#6a6a6a; text-transform:uppercase; letter-spacing:0.6px; font-weight:600 }
+        .vpsh-broker-name { font-size:15px; font-weight:600; font-family:'Figtree',sans-serif; color:#141414 }
+        .vpsh-wa { display:inline-flex; align-items:center; gap:6px; background:#25D366; color:#fff; padding:8px 14px; border-radius:100px; text-decoration:none; font-size:13px; font-weight:600; -webkit-tap-highlight-color:transparent }
+        .vpsh-wa:active { transform:scale(0.97) }
         .ventas-sidebar { width:320px; min-width:320px; background:#141414; border-right:1px solid rgba(237,232,220,0.08); position:fixed; top:0; left:0; bottom:0; overflow-y:auto; z-index:10 }
         .ventas-sidebar-header { padding:24px 20px 12px; display:flex; align-items:baseline; gap:12px }
         .ventas-logo { font-family:'Figtree',sans-serif; font-size:24px; font-weight:500; color:#EDE8DC; text-decoration:none }
@@ -1671,6 +1867,23 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vt-broker-banner { position:fixed; top:0; left:0; right:0; z-index:50; background:#3A6A48; color:#EDE8DC; padding:6px 16px; font-family:'DM Sans',sans-serif; font-size:12px; display:flex; align-items:center; justify-content:center; gap:10px; letter-spacing:0.5px }
         .vt-broker-banner-label { font-weight:700; font-size:11px; opacity:0.85 }
         .vt-broker-banner-name { font-weight:500 }
+        .vt-broker-banner-shortlists { margin-left:auto; background:rgba(237,232,220,0.18); border:1px solid rgba(237,232,220,0.35); color:#EDE8DC; padding:4px 10px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit }
+        .vt-broker-banner-shortlists:active { transform:scale(0.96) }
+        .vt-broker-tool { background:rgba(237,232,220,0.12); border:1px solid rgba(237,232,220,0.3); color:#EDE8DC; padding:4px 10px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
+        .vt-broker-tool:active { transform:scale(0.96) }
+        .vt-broker-tool.active { background:#EDE8DC; color:#3A6A48; border-color:#EDE8DC }
+        .vt-broker-tool-add { background:rgba(237,232,220,0.18) }
+        @media (max-width: 768px) {
+          .vt-broker-banner { flex-wrap:wrap; padding:6px 12px; gap:6px }
+          .vt-broker-tool, .vt-broker-banner-shortlists { font-size:10px; padding:3px 8px }
+        }
+        .vt-shortlist-banner { background:#3A6A48 !important; border-color:rgba(237,232,220,0.2) !important }
+        /* En mobile: banner shortlist arriba (debajo del banner SIMON BROKER) para no tapar acciones de cards TikTok */
+        @media (max-width: 768px) {
+          .vt-shortlist-banner-wrap { bottom:auto !important; top:42px !important }
+          .vt-shortlist-banner-wrap .vt-compare-banner { padding:8px 14px !important; font-size:13px !important; min-height:36px !important }
+          .vt-shortlist-banner-wrap .vt-compare-banner-clear { width:36px !important; min-height:36px !important; font-size:18px !important }
+        }
         .vt-compare-banner-wrap { position:fixed; bottom:max(24px, calc(env(safe-area-inset-bottom) + 16px)); left:50%; transform:translateX(-50%); z-index:150; display:flex; align-items:stretch; gap:6px; max-width:calc(100vw - 32px) }
         .vt-compare-banner { display:flex; align-items:center; gap:10px; padding:12px 20px; background:#141414; color:#EDE8DC; border:1px solid rgba(237,232,220,0.1); border-radius:100px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; letter-spacing:0.3px; cursor:pointer; box-shadow:0 6px 20px rgba(0,0,0,0.25); min-height:48px; white-space:nowrap; -webkit-tap-highlight-color:transparent }
         .vt-compare-banner:active { transform:scale(0.97) }
@@ -1715,6 +1928,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc-btn.mc-shortlist { background:rgba(58,106,72,0.15); border:1px solid rgba(58,106,72,0.4) }
         .mc-spotlight { position:absolute; top:max(56px, calc(env(safe-area-inset-top) + 50px)); left:16px; z-index:10; background:rgba(250,250,248,0.95); border-left:3px solid #3A6A48; padding:8px 14px; border-radius:0 8px 8px 0; font-family:'DM Sans',sans-serif; font-size:12px; color:#141414; letter-spacing:0.3px }
         .mc-tc-badge { position:absolute; top:max(56px, calc(env(safe-area-inset-top) + 50px)); right:16px; z-index:10; background:rgba(180,130,20,0.9); color:#fff; padding:6px 12px; border-radius:4px; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:500; letter-spacing:0.2px }
+        .mc-fuente-badge { position:absolute; top:max(56px, calc(env(safe-area-inset-top) + 50px)); left:16px; z-index:10; padding:5px 10px; border-radius:4px; font-family:'DM Sans',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.4px; text-transform:uppercase; box-shadow:0 2px 6px rgba(0,0,0,0.3) }
 
         /* Desktop spotlight */
         .ds-spotlight { margin-bottom:32px }
@@ -1797,6 +2011,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vc-nav-next { right:8px }
         .vc-photo-count { position:absolute; top:10px; right:10px; background:rgba(20,20,20,0.75); color:rgba(255,255,255,0.8); font-size:11px; padding:3px 8px; border-radius:100px; font-family:'DM Sans',sans-serif }
         .vc-tc-badge { position:absolute; bottom:10px; left:10px; background:rgba(180,130,20,0.9); color:#fff; font-size:11px; font-weight:500; padding:4px 10px; border-radius:4px; font-family:'DM Sans',sans-serif; letter-spacing:0.2px; z-index:3 }
+        .vc-fuente-badge { position:absolute; top:10px; left:10px; font-size:10px; font-weight:700; padding:4px 9px; border-radius:4px; font-family:'DM Sans',sans-serif; letter-spacing:0.4px; text-transform:uppercase; z-index:4; box-shadow:0 2px 4px rgba(0,0,0,0.2) }
         .vc-fav { position:absolute; top:10px; left:10px; width:40px; height:40px; border-radius:50%; background:rgba(20,20,20,0.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.15s; z-index:3 }
         .vc-fav:hover { transform:scale(1.1) }
         .vc-fav.active { background:rgba(224,85,85,0.15) }
@@ -1873,8 +2088,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-venta .bs-agent-office { color:#9A8E7A }
         .bs-venta .bs-gmaps-link { background:rgba(237,232,220,0.08); border:none; color:#EDE8DC }
         .bs-venta .bs-ver-original { width:100%; padding:14px; background:rgba(237,232,220,0.08); border:1px solid rgba(237,232,220,0.1); color:#EDE8DC; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:15px; cursor:pointer; font-weight:500; display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none }
-        .bs-venta .bs-add-shortlist { width:100%; padding:14px; background:#3A6A48; border:none; color:#EDE8DC; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:15px; cursor:pointer; font-weight:600; letter-spacing:0.3px; display:flex; align-items:center; justify-content:center; gap:8px; -webkit-tap-highlight-color:transparent }
+        .bs-venta .bs-add-shortlist { width:100%; padding:14px; background:transparent; border:1.5px solid #3A6A48; color:#3A6A48; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:15px; cursor:pointer; font-weight:600; letter-spacing:0.3px; display:flex; align-items:center; justify-content:center; gap:8px; -webkit-tap-highlight-color:transparent; transition:background 0.15s, color 0.15s }
         .bs-venta .bs-add-shortlist:active { transform:scale(0.98); opacity:0.9 }
+        .bs-venta .bs-add-shortlist-active { background:#3A6A48; color:#EDE8DC }
         .bs-venta .bs-gate { display:flex; flex-direction:column; gap:12px }
         .bs-venta .bs-gate-title { font-size:14px; color:#9A8E7A; margin-bottom:4px }
         .bs-venta .bs-gate-input { background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.12); color:#EDE8DC }

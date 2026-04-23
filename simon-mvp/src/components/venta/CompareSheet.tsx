@@ -7,6 +7,10 @@ interface CompareSheetProps {
   open: boolean
   properties: UnidadVenta[]
   onClose: () => void
+  // Cuando viene, el comparativo está embebido en una shortlist pública (/b/[hash])
+  // → ocultar preguntas al broker, "durante la visita" y CTAs WA por propiedad.
+  // Reemplaza por un único CTA "Consultar por WhatsApp" al broker que comparte.
+  publicShareBroker?: { nombre: string; telefono: string } | null
 }
 
 function fmt(n: number) { return n.toLocaleString('en-US') }
@@ -21,9 +25,10 @@ function estadoLabel(estado: string | null | undefined): string {
   return 'Entrega inmediata'
 }
 
-export default function CompareSheet({ open, properties, onClose }: CompareSheetProps) {
+export default function CompareSheet({ open, properties, onClose, publicShareBroker = null }: CompareSheetProps) {
   const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
   const MAX_QS = 3
+  const publicShareMode = publicShareBroker !== null
 
   const props = useMemo(() => properties.slice(0, 3), [properties])
 
@@ -363,7 +368,8 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
           </div>
         )}
 
-        {/* Questions for broker */}
+        {/* Questions for broker — oculto en publicShareMode */}
+        {!publicShareMode && (
         <div className="csv-section">
           <div className="csv-label-row">
             <span className="csv-label"><span className="csv-label-dot" />PREGUNTAS PARA EL BROKER</span>
@@ -385,7 +391,10 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
             })}
           </div>
         </div>
+        )}
 
+        {/* Durante la visita — oculto en publicShareMode */}
+        {!publicShareMode && (
         <div className="csv-section">
           <div className="csv-label"><span className="csv-label-dot" />DURANTE LA VISITA, FIJATE EN</div>
           <div className="csv-questions">
@@ -397,8 +406,24 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
             ))}
           </div>
         </div>
+        )}
 
-        {/* WhatsApp CTAs */}
+        {/* CTA único al broker que comparte (solo publicShareMode) */}
+        {publicShareMode && publicShareBroker && (
+          <div className="csv-section">
+            <a
+              href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${publicShareBroker.nombre}, comparé las propiedades que me enviaste y me gustaría conversar.`)}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, background:'#25D366', color:'#fff', padding:'14px 20px', borderRadius:10, textDecoration:'none', fontWeight:600, fontSize:15, fontFamily:"'DM Sans',sans-serif" }}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+              Consultar por WhatsApp
+            </a>
+          </div>
+        )}
+
+        {/* WhatsApp CTAs por propiedad — oculto en publicShareMode */}
+        {!publicShareMode && (
         <div className="csv-section">
           <div className="csv-label"><span className="csv-label-dot" />CONTACTAR</div>
           <div className="csv-ctas">
@@ -429,6 +454,7 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
             })}
           </div>
         </div>
+        )}
 
         <div className="csv-footer">
           <div className="csv-footer-text">Generado por Simon — Inteligencia Inmobiliaria</div>
