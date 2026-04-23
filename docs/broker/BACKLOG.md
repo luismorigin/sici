@@ -58,6 +58,37 @@ Ideas, features y mejoras parqueadas para después del MVP.
 
 ## Features producto
 
+### Shortlists "vivas" por cliente (Nivel 2)
+**Tier:** v1.3 — probar cuando aparezca señal de uso real
+**Agregado:** 2026-04-23
+**Rationale:** Hoy cada envío a un mismo cliente crea shortlist nueva (fila nueva, hash nuevo, link nuevo). En S3 agregamos el Nivel 1: agrupamos por cliente en el panel del broker + badge "cliente existente" al crear. Pero no resuelve el problema real del cliente: cuando un broker le manda 3 propiedades hoy y 2 más el mes próximo, el cliente acumula 2 links distintos en su WhatsApp → se pierde el hilo.
+
+**Solución propuesta:**
+- Al crear nueva shortlist para un teléfono que ya existe, preguntar: *"¿Agregar estas 3 propiedades a la shortlist de Juan (del 15 de abril), o crear una shortlist nueva?"*
+- Si agrega → INSERT en `broker_shortlist_items` con el mismo `shortlist_id` existente. Mismo link, cliente recibe notificación opcional *"Abel actualizó tu selección"*.
+- Si crea nueva → flujo actual (misma fila nueva + link nuevo).
+- Panel broker puede tener vista "timeline" dentro de la shortlist: qué props se agregaron y cuándo.
+
+**Esfuerzo estimado:** ~1 día dev. No requiere migración estructural (usa `broker_shortlist_items.created_at` para timeline).
+
+**Cuándo reactivar:** cuando un founder del MVP diga explícitamente *"Juan me volvió a pedir, no quiero mandarle otro link"*. Esa señal probablemente aparezca en los primeros 10-15 envíos reales. Antes de eso es spec'ulación.
+
+### Cliente como entidad (Nivel 3 — tabla `broker_clientes`)
+**Tier:** v2 — requiere product-market-fit con volumen
+**Agregado:** 2026-04-23
+**Rationale:** Modelo de datos "correcto" para un producto maduro: el cliente es una entidad de primera clase, las shortlists le pertenecen. Permite:
+- Tabla `broker_clientes` (telefono UNIQUE por broker, nombre, email opcional, notas privadas del broker).
+- `broker_shortlists.cliente_id` FK en lugar de `cliente_telefono` string duplicado.
+- Página `/broker/[slug]/clientes/[id]` consolida todo del cliente: shortlists activas, histórico, favoritos acumulados cross-shortlist, último contacto, notas.
+- Link permanente por cliente (`/b/<clienteHash>`) que nunca cambia — el broker va agregando props, el cliente ve su "feed" evolucionar como un mini-portal personalizado.
+- Base para features futuras: alertas ("te apareció un 3 dorm que te puede interesar"), analytics ("Juan vio 12 props pero nunca puso corazón, quizás no le gusta la zona"), re-engagement campaigns.
+
+**Esfuerzo estimado:** ~3-4 días dev. Migración fuerte (refactor `broker_shortlists` + backfill cliente_id + UI nueva). Data model cleanup.
+
+**Cuándo reactivar:** cuando haya señal real de que brokers gestionan *"clientes activos como portfolio"* (no solo envíos esporádicos). Indicador: brokers que tienen ≥5 clientes con ≥3 envíos cada uno en el último mes. Antes de eso la tabla nueva está subutilizada.
+
+**Anti-señal:** si los brokers siguen usando shortlists como "emails sueltos" (1-2 envíos por cliente máximo), el Nivel 3 es over-engineering.
+
 ### Activación de broker en el momento (opción mini — tabla + admin sin auth)
 **Tier:** v1.2 — cola post Fase 2 alquileres
 **Agregado:** 2026-04-23
