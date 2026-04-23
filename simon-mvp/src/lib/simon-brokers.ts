@@ -191,3 +191,13 @@ export function isValidSlugFormat(slug: string): boolean {
   // URL-safe: lowercase, digits, hyphens. 2-40 chars.
   return /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(slug)
 }
+
+/**
+ * Valida formato E.164 básico: debe empezar con `+`, luego 8-15 dígitos.
+ * Acepta espacios/guiones intermedios que se strippean antes del check.
+ * Rechaza teléfonos sin código país, con letras o con dígitos insuficientes.
+ */
+export function isValidPhoneFormat(phone: string): boolean {
+  const stripped = phone.trim().replace(/[\s-]/g, '')
+  return /^\+[0-9]{8,15}$/.test(stripped)
+}

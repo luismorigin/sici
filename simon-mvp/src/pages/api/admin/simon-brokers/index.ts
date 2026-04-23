@@ -11,6 +11,7 @@ import {
   listAllBrokersAdmin,
   createBroker,
   isValidSlugFormat,
+  isValidPhoneFormat,
   type BrokerAdmin,
 } from '@/lib/simon-brokers'
 
@@ -36,6 +37,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!isValidSlugFormat(slug)) {
         return res.status(400).json({
           error: 'slug inválido — solo a-z, 0-9, guiones. Largo 2-40, no puede empezar/terminar con guión.',
+        })
+      }
+      if (!isValidPhoneFormat(telefono)) {
+        return res.status(400).json({
+          error: 'teléfono inválido — debe empezar con + y código de país, ej. +59178519485 (8-15 dígitos total).',
         })
       }
 

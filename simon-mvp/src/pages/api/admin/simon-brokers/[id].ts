@@ -6,7 +6,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireAdmin } from '@/lib/admin-api-auth'
-import { updateBroker, type UpdateBrokerInput } from '@/lib/simon-brokers'
+import { updateBroker, isValidPhoneFormat, type UpdateBrokerInput } from '@/lib/simon-brokers'
 
 const ALLOWED_STATUS = ['activo', 'pausado', 'inactivo'] as const
 type Status = typeof ALLOWED_STATUS[number]
@@ -24,7 +24,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const payload: UpdateBrokerInput = {}
 
       if (body.nombre !== undefined) payload.nombre = String(body.nombre)
-      if (body.telefono !== undefined) payload.telefono = String(body.telefono)
+      if (body.telefono !== undefined) {
+        const tel = String(body.telefono)
+        if (!isValidPhoneFormat(tel)) {
+          return res.status(400).json({
+            error: 'teléfono inválido — debe empezar con + y código de país, ej. +59178519485 (8-15 dígitos total).',
+          })
+        }
+        payload.telefono = tel
+      }
       if (body.foto_url !== undefined) payload.foto_url = body.foto_url ? String(body.foto_url) : null
       if (body.inmobiliaria !== undefined) payload.inmobiliaria = body.inmobiliaria ? String(body.inmobiliaria) : null
       if (body.notas !== undefined) payload.notas = body.notas ? String(body.notas) : null
