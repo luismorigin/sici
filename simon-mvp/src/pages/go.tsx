@@ -58,6 +58,13 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    title: 'Herramientas',
+    color: '#2a4a5f',
+    items: [
+      { label: 'Simon Advisor', href: 'https://simon-advisor.vercel.app/', external: true, hint: 'App externa' },
+    ],
+  },
+  {
     title: 'Clientes',
     color: '#C7A74A',
     items: [
@@ -89,19 +96,40 @@ export default function LauncherPage() {
           <section key={section.title} className="go-section">
             <h2 className="go-section-title" style={{ color: section.color }}>{section.title}</h2>
             <div className="go-grid">
-              {section.items.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="go-btn"
-                  prefetch={false}
-                  target={item.external ? '_blank' : undefined}
-                  rel={item.external ? 'noopener' : undefined}
-                >
-                  <span className="go-btn-label">{item.label}</span>
-                  {item.hint && <span className="go-btn-hint">{item.hint}</span>}
-                </Link>
-              ))}
+              {section.items.map((item) => {
+                const content = (
+                  <>
+                    <span className="go-btn-label">
+                      {item.label}
+                      {item.external && <span className="go-btn-ext"> ↗</span>}
+                    </span>
+                    {item.hint && <span className="go-btn-hint">{item.hint}</span>}
+                  </>
+                )
+                if (item.external) {
+                  return (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener"
+                      className="go-btn"
+                    >
+                      {content}
+                    </a>
+                  )
+                }
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="go-btn"
+                    prefetch={false}
+                  >
+                    {content}
+                  </Link>
+                )
+              })}
             </div>
           </section>
         ))}
@@ -183,6 +211,11 @@ export default function LauncherPage() {
           color: #8a8a8a;
           font-weight: 400;
           line-height: 1.2;
+        }
+        .go-btn-ext {
+          opacity: 0.55;
+          font-weight: 500;
+          font-size: 12px;
         }
         .go-footer {
           margin-top: 32px;
