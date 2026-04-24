@@ -1683,7 +1683,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
 
   return (
     <>
-      <VentasHead seo={seo} />
+      <VentasHead
+        seo={seo}
+        brokerSlug={brokerSlug}
+        publicShareHash={publicShare?.hash ?? null}
+      />
 
       <Toast message={toastMsg} visible={toastVisible} />
 
@@ -2424,10 +2428,21 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
 }
 
 // ===== SEO Head Component =====
-function VentasHead({ seo }: { seo: VentasSEO }) {
+function VentasHead({ seo, brokerSlug = null, publicShareHash = null }: {
+  seo: VentasSEO
+  brokerSlug?: string | null
+  publicShareHash?: string | null
+}) {
   const mesAnio = formatMesAnioSEO(seo.fechaActualizacion)
   const fechaCorta = formatFechaCortaSEO(seo.fechaActualizacion)
-  const url = 'https://simonbo.com/ventas'
+  // URL canónica según contexto. Sin esto, og:url devuelve el feed público
+  // aunque el broker esté en /broker/[slug] o un cliente en /b/[hash],
+  // y al compartir el browser/WhatsApp comparte la URL genérica.
+  const url = publicShareHash
+    ? `https://simonbo.com/b/${publicShareHash}`
+    : brokerSlug
+    ? `https://simonbo.com/broker/${brokerSlug}`
+    : 'https://simonbo.com/ventas'
 
   const title = `${seo.totalPropiedades} Departamentos en Venta en Equipetrol — Desde ${fmtSEO(seo.tipologias[0]?.precioMediano || 85000)} | Simon`
   const description = `Departamentos en venta en Equipetrol, Santa Cruz, Bolivia. ${seo.totalPropiedades} unidades activas. Precio mediano del m²: ${fmtSEO(seo.medianaPrecioM2)} USD. Datos actualizados ${fechaCorta}. Fuente: Simon Inteligencia Inmobiliaria.`

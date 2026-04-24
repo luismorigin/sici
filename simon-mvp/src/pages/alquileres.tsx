@@ -901,7 +901,11 @@ export default function AlquileresPage({
 
   return (
     <>
-      <AlquileresHead seo={seo} />
+      <AlquileresHead
+        seo={seo}
+        brokerSlug={brokerSlug}
+        publicShareHash={publicShare?.hash ?? null}
+      />
 
 
       {/* Toast */}
@@ -2856,10 +2860,21 @@ function CardCounter({ total, active }: { total: number; active: number }) {
 }
 
 // ===== SEO Head Component =====
-function AlquileresHead({ seo }: { seo: AlquileresSEO }) {
+function AlquileresHead({ seo, brokerSlug = null, publicShareHash = null }: {
+  seo: AlquileresSEO
+  brokerSlug?: string | null
+  publicShareHash?: string | null
+}) {
   const mesAnio = formatMesAnioSEO(seo.fechaActualizacion)
   const fechaCorta = formatFechaCortaSEO(seo.fechaActualizacion)
-  const url = 'https://simonbo.com/alquileres'
+  // URL canónica según contexto. Sin override, el share del browser/OS resuelve
+  // og:url y termina compartiendo simonbo.com/alquileres (feed público)
+  // aunque el broker esté en /broker/[slug]/alquileres o un cliente en /b/[hash].
+  const url = publicShareHash
+    ? `https://simonbo.com/b/${publicShareHash}`
+    : brokerSlug
+    ? `https://simonbo.com/broker/${brokerSlug}/alquileres`
+    : 'https://simonbo.com/alquileres'
 
   const title = `${seo.totalUnidades} Alquileres en Equipetrol — Desde ${fmtBsSEO(seo.tipologias[0]?.rentaMedianaBs || 2500)}/mes | Simon`
   const description = `Departamentos en alquiler en Equipetrol, Santa Cruz, Bolivia. ${seo.totalUnidades} unidades disponibles. Renta mediana: ${fmtBsSEO(seo.rentaMedianaBs)}/mes. Datos actualizados ${fechaCorta}. Fuente: Simon Inteligencia Inmobiliaria.`
