@@ -763,8 +763,16 @@
 .apsh-wa:active{transform:scale(0.96);}
 @media (max-width:768px){.alq-public-share-header{padding:8px 14px;gap:8px;}.apsh-broker-photo{width:36px;height:36px;}.apsh-broker-name{font-size:13px;}.apsh-broker-agency{font-size:10px;}.apsh-wa{padding:7px 12px;font-size:12px;}}
 
-/* Dejar espacio para el header fixed en publicShareMode */
+/* Dejar espacio para el banner fixed del broker (modo broker) o el header
+   público (publicShareMode). Ambos son position:fixed top:0 ~ 48-64px alto. */
 .desktop-layout-public{padding-top:64px;}
+.desktop-layout-broker{padding-top:48px;}
+
+/* Shortlist banner mobile (brokerMode, reusa estructura de compare-banner) —
+   mismo patrón que ventas: fondo arena + sombra grande. */
+.alq-shortlist-banner{background:#EDE8DC !important;color:#141414 !important;border:1px solid rgba(20,20,20,0.15) !important;box-shadow:0 6px 22px rgba(20,20,20,0.18) !important;}
+.alq-shortlist-banner svg{color:#141414 !important;}
+.alq-shortlist-banner-wrap .alq-compare-banner-clear{background:#EDE8DC !important;color:rgba(20,20,20,0.55) !important;border:1px solid rgba(20,20,20,0.15) !important;box-shadow:0 6px 22px rgba(20,20,20,0.18) !important;}
 /* En mobile el feed TikTok es fullscreen — el header fixed se superpone sobre
    la primera card (~60px, tolerable). La UX gana: botón WA siempre visible
    aunque el cliente esté scrolleando. */

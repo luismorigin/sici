@@ -965,7 +965,7 @@ export default function AlquileresPage({
 
       {isDesktop ? (
         /* ==================== DESKTOP LAYOUT ==================== */
-        <div className={`desktop-layout ${publicShareMode ? 'desktop-layout-public' : ''}`}>
+        <div className={`desktop-layout ${publicShareMode ? 'desktop-layout-public' : ''} ${brokerMode ? 'desktop-layout-broker' : ''}`}>
           {/* Left sidebar - filters. Oculto en publicShareMode: el cliente recibe
               una shortlist curada, no debe ver filtros globales. */}
           {!publicShareMode && (
@@ -993,21 +993,37 @@ export default function AlquileresPage({
               onReset={resetFilters}
               proyectoNames={proyectoNames}
             />
-            {/* Favorites summary */}
+            {/* Selección del broker / Favoritos del público */}
             {favorites.size > 0 && (
               <div className="desktop-fav-summary">
                 <div className="desktop-fav-info">
-                  <svg viewBox="0 0 24 24" fill="#E05555" stroke="#E05555" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                  </svg>
-                  {favorites.size} favorito{favorites.size > 1 ? 's' : ''}
-                  <button className="desktop-fav-clear" onClick={() => { setFavorites(new Set()); showToast('Favoritos limpiados') }} title="Limpiar favoritos">&times;</button>
+                  {brokerMode ? (
+                    <svg viewBox="0 0 24 24" fill="#F2B441" stroke="#F2B441" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="#E05555" stroke="#E05555" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                  )}
+                  {brokerMode
+                    ? `${favorites.size} ${favorites.size === 1 ? 'seleccionada' : 'seleccionadas'}`
+                    : `${favorites.size} favorito${favorites.size > 1 ? 's' : ''}`}
+                  <button
+                    className="desktop-fav-clear"
+                    onClick={() => { setFavorites(new Set()); showToast(brokerMode ? 'Selección limpiada' : 'Favoritos limpiados') }}
+                    title={brokerMode ? 'Limpiar selección' : 'Limpiar favoritos'}
+                  >&times;</button>
                 </div>
-                {favorites.size >= 2 && (
+                {brokerMode ? (
+                  <button className="desktop-compare-btn" onClick={() => setShortlistModalOpen(true)}>
+                    Enviar shortlist ({favorites.size})
+                  </button>
+                ) : favorites.size >= 2 ? (
                   <button className="desktop-compare-btn" onClick={() => openCompare()}>
                     Comparar {favorites.size === MAX_FAVORITES ? '' : `(${favorites.size})`}
                   </button>
-                )}
+                ) : null}
               </div>
             )}
           </aside>
@@ -1268,14 +1284,23 @@ export default function AlquileresPage({
             </div>
           )}
 
-          {/* Compare banner — only shows with 1+ favorites */}
-          {favorites.size >= 1 && (
+          {/* Banner inferior — modo broker: Enviar shortlist (1+) | público: Comparar (2+). */}
+          {brokerMode && broker && favorites.size >= 1 && (
+            <div className="alq-compare-banner-wrap alq-shortlist-banner-wrap">
+              <button className="alq-compare-banner alq-shortlist-banner" onClick={() => setShortlistModalOpen(true)} style={{ flex: 1 }}>
+                <span className="alq-compare-banner-text">Enviar shortlist · {favorites.size} {favorites.size === 1 ? 'propiedad' : 'propiedades'}</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+              </button>
+              <button className="alq-compare-banner-clear" aria-label="Limpiar selección" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Selección limpiada') }}>&times;</button>
+            </div>
+          )}
+          {!brokerMode && favorites.size >= 1 && (
             <div className="alq-compare-banner-wrap">
               <button className="alq-compare-banner" onClick={() => favorites.size >= 2 ? openCompare() : showToast('Elegí al menos 2 para comparar')} style={{ flex: 1 }}>
                 <span className="alq-compare-banner-text">{favorites.size} favorito{favorites.size > 1 ? 's' : ''}{favorites.size >= 2 ? ' · Comparar' : ''}</span>
                 {favorites.size >= 2 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M9 18l6-6-6-6"/></svg>}
               </button>
-              <button className="alq-compare-banner-clear" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Favoritos limpiados') }}>&times;</button>
+              <button className="alq-compare-banner-clear" aria-label="Limpiar favoritos" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Favoritos limpiados') }}>&times;</button>
             </div>
           )}
 
