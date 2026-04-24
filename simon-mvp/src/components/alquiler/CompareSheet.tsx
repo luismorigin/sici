@@ -32,11 +32,26 @@ interface CompareSheetProps {
   open: boolean
   properties: UnidadAlquiler[]
   onClose: () => void
+  // publicShareMode: cliente en /b/[hash]. CTAs WA van al broker (no al agente
+  // original) y las "preguntas para el broker" se ocultan (el cliente habla
+  // directo con el broker, no curamos preguntas).
+  publicShareBroker?: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null
 }
 
 function fmt(n: number) { return n.toLocaleString('es-BO') }
 
-export default function CompareSheet({ open, properties, onClose }: CompareSheetProps) {
+function buildClientToBrokerCompareMessage(props: UnidadAlquiler[], brokerName: string): string {
+  const lines = props.map((p, i) => {
+    const letter = String.fromCharCode(65 + i)
+    const name = p.nombre_edificio || p.nombre_proyecto || `Depto ${letter}`
+    const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+    return `${letter}) ${name} — ${dorms}, ${Math.round(p.area_m2)}m², Bs ${fmt(p.precio_mensual_bob)}/mes`
+  }).join('\n')
+  return `Hola ${brokerName}, estoy comparando estas opciones y me gustaría conversar:\n\n${lines}`
+}
+
+export default function CompareSheet({ open, properties, onClose, publicShareBroker = null }: CompareSheetProps) {
+  const publicShareMode = publicShareBroker !== null
   const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
   const MAX_QS = 3
 
@@ -311,68 +326,94 @@ export default function CompareSheet({ open, properties, onClose }: CompareSheet
           </div>
         )}
 
-        {/* Questions for broker — selectable, max 3, included in WhatsApp */}
-        <div className="cs-section">
-          <div className="cs-label-row">
-            <span className="cs-label"><span className="cs-label-dot" />PREGUNTAS PARA EL BROKER</span>
-            <span className="cs-label-hint">{selectedQs.size > 0 ? `${selectedQs.size}/${MAX_QS} — se incluyen en WhatsApp` : `Selecciona hasta ${MAX_QS}`}</span>
+        {/* Questions for broker — selectable, max 3, included in WhatsApp.
+            Ocultas en publicShareMode (el cliente habla directo con su broker,
+            sin preguntas curadas). */}
+        {!publicShareMode && (
+          <div className="cs-section">
+            <div className="cs-label-row">
+              <span className="cs-label"><span className="cs-label-dot" />PREGUNTAS PARA EL BROKER</span>
+              <span className="cs-label-hint">{selectedQs.size > 0 ? `${selectedQs.size}/${MAX_QS} — se incluyen en WhatsApp` : `Selecciona hasta ${MAX_QS}`}</span>
+            </div>
+            <div className="cs-questions">
+              {askQuestions.map((q, i) => {
+                const isSelected = selectedQs.has(i)
+                const isDisabled = !isSelected && selectedQs.size >= MAX_QS
+                return (
+                  <button key={i} className={`cs-question cs-q-selectable ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
+                    onClick={() => toggleQuestion(i)} aria-pressed={isSelected}>
+                    <span className={`cs-q-check ${isSelected ? 'checked' : ''}`}>
+                      {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="#EDE8DC" strokeWidth="3" style={{width:10,height:10}}><path d="M5 12l5 5L20 7"/></svg>}
+                    </span>
+                    <span className="cs-q-text">{q.text}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
-          <div className="cs-questions">
-            {askQuestions.map((q, i) => {
-              const isSelected = selectedQs.has(i)
-              const isDisabled = !isSelected && selectedQs.size >= MAX_QS
-              return (
-                <button key={i} className={`cs-question cs-q-selectable ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
-                  onClick={() => toggleQuestion(i)} aria-pressed={isSelected}>
-                  <span className={`cs-q-check ${isSelected ? 'checked' : ''}`}>
-                    {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="#EDE8DC" strokeWidth="3" style={{width:10,height:10}}><path d="M5 12l5 5L20 7"/></svg>}
-                  </span>
-                  <span className="cs-q-text">{q.text}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
+        )}
 
-        <div className="cs-section">
-          <div className="cs-label"><span className="cs-label-dot" />DURANTE LA VISITA, FIJATE EN</div>
-          <div className="cs-questions">
-            {checkQuestions.map((q, i) => (
-              <div key={i} className="cs-question">
-                <span className="cs-q-dot" />
-                <span className="cs-q-text">{q.text}</span>
-              </div>
-            ))}
+        {/* "Durante la visita, fíjate en" — oculto en publicShareMode
+            (el cliente ya coordinó con su broker, la guía es redundante). */}
+        {!publicShareMode && (
+          <div className="cs-section">
+            <div className="cs-label"><span className="cs-label-dot" />DURANTE LA VISITA, FIJATE EN</div>
+            <div className="cs-questions">
+              {checkQuestions.map((q, i) => (
+                <div key={i} className="cs-question">
+                  <span className="cs-q-dot" />
+                  <span className="cs-q-text">{q.text}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* WhatsApp CTAs */}
         <div className="cs-section">
           <div className="cs-label"><span className="cs-label-dot" />CONTACTAR</div>
-          <div className="cs-ctas">
-            {props.map((p, i) => {
-              const name = p.nombre_edificio || p.nombre_proyecto || `Depto ${i + 1}`
-              const selectedTexts = Array.from(selectedQs).sort().map(idx => askQuestions[idx]?.text).filter(Boolean) as string[]
-              const msgText = buildAlquilerWaMessage(p, {
-                intro: 'Hola, vi este alquiler en Simon (simonbo.com) — estoy comparando varias opciones:',
-                preguntas: selectedTexts,
-              })
-              return (
-                <div key={p.id} className="cs-cta-row">
-                  <span className="cs-cta-letter">{String.fromCharCode(65 + i)}</span>
-                  <span className="cs-cta-name">{name}</span>
-                  {p.agente_whatsapp ? (
-                    <a href="#" onClick={(e) => triggerWhatsAppCapture(e, p, msgText, 'comparativo', selectedTexts.length > 0 ? selectedTexts : undefined)} className="cs-cta-btn">
-                      <svg viewBox="0 0 24 24" fill="#1EA952" style={{ width: 16, height: 16 }}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
-                      WhatsApp
-                    </a>
-                  ) : (
-                    <a href={p.url} target="_blank" rel="noopener noreferrer" className="cs-cta-btn cs-cta-link">Ver anuncio</a>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+          {publicShareMode && publicShareBroker ? (
+            // En publicShareMode: un solo CTA al broker mencionando las 3 opciones comparadas
+            <div className="cs-ctas">
+              <div className="cs-cta-row cs-cta-row-broker">
+                <span className="cs-cta-name" style={{ flex: 1 }}>
+                  Escribir a {publicShareBroker.nombre}
+                </span>
+                <a
+                  href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerCompareMessage(props, publicShareBroker.nombre))}`}
+                  target="_blank" rel="noopener noreferrer" className="cs-cta-btn"
+                >
+                  <svg viewBox="0 0 24 24" fill="#1EA952" style={{ width: 16, height: 16 }}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+                  WhatsApp
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="cs-ctas">
+              {props.map((p, i) => {
+                const name = p.nombre_edificio || p.nombre_proyecto || `Depto ${i + 1}`
+                const selectedTexts = Array.from(selectedQs).sort().map(idx => askQuestions[idx]?.text).filter(Boolean) as string[]
+                const msgText = buildAlquilerWaMessage(p, {
+                  intro: 'Hola, vi este alquiler en Simon (simonbo.com) — estoy comparando varias opciones:',
+                  preguntas: selectedTexts,
+                })
+                return (
+                  <div key={p.id} className="cs-cta-row">
+                    <span className="cs-cta-letter">{String.fromCharCode(65 + i)}</span>
+                    <span className="cs-cta-name">{name}</span>
+                    {p.agente_whatsapp ? (
+                      <a href="#" onClick={(e) => triggerWhatsAppCapture(e, p, msgText, 'comparativo', selectedTexts.length > 0 ? selectedTexts : undefined)} className="cs-cta-btn">
+                        <svg viewBox="0 0 24 24" fill="#1EA952" style={{ width: 16, height: 16 }}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+                        WhatsApp
+                      </a>
+                    ) : (
+                      <a href={p.url} target="_blank" rel="noopener noreferrer" className="cs-cta-btn cs-cta-link">Ver anuncio</a>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <div className="cs-footer">

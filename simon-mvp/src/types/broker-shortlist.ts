@@ -18,6 +18,10 @@ export interface BrokerShortlist {
 
   created_at: string
   updated_at: string
+
+  // Derivado del primer item (asumimos shortlist homogénea). Solo viene desde
+  // el endpoint GET /api/broker/shortlists, no desde POST ni desde la tabla.
+  tipo_operacion?: 'venta' | 'alquiler'
 }
 
 export interface BrokerShortlistItem {
@@ -28,15 +32,22 @@ export interface BrokerShortlistItem {
   comentario_broker: string | null
   orden: number
   added_at: string
-  // Snapshot del precio cuando se agregó a la shortlist (migración 229).
-  // NULL para items pre-migración. Se compara contra precio actual al renderizar
-  // /b/[hash] para mostrar badge "bajó" / "subió" si la diferencia es > 1%.
+  // Snapshots del precio cuando se agregó a la shortlist.
+  // NULL para items pre-migración. Se comparan contra el precio actual al
+  // renderizar /b/[hash] para mostrar badge "bajó" / "subió" si la diferencia
+  // es > 1%.
+  //   - precio_usd_snapshot / precio_norm_snapshot → solo items de venta (migraciones 229/230)
+  //   - precio_mensual_bob_snapshot               → solo items de alquiler (migración 233)
   precio_usd_snapshot?: number | null
-  // Preview enriquecido (solo viene del endpoint GET por id, no de la creación)
+  precio_norm_snapshot?: number | null
+  precio_mensual_bob_snapshot?: number | null
+  // Preview enriquecido (solo viene del endpoint GET por id, no de la creación).
+  // Para items de venta viene precio_usd poblado; para alquiler precio_mensual_bob.
   preview?: {
     proyecto: string
     zona: string | null
     precio_usd: number | null
+    precio_mensual_bob: number | null
     area_m2: number | null
     dormitorios: number | null
     foto: string | null
@@ -58,6 +69,9 @@ export interface BrokerShortlistItemWithProperty extends BrokerShortlistItem {
 
 export interface BrokerShortlistWithItems extends BrokerShortlist {
   items: BrokerShortlistItem[]
+  // IDs que el cliente marcó con corazón en /b/[hash] (migración 234).
+  // El broker los ve en el editor como feedback — "cliente marcó 3 de 7".
+  heartedPropertyIds?: number[]
 }
 
 // Payload para crear nueva shortlist desde el modal "Enviar"

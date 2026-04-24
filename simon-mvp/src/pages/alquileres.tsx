@@ -3,7 +3,6 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import Image from 'next/image'
 import type { GetStaticProps } from 'next'
 import { type UnidadAlquiler, type FiltrosAlquiler, buscarUnidadesAlquiler } from '@/lib/supabase'
 import { ZONAS_ALQUILER_UI, displayZona } from '@/lib/zonas'
@@ -12,6 +11,10 @@ import { fbqTrack } from '@/lib/meta-pixel'
 import { fetchMercadoAlquilerData, type MercadoAlquilerData } from '@/lib/mercado-alquiler-data'
 import { useWhatsAppCapture, triggerWhatsAppCapture } from '@/hooks/useWhatsAppCapture'
 import { buildAlquilerWaMessage } from '@/lib/wa-message'
+import { useBrokerShortlists } from '@/hooks/useBrokerShortlists'
+import ShortlistSendModal from '@/components/broker/ShortlistSendModal'
+import ShortlistsPanel from '@/components/broker/ShortlistsPanel'
+import type { Broker } from '@/lib/simon-brokers'
 
 // --- SEO types ---
 interface AlquileresSEO {
@@ -157,6 +160,13 @@ function buildShareWhatsAppUrl(p: UnidadAlquiler) {
   return `https://wa.me/?text=${encodeURIComponent(text)}`
 }
 
+// Mensaje del cliente al broker (publicShareMode en /b/[hash]).
+function buildClientToBrokerAlquilerMessage(p: UnidadAlquiler, brokerName: string): string {
+  const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
+  const dorms = dormLabel(p.dormitorios)
+  return `Hola ${brokerName}, me interesa este alquiler:\n\n${name} (${dorms} · ${Math.round(p.area_m2)}m² · ${formatPrice(p.precio_mensual_bob)}/mes)\n\n¿Podemos coordinar?`
+}
+
 // Track share separately — call from onClick, not from URL builder
 function trackShareClick(p: UnidadAlquiler) {
   const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
@@ -182,16 +192,61 @@ function useIsDesktop() {
   return isDesktop
 }
 
+// ===== PUBLIC SHARE DATA (links /b/[hash] con items de alquiler) =====
+// Analogo a PublicShareData de ventas.tsx, adaptado a alquiler:
+//  - items son UnidadAlquiler
+//  - priceSnapshots guarda precio_mensual_bob (fuente de verdad regla 10/12)
+//    y precio_mensual_bob_actual para detectar cambio del agente.
+export interface PublicShareDataAlquiler {
+  hash: string
+  broker: { slug: string; nombre: string; telefono: string; foto_url: string | null; inmobiliaria?: string | null }
+  items: UnidadAlquiler[]
+  itemComments?: Record<number, string | null>
+  priceSnapshots?: Record<number, { bobSnapshot: number | null; bobActual: number | null }>
+  // IDs de propiedades que el cliente ya marcó con corazón (persistidos en BD).
+  // El cliente hidrata favorites con esto en lugar de localStorage.
+  initialHearts?: number[]
+}
+
 // ===== MAIN PAGE =====
-export default function AlquileresPage({ seo, initialProperties }: { seo: AlquileresSEO; initialProperties: UnidadAlquiler[] }) {
+export default function AlquileresPage({
+  seo,
+  initialProperties,
+  brokerSlug: brokerSlugProp = null,
+  broker: brokerProp = null,
+  publicShare = null,
+}: {
+  seo: AlquileresSEO
+  initialProperties: UnidadAlquiler[]
+  brokerSlug?: string | null
+  broker?: Broker | null
+  publicShare?: PublicShareDataAlquiler | null
+}) {
   const router = useRouter()
   const { modalElement: waModalElement } = useWhatsAppCapture()
   const isDesktop = useIsDesktop()
-  const [properties, setProperties] = useState<UnidadAlquiler[]>(initialProperties)
+
+  // Modo broker + publicShare (Fase 2 Simon Broker)
+  const publicShareMode = publicShare !== null
+  const publicShareBrokerProp: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null = publicShare ? publicShare.broker : null
+  const priceSnapshotsMap: Record<number, { bobSnapshot: number | null; bobActual: number | null }> | null = publicShare && publicShare.priceSnapshots ? publicShare.priceSnapshots : null
+  const initialProps = publicShareMode ? publicShare!.items : initialProperties
+  const brokerSlug = brokerSlugProp
+  const broker = brokerProp
+  const brokerMode = broker !== null
+  const brokerInfoProp: { nombre: string; inmobiliaria?: string | null } | null = broker ? { nombre: broker.nombre, inmobiliaria: broker.inmobiliaria } : null
+
+  const [properties, setProperties] = useState<UnidadAlquiler[]>(initialProps)
   const [loading, setLoading] = useState(false)
   const [spotlightId, setSpotlightId] = useState<number | null>(null)
   const [fetchedSpotlight, setFetchedSpotlight] = useState<UnidadAlquiler | null>(null)
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
+
+  // Shortlists del broker — selección actual = favoritos, persistencia y envío via hook
+  const brokerShortlists = useBrokerShortlists(broker)
+  const [shortlistModalOpen, setShortlistModalOpen] = useState(false)
+  const [shortlistsPanelOpen, setShortlistsPanelOpen] = useState(false)
+  const [onlySelectedFilter, setOnlySelectedFilter] = useState(false)
 
   // Body styles — scoped to this page (cleanup on unmount)
   useEffect(() => {
@@ -207,12 +262,19 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     }
   }, [])
 
-  // Restore favorites from localStorage after hydration
+  // Restore favorites: publicShareMode hidrata desde BD (initialHearts),
+  // los demás desde localStorage.
   useEffect(() => {
+    if (publicShareMode) {
+      const hearts = publicShare?.initialHearts
+      if (hearts && hearts.length > 0) setFavorites(new Set(hearts))
+      return
+    }
     try {
       const saved = localStorage.getItem('alq_favorites')
       if (saved) setFavorites(new Set(JSON.parse(saved) as number[]))
     } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const [activeCardIndex, setActiveCardIndex] = useState(0)
   const activeCardIdxRef = useRef(0)
@@ -268,10 +330,12 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   const analyticsRef = useRef({ startTime: Date.now(), maxCardIdx: 0, hasInteracted: false, sessionSent: false, viewedIds: new Set<number>() })
   const fetchGenRef = useRef(0) // increments on each fetchProperties call to cancel stale background loads
 
-  // Persist favorites to localStorage
+  // Persist favorites to localStorage (skip en publicShareMode — se persiste
+  // en BD por cada toggle, ver toggleFavorite).
   useEffect(() => {
+    if (publicShareMode) return
     try { localStorage.setItem('alq_favorites', JSON.stringify(Array.from(favorites))) } catch {}
-  }, [favorites])
+  }, [favorites, publicShareMode])
 
   // Keep isFilteredRef in sync for scroll handler (avoids stale closure)
   useEffect(() => { isFilteredRef.current = isFiltered }, [isFiltered])
@@ -347,6 +411,9 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   }, [activeCardIndex, isDesktop])
 
   const fetchProperties = useCallback(async (f: FiltrosAlquiler, retry = true): Promise<number> => {
+    // En publicShareMode (/b/[hash]) el feed lo define la shortlist del broker,
+    // NO debe ser sobrescrito por fetches al feed público global.
+    if (publicShareMode) return properties.length
     const gen = ++fetchGenRef.current
     setLoading(true)
     setLoadError(false)
@@ -392,6 +459,10 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   // then load all 200 after the page becomes interactive (avoids competing with LCP image)
   useEffect(() => {
     trackEvent('page_enter_alquiler', {})
+    // En publicShareMode (/b/[hash]) las propiedades ya vienen curadas por el
+    // broker via props.publicShare.items. NUNCA traer el feed completo — pisaría
+    // la shortlist con las 200 props globales.
+    if (publicShareMode) return
     const doFetch = async () => {
       // Skip if a URL-driven filter (?edificio, ?zonas=..., etc.) already fetched — avoids overwriting filtered results with a stale-closure baseline fetch.
       if (isFilteredRef.current) return
@@ -503,7 +574,9 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
 
   function toggleFavorite(id: number) {
     const isFav = favorites.has(id)
-    if (!isFav && favorites.size >= MAX_FAVORITES) {
+    // Limite de 3 NO aplica en brokerMode ni publicShareMode: ambos pueden
+    // seleccionar tantas como quieran (broker = shortlist, cliente = feedback).
+    if (!brokerMode && !publicShareMode && !isFav && favorites.size >= MAX_FAVORITES) {
       showToast(`Maximo ${MAX_FAVORITES} favoritos`)
       return
     }
@@ -515,11 +588,26 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     })
     analyticsRef.current.hasInteracted = true
     trackEvent('toggle_favorite', { property_id: id, action: isFav ? 'remove' : 'add', total_favs: isFav ? favorites.size - 1 : favorites.size + 1 })
+    // En publicShareMode persistir en BD (feedback al broker). Optimistic UI:
+    // el state ya se actualizó arriba, el fetch corre en background. Si falla
+    // loggeamos pero no revertimos (el cliente quiere que funcione; el broker
+    // va a ver el heart siguiente o puede preguntarle).
+    if (publicShareMode && publicShare?.hash) {
+      const hash = publicShare.hash
+      const method = isFav ? 'DELETE' : 'POST'
+      fetch('/api/public/shortlist-hearts', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hash, propiedad_id: id }),
+      }).catch(err => console.warn('[hearts] toggle failed', err))
+    }
     if (isFav) {
-      showToast('Eliminado de favoritos')
+      showToast(brokerMode ? 'Quitado de la seleccion' : 'Eliminado de favoritos')
     } else {
       const newCount = favorites.size + 1
-      if (newCount >= 2) {
+      if (brokerMode) {
+        showToast(`${newCount} ${newCount === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'}`)
+      } else if (newCount >= 2) {
         showToast(`${newCount}/${MAX_FAVORITES} · Podes comparar abajo`)
       } else {
         showToast(`Guardado · ${newCount}/${MAX_FAVORITES} favoritos`)
@@ -527,10 +615,45 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     }
   }
 
+  function addToShortlist(p: UnidadAlquiler) {
+    trackEvent('broker_add_to_shortlist', { property_id: p.id, broker_slug: broker?.slug, tipo_operacion: 'alquiler' })
+    toggleFavorite(p.id)
+  }
+
+  async function handleSendShortlist(data: { cliente_nombre: string; cliente_telefono: string; mensaje_whatsapp?: string }) {
+    if (!broker) throw new Error('Broker no resuelto')
+    const propiedad_ids = Array.from(favorites)
+    if (propiedad_ids.length === 0) throw new Error('No hay propiedades seleccionadas')
+    trackEvent('broker_send_shortlist', { broker_slug: broker.slug, count: propiedad_ids.length, tipo_operacion: 'alquiler' })
+    const { whatsappUrl } = await brokerShortlists.createAndSend({ ...data, propiedad_ids, tipo_operacion: 'alquiler' })
+    setFavorites(new Set())
+    showToast('Shortlist enviada')
+    return { whatsappUrl }
+  }
+
   function openCompare() {
     setCompareOpen(true)
     analyticsRef.current.hasInteracted = true
     trackEvent('open_compare', { property_ids: Array.from(favorites).join(','), count: favorites.size })
+  }
+
+  const displayedProperties = useMemo(
+    () => (brokerMode && onlySelectedFilter) ? properties.filter(p => favorites.has(p.id)) : properties,
+    [brokerMode, onlySelectedFilter, properties, favorites]
+  )
+  const visibleNotMarked = useMemo(
+    () => brokerMode ? properties.filter(p => !favorites.has(p.id)) : [],
+    [brokerMode, properties, favorites]
+  )
+  function markAllVisible() {
+    if (visibleNotMarked.length === 0) return
+    trackEvent('broker_mark_all_visible', { count: visibleNotMarked.length, broker_slug: broker?.slug, tipo_operacion: 'alquiler' })
+    setFavorites(prev => {
+      const n = new Set(prev)
+      for (const p of properties) n.add(p.id)
+      return n
+    })
+    showToast(`${visibleNotMarked.length} propiedad${visibleNotMarked.length === 1 ? '' : 'es'} agregada${visibleNotMarked.length === 1 ? '' : 's'}`)
   }
 
   // Gate: check localStorage on mount
@@ -779,12 +902,6 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
   return (
     <>
       <AlquileresHead seo={seo} />
-      {/* Preload first photo for faster LCP — use Next.js image URL for cache hit */}
-      {initialProperties.length > 0 && initialProperties[0].fotos_urls?.[0] && (
-        <Head>
-          <link rel="preload" as="image" href={`/_next/image?url=${encodeURIComponent(initialProperties[0].fotos_urls[0])}&w=640&q=75`} fetchPriority="high" />
-        </Head>
-      )}
 
 
       {/* Toast */}
@@ -795,10 +912,14 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         open={compareOpen}
         properties={favoriteProperties}
         onClose={() => setCompareOpen(false)}
+        publicShareBroker={publicShareBrokerProp}
       />
 
-      {/* Simon Chat Bot — deferred to avoid TBT during initial load */}
-      {widgetsReady && <SimonChatWidget
+      {/* Simon Chat Bot — deferred to avoid TBT during initial load.
+          Oculto en publicShareMode: el cliente viene en contexto curado por el
+          broker, no queremos que el chat global sugiera props fuera de la
+          shortlist (leakage del flujo del broker). */}
+      {widgetsReady && !publicShareMode && <SimonChatWidget
         properties={properties}
         sheetOpen={sheetOpen}
         onOpenDetail={(id) => {
@@ -837,12 +958,30 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
         onShare={sheetProperty ? () => { trackShareClick(sheetProperty); window.open(buildShareWhatsAppUrl(sheetProperty), '_blank') } : undefined}
         properties={properties}
         onSwapProperty={(p) => setSheetProperty(p)}
+        brokerMode={brokerMode}
+        publicShareBroker={publicShareBrokerProp}
+        priceSnapshot={sheetProperty && priceSnapshotsMap ? priceSnapshotsMap[sheetProperty.id] || null : null}
       />
+
+      {/* Banner inferior flotante brokerMode — visible en mobile Y desktop,
+          el broker siempre tiene CTA "Enviar shortlist" + × para limpiar
+          la selección sin depender del sidebar. */}
+      {brokerMode && broker && favorites.size >= 1 && (
+        <div className="alq-compare-banner-wrap alq-shortlist-banner-wrap">
+          <button className="alq-compare-banner alq-shortlist-banner" onClick={() => setShortlistModalOpen(true)} style={{ flex: 1 }}>
+            <span className="alq-compare-banner-text">Enviar shortlist · {favorites.size} {favorites.size === 1 ? 'propiedad' : 'propiedades'}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+          <button className="alq-compare-banner-clear" aria-label="Limpiar selección" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Selección limpiada') }}>&times;</button>
+        </div>
+      )}
 
       {isDesktop ? (
         /* ==================== DESKTOP LAYOUT ==================== */
-        <div className="desktop-layout">
-          {/* Left sidebar - filters */}
+        <div className={`desktop-layout ${publicShareMode ? 'desktop-layout-public' : ''} ${brokerMode ? 'desktop-layout-broker' : ''}`}>
+          {/* Left sidebar - filters. Oculto en publicShareMode: el cliente recibe
+              una shortlist curada, no debe ver filtros globales. */}
+          {!publicShareMode && (
           <aside className="desktop-sidebar" style={{ overscrollBehavior: 'contain' }}>
             <div className="desktop-sidebar-header">
               <Link href="/landing-v2" className="desktop-logo">
@@ -867,24 +1006,41 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
               onReset={resetFilters}
               proyectoNames={proyectoNames}
             />
-            {/* Favorites summary */}
+            {/* Selección del broker / Favoritos del público */}
             {favorites.size > 0 && (
               <div className="desktop-fav-summary">
                 <div className="desktop-fav-info">
-                  <svg viewBox="0 0 24 24" fill="#E05555" stroke="#E05555" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                  </svg>
-                  {favorites.size} favorito{favorites.size > 1 ? 's' : ''}
-                  <button className="desktop-fav-clear" onClick={() => { setFavorites(new Set()); showToast('Favoritos limpiados') }} title="Limpiar favoritos">&times;</button>
+                  {brokerMode ? (
+                    <svg viewBox="0 0 24 24" fill="#F2B441" stroke="#F2B441" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="#E05555" stroke="#E05555" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                  )}
+                  {brokerMode
+                    ? `${favorites.size} ${favorites.size === 1 ? 'seleccionada' : 'seleccionadas'}`
+                    : `${favorites.size} favorito${favorites.size > 1 ? 's' : ''}`}
+                  <button
+                    className="desktop-fav-clear"
+                    onClick={() => { setFavorites(new Set()); showToast(brokerMode ? 'Selección limpiada' : 'Favoritos limpiados') }}
+                    title={brokerMode ? 'Limpiar selección' : 'Limpiar favoritos'}
+                  >&times;</button>
                 </div>
-                {favorites.size >= 2 && (
+                {brokerMode ? (
+                  <button className="desktop-compare-btn" onClick={() => setShortlistModalOpen(true)}>
+                    Enviar shortlist ({favorites.size})
+                  </button>
+                ) : favorites.size >= 2 ? (
                   <button className="desktop-compare-btn" onClick={() => openCompare()}>
                     Comparar {favorites.size === MAX_FAVORITES ? '' : `(${favorites.size})`}
                   </button>
-                )}
+                ) : null}
               </div>
             )}
           </aside>
+          )}
 
           {/* Right content */}
           <main className="desktop-main" ref={viewMode === 'grid' ? feedRef : undefined}
@@ -892,16 +1048,19 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
             {/* View toggle bar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid rgba(216,208,188,0.3)', flexShrink: 0, position: 'sticky', top: 0, background: 'transparent', zIndex: 10, paddingTop: 8 }}>
               <div style={{ fontSize: 13, color: '#7A7060', display: 'flex', alignItems: 'center', gap: 12 }}>
-                {favorites.size >= 2 && (
+                {/* Comparar es feature del público, no tiene sentido en brokerMode
+                    (el broker está armando shortlist — comparar sus propias
+                    selecciones no ayuda a decidir). */}
+                {!brokerMode && favorites.size >= 2 && (
                   <button onClick={() => openCompare()} style={{ padding: '6px 16px', background: '#141414', color: '#EDE8DC', border: 'none', borderRadius: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.5 }}>
                     Comparar {favorites.size} favoritos
                   </button>
                 )}
-                {favorites.size === 1 && (
+                {!brokerMode && favorites.size === 1 && (
                   <span style={{ fontSize: 12, color: '#7A7060' }}>1 favorito — elegí otro para comparar</span>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: 2, background: 'rgba(58,53,48,0.06)', borderRadius: 10, padding: 3 }}>
+              <div style={{ display: 'flex', gap: 2, background: '#EDE8DC', borderRadius: 10, padding: 3, boxShadow: '0 1px 3px rgba(20,20,20,0.08)' }}>
                 <button
                   onClick={() => { setViewMode('grid'); trackEvent('switch_view', { view_mode: 'grid' }) }}
                   style={{
@@ -961,6 +1120,11 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
                           onOpenInfo={() => openDetail(spotlightProperty)}
                           onPhotoTap={() => openDetail(spotlightProperty)}
                           onShare={() => { trackShareClick(spotlightProperty); window.open(buildShareWhatsAppUrl(spotlightProperty), '_blank') }}
+                          brokerMode={brokerMode}
+                          onAddToShortlist={brokerMode ? () => addToShortlist(spotlightProperty) : undefined}
+                          publicShareMode={publicShareMode}
+                          publicShareBroker={publicShareBrokerProp}
+                          priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[spotlightProperty.id] || null : null}
                         />
                       </div>
                       {spotlightProperty.latitud && spotlightProperty.longitud && (
@@ -1011,6 +1175,11 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
                           onOpenInfo={() => openDetail(p)}
                           onPhotoTap={() => openDetail(p)}
                           onShare={() => { trackShareClick(p); window.open(buildShareWhatsAppUrl(p), '_blank') }}
+                          brokerMode={brokerMode}
+                          onAddToShortlist={brokerMode ? () => addToShortlist(p) : undefined}
+                          publicShareMode={publicShareMode}
+                          publicShareBroker={publicShareBrokerProp}
+                          priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] || null : null}
                         />
                       </Fragment>
                     )
@@ -1039,6 +1208,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
                       onClose={() => setMapSelectedId(null)}
                       onToggleFavorite={() => toggleFavorite(sp.id)}
                       onOpenDetail={() => openDetail(sp)}
+                      publicShareBroker={publicShareBrokerProp}
                     />
                   )
                 })()}
@@ -1068,7 +1238,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
                           </div>
                         )
                       })}
-                      {favProps.length >= 2 && (
+                      {!brokerMode && favProps.length >= 2 && (
                         <button className="map-fav-compare" onClick={() => openCompare()}>Comparar</button>
                       )}
                     </div>
@@ -1081,16 +1251,19 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
       ) : (
         /* ==================== MOBILE LAYOUT (TikTok feed) ==================== */
         <>
-          {/* Top bar — search pill (Airbnb/TikTok style) */}
-          <div className="alq-top-bar">
-            <button className={`alq-search-pill${pillPulse ? ' pulse' : ''}`} onClick={() => { setPillPulse(false); setFilterOverlayOpen(true); trackEvent('open_filter_overlay') }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-              <span className="alq-search-text">{searchPillText}</span>
-              {isFiltered && <div className="alq-search-dot" />}
-            </button>
-          </div>
+          {/* Top bar — search pill (Airbnb/TikTok style).
+              Oculto en publicShareMode: el cliente ve el header del broker arriba. */}
+          {!publicShareMode && (
+            <div className="alq-top-bar">
+              <button className={`alq-search-pill${pillPulse ? ' pulse' : ''}`} onClick={() => { setPillPulse(false); setFilterOverlayOpen(true); trackEvent('open_filter_overlay') }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <span className="alq-search-text">{searchPillText}</span>
+                {isFiltered && <div className="alq-search-dot" />}
+              </button>
+            </div>
+          )}
 
           {/* Context badge — overlaid on first card photo */}
           {activeCardIndex === 0 && !loading && properties.length > 0 && (
@@ -1127,14 +1300,14 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
             </div>
           )}
 
-          {/* Compare banner — only shows with 1+ favorites */}
-          {favorites.size >= 1 && (
+          {/* Banner inferior público — Comparar (2+). Solo mobile. */}
+          {!brokerMode && favorites.size >= 1 && (
             <div className="alq-compare-banner-wrap">
               <button className="alq-compare-banner" onClick={() => favorites.size >= 2 ? openCompare() : showToast('Elegí al menos 2 para comparar')} style={{ flex: 1 }}>
                 <span className="alq-compare-banner-text">{favorites.size} favorito{favorites.size > 1 ? 's' : ''}{favorites.size >= 2 ? ' · Comparar' : ''}</span>
                 {favorites.size >= 2 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M9 18l6-6-6-6"/></svg>}
               </button>
-              <button className="alq-compare-banner-clear" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Favoritos limpiados') }}>&times;</button>
+              <button className="alq-compare-banner-clear" aria-label="Limpiar favoritos" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Favoritos limpiados') }}>&times;</button>
             </div>
           )}
 
@@ -1179,6 +1352,7 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
                       onClose={() => setMapSelectedId(null)}
                       onToggleFavorite={() => toggleFavorite(sp.id)}
                       onOpenDetail={() => { setMobileMapOpen(false); openDetail(sp) }}
+                      publicShareBroker={publicShareBrokerProp}
                     />
                   )
                 })()}
@@ -1236,6 +1410,11 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
                     onOpenInfo={() => openDetail(item.data)}
                     onPhotoTap={() => openDetail(item.data)}
                     onShare={() => { trackShareClick(item.data); window.open(buildShareWhatsAppUrl(item.data), '_blank') }}
+                    brokerMode={brokerMode}
+                    onAddToShortlist={brokerMode ? () => addToShortlist(item.data) : undefined}
+                    publicShareMode={publicShareMode}
+                    publicShareBroker={publicShareBrokerProp}
+                    priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[item.data.id] || null : null}
                   />
                 )
               })
@@ -1245,6 +1424,146 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
       )}
 
       {waModalElement}
+
+      {/* Modal Enviar shortlist — solo broker mode */}
+      {brokerMode && broker && (
+        <ShortlistSendModal
+          isOpen={shortlistModalOpen}
+          onClose={() => setShortlistModalOpen(false)}
+          broker={broker}
+          cantidadPropiedades={favorites.size}
+          existingShortlists={brokerShortlists.shortlists}
+          onConfirm={handleSendShortlist}
+        />
+      )}
+
+      {/* Panel Mis shortlists enviadas — solo broker mode */}
+      {brokerMode && broker && (
+        <ShortlistsPanel
+          isOpen={shortlistsPanelOpen}
+          onClose={() => setShortlistsPanelOpen(false)}
+          broker={broker}
+          shortlists={brokerShortlists.shortlists}
+          loading={brokerShortlists.loading}
+          onArchive={brokerShortlists.archive}
+          onRefresh={brokerShortlists.refresh}
+        />
+      )}
+
+      {/* Banner modo broker — arriba del feed cuando activo */}
+      {brokerMode && broker && (
+        <div className="alq-broker-banner">
+          <div className="alq-broker-banner-brand">
+            <span className="alq-broker-banner-logo">SIMON</span>
+            <span className="alq-broker-banner-divider">·</span>
+            <span className="alq-broker-banner-label">BROKER</span>
+            <span className="alq-broker-banner-name">{broker.nombre}</span>
+          </div>
+          <div className="alq-broker-tabs" role="tablist" aria-label="Tipo de operación">
+            <Link href={`/broker/${broker.slug}`} className="alq-broker-tab" role="tab" aria-selected="false">
+              Ventas
+            </Link>
+            <button className="alq-broker-tab active" role="tab" aria-selected="true" disabled>Alquileres</button>
+          </div>
+          {favorites.size > 0 && (
+            <button
+              className={`alq-broker-tool ${onlySelectedFilter ? 'active' : ''}`}
+              onClick={() => setOnlySelectedFilter(v => !v)}
+              title={onlySelectedFilter ? 'Mostrar todos los alquileres' : 'Ver solo los marcados'}
+            >
+              ★ Solo seleccionados · {favorites.size}
+            </button>
+          )}
+          {!onlySelectedFilter && visibleNotMarked.length > 0 && properties.length < 100 && (
+            <button
+              className="alq-broker-tool alq-broker-tool-add"
+              onClick={markAllVisible}
+              title="Agregar todas las propiedades visibles a la selección"
+            >
+              + Marcar los {visibleNotMarked.length} visibles
+            </button>
+          )}
+          <button
+            className="alq-broker-tool alq-broker-send"
+            onClick={() => {
+              if (favorites.size === 0) { showToast('Marcá al menos 1 alquiler para enviar'); return }
+              setShortlistModalOpen(true)
+            }}
+            title="Enviar shortlist por WhatsApp"
+            disabled={favorites.size === 0}
+          >
+            Enviar ({favorites.size})
+          </button>
+          <button className="alq-broker-banner-shortlists" onClick={() => setShortlistsPanelOpen(true)}>
+            Mis shortlists{brokerShortlists.shortlists.length > 0 ? ` · ${brokerShortlists.shortlists.length}` : ''}
+          </button>
+          <a
+            className="alq-broker-tool alq-broker-market-link"
+            href="/mercado/equipetrol/alquileres"
+            target="_blank"
+            rel="noopener"
+            onClick={() => trackEvent('broker_open_mercado', { broker_slug: broker?.slug, tipo_operacion: 'alquiler' })}
+            title="Abrir dashboard de mercado de alquileres en pestaña nueva"
+          >
+            Ver mercado <span aria-hidden="true" className="alq-broker-market-arrow">↗</span>
+          </a>
+        </div>
+      )}
+
+      {/* Header modo public share — header del broker que comparte la shortlist
+          con su cliente. CTA WhatsApp arma mensaje con los corazones marcados. */}
+      {publicShareMode && publicShare && (
+        <div className="alq-public-share-header">
+          <div className="apsh-broker">
+            {publicShare.broker.foto_url
+              ? <img src={publicShare.broker.foto_url} alt={publicShare.broker.nombre} className="apsh-broker-photo" />
+              : <div className="apsh-broker-photo apsh-broker-photo-ph">{publicShare.broker.nombre.charAt(0)}</div>}
+            <div className="apsh-broker-info">
+              <div className="apsh-broker-label">Selección de</div>
+              <div className="apsh-broker-name">{publicShare.broker.nombre}</div>
+              {publicShare.broker.inmobiliaria && (
+                <div className="apsh-broker-agency">{publicShare.broker.inmobiliaria}</div>
+              )}
+            </div>
+          </div>
+          <a
+            href={(() => {
+              const hearted = properties.filter(p => favorites.has(p.id))
+              if (hearted.length > 0) {
+                const lines = hearted.map(p => {
+                  const name = p.nombre_edificio || p.nombre_proyecto || 'Depto'
+                  const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+                  return `• ${name} (${dorms} · ${Math.round(p.area_m2)}m² · Bs ${Math.round(p.precio_mensual_bob).toLocaleString('es-BO')}/mes)`
+                }).join('\n')
+                const plural = hearted.length === 1 ? 'este' : 'estos'
+                const noun = hearted.length === 1 ? 'alquiler' : `${hearted.length} alquileres`
+                const msg = `Hola ${publicShare.broker.nombre}, me interesa${hearted.length === 1 ? '' : 'n'} ${plural} ${noun}:\n\n${lines}\n\n¿Podemos coordinar?`
+                return `https://wa.me/${publicShare.broker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`
+              }
+              return `https://wa.me/${publicShare.broker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${publicShare.broker.nombre}, vi los alquileres que me enviaste.`)}`
+            })()}
+            target="_blank" rel="noopener noreferrer" className="apsh-wa"
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+            WhatsApp
+          </a>
+        </div>
+      )}
+
+      {/* FAB "Mapa" — mobile only, publicShareMode. El top bar con el toggle
+          está oculto en este modo, este FAB es la forma de llegar al mapa. */}
+      {publicShareMode && !isDesktop && properties.length > 0 && (
+        <button
+          className="alq-public-map-fab"
+          onClick={() => setMobileMapOpen(true)}
+          aria-label="Ver mapa"
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          Mapa
+        </button>
+      )}
     </>
   )
 }
@@ -1520,10 +1839,16 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
 }
 
 // ===== MAP FLOATING CARD (own state to avoid re-rendering the map) =====
-function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onOpenDetail, mobile }: {
+function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onOpenDetail, mobile, publicShareBroker = null }: {
   property: UnidadAlquiler; isFavorite: boolean; mobile?: boolean
   onClose: () => void; onToggleFavorite: () => void; onOpenDetail: () => void
+  // publicShareMode: CTA WA redirige al broker (no al agente original).
+  publicShareBroker?: { nombre: string; telefono: string } | null
 }) {
+  const publicShareMode = publicShareBroker !== null
+  const brokerHref = publicShareMode && publicShareBroker
+    ? `https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerAlquilerMessage(sp, publicShareBroker.nombre))}`
+    : null
   const [photoIdx, setPhotoIdx] = useState(0)
   const spName = sp.nombre_edificio || sp.nombre_proyecto || 'Departamento'
   const photos = sp.fotos_urls ?? []
@@ -1567,9 +1892,11 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
           )}
           <div className="mfc-m-actions">
             <button className="mfc-m-btn-detail" onClick={onOpenDetail}>Ver detalles</button>
-            {sp.agente_whatsapp && (
+            {publicShareMode && brokerHref ? (
+              <a href={brokerHref} target="_blank" rel="noopener noreferrer" className="mfc-m-btn-wsp">WhatsApp</a>
+            ) : sp.agente_whatsapp ? (
               <a href="#" onClick={(e) => handleWhatsAppLead(e, sp, buildAlquilerWaMessage(sp), 'map_card_mobile')} className="mfc-m-btn-wsp">WhatsApp</a>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -1610,9 +1937,11 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
         )}
         <div className="map-float-actions">
           <button className="map-float-btn-detail" onClick={onOpenDetail}>Ver detalles</button>
-          {sp.agente_whatsapp && (
+          {publicShareMode && brokerHref ? (
+            <a href={brokerHref} target="_blank" rel="noopener noreferrer" className="map-float-btn-wsp">WhatsApp</a>
+          ) : sp.agente_whatsapp ? (
             <a href="#" onClick={(e) => handleWhatsAppLead(e, sp, buildAlquilerWaMessage(sp), 'map_card')} className="map-float-btn-wsp">WhatsApp</a>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
@@ -1620,9 +1949,16 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
 }
 
 // ===== DESKTOP CARD =====
-const DesktopCard = memo(function DesktopCard({ property: p, isFavorite, favoritesCount, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare, isFirst }: {
+const DesktopCard = memo(function DesktopCard({
+  property: p, isFavorite, favoritesCount, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare, isFirst,
+  brokerMode = false, onAddToShortlist, publicShareMode = false, publicShareBroker = null, priceSnapshot = null,
+}: {
   property: UnidadAlquiler; isFavorite: boolean; favoritesCount: number; petFilterActive?: boolean
   onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void; isFirst?: boolean
+  brokerMode?: boolean; onAddToShortlist?: () => void
+  publicShareMode?: boolean
+  publicShareBroker?: { nombre: string; telefono: string } | null
+  priceSnapshot?: { bobSnapshot: number | null; bobActual: number | null } | null
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = (p.fotos_urls?.length ?? 0) > 0 ? p.fotos_urls : ['']
@@ -1656,9 +1992,20 @@ const DesktopCard = memo(function DesktopCard({ property: p, isFavorite, favorit
   if (p.baulera) badges.push({ text: 'Baulera', color: '' })
 
   function handleFav() {
-    if (!isFavorite && favoritesCount >= MAX_FAVORITES) return
+    if (!brokerMode && !publicShareMode && !isFavorite && favoritesCount >= MAX_FAVORITES) return
+    if (brokerMode && onAddToShortlist) { onAddToShortlist(); return }
     onToggleFavorite()
   }
+
+  const priceChangeBadge = (() => {
+    if (!publicShareMode || !priceSnapshot) return null
+    const { bobSnapshot, bobActual } = priceSnapshot
+    if (bobSnapshot == null || bobActual == null) return null
+    if (bobSnapshot <= 0) return null
+    const delta = (bobActual - bobSnapshot) / bobSnapshot
+    if (Math.abs(delta) < 0.01) return null
+    return { direction: delta < 0 ? 'down' : 'up', from: bobSnapshot, to: bobActual }
+  })()
 
   return (
     <div className={`dc-card${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}`} ref={cardRef}>
@@ -1700,13 +2047,31 @@ const DesktopCard = memo(function DesktopCard({ property: p, isFavorite, favorit
             p.monto_expensas_bob && p.monto_expensas_bob > 0 ? `Expensas Bs ${p.monto_expensas_bob}` : null,
           ].filter(Boolean).map((t, i) => <span key={i}>{i > 0 || p.amoblado || p.acepta_mascotas ? '  ·  ' : ''}{t}</span>)}
         </div>
+        {priceChangeBadge && (
+          <div className={`dc-price-change dc-price-change-${priceChangeBadge.direction}`}>
+            {priceChangeBadge.direction === 'down'
+              ? `↓ Bajo de ${formatPrice(priceChangeBadge.from)} a ${formatPrice(priceChangeBadge.to)}/mes`
+              : `↑ Antes ${formatPrice(priceChangeBadge.from)} · ahora ${formatPrice(priceChangeBadge.to)}/mes`}
+          </div>
+        )}
         <div className="dc-actions">
-          <button className={`dc-act-btn dc-act-fav ${isFavorite ? 'active' : ''}`} onClick={handleFav}>
-            <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
+          <button
+            className={`dc-act-btn dc-act-fav ${isFavorite ? 'active' : ''} ${brokerMode ? 'dc-act-fav-broker' : ''}`}
+            onClick={handleFav}
+            aria-label={brokerMode ? (isFavorite ? 'Quitar de seleccion' : 'Agregar a seleccion') : (isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos')}
+            title={brokerMode ? (isFavorite ? 'Quitar de la shortlist' : 'Agregar a la shortlist') : undefined}
+          >
+            {brokerMode ? (
+              <svg viewBox="0 0 24 24" fill={isFavorite ? '#F2B441' : 'none'} stroke={isFavorite ? '#F2B441' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+                <polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : 'currentColor'} strokeWidth="1.5" style={{ width: 20, height: 20 }}>
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            )}
           </button>
-          {onShare && (
+          {onShare && !publicShareMode && (
             <button className="dc-act-btn" onClick={onShare}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
                 <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
@@ -1718,14 +2083,27 @@ const DesktopCard = memo(function DesktopCard({ property: p, isFavorite, favorit
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
-          {p.agente_whatsapp && (
+          {publicShareMode && publicShareBroker ? (
+            <a
+              href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent('click_whatsapp_broker', { property_id: p.id, source: 'alq_card_desktop_public' })}
+              className="dc-wsp-inline"
+            >
+              <svg viewBox="0 0 24 24" fill="#1EA952" style={{ width: 14, height: 14 }}>
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              Whatsapp
+            </a>
+          ) : !brokerMode && p.agente_whatsapp ? (
             <a href="#" onClick={(e) => handleWhatsAppLead(e, p, buildAlquilerWaMessage(p), 'card_desktop')} className="dc-wsp-inline">
               <svg viewBox="0 0 24 24" fill="#1EA952" style={{ width: 14, height: 14 }}>
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
               </svg>
               Whatsapp
             </a>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -1736,25 +2114,51 @@ const DesktopCard = memo(function DesktopCard({ property: p, isFavorite, favorit
   prev.isFavorite === next.isFavorite &&
   prev.favoritesCount === next.favoritesCount &&
   prev.isFirst === next.isFirst &&
-  prev.petFilterActive === next.petFilterActive
+  prev.petFilterActive === next.petFilterActive &&
+  prev.brokerMode === next.brokerMode &&
+  prev.publicShareMode === next.publicShareMode &&
+  prev.priceSnapshot?.bobSnapshot === next.priceSnapshot?.bobSnapshot &&
+  prev.priceSnapshot?.bobActual === next.priceSnapshot?.bobActual
 )
 
 // ===== MOBILE PROPERTY CARD (full-screen) =====
 const MobilePropertyCard = memo(function MobilePropertyCard({
   property: p, isFirst, showHint, isFavorite, favoritesCount, isSpotlight, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare,
+  brokerMode = false, onAddToShortlist, publicShareMode = false, publicShareBroker = null, priceSnapshot = null,
 }: {
   property: UnidadAlquiler; isFirst: boolean; showHint?: boolean; isFavorite: boolean; favoritesCount: number; isSpotlight: boolean; petFilterActive?: boolean
   onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void
+  brokerMode?: boolean; onAddToShortlist?: () => void
+  publicShareMode?: boolean
+  publicShareBroker?: { nombre: string; telefono: string } | null
+  priceSnapshot?: { bobSnapshot: number | null; bobActual: number | null } | null
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [shakeBtn, setShakeBtn] = useState(false)
 
   function handleFavorite() {
-    if (!isFavorite && favoritesCount >= MAX_FAVORITES) {
+    // Cap MAX_FAVORITES solo aplica en modo publico (CompareSheet acepta hasta 3).
+    // brokerMode y publicShareMode (corazones del cliente) pueden tener tantas como se quiera.
+    if (!brokerMode && !publicShareMode && !isFavorite && favoritesCount >= MAX_FAVORITES) {
       setShakeBtn(true); setTimeout(() => setShakeBtn(false), 300); return
     }
+    if (brokerMode && onAddToShortlist) { onAddToShortlist(); return }
     onToggleFavorite()
   }
+
+  // Badge de cambio de precio (snapshot vs actual): solo en publicShareMode y si la
+  // diferencia supera 1% entre bobSnapshot y bobActual. Regla 10/12: BOB es fuente de
+  // verdad en alquiler.
+  const priceChangeBadge = (() => {
+    if (!publicShareMode || !priceSnapshot) return null
+    const { bobSnapshot, bobActual } = priceSnapshot
+    if (bobSnapshot == null || bobActual == null) return null
+    if (bobSnapshot <= 0) return null
+    const delta = (bobActual - bobSnapshot) / bobSnapshot
+    if (Math.abs(delta) < 0.01) return null
+    const direction = delta < 0 ? 'down' : 'up'
+    return { direction, from: bobSnapshot, to: bobActual }
+  })()
 
   const badges: Array<{ text: string; color: string }> = []
   if (p.dias_en_mercado !== null && p.dias_en_mercado <= 7) badges.push({ text: 'Nuevo', color: 'green' })
@@ -1794,13 +2198,31 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
         {p.descripcion && (
           <div className="amc-razon">&ldquo;{p.descripcion.slice(0, 120)}{p.descripcion.length > 120 ? '...' : ''}&rdquo;</div>
         )}
+        {priceChangeBadge && (
+          <div className={`amc-price-change amc-price-change-${priceChangeBadge.direction}`}>
+            {priceChangeBadge.direction === 'down'
+              ? `↓ Bajo de ${formatPrice(priceChangeBadge.from)} a ${formatPrice(priceChangeBadge.to)}/mes`
+              : `↑ Antes ${formatPrice(priceChangeBadge.from)} · ahora ${formatPrice(priceChangeBadge.to)}/mes`}
+          </div>
+        )}
         <div className="amc-actions">
-          <button className={`amc-btn amc-fav ${isFavorite ? 'active' : ''} ${shakeBtn ? 'shake' : ''}`} aria-label={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'} onClick={handleFavorite}>
-            <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
+          <button
+            className={`amc-btn amc-fav ${isFavorite ? 'active' : ''} ${shakeBtn ? 'shake' : ''} ${brokerMode ? 'amc-fav-broker' : ''}`}
+            aria-label={brokerMode ? (isFavorite ? 'Quitar de seleccion' : 'Agregar a seleccion') : (isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos')}
+            onClick={handleFavorite}
+            title={brokerMode ? (isFavorite ? 'Quitar de la shortlist' : 'Agregar a la shortlist') : undefined}
+          >
+            {brokerMode ? (
+              <svg viewBox="0 0 24 24" fill={isFavorite ? '#F2B441' : 'none'} stroke={isFavorite ? '#F2B441' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
+                <polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#7A7060'} strokeWidth="1.5" style={{ width: 22, height: 22 }}>
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            )}
           </button>
-          {onShare && (
+          {onShare && !publicShareMode && (
             <button className="amc-btn amc-share" aria-label="Compartir por WhatsApp" onClick={onShare}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
                 <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
@@ -1812,16 +2234,29 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
-          {p.agente_whatsapp && (
+          {publicShareMode && publicShareBroker ? (
+            <a
+              href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent('click_whatsapp_broker', { property_id: p.id, source: 'alq_card_mobile_public' })}
+              className="amc-wsp-inline-mobile"
+            >
+              <svg viewBox="0 0 24 24" fill="#1EA952" style={{width:14,height:14}}>
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              Whatsapp
+            </a>
+          ) : !brokerMode && p.agente_whatsapp ? (
             <a href="#" onClick={(e) => handleWhatsAppLead(e, p, buildAlquilerWaMessage(p), 'card_mobile')} className="amc-wsp-inline-mobile">
               <svg viewBox="0 0 24 24" fill="#1EA952" style={{width:14,height:14}}>
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
               </svg>
               Whatsapp
             </a>
-          )}
+          ) : null}
         </div>
-        <a href="/landing-v2" className="amc-brand">simonbo.com</a>
+        {!publicShareMode && <a href="/landing-v2" className="amc-brand">simonbo.com</a>}
       </div>
       {isFirst && <div className="amc-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" style={{width:18,height:18}}><path d="M12 5v14M19 12l-7 7-7-7"/></svg></div>}
 
@@ -1833,7 +2268,11 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
   prev.favoritesCount === next.favoritesCount &&
   prev.isFirst === next.isFirst &&
   prev.isSpotlight === next.isSpotlight &&
-  prev.petFilterActive === next.petFilterActive
+  prev.petFilterActive === next.petFilterActive &&
+  prev.brokerMode === next.brokerMode &&
+  prev.publicShareMode === next.publicShareMode &&
+  prev.priceSnapshot?.bobSnapshot === next.priceSnapshot?.bobSnapshot &&
+  prev.priceSnapshot?.bobActual === next.priceSnapshot?.bobActual
 )
 
 // ===== PHOTO CAROUSEL (native scroll-snap) =====
@@ -1893,26 +2332,12 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap, propertyId }: { 
       <div className="pc-scroll" ref={scrollRef}>
         {(photos.length > 0 ? photos : ['']).map((url, i) => {
           const shouldLoad = i < maxLoaded
-          const useRealImg = isFirst && i === 0 && url
           return (
-          <div key={i} className="pc-slide" style={!useRealImg ? (shouldLoad && url ? { backgroundImage: `url('${url}')` } : { background: '#D8D0BC' }) : { background: '#D8D0BC' }}
+          <div key={i} className="pc-slide" style={shouldLoad && url ? { backgroundImage: `url('${url}')` } : { background: '#D8D0BC' }}
             onTouchStart={() => { isDragging.current = false }}
             onTouchMove={() => { isDragging.current = true }}
             onClick={() => { if (!isDragging.current && onPhotoTap && url) onPhotoTap(currentIdx) }}
           >
-            {/* First photo of first card uses next/image for LCP: WebP + resize */}
-            {useRealImg && (
-              <Image
-                src={url}
-                alt=""
-                fill
-                sizes="(max-width: 767px) 100vw, 50vw"
-                priority
-                draggable={false}
-                className="pc-slide-img"
-                style={{ objectFit: 'cover' }}
-              />
-            )}
           </div>
           )
         })}
@@ -2001,12 +2426,19 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 }
 
 // ===== BOTTOM SHEET =====
-function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive, isFavorite, onToggleFavorite, onShare, properties, onSwapProperty }: {
+function BottomSheet({
+  open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive, isFavorite, onToggleFavorite, onShare, properties, onSwapProperty,
+  brokerMode = false, publicShareBroker = null, priceSnapshot = null,
+}: {
   open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; petFilterActive?: boolean
   isFavorite?: boolean; onToggleFavorite?: () => void; onShare?: () => void
   properties?: UnidadAlquiler[]; onSwapProperty?: (p: UnidadAlquiler) => void
+  brokerMode?: boolean
+  publicShareBroker?: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null
+  priceSnapshot?: { bobSnapshot: number | null; bobActual: number | null } | null
 }) {
+  const publicShareMode = publicShareBroker !== null
   const [showGate, setShowGate] = useState(false)
   const [gateName, setGateName] = useState('')
   const [gateTel, setGateTel] = useState('')
@@ -2154,10 +2586,21 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
       {/* Sticky close + fav bar */}
       <div className="bs-sticky-top">
         {onToggleFavorite && (
-          <button className={`bs-sticky-fav ${isFavorite ? 'active' : ''}`} aria-label="Guardar favorito" onClick={onToggleFavorite}>
-            <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#fff'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
+          <button
+            className={`bs-sticky-fav ${isFavorite ? 'active' : ''} ${brokerMode ? 'bs-sticky-fav-broker' : ''}`}
+            aria-label={brokerMode ? (isFavorite ? 'Quitar de seleccion' : 'Agregar a seleccion') : 'Guardar favorito'}
+            onClick={onToggleFavorite}
+            title={brokerMode ? (isFavorite ? 'Quitar de la shortlist' : 'Agregar a la shortlist') : undefined}
+          >
+            {brokerMode ? (
+              <svg viewBox="0 0 24 24" fill={isFavorite ? '#F2B441' : 'none'} stroke={isFavorite ? '#F2B441' : '#fff'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+                <polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill={isFavorite ? '#E05555' : 'none'} stroke={isFavorite ? '#E05555' : '#fff'} strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            )}
           </button>
         )}
         <button className="bs-sticky-close" aria-label="Cerrar detalle" onClick={onClose}>&times;</button>
@@ -2176,6 +2619,13 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
         <div className="bs-hr-specs">
           {dormLabel(p.dormitorios)} · {p.area_m2}m² · {p.banos ? `${p.banos} baño${p.banos > 1 ? 's' : ''}` : '—'}{p.piso ? ` · Piso ${p.piso}` : ''}
         </div>
+        {publicShareMode && priceSnapshot && priceSnapshot.bobSnapshot != null && priceSnapshot.bobActual != null && priceSnapshot.bobSnapshot > 0 && Math.abs((priceSnapshot.bobActual - priceSnapshot.bobSnapshot) / priceSnapshot.bobSnapshot) >= 0.01 && (
+          <div className={`bs-hr-price-change ${priceSnapshot.bobActual < priceSnapshot.bobSnapshot ? 'down' : 'up'}`}>
+            {priceSnapshot.bobActual < priceSnapshot.bobSnapshot
+              ? `↓ Bajó de ${formatPrice(priceSnapshot.bobSnapshot)} a ${formatPrice(priceSnapshot.bobActual)}/mes`
+              : `↑ Antes ${formatPrice(priceSnapshot.bobSnapshot)} · ahora ${formatPrice(priceSnapshot.bobActual)}/mes`}
+          </div>
+        )}
       </div>
       {/* Galería de fotos horizontal */}
       {p.fotos_urls && p.fotos_urls.length > 0 && (
@@ -2257,7 +2707,7 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
               return (
                 <button key={sp.id} className="bs-sim-card" onClick={() => onSwapProperty?.(sp)}>
                   {sp.fotos_urls?.[0] ? (
-                    <img src={`/_next/image?url=${encodeURIComponent(sp.fotos_urls[0])}&w=256&q=60`}
+                    <img src={sp.fotos_urls[0]}
                          alt={spName} className="bs-sim-thumb" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                   ) : (
                     <div className="bs-sim-thumb bs-sim-nophoto" />
@@ -2273,8 +2723,8 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
           </div>
         </div>
       )}
-      {/* --- Preguntas para el broker --- */}
-      {brokerQuestions.length > 0 && (
+      {/* --- Preguntas para el broker --- Ocultas en brokerMode (el broker ya conoce) y publicShareMode (cliente habla directo con broker) */}
+      {!brokerMode && !publicShareMode && brokerQuestions.length > 0 && (
         <div className="bs-section">
           <div className="bs-q-header">
             <div className="bs-sl"><span className="bs-sl-dot" />Preguntas para el broker</div>
@@ -2299,7 +2749,8 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
           </div>
         </div>
       )}
-      {p.url && (
+      {/* Gate "Ver anuncio original" — oculto en brokerMode y publicShareMode (confianza en el broker) */}
+      {!brokerMode && !publicShareMode && p.url && (
         <div className="bs-section">
           {!showGate ? (
             <button className="bs-ver-anuncio" onClick={() => {
@@ -2326,9 +2777,33 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
           )}
         </div>
       )}
+      {/* En brokerMode: link directo al anuncio sin gate (broker confía en su flujo) */}
+      {brokerMode && p.url && (
+        <div className="bs-section">
+          <a className="bs-ver-anuncio" href={p.url} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent('broker_open_listing', { property_id: p.id })}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+            Ver anuncio original ↗
+          </a>
+        </div>
+      )}
       {/* Sticky footer: WSP + Compartir */}
       <div className="bs-sticky-footer">
-        {p.agente_whatsapp && (
+        {publicShareMode && publicShareBroker ? (
+          <a
+            href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => trackEvent('click_whatsapp_broker', { property_id: p.id, source: 'alq_bottom_sheet_public' })}
+            className="bs-footer-wsp"
+          >
+            <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 16, height: 16 }}>
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            Escribir al broker
+          </a>
+        ) : !brokerMode && p.agente_whatsapp ? (
           <a href="#" onClick={(e) => {
             const selectedTexts = Array.from(selectedQs).sort().map(idx => brokerQuestions[idx]).filter(Boolean)
             const msg = buildAlquilerWaMessage(p, { preguntas: selectedTexts })
@@ -2339,8 +2814,22 @@ function BottomSheet({ open, property, onClose, isDesktop, gateCompleted, onGate
             </svg>
             Whatsapp
           </a>
+        ) : null}
+        {brokerMode && p.agente_whatsapp && (
+          <a
+            href={`https://wa.me/${p.agente_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(buildAlquilerWaMessage(p))}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bs-footer-wsp"
+            onClick={() => trackEvent('broker_wa_agente', { property_id: p.id, tipo_operacion: 'alquiler' })}
+          >
+            <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 16, height: 16 }}>
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            WA al agente
+          </a>
         )}
-        {onShare && (
+        {onShare && !publicShareMode && (
           <button className="bs-footer-share" onClick={onShare}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>

@@ -39,32 +39,62 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Enriquecer items con preview de la propiedad (foto + nombre + datos clave)
       // para que el editor muestre thumbnails identificables (no solo el ID).
+      //
+      // Shortlists pueden tener items de venta o alquiler. Consultamos la RPC
+      // correspondiente según tipo_operacion para que el preview incluya el
+      // precio correcto (precio_usd para venta, precio_mensual_bob para alquiler)
+      // y las fotos.
+      type PreviewRow = {
+        proyecto: string
+        zona: string | null
+        precio_usd: number | null
+        precio_mensual_bob: number | null
+        area_m2: number | null
+        dormitorios: number | null
+        foto: string | null
+      }
       const safeItems = items || []
-      const propIds = safeItems.map(it => it.propiedad_id)
-      let previewByPropId: Record<number, { proyecto: string; zona: string | null; precio_usd: number | null; area_m2: number | null; dormitorios: number | null; foto: string | null }> = {}
-      if (propIds.length > 0) {
+      const ventaIds = safeItems.filter(it => it.tipo_operacion !== 'alquiler').map(it => it.propiedad_id)
+      const alquilerIds = safeItems.filter(it => it.tipo_operacion === 'alquiler').map(it => it.propiedad_id)
+      const previewByPropId: Record<number, PreviewRow> = {}
+
+      if (ventaIds.length > 0) {
         const { data: rows } = await supabase.rpc('buscar_unidades_simple', {
           p_filtros: { limite: 500, solo_con_fotos: false }
         })
-        const indexed = new Map<number, Record<string, unknown>>()
         for (const r of (rows || []) as Record<string, unknown>[]) {
-          if (typeof r.id === 'number') indexed.set(r.id, r)
-        }
-        previewByPropId = propIds.reduce((acc, pid) => {
-          const r = indexed.get(pid)
-          if (r) {
-            const fotos = Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : []
-            acc[pid] = {
-              proyecto: (r.nombre_proyecto as string) || `Propiedad #${pid}`,
-              zona: (r.zona as string) || null,
-              precio_usd: r.precio_usd ? parseFloat(String(r.precio_usd)) : null,
-              area_m2: r.area_m2 ? parseFloat(String(r.area_m2)) : null,
-              dormitorios: typeof r.dormitorios === 'number' ? r.dormitorios : null,
-              foto: fotos[0] || null,
-            }
+          if (typeof r.id !== 'number' || !ventaIds.includes(r.id)) continue
+          const fotos = Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : []
+          previewByPropId[r.id] = {
+            proyecto: (r.nombre_proyecto as string) || `Propiedad #${r.id}`,
+            zona: (r.zona as string) || null,
+            precio_usd: r.precio_usd ? parseFloat(String(r.precio_usd)) : null,
+            precio_mensual_bob: null,
+            area_m2: r.area_m2 ? parseFloat(String(r.area_m2)) : null,
+            dormitorios: typeof r.dormitorios === 'number' ? r.dormitorios : null,
+            foto: fotos[0] || null,
           }
-          return acc
-        }, {} as typeof previewByPropId)
+        }
+      }
+
+      if (alquilerIds.length > 0) {
+        const { data: rows } = await supabase.rpc('buscar_unidades_alquiler', {
+          p_filtros: { limite: 500, solo_con_fotos: false }
+        })
+        for (const r of (rows || []) as Record<string, unknown>[]) {
+          if (typeof r.id !== 'number' || !alquilerIds.includes(r.id)) continue
+          const fotos = Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : []
+          const name = (r.nombre_edificio as string) || (r.nombre_proyecto as string) || `Propiedad #${r.id}`
+          previewByPropId[r.id] = {
+            proyecto: name,
+            zona: (r.zona as string) || null,
+            precio_usd: null,
+            precio_mensual_bob: r.precio_mensual_bob ? parseFloat(String(r.precio_mensual_bob)) : null,
+            area_m2: r.area_m2 ? parseFloat(String(r.area_m2)) : null,
+            dormitorios: typeof r.dormitorios === 'number' ? r.dormitorios : null,
+            foto: fotos[0] || null,
+          }
+        }
       }
 
       const itemsEnriched = safeItems.map(it => ({
@@ -72,9 +102,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         preview: previewByPropId[it.propiedad_id] || null,
       }))
 
-      const result: BrokerShortlistWithItems & { items: typeof itemsEnriched } = {
+      // Hearts del cliente (migración 234). Permite al broker ver qué marcó.
+      const { data: heartRows } = await supabase
+        .from('broker_shortlist_hearts')
+        .select('propiedad_id')
+        .eq('shortlist_id', id)
+      const heartedPropertyIds: number[] = (heartRows || []).map((r: { propiedad_id: number }) => r.propiedad_id)
+
+      const result: BrokerShortlistWithItems & {
+        items: typeof itemsEnriched
+        heartedPropertyIds: number[]
+      } = {
         ...(shortlist as BrokerShortlist),
         items: itemsEnriched,
+        heartedPropertyIds,
       }
       return res.status(200).json(result)
     }

@@ -709,3 +709,74 @@
 .cc{position:fixed;top:50%;right:10px;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;align-items:center;gap:3px;}
 .cc-pip{width:3px;height:10px;border-radius:2px;background:rgba(58,53,48,0.12);transition:all 0.3s;}
 .cc-pip.active{background:#3A6A48;height:22px;}
+
+/* ===================== MODO BROKER (Fase 2) ===================== */
+.alq-broker-banner{position:fixed;top:0;left:0;right:0;z-index:60;background:#EDE8DC;color:#141414;padding:9px 18px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:12px;box-shadow:0 1px 0 rgba(20,20,20,0.08),0 4px 14px rgba(20,20,20,0.06);border-bottom:1px solid rgba(20,20,20,0.06);}
+.alq-broker-banner-brand{display:flex;align-items:baseline;gap:8px;min-width:0;}
+.alq-broker-banner-logo{font-family:'Figtree',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.6px;color:#141414;}
+.alq-broker-banner-divider{opacity:0.3;font-size:14px;color:#141414;}
+.alq-broker-banner-label{font-family:'DM Sans',sans-serif;font-weight:600;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#3A6A48;}
+.alq-broker-banner-name{font-family:'Figtree',sans-serif;font-weight:500;font-size:13px;margin-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#141414;}
+.alq-broker-banner-shortlists{margin-left:auto;background:#141414;color:#EDE8DC;border:1px solid #141414;padding:5px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:0.3px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;white-space:nowrap;}
+.alq-broker-banner-shortlists:active{transform:scale(0.96);}
+/* Tabs Ventas / Alquileres (Día 4-5 Fase 2) */
+.alq-broker-tabs{display:inline-flex;gap:0;background:rgba(20,20,20,0.06);border:1px solid rgba(20,20,20,0.1);border-radius:100px;padding:2px;flex-shrink:0;}
+.alq-broker-tab{background:transparent;border:none;color:rgba(20,20,20,0.55);padding:5px 14px;border-radius:100px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;letter-spacing:0.3px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;-webkit-tap-highlight-color:transparent;white-space:nowrap;}
+.alq-broker-tab:hover:not(.active){color:rgba(20,20,20,0.9);}
+.alq-broker-tab.active{background:#141414;color:#EDE8DC;cursor:default;}
+.alq-broker-tool{background:rgba(20,20,20,0.04);border:1px solid rgba(20,20,20,0.18);color:#141414;padding:5px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:0.3px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;white-space:nowrap;}
+.alq-broker-tool:hover{background:rgba(20,20,20,0.09);}
+.alq-broker-tool:active{transform:scale(0.96);}
+.alq-broker-tool.active{background:#141414;color:#EDE8DC;border-color:#141414;}
+.alq-broker-tool:disabled{opacity:0.45;cursor:not-allowed;}
+.alq-broker-tool-add{background:rgba(58,106,72,0.10);border-color:rgba(58,106,72,0.35);color:#3A6A48;}
+.alq-broker-tool-add:hover{background:rgba(58,106,72,0.18);}
+.alq-broker-send{background:#3A6A48;color:#EDE8DC;border-color:#3A6A48;}
+.alq-broker-send:hover{background:#2F5639;border-color:#2F5639;}
+.alq-broker-market-link{text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
+.alq-broker-market-arrow{opacity:0.55;font-weight:500;}
+@media (max-width:768px){.alq-broker-banner{flex-wrap:wrap;padding:6px 12px;gap:6px;}.alq-broker-tool,.alq-broker-banner-shortlists{font-size:10px;padding:3px 8px;}}
+
+/* Star icon del botón ⭐ en cards cuando brokerMode */
+.amc-fav-broker.active svg,.dc-act-fav-broker.active svg,.bs-sticky-fav-broker.active svg{filter:drop-shadow(0 0 4px rgba(242,180,65,0.5));}
+
+/* Badge cambio de precio (publicShareMode) */
+.amc-price-change,.dc-price-change{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;display:inline-block;margin:4px 0 8px;letter-spacing:0.2px;}
+.amc-price-change-down,.dc-price-change-down{background:rgba(58,106,72,0.12);color:#3A6A48;border:1px solid rgba(58,106,72,0.3);}
+.amc-price-change-up,.dc-price-change-up{background:rgba(20,20,20,0.06);color:#7A7060;border:1px solid rgba(20,20,20,0.15);}
+.bs-hr-price-change{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;padding:6px 12px;border-radius:100px;display:inline-block;margin-top:8px;letter-spacing:0.2px;}
+.bs-hr-price-change.down{background:rgba(58,106,72,0.14);color:#3A6A48;}
+.bs-hr-price-change.up{background:rgba(20,20,20,0.07);color:#7A7060;}
+
+/* ===================== PUBLIC SHARE HEADER (Fase 2) =====================
+   Cliente en /b/[hash]: header fijo con foto/nombre del broker + botón WA. */
+.alq-public-share-header{position:fixed;top:0;left:0;right:0;z-index:50;background:#EDE8DC;color:#141414;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid rgba(20,20,20,0.08);font-family:'DM Sans',sans-serif;box-shadow:0 1px 6px rgba(0,0,0,0.05);}
+.apsh-broker{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
+.apsh-broker-photo{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+.apsh-broker-photo-ph{background:#141414;color:#EDE8DC;display:flex;align-items:center;justify-content:center;font-family:'Figtree',sans-serif;font-weight:600;font-size:16px;}
+.apsh-broker-info{min-width:0;display:flex;flex-direction:column;gap:1px;}
+.apsh-broker-label{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:#7A7060;line-height:1.2;}
+.apsh-broker-name{font-family:'Figtree',sans-serif;font-weight:600;font-size:14px;color:#141414;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.apsh-broker-agency{font-family:'DM Sans',sans-serif;font-size:11px;color:#7A7060;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.apsh-wa{display:inline-flex;align-items:center;gap:6px;background:#1EA952;color:#fff;text-decoration:none;padding:8px 14px;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.3px;-webkit-tap-highlight-color:transparent;white-space:nowrap;flex-shrink:0;}
+.apsh-wa:hover{background:#178F45;}
+.apsh-wa:active{transform:scale(0.96);}
+@media (max-width:768px){.alq-public-share-header{padding:8px 14px;gap:8px;}.apsh-broker-photo{width:36px;height:36px;}.apsh-broker-name{font-size:13px;}.apsh-broker-agency{font-size:10px;}.apsh-wa{padding:7px 12px;font-size:12px;}}
+
+/* Dejar espacio para el banner fixed del broker (modo broker) o el header
+   público (publicShareMode). Ambos son position:fixed top:0 ~ 48-64px alto. */
+.desktop-layout-public{padding-top:64px;}
+.desktop-layout-broker{padding-top:48px;}
+
+/* Shortlist banner mobile (brokerMode, reusa estructura de compare-banner) —
+   mismo patrón que ventas: fondo arena + sombra grande. */
+.alq-shortlist-banner{background:#EDE8DC !important;color:#141414 !important;border:1px solid rgba(20,20,20,0.15) !important;box-shadow:0 6px 22px rgba(20,20,20,0.18) !important;}
+.alq-shortlist-banner svg{color:#141414 !important;}
+.alq-shortlist-banner-wrap .alq-compare-banner-clear{background:#EDE8DC !important;color:rgba(20,20,20,0.55) !important;border:1px solid rgba(20,20,20,0.15) !important;box-shadow:0 6px 22px rgba(20,20,20,0.18) !important;}
+/* En mobile el feed TikTok es fullscreen — el header fixed se superpone sobre
+   la primera card (~60px, tolerable). La UX gana: botón WA siempre visible
+   aunque el cliente esté scrolleando. */
+
+/* FAB mapa en publicShareMode mobile (sin top bar para acceder al mapa) */
+.alq-public-map-fab{position:fixed;bottom:max(20px,calc(env(safe-area-inset-bottom) + 16px));left:16px;z-index:100;display:inline-flex;align-items:center;gap:8px;background:#141414;color:#EDE8DC;border:none;padding:12px 20px 12px 16px;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.3px;cursor:pointer;box-shadow:0 6px 22px rgba(0,0,0,0.35);-webkit-tap-highlight-color:transparent;}
+.alq-public-map-fab:active{transform:scale(0.96);}

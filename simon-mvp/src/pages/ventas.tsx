@@ -429,14 +429,9 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
         <div className="mc-photo-scroll" ref={scrollRef}>
           {photos.length > 0 ? photos.map((url, i) => {
             const shouldLoad = i < maxLoaded
-            const useRealImg = isFirst && i === 0 && url
             return (
-            <div key={i} className="mc-slide" style={!useRealImg ? (shouldLoad && url ? { backgroundImage: `url('${url}')`, cursor: 'pointer' } : { cursor: 'pointer' }) : { cursor: 'pointer' }}
+            <div key={i} className="mc-slide" style={shouldLoad && url ? { backgroundImage: `url('${url}')`, cursor: 'pointer' } : { cursor: 'pointer' }}
               onClick={() => onPhotoTap(i)}>
-              {useRealImg && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={`/_next/image?url=${encodeURIComponent(url)}&w=640&q=75`} alt="" fetchPriority="high" draggable={false} className="mc-slide-img" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-              )}
             </div>
             )
           }) : (
@@ -1001,7 +996,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
                 {similarProps.map(sp => (
                   <button key={sp.id} className="bs-sim-card" aria-label={`Ver ${sp.proyecto}`} onClick={() => onSwapProperty?.(sp)}>
                     {sp.fotos_urls?.[0] ? (
-                      <img src={`/_next/image?url=${encodeURIComponent(sp.fotos_urls[0])}&w=256&q=60`}
+                      <img src={sp.fotos_urls[0]}
                            alt={sp.proyecto} className="bs-sim-thumb" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     ) : (
                       <div className="bs-sim-thumb bs-sim-nophoto" />
@@ -1253,6 +1248,7 @@ function fuenteBadge(fuente: string | null | undefined): { label: string; color:
 // (a) saltar fetch (la lista viene curada), (b) ocultar filtros/sidebar/spotlight/mapa,
 // (c) ocultar gate/preguntas/WA agente del sheet, (d) mostrar header con datos del broker.
 export interface PublicShareData {
+  hash: string
   broker: { slug: string; nombre: string; telefono: string; foto_url: string | null; inmobiliaria?: string | null }
   items: UnidadVenta[]
   itemComments?: Record<number, string | null>
@@ -1263,6 +1259,9 @@ export interface PublicShareData {
   // Lógica del badge: si abs(rawActual - rawSnapshot)/rawSnapshot > 1% → cambio del agente → mostrar badge
   // Si solo cambió el normalizado pero no el raw, fue movimiento de TC → no mostrar.
   priceSnapshots?: Record<number, { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null }>
+  // IDs que el cliente ya marcó con corazón (migración 234). Hidrata favorites
+  // al montar en lugar de localStorage.
+  initialHearts?: number[]
 }
 
 // ===== Page =====
@@ -1432,9 +1431,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   }
   function toggleFavorite(id: number) {
     const isFav = favorites.has(id)
-    // Límite de 3 solo aplica al modo público (CompareSheet acepta hasta 3).
-    // En modo broker la "selección" puede ser tan grande como el broker quiera.
-    if (!brokerMode && !isFav && favorites.size >= MAX_FAVORITES) {
+    // Límite de 3 solo aplica al modo público estándar. Ni brokerMode ni
+    // publicShareMode aplican el cap: broker arma shortlists amplias, cliente
+    // marca corazones como feedback sin tope.
+    if (!brokerMode && !publicShareMode && !isFav && favorites.size >= MAX_FAVORITES) {
       showToast(`Maximo ${MAX_FAVORITES} favoritos`)
       return
     }
@@ -1445,6 +1445,16 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       else n.add(id)
       return n
     })
+    // Feedback al broker: en publicShareMode persistir heart en BD (optimistic).
+    if (publicShareMode && publicShare?.hash) {
+      const hash = publicShare.hash
+      const method = isFav ? 'DELETE' : 'POST'
+      fetch('/api/public/shortlist-hearts', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hash, propiedad_id: id }),
+      }).catch(err => console.warn('[hearts] toggle failed', err))
+    }
     if (isFav) {
       showToast(brokerMode ? 'Quitado de la selección' : 'Quitado de favoritos')
     } else {
@@ -1568,8 +1578,20 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   }, [isFiltered, filters, activeFilterCount])
 
   // Persist favorites
-  useEffect(() => { try { const s = localStorage.getItem('ventas_favorites_v1'); if (s) setFavorites(new Set(JSON.parse(s))) } catch {} }, [])
-  useEffect(() => { if (favorites.size > 0) localStorage.setItem('ventas_favorites_v1', JSON.stringify([...favorites])) }, [favorites])
+  // Hidratar favorites: publicShareMode desde BD (initialHearts), los demás desde localStorage.
+  useEffect(() => {
+    if (publicShareMode) {
+      const hearts = publicShare?.initialHearts
+      if (hearts && hearts.length > 0) setFavorites(new Set(hearts))
+      return
+    }
+    try { const s = localStorage.getItem('ventas_favorites_v1'); if (s) setFavorites(new Set(JSON.parse(s))) } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    if (publicShareMode) return // persistencia va por BD en toggleFavorite
+    if (favorites.size > 0) localStorage.setItem('ventas_favorites_v1', JSON.stringify([...favorites]))
+  }, [favorites, publicShareMode])
 
   // Scroll tracking (mobile TikTok)
   useEffect(() => {
@@ -1662,12 +1684,6 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   return (
     <>
       <VentasHead seo={seo} />
-      {/* Preload first photo for faster LCP — use /_next/image to hit optimized pipeline */}
-      {properties.length > 0 && properties[0].fotos_urls?.[0] && (
-        <Head>
-          <link rel="preload" as="image" href={`/_next/image?url=${encodeURIComponent(properties[0].fotos_urls[0])}&w=640&q=75`} fetchPriority="high" />
-        </Head>
-      )}
 
       <Toast message={toastMsg} visible={toastVisible} />
 
@@ -1752,6 +1768,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             <span className="vt-broker-banner-divider">·</span>
             <span className="vt-broker-banner-label">BROKER</span>
             <span className="vt-broker-banner-name">{broker.nombre}</span>
+          </div>
+          <div className="vt-broker-tabs" role="tablist" aria-label="Tipo de operación">
+            <button className="vt-broker-tab active" role="tab" aria-selected="true" disabled>Ventas</button>
+            <Link href={`/broker/${broker.slug}/alquileres`} className="vt-broker-tab" role="tab" aria-selected="false">
+              Alquileres
+            </Link>
           </div>
           {properties.length > 0 && (
             <div className="vt-broker-viewmode" role="tablist" aria-label="Modo de vista">
@@ -2116,6 +2138,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vt-broker-vm-btn { background:transparent; border:none; color:rgba(20,20,20,0.5); padding:5px 11px; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; -webkit-tap-highlight-color:transparent }
         .vt-broker-vm-btn:hover { color:rgba(20,20,20,0.85) }
         .vt-broker-vm-btn.active { background:#141414; color:#EDE8DC }
+        /* Tabs Ventas / Alquileres (Día 4-5 Fase 2) */
+        .vt-broker-tabs { display:inline-flex; gap:0; background:rgba(20,20,20,0.06); border:1px solid rgba(20,20,20,0.1); border-radius:100px; padding:2px; flex-shrink:0 }
+        .vt-broker-tab { background:transparent; border:none; color:rgba(20,20,20,0.55); padding:5px 14px; border-radius:100px; cursor:pointer; font-family:inherit; font-size:12px; font-weight:600; letter-spacing:0.3px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; -webkit-tap-highlight-color:transparent; white-space:nowrap }
+        .vt-broker-tab:hover:not(.active) { color:rgba(20,20,20,0.9) }
+        .vt-broker-tab.active { background:#141414; color:#EDE8DC; cursor:default }
         /* Padding extra en el sidebar SOLO en brokerMode para que no quede tapado por el banner arena fijo */
         .ventas-desktop-broker .ventas-sidebar { padding-top:48px }
         /* Padding-top en el main desktop también, para que las cards no queden tapadas */

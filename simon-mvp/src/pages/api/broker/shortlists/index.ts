@@ -49,7 +49,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return res.status(200).json(data || [])
+      const shortlists = data || []
+
+      // Enriquecer cada shortlist con su tipo_operacion (derivado del primer item).
+      // Asumimos homogéneo (el UI no permite armar mixto). Sirve para el chip
+      // [venta]/[alquiler] en el panel "Mis shortlists".
+      if (shortlists.length > 0) {
+        const ids = shortlists.map((s: BrokerShortlist) => s.id)
+        const { data: itemRows } = await supabase
+          .from('broker_shortlist_items')
+          .select('shortlist_id, tipo_operacion, orden')
+          .in('shortlist_id', ids)
+          .order('orden', { ascending: true })
+        const firstTypeById = new Map<string, 'venta' | 'alquiler'>()
+        for (const r of (itemRows || []) as Array<{ shortlist_id: string; tipo_operacion: string }>) {
+          if (firstTypeById.has(r.shortlist_id)) continue
+          firstTypeById.set(r.shortlist_id, r.tipo_operacion === 'alquiler' ? 'alquiler' : 'venta')
+        }
+        for (const s of shortlists as Array<BrokerShortlist & { tipo_operacion?: 'venta' | 'alquiler' }>) {
+          s.tipo_operacion = firstTypeById.get(s.id) ?? 'venta'
+        }
+      }
+
+      return res.status(200).json(shortlists)
     }
 
     if (req.method === 'POST') {
@@ -84,37 +106,59 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (errInsert || !shortlist) throw errInsert || new Error('insert failed')
 
-      // Snapshot de precio (migraciones 229 + 230):
+      // Snapshot de precio. Depende del tipo_operacion de la shortlist:
+      //
+      // VENTA (migraciones 229 + 230):
       //  - precio_usd_snapshot  = RAW (propiedades_v2.precio_usd) → detecta cambio del agente
       //  - precio_norm_snapshot = NORMALIZADO (v_mercado_venta.precio_usd) → mostrar al cliente
       // El badge dispara solo si el RAW cambió (cambio del agente, no movimiento TC).
+      //
+      // ALQUILER (migración 233):
+      //  - precio_mensual_bob_snapshot = BOB directo (propiedades_v2.precio_mensual_bob)
+      // En alquiler el BOB es la fuente de verdad (regla 10 CLAUDE.md), no hay split
+      // raw/norm porque el USD se deriva como bob/6.96.
+      const tipoOperacion: 'venta' | 'alquiler' = payload.tipo_operacion === 'alquiler' ? 'alquiler' : 'venta'
       const rawByPropId = new Map<number, number | null>()
       const normByPropId = new Map<number, number | null>()
+      const bobByPropId = new Map<number, number | null>()
       try {
-        const [rawRes, normRes] = await Promise.all([
-          supabase.from('propiedades_v2').select('id, precio_usd').in('id', payload.propiedad_ids),
-          supabase.from('v_mercado_venta').select('id, precio_usd').in('id', payload.propiedad_ids),
-        ])
-        for (const r of (rawRes.data || []) as Array<{ id: number; precio_usd: string | number | null }>) {
-          const v = r.precio_usd != null ? parseFloat(String(r.precio_usd)) : null
-          rawByPropId.set(r.id, Number.isFinite(v as number) ? (v as number) : null)
-        }
-        for (const r of (normRes.data || []) as Array<{ id: number; precio_usd: string | number | null }>) {
-          const v = r.precio_usd != null ? parseFloat(String(r.precio_usd)) : null
-          normByPropId.set(r.id, Number.isFinite(v as number) ? (v as number) : null)
+        if (tipoOperacion === 'alquiler') {
+          const bobRes = await supabase
+            .from('propiedades_v2')
+            .select('id, precio_mensual_bob')
+            .in('id', payload.propiedad_ids)
+          for (const r of (bobRes.data || []) as Array<{ id: number; precio_mensual_bob: string | number | null }>) {
+            const v = r.precio_mensual_bob != null ? parseFloat(String(r.precio_mensual_bob)) : null
+            bobByPropId.set(r.id, Number.isFinite(v as number) ? (v as number) : null)
+          }
+        } else {
+          const [rawRes, normRes] = await Promise.all([
+            supabase.from('propiedades_v2').select('id, precio_usd').in('id', payload.propiedad_ids),
+            supabase.from('v_mercado_venta').select('id, precio_usd').in('id', payload.propiedad_ids),
+          ])
+          for (const r of (rawRes.data || []) as Array<{ id: number; precio_usd: string | number | null }>) {
+            const v = r.precio_usd != null ? parseFloat(String(r.precio_usd)) : null
+            rawByPropId.set(r.id, Number.isFinite(v as number) ? (v as number) : null)
+          }
+          for (const r of (normRes.data || []) as Array<{ id: number; precio_usd: string | number | null }>) {
+            const v = r.precio_usd != null ? parseFloat(String(r.precio_usd)) : null
+            normByPropId.set(r.id, Number.isFinite(v as number) ? (v as number) : null)
+          }
         }
       } catch (snapErr) {
         console.warn('[create shortlist] snapshot precio fallback:', snapErr)
       }
 
-      // Insertar items en el orden recibido
+      // Insertar items en el orden recibido.
+      // Los snapshots del otro tipo_operacion quedan NULL (no aplican).
       const items = payload.propiedad_ids.map((pid, idx) => ({
         shortlist_id: shortlist.id,
         propiedad_id: pid,
-        tipo_operacion: payload.tipo_operacion || 'venta',
+        tipo_operacion: tipoOperacion,
         orden: idx,
-        precio_usd_snapshot: rawByPropId.get(pid) ?? null,
-        precio_norm_snapshot: normByPropId.get(pid) ?? null,
+        precio_usd_snapshot: tipoOperacion === 'venta' ? (rawByPropId.get(pid) ?? null) : null,
+        precio_norm_snapshot: tipoOperacion === 'venta' ? (normByPropId.get(pid) ?? null) : null,
+        precio_mensual_bob_snapshot: tipoOperacion === 'alquiler' ? (bobByPropId.get(pid) ?? null) : null,
       }))
 
       const { error: errItems } = await supabase
