@@ -719,6 +719,11 @@
 .alq-broker-banner-name{font-family:'Figtree',sans-serif;font-weight:500;font-size:13px;margin-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#141414;}
 .alq-broker-banner-shortlists{margin-left:auto;background:#141414;color:#EDE8DC;border:1px solid #141414;padding:5px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:0.3px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;white-space:nowrap;}
 .alq-broker-banner-shortlists:active{transform:scale(0.96);}
+/* Tabs Ventas / Alquileres (Día 4-5 Fase 2) */
+.alq-broker-tabs{display:inline-flex;gap:0;background:rgba(20,20,20,0.06);border:1px solid rgba(20,20,20,0.1);border-radius:100px;padding:2px;flex-shrink:0;}
+.alq-broker-tab{background:transparent;border:none;color:rgba(20,20,20,0.55);padding:5px 14px;border-radius:100px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;letter-spacing:0.3px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;-webkit-tap-highlight-color:transparent;white-space:nowrap;}
+.alq-broker-tab:hover:not(.active){color:rgba(20,20,20,0.9);}
+.alq-broker-tab.active{background:#141414;color:#EDE8DC;cursor:default;}
 .alq-broker-tool{background:rgba(20,20,20,0.04);border:1px solid rgba(20,20,20,0.18);color:#141414;padding:5px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:0.3px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;white-space:nowrap;}
 .alq-broker-tool:hover{background:rgba(20,20,20,0.09);}
 .alq-broker-tool:active{transform:scale(0.96);}
@@ -763,3 +768,7 @@
 /* En mobile el feed TikTok es fullscreen — el header fixed se superpone sobre
    la primera card (~60px, tolerable). La UX gana: botón WA siempre visible
    aunque el cliente esté scrolleando. */
+
+/* FAB mapa en publicShareMode mobile (sin top bar para acceder al mapa) */
+.alq-public-map-fab{position:fixed;bottom:max(20px,calc(env(safe-area-inset-bottom) + 16px));left:16px;z-index:100;display:inline-flex;align-items:center;gap:8px;background:#141414;color:#EDE8DC;border:none;padding:12px 20px 12px 16px;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.3px;cursor:pointer;box-shadow:0 6px 22px rgba(0,0,0,0.35);-webkit-tap-highlight-color:transparent;}
+.alq-public-map-fab:active{transform:scale(0.96);}

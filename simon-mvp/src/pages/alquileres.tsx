@@ -1427,6 +1427,12 @@ export default function AlquileresPage({
             <span className="alq-broker-banner-label">BROKER</span>
             <span className="alq-broker-banner-name">{broker.nombre}</span>
           </div>
+          <div className="alq-broker-tabs" role="tablist" aria-label="Tipo de operación">
+            <Link href={`/broker/${broker.slug}`} className="alq-broker-tab" role="tab" aria-selected="false">
+              Ventas
+            </Link>
+            <button className="alq-broker-tab active" role="tab" aria-selected="true" disabled>Alquileres</button>
+          </div>
           {favorites.size > 0 && (
             <button
               className={`alq-broker-tool ${onlySelectedFilter ? 'active' : ''}`}
@@ -1510,6 +1516,21 @@ export default function AlquileresPage({
             WhatsApp
           </a>
         </div>
+      )}
+
+      {/* FAB "Mapa" — mobile only, publicShareMode. El top bar con el toggle
+          está oculto en este modo, este FAB es la forma de llegar al mapa. */}
+      {publicShareMode && !isDesktop && properties.length > 0 && (
+        <button
+          className="alq-public-map-fab"
+          onClick={() => setMobileMapOpen(true)}
+          aria-label="Ver mapa"
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          Mapa
+        </button>
       )}
     </>
   )

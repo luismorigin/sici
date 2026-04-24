@@ -1780,6 +1780,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             <span className="vt-broker-banner-label">BROKER</span>
             <span className="vt-broker-banner-name">{broker.nombre}</span>
           </div>
+          <div className="vt-broker-tabs" role="tablist" aria-label="Tipo de operación">
+            <button className="vt-broker-tab active" role="tab" aria-selected="true" disabled>Ventas</button>
+            <Link href={`/broker/${broker.slug}/alquileres`} className="vt-broker-tab" role="tab" aria-selected="false">
+              Alquileres
+            </Link>
+          </div>
           {properties.length > 0 && (
             <div className="vt-broker-viewmode" role="tablist" aria-label="Modo de vista">
               <button
@@ -2143,6 +2149,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vt-broker-vm-btn { background:transparent; border:none; color:rgba(20,20,20,0.5); padding:5px 11px; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; -webkit-tap-highlight-color:transparent }
         .vt-broker-vm-btn:hover { color:rgba(20,20,20,0.85) }
         .vt-broker-vm-btn.active { background:#141414; color:#EDE8DC }
+        /* Tabs Ventas / Alquileres (Día 4-5 Fase 2) */
+        .vt-broker-tabs { display:inline-flex; gap:0; background:rgba(20,20,20,0.06); border:1px solid rgba(20,20,20,0.1); border-radius:100px; padding:2px; flex-shrink:0 }
+        .vt-broker-tab { background:transparent; border:none; color:rgba(20,20,20,0.55); padding:5px 14px; border-radius:100px; cursor:pointer; font-family:inherit; font-size:12px; font-weight:600; letter-spacing:0.3px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; -webkit-tap-highlight-color:transparent; white-space:nowrap }
+        .vt-broker-tab:hover:not(.active) { color:rgba(20,20,20,0.9) }
+        .vt-broker-tab.active { background:#141414; color:#EDE8DC; cursor:default }
         /* Padding extra en el sidebar SOLO en brokerMode para que no quede tapado por el banner arena fijo */
         .ventas-desktop-broker .ventas-sidebar { padding-top:48px }
         /* Padding-top en el main desktop también, para que las cards no queden tapadas */
