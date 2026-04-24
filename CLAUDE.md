@@ -295,7 +295,7 @@ Las paginas editores siguen el patron: **tipos → constantes → hook → compo
 
 | Ruta | Proposito |
 |------|-----------|
-| `/admin/login` | Login admin |
+| `/admin/login` | Login admin — dos modos: **email + password** (default, 24h sesión) y **magic link** (fallback). Password recovery bypass al rate limit con `simon-mvp/scripts/set-admin-password.mjs` (requiere `SUPABASE_SERVICE_ROLE_KEY` en `.env.local`). Return_to preservado en emailRedirectTo del magic link |
 | `/admin/propiedades` | Listado propiedades (venta/alquiler) con filtros |
 | `/admin/propiedades/[id]` | Editor propiedad: candados, amenidades, pagos, galeria |
 | `/admin/proyectos` | Listado + crear proyectos |
@@ -327,6 +327,7 @@ Las paginas editores siguen el patron: **tipos → constantes → hook → compo
 | `/mercado/equipetrol/ventas` | **Mercado ventas** — precios/m2, zonas, tipologías, tendencias (Article + Dataset + FAQPage) |
 | `/mercado/equipetrol/alquileres` | **Mercado alquileres** — rentas Bs, zonas, yield estimado (Article + Dataset + FAQPage) |
 | `/condado-vi` | **Landing cliente** Condado VI (estudio de mercado) |
+| `/go` | **Launcher personal** — dashboard de links rápidos (público + brokers + admin + clientes + herramientas externas). Mobile-first, noindex. Pensado para "Agregar a pantalla de inicio" del celu. Editable desde array `SECTIONS` en `pages/go.tsx` |
 
 Flujo produccion: `simonbo.com (/) → /ventas` (feed simple). Funnel premium legacy: `/filtros-v2 → /formulario-v2 → /resultados-v2` (accesible por URL directa).
 
