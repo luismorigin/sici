@@ -60,6 +60,20 @@ const S: Record<string, CSSProperties> = {
     background: '#141414', color: '#EDE8DC', padding: '2px 8px',
     borderRadius: 100, fontSize: 10, fontWeight: 600, marginLeft: 6,
   },
+  chipVenta: {
+    background: 'rgba(58,106,72,0.12)', color: '#3A6A48',
+    border: '1px solid rgba(58,106,72,0.3)',
+    padding: '1px 8px', borderRadius: 100, fontSize: 10, fontWeight: 600,
+    letterSpacing: 0.4, textTransform: 'uppercase', marginLeft: 8,
+    display: 'inline-block', verticalAlign: 'middle',
+  },
+  chipAlquiler: {
+    background: 'rgba(201,138,54,0.14)', color: '#8A5A1E',
+    border: '1px solid rgba(201,138,54,0.35)',
+    padding: '1px 8px', borderRadius: 100, fontSize: 10, fontWeight: 600,
+    letterSpacing: 0.4, textTransform: 'uppercase', marginLeft: 8,
+    display: 'inline-block', verticalAlign: 'middle',
+  },
   btnBase: {
     padding: '6px 10px', borderRadius: 6, fontSize: 12,
     fontWeight: 600, cursor: 'pointer', border: '1px solid transparent',
@@ -139,6 +153,8 @@ function renderGrouped(
                 <div style={S.itemMain}>
                   <div style={S.itemName}>
                     {new Date(s.created_at).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })}
+                    {s.tipo_operacion === 'alquiler' && <span style={S.chipAlquiler}>Alquiler</span>}
+                    {s.tipo_operacion === 'venta' && <span style={S.chipVenta}>Venta</span>}
                     {' · '}
                     <span style={{ fontWeight: 400, color: '#6a6a6a' }}>
                       {s.mensaje_whatsapp ? 'con mensaje personalizado' : 'mensaje default'}

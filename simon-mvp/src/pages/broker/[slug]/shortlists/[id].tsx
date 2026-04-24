@@ -199,7 +199,11 @@ export default function ShortlistEditorPage({ broker }: PageProps) {
                       {pv?.zona && <span>{pv.zona}</span>}
                       {typeof pv?.dormitorios === 'number' && <span>{pv.dormitorios === 0 ? 'Mono' : `${pv.dormitorios} dorm`}</span>}
                       {pv?.area_m2 && <span>{Math.round(pv.area_m2)}m²</span>}
-                      {pv?.precio_usd && <span className="se-item-price">$us {Math.round(pv.precio_usd).toLocaleString('en-US')}</span>}
+                      {it.tipo_operacion === 'alquiler' && pv?.precio_mensual_bob
+                        ? <span className="se-item-price">Bs {Math.round(pv.precio_mensual_bob).toLocaleString('es-BO')}/mes</span>
+                        : pv?.precio_usd
+                        ? <span className="se-item-price">$us {Math.round(pv.precio_usd).toLocaleString('en-US')}</span>
+                        : null}
                     </div>
                     <textarea
                       placeholder="Comentario para el cliente (opcional)"

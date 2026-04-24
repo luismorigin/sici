@@ -49,7 +49,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return res.status(200).json(data || [])
+      const shortlists = data || []
+
+      // Enriquecer cada shortlist con su tipo_operacion (derivado del primer item).
+      // Asumimos homogéneo (el UI no permite armar mixto). Sirve para el chip
+      // [venta]/[alquiler] en el panel "Mis shortlists".
+      if (shortlists.length > 0) {
+        const ids = shortlists.map((s: BrokerShortlist) => s.id)
+        const { data: itemRows } = await supabase
+          .from('broker_shortlist_items')
+          .select('shortlist_id, tipo_operacion, orden')
+          .in('shortlist_id', ids)
+          .order('orden', { ascending: true })
+        const firstTypeById = new Map<string, 'venta' | 'alquiler'>()
+        for (const r of (itemRows || []) as Array<{ shortlist_id: string; tipo_operacion: string }>) {
+          if (firstTypeById.has(r.shortlist_id)) continue
+          firstTypeById.set(r.shortlist_id, r.tipo_operacion === 'alquiler' ? 'alquiler' : 'venta')
+        }
+        for (const s of shortlists as Array<BrokerShortlist & { tipo_operacion?: 'venta' | 'alquiler' }>) {
+          s.tipo_operacion = firstTypeById.get(s.id) ?? 'venta'
+        }
+      }
+
+      return res.status(200).json(shortlists)
     }
 
     if (req.method === 'POST') {

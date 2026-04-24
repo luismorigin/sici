@@ -18,6 +18,10 @@ export interface BrokerShortlist {
 
   created_at: string
   updated_at: string
+
+  // Derivado del primer item (asumimos shortlist homogénea). Solo viene desde
+  // el endpoint GET /api/broker/shortlists, no desde POST ni desde la tabla.
+  tipo_operacion?: 'venta' | 'alquiler'
 }
 
 export interface BrokerShortlistItem {
@@ -37,11 +41,13 @@ export interface BrokerShortlistItem {
   precio_usd_snapshot?: number | null
   precio_norm_snapshot?: number | null
   precio_mensual_bob_snapshot?: number | null
-  // Preview enriquecido (solo viene del endpoint GET por id, no de la creación)
+  // Preview enriquecido (solo viene del endpoint GET por id, no de la creación).
+  // Para items de venta viene precio_usd poblado; para alquiler precio_mensual_bob.
   preview?: {
     proyecto: string
     zona: string | null
     precio_usd: number | null
+    precio_mensual_bob: number | null
     area_m2: number | null
     dormitorios: number | null
     foto: string | null
