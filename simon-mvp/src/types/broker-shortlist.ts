@@ -28,10 +28,15 @@ export interface BrokerShortlistItem {
   comentario_broker: string | null
   orden: number
   added_at: string
-  // Snapshot del precio cuando se agregó a la shortlist (migración 229).
-  // NULL para items pre-migración. Se compara contra precio actual al renderizar
-  // /b/[hash] para mostrar badge "bajó" / "subió" si la diferencia es > 1%.
+  // Snapshots del precio cuando se agregó a la shortlist.
+  // NULL para items pre-migración. Se comparan contra el precio actual al
+  // renderizar /b/[hash] para mostrar badge "bajó" / "subió" si la diferencia
+  // es > 1%.
+  //   - precio_usd_snapshot / precio_norm_snapshot → solo items de venta (migraciones 229/230)
+  //   - precio_mensual_bob_snapshot               → solo items de alquiler (migración 233)
   precio_usd_snapshot?: number | null
+  precio_norm_snapshot?: number | null
+  precio_mensual_bob_snapshot?: number | null
   // Preview enriquecido (solo viene del endpoint GET por id, no de la creación)
   preview?: {
     proyecto: string
