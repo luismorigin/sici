@@ -315,6 +315,58 @@ Caso concreto: Sky Level 1584 en Eq. Centro 2-dorm preventa. Al forzar manualmen
 **Rationale:** MVP crea slugs manualmente. Cuando la base quiera crecer más allá del Founding Program, hace falta landing `/broker/signup`.
 **Cuándo reactivar:** post-MVP, tras validar product-market-fit.
 
+### Rate limit en API pública `/api/public/shortlist-hearts`
+**Tier:** esperando-señal
+**Agregado:** 2026-04-24
+**Rationale:** El endpoint POST/DELETE de hearts (Fase 2 Día 3, migración 234) acepta requests ilimitadas. Scoped al hash de la shortlist — quien tenga el link puede marcar/desmarcar sin límite. Con 1 broker founding (Abel) no es problema: no hay atacantes, los clientes marcan 3-5 corazones humanos. Agregar rate limit hoy es over-engineering para un escenario que no existe.
+
+**Riesgo concreto si no se resuelve antes de escalar:** un script con el hash puede spammear 1000 POSTs/segundo → contamina data del broker ("cliente marcó 847 veces"), gasta cuota Supabase, llena logs.
+
+**Implementación futura (orden de esfuerzo):**
+1. **Upstash Ratelimit** (Redis serverless, estándar en Next.js/Vercel) — 10 min setup, gratis hasta ~10k requests/día. Cross-instance.
+2. **Vercel Firewall** (Pro/Enterprise) — config via `vercel.json`, 5 min si ya hay plan Pro
+3. **In-memory Map en handler** — 15 min, no persiste deploys, no funciona con múltiples lambdas
+
+Para MVP founding 3-5 brokers la opción 3 alcanza. Para 15+ brokers ir a Upstash.
+
+**Límite propuesto:** 20 hits/minuto por hash. Uso humano máximo (marcar + corregir + re-marcar) cabe holgado. Script = bloqueo inmediato.
+
+**Cuándo reactivar:** al sumar el 5to broker activo o al primer incidente de data contaminada. Activar en el momento — el fix es barato (~15 min) y no justifica construirlo antes.
+
+---
+
+## UX / panel del broker
+
+### Snooze visual de shortlists antiguas en panel "Mis shortlists"
+**Tier:** v1.1
+**Agregado:** 2026-04-24
+**Rationale:** Hoy el panel lista TODAS las shortlists activas del broker ordenadas por fecha desc, agrupadas por cliente (teléfono). Funciona bien con 5-10 shortlists. Con 30+ el broker se pierde entre las recientes y las viejas.
+
+**Solución propuesta (sin cambios de BD):** dividir el panel en 2 secciones:
+- **Activas** (<30 días, o con apertura reciente por `last_viewed_at`)
+- **Antiguas** (colapsable, muestra contador "N shortlists más antiguas")
+
+**Esfuerzo estimado:** 30 min dev. Solo cambios en `ShortlistsPanel.tsx`. Sin migración, sin cron, sin cambios de schema.
+
+**Cuándo reactivar:** cuando un broker founding tenga ≥30 shortlists activas y reporte confusión, o cuando el scroll del panel pase una pantalla en mobile. Observar en el primer mes de uso real.
+
+### Expiración automática de shortlists
+**Tier:** v1.3
+**Agregado:** 2026-04-24
+**Rationale:** Hoy las shortlists viven para siempre mientras `archived_at IS NULL` y `is_published = TRUE`. Ventaja: relaciones largas (un cliente busca por meses) se mantienen. Desventaja: shortlists abandonadas quedan accesibles por años con precios snapshot desactualizados.
+
+**Opciones posibles (decidir cuando se active):**
+- **A. Auto-expira N días** (ej: 90) — cron pone `is_published=false`. Limpia sola pero corta relaciones legítimas.
+- **B. Auto-archiva por inactividad** — si `last_viewed_at` < N días, auto `archived_at`. Solo limpia lo olvidado, más lógica.
+- **C. Aviso al broker** — email/WA "tu shortlist de Juan cumplió 30 días sin apertura, ¿cerrar o reenviar?". Re-engagement pero requiere mailer + cron.
+
+**No implementar ahora** porque:
+1. Corta-relaciones legítimas sin señal real
+2. Ya existe archivado manual (`archived_at` en tabla 228 + botón en editor)
+3. El volumen hoy no justifica infra de cron + scheduling
+
+**Cuándo reactivar:** cuando aparezca confusión real reportada — ej: "el cliente de Abel abrió un link de hace 4 meses y me confundió con precios viejos", o cuando el panel tenga tantas shortlists que el snooze visual (v1.1) no alcance. Evaluar B como más balanceada (preserva uso activo, limpia abandono).
+
 ---
 
 ## Ideas sueltas sin clasificar
