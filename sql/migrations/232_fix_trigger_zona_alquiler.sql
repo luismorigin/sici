@@ -1,10 +1,18 @@
--- Función trigger: trigger_asignar_zona_alquiler
--- Última migración: 232 (fix zona_general → nombre canónico)
--- Exportado de producción: 24 Abr 2026
--- Dominio: Trigger / Auto-asignación zona desde GPS (solo alquileres)
--- Dispara: BEFORE INSERT/UPDATE en propiedades_v2
--- Casos: GPS cambió, proyecto cambió, zona/microzona NULL, excluir fuera de polígono
--- Fix 232: usa zg.nombre para zona+microzona (antes zg.zona_general='Equipetrol' rompía zona_valida)
+-- =====================================================
+-- Migración 232: Fix trigger_asignar_zona_alquiler
+-- Fecha: 24 Abr 2026
+-- =====================================================
+-- Bug: el trigger seteaba NEW.zona := zg.zona_general ('Equipetrol'),
+-- que NO es canónico en el check constraint zona_valida.
+-- Esto rompía INSERT discovery alquiler en C21/Remax/BI con error:
+--   new row for relation "propiedades_v2" violates check constraint "zona_valida"
+--
+-- Fix: usar zg.nombre para AMBOS zona y microzona (mismo patrón que
+-- trigger_asignar_zona_venta, que ya fue refactorizado en migración 184).
+--
+-- Props existentes: NO se tocan (trigger solo dispara en cambio
+-- GPS/zona/microzona/proyecto, y esas props ya tienen valores canónicos).
+-- =====================================================
 
 CREATE OR REPLACE FUNCTION public.trigger_asignar_zona_alquiler()
 RETURNS trigger
@@ -127,3 +135,6 @@ BEGIN
     RETURN NEW;
 END;
 $function$;
+
+COMMENT ON FUNCTION public.trigger_asignar_zona_alquiler() IS
+'BEFORE INSERT/UPDATE trigger en propiedades_v2 (solo alquiler). Asigna zona y microzona desde GPS via zonas_geograficas. Fix migración 232: usa zg.nombre para ambas columnas (antes usaba zg.zona_general=''Equipetrol'' que rompía check constraint zona_valida). Alineado con trigger_asignar_zona_venta.';
