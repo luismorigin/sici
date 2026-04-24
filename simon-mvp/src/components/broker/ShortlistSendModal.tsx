@@ -13,6 +13,45 @@ function normalizePhone(p: string): string {
   return p.replace(/\D/g, '')
 }
 
+/**
+ * Normaliza un teléfono al formato E.164 que WhatsApp acepta.
+ * Acepta varios formatos de entrada que el broker puede tipear sin pensar:
+ *   "70123456"        → "+59170123456"   (celu BO de 8 dígitos arrancando con 6/7)
+ *   "59170123456"     → "+59170123456"   (con 591 pero sin +)
+ *   "+591 70123456"   → "+59170123456"   (ya internacional, limpia espacios)
+ *   "+54 9 11 12345678" → "+5491112345678" (otro país, respeta código)
+ * Rechaza:
+ *   "12345"           (muy corto)
+ *   "40123456"        (no es formato BO válido)
+ */
+export function normalizeClientPhone(raw: string): { ok: true; e164: string } | { ok: false; error: string } {
+  const trimmed = raw.trim()
+  if (!trimmed) return { ok: false, error: 'Falta el teléfono' }
+
+  // Ya viene internacional (+XX...)
+  if (trimmed.startsWith('+')) {
+    const digits = trimmed.replace(/\D/g, '')
+    if (digits.length < 10) return { ok: false, error: 'Teléfono internacional muy corto (mínimo 10 dígitos)' }
+    if (digits.length > 15) return { ok: false, error: 'Teléfono demasiado largo' }
+    return { ok: true, e164: `+${digits}` }
+  }
+
+  // Sin + → inferir. Solo dígitos.
+  const digits = trimmed.replace(/\D/g, '')
+
+  // 591 + 8 dígitos sin + (ej "59170123456")
+  if (digits.length === 11 && digits.startsWith('591')) {
+    return { ok: true, e164: `+${digits}` }
+  }
+
+  // 8 dígitos arrancando con 6 o 7 → celu boliviano, auto-prefijar +591
+  if (digits.length === 8 && /^[67]/.test(digits)) {
+    return { ok: true, e164: `+591${digits}` }
+  }
+
+  return { ok: false, error: 'Formato inválido. Usá "+591 70123456" o "70123456"' }
+}
+
 const TEMPLATE_PLACEHOLDER_URL = '__SHORTLIST_URL__'
 
 interface Props {
@@ -128,8 +167,9 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
   async function handleSubmit() {
     setErrorMsg(null)
     if (!clienteNombre.trim()) return setErrorMsg('Falta el nombre del cliente')
-    if (!clienteTelefono.trim()) return setErrorMsg('Falta el teléfono')
-    if (clienteTelefono.replace(/\D/g, '').length < 8) return setErrorMsg('Teléfono inválido (min 8 dígitos con código de país)')
+
+    const phoneResult = normalizeClientPhone(clienteTelefono)
+    if (!phoneResult.ok) return setErrorMsg(phoneResult.error)
 
     setSubmitting(true)
     try {
@@ -139,7 +179,7 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
 
       const { whatsappUrl } = await onConfirm({
         cliente_nombre: clienteNombre.trim(),
-        cliente_telefono: clienteTelefono.trim(),
+        cliente_telefono: phoneResult.e164,
         mensaje_whatsapp: finalMessage,
       })
 
@@ -181,10 +221,19 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
             style={S.input}
             value={clienteTelefono}
             onChange={e => setClienteTelefono(e.target.value)}
-            placeholder="+591 70123456"
+            placeholder="+591 70123456  (o solo 70123456)"
             inputMode="tel"
           />
-          <span style={S.help}>Incluí el código de país (Bolivia: +591)</span>
+          {(() => {
+            if (!clienteTelefono.trim()) {
+              return <span style={S.help}>Podés tipear solo 70123456 — agregamos +591 automáticamente. O internacional con +código.</span>
+            }
+            const result = normalizeClientPhone(clienteTelefono)
+            if (result.ok) {
+              return <span style={{ ...S.help, color: '#3A6A48', fontWeight: 600 }}>✓ WhatsApp abrirá a: {result.e164}</span>
+            }
+            return <span style={{ ...S.help, color: '#b91c1c' }}>{result.error}</span>
+          })()}
           {existingClientMatches.length > 0 && (
             <div style={{
               marginTop: 8, padding: '10px 12px',
