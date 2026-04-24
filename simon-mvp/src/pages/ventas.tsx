@@ -429,14 +429,9 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
         <div className="mc-photo-scroll" ref={scrollRef}>
           {photos.length > 0 ? photos.map((url, i) => {
             const shouldLoad = i < maxLoaded
-            const useRealImg = isFirst && i === 0 && url
             return (
-            <div key={i} className="mc-slide" style={!useRealImg ? (shouldLoad && url ? { backgroundImage: `url('${url}')`, cursor: 'pointer' } : { cursor: 'pointer' }) : { cursor: 'pointer' }}
+            <div key={i} className="mc-slide" style={shouldLoad && url ? { backgroundImage: `url('${url}')`, cursor: 'pointer' } : { cursor: 'pointer' }}
               onClick={() => onPhotoTap(i)}>
-              {useRealImg && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={`/_next/image?url=${encodeURIComponent(url)}&w=640&q=75`} alt="" fetchPriority="high" draggable={false} className="mc-slide-img" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-              )}
             </div>
             )
           }) : (
@@ -1001,7 +996,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
                 {similarProps.map(sp => (
                   <button key={sp.id} className="bs-sim-card" aria-label={`Ver ${sp.proyecto}`} onClick={() => onSwapProperty?.(sp)}>
                     {sp.fotos_urls?.[0] ? (
-                      <img src={`/_next/image?url=${encodeURIComponent(sp.fotos_urls[0])}&w=256&q=60`}
+                      <img src={sp.fotos_urls[0]}
                            alt={sp.proyecto} className="bs-sim-thumb" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     ) : (
                       <div className="bs-sim-thumb bs-sim-nophoto" />
@@ -1689,12 +1684,6 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   return (
     <>
       <VentasHead seo={seo} />
-      {/* Preload first photo for faster LCP — use /_next/image to hit optimized pipeline */}
-      {properties.length > 0 && properties[0].fotos_urls?.[0] && (
-        <Head>
-          <link rel="preload" as="image" href={`/_next/image?url=${encodeURIComponent(properties[0].fotos_urls[0])}&w=640&q=75`} fetchPriority="high" />
-        </Head>
-      )}
 
       <Toast message={toastMsg} visible={toastVisible} />
 

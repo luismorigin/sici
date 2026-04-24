@@ -2707,7 +2707,7 @@ function BottomSheet({
               return (
                 <button key={sp.id} className="bs-sim-card" onClick={() => onSwapProperty?.(sp)}>
                   {sp.fotos_urls?.[0] ? (
-                    <img src={`/_next/image?url=${encodeURIComponent(sp.fotos_urls[0])}&w=256&q=60`}
+                    <img src={sp.fotos_urls[0]}
                          alt={spName} className="bs-sim-thumb" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                   ) : (
                     <div className="bs-sim-thumb bs-sim-nophoto" />
