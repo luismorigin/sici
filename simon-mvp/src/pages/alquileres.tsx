@@ -1046,7 +1046,7 @@ export default function AlquileresPage({
           <main className="desktop-main" ref={viewMode === 'grid' ? feedRef : undefined}
             style={viewMode === 'map' ? { overflow: 'hidden', display: 'flex', flexDirection: 'column' } : undefined}>
             {/* View toggle bar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid rgba(216,208,188,0.3)', flexShrink: 0, position: 'sticky', top: 0, background: '#EDE8DC', zIndex: 10, paddingTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid rgba(216,208,188,0.3)', flexShrink: 0, position: 'sticky', top: 0, background: 'transparent', zIndex: 10, paddingTop: 8 }}>
               <div style={{ fontSize: 13, color: '#7A7060', display: 'flex', alignItems: 'center', gap: 12 }}>
                 {/* Comparar es feature del público, no tiene sentido en brokerMode
                     (el broker está armando shortlist — comparar sus propias
@@ -1060,7 +1060,7 @@ export default function AlquileresPage({
                   <span style={{ fontSize: 12, color: '#7A7060' }}>1 favorito — elegí otro para comparar</span>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: 2, background: 'rgba(58,53,48,0.06)', borderRadius: 10, padding: 3 }}>
+              <div style={{ display: 'flex', gap: 2, background: '#EDE8DC', borderRadius: 10, padding: 3, boxShadow: '0 1px 3px rgba(20,20,20,0.08)' }}>
                 <button
                   onClick={() => { setViewMode('grid'); trackEvent('switch_view', { view_mode: 'grid' }) }}
                   style={{
