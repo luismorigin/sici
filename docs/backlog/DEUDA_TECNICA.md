@@ -135,12 +135,11 @@ Source of truth de marca: repo `simon-brand` (github.com/luismorigin/simon-brand
 **Implicaciones:**
 1. **Hardcodeado**: Si los 3 IDs se dan de baja, el feed vuelve al sort natural (sin efecto negativo)
 2. **Flash en carga**: ISR renderiza la primera prop por recientes → deferred fetch carga 123 props → pin reordena → scroll reset. Causa flash visual (~300ms) y +0.3s en LCP (1.2s → 1.5s). Sigue dentro del umbral verde de Core Web Vitals (<2.5s)
-3. **Preload mismatch**: El `<link rel="preload">` apunta a la foto de `initialProperties[0]` (ISR), no a la del pin. La foto del pin se carga sin preload
+3. ~~Preload mismatch~~ — resuelto 24 abr 2026 (commits `c8a0f17` + `c14f764`): el `<link rel="preload">` fue removido en ambos feeds al cerrar la Capa 1 de `IMAGE_OPTIMIZATION_VERCEL.md`. Ya no hay mismatch, y los preconnects en `_document.tsx:11-13` cubren DNS/TLS al CDN origen
 
 **Solución futura (si escala):**
 - Mover IDs pinneados a un campo `pin_feed` en admin o tabla de config
-- Precargar foto del pin en `getStaticProps` para eliminar flash y recuperar LCP
-- O: hacer el pin en el server (SQL ORDER BY) para eliminar el reorder client-side
+- Hacer el pin en el server (SQL ORDER BY) para eliminar el reorder client-side y recuperar LCP
 
 **Prioridad: BAJA.** El trade-off CRO (mejor primera impresión) justifica +0.3s de LCP. Revisitar si se necesita rotar pins frecuentemente o si LCP sube de 2s.
 

@@ -4,6 +4,8 @@ Lecciones aprendidas optimizando Core Web Vitals. Referencia para futuros cambio
 
 ## LCP (Largest Contentful Paint)
 
+> ⚠️ **Nota 24 abr 2026:** Los 3 learnings siguientes (preload `/_next/image`, `useRealImg` primera foto, `sizes` en next/image de feeds) fueron **revertidos en prod** por agotamiento del límite Vercel Image Optimization (5k/mes Hobby). Ver `docs/backlog/IMAGE_OPTIMIZATION_VERCEL.md` y commits `c8a0f17` + `c14f764`. Los feeds (`/ventas`, `/alquileres`) ahora usan URL directa del CDN con `<link rel="preconnect">` en `_document.tsx` como mitigación. **No re-introducir `/_next/image` en feeds sin revisar el estado del límite Vercel.**
+
 ### Preload debe coincidir con la URL final (3 abr 2026)
 
 **Problema:** `<link rel="preload" href="https://cdn.21online.lat/foto.jpg">` preloadeaba la imagen raw, pero Next.js Image pedía `/_next/image?url=...&w=640&q=75`. Doble descarga.
