@@ -963,6 +963,19 @@ export default function AlquileresPage({
         priceSnapshot={sheetProperty && priceSnapshotsMap ? priceSnapshotsMap[sheetProperty.id] || null : null}
       />
 
+      {/* Banner inferior flotante brokerMode — visible en mobile Y desktop,
+          el broker siempre tiene CTA "Enviar shortlist" + × para limpiar
+          la selección sin depender del sidebar. */}
+      {brokerMode && broker && favorites.size >= 1 && (
+        <div className="alq-compare-banner-wrap alq-shortlist-banner-wrap">
+          <button className="alq-compare-banner alq-shortlist-banner" onClick={() => setShortlistModalOpen(true)} style={{ flex: 1 }}>
+            <span className="alq-compare-banner-text">Enviar shortlist · {favorites.size} {favorites.size === 1 ? 'propiedad' : 'propiedades'}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+          <button className="alq-compare-banner-clear" aria-label="Limpiar selección" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Selección limpiada') }}>&times;</button>
+        </div>
+      )}
+
       {isDesktop ? (
         /* ==================== DESKTOP LAYOUT ==================== */
         <div className={`desktop-layout ${publicShareMode ? 'desktop-layout-public' : ''} ${brokerMode ? 'desktop-layout-broker' : ''}`}>
@@ -1035,12 +1048,15 @@ export default function AlquileresPage({
             {/* View toggle bar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid rgba(216,208,188,0.3)', flexShrink: 0, position: 'sticky', top: 0, background: 'transparent', zIndex: 10, paddingTop: 8 }}>
               <div style={{ fontSize: 13, color: '#7A7060', display: 'flex', alignItems: 'center', gap: 12 }}>
-                {favorites.size >= 2 && (
+                {/* Comparar es feature del público, no tiene sentido en brokerMode
+                    (el broker está armando shortlist — comparar sus propias
+                    selecciones no ayuda a decidir). */}
+                {!brokerMode && favorites.size >= 2 && (
                   <button onClick={() => openCompare()} style={{ padding: '6px 16px', background: '#141414', color: '#EDE8DC', border: 'none', borderRadius: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.5 }}>
                     Comparar {favorites.size} favoritos
                   </button>
                 )}
-                {favorites.size === 1 && (
+                {!brokerMode && favorites.size === 1 && (
                   <span style={{ fontSize: 12, color: '#7A7060' }}>1 favorito — elegí otro para comparar</span>
                 )}
               </div>
@@ -1222,7 +1238,7 @@ export default function AlquileresPage({
                           </div>
                         )
                       })}
-                      {favProps.length >= 2 && (
+                      {!brokerMode && favProps.length >= 2 && (
                         <button className="map-fav-compare" onClick={() => openCompare()}>Comparar</button>
                       )}
                     </div>
@@ -1284,16 +1300,7 @@ export default function AlquileresPage({
             </div>
           )}
 
-          {/* Banner inferior — modo broker: Enviar shortlist (1+) | público: Comparar (2+). */}
-          {brokerMode && broker && favorites.size >= 1 && (
-            <div className="alq-compare-banner-wrap alq-shortlist-banner-wrap">
-              <button className="alq-compare-banner alq-shortlist-banner" onClick={() => setShortlistModalOpen(true)} style={{ flex: 1 }}>
-                <span className="alq-compare-banner-text">Enviar shortlist · {favorites.size} {favorites.size === 1 ? 'propiedad' : 'propiedades'}</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-              </button>
-              <button className="alq-compare-banner-clear" aria-label="Limpiar selección" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Selección limpiada') }}>&times;</button>
-            </div>
-          )}
+          {/* Banner inferior público — Comparar (2+). Solo mobile. */}
           {!brokerMode && favorites.size >= 1 && (
             <div className="alq-compare-banner-wrap">
               <button className="alq-compare-banner" onClick={() => favorites.size >= 2 ? openCompare() : showToast('Elegí al menos 2 para comparar')} style={{ flex: 1 }}>
