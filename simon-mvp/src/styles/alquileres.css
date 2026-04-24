@@ -742,3 +742,24 @@
 .bs-hr-price-change{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;padding:6px 12px;border-radius:100px;display:inline-block;margin-top:8px;letter-spacing:0.2px;}
 .bs-hr-price-change.down{background:rgba(58,106,72,0.14);color:#3A6A48;}
 .bs-hr-price-change.up{background:rgba(20,20,20,0.07);color:#7A7060;}
+
+/* ===================== PUBLIC SHARE HEADER (Fase 2) =====================
+   Cliente en /b/[hash]: header fijo con foto/nombre del broker + botón WA. */
+.alq-public-share-header{position:fixed;top:0;left:0;right:0;z-index:50;background:#EDE8DC;color:#141414;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid rgba(20,20,20,0.08);font-family:'DM Sans',sans-serif;box-shadow:0 1px 6px rgba(0,0,0,0.05);}
+.apsh-broker{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
+.apsh-broker-photo{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+.apsh-broker-photo-ph{background:#141414;color:#EDE8DC;display:flex;align-items:center;justify-content:center;font-family:'Figtree',sans-serif;font-weight:600;font-size:16px;}
+.apsh-broker-info{min-width:0;display:flex;flex-direction:column;gap:1px;}
+.apsh-broker-label{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:#7A7060;line-height:1.2;}
+.apsh-broker-name{font-family:'Figtree',sans-serif;font-weight:600;font-size:14px;color:#141414;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.apsh-broker-agency{font-family:'DM Sans',sans-serif;font-size:11px;color:#7A7060;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.apsh-wa{display:inline-flex;align-items:center;gap:6px;background:#1EA952;color:#fff;text-decoration:none;padding:8px 14px;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.3px;-webkit-tap-highlight-color:transparent;white-space:nowrap;flex-shrink:0;}
+.apsh-wa:hover{background:#178F45;}
+.apsh-wa:active{transform:scale(0.96);}
+@media (max-width:768px){.alq-public-share-header{padding:8px 14px;gap:8px;}.apsh-broker-photo{width:36px;height:36px;}.apsh-broker-name{font-size:13px;}.apsh-broker-agency{font-size:10px;}.apsh-wa{padding:7px 12px;font-size:12px;}}
+
+/* Dejar espacio para el header fixed en publicShareMode */
+.desktop-layout-public{padding-top:64px;}
+/* En mobile el feed TikTok es fullscreen — el header fixed se superpone sobre
+   la primera card (~60px, tolerable). La UX gana: botón WA siempre visible
+   aunque el cliente esté scrolleando. */

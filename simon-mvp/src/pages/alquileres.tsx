@@ -3,7 +3,6 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import Image from 'next/image'
 import type { GetStaticProps } from 'next'
 import { type UnidadAlquiler, type FiltrosAlquiler, buscarUnidadesAlquiler } from '@/lib/supabase'
 import { ZONAS_ALQUILER_UI, displayZona } from '@/lib/zonas'
@@ -399,6 +398,9 @@ export default function AlquileresPage({
   }, [activeCardIndex, isDesktop])
 
   const fetchProperties = useCallback(async (f: FiltrosAlquiler, retry = true): Promise<number> => {
+    // En publicShareMode (/b/[hash]) el feed lo define la shortlist del broker,
+    // NO debe ser sobrescrito por fetches al feed público global.
+    if (publicShareMode) return properties.length
     const gen = ++fetchGenRef.current
     setLoading(true)
     setLoadError(false)
@@ -444,6 +446,10 @@ export default function AlquileresPage({
   // then load all 200 after the page becomes interactive (avoids competing with LCP image)
   useEffect(() => {
     trackEvent('page_enter_alquiler', {})
+    // En publicShareMode (/b/[hash]) las propiedades ya vienen curadas por el
+    // broker via props.publicShare.items. NUNCA traer el feed completo — pisaría
+    // la shortlist con las 200 props globales.
+    if (publicShareMode) return
     const doFetch = async () => {
       // Skip if a URL-driven filter (?edificio, ?zonas=..., etc.) already fetched — avoids overwriting filtered results with a stale-closure baseline fetch.
       if (isFilteredRef.current) return
@@ -869,12 +875,6 @@ export default function AlquileresPage({
   return (
     <>
       <AlquileresHead seo={seo} />
-      {/* Preload first photo for faster LCP — use Next.js image URL for cache hit */}
-      {initialProperties.length > 0 && initialProperties[0].fotos_urls?.[0] && (
-        <Head>
-          <link rel="preload" as="image" href={`/_next/image?url=${encodeURIComponent(initialProperties[0].fotos_urls[0])}&w=640&q=75`} fetchPriority="high" />
-        </Head>
-      )}
 
 
       {/* Toast */}
@@ -885,10 +885,14 @@ export default function AlquileresPage({
         open={compareOpen}
         properties={favoriteProperties}
         onClose={() => setCompareOpen(false)}
+        publicShareBroker={publicShareBrokerProp}
       />
 
-      {/* Simon Chat Bot — deferred to avoid TBT during initial load */}
-      {widgetsReady && <SimonChatWidget
+      {/* Simon Chat Bot — deferred to avoid TBT during initial load.
+          Oculto en publicShareMode: el cliente viene en contexto curado por el
+          broker, no queremos que el chat global sugiera props fuera de la
+          shortlist (leakage del flujo del broker). */}
+      {widgetsReady && !publicShareMode && <SimonChatWidget
         properties={properties}
         sheetOpen={sheetOpen}
         onOpenDetail={(id) => {
@@ -934,8 +938,10 @@ export default function AlquileresPage({
 
       {isDesktop ? (
         /* ==================== DESKTOP LAYOUT ==================== */
-        <div className="desktop-layout">
-          {/* Left sidebar - filters */}
+        <div className={`desktop-layout ${publicShareMode ? 'desktop-layout-public' : ''}`}>
+          {/* Left sidebar - filters. Oculto en publicShareMode: el cliente recibe
+              una shortlist curada, no debe ver filtros globales. */}
+          {!publicShareMode && (
           <aside className="desktop-sidebar" style={{ overscrollBehavior: 'contain' }}>
             <div className="desktop-sidebar-header">
               <Link href="/landing-v2" className="desktop-logo">
@@ -978,6 +984,7 @@ export default function AlquileresPage({
               </div>
             )}
           </aside>
+          )}
 
           {/* Right content */}
           <main className="desktop-main" ref={viewMode === 'grid' ? feedRef : undefined}
@@ -1142,6 +1149,7 @@ export default function AlquileresPage({
                       onClose={() => setMapSelectedId(null)}
                       onToggleFavorite={() => toggleFavorite(sp.id)}
                       onOpenDetail={() => openDetail(sp)}
+                      publicShareBroker={publicShareBrokerProp}
                     />
                   )
                 })()}
@@ -1184,16 +1192,19 @@ export default function AlquileresPage({
       ) : (
         /* ==================== MOBILE LAYOUT (TikTok feed) ==================== */
         <>
-          {/* Top bar — search pill (Airbnb/TikTok style) */}
-          <div className="alq-top-bar">
-            <button className={`alq-search-pill${pillPulse ? ' pulse' : ''}`} onClick={() => { setPillPulse(false); setFilterOverlayOpen(true); trackEvent('open_filter_overlay') }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-              <span className="alq-search-text">{searchPillText}</span>
-              {isFiltered && <div className="alq-search-dot" />}
-            </button>
-          </div>
+          {/* Top bar — search pill (Airbnb/TikTok style).
+              Oculto en publicShareMode: el cliente ve el header del broker arriba. */}
+          {!publicShareMode && (
+            <div className="alq-top-bar">
+              <button className={`alq-search-pill${pillPulse ? ' pulse' : ''}`} onClick={() => { setPillPulse(false); setFilterOverlayOpen(true); trackEvent('open_filter_overlay') }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <span className="alq-search-text">{searchPillText}</span>
+                {isFiltered && <div className="alq-search-dot" />}
+              </button>
+            </div>
+          )}
 
           {/* Context badge — overlaid on first card photo */}
           {activeCardIndex === 0 && !loading && properties.length > 0 && (
@@ -1282,6 +1293,7 @@ export default function AlquileresPage({
                       onClose={() => setMapSelectedId(null)}
                       onToggleFavorite={() => toggleFavorite(sp.id)}
                       onOpenDetail={() => { setMobileMapOpen(false); openDetail(sp) }}
+                      publicShareBroker={publicShareBrokerProp}
                     />
                   )
                 })()}
@@ -1429,6 +1441,46 @@ export default function AlquileresPage({
             title="Abrir dashboard de mercado de alquileres en pestaña nueva"
           >
             Ver mercado <span aria-hidden="true" className="alq-broker-market-arrow">↗</span>
+          </a>
+        </div>
+      )}
+
+      {/* Header modo public share — header del broker que comparte la shortlist
+          con su cliente. CTA WhatsApp arma mensaje con los corazones marcados. */}
+      {publicShareMode && publicShare && (
+        <div className="alq-public-share-header">
+          <div className="apsh-broker">
+            {publicShare.broker.foto_url
+              ? <img src={publicShare.broker.foto_url} alt={publicShare.broker.nombre} className="apsh-broker-photo" />
+              : <div className="apsh-broker-photo apsh-broker-photo-ph">{publicShare.broker.nombre.charAt(0)}</div>}
+            <div className="apsh-broker-info">
+              <div className="apsh-broker-label">Selección de</div>
+              <div className="apsh-broker-name">{publicShare.broker.nombre}</div>
+              {publicShare.broker.inmobiliaria && (
+                <div className="apsh-broker-agency">{publicShare.broker.inmobiliaria}</div>
+              )}
+            </div>
+          </div>
+          <a
+            href={(() => {
+              const hearted = properties.filter(p => favorites.has(p.id))
+              if (hearted.length > 0) {
+                const lines = hearted.map(p => {
+                  const name = p.nombre_edificio || p.nombre_proyecto || 'Depto'
+                  const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
+                  return `• ${name} (${dorms} · ${Math.round(p.area_m2)}m² · Bs ${Math.round(p.precio_mensual_bob).toLocaleString('es-BO')}/mes)`
+                }).join('\n')
+                const plural = hearted.length === 1 ? 'este' : 'estos'
+                const noun = hearted.length === 1 ? 'alquiler' : `${hearted.length} alquileres`
+                const msg = `Hola ${publicShare.broker.nombre}, me interesa${hearted.length === 1 ? '' : 'n'} ${plural} ${noun}:\n\n${lines}\n\n¿Podemos coordinar?`
+                return `https://wa.me/${publicShare.broker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`
+              }
+              return `https://wa.me/${publicShare.broker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${publicShare.broker.nombre}, vi los alquileres que me enviaste.`)}`
+            })()}
+            target="_blank" rel="noopener noreferrer" className="apsh-wa"
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+            WhatsApp
           </a>
         </div>
       )}
@@ -1707,10 +1759,16 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
 }
 
 // ===== MAP FLOATING CARD (own state to avoid re-rendering the map) =====
-function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onOpenDetail, mobile }: {
+function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onOpenDetail, mobile, publicShareBroker = null }: {
   property: UnidadAlquiler; isFavorite: boolean; mobile?: boolean
   onClose: () => void; onToggleFavorite: () => void; onOpenDetail: () => void
+  // publicShareMode: CTA WA redirige al broker (no al agente original).
+  publicShareBroker?: { nombre: string; telefono: string } | null
 }) {
+  const publicShareMode = publicShareBroker !== null
+  const brokerHref = publicShareMode && publicShareBroker
+    ? `https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerAlquilerMessage(sp, publicShareBroker.nombre))}`
+    : null
   const [photoIdx, setPhotoIdx] = useState(0)
   const spName = sp.nombre_edificio || sp.nombre_proyecto || 'Departamento'
   const photos = sp.fotos_urls ?? []
@@ -1754,9 +1812,11 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
           )}
           <div className="mfc-m-actions">
             <button className="mfc-m-btn-detail" onClick={onOpenDetail}>Ver detalles</button>
-            {sp.agente_whatsapp && (
+            {publicShareMode && brokerHref ? (
+              <a href={brokerHref} target="_blank" rel="noopener noreferrer" className="mfc-m-btn-wsp">WhatsApp</a>
+            ) : sp.agente_whatsapp ? (
               <a href="#" onClick={(e) => handleWhatsAppLead(e, sp, buildAlquilerWaMessage(sp), 'map_card_mobile')} className="mfc-m-btn-wsp">WhatsApp</a>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -1797,9 +1857,11 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
         )}
         <div className="map-float-actions">
           <button className="map-float-btn-detail" onClick={onOpenDetail}>Ver detalles</button>
-          {sp.agente_whatsapp && (
+          {publicShareMode && brokerHref ? (
+            <a href={brokerHref} target="_blank" rel="noopener noreferrer" className="map-float-btn-wsp">WhatsApp</a>
+          ) : sp.agente_whatsapp ? (
             <a href="#" onClick={(e) => handleWhatsAppLead(e, sp, buildAlquilerWaMessage(sp), 'map_card')} className="map-float-btn-wsp">WhatsApp</a>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
@@ -2190,26 +2252,12 @@ function PhotoCarousel({ photos, isFirst, showHint, onPhotoTap, propertyId }: { 
       <div className="pc-scroll" ref={scrollRef}>
         {(photos.length > 0 ? photos : ['']).map((url, i) => {
           const shouldLoad = i < maxLoaded
-          const useRealImg = isFirst && i === 0 && url
           return (
-          <div key={i} className="pc-slide" style={!useRealImg ? (shouldLoad && url ? { backgroundImage: `url('${url}')` } : { background: '#D8D0BC' }) : { background: '#D8D0BC' }}
+          <div key={i} className="pc-slide" style={shouldLoad && url ? { backgroundImage: `url('${url}')` } : { background: '#D8D0BC' }}
             onTouchStart={() => { isDragging.current = false }}
             onTouchMove={() => { isDragging.current = true }}
             onClick={() => { if (!isDragging.current && onPhotoTap && url) onPhotoTap(currentIdx) }}
           >
-            {/* First photo of first card uses next/image for LCP: WebP + resize */}
-            {useRealImg && (
-              <Image
-                src={url}
-                alt=""
-                fill
-                sizes="(max-width: 767px) 100vw, 50vw"
-                priority
-                draggable={false}
-                className="pc-slide-img"
-                style={{ objectFit: 'cover' }}
-              />
-            )}
           </div>
           )
         })}
