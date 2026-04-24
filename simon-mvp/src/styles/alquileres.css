@@ -709,3 +709,36 @@
 .cc{position:fixed;top:50%;right:10px;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;align-items:center;gap:3px;}
 .cc-pip{width:3px;height:10px;border-radius:2px;background:rgba(58,53,48,0.12);transition:all 0.3s;}
 .cc-pip.active{background:#3A6A48;height:22px;}
+
+/* ===================== MODO BROKER (Fase 2) ===================== */
+.alq-broker-banner{position:fixed;top:0;left:0;right:0;z-index:60;background:#EDE8DC;color:#141414;padding:9px 18px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:12px;box-shadow:0 1px 0 rgba(20,20,20,0.08),0 4px 14px rgba(20,20,20,0.06);border-bottom:1px solid rgba(20,20,20,0.06);}
+.alq-broker-banner-brand{display:flex;align-items:baseline;gap:8px;min-width:0;}
+.alq-broker-banner-logo{font-family:'Figtree',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.6px;color:#141414;}
+.alq-broker-banner-divider{opacity:0.3;font-size:14px;color:#141414;}
+.alq-broker-banner-label{font-family:'DM Sans',sans-serif;font-weight:600;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#3A6A48;}
+.alq-broker-banner-name{font-family:'Figtree',sans-serif;font-weight:500;font-size:13px;margin-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#141414;}
+.alq-broker-banner-shortlists{margin-left:auto;background:#141414;color:#EDE8DC;border:1px solid #141414;padding:5px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:0.3px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;white-space:nowrap;}
+.alq-broker-banner-shortlists:active{transform:scale(0.96);}
+.alq-broker-tool{background:rgba(20,20,20,0.04);border:1px solid rgba(20,20,20,0.18);color:#141414;padding:5px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:0.3px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;white-space:nowrap;}
+.alq-broker-tool:hover{background:rgba(20,20,20,0.09);}
+.alq-broker-tool:active{transform:scale(0.96);}
+.alq-broker-tool.active{background:#141414;color:#EDE8DC;border-color:#141414;}
+.alq-broker-tool:disabled{opacity:0.45;cursor:not-allowed;}
+.alq-broker-tool-add{background:rgba(58,106,72,0.10);border-color:rgba(58,106,72,0.35);color:#3A6A48;}
+.alq-broker-tool-add:hover{background:rgba(58,106,72,0.18);}
+.alq-broker-send{background:#3A6A48;color:#EDE8DC;border-color:#3A6A48;}
+.alq-broker-send:hover{background:#2F5639;border-color:#2F5639;}
+.alq-broker-market-link{text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
+.alq-broker-market-arrow{opacity:0.55;font-weight:500;}
+@media (max-width:768px){.alq-broker-banner{flex-wrap:wrap;padding:6px 12px;gap:6px;}.alq-broker-tool,.alq-broker-banner-shortlists{font-size:10px;padding:3px 8px;}}
+
+/* Star icon del botón ⭐ en cards cuando brokerMode */
+.amc-fav-broker.active svg,.dc-act-fav-broker.active svg,.bs-sticky-fav-broker.active svg{filter:drop-shadow(0 0 4px rgba(242,180,65,0.5));}
+
+/* Badge cambio de precio (publicShareMode) */
+.amc-price-change,.dc-price-change{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;display:inline-block;margin:4px 0 8px;letter-spacing:0.2px;}
+.amc-price-change-down,.dc-price-change-down{background:rgba(58,106,72,0.12);color:#3A6A48;border:1px solid rgba(58,106,72,0.3);}
+.amc-price-change-up,.dc-price-change-up{background:rgba(20,20,20,0.06);color:#7A7060;border:1px solid rgba(20,20,20,0.15);}
+.bs-hr-price-change{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;padding:6px 12px;border-radius:100px;display:inline-block;margin-top:8px;letter-spacing:0.2px;}
+.bs-hr-price-change.down{background:rgba(58,106,72,0.14);color:#3A6A48;}
+.bs-hr-price-change.up{background:rgba(20,20,20,0.07);color:#7A7060;}
