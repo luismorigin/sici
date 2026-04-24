@@ -192,6 +192,14 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     .eq('id', shortlist.id)
     .then(() => {})
 
+  // Hearts del cliente (migración 234). Para hidratar el state del cliente
+  // al cargar, de modo que los corazones ya marcados aparezcan como activos.
+  const { data: heartRows } = await supabase
+    .from('broker_shortlist_hearts')
+    .select('propiedad_id')
+    .eq('shortlist_id', shortlist.id)
+  const initialHearts: number[] = (heartRows || []).map((r: { propiedad_id: number }) => r.propiedad_id)
+
   // Determinar tipo_operacion por el primer item (shortlist homogénea).
   // Si no hay items, default a venta (shortlist vacía, caso degenerado).
   const primerTipo = safeItems[0]?.tipo_operacion as 'venta' | 'alquiler' | undefined
@@ -249,6 +257,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
         seo: baseProps.seo as AlquilerPageProps['seo'],
         initialProperties: properties,
         publicShare: {
+          hash,
           broker: {
             slug: broker.slug,
             nombre: broker.nombre,
@@ -259,6 +268,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
           items: properties,
           itemComments,
           priceSnapshots,
+          initialHearts,
         },
         shortlistTitle,
       },
@@ -318,10 +328,12 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
       seo: baseProps.seo as VentaPageProps['seo'],
       initialProperties: properties,
       publicShare: {
+        hash,
         broker,
         items: properties,
         itemComments,
         priceSnapshots,
+        initialHearts,
       },
       shortlistTitle,
     },

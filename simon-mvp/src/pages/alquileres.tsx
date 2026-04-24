@@ -198,10 +198,14 @@ function useIsDesktop() {
 //  - priceSnapshots guarda precio_mensual_bob (fuente de verdad regla 10/12)
 //    y precio_mensual_bob_actual para detectar cambio del agente.
 export interface PublicShareDataAlquiler {
+  hash: string
   broker: { slug: string; nombre: string; telefono: string; foto_url: string | null; inmobiliaria?: string | null }
   items: UnidadAlquiler[]
   itemComments?: Record<number, string | null>
   priceSnapshots?: Record<number, { bobSnapshot: number | null; bobActual: number | null }>
+  // IDs de propiedades que el cliente ya marcó con corazón (persistidos en BD).
+  // El cliente hidrata favorites con esto en lugar de localStorage.
+  initialHearts?: number[]
 }
 
 // ===== MAIN PAGE =====
@@ -258,12 +262,19 @@ export default function AlquileresPage({
     }
   }, [])
 
-  // Restore favorites from localStorage after hydration
+  // Restore favorites: publicShareMode hidrata desde BD (initialHearts),
+  // los demás desde localStorage.
   useEffect(() => {
+    if (publicShareMode) {
+      const hearts = publicShare?.initialHearts
+      if (hearts && hearts.length > 0) setFavorites(new Set(hearts))
+      return
+    }
     try {
       const saved = localStorage.getItem('alq_favorites')
       if (saved) setFavorites(new Set(JSON.parse(saved) as number[]))
     } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const [activeCardIndex, setActiveCardIndex] = useState(0)
   const activeCardIdxRef = useRef(0)
@@ -319,10 +330,12 @@ export default function AlquileresPage({
   const analyticsRef = useRef({ startTime: Date.now(), maxCardIdx: 0, hasInteracted: false, sessionSent: false, viewedIds: new Set<number>() })
   const fetchGenRef = useRef(0) // increments on each fetchProperties call to cancel stale background loads
 
-  // Persist favorites to localStorage
+  // Persist favorites to localStorage (skip en publicShareMode — se persiste
+  // en BD por cada toggle, ver toggleFavorite).
   useEffect(() => {
+    if (publicShareMode) return
     try { localStorage.setItem('alq_favorites', JSON.stringify(Array.from(favorites))) } catch {}
-  }, [favorites])
+  }, [favorites, publicShareMode])
 
   // Keep isFilteredRef in sync for scroll handler (avoids stale closure)
   useEffect(() => { isFilteredRef.current = isFiltered }, [isFiltered])
@@ -561,8 +574,9 @@ export default function AlquileresPage({
 
   function toggleFavorite(id: number) {
     const isFav = favorites.has(id)
-    // Limite de 3 NO aplica en brokerMode: el broker puede seleccionar tantas como quiera.
-    if (!brokerMode && !isFav && favorites.size >= MAX_FAVORITES) {
+    // Limite de 3 NO aplica en brokerMode ni publicShareMode: ambos pueden
+    // seleccionar tantas como quieran (broker = shortlist, cliente = feedback).
+    if (!brokerMode && !publicShareMode && !isFav && favorites.size >= MAX_FAVORITES) {
       showToast(`Maximo ${MAX_FAVORITES} favoritos`)
       return
     }
@@ -574,6 +588,19 @@ export default function AlquileresPage({
     })
     analyticsRef.current.hasInteracted = true
     trackEvent('toggle_favorite', { property_id: id, action: isFav ? 'remove' : 'add', total_favs: isFav ? favorites.size - 1 : favorites.size + 1 })
+    // En publicShareMode persistir en BD (feedback al broker). Optimistic UI:
+    // el state ya se actualizó arriba, el fetch corre en background. Si falla
+    // loggeamos pero no revertimos (el cliente quiere que funcione; el broker
+    // va a ver el heart siguiente o puede preguntarle).
+    if (publicShareMode && publicShare?.hash) {
+      const hash = publicShare.hash
+      const method = isFav ? 'DELETE' : 'POST'
+      fetch('/api/public/shortlist-hearts', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hash, propiedad_id: id }),
+      }).catch(err => console.warn('[hearts] toggle failed', err))
+    }
     if (isFav) {
       showToast(brokerMode ? 'Quitado de la seleccion' : 'Eliminado de favoritos')
     } else {

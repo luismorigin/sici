@@ -1253,6 +1253,7 @@ function fuenteBadge(fuente: string | null | undefined): { label: string; color:
 // (a) saltar fetch (la lista viene curada), (b) ocultar filtros/sidebar/spotlight/mapa,
 // (c) ocultar gate/preguntas/WA agente del sheet, (d) mostrar header con datos del broker.
 export interface PublicShareData {
+  hash: string
   broker: { slug: string; nombre: string; telefono: string; foto_url: string | null; inmobiliaria?: string | null }
   items: UnidadVenta[]
   itemComments?: Record<number, string | null>
@@ -1263,6 +1264,9 @@ export interface PublicShareData {
   // Lógica del badge: si abs(rawActual - rawSnapshot)/rawSnapshot > 1% → cambio del agente → mostrar badge
   // Si solo cambió el normalizado pero no el raw, fue movimiento de TC → no mostrar.
   priceSnapshots?: Record<number, { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null }>
+  // IDs que el cliente ya marcó con corazón (migración 234). Hidrata favorites
+  // al montar en lugar de localStorage.
+  initialHearts?: number[]
 }
 
 // ===== Page =====
@@ -1432,9 +1436,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   }
   function toggleFavorite(id: number) {
     const isFav = favorites.has(id)
-    // Límite de 3 solo aplica al modo público (CompareSheet acepta hasta 3).
-    // En modo broker la "selección" puede ser tan grande como el broker quiera.
-    if (!brokerMode && !isFav && favorites.size >= MAX_FAVORITES) {
+    // Límite de 3 solo aplica al modo público estándar. Ni brokerMode ni
+    // publicShareMode aplican el cap: broker arma shortlists amplias, cliente
+    // marca corazones como feedback sin tope.
+    if (!brokerMode && !publicShareMode && !isFav && favorites.size >= MAX_FAVORITES) {
       showToast(`Maximo ${MAX_FAVORITES} favoritos`)
       return
     }
@@ -1445,6 +1450,16 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       else n.add(id)
       return n
     })
+    // Feedback al broker: en publicShareMode persistir heart en BD (optimistic).
+    if (publicShareMode && publicShare?.hash) {
+      const hash = publicShare.hash
+      const method = isFav ? 'DELETE' : 'POST'
+      fetch('/api/public/shortlist-hearts', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hash, propiedad_id: id }),
+      }).catch(err => console.warn('[hearts] toggle failed', err))
+    }
     if (isFav) {
       showToast(brokerMode ? 'Quitado de la selección' : 'Quitado de favoritos')
     } else {
@@ -1568,8 +1583,20 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   }, [isFiltered, filters, activeFilterCount])
 
   // Persist favorites
-  useEffect(() => { try { const s = localStorage.getItem('ventas_favorites_v1'); if (s) setFavorites(new Set(JSON.parse(s))) } catch {} }, [])
-  useEffect(() => { if (favorites.size > 0) localStorage.setItem('ventas_favorites_v1', JSON.stringify([...favorites])) }, [favorites])
+  // Hidratar favorites: publicShareMode desde BD (initialHearts), los demás desde localStorage.
+  useEffect(() => {
+    if (publicShareMode) {
+      const hearts = publicShare?.initialHearts
+      if (hearts && hearts.length > 0) setFavorites(new Set(hearts))
+      return
+    }
+    try { const s = localStorage.getItem('ventas_favorites_v1'); if (s) setFavorites(new Set(JSON.parse(s))) } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    if (publicShareMode) return // persistencia va por BD en toggleFavorite
+    if (favorites.size > 0) localStorage.setItem('ventas_favorites_v1', JSON.stringify([...favorites]))
+  }, [favorites, publicShareMode])
 
   // Scroll tracking (mobile TikTok)
   useEffect(() => {

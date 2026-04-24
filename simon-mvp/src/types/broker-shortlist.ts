@@ -69,6 +69,9 @@ export interface BrokerShortlistItemWithProperty extends BrokerShortlistItem {
 
 export interface BrokerShortlistWithItems extends BrokerShortlist {
   items: BrokerShortlistItem[]
+  // IDs que el cliente marcó con corazón en /b/[hash] (migración 234).
+  // El broker los ve en el editor como feedback — "cliente marcó 3 de 7".
+  heartedPropertyIds?: number[]
 }
 
 // Payload para crear nueva shortlist desde el modal "Enviar"

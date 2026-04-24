@@ -177,24 +177,42 @@ export default function ShortlistEditorPage({ broker }: PageProps) {
 
         <section className="se-section">
           <h2 className="se-section-title">Propiedades ({items.length})</h2>
+          {data && Array.isArray(data.heartedPropertyIds) && data.heartedPropertyIds.length > 0 && (
+            <div className="se-hearts-banner">
+              <span className="se-hearts-emoji" aria-hidden>❤</span>
+              <span>
+                <strong>{data.heartedPropertyIds.length}</strong> de <strong>{items.length}</strong> marcadas por el cliente
+              </span>
+            </div>
+          )}
           <ul className="se-items">
             {items.map((it, idx) => {
               const pv = it.preview
+              const hearted = Array.isArray(data?.heartedPropertyIds) && data!.heartedPropertyIds!.includes(it.propiedad_id)
               return (
-                <li key={it.id} className="se-item">
+                <li key={it.id} className={`se-item ${hearted ? 'se-item-hearted' : ''}`}>
                   <div className="se-item-handle">
                     <button onClick={() => moveItem(idx, -1)} disabled={idx === 0} aria-label="Subir">↑</button>
                     <span className="se-item-pos">{idx + 1}</span>
                     <button onClick={() => moveItem(idx, 1)} disabled={idx === items.length - 1} aria-label="Bajar">↓</button>
                   </div>
                   {pv?.foto ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={pv.foto} alt={pv.proyecto} className="se-item-thumb" />
+                    <div className="se-item-thumb-wrap">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={pv.foto} alt={pv.proyecto} className="se-item-thumb" />
+                      {hearted && <span className="se-item-thumb-heart" aria-label="Cliente marcó esta propiedad">❤</span>}
+                    </div>
                   ) : (
-                    <div className="se-item-thumb se-item-thumb-ph">#{it.propiedad_id}</div>
+                    <div className="se-item-thumb-wrap">
+                      <div className="se-item-thumb se-item-thumb-ph">#{it.propiedad_id}</div>
+                      {hearted && <span className="se-item-thumb-heart" aria-label="Cliente marcó esta propiedad">❤</span>}
+                    </div>
                   )}
                   <div className="se-item-body">
-                    <div className="se-item-name">{pv?.proyecto || `Propiedad #${it.propiedad_id}`}</div>
+                    <div className="se-item-name">
+                      {pv?.proyecto || `Propiedad #${it.propiedad_id}`}
+                      {hearted && <span className="se-item-hearted-chip">Cliente marcó</span>}
+                    </div>
                     <div className="se-item-meta">
                       {pv?.zona && <span>{pv.zona}</span>}
                       {typeof pv?.dormitorios === 'number' && <span>{pv.dormitorios === 0 ? 'Mono' : `${pv.dormitorios} dorm`}</span>}
@@ -269,6 +287,13 @@ export default function ShortlistEditorPage({ broker }: PageProps) {
         .se-btn-primary { background: #3A6A48; color: #EDE8DC; }
         .se-btn-primary:disabled { opacity: 0.6; }
         .se-btn-trash { background: transparent; color: #b91c1c; border-color: rgba(185,28,28,0.3); }
+        /* Hearts del cliente (feedback, Día 3 Fase 2) */
+        .se-hearts-banner { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin-bottom: 10px; background: rgba(224,85,85,0.08); border: 1px solid rgba(224,85,85,0.22); border-radius: 8px; font-size: 13px; color: #141414; font-family: 'DM Sans', sans-serif; }
+        .se-hearts-emoji { color: #E05555; font-size: 16px; }
+        .se-item-hearted { background: #fff4f4; border: 1px solid rgba(224,85,85,0.3); }
+        .se-item-thumb-wrap { position: relative; flex-shrink: 0; }
+        .se-item-thumb-heart { position: absolute; top: -6px; right: -6px; background: #E05555; color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+        .se-item-hearted-chip { display: inline-block; margin-left: 8px; background: rgba(224,85,85,0.12); color: #b91c1c; border: 1px solid rgba(224,85,85,0.3); padding: 1px 8px; border-radius: 100px; font-size: 10px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; vertical-align: middle; font-family: 'DM Sans', sans-serif; }
       `}</style>
     </>
   )

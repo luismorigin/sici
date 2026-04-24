@@ -102,9 +102,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         preview: previewByPropId[it.propiedad_id] || null,
       }))
 
-      const result: BrokerShortlistWithItems & { items: typeof itemsEnriched } = {
+      // Hearts del cliente (migración 234). Permite al broker ver qué marcó.
+      const { data: heartRows } = await supabase
+        .from('broker_shortlist_hearts')
+        .select('propiedad_id')
+        .eq('shortlist_id', id)
+      const heartedPropertyIds: number[] = (heartRows || []).map((r: { propiedad_id: number }) => r.propiedad_id)
+
+      const result: BrokerShortlistWithItems & {
+        items: typeof itemsEnriched
+        heartedPropertyIds: number[]
+      } = {
         ...(shortlist as BrokerShortlist),
         items: itemsEnriched,
+        heartedPropertyIds,
       }
       return res.status(200).json(result)
     }
