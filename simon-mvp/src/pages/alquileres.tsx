@@ -12,6 +12,10 @@ import { fbqTrack } from '@/lib/meta-pixel'
 import { fetchMercadoAlquilerData, type MercadoAlquilerData } from '@/lib/mercado-alquiler-data'
 import { useWhatsAppCapture, triggerWhatsAppCapture } from '@/hooks/useWhatsAppCapture'
 import { buildAlquilerWaMessage } from '@/lib/wa-message'
+import { useBrokerShortlists } from '@/hooks/useBrokerShortlists'
+import ShortlistSendModal from '@/components/broker/ShortlistSendModal'
+import ShortlistsPanel from '@/components/broker/ShortlistsPanel'
+import type { Broker } from '@/lib/simon-brokers'
 
 // --- SEO types ---
 interface AlquileresSEO {
@@ -182,16 +186,57 @@ function useIsDesktop() {
   return isDesktop
 }
 
+// ===== PUBLIC SHARE DATA (links /b/[hash] con items de alquiler) =====
+// Analogo a PublicShareData de ventas.tsx, adaptado a alquiler:
+//  - items son UnidadAlquiler
+//  - priceSnapshots guarda precio_mensual_bob (fuente de verdad regla 10/12)
+//    y precio_mensual_bob_actual para detectar cambio del agente.
+export interface PublicShareDataAlquiler {
+  broker: { slug: string; nombre: string; telefono: string; foto_url: string | null; inmobiliaria?: string | null }
+  items: UnidadAlquiler[]
+  itemComments?: Record<number, string | null>
+  priceSnapshots?: Record<number, { bobSnapshot: number | null; bobActual: number | null }>
+}
+
 // ===== MAIN PAGE =====
-export default function AlquileresPage({ seo, initialProperties }: { seo: AlquileresSEO; initialProperties: UnidadAlquiler[] }) {
+export default function AlquileresPage({
+  seo,
+  initialProperties,
+  brokerSlug: brokerSlugProp = null,
+  broker: brokerProp = null,
+  publicShare = null,
+}: {
+  seo: AlquileresSEO
+  initialProperties: UnidadAlquiler[]
+  brokerSlug?: string | null
+  broker?: Broker | null
+  publicShare?: PublicShareDataAlquiler | null
+}) {
   const router = useRouter()
   const { modalElement: waModalElement } = useWhatsAppCapture()
   const isDesktop = useIsDesktop()
-  const [properties, setProperties] = useState<UnidadAlquiler[]>(initialProperties)
+
+  // Modo broker + publicShare (Fase 2 Simon Broker)
+  const publicShareMode = publicShare !== null
+  const publicShareBrokerProp: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null = publicShare ? publicShare.broker : null
+  const priceSnapshotsMap: Record<number, { bobSnapshot: number | null; bobActual: number | null }> | null = publicShare && publicShare.priceSnapshots ? publicShare.priceSnapshots : null
+  const initialProps = publicShareMode ? publicShare!.items : initialProperties
+  const brokerSlug = brokerSlugProp
+  const broker = brokerProp
+  const brokerMode = broker !== null
+  const brokerInfoProp: { nombre: string; inmobiliaria?: string | null } | null = broker ? { nombre: broker.nombre, inmobiliaria: broker.inmobiliaria } : null
+
+  const [properties, setProperties] = useState<UnidadAlquiler[]>(initialProps)
   const [loading, setLoading] = useState(false)
   const [spotlightId, setSpotlightId] = useState<number | null>(null)
   const [fetchedSpotlight, setFetchedSpotlight] = useState<UnidadAlquiler | null>(null)
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
+
+  // Shortlists del broker — selección actual = favoritos, persistencia y envío via hook
+  const brokerShortlists = useBrokerShortlists(broker)
+  const [shortlistModalOpen, setShortlistModalOpen] = useState(false)
+  const [shortlistsPanelOpen, setShortlistsPanelOpen] = useState(false)
+  const [onlySelectedFilter, setOnlySelectedFilter] = useState(false)
 
   // Body styles — scoped to this page (cleanup on unmount)
   useEffect(() => {
@@ -503,7 +548,8 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
 
   function toggleFavorite(id: number) {
     const isFav = favorites.has(id)
-    if (!isFav && favorites.size >= MAX_FAVORITES) {
+    // Limite de 3 NO aplica en brokerMode: el broker puede seleccionar tantas como quiera.
+    if (!brokerMode && !isFav && favorites.size >= MAX_FAVORITES) {
       showToast(`Maximo ${MAX_FAVORITES} favoritos`)
       return
     }
@@ -516,10 +562,12 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     analyticsRef.current.hasInteracted = true
     trackEvent('toggle_favorite', { property_id: id, action: isFav ? 'remove' : 'add', total_favs: isFav ? favorites.size - 1 : favorites.size + 1 })
     if (isFav) {
-      showToast('Eliminado de favoritos')
+      showToast(brokerMode ? 'Quitado de la seleccion' : 'Eliminado de favoritos')
     } else {
       const newCount = favorites.size + 1
-      if (newCount >= 2) {
+      if (brokerMode) {
+        showToast(`${newCount} ${newCount === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'}`)
+      } else if (newCount >= 2) {
         showToast(`${newCount}/${MAX_FAVORITES} · Podes comparar abajo`)
       } else {
         showToast(`Guardado · ${newCount}/${MAX_FAVORITES} favoritos`)
@@ -527,10 +575,45 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
     }
   }
 
+  function addToShortlist(p: UnidadAlquiler) {
+    trackEvent('broker_add_to_shortlist', { property_id: p.id, broker_slug: broker?.slug, tipo_operacion: 'alquiler' })
+    toggleFavorite(p.id)
+  }
+
+  async function handleSendShortlist(data: { cliente_nombre: string; cliente_telefono: string; mensaje_whatsapp?: string }) {
+    if (!broker) throw new Error('Broker no resuelto')
+    const propiedad_ids = Array.from(favorites)
+    if (propiedad_ids.length === 0) throw new Error('No hay propiedades seleccionadas')
+    trackEvent('broker_send_shortlist', { broker_slug: broker.slug, count: propiedad_ids.length, tipo_operacion: 'alquiler' })
+    const { whatsappUrl } = await brokerShortlists.createAndSend({ ...data, propiedad_ids, tipo_operacion: 'alquiler' })
+    setFavorites(new Set())
+    showToast('Shortlist enviada')
+    return { whatsappUrl }
+  }
+
   function openCompare() {
     setCompareOpen(true)
     analyticsRef.current.hasInteracted = true
     trackEvent('open_compare', { property_ids: Array.from(favorites).join(','), count: favorites.size })
+  }
+
+  const displayedProperties = useMemo(
+    () => (brokerMode && onlySelectedFilter) ? properties.filter(p => favorites.has(p.id)) : properties,
+    [brokerMode, onlySelectedFilter, properties, favorites]
+  )
+  const visibleNotMarked = useMemo(
+    () => brokerMode ? properties.filter(p => !favorites.has(p.id)) : [],
+    [brokerMode, properties, favorites]
+  )
+  function markAllVisible() {
+    if (visibleNotMarked.length === 0) return
+    trackEvent('broker_mark_all_visible', { count: visibleNotMarked.length, broker_slug: broker?.slug, tipo_operacion: 'alquiler' })
+    setFavorites(prev => {
+      const n = new Set(prev)
+      for (const p of properties) n.add(p.id)
+      return n
+    })
+    showToast(`${visibleNotMarked.length} propiedad${visibleNotMarked.length === 1 ? '' : 'es'} agregada${visibleNotMarked.length === 1 ? '' : 's'}`)
   }
 
   // Gate: check localStorage on mount
@@ -1245,6 +1328,85 @@ export default function AlquileresPage({ seo, initialProperties }: { seo: Alquil
       )}
 
       {waModalElement}
+
+      {/* Modal Enviar shortlist — solo broker mode */}
+      {brokerMode && broker && (
+        <ShortlistSendModal
+          isOpen={shortlistModalOpen}
+          onClose={() => setShortlistModalOpen(false)}
+          broker={broker}
+          cantidadPropiedades={favorites.size}
+          existingShortlists={brokerShortlists.shortlists}
+          onConfirm={handleSendShortlist}
+        />
+      )}
+
+      {/* Panel Mis shortlists enviadas — solo broker mode */}
+      {brokerMode && broker && (
+        <ShortlistsPanel
+          isOpen={shortlistsPanelOpen}
+          onClose={() => setShortlistsPanelOpen(false)}
+          broker={broker}
+          shortlists={brokerShortlists.shortlists}
+          loading={brokerShortlists.loading}
+          onArchive={brokerShortlists.archive}
+          onRefresh={brokerShortlists.refresh}
+        />
+      )}
+
+      {/* Banner modo broker — arriba del feed cuando activo */}
+      {brokerMode && broker && (
+        <div className="alq-broker-banner">
+          <div className="alq-broker-banner-brand">
+            <span className="alq-broker-banner-logo">SIMON</span>
+            <span className="alq-broker-banner-divider">·</span>
+            <span className="alq-broker-banner-label">BROKER</span>
+            <span className="alq-broker-banner-name">{broker.nombre}</span>
+          </div>
+          {favorites.size > 0 && (
+            <button
+              className={`alq-broker-tool ${onlySelectedFilter ? 'active' : ''}`}
+              onClick={() => setOnlySelectedFilter(v => !v)}
+              title={onlySelectedFilter ? 'Mostrar todos los alquileres' : 'Ver solo los marcados'}
+            >
+              ★ Solo seleccionados · {favorites.size}
+            </button>
+          )}
+          {!onlySelectedFilter && visibleNotMarked.length > 0 && properties.length < 100 && (
+            <button
+              className="alq-broker-tool alq-broker-tool-add"
+              onClick={markAllVisible}
+              title="Agregar todas las propiedades visibles a la selección"
+            >
+              + Marcar los {visibleNotMarked.length} visibles
+            </button>
+          )}
+          <button
+            className="alq-broker-tool alq-broker-send"
+            onClick={() => {
+              if (favorites.size === 0) { showToast('Marcá al menos 1 alquiler para enviar'); return }
+              setShortlistModalOpen(true)
+            }}
+            title="Enviar shortlist por WhatsApp"
+            disabled={favorites.size === 0}
+          >
+            Enviar ({favorites.size})
+          </button>
+          <button className="alq-broker-banner-shortlists" onClick={() => setShortlistsPanelOpen(true)}>
+            Mis shortlists{brokerShortlists.shortlists.length > 0 ? ` · ${brokerShortlists.shortlists.length}` : ''}
+          </button>
+          <a
+            className="alq-broker-tool alq-broker-market-link"
+            href="/mercado/equipetrol/alquileres"
+            target="_blank"
+            rel="noopener"
+            onClick={() => trackEvent('broker_open_mercado', { broker_slug: broker?.slug, tipo_operacion: 'alquiler' })}
+            title="Abrir dashboard de mercado de alquileres en pestaña nueva"
+          >
+            Ver mercado <span aria-hidden="true" className="alq-broker-market-arrow">↗</span>
+          </a>
+        </div>
+      )}
     </>
   )
 }
