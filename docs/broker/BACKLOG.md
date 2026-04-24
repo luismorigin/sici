@@ -15,12 +15,27 @@ Ideas, features y mejoras parqueadas para después del MVP.
 
 ---
 
-## Fase 2 — Extensión natural (1-1.5 semanas post-MVP)
+## Fase 2 — Extensión natural (✅ HECHA — merge 2026-04-24)
 
 ### Extender Simon Broker a alquileres
-**Tier:** v1.1 — cola inmediata post-MVP
-**Agregado:** 2026-04-22
-**Rationale:** El MVP cubre venta. La extensión a alquiler se apoya en infraestructura que ya existe en `/alquileres`: sistema de favoritos (corazones), CompareSheet, mini estudio de mercado en sheet, similares. **No se construye ACM de alquiler** — en alquiler el usuario elige rápido (no es decisión de inversión), el mini estudio de mercado ya existente alcanza, y los corazones + CompareSheet son herramienta de curación natural.
+**Tier:** ✅ **HECHA** — merge commit `65ccc4b` el 2026-04-24
+**Agregado:** 2026-04-22 · **Completada:** 2026-04-24
+
+**Resumen de lo entregado** (15 commits en rama `broker-fase2`):
+- `/broker/[slug]/alquileres` — modo broker sobre `AlquileresPage` (delega a `getStaticProps` de alquileres + `brokerSlug/broker` prop)
+- Tabs "Ventas | Alquileres" en el banner broker (nav entre ambos feeds desde la misma página)
+- `/b/[hash]` ramifica por `tipo_operacion` del primer item → VentasPage o AlquileresPage con props `publicShare`
+- Header público fijo con foto/nombre del broker + inmobiliaria + CTA WhatsApp con mensaje armado desde corazones marcados
+- FAB mapa mobile en publicShareMode (top bar oculto)
+- Ocultamiento de gate/preguntas/chat/filtros en publicShareMode (cliente ve contexto curado)
+- CTAs WA al broker en cards, BottomSheet, MapFloatCard y CompareSheet (no al agente original)
+- Migración 233 — `broker_shortlist_items.precio_mensual_bob_snapshot` (badge cambio de precio en alquiler)
+- Migración 234 — tabla `broker_shortlist_hearts` (feedback del cliente al broker) + API `/api/public/shortlist-hearts` (GET/POST/DELETE scoped por hash)
+- Editor broker muestra "N de M marcadas por el cliente" + chip rojo en items con corazón
+- Chip `[Venta]`/`[Alquiler]` en "Mis shortlists" para distinguir envíos
+- Fix bloqueante: validación teléfono E.164 en ShortlistSendModal (auto-prefija +591 si se tipea solo 8 dígitos boliviano)
+
+**Rationale original (preservado):** El MVP cubre venta. La extensión a alquiler se apoya en infraestructura que ya existe en `/alquileres`: sistema de favoritos (corazones), CompareSheet, mini estudio de mercado en sheet, similares. **No se construye ACM de alquiler** — en alquiler el usuario elige rápido (no es decisión de inversión), el mini estudio de mercado ya existente alcanza, y los corazones + CompareSheet son herramienta de curación natural.
 
 **Qué cambia específicamente (sobre infra existente):**
 - **Modo broker en sheet de `/alquileres`** (mismo patrón que `/ventas`):

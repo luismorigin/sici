@@ -1,7 +1,7 @@
 # Simon Broker — PRD MVP Mínimo
 
 **Fecha:** 2026-04-22
-**Estado:** Scope congelado. Build en cola.
+**Estado:** MVP venta mergeado a `main` 2026-04-23 (merge `05bc1eb`). Fase 2 alquileres mergeada 2026-04-24 (merge `65ccc4b`). Listo para pruebas reales con broker Abel (abel-flores). Ver `BACKLOG.md` sección "Fase 2 — HECHA" para detalle de lo entregado en alquileres.
 **Responsable producto:** Lucho
 **Responsable data:** SICI team
 
