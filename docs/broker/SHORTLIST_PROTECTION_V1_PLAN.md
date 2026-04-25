@@ -25,22 +25,36 @@ Resultado: la marca Simón se diluye, `simon.bo/equipetrol` deja de tener valor 
 
 Por lo tanto, el **lever de monetización Pro NO es branding** — es **límites más altos**:
 
-| Capability | Plan Inicial (Bs 300/mes) | Plan Pro (Bs 800/mes) |
-|---|---|---|
-| Vistas únicas por shortlist | 20 | 50/100/ilimitado |
-| Duración antes de expirar | 30 días | 90 días o sin expiración |
-| Shortlists activas simultáneas | TBD (no cap inicial) | Más alto |
-| Analytics por link compartido | Básico | Detallado |
-| Push notifications (cliente abrió link) | NO | SÍ (futuro) |
+### Plan Inicial (único plan hoy — Bs 350/mes)
 
-**No hay plan "Free".** Todo broker que entra paga desde el día uno. Los límites del Plan Inicial son el dolor que justifica el upgrade a Pro — sin restricciones, no hay producto Pro vendible. Por eso v1 mínimo es estratégico: construye el dolor que después monetizás.
+| Capability | Plan Inicial |
+|---|---|
+| Vistas únicas por shortlist | 20 |
+| Duración antes de expirar | 30 días |
+| Shortlists activas simultáneas | Sin cap (TBD si surge problema) |
 
-> **Sobre el delta de precio:** Bs 300 → Bs 800 son ~2.7x. El upgrade tiene
-> que sentirse claramente justificado por los límites más altos + features
-> productivas. Si las features Pro son débiles, el broker se queda en
-> Inicial y la monetización del v1 mínimo no escala. Por eso es importante
-> tener al menos UNA feature Pro deseable lista cuando se active el cap
-> (más vistas + analytics decentes son el combo mínimo).
+**No hay plan "Free".** Todo broker que entra paga Bs 350/mes desde el día uno.
+
+### Plan Pro (FUTURO — sin diseñar todavía)
+
+Precio y features **NO están definidas**. Lo único que tenemos hoy es la idea genérica de "más vistas / mayor duración", pero **eso solo no es diferenciador suficiente** para justificar un upgrade — un broker puede simplemente armar 2 shortlists para 2 clientes en vez de pagar más.
+
+Para que Pro sea vendible va a hacer falta al menos UNA feature productiva real adicional al cap. Posibles candidatos a evaluar cuando se diseñe:
+
+- **Analytics detallados del link compartido** (timestamps de aperturas, dispositivos únicos, geolocalización aproximada — info útil para el broker sobre engagement del cliente)
+- **Notificaciones push** cuando el cliente abre el link
+- **Más shortlists activas simultáneas** (si el cap free termina siendo bajo)
+- **Bulk operations** (regenerar links, exportar shortlists, etc.)
+
+**Decisión Pro queda abierta.** El v1 mínimo construye los límites del Inicial sin definir aún cómo se ve el upgrade — eso es trabajo de diseño de producto futuro, no de protección defensiva.
+
+### Por qué el v1 mínimo igual tiene sentido
+
+Aunque Pro no esté diseñado, las protecciones del Inicial sirven **por sí solas** como defensa contra canibalización:
+- Sin cap, un broker puede postear el link de su shortlist en redes y convertirla en mini-portal público.
+- El cap previene eso independientemente de si después hay un upgrade vendible o no.
+
+El upgrade Pro es la siguiente capa (monetización), no la primera (defensa).
 
 ---
 
@@ -306,7 +320,9 @@ En cada lugar donde se aplique un cap o límite, dejar comentario:
 // El dolor del límite del Plan Inicial es el incentivo a upgrade. NUNCA habilitar
 // branding propio del broker (decisión editorial: marca siempre Simón).
 // Plan Pro futuro = más vistas + mayor duración + features productivas.
-// (NO hay plan Free — todo broker paga desde el día uno; Plan Inicial = Bs 300/mes.)
+// (NO hay plan Free — todo broker paga desde el día uno; Plan Inicial = Bs 350/mes.
+// Plan Pro: features y precio sin definir todavía — el cap del Inicial es defensa
+// contra canibalización por sí solo, independiente del upgrade futuro.)
 const MAX_VIEWS_INICIAL = 20
 ```
 
@@ -336,9 +352,12 @@ export const SHORTLIST_LIMITS = {
   inicial: {
     maxViewsPerShortlist: 20,
     expirationDays: 30,
-    // Bs 300/mes.
+    // Bs 350/mes — único plan disponible hoy.
   },
-  // pro: { maxViewsPerShortlist: ?, expirationDays: ?, /* Bs 800/mes */ }
+  // Plan Pro futuro: precio y features sin definir todavía.
+  // Más vistas/duración solo NO es diferenciador suficiente — necesita features
+  // productivas adicionales (analytics detallados, push, etc.) cuando se diseñe.
+  // pro: { maxViewsPerShortlist: ?, expirationDays: ?, ...features }
 } as const
 ```
 
