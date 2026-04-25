@@ -2063,12 +2063,12 @@ const DesktopCard = memo(function DesktopCard({
         {photos.length > 1 && (
           <>
             {photoIdx > 0 && (
-              <button className="dc-nav dc-prev" aria-label="Foto anterior" onClick={() => setPhotoIdx(photoIdx - 1)}>
+              <button className="dc-nav dc-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width: 16, height: 16 }}><path d="M15 18l-6-6 6-6"/></svg>
               </button>
             )}
             {photoIdx < photos.length - 1 && (
-              <button className="dc-nav dc-next" aria-label="Foto siguiente" onClick={() => setPhotoIdx(photoIdx + 1)}>
+              <button className="dc-nav dc-next" aria-label="Foto siguiente" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width: 16, height: 16 }}><path d="M9 18l6-6-6-6"/></svg>
               </button>
             )}
