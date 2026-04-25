@@ -25,7 +25,7 @@ Resultado: la marca Simón se diluye, `simon.bo/equipetrol` deja de tener valor 
 
 Por lo tanto, el **lever de monetización Pro NO es branding** — es **límites más altos**:
 
-| Capability | Plan Inicial (Bs 3,250/mes) | Plan Pro (Bs 7,000/mes — confirmar) |
+| Capability | Plan Inicial (Bs 300/mes) | Plan Pro (Bs 800/mes) |
 |---|---|---|
 | Vistas únicas por shortlist | 20 | 50/100/ilimitado |
 | Duración antes de expirar | 30 días | 90 días o sin expiración |
@@ -33,12 +33,14 @@ Por lo tanto, el **lever de monetización Pro NO es branding** — es **límites
 | Analytics por link compartido | Básico | Detallado |
 | Push notifications (cliente abrió link) | NO | SÍ (futuro) |
 
-> **Nota sobre precios:** el plan Inicial es Bs 3,250/mes (confirmado). El plan Pro
-> está en diseño — el monto exacto a confirmar (interpreté "700" como typo de
-> "7,000" por orden lógico de tiers; podría ser USD 700 ≈ Bs 4,800 también).
-> Validar antes de comunicar a brokers.
+**No hay plan "Free".** Todo broker que entra paga desde el día uno. Los límites del Plan Inicial son el dolor que justifica el upgrade a Pro — sin restricciones, no hay producto Pro vendible. Por eso v1 mínimo es estratégico: construye el dolor que después monetizás.
 
-**No hay plan "Free".** Todo broker que entra paga desde el día uno. Los límites del Plan Inicial son el dolor que justifica el upgrade a Pro futuro — sin restricciones, no hay producto Pro vendible. Por eso v1 mínimo es estratégico: construye el dolor que después monetizás.
+> **Sobre el delta de precio:** Bs 300 → Bs 800 son ~2.7x. El upgrade tiene
+> que sentirse claramente justificado por los límites más altos + features
+> productivas. Si las features Pro son débiles, el broker se queda en
+> Inicial y la monetización del v1 mínimo no escala. Por eso es importante
+> tener al menos UNA feature Pro deseable lista cuando se active el cap
+> (más vistas + analytics decentes son el combo mínimo).
 
 ---
 
@@ -304,7 +306,7 @@ En cada lugar donde se aplique un cap o límite, dejar comentario:
 // El dolor del límite del Plan Inicial es el incentivo a upgrade. NUNCA habilitar
 // branding propio del broker (decisión editorial: marca siempre Simón).
 // Plan Pro futuro = más vistas + mayor duración + features productivas.
-// (NO hay plan Free — todo broker paga desde el día uno; Plan Inicial = Bs 3,250/mes.)
+// (NO hay plan Free — todo broker paga desde el día uno; Plan Inicial = Bs 300/mes.)
 const MAX_VIEWS_INICIAL = 20
 ```
 
@@ -334,9 +336,9 @@ export const SHORTLIST_LIMITS = {
   inicial: {
     maxViewsPerShortlist: 20,
     expirationDays: 30,
-    // Bs 3,250/mes — confirmado.
+    // Bs 300/mes.
   },
-  // pro: { maxViewsPerShortlist: ?, expirationDays: ?, /* Bs 7,000/mes — confirmar */ }
+  // pro: { maxViewsPerShortlist: ?, expirationDays: ?, /* Bs 800/mes */ }
 } as const
 ```
 
