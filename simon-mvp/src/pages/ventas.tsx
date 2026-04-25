@@ -323,23 +323,32 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
   const amenities = p.amenities_confirmados || []
   const equipamiento = p.equipamiento_detectado || []
 
+  // Carrusel scroll-snap solo en publicShareMode (shortlist del cliente final).
+  // Para feed normal y broker mode mantenemos la foto estática + flechas
+  // (el carrusel introducía regresiones que no llegamos a aislar).
+  const useCarousel = publicShareMode
+
   return (
     <div className="vc" ref={cardRef}>
-      <div className="vc-photo">
-        <div className="vc-photo-scroll" ref={scrollRef}>
-          {hasPhotos ? photos.map((url, i) => (
-            <div key={i} className="vc-slide"
-              style={visible ? { backgroundImage: `url('${url}')` } : undefined}
-              onClick={() => onPhotoTap(i)} />
-          )) : (
-            <div className="vc-slide vc-slide-empty"><div className="vc-nofoto">Sin fotos</div></div>
-          )}
-        </div>
+      <div className="vc-photo" style={!useCarousel && hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')`, cursor: 'pointer' } : undefined}
+        onClick={!useCarousel ? () => { if (hasPhotos) onPhotoTap(photoIdx) } : undefined}>
+        {useCarousel && (
+          <div className="vc-photo-scroll" ref={scrollRef}>
+            {hasPhotos ? photos.map((url, i) => (
+              <div key={i} className="vc-slide"
+                style={visible ? { backgroundImage: `url('${url}')` } : undefined}
+                onClick={() => onPhotoTap(i)} />
+            )) : (
+              <div className="vc-slide vc-slide-empty"><div className="vc-nofoto">Sin fotos</div></div>
+            )}
+          </div>
+        )}
+        {!useCarousel && !hasPhotos && <div className="vc-nofoto">Sin fotos</div>}
         {p.tc_sospechoso && <div className="vc-tc-badge">Confirmar tipo de cambio</div>}
         {brokerMode && !publicShareMode && (() => { const fb = fuenteBadge(p.fuente); return fb ? <div className="vc-fuente-badge" style={{ background: fb.bg, color: fb.color }}>{fb.label}</div> : null })()}
         {photos.length > 1 && (<>
-          {photoIdx > 0 && <button className="vc-nav vc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); navTo(photoIdx - 1) }}><ChevronLeft /></button>}
-          {photoIdx < photos.length - 1 && <button className="vc-nav vc-nav-next" aria-label="Foto siguiente" onClick={e => { e.stopPropagation(); navTo(photoIdx + 1) }}><ChevronRight /></button>}
+          {photoIdx > 0 && <button className="vc-nav vc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); useCarousel ? navTo(photoIdx - 1) : setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
+          {photoIdx < photos.length - 1 && <button className="vc-nav vc-nav-next" aria-label="Foto siguiente" onClick={e => { e.stopPropagation(); useCarousel ? navTo(photoIdx + 1) : setPhotoIdx(photoIdx + 1) }}><ChevronRight /></button>}
           <div className="vc-photo-count">{photoIdx + 1}/{photos.length}</div>
         </>)}
       </div>
