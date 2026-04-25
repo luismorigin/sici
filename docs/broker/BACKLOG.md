@@ -403,6 +403,26 @@ Para MVP founding 3-5 brokers la opción 3 alcanza. Para 15+ brokers ir a Upstas
 
 **Cuándo reactivar:** después de probar con Abel un par de semanas. Si el header del overlay full-screen mobile lo confunde (extra X, extra título), o si en desktop pide buscar el toggle "donde está en ventas", priorizar. Si nadie lo nota, queda parqueado — la paridad visual del banner ya cubre lo importante.
 
+### Swipe táctil en cards del feed venta/alquileres broker mobile (virtualización)
+**Tier:** baja-prioridad / esperando-señal
+**Agregado:** 2026-04-25
+**Rationale:** Hoy las cards del feed broker mobile (`/broker/[slug]` venta y `/broker/[slug]/alquileres`) usan foto estática + flechas para cambiar foto. Las cards del shortlist público `/b/[hash]` sí permiten swipe táctil (carrusel scroll-snap con lazy-load por slide). Asimetría intencional.
+
+**Por qué no se hizo:** intentamos extender el carrusel `useCarousel = true` al feed broker, pero crashea mobile con "ocurrió un problema". El feed venta tiene 70+ cards × 8-10 fotos cada una. Probamos lazy-load de imágenes (`maxLoaded` por card) — no resolvió. Hipótesis: el problema es la cantidad de DOM, no de imágenes. 70 cards × N divs `vc-slide` = ~700 elementos extra con `scroll-snap-type:x mandatory` cada uno. El motor de layout mobile no aguanta.
+
+**Para hacerlo bien se necesita virtualización de slides:**
+- En cada card, solo renderizar 2-3 divs (idx ± 1), no todos.
+- Cuando user hace swipe, agregar el siguiente y quitar el de atrás del DOM.
+- Mantener el scroll-snap funcional con un sub-conjunto rotativo de slides.
+- Esfuerzo estimado: 2-3h, no garantizado que funcione (el patrón tiene casos edge complicados con scroll-snap en containers virtualizados).
+
+**No es prioridad porque:**
+1. Foto estática + flechas en mobile broker funciona bien — el broker tiene quizás 5-7 cards visibles a la vez en su flujo de armar shortlist.
+2. Tap en la foto abre el sheet con galería swipeable completa (PhotoViewer). El broker ahí sí puede ver fotos cómodamente.
+3. Lo que el cliente final ve (`/b/[hash]`) sí tiene swipe — esa era la prioridad real.
+
+**Cuándo reactivar:** si el broker reporta dolor concreto con las flechas en mobile (ej: "no puedo ver fotos rápido al armar shortlist"), o cuando alguien tenga ganas de meterse con virtualización react-virtual / react-window.
+
 ---
 
 ## Ideas sueltas sin clasificar

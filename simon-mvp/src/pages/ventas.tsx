@@ -277,6 +277,10 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
   priceSnapshot?: { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null } | null
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
+  // Lazy-load por slide: solo cargamos backgroundImage de las fotos cercanas al
+  // photoIdx actual. Sin esto, 70+ cards × 8-10 fotos = ~700 imágenes saturando
+  // mobile RAM/red al hacer scroll vertical (causa documentada del crash mobile).
+  const [maxLoaded, setMaxLoaded] = useState(2)
   const photos = p.fotos_urls?.length > 0 ? p.fotos_urls : []
   const hasPhotos = photos.length > 0
   const cardRef = useRef<HTMLDivElement>(null)
@@ -296,6 +300,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
 
   // Sync photoIdx con scroll del carrusel — patrón clonado de MobileVentaCard.
   // Permite swipe táctil en mobile + actualiza counter/dots mientras scrolleás.
+  // Además precarga la siguiente foto (idx + 2) al scrollear (lazy-load).
   useEffect(() => {
     const el = scrollRef.current
     if (!el || photos.length <= 1) return
@@ -307,6 +312,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
         if (!el) { ticking = false; return }
         const idx = Math.round(el.scrollLeft / el.clientWidth)
         setPhotoIdx(idx)
+        setMaxLoaded(prev => Math.max(prev, idx + 2))
         ticking = false
       })
     }
@@ -317,17 +323,18 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
   function navTo(idx: number) {
     const el = scrollRef.current
     if (!el) return
+    setMaxLoaded(prev => Math.max(prev, idx + 2))
     el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' })
   }
 
   const amenities = p.amenities_confirmados || []
   const equipamiento = p.equipamiento_detectado || []
 
-  // Carrusel scroll-snap solo en publicShareMode. Tentamos extenderlo a todas
-  // las superficies (commit cffe275) pero apareció el crash "ocurrió un problema"
-  // en mobile con 70+ cards × 8-10 fotos cada una = ~700 backgroundImage URLs
-  // cargando simultáneamente cuando una card entra al viewport (memoria/red).
-  // Ver backlog: lazy-load por slide (patrón maxLoaded de MobileVentaCard).
+  // Carrusel scroll-snap solo en publicShareMode (3-7 cards típicamente).
+  // En feed venta (70+ cards) el carrusel crashea mobile incluso con lazy-load
+  // de imágenes — el problema parece ser la cantidad de DOM (70 × N slides).
+  // Para hacerlo en feed se necesita virtualización de slides (solo renderizar
+  // idx ± 2 divs, no todos). Queda parqueado.
   const useCarousel = publicShareMode
 
   return (
@@ -336,11 +343,14 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
         onClick={!useCarousel ? () => { if (hasPhotos) onPhotoTap(photoIdx) } : undefined}>
         {useCarousel && (
           <div className="vc-photo-scroll" ref={scrollRef}>
-            {hasPhotos ? photos.map((url, i) => (
-              <div key={i} className="vc-slide"
-                style={visible ? { backgroundImage: `url('${url}')` } : undefined}
-                onClick={() => onPhotoTap(i)} />
-            )) : (
+            {hasPhotos ? photos.map((url, i) => {
+              const shouldLoad = visible && i < maxLoaded
+              return (
+                <div key={i} className="vc-slide"
+                  style={shouldLoad ? { backgroundImage: `url('${url}')` } : undefined}
+                  onClick={() => onPhotoTap(i)} />
+              )
+            }) : (
               <div className="vc-slide vc-slide-empty"><div className="vc-nofoto">Sin fotos</div></div>
             )}
           </div>
