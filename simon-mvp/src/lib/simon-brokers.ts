@@ -130,6 +130,13 @@ export interface CreateBrokerInput {
   inmobiliaria?: string | null
   fecha_proximo_cobro?: string | null
   notas?: string | null
+  /**
+   * Confirmación de que el admin verificó que el broker leyó y aceptó los
+   * términos de uso (ver components/admin/SimonBrokerTerms). El backend
+   * persiste como `terms_accepted_at = NOW()` en simon_brokers (migración 235).
+   * Required: la API rechaza POSTs sin esto.
+   */
+  terms_accepted: boolean
 }
 
 export async function createBroker(input: CreateBrokerInput): Promise<BrokerAdmin> {
@@ -145,6 +152,7 @@ export async function createBroker(input: CreateBrokerInput): Promise<BrokerAdmi
       fecha_proximo_cobro: input.fecha_proximo_cobro || null,
       notas: input.notas?.trim() || null,
       status: 'activo',
+      terms_accepted_at: input.terms_accepted ? new Date().toISOString() : null,
     })
     .select('*')
     .single()
