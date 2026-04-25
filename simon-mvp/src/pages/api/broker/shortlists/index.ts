@@ -110,7 +110,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       //
       // VENTA (migraciones 229 + 230):
       //  - precio_usd_snapshot  = RAW (propiedades_v2.precio_usd) → detecta cambio del agente
-      //  - precio_norm_snapshot = NORMALIZADO (v_mercado_venta.precio_usd) → mostrar al cliente
+      //  - precio_norm_snapshot = NORMALIZADO (v_mercado_venta.precio_norm) → comparable USD oficial
+      // OJO: en v_mercado_venta `precio_usd` es el RAW y `precio_norm` es el normalizado.
+      // El RPC `buscar_unidades_reales` retorna `precio_normalizado() AS precio_usd` — distinto contrato.
       // El badge dispara solo si el RAW cambió (cambio del agente, no movimiento TC).
       //
       // ALQUILER (migración 233):
@@ -134,14 +136,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         } else {
           const [rawRes, normRes] = await Promise.all([
             supabase.from('propiedades_v2').select('id, precio_usd').in('id', payload.propiedad_ids),
-            supabase.from('v_mercado_venta').select('id, precio_usd').in('id', payload.propiedad_ids),
+            supabase.from('v_mercado_venta').select('id, precio_norm').in('id', payload.propiedad_ids),
           ])
           for (const r of (rawRes.data || []) as Array<{ id: number; precio_usd: string | number | null }>) {
             const v = r.precio_usd != null ? parseFloat(String(r.precio_usd)) : null
             rawByPropId.set(r.id, Number.isFinite(v as number) ? (v as number) : null)
           }
-          for (const r of (normRes.data || []) as Array<{ id: number; precio_usd: string | number | null }>) {
-            const v = r.precio_usd != null ? parseFloat(String(r.precio_usd)) : null
+          for (const r of (normRes.data || []) as Array<{ id: number; precio_norm: string | number | null }>) {
+            const v = r.precio_norm != null ? parseFloat(String(r.precio_norm)) : null
             normByPropId.set(r.id, Number.isFinite(v as number) ? (v as number) : null)
           }
         }
