@@ -323,10 +323,12 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
   const amenities = p.amenities_confirmados || []
   const equipamiento = p.equipamiento_detectado || []
 
-  // Carrusel scroll-snap solo en publicShareMode (shortlist del cliente final).
-  // Para feed normal y broker mode mantenemos la foto estática + flechas
-  // (el carrusel introducía regresiones que no llegamos a aislar).
-  const useCarousel = publicShareMode
+  // Carrusel scroll-snap activo en TODAS las superficies (mobile y desktop):
+  // - mobile: swipe táctil natural (gesture).
+  // - desktop: las flechas hacen scrollTo smooth (sin regresión vs antes).
+  // Originalmente gateado a publicShareMode por miedo a un crash que terminó
+  // siendo CSS roto (background-size:cover perdido); ya arreglado.
+  const useCarousel = true
 
   return (
     <div className="vc" ref={cardRef}>
