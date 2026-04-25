@@ -9,7 +9,9 @@
 // /broker/[slug]/alquileres alquiler). Si apareciera mixto en BD (ej: legacy),
 // se usa el tipo del primer item como fallback y los demás siguen ese feed.
 //
-// SSR con cache 60s + tracking server-side de view_count.
+// SSR sin cache (no-store) — incompatible con Set-Cookie de fingerprint.
+// Si cacheáramos, el CDN serviría el mismo Set-Cookie a múltiples clientes
+// y el uniqueness del cap fallaría. Ver migración 235 + SHORTLIST_PROTECTION_V1_PLAN.md.
 // robots noindex/nofollow + Disallow /b/ en robots.txt.
 
 import Head from 'next/head'
@@ -20,9 +22,30 @@ import type { PublicShareData } from '../ventas'
 import AlquileresPage, { getStaticProps as alquileresGetStaticProps } from '../alquileres'
 import type { PublicShareDataAlquiler } from '../alquileres'
 import { getBrokerBySlug } from '@/lib/simon-brokers'
-import type { BrokerShortlist } from '@/types/broker-shortlist'
+import {
+  getShortlistByHashWithStatus,
+  fingerprintExists,
+  registerNewVisit,
+  registerReturnVisit,
+  markAsExpired,
+  markAsViewLimitReached,
+} from '@/lib/broker-shortlists-server'
+import {
+  computeFingerprint,
+  buildVisitorCookie,
+  sha256,
+} from '@/lib/shortlist-fingerprint'
+import ShortlistBlockedPage, { type BlockReason } from '@/components/broker/ShortlistBlockedPage'
+import ShortlistWatermark from '@/components/broker/ShortlistWatermark'
 import type { RawUnidadSimpleRow, RawUnidadAlquilerRow } from '@/types/db-responses'
 import type { UnidadVenta, UnidadAlquiler } from '@/lib/supabase'
+
+interface ShortlistMeta {
+  id: string
+  createdAt: string
+  expiresAt: string
+  brokerNombre: string
+}
 
 type VentaPageProps = {
   kind: 'venta'
@@ -30,6 +53,7 @@ type VentaPageProps = {
   initialProperties: UnidadVenta[]
   publicShare: PublicShareData
   shortlistTitle: string
+  shortlistMeta: ShortlistMeta
 }
 
 type AlquilerPageProps = {
@@ -38,11 +62,22 @@ type AlquilerPageProps = {
   initialProperties: UnidadAlquiler[]
   publicShare: PublicShareDataAlquiler
   shortlistTitle: string
+  shortlistMeta: ShortlistMeta
 }
 
-type PageProps = VentaPageProps | AlquilerPageProps
+type BlockedProps = {
+  kind: 'blocked'
+  reason: BlockReason
+  broker: { nombre: string; telefono: string }
+}
+
+type PageProps = VentaPageProps | AlquilerPageProps | BlockedProps
 
 export default function PublicShortlistPage(props: PageProps) {
+  if (props.kind === 'blocked') {
+    return <ShortlistBlockedPage reason={props.reason} broker={props.broker} />
+  }
+
   const itemCount = props.publicShare.items.length
   return (
     <>
@@ -58,6 +93,12 @@ export default function PublicShortlistPage(props: PageProps) {
       ) : (
         <VentasPage seo={props.seo} initialProperties={props.initialProperties} publicShare={props.publicShare} />
       )}
+      <ShortlistWatermark
+        brokerNombre={props.shortlistMeta.brokerNombre}
+        shortlistId={props.shortlistMeta.id}
+        createdAt={props.shortlistMeta.createdAt}
+        expiresAt={props.shortlistMeta.expiresAt}
+      />
     </>
   )
 }
@@ -150,30 +191,93 @@ function mapRowAlquiler(r: RawUnidadAlquilerRow): UnidadAlquiler {
   }
 }
 
+function blockedProps(
+  reason: BlockReason,
+  broker: { nombre: string; telefono: string }
+): { props: BlockedProps } {
+  return {
+    props: {
+      kind: 'blocked',
+      reason,
+      broker: { nombre: broker.nombre, telefono: broker.telefono },
+    },
+  }
+}
+
 export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => {
-  ctx.res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300')
+  // SIN cache: incompatible con Set-Cookie de fingerprint (el CDN cachearía
+  // la cookie y la serviría a otros visitantes, rompiendo el uniqueness del cap).
+  ctx.res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate')
   ctx.res.setHeader('X-Robots-Tag', 'noindex, nofollow')
 
   const hash = ctx.params?.hash as string | undefined
   if (!hash) return { notFound: true }
 
+  // Lookup con campos de protección (filtra is_published + archived_at IS NULL).
+  const shortlist = await getShortlistByHashWithStatus(hash)
+  if (!shortlist) return { notFound: true }
+
+  const broker = await getBrokerBySlug(shortlist.broker_slug)
+  if (!broker) return { notFound: true }
+
+  // ========== GATES DE PROTECCIÓN (migración 235) ==========
+  // Orden importa: suspended > expired > view_limit. Suspended siempre gana
+  // (admin manual lo decidió). Expired antes que cap porque marca status sin
+  // gastar query de fingerprint.
+
+  // 1. Suspendida por admin
+  if (shortlist.status === 'suspended') {
+    return blockedProps('suspended', broker)
+  }
+
+  // 2. Pre-bloqueada por admin/cron (status ya es expired/view_limit_reached)
+  if (shortlist.status === 'expired') {
+    return blockedProps('expired', broker)
+  }
+  if (shortlist.status === 'view_limit_reached') {
+    return blockedProps('view_limit_reached', broker)
+  }
+
+  // 3. Expiración lazy (cron no llegó, status sigue active)
+  if (new Date(shortlist.expires_at) < new Date()) {
+    await markAsExpired(shortlist.id)
+    return blockedProps('expired', broker)
+  }
+
+  // 4. Cap de vistas únicas: necesita fingerprint
+  const fp = computeFingerprint(ctx.req as Parameters<typeof computeFingerprint>[0], shortlist.id)
+  const ipHash = fp.ip !== 'unknown' ? sha256(fp.ip) : null
+  const referrer = (ctx.req.headers.referer as string | undefined) || null
+  const visitMeta = { ipHash, userAgent: fp.userAgent || null, referrer }
+
+  const alreadyVisited = await fingerprintExists(shortlist.id, fp.fingerprint)
+
+  if (!alreadyVisited && shortlist.current_views >= shortlist.max_views) {
+    await markAsViewLimitReached(shortlist.id)
+    return blockedProps('view_limit_reached', broker)
+  }
+
+  // 5. Registrar visita (no bloquea render, pero awaiteamos para garantizar
+  //    que current_views/last_viewed_at queden correctos antes de devolver).
+  if (alreadyVisited) {
+    await registerReturnVisit(shortlist.id, fp.fingerprint, visitMeta)
+  } else {
+    await registerNewVisit(shortlist.id, fp.fingerprint, visitMeta)
+  }
+
+  // 6. Set-Cookie persistente si no había una. Próxima visita del mismo
+  //    dispositivo va a usar la cookie en lugar del fallback IP+UA.
+  if (fp.isNewVisitor) {
+    ctx.res.setHeader('Set-Cookie', buildVisitorCookie(shortlist.id, fp.fingerprint))
+  }
+
+  // ========== FIN GATES ==========
+
+  // A partir de acá, supabase con service_role para queries de items/hearts.
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
-
-  const { data: shortlist, error: errSL } = await supabase
-    .from('broker_shortlists')
-    .select('*')
-    .eq('hash', hash)
-    .eq('is_published', true)
-    .is('archived_at', null)
-    .maybeSingle<BrokerShortlist>()
-
-  if (errSL || !shortlist) return { notFound: true }
-
-  const broker = await getBrokerBySlug(shortlist.broker_slug)
-  if (!broker) return { notFound: true }
 
   const { data: items, error: errItems } = await supabase
     .from('broker_shortlist_items')
@@ -184,14 +288,6 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   if (errItems) throw errItems
   const safeItems = items || []
 
-  // Tracking de view (best-effort, no bloquea render) — disparado una sola vez
-  // independiente del tipo_operacion
-  supabase
-    .from('broker_shortlists')
-    .update({ view_count: (shortlist.view_count ?? 0) + 1, last_viewed_at: new Date().toISOString() })
-    .eq('id', shortlist.id)
-    .then(() => {})
-
   // Hearts del cliente (migración 234). Para hidratar el state del cliente
   // al cargar, de modo que los corazones ya marcados aparezcan como activos.
   const { data: heartRows } = await supabase
@@ -199,6 +295,13 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     .select('propiedad_id')
     .eq('shortlist_id', shortlist.id)
   const initialHearts: number[] = (heartRows || []).map((r: { propiedad_id: number }) => r.propiedad_id)
+
+  const shortlistMeta: ShortlistMeta = {
+    id: shortlist.id,
+    createdAt: shortlist.created_at,
+    expiresAt: shortlist.expires_at,
+    brokerNombre: broker.nombre,
+  }
 
   // Determinar tipo_operacion por el primer item (shortlist homogénea).
   // Si no hay items, default a venta (shortlist vacía, caso degenerado).
@@ -271,6 +374,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
           initialHearts,
         },
         shortlistTitle,
+        shortlistMeta,
       },
     }
   }
@@ -336,6 +440,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
         initialHearts,
       },
       shortlistTitle,
+      shortlistMeta,
     },
   }
 }
