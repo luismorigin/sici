@@ -1498,11 +1498,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   }
   function toggleFavorite(id: number) {
     const isFav = favorites.has(id)
-    // Límite de 3 solo aplica al modo público estándar. Ni brokerMode ni
-    // publicShareMode aplican el cap: broker arma shortlists amplias, cliente
-    // marca corazones como feedback sin tope.
-    if (!brokerMode && !publicShareMode && !isFav && favorites.size >= MAX_FAVORITES) {
-      showToast(`Maximo ${MAX_FAVORITES} favoritos`)
+    // Limite de 3 aplica en feed público y en publicShareMode (cliente final ve shortlist).
+    // Forced choice: 3 favoritos obligan a curar/comparar, no a explorar. El comparativo
+    // de 3 es legible, el de 7 no. Para el broker armando shortlist NO aplica.
+    if (!brokerMode && !isFav && favorites.size >= MAX_FAVORITES) {
+      showToast(`Máximo ${MAX_FAVORITES} — destildá uno para agregar otro`)
       return
     }
     trackEvent('toggle_favorite_venta', { property_id: id, action: isFav ? 'remove' : 'add', total_favs: isFav ? favorites.size - 1 : favorites.size + 1 })

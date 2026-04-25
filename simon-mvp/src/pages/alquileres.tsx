@@ -578,10 +578,11 @@ export default function AlquileresPage({
 
   function toggleFavorite(id: number) {
     const isFav = favorites.has(id)
-    // Limite de 3 NO aplica en brokerMode ni publicShareMode: ambos pueden
-    // seleccionar tantas como quieran (broker = shortlist, cliente = feedback).
-    if (!brokerMode && !publicShareMode && !isFav && favorites.size >= MAX_FAVORITES) {
-      showToast(`Maximo ${MAX_FAVORITES} favoritos`)
+    // Limite de 3 aplica en feed público y en publicShareMode (cliente final ve shortlist).
+    // Forced choice: 3 favoritos obligan a curar/comparar, no a explorar. El comparativo
+    // de 3 es legible, el de 7 no. Para el broker armando shortlist NO aplica.
+    if (!brokerMode && !isFav && favorites.size >= MAX_FAVORITES) {
+      showToast(`Máximo ${MAX_FAVORITES} — destildá uno para agregar otro`)
       return
     }
     setFavorites(prev => {
@@ -2043,7 +2044,7 @@ const DesktopCard = memo(function DesktopCard({
   if (p.baulera) badges.push({ text: 'Baulera', color: '' })
 
   function handleFav() {
-    if (!brokerMode && !publicShareMode && !isFavorite && favoritesCount >= MAX_FAVORITES) return
+    // El cap de MAX_FAVORITES lo maneja el padre toggleFavorite (con toast).
     if (brokerMode && onAddToShortlist) { onAddToShortlist(); return }
     onToggleFavorite()
   }
@@ -2188,11 +2189,9 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
   const [shakeBtn, setShakeBtn] = useState(false)
 
   function handleFavorite() {
-    // Cap MAX_FAVORITES solo aplica en modo publico (CompareSheet acepta hasta 3).
-    // brokerMode y publicShareMode (corazones del cliente) pueden tener tantas como se quiera.
-    if (!brokerMode && !publicShareMode && !isFavorite && favoritesCount >= MAX_FAVORITES) {
-      setShakeBtn(true); setTimeout(() => setShakeBtn(false), 300); return
-    }
+    // Cap MAX_FAVORITES lo maneja el padre toggleFavorite (con toast).
+    // El shake visual queda solo cuando el padre rechaza por cap (necesitaría
+    // pasar callback; por simplicidad lo dejamos sin shake — toast cubre el feedback).
     if (brokerMode && onAddToShortlist) { onAddToShortlist(); return }
     onToggleFavorite()
   }
