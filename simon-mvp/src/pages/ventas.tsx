@@ -2352,9 +2352,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         /* ===== DESKTOP VENTA CARD ===== */
         .vc { background:#1e1e1e; border:1px solid rgba(237,232,220,0.08); border-radius:14px; overflow:hidden; transition:all 0.25s cubic-bezier(0.4,0,0.2,1); display:flex; flex-direction:column }
         .vc:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,0.3) }
-        /* vc-photo es ahora el wrapper; vc-photo-scroll es el carrusel con scroll-snap horizontal
-           (swipe táctil en mobile + click en flechas en desktop). Patrón clonado de mc-photo-scroll. */
-        .vc-photo { height:220px; background-color:#2a2a2a; position:relative; overflow:hidden }
+        /* vc-photo: wrapper con foto estática (background-image directo) cuando !useCarousel.
+           Cuando useCarousel (publicShareMode), el background-image vive en .vc-slide hijos.
+           background-size:cover + position:center necesarios SIEMPRE porque el wrapper también
+           se usa con backgroundImage directo en el modo no-carrusel (feed venta, broker mode). */
+        .vc-photo { height:220px; background-size:cover; background-position:center; background-color:#2a2a2a; position:relative; overflow:hidden }
         .vc-photo-scroll { display:flex; height:100%; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none }
         .vc-photo-scroll::-webkit-scrollbar { display:none }
         .vc-slide { flex:0 0 100%; height:100%; background-size:cover; background-position:center; background-color:#2a2a2a; scroll-snap-align:start; scroll-snap-stop:always; cursor:pointer }

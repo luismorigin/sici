@@ -987,9 +987,11 @@ export default function AlquileresPage({
            (paridad con /broker/[slug] que ya forzaba desktop layout en mobile via brokerMode).
            Patrón espejo de ventas.tsx (regla CLAUDE.md: paridad UX entre venta/alquiler). */
         <div className={`desktop-layout ${publicShareMode ? 'desktop-layout-public' : ''} ${brokerMode ? 'desktop-layout-broker' : ''}`}>
-          {/* Left sidebar - filters. Oculto en publicShareMode: el cliente recibe
-              una shortlist curada, no debe ver filtros globales. */}
-          {!publicShareMode && (
+          {/* Left sidebar - filters. Oculto en:
+              - publicShareMode: el cliente recibe una shortlist curada, no debe ver filtros globales.
+              - brokerMode mobile: 320px de sidebar no caben en mobile; el broker usa el chip
+                ⚙ Filtros del banner (que abre el FilterOverlay full-screen). */}
+          {!publicShareMode && !(brokerMode && !isDesktop) && (
           <aside className="desktop-sidebar" style={{ overscrollBehavior: 'contain' }}>
             <div className="desktop-sidebar-header">
               <Link href="/landing-v2" className="desktop-logo">
@@ -1285,20 +1287,6 @@ export default function AlquileresPage({
           )}
 
 
-          {/* Filter overlay */}
-          <FilterOverlay
-            key={`fo-${filterComponentVersion}`}
-            isOpen={filterOverlayOpen}
-            onClose={() => setFilterOverlayOpen(false)}
-            totalCount={totalCount}
-            filteredCount={properties.length}
-            isFiltered={isFiltered}
-            currentFilters={filters}
-            onApply={(f) => { applyFilters(f); setFilterOverlayOpen(false) }}
-            onReset={() => { resetFilters(); setFilterOverlayOpen(false) }}
-            proyectoNames={proyectoNames}
-          />
-
           {/* UTM contextual banner — mobile */}
           {showZonaBanner && (
             <div className="utm-zona-banner-mobile">
@@ -1571,6 +1559,22 @@ export default function AlquileresPage({
           Mapa
         </button>
       )}
+
+      {/* Filter overlay — fuera del condicional layout para que funcione en todas las
+          superficies: publicShare mobile (no se usa pero queda disponible), broker mobile
+          (chip ⚙ Filtros del banner) y feed público mobile (search pill). */}
+      <FilterOverlay
+        key={`fo-${filterComponentVersion}`}
+        isOpen={filterOverlayOpen}
+        onClose={() => setFilterOverlayOpen(false)}
+        totalCount={totalCount}
+        filteredCount={properties.length}
+        isFiltered={isFiltered}
+        currentFilters={filters}
+        onApply={(f) => { applyFilters(f); setFilterOverlayOpen(false) }}
+        onReset={() => { resetFilters(); setFilterOverlayOpen(false) }}
+        proyectoNames={proyectoNames}
+      />
 
       {/* Full-screen mobile map — fuera del condicional layout para que funcione
           en publicShareMode mobile, brokerMode mobile y feed público mobile. */}
