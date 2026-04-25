@@ -280,6 +280,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
   const photos = p.fotos_urls?.length > 0 ? p.fotos_urls : []
   const hasPhotos = photos.length > 0
   const cardRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(!!isFirst)
 
   useEffect(() => {
@@ -292,19 +293,53 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
     obs.observe(el)
     return () => obs.disconnect()
   }, [isFirst])
+
+  // Sync photoIdx con scroll del carrusel — patrón clonado de MobileVentaCard.
+  // Permite swipe táctil en mobile + actualiza counter/dots mientras scrolleás.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || photos.length <= 1) return
+    let ticking = false
+    function onScroll() {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        if (!el) { ticking = false; return }
+        const idx = Math.round(el.scrollLeft / el.clientWidth)
+        setPhotoIdx(idx)
+        ticking = false
+      })
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [photos.length])
+
+  function navTo(idx: number) {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' })
+  }
+
   const amenities = p.amenities_confirmados || []
   const equipamiento = p.equipamiento_detectado || []
 
   return (
     <div className="vc" ref={cardRef}>
-      <div className="vc-photo" style={hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')`, cursor: 'pointer' } : undefined}
-        onClick={() => { if (hasPhotos) onPhotoTap(photoIdx) }}>
-        {!hasPhotos && <div className="vc-nofoto">Sin fotos</div>}
+      <div className="vc-photo">
+        <div className="vc-photo-scroll" ref={scrollRef}>
+          {hasPhotos ? photos.map((url, i) => (
+            <div key={i} className="vc-slide"
+              style={visible ? { backgroundImage: `url('${url}')` } : undefined}
+              onClick={() => onPhotoTap(i)} />
+          )) : (
+            <div className="vc-slide vc-slide-empty"><div className="vc-nofoto">Sin fotos</div></div>
+          )}
+        </div>
         {p.tc_sospechoso && <div className="vc-tc-badge">Confirmar tipo de cambio</div>}
         {brokerMode && !publicShareMode && (() => { const fb = fuenteBadge(p.fuente); return fb ? <div className="vc-fuente-badge" style={{ background: fb.bg, color: fb.color }}>{fb.label}</div> : null })()}
         {photos.length > 1 && (<>
-          {photoIdx > 0 && <button className="vc-nav vc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
-          {photoIdx < photos.length - 1 && <button className="vc-nav vc-nav-next" aria-label="Foto siguiente" onClick={e => { e.stopPropagation(); setPhotoIdx(photoIdx + 1) }}><ChevronRight /></button>}
+          {photoIdx > 0 && <button className="vc-nav vc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); navTo(photoIdx - 1) }}><ChevronLeft /></button>}
+          {photoIdx < photos.length - 1 && <button className="vc-nav vc-nav-next" aria-label="Foto siguiente" onClick={e => { e.stopPropagation(); navTo(photoIdx + 1) }}><ChevronRight /></button>}
           <div className="vc-photo-count">{photoIdx + 1}/{photos.length}</div>
         </>)}
       </div>
@@ -2308,7 +2343,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         /* ===== DESKTOP VENTA CARD ===== */
         .vc { background:#1e1e1e; border:1px solid rgba(237,232,220,0.08); border-radius:14px; overflow:hidden; transition:all 0.25s cubic-bezier(0.4,0,0.2,1); display:flex; flex-direction:column }
         .vc:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,0.3) }
-        .vc-photo { height:220px; background-size:cover; background-position:center; background-color:#2a2a2a; position:relative }
+        /* vc-photo es ahora el wrapper; vc-photo-scroll es el carrusel con scroll-snap horizontal
+           (swipe táctil en mobile + click en flechas en desktop). Patrón clonado de mc-photo-scroll. */
+        .vc-photo { height:220px; background-color:#2a2a2a; position:relative; overflow:hidden }
+        .vc-photo-scroll { display:flex; height:100%; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none }
+        .vc-photo-scroll::-webkit-scrollbar { display:none }
+        .vc-slide { flex:0 0 100%; height:100%; background-size:cover; background-position:center; background-color:#2a2a2a; scroll-snap-align:start; scroll-snap-stop:always; cursor:pointer }
+        .vc-slide-empty { display:flex; align-items:center; justify-content:center; cursor:default }
         @keyframes vcShimmer { 0%,100%{background-color:#2a2a2a} 50%{background-color:#333} }
         .vc-photo:not([style*="background-image"]) { animation:vcShimmer 1.5s ease-in-out infinite }
         .vc-nofoto { display:flex; align-items:center; justify-content:center; height:100%; color:#9A8E7A; font-size:13px; font-family:'DM Sans',sans-serif }

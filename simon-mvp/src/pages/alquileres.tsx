@@ -980,8 +980,10 @@ export default function AlquileresPage({
         </div>
       )}
 
-      {isDesktop ? (
-        /* ==================== DESKTOP LAYOUT ==================== */
+      {(isDesktop || publicShareMode) ? (
+        /* ==================== DESKTOP LAYOUT (también publicShareMode mobile) ==================== */
+        /* publicShareMode = shortlist curada del cliente final → grid para comparar, no TikTok feed.
+           Patrón espejo de ventas.tsx (regla CLAUDE.md: paridad UX entre venta/alquiler en publicShareMode). */
         <div className={`desktop-layout ${publicShareMode ? 'desktop-layout-public' : ''} ${brokerMode ? 'desktop-layout-broker' : ''}`}>
           {/* Left sidebar - filters. Oculto en publicShareMode: el cliente recibe
               una shortlist curada, no debe ver filtros globales. */}
@@ -1049,7 +1051,8 @@ export default function AlquileresPage({
           {/* Right content */}
           <main className="desktop-main" ref={viewMode === 'grid' ? feedRef : undefined}
             style={viewMode === 'map' ? { overflow: 'hidden', display: 'flex', flexDirection: 'column' } : undefined}>
-            {/* View toggle bar */}
+            {/* View toggle bar — oculto en mobile publicShareMode (el FAB negro alq-public-map-fab cubre el acceso al mapa). */}
+            {!(publicShareMode && !isDesktop) && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid rgba(216,208,188,0.3)', flexShrink: 0, position: 'sticky', top: 0, background: 'transparent', zIndex: 10, paddingTop: 8 }}>
               <div style={{ fontSize: 13, color: '#7A7060', display: 'flex', alignItems: 'center', gap: 12 }}>
                 {/* Comparar es feature del público, no tiene sentido en brokerMode
@@ -1093,6 +1096,7 @@ export default function AlquileresPage({
                 </button>
               </div>
             </div>
+            )}
 
             {loadError ? (
               <div className="desktop-loading">
@@ -1583,8 +1587,9 @@ export default function AlquileresPage({
       )}
 
       {/* FAB "Mapa" — mobile only, publicShareMode. El top bar con el toggle
-          está oculto en este modo, este FAB es la forma de llegar al mapa. */}
-      {publicShareMode && !isDesktop && properties.length > 0 && (
+          está oculto en este modo, este FAB es la forma de llegar al mapa.
+          Oculto cuando el overlay de mapa ya está abierto (mobileMapOpen). */}
+      {publicShareMode && !isDesktop && !mobileMapOpen && properties.length > 0 && (
         <button
           className="alq-public-map-fab"
           onClick={() => setMobileMapOpen(true)}

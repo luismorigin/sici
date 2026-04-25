@@ -772,6 +772,13 @@
    público (publicShareMode). Ambos son position:fixed top:0 ~ 48-64px alto. */
 .desktop-layout-public{padding-top:64px;}
 .desktop-layout-broker{padding-top:48px;}
+/* publicShareMode en MOBILE: layout grid sin sidebar. El cliente abre /b/[hash]
+   en el celular y ve la shortlist como grid (1 columna), no TikTok feed. */
+@media (max-width:768px){
+  .desktop-layout-public{padding-top:56px;height:auto;overflow:visible;display:block;}
+  .desktop-layout-public .desktop-main{padding:16px 12px 80px;height:auto;overflow:visible;}
+  .desktop-layout-public .desktop-grid{grid-template-columns:1fr;gap:14px;max-width:100%;}
+}
 
 /* Shortlist banner mobile (brokerMode, reusa estructura de compare-banner) —
    mismo patrón que ventas: fondo arena + sombra grande. */
