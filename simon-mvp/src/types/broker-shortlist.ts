@@ -19,9 +19,34 @@ export interface BrokerShortlist {
   created_at: string
   updated_at: string
 
+  // Migración 235 — Protección de shortlists v1.
+  // Optional para back-compat con literales pre-235 (handlers que ya retornan
+  // este tipo sin haber sido actualizados). Post-migración la BD siempre los
+  // tiene NOT NULL, así que cualquier SELECT real los va a traer poblados.
+  // Ver docs/broker/SHORTLIST_PROTECTION_V1_PLAN.md.
+  max_views?: number
+  current_views?: number
+  expires_at?: string
+  status?: 'active' | 'expired' | 'view_limit_reached' | 'suspended'
+  first_viewed_at?: string | null
+
   // Derivado del primer item (asumimos shortlist homogénea). Solo viene desde
   // el endpoint GET /api/broker/shortlists, no desde POST ni desde la tabla.
   tipo_operacion?: 'venta' | 'alquiler'
+}
+
+/**
+ * BrokerShortlist con todos los campos de protección garantizados (NOT NULL).
+ * Las funciones server-side post-235 retornan este tipo. Usar este en lugar
+ * del base cuando necesitás `status`/`current_views`/`expires_at` sin checks
+ * de nullable.
+ */
+export interface BrokerShortlistProtected extends BrokerShortlist {
+  max_views: number
+  current_views: number
+  expires_at: string
+  status: 'active' | 'expired' | 'view_limit_reached' | 'suspended'
+  first_viewed_at: string | null
 }
 
 export interface BrokerShortlistItem {
