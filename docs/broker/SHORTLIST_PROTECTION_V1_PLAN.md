@@ -25,7 +25,7 @@ Resultado: la marca Simón se diluye, `simon.bo/equipetrol` deja de tener valor 
 
 Por lo tanto, el **lever de monetización Pro NO es branding** — es **límites más altos**:
 
-| Capability | Plan Free | Plan Pro (futuro) |
+| Capability | Plan Inicial (Bs 3,250/mes) | Plan Pro (Bs 7,000/mes — confirmar) |
 |---|---|---|
 | Vistas únicas por shortlist | 20 | 50/100/ilimitado |
 | Duración antes de expirar | 30 días | 90 días o sin expiración |
@@ -33,7 +33,12 @@ Por lo tanto, el **lever de monetización Pro NO es branding** — es **límites
 | Analytics por link compartido | Básico | Detallado |
 | Push notifications (cliente abrió link) | NO | SÍ (futuro) |
 
-**Los límites del Free son el dolor que justifica el upgrade.** Sin restricciones, no hay producto Pro vendible. Por eso v1 mínimo es estratégico: construye el dolor que después monetizás.
+> **Nota sobre precios:** el plan Inicial es Bs 3,250/mes (confirmado). El plan Pro
+> está en diseño — el monto exacto a confirmar (interpreté "700" como typo de
+> "7,000" por orden lógico de tiers; podría ser USD 700 ≈ Bs 4,800 también).
+> Validar antes de comunicar a brokers.
+
+**No hay plan "Free".** Todo broker que entra paga desde el día uno. Los límites del Plan Inicial son el dolor que justifica el upgrade a Pro futuro — sin restricciones, no hay producto Pro vendible. Por eso v1 mínimo es estratégico: construye el dolor que después monetizás.
 
 ---
 
@@ -64,7 +69,7 @@ Por lo tanto, el **lever de monetización Pro NO es branding** — es **límites
 ```sql
 -- Migración 235: Protección de shortlists v1
 -- Lever de monetización Pro: max_views y expires_at son configurables por plan futuro.
--- Plan Free: 20 vistas / 30 días. Plan Pro (TBD): valores más altos. Ver docs/broker/SHORTLIST_PROTECTION_V1_PLAN.md
+-- Plan Inicial: 20 vistas / 30 días. Plan Pro (TBD): valores más altos. Ver docs/broker/SHORTLIST_PROTECTION_V1_PLAN.md
 
 ALTER TABLE broker_shortlists
   ADD COLUMN IF NOT EXISTS max_views INTEGER NOT NULL DEFAULT 20,
@@ -296,22 +301,23 @@ En cada lugar donde se aplique un cap o límite, dejar comentario:
 
 ```typescript
 // CAP de 20 vistas — lever de monetización para Plan Pro futuro.
-// El dolor del límite Free es el incentivo a upgrade. NUNCA habilitar
+// El dolor del límite del Plan Inicial es el incentivo a upgrade. NUNCA habilitar
 // branding propio del broker (decisión editorial: marca siempre Simón).
 // Plan Pro futuro = más vistas + mayor duración + features productivas.
-const MAX_VIEWS_FREE = 20
+// (NO hay plan Free — todo broker paga desde el día uno; Plan Inicial = Bs 3,250/mes.)
+const MAX_VIEWS_INICIAL = 20
 ```
 
 ```typescript
-// EXPIRACIÓN 30 días — lever de monetización Pro. Misma lógica que MAX_VIEWS_FREE.
-const EXPIRATION_DAYS_FREE = 30
+// EXPIRACIÓN 30 días — lever de monetización Pro. Misma lógica que MAX_VIEWS_INICIAL.
+const EXPIRATION_DAYS_INICIAL = 30
 ```
 
 Idealmente extraer a `lib/broker-plan-limits.ts` con un comentario top-of-file explicando el modelo:
 
 ```typescript
 /**
- * Límites del Plan Free de Simon Broker.
+ * Límites del Plan Inicial de Simon Broker.
  *
  * Estos valores son INTENCIONALMENTE conservadores. Son la palanca de
  * monetización para el Plan Pro futuro: cuando un broker quiera más vistas
@@ -325,11 +331,12 @@ Idealmente extraer a `lib/broker-plan-limits.ts` con un comentario top-of-file e
  * Ver: docs/broker/SHORTLIST_PROTECTION_V1_PLAN.md
  */
 export const SHORTLIST_LIMITS = {
-  free: {
+  inicial: {
     maxViewsPerShortlist: 20,
     expirationDays: 30,
+    // Bs 3,250/mes — confirmado.
   },
-  // pro: { ... } cuando exista
+  // pro: { maxViewsPerShortlist: ?, expirationDays: ?, /* Bs 7,000/mes — confirmar */ }
 } as const
 ```
 
