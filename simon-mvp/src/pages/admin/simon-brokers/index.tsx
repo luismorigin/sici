@@ -421,6 +421,13 @@ export default function AdminSimonBrokers() {
                           >
                             Abrir ↗
                           </a>
+                          <a
+                            href={`/admin/simon-brokers/${b.slug}`}
+                            className="text-xs border border-slate-300 rounded px-2 py-1 hover:bg-slate-50"
+                            title="Ver shortlists y suspender/reactivar individualmente"
+                          >
+                            Shortlists
+                          </a>
                           <button
                             onClick={() => handleCopyURL(b.slug)}
                             className="text-xs border border-slate-300 rounded px-2 py-1 hover:bg-slate-50"
