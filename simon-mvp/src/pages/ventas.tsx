@@ -323,12 +323,12 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
   const amenities = p.amenities_confirmados || []
   const equipamiento = p.equipamiento_detectado || []
 
-  // Carrusel scroll-snap activo en TODAS las superficies (mobile y desktop):
-  // - mobile: swipe táctil natural (gesture).
-  // - desktop: las flechas hacen scrollTo smooth (sin regresión vs antes).
-  // Originalmente gateado a publicShareMode por miedo a un crash que terminó
-  // siendo CSS roto (background-size:cover perdido); ya arreglado.
-  const useCarousel = true
+  // Carrusel scroll-snap solo en publicShareMode. Tentamos extenderlo a todas
+  // las superficies (commit cffe275) pero apareció el crash "ocurrió un problema"
+  // en mobile con 70+ cards × 8-10 fotos cada una = ~700 backgroundImage URLs
+  // cargando simultáneamente cuando una card entra al viewport (memoria/red).
+  // Ver backlog: lazy-load por slide (patrón maxLoaded de MobileVentaCard).
+  const useCarousel = publicShareMode
 
   return (
     <div className="vc" ref={cardRef}>
