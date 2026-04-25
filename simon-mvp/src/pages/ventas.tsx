@@ -1171,8 +1171,19 @@ function priceChangeBadge(snap: { rawSnapshot: number | null; normSnapshot: numb
   const { rawSnapshot, normSnapshot, rawActual } = snap
   if (!rawSnapshot || !rawActual || !normSnapshot || rawSnapshot <= 0 || normSnapshot <= 0) return null
   const fmt = (n: number) => '$us ' + Math.round(n).toLocaleString('en-US')
+  // Para el caso TC paralelo (estimativo, ya tiene "~"): redondeo a magnitud legible.
+  // Evita números falsa-precisos tipo "$us 48,325" que se leen como cuarenta y ocho mil trescientos veinticinco.
+  const fmtAprox = (n: number): string => {
+    const abs = Math.round(n)
+    if (abs >= 10000) return '$us ' + Math.round(abs / 1000) + 'k'
+    if (abs >= 1000) {
+      const k = abs / 1000
+      return '$us ' + (Math.round(k * 10) / 10).toFixed(k % 1 === 0 ? 0 : 1) + 'k'
+    }
+    return '$us ' + abs.toLocaleString('en-US')
+  }
 
-  // Caso 1: el agente cambió el precio (RAW se movió)
+  // Caso 1: el agente cambió el precio (RAW se movió) — precisión real del portal
   const rawDiff = rawActual - rawSnapshot
   const rawPct = Math.abs(rawDiff) / rawSnapshot
   if (rawPct >= 0.01) {
@@ -1180,13 +1191,13 @@ function priceChangeBadge(snap: { rawSnapshot: number | null; normSnapshot: numb
     return { kind: 'agent-up', label: `Antes era ${fmt(normSnapshot)}` }
   }
 
-  // Caso 2: RAW estable pero NORMALIZADO cambió → fue solo movimiento del TC paralelo
+  // Caso 2: RAW estable pero NORMALIZADO cambió → fue movimiento del TC paralelo (aproximado)
   const normDiff = normActual - normSnapshot
   const normPct = Math.abs(normDiff) / normSnapshot
   if (normPct >= 0.01) {
     const absDiff = Math.abs(normDiff)
-    if (normDiff < 0) return { kind: 'tc-down', label: `↓ TC paralelo bajó · ~${fmt(absDiff)}` }
-    return { kind: 'tc-up', label: `↑ TC paralelo subió · ~${fmt(absDiff)}` }
+    if (normDiff < 0) return { kind: 'tc-down', label: `↓ TC paralelo bajó · ~${fmtAprox(absDiff)}` }
+    return { kind: 'tc-up', label: `↑ TC paralelo subió · ~${fmtAprox(absDiff)}` }
   }
 
   return null
@@ -2060,14 +2071,16 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         /* Broker en mobile: mismo layout que public share — grid simple sin sidebar */
         .ventas-desktop-broker-mobile .ventas-main { margin-left:0 !important; padding-top:110px !important; padding:110px 12px 24px !important }
         .ventas-desktop-broker-mobile .ventas-grid { grid-template-columns:1fr; gap:14px }
-        .vt-public-share-header { position:fixed; top:0; left:0; right:0; z-index:50; background:#EDE8DC; color:#141414; padding:10px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid rgba(20,20,20,0.08); font-family:'DM Sans',sans-serif; box-shadow:0 1px 6px rgba(0,0,0,0.05) }
+        /* Link público venta /b/[hash] — NEGRO para que el cliente sienta el peso/elegancia
+           de la decisión patrimonial. Alquiler usa header arena. */
+        .vt-public-share-header { position:fixed; top:0; left:0; right:0; z-index:50; background:#141414; color:#EDE8DC; padding:10px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid rgba(237,232,220,0.08); font-family:'DM Sans',sans-serif; box-shadow:0 1px 6px rgba(0,0,0,0.4) }
         .vpsh-broker { display:flex; align-items:center; gap:10px; min-width:0 }
         .vpsh-broker-photo { width:44px; height:44px; border-radius:50%; object-fit:cover; display:block }
-        .vpsh-broker-photo-ph { background:#3A6A48; color:#EDE8DC; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:18px }
+        .vpsh-broker-photo-ph { background:#7BB389; color:#141414; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:18px }
         .vpsh-broker-info { min-width:0; line-height:1.2 }
-        .vpsh-broker-label { font-size:10px; color:#6a6a6a; text-transform:uppercase; letter-spacing:0.6px; font-weight:600 }
-        .vpsh-broker-name { font-size:15px; font-weight:600; font-family:'Figtree',sans-serif; color:#141414 }
-        .vpsh-broker-agency { font-size:11px; color:#6a6a6a; font-weight:500; margin-top:1px; letter-spacing:0.2px }
+        .vpsh-broker-label { font-size:10px; color:rgba(237,232,220,0.55); text-transform:uppercase; letter-spacing:0.6px; font-weight:600 }
+        .vpsh-broker-name { font-size:15px; font-weight:600; font-family:'Figtree',sans-serif; color:#EDE8DC }
+        .vpsh-broker-agency { font-size:11px; color:rgba(237,232,220,0.55); font-weight:500; margin-top:1px; letter-spacing:0.2px }
         .vpsh-wa { display:inline-flex; align-items:center; gap:6px; background:#25D366; color:#fff; padding:8px 14px; border-radius:100px; text-decoration:none; font-size:13px; font-weight:600; -webkit-tap-highlight-color:transparent }
         .vpsh-wa:active { transform:scale(0.97) }
         .vt-public-map-fab { position:fixed; bottom:max(20px, calc(env(safe-area-inset-bottom) + 16px)); left:16px; z-index:100; display:inline-flex; align-items:center; gap:8px; background:#141414; color:#EDE8DC; border:none; padding:14px 22px 14px 18px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; letter-spacing:0.3px; cursor:pointer; box-shadow:0 6px 22px rgba(0,0,0,0.35); -webkit-tap-highlight-color:transparent }
@@ -2132,33 +2145,37 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .fo-apply:active { transform:scale(0.97) }
         .mt-counter { position:fixed; bottom:max(16px, calc(env(safe-area-inset-bottom) + 8px)); right:16px; z-index:50; font-size:12px; color:#7A7060; font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums }
         .mt-map-btn { position:fixed; bottom:max(140px, calc(env(safe-area-inset-bottom) + 130px)); right:20px; z-index:100; width:48px; height:48px; border-radius:50%; background:rgba(20,20,20,0.7); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.2) }
-        .vt-broker-banner { position:fixed; top:0; left:0; right:0; z-index:60; background:#EDE8DC; color:#141414; padding:9px 18px; font-family:'DM Sans',sans-serif; display:flex; align-items:center; gap:12px; box-shadow:0 1px 0 rgba(20,20,20,0.08), 0 4px 14px rgba(20,20,20,0.06); border-bottom:1px solid rgba(20,20,20,0.06) }
+        /* Banner broker venta — NEGRO (paridad con marca: peso = decisión patrimonial).
+           Alquiler usa banner arena (más ligero, decisión rápida). Inversión cromática
+           total respecto al feed mobile/desktop para que el navbar se despegue del fondo. */
+        .vt-broker-banner { position:fixed; top:0; left:0; right:0; z-index:60; background:#141414; color:#EDE8DC; padding:9px 18px; font-family:'DM Sans',sans-serif; display:flex; align-items:center; gap:12px; box-shadow:0 1px 0 rgba(0,0,0,0.4), 0 4px 14px rgba(0,0,0,0.25); border-bottom:1px solid rgba(237,232,220,0.08) }
         .vt-broker-banner-brand { display:flex; align-items:baseline; gap:8px; min-width:0 }
-        .vt-broker-banner-logo { font-family:'Figtree',sans-serif; font-weight:700; font-size:15px; letter-spacing:0.6px; color:#141414 }
-        .vt-broker-banner-divider { opacity:0.3; font-size:14px; color:#141414 }
-        .vt-broker-banner-label { font-family:'DM Sans',sans-serif; font-weight:600; font-size:10px; letter-spacing:1.6px; text-transform:uppercase; color:#3A6A48 }
-        .vt-broker-banner-name { font-family:'Figtree',sans-serif; font-weight:500; font-size:13px; margin-left:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#141414 }
-        .vt-broker-viewmode { display:inline-flex; gap:0; background:rgba(20,20,20,0.06); border:1px solid rgba(20,20,20,0.1); border-radius:8px; padding:2px; flex-shrink:0 }
-        .vt-broker-vm-btn { background:transparent; border:none; color:rgba(20,20,20,0.5); padding:5px 11px; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; -webkit-tap-highlight-color:transparent }
-        .vt-broker-vm-btn:hover { color:rgba(20,20,20,0.85) }
-        .vt-broker-vm-btn.active { background:#141414; color:#EDE8DC }
+        .vt-broker-banner-logo { font-family:'Figtree',sans-serif; font-weight:700; font-size:15px; letter-spacing:0.6px; color:#EDE8DC }
+        .vt-broker-banner-divider { opacity:0.35; font-size:14px; color:#EDE8DC }
+        /* Salvia bumpeada para legibilidad sobre negro (variante dark del #3A6A48) */
+        .vt-broker-banner-label { font-family:'DM Sans',sans-serif; font-weight:600; font-size:10px; letter-spacing:1.6px; text-transform:uppercase; color:#7BB389 }
+        .vt-broker-banner-name { font-family:'Figtree',sans-serif; font-weight:500; font-size:13px; margin-left:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#EDE8DC }
+        .vt-broker-viewmode { display:inline-flex; gap:0; background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.14); border-radius:8px; padding:2px; flex-shrink:0 }
+        .vt-broker-vm-btn { background:transparent; border:none; color:rgba(237,232,220,0.5); padding:5px 11px; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; -webkit-tap-highlight-color:transparent }
+        .vt-broker-vm-btn:hover { color:rgba(237,232,220,0.9) }
+        .vt-broker-vm-btn.active { background:#EDE8DC; color:#141414 }
         /* Tabs Ventas / Alquileres (Día 4-5 Fase 2) */
-        .vt-broker-tabs { display:inline-flex; gap:0; background:rgba(20,20,20,0.06); border:1px solid rgba(20,20,20,0.1); border-radius:100px; padding:2px; flex-shrink:0 }
-        .vt-broker-tab { background:transparent; border:none; color:rgba(20,20,20,0.55); padding:5px 14px; border-radius:100px; cursor:pointer; font-family:inherit; font-size:12px; font-weight:600; letter-spacing:0.3px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; -webkit-tap-highlight-color:transparent; white-space:nowrap }
-        .vt-broker-tab:hover:not(.active) { color:rgba(20,20,20,0.9) }
-        .vt-broker-tab.active { background:#141414; color:#EDE8DC; cursor:default }
-        /* Padding extra en el sidebar SOLO en brokerMode para que no quede tapado por el banner arena fijo */
+        .vt-broker-tabs { display:inline-flex; gap:0; background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.14); border-radius:100px; padding:2px; flex-shrink:0 }
+        .vt-broker-tab { background:transparent; border:none; color:rgba(237,232,220,0.55); padding:5px 14px; border-radius:100px; cursor:pointer; font-family:inherit; font-size:12px; font-weight:600; letter-spacing:0.3px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; transition:background 0.15s, color 0.15s; -webkit-tap-highlight-color:transparent; white-space:nowrap }
+        .vt-broker-tab:hover:not(.active) { color:rgba(237,232,220,0.95) }
+        .vt-broker-tab.active { background:#EDE8DC; color:#141414; cursor:default }
+        /* Padding extra en el sidebar SOLO en brokerMode para que no quede tapado por el banner negro fijo */
         .ventas-desktop-broker .ventas-sidebar { padding-top:48px }
         /* Padding-top en el main desktop también, para que las cards no queden tapadas */
         .ventas-desktop-broker .ventas-main { padding-top:70px }
-        .vt-broker-banner-shortlists { margin-left:auto; background:#141414; color:#EDE8DC; border:1px solid #141414; padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
+        .vt-broker-banner-shortlists { margin-left:auto; background:#EDE8DC; color:#141414; border:1px solid #EDE8DC; padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
         .vt-broker-banner-shortlists:active { transform:scale(0.96) }
-        .vt-broker-tool { background:rgba(20,20,20,0.04); border:1px solid rgba(20,20,20,0.18); color:#141414; padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
-        .vt-broker-tool:hover { background:rgba(20,20,20,0.09) }
+        .vt-broker-tool { background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.22); color:#EDE8DC; padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
+        .vt-broker-tool:hover { background:rgba(237,232,220,0.12) }
         .vt-broker-tool:active { transform:scale(0.96) }
-        .vt-broker-tool.active { background:#141414; color:#EDE8DC; border-color:#141414 }
-        .vt-broker-tool-add { background:rgba(58,106,72,0.10); border-color:rgba(58,106,72,0.35); color:#3A6A48 }
-        .vt-broker-tool-add:hover { background:rgba(58,106,72,0.18) }
+        .vt-broker-tool.active { background:#EDE8DC; color:#141414; border-color:#EDE8DC }
+        .vt-broker-tool-add { background:rgba(123,179,137,0.16); border-color:rgba(123,179,137,0.50); color:#9BCDA8 }
+        .vt-broker-tool-add:hover { background:rgba(123,179,137,0.24) }
         .vt-broker-market-link { text-decoration:none; display:inline-flex; align-items:center; gap:4px }
         .vt-broker-market-arrow { opacity:0.55; font-weight:500 }
         @media (max-width: 768px) {

@@ -724,6 +724,11 @@
 .alq-broker-tab{background:transparent;border:none;color:rgba(20,20,20,0.55);padding:5px 14px;border-radius:100px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;letter-spacing:0.3px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;-webkit-tap-highlight-color:transparent;white-space:nowrap;}
 .alq-broker-tab:hover:not(.active){color:rgba(20,20,20,0.9);}
 .alq-broker-tab.active{background:#141414;color:#EDE8DC;cursor:default;}
+/* Toggle Grid|Mapa en banner broker — paridad con ventas (vt-broker-viewmode) */
+.alq-broker-viewmode{display:inline-flex;gap:0;background:rgba(20,20,20,0.06);border:1px solid rgba(20,20,20,0.1);border-radius:8px;padding:2px;flex-shrink:0;}
+.alq-broker-vm-btn{background:transparent;border:none;color:rgba(20,20,20,0.5);padding:5px 11px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;-webkit-tap-highlight-color:transparent;}
+.alq-broker-vm-btn:hover{color:rgba(20,20,20,0.85);}
+.alq-broker-vm-btn.active{background:#141414;color:#EDE8DC;}
 .alq-broker-tool{background:rgba(20,20,20,0.04);border:1px solid rgba(20,20,20,0.18);color:#141414;padding:5px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:0.3px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;white-space:nowrap;}
 .alq-broker-tool:hover{background:rgba(20,20,20,0.09);}
 .alq-broker-tool:active{transform:scale(0.96);}

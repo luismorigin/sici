@@ -382,6 +382,27 @@ Para MVP founding 3-5 brokers la opción 3 alcanza. Para 15+ brokers ir a Upstas
 
 **Cuándo reactivar:** cuando aparezca confusión real reportada — ej: "el cliente de Abel abrió un link de hace 4 meses y me confundió con precios viejos", o cuando el panel tenga tantas shortlists que el snooze visual (v1.1) no alcance. Evaluar B como más balanceada (preserva uso activo, limpia abandono).
 
+### Paridad total venta/alquiler en banner broker (mapa inline + viewmode desktop)
+**Tier:** v1.1
+**Agregado:** 2026-04-24
+**Rationale:** Hoy el broker en `/broker/[slug]/alquileres` tiene paridad **visual** con `/broker/[slug]` (mismo banner, tabs, chip ⚙ Filtros, toggle Grid|Mapa) — commit del 24 abr. Pero falta paridad **estructural** en dos puntos:
+
+**1. Mobile — mapa inline (no overlay)**
+- Hoy: tap en "Mapa" abre `alq-mobile-map-overlay` full-screen con su propio header (`Mapa de Alquileres` + X). El banner del broker queda tapado.
+- Ventas: tap en "Mapa" reemplaza el feed inline; el banner queda visible arriba.
+- Cambio: condicional `brokerMode && mobileMapOpen` → renderizar `MapMultiComponent` en el body del feed en lugar del overlay full-screen. Quitar el header propio (el banner ya hace de header). Ajustar `calc(100dvh - altura_banner)`.
+- **Esfuerzo:** ~1-2h, riesgo bajo si se gatea con `brokerMode` (no-broker mantiene flotante + overlay actual).
+
+**2. Desktop — toggle Grid|Mapa al banner del broker**
+- Hoy: en `/broker/[slug]/alquileres` desktop, el toggle viewmode está dentro de `desktop-main` (alquileres.tsx ~L1069-1090, dos botones grandes con borde).
+- Ventas: el toggle vive **en el banner** del broker (mini chip `vt-broker-viewmode`).
+- Cambio: mover el toggle desktop al `alq-broker-banner` (renderizar el mismo `alq-broker-viewmode` que ya existe en mobile). Eliminar los botones inline de `desktop-main` cuando `brokerMode`.
+- **Esfuerzo:** ~15-30 min. Solo JSX + un par de reglas CSS para que el toggle aparezca también en desktop dentro del banner.
+
+**Total:** ~1.5-2.5h ambos juntos, scoped a brokerMode → cero riesgo para usuarios públicos en `/alquileres` o `/ventas`.
+
+**Cuándo reactivar:** después de probar con Abel un par de semanas. Si el header del overlay full-screen mobile lo confunde (extra X, extra título), o si en desktop pide buscar el toggle "donde está en ventas", priorizar. Si nadie lo nota, queda parqueado — la paridad visual del banner ya cubre lo importante.
+
 ---
 
 ## Ideas sueltas sin clasificar

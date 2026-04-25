@@ -1256,8 +1256,9 @@ export default function AlquileresPage({
         /* ==================== MOBILE LAYOUT (TikTok feed) ==================== */
         <>
           {/* Top bar — search pill (Airbnb/TikTok style).
-              Oculto en publicShareMode: el cliente ve el header del broker arriba. */}
-          {!publicShareMode && (
+              Oculto en publicShareMode (cliente ve el header del broker) y en brokerMode
+              (el chip ⚙ Filtros del banner del broker reemplaza al pill). */}
+          {!publicShareMode && !brokerMode && (
             <div className="alq-top-bar">
               <button className={`alq-search-pill${pillPulse ? ' pulse' : ''}`} onClick={() => { setPillPulse(false); setFilterOverlayOpen(true); trackEvent('open_filter_overlay') }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
@@ -1315,12 +1316,14 @@ export default function AlquileresPage({
             </div>
           )}
 
-          {/* Floating map button */}
-          <button className="alq-map-floating" aria-label="Ver mapa" onClick={() => { setMobileMapOpen(true); trackEvent('open_map_mobile') }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="#141414" strokeWidth="1.5" style={{width:22,height:22}}>
-              <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
-            </svg>
-          </button>
+          {/* Floating map button — oculto en brokerMode (toggle Grid|Map en el banner) */}
+          {!brokerMode && (
+            <button className="alq-map-floating" aria-label="Ver mapa" onClick={() => { setMobileMapOpen(true); trackEvent('open_map_mobile') }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#141414" strokeWidth="1.5" style={{width:22,height:22}}>
+                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
+              </svg>
+            </button>
+          )}
 
           {/* Bot nudge pill — appears once after 5s of inactivity */}
           {nudgeVisible && (
@@ -1469,6 +1472,31 @@ export default function AlquileresPage({
             </Link>
             <button className="alq-broker-tab active" role="tab" aria-selected="true" disabled>Alquileres</button>
           </div>
+          {properties.length > 0 && (
+            <div className="alq-broker-viewmode" role="tablist" aria-label="Modo de vista">
+              <button
+                className={`alq-broker-vm-btn ${!mobileMapOpen ? 'active' : ''}`}
+                onClick={() => { setMobileMapOpen(false); trackEvent('switch_view', { view_mode: 'grid', source: 'broker_banner' }) }}
+                aria-label="Ver lista" role="tab" aria-selected={!mobileMapOpen}
+              >
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              </button>
+              <button
+                className={`alq-broker-vm-btn ${mobileMapOpen ? 'active' : ''}`}
+                onClick={() => { setMobileMapOpen(true); trackEvent('switch_view', { view_mode: 'map', source: 'broker_banner' }) }}
+                aria-label="Ver mapa" role="tab" aria-selected={mobileMapOpen}
+              >
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </button>
+            </div>
+          )}
+          <button
+            className="alq-broker-tool"
+            onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay', { source: 'broker_banner' }) }}
+            title="Filtrar alquileres"
+          >
+            ⚙ Filtros{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+          </button>
           {favorites.size > 0 && (
             <button
               className={`alq-broker-tool ${onlySelectedFilter ? 'active' : ''}`}
