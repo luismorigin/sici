@@ -248,11 +248,15 @@ export default function AlquileresPage({
   const [shortlistsPanelOpen, setShortlistsPanelOpen] = useState(false)
   const [onlySelectedFilter, setOnlySelectedFilter] = useState(false)
 
-  // Body styles — scoped to this page (cleanup on unmount)
+  // Body styles — scoped to this page (cleanup on unmount).
+  // overflow:hidden solo en TikTok feed mobile (feed público sin broker/share):
+  // ahí el scroll vive en .alq-feed interno con scroll-snap. En grid (publicShare/broker
+  // mobile), el scroll natural del body es necesario.
   useEffect(() => {
     document.body.style.background = '#EDE8DC'
     const mq = window.matchMedia('(max-width: 767px)')
-    function applyOverflow() { document.body.style.overflow = mq.matches ? 'hidden' : '' }
+    const isTikTokFeed = !publicShareMode && !brokerMode
+    function applyOverflow() { document.body.style.overflow = (mq.matches && isTikTokFeed) ? 'hidden' : '' }
     applyOverflow()
     mq.addEventListener('change', applyOverflow)
     return () => {
@@ -260,7 +264,7 @@ export default function AlquileresPage({
       document.body.style.overflow = ''
       mq.removeEventListener('change', applyOverflow)
     }
-  }, [])
+  }, [publicShareMode, brokerMode])
 
   // Restore favorites: publicShareMode hidrata desde BD (initialHearts),
   // los demás desde localStorage.
