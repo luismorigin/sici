@@ -11,6 +11,7 @@ import { Fragment, useEffect, useState, useCallback } from 'react'
 import Head from 'next/head'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import SimonBrokerTerms from '@/components/admin/SimonBrokerTerms'
 
 interface BrokerAdmin {
   id: string
@@ -66,6 +67,7 @@ export default function AdminSimonBrokers() {
   const [formFotoUrl, setFormFotoUrl] = useState('')
   const [formNotas, setFormNotas] = useState('')
   const [slugManual, setSlugManual] = useState(false)
+  const [formTermsAccepted, setFormTermsAccepted] = useState(false)
 
   const fetchBrokers = useCallback(async () => {
     setLoading(true)
@@ -107,6 +109,7 @@ export default function AdminSimonBrokers() {
           inmobiliaria: formInmobiliaria.trim() || null,
           foto_url: formFotoUrl.trim() || null,
           notas: formNotas.trim() || null,
+          terms_accepted: formTermsAccepted,
         }),
       })
       if (!res.ok) {
@@ -120,6 +123,7 @@ export default function AdminSimonBrokers() {
       setFormFotoUrl('')
       setFormNotas('')
       setSlugManual(false)
+      setFormTermsAccepted(false)
       await fetchBrokers()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear')
@@ -325,11 +329,28 @@ export default function AdminSimonBrokers() {
                   placeholder="Contexto, acordado por WA, fecha cobro, etc."
                 />
               </div>
+              <div className="col-span-2">
+                <SimonBrokerTerms />
+              </div>
+              <div className="col-span-2">
+                <label className="flex items-start gap-2 cursor-pointer text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    required
+                    checked={formTermsAccepted}
+                    onChange={(e) => setFormTermsAccepted(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 accent-slate-900"
+                  />
+                  <span>
+                    He confirmado que el broker leyó y aceptó estos términos de uso.
+                  </span>
+                </label>
+              </div>
               <div className="col-span-2 flex justify-end">
                 <button
                   type="submit"
-                  disabled={creating}
-                  className="bg-slate-900 text-white px-4 py-2 rounded text-sm font-medium hover:bg-slate-700 disabled:opacity-50"
+                  disabled={creating || !formTermsAccepted}
+                  className="bg-slate-900 text-white px-4 py-2 rounded text-sm font-medium hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {creating ? 'Creando...' : 'Crear broker'}
                 </button>

@@ -44,6 +44,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           error: 'teléfono inválido — debe empezar con + y código de país, ej. +59178519485 (8-15 dígitos total).',
         })
       }
+      // Términos de uso: obligatorio para nuevos brokers (migración 235).
+      // Los 2 brokers pre-235 quedan grandfathered con terms_accepted_at backfilleado.
+      if (body.terms_accepted !== true) {
+        return res.status(400).json({
+          error: 'terms_accepted requerido — confirmá que el broker leyó los términos de uso antes de crearlo.',
+        })
+      }
 
       try {
         const created = await createBroker({
@@ -54,6 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           inmobiliaria: body.inmobiliaria ?? null,
           notas: body.notas ?? null,
           fecha_proximo_cobro: body.fecha_proximo_cobro ?? null,
+          terms_accepted: true,
         })
         return res.status(201).json(created)
       } catch (err) {
