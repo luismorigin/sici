@@ -171,6 +171,11 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
     const phoneResult = normalizeClientPhone(clienteTelefono)
     if (!phoneResult.ok) return setErrorMsg(phoneResult.error)
 
+    // Abrir el window ANTES del await preserva el user gesture en mobile
+    // (Safari/Chrome iOS bloquean window.open post-await aunque el origen sea el click).
+    // Después del fetch le asignamos la URL real; si el fetch falla, cerramos el blank.
+    const waWindow = window.open('', '_blank')
+
     setSubmitting(true)
     try {
       const finalMessage = mensajeEditedManually
@@ -183,9 +188,15 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
         mensaje_whatsapp: finalMessage,
       })
 
-      window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
+      if (waWindow && !waWindow.closed) {
+        waWindow.location.href = whatsappUrl
+      } else {
+        // Browser bloqueó incluso el about:blank → fallback navegando la misma pestaña
+        window.location.href = whatsappUrl
+      }
       onClose()
     } catch (err) {
+      if (waWindow && !waWindow.closed) waWindow.close()
       setErrorMsg(err instanceof Error ? err.message : 'Error al enviar')
     } finally {
       setSubmitting(false)
