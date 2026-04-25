@@ -772,12 +772,17 @@
    público (publicShareMode). Ambos son position:fixed top:0 ~ 48-64px alto. */
 .desktop-layout-public{padding-top:64px;}
 .desktop-layout-broker{padding-top:48px;}
-/* publicShareMode en MOBILE: layout grid sin sidebar. El cliente abre /b/[hash]
-   en el celular y ve la shortlist como grid (1 columna), no TikTok feed. */
+/* publicShareMode + brokerMode en MOBILE: layout grid sin sidebar.
+   - publicShare = cliente abre /b/[hash] → grid para comparar shortlist curada.
+   - broker = broker arma /broker/[slug]/alquileres → grid (paridad con venta brokerMode mobile).
+   Banner broker en mobile ocupa ~100px (flex-wrap), banner public ~64px. */
 @media (max-width:768px){
-  .desktop-layout-public{padding-top:56px;height:auto;overflow:visible;display:block;}
-  .desktop-layout-public .desktop-main{padding:16px 12px 80px;height:auto;overflow:visible;}
+  .desktop-layout-public{padding-top:0;height:auto;overflow:visible;display:block;}
+  .desktop-layout-public .desktop-main{padding:64px 12px 80px;height:auto;overflow:visible;}
   .desktop-layout-public .desktop-grid{grid-template-columns:1fr;gap:14px;max-width:100%;}
+  .desktop-layout-broker{padding-top:0;height:auto;overflow:visible;display:block;}
+  .desktop-layout-broker .desktop-main{padding:110px 12px 80px;height:auto;overflow:visible;}
+  .desktop-layout-broker .desktop-grid{grid-template-columns:1fr;gap:14px;max-width:100%;}
 }
 
 /* Shortlist banner mobile (brokerMode, reusa estructura de compare-banner) —

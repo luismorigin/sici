@@ -980,10 +980,12 @@ export default function AlquileresPage({
         </div>
       )}
 
-      {(isDesktop || publicShareMode) ? (
-        /* ==================== DESKTOP LAYOUT (también publicShareMode mobile) ==================== */
+      {(isDesktop || publicShareMode || brokerMode) ? (
+        /* ==================== DESKTOP LAYOUT (también publicShareMode + brokerMode mobile) ==================== */
         /* publicShareMode = shortlist curada del cliente final → grid para comparar, no TikTok feed.
-           Patrón espejo de ventas.tsx (regla CLAUDE.md: paridad UX entre venta/alquiler en publicShareMode). */
+           brokerMode = broker armando shortlist en /broker/[slug]/alquileres → mismo patrón que venta
+           (paridad con /broker/[slug] que ya forzaba desktop layout en mobile via brokerMode).
+           Patrón espejo de ventas.tsx (regla CLAUDE.md: paridad UX entre venta/alquiler). */
         <div className={`desktop-layout ${publicShareMode ? 'desktop-layout-public' : ''} ${brokerMode ? 'desktop-layout-broker' : ''}`}>
           {/* Left sidebar - filters. Oculto en publicShareMode: el cliente recibe
               una shortlist curada, no debe ver filtros globales. */}
@@ -1051,8 +1053,9 @@ export default function AlquileresPage({
           {/* Right content */}
           <main className="desktop-main" ref={viewMode === 'grid' ? feedRef : undefined}
             style={viewMode === 'map' ? { overflow: 'hidden', display: 'flex', flexDirection: 'column' } : undefined}>
-            {/* View toggle bar — oculto en mobile publicShareMode (el FAB negro alq-public-map-fab cubre el acceso al mapa). */}
-            {!(publicShareMode && !isDesktop) && (
+            {/* View toggle bar — oculto en mobile publicShareMode (FAB negro cubre el mapa) y
+                en mobile brokerMode (toggle Grid|Mapa del banner broker ya cumple esa función). */}
+            {!((publicShareMode || brokerMode) && !isDesktop) && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid rgba(216,208,188,0.3)', flexShrink: 0, position: 'sticky', top: 0, background: 'transparent', zIndex: 10, paddingTop: 8 }}>
               <div style={{ fontSize: 13, color: '#7A7060', display: 'flex', alignItems: 'center', gap: 12 }}>
                 {/* Comparar es feature del público, no tiene sentido en brokerMode
@@ -1338,39 +1341,6 @@ export default function AlquileresPage({
             </div>
           )}
 
-          {/* Full-screen mobile map */}
-          {mobileMapOpen && (
-            <div className="alq-mobile-map-overlay">
-              <div className="alq-mobile-map-header">
-                <span className="alq-mobile-map-title">Mapa de Alquileres</span>
-                <button className="alq-mobile-map-close" onClick={() => setMobileMapOpen(false)}>&times;</button>
-              </div>
-              <div className="alq-mobile-map-body">
-                <MapMultiComponent
-                  properties={properties}
-                  onSelectProperty={handleMapSelect}
-                  selectedId={mapSelectedId}
-                />
-                {mapSelectedId && (() => {
-                  const sp = properties.find(x => x.id === mapSelectedId)
-                  if (!sp) return null
-                  return (
-                    <MapFloatCard
-                      key={sp.id}
-                      property={sp}
-                      isFavorite={favorites.has(sp.id)}
-                      mobile
-                      onClose={() => setMapSelectedId(null)}
-                      onToggleFavorite={() => toggleFavorite(sp.id)}
-                      onOpenDetail={() => { setMobileMapOpen(false); openDetail(sp) }}
-                      publicShareBroker={publicShareBrokerProp}
-                    />
-                  )
-                })()}
-              </div>
-            </div>
-          )}
-
           <CardCounter total={feedItems.length} active={activeCardIndex} />
 
           {/* Feed — windowed: only render cards near viewport */}
@@ -1600,6 +1570,40 @@ export default function AlquileresPage({
           </svg>
           Mapa
         </button>
+      )}
+
+      {/* Full-screen mobile map — fuera del condicional layout para que funcione
+          en publicShareMode mobile, brokerMode mobile y feed público mobile. */}
+      {mobileMapOpen && (
+        <div className="alq-mobile-map-overlay">
+          <div className="alq-mobile-map-header">
+            <span className="alq-mobile-map-title">Mapa de Alquileres</span>
+            <button className="alq-mobile-map-close" onClick={() => setMobileMapOpen(false)}>&times;</button>
+          </div>
+          <div className="alq-mobile-map-body">
+            <MapMultiComponent
+              properties={properties}
+              onSelectProperty={handleMapSelect}
+              selectedId={mapSelectedId}
+            />
+            {mapSelectedId && (() => {
+              const sp = properties.find(x => x.id === mapSelectedId)
+              if (!sp) return null
+              return (
+                <MapFloatCard
+                  key={sp.id}
+                  property={sp}
+                  isFavorite={favorites.has(sp.id)}
+                  mobile
+                  onClose={() => setMapSelectedId(null)}
+                  onToggleFavorite={() => toggleFavorite(sp.id)}
+                  onOpenDetail={() => { setMobileMapOpen(false); openDetail(sp) }}
+                  publicShareBroker={publicShareBrokerProp}
+                />
+              )
+            })()}
+          </div>
+        </div>
       )}
     </>
   )
