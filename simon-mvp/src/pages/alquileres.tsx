@@ -1304,17 +1304,6 @@ export default function AlquileresPage({
             </div>
           )}
 
-          {/* Banner inferior público — Comparar (2+). Solo mobile. */}
-          {!brokerMode && favorites.size >= 1 && (
-            <div className="alq-compare-banner-wrap">
-              <button className="alq-compare-banner" onClick={() => favorites.size >= 2 ? openCompare() : showToast('Elegí al menos 2 para comparar')} style={{ flex: 1 }}>
-                <span className="alq-compare-banner-text">{favorites.size} favorito{favorites.size > 1 ? 's' : ''}{favorites.size >= 2 ? ' · Comparar' : ''}</span>
-                {favorites.size >= 2 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M9 18l6-6-6-6"/></svg>}
-              </button>
-              <button className="alq-compare-banner-clear" aria-label="Limpiar favoritos" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Favoritos limpiados') }}>&times;</button>
-            </div>
-          )}
-
           {/* Floating map button — oculto en brokerMode (toggle Grid|Map en el banner) */}
           {!brokerMode && (
             <button className="alq-map-floating" aria-label="Ver mapa" onClick={() => { setMobileMapOpen(true); trackEvent('open_map_mobile') }}>
@@ -1562,6 +1551,19 @@ export default function AlquileresPage({
           </svg>
           Mapa
         </button>
+      )}
+
+      {/* Banner inferior Comparar (2+ favoritos) — solo mobile, fuera del condicional layout
+          para que aparezca en publicShareMode mobile (cliente final ve la shortlist en grid).
+          En desktop hay otro botón Comparar dentro del toggle bar del desktop-main. */}
+      {!brokerMode && !isDesktop && favorites.size >= 1 && (
+        <div className="alq-compare-banner-wrap">
+          <button className="alq-compare-banner" onClick={() => favorites.size >= 2 ? openCompare() : showToast('Elegí al menos 2 para comparar')} style={{ flex: 1 }}>
+            <span className="alq-compare-banner-text">{favorites.size} favorito{favorites.size > 1 ? 's' : ''}{favorites.size >= 2 ? ' · Comparar' : ''}</span>
+            {favorites.size >= 2 && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16}}><path d="M9 18l6-6-6-6"/></svg>}
+          </button>
+          <button className="alq-compare-banner-clear" aria-label="Limpiar favoritos" onClick={(e) => { e.stopPropagation(); setFavorites(new Set()); showToast('Favoritos limpiados') }}>&times;</button>
+        </div>
       )}
 
       {/* Filter overlay — fuera del condicional layout para que funcione en todas las
