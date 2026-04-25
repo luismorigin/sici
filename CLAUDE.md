@@ -56,7 +56,8 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 13. **Seguridad Supabase / RLS** — Antes de crear API routes con Supabase, habilitar RLS, dropear tablas, o crear views/funciones RPC: leer `docs/canonical/SEGURIDAD_SUPABASE.md`. Reglas clave: service_role en API server-side (nunca anon, nunca con prefijo `NEXT_PUBLIC_`), rename a `_trash_*` antes de DROP, grep + `pg_stat_user_tables` + `pg_depend` antes de RLS, views sin `SECURITY DEFINER`.
 14. **Brokers — dos tablas distintas, NUNCA confundir**:
     - `brokers` (legacy, pre-Simon Broker MVP) — sistema de captación B2B donde brokers suben **sus propias propiedades** al pipeline (`estado_verificacion`, `fuente_registro`, `total_propiedades`). **No se usa hoy** pero se mantiene por si se reactiva esa línea. Admin en `/admin/brokers`.
-    - `simon_brokers` (MVP Simon Broker, migración 231) — brokers que usan `/broker/[slug]` para **armar shortlists** y compartirlas con sus clientes por WA. Reemplaza el archivo hardcoded `lib/brokers-demo.ts` (eliminado S3). Admin en `/admin/simon-brokers`. Lib server-side `lib/simon-brokers.ts`.
+    - `simon_brokers` (MVP Simon Broker, migración 231) — brokers que usan `/broker/[slug]` para **armar shortlists** y compartirlas con sus clientes por WA. Reemplaza el archivo hardcoded `lib/brokers-demo.ts` (eliminado S3). Admin en `/admin/simon-brokers`. Lib server-side `lib/simon-brokers.ts`. Migración 235 agregó `terms_accepted_at` (checkbox obligatorio en onboarding).
+    - `broker_shortlists` (228) + `broker_shortlist_items` (228) + `broker_shortlist_hearts` (234) + **`broker_shortlist_views` (235)** — sistema completo de shortlists. Migración 235 sumó protección v1: `max_views/current_views/expires_at/status/first_viewed_at` en `broker_shortlists` (cap 20 vistas / 30 días Plan Inicial), `broker_shortlist_views` para tracking de visitas únicas con fingerprint cookie+IP+UA hash. Lever de monetización Plan Pro futuro. Lib server-side `lib/broker-shortlists-server.ts`. Ver `docs/broker/SHORTLIST_PROTECTION_V1_PLAN.md`.
     - Ninguna FK entre ambas. Datos completamente separados.
 
 ## Zonas Canonicas (6 zonas)
@@ -109,7 +110,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | Proposito | Archivo |
 |-----------|---------|
 | **Product Brief Simón** | `docs/producto/SIMON_PRODUCT_BRIEF.md` — superficies, estado producción vs construido, capacidades, limitaciones |
-| **Simon Broker** | `docs/broker/` — MVP venta + Fase 2 alquileres en producción (merges `05bc1eb` + `65ccc4b`). Migraciones 228-234. Admin UI `/admin/simon-brokers`. Estado, features entregados y pendientes: ver `docs/broker/README.md` |
+| **Simon Broker** | `docs/broker/` — MVP venta + Fase 2 alquileres + v1 protección shortlists en producción (merges `05bc1eb` + `65ccc4b` + `037584b`). Migraciones 228-235. Admin UI `/admin/simon-brokers` + `/admin/simon-brokers/[slug]` (gestión shortlists con suspender/reactivar). Estado, features entregados y pendientes: ver `docs/broker/README.md` |
 | **Arquitectura SICI** | `docs/arquitectura/SICI_ARQUITECTURA_MAESTRA.md` |
 | **Simon Arquitectura** | `docs/simon/SIMON_ARQUITECTURA_COGNITIVA.md` |
 | **Metodologia Fiduciaria** | `docs/canonical/METODOLOGIA_FIDUCIARIA_PARTE_*.md` |
@@ -301,7 +302,8 @@ Las paginas editores siguen el patron: **tipos → constantes → hook → compo
 | `/admin/proyectos` | Listado + crear proyectos |
 | `/admin/proyectos/[id]` | Editor proyecto: datos, inferir, propagar, tabla propiedades |
 | `/admin/brokers` | Gestion brokers B2B (tabla `brokers` legacy captación) |
-| `/admin/simon-brokers` | **Gestión brokers MVP Simon Broker** (tabla `simon_brokers`, migración 231) |
+| `/admin/simon-brokers` | **Gestión brokers MVP Simon Broker** (tabla `simon_brokers`, migración 231). Form crear con checkbox obligatorio de términos (migración 235). |
+| `/admin/simon-brokers/[slug]` | **Gestión shortlists del broker** (migración 235): tabla con status/vistas/expiración, suspender/reactivar individual, link a `/b/[hash]` público. APIs `/api/admin/shortlists*`. |
 | `/admin/supervisor` | Dashboard HITL (contadores) |
 | `/admin/supervisor/matching` | Revisar matches pendientes |
 | `/admin/supervisor/sin-match` | Asignar proyectos huerfanas |

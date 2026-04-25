@@ -366,21 +366,22 @@ Para MVP founding 3-5 brokers la opción 3 alcanza. Para 15+ brokers ir a Upstas
 **Cuándo reactivar:** cuando un broker founding tenga ≥30 shortlists activas y reporte confusión, o cuando el scroll del panel pase una pantalla en mobile. Observar en el primer mes de uso real.
 
 ### Expiración automática de shortlists
-**Tier:** v1.3
-**Agregado:** 2026-04-24
-**Rationale:** Hoy las shortlists viven para siempre mientras `archived_at IS NULL` y `is_published = TRUE`. Ventaja: relaciones largas (un cliente busca por meses) se mantienen. Desventaja: shortlists abandonadas quedan accesibles por años con precios snapshot desactualizados.
+**Tier:** ✅ **HECHA (variante A modificada)** — merge `037584b` el 2026-04-25
+**Agregado:** 2026-04-24 · **Completada:** 2026-04-25 (migración 235)
 
-**Opciones posibles (decidir cuando se active):**
-- **A. Auto-expira N días** (ej: 90) — cron pone `is_published=false`. Limpia sola pero corta relaciones legítimas.
-- **B. Auto-archiva por inactividad** — si `last_viewed_at` < N días, auto `archived_at`. Solo limpia lo olvidado, más lógica.
-- **C. Aviso al broker** — email/WA "tu shortlist de Juan cumplió 30 días sin apertura, ¿cerrar o reenviar?". Re-engagement pero requiere mailer + cron.
+**Implementación final:** Variante A pero la motivación fue defensa anti-canibalización (ver `SHORTLIST_PROTECTION_V1_PLAN.md`), no limpieza de abandono. Resultados:
+- `expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 days')` en `broker_shortlists`.
+- Backfill: `expires_at = created_at + 30d` para 22 shortlists existentes (ninguna quedó pre-expirada).
+- Lazy expiration en SSR de `/b/[hash]`: si `expires_at < NOW()` y status sigue `active`, se actualiza a `expired` en el primer hit (no requiere cron).
+- Cliente recibe `ShortlistBlockedPage` con mensaje "Esta selección expiró" + CTA WhatsApp para pedir nuevo link al broker.
+- El broker puede ver expiración + reactivar manualmente desde `/admin/simon-brokers/[slug]`.
 
-**No implementar ahora** porque:
-1. Corta-relaciones legítimas sin señal real
-2. Ya existe archivado manual (`archived_at` en tabla 228 + botón en editor)
-3. El volumen hoy no justifica infra de cron + scheduling
+**Trade-offs originales mitigados:**
+- "Corta relaciones legítimas" → mitigado: el broker reactiva desde admin en 1 click (UI nueva). Y 30 días alcanza para el 95% de los casos de búsqueda activa.
+- "Ya existe archivado manual" → cierto, pero esto agrega defensa contra abuso (broker que olvida un link público), no solo limpieza.
+- "El volumen no justifica cron" → no hay cron. Lazy en SSR.
 
-**Cuándo reactivar:** cuando aparezca confusión real reportada — ej: "el cliente de Abel abrió un link de hace 4 meses y me confundió con precios viejos", o cuando el panel tenga tantas shortlists que el snooze visual (v1.1) no alcance. Evaluar B como más balanceada (preserva uso activo, limpia abandono).
+**Migrar a variante B (auto-archivar por inactividad)** queda como v2 si surge la señal "shortlists vivas pero sin apertura por 60+ días".
 
 ### Paridad total venta/alquiler en banner broker (mapa inline + viewmode desktop)
 **Tier:** v1.1

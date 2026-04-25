@@ -1,9 +1,13 @@
-# Shortlist Protection v1 — Plan de implementación
+# Shortlist Protection v1 — Plan + implementación
 
-**Branch:** `broker-shortlist-protection-v1`
-**Creado:** 2026-04-25
-**Esfuerzo estimado:** 4-6h
-**Trigger de implementación:** antes del primer cobro a un broker (no después).
+**Estado:** ✅ **MERGEADO A `main`** — commit `037584b` el 2026-04-25
+**Branch:** `broker-shortlist-protection-v1` (borrado post-merge)
+**Creado:** 2026-04-25 · **Implementado:** 2026-04-25 (mismo día)
+**Esfuerzo real:** ~4h
+**Trigger original:** antes del primer cobro a un broker (no después).
+
+> Este documento conserva el plan original abajo + sección "Implementación realizada"
+> al final con commits, archivos creados/modificados y decisiones que difirieron del plan.
 
 ---
 
@@ -409,3 +413,77 @@ Para arrancar la sesión nueva sobre este trabajo:
 4. Al final, mergear branch a `main` con un único PR descriptivo.
 
 **Recordatorio**: este branch existe para no afectar producción mientras se construye. NO mergear hasta que el checklist esté completo.
+
+---
+
+## Implementación realizada (2026-04-25)
+
+### Commits en order de dependencia
+
+| # | Commit | Qué entrega |
+|---|---|---|
+| 1 | `47d7985` | Migración 235 — `broker_shortlists +5 cols`, `broker_shortlist_views` nueva, `simon_brokers.terms_accepted_at`. Backfill `expires_at = created_at+30d` para 22 shortlists existentes. RLS + policy `claude_readonly_select` en views. |
+| 2 | `3f326aa` | Helpers server: `lib/broker-plan-limits.ts` (`SHORTLIST_LIMITS.inicial`), `lib/shortlist-fingerprint.ts` (cookie+IP+UA hash), `lib/broker-shortlists-server.ts` (7 funciones), tipo `BrokerShortlistProtected`. |
+| 3 | `19c87e7` | UI components: `ShortlistBlockedPage` (3 mensajes), `ShortlistWatermark` (footer trazable). |
+| 4 | `fcdc43a` | Middleware `pages/b/[hash].tsx` con 6 gates ordenados, Set-Cookie persistente, `Cache-Control: no-store`. Branch venta/alquiler intacta. |
+| 5 | `72da132` | Términos onboarding: `SimonBrokerTerms` + checkbox required + validación API + `terms_accepted_at = NOW()` en `createBroker`. |
+| 6 | `7f5b020` | Admin gestión: página `/admin/simon-brokers/[slug]` + APIs `/api/admin/shortlists` y `/api/admin/shortlists/[id]/suspend`. Link "Shortlists" en tabla del index. |
+| **Merge** | **`037584b`** | **`Merge --no-ff broker-shortlist-protection-v1 into main`** |
+
+### Archivos creados (10)
+
+```
+sql/migrations/235_shortlist_protection.sql
+simon-mvp/src/lib/broker-plan-limits.ts
+simon-mvp/src/lib/shortlist-fingerprint.ts
+simon-mvp/src/lib/broker-shortlists-server.ts
+simon-mvp/src/components/broker/ShortlistBlockedPage.tsx
+simon-mvp/src/components/broker/ShortlistWatermark.tsx
+simon-mvp/src/components/admin/SimonBrokerTerms.tsx
+simon-mvp/src/pages/admin/simon-brokers/[slug].tsx
+simon-mvp/src/pages/api/admin/shortlists/index.ts
+simon-mvp/src/pages/api/admin/shortlists/[id]/suspend.ts
+```
+
+### Archivos modificados (4)
+
+- `simon-mvp/src/types/broker-shortlist.ts` (+5 campos optional + nuevo `BrokerShortlistProtected`)
+- `simon-mvp/src/pages/b/[hash].tsx` (middleware + watermark + early return blocked)
+- `simon-mvp/src/lib/simon-brokers.ts` (`CreateBrokerInput.terms_accepted` required + INSERT)
+- `simon-mvp/src/pages/api/admin/simon-brokers/index.ts` (validación 400 sin terms_accepted)
+- `simon-mvp/src/pages/admin/simon-brokers/index.tsx` (state + checkbox + render `<SimonBrokerTerms>` + link "Shortlists")
+- `docs/migrations/MIGRATION_INDEX.md` (entrada 235)
+
+### Decisiones que difirieron del plan original
+
+| # | Plan original | Decisión final | Por qué |
+|---|---|---|---|
+| 1 | Backfill `expires_at` con `DEFAULT (NOW() + 30d)` | Backfill explícito `created_at + 30d`, después `SET DEFAULT` | Shortlists viejas tienen expiración coherente con su edad real, no con el momento del ALTER. |
+| 2 | `last_viewed_at` nuevo | NO se agrega | Ya existía en migración 228. |
+| 3 | `terms_accepted_at` en migración aparte | Incluido en 235 | Trabajo SQL relacionado, sin razón para fragmentar. |
+| 4 | Cache `s-maxage=60, stale-while-revalidate=300` | `private, no-store, no-cache, must-revalidate` | Crítico: cachear con Set-Cookie de fingerprint hace que el CDN sirva la misma cookie a múltiples clientes y rompa el uniqueness del cap. |
+| 5 | Carpeta `components/sl/` | `components/broker/` | Carpeta existente que ya agrupa `ShortlistsPanel` y `ShortlistSendModal`. |
+| 6 | Modificar `lib/broker-shortlists.ts` | Crear `lib/broker-shortlists-server.ts` aparte | El archivo existente es client-side puro (wrappers `fetch()`). Mezclar server+client viola el contrato implícito. |
+| 7 | RPC SQL atómica para `registerNewVisit` | SELECT+UPDATE secuencial, no atómico | Source of truth = `broker_shortlist_views`; `current_views` es cache. Si aparece desincronización en prod, migrar a RPC. **YAGNI** hasta entonces. |
+| 8 | Tabla shortlists embebida en `index.tsx` | Página dedicada `/admin/simon-brokers/[slug]` | CLAUDE.md la documentaba como ruta esperada; mantiene index.tsx legible. |
+
+### Smoke test contra producción (2026-04-25)
+
+Validado vía 2 curls a shortlist demo `rusV39jkh_` + queries de control:
+
+- Feed normal renderiza (HTTP 200, body 134KB, title del feed) ✓
+- Cookie `sl_visitor_<first8>` se setea con `HttpOnly + SameSite=Lax + Max-Age=1año` ✓
+- `Cache-Control: no-store` ✓
+- 2do hit con cookie → return visit (sin Set-Cookie nuevo) ✓
+- `current_views` incrementa solo en visita única (0→1, no 2) ✓
+- `view_count` incrementa en cada hit (3→5, analytics legacy preserva) ✓
+- 2 filas en `broker_shortlist_views` (1 unique + 1 return), mismo fingerprint, ip_hash y ua poblados ✓
+
+Visual chrome del feed + watermark validado por Lucho. Cleanup limpio: 0 residuos curl en BD post-test.
+
+### Pendientes legítimos (no críticos)
+
+- **Visual chrome del flujo nuevo `/admin/simon-brokers/<slug>`** → suspender/reactivar shortlist demo (cuando puedas).
+- **Visual chrome del `BlockedPage`** forzando `status='suspended'` en BD si querés validarlo (no urgente — el código está testeado, es solo confirmar el render).
+- **Migrar a RPC SQL atómica** si aparece desincronización del counter `current_views` en producción (probabilidad baja).
+- **Agente de seguimiento agendado para 2 semanas** para revisar las primeras shortlists protegidas (cuántas llegaron al cap, cuántas expiraron, ratio de uniqueness real). Calibra si los caps del Plan Inicial están bien o hay que ajustar.
