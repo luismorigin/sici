@@ -65,6 +65,16 @@ const ENTREGA_OPTIONS = [
   { value: 'solo_preventa', label: 'Preventa' },
 ]
 
+// Filtro de fuentes (modo broker). Permite al broker mostrar solo el inventario
+// de las franquicias con las que opera. Aplica solo en /broker/[slug].
+const FUENTES_BROKER = ['century21', 'remax', 'bien_inmuebles'] as const
+type FuenteBroker = typeof FUENTES_BROKER[number]
+const FUENTES_BROKER_LABELS: Record<FuenteBroker, string> = {
+  century21: 'Century 21',
+  remax: 'RE/MAX',
+  bien_inmuebles: 'Bien Inmuebles',
+}
+
 function formatPriceK(v: number) { return `$${(v / 1000).toFixed(0)}k` }
 
 function buildEmptyMessage(f: FiltrosVentaSimple): string {
@@ -1307,7 +1317,7 @@ function fuenteBadge(fuente: string | null | undefined): { label: string; color:
   const f = fuente.toLowerCase()
   if (f === 'century21' || f === 'c21') return { label: 'Century 21', color: '#000', bg: '#BEAF87' }
   if (f === 'remax') return { label: 'RE/MAX', color: '#fff', bg: '#DC1C2E' }
-  if (f === 'bien_inmuebles' || f === 'bieninmuebles') return { label: 'Bien Inmuebles', color: '#fff', bg: '#1a4980' }
+  if (f === 'bien_inmuebles' || f === 'bieninmuebles') return { label: 'Bien Inmuebles', color: '#fff', bg: '#37BEAA' }
   return null
 }
 
@@ -1390,6 +1400,32 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const [shortlistsPanelOpen, setShortlistsPanelOpen] = useState(false)
   // Filtro broker: ver solo propiedades marcadas (útil cuando hay muchas + filtros cambiados)
   const [onlySelectedFilter, setOnlySelectedFilter] = useState(false)
+  // Filtro broker: fuentes/franquicias permitidas. Default: todas.
+  // Persistido por slug en localStorage. Solo se aplica si brokerMode.
+  const [fuentesPermitidas, setFuentesPermitidas] = useState<Set<FuenteBroker>>(() => new Set(FUENTES_BROKER))
+  useEffect(() => {
+    if (!brokerMode || !brokerSlug) return
+    try {
+      const raw = localStorage.getItem(`broker_fuentes_${brokerSlug}`)
+      if (!raw) return
+      const arr = JSON.parse(raw)
+      if (Array.isArray(arr)) {
+        const valid = arr.filter((x): x is FuenteBroker => (FUENTES_BROKER as readonly string[]).includes(x))
+        setFuentesPermitidas(new Set(valid))
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brokerSlug])
+  function toggleFuente(f: FuenteBroker) {
+    setFuentesPermitidas(prev => {
+      const next = new Set(prev)
+      if (next.has(f)) next.delete(f); else next.add(f)
+      if (brokerSlug) {
+        try { localStorage.setItem(`broker_fuentes_${brokerSlug}`, JSON.stringify([...next])) } catch {}
+      }
+      return next
+    })
+  }
 
   // publicShareMode O brokerMode mobile: el body tiene overflow:hidden por la media
   // query del feed TikTok. Cuando forzamos layout desktop-grid en mobile, hay que
@@ -1535,16 +1571,26 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       }
     }
   }
-  // Lista que se muestra: si filtro broker "solo seleccionadas" está ON,
-  // restringe a las marcadas. Útil para no perderse cuando hay 30+ marcadas.
-  const displayedProperties = useMemo(
-    () => (brokerMode && onlySelectedFilter) ? properties.filter(p => favorites.has(p.id)) : properties,
-    [brokerMode, onlySelectedFilter, properties, favorites]
-  )
-  const visibleNotMarked = useMemo(
-    () => brokerMode ? properties.filter(p => !favorites.has(p.id)) : [],
-    [brokerMode, properties, favorites]
-  )
+  // Lista que se muestra: aplica filtro de fuentes (broker) + "solo seleccionadas".
+  // Cuando brokerMode = false, no se aplica nada (paridad con feed público).
+  const displayedProperties = useMemo(() => {
+    let list: UnidadVenta[] = properties
+    if (brokerMode && fuentesPermitidas.size < FUENTES_BROKER.length) {
+      list = list.filter(p => fuentesPermitidas.has(((p.fuente || '').toLowerCase()) as FuenteBroker))
+    }
+    if (brokerMode && onlySelectedFilter) {
+      list = list.filter(p => favorites.has(p.id))
+    }
+    return list
+  }, [brokerMode, onlySelectedFilter, properties, favorites, fuentesPermitidas])
+  const visibleNotMarked = useMemo(() => {
+    if (!brokerMode) return []
+    let list: UnidadVenta[] = properties
+    if (fuentesPermitidas.size < FUENTES_BROKER.length) {
+      list = list.filter(p => fuentesPermitidas.has(((p.fuente || '').toLowerCase()) as FuenteBroker))
+    }
+    return list.filter(p => !favorites.has(p.id))
+  }, [brokerMode, properties, favorites, fuentesPermitidas])
   function markAllVisible() {
     if (visibleNotMarked.length === 0) return
     trackEvent('broker_mark_all_visible', { count: visibleNotMarked.length, broker_slug: broker?.slug })
@@ -1736,9 +1782,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   // Build feed items (mobile): spotlight first, then property cards (filter card removed — now overlay)
   const feedItems = useMemo(() => {
     const items: Array<{ type: 'property'; data: UnidadVenta; isSpotlight?: boolean }> = []
-    const baseList = (brokerMode && onlySelectedFilter)
-      ? properties.filter(p => favorites.has(p.id))
-      : properties
+    let baseList: UnidadVenta[] = properties
+    if (brokerMode && fuentesPermitidas.size < FUENTES_BROKER.length) {
+      baseList = baseList.filter(p => fuentesPermitidas.has(((p.fuente || '').toLowerCase()) as FuenteBroker))
+    }
+    if (brokerMode && onlySelectedFilter) {
+      baseList = baseList.filter(p => favorites.has(p.id))
+    }
     const mobileProps = spotlightProperty
       ? [spotlightProperty, ...baseList.filter(p => p.id !== spotlightId)]
       : baseList
@@ -1746,7 +1796,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       items.push({ type: 'property', data: p, isSpotlight: i === 0 && !!spotlightProperty })
     })
     return items
-  }, [properties, favorites, brokerMode, onlySelectedFilter, spotlightProperty, spotlightId])
+  }, [properties, favorites, brokerMode, onlySelectedFilter, fuentesPermitidas, spotlightProperty, spotlightId])
 
   return (
     <>
@@ -1902,6 +1952,31 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           >
             Ver mercado <span aria-hidden="true" className="vt-broker-market-arrow">↗</span>
           </a>
+          {/* Fila de fuentes/franquicias — solo modo broker.
+              Default las 3 marcadas (= ver todo). Persistido por slug en localStorage. */}
+          <div className="vt-fuentes-row">
+            <span className="vt-fuentes-label">Fuentes:</span>
+            {FUENTES_BROKER.map(f => {
+              const fb = fuenteBadge(f)
+              const active = fuentesPermitidas.has(f)
+              const style = active && fb
+                ? { background: fb.bg, color: fb.color, borderColor: fb.bg }
+                : undefined
+              return (
+                <button
+                  key={f}
+                  type="button"
+                  className={`vt-fuente-chip ${active ? 'active' : ''}`}
+                  style={style}
+                  onClick={() => toggleFuente(f)}
+                  aria-pressed={active}
+                  title={active ? `Ocultar ${FUENTES_BROKER_LABELS[f]}` : `Mostrar ${FUENTES_BROKER_LABELS[f]}`}
+                >
+                  {FUENTES_BROKER_LABELS[f]}
+                </button>
+              )
+            })}
+          </div>
         </div>
       )}
 
@@ -2021,12 +2096,18 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 ))}
               </div>
             )}
-            {brokerMode && onlySelectedFilter && displayedProperties.length === 0 && (
+            {brokerMode && fuentesPermitidas.size === 0 && (
+              <div className="ventas-status">Activá al menos una fuente arriba para ver propiedades.</div>
+            )}
+            {brokerMode && fuentesPermitidas.size > 0 && onlySelectedFilter && displayedProperties.length === 0 && (
               <div className="ventas-status">No hay propiedades marcadas que cumplan los filtros actuales.</div>
             )}
-            {properties.length > 0 && viewMode === 'map' && (
+            {brokerMode && fuentesPermitidas.size > 0 && !onlySelectedFilter && displayedProperties.length === 0 && properties.length > 0 && (
+              <div className="ventas-status">No hay propiedades de las fuentes seleccionadas.</div>
+            )}
+            {displayedProperties.length > 0 && viewMode === 'map' && (
               <div className="ventas-map-container">
-                <VentaMap properties={properties} onSelectProperty={(id) => setMapSelectedId(id)} selectedId={mapSelectedId} />
+                <VentaMap properties={displayedProperties} onSelectProperty={(id) => setMapSelectedId(id)} selectedId={mapSelectedId} />
                 {mapSelectedId && (() => {
                   const sp = properties.find(x => x.id === mapSelectedId)
                   if (!sp) return null
@@ -2083,9 +2164,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 <button className="mt-map-close" aria-label="Cerrar mapa" onClick={() => { setMobileMapOpen(false); setMapSelectedId(null) }}>&times;</button>
               </div>
               <div className="mt-map-body">
-                <VentaMap properties={properties} onSelectProperty={(id) => setMapSelectedId(id)} selectedId={mapSelectedId} />
+                <VentaMap properties={displayedProperties} onSelectProperty={(id) => setMapSelectedId(id)} selectedId={mapSelectedId} />
                 {mapSelectedId && (() => {
-                  const sp = properties.find(x => x.id === mapSelectedId)
+                  const sp = displayedProperties.find(x => x.id === mapSelectedId)
                   if (!sp) return null
                   return <MapFloatCard mobile property={sp} isFavorite={favorites.has(sp.id)} onClose={() => setMapSelectedId(null)} onOpenDetail={() => { setMapSelectedId(null); setMobileMapOpen(false); openSheet(sp) }} onToggleFavorite={() => toggleFavorite(sp.id)} />
                 })()}
@@ -2125,7 +2206,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-desktop-public .ventas-main { margin-left:0 !important; padding-top:80px !important }
         .ventas-desktop-public .ventas-grid { grid-template-columns:repeat(auto-fill,minmax(280px,1fr)) }
         /* Broker en mobile: mismo layout que public share — grid simple sin sidebar */
-        .ventas-desktop-broker-mobile .ventas-main { margin-left:0 !important; padding-top:110px !important; padding:110px 12px 24px !important }
+        .ventas-desktop-broker-mobile .ventas-main { margin-left:0 !important; padding-top:144px !important; padding:144px 12px 24px !important }
         .ventas-desktop-broker-mobile .ventas-grid { grid-template-columns:1fr; gap:14px }
         /* Link público venta /b/[hash] — NEGRO para que el cliente sienta el peso/elegancia
            de la decisión patrimonial. Alquiler usa header arena. */
@@ -2221,9 +2302,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vt-broker-tab:hover:not(.active) { color:rgba(237,232,220,0.95) }
         .vt-broker-tab.active { background:#EDE8DC; color:#141414; cursor:default }
         /* Padding extra en el sidebar SOLO en brokerMode para que no quede tapado por el banner negro fijo */
-        .ventas-desktop-broker .ventas-sidebar { padding-top:48px }
+        .ventas-desktop-broker .ventas-sidebar { padding-top:84px }
         /* Padding-top en el main desktop también, para que las cards no queden tapadas */
-        .ventas-desktop-broker .ventas-main { padding-top:70px }
+        .ventas-desktop-broker .ventas-main { padding-top:128px }
         .vt-broker-banner-shortlists { margin-left:auto; background:#EDE8DC; color:#141414; border:1px solid #EDE8DC; padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
         .vt-broker-banner-shortlists:active { transform:scale(0.96) }
         .vt-broker-tool { background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.22); color:#EDE8DC; padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
@@ -2234,9 +2315,21 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vt-broker-tool-add:hover { background:rgba(123,179,137,0.24) }
         .vt-broker-market-link { text-decoration:none; display:inline-flex; align-items:center; gap:4px }
         .vt-broker-market-arrow { opacity:0.55; font-weight:500 }
+        /* Fuentes row — fila completa dentro del banner broker.
+           flex-basis:100% fuerza nueva línea (banner desktop sin flex-wrap, en este hijo sí). */
+        .vt-broker-banner { flex-wrap:wrap; row-gap:8px }
+        .vt-fuentes-row { flex-basis:100%; display:flex; align-items:center; gap:8px; padding-top:6px; margin-top:2px; border-top:1px solid rgba(237,232,220,0.06) }
+        .vt-fuentes-label { font-family:'DM Sans',sans-serif; font-size:10px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:rgba(237,232,220,0.55); margin-right:4px }
+        .vt-fuente-chip { background:transparent; border:1px solid rgba(237,232,220,0.22); color:#EDE8DC; padding:4px 11px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:'DM Sans',sans-serif; white-space:nowrap; opacity:0.55; transition:opacity 0.15s, background 0.15s, border-color 0.15s }
+        .vt-fuente-chip:hover { opacity:0.85 }
+        .vt-fuente-chip:active { transform:scale(0.96) }
+        .vt-fuente-chip.active { opacity:1 }
         @media (max-width: 768px) {
-          .vt-broker-banner { flex-wrap:wrap; padding:6px 12px; gap:6px }
+          .vt-broker-banner { padding:6px 12px; gap:6px }
           .vt-broker-tool, .vt-broker-banner-shortlists { font-size:10px; padding:3px 8px }
+          .vt-fuentes-row { padding-top:4px; gap:6px }
+          .vt-fuentes-label { font-size:9px }
+          .vt-fuente-chip { font-size:10px; padding:3px 9px }
         }
         .vt-shortlist-banner { background:#EDE8DC !important; color:#141414 !important; border:1px solid rgba(20,20,20,0.15) !important; box-shadow:0 6px 22px rgba(20,20,20,0.18) !important }
         .vt-shortlist-banner svg { color:#141414 !important }

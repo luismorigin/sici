@@ -62,6 +62,21 @@ const MAX_SLIDER_PRICE = 18000
 
 const MAX_FAVORITES = 3
 
+// Filtro de fuentes (modo broker). Permite al broker mostrar solo el inventario
+// de las franquicias con las que opera. Aplica solo en /broker/[slug]/alquileres.
+const FUENTES_BROKER = ['century21', 'remax', 'bien_inmuebles'] as const
+type FuenteBroker = typeof FUENTES_BROKER[number]
+const FUENTES_BROKER_LABELS: Record<FuenteBroker, string> = {
+  century21: 'Century 21',
+  remax: 'RE/MAX',
+  bien_inmuebles: 'Bien Inmuebles',
+}
+const FUENTES_BROKER_BADGE: Record<FuenteBroker, { color: string; bg: string }> = {
+  century21: { color: '#000', bg: '#BEAF87' },
+  remax: { color: '#fff', bg: '#DC1C2E' },
+  bien_inmuebles: { color: '#fff', bg: '#37BEAA' },
+}
+
 const formatPrice = formatPriceBob
 
 function buildEmptyMessage(f: FiltrosAlquiler): string {
@@ -247,6 +262,31 @@ export default function AlquileresPage({
   const [shortlistModalOpen, setShortlistModalOpen] = useState(false)
   const [shortlistsPanelOpen, setShortlistsPanelOpen] = useState(false)
   const [onlySelectedFilter, setOnlySelectedFilter] = useState(false)
+  // Filtro broker: fuentes/franquicias permitidas. Default: todas. Persistido por slug.
+  const [fuentesPermitidas, setFuentesPermitidas] = useState<Set<FuenteBroker>>(() => new Set(FUENTES_BROKER))
+  useEffect(() => {
+    if (!brokerMode || !brokerSlug) return
+    try {
+      const raw = localStorage.getItem(`broker_fuentes_${brokerSlug}`)
+      if (!raw) return
+      const arr = JSON.parse(raw)
+      if (Array.isArray(arr)) {
+        const valid = arr.filter((x): x is FuenteBroker => (FUENTES_BROKER as readonly string[]).includes(x))
+        setFuentesPermitidas(new Set(valid))
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brokerSlug])
+  function toggleFuente(f: FuenteBroker) {
+    setFuentesPermitidas(prev => {
+      const next = new Set(prev)
+      if (next.has(f)) next.delete(f); else next.add(f)
+      if (brokerSlug) {
+        try { localStorage.setItem(`broker_fuentes_${brokerSlug}`, JSON.stringify([...next])) } catch {}
+      }
+      return next
+    })
+  }
 
   // Body styles — scoped to this page (cleanup on unmount).
   // overflow:hidden solo en TikTok feed mobile (feed público sin broker/share):
@@ -642,14 +682,24 @@ export default function AlquileresPage({
     trackEvent('open_compare', { property_ids: Array.from(favorites).join(','), count: favorites.size })
   }
 
-  const displayedProperties = useMemo(
-    () => (brokerMode && onlySelectedFilter) ? properties.filter(p => favorites.has(p.id)) : properties,
-    [brokerMode, onlySelectedFilter, properties, favorites]
-  )
-  const visibleNotMarked = useMemo(
-    () => brokerMode ? properties.filter(p => !favorites.has(p.id)) : [],
-    [brokerMode, properties, favorites]
-  )
+  const displayedProperties = useMemo(() => {
+    let list: UnidadAlquiler[] = properties
+    if (brokerMode && fuentesPermitidas.size < FUENTES_BROKER.length) {
+      list = list.filter(p => fuentesPermitidas.has(((p.fuente || '').toLowerCase()) as FuenteBroker))
+    }
+    if (brokerMode && onlySelectedFilter) {
+      list = list.filter(p => favorites.has(p.id))
+    }
+    return list
+  }, [brokerMode, onlySelectedFilter, properties, favorites, fuentesPermitidas])
+  const visibleNotMarked = useMemo(() => {
+    if (!brokerMode) return []
+    let list: UnidadAlquiler[] = properties
+    if (fuentesPermitidas.size < FUENTES_BROKER.length) {
+      list = list.filter(p => fuentesPermitidas.has(((p.fuente || '').toLowerCase()) as FuenteBroker))
+    }
+    return list.filter(p => !favorites.has(p.id))
+  }, [brokerMode, properties, favorites, fuentesPermitidas])
   function markAllVisible() {
     if (visibleNotMarked.length === 0) return
     trackEvent('broker_mark_all_visible', { count: visibleNotMarked.length, broker_slug: broker?.slug, tipo_operacion: 'alquiler' })
@@ -870,11 +920,19 @@ export default function AlquileresPage({
     router.replace('/alquileres', undefined, { shallow: true })
   }
 
-  // Desktop grid: exclude spotlight property to avoid duplication
+  // Desktop grid: exclude spotlight property to avoid duplication.
+  // En modo broker aplica también filtro de fuentes y "solo seleccionadas".
   const gridProperties = useMemo(() => {
-    if (!spotlightProperty) return properties
-    return properties.filter(p => p.id !== spotlightId)
-  }, [properties, spotlightProperty, spotlightId])
+    let list = properties
+    if (brokerMode && fuentesPermitidas.size < FUENTES_BROKER.length) {
+      list = list.filter(p => fuentesPermitidas.has(((p.fuente || '').toLowerCase()) as FuenteBroker))
+    }
+    if (brokerMode && onlySelectedFilter) {
+      list = list.filter(p => favorites.has(p.id))
+    }
+    if (spotlightProperty) list = list.filter(p => p.id !== spotlightId)
+    return list
+  }, [properties, spotlightProperty, spotlightId, brokerMode, fuentesPermitidas, onlySelectedFilter, favorites])
 
   // Pinned first card: first available ID wins, rest stay in natural order
   const PINNED_FIRST_IDS = [1350, 1349, 1333]
@@ -1173,6 +1231,18 @@ export default function AlquileresPage({
                     <button className="utm-zona-close" onClick={() => { bannerDismissedRef.current = true; setBannerDismissed(true) }}>&times;</button>
                   </div>
                 )}
+                {brokerMode && fuentesPermitidas.size === 0 && (
+                  <div style={{ padding: '40px 16px', textAlign: 'center', color: '#7A7060', fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
+                    Activá al menos una fuente arriba para ver alquileres.
+                  </div>
+                )}
+                {brokerMode && fuentesPermitidas.size > 0 && gridProperties.length === 0 && properties.length > 0 && (
+                  <div style={{ padding: '40px 16px', textAlign: 'center', color: '#7A7060', fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
+                    {onlySelectedFilter
+                      ? 'No hay alquileres marcados que cumplan los filtros actuales.'
+                      : 'No hay alquileres de las fuentes seleccionadas.'}
+                  </div>
+                )}
                 <div className="desktop-grid">
                   {gridProperties.map((p, idx) => {
                     const showDivider = filters.acepta_mascotas && idx > 0 && gridProperties[idx - 1]?.acepta_mascotas === true && p.acepta_mascotas !== true
@@ -1209,14 +1279,14 @@ export default function AlquileresPage({
               <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
                 <div style={{ position: 'absolute', inset: 0, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)', zIndex: 0 }}>
                   <MapMultiComponent
-                    properties={properties}
+                    properties={displayedProperties}
                     onSelectProperty={handleMapSelect}
                     selectedId={mapSelectedId}
                   />
                 </div>
                 {/* Floating card when a pin is selected */}
                 {mapSelectedId && (() => {
-                  const sp = properties.find(x => x.id === mapSelectedId)
+                  const sp = displayedProperties.find(x => x.id === mapSelectedId)
                   if (!sp) return null
                   return (
                     <MapFloatCard
@@ -1495,6 +1565,31 @@ export default function AlquileresPage({
           >
             Ver mercado <span aria-hidden="true" className="alq-broker-market-arrow">↗</span>
           </a>
+          {/* Fila de fuentes/franquicias — solo modo broker.
+              Default las 3 marcadas (= ver todo). Persistido por slug en localStorage. */}
+          <div className="alq-fuentes-row">
+            <span className="alq-fuentes-label">Fuentes:</span>
+            {FUENTES_BROKER.map(f => {
+              const fb = FUENTES_BROKER_BADGE[f]
+              const active = fuentesPermitidas.has(f)
+              const style = active
+                ? { background: fb.bg, color: fb.color, borderColor: fb.bg }
+                : undefined
+              return (
+                <button
+                  key={f}
+                  type="button"
+                  className={`alq-fuente-chip ${active ? 'active' : ''}`}
+                  style={style}
+                  onClick={() => toggleFuente(f)}
+                  aria-pressed={active}
+                  title={active ? `Ocultar ${FUENTES_BROKER_LABELS[f]}` : `Mostrar ${FUENTES_BROKER_LABELS[f]}`}
+                >
+                  {FUENTES_BROKER_LABELS[f]}
+                </button>
+              )
+            })}
+          </div>
         </div>
       )}
 

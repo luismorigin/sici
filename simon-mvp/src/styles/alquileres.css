@@ -740,7 +740,15 @@
 .alq-broker-send:hover{background:#2F5639;border-color:#2F5639;}
 .alq-broker-market-link{text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
 .alq-broker-market-arrow{opacity:0.55;font-weight:500;}
-@media (max-width:768px){.alq-broker-banner{flex-wrap:wrap;padding:6px 12px;gap:6px;}.alq-broker-tool,.alq-broker-banner-shortlists{font-size:10px;padding:3px 8px;}}
+/* Fila de fuentes/franquicias dentro del banner broker — flex-basis:100% fuerza wrap a nueva línea */
+.alq-broker-banner{flex-wrap:wrap;row-gap:8px;}
+.alq-fuentes-row{flex-basis:100%;display:flex;align-items:center;gap:8px;padding-top:6px;margin-top:2px;border-top:1px solid rgba(20,20,20,0.08);}
+.alq-fuentes-label{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:rgba(20,20,20,0.5);margin-right:4px;}
+.alq-fuente-chip{background:transparent;border:1px solid rgba(20,20,20,0.22);color:#141414;padding:4px 11px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:0.3px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:'DM Sans',sans-serif;white-space:nowrap;opacity:0.55;transition:opacity 0.15s,background 0.15s,border-color 0.15s;}
+.alq-fuente-chip:hover{opacity:0.85;}
+.alq-fuente-chip:active{transform:scale(0.96);}
+.alq-fuente-chip.active{opacity:1;}
+@media (max-width:768px){.alq-broker-banner{padding:6px 12px;gap:6px;}.alq-broker-tool,.alq-broker-banner-shortlists{font-size:10px;padding:3px 8px;}.alq-fuentes-row{padding-top:4px;gap:6px;}.alq-fuentes-label{font-size:9px;}.alq-fuente-chip{font-size:10px;padding:3px 9px;}}
 
 /* Star icon del botón ⭐ en cards cuando brokerMode */
 .amc-fav-broker.active svg,.dc-act-fav-broker.active svg,.bs-sticky-fav-broker.active svg{filter:drop-shadow(0 0 4px rgba(242,180,65,0.5));}
@@ -771,7 +779,7 @@
 /* Dejar espacio para el banner fixed del broker (modo broker) o el header
    público (publicShareMode). Ambos son position:fixed top:0 ~ 48-64px alto. */
 .desktop-layout-public{padding-top:64px;}
-.desktop-layout-broker{padding-top:48px;}
+.desktop-layout-broker{padding-top:82px;}
 /* publicShareMode + brokerMode en MOBILE: layout grid sin sidebar.
    - publicShare = cliente abre /b/[hash] → grid para comparar shortlist curada.
    - broker = broker arma /broker/[slug]/alquileres → grid (paridad con venta brokerMode mobile).
@@ -781,7 +789,7 @@
   .desktop-layout-public .desktop-main{padding:64px 12px 80px;height:auto;overflow:visible;}
   .desktop-layout-public .desktop-grid{grid-template-columns:1fr;gap:14px;max-width:100%;}
   .desktop-layout-broker{padding-top:0;height:auto;overflow:visible;display:block;}
-  .desktop-layout-broker .desktop-main{padding:110px 12px 80px;height:auto;overflow:visible;}
+  .desktop-layout-broker .desktop-main{padding:144px 12px 80px;height:auto;overflow:visible;}
   .desktop-layout-broker .desktop-grid{grid-template-columns:1fr;gap:14px;max-width:100%;}
 }
 
