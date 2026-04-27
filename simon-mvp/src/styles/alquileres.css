@@ -374,6 +374,19 @@
 .afo-area-sep{color:#7A7060;font-size:14px;flex-shrink:0;}
 .afo-area-clear{margin-top:8px;background:transparent;border:none;color:#7A7060;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 0;text-align:left;}
 .afo-area-clear:hover{color:#141414;}
+/* Inputs precio min/max (modo broker) — reusa estructura de afo-area-field */
+.afo-price-input-wrap{margin-top:6px;}
+.afo-price-inputs-row{display:flex;align-items:center;gap:10px;margin-top:6px;}
+.afo-price-bs{font-size:11px;color:#7A7060;font-family:'DM Sans',sans-serif;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;flex-shrink:0;margin-right:-2px;}
+/* Doble slider min/max (modo broker) — sliders solapados con thumbs encima */
+.afo-range-wrap{position:relative;height:28px;}
+.afo-range-slider{position:absolute;top:0;left:0;width:100%;-webkit-appearance:none;appearance:none;background:transparent;pointer-events:none;height:28px;outline:none;margin:0;}
+.afo-range-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#FAFAF8;cursor:pointer;pointer-events:all;border:2px solid #141414;position:relative;z-index:2;}
+.afo-range-slider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#FAFAF8;cursor:pointer;pointer-events:all;border:2px solid #141414;}
+.afo-range-slider::-webkit-slider-runnable-track{height:3px;background:#D8D0BC;border-radius:2px;}
+.afo-range-slider::-moz-range-track{height:3px;background:#D8D0BC;border-radius:2px;}
+.afo-range-slider-min{z-index:1;}
+.afo-range-slider-max{z-index:2;}
 
 /* Map Float Card Mobile (mfc-m-*) */
 .mfc-mobile {

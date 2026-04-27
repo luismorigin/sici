@@ -182,6 +182,69 @@ const ChevronRight = () => (
 )
 
 // ===== Shared filter UI =====
+// Sub-componente con buffer interno para inputs de precio (broker).
+// Valor expuesto en miles ($K) — el slider trabaja con valor pleno (30000-400000),
+// pero el input pide al usuario escribir "150" para significar $150k. Conversión x1000.
+// Commit + clamp solo en onBlur o Enter (mismo patrón que área m²).
+function PriceInputsVT({ minPrice, maxPrice, onMinPrice, onMaxPrice }: {
+  minPrice: number; maxPrice: number
+  onMinPrice: (v: number) => void; onMaxPrice: (v: number) => void
+}) {
+  const MIN_K = Math.round(MIN_PRICE / 1000)
+  const MAX_K = Math.round(MAX_PRICE / 1000)
+  const [minStr, setMinStr] = useState(String(Math.round(minPrice / 1000)))
+  const [maxStr, setMaxStr] = useState(String(Math.round(maxPrice / 1000)))
+  useEffect(() => { setMinStr(String(Math.round(minPrice / 1000))) }, [minPrice])
+  useEffect(() => { setMaxStr(String(Math.round(maxPrice / 1000))) }, [maxPrice])
+  function commitMin() {
+    const n = parseInt(minStr)
+    if (!Number.isFinite(n)) { setMinStr(String(Math.round(minPrice / 1000))); return }
+    const maxK = Math.round(maxPrice / 1000)
+    const clampedK = Math.max(MIN_K, Math.min(n, maxK - Math.round(PRICE_STEP / 1000)))
+    setMinStr(String(clampedK))
+    const valPleno = clampedK * 1000
+    if (valPleno !== minPrice) onMinPrice(valPleno)
+  }
+  function commitMax() {
+    const n = parseInt(maxStr)
+    if (!Number.isFinite(n)) { setMaxStr(String(Math.round(maxPrice / 1000))); return }
+    const minK = Math.round(minPrice / 1000)
+    const clampedK = Math.min(MAX_K, Math.max(n, minK + Math.round(PRICE_STEP / 1000)))
+    setMaxStr(String(clampedK))
+    const valPleno = clampedK * 1000
+    if (valPleno !== maxPrice) onMaxPrice(valPleno)
+  }
+  return (
+    <div className="vf-price-inputs">
+      <label className="vf-area-field">
+        <span className="vf-area-prefix">Min</span>
+        <span className="vf-price-dollar">$</span>
+        <input type="number" className="vf-area-input" inputMode="numeric"
+          min={MIN_K} max={MAX_K} step={5}
+          value={minStr}
+          aria-label="Precio mínimo en miles de USD"
+          onChange={e => setMinStr(e.target.value)}
+          onBlur={commitMin}
+          onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }} />
+        <span className="vf-area-suffix">K</span>
+      </label>
+      <span className="vf-area-sep">—</span>
+      <label className="vf-area-field">
+        <span className="vf-area-prefix">Max</span>
+        <span className="vf-price-dollar">$</span>
+        <input type="number" className="vf-area-input" inputMode="numeric"
+          min={MIN_K} max={MAX_K} step={5}
+          value={maxStr}
+          aria-label="Precio máximo en miles de USD"
+          onChange={e => setMaxStr(e.target.value)}
+          onBlur={commitMax}
+          onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }} />
+        <span className="vf-area-suffix">K</span>
+      </label>
+    </div>
+  )
+}
+
 // Sub-componente con buffer string interno para inputs de m².
 // Evita el bug de clamp en cada keystroke (al escribir "150" se clampaba a 30 con el "1").
 // Commit + clamp solo en onBlur o Enter. El feed se filtra cuando hay commit.
@@ -273,7 +336,11 @@ function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entr
         </div>
       </div>
       <div className="vf-group"><div className="vf-label">PRESUPUESTO</div>
-        <div className="vf-range-display">{formatPriceK(minPrice)} — {formatPriceK(maxPrice)}</div>
+        {brokerMode ? (
+          <PriceInputsVT minPrice={minPrice} maxPrice={maxPrice} onMinPrice={onMinPrice} onMaxPrice={onMaxPrice} />
+        ) : (
+          <div className="vf-range-display">{formatPriceK(minPrice)} — {formatPriceK(maxPrice)}</div>
+        )}
         <div className="vf-range-wrap">
           <input type="range" className="vf-slider vf-slider-min" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
             value={minPrice} aria-label="Precio mínimo" onChange={e => onMinPrice(parseInt(e.target.value))} />
@@ -2591,6 +2658,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vf-tc-note { font-size:12px; color:#9A8E7A; font-family:'DM Sans',sans-serif; margin-top:8px; text-align:right }
         .vf-reset { width:100%; max-width:340px; padding:10px; background:transparent; border:1px solid rgba(237,232,220,0.12); border-radius:10px; color:#9A8E7A; font-size:12px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s }
         .vf-reset:hover { border-color:rgba(237,232,220,0.25); color:#EDE8DC }
+        /* Inputs precio (modo broker) — reusa estilo .vf-area-field */
+        .vf-price-inputs { display:flex; align-items:center; gap:10px; margin-bottom:10px }
+        .vf-price-dollar { font-size:13px; color:#9A8E7A; font-family:'DM Sans',sans-serif; flex-shrink:0; margin-right:-2px }
         /* Inputs m² (modo broker) — pareados min/max con label flotante */
         .vf-area-inputs { display:flex; align-items:center; gap:10px }
         .vf-area-field { flex:1; display:flex; align-items:center; gap:6px; padding:8px 12px; border-radius:10px; border:1px solid rgba(237,232,220,0.12); background:transparent; transition:border-color 0.15s }

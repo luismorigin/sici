@@ -311,6 +311,24 @@ export default function AlquileresPage({
     try { localStorage.setItem(`broker_area_${brokerSlug}`, JSON.stringify({ min, max })) } catch {}
   }
   const areaFiltroActivo = brokerMode && (areaMin > M2_MIN_DEFAULT || areaMax < M2_MAX_DEFAULT)
+  // Filtro broker: precio mínimo mensual (Bs). Default 0 = sin filtro. Persistido por slug.
+  const [precioMinAlq, setPrecioMinAlq] = useState<number>(0)
+  useEffect(() => {
+    if (!brokerMode || !brokerSlug) return
+    try {
+      const raw = localStorage.getItem(`broker_precio_min_${brokerSlug}`)
+      if (raw) {
+        const n = parseInt(raw)
+        if (Number.isFinite(n) && n >= 0) setPrecioMinAlq(n)
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brokerSlug])
+  function persistPrecioMin(v: number) {
+    if (!brokerSlug) return
+    try { localStorage.setItem(`broker_precio_min_${brokerSlug}`, String(v)) } catch {}
+  }
+  const precioMinFiltroActivo = brokerMode && precioMinAlq > 0
 
   // Body styles — scoped to this page (cleanup on unmount).
   // overflow:hidden solo en TikTok feed mobile (feed público sin broker/share):
@@ -718,11 +736,14 @@ export default function AlquileresPage({
         return a >= areaMin && a <= areaMax
       })
     }
+    if (precioMinFiltroActivo) {
+      list = list.filter(p => (p.precio_mensual_bob || 0) >= precioMinAlq)
+    }
     if (brokerMode && onlySelectedFilter) {
       list = list.filter(p => favorites.has(p.id))
     }
     return list
-  }, [brokerMode, onlySelectedFilter, properties, favorites, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax])
+  }, [brokerMode, onlySelectedFilter, properties, favorites, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax, precioMinFiltroActivo, precioMinAlq])
   const visibleNotMarked = useMemo(() => {
     if (!brokerMode) return []
     let list: UnidadAlquiler[] = properties
@@ -736,8 +757,11 @@ export default function AlquileresPage({
         return a >= areaMin && a <= areaMax
       })
     }
+    if (precioMinFiltroActivo) {
+      list = list.filter(p => (p.precio_mensual_bob || 0) >= precioMinAlq)
+    }
     return list.filter(p => !favorites.has(p.id))
-  }, [brokerMode, properties, favorites, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax])
+  }, [brokerMode, properties, favorites, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax, precioMinFiltroActivo, precioMinAlq])
   function markAllVisible() {
     if (visibleNotMarked.length === 0) return
     trackEvent('broker_mark_all_visible', { count: visibleNotMarked.length, broker_slug: broker?.slug, tipo_operacion: 'alquiler' })
@@ -972,12 +996,15 @@ export default function AlquileresPage({
         return a >= areaMin && a <= areaMax
       })
     }
+    if (precioMinFiltroActivo) {
+      list = list.filter(p => (p.precio_mensual_bob || 0) >= precioMinAlq)
+    }
     if (brokerMode && onlySelectedFilter) {
       list = list.filter(p => favorites.has(p.id))
     }
     if (spotlightProperty) list = list.filter(p => p.id !== spotlightId)
     return list
-  }, [properties, spotlightProperty, spotlightId, brokerMode, fuentesPermitidas, onlySelectedFilter, favorites, areaFiltroActivo, areaMin, areaMax])
+  }, [properties, spotlightProperty, spotlightId, brokerMode, fuentesPermitidas, onlySelectedFilter, favorites, areaFiltroActivo, areaMin, areaMax, precioMinFiltroActivo, precioMinAlq])
 
   // Pinned first card: first available ID wins, rest stay in natural order
   const PINNED_FIRST_IDS = [1350, 1349, 1333]
@@ -1128,6 +1155,8 @@ export default function AlquileresPage({
               areaMax={areaMax}
               onAreaMin={(v) => { setAreaMin(v); persistArea(v, areaMax) }}
               onAreaMax={(v) => { setAreaMax(v); persistArea(areaMin, v) }}
+              precioMin={precioMinAlq}
+              onPrecioMin={(v) => { setPrecioMinAlq(v); persistPrecioMin(v) }}
             />
             {/* Selección del broker / Favoritos del público */}
             {favorites.size > 0 && (
@@ -1731,6 +1760,8 @@ export default function AlquileresPage({
         areaMax={areaMax}
         onAreaMin={(v) => { setAreaMin(v); persistArea(v, areaMax) }}
         onAreaMax={(v) => { setAreaMax(v); persistArea(areaMin, v) }}
+        precioMin={precioMinAlq}
+        onPrecioMin={(v) => { setPrecioMinAlq(v); persistPrecioMin(v) }}
       />
 
       {/* Full-screen mobile map — fuera del condicional layout para que funcione
@@ -1767,6 +1798,62 @@ export default function AlquileresPage({
         </div>
       )}
     </>
+  )
+}
+
+// Sub-componente con buffer interno para inputs de precio min/max (broker).
+// Valores en Bs/mes. Min default = 0 (sin filtro). Max range 2000-18000.
+// Commit + clamp solo onBlur o Enter.
+function PriceInputAlq({ minPrice, maxPrice, onMinPrice, onMaxPrice }: {
+  minPrice: number; maxPrice: number
+  onMinPrice: (v: number) => void; onMaxPrice: (v: number) => void
+}) {
+  const MAX_BS = MAX_SLIDER_PRICE
+  const [minStr, setMinStr] = useState(String(minPrice))
+  const [maxStr, setMaxStr] = useState(String(maxPrice))
+  useEffect(() => { setMinStr(String(minPrice)) }, [minPrice])
+  useEffect(() => { setMaxStr(String(maxPrice)) }, [maxPrice])
+  function commitMin() {
+    const n = parseInt(minStr)
+    if (!Number.isFinite(n)) { setMinStr(String(minPrice)); return }
+    // Min puede ser 0 (sin filtro). Tope superior: maxPrice.
+    const clamped = Math.max(0, Math.min(n, maxPrice))
+    setMinStr(String(clamped))
+    if (clamped !== minPrice) onMinPrice(clamped)
+  }
+  function commitMax() {
+    const n = parseInt(maxStr)
+    if (!Number.isFinite(n)) { setMaxStr(String(maxPrice)); return }
+    const clamped = Math.max(Math.max(2000, minPrice), Math.min(n, MAX_BS))
+    setMaxStr(String(clamped))
+    if (clamped !== maxPrice) onMaxPrice(clamped)
+  }
+  return (
+    <div className="afo-price-inputs-row">
+      <label className="afo-area-field">
+        <span className="afo-area-prefix">Min</span>
+        <span className="afo-price-bs">Bs</span>
+        <input type="number" className="afo-area-input" inputMode="numeric"
+          min={0} max={MAX_BS} step={500}
+          value={minStr}
+          aria-label="Precio mínimo mensual en bolivianos"
+          onChange={e => setMinStr(e.target.value)}
+          onBlur={commitMin}
+          onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }} />
+      </label>
+      <span className="afo-area-sep">—</span>
+      <label className="afo-area-field">
+        <span className="afo-area-prefix">Max</span>
+        <span className="afo-price-bs">Bs</span>
+        <input type="number" className="afo-area-input" inputMode="numeric"
+          min={2000} max={MAX_BS} step={500}
+          value={maxStr}
+          aria-label="Precio máximo mensual en bolivianos"
+          onChange={e => setMaxStr(e.target.value)}
+          onBlur={commitMax}
+          onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }} />
+      </label>
+    </div>
   )
 }
 
@@ -1834,12 +1921,13 @@ function AreaInputsAlq({ areaMin, areaMax, onAreaMin, onAreaMax }: {
 }
 
 // ===== DESKTOP FILTERS (sidebar, auto-apply) =====
-function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax }: {
+function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, precioMin, onPrecioMin }: {
   currentFilters: FiltrosAlquiler; isFiltered: boolean
   onApply: (f: FiltrosAlquiler) => void; onReset: () => void; proyectoNames?: string[]
   brokerMode?: boolean
   areaMin?: number; areaMax?: number
   onAreaMin?: (v: number) => void; onAreaMax?: (v: number) => void
+  precioMin?: number; onPrecioMin?: (v: number) => void
 }) {
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set(currentFilters.dormitorios_lista || []))
@@ -1941,10 +2029,37 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 
       {/* Budget */}
       <div className="df-group">
-        <div className="df-label"><span className="df-dot" />PRESUPUESTO MAXIMO</div>
-        <input type="range" className="df-slider" min={2000} max={18000} step={500} value={maxPrice}
-          onChange={e => handlePriceChange(parseInt(e.target.value))} />
-        <div className="df-slider-val">{formatPrice(maxPrice)}/mes</div>
+        <div className="df-label"><span className="df-dot" />{brokerMode ? 'PRESUPUESTO MENSUAL' : 'PRESUPUESTO MAXIMO'}</div>
+        {brokerMode && onPrecioMin ? (
+          <div className="afo-range-wrap">
+            <input type="range" className="afo-range-slider afo-range-slider-min"
+              min={0} max={18000} step={500}
+              value={precioMin ?? 0}
+              aria-label="Precio mínimo (slider)"
+              onChange={e => {
+                const v = parseInt(e.target.value)
+                const clamped = Math.min(v, maxPrice - 500)
+                onPrecioMin(clamped)
+              }} />
+            <input type="range" className="afo-range-slider afo-range-slider-max"
+              min={0} max={18000} step={500}
+              value={maxPrice}
+              aria-label="Precio máximo (slider)"
+              onChange={e => {
+                const v = parseInt(e.target.value)
+                const clamped = Math.max(v, (precioMin ?? 0) + 500)
+                handlePriceChange(clamped)
+              }} />
+          </div>
+        ) : (
+          <input type="range" className="df-slider" min={2000} max={18000} step={500} value={maxPrice}
+            onChange={e => handlePriceChange(parseInt(e.target.value))} />
+        )}
+        {brokerMode && onPrecioMin ? (
+          <PriceInputAlq minPrice={precioMin ?? 0} maxPrice={maxPrice} onMinPrice={onPrecioMin} onMaxPrice={handlePriceChange} />
+        ) : (
+          <div className="df-slider-val">{formatPrice(maxPrice)}/mes</div>
+        )}
       </div>
 
       {/* Superficie m² (solo broker) */}
@@ -1998,7 +2113,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 }
 
 // ===== FILTER OVERLAY (full-screen, replaces MobileFilterCard in feed) =====
-function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, currentFilters, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax }: {
+function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, currentFilters, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax, precioMin, onPrecioMin }: {
   isOpen: boolean; onClose: () => void
   totalCount: number; filteredCount: number; isFiltered: boolean
   currentFilters: FiltrosAlquiler
@@ -2006,6 +2121,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
   brokerMode?: boolean
   areaMin?: number; areaMax?: number
   onAreaMin?: (v: number) => void; onAreaMax?: (v: number) => void
+  precioMin?: number; onPrecioMin?: (v: number) => void
 }) {
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set(currentFilters.dormitorios_lista || []))
@@ -2089,9 +2205,36 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
           ))}</div>
         </div>
         {/* Budget */}
-        <div className="afo-group"><div className="afo-label"><span className="afo-dot" />PRESUPUESTO MAXIMO</div>
-          <input type="range" className="afo-slider" min={2000} max={MAX_SLIDER_PRICE} step={500} value={maxPrice} onChange={e => setMaxPrice(parseInt(e.target.value))} />
-          <div className="afo-slider-val">{formatPrice(maxPrice)}/mes</div>
+        <div className="afo-group"><div className="afo-label"><span className="afo-dot" />{brokerMode ? 'PRESUPUESTO MENSUAL' : 'PRESUPUESTO MAXIMO'}</div>
+          {brokerMode && onPrecioMin ? (
+            <div className="afo-range-wrap">
+              <input type="range" className="afo-range-slider afo-range-slider-min"
+                min={0} max={MAX_SLIDER_PRICE} step={500}
+                value={precioMin ?? 0}
+                aria-label="Precio mínimo (slider)"
+                onChange={e => {
+                  const v = parseInt(e.target.value)
+                  const clamped = Math.min(v, maxPrice - 500)
+                  onPrecioMin(clamped)
+                }} />
+              <input type="range" className="afo-range-slider afo-range-slider-max"
+                min={0} max={MAX_SLIDER_PRICE} step={500}
+                value={maxPrice}
+                aria-label="Precio máximo (slider)"
+                onChange={e => {
+                  const v = parseInt(e.target.value)
+                  const clamped = Math.max(v, (precioMin ?? 0) + 500)
+                  setMaxPrice(clamped)
+                }} />
+            </div>
+          ) : (
+            <input type="range" className="afo-slider" min={2000} max={MAX_SLIDER_PRICE} step={500} value={maxPrice} onChange={e => setMaxPrice(parseInt(e.target.value))} />
+          )}
+          {brokerMode && onPrecioMin ? (
+            <PriceInputAlq minPrice={precioMin ?? 0} maxPrice={maxPrice} onMinPrice={onPrecioMin} onMaxPrice={setMaxPrice} />
+          ) : (
+            <div className="afo-slider-val">{formatPrice(maxPrice)}/mes</div>
+          )}
         </div>
         {brokerMode && onAreaMin && onAreaMax && (
           <div className="afo-group"><div className="afo-label"><span className="afo-dot" />SUPERFICIE (m²)</div>
