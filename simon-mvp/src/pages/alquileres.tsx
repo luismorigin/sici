@@ -77,6 +77,11 @@ const FUENTES_BROKER_BADGE: Record<FuenteBroker, { color: string; bg: string }> 
   bien_inmuebles: { color: '#fff', bg: '#37BEAA' },
 }
 
+// Filtro de superficie m² (modo broker). Inputs editables min/max, client-side.
+// Default: rango completo (sin filtro). Props sin area_m2 se ocultan cuando hay rango.
+const M2_MIN_DEFAULT = 30
+const M2_MAX_DEFAULT = 400
+
 const formatPrice = formatPriceBob
 
 function buildEmptyMessage(f: FiltrosAlquiler): string {
@@ -287,6 +292,25 @@ export default function AlquileresPage({
       return next
     })
   }
+  // Filtro broker: superficie m² min/max. Default = sin filtro. Persistido por slug.
+  const [areaMin, setAreaMin] = useState<number>(M2_MIN_DEFAULT)
+  const [areaMax, setAreaMax] = useState<number>(M2_MAX_DEFAULT)
+  useEffect(() => {
+    if (!brokerMode || !brokerSlug) return
+    try {
+      const raw = localStorage.getItem(`broker_area_${brokerSlug}`)
+      if (!raw) return
+      const obj = JSON.parse(raw)
+      if (typeof obj?.min === 'number') setAreaMin(obj.min)
+      if (typeof obj?.max === 'number') setAreaMax(obj.max)
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brokerSlug])
+  function persistArea(min: number, max: number) {
+    if (!brokerSlug) return
+    try { localStorage.setItem(`broker_area_${brokerSlug}`, JSON.stringify({ min, max })) } catch {}
+  }
+  const areaFiltroActivo = brokerMode && (areaMin > M2_MIN_DEFAULT || areaMax < M2_MAX_DEFAULT)
 
   // Body styles — scoped to this page (cleanup on unmount).
   // overflow:hidden solo en TikTok feed mobile (feed público sin broker/share):
@@ -687,19 +711,33 @@ export default function AlquileresPage({
     if (brokerMode && fuentesPermitidas.size < FUENTES_BROKER.length) {
       list = list.filter(p => fuentesPermitidas.has(((p.fuente || '').toLowerCase()) as FuenteBroker))
     }
+    if (areaFiltroActivo) {
+      list = list.filter(p => {
+        const a = p.area_m2
+        if (!a || a <= 0) return false
+        return a >= areaMin && a <= areaMax
+      })
+    }
     if (brokerMode && onlySelectedFilter) {
       list = list.filter(p => favorites.has(p.id))
     }
     return list
-  }, [brokerMode, onlySelectedFilter, properties, favorites, fuentesPermitidas])
+  }, [brokerMode, onlySelectedFilter, properties, favorites, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax])
   const visibleNotMarked = useMemo(() => {
     if (!brokerMode) return []
     let list: UnidadAlquiler[] = properties
     if (fuentesPermitidas.size < FUENTES_BROKER.length) {
       list = list.filter(p => fuentesPermitidas.has(((p.fuente || '').toLowerCase()) as FuenteBroker))
     }
+    if (areaFiltroActivo) {
+      list = list.filter(p => {
+        const a = p.area_m2
+        if (!a || a <= 0) return false
+        return a >= areaMin && a <= areaMax
+      })
+    }
     return list.filter(p => !favorites.has(p.id))
-  }, [brokerMode, properties, favorites, fuentesPermitidas])
+  }, [brokerMode, properties, favorites, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax])
   function markAllVisible() {
     if (visibleNotMarked.length === 0) return
     trackEvent('broker_mark_all_visible', { count: visibleNotMarked.length, broker_slug: broker?.slug, tipo_operacion: 'alquiler' })
@@ -921,18 +959,25 @@ export default function AlquileresPage({
   }
 
   // Desktop grid: exclude spotlight property to avoid duplication.
-  // En modo broker aplica también filtro de fuentes y "solo seleccionadas".
+  // En modo broker aplica también filtro de fuentes, área m² y "solo seleccionadas".
   const gridProperties = useMemo(() => {
     let list = properties
     if (brokerMode && fuentesPermitidas.size < FUENTES_BROKER.length) {
       list = list.filter(p => fuentesPermitidas.has(((p.fuente || '').toLowerCase()) as FuenteBroker))
+    }
+    if (areaFiltroActivo) {
+      list = list.filter(p => {
+        const a = p.area_m2
+        if (!a || a <= 0) return false
+        return a >= areaMin && a <= areaMax
+      })
     }
     if (brokerMode && onlySelectedFilter) {
       list = list.filter(p => favorites.has(p.id))
     }
     if (spotlightProperty) list = list.filter(p => p.id !== spotlightId)
     return list
-  }, [properties, spotlightProperty, spotlightId, brokerMode, fuentesPermitidas, onlySelectedFilter, favorites])
+  }, [properties, spotlightProperty, spotlightId, brokerMode, fuentesPermitidas, onlySelectedFilter, favorites, areaFiltroActivo, areaMin, areaMax])
 
   // Pinned first card: first available ID wins, rest stay in natural order
   const PINNED_FIRST_IDS = [1350, 1349, 1333]
@@ -1078,6 +1123,11 @@ export default function AlquileresPage({
               onApply={applyFilters}
               onReset={resetFilters}
               proyectoNames={proyectoNames}
+              brokerMode={brokerMode}
+              areaMin={areaMin}
+              areaMax={areaMax}
+              onAreaMin={(v) => { setAreaMin(v); persistArea(v, areaMax) }}
+              onAreaMax={(v) => { setAreaMax(v); persistArea(areaMin, v) }}
             />
             {/* Selección del broker / Favoritos del público */}
             {favorites.size > 0 && (
@@ -1676,6 +1726,11 @@ export default function AlquileresPage({
         onApply={(f) => { applyFilters(f); setFilterOverlayOpen(false) }}
         onReset={() => { resetFilters(); setFilterOverlayOpen(false) }}
         proyectoNames={proyectoNames}
+        brokerMode={brokerMode}
+        areaMin={areaMin}
+        areaMax={areaMax}
+        onAreaMin={(v) => { setAreaMin(v); persistArea(v, areaMax) }}
+        onAreaMax={(v) => { setAreaMax(v); persistArea(areaMin, v) }}
       />
 
       {/* Full-screen mobile map — fuera del condicional layout para que funcione
@@ -1715,10 +1770,76 @@ export default function AlquileresPage({
   )
 }
 
+// Sub-componente con buffer string interno para inputs de m².
+// Evita el bug de clamp en cada keystroke (al escribir "150" se clampaba a 30 con el "1").
+// Commit + clamp solo en onBlur o Enter.
+function AreaInputsAlq({ areaMin, areaMax, onAreaMin, onAreaMax }: {
+  areaMin: number; areaMax: number
+  onAreaMin: (v: number) => void; onAreaMax: (v: number) => void
+}) {
+  const [minStr, setMinStr] = useState(String(areaMin))
+  const [maxStr, setMaxStr] = useState(String(areaMax))
+  useEffect(() => { setMinStr(String(areaMin)) }, [areaMin])
+  useEffect(() => { setMaxStr(String(areaMax)) }, [areaMax])
+  function commitMin() {
+    const n = parseInt(minStr)
+    if (!Number.isFinite(n)) { setMinStr(String(areaMin)); return }
+    const clamped = Math.max(M2_MIN_DEFAULT, Math.min(n, areaMax))
+    setMinStr(String(clamped))
+    if (clamped !== areaMin) onAreaMin(clamped)
+  }
+  function commitMax() {
+    const n = parseInt(maxStr)
+    if (!Number.isFinite(n)) { setMaxStr(String(areaMax)); return }
+    const clamped = Math.min(M2_MAX_DEFAULT, Math.max(n, areaMin))
+    setMaxStr(String(clamped))
+    if (clamped !== areaMax) onAreaMax(clamped)
+  }
+  const filtroActivo = areaMin > M2_MIN_DEFAULT || areaMax < M2_MAX_DEFAULT
+  return (
+    <>
+      <div className="afo-area-inputs">
+        <label className="afo-area-field">
+          <span className="afo-area-prefix">Min</span>
+          <input type="number" className="afo-area-input" inputMode="numeric"
+            min={M2_MIN_DEFAULT} max={M2_MAX_DEFAULT} step={5}
+            value={minStr}
+            aria-label="Superficie mínima en metros cuadrados"
+            onChange={e => setMinStr(e.target.value)}
+            onBlur={commitMin}
+            onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }} />
+          <span className="afo-area-suffix">m²</span>
+        </label>
+        <span className="afo-area-sep">—</span>
+        <label className="afo-area-field">
+          <span className="afo-area-prefix">Max</span>
+          <input type="number" className="afo-area-input" inputMode="numeric"
+            min={M2_MIN_DEFAULT} max={M2_MAX_DEFAULT} step={5}
+            value={maxStr}
+            aria-label="Superficie máxima en metros cuadrados"
+            onChange={e => setMaxStr(e.target.value)}
+            onBlur={commitMax}
+            onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }} />
+          <span className="afo-area-suffix">m²</span>
+        </label>
+      </div>
+      {filtroActivo && (
+        <button type="button" className="afo-area-clear"
+          onClick={() => { onAreaMin(M2_MIN_DEFAULT); onAreaMax(M2_MAX_DEFAULT) }}>
+          Quitar filtro de superficie
+        </button>
+      )}
+    </>
+  )
+}
+
 // ===== DESKTOP FILTERS (sidebar, auto-apply) =====
-function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyectoNames }: {
+function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax }: {
   currentFilters: FiltrosAlquiler; isFiltered: boolean
   onApply: (f: FiltrosAlquiler) => void; onReset: () => void; proyectoNames?: string[]
+  brokerMode?: boolean
+  areaMin?: number; areaMax?: number
+  onAreaMin?: (v: number) => void; onAreaMax?: (v: number) => void
 }) {
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set(currentFilters.dormitorios_lista || []))
@@ -1826,6 +1947,19 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
         <div className="df-slider-val">{formatPrice(maxPrice)}/mes</div>
       </div>
 
+      {/* Superficie m² (solo broker) */}
+      {brokerMode && onAreaMin && onAreaMax && (
+        <div className="df-group">
+          <div className="df-label"><span className="df-dot" />SUPERFICIE (m²)</div>
+          <AreaInputsAlq
+            areaMin={areaMin ?? M2_MIN_DEFAULT}
+            areaMax={areaMax ?? M2_MAX_DEFAULT}
+            onAreaMin={onAreaMin}
+            onAreaMax={onAreaMax}
+          />
+        </div>
+      )}
+
       {/* Dorms */}
       <div className="df-group">
         <div className="df-label"><span className="df-dot" />DORMITORIOS</div>
@@ -1864,11 +1998,14 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 }
 
 // ===== FILTER OVERLAY (full-screen, replaces MobileFilterCard in feed) =====
-function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, currentFilters, onApply, onReset, proyectoNames }: {
+function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, currentFilters, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax }: {
   isOpen: boolean; onClose: () => void
   totalCount: number; filteredCount: number; isFiltered: boolean
   currentFilters: FiltrosAlquiler
   onApply: (f: FiltrosAlquiler) => void; onReset: () => void; proyectoNames?: string[]
+  brokerMode?: boolean
+  areaMin?: number; areaMax?: number
+  onAreaMin?: (v: number) => void; onAreaMax?: (v: number) => void
 }) {
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_mensual_max || MAX_SLIDER_PRICE)
   const [selectedDorms, setSelectedDorms] = useState<Set<number>>(new Set(currentFilters.dormitorios_lista || []))
@@ -1956,6 +2093,16 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
           <input type="range" className="afo-slider" min={2000} max={MAX_SLIDER_PRICE} step={500} value={maxPrice} onChange={e => setMaxPrice(parseInt(e.target.value))} />
           <div className="afo-slider-val">{formatPrice(maxPrice)}/mes</div>
         </div>
+        {brokerMode && onAreaMin && onAreaMax && (
+          <div className="afo-group"><div className="afo-label"><span className="afo-dot" />SUPERFICIE (m²)</div>
+            <AreaInputsAlq
+              areaMin={areaMin ?? M2_MIN_DEFAULT}
+              areaMax={areaMax ?? M2_MAX_DEFAULT}
+              onAreaMin={onAreaMin}
+              onAreaMax={onAreaMax}
+            />
+          </div>
+        )}
         {/* Dorms */}
         <div className="afo-group"><div className="afo-label"><span className="afo-dot" />DORMITORIOS</div>
           <div className="afo-dorms">{[0,1,2,3].map(d => (

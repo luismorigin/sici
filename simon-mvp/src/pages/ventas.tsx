@@ -75,6 +75,11 @@ const FUENTES_BROKER_LABELS: Record<FuenteBroker, string> = {
   bien_inmuebles: 'Bien Inmuebles',
 }
 
+// Filtro de superficie m² (modo broker). Inputs editables min/max, client-side.
+// Default: rango completo (sin filtro). Props sin area_m2 se ocultan cuando hay rango.
+const M2_MIN_DEFAULT = 30
+const M2_MAX_DEFAULT = 400
+
 function formatPriceK(v: number) { return `$${(v / 1000).toFixed(0)}k` }
 
 function buildEmptyMessage(f: FiltrosVentaSimple): string {
@@ -177,9 +182,76 @@ const ChevronRight = () => (
 )
 
 // ===== Shared filter UI =====
-function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, proyecto, proyectoNames, onMinPrice, onMaxPrice, onToggleZona, onToggleDorm, onEntrega, onOrden, onProyecto }: {
+// Sub-componente con buffer string interno para inputs de m².
+// Evita el bug de clamp en cada keystroke (al escribir "150" se clampaba a 30 con el "1").
+// Commit + clamp solo en onBlur o Enter. El feed se filtra cuando hay commit.
+function AreaInputsVT({ areaMin, areaMax, onAreaMin, onAreaMax }: {
+  areaMin: number; areaMax: number
+  onAreaMin: (v: number) => void; onAreaMax: (v: number) => void
+}) {
+  const [minStr, setMinStr] = useState(String(areaMin))
+  const [maxStr, setMaxStr] = useState(String(areaMax))
+  // Sync cuando el padre actualiza (ej: click "Quitar filtro de superficie").
+  useEffect(() => { setMinStr(String(areaMin)) }, [areaMin])
+  useEffect(() => { setMaxStr(String(areaMax)) }, [areaMax])
+  function commitMin() {
+    const n = parseInt(minStr)
+    if (!Number.isFinite(n)) { setMinStr(String(areaMin)); return }
+    const clamped = Math.max(M2_MIN_DEFAULT, Math.min(n, areaMax))
+    setMinStr(String(clamped))
+    if (clamped !== areaMin) onAreaMin(clamped)
+  }
+  function commitMax() {
+    const n = parseInt(maxStr)
+    if (!Number.isFinite(n)) { setMaxStr(String(areaMax)); return }
+    const clamped = Math.min(M2_MAX_DEFAULT, Math.max(n, areaMin))
+    setMaxStr(String(clamped))
+    if (clamped !== areaMax) onAreaMax(clamped)
+  }
+  const filtroActivo = areaMin > M2_MIN_DEFAULT || areaMax < M2_MAX_DEFAULT
+  return (
+    <>
+      <div className="vf-area-inputs">
+        <label className="vf-area-field">
+          <span className="vf-area-prefix">Min</span>
+          <input type="number" className="vf-area-input" inputMode="numeric"
+            min={M2_MIN_DEFAULT} max={M2_MAX_DEFAULT} step={5}
+            value={minStr}
+            aria-label="Superficie mínima en metros cuadrados"
+            onChange={e => setMinStr(e.target.value)}
+            onBlur={commitMin}
+            onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }} />
+          <span className="vf-area-suffix">m²</span>
+        </label>
+        <span className="vf-area-sep">—</span>
+        <label className="vf-area-field">
+          <span className="vf-area-prefix">Max</span>
+          <input type="number" className="vf-area-input" inputMode="numeric"
+            min={M2_MIN_DEFAULT} max={M2_MAX_DEFAULT} step={5}
+            value={maxStr}
+            aria-label="Superficie máxima en metros cuadrados"
+            onChange={e => setMaxStr(e.target.value)}
+            onBlur={commitMax}
+            onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }} />
+          <span className="vf-area-suffix">m²</span>
+        </label>
+      </div>
+      {filtroActivo && (
+        <button type="button" className="vf-area-clear"
+          onClick={() => { onAreaMin(M2_MIN_DEFAULT); onAreaMax(M2_MAX_DEFAULT) }}>
+          Quitar filtro de superficie
+        </button>
+      )}
+    </>
+  )
+}
+
+function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entrega, orden, proyecto, proyectoNames, onMinPrice, onMaxPrice, onToggleZona, onToggleDorm, onEntrega, onOrden, onProyecto, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax }: {
   minPrice: number; maxPrice: number; selectedDorms: Set<number>; selectedZonas: Set<string>; entrega: string; orden: FiltrosVentaSimple['orden']; proyecto: string; proyectoNames?: string[]
   onMinPrice: (v: number) => void; onMaxPrice: (v: number) => void; onToggleZona: (db: string) => void; onToggleDorm: (d: number) => void; onEntrega: (v: string) => void; onOrden: (v: FiltrosVentaSimple['orden']) => void; onProyecto: (v: string) => void
+  brokerMode?: boolean
+  areaMin?: number; areaMax?: number
+  onAreaMin?: (v: number) => void; onAreaMax?: (v: number) => void
 }) {
   return (
     <>
@@ -210,6 +282,16 @@ function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entr
         </div>
         <div className="vf-tc-note">Precios en USD oficial · TC Bs 6.96</div>
       </div>
+      {brokerMode && onAreaMin && onAreaMax && (
+        <div className="vf-group"><div className="vf-label">SUPERFICIE (m²)</div>
+          <AreaInputsVT
+            areaMin={areaMin ?? M2_MIN_DEFAULT}
+            areaMax={areaMax ?? M2_MAX_DEFAULT}
+            onAreaMin={onAreaMin}
+            onAreaMax={onAreaMax}
+          />
+        </div>
+      )}
       <div className="vf-group"><div className="vf-label">DORMITORIOS</div>
         <div className="vf-btn-row">
           {[0, 1, 2, 3].map(d => (
@@ -239,9 +321,12 @@ function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entr
 }
 
 // ===== Desktop Filters =====
-function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyectoNames }: {
+function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax }: {
   currentFilters: FiltrosVentaSimple; isFiltered: boolean
   onApply: (f: FiltrosVentaSimple) => void; onReset: () => void; proyectoNames?: string[]
+  brokerMode?: boolean
+  areaMin?: number; areaMax?: number
+  onAreaMin?: (v: number) => void; onAreaMax?: (v: number) => void
 }) {
   const [minPrice, setMinPrice] = useState(currentFilters.precio_min || MIN_PRICE)
   const [maxPrice, setMaxPrice] = useState(currentFilters.precio_max || MAX_PRICE)
@@ -271,7 +356,8 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
     <div className="vf-wrap">
       <FilterControls minPrice={minPrice} maxPrice={maxPrice} selectedDorms={selectedDorms} selectedZonas={selectedZonas}
         entrega={entrega} orden={orden} proyecto={proyecto} proyectoNames={proyectoNames} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
-        onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={handleEntrega} onOrden={handleOrden} onProyecto={handleProyecto} />
+        onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={handleEntrega} onOrden={handleOrden} onProyecto={handleProyecto}
+        brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax} onAreaMin={onAreaMin} onAreaMax={onAreaMax} />
       {isFiltered && <button className="vf-reset" onClick={onReset}>Quitar filtros</button>}
     </div>
   )
@@ -630,10 +716,13 @@ function MobileFilterCard({ totalCount, filteredCount, isFiltered, onApply, onRe
 }
 
 // ===== Mobile Filter Overlay (TikTok/Airbnb style) =====
-function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset, proyectoNames }: {
+function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered, onApply, onReset, proyectoNames, brokerMode = false, areaMin, areaMax, onAreaMin, onAreaMax }: {
   isOpen: boolean; onClose: () => void
   totalCount: number; filteredCount: number; isFiltered: boolean
   onApply: (f: FiltrosVentaSimple) => void; onReset: () => void; proyectoNames?: string[]
+  brokerMode?: boolean
+  areaMin?: number; areaMax?: number
+  onAreaMin?: (v: number) => void; onAreaMax?: (v: number) => void
 }) {
   const [minPrice, setMinPrice] = useState(MIN_PRICE)
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE)
@@ -701,7 +790,8 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
       <div className="fo-body">
         <FilterControls minPrice={minPrice} maxPrice={maxPrice} selectedDorms={selectedDorms} selectedZonas={selectedZonas}
           entrega={entrega} orden={orden} proyecto={proyecto} proyectoNames={proyectoNames} onMinPrice={handleMinPrice} onMaxPrice={handleMaxPrice}
-          onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={v => setEntrega(v)} onOrden={v => setOrden(v)} onProyecto={v => setProyecto(v)} />
+          onToggleZona={toggleZona} onToggleDorm={toggleDorm} onEntrega={v => setEntrega(v)} onOrden={v => setOrden(v)} onProyecto={v => setProyecto(v)}
+          brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax} onAreaMin={onAreaMin} onAreaMax={onAreaMax} />
       </div>
       <div className="fo-footer">
         {isFiltered && <button className="fo-reset" onClick={handleReset}>Quitar filtros</button>}
@@ -1426,6 +1516,27 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       return next
     })
   }
+  // Filtro broker: superficie m² min/max (inputs editables). Default = sin filtro.
+  // Stored como pair {min, max}. Persistido por slug.
+  const [areaMin, setAreaMin] = useState<number>(M2_MIN_DEFAULT)
+  const [areaMax, setAreaMax] = useState<number>(M2_MAX_DEFAULT)
+  useEffect(() => {
+    if (!brokerMode || !brokerSlug) return
+    try {
+      const raw = localStorage.getItem(`broker_area_${brokerSlug}`)
+      if (!raw) return
+      const obj = JSON.parse(raw)
+      if (typeof obj?.min === 'number') setAreaMin(obj.min)
+      if (typeof obj?.max === 'number') setAreaMax(obj.max)
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brokerSlug])
+  function persistArea(min: number, max: number) {
+    if (!brokerSlug) return
+    try { localStorage.setItem(`broker_area_${brokerSlug}`, JSON.stringify({ min, max })) } catch {}
+  }
+  // Indica si el filtro de área está activo (no en defaults). Ocultar props sin area_m2 si lo está.
+  const areaFiltroActivo = brokerMode && (areaMin > M2_MIN_DEFAULT || areaMax < M2_MAX_DEFAULT)
 
   // publicShareMode O brokerMode mobile: el body tiene overflow:hidden por la media
   // query del feed TikTok. Cuando forzamos layout desktop-grid en mobile, hay que
@@ -1571,26 +1682,40 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       }
     }
   }
-  // Lista que se muestra: aplica filtro de fuentes (broker) + "solo seleccionadas".
+  // Lista que se muestra: aplica filtro de fuentes (broker) + área m² (broker) + "solo seleccionadas".
   // Cuando brokerMode = false, no se aplica nada (paridad con feed público).
   const displayedProperties = useMemo(() => {
     let list: UnidadVenta[] = properties
     if (brokerMode && fuentesPermitidas.size < FUENTES_BROKER.length) {
       list = list.filter(p => fuentesPermitidas.has(((p.fuente || '').toLowerCase()) as FuenteBroker))
     }
+    if (areaFiltroActivo) {
+      list = list.filter(p => {
+        const a = p.area_m2
+        if (!a || a <= 0) return false // sin área, ocultar cuando filtro está activo
+        return a >= areaMin && a <= areaMax
+      })
+    }
     if (brokerMode && onlySelectedFilter) {
       list = list.filter(p => favorites.has(p.id))
     }
     return list
-  }, [brokerMode, onlySelectedFilter, properties, favorites, fuentesPermitidas])
+  }, [brokerMode, onlySelectedFilter, properties, favorites, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax])
   const visibleNotMarked = useMemo(() => {
     if (!brokerMode) return []
     let list: UnidadVenta[] = properties
     if (fuentesPermitidas.size < FUENTES_BROKER.length) {
       list = list.filter(p => fuentesPermitidas.has(((p.fuente || '').toLowerCase()) as FuenteBroker))
     }
+    if (areaFiltroActivo) {
+      list = list.filter(p => {
+        const a = p.area_m2
+        if (!a || a <= 0) return false
+        return a >= areaMin && a <= areaMax
+      })
+    }
     return list.filter(p => !favorites.has(p.id))
-  }, [brokerMode, properties, favorites, fuentesPermitidas])
+  }, [brokerMode, properties, favorites, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax])
   function markAllVisible() {
     if (visibleNotMarked.length === 0) return
     trackEvent('broker_mark_all_visible', { count: visibleNotMarked.length, broker_slug: broker?.slug })
@@ -1786,6 +1911,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     if (brokerMode && fuentesPermitidas.size < FUENTES_BROKER.length) {
       baseList = baseList.filter(p => fuentesPermitidas.has(((p.fuente || '').toLowerCase()) as FuenteBroker))
     }
+    if (areaFiltroActivo) {
+      baseList = baseList.filter(p => {
+        const a = p.area_m2
+        if (!a || a <= 0) return false
+        return a >= areaMin && a <= areaMax
+      })
+    }
     if (brokerMode && onlySelectedFilter) {
       baseList = baseList.filter(p => favorites.has(p.id))
     }
@@ -1796,7 +1928,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       items.push({ type: 'property', data: p, isSpotlight: i === 0 && !!spotlightProperty })
     })
     return items
-  }, [properties, favorites, brokerMode, onlySelectedFilter, fuentesPermitidas, spotlightProperty, spotlightId])
+  }, [properties, favorites, brokerMode, onlySelectedFilter, fuentesPermitidas, areaFiltroActivo, areaMin, areaMax, spotlightProperty, spotlightId])
 
   return (
     <>
@@ -2035,7 +2167,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       {/* Filter overlay — montado siempre (lo dispara el search pill mobile o el chip Filtros del broker mobile) */}
       <FilterOverlay isOpen={filterOverlayOpen} onClose={() => setFilterOverlayOpen(false)}
         totalCount={unfilteredCount || totalCount} filteredCount={properties.length}
-        isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
+        isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames}
+        brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax}
+        onAreaMin={(v) => { setAreaMin(v); persistArea(v, areaMax) }}
+        onAreaMax={(v) => { setAreaMax(v); persistArea(areaMin, v) }} />
 
       {(isDesktop || publicShareMode || brokerMode) ? (
         /* ===== DESKTOP (o public share / broker en cualquier device — feed con grid simple) ===== */
@@ -2050,7 +2185,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 <span className="ventas-count-num">{properties.length}</span>
                 <span className="ventas-count-text">{isFiltered ? `de ${unfilteredCount} departamentos` : 'departamentos en Equipetrol'}</span>
               </div>
-              <DesktopFilters currentFilters={filters} isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames} />
+              <DesktopFilters currentFilters={filters} isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames}
+                brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax}
+                onAreaMin={(v) => { setAreaMin(v); persistArea(v, areaMax) }}
+                onAreaMax={(v) => { setAreaMax(v); persistArea(areaMin, v) }} />
             </aside>
           )}
           <main className="ventas-main">
@@ -2453,6 +2591,17 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vf-tc-note { font-size:12px; color:#9A8E7A; font-family:'DM Sans',sans-serif; margin-top:8px; text-align:right }
         .vf-reset { width:100%; max-width:340px; padding:10px; background:transparent; border:1px solid rgba(237,232,220,0.12); border-radius:10px; color:#9A8E7A; font-size:12px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s }
         .vf-reset:hover { border-color:rgba(237,232,220,0.25); color:#EDE8DC }
+        /* Inputs m² (modo broker) — pareados min/max con label flotante */
+        .vf-area-inputs { display:flex; align-items:center; gap:10px }
+        .vf-area-field { flex:1; display:flex; align-items:center; gap:6px; padding:8px 12px; border-radius:10px; border:1px solid rgba(237,232,220,0.12); background:transparent; transition:border-color 0.15s }
+        .vf-area-field:focus-within { border-color:#3A6A48 }
+        .vf-area-prefix { font-size:11px; color:#7A7060; font-family:'DM Sans',sans-serif; font-weight:600; letter-spacing:0.4px; text-transform:uppercase; flex-shrink:0 }
+        .vf-area-input { width:100%; min-width:0; background:transparent; border:none; outline:none; color:#EDE8DC; font-size:14px; font-family:'DM Sans',sans-serif; font-weight:500; font-variant-numeric:tabular-nums; -moz-appearance:textfield; padding:0 }
+        .vf-area-input::-webkit-outer-spin-button,.vf-area-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0 }
+        .vf-area-suffix { font-size:12px; color:#9A8E7A; font-family:'DM Sans',sans-serif; flex-shrink:0 }
+        .vf-area-sep { color:#7A7060; font-size:14px; flex-shrink:0 }
+        .vf-area-clear { margin-top:8px; background:transparent; border:none; color:#9A8E7A; font-size:11px; cursor:pointer; font-family:'DM Sans',sans-serif; padding:4px 0; text-align:left }
+        .vf-area-clear:hover { color:#EDE8DC }
 
         /* ===== DESKTOP VENTA CARD ===== */
         .vc { background:#1e1e1e; border:1px solid rgba(237,232,220,0.08); border-radius:14px; overflow:hidden; transition:all 0.25s cubic-bezier(0.4,0,0.2,1); display:flex; flex-direction:column }

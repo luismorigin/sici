@@ -363,6 +363,17 @@
 .afo-slider{width:100%;-webkit-appearance:none;appearance:none;height:3px;background:#D8D0BC;border-radius:2px;outline:none;}
 .afo-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#FAFAF8;border:2px solid #141414;cursor:pointer;}
 .afo-slider-val{text-align:right;font-size:15px;color:#141414;margin-top:6px;font-weight:600;font-family:'DM Sans',sans-serif;font-variant-numeric:tabular-nums;}
+/* Inputs m² (modo broker) — pareados min/max */
+.afo-area-inputs{display:flex;align-items:center;gap:10px;}
+.afo-area-field{flex:1;display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:10px;border:1px solid rgba(20,20,20,0.12);background:transparent;transition:border-color 0.15s;}
+.afo-area-field:focus-within{border-color:#3A6A48;}
+.afo-area-prefix{font-size:11px;color:#7A7060;font-family:'DM Sans',sans-serif;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;flex-shrink:0;}
+.afo-area-input{width:100%;min-width:0;background:transparent;border:none;outline:none;color:#141414;font-size:14px;font-family:'DM Sans',sans-serif;font-weight:500;font-variant-numeric:tabular-nums;-moz-appearance:textfield;padding:0;}
+.afo-area-input::-webkit-outer-spin-button,.afo-area-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.afo-area-suffix{font-size:12px;color:#7A7060;font-family:'DM Sans',sans-serif;flex-shrink:0;}
+.afo-area-sep{color:#7A7060;font-size:14px;flex-shrink:0;}
+.afo-area-clear{margin-top:8px;background:transparent;border:none;color:#7A7060;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 0;text-align:left;}
+.afo-area-clear:hover{color:#141414;}
 
 /* Map Float Card Mobile (mfc-m-*) */
 .mfc-mobile {
