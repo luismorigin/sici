@@ -216,8 +216,10 @@
 
 /* Compare Banner */
 .alq-compare-banner-wrap {
-  position: fixed; top: max(64px, calc(env(safe-area-inset-top) + 56px)); left: 50%; transform: translateX(-50%);
-  z-index: 100; display: flex; align-items: center; gap: 0;
+  /* Pegado al pie igual que en ventas — antes estaba arriba (top:64px)
+     y tapaba el banner broker. */
+  position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom) + 16px)); left: 50%; transform: translateX(-50%);
+  z-index: 150; display: flex; align-items: center; gap: 0;
   border-radius: 100px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);
   animation: alqBannerIn 0.3s ease-out;
 }
@@ -232,7 +234,7 @@
   padding: 12px 16px 12px 12px; cursor: pointer; font-size: 18px; font-weight: 700; line-height: 1;
   font-family: 'DM Sans', sans-serif; border-left: 1px solid rgba(237,232,220,0.15);
 }
-@keyframes alqBannerIn { from { opacity: 0; transform: translateX(-50%) translateY(-12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+@keyframes alqBannerIn { from { opacity: 0; transform: translateX(-50%) translateY(12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 .alq-compare-banner-text { white-space: nowrap; }
 .alq-fav-count {
   position: absolute; top: -4px; right: -4px;
