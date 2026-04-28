@@ -277,67 +277,30 @@ export default function AlquileresPage({
   const [shortlistModalOpen, setShortlistModalOpen] = useState(false)
   const [shortlistsPanelOpen, setShortlistsPanelOpen] = useState(false)
   const [onlySelectedFilter, setOnlySelectedFilter] = useState(false)
-  // Filtro broker: fuentes/franquicias permitidas. Default: todas. Persistido por slug.
+  // Filtros broker: NO persisten — cada visita arranca en default.
+  // Decisión deliberada: si filtro persistía, broker volvía al día siguiente
+  // y veía un feed corto sin entender por qué (filtros olvidados de la sesión anterior).
+  // Limpieza defensiva del localStorage existente al montar (versiones previas sí persistían).
   const [fuentesPermitidas, setFuentesPermitidas] = useState<Set<FuenteBroker>>(() => new Set(FUENTES_BROKER))
+  const [areaMin, setAreaMin] = useState<number>(M2_MIN_DEFAULT)
+  const [areaMax, setAreaMax] = useState<number>(M2_MAX_DEFAULT)
+  const [precioMinAlq, setPrecioMinAlq] = useState<number>(0)
   useEffect(() => {
-    if (!brokerMode || !brokerSlug) return
+    if (!brokerSlug) return
     try {
-      const raw = localStorage.getItem(`broker_fuentes_${brokerSlug}`)
-      if (!raw) return
-      const arr = JSON.parse(raw)
-      if (Array.isArray(arr)) {
-        const valid = arr.filter((x): x is FuenteBroker => (FUENTES_BROKER as readonly string[]).includes(x))
-        setFuentesPermitidas(new Set(valid))
-      }
+      localStorage.removeItem(`broker_fuentes_${brokerSlug}`)
+      localStorage.removeItem(`broker_area_${brokerSlug}`)
+      localStorage.removeItem(`broker_precio_min_${brokerSlug}`)
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brokerSlug])
   function toggleFuente(f: FuenteBroker) {
     setFuentesPermitidas(prev => {
       const next = new Set(prev)
       if (next.has(f)) next.delete(f); else next.add(f)
-      if (brokerSlug) {
-        try { localStorage.setItem(`broker_fuentes_${brokerSlug}`, JSON.stringify([...next])) } catch {}
-      }
       return next
     })
   }
-  // Filtro broker: superficie m² min/max. Default = sin filtro. Persistido por slug.
-  const [areaMin, setAreaMin] = useState<number>(M2_MIN_DEFAULT)
-  const [areaMax, setAreaMax] = useState<number>(M2_MAX_DEFAULT)
-  useEffect(() => {
-    if (!brokerMode || !brokerSlug) return
-    try {
-      const raw = localStorage.getItem(`broker_area_${brokerSlug}`)
-      if (!raw) return
-      const obj = JSON.parse(raw)
-      if (typeof obj?.min === 'number') setAreaMin(obj.min)
-      if (typeof obj?.max === 'number') setAreaMax(obj.max)
-    } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brokerSlug])
-  function persistArea(min: number, max: number) {
-    if (!brokerSlug) return
-    try { localStorage.setItem(`broker_area_${brokerSlug}`, JSON.stringify({ min, max })) } catch {}
-  }
   const areaFiltroActivo = brokerMode && (areaMin > M2_MIN_DEFAULT || areaMax < M2_MAX_DEFAULT)
-  // Filtro broker: precio mínimo mensual (Bs). Default 0 = sin filtro. Persistido por slug.
-  const [precioMinAlq, setPrecioMinAlq] = useState<number>(0)
-  useEffect(() => {
-    if (!brokerMode || !brokerSlug) return
-    try {
-      const raw = localStorage.getItem(`broker_precio_min_${brokerSlug}`)
-      if (raw) {
-        const n = parseInt(raw)
-        if (Number.isFinite(n) && n >= 0) setPrecioMinAlq(n)
-      }
-    } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brokerSlug])
-  function persistPrecioMin(v: number) {
-    if (!brokerSlug) return
-    try { localStorage.setItem(`broker_precio_min_${brokerSlug}`, String(v)) } catch {}
-  }
   const precioMinFiltroActivo = brokerMode && precioMinAlq > 0
 
   // Body styles — scoped to this page (cleanup on unmount).
@@ -1163,10 +1126,10 @@ export default function AlquileresPage({
               brokerMode={brokerMode}
               areaMin={areaMin}
               areaMax={areaMax}
-              onAreaMin={(v) => { setAreaMin(v); persistArea(v, areaMax) }}
-              onAreaMax={(v) => { setAreaMax(v); persistArea(areaMin, v) }}
+              onAreaMin={setAreaMin}
+              onAreaMax={setAreaMax}
               precioMin={precioMinAlq}
-              onPrecioMin={(v) => { setPrecioMinAlq(v); persistPrecioMin(v) }}
+              onPrecioMin={setPrecioMinAlq}
             />
             {/* Selección del broker / Favoritos del público */}
             {favorites.size > 0 && (
@@ -1768,10 +1731,10 @@ export default function AlquileresPage({
         brokerMode={brokerMode}
         areaMin={areaMin}
         areaMax={areaMax}
-        onAreaMin={(v) => { setAreaMin(v); persistArea(v, areaMax) }}
-        onAreaMax={(v) => { setAreaMax(v); persistArea(areaMin, v) }}
+        onAreaMin={setAreaMin}
+        onAreaMax={setAreaMax}
         precioMin={precioMinAlq}
-        onPrecioMin={(v) => { setPrecioMinAlq(v); persistPrecioMin(v) }}
+        onPrecioMin={setPrecioMinAlq}
       />
 
       {/* Full-screen mobile map — fuera del condicional layout para que funcione

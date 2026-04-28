@@ -1553,50 +1553,27 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const [shortlistsPanelOpen, setShortlistsPanelOpen] = useState(false)
   // Filtro broker: ver solo propiedades marcadas (útil cuando hay muchas + filtros cambiados)
   const [onlySelectedFilter, setOnlySelectedFilter] = useState(false)
-  // Filtro broker: fuentes/franquicias permitidas. Default: todas.
-  // Persistido por slug en localStorage. Solo se aplica si brokerMode.
+  // Filtros broker: NO persisten — cada visita arranca en default.
+  // Decisión deliberada: si filtro persistía, broker volvía al día siguiente
+  // y veía un feed corto sin entender por qué (filtros olvidados de la sesión anterior).
+  // Limpieza defensiva del localStorage existente al montar (versiones previas
+  // sí persistían).
   const [fuentesPermitidas, setFuentesPermitidas] = useState<Set<FuenteBroker>>(() => new Set(FUENTES_BROKER))
+  const [areaMin, setAreaMin] = useState<number>(M2_MIN_DEFAULT)
+  const [areaMax, setAreaMax] = useState<number>(M2_MAX_DEFAULT)
   useEffect(() => {
-    if (!brokerMode || !brokerSlug) return
+    if (!brokerSlug) return
     try {
-      const raw = localStorage.getItem(`broker_fuentes_${brokerSlug}`)
-      if (!raw) return
-      const arr = JSON.parse(raw)
-      if (Array.isArray(arr)) {
-        const valid = arr.filter((x): x is FuenteBroker => (FUENTES_BROKER as readonly string[]).includes(x))
-        setFuentesPermitidas(new Set(valid))
-      }
+      localStorage.removeItem(`broker_fuentes_${brokerSlug}`)
+      localStorage.removeItem(`broker_area_${brokerSlug}`)
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brokerSlug])
   function toggleFuente(f: FuenteBroker) {
     setFuentesPermitidas(prev => {
       const next = new Set(prev)
       if (next.has(f)) next.delete(f); else next.add(f)
-      if (brokerSlug) {
-        try { localStorage.setItem(`broker_fuentes_${brokerSlug}`, JSON.stringify([...next])) } catch {}
-      }
       return next
     })
-  }
-  // Filtro broker: superficie m² min/max (inputs editables). Default = sin filtro.
-  // Stored como pair {min, max}. Persistido por slug.
-  const [areaMin, setAreaMin] = useState<number>(M2_MIN_DEFAULT)
-  const [areaMax, setAreaMax] = useState<number>(M2_MAX_DEFAULT)
-  useEffect(() => {
-    if (!brokerMode || !brokerSlug) return
-    try {
-      const raw = localStorage.getItem(`broker_area_${brokerSlug}`)
-      if (!raw) return
-      const obj = JSON.parse(raw)
-      if (typeof obj?.min === 'number') setAreaMin(obj.min)
-      if (typeof obj?.max === 'number') setAreaMax(obj.max)
-    } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brokerSlug])
-  function persistArea(min: number, max: number) {
-    if (!brokerSlug) return
-    try { localStorage.setItem(`broker_area_${brokerSlug}`, JSON.stringify({ min, max })) } catch {}
   }
   // Indica si el filtro de área está activo (no en defaults). Ocultar props sin area_m2 si lo está.
   const areaFiltroActivo = brokerMode && (areaMin > M2_MIN_DEFAULT || areaMax < M2_MAX_DEFAULT)
@@ -2269,8 +2246,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         totalCount={unfilteredCount || totalCount} filteredCount={properties.length}
         isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames}
         brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax}
-        onAreaMin={(v) => { setAreaMin(v); persistArea(v, areaMax) }}
-        onAreaMax={(v) => { setAreaMax(v); persistArea(areaMin, v) }} />
+        onAreaMin={setAreaMin}
+        onAreaMax={setAreaMax} />
 
       {(isDesktop || publicShareMode || brokerMode) ? (
         /* ===== DESKTOP (o public share / broker en cualquier device — feed con grid simple) ===== */
@@ -2287,8 +2264,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
               </div>
               <DesktopFilters currentFilters={filters} isFiltered={isFiltered} onApply={applyFilters} onReset={resetFilters} proyectoNames={proyectoNames}
                 brokerMode={brokerMode} areaMin={areaMin} areaMax={areaMax}
-                onAreaMin={(v) => { setAreaMin(v); persistArea(v, areaMax) }}
-                onAreaMax={(v) => { setAreaMax(v); persistArea(areaMin, v) }} />
+                onAreaMin={setAreaMin}
+                onAreaMax={setAreaMax} />
             </aside>
           )}
           <main className="ventas-main">
