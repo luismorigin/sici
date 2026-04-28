@@ -426,6 +426,39 @@ Para MVP founding 3-5 brokers la opción 3 alcanza. Para 15+ brokers ir a Upstas
 
 ---
 
+## Filtros — promoción a feed público (parqueado 2026-04-27)
+
+Contexto: en abril 2026 se agregaron al modo broker los filtros que pidió Abel Flores en su demo: filtro por fuente/franquicia, filtro de superficie m² (min/max), inputs editables de precio (commits `c9fb067`, `ff5e438`, `ba58128`, `026b496`). El **input editable de precio** ya se promovió al feed público en commit `026b496` (Fase 3). Las dos cosas siguientes quedaron pendientes a propósito.
+
+### Filtro de superficie m² en feed público (`/ventas` y `/alquileres`)
+**Tier:** esperando-señal
+**Agregado:** 2026-04-27
+
+**Estado:** funcionalmente listo en broker (`/broker/[slug]` y `/broker/[slug]/alquileres`) con state, persistencia localStorage y filtrado client-side. Para activarlo en feed público:
+- En `FilterControls` (ventas) y `FilterOverlay`/`DesktopFilters` (alquileres), des-gatear el bloque "SUPERFICIE (m²)" del check `brokerMode`.
+- State `areaMin/areaMax` se mueve a `VentasPage`/`AlquileresPage` sin restricción a broker, con una key de localStorage genérica (no por slug).
+- Cambio mecánico de ~10-15 líneas, sin tocar API ni BD.
+
+**Rationale por qué no ahora:** el feed público mobile es estilo TikTok con un overlay full-screen de filtros que está cuidadosamente balanceado para entrar en una pantalla. Agregar el bloque m² aumenta la altura del overlay y hay que rebalancear el layout sin romper la experiencia mobile actual. Antes de hacerlo conviene tener señal de que los usuarios públicos lo necesitan (los brokers sí lo pidieron por casos concretos: 60m² vs 120m² al mismo precio = perfiles distintos).
+
+**Cuándo reactivar:** cuando aparezca pedido orgánico de visitantes públicos del feed (encuestas, soporte, hotjar/clarity), o cuando se haga rebalanceo del overlay TikTok mobile por otra razón y se pueda colar este filtro junto.
+
+### Filtro de precio mínimo en alquileres público (`/alquileres`)
+**Tier:** esperando-señal
+**Agregado:** 2026-04-27
+
+**Estado:** funcional en broker (sub-fase 2.5 — doble slider min/max + 2 inputs editables, filtrado client-side). El público de alquileres hoy solo tiene techo (max), no piso. Promoverlo al feed público requiere:
+- Agregar `precio_mensual_min` a la interface `FiltrosAlquiler` (`lib/supabase.ts`)
+- Modificar `/api/alquileres` para aceptar el campo y pasarlo al RPC
+- Modificar la función SQL `buscar_unidades_alquiler` para aplicar el filtro WHERE
+- Migración SQL aplicada en producción
+
+**Rationale por qué no ahora:** es el único cambio de los pedidos por Abel que toca BD/API real (los demás se resolvieron client-side). El público actual está cómodo sin filtro de min — el patrón de búsqueda en alquiler suele ser "no quiero pagar más de X", no "quiero un piso de calidad". Bajo riesgo de implementar pero no justifica el trabajo de migración SQL ahora.
+
+**Cuándo reactivar:** señal concreta de necesidad, o cuando se toque la RPC `buscar_unidades_alquiler` por otro motivo (ej. agregar índice de calidad, ordenamiento custom, etc.) y se pueda colar este parámetro junto.
+
+---
+
 ## Ideas sueltas sin clasificar
 
 *(Zona libre para ideas que aparecen en conversación y todavía no se piensan. Se clasifican en la próxima revisión del backlog.)*
