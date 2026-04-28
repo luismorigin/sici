@@ -1655,8 +1655,10 @@ export default function AlquileresPage({
             {FUENTES_BROKER.map(f => {
               const fb = FUENTES_BROKER_BADGE[f]
               const active = fuentesPermitidas.has(f)
+              // Outline con color brand (paralelo al patrón de ventas):
+              // fondo transparente, texto + borde del color brand.
               const style = active
-                ? { background: fb.bg, color: fb.color, borderColor: fb.bg }
+                ? { background: 'transparent', color: fb.bg, borderColor: fb.bg }
                 : undefined
               return (
                 <button

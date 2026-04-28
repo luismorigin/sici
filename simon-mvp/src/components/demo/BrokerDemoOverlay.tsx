@@ -174,14 +174,16 @@ export default function BrokerDemoOverlay() {
       `}</style>
 
       <style jsx>{`
+        /* Banner demo arena (#EDE8DC) — contraste con el banner broker
+           oscuro abajo, sin competir con verdes (chip TC y otros). */
         .bdo-top-banner {
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
           height: 32px;
-          background: #141414;
-          color: #EDE8DC;
+          background: #EDE8DC;
+          color: #141414;
           font-family: 'DM Sans', system-ui, sans-serif;
           font-size: 12px;
           display: flex;
@@ -189,7 +191,7 @@ export default function BrokerDemoOverlay() {
           justify-content: center;
           gap: 10px;
           padding: 0 12px;
-          border-bottom: 1px solid rgba(237, 232, 220, 0.08);
+          border-bottom: 1px solid rgba(20, 20, 20, 0.08);
           /* z-index 100 — encima del banner broker (60) pero DEBAJO de
              bottom sheets (500+) y modales (200+). Cuando el broker
              prospect abre un sheet, el banner demo queda tapado por el
@@ -198,9 +200,9 @@ export default function BrokerDemoOverlay() {
           white-space: nowrap;
         }
         .bdo-banner-tag {
-          background: rgba(58, 106, 72, 0.25);
-          color: #D4E5DA;
-          border: 1px solid rgba(58, 106, 72, 0.5);
+          background: transparent;
+          color: #141414;
+          border: 1px solid rgba(20, 20, 20, 0.25);
           padding: 3px 10px;
           border-radius: 999px;
           font-size: 10.5px;
@@ -216,8 +218,8 @@ export default function BrokerDemoOverlay() {
           transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
         }
         .bdo-banner-tag:hover {
-          background: rgba(58, 106, 72, 0.4);
-          border-color: rgba(58, 106, 72, 0.7);
+          background: rgba(20, 20, 20, 0.06);
+          border-color: rgba(20, 20, 20, 0.45);
           transform: translateY(-1px);
         }
         .bdo-banner-tag-text {
@@ -225,18 +227,18 @@ export default function BrokerDemoOverlay() {
         }
         .bdo-banner-tag-info {
           font-size: 12px;
-          opacity: 0.85;
+          opacity: 0.7;
           margin-left: 1px;
         }
         .bdo-banner-pipe {
-          color: rgba(237, 232, 220, 0.3);
+          color: rgba(20, 20, 20, 0.25);
         }
         .bdo-banner-text {
-          color: rgba(237, 232, 220, 0.8);
+          color: rgba(20, 20, 20, 0.7);
           font-size: 12px;
         }
         .bdo-banner-cta {
-          background: #3A6A48;
+          background: #141414;
           color: #EDE8DC;
           padding: 4px 12px;
           border-radius: 999px;
@@ -245,10 +247,11 @@ export default function BrokerDemoOverlay() {
           letter-spacing: 0.2px;
           font-size: 11px;
           line-height: 1.4;
-          transition: background 160ms ease;
+          transition: background 160ms ease, transform 160ms ease;
         }
         .bdo-banner-cta:hover {
-          background: #2e5439;
+          background: #2a2a2a;
+          transform: translateY(-1px);
         }
         @media (max-width: 640px) {
           .bdo-top-banner {

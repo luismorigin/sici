@@ -2118,8 +2118,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
               <span className="vt-broker-tc-chip"
                 title={tooltipParts.join('\n')}
                 aria-label="Tipo de cambio paralelo Binance">
-                <span className="vt-broker-tc-icon" aria-hidden="true">💵</span>
-                <span className="vt-broker-tc-label">Binance</span>
+                <span className="vt-broker-tc-label">TC paralelo</span>
+                <span className="vt-broker-tc-divider" aria-hidden="true">·</span>
                 <span className="vt-broker-tc-value">Bs {tcParalelo.valor.toFixed(2)}</span>
               </span>
             )
@@ -2193,8 +2193,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             {FUENTES_BROKER.map(f => {
               const fb = fuenteBadge(f)
               const active = fuentesPermitidas.has(f)
+              // Outline con color brand: fondo transparente, texto + borde
+              // del color brand. Reduce saturación visual vs. pill sólido,
+              // mantiene legibilidad y reconocimiento.
               const style = active && fb
-                ? { background: fb.bg, color: fb.color, borderColor: fb.bg }
+                ? { background: 'transparent', color: fb.bg, borderColor: fb.bg }
                 : undefined
               return (
                 <button
@@ -2548,12 +2551,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-desktop-broker .ventas-sidebar { padding-top:84px }
         /* Padding-top en el main desktop también, para que las cards no queden tapadas */
         .ventas-desktop-broker .ventas-main { padding-top:128px }
-        /* TC paralelo Binance — chip informativo, no interactivo */
-        .vt-broker-tc-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:100px; background:rgba(123,179,137,0.16); border:1px solid rgba(123,179,137,0.40); color:#9BCDA8; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.2px; white-space:nowrap; cursor:default }
-        .vt-broker-tc-icon { font-size:11px; line-height:1 }
+        /* TC paralelo Binance — texto plano, sin caja. Antes era pill verde
+           que competía con otros verdes en el banner. */
+        .vt-broker-tc-chip { display:inline-flex; align-items:center; gap:6px; padding:0; background:transparent; border:none; color:rgba(237,232,220,0.55); font-family:'DM Sans',sans-serif; font-size:11px; font-weight:500; letter-spacing:0.2px; white-space:nowrap; cursor:default }
+        .vt-broker-tc-divider { color:rgba(237,232,220,0.3); font-weight:300 }
         .vt-broker-tc-label { font-size:10px; letter-spacing:0.6px; text-transform:uppercase; opacity:0.75 }
-        .vt-broker-tc-value { font-variant-numeric:tabular-nums; font-weight:700 }
-        @media (max-width:768px) { .vt-broker-tc-chip { font-size:10px; padding:3px 8px } .vt-broker-tc-label { font-size:9px } }
+        .vt-broker-tc-value { font-variant-numeric:tabular-nums; font-weight:600; color:rgba(237,232,220,0.85) }
+        @media (max-width:768px) { .vt-broker-tc-chip { font-size:10px } .vt-broker-tc-label { font-size:9px } }
         .vt-broker-banner-shortlists { margin-left:auto; background:#EDE8DC; color:#141414; border:1px solid #EDE8DC; padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
         .vt-broker-banner-shortlists:active { transform:scale(0.96) }
         .vt-broker-tool { background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.22); color:#EDE8DC; padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
