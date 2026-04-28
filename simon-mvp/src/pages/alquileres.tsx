@@ -1801,6 +1801,41 @@ export default function AlquileresPage({
   )
 }
 
+// Sub-componente con buffer interno para input solo-max (feed público alquileres).
+// Reemplaza el display read-only "Bs 6,000/mes" por input editable.
+// Commit + clamp solo onBlur o Enter.
+function PriceInputAlqMaxOnly({ maxPrice, onMaxPrice }: {
+  maxPrice: number; onMaxPrice: (v: number) => void
+}) {
+  const MIN_BS = 2000
+  const MAX_BS = MAX_SLIDER_PRICE
+  const [str, setStr] = useState(String(maxPrice))
+  useEffect(() => { setStr(String(maxPrice)) }, [maxPrice])
+  function commit() {
+    const n = parseInt(str)
+    if (!Number.isFinite(n)) { setStr(String(maxPrice)); return }
+    const clamped = Math.max(MIN_BS, Math.min(n, MAX_BS))
+    setStr(String(clamped))
+    if (clamped !== maxPrice) onMaxPrice(clamped)
+  }
+  return (
+    <div className="afo-price-input-wrap">
+      <label className="afo-area-field">
+        <span className="afo-area-prefix">Hasta</span>
+        <span className="afo-price-bs">Bs</span>
+        <input type="number" className="afo-area-input" inputMode="numeric"
+          min={MIN_BS} max={MAX_BS} step={500}
+          value={str}
+          aria-label="Precio máximo mensual en bolivianos"
+          onChange={e => setStr(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }} />
+        <span className="afo-area-suffix">/ mes</span>
+      </label>
+    </div>
+  )
+}
+
 // Sub-componente con buffer interno para inputs de precio min/max (broker).
 // Valores en Bs/mes. Min default = 0 (sin filtro). Max range 2000-18000.
 // Commit + clamp solo onBlur o Enter.
@@ -2058,7 +2093,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
         {brokerMode && onPrecioMin ? (
           <PriceInputAlq minPrice={precioMin ?? 0} maxPrice={maxPrice} onMinPrice={onPrecioMin} onMaxPrice={handlePriceChange} />
         ) : (
-          <div className="df-slider-val">{formatPrice(maxPrice)}/mes</div>
+          <PriceInputAlqMaxOnly maxPrice={maxPrice} onMaxPrice={handlePriceChange} />
         )}
       </div>
 
@@ -2233,7 +2268,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
           {brokerMode && onPrecioMin ? (
             <PriceInputAlq minPrice={precioMin ?? 0} maxPrice={maxPrice} onMinPrice={onPrecioMin} onMaxPrice={setMaxPrice} />
           ) : (
-            <div className="afo-slider-val">{formatPrice(maxPrice)}/mes</div>
+            <PriceInputAlqMaxOnly maxPrice={maxPrice} onMaxPrice={setMaxPrice} />
           )}
         </div>
         {brokerMode && onAreaMin && onAreaMax && (

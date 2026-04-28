@@ -336,11 +336,7 @@ function FilterControls({ minPrice, maxPrice, selectedDorms, selectedZonas, entr
         </div>
       </div>
       <div className="vf-group"><div className="vf-label">PRESUPUESTO</div>
-        {brokerMode ? (
-          <PriceInputsVT minPrice={minPrice} maxPrice={maxPrice} onMinPrice={onMinPrice} onMaxPrice={onMaxPrice} />
-        ) : (
-          <div className="vf-range-display">{formatPriceK(minPrice)} — {formatPriceK(maxPrice)}</div>
-        )}
+        <PriceInputsVT minPrice={minPrice} maxPrice={maxPrice} onMinPrice={onMinPrice} onMaxPrice={onMaxPrice} />
         <div className="vf-range-wrap">
           <input type="range" className="vf-slider vf-slider-min" min={MIN_PRICE} max={MAX_PRICE} step={PRICE_STEP}
             value={minPrice} aria-label="Precio mínimo" onChange={e => onMinPrice(parseInt(e.target.value))} />
