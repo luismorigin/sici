@@ -77,6 +77,16 @@ const FUENTES_BROKER_BADGE: Record<FuenteBroker, { color: string; bg: string }> 
   bien_inmuebles: { color: '#fff', bg: '#37BEAA' },
 }
 
+// Badge de franquicia sobre la foto (modo broker). Match a ventas.tsx:fuenteBadge.
+function fuenteBadge(fuente: string | null | undefined): { label: string; color: string; bg: string } | null {
+  if (!fuente) return null
+  const f = fuente.toLowerCase()
+  if (f === 'century21' || f === 'c21') return { label: 'Century 21', color: '#000', bg: '#BEAF87' }
+  if (f === 'remax') return { label: 'RE/MAX', color: '#fff', bg: '#DC1C2E' }
+  if (f === 'bien_inmuebles' || f === 'bieninmuebles') return { label: 'Bien Inmuebles', color: '#fff', bg: '#37BEAA' }
+  return null
+}
+
 // Filtro de superficie m² (modo broker). Inputs editables min/max, client-side.
 // Default: rango completo (sin filtro). Props sin area_m2 se ocultan cuando hay rango.
 const M2_MIN_DEFAULT = 30
@@ -2498,6 +2508,10 @@ const DesktopCard = memo(function DesktopCard({
             <div className="dc-photo-count">{photoIdx + 1}/{photos.length}</div>
           </>
         )}
+        {brokerMode && !publicShareMode && (() => {
+          const fb = fuenteBadge(p.fuente)
+          return fb ? <div className="dc-fuente-badge" style={{ background: fb.bg, color: fb.color }}>{fb.label}</div> : null
+        })()}
       </div>
 
       {/* Content */}
@@ -2649,6 +2663,10 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
       {isSpotlight && (
         <div className="amc-spotlight-badge">Te compartieron este depto</div>
       )}
+      {brokerMode && !publicShareMode && (() => {
+        const fb = fuenteBadge(p.fuente)
+        return fb ? <div className="amc-fuente-badge" style={{ background: fb.bg, color: fb.color }}>{fb.label}</div> : null
+      })()}
       <div className="amc-content">
         <div className="amc-name">{displayName}{p.dias_en_mercado !== null && p.dias_en_mercado <= 60 && <span className="amc-reciente">Publicación reciente</span>}</div>
         <div className="amc-zona">{displayZona(p.zona)} <span className="amc-id">#{p.id}</span></div>

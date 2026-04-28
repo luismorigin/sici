@@ -536,6 +536,7 @@
 .dc-prev { left: 8px; }
 .dc-next { right: 8px; }
 .dc-photo-count { position: absolute; top: 10px; right: 10px; background: rgba(20,20,20,0.6); padding: 3px 10px; border-radius: 100px; font-size: 12px; color: rgba(255,255,255,0.8); font-family: 'DM Sans', sans-serif; }
+.dc-fuente-badge { position: absolute; top: 10px; left: 10px; font-size: 10px; font-weight: 700; padding: 4px 9px; border-radius: 4px; font-family: 'DM Sans', sans-serif; letter-spacing: 0.4px; text-transform: uppercase; z-index: 4; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 .dc-content { padding: 16px; flex: 1; display: flex; flex-direction: column; }
 .dc-name { font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 500; color: #141414; line-height: 1.2; margin-bottom: 2px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .dc-reciente { font-size: 11px; font-weight: 500; color: #3A6A48; font-family: 'DM Sans', sans-serif; letter-spacing: 0.3px; }
@@ -594,6 +595,7 @@
 .amc-btn.shake { animation: amcShake 0.3s ease; }
 @keyframes amcShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
 .amc-spotlight-badge { position: absolute; top: max(56px, calc(env(safe-area-inset-top) + 50px)); left: 16px; z-index: 10; background: rgba(250,250,248,0.92); border-left: 3px solid #3A6A48; padding: 8px 14px; border-radius: 0 14px 14px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #3A3530; letter-spacing: 0.3px; }
+.amc-fuente-badge { position: absolute; top: max(56px, calc(env(safe-area-inset-top) + 50px)); right: 16px; z-index: 10; padding: 5px 10px; border-radius: 4px; font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
 .amc-scroll-hint { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); z-index: 10; animation: amcBounce 2s infinite; opacity: 0.25; }
 @keyframes amcBounce { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-5px)} }
 @media (prefers-reduced-motion: reduce) {
