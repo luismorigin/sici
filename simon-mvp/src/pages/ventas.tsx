@@ -1600,6 +1600,21 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   }
   // Indica si el filtro de área está activo (no en defaults). Ocultar props sin area_m2 si lo está.
   const areaFiltroActivo = brokerMode && (areaMin > M2_MIN_DEFAULT || areaMax < M2_MAX_DEFAULT)
+  // TC paralelo (Binance) para que el broker calcule mentalmente USD billete.
+  // Solo informativo — no se aplica a ningún precio. Cargado al montar en modo broker.
+  const [tcParalelo, setTcParalelo] = useState<{ valor: number; fecha: string | null } | null>(null)
+  useEffect(() => {
+    if (!brokerMode) return
+    let cancelled = false
+    fetch('/api/tc-actual')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (cancelled || !d || typeof d.tcParalelo !== 'number') return
+        setTcParalelo({ valor: d.tcParalelo, fecha: d.fechaActualizacion || null })
+      })
+      .catch(() => { /* fail silent — el chip simplemente no aparece */ })
+    return () => { cancelled = true }
+  }, [brokerMode])
 
   // publicShareMode O brokerMode mobile: el body tiene overflow:hidden por la media
   // query del feed TikTok. Cuando forzamos layout desktop-grid en mobile, hay que
@@ -2085,6 +2100,15 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             <span className="vt-broker-banner-label">BROKER</span>
             <span className="vt-broker-banner-name">{broker.nombre}</span>
           </div>
+          {tcParalelo && (
+            <span className="vt-broker-tc-chip"
+              title={tcParalelo.fecha ? `Actualizado ${new Date(tcParalelo.fecha).toLocaleString('es-BO', { dateStyle: 'short', timeStyle: 'short' })}` : 'TC paralelo Binance'}
+              aria-label="Tipo de cambio paralelo Binance">
+              <span className="vt-broker-tc-icon" aria-hidden="true">💵</span>
+              <span className="vt-broker-tc-label">Binance</span>
+              <span className="vt-broker-tc-value">Bs {tcParalelo.valor.toFixed(2)}</span>
+            </span>
+          )}
           <div className="vt-broker-tabs" role="tablist" aria-label="Tipo de operación">
             <button className="vt-broker-tab active" role="tab" aria-selected="true" disabled>Ventas</button>
             <Link href={`/broker/${broker.slug}/alquileres`} className="vt-broker-tab" role="tab" aria-selected="false">
@@ -2506,6 +2530,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-desktop-broker .ventas-sidebar { padding-top:84px }
         /* Padding-top en el main desktop también, para que las cards no queden tapadas */
         .ventas-desktop-broker .ventas-main { padding-top:128px }
+        /* TC paralelo Binance — chip informativo, no interactivo */
+        .vt-broker-tc-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:100px; background:rgba(123,179,137,0.16); border:1px solid rgba(123,179,137,0.40); color:#9BCDA8; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.2px; white-space:nowrap; cursor:default }
+        .vt-broker-tc-icon { font-size:11px; line-height:1 }
+        .vt-broker-tc-label { font-size:10px; letter-spacing:0.6px; text-transform:uppercase; opacity:0.75 }
+        .vt-broker-tc-value { font-variant-numeric:tabular-nums; font-weight:700 }
+        @media (max-width:768px) { .vt-broker-tc-chip { font-size:10px; padding:3px 8px } .vt-broker-tc-label { font-size:9px } }
         .vt-broker-banner-shortlists { margin-left:auto; background:#EDE8DC; color:#141414; border:1px solid #EDE8DC; padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
         .vt-broker-banner-shortlists:active { transform:scale(0.96) }
         .vt-broker-tool { background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.22); color:#EDE8DC; padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
