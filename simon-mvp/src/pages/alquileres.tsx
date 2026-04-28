@@ -1600,21 +1600,22 @@ export default function AlquileresPage({
             </div>
           )}
           <button
-            className="alq-broker-tool"
+            className="alq-broker-tool alq-broker-tool-primary"
             onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay', { source: 'broker_banner' }) }}
             title="Filtrar alquileres"
           >
-            ⚙ Filtros{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+            ⚙ Filtrar{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
           </button>
-          {favorites.size > 0 && (
-            <button
-              className={`alq-broker-tool ${onlySelectedFilter ? 'active' : ''}`}
-              onClick={() => setOnlySelectedFilter(v => !v)}
-              title={onlySelectedFilter ? 'Mostrar todos los alquileres' : 'Ver solo los marcados'}
-            >
-              ★ Solo seleccionados · {favorites.size}
-            </button>
-          )}
+          <button
+            className={`alq-broker-tool ${favorites.size === 0 ? 'alq-broker-tool-disabled' : (onlySelectedFilter ? 'active' : '')}`}
+            onClick={favorites.size === 0 ? undefined : () => setOnlySelectedFilter(v => !v)}
+            title={favorites.size === 0
+              ? 'Marcá alquileres con ⭐ para activar'
+              : (onlySelectedFilter ? 'Mostrar todos los alquileres' : 'Ver solo los marcados')}
+            disabled={favorites.size === 0}
+          >
+            ★ {favorites.size === 0 ? 'Seleccionados · 0' : `Solo seleccionados · ${favorites.size}`}
+          </button>
           {!onlySelectedFilter && visibleNotMarked.length > 0 && properties.length < 100 && (
             <button
               className="alq-broker-tool alq-broker-tool-add"

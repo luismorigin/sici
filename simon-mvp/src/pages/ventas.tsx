@@ -2149,21 +2149,22 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             </div>
           )}
           <button
-            className="vt-broker-tool"
+            className="vt-broker-tool vt-broker-tool-primary"
             onClick={() => { setFilterOverlayOpen(true); trackEvent('open_filter_overlay_venta', { source: 'broker_banner' }) }}
             title="Filtrar propiedades"
           >
-            ⚙ Filtros{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+            ⚙ Filtrar{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
           </button>
-          {favorites.size > 0 && (
-            <button
-              className={`vt-broker-tool ${onlySelectedFilter ? 'active' : ''}`}
-              onClick={() => setOnlySelectedFilter(v => !v)}
-              title={onlySelectedFilter ? 'Mostrar todas las propiedades' : 'Ver solo las propiedades marcadas'}
-            >
-              ★ Solo seleccionadas · {favorites.size}
-            </button>
-          )}
+          <button
+            className={`vt-broker-tool ${favorites.size === 0 ? 'vt-broker-tool-disabled' : (onlySelectedFilter ? 'active' : '')}`}
+            onClick={favorites.size === 0 ? undefined : () => setOnlySelectedFilter(v => !v)}
+            title={favorites.size === 0
+              ? 'Marcá propiedades con ⭐ para activar'
+              : (onlySelectedFilter ? 'Mostrar todas las propiedades' : 'Ver solo las propiedades marcadas')}
+            disabled={favorites.size === 0}
+          >
+            ★ {favorites.size === 0 ? 'Seleccionadas · 0' : `Solo seleccionadas · ${favorites.size}`}
+          </button>{/* Siempre visible: el "0" guía al broker para empezar a marcar */}
           {!onlySelectedFilter && visibleNotMarked.length > 0 && properties.length < 100 && (
             <button
               className="vt-broker-tool vt-broker-tool-add"
@@ -2552,16 +2553,28 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         /* Padding-top en el main desktop también, para que las cards no queden tapadas */
         .ventas-desktop-broker .ventas-main { padding-top:128px }
         /* TC paralelo Binance — texto plano, sin caja. Antes era pill verde
-           que competía con otros verdes en el banner. */
-        .vt-broker-tc-chip { display:inline-flex; align-items:center; gap:6px; padding:0; background:transparent; border:none; color:rgba(237,232,220,0.55); font-family:'DM Sans',sans-serif; font-size:11px; font-weight:500; letter-spacing:0.2px; white-space:nowrap; cursor:default }
-        .vt-broker-tc-divider { color:rgba(237,232,220,0.3); font-weight:300 }
-        .vt-broker-tc-label { font-size:10px; letter-spacing:0.6px; text-transform:uppercase; opacity:0.75 }
-        .vt-broker-tc-value { font-variant-numeric:tabular-nums; font-weight:600; color:rgba(237,232,220,0.85) }
+           que competía con otros verdes en el banner. Contraste subido para
+           que el label "TC paralelo" no desaparezca en plomo. */
+        .vt-broker-tc-chip { display:inline-flex; align-items:center; gap:6px; padding:0; background:transparent; border:none; color:rgba(237,232,220,0.85); font-family:'DM Sans',sans-serif; font-size:11px; font-weight:500; letter-spacing:0.2px; white-space:nowrap; cursor:default }
+        .vt-broker-tc-divider { color:rgba(237,232,220,0.4); font-weight:300 }
+        .vt-broker-tc-label { font-size:10px; letter-spacing:0.6px; text-transform:uppercase; color:rgba(237,232,220,0.85); font-weight:600 }
+        .vt-broker-tc-value { font-variant-numeric:tabular-nums; font-weight:700; color:#EDE8DC }
         @media (max-width:768px) { .vt-broker-tc-chip { font-size:10px } .vt-broker-tc-label { font-size:9px } }
-        .vt-broker-banner-shortlists { margin-left:auto; background:#EDE8DC; color:#141414; border:1px solid #EDE8DC; padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
+        /* Mis shortlists: ahora secundario (no compite con Filtros). Mantiene
+           margin-left:auto para empujarse a la derecha del banner. */
+        .vt-broker-banner-shortlists { margin-left:auto; background:rgba(237,232,220,0.06); color:#EDE8DC; border:1px solid rgba(237,232,220,0.22); padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
+        .vt-broker-banner-shortlists:hover { background:rgba(237,232,220,0.12) }
         .vt-broker-banner-shortlists:active { transform:scale(0.96) }
         .vt-broker-tool { background:rgba(237,232,220,0.06); border:1px solid rgba(237,232,220,0.22); color:#EDE8DC; padding:5px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; cursor:pointer; -webkit-tap-highlight-color:transparent; font-family:inherit; white-space:nowrap }
         .vt-broker-tool:hover { background:rgba(237,232,220,0.12) }
+        /* Filtros: primary del banner. Arena sólido + texto negro + peso 700. */
+        .vt-broker-tool-primary { background:#EDE8DC; color:#141414; border-color:#EDE8DC; font-weight:700 }
+        .vt-broker-tool-primary:hover { background:#fff; border-color:#fff }
+        /* Disabled state: cuando Seleccionadas · 0, queda visible pero apagado */
+        .vt-broker-tool:disabled,
+        .vt-broker-tool-disabled { opacity:0.4; cursor:default }
+        .vt-broker-tool-disabled:hover,
+        .vt-broker-tool:disabled:hover { background:rgba(237,232,220,0.06) }
         .vt-broker-tool:active { transform:scale(0.96) }
         .vt-broker-tool.active { background:#EDE8DC; color:#141414; border-color:#EDE8DC }
         .vt-broker-tool-add { background:rgba(123,179,137,0.16); border-color:rgba(123,179,137,0.50); color:#9BCDA8 }
