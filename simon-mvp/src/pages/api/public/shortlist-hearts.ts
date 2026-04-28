@@ -22,6 +22,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { isDemoShortlistHash } from '@/lib/demo-mode'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -60,6 +61,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const hash = String(req.query.hash || '').trim()
       if (!hash) return res.status(400).json({ error: 'hash requerido' })
 
+      // Modo demo: hearts no se persisten (la shortlist demo es compartida
+      // por todos los visitantes — no podemos cruzar favoritos entre brokers
+      // prospects distintos). Devolvemos vacío y el cliente maneja en local.
+      if (isDemoShortlistHash(hash)) {
+        res.setHeader('Cache-Control', 'private, no-store')
+        return res.status(200).json({ propertyIds: [] })
+      }
+
       const shortlist = await resolveShortlistByHash(hash)
       if (!shortlist || shortlist.archived_at) return res.status(404).json({ error: 'shortlist no encontrada' })
       // Lectura sí se permite aunque esté despublicada — es info del cliente,
@@ -85,6 +94,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         : null
       if (!hash || propiedadId === null) {
         return res.status(400).json({ error: 'hash y propiedad_id requeridos' })
+      }
+
+      // Modo demo: aceptamos POST/DELETE para no romper el UI client-side,
+      // pero NO escribimos a BD. El cliente cree que persistió y mantiene
+      // el toggle visual local; al recargar se pierden los hearts (esperado).
+      if (isDemoShortlistHash(hash)) {
+        return res.status(req.method === 'POST' ? 201 : 200).json({ ok: true, demo: true })
       }
 
       const shortlist = await resolveShortlistByHash(hash)

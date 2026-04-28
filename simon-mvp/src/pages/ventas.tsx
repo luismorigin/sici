@@ -1492,6 +1492,10 @@ export interface PublicShareData {
   // IDs que el cliente ya marcó con corazón (migración 234). Hidrata favorites
   // al montar en lugar de localStorage.
   initialHearts?: number[]
+  // Modo demo (/b/demo): renderiza placeholder "Tu foto" sobre la silueta
+  // del broker cuando foto_url es null. Otros affordances de demo
+  // (intercept WA, intro sheet, watermark) viven en pages/b/[hash].tsx.
+  isDemo?: boolean
 }
 
 // ===== Page =====
@@ -2209,7 +2213,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           <div className="vpsh-broker">
             {publicShare.broker.foto_url
               ? <img src={publicShare.broker.foto_url} alt={publicShare.broker.nombre} className="vpsh-broker-photo" />
-              : <div className="vpsh-broker-photo vpsh-broker-photo-ph">{publicShare.broker.nombre.charAt(0)}</div>}
+              : publicShare.isDemo
+                ? <div className="vpsh-broker-photo vpsh-broker-photo-ph vpsh-broker-photo-demo">Tu foto</div>
+                : <div className="vpsh-broker-photo vpsh-broker-photo-ph">{publicShare.broker.nombre.charAt(0)}</div>}
             <div className="vpsh-broker-info">
               <div className="vpsh-broker-label">Selección de</div>
               <div className="vpsh-broker-name">{publicShare.broker.nombre}</div>
@@ -2429,6 +2435,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vpsh-broker { display:flex; align-items:center; gap:10px; min-width:0 }
         .vpsh-broker-photo { width:44px; height:44px; border-radius:50%; object-fit:cover; display:block }
         .vpsh-broker-photo-ph { background:#7BB389; color:#141414; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:18px }
+        .vpsh-broker-photo-demo { background:rgba(237,232,220,0.08); color:rgba(237,232,220,0.85); border:1.5px dashed rgba(237,232,220,0.45); font-size:9px; font-weight:500; letter-spacing:0.4px; text-transform:uppercase }
         .vpsh-broker-info { min-width:0; line-height:1.2 }
         .vpsh-broker-label { font-size:10px; color:rgba(237,232,220,0.55); text-transform:uppercase; letter-spacing:0.6px; font-weight:600 }
         .vpsh-broker-name { font-size:15px; font-weight:600; font-family:'Figtree',sans-serif; color:#EDE8DC }

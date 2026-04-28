@@ -793,6 +793,7 @@
 .apsh-broker{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
 .apsh-broker-photo{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;}
 .apsh-broker-photo-ph{background:#141414;color:#EDE8DC;display:flex;align-items:center;justify-content:center;font-family:'Figtree',sans-serif;font-weight:600;font-size:16px;}
+.apsh-broker-photo-demo{background:rgba(20,20,20,0.06);color:rgba(20,20,20,0.62);border:1.5px dashed rgba(20,20,20,0.32);font-size:9px;font-weight:500;letter-spacing:0.4px;text-transform:uppercase;}
 .apsh-broker-info{min-width:0;display:flex;flex-direction:column;gap:1px;}
 .apsh-broker-label{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:#7A7060;line-height:1.2;}
 .apsh-broker-name{font-family:'Figtree',sans-serif;font-weight:600;font-size:14px;color:#141414;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}

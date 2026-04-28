@@ -14,6 +14,7 @@
 // y el uniqueness del cap fallaría. Ver migración 235 + SHORTLIST_PROTECTION_V1_PLAN.md.
 // robots noindex/nofollow + Disallow /b/ en robots.txt.
 
+import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import type { GetServerSideProps } from 'next'
 import { createClient } from '@supabase/supabase-js'
@@ -37,6 +38,16 @@ import {
 } from '@/lib/shortlist-fingerprint'
 import ShortlistBlockedPage, { type BlockReason } from '@/components/broker/ShortlistBlockedPage'
 import ShortlistWatermark from '@/components/broker/ShortlistWatermark'
+import DemoFooterWatermark from '@/components/demo/DemoFooterWatermark'
+import DemoModalEducational from '@/components/demo/DemoModalEducational'
+import DemoIntroBottomSheet from '@/components/demo/DemoIntroBottomSheet'
+import DemoIntroTrigger from '@/components/demo/DemoIntroTrigger'
+import {
+  isDemoShortlistHash,
+  sanitizeVentasArrayForDemo,
+  sanitizeAlquileresArrayForDemo,
+} from '@/lib/demo-mode'
+import { DEMO_SHORTLIST_TITLE } from '@/lib/demo-config'
 import type { RawUnidadSimpleRow, RawUnidadAlquilerRow } from '@/types/db-responses'
 import type { UnidadVenta, UnidadAlquiler } from '@/lib/supabase'
 
@@ -54,6 +65,7 @@ type VentaPageProps = {
   publicShare: PublicShareData
   shortlistTitle: string
   shortlistMeta: ShortlistMeta
+  isDemo: boolean
 }
 
 type AlquilerPageProps = {
@@ -63,6 +75,7 @@ type AlquilerPageProps = {
   publicShare: PublicShareDataAlquiler
   shortlistTitle: string
   shortlistMeta: ShortlistMeta
+  isDemo: boolean
 }
 
 type BlockedProps = {
@@ -73,12 +86,71 @@ type BlockedProps = {
 
 type PageProps = VentaPageProps | AlquilerPageProps | BlockedProps
 
+const DEMO_INTRO_COOKIE = 'simon_demo_intro_seen'
+
+function readCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.split('; ').find((row) => row.startsWith(`${name}=`))
+  return match ? decodeURIComponent(match.split('=')[1] || '') : null
+}
+
+function writeCookie(name: string, value: string, days: number): void {
+  if (typeof document === 'undefined') return
+  const exp = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString()
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${exp}; path=/; SameSite=Lax`
+}
+
 export default function PublicShortlistPage(props: PageProps) {
+  const [demoBrokerModalOpen, setDemoBrokerModalOpen] = useState(false)
+  const [demoIntroOpen, setDemoIntroOpen] = useState(false)
+
+  // Auto-abrir intro la primera vez que el visitante entra a /b/demo.
+  // El useEffect corre client-side post-mount — el sheet animaba desde
+  // translateY(100%), entonces se ve un slide-up nítido en lugar de
+  // aparecer ya abierto. Cookie 365d para no insistir.
+  const isDemoMode = props.kind !== 'blocked' && props.isDemo
+  useEffect(() => {
+    if (!isDemoMode) return
+    if (readCookie(DEMO_INTRO_COOKIE)) return
+    const t = window.setTimeout(() => setDemoIntroOpen(true), 350)
+    return () => window.clearTimeout(t)
+  }, [isDemoMode])
+
+  const closeDemoIntro = () => {
+    setDemoIntroOpen(false)
+    writeCookie(DEMO_INTRO_COOKIE, '1', 365)
+  }
+
   if (props.kind === 'blocked') {
     return <ShortlistBlockedPage reason={props.reason} broker={props.broker} />
   }
 
   const itemCount = props.publicShare.items.length
+
+  // En modo demo, cualquier click sobre un anchor wa.me dentro del feed
+  // (botón WA del broker en cards, sheet, compare) se intercepta acá y se
+  // reemplaza por un modal explicativo. Event delegation evita modificar
+  // ventas.tsx/alquileres.tsx/CompareSheet en 6+ puntos. publicShareMode
+  // ya garantiza que NO hay otros wa.me en el DOM (los del agente
+  // original están ocultos), así que es seguro capturar todos.
+  const interceptDemoWaClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!props.isDemo) return
+    const target = e.target as HTMLElement | null
+    if (!target) return
+    const link = target.closest('a[href*="wa.me/"]') as HTMLAnchorElement | null
+    if (!link) return
+    e.preventDefault()
+    e.stopPropagation()
+    setDemoBrokerModalOpen(true)
+  }
+
+  const feed =
+    props.kind === 'alquiler' ? (
+      <AlquileresPage seo={props.seo} initialProperties={props.initialProperties} publicShare={props.publicShare} />
+    ) : (
+      <VentasPage seo={props.seo} initialProperties={props.initialProperties} publicShare={props.publicShare} />
+    )
+
   return (
     <>
       <Head>
@@ -88,17 +160,36 @@ export default function PublicShortlistPage(props: PageProps) {
         <meta property="og:description" content={`${itemCount} propiedades seleccionadas en Equipetrol`} />
         <meta property="og:type" content="website" />
       </Head>
-      {props.kind === 'alquiler' ? (
-        <AlquileresPage seo={props.seo} initialProperties={props.initialProperties} publicShare={props.publicShare} />
+      {props.isDemo ? (
+        <div onClickCapture={interceptDemoWaClick} style={{ display: 'contents' }}>
+          {feed}
+        </div>
       ) : (
-        <VentasPage seo={props.seo} initialProperties={props.initialProperties} publicShare={props.publicShare} />
+        feed
       )}
-      <ShortlistWatermark
-        brokerNombre={props.shortlistMeta.brokerNombre}
-        shortlistId={props.shortlistMeta.id}
-        createdAt={props.shortlistMeta.createdAt}
-        expiresAt={props.shortlistMeta.expiresAt}
-      />
+      {props.isDemo ? (
+        <DemoFooterWatermark />
+      ) : (
+        <ShortlistWatermark
+          brokerNombre={props.shortlistMeta.brokerNombre}
+          shortlistId={props.shortlistMeta.id}
+          createdAt={props.shortlistMeta.createdAt}
+          expiresAt={props.shortlistMeta.expiresAt}
+        />
+      )}
+      {props.isDemo && (
+        <>
+          <DemoModalEducational
+            isOpen={demoBrokerModalOpen}
+            onClose={() => setDemoBrokerModalOpen(false)}
+            context="wa_broker_b_demo"
+            title="Es una muestra de cómo lo verán tus clientes"
+            body="Cuando uses Simón con tus clientes reales, este botón abre TU WhatsApp directamente — vas a poder responder consultas, coordinar visitas y ver qué propiedades marcaron como favoritas en tu panel de broker."
+          />
+          <DemoIntroBottomSheet isOpen={demoIntroOpen} onClose={closeDemoIntro} />
+          <DemoIntroTrigger onClick={() => setDemoIntroOpen(true)} />
+        </>
+      )}
     </>
   )
 }
@@ -213,6 +304,8 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const hash = ctx.params?.hash as string | undefined
   if (!hash) return { notFound: true }
 
+  const isDemo = isDemoShortlistHash(hash)
+
   // Lookup con campos de protección (filtra is_published + archived_at IS NULL).
   const shortlist = await getShortlistByHashWithStatus(hash)
   if (!shortlist) return { notFound: true }
@@ -220,58 +313,63 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const broker = await getBrokerBySlug(shortlist.broker_slug)
   if (!broker) return { notFound: true }
 
-  // ========== GATES DE PROTECCIÓN (migración 235) ==========
-  // Orden importa: suspended > expired > view_limit. Suspended siempre gana
-  // (admin manual lo decidió). Expired antes que cap porque marca status sin
-  // gastar query de fingerprint.
+  // En modo demo se saltan todos los gates: la shortlist demo NO tiene
+  // expiración real, NO acumula vistas únicas, NO se suspende. Cada visitante
+  // (broker prospect) la abre cuantas veces quiera para evaluar el producto.
+  if (!isDemo) {
+    // ========== GATES DE PROTECCIÓN (migración 235) ==========
+    // Orden importa: suspended > expired > view_limit. Suspended siempre gana
+    // (admin manual lo decidió). Expired antes que cap porque marca status sin
+    // gastar query de fingerprint.
 
-  // 1. Suspendida por admin
-  if (shortlist.status === 'suspended') {
-    return blockedProps('suspended', broker)
+    // 1. Suspendida por admin
+    if (shortlist.status === 'suspended') {
+      return blockedProps('suspended', broker)
+    }
+
+    // 2. Pre-bloqueada por admin/cron (status ya es expired/view_limit_reached)
+    if (shortlist.status === 'expired') {
+      return blockedProps('expired', broker)
+    }
+    if (shortlist.status === 'view_limit_reached') {
+      return blockedProps('view_limit_reached', broker)
+    }
+
+    // 3. Expiración lazy (cron no llegó, status sigue active)
+    if (new Date(shortlist.expires_at) < new Date()) {
+      await markAsExpired(shortlist.id)
+      return blockedProps('expired', broker)
+    }
+
+    // 4. Cap de vistas únicas: necesita fingerprint
+    const fp = computeFingerprint(ctx.req as Parameters<typeof computeFingerprint>[0], shortlist.id)
+    const ipHash = fp.ip !== 'unknown' ? sha256(fp.ip) : null
+    const referrer = (ctx.req.headers.referer as string | undefined) || null
+    const visitMeta = { ipHash, userAgent: fp.userAgent || null, referrer }
+
+    const alreadyVisited = await fingerprintExists(shortlist.id, fp.fingerprint)
+
+    if (!alreadyVisited && shortlist.current_views >= shortlist.max_views) {
+      await markAsViewLimitReached(shortlist.id)
+      return blockedProps('view_limit_reached', broker)
+    }
+
+    // 5. Registrar visita (no bloquea render, pero awaiteamos para garantizar
+    //    que current_views/last_viewed_at queden correctos antes de devolver).
+    if (alreadyVisited) {
+      await registerReturnVisit(shortlist.id, fp.fingerprint, visitMeta)
+    } else {
+      await registerNewVisit(shortlist.id, fp.fingerprint, visitMeta)
+    }
+
+    // 6. Set-Cookie persistente si no había una. Próxima visita del mismo
+    //    dispositivo va a usar la cookie en lugar del fallback IP+UA.
+    if (fp.isNewVisitor) {
+      ctx.res.setHeader('Set-Cookie', buildVisitorCookie(shortlist.id, fp.fingerprint))
+    }
+
+    // ========== FIN GATES ==========
   }
-
-  // 2. Pre-bloqueada por admin/cron (status ya es expired/view_limit_reached)
-  if (shortlist.status === 'expired') {
-    return blockedProps('expired', broker)
-  }
-  if (shortlist.status === 'view_limit_reached') {
-    return blockedProps('view_limit_reached', broker)
-  }
-
-  // 3. Expiración lazy (cron no llegó, status sigue active)
-  if (new Date(shortlist.expires_at) < new Date()) {
-    await markAsExpired(shortlist.id)
-    return blockedProps('expired', broker)
-  }
-
-  // 4. Cap de vistas únicas: necesita fingerprint
-  const fp = computeFingerprint(ctx.req as Parameters<typeof computeFingerprint>[0], shortlist.id)
-  const ipHash = fp.ip !== 'unknown' ? sha256(fp.ip) : null
-  const referrer = (ctx.req.headers.referer as string | undefined) || null
-  const visitMeta = { ipHash, userAgent: fp.userAgent || null, referrer }
-
-  const alreadyVisited = await fingerprintExists(shortlist.id, fp.fingerprint)
-
-  if (!alreadyVisited && shortlist.current_views >= shortlist.max_views) {
-    await markAsViewLimitReached(shortlist.id)
-    return blockedProps('view_limit_reached', broker)
-  }
-
-  // 5. Registrar visita (no bloquea render, pero awaiteamos para garantizar
-  //    que current_views/last_viewed_at queden correctos antes de devolver).
-  if (alreadyVisited) {
-    await registerReturnVisit(shortlist.id, fp.fingerprint, visitMeta)
-  } else {
-    await registerNewVisit(shortlist.id, fp.fingerprint, visitMeta)
-  }
-
-  // 6. Set-Cookie persistente si no había una. Próxima visita del mismo
-  //    dispositivo va a usar la cookie en lugar del fallback IP+UA.
-  if (fp.isNewVisitor) {
-    ctx.res.setHeader('Set-Cookie', buildVisitorCookie(shortlist.id, fp.fingerprint))
-  }
-
-  // ========== FIN GATES ==========
 
   // A partir de acá, supabase con service_role para queries de items/hearts.
   const supabase = createClient(
@@ -290,11 +388,17 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
 
   // Hearts del cliente (migración 234). Para hidratar el state del cliente
   // al cargar, de modo que los corazones ya marcados aparezcan como activos.
-  const { data: heartRows } = await supabase
-    .from('broker_shortlist_hearts')
-    .select('propiedad_id')
-    .eq('shortlist_id', shortlist.id)
-  const initialHearts: number[] = (heartRows || []).map((r: { propiedad_id: number }) => r.propiedad_id)
+  // En modo demo NO se persisten hearts — la shortlist demo es compartida
+  // por todos los visitantes y no podemos mostrar favoritos cruzados entre
+  // brokers prospects distintos. El UI client-side los maneja en state local.
+  let initialHearts: number[] = []
+  if (!isDemo) {
+    const { data: heartRows } = await supabase
+      .from('broker_shortlist_hearts')
+      .select('propiedad_id')
+      .eq('shortlist_id', shortlist.id)
+    initialHearts = (heartRows || []).map((r: { propiedad_id: number }) => r.propiedad_id)
+  }
 
   const shortlistMeta: ShortlistMeta = {
     id: shortlist.id,
@@ -308,7 +412,9 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const primerTipo = safeItems[0]?.tipo_operacion as 'venta' | 'alquiler' | undefined
   const tipoOperacion: 'venta' | 'alquiler' = primerTipo === 'alquiler' ? 'alquiler' : 'venta'
 
-  const shortlistTitle = `Selección de ${broker.nombre} para ${shortlist.cliente_nombre}`
+  const shortlistTitle = isDemo
+    ? DEMO_SHORTLIST_TITLE
+    : `Selección de ${broker.nombre} para ${shortlist.cliente_nombre}`
   const propIds = safeItems.map(i => i.propiedad_id)
 
   // ======================== RAMA ALQUILER ========================
@@ -329,6 +435,11 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
         .map(i => indexed.get(i.propiedad_id))
         .filter((r): r is RawUnidadAlquilerRow => Boolean(r))
         .map(mapRowAlquiler)
+
+      // Sanitizar agente_* server-side antes de hidratar al cliente. Sin esto,
+      // un broker prospect con DevTools puede leer __NEXT_DATA__ y extraer
+      // los WhatsApps de captadores. Ver lib/demo-mode.ts.
+      if (isDemo) properties = sanitizeAlquileresArrayForDemo(properties)
 
       const bobActualByPropId = new Map<number, number | null>()
       for (const r of (bobRes.data || []) as Array<{ id: number; precio_mensual_bob: string | number | null }>) {
@@ -372,9 +483,11 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
           itemComments,
           priceSnapshots,
           initialHearts,
+          isDemo,
         },
         shortlistTitle,
         shortlistMeta,
+        isDemo,
       },
     }
   }
@@ -399,6 +512,11 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
       .map(i => indexed.get(i.propiedad_id))
       .filter((r): r is RawUnidadSimpleRow => Boolean(r))
       .map(mapRowVenta)
+
+    // Sanitizar agente_* server-side antes de hidratar al cliente. Sin esto,
+    // un broker prospect con DevTools puede leer __NEXT_DATA__ y extraer los
+    // WhatsApps de captadores. Ver lib/demo-mode.ts.
+    if (isDemo) properties = sanitizeVentasArrayForDemo(properties)
 
     const rawActualByPropId = new Map<number, number | null>()
     for (const r of (rawRes.data || []) as Array<{ id: number; precio_usd: string | number | null }>) {
@@ -438,9 +556,11 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
         itemComments,
         priceSnapshots,
         initialHearts,
+        isDemo,
       },
       shortlistTitle,
       shortlistMeta,
+      isDemo,
     },
   }
 }

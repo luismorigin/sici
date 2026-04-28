@@ -236,6 +236,9 @@ export interface PublicShareDataAlquiler {
   // IDs de propiedades que el cliente ya marcó con corazón (persistidos en BD).
   // El cliente hidrata favorites con esto en lugar de localStorage.
   initialHearts?: number[]
+  // Modo demo (/b/demo): renderiza placeholder "Tu foto" sobre la silueta
+  // del broker cuando foto_url es null.
+  isDemo?: boolean
 }
 
 // ===== MAIN PAGE =====
@@ -1652,7 +1655,9 @@ export default function AlquileresPage({
           <div className="apsh-broker">
             {publicShare.broker.foto_url
               ? <img src={publicShare.broker.foto_url} alt={publicShare.broker.nombre} className="apsh-broker-photo" />
-              : <div className="apsh-broker-photo apsh-broker-photo-ph">{publicShare.broker.nombre.charAt(0)}</div>}
+              : publicShare.isDemo
+                ? <div className="apsh-broker-photo apsh-broker-photo-ph apsh-broker-photo-demo">Tu foto</div>
+                : <div className="apsh-broker-photo apsh-broker-photo-ph">{publicShare.broker.nombre.charAt(0)}</div>}
             <div className="apsh-broker-info">
               <div className="apsh-broker-label">Selección de</div>
               <div className="apsh-broker-name">{publicShare.broker.nombre}</div>

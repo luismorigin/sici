@@ -36,7 +36,7 @@ export default function ShortlistWatermark({
     <footer className="sl-watermark">
       <div className="sl-watermark-line">
         Selección de <strong>{brokerNombre}</strong> con{' '}
-        <a href="https://simon.bo" target="_blank" rel="noopener noreferrer">
+        <a href="https://simonbo.com" target="_blank" rel="noopener noreferrer">
           Simón · Inteligencia Inmobiliaria
         </a>
       </div>
