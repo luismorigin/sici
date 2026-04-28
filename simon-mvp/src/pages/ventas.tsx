@@ -1602,7 +1602,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const areaFiltroActivo = brokerMode && (areaMin > M2_MIN_DEFAULT || areaMax < M2_MAX_DEFAULT)
   // TC paralelo (Binance) para que el broker calcule mentalmente USD billete.
   // Solo informativo — no se aplica a ningún precio. Cargado al montar en modo broker.
-  const [tcParalelo, setTcParalelo] = useState<{ valor: number; fecha: string | null } | null>(null)
+  // ultimaVerificacion = workflow nocturno corre cada día (verifica Binance)
+  // fecha = última actualización efectiva del valor en BD (cambia solo si delta >= 0.5%)
+  const [tcParalelo, setTcParalelo] = useState<{ valor: number; fecha: string | null; verificacion: string | null } | null>(null)
   useEffect(() => {
     if (!brokerMode) return
     let cancelled = false
@@ -1610,7 +1612,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (cancelled || !d || typeof d.tcParalelo !== 'number') return
-        setTcParalelo({ valor: d.tcParalelo, fecha: d.fechaActualizacion || null })
+        setTcParalelo({ valor: d.tcParalelo, fecha: d.fechaActualizacion || null, verificacion: d.ultimaVerificacion || null })
       })
       .catch(() => { /* fail silent — el chip simplemente no aparece */ })
     return () => { cancelled = true }
@@ -2100,15 +2102,26 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             <span className="vt-broker-banner-label">BROKER</span>
             <span className="vt-broker-banner-name">{broker.nombre}</span>
           </div>
-          {tcParalelo && (
-            <span className="vt-broker-tc-chip"
-              title={tcParalelo.fecha ? `Actualizado ${new Date(tcParalelo.fecha).toLocaleString('es-BO', { dateStyle: 'short', timeStyle: 'short' })}` : 'TC paralelo Binance'}
-              aria-label="Tipo de cambio paralelo Binance">
-              <span className="vt-broker-tc-icon" aria-hidden="true">💵</span>
-              <span className="vt-broker-tc-label">Binance</span>
-              <span className="vt-broker-tc-value">Bs {tcParalelo.valor.toFixed(2)}</span>
-            </span>
-          )}
+          {tcParalelo && (() => {
+            // El workflow verifica Binance cada noche. Solo actualiza la BD si el
+            // cambio es ≥ 0.5% (threshold para evitar ruido). Mostramos al broker
+            // ambas fechas en el tooltip para que entienda que TC "viejo" puede
+            // significar simplemente "estable", no roto.
+            const fmt = (s: string | null) => s ? new Date(s).toLocaleString('es-BO', { dateStyle: 'short', timeStyle: 'short' }) : '—'
+            const tooltipParts: string[] = ['TC paralelo Binance P2P']
+            if (tcParalelo.verificacion) tooltipParts.push(`Última verificación: ${fmt(tcParalelo.verificacion)}`)
+            if (tcParalelo.fecha) tooltipParts.push(`Última actualización efectiva: ${fmt(tcParalelo.fecha)}`)
+            tooltipParts.push('(El TC se actualiza solo si el cambio diario es ≥ 0,5%)')
+            return (
+              <span className="vt-broker-tc-chip"
+                title={tooltipParts.join('\n')}
+                aria-label="Tipo de cambio paralelo Binance">
+                <span className="vt-broker-tc-icon" aria-hidden="true">💵</span>
+                <span className="vt-broker-tc-label">Binance</span>
+                <span className="vt-broker-tc-value">Bs {tcParalelo.valor.toFixed(2)}</span>
+              </span>
+            )
+          })()}
           <div className="vt-broker-tabs" role="tablist" aria-label="Tipo de operación">
             <button className="vt-broker-tab active" role="tab" aria-selected="true" disabled>Ventas</button>
             <Link href={`/broker/${broker.slug}/alquileres`} className="vt-broker-tab" role="tab" aria-selected="false">
