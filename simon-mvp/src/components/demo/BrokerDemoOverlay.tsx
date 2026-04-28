@@ -48,7 +48,7 @@ interface ModalContent {
 const MODAL_CONTENTS: Record<string, ModalContent> = {
   contactar_captador: {
     title: 'Captador disponible en versión real',
-    body: 'En tu cuenta activa, este botón te conecta directo con el captador original de la propiedad con un mensaje pre-armado para coordinar comisión compartida. Esa es la red exclusiva de Simón.',
+    body: 'En tu cuenta activa, este botón te conecta directo con el captador original de la propiedad con un mensaje pre-armado para coordinar comisión compartida.',
     context: 'contactar_captador',
   },
   enviar_shortlist: {
