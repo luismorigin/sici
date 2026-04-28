@@ -42,6 +42,7 @@ import DemoFooterWatermark from '@/components/demo/DemoFooterWatermark'
 import DemoModalEducational from '@/components/demo/DemoModalEducational'
 import DemoIntroBottomSheet from '@/components/demo/DemoIntroBottomSheet'
 import DemoIntroTrigger from '@/components/demo/DemoIntroTrigger'
+import DemoBackToBrokerBanner from '@/components/demo/DemoBackToBrokerBanner'
 import {
   isDemoShortlistHash,
   sanitizeVentasArrayForDemo,
@@ -179,6 +180,7 @@ export default function PublicShortlistPage(props: PageProps) {
       )}
       {props.isDemo && (
         <>
+          <DemoBackToBrokerBanner />
           <DemoModalEducational
             isOpen={demoBrokerModalOpen}
             onClose={() => setDemoBrokerModalOpen(false)}

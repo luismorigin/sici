@@ -10,9 +10,10 @@ import { trackEvent } from '@/lib/analytics'
 import { fetchMercadoData, type MercadoData } from '@/lib/mercado-data'
 import type { Broker } from '@/lib/simon-brokers'
 import ACMInline from '@/components/broker/ACMInline'
-import { useBrokerShortlists } from '@/hooks/useBrokerShortlists'
+import { useBrokerShortlists, DEMO_SHORTLIST_BLOCKED } from '@/hooks/useBrokerShortlists'
 import ShortlistSendModal from '@/components/broker/ShortlistSendModal'
 import ShortlistsPanel from '@/components/broker/ShortlistsPanel'
+import BrokerDemoOverlay from '@/components/demo/BrokerDemoOverlay'
 
 // --- SEO types ---
 interface VentasSEO {
@@ -1499,7 +1500,7 @@ export interface PublicShareData {
 }
 
 // ===== Page =====
-export default function VentasPage({ seo, initialProperties = [], brokerSlug: brokerSlugProp = null, broker: brokerProp = null, publicShare = null }: { seo: VentasSEO; initialProperties: UnidadVenta[]; brokerSlug?: string | null; broker?: Broker | null; publicShare?: PublicShareData | null }) {
+export default function VentasPage({ seo, initialProperties = [], brokerSlug: brokerSlugProp = null, broker: brokerProp = null, publicShare = null, brokerDemoMode = false }: { seo: VentasSEO; initialProperties: UnidadVenta[]; brokerSlug?: string | null; broker?: Broker | null; publicShare?: PublicShareData | null; brokerDemoMode?: boolean }) {
   const publicShareMode = publicShare !== null
   const publicShareBrokerProp: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null = publicShare ? publicShare.broker : null
   const priceSnapshotsMap: Record<number, { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null }> | null = publicShare && publicShare.priceSnapshots ? publicShare.priceSnapshots : null
@@ -1833,10 +1834,21 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     const propiedad_ids = Array.from(favorites)
     if (propiedad_ids.length === 0) throw new Error('No hay propiedades seleccionadas')
     trackEvent('broker_send_shortlist', { broker_slug: broker.slug, count: propiedad_ids.length })
-    const { whatsappUrl } = await brokerShortlists.createAndSend({ ...data, propiedad_ids })
-    setFavorites(new Set())
-    showToast('Shortlist enviada')
-    return { whatsappUrl }
+    try {
+      const { whatsappUrl } = await brokerShortlists.createAndSend({ ...data, propiedad_ids })
+      setFavorites(new Set())
+      showToast('Shortlist enviada')
+      return { whatsappUrl }
+    } catch (err) {
+      // En /broker/demo el hook lanza este error sentinela. Lo capturamos
+      // antes de que ShortlistSendModal lo muestre como error rojo y
+      // emitimos evento que BrokerDemoOverlay convierte en modal educativo.
+      if (err instanceof Error && err.message === DEMO_SHORTLIST_BLOCKED) {
+        window.dispatchEvent(new CustomEvent('simon:demo-blocked', { detail: { context: 'enviar_shortlist' } }))
+        return { whatsappUrl: '' }
+      }
+      throw err
+    }
   }
   function openCompare() {
     trackEvent('open_compare_venta', { property_ids: Array.from(favorites).join(','), count: favorites.size })
@@ -1878,19 +1890,23 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
 
   // Persist favorites
   // Hidratar favorites: publicShareMode desde BD (initialHearts), los demás desde localStorage.
+  // brokerDemoMode: NO hidrata ni persiste — sesión limpia siempre, lo que el
+  // broker prospect marca queda solo durante la sesión.
   useEffect(() => {
     if (publicShareMode) {
       const hearts = publicShare?.initialHearts
       if (hearts && hearts.length > 0) setFavorites(new Set(hearts))
       return
     }
+    if (brokerDemoMode) return
     try { const s = localStorage.getItem('ventas_favorites_v1'); if (s) setFavorites(new Set(JSON.parse(s))) } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   useEffect(() => {
     if (publicShareMode) return // persistencia va por BD en toggleFavorite
+    if (brokerDemoMode) return // demo no persiste
     if (favorites.size > 0) localStorage.setItem('ventas_favorites_v1', JSON.stringify([...favorites]))
-  }, [favorites, publicShareMode])
+  }, [favorites, publicShareMode, brokerDemoMode])
 
   // Scroll tracking (mobile TikTok)
   useEffect(() => {
@@ -2050,8 +2066,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           cantidadPropiedades={favorites.size}
           existingShortlists={brokerShortlists.shortlists}
           onConfirm={handleSendShortlist}
+          onDemoBlock={brokerDemoMode ? () => {
+            window.dispatchEvent(new CustomEvent('simon:demo-blocked', { detail: { context: 'enviar_shortlist' } }))
+          } : undefined}
         />
       )}
+
+      {brokerDemoMode && <BrokerDemoOverlay />}
 
       {/* Panel Mis shortlists enviadas — solo broker mode */}
       {brokerMode && broker && (

@@ -29,6 +29,25 @@ export interface DemoModalEducationalProps {
   primaryLabel?: string
   /** Texto del CTA secondary. Default: "Cerrar". */
   secondaryLabel?: string
+  /**
+   * Override del CTA primary. Si se provee, reemplaza el default
+   * (que abre WA del founder) con un handler custom. Útil cuando el
+   * primary no es "activar cuenta" sino otra acción demo (ej. ver
+   * ejemplo de shortlist en /b/demo).
+   */
+  customPrimary?: {
+    label: string
+    onClick: () => void
+  }
+  /**
+   * Footer extra opcional debajo de los botones — link sutil con CTA
+   * complementario. Útil cuando customPrimary toma el primary slot pero
+   * queremos mantener la opción de "Activá tu cuenta" disponible.
+   */
+  footerLink?: {
+    label: string
+    onClick: () => void
+  }
 }
 
 export default function DemoModalEducational({
@@ -39,6 +58,8 @@ export default function DemoModalEducational({
   body,
   primaryLabel = 'Activar mi cuenta',
   secondaryLabel = 'Cerrar',
+  customPrimary,
+  footerLink,
 }: DemoModalEducationalProps) {
   useEffect(() => {
     if (!isOpen) return
@@ -63,16 +84,23 @@ export default function DemoModalEducational({
         gtag('event', 'demo_cta_click', { demo_context: context })
       }
     }
+    if (customPrimary) {
+      customPrimary.onClick()
+      return
+    }
     window.open(waUrl, '_blank', 'noopener,noreferrer')
   }
 
+  const effectivePrimaryLabel = customPrimary ? customPrimary.label : primaryLabel
+
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[200] p-4"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="demo-modal-title"
+      style={{ zIndex: 2147483646 }}
     >
       <div
         className="bg-white rounded-2xl max-w-md w-full shadow-2xl"
@@ -91,7 +119,7 @@ export default function DemoModalEducational({
               onClick={handlePrimary}
               className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors"
             >
-              {primaryLabel}
+              {effectivePrimaryLabel}
             </button>
             <button
               type="button"
@@ -101,6 +129,17 @@ export default function DemoModalEducational({
               {secondaryLabel}
             </button>
           </div>
+          {footerLink && (
+            <div className="mt-4 text-center text-sm">
+              <button
+                type="button"
+                onClick={footerLink.onClick}
+                className="text-gray-600 hover:text-gray-900 underline underline-offset-4"
+              >
+                {footerLink.label}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

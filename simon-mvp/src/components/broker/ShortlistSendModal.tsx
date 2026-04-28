@@ -61,6 +61,13 @@ interface Props {
   cantidadPropiedades: number
   existingShortlists?: BrokerShortlist[]
   onConfirm: (data: { cliente_nombre: string; cliente_telefono: string; mensaje_whatsapp?: string }) => Promise<{ whatsappUrl: string }>
+  /**
+   * Modo demo: si está provista, se invoca al apretar "Enviar" en lugar de
+   * ejecutar el flujo normal (no abre window de WA, no llama onConfirm). El
+   * caller (ventas/alquileres en /broker/demo) usa esto para mostrar modal
+   * educativo en vez de persistir una shortlist.
+   */
+  onDemoBlock?: () => void
 }
 
 const S: Record<string, CSSProperties> = {
@@ -117,7 +124,7 @@ const S: Record<string, CSSProperties> = {
   btnPrimary: { background: '#3A6A48', color: '#EDE8DC' },
 }
 
-export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPropiedades, existingShortlists = [], onConfirm }: Props) {
+export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPropiedades, existingShortlists = [], onConfirm, onDemoBlock }: Props) {
   const [clienteNombre, setClienteNombre] = useState('')
   const [clienteTelefono, setClienteTelefono] = useState('')
   const [mensaje, setMensaje] = useState('')
@@ -144,8 +151,17 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
 
   useEffect(() => {
     if (isOpen) {
-      setClienteNombre('')
-      setClienteTelefono('')
+      // En modo demo (onDemoBlock provisto) pre-llenamos con datos ficticios
+      // para que el broker prospect no tenga que inventarlos. Los campos
+      // siguen editables — el banner arriba aclara que es solo para ver
+      // el ejemplo, no se envía nada.
+      if (onDemoBlock) {
+        setClienteNombre('Cliente Demo')
+        setClienteTelefono('+591 70000000')
+      } else {
+        setClienteNombre('')
+        setClienteTelefono('')
+      }
       setMensaje('')
       setMensajeEditedManually(false)
       setErrorMsg(null)
@@ -154,7 +170,7 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
       document.body.style.overflow = 'hidden'
       return () => { document.body.style.overflow = prev }
     }
-  }, [isOpen])
+  }, [isOpen, onDemoBlock])
 
   useEffect(() => {
     if (!mensajeEditedManually) {
@@ -170,6 +186,14 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
 
     const phoneResult = normalizeClientPhone(clienteTelefono)
     if (!phoneResult.ok) return setErrorMsg(phoneResult.error)
+
+    // Modo demo: corto antes de abrir waWindow para evitar pestaña en blanco.
+    // El caller maneja el modal educativo y cierra este modal.
+    if (onDemoBlock) {
+      onDemoBlock()
+      onClose()
+      return
+    }
 
     // Abrir el window ANTES del await preserva el user gesture en mobile
     // (Safari/Chrome iOS bloquean window.open post-await aunque el origen sea el click).
@@ -214,6 +238,27 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
         <div style={S.summary}>
           <strong>{cantidadPropiedades}</strong> {cantidadPropiedades === 1 ? 'propiedad' : 'propiedades'} seleccionada{cantidadPropiedades === 1 ? '' : 's'}
         </div>
+
+        {onDemoBlock && (
+          <div style={{
+            background: 'rgba(58,106,72,0.10)',
+            border: '1px solid rgba(58,106,72,0.32)',
+            borderRadius: 10,
+            padding: '12px 14px',
+            marginBottom: 16,
+            fontSize: 13,
+            lineHeight: 1.5,
+            color: '#2e5439',
+            display: 'flex',
+            gap: 10,
+            alignItems: 'flex-start',
+          }}>
+            <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>🎯</span>
+            <span>
+              <strong>Modo Demo</strong> · Los campos vienen con datos de ejemplo (editables). No se envía ningún WhatsApp — al darle <em>Ver el ejemplo</em> te abrimos cómo recibiría tu cliente la shortlist.
+            </span>
+          </div>
+        )}
 
         <div style={S.field}>
           <label style={S.label}>Nombre del cliente</label>
@@ -275,7 +320,7 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
         <footer style={S.footer}>
           <button style={{ ...S.btnBase, ...S.btnGhost }} onClick={onClose} disabled={submitting}>Cancelar</button>
           <button style={{ ...S.btnBase, ...S.btnPrimary, opacity: submitting ? 0.6 : 1 }} onClick={handleSubmit} disabled={submitting}>
-            {submitting ? 'Enviando…' : 'Enviar por WhatsApp'}
+            {submitting ? 'Enviando…' : (onDemoBlock ? 'Ver el ejemplo →' : 'Enviar por WhatsApp')}
           </button>
         </footer>
       </div>

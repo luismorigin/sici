@@ -8,6 +8,8 @@
 
 import AlquileresPage, { getStaticProps as alquileresGetStaticProps } from '../../alquileres'
 import { listActiveSlugs, getBrokerBySlug, type Broker } from '@/lib/simon-brokers'
+import { isDemoBrokerSlug, sanitizeAlquileresArrayForDemo } from '@/lib/demo-mode'
+import type { UnidadAlquiler } from '@/lib/supabase'
 import type { GetStaticPaths, GetStaticProps } from 'next'
 
 export default AlquileresPage
@@ -32,11 +34,21 @@ export const getStaticProps: GetStaticProps = async (context) => {
   const alquileresResult = await alquileresGetStaticProps(context)
 
   if ('props' in alquileresResult) {
+    const baseProps = alquileresResult.props as { initialProperties?: UnidadAlquiler[] } & Record<string, unknown>
+    const isDemo = isDemoBrokerSlug(slug)
+
+    // Sanitizar agente_nombre/telefono/whatsapp server-side en modo demo.
+    const initialProperties = isDemo && Array.isArray(baseProps.initialProperties)
+      ? sanitizeAlquileresArrayForDemo(baseProps.initialProperties)
+      : baseProps.initialProperties
+
     return {
       props: {
-        ...(alquileresResult.props as object),
+        ...baseProps,
+        initialProperties,
         brokerSlug: slug,
         broker,
+        brokerDemoMode: isDemo,
       },
       revalidate: 60,
     }

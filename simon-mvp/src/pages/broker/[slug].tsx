@@ -9,6 +9,8 @@
 
 import VentasPage, { getStaticProps as ventasGetStaticProps } from '../ventas'
 import { listActiveSlugs, getBrokerBySlug, type Broker } from '@/lib/simon-brokers'
+import { isDemoBrokerSlug, sanitizeVentasArrayForDemo } from '@/lib/demo-mode'
+import type { UnidadVenta } from '@/lib/supabase'
 import type { GetStaticPaths, GetStaticProps } from 'next'
 
 export default VentasPage
@@ -33,11 +35,22 @@ export const getStaticProps: GetStaticProps = async (context) => {
   const ventasResult = await ventasGetStaticProps(context)
 
   if ('props' in ventasResult) {
+    const baseProps = ventasResult.props as { initialProperties?: UnidadVenta[] } & Record<string, unknown>
+    const isDemo = isDemoBrokerSlug(slug)
+
+    // En modo demo borramos agente_nombre/telefono server-side antes de
+    // hidratar para evitar extracción via __NEXT_DATA__. Ver lib/demo-mode.ts.
+    const initialProperties = isDemo && Array.isArray(baseProps.initialProperties)
+      ? sanitizeVentasArrayForDemo(baseProps.initialProperties)
+      : baseProps.initialProperties
+
     return {
       props: {
-        ...(ventasResult.props as object),
+        ...baseProps,
+        initialProperties,
         brokerSlug: slug,
         broker,
+        brokerDemoMode: isDemo,
       },
       revalidate: 60,
     }

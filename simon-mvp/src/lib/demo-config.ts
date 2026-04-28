@@ -40,15 +40,15 @@ export type DemoCTAContext =
 export function getDemoCTAMessage(context: DemoCTAContext): string {
   switch (context) {
     case 'wa_broker_b_demo':
-      return 'Hola Luis, vi la demo de Simón (link cliente) y quiero entender cómo activar mi cuenta para empezar a usarlo con mis clientes.'
+      return 'Hola, vi la demo de Simón (link cliente) y quiero entender cómo activar mi cuenta para empezar a usarlo con mis clientes.'
     case 'contactar_captador':
-      return 'Hola Luis, vi la demo de Simón y quiero acceso a los captadores para coordinar comisión compartida.'
+      return 'Hola, vi la demo de Simón y quiero acceso a los captadores para coordinar comisión compartida.'
     case 'enviar_shortlist':
-      return 'Hola Luis, vi la demo de Simón y quiero empezar a mandar shortlists profesionales a mis clientes.'
+      return 'Hola, vi la demo de Simón y quiero empezar a mandar shortlists profesionales a mis clientes.'
     case 'guardar_favorito':
-      return 'Hola Luis, vi la demo de Simón y quiero activar mi cuenta para trabajar con favoritos guardados.'
+      return 'Hola, vi la demo de Simón y quiero activar mi cuenta para trabajar con favoritos guardados.'
     case 'watermark_top':
     case 'watermark_footer':
-      return 'Hola Luis, estuve viendo la demo de Simón y quiero saber cómo activar mi cuenta.'
+      return 'Hola, estuve viendo la demo de Simón y quiero saber cómo activar mi cuenta.'
   }
 }

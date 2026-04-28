@@ -23,8 +23,26 @@ export function isDemoShortlistHash(hash: string | null | undefined): boolean {
 }
 
 /**
- * Quita identidad individual del captador en modo demo. Mantiene
+ * Placeholder fake para agente_telefono / agente_whatsapp en demo. Es un
+ * número con formato BO válido pero todo ceros tras el código país, así:
+ *  - los condicionales `if (p.agente_whatsapp)` siguen siendo truthy →
+ *    el botón "Contactar captador" SE RENDERIZA (el broker prospect ve
+ *    cómo se vería en producción, que es parte del valor del demo)
+ *  - el href construido es `wa.me/59100000000` que NO es un número real,
+ *    así que aún si alguien evade los listeners de intercepción y
+ *    navegara, no llegaría a un broker real
+ *  - el listener global de BrokerDemoOverlay (clicks `a[href*="wa.me"]`)
+ *    captura los anchors directos; los `<a href="#" onClick>` que usan
+ *    `triggerWhatsAppCapture` se interceptan vía setDemoModeForCapture
+ */
+const DEMO_FAKE_PHONE = '+59100000000'
+
+/**
+ * Reemplaza identidad individual del captador en modo demo. Mantiene
  * agente_oficina (agencia genérica) — eso ya es público en los portales.
+ * agente_nombre=null para no mostrar nombre falso, telefono/whatsapp=fake
+ * para que el botón siga renderizándose y el broker prospect entienda la
+ * UX, con click interceptado por el listener global.
  *
  * Aplicar SIEMPRE server-side antes de pasar a `initialProperties` /
  * `publicShare.items`. Si se aplica solo en render, la data viaja en el
@@ -34,7 +52,7 @@ export function sanitizeUnidadVentaForDemo(u: UnidadVenta): UnidadVenta {
   return {
     ...u,
     agente_nombre: null,
-    agente_telefono: null,
+    agente_telefono: DEMO_FAKE_PHONE,
     agente_oficina: u.agente_oficina, // se mantiene
   }
 }
@@ -43,8 +61,8 @@ export function sanitizeUnidadAlquilerForDemo(u: UnidadAlquiler): UnidadAlquiler
   return {
     ...u,
     agente_nombre: null,
-    agente_telefono: null,
-    agente_whatsapp: null,
+    agente_telefono: DEMO_FAKE_PHONE,
+    agente_whatsapp: DEMO_FAKE_PHONE,
   }
 }
 

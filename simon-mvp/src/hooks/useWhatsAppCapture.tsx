@@ -26,7 +26,24 @@ export interface CaptureProperty {
 type TriggerFn = (e: React.MouseEvent, p: CaptureProperty, msg: string, fuente: string, preguntas?: string[]) => void
 let _moduleTrigger: TriggerFn | null = null
 
+// Flag global para modo /broker/demo. Cuando está activo, cualquier
+// `triggerWhatsAppCapture` se transforma en evento custom que
+// BrokerDemoOverlay traduce a modal educativo. Setteado por
+// useWhatsAppCapture cuando recibe demoMode=true.
+let _demoMode = false
+export function setDemoModeForCapture(enabled: boolean) {
+  _demoMode = enabled
+}
+
 export function triggerWhatsAppCapture(e: React.MouseEvent, p: CaptureProperty, msg: string, fuente: string, preguntas?: string[]) {
+  if (_demoMode) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('simon:demo-blocked', { detail: { context: 'contactar_captador' } }))
+    }
+    return
+  }
   if (_moduleTrigger) {
     _moduleTrigger(e, p, msg, fuente, preguntas)
     return

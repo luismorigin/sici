@@ -17,8 +17,14 @@ import {
   publicShortlistURL,
 } from '@/lib/broker-shortlists'
 import { buildWhatsAppURL, defaultShortlistMessage } from '@/lib/whatsapp'
+import { isDemoBrokerSlug } from '@/lib/demo-mode'
 import type { Broker } from '@/lib/simon-brokers'
 import type { BrokerShortlist, CreateShortlistPayload } from '@/types/broker-shortlist'
+
+// Error sentinela que dispara handleSendShortlist cuando intenta crear
+// una shortlist en /broker/demo. ventas.tsx/alquileres.tsx lo capturan y
+// abren modal educativo en vez de propagar como error real.
+export const DEMO_SHORTLIST_BLOCKED = '__SIMON_DEMO_SHORTLIST_BLOCKED__'
 
 export interface UseBrokerShortlistsResult {
   shortlists: BrokerShortlist[]
@@ -46,6 +52,15 @@ export function useBrokerShortlists(broker: Broker | null): UseBrokerShortlistsR
 
   const refresh = useCallback(async () => {
     if (!broker) return
+    // Modo demo: no se carga ninguna shortlist real. El panel "Mis shortlists"
+    // queda vacío con copy explicativo y el broker prospect no ve datos
+    // operativos de ningún otro broker.
+    if (isDemoBrokerSlug(broker.slug)) {
+      setShortlists([])
+      setLoading(false)
+      setError(null)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -64,6 +79,12 @@ export function useBrokerShortlists(broker: Broker | null): UseBrokerShortlistsR
 
   const createAndSend = useCallback(async (input: CreateAndSendInput) => {
     if (!broker) throw new Error('Broker no resuelto')
+    // Modo demo: bloqueamos la creación con un error sentinela que el
+    // caller detecta para abrir modal educativo. No mandamos POST a la API
+    // (defensa en profundidad — la API también rechaza slug=demo).
+    if (isDemoBrokerSlug(broker.slug)) {
+      throw new Error(DEMO_SHORTLIST_BLOCKED)
+    }
 
     const payload: CreateShortlistPayload = {
       broker_slug: broker.slug,
