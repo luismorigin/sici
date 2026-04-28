@@ -42,7 +42,7 @@ export function getDemoCTAMessage(context: DemoCTAContext): string {
     case 'wa_broker_b_demo':
       return 'Hola, vi la demo de Simón (link cliente) y quiero entender cómo activar mi cuenta para empezar a usarlo con mis clientes.'
     case 'contactar_captador':
-      return 'Hola, vi la demo de Simón y quiero acceso a los captadores para coordinar comisión compartida.'
+      return 'Hola, vi la demo de Simón y quiero acceso directo a los brokers captadores.'
     case 'enviar_shortlist':
       return 'Hola, vi la demo de Simón y quiero empezar a mandar shortlists profesionales a mis clientes.'
     case 'guardar_favorito':

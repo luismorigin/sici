@@ -13,39 +13,39 @@ export interface BrokerDemoIntroSheetProps {
 
 const BULLETS: Array<{ icon: string; title: string; body: string }> = [
   {
-    icon: '🏙',
-    title: 'Inventario completo',
-    body: 'Todas las propiedades de Equipetrol con datos al día y ACM por unidad (solo ventas) — el mismo feed que ves acá en demo.',
+    icon: '📊',
+    title: '+300 propiedades',
+    body: 'filtrables por zona, precio, m² y dormitorios',
   },
   {
-    icon: '🔒',
-    title: 'Captadores protegidos',
-    body: 'En tu cuenta activa desbloqueas el nombre y WhatsApp del captador original para coordinar comisión compartida.',
+    icon: '🤝',
+    title: 'Acceso directo',
+    body: 'a los brokers captadores de cada propiedad',
   },
   {
     icon: '📤',
-    title: 'Shortlists ilimitadas',
-    body: 'Curás 5–15 propiedades para un cliente y se las mandás por WhatsApp en un link único con el logo de tu franquicia, tu foto y tu nombre.',
+    title: 'Listas curadas',
+    body: 'con tu nombre y WhatsApp, en formato profesional para enviar al cliente',
   },
   {
-    icon: '📊',
-    title: 'Tu panel y métricas',
-    body: 'Tu cuenta real te muestra qué propiedades marcó tu cliente, cuántas vistas tiene tu link y qué shortlists están activas.',
+    icon: '📈',
+    title: 'Tu panel',
+    body: 'favoritos del cliente, vistas del link, shortlists activas',
   },
 ]
 
 const STEPS: Array<{ title: string; body: string }> = [
   {
     title: 'Filtrá por la solicitud de tu cliente',
-    body: 'Zona, rango de precio, dormitorios, m². Acotá el inventario al perfil específico que estás trabajando.',
+    body: 'Zona, precio, m² y dormitorios — acotá al perfil exacto que estás trabajando.',
   },
   {
-    title: 'Marcá las que cumplen',
-    body: 'Una a una con la ⭐, o usá "+ Marcar las visibles" arriba para sumar todo lo filtrado de una vez.',
+    title: 'Marcá ⭐ las que cumplan',
+    body: 'Una a una, o "+ Marcar las visibles" para sumar todo lo filtrado de una vez.',
   },
   {
-    title: 'Mirá en mapa o enviá la shortlist',
-    body: 'Cambiá a vista mapa para ver ubicaciones, o tocá "Enviar shortlist" para ver cómo le llegaría a tu cliente (en demo solo simula).',
+    title: 'Enviá la shortlist por WhatsApp',
+    body: 'En demo solo simula — te abrimos un ejemplo de cómo le llega al cliente.',
   },
 ]
 
@@ -90,13 +90,13 @@ export default function BrokerDemoIntroSheet({ isOpen, onClose }: BrokerDemoIntr
         <div className="bdis-content">
           <div className="bdis-tag">🎯 Modo Demo Broker</div>
           <h2 id="bdis-title" className="bdis-title">
-            Estás viendo Simón como broker activo
+            Todo Equipetrol en tus manos
           </h2>
           <p className="bdis-subtitle">
-            Inventario completo, ACM por propiedad, panel de shortlists. Esto es lo que vas a usar todos los días.
+            Actualizado cada día, normalizado a TC oficial. Listo para mandarle a tu cliente.
           </p>
 
-          <div className="bdis-section-label">Qué es</div>
+          <div className="bdis-section-label">Qué incluye</div>
           <ul className="bdis-bullets">
             {BULLETS.map((b) => (
               <li key={b.title} className="bdis-bullet">
