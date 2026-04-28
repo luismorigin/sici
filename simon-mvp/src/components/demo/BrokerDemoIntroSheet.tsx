@@ -24,8 +24,8 @@ const BULLETS: Array<{ icon: string; title: string; body: string }> = [
   },
   {
     icon: '📤',
-    title: 'Listas curadas',
-    body: 'con tu nombre y WhatsApp, en formato profesional para enviar al cliente',
+    title: 'Mini-sitio profesional para tu cliente',
+    body: 'con fotos, precios, m², dorms y mapa de las propiedades que elegís — las vendidas se quitan solas, con tu nombre y WhatsApp',
   },
   {
     icon: '📈',

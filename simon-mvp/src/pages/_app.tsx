@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import Script from 'next/script'
 import { Inter, Outfit, Figtree, DM_Sans } from 'next/font/google'
 import { AdminAuthProvider } from '@/contexts/AdminAuthContext'
+import RouteProgressBar from '@/components/shared/RouteProgressBar'
 import { useEffect, useState } from 'react'
 
 const AnimatePresenceWrapper = dynamic(
@@ -97,6 +98,7 @@ export default function App({ Component, pageProps, router }: AppProps) {
 
   return (
     <div className={isPremiumRoute ? `${figtree.variable} ${dmSans.variable}` : `${inter.variable} ${outfit.variable}`}>
+      <RouteProgressBar />
       {/* Google Analytics — solo en rutas públicas, no admin/broker, no debug */}
       {!isDebug && !router.pathname.startsWith('/admin') && !router.pathname.startsWith('/broker') && (
         <>
