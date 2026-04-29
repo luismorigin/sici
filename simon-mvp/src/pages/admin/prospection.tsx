@@ -50,28 +50,30 @@ interface Stats {
 const MSG2_TEMPLATE = (nombre: string) => `Hola ${nombre}, soy Luis Medina, founder de Simón —
 plataforma de inteligencia inmobiliaria de Equipetrol.
 
-🔍 300+ deptos en venta y 120+ en alquiler —
+Simón te posiciona como el especialista de la zona:
+
+🏙️ 300+ deptos en venta y 120+ en alquiler —
    Remax, Century 21 y Bien Inmuebles en una
-   sola pantalla, filtrable por zona, precio,
-   m² y dormitorios
+   sola pantalla
 
-🤝 Contacto directo al captador original de cada
-   propiedad con un click por WhatsApp
+🤝 Contacto directo al captador original de
+   cada propiedad con un click por WhatsApp
 
-📱 Mini-sitio profesional para tu cliente con tu
-   nombre, foto y WhatsApp — listo para mandar
+📱 Mini-sitio profesional para tu cliente con
+   tu nombre, foto y WhatsApp — listo para mandar
 
-¿Querés verlo en acción?
+¿Querés ver cómo funciona?
 
 👉 simonbo.com/broker/demo`
 
 const MSG3 = `Estoy abriendo acceso a 20 brokers fundadores
-de Equipetrol con precio congelado de por vida.
+de Equipetrol que quieran posicionarse como
+especialistas de la zona antes que el resto.
 
-Si te interesa ser de los primeros, coordinamos
-un café o me paso por tu oficina. Son 20 minutos.
+Precio congelado de por vida para los primeros 20.
 
-¿Cuándo tenés tiempo esta semana?`
+¿Coordinamos un café o me paso por tu oficina?
+Son 20 minutos.`
 
 // ============================================================
 // Helpers
