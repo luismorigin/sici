@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { buildWhatsAppURL } from '@/lib/whatsapp'
 import ProspectionMsg1Modal from '@/components/admin/ProspectionMsg1Modal'
+import ProspectionResponsesDrawer from '@/components/admin/ProspectionResponsesDrawer'
 
 type ProspectionStatus = 'pending' | 'msg1_sent' | 'msg2_sent' | 'msg3_sent'
 
@@ -142,6 +143,12 @@ export default function AdminProspection() {
 
   // Modal Msg 1
   const [msg1Modal, setMsg1Modal] = useState<{ open: boolean; broker: ProspectionBroker | null }>({
+    open: false,
+    broker: null,
+  })
+
+  // Drawer respuestas pre-armadas
+  const [responsesDrawer, setResponsesDrawer] = useState<{ open: boolean; broker: ProspectionBroker | null }>({
     open: false,
     broker: null,
   })
@@ -296,13 +303,22 @@ export default function AdminProspection() {
                 Outreach a captadores de Equipetrol · 3 mensajes secuenciales por WhatsApp
               </p>
             </div>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50"
-            >
-              {refreshing ? 'Refrescando...' : 'Refrescar lista'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setResponsesDrawer({ open: true, broker: null })}
+                className="px-4 py-2 bg-white border border-gray-300 text-gray-800 text-sm font-medium rounded-lg hover:border-gray-500"
+                title="Respuestas pre-armadas para responder rápido por WhatsApp"
+              >
+                💬 Respuestas
+              </button>
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50"
+              >
+                {refreshing ? 'Refrescando...' : 'Refrescar lista'}
+              </button>
+            </div>
           </header>
 
           {/* Stats */}
@@ -500,6 +516,13 @@ export default function AdminProspection() {
                           >
                             ✓ Marcar 3
                           </button>
+                          <button
+                            onClick={() => setResponsesDrawer({ open: true, broker: b })}
+                            className="px-2 py-1 text-xs font-medium rounded border border-gray-200 hover:border-gray-400 bg-white"
+                            title="Abrir respuestas pre-armadas para este broker"
+                          >
+                            💬
+                          </button>
                         </div>
                       </td>
                       <td className="px-3 py-2.5 max-w-xs">
@@ -554,6 +577,13 @@ export default function AdminProspection() {
           isOpen={msg1Modal.open}
           onClose={() => setMsg1Modal({ open: false, broker: null })}
           broker={msg1Modal.broker ? { telefono: msg1Modal.broker.telefono, nombre: msg1Modal.broker.nombre } : null}
+        />
+
+        {/* Drawer Respuestas pre-armadas */}
+        <ProspectionResponsesDrawer
+          isOpen={responsesDrawer.open}
+          onClose={() => setResponsesDrawer({ open: false, broker: null })}
+          broker={responsesDrawer.broker ? { telefono: responsesDrawer.broker.telefono, nombre: responsesDrawer.broker.nombre } : null}
         />
       </div>
     </>
