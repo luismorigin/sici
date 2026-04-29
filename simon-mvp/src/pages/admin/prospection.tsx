@@ -24,6 +24,8 @@ interface ProspectionBroker {
   tier: 1 | 2 | 3
   props_activas: number
   props_recientes_90d: number
+  dias_pub_min: number | null
+  dias_pub_max: number | null
   status: ProspectionStatus
   fecha_msg1: string | null
   fecha_msg2: string | null
@@ -383,6 +385,7 @@ export default function AdminProspection() {
                     <th className="px-3 py-2.5 text-left">Broker</th>
                     <th className="px-3 py-2.5 text-left">Agencia</th>
                     <th className="px-3 py-2.5 text-center">Props</th>
+                    <th className="px-3 py-2.5 text-center">Antigüedad</th>
                     <th className="px-3 py-2.5 text-left">Status</th>
                     <th className="px-3 py-2.5 text-left">Acciones</th>
                     <th className="px-3 py-2.5 text-left">Notas</th>
@@ -390,10 +393,10 @@ export default function AdminProspection() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {loading && (
-                    <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>
                   )}
                   {!loading && brokers.length === 0 && (
-                    <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                       Sin resultados. ¿Refrescaste la lista?
                     </td></tr>
                   )}
@@ -416,6 +419,20 @@ export default function AdminProspection() {
                       <td className="px-3 py-2.5 text-center">
                         <div className="font-semibold">{b.props_activas}</div>
                         <div className="text-xs text-gray-500">{b.props_recientes_90d} recientes</div>
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        {b.dias_pub_min == null ? (
+                          <span className="text-xs text-gray-400">—</span>
+                        ) : (
+                          <>
+                            <div className="font-semibold text-sm" title="Días en mercado de la publicación más reciente">{b.dias_pub_min}d</div>
+                            {b.dias_pub_max != null && b.dias_pub_max !== b.dias_pub_min && (
+                              <div className="text-xs text-gray-500" title="Días en mercado de la publicación más antigua">
+                                hasta {b.dias_pub_max}d
+                              </div>
+                            )}
+                          </>
+                        )}
                       </td>
                       <td className="px-3 py-2.5">
                         <select

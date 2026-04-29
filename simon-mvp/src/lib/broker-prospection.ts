@@ -14,6 +14,10 @@ export interface ProspectionBroker {
   tier: 1 | 2 | 3
   props_activas: number
   props_recientes_90d: number
+  /** Días en mercado de la propiedad más reciente del broker. NULL si no calculado todavía. */
+  dias_pub_min: number | null
+  /** Días en mercado de la propiedad más antigua del broker. NULL si no calculado todavía. */
+  dias_pub_max: number | null
   status: ProspectionStatus
   fecha_msg1: string | null
   fecha_msg2: string | null
@@ -43,6 +47,7 @@ function getSupabaseAdmin() {
 
 const COLS =
   'telefono, nombre, agencia, tier, props_activas, props_recientes_90d, ' +
+  'dias_pub_min, dias_pub_max, ' +
   'status, fecha_msg1, fecha_msg2, fecha_msg3, notas, created_at, updated_at'
 
 /**
@@ -64,9 +69,12 @@ export async function listProspectionBrokers(
     q = q.or(`nombre.ilike.%${term}%,telefono.ilike.%${term}%`)
   }
 
+  // Orden: tier ASC, props_activas ASC (los más manejables primero),
+  // dias_pub_min ASC (publicación más reciente primero — broker activo
+  // hoy es lead más caliente).
   q = q.order('tier', { ascending: true })
-       .order('props_recientes_90d', { ascending: false })
-       .order('props_activas', { ascending: false })
+       .order('props_activas', { ascending: true })
+       .order('dias_pub_min', { ascending: true, nullsFirst: false })
 
   const { data, error } = await q
   if (error) {
