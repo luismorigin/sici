@@ -67,10 +67,9 @@ Simón te posiciona como el especialista de la zona:
 👉 simonbo.com/broker/demo`
 
 const MSG3 = `Estoy abriendo acceso a 20 brokers fundadores
-de Equipetrol que quieran posicionarse como
-especialistas de la zona antes que el resto.
-
-Precio congelado de por vida para los primeros 20.
+de Equipetrol. Los primeros 20 entran con precio
+congelado por 12 meses — cuando suba para los
+nuevos, vos mantenés el tuyo.
 
 ¿Coordinamos un café o me paso por tu oficina?
 Son 20 minutos.`
