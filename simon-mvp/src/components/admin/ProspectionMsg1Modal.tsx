@@ -36,7 +36,8 @@ export default function ProspectionMsg1Modal({ isOpen, onClose, broker }: Prospe
       const blob = await response.blob()
       // Algunos browsers solo soportan PNG en clipboard. Si la imagen es
       // jpg/webp, hacemos fallback a abrir en nueva pestaña.
-      if (!('ClipboardItem' in window)) {
+      // (typeof ClipboardItem evita el narrowing agresivo de TS sobre `window`).
+      if (typeof ClipboardItem === 'undefined') {
         window.open(MSG1_IMAGE_PATH, '_blank', 'noopener,noreferrer')
         setCopyError('Tu navegador no soporta copiar imagen al clipboard. Te abrí la imagen en pestaña nueva — guardala / copiala desde ahí.')
         return
