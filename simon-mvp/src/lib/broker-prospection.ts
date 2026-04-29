@@ -32,6 +32,10 @@ export interface ProspectionFilters {
   status?: ProspectionStatus | null
   agencia?: string | null
   search?: string | null
+  /** Orden por cantidad de propiedades. Default 'asc' (menos a más). */
+  sortProps?: 'asc' | 'desc'
+  /** Orden por antigüedad de publicación más reciente. Default 'asc' (más nuevos primero). */
+  sortDias?: 'asc' | 'desc'
 }
 
 function getSupabaseAdmin() {
@@ -69,12 +73,15 @@ export async function listProspectionBrokers(
     q = q.or(`nombre.ilike.%${term}%,telefono.ilike.%${term}%`)
   }
 
-  // Orden: tier ASC, props_activas ASC (los más manejables primero),
-  // dias_pub_min ASC (publicación más reciente primero — broker activo
-  // hoy es lead más caliente).
+  // Orden: tier siempre ASC (T1, T2, T3 — estrategia de prospección).
+  // Después, orden configurable por props_activas y dias_pub_min.
+  // Defaults: ambos ASC (menos props primero, publicación más reciente
+  // arriba — los leads más manejables y activos primero).
+  const propsAsc = filters.sortProps !== 'desc'
+  const diasAsc = filters.sortDias !== 'desc'
   q = q.order('tier', { ascending: true })
-       .order('props_activas', { ascending: true })
-       .order('dias_pub_min', { ascending: true, nullsFirst: false })
+       .order('props_activas', { ascending: propsAsc })
+       .order('dias_pub_min', { ascending: diasAsc, nullsFirst: false })
 
   const { data, error } = await q
   if (error) {

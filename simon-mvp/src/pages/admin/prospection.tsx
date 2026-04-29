@@ -136,6 +136,8 @@ export default function AdminProspection() {
   const [filterStatus, setFilterStatus] = useState<'' | ProspectionStatus>('')
   const [filterAgencia, setFilterAgencia] = useState('')
   const [search, setSearch] = useState('')
+  const [sortProps, setSortProps] = useState<'asc' | 'desc'>('asc')
+  const [sortDias, setSortDias] = useState<'asc' | 'desc'>('asc')
 
   // Modal Msg 1
   const [msg1Modal, setMsg1Modal] = useState<{ open: boolean; broker: ProspectionBroker | null }>({
@@ -157,6 +159,8 @@ export default function AdminProspection() {
       if (filterStatus) params.set('status', filterStatus)
       if (filterAgencia) params.set('agencia', filterAgencia)
       if (search.trim()) params.set('search', search.trim())
+      params.set('sort_props', sortProps)
+      params.set('sort_dias', sortDias)
       const res = await fetch(`/api/admin/prospection?${params.toString()}`, { headers })
       if (!res.ok) {
         const j = await res.json().catch(() => ({}))
@@ -170,7 +174,7 @@ export default function AdminProspection() {
     } finally {
       setLoading(false)
     }
-  }, [filterTier, filterStatus, filterAgencia, search])
+  }, [filterTier, filterStatus, filterAgencia, search, sortProps, sortDias])
 
   useEffect(() => {
     if (authLoading || !admin) return
@@ -367,6 +371,37 @@ export default function AdminProspection() {
             <span className="text-sm text-gray-500 ml-auto">
               {brokers.length} {brokers.length === 1 ? 'broker' : 'brokers'}
             </span>
+          </div>
+
+          {/* Orden: tier siempre primero, después configurable */}
+          <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4 flex flex-wrap gap-2 items-center text-sm">
+            <span className="text-xs uppercase tracking-wider text-gray-500 font-semibold mr-1">Orden:</span>
+            <span className="text-xs text-gray-500">Tier 1→3 · luego</span>
+            <button
+              type="button"
+              onClick={() => setSortProps(p => p === 'asc' ? 'desc' : 'asc')}
+              className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                sortProps === 'asc'
+                  ? 'bg-gray-900 text-white border-gray-900'
+                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'
+              }`}
+              title="Click para alternar"
+            >
+              Propiedades {sortProps === 'asc' ? '↑ menos→más' : '↓ más→menos'}
+            </button>
+            <span className="text-xs text-gray-400">·</span>
+            <button
+              type="button"
+              onClick={() => setSortDias(d => d === 'asc' ? 'desc' : 'asc')}
+              className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                sortDias === 'asc'
+                  ? 'bg-gray-900 text-white border-gray-900'
+                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'
+              }`}
+              title="Click para alternar"
+            >
+              Antigüedad {sortDias === 'asc' ? '↑ recientes' : '↓ viejas'}
+            </button>
           </div>
 
           {error && (

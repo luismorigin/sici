@@ -34,8 +34,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const agencia = String(req.query.agencia || '').trim() || null
     const search = String(req.query.search || '').trim() || null
 
+    const sortProps: 'asc' | 'desc' = req.query.sort_props === 'desc' ? 'desc' : 'asc'
+    const sortDias: 'asc' | 'desc' = req.query.sort_dias === 'desc' ? 'desc' : 'asc'
+
     const [brokers, stats] = await Promise.all([
-      listProspectionBrokers({ tier, status, agencia, search }),
+      listProspectionBrokers({ tier, status, agencia, search, sortProps, sortDias }),
       getProspectionStats(),
     ])
 
