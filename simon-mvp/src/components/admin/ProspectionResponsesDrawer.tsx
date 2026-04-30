@@ -131,7 +131,9 @@ export default function ProspectionResponsesDrawer({
 
   const buildText = (r: Respuesta): string => {
     if (r.hasNombre && broker?.nombre) {
-      return r.texto.replaceAll('[nombre]', broker.nombre)
+      // Solo primer nombre — saludar por nombre completo suena raro.
+      const firstName = broker.nombre.trim().split(/\s+/)[0] || broker.nombre
+      return r.texto.replaceAll('[nombre]', firstName)
     }
     return r.texto
   }

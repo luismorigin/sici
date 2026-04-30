@@ -85,6 +85,17 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+/**
+ * Devuelve solo el primer nombre del broker. "Juan Pérez García" → "Juan".
+ * Saludar por nombre completo en WhatsApp suena formal/raro; el primer
+ * nombre genera mejor rapport en el outreach.
+ */
+function getFirstName(fullName: string): string {
+  const trimmed = (fullName || '').trim()
+  if (!trimmed) return ''
+  return trimmed.split(/\s+/)[0]
+}
+
 const STATUS_LABELS: Record<ProspectionStatus, string> = {
   pending: 'Pendiente',
   msg1_sent: 'Msg 1 ✓',
@@ -252,7 +263,7 @@ export default function AdminProspection() {
       setMsg1Modal({ open: true, broker })
       return
     }
-    const text = msg === 2 ? MSG2_TEMPLATE(broker.nombre) : MSG3
+    const text = msg === 2 ? MSG2_TEMPLATE(getFirstName(broker.nombre)) : MSG3
     const url = buildWhatsAppURL(broker.telefono, text)
     window.open(url, '_blank', 'noopener,noreferrer')
   }
