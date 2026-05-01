@@ -3,7 +3,8 @@
 // Bots/prefetch no ejecutan POST, eliminando leads fantasma.
 //
 // Fase 1 modal WA: acepta usuario_telefono, alert_consent, visitor_uuid, modal_action.
-// Slack notif fire-and-forget si alert_consent=true (al webhook directo).
+// Slack notif AWAITED si alert_consent=true (penalizar ~200-500ms es ok; sin await
+// la lambda muere antes de que el fetch complete y se pierden notifs).
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
@@ -57,8 +58,10 @@ function getClientIP(req: NextApiRequest): string {
   return req.socket?.remoteAddress || 'unknown'
 }
 
-// ===== Slack fire-and-forget =====
-function notifySlackFireAndForget(payload: {
+// ===== Slack notifier =====
+// Awaited en el handler antes de responder. Sin await el fetch muere a mitad
+// de camino cuando Vercel suspende la lambda (causa de leads sin notif).
+async function notifySlack(payload: {
   leadId: number
   whatsapp: string
   proyecto: string
@@ -71,11 +74,15 @@ function notifySlackFireAndForget(payload: {
     `> Proyecto: ${payload.proyecto || 'N/A'}\n` +
     `> Propiedad ID: ${payload.propiedad_id ?? 'N/A'}\n` +
     `> Lead ID: #${payload.leadId}`
-  fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: message, unfurl_links: false }),
-  }).catch(() => { /* silenciar: Slack no debe bloquear lead */ })
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: message, unfurl_links: false }),
+    })
+  } catch (err) {
+    console.error('Slack webhook fallo:', err)
+  }
 }
 
 type ModalAction = 'submitted' | 'skipped' | 'reused' | 'dismissed'
@@ -231,8 +238,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (error) {
           console.error('Error registrando lead alquiler:', error)
         } else if (inserted && alert_consent && usuario_telefono && !esBot && !isDebounce) {
-          // Slack fire-and-forget: solo leads con consent real (no bots ni debounces)
-          notifySlackFireAndForget({
+          // Awaited: garantiza que el webhook complete antes de responder.
+          // Sin await, Vercel suspende la lambda y el fetch muere.
+          await notifySlack({
             leadId: inserted.id,
             whatsapp: usuario_telefono,
             proyecto: nombre || '(sin nombre)',

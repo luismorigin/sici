@@ -701,6 +701,22 @@ def _print_leads_bd(days):
         """ % _LEADS_WHERE % int(days))
         by_pieza = cur.fetchall()
 
+        # By modal_action — incluye dismissed para ver el embudo completo del modal
+        cur.execute("""
+            SELECT COALESCE(modal_action, 'pre-modal') as accion,
+                   COUNT(*) as n,
+                   COUNT(*) FILTER (WHERE usuario_telefono IS NOT NULL) as con_telefono,
+                   COUNT(*) FILTER (WHERE alert_consent = true) as con_consent
+            FROM leads_alquiler
+            WHERE created_at >= NOW() - INTERVAL '%s days'
+              AND (es_test = false OR es_test IS NULL)
+              AND (es_debounce = false OR es_debounce IS NULL)
+              AND (es_bot = false OR es_bot IS NULL)
+            GROUP BY COALESCE(modal_action, 'pre-modal')
+            ORDER BY n DESC
+        """ % int(days))
+        by_modal = cur.fetchall()
+
         conn.close()
     except Exception as e:
         print(f"\n  (Error BD: {e})")
@@ -750,6 +766,24 @@ def _print_leads_bd(days):
         for pieza, canal, n, props in by_pieza:
             name = PIEZAS.get(pieza, pieza)
             print(f"    {name[:25]:<25} {canal:<12} {n:>4} leads  {props:>4} props")
+
+    # Modal WhatsApp Capture breakdown -- que hizo el usuario en el modal
+    if by_modal:
+        print()
+        print("  Modal WA Capture (que hizo el usuario):")
+        print(f"    {'Accion':<16} {'Leads':>6} {'C/telefono':>12} {'C/consent':>11}")
+        for accion, n, con_tel, con_consent in by_modal:
+            label = {
+                'submitted': 'submitted [GOLD]',  # dejaron telefono Y consent
+                'skipped':   'skipped',
+                'reused':    'reused',
+                'dismissed': 'dismissed',
+                'pre-modal': 'pre-modal',
+            }.get(accion, accion)
+            print(f"    {label:<16} {n:>6} {con_tel:>12} {con_consent:>11}")
+        submitted_count = sum(n for a, n, _, _ in by_modal if a == 'submitted')
+        if submitted_count > 0:
+            print(f"    [GOLD] = dejaron WhatsApp + consent para alertas (lead activable)")
 
     if has_null_utm:
         print()
