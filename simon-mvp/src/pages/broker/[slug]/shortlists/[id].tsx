@@ -81,6 +81,18 @@ export default function ShortlistEditorPage({ broker }: PageProps) {
     setItems(prev => prev.map(it => it.propiedad_id === propiedadId ? { ...it, comentario_broker: value } : it))
   }
 
+  function toggleDestacada(propiedadId: number) {
+    setItems(prev => {
+      const target = prev.find(it => it.propiedad_id === propiedadId)
+      const yaEstabaDestacada = target?.is_destacada === true
+      // Toggle: si estaba destacada → desmarca; si no → marca y desmarca todas las demás.
+      return prev.map(it => ({
+        ...it,
+        is_destacada: it.propiedad_id === propiedadId ? !yaEstabaDestacada : false,
+      }))
+    })
+  }
+
   async function handleSave() {
     if (!id) return
     setSaving(true); setError(null)
@@ -94,6 +106,7 @@ export default function ShortlistEditorPage({ broker }: PageProps) {
           propiedad_id: it.propiedad_id,
           orden: it.orden,
           comentario_broker: it.comentario_broker,
+          is_destacada: it.is_destacada === true,
           tipo_operacion: it.tipo_operacion,
         })),
       })
@@ -190,7 +203,7 @@ export default function ShortlistEditorPage({ broker }: PageProps) {
               const pv = it.preview
               const hearted = Array.isArray(data?.heartedPropertyIds) && data!.heartedPropertyIds!.includes(it.propiedad_id)
               return (
-                <li key={it.id} className={`se-item ${hearted ? 'se-item-hearted' : ''}`}>
+                <li key={it.id} className={`se-item ${hearted ? 'se-item-hearted' : ''} ${it.is_destacada ? 'se-item-destacada' : ''}`}>
                   <div className="se-item-handle">
                     <button onClick={() => moveItem(idx, -1)} disabled={idx === 0} aria-label="Subir">↑</button>
                     <span className="se-item-pos">{idx + 1}</span>
@@ -223,6 +236,14 @@ export default function ShortlistEditorPage({ broker }: PageProps) {
                         ? <span className="se-item-price">$us {Math.round(pv.precio_usd).toLocaleString('en-US')}</span>
                         : null}
                     </div>
+                    <label className="se-destacada-toggle">
+                      <input
+                        type="checkbox"
+                        checked={it.is_destacada === true}
+                        onChange={() => toggleDestacada(it.propiedad_id)}
+                      />
+                      <span>⭐ Recomendada (máx 1 por shortlist)</span>
+                    </label>
                     <textarea
                       placeholder="Comentario para el cliente (opcional)"
                       value={it.comentario_broker || ''}
@@ -294,6 +315,12 @@ export default function ShortlistEditorPage({ broker }: PageProps) {
         .se-item-thumb-wrap { position: relative; flex-shrink: 0; }
         .se-item-thumb-heart { position: absolute; top: -6px; right: -6px; background: #E05555; color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
         .se-item-hearted-chip { display: inline-block; margin-left: 8px; background: rgba(224,85,85,0.12); color: #b91c1c; border: 1px solid rgba(224,85,85,0.3); padding: 1px 8px; border-radius: 100px; font-size: 10px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; vertical-align: middle; font-family: 'DM Sans', sans-serif; }
+        /* Destacada — máx 1 por shortlist (migración 239) */
+        .se-destacada-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #5a5a5a; cursor: pointer; padding: 4px 0; user-select: none; }
+        .se-destacada-toggle input { cursor: pointer; }
+        .se-destacada-toggle:hover { color: #141414; }
+        .se-item-destacada { background: #fff8e1; border: 1px solid #d4a82e; box-shadow: 0 2px 8px rgba(212,168,46,0.15); }
+        .se-item-destacada .se-destacada-toggle { color: #8a6d1a; font-weight: 600; }
       `}</style>
     </>
   )

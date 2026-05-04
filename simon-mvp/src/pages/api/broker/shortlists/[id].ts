@@ -139,6 +139,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Reemplazo completo de items si vienen
       if (Array.isArray(payload.items)) {
+        // Validación defensiva: máximo 1 destacada por shortlist (regla de
+        // producto enforced en frontend; backend rechaza si se cuela 2+).
+        const destacadasCount = payload.items.filter(it => it.is_destacada === true).length
+        if (destacadasCount > 1) {
+          return res.status(400).json({
+            error: 'Solo se permite 1 propiedad destacada por shortlist'
+          })
+        }
+
         const { error: errDel } = await supabase
           .from('broker_shortlist_items')
           .delete()
@@ -151,6 +160,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             propiedad_id: it.propiedad_id,
             tipo_operacion: it.tipo_operacion || 'venta',
             comentario_broker: it.comentario_broker?.trim() || null,
+            is_destacada: it.is_destacada === true,
             orden: it.orden ?? idx,
           }))
           const { error: errIns } = await supabase

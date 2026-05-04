@@ -843,3 +843,23 @@
 /* FAB mapa en publicShareMode mobile (sin top bar para acceder al mapa) */
 .alq-public-map-fab{position:fixed;bottom:max(20px,calc(env(safe-area-inset-bottom) + 16px));left:16px;z-index:100;display:inline-flex;align-items:center;gap:8px;background:#141414;color:#EDE8DC;border:none;padding:12px 20px 12px 16px;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.3px;cursor:pointer;box-shadow:0 6px 22px rgba(0,0,0,0.35);-webkit-tap-highlight-color:transparent;}
 .alq-public-map-fab:active{transform:scale(0.96);}
+
+/* ===== Comentario broker + Destacada (migración 239) =====
+   Alquiler usa fondo claro: la destacada se distingue con borde negro 2px (no
+   invierte tema como en ventas). Comentario va en card arena con borde-izq salvia. */
+
+/* Card destacada — desktop */
+.dc-card.dc-card-destacada{border:2px solid #141414;position:relative;}
+.dc-destacada-chip{position:absolute;top:12px;left:12px;z-index:3;background:#EDE8DC;color:#141414;border:1px solid #141414;padding:6px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:0.3px;box-shadow:0 4px 12px rgba(0,0,0,0.18);pointer-events:none;font-family:'DM Sans',sans-serif;}
+.dc-comentario{margin-top:10px;padding:12px 14px;background:#EDE8DC;border-left:3px solid #3A6A48;border-radius:6px;color:#141414;}
+.dc-comentario-quote{font-size:24px;color:#3A6A48;line-height:0.6;font-family:Georgia,serif;margin-bottom:2px;opacity:0.7;}
+.dc-comentario-text{font-size:13px;line-height:1.45;color:#141414;font-style:italic;}
+.dc-comentario-author{font-size:11px;color:#5a5a5a;margin-top:6px;font-weight:500;font-style:normal;}
+
+/* Card destacada — mobile */
+.alq-card.alq-card-destacada{border:2px solid #141414;position:relative;}
+.amc-destacada-chip{position:absolute;top:12px;left:12px;z-index:5;background:#EDE8DC;color:#141414;border:1px solid #141414;padding:6px 12px;border-radius:100px;font-size:10px;font-weight:600;letter-spacing:0.3px;box-shadow:0 4px 12px rgba(0,0,0,0.18);pointer-events:none;font-family:'DM Sans',sans-serif;}
+.amc-comentario{margin:8px 0 4px;padding:10px 12px;background:#EDE8DC;border-left:3px solid #3A6A48;border-radius:6px;color:#141414;}
+.amc-comentario-quote{font-size:22px;color:#3A6A48;line-height:0.6;font-family:Georgia,serif;opacity:0.7;}
+.amc-comentario-text{font-size:12px;line-height:1.45;font-style:italic;}
+.amc-comentario-author{font-size:10px;color:#5a5a5a;margin-top:4px;font-weight:500;font-style:normal;}

@@ -233,6 +233,9 @@ export interface PublicShareDataAlquiler {
   broker: { slug: string; nombre: string; telefono: string; foto_url: string | null; inmobiliaria?: string | null }
   items: UnidadAlquiler[]
   itemComments?: Record<number, string | null>
+  // Items destacados por el broker (migración 239). Máx 1 por shortlist.
+  // Render alquiler: card con borde negro 2px + chip "Recomendada por tu broker".
+  itemsDestacada?: Record<number, boolean>
   priceSnapshots?: Record<number, { bobSnapshot: number | null; bobActual: number | null }>
   // IDs de propiedades que el cliente ya marcó con corazón (persistidos en BD).
   // El cliente hidrata favorites con esto en lugar de localStorage.
@@ -266,6 +269,8 @@ export default function AlquileresPage({
   const publicShareMode = publicShare !== null
   const publicShareBrokerProp: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null = publicShare ? publicShare.broker : null
   const priceSnapshotsMap: Record<number, { bobSnapshot: number | null; bobActual: number | null }> | null = publicShare && publicShare.priceSnapshots ? publicShare.priceSnapshots : null
+  const itemCommentsMap: Record<number, string | null> | null = publicShare && publicShare.itemComments ? publicShare.itemComments : null
+  const itemsDestacadaMap: Record<number, boolean> | null = publicShare && publicShare.itemsDestacada ? publicShare.itemsDestacada : null
   const initialProps = publicShareMode ? publicShare!.items : initialProperties
   const brokerSlug = brokerSlugProp
   const broker = brokerProp
@@ -1279,6 +1284,8 @@ export default function AlquileresPage({
                           publicShareMode={publicShareMode}
                           publicShareBroker={publicShareBrokerProp}
                           priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[spotlightProperty.id] || null : null}
+                          brokerComment={itemCommentsMap ? itemCommentsMap[spotlightProperty.id] : null}
+                          isDestacada={itemsDestacadaMap ? itemsDestacadaMap[spotlightProperty.id] === true : false}
                         />
                       </div>
                       {spotlightProperty.latitud && spotlightProperty.longitud && (
@@ -1346,6 +1353,8 @@ export default function AlquileresPage({
                           publicShareMode={publicShareMode}
                           publicShareBroker={publicShareBrokerProp}
                           priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] || null : null}
+                          brokerComment={itemCommentsMap ? itemCommentsMap[p.id] : null}
+                          isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false}
                         />
                       </Fragment>
                     )
@@ -1526,6 +1535,8 @@ export default function AlquileresPage({
                     publicShareMode={publicShareMode}
                     publicShareBroker={publicShareBrokerProp}
                     priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[item.data.id] || null : null}
+                    brokerComment={itemCommentsMap ? itemCommentsMap[item.data.id] : null}
+                    isDestacada={itemsDestacadaMap ? itemsDestacadaMap[item.data.id] === true : false}
                   />
                 )
               })
@@ -2433,6 +2444,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
 const DesktopCard = memo(function DesktopCard({
   property: p, isFavorite, favoritesCount, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare, isFirst,
   brokerMode = false, onAddToShortlist, publicShareMode = false, publicShareBroker = null, priceSnapshot = null,
+  brokerComment = null, isDestacada = false,
 }: {
   property: UnidadAlquiler; isFavorite: boolean; favoritesCount: number; petFilterActive?: boolean
   onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void; isFirst?: boolean
@@ -2440,6 +2452,10 @@ const DesktopCard = memo(function DesktopCard({
   publicShareMode?: boolean
   publicShareBroker?: { nombre: string; telefono: string } | null
   priceSnapshot?: { bobSnapshot: number | null; bobActual: number | null } | null
+  // Comentario del broker (migración 228, render desde 239).
+  brokerComment?: string | null
+  // Item marcado "Recomendada" (migración 239). Render alquiler: borde negro 2px + chip ⭐.
+  isDestacada?: boolean
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = (p.fotos_urls?.length ?? 0) > 0 ? p.fotos_urls : ['']
@@ -2489,7 +2505,8 @@ const DesktopCard = memo(function DesktopCard({
   })()
 
   return (
-    <div className={`dc-card${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}`} ref={cardRef}>
+    <div className={`dc-card${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}${isDestacada ? ' dc-card-destacada' : ''}`} ref={cardRef}>
+      {isDestacada && <div className="dc-destacada-chip">⭐ Recomendada por tu broker</div>}
       {/* Photo */}
       <div className="dc-photo" style={{ ...(visible && photos[photoIdx] ? { backgroundImage: `url('${photos[photoIdx]}')` } : { background: '#D8D0BC' }), cursor: photos[photoIdx] ? 'pointer' : undefined }} onClick={() => { if (photos[photoIdx] && onPhotoTap) onPhotoTap(photoIdx) }}>
         {photos.length > 1 && (
@@ -2537,6 +2554,13 @@ const DesktopCard = memo(function DesktopCard({
             {priceChangeBadge.direction === 'down'
               ? `↓ Bajo de ${formatPrice(priceChangeBadge.from)} a ${formatPrice(priceChangeBadge.to)}/mes`
               : `↑ Antes ${formatPrice(priceChangeBadge.from)} · ahora ${formatPrice(priceChangeBadge.to)}/mes`}
+          </div>
+        )}
+        {brokerComment && publicShareMode && (
+          <div className="dc-comentario">
+            <div className="dc-comentario-quote">&ldquo;</div>
+            <div className="dc-comentario-text">{brokerComment}</div>
+            {publicShareBroker && <div className="dc-comentario-author">— {publicShareBroker.nombre}, tu broker</div>}
           </div>
         )}
         <div className="dc-actions">
@@ -2610,6 +2634,7 @@ const DesktopCard = memo(function DesktopCard({
 const MobilePropertyCard = memo(function MobilePropertyCard({
   property: p, isFirst, showHint, isFavorite, favoritesCount, isSpotlight, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare,
   brokerMode = false, onAddToShortlist, publicShareMode = false, publicShareBroker = null, priceSnapshot = null,
+  brokerComment = null, isDestacada = false,
 }: {
   property: UnidadAlquiler; isFirst: boolean; showHint?: boolean; isFavorite: boolean; favoritesCount: number; isSpotlight: boolean; petFilterActive?: boolean
   onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void
@@ -2617,6 +2642,8 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
   publicShareMode?: boolean
   publicShareBroker?: { nombre: string; telefono: string } | null
   priceSnapshot?: { bobSnapshot: number | null; bobActual: number | null } | null
+  brokerComment?: string | null
+  isDestacada?: boolean
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [shakeBtn, setShakeBtn] = useState(false)
@@ -2657,7 +2684,8 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
   const displayName = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
 
   return (
-    <div className={`alq-card${isFirst ? ' alq-card-first' : ''}${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}`} ref={cardRef}>
+    <div className={`alq-card${isFirst ? ' alq-card-first' : ''}${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}${isDestacada ? ' alq-card-destacada' : ''}`} ref={cardRef}>
+      {isDestacada && <div className="amc-destacada-chip">⭐ Recomendada por tu broker</div>}
       <PhotoCarousel photos={p.fotos_urls || []} isFirst={isFirst} showHint={showHint} onPhotoTap={onPhotoTap} propertyId={p.id} />
       {isSpotlight && (
         <div className="amc-spotlight-badge">Te compartieron este depto</div>
@@ -2690,6 +2718,13 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
             {priceChangeBadge.direction === 'down'
               ? `↓ Bajo de ${formatPrice(priceChangeBadge.from)} a ${formatPrice(priceChangeBadge.to)}/mes`
               : `↑ Antes ${formatPrice(priceChangeBadge.from)} · ahora ${formatPrice(priceChangeBadge.to)}/mes`}
+          </div>
+        )}
+        {brokerComment && publicShareMode && (
+          <div className="amc-comentario">
+            <div className="amc-comentario-quote">&ldquo;</div>
+            <div className="amc-comentario-text">{brokerComment}</div>
+            {publicShareBroker && <div className="amc-comentario-author">— {publicShareBroker.nombre}, tu broker</div>}
           </div>
         )}
         <div className="amc-actions">
@@ -2759,7 +2794,9 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
   prev.brokerMode === next.brokerMode &&
   prev.publicShareMode === next.publicShareMode &&
   prev.priceSnapshot?.bobSnapshot === next.priceSnapshot?.bobSnapshot &&
-  prev.priceSnapshot?.bobActual === next.priceSnapshot?.bobActual
+  prev.priceSnapshot?.bobActual === next.priceSnapshot?.bobActual &&
+  prev.brokerComment === next.brokerComment &&
+  prev.isDestacada === next.isDestacada
 )
 
 // ===== PHOTO CAROUSEL (native scroll-snap) =====
