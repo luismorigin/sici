@@ -23,7 +23,7 @@ El broker que use Simon tiene que poder defender cualquier número del producto 
 - **Merges:** `05bc1eb` (MVP venta, 23 Abr) · `65ccc4b` (Fase 2 alquileres, 24 Abr) · `037584b` (Protección v1, 25 Abr)
 - **Target founding:** 15-25 brokers en 60-90 días post-deploy
 - **Auth:** no al inicio (slug en URL). Se agrega cuando crezca la base o haya datos sensibles.
-- **Migraciones aplicadas:** 228 (tablas shortlists), 229 (snapshot USD RAW), 230 (snapshot USD normalizado), 231 (`simon_brokers` reemplaza hardcoded), 233 (snapshot BOB alquiler), 234 (`broker_shortlist_hearts` feedback cliente), **235 (protección v1: caps+expiración+fingerprint+terms)**
+- **Migraciones aplicadas:** 228 (tablas shortlists), 229 (snapshot USD RAW), 230 (snapshot USD normalizado), 231 (`simon_brokers` reemplaza hardcoded), 233 (snapshot BOB alquiler), 234 (`broker_shortlist_hearts` feedback cliente), **235 (protección v1: caps+expiración+fingerprint+terms)**, **239 (`is_destacada` recomendada por broker)**
 
 ### Features en producción
 
@@ -35,7 +35,7 @@ El broker que use Simon tiene que poder defender cualquier número del producto 
 - Tabs "Ventas | Alquileres" en banner broker para cambiar entre ambos
 - ShortlistSendModal con validación teléfono E.164 (auto-prefija +591)
 - "Mis shortlists" con agrupación por cliente (teléfono normalizado) + chip `[Venta]`/`[Alquiler]` + alerta "cliente existente" (Nivel 1)
-- Editor `/broker/[slug]/shortlists/[id]` con fotos + precios (Bs/$us según tipo) + reordenar + archivar
+- Editor `/broker/[slug]/shortlists/[id]` con fotos + precios (Bs/$us según tipo) + reordenar + archivar + **comentario por item + checkbox "⭐ Recomendada" (máx 1)**
 
 **Link público al cliente:**
 - `/b/[hash]` ramifica según `tipo_operacion` del primer item → `VentasPage` o `AlquileresPage` con prop `publicShare`
@@ -44,6 +44,8 @@ El broker que use Simon tiene que poder defender cualquier número del producto 
 - Sin gate/preguntas al broker/chat/filtros — contexto curado
 - CTAs WhatsApp siempre al broker (cards, BottomSheet, MapFloatCard, CompareSheet), nunca al agente original
 - Badge "↓ bajó" / "↑ antes Bs X" si el snapshot vs actual difiere >1% (tanto venta USD como alquiler BOB)
+- **Comentario broker por propiedad** (bloque arena con borde-izq salvia + autor) — visible en card de venta y alquiler
+- **"⭐ Recomendada por tu broker"** — máx 1 propiedad destacada por shortlist. Venta: card invierte tema (fondo arena sobre fondo negro). Alquiler: borde negro 2px sobre fondo crema. Comentario y destacada son independientes (4 combinaciones posibles)
 
 **Feedback cliente → broker:**
 - API pública `/api/public/shortlist-hearts` GET/POST/DELETE scoped por hash, sin auth

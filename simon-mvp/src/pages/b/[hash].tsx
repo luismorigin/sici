@@ -423,6 +423,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   if (tipoOperacion === 'alquiler') {
     let properties: UnidadAlquiler[] = []
     let itemComments: Record<number, string | null> = {}
+    let itemsDestacada: Record<number, boolean> = {}
     let priceSnapshots: Record<number, { bobSnapshot: number | null; bobActual: number | null }> = {}
 
     if (propIds.length > 0) {
@@ -451,6 +452,12 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
 
       itemComments = safeItems.reduce<Record<number, string | null>>((acc, it) => {
         acc[it.propiedad_id] = it.comentario_broker
+        return acc
+      }, {})
+      itemsDestacada = safeItems.reduce<Record<number, boolean>>((acc, it) => {
+        if ((it as { is_destacada?: boolean }).is_destacada === true) {
+          acc[it.propiedad_id] = true
+        }
         return acc
       }, {})
       priceSnapshots = safeItems.reduce<Record<number, { bobSnapshot: number | null; bobActual: number | null }>>((acc, it) => {
@@ -483,6 +490,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
           },
           items: properties,
           itemComments,
+          itemsDestacada,
           priceSnapshots,
           initialHearts,
           isDemo,
@@ -497,6 +505,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   // ========================= RAMA VENTA =========================
   let properties: UnidadVenta[] = []
   let itemComments: Record<number, string | null> = {}
+  let itemsDestacada: Record<number, boolean> = {}
   let priceSnapshots: Record<number, { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null }> = {}
   if (propIds.length > 0) {
     // 3 fuentes en paralelo:
@@ -530,6 +539,12 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
       acc[it.propiedad_id] = it.comentario_broker
       return acc
     }, {})
+    itemsDestacada = safeItems.reduce<Record<number, boolean>>((acc, it) => {
+      if ((it as { is_destacada?: boolean }).is_destacada === true) {
+        acc[it.propiedad_id] = true
+      }
+      return acc
+    }, {})
     priceSnapshots = safeItems.reduce<Record<number, { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null }>>((acc, it) => {
       const rawSnap = (it as { precio_usd_snapshot?: number | string | null }).precio_usd_snapshot
       const normSnap = (it as { precio_norm_snapshot?: number | string | null }).precio_norm_snapshot
@@ -556,6 +571,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
         broker,
         items: properties,
         itemComments,
+        itemsDestacada,
         priceSnapshots,
         initialHearts,
         isDemo,

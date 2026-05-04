@@ -55,6 +55,11 @@ export interface BrokerShortlistItem {
   propiedad_id: number
   tipo_operacion: 'venta' | 'alquiler'
   comentario_broker: string | null
+  // Marca al item como "Recomendada por tu broker" en el feed público.
+  // Máximo 1 por shortlist (validación frontend + API). Migración 239.
+  // Optional para back-compat con literales pre-239; la BD siempre lo
+  // tiene NOT NULL DEFAULT FALSE.
+  is_destacada?: boolean
   orden: number
   added_at: string
   // Snapshots del precio cuando se agregó a la shortlist.
@@ -106,6 +111,16 @@ export interface CreateShortlistPayload {
   cliente_telefono: string
   mensaje_whatsapp?: string | null
   propiedad_ids: number[]
+  // Metadata por item: comentario + flag destacada. Opcional — si no viene, se
+  // crean los items con valores default (sin comentario, sin destacar). Permite
+  // que el modal "Enviar shortlist" personalice cada propiedad antes de crearla.
+  // Si viene, debe tener un entry por cada propiedad_id (en cualquier orden).
+  // Migración 239 + flujo opción B.
+  items_metadata?: Array<{
+    propiedad_id: number
+    comentario_broker?: string | null
+    is_destacada?: boolean
+  }>
   tipo_operacion?: 'venta' | 'alquiler'
 }
 
@@ -119,6 +134,7 @@ export interface UpdateShortlistPayload {
     propiedad_id: number
     orden: number
     comentario_broker?: string | null
+    is_destacada?: boolean
     tipo_operacion?: 'venta' | 'alquiler'
   }>
 }

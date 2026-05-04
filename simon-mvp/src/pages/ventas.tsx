@@ -428,13 +428,19 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 }
 
 // ===== Desktop VentaCard =====
-function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null }: {
+function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false }: {
   property: UnidadVenta; isFavorite: boolean; isFirst?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
   brokerMode?: boolean; onAddToShortlist?: () => void; publicShareMode?: boolean
   brokerInfo?: { nombre: string; inmobiliaria?: string | null } | null
   publicShareBroker?: { nombre: string; telefono: string } | null
   priceSnapshot?: { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null } | null
+  // Comentario del broker para esta propiedad (migración 228, render desde 239).
+  // Render: bloque arena con borde-izq salvia debajo del bloque de precio.
+  brokerComment?: string | null
+  // Item marcado como "Recomendada" por el broker (migración 239). Máx 1 por shortlist.
+  // Render venta: card con fondo arena (invierte tema) + chip ⭐ arriba-izquierda.
+  isDestacada?: boolean
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   // Lazy-load por slide: solo cargamos backgroundImage de las fotos cercanas al
@@ -498,7 +504,8 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
   const useCarousel = publicShareMode
 
   return (
-    <div className="vc" ref={cardRef}>
+    <div className={`vc ${isDestacada ? 'vc-destacada' : ''}`} ref={cardRef}>
+      {isDestacada && <div className="vc-destacada-chip">⭐ Recomendada por tu broker</div>}
       <div className="vc-photo" style={!useCarousel && hasPhotos && visible ? { backgroundImage: `url('${photos[photoIdx]}')`, cursor: 'pointer' } : undefined}
         onClick={!useCarousel ? () => { if (hasPhotos) onPhotoTap(photoIdx) } : undefined}>
         {useCarousel && (
@@ -545,6 +552,17 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
+        {brokerComment && publicShareMode && (
+          <div className="vc-comentario">
+            <div className="vc-comentario-quote">&ldquo;</div>
+            <div className="vc-comentario-text">{brokerComment}</div>
+            {brokerComment.length > 50 && (
+              <button type="button" className="vc-comentario-more" onClick={onDetails}>
+                Leer comentario completo →
+              </button>
+            )}
+          </div>
+        )}
         <div className="vc-actions">
           <button className={`vc-act-btn vc-act-fav ${brokerMode ? 'vc-act-star' : ''} ${isFavorite ? 'active' : ''}`} aria-label={brokerMode ? (isFavorite ? 'Quitar de shortlist' : 'Agregar a shortlist') : 'Favorito'} onClick={onToggleFavorite}>
             {brokerMode ? (
@@ -591,13 +609,15 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
 }
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
-function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null }: {
+function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false }: {
   property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean; isFirst?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
   brokerMode?: boolean; onAddToShortlist?: () => void; publicShareMode?: boolean
   brokerInfo?: { nombre: string; inmobiliaria?: string | null } | null
   publicShareBroker?: { nombre: string; telefono: string } | null
   priceSnapshot?: { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null } | null
+  brokerComment?: string | null
+  isDestacada?: boolean
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -639,7 +659,8 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
   }, [photos.length])
 
   return (
-    <div className="mc">
+    <div className={`mc ${isDestacada ? 'mc-destacada' : ''}`}>
+      {isDestacada && <div className="mc-destacada-chip">⭐ Recomendada por tu broker</div>}
       {/* Photo carousel zone (55%) */}
       <div className="mc-photo-zone" ref={zoneRef}>
         <div className="mc-photo-scroll" ref={scrollRef}>
@@ -697,6 +718,17 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
           p.parqueo_incluido ? 'Parqueo incl.' : null,
           p.baulera_incluido ? 'Baulera incl.' : null,
                   ].filter(Boolean).join('  ·  ')}</div>
+        {brokerComment && publicShareMode && (
+          <div className="mc-comentario">
+            <div className="mc-comentario-quote">&ldquo;</div>
+            <div className="mc-comentario-text">{brokerComment}</div>
+            {brokerComment.length > 50 && (
+              <button type="button" className="mc-comentario-more" onClick={onDetails}>
+                Leer comentario completo →
+              </button>
+            )}
+          </div>
+        )}
         <div className="mc-actions">
           <button className={`mc-btn mc-fav ${brokerMode ? 'mc-star' : ''} ${isFavorite ? 'active' : ''}`} aria-label={brokerMode ? (isFavorite ? 'Quitar de shortlist' : 'Agregar a shortlist') : 'Favorito'} onClick={onToggleFavorite}>
             {brokerMode ? (
@@ -981,7 +1013,7 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 }
 
 // ===== Bottom Sheet =====
-function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty, brokerMode = false, onAddToShortlist, publicShareBroker = null, brokerInfo = null }: {
+function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty, brokerMode = false, onAddToShortlist, publicShareBroker = null, brokerInfo = null, brokerComment = null }: {
   property: UnidadVenta | null; isOpen: boolean; onClose: () => void; onShare?: () => void
   isFavorite?: boolean; onToggleFavorite?: () => void
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; isDesktop: boolean
@@ -991,6 +1023,8 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
   // Datos del broker activo (cuando brokerMode=true). Se usa para personalizar
   // el mensaje WA broker→broker (identificación + franquicia + link del anuncio).
   brokerInfo?: { nombre: string; inmobiliaria?: string | null } | null
+  // Comentario completo del broker — se renderiza arriba del detalle, sin clamp.
+  brokerComment?: string | null
 }) {
   const publicShareMode = publicShareBroker !== null
   const [gateName, setGateName] = useState('')
@@ -1110,6 +1144,18 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
           {/* Galería de fotos horizontal */}
           {p.fotos_urls && p.fotos_urls.length > 0 && (
             <BottomSheetGallery photos={p.fotos_urls} propertyId={p.id} />
+          )}
+
+          {/* Comentario del broker — solo en publicShareMode */}
+          {publicShareMode && brokerComment && (
+            <div className="bs-section bs-broker-comment-section" id="bs-broker-comment">
+              <div className="bs-sl"><span className="bs-sl-dot" />Comentario de tu broker</div>
+              <div className="bs-broker-comment">
+                <div className="bs-broker-comment-quote">&ldquo;</div>
+                <div className="bs-broker-comment-text">{brokerComment}</div>
+                {publicShareBroker && <div className="bs-broker-comment-author">— {publicShareBroker.nombre}, tu broker</div>}
+              </div>
+            </div>
           )}
 
           {/* Características */}
@@ -1483,6 +1529,9 @@ export interface PublicShareData {
   broker: { slug: string; nombre: string; telefono: string; foto_url: string | null; inmobiliaria?: string | null }
   items: UnidadVenta[]
   itemComments?: Record<number, string | null>
+  // Items destacados por el broker (migración 239). Máx 1 por shortlist.
+  // Render: card con fondo arena + chip "Recomendada por tu broker".
+  itemsDestacada?: Record<number, boolean>
   // Snapshot de precio (migraciones 229 + 230). Para cada propiedad:
   //  - rawSnapshot: precio_usd RAW al armar (propiedades_v2.precio_usd) — detecta cambio del agente
   //  - normSnapshot: precio NORMALIZADO al armar (v_mercado_venta.precio_usd) — para mostrar "Antes era $X"
@@ -1504,6 +1553,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const publicShareMode = publicShare !== null
   const publicShareBrokerProp: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null = publicShare ? publicShare.broker : null
   const priceSnapshotsMap: Record<number, { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null }> | null = publicShare && publicShare.priceSnapshots ? publicShare.priceSnapshots : null
+  const itemCommentsMap: Record<number, string | null> | null = publicShare && publicShare.itemComments ? publicShare.itemComments : null
+  const itemsDestacadaMap: Record<number, boolean> | null = publicShare && publicShare.itemsDestacada ? publicShare.itemsDestacada : null
   const initialProps = publicShareMode ? publicShare!.items : initialProperties
   const [properties, setProperties] = useState<UnidadVenta[]>(initialProps)
   const [loading, setLoading] = useState(publicShareMode ? false : initialProperties.length === 0)
@@ -1829,13 +1880,19 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     trackEvent('broker_add_to_shortlist', { property_id: p.id, broker_slug: broker?.slug })
     toggleFavorite(p.id)
   }
-  async function handleSendShortlist(data: { cliente_nombre: string; cliente_telefono: string; mensaje_whatsapp?: string }) {
+  async function handleSendShortlist(data: { cliente_nombre: string; cliente_telefono: string; mensaje_whatsapp?: string; items_metadata?: Array<{ propiedad_id: number; comentario_broker?: string | null; is_destacada?: boolean }> }) {
     if (!broker) throw new Error('Broker no resuelto')
     const propiedad_ids = Array.from(favorites)
     if (propiedad_ids.length === 0) throw new Error('No hay propiedades seleccionadas')
-    trackEvent('broker_send_shortlist', { broker_slug: broker.slug, count: propiedad_ids.length })
+    trackEvent('broker_send_shortlist', { broker_slug: broker.slug, count: propiedad_ids.length, with_metadata: data.items_metadata ? data.items_metadata.length : 0 })
     try {
-      const { whatsappUrl } = await brokerShortlists.createAndSend({ ...data, propiedad_ids })
+      const { whatsappUrl } = await brokerShortlists.createAndSend({
+        cliente_nombre: data.cliente_nombre,
+        cliente_telefono: data.cliente_telefono,
+        mensaje_whatsapp: data.mensaje_whatsapp,
+        propiedad_ids,
+        items_metadata: data.items_metadata,
+      })
       setFavorites(new Set())
       showToast('Shortlist enviada')
       return { whatsappUrl }
@@ -2035,7 +2092,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         brokerMode={brokerMode}
         onAddToShortlist={addToShortlist}
         publicShareBroker={publicShareBrokerProp}
-        brokerInfo={brokerInfoProp} />
+        brokerInfo={brokerInfoProp}
+        brokerComment={sheetProperty && itemCommentsMap ? itemCommentsMap[sheetProperty.id] || null : null} />
 
       {/* Banner inferior — modo broker: Enviar shortlist (1+) | público: Comparar (2+) */}
       {brokerMode && broker && favorites.size >= 1 && (
@@ -2064,6 +2122,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           onClose={() => setShortlistModalOpen(false)}
           broker={broker}
           cantidadPropiedades={favorites.size}
+          propiedades={favoriteProperties.map(p => ({
+            id: p.id,
+            nombre: p.proyecto || `Propiedad #${p.id}`,
+            foto: p.fotos_urls?.[0] || null,
+            zona: displayZona(p.zona),
+            precio_label: `$us ${Math.round(p.precio_usd).toLocaleString('en-US')}`,
+          }))}
           existingShortlists={brokerShortlists.shortlists}
           onConfirm={handleSendShortlist}
           onDemoBlock={brokerDemoMode ? () => {
@@ -2327,7 +2392,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 <VentaCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
                   onToggleFavorite={() => toggleFavorite(spotlightProperty.id)} onShare={() => shareProperty(spotlightProperty)}
                   onPhotoTap={() => openSheet(spotlightProperty)} onDetails={() => openSheet(spotlightProperty)}
-                  brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(spotlightProperty)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[spotlightProperty.id] : null} />
+                  brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(spotlightProperty)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[spotlightProperty.id] : null}
+                  brokerComment={itemCommentsMap ? itemCommentsMap[spotlightProperty.id] : null}
+                  isDestacada={itemsDestacadaMap ? itemsDestacadaMap[spotlightProperty.id] === true : false} />
                 <div className="ds-spotlight-sep">
                   <span className="ds-spotlight-line" /><span className="ds-spotlight-text">Explorar más departamentos</span><span className="ds-spotlight-line" />
                 </div>
@@ -2339,7 +2406,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)} isFirst={idx === 0}
                     onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
                     onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)}
-                    brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null} />
+                    brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null}
+                    brokerComment={itemCommentsMap ? itemCommentsMap[p.id] : null}
+                    isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false} />
                 ))}
               </div>
             )}
@@ -2438,7 +2507,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 isSpotlight={item.isSpotlight} isFirst={idx === 0}
                 onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
                 onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)}
-                brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null} />
+                brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null}
+                brokerComment={itemCommentsMap ? itemCommentsMap[p.id] : null}
+                isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false} />
             })}
           </div>
         </main>
@@ -2478,7 +2549,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-count-num { font-family:'Figtree',sans-serif; font-size:48px; font-weight:500; color:#EDE8DC; display:block; line-height:1; font-variant-numeric:tabular-nums }
         .ventas-count-text { font-size:13px; color:#9A8E7A }
         .ventas-main { margin-left:320px; flex:1; padding:24px; min-height:100vh; background:#1a1a1a }
-        .ventas-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:24px }
+        .ventas-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:24px; align-items:start }
         .ventas-map-container { height:calc(100vh - 80px); border-radius:14px; overflow:hidden; border:1px solid rgba(237,232,220,0.08); position:relative }
         .vt-back-to-grid { position:absolute; top:14px; left:14px; z-index:1100; display:inline-flex; align-items:center; gap:6px; background:#141414; color:#EDE8DC; border:none; padding:10px 16px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.3px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.35); -webkit-tap-highlight-color:transparent }
         .vt-back-to-grid:active { transform:scale(0.97) }
@@ -2876,6 +2947,59 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-venta .bs-sim-name { color:#EDE8DC }
         .bs-venta .bs-sim-price { color:#EDE8DC }
         .bs-venta .bs-sim-specs { color:#9A8E7A }
+
+        /* ===== Comentario broker + Destacada (migración 239) ===== */
+        /* Card destacada en venta — fondo arena invierte tema oscuro, salta del fondo negro */
+        .vc.vc-destacada { background:#EDE8DC; color:#141414; position:relative }
+        .vc.vc-destacada .vc-name { color:#141414 }
+        .vc.vc-destacada .vc-zona { color:#5a5a5a }
+        .vc.vc-destacada .vc-id { color:#7a7a7a }
+        .vc.vc-destacada .vc-price { color:#141414 }
+        .vc.vc-destacada .vc-tc { color:#5a5a5a }
+        .vc.vc-destacada .vc-specs { color:#5a5a5a }
+        .vc.vc-destacada .vc-specs-2 { color:#5a5a5a }
+        .vc.vc-destacada .vc-act-btn { color:#141414; border-color:rgba(20,20,20,0.18) }
+        .vc.vc-destacada .vc-act-btn.vc-act-detail { color:#141414 }
+        /* Chip Recomendada — venta */
+        .vc-destacada-chip { position:absolute; top:12px; left:12px; z-index:3; background:#141414; color:#EDE8DC; padding:6px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; box-shadow:0 4px 12px rgba(0,0,0,0.3); pointer-events:none; font-family:'DM Sans',sans-serif }
+        /* Bloque comentario broker — desktop */
+        .vc-comentario { margin-top:10px; padding:10px 12px; background:#EDE8DC; border-left:3px solid #3A6A48; border-radius:6px; color:#141414; position:relative }
+        .vc.vc-destacada .vc-comentario { background:#fff }
+        .vc-comentario-quote { font-size:20px; color:#3A6A48; line-height:0.6; font-family:Georgia,serif; margin-bottom:2px; opacity:0.7 }
+        .vc-comentario-text { font-size:12px; line-height:1.4; color:#141414; font-style:italic; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden }
+        .vc-comentario-author { font-size:10px; color:#5a5a5a; margin-top:4px; font-weight:500; font-style:normal }
+        .vc-comentario-more { font-size:11px; color:#3A6A48; cursor:pointer; background:none; border:none; padding:4px 0 0; font-family:inherit; font-weight:600; text-decoration:underline; text-underline-offset:2px }
+        .vc-comentario-more:hover { color:#2c5238 }
+        /* Mobile feed — destacada y comentario */
+        .mc.mc-destacada { background:#EDE8DC; position:relative }
+        .mc.mc-destacada .mc-name { color:#141414 }
+        .mc.mc-destacada .mc-zona { color:#5a5a5a }
+        .mc.mc-destacada .mc-id { color:#7a7a7a }
+        .mc.mc-destacada .mc-price { color:#141414 }
+        .mc.mc-destacada .mc-tc { color:#5a5a5a }
+        .mc.mc-destacada .mc-specs { color:#5a5a5a }
+        .mc.mc-destacada .mc-specs-2 { color:#5a5a5a }
+        .mc.mc-destacada .mc-content { color:#141414 }
+        .mc-destacada-chip { position:absolute; top:12px; left:12px; z-index:3; background:#141414; color:#EDE8DC; padding:6px 12px; border-radius:100px; font-size:10px; font-weight:600; letter-spacing:0.3px; box-shadow:0 4px 12px rgba(0,0,0,0.3); pointer-events:none; font-family:'DM Sans',sans-serif }
+        .mc-comentario { margin:6px 0 4px; padding:8px 10px; background:rgba(237,232,220,0.12); border-left:3px solid #3A6A48; border-radius:6px; color:#EDE8DC }
+        .mc.mc-destacada .mc-comentario { background:#fff; color:#141414 }
+        .mc-comentario-quote { font-size:18px; color:#3A6A48; line-height:0.6; font-family:Georgia,serif; opacity:0.7 }
+        .mc.mc-destacada .mc-comentario-quote { color:#3A6A48 }
+        .mc-comentario-text { font-size:12px; line-height:1.4; font-style:italic; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden }
+        .mc-comentario-author { font-size:10px; opacity:0.7; margin-top:3px; font-weight:500; font-style:normal }
+        .mc-comentario-more { font-size:11px; color:#3A6A48; cursor:pointer; background:none; border:none; padding:4px 0 0; font-family:inherit; font-weight:600; text-decoration:underline; text-underline-offset:2px; -webkit-tap-highlight-color:transparent }
+        .mc.mc-destacada .mc-comentario-more { color:#3A6A48 }
+
+        /* Comentario del broker dentro del bottom sheet venta — sin clamp, texto completo */
+        .bs-broker-comment { padding:14px 16px; background:#EDE8DC; border-left:3px solid #3A6A48; border-radius:8px; color:#141414 }
+        .bs-broker-comment-quote { font-size:24px; color:#3A6A48; line-height:0.6; font-family:Georgia,serif; margin-bottom:4px; opacity:0.7 }
+        .bs-broker-comment-text { font-size:14px; line-height:1.55; color:#141414; font-style:italic; white-space:pre-wrap; word-wrap:break-word }
+        .bs-broker-comment-author { font-size:12px; color:#5a5a5a; margin-top:8px; font-weight:500; font-style:normal }
+        /* Para el sheet de venta (fondo oscuro) → invertimos contraste */
+        .bs-venta .bs-broker-comment { background:rgba(237,232,220,0.08); border-left-color:#7BB389 }
+        .bs-venta .bs-broker-comment-quote { color:#7BB389 }
+        .bs-venta .bs-broker-comment-text { color:#EDE8DC }
+        .bs-venta .bs-broker-comment-author { color:rgba(237,232,220,0.6) }
 
       `}</style>
     </>
