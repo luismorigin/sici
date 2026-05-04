@@ -701,13 +701,20 @@ export default function AlquileresPage({
     toggleFavorite(p.id)
   }
 
-  async function handleSendShortlist(data: { cliente_nombre: string; cliente_telefono: string; mensaje_whatsapp?: string }) {
+  async function handleSendShortlist(data: { cliente_nombre: string; cliente_telefono: string; mensaje_whatsapp?: string; items_metadata?: Array<{ propiedad_id: number; comentario_broker?: string | null; is_destacada?: boolean }> }) {
     if (!broker) throw new Error('Broker no resuelto')
     const propiedad_ids = Array.from(favorites)
     if (propiedad_ids.length === 0) throw new Error('No hay propiedades seleccionadas')
-    trackEvent('broker_send_shortlist', { broker_slug: broker.slug, count: propiedad_ids.length, tipo_operacion: 'alquiler' })
+    trackEvent('broker_send_shortlist', { broker_slug: broker.slug, count: propiedad_ids.length, tipo_operacion: 'alquiler', with_metadata: data.items_metadata ? data.items_metadata.length : 0 })
     try {
-      const { whatsappUrl } = await brokerShortlists.createAndSend({ ...data, propiedad_ids, tipo_operacion: 'alquiler' })
+      const { whatsappUrl } = await brokerShortlists.createAndSend({
+        cliente_nombre: data.cliente_nombre,
+        cliente_telefono: data.cliente_telefono,
+        mensaje_whatsapp: data.mensaje_whatsapp,
+        propiedad_ids,
+        items_metadata: data.items_metadata,
+        tipo_operacion: 'alquiler',
+      })
       setFavorites(new Set())
       showToast('Shortlist enviada')
       return { whatsappUrl }
@@ -1104,6 +1111,7 @@ export default function AlquileresPage({
         brokerMode={brokerMode}
         publicShareBroker={publicShareBrokerProp}
         priceSnapshot={sheetProperty && priceSnapshotsMap ? priceSnapshotsMap[sheetProperty.id] || null : null}
+        brokerComment={sheetProperty && itemCommentsMap ? itemCommentsMap[sheetProperty.id] || null : null}
       />
 
       {/* Banner inferior flotante brokerMode — visible en mobile Y desktop,
@@ -1204,7 +1212,7 @@ export default function AlquileresPage({
             {/* View toggle bar — oculto en mobile publicShareMode (FAB negro cubre el mapa) y
                 en mobile brokerMode (toggle Grid|Mapa del banner broker ya cumple esa función). */}
             {!((publicShareMode || brokerMode) && !isDesktop) && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid rgba(216,208,188,0.3)', flexShrink: 0, position: 'sticky', top: 0, background: 'transparent', zIndex: 10, paddingTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: publicShareMode ? 12 : 20, paddingBottom: publicShareMode ? 0 : 16, borderBottom: publicShareMode ? 'none' : '1px solid rgba(216,208,188,0.3)', flexShrink: 0, position: publicShareMode ? 'static' : 'sticky', top: 0, background: 'transparent', zIndex: 10, paddingTop: publicShareMode ? 0 : 8 }}>
               <div style={{ fontSize: 13, color: '#7A7060', display: 'flex', alignItems: 'center', gap: 12 }}>
                 {/* Comparar es feature del público, no tiene sentido en brokerMode
                     (el broker está armando shortlist — comparar sus propias
@@ -1554,6 +1562,13 @@ export default function AlquileresPage({
           onClose={() => setShortlistModalOpen(false)}
           broker={broker}
           cantidadPropiedades={favorites.size}
+          propiedades={favoriteProperties.map(p => ({
+            id: p.id,
+            nombre: p.nombre_edificio || p.nombre_proyecto || `Propiedad #${p.id}`,
+            foto: p.fotos_urls?.[0] || null,
+            zona: displayZona(p.zona),
+            precio_label: `Bs ${Math.round(p.precio_mensual_bob).toLocaleString('es-BO')}/mes`,
+          }))}
           existingShortlists={brokerShortlists.shortlists}
           onConfirm={handleSendShortlist}
           onDemoBlock={brokerDemoMode ? () => {
@@ -2560,7 +2575,11 @@ const DesktopCard = memo(function DesktopCard({
           <div className="dc-comentario">
             <div className="dc-comentario-quote">&ldquo;</div>
             <div className="dc-comentario-text">{brokerComment}</div>
-            {publicShareBroker && <div className="dc-comentario-author">— {publicShareBroker.nombre}, tu broker</div>}
+            {brokerComment.length > 50 && (
+              <button type="button" className="dc-comentario-more" onClick={onOpenInfo}>
+                Leer comentario completo →
+              </button>
+            )}
           </div>
         )}
         <div className="dc-actions">
@@ -2724,7 +2743,11 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
           <div className="amc-comentario">
             <div className="amc-comentario-quote">&ldquo;</div>
             <div className="amc-comentario-text">{brokerComment}</div>
-            {publicShareBroker && <div className="amc-comentario-author">— {publicShareBroker.nombre}, tu broker</div>}
+            {brokerComment.length > 50 && (
+              <button type="button" className="amc-comentario-more" onClick={onOpenInfo}>
+                Leer comentario completo →
+              </button>
+            )}
           </div>
         )}
         <div className="amc-actions">
@@ -2952,7 +2975,7 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 // ===== BOTTOM SHEET =====
 function BottomSheet({
   open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive, isFavorite, onToggleFavorite, onShare, properties, onSwapProperty,
-  brokerMode = false, publicShareBroker = null, priceSnapshot = null,
+  brokerMode = false, publicShareBroker = null, priceSnapshot = null, brokerComment = null,
 }: {
   open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; petFilterActive?: boolean
@@ -2961,6 +2984,9 @@ function BottomSheet({
   brokerMode?: boolean
   publicShareBroker?: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null
   priceSnapshot?: { bobSnapshot: number | null; bobActual: number | null } | null
+  // Comentario del broker — se renderiza arriba del detalle, sin clamp (a diferencia
+  // de la card en el feed que clampea a 2 líneas).
+  brokerComment?: string | null
 }) {
   const publicShareMode = publicShareBroker !== null
   const [showGate, setShowGate] = useState(false)
@@ -3154,6 +3180,17 @@ function BottomSheet({
       {/* Galería de fotos horizontal */}
       {p.fotos_urls && p.fotos_urls.length > 0 && (
         <BottomSheetGallery photos={p.fotos_urls} propertyId={p.id} />
+      )}
+      {/* Comentario del broker — solo en publicShareMode (link compartido /b/[hash]) */}
+      {publicShareMode && brokerComment && (
+        <div className="bs-section bs-broker-comment-section" id="bs-broker-comment">
+          <div className="bs-sl"><span className="bs-sl-dot" />Comentario de tu broker</div>
+          <div className="bs-broker-comment">
+            <div className="bs-broker-comment-quote">&ldquo;</div>
+            <div className="bs-broker-comment-text">{brokerComment}</div>
+            {publicShareBroker && <div className="bs-broker-comment-author">— {publicShareBroker.nombre}, tu broker</div>}
+          </div>
+        </div>
       )}
       {/* Body blanco — características, amenidades, ubicación, anuncio */}
       <div className="bs-section">

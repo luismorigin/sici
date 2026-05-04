@@ -42,6 +42,13 @@ export interface CreateAndSendInput {
   cliente_telefono: string
   mensaje_whatsapp?: string
   propiedad_ids: number[]
+  // Metadata por item (opción B): si el broker personalizó comentarios/destacada
+  // en el modal antes de enviar, viene acá. Si saltó el paso, queda undefined.
+  items_metadata?: Array<{
+    propiedad_id: number
+    comentario_broker?: string | null
+    is_destacada?: boolean
+  }>
   tipo_operacion?: 'venta' | 'alquiler'
 }
 
@@ -92,6 +99,7 @@ export function useBrokerShortlists(broker: Broker | null): UseBrokerShortlistsR
       cliente_telefono: input.cliente_telefono,
       mensaje_whatsapp: input.mensaje_whatsapp || null,
       propiedad_ids: input.propiedad_ids,
+      items_metadata: input.items_metadata,
       tipo_operacion: input.tipo_operacion,
     }
 

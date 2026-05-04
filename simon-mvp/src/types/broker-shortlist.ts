@@ -111,6 +111,16 @@ export interface CreateShortlistPayload {
   cliente_telefono: string
   mensaje_whatsapp?: string | null
   propiedad_ids: number[]
+  // Metadata por item: comentario + flag destacada. Opcional — si no viene, se
+  // crean los items con valores default (sin comentario, sin destacar). Permite
+  // que el modal "Enviar shortlist" personalice cada propiedad antes de crearla.
+  // Si viene, debe tener un entry por cada propiedad_id (en cualquier orden).
+  // Migración 239 + flujo opción B.
+  items_metadata?: Array<{
+    propiedad_id: number
+    comentario_broker?: string | null
+    is_destacada?: boolean
+  }>
   tipo_operacion?: 'venta' | 'alquiler'
 }
 

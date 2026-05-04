@@ -556,7 +556,11 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
           <div className="vc-comentario">
             <div className="vc-comentario-quote">&ldquo;</div>
             <div className="vc-comentario-text">{brokerComment}</div>
-            {publicShareBroker && <div className="vc-comentario-author">— {publicShareBroker.nombre}, tu broker</div>}
+            {brokerComment.length > 50 && (
+              <button type="button" className="vc-comentario-more" onClick={onDetails}>
+                Leer comentario completo →
+              </button>
+            )}
           </div>
         )}
         <div className="vc-actions">
@@ -718,7 +722,11 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
           <div className="mc-comentario">
             <div className="mc-comentario-quote">&ldquo;</div>
             <div className="mc-comentario-text">{brokerComment}</div>
-            {publicShareBroker && <div className="mc-comentario-author">— {publicShareBroker.nombre}, tu broker</div>}
+            {brokerComment.length > 50 && (
+              <button type="button" className="mc-comentario-more" onClick={onDetails}>
+                Leer comentario completo →
+              </button>
+            )}
           </div>
         )}
         <div className="mc-actions">
@@ -1005,7 +1013,7 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 }
 
 // ===== Bottom Sheet =====
-function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty, brokerMode = false, onAddToShortlist, publicShareBroker = null, brokerInfo = null }: {
+function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty, brokerMode = false, onAddToShortlist, publicShareBroker = null, brokerInfo = null, brokerComment = null }: {
   property: UnidadVenta | null; isOpen: boolean; onClose: () => void; onShare?: () => void
   isFavorite?: boolean; onToggleFavorite?: () => void
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; isDesktop: boolean
@@ -1015,6 +1023,8 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
   // Datos del broker activo (cuando brokerMode=true). Se usa para personalizar
   // el mensaje WA broker→broker (identificación + franquicia + link del anuncio).
   brokerInfo?: { nombre: string; inmobiliaria?: string | null } | null
+  // Comentario completo del broker — se renderiza arriba del detalle, sin clamp.
+  brokerComment?: string | null
 }) {
   const publicShareMode = publicShareBroker !== null
   const [gateName, setGateName] = useState('')
@@ -1134,6 +1144,18 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
           {/* Galería de fotos horizontal */}
           {p.fotos_urls && p.fotos_urls.length > 0 && (
             <BottomSheetGallery photos={p.fotos_urls} propertyId={p.id} />
+          )}
+
+          {/* Comentario del broker — solo en publicShareMode */}
+          {publicShareMode && brokerComment && (
+            <div className="bs-section bs-broker-comment-section" id="bs-broker-comment">
+              <div className="bs-sl"><span className="bs-sl-dot" />Comentario de tu broker</div>
+              <div className="bs-broker-comment">
+                <div className="bs-broker-comment-quote">&ldquo;</div>
+                <div className="bs-broker-comment-text">{brokerComment}</div>
+                {publicShareBroker && <div className="bs-broker-comment-author">— {publicShareBroker.nombre}, tu broker</div>}
+              </div>
+            </div>
           )}
 
           {/* Características */}
@@ -1858,13 +1880,19 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     trackEvent('broker_add_to_shortlist', { property_id: p.id, broker_slug: broker?.slug })
     toggleFavorite(p.id)
   }
-  async function handleSendShortlist(data: { cliente_nombre: string; cliente_telefono: string; mensaje_whatsapp?: string }) {
+  async function handleSendShortlist(data: { cliente_nombre: string; cliente_telefono: string; mensaje_whatsapp?: string; items_metadata?: Array<{ propiedad_id: number; comentario_broker?: string | null; is_destacada?: boolean }> }) {
     if (!broker) throw new Error('Broker no resuelto')
     const propiedad_ids = Array.from(favorites)
     if (propiedad_ids.length === 0) throw new Error('No hay propiedades seleccionadas')
-    trackEvent('broker_send_shortlist', { broker_slug: broker.slug, count: propiedad_ids.length })
+    trackEvent('broker_send_shortlist', { broker_slug: broker.slug, count: propiedad_ids.length, with_metadata: data.items_metadata ? data.items_metadata.length : 0 })
     try {
-      const { whatsappUrl } = await brokerShortlists.createAndSend({ ...data, propiedad_ids })
+      const { whatsappUrl } = await brokerShortlists.createAndSend({
+        cliente_nombre: data.cliente_nombre,
+        cliente_telefono: data.cliente_telefono,
+        mensaje_whatsapp: data.mensaje_whatsapp,
+        propiedad_ids,
+        items_metadata: data.items_metadata,
+      })
       setFavorites(new Set())
       showToast('Shortlist enviada')
       return { whatsappUrl }
@@ -2064,7 +2092,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         brokerMode={brokerMode}
         onAddToShortlist={addToShortlist}
         publicShareBroker={publicShareBrokerProp}
-        brokerInfo={brokerInfoProp} />
+        brokerInfo={brokerInfoProp}
+        brokerComment={sheetProperty && itemCommentsMap ? itemCommentsMap[sheetProperty.id] || null : null} />
 
       {/* Banner inferior — modo broker: Enviar shortlist (1+) | público: Comparar (2+) */}
       {brokerMode && broker && favorites.size >= 1 && (
@@ -2093,6 +2122,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           onClose={() => setShortlistModalOpen(false)}
           broker={broker}
           cantidadPropiedades={favorites.size}
+          propiedades={favoriteProperties.map(p => ({
+            id: p.id,
+            nombre: p.proyecto || `Propiedad #${p.id}`,
+            foto: p.fotos_urls?.[0] || null,
+            zona: displayZona(p.zona),
+            precio_label: `$us ${Math.round(p.precio_usd).toLocaleString('en-US')}`,
+          }))}
           existingShortlists={brokerShortlists.shortlists}
           onConfirm={handleSendShortlist}
           onDemoBlock={brokerDemoMode ? () => {
@@ -2513,7 +2549,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-count-num { font-family:'Figtree',sans-serif; font-size:48px; font-weight:500; color:#EDE8DC; display:block; line-height:1; font-variant-numeric:tabular-nums }
         .ventas-count-text { font-size:13px; color:#9A8E7A }
         .ventas-main { margin-left:320px; flex:1; padding:24px; min-height:100vh; background:#1a1a1a }
-        .ventas-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:24px }
+        .ventas-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:24px; align-items:start }
         .ventas-map-container { height:calc(100vh - 80px); border-radius:14px; overflow:hidden; border:1px solid rgba(237,232,220,0.08); position:relative }
         .vt-back-to-grid { position:absolute; top:14px; left:14px; z-index:1100; display:inline-flex; align-items:center; gap:6px; background:#141414; color:#EDE8DC; border:none; padding:10px 16px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.3px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.35); -webkit-tap-highlight-color:transparent }
         .vt-back-to-grid:active { transform:scale(0.97) }
@@ -2927,11 +2963,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         /* Chip Recomendada — venta */
         .vc-destacada-chip { position:absolute; top:12px; left:12px; z-index:3; background:#141414; color:#EDE8DC; padding:6px 12px; border-radius:100px; font-size:11px; font-weight:600; letter-spacing:0.3px; box-shadow:0 4px 12px rgba(0,0,0,0.3); pointer-events:none; font-family:'DM Sans',sans-serif }
         /* Bloque comentario broker — desktop */
-        .vc-comentario { margin-top:12px; padding:12px 14px; background:#EDE8DC; border-left:3px solid #3A6A48; border-radius:6px; color:#141414; position:relative }
+        .vc-comentario { margin-top:10px; padding:10px 12px; background:#EDE8DC; border-left:3px solid #3A6A48; border-radius:6px; color:#141414; position:relative }
         .vc.vc-destacada .vc-comentario { background:#fff }
-        .vc-comentario-quote { font-size:24px; color:#3A6A48; line-height:0.6; font-family:Georgia,serif; margin-bottom:2px; opacity:0.7 }
-        .vc-comentario-text { font-size:13px; line-height:1.45; color:#141414; font-style:italic }
-        .vc-comentario-author { font-size:11px; color:#5a5a5a; margin-top:6px; font-weight:500; font-style:normal }
+        .vc-comentario-quote { font-size:20px; color:#3A6A48; line-height:0.6; font-family:Georgia,serif; margin-bottom:2px; opacity:0.7 }
+        .vc-comentario-text { font-size:12px; line-height:1.4; color:#141414; font-style:italic; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden }
+        .vc-comentario-author { font-size:10px; color:#5a5a5a; margin-top:4px; font-weight:500; font-style:normal }
+        .vc-comentario-more { font-size:11px; color:#3A6A48; cursor:pointer; background:none; border:none; padding:4px 0 0; font-family:inherit; font-weight:600; text-decoration:underline; text-underline-offset:2px }
+        .vc-comentario-more:hover { color:#2c5238 }
         /* Mobile feed — destacada y comentario */
         .mc.mc-destacada { background:#EDE8DC; position:relative }
         .mc.mc-destacada .mc-name { color:#141414 }
@@ -2943,12 +2981,25 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc.mc-destacada .mc-specs-2 { color:#5a5a5a }
         .mc.mc-destacada .mc-content { color:#141414 }
         .mc-destacada-chip { position:absolute; top:12px; left:12px; z-index:3; background:#141414; color:#EDE8DC; padding:6px 12px; border-radius:100px; font-size:10px; font-weight:600; letter-spacing:0.3px; box-shadow:0 4px 12px rgba(0,0,0,0.3); pointer-events:none; font-family:'DM Sans',sans-serif }
-        .mc-comentario { margin:8px 0 4px; padding:10px 12px; background:rgba(237,232,220,0.12); border-left:3px solid #3A6A48; border-radius:6px; color:#EDE8DC }
+        .mc-comentario { margin:6px 0 4px; padding:8px 10px; background:rgba(237,232,220,0.12); border-left:3px solid #3A6A48; border-radius:6px; color:#EDE8DC }
         .mc.mc-destacada .mc-comentario { background:#fff; color:#141414 }
-        .mc-comentario-quote { font-size:22px; color:#3A6A48; line-height:0.6; font-family:Georgia,serif; opacity:0.7 }
+        .mc-comentario-quote { font-size:18px; color:#3A6A48; line-height:0.6; font-family:Georgia,serif; opacity:0.7 }
         .mc.mc-destacada .mc-comentario-quote { color:#3A6A48 }
-        .mc-comentario-text { font-size:12px; line-height:1.45; font-style:italic }
-        .mc-comentario-author { font-size:10px; opacity:0.7; margin-top:4px; font-weight:500; font-style:normal }
+        .mc-comentario-text { font-size:12px; line-height:1.4; font-style:italic; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden }
+        .mc-comentario-author { font-size:10px; opacity:0.7; margin-top:3px; font-weight:500; font-style:normal }
+        .mc-comentario-more { font-size:11px; color:#3A6A48; cursor:pointer; background:none; border:none; padding:4px 0 0; font-family:inherit; font-weight:600; text-decoration:underline; text-underline-offset:2px; -webkit-tap-highlight-color:transparent }
+        .mc.mc-destacada .mc-comentario-more { color:#3A6A48 }
+
+        /* Comentario del broker dentro del bottom sheet venta — sin clamp, texto completo */
+        .bs-broker-comment { padding:14px 16px; background:#EDE8DC; border-left:3px solid #3A6A48; border-radius:8px; color:#141414 }
+        .bs-broker-comment-quote { font-size:24px; color:#3A6A48; line-height:0.6; font-family:Georgia,serif; margin-bottom:4px; opacity:0.7 }
+        .bs-broker-comment-text { font-size:14px; line-height:1.55; color:#141414; font-style:italic; white-space:pre-wrap; word-wrap:break-word }
+        .bs-broker-comment-author { font-size:12px; color:#5a5a5a; margin-top:8px; font-weight:500; font-style:normal }
+        /* Para el sheet de venta (fondo oscuro) → invertimos contraste */
+        .bs-venta .bs-broker-comment { background:rgba(237,232,220,0.08); border-left-color:#7BB389 }
+        .bs-venta .bs-broker-comment-quote { color:#7BB389 }
+        .bs-venta .bs-broker-comment-text { color:#EDE8DC }
+        .bs-venta .bs-broker-comment-author { color:rgba(237,232,220,0.6) }
 
       `}</style>
     </>

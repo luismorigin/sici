@@ -70,6 +70,10 @@
 .desktop-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 24px; max-width: 1200px;
+  /* align-items: start evita que las cards de altura natural se estiren al alto
+     de la más alta (típico cuando una card tiene comentario broker y las demás no).
+     Sin esto, las cards sin comentario quedan con whitespace vacío en el medio. */
+  align-items: start;
 }
 .alq-pet-divider {
   grid-column: 1 / -1; text-align: center; padding: 20px 0 8px;
@@ -851,15 +855,26 @@
 /* Card destacada — desktop */
 .dc-card.dc-card-destacada{border:2px solid #141414;position:relative;}
 .dc-destacada-chip{position:absolute;top:12px;left:12px;z-index:3;background:#EDE8DC;color:#141414;border:1px solid #141414;padding:6px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:0.3px;box-shadow:0 4px 12px rgba(0,0,0,0.18);pointer-events:none;font-family:'DM Sans',sans-serif;}
-.dc-comentario{margin-top:10px;padding:12px 14px;background:#EDE8DC;border-left:3px solid #3A6A48;border-radius:6px;color:#141414;}
-.dc-comentario-quote{font-size:24px;color:#3A6A48;line-height:0.6;font-family:Georgia,serif;margin-bottom:2px;opacity:0.7;}
-.dc-comentario-text{font-size:13px;line-height:1.45;color:#141414;font-style:italic;}
-.dc-comentario-author{font-size:11px;color:#5a5a5a;margin-top:6px;font-weight:500;font-style:normal;}
+.dc-comentario{margin-top:10px;padding:10px 12px;background:#EDE8DC;border-left:3px solid #3A6A48;border-radius:6px;color:#141414;}
+.dc-comentario-quote{font-size:20px;color:#3A6A48;line-height:0.6;font-family:Georgia,serif;margin-bottom:2px;opacity:0.7;}
+.dc-comentario-text{font-size:12px;line-height:1.4;color:#141414;font-style:italic;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
+.dc-comentario-more{font-size:11px;color:#3A6A48;cursor:pointer;background:none;border:none;padding:4px 0 0;font-family:inherit;font-weight:600;text-decoration:underline;text-underline-offset:2px;}
+.dc-comentario-more:hover{color:#2c5238;}
+.dc-comentario-author{font-size:10px;color:#5a5a5a;margin-top:4px;font-weight:500;font-style:normal;}
 
 /* Card destacada — mobile */
 .alq-card.alq-card-destacada{border:2px solid #141414;position:relative;}
 .amc-destacada-chip{position:absolute;top:12px;left:12px;z-index:5;background:#EDE8DC;color:#141414;border:1px solid #141414;padding:6px 12px;border-radius:100px;font-size:10px;font-weight:600;letter-spacing:0.3px;box-shadow:0 4px 12px rgba(0,0,0,0.18);pointer-events:none;font-family:'DM Sans',sans-serif;}
-.amc-comentario{margin:8px 0 4px;padding:10px 12px;background:#EDE8DC;border-left:3px solid #3A6A48;border-radius:6px;color:#141414;}
-.amc-comentario-quote{font-size:22px;color:#3A6A48;line-height:0.6;font-family:Georgia,serif;opacity:0.7;}
-.amc-comentario-text{font-size:12px;line-height:1.45;font-style:italic;}
-.amc-comentario-author{font-size:10px;color:#5a5a5a;margin-top:4px;font-weight:500;font-style:normal;}
+.amc-comentario{margin:6px 0 4px;padding:8px 10px;background:#EDE8DC;border-left:3px solid #3A6A48;border-radius:6px;color:#141414;}
+.amc-comentario-quote{font-size:18px;color:#3A6A48;line-height:0.6;font-family:Georgia,serif;opacity:0.7;}
+.amc-comentario-text{font-size:12px;line-height:1.4;font-style:italic;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
+.amc-comentario-more{font-size:11px;color:#3A6A48;cursor:pointer;background:none;border:none;padding:4px 0 0;font-family:inherit;font-weight:600;text-decoration:underline;text-underline-offset:2px;}
+.amc-comentario-more:active{color:#2c5238;}
+
+/* Comentario broker dentro del bottom sheet — sin clamp, texto completo. */
+.bs-broker-comment-section{}
+.bs-broker-comment{padding:14px 16px;background:#EDE8DC;border-left:3px solid #3A6A48;border-radius:8px;color:#141414;}
+.bs-broker-comment-quote{font-size:24px;color:#3A6A48;line-height:0.6;font-family:Georgia,serif;margin-bottom:4px;opacity:0.7;}
+.bs-broker-comment-text{font-size:14px;line-height:1.55;color:#141414;font-style:italic;white-space:pre-wrap;word-wrap:break-word;}
+.bs-broker-comment-author{font-size:12px;color:#5a5a5a;margin-top:8px;font-weight:500;font-style:normal;}
+.amc-comentario-author{font-size:10px;color:#5a5a5a;margin-top:3px;font-weight:500;font-style:normal;}

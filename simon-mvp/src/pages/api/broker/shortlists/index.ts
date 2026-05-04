@@ -90,6 +90,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'al menos una propiedad' })
       }
 
+      // Validación máx 1 destacada (defensa server-side; el frontend ya enforce
+      // auto-desmarcando al elegir otra). Migración 239.
+      const itemsMetadata = Array.isArray(payload.items_metadata) ? payload.items_metadata : []
+      const destacadasCount = itemsMetadata.filter(m => m.is_destacada === true).length
+      if (destacadasCount > 1) {
+        return res.status(400).json({
+          error: 'Solo se permite 1 propiedad destacada por shortlist'
+        })
+      }
+      // Index por propiedad_id para lookup en el insert de items
+      const metadataByPropId = new Map<number, { comentario_broker: string | null; is_destacada: boolean }>()
+      for (const m of itemsMetadata) {
+        metadataByPropId.set(m.propiedad_id, {
+          comentario_broker: m.comentario_broker?.trim() || null,
+          is_destacada: m.is_destacada === true,
+        })
+      }
+
       const hash = await generateUniqueHash()
 
       const { data: shortlist, error: errInsert } = await supabase
@@ -153,15 +171,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Insertar items en el orden recibido.
       // Los snapshots del otro tipo_operacion quedan NULL (no aplican).
-      const items = payload.propiedad_ids.map((pid, idx) => ({
-        shortlist_id: shortlist.id,
-        propiedad_id: pid,
-        tipo_operacion: tipoOperacion,
-        orden: idx,
-        precio_usd_snapshot: tipoOperacion === 'venta' ? (rawByPropId.get(pid) ?? null) : null,
-        precio_norm_snapshot: tipoOperacion === 'venta' ? (normByPropId.get(pid) ?? null) : null,
-        precio_mensual_bob_snapshot: tipoOperacion === 'alquiler' ? (bobByPropId.get(pid) ?? null) : null,
-      }))
+      // comentario_broker e is_destacada vienen de items_metadata si existe (opción B,
+      // modal con paso "Personalizar"); si no, defaults (sin comentario, sin destacar).
+      const items = payload.propiedad_ids.map((pid, idx) => {
+        const meta = metadataByPropId.get(pid)
+        return {
+          shortlist_id: shortlist.id,
+          propiedad_id: pid,
+          tipo_operacion: tipoOperacion,
+          orden: idx,
+          comentario_broker: meta?.comentario_broker ?? null,
+          is_destacada: meta?.is_destacada ?? false,
+          precio_usd_snapshot: tipoOperacion === 'venta' ? (rawByPropId.get(pid) ?? null) : null,
+          precio_norm_snapshot: tipoOperacion === 'venta' ? (normByPropId.get(pid) ?? null) : null,
+          precio_mensual_bob_snapshot: tipoOperacion === 'alquiler' ? (bobByPropId.get(pid) ?? null) : null,
+        }
+      })
 
       const { error: errItems } = await supabase
         .from('broker_shortlist_items')
