@@ -1947,8 +1947,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
 
   // Persist favorites
   // Hidratar favorites: publicShareMode desde BD (initialHearts), los demás desde localStorage.
-  // brokerDemoMode: NO hidrata ni persiste — sesión limpia siempre, lo que el
-  // broker prospect marca queda solo durante la sesión.
+  // brokerDemoMode y brokerMode: NO hidratan ni persisten — sesión limpia
+  // siempre. Broker usa "Mis shortlists" (BD) para guardar/retomar trabajo;
+  // localStorage compartido entre público y broker filtraría selecciones.
   useEffect(() => {
     if (publicShareMode) {
       const hearts = publicShare?.initialHearts
@@ -1956,14 +1957,16 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       return
     }
     if (brokerDemoMode) return
+    if (brokerMode) return
     try { const s = localStorage.getItem('ventas_favorites_v1'); if (s) setFavorites(new Set(JSON.parse(s))) } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   useEffect(() => {
     if (publicShareMode) return // persistencia va por BD en toggleFavorite
     if (brokerDemoMode) return // demo no persiste
+    if (brokerMode) return // broker usa BD via "Mis shortlists"
     if (favorites.size > 0) localStorage.setItem('ventas_favorites_v1', JSON.stringify([...favorites]))
-  }, [favorites, publicShareMode, brokerDemoMode])
+  }, [favorites, publicShareMode, brokerDemoMode, brokerMode])
 
   // Scroll tracking (mobile TikTok)
   useEffect(() => {

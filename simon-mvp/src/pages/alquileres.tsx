@@ -333,7 +333,9 @@ export default function AlquileresPage({
   }, [publicShareMode, brokerMode])
 
   // Restore favorites: publicShareMode hidrata desde BD (initialHearts),
-  // brokerDemoMode arranca limpio siempre, los demás desde localStorage.
+  // brokerDemoMode y brokerMode arrancan limpios siempre, los demás desde
+  // localStorage. brokerMode usa "Mis shortlists" (BD) para retomar trabajo
+  // — no queremos leakage entre clientes ni entre uso público/broker.
   useEffect(() => {
     if (publicShareMode) {
       const hearts = publicShare?.initialHearts
@@ -341,6 +343,7 @@ export default function AlquileresPage({
       return
     }
     if (brokerDemoMode) return
+    if (brokerMode) return
     try {
       const saved = localStorage.getItem('alq_favorites')
       if (saved) setFavorites(new Set(JSON.parse(saved) as number[]))
@@ -410,12 +413,18 @@ export default function AlquileresPage({
   const fetchGenRef = useRef(0) // increments on each fetchProperties call to cancel stale background loads
 
   // Persist favorites to localStorage (skip en publicShareMode — se persiste
-  // en BD por cada toggle. Skip en brokerDemoMode — sesión limpia siempre).
+  // en BD por cada toggle. Skip en brokerDemoMode y brokerMode — sesión
+  // limpia siempre, broker usa BD via "Mis shortlists" para guardar trabajo).
+  // Skip si favorites está vacío: evita pisar localStorage durante el
+  // initial mount cuando la hidratación todavía no actualizó el state.
+  // Mismo patrón que ventas.tsx (línea ~1965).
   useEffect(() => {
     if (publicShareMode) return
     if (brokerDemoMode) return
+    if (brokerMode) return
+    if (favorites.size === 0) return
     try { localStorage.setItem('alq_favorites', JSON.stringify(Array.from(favorites))) } catch {}
-  }, [favorites, publicShareMode, brokerDemoMode])
+  }, [favorites, publicShareMode, brokerDemoMode, brokerMode])
 
   // Keep isFilteredRef in sync for scroll handler (avoids stale closure)
   useEffect(() => { isFilteredRef.current = isFiltered }, [isFiltered])
