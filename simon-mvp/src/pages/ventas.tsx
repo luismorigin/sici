@@ -1792,7 +1792,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         // interna). El broker debe verificar el precio antes de enviar.
         const prop = properties.find(x => x.id === id)
         if (prop?.tc_sospechoso) {
-          showToast(`${newCount} ${newCount === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'} · ⚠ Esta tiene TC sin confirmar — el cliente no verá esa alerta, verificá precio antes de enviar`)
+          showToast(`${newCount} ${newCount === 1 ? 'seleccionada' : 'seleccionadas'} · ⚠ Verificá TC antes de enviar al cliente`)
         } else {
           showToast(`${newCount} ${newCount === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'}`)
         }
@@ -2877,7 +2877,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-status button { margin-top:12px; padding:8px 20px; background:#EDE8DC; color:#141414; border:none; border-radius:10px; cursor:pointer; font-weight:600; font-size:14px }
 
         /* ===== TOAST ===== */
-        .ventas-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#141414; color:#EDE8DC; padding:10px 24px; border-radius:100px; font-size:13px; font-family:'DM Sans',sans-serif; z-index:100; font-weight:600 }
+        .ventas-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#141414; color:#EDE8DC; padding:12px 20px; border-radius:14px; font-size:13px; font-family:'DM Sans',sans-serif; z-index:100; font-weight:600; max-width:min(520px, calc(100vw - 32px)); line-height:1.4; text-align:center; box-shadow:0 6px 22px rgba(0,0,0,0.35) }
 
         /* ===== BOTTOM SHEET (ventas dark theme — .bs-venta overrides alquileres.css) ===== */
         .bs-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:500; opacity:0; pointer-events:none; transition:opacity 0.3s }
