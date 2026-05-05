@@ -155,15 +155,20 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
     }
 
     // 4. TC sospechoso — alerta critica, va a tope de prioridad cuando aparece.
+    //    Solo visible al feed público / broker armando shortlist. En
+    //    publicShareMode (cliente final viendo /b/[hash]) este aviso es señal
+    //    interna y no debe filtrarse — el broker ya recibió un toast al
+    //    seleccionar la prop. Los insights de precio/m² igual se omiten
+    //    arriba (línea 72) por seguridad, pero sin explicar el motivo.
     const sospechosasIdx: number[] = []
     props.forEach((p, i) => { if (p.tc_sospechoso === true) sospechosasIdx.push(i) })
-    if (sospechosasIdx.length > 0) {
+    if (sospechosasIdx.length > 0 && !publicShareMode) {
       const names = sospechosasIdx.map(i => nameAt(i)).join(' y ')
       result.unshift(`${names} tiene${sospechosasIdx.length > 1 ? 'n' : ''} precio sospechoso — confirmar tipo de cambio con el broker antes de comparar.`)
     }
 
     return result.slice(0, 4)
-  }, [props, precioM2, minPrecioM2])
+  }, [props, precioM2, minPrecioM2, publicShareMode])
 
   // Ocultar filas donde ninguna prop aporta data util (todo null/vacio).
   const showBanos = props.some(p => p.banos !== null && p.banos !== undefined)
