@@ -386,7 +386,18 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     .order('orden', { ascending: true })
 
   if (errItems) throw errItems
-  const safeItems = items || []
+  // La destacada (migración 239) siempre va primera en el feed público,
+  // independiente del `orden` manual del broker. El editor del broker
+  // mantiene el orden manual (intencional: asimétrico para que el broker
+  // controle la posición de las no-destacadas con las flechas ↑↓).
+  // Si no hay destacada, el orden es el manual del broker como antes.
+  const safeItems = (items || []).slice().sort((a, b) => {
+    const aDest = (a as { is_destacada?: boolean }).is_destacada === true
+    const bDest = (b as { is_destacada?: boolean }).is_destacada === true
+    if (aDest && !bDest) return -1
+    if (!aDest && bDest) return 1
+    return (a.orden ?? 0) - (b.orden ?? 0)
+  })
 
   // Hearts del cliente (migración 234). Para hidratar el state del cliente
   // al cargar, de modo que los corazones ya marcados aparezcan como activos.
