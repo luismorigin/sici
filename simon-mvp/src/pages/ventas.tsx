@@ -2427,7 +2427,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 {mapSelectedId && (() => {
                   const sp = properties.find(x => x.id === mapSelectedId)
                   if (!sp) return null
-                  return <MapFloatCard property={sp} isFavorite={favorites.has(sp.id)} onClose={() => setMapSelectedId(null)} onOpenDetail={() => { setMapSelectedId(null); openSheet(sp) }} onToggleFavorite={() => toggleFavorite(sp.id)} mobile={!isDesktop || publicShareMode} />
+                  return <MapFloatCard property={sp} isFavorite={favorites.has(sp.id)} onClose={() => setMapSelectedId(null)} onOpenDetail={() => { setMapSelectedId(null); openSheet(sp) }} onToggleFavorite={() => toggleFavorite(sp.id)} mobile={!isDesktop} />
                 })()}
                 <button className="vt-back-to-grid" onClick={() => { setViewMode('grid'); setMapSelectedId(null) }} aria-label="Volver a la lista">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ flexShrink: 0 }}><path d="M15 18l-6-6 6-6"/></svg>
@@ -2551,6 +2551,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-main { margin-left:320px; flex:1; padding:24px; min-height:100vh; background:#1a1a1a }
         .ventas-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:24px; align-items:start }
         .ventas-map-container { height:calc(100vh - 80px); border-radius:14px; overflow:hidden; border:1px solid rgba(237,232,220,0.08); position:relative }
+        .ventas-map-container .venta-map { position:absolute; inset:0 }
         .vt-back-to-grid { position:absolute; top:14px; left:14px; z-index:1100; display:inline-flex; align-items:center; gap:6px; background:#141414; color:#EDE8DC; border:none; padding:10px 16px; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.3px; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.35); -webkit-tap-highlight-color:transparent }
         .vt-back-to-grid:active { transform:scale(0.97) }
 

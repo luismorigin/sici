@@ -1068,8 +1068,10 @@ export default function AlquileresPage({
       {/* Simon Chat Bot — deferred to avoid TBT during initial load.
           Oculto en publicShareMode: el cliente viene en contexto curado por el
           broker, no queremos que el chat global sugiera props fuera de la
-          shortlist (leakage del flujo del broker). */}
-      {widgetsReady && !publicShareMode && <SimonChatWidget
+          shortlist (leakage del flujo del broker).
+          Oculto en brokerMode: el broker está armando shortlist, no necesita
+          el chat sugiriéndole alquileres. */}
+      {widgetsReady && !publicShareMode && !brokerMode && <SimonChatWidget
         properties={properties}
         sheetOpen={sheetOpen}
         onOpenDetail={(id) => {
@@ -1210,8 +1212,9 @@ export default function AlquileresPage({
           <main className="desktop-main" ref={viewMode === 'grid' ? feedRef : undefined}
             style={viewMode === 'map' ? { overflow: 'hidden', display: 'flex', flexDirection: 'column' } : undefined}>
             {/* View toggle bar — oculto en mobile publicShareMode (FAB negro cubre el mapa) y
-                en mobile brokerMode (toggle Grid|Mapa del banner broker ya cumple esa función). */}
-            {!((publicShareMode || brokerMode) && !isDesktop) && (
+                en brokerMode siempre (toggle Grid|Mapa del banner broker ya cumple esa función,
+                desktop + mobile). Espejo de ventas.tsx (línea 2370). */}
+            {!(publicShareMode && !isDesktop) && !brokerMode && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: publicShareMode ? 12 : 20, paddingBottom: publicShareMode ? 0 : 16, borderBottom: publicShareMode ? 'none' : '1px solid rgba(216,208,188,0.3)', flexShrink: 0, position: publicShareMode ? 'static' : 'sticky', top: 0, background: 'transparent', zIndex: 10, paddingTop: publicShareMode ? 0 : 8 }}>
               <div style={{ fontSize: 13, color: '#7A7060', display: 'flex', alignItems: 'center', gap: 12 }}>
                 {/* Comparar es feature del público, no tiene sentido en brokerMode
@@ -1610,16 +1613,16 @@ export default function AlquileresPage({
           {properties.length > 0 && (
             <div className="alq-broker-viewmode" role="tablist" aria-label="Modo de vista">
               <button
-                className={`alq-broker-vm-btn ${!mobileMapOpen ? 'active' : ''}`}
-                onClick={() => { setMobileMapOpen(false); trackEvent('switch_view', { view_mode: 'grid', source: 'broker_banner' }) }}
-                aria-label="Ver lista" role="tab" aria-selected={!mobileMapOpen}
+                className={`alq-broker-vm-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                onClick={() => { setViewMode('grid'); trackEvent('switch_view', { view_mode: 'grid', source: 'broker_banner' }) }}
+                aria-label="Ver lista" role="tab" aria-selected={viewMode === 'grid'}
               >
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
               </button>
               <button
-                className={`alq-broker-vm-btn ${mobileMapOpen ? 'active' : ''}`}
-                onClick={() => { setMobileMapOpen(true); trackEvent('switch_view', { view_mode: 'map', source: 'broker_banner' }) }}
-                aria-label="Ver mapa" role="tab" aria-selected={mobileMapOpen}
+                className={`alq-broker-vm-btn ${viewMode === 'map' ? 'active' : ''}`}
+                onClick={() => { setViewMode('map'); trackEvent('switch_view', { view_mode: 'map', source: 'broker_banner' }) }}
+                aria-label="Ver mapa" role="tab" aria-selected={viewMode === 'map'}
               >
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
               </button>
