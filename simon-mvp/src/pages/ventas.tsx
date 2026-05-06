@@ -2453,13 +2453,6 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         </div>
       )}
 
-      {/* Banner persistente: cantidad de reportes propios pendientes/in_review.
-          Solo broker mode, no en publicShareMode (cliente final no ve esto).
-          count viene de reportedIds.size (single source of truth). */}
-      {brokerMode && brokerSlug && !publicShareMode && (
-        <DataReportsBanner count={reportedIds.size} />
-      )}
-
       {/* FAB mapa en publicShareMode mobile — el toggle Grid|Mapa text se pierde con scroll */}
       {publicShareMode && !isDesktop && viewMode === 'grid' && properties.length > 0 && (
         <button
@@ -2542,6 +2535,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             </aside>
           )}
           <main className="ventas-main">
+            {/* Banner persistente reportes broker — DENTRO del main para que respete
+                el flujo del feed (no del root). Migración 240. */}
+            {brokerMode && brokerSlug && !publicShareMode && (
+              <DataReportsBanner count={reportedIds.size} />
+            )}
             {/* View mode toggle — oculto en publicShareMode mobile (FAB) y en brokerMode (banner verde) */}
             {properties.length > 0 && !(publicShareMode && !isDesktop) && !brokerMode && (
               <div className="vm-toggle">

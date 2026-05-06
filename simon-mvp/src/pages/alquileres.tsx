@@ -1277,6 +1277,12 @@ export default function AlquileresPage({
           {/* Right content */}
           <main className="desktop-main" ref={viewMode === 'grid' ? feedRef : undefined}
             style={viewMode === 'map' ? { overflow: 'hidden', display: 'flex', flexDirection: 'column' } : undefined}>
+            {/* Banner persistente reportes — solo broker mode, dentro del main para
+                que respete el flujo del feed (no del root, donde quedaba al final
+                del DOM y tapaba el footer del sidebar). Migración 240. */}
+            {brokerMode && brokerSlug && !publicShareMode && (
+              <DataReportsBanner count={reportedIds.size} />
+            )}
             {/* View toggle bar — oculto en mobile publicShareMode (FAB negro cubre el mapa) y
                 en brokerMode siempre (toggle Grid|Mapa del banner broker ya cumple esa función,
                 desktop + mobile). Espejo de ventas.tsx (línea 2370). */}
@@ -1791,13 +1797,6 @@ export default function AlquileresPage({
             })}
           </div>
         </div>
-      )}
-
-      {/* Banner persistente: cantidad de reportes propios pendientes/in_review.
-          Solo broker mode, no en publicShareMode. Migración 240.
-          count viene de reportedIds.size (single source of truth). */}
-      {brokerMode && brokerSlug && !publicShareMode && (
-        <DataReportsBanner count={reportedIds.size} />
       )}
 
       {/* Header modo public share — header del broker que comparte la shortlist
