@@ -562,6 +562,10 @@
 .dc-act-btn { display: flex; align-items: center; gap: 4px; background: none; border: none; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 6px 0; transition: color 0.15s; text-decoration: none; min-height: 36px; }
 .dc-act-btn:hover { color: #141414; }
 .dc-act-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
+.dc-act-report { color: #B07820; font-weight: 500; }
+.dc-act-report:hover { color: #E0A030; }
+.dc-act-report.reported { color: #3A6A48; cursor: default; opacity: 1; }
+.dc-act-report.reported:hover { color: #3A6A48; }
 .dc-act-detail { color: #EDE8DC; background: #141414; padding: 6px 12px; font-weight: 500; border-radius: 8px; font-size: 12px; }
 .dc-act-detail:hover { background: #3A3530; }
 .dc-wsp-inline { display: flex; align-items: center; gap: 5px; color: #1EA952; font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 600; text-decoration: none; padding: 6px 14px; background: rgba(30,169,82,0.1); border-radius: 10px; min-height: 36px; transition: opacity 0.15s; }
@@ -594,6 +598,8 @@
 .amc-btn { display: flex; align-items: center; gap: 4px; background: none; border: none; color: #7A7060; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 6px 0; min-width: 36px; min-height: 36px; }
 .amc-btn.amc-fav.active svg { filter: drop-shadow(0 2px 4px rgba(224,85,85,0.4)); }
 .amc-btn.amc-share { color: #7A7060; }
+.amc-btn.amc-report { color: #B07820; font-weight: 500; }
+.amc-btn.amc-report.reported { color: #3A6A48; opacity: 1; }
 .amc-btn.amc-info { color: #EDE8DC; font-size: 12px; background: #141414; padding: 6px 12px; font-weight: 500; border-radius: 8px; min-width: 0; min-height: 0; }
 .amc-wsp-inline-mobile { display: flex; align-items: center; gap: 5px; color: #1EA952; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; text-decoration: none; padding: 6px 14px; background: rgba(30,169,82,0.1); border-radius: 10px; cursor: pointer; white-space: nowrap; min-height: 36px; }
 .amc-wsp-inline-mobile:active { opacity: 0.7; }

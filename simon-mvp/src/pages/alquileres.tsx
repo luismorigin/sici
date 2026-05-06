@@ -15,6 +15,8 @@ import { useBrokerShortlists, DEMO_SHORTLIST_BLOCKED } from '@/hooks/useBrokerSh
 import ShortlistSendModal from '@/components/broker/ShortlistSendModal'
 import BrokerDemoOverlay from '@/components/demo/BrokerDemoOverlay'
 import ShortlistsPanel from '@/components/broker/ShortlistsPanel'
+import ReportPropertyModal from '@/components/broker/ReportPropertyModal'
+import DataReportsBanner from '@/components/broker/DataReportsBanner'
 import type { Broker } from '@/lib/simon-brokers'
 
 // --- SEO types ---
@@ -304,6 +306,24 @@ export default function AlquileresPage({
       localStorage.removeItem(`broker_precio_min_${brokerSlug}`)
     } catch {}
   }, [brokerSlug])
+
+  // Persistencia reportes propios al mount (migración 240). Pobla reportedIds
+  // → cards muestran "Reportada" tras recargar + alimenta el banner persistente.
+  useEffect(() => {
+    if (!brokerSlug || !brokerMode || publicShareMode) return
+    let cancelled = false
+    fetch(`/api/broker/property-reports?slug=${encodeURIComponent(brokerSlug)}&status=pending,in_review`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (cancelled || !json?.reports) return
+        const ids = new Set<number>(
+          json.reports.map((r: { propiedad_id: number }) => r.propiedad_id),
+        )
+        setReportedIds(ids)
+      })
+      .catch(() => {/* best-effort */})
+    return () => { cancelled = true }
+  }, [brokerSlug, brokerMode, publicShareMode])
   function toggleFuente(f: FuenteBroker) {
     setFuentesPermitidas(prev => {
       const next = new Set(prev)
@@ -371,6 +391,9 @@ export default function AlquileresPage({
   const [chipsExpanded, setChipsExpanded] = useState(false)
   const [compareOpen, setCompareOpen] = useState(false)
   const [filterOverlayOpen, setFilterOverlayOpen] = useState(false)
+  // Modal "Reportar dato incorrecto" — solo broker mode (migración 240).
+  const [reportProperty, setReportProperty] = useState<UnidadAlquiler | null>(null)
+  const [reportedIds, setReportedIds] = useState<Set<number>>(new Set())
 
   const [filters, setFilters] = useState<FiltrosAlquiler>({
     orden: 'recientes',
@@ -595,10 +618,41 @@ export default function AlquileresPage({
     return () => document.removeEventListener('visibilitychange', onVisChange)
   }, [properties.length])
 
-  function showToast(msg: string) {
+  function openReportModal(p: UnidadAlquiler) {
+    if (reportedIds.has(p.id)) {
+      showToast('Ya reportaste esta propiedad. SICI la está revisando.', 5000)
+      return
+    }
+    setReportProperty(p)
+  }
+
+  function handleReportSuccess(duplicate: boolean) {
+    const propId = reportProperty?.id
+    setReportProperty(null)
+    if (propId != null) {
+      setReportedIds((prev) => {
+        const n = new Set(prev)
+        n.add(propId)
+        return n
+      })
+    }
+    if (duplicate) {
+      showToast('Ya reportaste esta propiedad. SICI la está revisando.', 5000)
+    } else {
+      showToast('✓ Reporte enviado. SICI lo está revisando.', 5000)
+      trackEvent('broker_report_property_alquiler', { property_id: propId })
+    }
+  }
+
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function showToast(msg: string, durationMs: number = 2500) {
     setToastMessage(msg)
     setToastVisible(true)
-    setTimeout(() => setToastVisible(false), 2500)
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastVisible(false)
+      toastTimeoutRef.current = null
+    }, durationMs)
   }
 
   async function applyFilters(newFilters: FiltrosAlquiler) {
@@ -695,7 +749,10 @@ export default function AlquileresPage({
       showToast(brokerMode ? 'Quitado de la seleccion' : 'Eliminado de favoritos')
     } else {
       const newCount = favorites.size + 1
-      if (brokerMode) {
+      const isReportada = brokerMode && reportedIds.has(id)
+      if (isReportada) {
+        showToast('Atención: esta prop tiene datos reportados como incorrectos. SICI los está revisando.', 5000)
+      } else if (brokerMode) {
         showToast(`${newCount} ${newCount === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'}`)
       } else if (newCount >= 2) {
         showToast(`${newCount}/${MAX_FAVORITES} · Podes comparar abajo`)
@@ -1220,6 +1277,12 @@ export default function AlquileresPage({
           {/* Right content */}
           <main className="desktop-main" ref={viewMode === 'grid' ? feedRef : undefined}
             style={viewMode === 'map' ? { overflow: 'hidden', display: 'flex', flexDirection: 'column' } : undefined}>
+            {/* Banner persistente reportes — solo broker mode, dentro del main para
+                que respete el flujo del feed (no del root, donde quedaba al final
+                del DOM y tapaba el footer del sidebar). Migración 240. */}
+            {brokerMode && brokerSlug && !publicShareMode && (
+              <DataReportsBanner count={reportedIds.size} />
+            )}
             {/* View toggle bar — oculto en mobile publicShareMode (FAB negro cubre el mapa) y
                 en brokerMode siempre (toggle Grid|Mapa del banner broker ya cumple esa función,
                 desktop + mobile). Espejo de ventas.tsx (línea 2370). */}
@@ -1306,6 +1369,8 @@ export default function AlquileresPage({
                           priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[spotlightProperty.id] || null : null}
                           brokerComment={itemCommentsMap ? itemCommentsMap[spotlightProperty.id] : null}
                           isDestacada={itemsDestacadaMap ? itemsDestacadaMap[spotlightProperty.id] === true : false}
+                          onReport={brokerMode && !publicShareMode && brokerSlug ? () => openReportModal(spotlightProperty) : undefined}
+                          isReported={reportedIds.has(spotlightProperty.id)}
                         />
                       </div>
                       {spotlightProperty.latitud && spotlightProperty.longitud && (
@@ -1375,6 +1440,8 @@ export default function AlquileresPage({
                           priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] || null : null}
                           brokerComment={itemCommentsMap ? itemCommentsMap[p.id] : null}
                           isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false}
+                          onReport={brokerMode && !publicShareMode && brokerSlug ? () => openReportModal(p) : undefined}
+                          isReported={reportedIds.has(p.id)}
                         />
                       </Fragment>
                     )
@@ -1557,6 +1624,8 @@ export default function AlquileresPage({
                     priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[item.data.id] || null : null}
                     brokerComment={itemCommentsMap ? itemCommentsMap[item.data.id] : null}
                     isDestacada={itemsDestacadaMap ? itemsDestacadaMap[item.data.id] === true : false}
+                    onReport={brokerMode && !publicShareMode && brokerSlug ? () => openReportModal(item.data) : undefined}
+                    isReported={reportedIds.has(item.data.id)}
                   />
                 )
               })
@@ -1590,6 +1659,19 @@ export default function AlquileresPage({
       )}
 
       {brokerDemoMode && <BrokerDemoOverlay />}
+
+      {/* Modal Reportar dato incorrecto — solo broker mode (migración 240) */}
+      {brokerMode && brokerSlug && reportProperty && (
+        <ReportPropertyModal
+          isOpen={true}
+          onClose={() => setReportProperty(null)}
+          brokerSlug={brokerSlug}
+          propiedadId={reportProperty.id}
+          propiedadLabel={`${reportProperty.nombre_edificio || reportProperty.nombre_proyecto || 'Departamento'} · ${displayZona(reportProperty.zona)}`}
+          tipoOperacion="alquiler"
+          onSuccess={handleReportSuccess}
+        />
+      )}
 
       {/* Panel Mis shortlists enviadas — solo broker mode */}
       {brokerMode && broker && (
@@ -2471,7 +2553,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
 const DesktopCard = memo(function DesktopCard({
   property: p, isFavorite, favoritesCount, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare, isFirst,
   brokerMode = false, onAddToShortlist, publicShareMode = false, publicShareBroker = null, priceSnapshot = null,
-  brokerComment = null, isDestacada = false,
+  brokerComment = null, isDestacada = false, onReport, isReported = false,
 }: {
   property: UnidadAlquiler; isFavorite: boolean; favoritesCount: number; petFilterActive?: boolean
   onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void; isFirst?: boolean
@@ -2483,6 +2565,9 @@ const DesktopCard = memo(function DesktopCard({
   brokerComment?: string | null
   // Item marcado "Recomendada" (migración 239). Render alquiler: borde negro 2px + chip ⭐.
   isDestacada?: boolean
+  // Reporte de datos broker (migración 240).
+  onReport?: () => void
+  isReported?: boolean
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = (p.fotos_urls?.length ?? 0) > 0 ? p.fotos_urls : ['']
@@ -2611,11 +2696,37 @@ const DesktopCard = memo(function DesktopCard({
               </svg>
             )}
           </button>
-          {onShare && !publicShareMode && (
+          {onShare && !publicShareMode && !brokerMode && (
             <button className="dc-act-btn" onClick={onShare}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
                 <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
               </svg> Compartir
+            </button>
+          )}
+          {brokerMode && !publicShareMode && onReport && (
+            <button
+              className={`dc-act-btn dc-act-report ${isReported ? 'reported' : ''}`}
+              aria-label={isReported ? 'Reportada' : 'Reportar dato incorrecto'}
+              title={isReported ? 'Ya reportada — SICI revisando' : 'Reportar dato incorrecto'}
+              onClick={onReport}
+            >
+              {isReported ? (
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Reportada
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 14, height: 14 }}>
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  Reportar
+                </>
+              )}
             </button>
           )}
           <button className="dc-act-btn dc-act-detail" onClick={onOpenInfo}>
@@ -2658,14 +2769,15 @@ const DesktopCard = memo(function DesktopCard({
   prev.brokerMode === next.brokerMode &&
   prev.publicShareMode === next.publicShareMode &&
   prev.priceSnapshot?.bobSnapshot === next.priceSnapshot?.bobSnapshot &&
-  prev.priceSnapshot?.bobActual === next.priceSnapshot?.bobActual
+  prev.priceSnapshot?.bobActual === next.priceSnapshot?.bobActual &&
+  prev.isReported === next.isReported
 )
 
 // ===== MOBILE PROPERTY CARD (full-screen) =====
 const MobilePropertyCard = memo(function MobilePropertyCard({
   property: p, isFirst, showHint, isFavorite, favoritesCount, isSpotlight, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare,
   brokerMode = false, onAddToShortlist, publicShareMode = false, publicShareBroker = null, priceSnapshot = null,
-  brokerComment = null, isDestacada = false,
+  brokerComment = null, isDestacada = false, onReport, isReported = false,
 }: {
   property: UnidadAlquiler; isFirst: boolean; showHint?: boolean; isFavorite: boolean; favoritesCount: number; isSpotlight: boolean; petFilterActive?: boolean
   onToggleFavorite: () => void; onOpenInfo: () => void; onPhotoTap?: (photoIdx: number) => void; onShare?: () => void
@@ -2675,6 +2787,9 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
   priceSnapshot?: { bobSnapshot: number | null; bobActual: number | null } | null
   brokerComment?: string | null
   isDestacada?: boolean
+  // Reporte de datos broker (migración 240).
+  onReport?: () => void
+  isReported?: boolean
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [shakeBtn, setShakeBtn] = useState(false)
@@ -2779,11 +2894,36 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
               </svg>
             )}
           </button>
-          {onShare && !publicShareMode && (
+          {onShare && !publicShareMode && !brokerMode && (
             <button className="amc-btn amc-share" aria-label="Compartir por WhatsApp" onClick={onShare}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
                 <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
               </svg> Compartir
+            </button>
+          )}
+          {brokerMode && !publicShareMode && onReport && (
+            <button
+              className={`amc-btn amc-report ${isReported ? 'reported' : ''}`}
+              aria-label={isReported ? 'Reportada' : 'Reportar dato incorrecto'}
+              onClick={onReport}
+            >
+              {isReported ? (
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Reportada
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 14, height: 14 }}>
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  Reportar
+                </>
+              )}
             </button>
           )}
           <button className="amc-btn amc-info" onClick={onOpenInfo}>
@@ -2831,7 +2971,8 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
   prev.priceSnapshot?.bobSnapshot === next.priceSnapshot?.bobSnapshot &&
   prev.priceSnapshot?.bobActual === next.priceSnapshot?.bobActual &&
   prev.brokerComment === next.brokerComment &&
-  prev.isDestacada === next.isDestacada
+  prev.isDestacada === next.isDestacada &&
+  prev.isReported === next.isReported
 )
 
 // ===== PHOTO CAROUSEL (native scroll-snap) =====
