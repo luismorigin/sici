@@ -280,7 +280,7 @@ export async function listReportsForAdmin(
     propIds.length > 0
       ? supa
           .from('propiedades_v2')
-          .select('id, titulo, nombre_edificio, zona, tipo_operacion, precio_usd')
+          .select('id, nombre_edificio, zona, tipo_operacion, precio_usd')
           .in('id', propIds)
       : Promise.resolve({ data: [], error: null }),
   ])
@@ -303,7 +303,6 @@ export async function listReportsForAdmin(
   const propsMap = new Map<number, PropertyReportWithJoins['propiedad']>()
   for (const p of (propsRes.data || []) as Array<{
     id: number
-    titulo: string | null
     nombre_edificio: string | null
     zona: string | null
     tipo_operacion: 'venta' | 'alquiler'
@@ -311,7 +310,7 @@ export async function listReportsForAdmin(
   }>) {
     propsMap.set(p.id, {
       id: p.id,
-      titulo: p.titulo ?? null,
+      titulo: null,
       nombre_edificio: p.nombre_edificio ?? null,
       zona: p.zona ?? null,
       tipo_operacion: p.tipo_operacion,

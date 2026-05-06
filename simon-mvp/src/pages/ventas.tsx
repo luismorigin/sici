@@ -1823,6 +1823,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   }
 
   function openReportModal(p: UnidadVenta) {
+    // Atajo anti-confusión: si ya está reportada por este broker, mostramos
+    // toast directo en vez de abrir el modal vacío. El backend igual chequea
+    // duplicado en el submit, pero acá evitamos que el broker pierda tiempo.
+    if (reportedIds.has(p.id)) {
+      showToast('Ya reportaste esta propiedad. SICI la está revisando.', 'warn')
+      return
+    }
     setReportProperty(p)
   }
 
@@ -1923,7 +1930,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         // verá el badge "Confirmar tipo de cambio" en la shortlist (es señal
         // interna). El broker debe verificar el precio antes de enviar.
         const prop = properties.find(x => x.id === id)
-        if (prop?.tc_sospechoso) {
+        const isReportada = reportedIds.has(id)
+        if (isReportada) {
+          // Atención: prop con datos reportados como incorrectos. El broker
+          // tiene que decidir si igual la incluye en la shortlist al cliente.
+          showToast(`Atención: esta prop tiene datos reportados como incorrectos. SICI los está revisando.`, 'warn')
+        } else if (prop?.tc_sospechoso) {
           showToast(`${newCount} ${newCount === 1 ? 'seleccionada' : 'seleccionadas'} · Verificá TC antes de enviar al cliente`, 'warn')
         } else {
           showToast(`${newCount} ${newCount === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'}`)

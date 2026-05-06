@@ -619,6 +619,10 @@ export default function AlquileresPage({
   }, [properties.length])
 
   function openReportModal(p: UnidadAlquiler) {
+    if (reportedIds.has(p.id)) {
+      showToast('Ya reportaste esta propiedad. SICI la está revisando.', 5000)
+      return
+    }
     setReportProperty(p)
   }
 
@@ -740,7 +744,10 @@ export default function AlquileresPage({
       showToast(brokerMode ? 'Quitado de la seleccion' : 'Eliminado de favoritos')
     } else {
       const newCount = favorites.size + 1
-      if (brokerMode) {
+      const isReportada = brokerMode && reportedIds.has(id)
+      if (isReportada) {
+        showToast('Atención: esta prop tiene datos reportados como incorrectos. SICI los está revisando.', 5000)
+      } else if (brokerMode) {
         showToast(`${newCount} ${newCount === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'}`)
       } else if (newCount >= 2) {
         showToast(`${newCount}/${MAX_FAVORITES} · Podes comparar abajo`)
