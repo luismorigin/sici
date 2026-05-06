@@ -222,6 +222,24 @@ Ideas, features y mejoras parqueadas para después del MVP.
 **Rationale:** "Avisame cuando aparezca un 3 dorm en Equipetrol Centro bajo $180k" → notificación al broker. Extremadamente útil pero requiere infra de notificaciones + gestión de criterios guardados.
 **Cuándo reactivar:** tras MVP, cuando los brokers pidan "¿cómo me entero de listings nuevos?".
 
+### Banner persistente agregado de calidad de datos en shortlist
+**Tier:** v2 — parte del sistema completo de reportes broker → SICI (PRD pendiente)
+**Agregado:** 2026-05-05
+**Rationale:** Hoy el toast "⚠ Verificá TC antes de enviar al cliente" aparece 5s al marcar prop con `tc_sospechoso` (hotfix de UX, ver commit `8deed85` y siguientes). Es feedback transient — si el broker marca 8 props rápido, el último toast es lo único que ve, y al momento de enviar la shortlist (minutos después) ya olvidó cuáles tenían el flag. Para una solución persistente y agregada:
+
+- **Banner fijo** cerca del botón "Enviar shortlist" (en `vt-broker-banner` y `alq-broker-banner`).
+- Texto dinámico: `"⚠ N propiedad(es) con TC sin confirmar — verificá precios"`.
+- Visible mientras `favorites` tenga al menos 1 prop con `tc_sospechoso=true`. Si broker desmarca todas las sospechosas, banner desaparece.
+- Click en el banner: scroll al feed con filtro temporal "solo sospechosas marcadas" para revisión rápida.
+- Color: amarillo (#F2B441) coherente con el SVG triángulo del toast actual.
+- Survives clicks → broker lo ve siempre, no depende de los 5s del toast.
+
+**Por qué no ahora:** queda en backlog hasta que se diseñe el sistema completo de reportes del broker (precio incorrecto, área, dorms, baños, vendida) — el banner agregado de TC es un caso particular de un patrón general "calidad de datos en shortlist". Implementarlo aislado ahora duplicaría diseño cuando llegue el resto.
+
+**Cuándo reactivar:** al iniciar el branch `broker/data-quality-reports` con PRD del sistema completo. El banner agregado va como Fase 1 del sistema (visualización), antes de Fase 2 (reportes del broker → BD) y Fase 3 (admin workflow para resolver).
+
+**Esfuerzo estimado:** ~2-3h aislado. Como parte del sistema completo, ~1 día con el resto de la UX de calidad.
+
 ---
 
 ## Bugs / deuda técnica detectada

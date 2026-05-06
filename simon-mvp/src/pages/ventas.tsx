@@ -1413,9 +1413,23 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
 }
 
 // ===== Toast =====
-function Toast({ message, visible }: { message: string; visible: boolean }) {
+// kind="warn" → triángulo amarillo + borde izquierdo + padding asimétrico para
+// avisos críticos (ej. TC sospechoso, requiere atención del broker antes de
+// enviar shortlist). showToast() controla la duración (5s warn, 2.5s info).
+function Toast({ message, visible, kind = 'info' }: { message: string; visible: boolean; kind?: 'info' | 'warn' }) {
   if (!visible) return null
-  return <div className="ventas-toast">{message}</div>
+  return (
+    <div className={`ventas-toast ${kind === 'warn' ? 'ventas-toast-warn' : ''}`}>
+      {kind === 'warn' && (
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#F2B441" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      )}
+      <span>{message}</span>
+    </div>
+  )
 }
 
 // Devuelve un badge informativo según qué cambió desde que el broker armó la shortlist:
@@ -1567,6 +1581,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const [compareOpen, setCompareOpen] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
+  const [toastKind, setToastKind] = useState<'info' | 'warn'>('info')
   const [activeCardIndex, setActiveCardIndex] = useState(0)
   // PhotoViewer state
   const [viewerOpen, setViewerOpen] = useState(false)
@@ -1710,7 +1725,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     return properties.find(p => p.id === spotlightId) || fetchedSpotlight || null
   }, [spotlightId, properties, fetchedSpotlight])
 
-  function showToast(msg: string) { setToastMsg(msg); setToastVisible(true); setTimeout(() => setToastVisible(false), 2500) }
+  function showToast(msg: string, kind: 'info' | 'warn' = 'info') {
+    setToastMsg(msg)
+    setToastKind(kind)
+    setToastVisible(true)
+    setTimeout(() => setToastVisible(false), kind === 'warn' ? 5000 : 2500)
+  }
 
   function openViewer(p: UnidadVenta, photoIdx: number) {
     if (!p.fotos_urls?.length) return
@@ -1792,7 +1812,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         // interna). El broker debe verificar el precio antes de enviar.
         const prop = properties.find(x => x.id === id)
         if (prop?.tc_sospechoso) {
-          showToast(`${newCount} ${newCount === 1 ? 'seleccionada' : 'seleccionadas'} · ⚠ Verificá TC antes de enviar al cliente`)
+          showToast(`${newCount} ${newCount === 1 ? 'seleccionada' : 'seleccionadas'} · Verificá TC antes de enviar al cliente`, 'warn')
         } else {
           showToast(`${newCount} ${newCount === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'}`)
         }
@@ -2083,7 +2103,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         publicShareHash={publicShare?.hash ?? null}
       />
 
-      <Toast message={toastMsg} visible={toastVisible} />
+      <Toast message={toastMsg} visible={toastVisible} kind={toastKind} />
 
       {/* PhotoViewer */}
       {viewerOpen && (
@@ -2877,7 +2897,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .ventas-status button { margin-top:12px; padding:8px 20px; background:#EDE8DC; color:#141414; border:none; border-radius:10px; cursor:pointer; font-weight:600; font-size:14px }
 
         /* ===== TOAST ===== */
-        .ventas-toast { position:fixed; top:max(90px, calc(env(safe-area-inset-top) + 80px)); left:50%; transform:translateX(-50%); background:#141414; color:#EDE8DC; padding:12px 20px; border-radius:14px; font-size:13px; font-family:'DM Sans',sans-serif; z-index:200; font-weight:600; width:max-content; max-width:min(520px, calc(100vw - 32px)); line-height:1.4; text-align:center; box-shadow:0 6px 22px rgba(0,0,0,0.35) }
+        .ventas-toast { position:fixed; top:max(90px, calc(env(safe-area-inset-top) + 80px)); left:50%; transform:translateX(-50%); background:#141414; color:#EDE8DC; padding:12px 20px; border-radius:14px; font-size:13px; font-family:'DM Sans',sans-serif; z-index:200; font-weight:600; width:max-content; max-width:min(520px, calc(100vw - 32px)); line-height:1.4; text-align:center; box-shadow:0 6px 22px rgba(0,0,0,0.35); display:flex; align-items:center; gap:10px }
+        .ventas-toast-warn { border-left:4px solid #F2B441; padding-left:14px; text-align:left }
 
         /* ===== BOTTOM SHEET (ventas dark theme — .bs-venta overrides alquileres.css) ===== */
         .bs-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:500; opacity:0; pointer-events:none; transition:opacity 0.3s }
