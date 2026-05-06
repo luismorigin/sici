@@ -2,47 +2,19 @@
 // pendientes o en revisión por SICI. Loop emocional "SICI está trabajando
 // en lo que reporté" sin requerir notification center ni email.
 //
-// Render: solo si hay ≥1 reporte propio en pending+in_review. Oculto si 0.
+// Render: solo si count > 0. El padre (ventas.tsx / alquileres.tsx) ya
+// hace el fetch de los reportes propios al mount para poblar reportedIds
+// (persistencia visual de cards "Reportada"); este componente recibe el
+// count derivado de ese mismo state. Single source of truth.
+//
 // Migración 240. Brief: docs/broker/REPORTES_DATOS_BRIEF.md.
 
-import { useEffect, useState } from 'react'
-import type { PropertyReport } from '@/types/broker-property-report'
-
 interface Props {
-  brokerSlug: string
-  /** Si se pasa, solo cuenta reportes sobre props en este array.
-   *  Si no se pasa (default), cuenta todos los reportes pendientes del broker. */
-  propiedadIds?: number[]
+  count: number
 }
 
-export default function DataReportsBanner({ brokerSlug, propiedadIds }: Props) {
-  const [count, setCount] = useState<number | null>(null)
-
-  useEffect(() => {
-    if (!brokerSlug) return
-    let cancelled = false
-    const params = new URLSearchParams()
-    params.set('slug', brokerSlug)
-    params.set('status', 'pending,in_review')
-    if (propiedadIds && propiedadIds.length > 0) {
-      params.set('propiedad_ids', propiedadIds.join(','))
-    }
-    fetch(`/api/broker/property-reports?${params.toString()}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => {
-        if (cancelled || !json) return
-        const reports = (json.reports || []) as PropertyReport[]
-        setCount(reports.length)
-      })
-      .catch(() => {
-        // best-effort: si falla, no mostrar banner
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [brokerSlug, propiedadIds])
-
-  if (count === null || count === 0) return null
+export default function DataReportsBanner({ count }: Props) {
+  if (count <= 0) return null
 
   const text =
     count === 1

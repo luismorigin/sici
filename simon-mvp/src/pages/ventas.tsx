@@ -592,20 +592,26 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
           {brokerMode && !publicShareMode && onReport && (
             <button
               className={`vc-act-btn vc-act-report ${isReported ? 'reported' : ''}`}
-              aria-label={isReported ? 'Ya reportada en esta sesión' : 'Reportar dato incorrecto'}
-              title={isReported ? 'Ya reportada en esta sesión' : 'Reportar dato incorrecto'}
+              aria-label={isReported ? 'Reportada' : 'Reportar dato incorrecto'}
+              title={isReported ? 'Ya reportada — SICI revisando' : 'Reportar dato incorrecto'}
               onClick={onReport}
             >
               {isReported ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="#7A7060" strokeWidth="1.8" style={{ width: 16, height: 16 }}>
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Reportada
+                </>
               ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                  <line x1="12" y1="9" x2="12" y2="13"/>
-                  <line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 14, height: 14 }}>
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  Reportar
+                </>
               )}
             </button>
           )}
@@ -780,19 +786,25 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
           {brokerMode && !publicShareMode && onReport && (
             <button
               className={`mc-btn mc-report ${isReported ? 'reported' : ''}`}
-              aria-label={isReported ? 'Ya reportada en esta sesión' : 'Reportar dato incorrecto'}
+              aria-label={isReported ? 'Reportada' : 'Reportar dato incorrecto'}
               onClick={onReport}
             >
               {isReported ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="#7A7060" strokeWidth="1.8" style={{ width: 18, height: 18 }}>
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Reportada
+                </>
               ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                  <line x1="12" y1="9" x2="12" y2="13"/>
-                  <line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 14, height: 14 }}>
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  Reportar
+                </>
               )}
             </button>
           )}
@@ -1464,15 +1476,20 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
 // kind="warn" → triángulo amarillo + borde izquierdo + padding asimétrico para
 // avisos críticos (ej. TC sospechoso, requiere atención del broker antes de
 // enviar shortlist). showToast() controla la duración (5s warn, 2.5s info).
-function Toast({ message, visible, kind = 'info' }: { message: string; visible: boolean; kind?: 'info' | 'warn' }) {
+function Toast({ message, visible, kind = 'info' }: { message: string; visible: boolean; kind?: 'info' | 'warn' | 'success' }) {
   if (!visible) return null
   return (
-    <div className={`ventas-toast ${kind === 'warn' ? 'ventas-toast-warn' : ''}`}>
+    <div className={`ventas-toast ${kind === 'warn' ? 'ventas-toast-warn' : ''} ${kind === 'success' ? 'ventas-toast-success' : ''}`}>
       {kind === 'warn' && (
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#F2B441" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
           <line x1="12" y1="9" x2="12" y2="13"/>
           <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      )}
+      {kind === 'success' && (
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#7BB389" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <polyline points="20 6 9 17 4 12"/>
         </svg>
       )}
       <span>{message}</span>
@@ -1629,7 +1646,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const [compareOpen, setCompareOpen] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
-  const [toastKind, setToastKind] = useState<'info' | 'warn'>('info')
+  const [toastKind, setToastKind] = useState<'info' | 'warn' | 'success'>('info')
   // Modal "Reportar dato incorrecto" — solo broker mode (migración 240).
   // reportProperty trackea cuál prop tiene el modal abierto. reportedIds es un
   // marcador visual de sesión (no persistido) para mostrar ✓ en cards reportadas.
@@ -1753,6 +1770,25 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     }
   }, [router.query.edificio]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Persistencia de reportes propios al mount: cargar todos los pendientes/in_review
+  // del broker activo. Pobla reportedIds → cards muestran "Reportada" tras recargar.
+  // También sirve para alimentar el banner persistente sin doble fetch.
+  useEffect(() => {
+    if (!brokerSlug || !brokerMode || publicShareMode) return
+    let cancelled = false
+    fetch(`/api/broker/property-reports?slug=${encodeURIComponent(brokerSlug)}&status=pending,in_review`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (cancelled || !json?.reports) return
+        const ids = new Set<number>(
+          json.reports.map((r: { propiedad_id: number }) => r.propiedad_id),
+        )
+        setReportedIds(ids)
+      })
+      .catch(() => {/* best-effort */})
+    return () => { cancelled = true }
+  }, [brokerSlug, brokerMode, publicShareMode])
+
   // Spotlight: parse ?id= from URL
   useEffect(() => {
     const idParam = router.query.id
@@ -1778,11 +1814,12 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     return properties.find(p => p.id === spotlightId) || fetchedSpotlight || null
   }, [spotlightId, properties, fetchedSpotlight])
 
-  function showToast(msg: string, kind: 'info' | 'warn' = 'info') {
+  function showToast(msg: string, kind: 'info' | 'warn' | 'success' = 'info') {
     setToastMsg(msg)
     setToastKind(kind)
     setToastVisible(true)
-    setTimeout(() => setToastVisible(false), kind === 'warn' ? 5000 : 2500)
+    const duration = kind === 'info' ? 2500 : 5000
+    setTimeout(() => setToastVisible(false), duration)
   }
 
   function openReportModal(p: UnidadVenta) {
@@ -1800,9 +1837,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
       })
     }
     if (duplicate) {
-      showToast('Ya reportaste esta propiedad. SICI la está revisando.', 'info')
+      showToast('Ya reportaste esta propiedad. SICI la está revisando.', 'warn')
     } else {
-      showToast('Reporte enviado. SICI lo está revisando.', 'info')
+      showToast('Reporte enviado. SICI lo está revisando.', 'success')
       trackEvent('broker_report_property', { property_id: propId })
     }
   }
@@ -2406,9 +2443,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
 
       {/* Banner persistente: cantidad de reportes propios pendientes/in_review.
           Solo broker mode, no en publicShareMode (cliente final no ve esto).
-          Render condicional dentro del component (oculto si count=0). */}
+          count viene de reportedIds.size (single source of truth). */}
       {brokerMode && brokerSlug && !publicShareMode && (
-        <DataReportsBanner brokerSlug={brokerSlug} />
+        <DataReportsBanner count={reportedIds.size} />
       )}
 
       {/* FAB mapa en publicShareMode mobile — el toggle Grid|Mapa text se pierde con scroll */}
@@ -2852,9 +2889,8 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc-btn { display:flex; align-items:center; justify-content:center; gap:5px; background:none; border:none; color:#9A8E7A; font-size:12px; font-family:'DM Sans',sans-serif; cursor:pointer; padding:8px; min-width:44px; min-height:44px }
         .mc-btn.mc-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
         .mc-btn.mc-share { color:#9A8E7A }
-        .mc-btn.mc-report { color:#9A8E7A }
-        .mc-btn.mc-report.reported { color:#7A7060; opacity:0.55 }
-        .mc-btn.mc-report.reported svg { stroke:#7A7060 !important }
+        .mc-btn.mc-report { color:#C8B98A; font-weight:500 }
+        .mc-btn.mc-report.reported { color:#7BB389; opacity:1 }
         .mc-btn.mc-info { color:rgba(237,232,220,0.85); font-size:12px; letter-spacing:0.3px; background:rgba(237,232,220,0.08); border-radius:10px; padding:8px 14px; font-weight:500 }
         .mc-btn.mc-shortlist { background:rgba(58,106,72,0.15); border:1px solid rgba(58,106,72,0.4) }
         .mc-spotlight { position:absolute; top:max(56px, calc(env(safe-area-inset-top) + 50px)); left:16px; z-index:10; background:rgba(250,250,248,0.95); border-left:3px solid #3A6A48; padding:8px 14px; border-radius:0 8px 8px 0; font-family:'DM Sans',sans-serif; font-size:12px; color:#141414; letter-spacing:0.3px }
@@ -2992,10 +3028,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vc-act-btn { display:flex; align-items:center; gap:4px; background:none; border:none; color:#9A8E7A; font-size:11px; font-family:'DM Sans',sans-serif; cursor:pointer; padding:4px 0; transition:color 0.15s; text-decoration:none }
         .vc-act-btn:hover { color:#EDE8DC }
         .vc-act-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
-        .vc-act-report { color:#9A8E7A }
+        .vc-act-report { color:#C8B98A; font-weight:500 }
         .vc-act-report:hover { color:#E0A030 }
-        .vc-act-report.reported { color:#7A7060; opacity:0.55; cursor:default }
-        .vc-act-report.reported:hover { color:#7A7060 }
+        .vc-act-report.reported { color:#7BB389; cursor:default; opacity:1 }
+        .vc-act-report.reported:hover { color:#7BB389 }
         .vc-act-detail { color:rgba(237,232,220,0.7) }
         .vc-act-wsp { color:#1EA952; font-weight:600 }
         .vc-act-shortlist { color:#3A6A48; font-weight:600; background:rgba(58,106,72,0.08); border:1px solid rgba(58,106,72,0.25) }
@@ -3008,6 +3044,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         /* ===== TOAST ===== */
         .ventas-toast { position:fixed; top:max(90px, calc(env(safe-area-inset-top) + 80px)); left:50%; transform:translateX(-50%); background:#141414; color:#EDE8DC; padding:12px 20px; border-radius:14px; font-size:13px; font-family:'DM Sans',sans-serif; z-index:200; font-weight:600; width:max-content; max-width:min(520px, calc(100vw - 32px)); line-height:1.4; text-align:center; box-shadow:0 6px 22px rgba(0,0,0,0.35); display:flex; align-items:center; gap:10px }
         .ventas-toast-warn { border-left:4px solid #F2B441; padding-left:14px; text-align:left }
+        .ventas-toast-success { border-left:4px solid #7BB389; padding-left:14px; text-align:left }
 
         /* ===== BOTTOM SHEET (ventas dark theme — .bs-venta overrides alquileres.css) ===== */
         .bs-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:500; opacity:0; pointer-events:none; transition:opacity 0.3s }

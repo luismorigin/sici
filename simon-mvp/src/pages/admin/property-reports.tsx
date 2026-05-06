@@ -427,34 +427,44 @@ function ReportRow({
             </div>
           </div>
         ) : (
-          <span className="text-gray-400">—</span>
+          <div className="text-xs text-gray-500" title={report.simon_broker_id}>
+            <div className="font-medium text-gray-700">Broker desconocido</div>
+            <div className="font-mono">{report.simon_broker_id.slice(0, 8)}…</div>
+          </div>
         )}
       </td>
       <td className="px-4 py-3">
-        {report.propiedad ? (
-          <div>
-            <Link
-              href={`/admin/propiedades/${report.propiedad.id}`}
-              target="_blank"
-              className="text-gray-900 hover:underline font-medium"
-            >
-              #{report.propiedad.id} — {report.propiedad.nombre_edificio || report.propiedad.titulo || 'Sin nombre'}
-            </Link>
-            <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
-              <span>{report.propiedad.zona || '—'}</span>
+        {/* prop_id siempre visible: la columna no depende del JOIN para
+            renderizar el link al editor (clave para resolver desde admin). */}
+        <div>
+          <Link
+            href={`/admin/propiedades/${report.propiedad_id}`}
+            target="_blank"
+            className="text-blue-600 hover:underline font-medium"
+            title="Abrir editor de propiedad en nueva pestaña"
+          >
+            #{report.propiedad_id}
+            {report.propiedad?.nombre_edificio || report.propiedad?.titulo
+              ? ` — ${report.propiedad.nombre_edificio || report.propiedad.titulo}`
+              : ''}
+          </Link>
+          <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-2 flex-wrap">
+            {report.propiedad?.zona && <span>{report.propiedad.zona}</span>}
+            {report.propiedad?.tipo_operacion && (
               <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wide">
                 {report.propiedad.tipo_operacion}
               </span>
-              {isRecurrent && (
-                <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[10px] font-medium">
-                  ⚠ Múltiples reportes
-                </span>
-              )}
-            </div>
+            )}
+            {isRecurrent && (
+              <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[10px] font-medium">
+                ⚠ Múltiples reportes
+              </span>
+            )}
+            {!report.propiedad && (
+              <span className="text-amber-700 text-[10px]">⚠ datos no disponibles</span>
+            )}
           </div>
-        ) : (
-          <span className="text-gray-400">—</span>
-        )}
+        </div>
       </td>
       <td className="px-4 py-3">
         <div className="flex flex-wrap gap-1">
