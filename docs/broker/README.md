@@ -9,6 +9,7 @@ Carpeta de trabajo para **Simon Broker**, el tier SaaS pago (Bs. 75-210/mes) sob
 | [PRD.md](PRD.md) | Product Requirements Document del MVP mínimo. Scope congelado, cronograma 3 semanas, decisiones tomadas. |
 | [BACKLOG.md](BACKLOG.md) | Ideas parqueadas para v2+. Cada entrada con rationale de por qué no entra al MVP. |
 | [SHORTLIST_PROTECTION_V1_PLAN.md](SHORTLIST_PROTECTION_V1_PLAN.md) | Plan + implementación realizada del v1 protección (caps, expiración, fingerprint, watermark, términos). Mergeado a main `037584b` el 25 Abr 2026. |
+| [REPORTES_DATOS_BRIEF.md](REPORTES_DATOS_BRIEF.md) | Brief con decisiones de alcance del sistema de reportes broker → SICI sobre datos incorrectos. Input para PRD. |
 
 ## Principio rector
 
@@ -18,12 +19,14 @@ El broker que use Simon tiene que poder defender cualquier número del producto 
 
 ## Estado actual
 
-- **Fase:** MVP venta + Fase 2 alquileres + v1 Protección shortlists mergeados a `main`
-- **Última actualización:** 2026-04-25
+- **Fase:** MVP venta + Fase 2 alquileres + v1 Protección shortlists mergeados a `main`. **Sistema de reportes datos broker → SICI en branch `feature/broker-property-reports` (smoke OK, pendiente aprobación user para aplicar migración 240 + merge a main).**
+- **Última actualización:** 2026-05-05
 - **Merges:** `05bc1eb` (MVP venta, 23 Abr) · `65ccc4b` (Fase 2 alquileres, 24 Abr) · `037584b` (Protección v1, 25 Abr)
+- **Branch en revisión:** `feature/broker-property-reports` (5 commits, smoke local OK).
 - **Target founding:** 15-25 brokers en 60-90 días post-deploy
 - **Auth:** no al inicio (slug en URL). Se agrega cuando crezca la base o haya datos sensibles.
 - **Migraciones aplicadas:** 228 (tablas shortlists), 229 (snapshot USD RAW), 230 (snapshot USD normalizado), 231 (`simon_brokers` reemplaza hardcoded), 233 (snapshot BOB alquiler), 234 (`broker_shortlist_hearts` feedback cliente), **235 (protección v1: caps+expiración+fingerprint+terms)**, **239 (`is_destacada` recomendada por broker)**
+- **Migraciones pendientes de aplicar:** 240 (`broker_property_reports` — sistema de reportes broker → SICI sobre datos incorrectos. Branch: `feature/broker-property-reports`).
 
 ### Features en producción
 
