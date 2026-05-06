@@ -16,6 +16,7 @@ import ShortlistSendModal from '@/components/broker/ShortlistSendModal'
 import BrokerDemoOverlay from '@/components/demo/BrokerDemoOverlay'
 import ShortlistsPanel from '@/components/broker/ShortlistsPanel'
 import ReportPropertyModal from '@/components/broker/ReportPropertyModal'
+import DataReportsBanner from '@/components/broker/DataReportsBanner'
 import type { Broker } from '@/lib/simon-brokers'
 
 // --- SEO types ---
@@ -1760,6 +1761,12 @@ export default function AlquileresPage({
             })}
           </div>
         </div>
+      )}
+
+      {/* Banner persistente: cantidad de reportes propios pendientes/in_review.
+          Solo broker mode, no en publicShareMode. Migración 240. */}
+      {brokerMode && brokerSlug && !publicShareMode && (
+        <DataReportsBanner brokerSlug={brokerSlug} />
       )}
 
       {/* Header modo public share — header del broker que comparte la shortlist

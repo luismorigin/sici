@@ -15,6 +15,7 @@ import ShortlistSendModal from '@/components/broker/ShortlistSendModal'
 import ShortlistsPanel from '@/components/broker/ShortlistsPanel'
 import BrokerDemoOverlay from '@/components/demo/BrokerDemoOverlay'
 import ReportPropertyModal from '@/components/broker/ReportPropertyModal'
+import DataReportsBanner from '@/components/broker/DataReportsBanner'
 
 // --- SEO types ---
 interface VentasSEO {
@@ -2401,6 +2402,13 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
             })}
           </div>
         </div>
+      )}
+
+      {/* Banner persistente: cantidad de reportes propios pendientes/in_review.
+          Solo broker mode, no en publicShareMode (cliente final no ve esto).
+          Render condicional dentro del component (oculto si count=0). */}
+      {brokerMode && brokerSlug && !publicShareMode && (
+        <DataReportsBanner brokerSlug={brokerSlug} />
       )}
 
       {/* FAB mapa en publicShareMode mobile — el toggle Grid|Mapa text se pierde con scroll */}
