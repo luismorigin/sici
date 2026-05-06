@@ -14,6 +14,7 @@ import { useBrokerShortlists, DEMO_SHORTLIST_BLOCKED } from '@/hooks/useBrokerSh
 import ShortlistSendModal from '@/components/broker/ShortlistSendModal'
 import ShortlistsPanel from '@/components/broker/ShortlistsPanel'
 import BrokerDemoOverlay from '@/components/demo/BrokerDemoOverlay'
+import ReportPropertyModal from '@/components/broker/ReportPropertyModal'
 
 // --- SEO types ---
 interface VentasSEO {
@@ -428,7 +429,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 }
 
 // ===== Desktop VentaCard =====
-function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false }: {
+function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
   property: UnidadVenta; isFavorite: boolean; isFirst?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
   brokerMode?: boolean; onAddToShortlist?: () => void; publicShareMode?: boolean
@@ -441,6 +442,11 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
   // Item marcado como "Recomendada" por el broker (migración 239). Máx 1 por shortlist.
   // Render venta: card con fondo arena (invierte tema) + chip ⭐ arriba-izquierda.
   isDestacada?: boolean
+  // Reporte de datos broker (migración 240). onReport abre modal; isReported
+  // marca visualmente (estado local de sesión, no persistido). Solo activos
+  // cuando brokerMode && !publicShareMode.
+  onReport?: () => void
+  isReported?: boolean
 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   // Lazy-load por slide: solo cargamos backgroundImage de las fotos cercanas al
@@ -582,6 +588,26 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
               </svg> Compartir
             </button>
           )}
+          {brokerMode && !publicShareMode && onReport && (
+            <button
+              className={`vc-act-btn vc-act-report ${isReported ? 'reported' : ''}`}
+              aria-label={isReported ? 'Ya reportada en esta sesión' : 'Reportar dato incorrecto'}
+              title={isReported ? 'Ya reportada en esta sesión' : 'Reportar dato incorrecto'}
+              onClick={onReport}
+            >
+              {isReported ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="#7A7060" strokeWidth="1.8" style={{ width: 16, height: 16 }}>
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              )}
+            </button>
+          )}
           <button className="vc-act-btn vc-act-detail" aria-label="Ver detalles" onClick={onDetails}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
               <polyline points="6 9 12 15 18 9"/>
@@ -609,7 +635,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
 }
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
-function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false }: {
+function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
   property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean; isFirst?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
   brokerMode?: boolean; onAddToShortlist?: () => void; publicShareMode?: boolean
@@ -618,6 +644,8 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
   priceSnapshot?: { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null } | null
   brokerComment?: string | null
   isDestacada?: boolean
+  onReport?: () => void
+  isReported?: boolean
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -746,6 +774,25 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
                 <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
               </svg>
+            </button>
+          )}
+          {brokerMode && !publicShareMode && onReport && (
+            <button
+              className={`mc-btn mc-report ${isReported ? 'reported' : ''}`}
+              aria-label={isReported ? 'Ya reportada en esta sesión' : 'Reportar dato incorrecto'}
+              onClick={onReport}
+            >
+              {isReported ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="#7A7060" strokeWidth="1.8" style={{ width: 18, height: 18 }}>
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}>
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              )}
             </button>
           )}
           <button className="mc-btn mc-info" onClick={onDetails}>
@@ -1582,6 +1629,11 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
   const [toastMsg, setToastMsg] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
   const [toastKind, setToastKind] = useState<'info' | 'warn'>('info')
+  // Modal "Reportar dato incorrecto" — solo broker mode (migración 240).
+  // reportProperty trackea cuál prop tiene el modal abierto. reportedIds es un
+  // marcador visual de sesión (no persistido) para mostrar ✓ en cards reportadas.
+  const [reportProperty, setReportProperty] = useState<UnidadVenta | null>(null)
+  const [reportedIds, setReportedIds] = useState<Set<number>>(new Set())
   const [activeCardIndex, setActiveCardIndex] = useState(0)
   // PhotoViewer state
   const [viewerOpen, setViewerOpen] = useState(false)
@@ -1730,6 +1782,28 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
     setToastKind(kind)
     setToastVisible(true)
     setTimeout(() => setToastVisible(false), kind === 'warn' ? 5000 : 2500)
+  }
+
+  function openReportModal(p: UnidadVenta) {
+    setReportProperty(p)
+  }
+
+  function handleReportSuccess(duplicate: boolean) {
+    const propId = reportProperty?.id
+    setReportProperty(null)
+    if (propId != null) {
+      setReportedIds((prev) => {
+        const n = new Set(prev)
+        n.add(propId)
+        return n
+      })
+    }
+    if (duplicate) {
+      showToast('Ya reportaste esta propiedad. SICI la está revisando.', 'info')
+    } else {
+      showToast('Reporte enviado. SICI lo está revisando.', 'info')
+      trackEvent('broker_report_property', { property_id: propId })
+    }
   }
 
   function openViewer(p: UnidadVenta, photoIdx: number) {
@@ -2170,6 +2244,20 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
 
       {brokerDemoMode && <BrokerDemoOverlay />}
 
+      {/* Modal Reportar dato incorrecto — solo broker mode (migración 240) */}
+      {brokerMode && brokerSlug && reportProperty && (
+        <ReportPropertyModal
+          isOpen={true}
+          onClose={() => setReportProperty(null)}
+          brokerSlug={brokerSlug}
+          propiedadId={reportProperty.id}
+          propiedadLabel={`${reportProperty.proyecto || 'Sin nombre'} · ${displayZona(reportProperty.zona)}`}
+          tipoOperacion="venta"
+          tcSospechosoFlag={reportProperty.tc_sospechoso === true}
+          onSuccess={handleReportSuccess}
+        />
+      )}
+
       {/* Panel Mis shortlists enviadas — solo broker mode */}
       {brokerMode && broker && (
         <ShortlistsPanel
@@ -2425,7 +2513,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   onPhotoTap={() => openSheet(spotlightProperty)} onDetails={() => openSheet(spotlightProperty)}
                   brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(spotlightProperty)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[spotlightProperty.id] : null}
                   brokerComment={itemCommentsMap ? itemCommentsMap[spotlightProperty.id] : null}
-                  isDestacada={itemsDestacadaMap ? itemsDestacadaMap[spotlightProperty.id] === true : false} />
+                  isDestacada={itemsDestacadaMap ? itemsDestacadaMap[spotlightProperty.id] === true : false}
+                  onReport={brokerMode && !publicShareMode && brokerSlug ? () => openReportModal(spotlightProperty) : undefined}
+                  isReported={reportedIds.has(spotlightProperty.id)} />
                 <div className="ds-spotlight-sep">
                   <span className="ds-spotlight-line" /><span className="ds-spotlight-text">Explorar más departamentos</span><span className="ds-spotlight-line" />
                 </div>
@@ -2439,7 +2529,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                     onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)}
                     brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null}
                     brokerComment={itemCommentsMap ? itemCommentsMap[p.id] : null}
-                    isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false} />
+                    isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false}
+                    onReport={brokerMode && !publicShareMode && brokerSlug ? () => openReportModal(p) : undefined}
+                    isReported={reportedIds.has(p.id)} />
                 ))}
               </div>
             )}
@@ -2540,7 +2632,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)}
                 brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null}
                 brokerComment={itemCommentsMap ? itemCommentsMap[p.id] : null}
-                isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false} />
+                isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false}
+                onReport={brokerMode && !publicShareMode && brokerSlug ? () => openReportModal(p) : undefined}
+                isReported={reportedIds.has(p.id)} />
             })}
           </div>
         </main>
@@ -2750,6 +2844,9 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc-btn { display:flex; align-items:center; justify-content:center; gap:5px; background:none; border:none; color:#9A8E7A; font-size:12px; font-family:'DM Sans',sans-serif; cursor:pointer; padding:8px; min-width:44px; min-height:44px }
         .mc-btn.mc-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
         .mc-btn.mc-share { color:#9A8E7A }
+        .mc-btn.mc-report { color:#9A8E7A }
+        .mc-btn.mc-report.reported { color:#7A7060; opacity:0.55 }
+        .mc-btn.mc-report.reported svg { stroke:#7A7060 !important }
         .mc-btn.mc-info { color:rgba(237,232,220,0.85); font-size:12px; letter-spacing:0.3px; background:rgba(237,232,220,0.08); border-radius:10px; padding:8px 14px; font-weight:500 }
         .mc-btn.mc-shortlist { background:rgba(58,106,72,0.15); border:1px solid rgba(58,106,72,0.4) }
         .mc-spotlight { position:absolute; top:max(56px, calc(env(safe-area-inset-top) + 50px)); left:16px; z-index:10; background:rgba(250,250,248,0.95); border-left:3px solid #3A6A48; padding:8px 14px; border-radius:0 8px 8px 0; font-family:'DM Sans',sans-serif; font-size:12px; color:#141414; letter-spacing:0.3px }
@@ -2887,6 +2984,10 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vc-act-btn { display:flex; align-items:center; gap:4px; background:none; border:none; color:#9A8E7A; font-size:11px; font-family:'DM Sans',sans-serif; cursor:pointer; padding:4px 0; transition:color 0.15s; text-decoration:none }
         .vc-act-btn:hover { color:#EDE8DC }
         .vc-act-fav.active svg { filter:drop-shadow(0 2px 4px rgba(224,85,85,0.4)) }
+        .vc-act-report { color:#9A8E7A }
+        .vc-act-report:hover { color:#E0A030 }
+        .vc-act-report.reported { color:#7A7060; opacity:0.55; cursor:default }
+        .vc-act-report.reported:hover { color:#7A7060 }
         .vc-act-detail { color:rgba(237,232,220,0.7) }
         .vc-act-wsp { color:#1EA952; font-weight:600 }
         .vc-act-shortlist { color:#3A6A48; font-weight:600; background:rgba(58,106,72,0.08); border:1px solid rgba(58,106,72,0.25) }
