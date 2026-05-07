@@ -16,7 +16,7 @@ import {
   updateShortlist,
   publicShortlistURL,
 } from '@/lib/broker-shortlists'
-import { buildWhatsAppURL, defaultShortlistMessage } from '@/lib/whatsapp'
+import { buildWhatsAppURL, buildShortlistWAMessage, defaultShortlistMessage } from '@/lib/whatsapp'
 import { isDemoBrokerSlug } from '@/lib/demo-mode'
 import type { Broker } from '@/lib/simon-brokers'
 import type { BrokerShortlist, CreateShortlistPayload } from '@/types/broker-shortlist'
@@ -105,13 +105,13 @@ export function useBrokerShortlists(broker: Broker | null): UseBrokerShortlistsR
 
     const shortlist = await createShortlist(payload)
     const url = publicShortlistURL(shortlist.hash)
-    const message = input.mensaje_whatsapp ||
-      defaultShortlistMessage({
-        clienteNombre: input.cliente_nombre,
-        brokerNombre: broker.nombre,
-        shortlistUrl: url,
-        cantidadPropiedades: input.propiedad_ids.length,
-      })
+    const message = buildShortlistWAMessage({
+      customMessage: input.mensaje_whatsapp,
+      clienteNombre: input.cliente_nombre,
+      brokerNombre: broker.nombre,
+      shortlistUrl: url,
+      cantidadPropiedades: input.propiedad_ids.length,
+    })
     const whatsappUrl = buildWhatsAppURL(input.cliente_telefono, message)
 
     setShortlists(prev => [shortlist, ...prev])

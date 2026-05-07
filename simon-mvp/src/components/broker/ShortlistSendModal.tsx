@@ -12,7 +12,7 @@ import { CSSProperties, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Broker } from '@/lib/simon-brokers'
 import type { BrokerShortlist } from '@/types/broker-shortlist'
-import { defaultShortlistMessage } from '@/lib/whatsapp'
+import { defaultShortlistMessageBody } from '@/lib/whatsapp'
 
 function normalizePhone(p: string): string {
   return p.replace(/\D/g, '')
@@ -57,7 +57,9 @@ export function normalizeClientPhone(raw: string): { ok: true; e164: string } | 
   return { ok: false, error: 'Formato inválido. Usá "+591 70123456" o "70123456"' }
 }
 
-const TEMPLATE_PLACEHOLDER_URL = '__SHORTLIST_URL__'
+// Nota: la URL ya NO va dentro del textarea editable. Se muestra en un bloque
+// inmutable debajo del textarea (ver renderLinkBlock). El helper
+// buildShortlistWAMessage anexa la URL real al mensaje al enviar.
 
 /**
  * Datos mínimos por propiedad para mostrar en el paso "Personalizar".
@@ -175,9 +177,26 @@ const S: Record<string, CSSProperties> = {
   textarea: {
     width: '100%', padding: '10px 12px',
     background: '#fff', border: '1px solid rgba(20,20,20,0.15)',
-    borderRadius: 8, fontSize: 14, fontFamily: 'inherit', color: '#141414',
+    borderRadius: '8px 8px 0 0', fontSize: 14, fontFamily: 'inherit', color: '#141414',
     resize: 'vertical', minHeight: 100, lineHeight: 1.4, boxSizing: 'border-box',
+    borderBottom: 'none',
   },
+  // Bloque inmutable que se "pega" debajo del textarea para representar
+  // visualmente el link de la shortlist. NO es editable. La URL real se
+  // anexa al mensaje server-side via buildShortlistWAMessage.
+  linkBlock: {
+    width: '100%', padding: '10px 12px',
+    background: '#e5dec8',
+    border: '1px solid rgba(20,20,20,0.15)',
+    borderRadius: '0 0 8px 8px',
+    fontSize: 12, color: '#5a5a5a',
+    boxSizing: 'border-box',
+    display: 'flex', alignItems: 'center', gap: 8,
+    cursor: 'not-allowed',
+    userSelect: 'none',
+  },
+  linkBlockIcon: { fontSize: 14, opacity: 0.7, flexShrink: 0 },
+  linkBlockText: { lineHeight: 1.4 },
   help: { fontSize: 11, color: '#7a7a7a' },
   error: {
     background: 'rgba(220, 38, 38, 0.1)', color: '#b91c1c',
@@ -234,10 +253,9 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
 
   const previewMessage = useMemo(() => {
     if (!clienteNombre.trim()) return ''
-    return defaultShortlistMessage({
+    return defaultShortlistMessageBody({
       clienteNombre: clienteNombre.trim(),
       brokerNombre: broker.nombre,
-      shortlistUrl: TEMPLATE_PLACEHOLDER_URL,
       cantidadPropiedades,
     })
   }, [clienteNombre, broker.nombre, cantidadPropiedades])
@@ -345,9 +363,11 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
 
     setSubmitting(true)
     try {
-      const finalMessage = mensajeEditedManually
-        ? mensaje.replaceAll(TEMPLATE_PLACEHOLDER_URL, '').trim()
-        : undefined
+      // Si el broker editó el textarea, mandamos su versión (sin URL — el
+      // link vive en el bloque inmutable y se anexa server-side via
+      // buildShortlistWAMessage). Si no tocó nada, mandamos undefined para
+      // que el helper genere el default completo.
+      const finalMessage = mensajeEditedManually ? mensaje.trim() : undefined
 
       const { whatsappUrl } = await onConfirm({
         cliente_nombre: clienteNombre.trim(),
@@ -519,7 +539,12 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
                   rows={6}
                   placeholder="El mensaje aparecerá acá cuando completes el nombre…"
                 />
-                <span style={S.help}>El link a la shortlist se agrega automáticamente al enviar.</span>
+                <div style={S.linkBlock} aria-label="Link de la shortlist (no editable)">
+                  <span style={S.linkBlockIcon} aria-hidden="true">🔗</span>
+                  <span style={S.linkBlockText}>
+                    El link a tu shortlist se agrega automáticamente al final del mensaje. No se puede editar desde acá.
+                  </span>
+                </div>
               </div>
 
               {errorMsg && <div style={S.error}>{errorMsg}</div>}

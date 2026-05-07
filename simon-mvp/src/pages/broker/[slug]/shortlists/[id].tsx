@@ -12,7 +12,7 @@ import Head from 'next/head'
 import type { GetServerSideProps } from 'next'
 import { getBrokerBySlug, type Broker } from '@/lib/simon-brokers'
 import { getShortlistById, updateShortlist, archiveShortlist, publicShortlistURL } from '@/lib/broker-shortlists'
-import { buildWhatsAppURL, defaultShortlistMessage } from '@/lib/whatsapp'
+import { buildWhatsAppURL, buildShortlistWAMessage, defaultShortlistMessage } from '@/lib/whatsapp'
 import type { BrokerShortlistItem, BrokerShortlistWithItems } from '@/types/broker-shortlist'
 
 interface PageProps {
@@ -132,7 +132,8 @@ export default function ShortlistEditorPage({ broker }: PageProps) {
 
   function handleResend() {
     if (!data) return
-    const message = mensaje || defaultShortlistMessage({
+    const message = buildShortlistWAMessage({
+      customMessage: mensaje,
       clienteNombre: clienteNombre,
       brokerNombre: broker.nombre,
       shortlistUrl: shareUrl,

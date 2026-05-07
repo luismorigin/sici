@@ -8,7 +8,7 @@ import Link from 'next/link'
 import type { Broker } from '@/lib/simon-brokers'
 import type { BrokerShortlist } from '@/types/broker-shortlist'
 import { publicShortlistURL } from '@/lib/broker-shortlists'
-import { buildWhatsAppURL, defaultShortlistMessage } from '@/lib/whatsapp'
+import { buildWhatsAppURL, buildShortlistWAMessage } from '@/lib/whatsapp'
 
 interface Props {
   isOpen: boolean
@@ -198,7 +198,8 @@ export default function ShortlistsPanel({ isOpen, onClose, broker, shortlists, l
 
   function handleResend(s: BrokerShortlist) {
     const url = publicShortlistURL(s.hash)
-    const message = s.mensaje_whatsapp || defaultShortlistMessage({
+    const message = buildShortlistWAMessage({
+      customMessage: s.mensaje_whatsapp,
       clienteNombre: s.cliente_nombre,
       brokerNombre: broker.nombre,
       shortlistUrl: url,
