@@ -4,6 +4,7 @@ import { trackEvent } from '@/lib/analytics'
 import { fbqTrack } from '@/lib/meta-pixel'
 import { getStoredPhone, setStoredPhone } from '@/lib/user-phone'
 import { getVisitorId } from '@/lib/visitor'
+import { openWhatsApp } from '@/lib/whatsapp'
 import WhatsAppCaptureModal from '@/components/capture/WhatsAppCaptureModal'
 
 // Interface mínima: cualquier unidad (alquiler o venta Fase 3) que cumpla estos
@@ -35,6 +36,15 @@ export function setDemoModeForCapture(enabled: boolean) {
   _demoMode = enabled
 }
 
+// Flag global para modo broker logueado (/broker/[slug]/...). Cuando está
+// activo, el modal de captura de WhatsApp NO debe aparecer — el broker es
+// quien envía, no quien recibe. Saltamos directo a abrir WA con el broker
+// captador de la propiedad.
+let _brokerMode = false
+export function setBrokerModeForCapture(enabled: boolean) {
+  _brokerMode = enabled
+}
+
 export function triggerWhatsAppCapture(e: React.MouseEvent, p: CaptureProperty, msg: string, fuente: string, preguntas?: string[]) {
   if (_demoMode) {
     e.preventDefault()
@@ -44,17 +54,25 @@ export function triggerWhatsAppCapture(e: React.MouseEvent, p: CaptureProperty, 
     }
     return
   }
+  // Broker logueado: NO mostrar modal de captura, ir directo a WA.
+  // El modal solo tiene sentido para visitantes públicos del feed.
+  if (_brokerMode) {
+    e.preventDefault()
+    const phone = p.agente_whatsapp?.replace(/\D/g, '') || ''
+    const finalPhone = phone.startsWith('591') ? phone : `591${phone}`
+    openWhatsApp(finalPhone, msg)
+    return
+  }
   if (_moduleTrigger) {
     _moduleTrigger(e, p, msg, fuente, preguntas)
     return
   }
   // Fallback defensivo: si nadie registró el hook (no debería ocurrir),
-  // comportarse como antes — abrir wa.me directo sin modal.
+  // comportarse como antes — abrir WA directo sin modal.
   e.preventDefault()
   const phone = p.agente_whatsapp?.replace(/\D/g, '') || ''
   const finalPhone = phone.startsWith('591') ? phone : `591${phone}`
-  const url = `https://wa.me/${finalPhone}${msg ? `?text=${encodeURIComponent(msg)}` : ''}`
-  window.open(url, '_blank')
+  openWhatsApp(finalPhone, msg)
 }
 
 // -----------------------------------------------------------------------------
@@ -96,10 +114,9 @@ function getSessionId(): string {
   return sid
 }
 
-function buildWhatsAppUrl(p: CaptureProperty, msg: string): string {
+function getFinalPhone(p: CaptureProperty): string {
   const phone = p.agente_whatsapp?.replace(/\D/g, '') || ''
-  const finalPhone = phone.startsWith('591') ? phone : `591${phone}`
-  return `https://wa.me/${finalPhone}${msg ? `?text=${encodeURIComponent(msg)}` : ''}`
+  return phone.startsWith('591') ? phone : `591${phone}`
 }
 
 // -----------------------------------------------------------------------------
@@ -277,9 +294,7 @@ export function useWhatsAppCapture() {
       })
       const payload = buildPayload(p, msg, fuente, preguntas, 'reused', stored.phone, stored.consent)
       postLead(payload).then((ok) => { if (!ok) savePendingLead(payload) })
-      const url = buildWhatsAppUrl(p, msg)
-      const opened = window.open(url, '_blank')
-      if (!opened) window.location.href = url // fallback si popup bloqueado
+      openWhatsApp(getFinalPhone(p), msg)
       return
     }
 
@@ -315,10 +330,8 @@ export function useWhatsAppCapture() {
     const payload = buildPayload(p, cur.msg, cur.fuente, cur.preguntas, 'submitted', normalizedPhone, consent)
     postLead(payload).then((ok) => { if (!ok) savePendingLead(payload) })
 
-    // Abrir wa.me (click del submit cuenta como user gesture)
-    const url = buildWhatsAppUrl(p, cur.msg)
-    const opened = window.open(url, '_blank')
-    if (!opened) window.location.href = url
+    // Abrir WA (click del submit cuenta como user gesture)
+    openWhatsApp(getFinalPhone(p), cur.msg)
 
     // Mostrar "listo" brevemente
     setShowSuccess(true)
@@ -348,9 +361,7 @@ export function useWhatsAppCapture() {
     const payload = buildPayload(p, cur.msg, cur.fuente, cur.preguntas, 'skipped', null, false)
     postLead(payload).then((ok) => { if (!ok) savePendingLead(payload) })
 
-    const url = buildWhatsAppUrl(p, cur.msg)
-    const opened = window.open(url, '_blank')
-    if (!opened) window.location.href = url
+    openWhatsApp(getFinalPhone(p), cur.msg)
 
     setState(EMPTY_STATE)
   }, [isSubmitting])

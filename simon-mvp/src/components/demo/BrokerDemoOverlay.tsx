@@ -16,7 +16,7 @@
 import { useEffect, useState } from 'react'
 import DemoModalEducational from './DemoModalEducational'
 import BrokerDemoIntroSheet from './BrokerDemoIntroSheet'
-import { buildWhatsAppURL } from '@/lib/whatsapp'
+import { buildWhatsAppURL, openWhatsApp } from '@/lib/whatsapp'
 import {
   FOUNDER_WHATSAPP,
   getDemoCTAMessage,
@@ -160,7 +160,7 @@ export default function BrokerDemoOverlay() {
         footerLink={modalContent.context === 'enviar_shortlist' ? {
           label: '¿Querés activar tu cuenta? Hablá con el founder →',
           onClick: () => {
-            window.open(founderWaUrl, '_blank', 'noopener,noreferrer')
+            openWhatsApp(FOUNDER_WHATSAPP, getDemoCTAMessage('watermark_top'))
           },
         } : undefined}
       />

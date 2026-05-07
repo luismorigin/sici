@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { UnidadAlquiler } from '@/lib/supabase'
 import { colors, spacing } from '@/lib/simon-design-tokens'
+import { openWhatsApp } from '@/lib/whatsapp'
 import { trackChatEvent, getSessionId } from './chat-utils'
 
 interface Props {
@@ -17,10 +18,9 @@ export default function ChatPropertyCard({ property: p, onOpenDetail }: Props) {
   function handleWhatsApp(e: React.MouseEvent) {
     e.stopPropagation() // don't trigger card click (openDetail)
     if (!brokerPhone) return
-    const phone = brokerPhone.replace(/[^0-9]/g, '')
     const precio = `Bs ${Math.round(p.precio_mensual_bob).toLocaleString()}/mes`
     const msg = `Hola, vi este alquiler en Simon y me interesa: ${name} - ${precio}${p.url ? '\n' + p.url : ''}`
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
+    openWhatsApp(brokerPhone, msg)
 
     // Fire-and-forget lead
     fetch('/api/lead-alquiler', {

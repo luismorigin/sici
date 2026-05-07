@@ -12,7 +12,7 @@ import { CSSProperties, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Broker } from '@/lib/simon-brokers'
 import type { BrokerShortlist } from '@/types/broker-shortlist'
-import { defaultShortlistMessageBody } from '@/lib/whatsapp'
+import { commitWhatsAppWindow, defaultShortlistMessageBody, prepareWhatsAppWindow } from '@/lib/whatsapp'
 
 function normalizePhone(p: string): string {
   return p.replace(/\D/g, '')
@@ -375,10 +375,13 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
       return
     }
 
-    // Abrir el window ANTES del await preserva el user gesture en mobile
-    // (Safari/Chrome iOS bloquean window.open post-await aunque el origen sea el click).
-    // Después del fetch le asignamos la URL real; si el fetch falla, cerramos el blank.
-    const waWindow = window.open('', '_blank')
+    // Pre-abrir/reusar pestaña ANTES del await preserva el user gesture en
+    // mobile (Safari/Chrome iOS bloquean window.open post-await aunque el
+    // origen haya sido el click). En desktop, si ya tenemos pestaña reusable
+    // de un envío previo, prepareWhatsAppWindow es no-op — la navegación
+    // posterior con commitWhatsAppWindow no requiere gesture porque la
+    // ventana ya existe.
+    prepareWhatsAppWindow()
 
     setSubmitting(true)
     try {
@@ -395,15 +398,9 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
         items_metadata: buildItemsMetadata(),
       })
 
-      if (waWindow && !waWindow.closed) {
-        waWindow.location.href = whatsappUrl
-      } else {
-        // Browser bloqueó incluso el about:blank → fallback navegando la misma pestaña
-        window.location.href = whatsappUrl
-      }
+      commitWhatsAppWindow(whatsappUrl)
       onClose()
     } catch (err) {
-      if (waWindow && !waWindow.closed) waWindow.close()
       setErrorMsg(err instanceof Error ? err.message : 'Error al enviar')
     } finally {
       setSubmitting(false)
