@@ -2905,7 +2905,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .mc-btn.mc-info { color:rgba(237,232,220,0.85); font-size:12px; letter-spacing:0.3px; background:rgba(237,232,220,0.08); border-radius:10px; padding:8px 14px; font-weight:500 }
         .mc-btn.mc-shortlist { background:rgba(58,106,72,0.15); border:1px solid rgba(58,106,72,0.4) }
         .mc-spotlight { position:absolute; top:max(56px, calc(env(safe-area-inset-top) + 50px)); left:16px; z-index:10; background:rgba(250,250,248,0.95); border-left:3px solid #3A6A48; padding:8px 14px; border-radius:0 8px 8px 0; font-family:'DM Sans',sans-serif; font-size:12px; color:#141414; letter-spacing:0.3px }
-        .mc-tc-badge { position:absolute; top:max(56px, calc(env(safe-area-inset-top) + 50px)); right:16px; z-index:10; background:rgba(180,130,20,0.9); color:#fff; padding:6px 12px; border-radius:4px; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:500; letter-spacing:0.2px }
+        .mc-tc-badge { position:absolute; top:max(56px, calc(env(safe-area-inset-top) + 50px)); right:16px; z-index:10; background:rgba(70,130,200,0.9); color:#fff; padding:6px 12px; border-radius:4px; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:500; letter-spacing:0.2px }
         .mc-fuente-badge { position:absolute; top:max(56px, calc(env(safe-area-inset-top) + 50px)); left:16px; z-index:10; padding:5px 10px; border-radius:4px; font-family:'DM Sans',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.4px; text-transform:uppercase; box-shadow:0 2px 6px rgba(0,0,0,0.3) }
 
         /* Desktop spotlight */
@@ -3010,7 +3010,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .vc-nav-prev { left:8px }
         .vc-nav-next { right:8px }
         .vc-photo-count { position:absolute; top:10px; right:10px; background:rgba(20,20,20,0.75); color:rgba(255,255,255,0.8); font-size:11px; padding:3px 8px; border-radius:100px; font-family:'DM Sans',sans-serif }
-        .vc-tc-badge { position:absolute; bottom:10px; left:10px; background:rgba(180,130,20,0.9); color:#fff; font-size:11px; font-weight:500; padding:4px 10px; border-radius:4px; font-family:'DM Sans',sans-serif; letter-spacing:0.2px; z-index:3 }
+        .vc-tc-badge { position:absolute; bottom:10px; left:10px; background:rgba(70,130,200,0.9); color:#fff; font-size:11px; font-weight:500; padding:4px 10px; border-radius:4px; font-family:'DM Sans',sans-serif; letter-spacing:0.2px; z-index:3 }
         .vc-fuente-badge { position:absolute; top:10px; left:10px; font-size:10px; font-weight:700; padding:4px 9px; border-radius:4px; font-family:'DM Sans',sans-serif; letter-spacing:0.4px; text-transform:uppercase; z-index:4; box-shadow:0 2px 4px rgba(0,0,0,0.2) }
         .vc-fav { position:absolute; top:10px; left:10px; width:40px; height:40px; border-radius:50%; background:rgba(20,20,20,0.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.15s; z-index:3 }
         .vc-fav:hover { transform:scale(1.1) }
@@ -3076,7 +3076,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         .bs-venta .bs-h-price-block { border-left:3px solid #3A6A48; padding-left:14px }
         .bs-venta .bs-h-price { font-family:'DM Sans',sans-serif; font-size:28px; font-weight:500; color:#EDE8DC; line-height:1; margin-bottom:6px; font-variant-numeric:tabular-nums }
         .bs-venta .bs-h-tc { font-size:11px; font-weight:400; color:rgba(237,232,220,0.3); letter-spacing:0.2px }
-        .bs-tc-badge { display:inline-block; margin-left:10px; background:rgba(180,130,20,0.9); color:#fff; font-size:10px; font-weight:500; padding:3px 8px; border-radius:3px; vertical-align:middle; letter-spacing:0.2px }
+        .bs-tc-badge { display:inline-block; margin-left:10px; background:rgba(70,130,200,0.9); color:#fff; font-size:10px; font-weight:500; padding:3px 8px; border-radius:3px; vertical-align:middle; letter-spacing:0.2px }
         .bs-venta .bs-h-specs { font-size:15px; color:#9A8E7A; font-family:'DM Sans',sans-serif; font-weight:300; line-height:1.4 }
         .bs-venta .bs-h-sub { font-size:14px; color:#EDE8DC; font-family:'DM Sans',sans-serif; font-weight:300; margin-top:4px }
 
