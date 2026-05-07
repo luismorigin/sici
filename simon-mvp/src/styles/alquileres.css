@@ -22,26 +22,30 @@
 }
 
 /* Desktop Sidebar + Filters */
+/* Scroll interno en .df-wrap (no en el sidebar) para que header y fav-summary
+   queden fijos en pantallas de poca altura (laptop chica, zoom alto, devtools).
+   Sin esta separación, el último grupo de filtros (Ordenar por) quedaba
+   cortado abajo del padding del sidebar. Ver MEMORY/CLAUDE notes. */
 .desktop-sidebar {
   width: 320px; min-width: 320px; height: 100vh;
   background: #EDE8DC; border-right: 1px solid #D8D0BC;
-  padding: 32px 28px; overflow-y: auto;
+  padding: 32px 28px;
   display: flex; flex-direction: column;
 }
-.desktop-sidebar-header { margin-bottom: 32px; }
+.desktop-sidebar-header { margin-bottom: 32px; flex-shrink: 0; }
 .desktop-logo {
   font-family: 'Figtree', sans-serif; font-size: 32px; font-weight: 500;
   color: #141414; text-decoration: none; display: block;
 }
 .desktop-label { font-size: 12px; color: #7A7060; letter-spacing: 0.5px; margin-top: 2px; text-transform: uppercase; font-family: 'DM Sans', sans-serif; }
-.desktop-sidebar-count { margin-bottom: 28px; }
+.desktop-sidebar-count { margin-bottom: 28px; flex-shrink: 0; }
 .desktop-count-num {
   font-family: 'Figtree', sans-serif; font-size: 48px; font-weight: 500;
   color: #141414; line-height: 1; display: block; font-variant-numeric: tabular-nums;
 }
 .desktop-count-label { font-size: 13px; color: #7A7060; }
 .desktop-fav-summary {
-  margin-top: auto; padding-top: 20px; border-top: 1px solid #D8D0BC;
+  flex-shrink: 0; padding-top: 20px; border-top: 1px solid #D8D0BC;
   display: flex; align-items: center; justify-content: space-between;
   color: #3A6A48; font-size: 13px;
 }
@@ -318,7 +322,10 @@
 .utm-zona-close-m { position:absolute; top:8px; right:10px; background:none; border:none; color:#7A7060; font-size:18px; cursor:pointer; padding:4px; line-height:1 }
 
 /* Desktop Filters (df-*) */
-.df-wrap { flex: 1; }
+/* min-height: 0 es OBLIGATORIO para que overflow-y funcione en un flex item.
+   Sin esto, el flex item toma min-height: auto (= alto natural del contenido)
+   y el overflow se ignora — el contenido se desborda en vez de scrollear. */
+.df-wrap { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 12px; }
 .df-group { margin-bottom: 18px; }
 .df-label { font-size: 12px; font-weight: 600; color: #3A3530; letter-spacing: 0.5px; margin-bottom: 8px; font-family: 'DM Sans', sans-serif; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
 .df-dot { width: 6px; height: 6px; border-radius: 50%; background: #3A6A48; flex-shrink: 0; }

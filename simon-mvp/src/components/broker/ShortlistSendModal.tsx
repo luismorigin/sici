@@ -267,6 +267,25 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
     return existingShortlists.filter(s => normalizePhone(s.cliente_telefono) === normalized)
   }, [clienteTelefono, existingShortlists])
 
+  // Lista deduplicada de clientes previos del broker (DISTINCT por teléfono
+  // normalizado, más reciente primero). Alimenta el <datalist> del input
+  // nombre para autocompletar cuando se reenvía a un cliente conocido.
+  // Las archivadas se excluyen para no sugerir relaciones inactivas.
+  const clientesPrevios = useMemo(() => {
+    const map = new Map<string, { nombre: string; telefono: string; lastDate: number }>()
+    for (const s of existingShortlists) {
+      if (s.archived_at) continue
+      const key = normalizePhone(s.cliente_telefono)
+      if (key.length < 6) continue
+      const ts = new Date(s.created_at).getTime()
+      const prev = map.get(key)
+      if (!prev || ts > prev.lastDate) {
+        map.set(key, { nombre: s.cliente_nombre, telefono: s.cliente_telefono, lastDate: ts })
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.lastDate - a.lastDate)
+  }, [existingShortlists])
+
   useEffect(() => {
     if (isOpen) {
       // En modo demo (onDemoBlock provisto) pre-llenamos con datos ficticios
@@ -491,11 +510,32 @@ export default function ShortlistSendModal({ isOpen, onClose, broker, cantidadPr
                 <label style={S.label}>Nombre del cliente</label>
                 <input
                   style={S.input}
+                  list={!onDemoBlock && clientesPrevios.length > 0 ? 'shortlist-clientes-prev' : undefined}
                   value={clienteNombre}
-                  onChange={e => { setClienteNombre(e.target.value); if (errorMsg) setErrorMsg(null) }}
+                  onChange={e => {
+                    const v = e.target.value
+                    setClienteNombre(v)
+                    if (errorMsg) setErrorMsg(null)
+                    // Si matchea exacto un cliente previo y el teléfono está
+                    // vacío, autollenarlo. No pisamos teléfono ya tipeado para
+                    // no sobrescribir si el broker está editando manualmente.
+                    if (!clienteTelefono.trim()) {
+                      const trimmed = v.trim().toLowerCase()
+                      const match = clientesPrevios.find(c => c.nombre.trim().toLowerCase() === trimmed)
+                      if (match) setClienteTelefono(match.telefono)
+                    }
+                  }}
                   placeholder="Juan Pérez"
                   autoFocus
+                  autoComplete="off"
                 />
+                {!onDemoBlock && clientesPrevios.length > 0 && (
+                  <datalist id="shortlist-clientes-prev">
+                    {clientesPrevios.map(c => (
+                      <option key={c.telefono} value={c.nombre}>{c.telefono}</option>
+                    ))}
+                  </datalist>
+                )}
               </div>
 
               <div style={S.field}>

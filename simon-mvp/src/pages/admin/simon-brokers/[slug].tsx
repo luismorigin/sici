@@ -203,7 +203,7 @@ export default function AdminBrokerDetail() {
                           <span className="text-slate-400"> / {max}</span>
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600">
-                          {fmtDate(s.created_at)}
+                          {fmtDateTime(s.created_at)}
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600">
                           {s.expires_at ? fmtDate(s.expires_at) : '—'}
