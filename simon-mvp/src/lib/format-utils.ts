@@ -53,3 +53,11 @@ export function formatPriceUSD(p: number | null | undefined): string {
     maximumFractionDigits: 0,
   }).format(p)
 }
+
+// "Abel Antonio Flores Nava" → "Abel". Usado en saludos de WhatsApp del cliente
+// al broker para que no suenen robóticos. Edge case: nombres compuestos como
+// "María José" pierden el "José" — bajo impacto. Migrable a columnas separadas
+// (nombre_pila/apellido) en simon_brokers más adelante.
+export function firstName(full: string): string {
+  return full.trim().split(/\s+/)[0] || full
+}

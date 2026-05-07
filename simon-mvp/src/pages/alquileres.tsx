@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import type { GetStaticProps } from 'next'
 import { type UnidadAlquiler, type FiltrosAlquiler, buscarUnidadesAlquiler } from '@/lib/supabase'
 import { ZONAS_ALQUILER_UI, displayZona } from '@/lib/zonas'
-import { dormLabel, formatPriceBob } from '@/lib/format-utils'
+import { dormLabel, formatPriceBob, firstName } from '@/lib/format-utils'
 import { fbqTrack } from '@/lib/meta-pixel'
 import { fetchMercadoAlquilerData, type MercadoAlquilerData } from '@/lib/mercado-alquiler-data'
 import { useWhatsAppCapture, triggerWhatsAppCapture, setDemoModeForCapture } from '@/hooks/useWhatsAppCapture'
@@ -197,7 +197,7 @@ function buildShareWhatsAppUrl(p: UnidadAlquiler) {
 function buildClientToBrokerAlquilerMessage(p: UnidadAlquiler, brokerName: string): string {
   const name = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
   const dorms = dormLabel(p.dormitorios)
-  return `Hola ${brokerName}, me interesa este alquiler:\n\n${name} (${dorms} · ${Math.round(p.area_m2)}m² · ${formatPrice(p.precio_mensual_bob)}/mes)\n\n¿Podemos coordinar?`
+  return `Hola ${firstName(brokerName)}, me interesa este alquiler:\n\n${name} (${dorms} · ${Math.round(p.area_m2)}m² · ${formatPrice(p.precio_mensual_bob)}/mes)\n\n¿Podemos coordinar?`
 }
 
 // Track share separately — call from onClick, not from URL builder
@@ -1828,10 +1828,10 @@ export default function AlquileresPage({
                 }).join('\n')
                 const plural = hearted.length === 1 ? 'este' : 'estos'
                 const noun = hearted.length === 1 ? 'alquiler' : `${hearted.length} alquileres`
-                const msg = `Hola ${publicShare.broker.nombre}, me interesa${hearted.length === 1 ? '' : 'n'} ${plural} ${noun}:\n\n${lines}\n\n¿Podemos coordinar?`
+                const msg = `Hola ${firstName(publicShare.broker.nombre)}, me interesa${hearted.length === 1 ? '' : 'n'} ${plural} ${noun}:\n\n${lines}\n\n¿Podemos coordinar?`
                 return `https://wa.me/${publicShare.broker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`
               }
-              return `https://wa.me/${publicShare.broker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${publicShare.broker.nombre}, vi los alquileres que me enviaste.`)}`
+              return `https://wa.me/${publicShare.broker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${firstName(publicShare.broker.nombre)}, vi los alquileres que me enviaste.`)}`
             })()}
             target="_blank" rel="noopener noreferrer" className="apsh-wa"
           >

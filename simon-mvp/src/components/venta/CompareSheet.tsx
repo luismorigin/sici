@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { dormLabel, formatPriceUSD } from '@/lib/format-utils'
+import { dormLabel, formatPriceUSD, firstName } from '@/lib/format-utils'
 import type { UnidadVenta } from '@/lib/supabase'
 import { displayZona } from '@/lib/zonas'
 
@@ -419,7 +419,7 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
             const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
             return `• ${p.proyecto} (${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
           }).join('\n')
-          const msg = `Hola ${publicShareBroker.nombre}, estoy interesado en estas alternativas:\n\n${clienteLines}\n\n¿Podemos coordinar?`
+          const msg = `Hola ${firstName(publicShareBroker.nombre)}, estoy interesado en estas alternativas:\n\n${clienteLines}\n\n¿Podemos coordinar?`
           return (
           <div className="csv-section">
             <a

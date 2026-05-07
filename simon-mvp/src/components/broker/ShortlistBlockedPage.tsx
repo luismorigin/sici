@@ -8,6 +8,7 @@
 
 import Head from 'next/head'
 import { buildWhatsAppURL } from '@/lib/whatsapp'
+import { firstName } from '@/lib/format-utils'
 
 export type BlockReason = 'expired' | 'view_limit_reached' | 'suspended'
 
@@ -35,7 +36,7 @@ const MESSAGES: Record<BlockReason, { title: string; body: string }> = {
 }
 
 function buildPedidoMessage(broker: { nombre: string }): string {
-  return `Hola ${broker.nombre}, el link de la selección que me enviaste ya no funciona. ¿Me podés mandar uno nuevo?`
+  return `Hola ${firstName(broker.nombre)}, el link de la selección que me enviaste ya no funciona. ¿Me podés mandar uno nuevo?`
 }
 
 export default function ShortlistBlockedPage({ reason, broker }: ShortlistBlockedPageProps) {

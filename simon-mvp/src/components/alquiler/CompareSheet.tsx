@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { dormLabel } from '@/lib/format-utils'
+import { dormLabel, firstName } from '@/lib/format-utils'
 import { triggerWhatsAppCapture } from '@/hooks/useWhatsAppCapture'
 import { buildAlquilerWaMessage } from '@/lib/wa-message'
 
@@ -47,7 +47,7 @@ function buildClientToBrokerCompareMessage(props: UnidadAlquiler[], brokerName: 
     const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
     return `${letter}) ${name} — ${dorms}, ${Math.round(p.area_m2)}m², Bs ${fmt(p.precio_mensual_bob)}/mes`
   }).join('\n')
-  return `Hola ${brokerName}, estoy comparando estas opciones y me gustaría conversar:\n\n${lines}`
+  return `Hola ${firstName(brokerName)}, estoy comparando estas opciones y me gustaría conversar:\n\n${lines}`
 }
 
 export default function CompareSheet({ open, properties, onClose, publicShareBroker = null }: CompareSheetProps) {
