@@ -160,6 +160,17 @@ export default function PublicShortlistPage(props: PageProps) {
         <meta property="og:title" content={props.shortlistTitle} />
         <meta property="og:description" content={`${itemCount} propiedades seleccionadas en Equipetrol`} />
         <meta property="og:type" content="website" />
+        {/* Imagen estática del skyline de Equipetrol (asset en /public/, NO pasa
+            por /_next/image — cero impacto en cuota Image Optimization de Vercel).
+            WhatsApp/iMessage/Slack la usan como hero de la card preview. */}
+        <meta property="og:image" content="https://simonbo.com/skyline-equipetrol.jpg" />
+        <meta property="og:image:width" content="1024" />
+        <meta property="og:image:height" content="767" />
+        <meta property="og:image:alt" content="Skyline de Equipetrol al amanecer" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={props.shortlistTitle} />
+        <meta name="twitter:description" content={`${itemCount} propiedades seleccionadas en Equipetrol`} />
+        <meta name="twitter:image" content="https://simonbo.com/skyline-equipetrol.jpg" />
       </Head>
       {props.isDemo ? (
         <div onClickCapture={interceptDemoWaClick} style={{ display: 'contents' }}>
