@@ -3201,6 +3201,12 @@ function VentasHead({ seo, brokerSlug = null, publicShareHash = null }: {
   brokerSlug?: string | null
   publicShareHash?: string | null
 }) {
+  // En modo shortlist pública (/b/[hash]) el wrapper provee sus propios OG
+  // personalizados con el nombre del broker y la cantidad de propiedades.
+  // Renderizar VentasHead acá pisaría/duplicaría esos OG y WhatsApp termina
+  // mostrando el preview genérico del feed ("348 Departamentos...") en vez
+  // de "Selección de <broker> para <cliente>". Skipeamos.
+  if (publicShareHash) return null
   const mesAnio = formatMesAnioSEO(seo.fechaActualizacion)
   const fechaCorta = formatFechaCortaSEO(seo.fechaActualizacion)
   // URL canónica según contexto. Sin esto, og:url devuelve el feed público

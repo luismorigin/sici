@@ -3575,6 +3575,11 @@ function AlquileresHead({ seo, brokerSlug = null, publicShareHash = null }: {
   brokerSlug?: string | null
   publicShareHash?: string | null
 }) {
+  // En modo shortlist pública (/b/[hash]) el wrapper provee sus propios OG
+  // personalizados con el nombre del broker y la cantidad de propiedades.
+  // Renderizar AlquileresHead acá pisaría/duplicaría esos OG y WhatsApp termina
+  // mostrando el preview genérico del feed en vez del personalizado. Skipeamos.
+  if (publicShareHash) return null
   const mesAnio = formatMesAnioSEO(seo.fechaActualizacion)
   const fechaCorta = formatFechaCortaSEO(seo.fechaActualizacion)
   // URL canónica según contexto. Sin override, el share del browser/OS resuelve
