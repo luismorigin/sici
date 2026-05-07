@@ -12,7 +12,7 @@ import Head from 'next/head'
 import type { GetServerSideProps } from 'next'
 import { getBrokerBySlug, type Broker } from '@/lib/simon-brokers'
 import { getShortlistById, updateShortlist, archiveShortlist, publicShortlistURL } from '@/lib/broker-shortlists'
-import { buildWhatsAppURL, buildShortlistWAMessage, defaultShortlistMessage } from '@/lib/whatsapp'
+import { buildShortlistWAMessage, defaultShortlistMessage, openWhatsApp } from '@/lib/whatsapp'
 import type { BrokerShortlistItem, BrokerShortlistWithItems } from '@/types/broker-shortlist'
 
 interface PageProps {
@@ -139,8 +139,7 @@ export default function ShortlistEditorPage({ broker }: PageProps) {
       shortlistUrl: shareUrl,
       cantidadPropiedades: items.length,
     })
-    const wa = buildWhatsAppURL(clienteTelefono, message)
-    window.open(wa, '_blank', 'noopener,noreferrer')
+    openWhatsApp(clienteTelefono, message)
   }
 
   async function handleArchive() {

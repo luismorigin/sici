@@ -9,8 +9,9 @@ import { ZONAS_ALQUILER_UI, displayZona } from '@/lib/zonas'
 import { dormLabel, formatPriceBob, firstName } from '@/lib/format-utils'
 import { fbqTrack } from '@/lib/meta-pixel'
 import { fetchMercadoAlquilerData, type MercadoAlquilerData } from '@/lib/mercado-alquiler-data'
-import { useWhatsAppCapture, triggerWhatsAppCapture, setDemoModeForCapture } from '@/hooks/useWhatsAppCapture'
+import { useWhatsAppCapture, triggerWhatsAppCapture, setDemoModeForCapture, setBrokerModeForCapture } from '@/hooks/useWhatsAppCapture'
 import { buildAlquilerWaMessage } from '@/lib/wa-message'
+import { openWhatsApp } from '@/lib/whatsapp'
 import { useBrokerShortlists, DEMO_SHORTLIST_BLOCKED } from '@/hooks/useBrokerShortlists'
 import ShortlistSendModal from '@/components/broker/ShortlistSendModal'
 import BrokerDemoOverlay from '@/components/demo/BrokerDemoOverlay'
@@ -378,6 +379,12 @@ export default function AlquileresPage({
     setDemoModeForCapture(brokerDemoMode)
     return () => setDemoModeForCapture(false)
   }, [brokerDemoMode])
+  // En modo broker logueado, saltar el modal de captura (broker no debe
+  // dejar sus datos — él es quien envía). Va directo a WA con el broker captador.
+  useEffect(() => {
+    setBrokerModeForCapture(brokerMode)
+    return () => setBrokerModeForCapture(false)
+  }, [brokerMode])
   const [activeCardIndex, setActiveCardIndex] = useState(0)
   const activeCardIdxRef = useRef(0)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -1817,8 +1824,8 @@ export default function AlquileresPage({
               )}
             </div>
           </div>
-          <a
-            href={(() => {
+          {(() => {
+            const buildAlqShareMsg = (): string => {
               const hearted = properties.filter(p => favorites.has(p.id))
               if (hearted.length > 0) {
                 const lines = hearted.map(p => {
@@ -1828,16 +1835,21 @@ export default function AlquileresPage({
                 }).join('\n')
                 const plural = hearted.length === 1 ? 'este' : 'estos'
                 const noun = hearted.length === 1 ? 'alquiler' : `${hearted.length} alquileres`
-                const msg = `Hola ${firstName(publicShare.broker.nombre)}, me interesa${hearted.length === 1 ? '' : 'n'} ${plural} ${noun}:\n\n${lines}\n\n¿Podemos coordinar?`
-                return `https://wa.me/${publicShare.broker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`
+                return `Hola ${firstName(publicShare.broker.nombre)}, me interesa${hearted.length === 1 ? '' : 'n'} ${plural} ${noun}:\n\n${lines}\n\n¿Podemos coordinar?`
               }
-              return `https://wa.me/${publicShare.broker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${firstName(publicShare.broker.nombre)}, vi los alquileres que me enviaste.`)}`
-            })()}
+              return `Hola ${firstName(publicShare.broker.nombre)}, vi los alquileres que me enviaste.`
+            }
+            return (
+          <a
+            href={`https://wa.me/${publicShare.broker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildAlqShareMsg())}`}
             target="_blank" rel="noopener noreferrer" className="apsh-wa"
+            onClick={(e) => { e.preventDefault(); openWhatsApp(publicShare.broker.telefono, buildAlqShareMsg()) }}
           >
             <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
             WhatsApp
           </a>
+            )
+          })()}
         </div>
       )}
 
@@ -2493,8 +2505,9 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
           )}
           <div className="mfc-m-actions">
             <button className="mfc-m-btn-detail" onClick={onOpenDetail}>Ver detalles</button>
-            {publicShareMode && brokerHref ? (
-              <a href={brokerHref} target="_blank" rel="noopener noreferrer" className="mfc-m-btn-wsp">WhatsApp</a>
+            {publicShareMode && brokerHref && publicShareBroker ? (
+              <a href={brokerHref} target="_blank" rel="noopener noreferrer" className="mfc-m-btn-wsp"
+                onClick={(e) => { e.preventDefault(); openWhatsApp(publicShareBroker.telefono, buildClientToBrokerAlquilerMessage(sp, publicShareBroker.nombre)) }}>WhatsApp</a>
             ) : sp.agente_whatsapp ? (
               <a href="#" onClick={(e) => handleWhatsAppLead(e, sp, buildAlquilerWaMessage(sp), 'map_card_mobile')} className="mfc-m-btn-wsp">WhatsApp</a>
             ) : null}
@@ -2538,8 +2551,9 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
         )}
         <div className="map-float-actions">
           <button className="map-float-btn-detail" onClick={onOpenDetail}>Ver detalles</button>
-          {publicShareMode && brokerHref ? (
-            <a href={brokerHref} target="_blank" rel="noopener noreferrer" className="map-float-btn-wsp">WhatsApp</a>
+          {publicShareMode && brokerHref && publicShareBroker ? (
+            <a href={brokerHref} target="_blank" rel="noopener noreferrer" className="map-float-btn-wsp"
+              onClick={(e) => { e.preventDefault(); openWhatsApp(publicShareBroker.telefono, buildClientToBrokerAlquilerMessage(sp, publicShareBroker.nombre)) }}>WhatsApp</a>
           ) : sp.agente_whatsapp ? (
             <a href="#" onClick={(e) => handleWhatsAppLead(e, sp, buildAlquilerWaMessage(sp), 'map_card')} className="map-float-btn-wsp">WhatsApp</a>
           ) : null}
@@ -2739,7 +2753,11 @@ const DesktopCard = memo(function DesktopCard({
               href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))}`}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackEvent('click_whatsapp_broker', { property_id: p.id, source: 'alq_card_desktop_public' })}
+              onClick={(e) => {
+                e.preventDefault()
+                trackEvent('click_whatsapp_broker', { property_id: p.id, source: 'alq_card_desktop_public' })
+                openWhatsApp(publicShareBroker.telefono, buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))
+              }}
               className="dc-wsp-inline"
             >
               <svg viewBox="0 0 24 24" fill="#1EA952" style={{ width: 14, height: 14 }}>
@@ -2936,7 +2954,11 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
               href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))}`}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackEvent('click_whatsapp_broker', { property_id: p.id, source: 'alq_card_mobile_public' })}
+              onClick={(e) => {
+                e.preventDefault()
+                trackEvent('click_whatsapp_broker', { property_id: p.id, source: 'alq_card_mobile_public' })
+                openWhatsApp(publicShareBroker.telefono, buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))
+              }}
               className="amc-wsp-inline-mobile"
             >
               <svg viewBox="0 0 24 24" fill="#1EA952" style={{width:14,height:14}}>
@@ -3509,7 +3531,11 @@ function BottomSheet({
             href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))}`}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => trackEvent('click_whatsapp_broker', { property_id: p.id, source: 'alq_bottom_sheet_public' })}
+            onClick={(e) => {
+              e.preventDefault()
+              trackEvent('click_whatsapp_broker', { property_id: p.id, source: 'alq_bottom_sheet_public' })
+              openWhatsApp(publicShareBroker.telefono, buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))
+            }}
             className="bs-footer-wsp"
           >
             <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 16, height: 16 }}>
@@ -3535,7 +3561,11 @@ function BottomSheet({
             target="_blank"
             rel="noopener noreferrer"
             className="bs-footer-wsp"
-            onClick={() => trackEvent('broker_wa_agente', { property_id: p.id, tipo_operacion: 'alquiler' })}
+            onClick={(e) => {
+              e.preventDefault()
+              trackEvent('broker_wa_agente', { property_id: p.id, tipo_operacion: 'alquiler' })
+              openWhatsApp(p.agente_whatsapp!, buildAlquilerWaMessage(p))
+            }}
           >
             <svg viewBox="0 0 24 24" fill="#fff" style={{ width: 16, height: 16 }}>
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
