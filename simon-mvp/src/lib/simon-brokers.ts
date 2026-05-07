@@ -9,6 +9,11 @@
 // Reemplaza al archivo hardcodeado `brokers-demo.ts` (S1 MVP).
 
 import { createClient } from '@supabase/supabase-js'
+import { isValidPhoneFormat, PHONE_FORMAT_ERROR } from './phone-validation'
+
+// Re-export para mantener compatibilidad con callers que importan desde
+// '@/lib/simon-brokers' (la función vive ahora en phone-validation.ts).
+export { isValidPhoneFormat } from './phone-validation'
 
 export interface Broker {
   slug: string
@@ -140,6 +145,9 @@ export interface CreateBrokerInput {
 }
 
 export async function createBroker(input: CreateBrokerInput): Promise<BrokerAdmin> {
+  if (!isValidPhoneFormat(input.telefono)) {
+    throw new Error(PHONE_FORMAT_ERROR)
+  }
   const supa = getSupabaseAdmin()
   const { data, error } = await supa
     .from('simon_brokers')
@@ -181,6 +189,9 @@ export async function deleteBroker(id: string): Promise<void> {
 }
 
 export async function updateBroker(id: string, input: UpdateBrokerInput): Promise<BrokerAdmin> {
+  if (input.telefono !== undefined && !isValidPhoneFormat(input.telefono)) {
+    throw new Error(PHONE_FORMAT_ERROR)
+  }
   const supa = getSupabaseAdmin()
   const payload: Record<string, unknown> = {}
   if (input.nombre !== undefined) payload.nombre = input.nombre.trim()
@@ -208,12 +219,3 @@ export function isValidSlugFormat(slug: string): boolean {
   return /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(slug)
 }
 
-/**
- * Valida formato E.164 básico: debe empezar con `+`, luego 8-15 dígitos.
- * Acepta espacios/guiones intermedios que se strippean antes del check.
- * Rechaza teléfonos sin código país, con letras o con dígitos insuficientes.
- */
-export function isValidPhoneFormat(phone: string): boolean {
-  const stripped = phone.trim().replace(/[\s-]/g, '')
-  return /^\+[0-9]{8,15}$/.test(stripped)
-}

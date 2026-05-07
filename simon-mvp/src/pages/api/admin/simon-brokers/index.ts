@@ -11,9 +11,9 @@ import {
   listAllBrokersAdmin,
   createBroker,
   isValidSlugFormat,
-  isValidPhoneFormat,
   type BrokerAdmin,
 } from '@/lib/simon-brokers'
+import { isValidPhoneFormat, PHONE_FORMAT_ERROR } from '@/lib/phone-validation'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const admin = await requireAdmin(req, res, ['super_admin'])
@@ -40,9 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
       }
       if (!isValidPhoneFormat(telefono)) {
-        return res.status(400).json({
-          error: 'teléfono inválido — debe empezar con + y código de país, ej. +59178519485 (8-15 dígitos total).',
-        })
+        return res.status(400).json({ error: PHONE_FORMAT_ERROR })
       }
       // Términos de uso: obligatorio para nuevos brokers (migración 235).
       // Los 2 brokers pre-235 quedan grandfathered con terms_accepted_at backfilleado.

@@ -6,7 +6,8 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireAdmin } from '@/lib/admin-api-auth'
-import { updateBroker, deleteBroker, isValidPhoneFormat, type UpdateBrokerInput } from '@/lib/simon-brokers'
+import { updateBroker, deleteBroker, type UpdateBrokerInput } from '@/lib/simon-brokers'
+import { isValidPhoneFormat, PHONE_FORMAT_ERROR } from '@/lib/phone-validation'
 
 const ALLOWED_STATUS = ['activo', 'pausado', 'inactivo'] as const
 type Status = typeof ALLOWED_STATUS[number]
@@ -27,9 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (body.telefono !== undefined) {
         const tel = String(body.telefono)
         if (!isValidPhoneFormat(tel)) {
-          return res.status(400).json({
-            error: 'teléfono inválido — debe empezar con + y código de país, ej. +59178519485 (8-15 dígitos total).',
-          })
+          return res.status(400).json({ error: PHONE_FORMAT_ERROR })
         }
         payload.telefono = tel
       }

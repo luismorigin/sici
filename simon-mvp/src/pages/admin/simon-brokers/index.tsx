@@ -12,6 +12,7 @@ import Head from 'next/head'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import SimonBrokerTerms from '@/components/admin/SimonBrokerTerms'
+import { isValidPhoneFormat, PHONE_FORMAT_ERROR } from '@/lib/phone-validation'
 
 interface BrokerAdmin {
   id: string
@@ -95,6 +96,10 @@ export default function AdminSimonBrokers() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (creating) return
+    if (!isValidPhoneFormat(formTelefono)) {
+      setError(PHONE_FORMAT_ERROR)
+      return
+    }
     setCreating(true)
     setError(null)
     try {
@@ -200,6 +205,10 @@ export default function AdminSimonBrokers() {
   }
 
   const saveEdit = async (id: string) => {
+    if (editDraft.telefono !== undefined && !isValidPhoneFormat(editDraft.telefono || '')) {
+      setError(PHONE_FORMAT_ERROR)
+      return
+    }
     setSaving(id)
     setError(null)
     try {
