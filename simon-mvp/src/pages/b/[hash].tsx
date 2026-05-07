@@ -436,9 +436,17 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
   const primerTipo = safeItems[0]?.tipo_operacion as 'venta' | 'alquiler' | undefined
   const tipoOperacion: 'venta' | 'alquiler' = primerTipo === 'alquiler' ? 'alquiler' : 'venta'
 
+  // Solo el primer nombre en el título del preview WA (más legible en card).
+  // Si el broker tiene "Abel Antonio Flores Nava" y cliente "Luis Medina test 8",
+  // el OG queda "Selección de Abel para Luis" en vez del nombre completo de
+  // ambos. El mensaje WA mantiene el nombre completo en la firma del broker.
+  // Edge case: nombres compuestos como "María José" pierden el "José" — bajo
+  // impacto, mayoría de brokers usan un nombre simple. Migrable a columnas
+  // separadas (nombre_pila/apellido) sin romper este código.
+  const firstName = (full: string): string => full.trim().split(/\s+/)[0] || full
   const shortlistTitle = isDemo
     ? DEMO_SHORTLIST_TITLE
-    : `Selección de ${broker.nombre} para ${shortlist.cliente_nombre}`
+    : `Selección de ${firstName(broker.nombre)} para ${firstName(shortlist.cliente_nombre)}`
   const propIds = safeItems.map(i => i.propiedad_id)
 
   // ======================== RAMA ALQUILER ========================
