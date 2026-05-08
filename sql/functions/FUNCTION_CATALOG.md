@@ -78,8 +78,8 @@
 | Función | Archivo canónico | Última migración |
 |---------|-----------------|------------------|
 | `buscar_unidades_reales(filtros)` | `query_layer/buscar_unidades_reales.sql` | 168 |
-| `buscar_unidades_simple(filtros)` | `query_layer/buscar_unidades_simple.sql` | — (deploy manual 2026-03-18, feed /ventas) |
-| `buscar_unidades_alquiler(filtros)` | `query_layer/buscar_unidades_alquiler.sql` | 163 |
+| `buscar_unidades_simple(filtros)` | `query_layer/buscar_unidades_simple.sql` | 241 (acepta `filtros.ids[]` para shortlists; default trae feed /ventas) |
+| `buscar_unidades_alquiler(filtros)` | `query_layer/buscar_unidades_alquiler.sql` | 241 (acepta `filtros.ids[]` para shortlists; default trae feed /alquileres) |
 | `buscar_unidades_broker(filtros)` | `broker/buscar_unidades_broker.sql` | 101 |
 | `buscar_unidades_con_amenities(amenities, filtros)` | — | 069 |
 | `buscar_proyecto_fuzzy(nombre, umbral, limite)` | — | 022 |

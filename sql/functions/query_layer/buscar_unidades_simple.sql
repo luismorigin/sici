@@ -7,6 +7,8 @@
 -- Fix vs original: status IN ('completado','actualizado') en vez de solo 'completado'.
 -- Creada: 18 Mar 2026
 -- Migración 219: tc_sospechoso (no_especificado + >30% debajo mediana grupo)
+-- Migración 227: umbral tc_sospechoso bajado a 28%
+-- Migración 241: filtro `ids` opcional para shortlists (/b/[hash])
 
 CREATE OR REPLACE FUNCTION public.buscar_unidades_simple(p_filtros jsonb DEFAULT '{}'::jsonb)
 RETURNS TABLE(
@@ -208,6 +210,16 @@ AS $function$
       AND p.status IN ('completado', 'actualizado')
       AND pm.zona != 'Sin zona'
       AND p.duplicado_de IS NULL
+      -- ====================================================================
+      -- MIGRACIÓN 241: filtro `ids` opcional. Backwards compatible: si no
+      -- viene `ids` en p_filtros, evalúa IS NULL → TRUE → ningún cambio.
+      -- Usado por /b/[hash] para restringir RPC a las propiedades del
+      -- shortlist (5-20) en vez de traer 323 y filtrar en JS.
+      -- ====================================================================
+      AND (
+        p_filtros->'ids' IS NULL
+        OR p.id = ANY(ARRAY(SELECT (jsonb_array_elements_text(p_filtros->'ids'))::int))
+      )
       AND (
         CASE
           WHEN p_filtros->>'tipo_operacion' IS NOT NULL

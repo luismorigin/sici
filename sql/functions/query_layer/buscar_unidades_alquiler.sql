@@ -6,7 +6,7 @@
 -- soporta multiselect dormitorios (3+ = >=3), fotos multi-fuente (C21/Remax/BI),
 -- filtro 150 días, OFFSET para paginación server-side.
 -- Filtro mascotas: incluye NULL (sin dato), excluye solo false. Confirmadas primero.
--- Última migración: 163 (alquiler_filtro_150_dias)
+-- Última migración: 241 (filtro `ids` opcional para shortlists /b/[hash])
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.buscar_unidades_alquiler(p_filtros jsonb DEFAULT '{}'::jsonb)
@@ -195,6 +195,16 @@ AS $function$
         AND p.area_total_m2 >= 20
         AND COALESCE(p.tipo_propiedad_original, '') NOT IN ('baulera', 'parqueo', 'garaje', 'deposito')
         AND (p.es_multiproyecto = false OR p.es_multiproyecto IS NULL)
+        -- ====================================================================
+        -- MIGRACIÓN 241: filtro `ids` opcional. Backwards compatible: si no
+        -- viene `ids` en p_filtros, evalúa IS NULL → TRUE → ningún cambio.
+        -- Usado por /b/[hash] para restringir RPC a las propiedades del
+        -- shortlist (5-20) en vez de traer 138 y filtrar en JS.
+        -- ====================================================================
+        AND (
+          p_filtros->'ids' IS NULL
+          OR p.id = ANY(ARRAY(SELECT (jsonb_array_elements_text(p_filtros->'ids'))::int))
+        )
         AND (
             p_filtros->>'precio_mensual_max' IS NULL
             OR p.precio_mensual_bob <= (p_filtros->>'precio_mensual_max')::numeric
