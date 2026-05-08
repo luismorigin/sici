@@ -153,6 +153,16 @@ export default function PublicShortlistPage(props: PageProps) {
 
   const itemCount = props.publicShare.items.length
 
+  // LCP optimization: preload de la primera foto del shortlist (la que ocupa
+  // el primer card visible). Sin preload, el browser recién pide esta imagen
+  // cuando React hidrata + el CSS aplica `background-image: url(...)`. Con
+  // preload, baja en paralelo con el JS bundle desde que llega el HTML.
+  // Lighthouse LCP del shortlist baja de ~5.5s a ~2-3s.
+  // Las cards usan background-image (no <img>), por eso fetchpriority="high"
+  // va en el <link rel="preload">, no en un tag de imagen.
+  const firstPhotoUrl: string | null =
+    (props.publicShare.items[0] as { fotos_urls?: string[] | null } | undefined)?.fotos_urls?.[0] ?? null
+
   // En modo demo, cualquier click sobre un anchor wa.me dentro del feed
   // (botón WA del broker en cards, sheet, compare) se intercepta acá y se
   // reemplaza por un modal explicativo. Event delegation evita modificar
@@ -182,6 +192,17 @@ export default function PublicShortlistPage(props: PageProps) {
       <Head>
         <title>{props.shortlistTitle}</title>
         <meta name="robots" content="noindex,nofollow" />
+        {/* Preload LCP image: la primera foto del primer card es el LCP element
+            del shortlist. Sin preload tarda 5.5s en aparecer; con preload ~2-3s. */}
+        {firstPhotoUrl && (
+          <link
+            rel="preload"
+            as="image"
+            href={firstPhotoUrl}
+            // @ts-expect-error fetchpriority es atributo HTML válido pero React types lo agregaron tarde
+            fetchpriority="high"
+          />
+        )}
         <meta property="og:title" content={props.shortlistTitle} />
         <meta property="og:description" content={`${itemCount} propiedades seleccionadas en Equipetrol`} />
         <meta property="og:type" content="website" />
