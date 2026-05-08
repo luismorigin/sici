@@ -18,10 +18,34 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import type { GetServerSideProps } from 'next'
 import { createClient } from '@supabase/supabase-js'
-import VentasPage, { getStaticProps as ventasGetStaticProps } from '../ventas'
+import VentasPage from '../ventas'
 import type { PublicShareData } from '../ventas'
-import AlquileresPage, { getStaticProps as alquileresGetStaticProps } from '../alquileres'
+import AlquileresPage from '../alquileres'
 import type { PublicShareDataAlquiler } from '../alquileres'
+
+// SEO mínimo para /b/[hash]: shortlist tiene noindex/nofollow + VentasHead/AlquileresHead
+// retornan null cuando publicShareHash existe (línea 3237 ventas, 3612 alquileres).
+// Por eso ningún campo se renderiza — solo necesitamos shape válida para satisfacer tipos.
+// Migración 241 perf: eliminamos las llamadas a ventasGetStaticProps/alquileresGetStaticProps
+// del SSR de /b/[hash] que recalculaban KPIs de mercado entero (~1.5-2.5s de TTFB).
+const STUB_VENTA_SEO = {
+  totalPropiedades: 0,
+  medianaPrecioM2: 0,
+  absorcionPct: 0,
+  fechaActualizacion: '',
+  generatedAt: '',
+  tipologias: [] as Array<{ dormitorios: number; unidades: number; precioMediano: number; precioP25: number; precioP75: number }>,
+  zonas: [] as Array<{ zonaDisplay: string; unidades: number; medianaPrecioM2: number }>,
+}
+const STUB_ALQUILER_SEO = {
+  totalUnidades: 0,
+  rentaMedianaBs: 0,
+  bsM2Promedio: 0,
+  fechaActualizacion: '',
+  generatedAt: '',
+  tipologias: [] as Array<{ dormitorios: number; unidades: number; rentaMedianaBs: number; rentaP25Bs: number; rentaP75Bs: number }>,
+  zonas: [] as Array<{ zonaDisplay: string; unidades: number; bsM2Promedio: number; rentaMedianaBs: number }>,
+}
 import { getBrokerBySlug } from '@/lib/simon-brokers'
 import {
   getShortlistByHashWithStatus,
@@ -500,14 +524,10 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
       }, {})
     }
 
-    // Reusamos el SEO base de /alquileres (meta tags + KPIs de mercado)
-    const alquileresResult = await alquileresGetStaticProps({} as Parameters<typeof alquileresGetStaticProps>[0])
-    const baseProps = 'props' in alquileresResult ? (alquileresResult.props as Record<string, unknown>) : {}
-
     return {
       props: {
         kind: 'alquiler',
-        seo: baseProps.seo as AlquilerPageProps['seo'],
+        seo: STUB_ALQUILER_SEO as AlquilerPageProps['seo'],
         initialProperties: properties,
         publicShare: {
           hash,
@@ -590,14 +610,10 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     }, {})
   }
 
-  // Reusamos el SEO de /ventas (mismas defaults para meta tags base)
-  const ventasResult = await ventasGetStaticProps({} as Parameters<typeof ventasGetStaticProps>[0])
-  const baseProps = 'props' in ventasResult ? (ventasResult.props as Record<string, unknown>) : {}
-
   return {
     props: {
       kind: 'venta',
-      seo: baseProps.seo as VentaPageProps['seo'],
+      seo: STUB_VENTA_SEO as VentaPageProps['seo'],
       initialProperties: properties,
       publicShare: {
         hash,
