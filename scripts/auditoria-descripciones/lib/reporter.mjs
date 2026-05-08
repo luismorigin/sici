@@ -27,6 +27,7 @@ export async function generarReporte(resultados, runDir) {
             id: r.id,
             fuente: r.fuente,
             url: r.url,
+            title_scraped: r.title_scraped || '',
             descripcion_bd: r.descripcion_bd,
             descripcion_scraped: r.descripcion_scraped,
             similitud_pct: r.similitud_pct,

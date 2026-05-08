@@ -1,0 +1,505 @@
+import { config as loadEnv } from 'dotenv';
+import { writeFile, mkdir } from 'node:fs/promises';
+import { dirname, resolve, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+
+import { getSupabaseClient, getPropsViejasFromFeed } from './lib/db.mjs';
+import { scrapeBatch } from './lib/firecrawl.mjs';
+import { extraerDescripcion, extraerTitle } from './lib/extractor.mjs';
+import { compararDescripciones } from './lib/similarity.mjs';
+import { generarReporte } from './lib/reporter.mjs';
+import { runChecks as runInternalChecks } from './lib/internal-checks.mjs';
+import { checkMatching } from './lib/matching-checks.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ENV_CANDIDATES = [
+  resolve(__dirname, '../../simon-mvp/.env.local'),
+  resolve(__dirname, '../../../sici/simon-mvp/.env.local'),
+  process.env.ENV_FILE,
+].filter(Boolean);
+const ENV_PATH = ENV_CANDIDATES.find((p) => existsSync(p));
+if (ENV_PATH) loadEnv({ path: ENV_PATH });
+
+const args = parseArgs(process.argv.slice(2));
+const USE_CACHED = args['use-cached'];
+const CONCURRENCY = args.concurrency ? parseInt(args.concurrency, 10) : 5;
+const SKIP_INSERT = !!args['skip-insert'];
+
+async function main() {
+  const tStart = Date.now();
+  const runDir = resolve(
+    __dirname,
+    'reports',
+    'mensual-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
+  );
+  await mkdir(runDir, { recursive: true });
+
+  console.log('▶ Audit mensual — orquestador');
+  console.log(`  Modo: ${USE_CACHED ? 'CACHED (--use-cached ' + USE_CACHED + ')' : 'NORMAL (Firecrawl)'}`);
+  console.log(`  Run dir: ${runDir}`);
+
+  const supabase = getSupabaseClient();
+  if (!USE_CACHED && !process.env.FIRECRAWL_API_KEY) {
+    console.error('✖ FIRECRAWL_API_KEY no encontrada. Necesaria en modo normal.');
+    process.exit(1);
+  }
+
+  // === FASE 1: Drift Firecrawl (capa 1) ===
+  console.log('\n▶ Capa 1: Drift Firecrawl');
+  const capa1Items = USE_CACHED
+    ? await loadCapa1FromCached(USE_CACHED)
+    : await runCapa1Fresh(supabase);
+  console.log(`  ${capa1Items.length} props procesadas en capa 1`);
+  const scrapeOk = capa1Items.filter((c) => c.scrape_status === 'ok').length;
+  const scrapeFail = capa1Items.length - scrapeOk;
+
+  // === FASE 2: Inconsistencias internas (capa 2) ===
+  console.log('\n▶ Capa 2: Inconsistencias internas');
+  const capa2Items = await runCapa2(supabase);
+  console.log(`  ${capa2Items.size} props con issues internos`);
+
+  // === FASE 3: Audit matching (capa 3) ===
+  console.log('\n▶ Capa 3: Audit matching');
+  const capa3Items = await runCapa3(supabase, capa1Items);
+  console.log(`  ${capa3Items.size} props con issues de matching`);
+
+  // === Combinar resultados ===
+  const combined = combinarResultados(capa1Items, capa2Items, capa3Items);
+
+  // === Stats ===
+  const stats = computeStats(combined);
+  console.log('\n=== Stats globales ===');
+  Object.entries(stats).forEach(([k, v]) => console.log(`  ${k}: ${v}`));
+
+  const costoFirecrawl = USE_CACHED ? 0 : Math.round(scrapeOk * 0.005 * 100) / 100;
+
+  // === Persistir a Supabase (si la migración 242 está aplicada) ===
+  let runId = null;
+  if (!SKIP_INSERT) {
+    runId = await persistRunAndItems(supabase, {
+      modo: USE_CACHED ? 'cached' : 'normal',
+      cached_run_dir: USE_CACHED || null,
+      total_props: combined.length,
+      scrape_ok: scrapeOk,
+      scrape_failed: scrapeFail,
+      summary_stats: stats,
+      costo_firecrawl: costoFirecrawl,
+      items: combined,
+    });
+  }
+
+  // === Generar reportes locales ===
+  await writeFile(join(runDir, 'combined.json'), JSON.stringify(combined, null, 2), 'utf8');
+  await writeFile(
+    join(runDir, 'meta.json'),
+    JSON.stringify({ runId, stats, costoFirecrawl, modo: USE_CACHED ? 'cached' : 'normal', cachedFrom: USE_CACHED || null, durationMs: Date.now() - tStart }, null, 2),
+    'utf8'
+  );
+  await writeFile(join(runDir, 'summary.md'), renderSummary(combined, stats, runId, USE_CACHED), 'utf8');
+
+  console.log(`\n✔ Reportes en ${runDir}`);
+  console.log(`  - combined.json: detalle completo de ${combined.length} props`);
+  console.log(`  - summary.md: reporte ejecutivo (esto es lo que la skill lee)`);
+  if (runId) console.log(`  - DB run_id: ${runId}`);
+}
+
+// ============================================================
+// CAPA 1
+// ============================================================
+
+async function runCapa1Fresh(supabase) {
+  const props = await getPropsViejasFromFeed(supabase, 1000, 0, [], []);
+  console.log(`  ${props.length} props desde v_mercado_venta`);
+
+  let lastPct = -1;
+  const scraped = await scrapeBatch(props, {
+    apiKey: process.env.FIRECRAWL_API_KEY,
+    concurrency: CONCURRENCY,
+    onProgress: (done, total) => {
+      const pct = Math.floor((done / total) * 100);
+      if (pct !== lastPct && pct % 10 === 0) {
+        console.log(`  scraping ${done}/${total} (${pct}%)`);
+        lastPct = pct;
+      }
+    },
+  });
+
+  return scraped.map((s) => {
+    if (!s.ok) {
+      return {
+        id: s.id,
+        fuente: s.fuente,
+        url: s.url,
+        descripcion_bd: s.descripcion_bd || '',
+        descripcion_scraped: '',
+        title_scraped: '',
+        scrape_status: 'failed',
+        error: s.error,
+        ...emptyCmp(),
+      };
+    }
+    const descScraped = extraerDescripcion(s.html, s.fuente);
+    const titleScraped = extraerTitle(s.html, s.fuente);
+    const cmp = compararDescripciones(s.descripcion_bd || '', descScraped);
+    return {
+      id: s.id,
+      fuente: s.fuente,
+      url: s.url,
+      descripcion_bd: s.descripcion_bd || '',
+      descripcion_scraped: descScraped,
+      title_scraped: titleScraped,
+      scrape_status: 'ok',
+      ...cmp,
+    };
+  });
+}
+
+async function loadCapa1FromCached(runDirName) {
+  const runDir = resolve(__dirname, 'reports', runDirName);
+  const resultsPath = join(runDir, 'results.json');
+  if (!existsSync(resultsPath)) {
+    throw new Error(`No existe ${resultsPath}`);
+  }
+  const items = JSON.parse(readFileSync(resultsPath, 'utf8'));
+  const rawDir = join(runDir, 'raw');
+  if (existsSync(rawDir)) {
+    const titlesById = new Map();
+    for (const file of readdirSync(rawDir)) {
+      try {
+        const data = JSON.parse(readFileSync(join(rawDir, file), 'utf8'));
+        if (data.id && data.title_scraped) titlesById.set(data.id, data.title_scraped);
+      } catch {}
+    }
+    for (const item of items) {
+      if (titlesById.has(item.id)) item.title_scraped = titlesById.get(item.id);
+    }
+  }
+  return items;
+}
+
+function emptyCmp() {
+  return {
+    similitud_pct: 0,
+    len_bd: 0,
+    len_scraped: 0,
+    palabras_agregadas: [],
+    palabras_quitadas: [],
+    flags_semanticos: {},
+    bucket: 'identicas',
+    tiene_flag_semantico: false,
+  };
+}
+
+// ============================================================
+// CAPA 2
+// ============================================================
+
+async function runCapa2(supabase) {
+  const { data, error } = await supabase
+    .from('propiedades_v2')
+    .select('id, precio_usd, tipo_cambio_detectado, nombre_edificio, datos_json, datos_json_enrichment')
+    .eq('status', 'completado')
+    .eq('tipo_operacion', 'venta');
+  if (error) throw error;
+
+  const issuesByProp = new Map();
+  for (const p of data) {
+    const issues = runInternalChecks({
+      precio_usd: parseFloat(p.precio_usd) || 0,
+      tipo_cambio_detectado: p.tipo_cambio_detectado,
+      nombre_edificio: p.nombre_edificio,
+      contenido_desc: p.datos_json?.contenido?.descripcion || '',
+      enrichment_desc: p.datos_json_enrichment?.descripcion || '',
+    });
+    if (issues.length > 0) issuesByProp.set(p.id, issues);
+  }
+  return issuesByProp;
+}
+
+// ============================================================
+// CAPA 3
+// ============================================================
+
+async function runCapa3(supabase, capa1Items) {
+  const { data: props, error } = await supabase
+    .from('propiedades_v2')
+    .select('id, fuente, url, nombre_edificio, id_proyecto_master, status, datos_json')
+    .eq('status', 'completado')
+    .eq('tipo_operacion', 'venta');
+  if (error) throw error;
+
+  const proyectoIds = [...new Set(props.map((p) => p.id_proyecto_master).filter(Boolean))];
+  const proyectosById = new Map();
+  if (proyectoIds.length > 0) {
+    const { data: proys, error: e2 } = await supabase
+      .from('proyectos_master')
+      .select('id_proyecto_master, nombre_oficial, alias_conocidos')
+      .in('id_proyecto_master', proyectoIds);
+    if (e2) throw e2;
+    for (const pm of proys || []) proyectosById.set(pm.id_proyecto_master, pm);
+  }
+
+  const titlesByPropId = new Map();
+  for (const c of capa1Items) {
+    if (c.title_scraped) titlesByPropId.set(c.id, c.title_scraped);
+  }
+
+  const issuesByProp = new Map();
+  for (const p of props) {
+    const pm = p.id_proyecto_master ? proyectosById.get(p.id_proyecto_master) : null;
+    const aliases = collectAliases(p, pm);
+    const enriched = {
+      id: p.id,
+      url: p.url,
+      nombre_edificio: p.nombre_edificio,
+      aliases,
+      contenido_desc: p.datos_json?.contenido?.descripcion || '',
+    };
+    const scraped = { title_scraped: titlesByPropId.get(p.id) || '' };
+    const result = checkMatching(enriched, scraped);
+    if (result.check !== 'ok') issuesByProp.set(p.id, result);
+  }
+  return issuesByProp;
+}
+
+function collectAliases(prop, pm) {
+  const set = new Set();
+  if (prop.nombre_edificio) set.add(prop.nombre_edificio);
+  if (pm) {
+    if (pm.nombre_oficial) set.add(pm.nombre_oficial);
+    if (Array.isArray(pm.alias_conocidos)) {
+      for (const a of pm.alias_conocidos) if (a) set.add(a);
+    }
+  }
+  return [...set];
+}
+
+// ============================================================
+// COMBINAR
+// ============================================================
+
+function combinarResultados(capa1, capa2, capa3) {
+  return capa1.map((c1) => {
+    const c2 = capa2.get(c1.id) || [];
+    const c3 = capa3.get(c1.id) || null;
+
+    const sevC2 = c2.length > 0 ? maxSeveridad(c2.map((i) => i.severidad)) : null;
+    const sevC3 = c3 ? c3.severidad : null;
+    const sevMax = maxSeveridad([sevC2, sevC3]);
+
+    return {
+      id: c1.id,
+      fuente: c1.fuente,
+      url: c1.url,
+      capa1: {
+        bucket: c1.bucket,
+        similitud_pct: c1.similitud_pct,
+        scrape_status: c1.scrape_status,
+        len_bd: c1.len_bd,
+        len_scraped: c1.len_scraped,
+        descripcion_bd: c1.descripcion_bd,
+        descripcion_scraped: c1.descripcion_scraped,
+        title_scraped: c1.title_scraped || '',
+        flags_semanticos: c1.flags_semanticos,
+        palabras_agregadas: c1.palabras_agregadas,
+        palabras_quitadas: c1.palabras_quitadas,
+      },
+      capa2: c2,
+      capa3: c3,
+      severidad_max: sevMax,
+    };
+  });
+}
+
+function maxSeveridad(arr) {
+  const orden = { alta: 3, media: 2, baja: 1 };
+  let max = null;
+  let maxVal = 0;
+  for (const s of arr) {
+    if (s && (orden[s] || 0) > maxVal) {
+      max = s;
+      maxVal = orden[s];
+    }
+  }
+  return max;
+}
+
+// ============================================================
+// STATS
+// ============================================================
+
+function computeStats(combined) {
+  const stats = {
+    total: combined.length,
+    identicas: 0,
+    cambio_menor: 0,
+    cambio_relevante: 0,
+    reescritas: 0,
+    listings_muertos: 0,
+    con_flag_semantico: 0,
+    con_inconsistencia_interna: 0,
+    con_mismatch_matching: 0,
+    severidad_alta: 0,
+    severidad_media: 0,
+    severidad_baja: 0,
+    scrape_failed: 0,
+  };
+  for (const r of combined) {
+    if (r.capa1.scrape_status !== 'ok') stats.scrape_failed++;
+    const b = r.capa1.bucket;
+    if (b === 'identicas') stats.identicas++;
+    else if (b === 'cambio_menor') stats.cambio_menor++;
+    else if (b === 'cambio_relevante') stats.cambio_relevante++;
+    else if (b === 'reescrita') {
+      if (r.capa1.len_scraped === 0) stats.listings_muertos++;
+      else stats.reescritas++;
+    }
+    if (r.capa1.flags_semanticos && Object.keys(r.capa1.flags_semanticos).length > 0) {
+      stats.con_flag_semantico++;
+    }
+    if (r.capa2.length > 0) stats.con_inconsistencia_interna++;
+    if (r.capa3 && r.capa3.check === 'mismatch_real') stats.con_mismatch_matching++;
+    if (r.severidad_max === 'alta') stats.severidad_alta++;
+    else if (r.severidad_max === 'media') stats.severidad_media++;
+    else if (r.severidad_max === 'baja') stats.severidad_baja++;
+  }
+  return stats;
+}
+
+// ============================================================
+// PERSISTIR A SUPABASE
+// ============================================================
+
+async function persistRunAndItems(supabase, payload) {
+  try {
+    const { data: runRow, error: e1 } = await supabase
+      .from('audit_descripciones_runs')
+      .insert({
+        modo: payload.modo,
+        cached_run_dir: payload.cached_run_dir,
+        total_props: payload.total_props,
+        scrape_ok: payload.scrape_ok,
+        scrape_failed: payload.scrape_failed,
+        summary_stats: payload.summary_stats,
+        costo_firecrawl: payload.costo_firecrawl,
+      })
+      .select('id')
+      .single();
+    if (e1) throw e1;
+
+    const runId = runRow.id;
+    const itemsForInsert = payload.items.map((r) => ({
+      run_id: runId,
+      prop_id: r.id,
+      fuente: r.fuente,
+      url: r.url,
+      bucket: r.capa1.bucket,
+      similitud_pct: r.capa1.similitud_pct,
+      descripcion_bd_snapshot: r.capa1.descripcion_bd,
+      descripcion_scraped: r.capa1.descripcion_scraped,
+      title_scraped: r.capa1.title_scraped || null,
+      flags_semanticos: r.capa1.flags_semanticos || {},
+      palabras_agregadas: r.capa1.palabras_agregadas || [],
+      palabras_quitadas: r.capa1.palabras_quitadas || [],
+      scrape_status: r.capa1.scrape_status,
+      inconsistencias_internas: r.capa2 || [],
+      severidad_max: r.severidad_max,
+      matching_check: r.capa3?.check || null,
+      matching_detalle: r.capa3?.detalle || null,
+    }));
+
+    const chunkSize = 100;
+    for (let i = 0; i < itemsForInsert.length; i += chunkSize) {
+      const chunk = itemsForInsert.slice(i, i + chunkSize);
+      const { error: e2 } = await supabase.from('audit_descripciones_items').insert(chunk);
+      if (e2) throw e2;
+    }
+    console.log(`✓ Persistido en Supabase: run_id=${runId}, items=${itemsForInsert.length}`);
+    return runId;
+  } catch (err) {
+    console.warn(`⚠ No se pudo persistir a Supabase: ${err.message}`);
+    console.warn(`  (¿migración 242 aplicada? — el script siguió con el reporte local)`);
+    return null;
+  }
+}
+
+// ============================================================
+// SUMMARY
+// ============================================================
+
+function renderSummary(combined, stats, runId, modo) {
+  const lines = [];
+  lines.push(`# Audit mensual — ${new Date().toISOString().slice(0, 10)}`);
+  lines.push('');
+  if (runId) lines.push(`**DB run_id:** \`${runId}\``);
+  if (modo) lines.push(`**Modo:** cached (${modo})`);
+  lines.push('');
+  lines.push('## Stats globales');
+  lines.push('');
+  lines.push('| Métrica | Cantidad |');
+  lines.push('|---|---:|');
+  lines.push(`| Total props | ${stats.total} |`);
+  lines.push(`| Idénticas | ${stats.identicas} |`);
+  lines.push(`| Cambio menor | ${stats.cambio_menor} |`);
+  lines.push(`| Cambio relevante | ${stats.cambio_relevante} |`);
+  lines.push(`| Reescritas | ${stats.reescritas} |`);
+  lines.push(`| **Listings muertos** | ${stats.listings_muertos} |`);
+  lines.push(`| Con flag semántico | ${stats.con_flag_semantico} |`);
+  lines.push(`| **Con inconsistencia interna** | ${stats.con_inconsistencia_interna} |`);
+  lines.push(`| **Con mismatch matching** | ${stats.con_mismatch_matching} |`);
+  lines.push(`| 🔴 Severidad alta | ${stats.severidad_alta} |`);
+  lines.push(`| 🟡 Severidad media | ${stats.severidad_media} |`);
+  lines.push(`| Scrape fallidos | ${stats.scrape_failed} |`);
+  lines.push('');
+
+  const altas = combined.filter((r) => r.severidad_max === 'alta');
+  if (altas.length > 0) {
+    lines.push(`## 🔴 Severidad alta (${altas.length})`);
+    lines.push('');
+    lines.push('| ID | Fuente | Bucket | C2 issues | C3 check |');
+    lines.push('|---:|---|---|---|---|');
+    for (const r of altas) {
+      const c2 = r.capa2.map((i) => i.tipo).join(', ');
+      const c3 = r.capa3 ? r.capa3.check : '-';
+      lines.push(`| ${r.id} | ${r.fuente} | ${r.capa1.bucket} | ${c2 || '-'} | ${c3} |`);
+    }
+    lines.push('');
+  }
+
+  const muertos = combined.filter((r) => r.capa1.bucket === 'reescrita' && r.capa1.len_scraped === 0);
+  if (muertos.length > 0) {
+    lines.push(`## ⚰️ Listings muertos (${muertos.length})`);
+    lines.push('');
+    lines.push('| ID | Fuente | URL |');
+    lines.push('|---:|---|---|');
+    for (const r of muertos) lines.push(`| ${r.id} | ${r.fuente} | ${r.url} |`);
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+function parseArgs(argv) {
+  const out = {};
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a.startsWith('--')) {
+      const key = a.slice(2);
+      const next = argv[i + 1];
+      if (next && !next.startsWith('--')) {
+        out[key] = next;
+        i++;
+      } else {
+        out[key] = true;
+      }
+    }
+  }
+  return out;
+}
+
+main().catch((err) => {
+  console.error('✖ Error fatal:', err);
+  process.exit(1);
+});

@@ -56,3 +56,41 @@ Reportados aparte (suben al top), capturan cambios chicos pero importantes:
 ## Costo
 
 Firecrawl ~$0.005/URL × 50 props ≈ **$0.25 por corrida**.
+
+---
+
+## Skill `/audit-mensual` (slash command)
+
+Corrida mensual orquestada de las 3 capas (drift Firecrawl + inconsistencias internas SQL + audit matching). Reporte ejecutivo con análisis humano.
+
+### Setup (una vez)
+
+Copiar el archivo de skill a tu `.claude/commands/`:
+
+```powershell
+# Desde el repo principal sici/
+copy "scripts\auditoria-descripciones\audit-mensual.command.md" ".claude\commands\audit-mensual.md"
+```
+
+(El archivo `.claude/commands/audit-mensual.md` está gitignored, por eso vive en `audit-mensual.command.md` dentro del repo.)
+
+### Uso
+
+```
+/audit-mensual                              ← corrida normal con Firecrawl ($1.75)
+/audit-mensual --use-cached <run-dir>       ← test sin gastar Firecrawl
+/audit-mensual --skip-insert                ← no escribe a Supabase (si migración no aplicada)
+```
+
+### Pre-requisitos
+
+- Migración SQL `242_audit_descripciones.sql` aplicada en Supabase (sino usar `--skip-insert`)
+- `FIRECRAWL_API_KEY` en `simon-mvp/.env.local`
+- `SUPABASE_SERVICE_ROLE_KEY` en `simon-mvp/.env.local`
+
+### Output
+
+- `reports/mensual-<timestamp>/combined.json` — detalle por prop
+- `reports/mensual-<timestamp>/summary.md` — reporte ejecutivo bruto
+- `reports/mensual-<timestamp>/meta.json` — stats + run_id
+- Persistido en Supabase: `audit_descripciones_runs` + `audit_descripciones_items`

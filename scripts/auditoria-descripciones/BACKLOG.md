@@ -81,25 +81,27 @@ Ubicación del original: `n8n/workflows/modulo_1/flujo_c_verificador_v2.0.0.json
 
 ## 🟡 Media — automatización del audit
 
-### 3. Workflow nightly de auditoría (Opción A discutida)
+### 3. ~~Workflow nightly~~ → **Skill `/audit-mensual`** ✅ implementada
 
-Hoy hice el audit a mano. Para que se mantenga:
+Decisión final: en vez de workflow n8n o routine remota, **slash command local** que el usuario invoca 1 vez al mes desde su Claude Code. Razones:
+- Cero infra adicional (sin n8n, sin routine remota, sin GitHub Action)
+- Análisis humano incluido (Claude lee output y filtra ruido conocido)
+- Costo Firecrawl: $1.75/mes (350 props × $0.005)
+- Acceso directo al .env.local (Firecrawl + Supabase keys)
 
-**Diseño propuesto:**
-- Workflow n8n nuevo, corre cada noche
-- Procesa 1/7 del feed por noche (rotativa) — 50 props/noche para 350 totales
-- Detecta drift: similitud < 90% o flags semánticos
-- Si detecta drift:
-  - Setea `fecha_enrichment = NULL` para que el flujo nocturno re-procese
-  - Si el precio_usd está bloqueado pero la descripción del portal tiene precio distinto, **dispara alerta a Slack al admin** con el diff
-- Si detecta listing muerto (HTML vacío con 200 OK), marca `inactivo_pending`
+**Componentes implementados** (commit en este branch):
+- `audit-mensual.mjs` — orquestador que corre 3 capas + persiste a Supabase
+- `audit-matching.mjs` — capa 3 (audit de matching usando alias_conocidos)
+- `lib/matching-checks.mjs` — lógica de check matching
+- `lib/internal-checks.mjs` — capa 2 afinada (de 118 → 18 issues, 6.5x menos ruido)
+- `lib/extractor.mjs` — agregada extracción de title del HTML
+- `audit-mensual.command.md` — instrucciones de la skill (copiar a `.claude/commands/audit-mensual.md`)
+- `sql/migrations/242_audit_descripciones.sql` — persistencia (tablas + RLS + view de tendencias)
 
-**Costo**: ~$0.25/noche × 30 = **$7.50/mes** Firecrawl. Despreciable.
-
-**Componentes a portar al workflow**:
-- `lib/firecrawl.mjs` (cliente con retry)
-- `lib/extractor.mjs` (C21/Remax descripción)
-- `lib/similarity.mjs` (Levenshtein + flags semánticos)
+**Pendiente para activar**:
+- Aplicar migración `242` en Supabase (no aplicada todavía)
+- Copiar `audit-mensual.command.md` a `.claude/commands/audit-mensual.md`
+- Primer audit real el próximo mes
 
 ---
 

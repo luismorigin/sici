@@ -6,7 +6,7 @@ import { existsSync } from 'node:fs';
 import { readFileSync, existsSync as existsSync2, readdirSync } from 'node:fs';
 import { getSupabaseClient, getPropsViejasFromFeed } from './lib/db.mjs';
 import { scrapeBatch } from './lib/firecrawl.mjs';
-import { extraerDescripcion } from './lib/extractor.mjs';
+import { extraerDescripcion, extraerTitle } from './lib/extractor.mjs';
 import { compararDescripciones } from './lib/similarity.mjs';
 import { generarReporte } from './lib/reporter.mjs';
 
@@ -105,6 +105,7 @@ async function main() {
       };
     }
     const descScraped = extraerDescripcion(s.html, s.fuente);
+    const titleScraped = extraerTitle(s.html, s.fuente);
     const cmp = compararDescripciones(s.descripcion_bd || '', descScraped);
     return {
       id: s.id,
@@ -116,6 +117,7 @@ async function main() {
       scrape_status: 'ok',
       descripcion_bd: s.descripcion_bd || '',
       descripcion_scraped: descScraped,
+      title_scraped: titleScraped,
       ...cmp,
     };
   });
