@@ -10,12 +10,62 @@ C21 sirve listings inactivos con HTTP 200 + HTML esqueleto sin descripción ni m
 
 **Casos detectados manualmente** (5 props del audit + 2 anteriores): #172, #497, #629, #888, #1141, #1142, #1143.
 
-**Acción**: agregar al verificador un check del estilo:
-```
-si (status_http === 200 && contenido_descripcion.length < 50) → marcar inactivo_pending
+**Estado: bloqueado por bug secundario en el flujo legacy del verificador**. Test corrido el 2026-05-08 reveló que el nodo `UPDATE inactivo_confirmed` tiene hardcoded `status='inactivo_confirmed'` — ignora el `newStatus` que setea el código JS de "Procesar respuesta". Por eso el flujo no diferencia entre `pending` y `confirmed`, va siempre directo a `confirmed`.
+
+**Para retomar este punto necesitarás 3 cambios**:
+
+a) **Modificar `Procesar respuesta`** — bloque C21 con detector HTML vacío. Código completo de v2.1 ya redactado (ver historial de la sesión 2026-05-08, resumido en este archivo).
+
+b) **Modificar `UPDATE inactivo_confirmed` para que sea dinámico**:
+```sql
+UPDATE propiedades_v2
+SET
+  status = '{{ $json.newStatus }}'::estado_propiedad,
+  es_activa = CASE WHEN '{{ $json.newStatus }}' = 'inactivo_confirmed' THEN FALSE ELSE es_activa END,
+  fecha_inactivacion = CASE
+    WHEN '{{ $json.newStatus }}' = 'inactivo_confirmed'
+    THEN COALESCE(primera_ausencia_at, NOW())
+    ELSE fecha_inactivacion
+  END,
+  primera_ausencia_at = CASE
+    WHEN '{{ $json.newStatus }}' = 'inactivo_pending' AND primera_ausencia_at IS NULL
+    THEN NOW()
+    ELSE primera_ausencia_at
+  END,
+  razon_inactiva = '{{ $json.razonInactiva }}',
+  fecha_actualizacion = NOW()
+WHERE id = {{ $json.id }}
+RETURNING id, url, status, fecha_inactivacion, primera_ausencia_at, razon_inactiva,
+  '{{ $json.action }}' as action,
+  '{{ $json.razonInactiva }}' as "razonInactiva",
+  '{{ $json.origen }}' as origen,
+  '{{ $json.fuente }}' as fuente;
 ```
 
-Ubicación: `n8n/workflows/modulo_1/flujo_c_verificador_v2.0.0.json`
+c) **Re-test con SQL de revert** (solo si retomás mañana — si pasaron varios días, los IDs pueden ser otros):
+```sql
+-- Revertir las 5 muertas de vuelta a completado para re-test
+UPDATE propiedades_v2
+SET status = 'completado'::estado_propiedad,
+    es_activa = TRUE,
+    fecha_inactivacion = NULL,
+    primera_ausencia_at = NULL,
+    razon_inactiva = NULL,
+    fecha_actualizacion = NOW()
+WHERE id IN (629, 888, 1141, 1142, 1143);
+```
+
+**NOTA**: las 5 props (#629, 888, 1141, 1142, 1143) ya quedaron en `inactivo_confirmed` por el test fallido del 2026-05-08. **El estado final es correcto** (están realmente muertas), solo que llegaron por el camino equivocado. NO hace falta revertirlas a menos que se quiera re-testear el flujo `pending → confirmed`.
+
+**Workflow duplicado para retomar**: `C:\Users\LUCHO\Downloads\Flujo C - Verificador Venta v2.0.0 copy.json` (en Downloads del user, no commiteado).
+
+Ubicación del original: `n8n/workflows/modulo_1/flujo_c_verificador_v2.0.0.json`
+
+**Riesgo concreto del fix** (re-evaluado con datos del sistema actual):
+- Falsos positivos son **self-healing en <24h** porque `registrar_discovery` reactiva `inactivo_pending` → `actualizado` (`completado`) cuando vuelve a encontrar la URL en el portal (ver `sql/functions/discovery/funciones_auxiliares_discovery.sql:116-118`).
+- Bajo riesgo total dado el self-healing.
+
+**Alternativa si no se quiere tocar verificador**: el audit mensual ya detecta listings muertos (vía Firecrawl scraped vacío). Costo: hasta 30d de delay en marcarlos. Tasa observada: ~0.7%/mes (2-3 props/mes).
 
 ---
 
