@@ -60,7 +60,12 @@ Leer los 3 archivos.
 - **Cambio de precio explícito en desc**: descripción menciona "Nuevo Precio" o el precio bajó significativamente (>10%) y `precio_usd` BD no se actualizó
 - **Listings muertos**: `bucket='reescrita'` con `len_scraped=0` (HTML 200 OK pero sin contenido)
   - SQL: `UPDATE propiedades_v2 SET status='inactivo_pending', fecha_actualizacion=NOW() WHERE id IN (...);`
-- **Mismatch de matching real**: capa 3 reporta `mismatch_real`. Validá leyendo la descripción real — el regex puede dar falsos positivos (ej: capturar texto descriptivo como "Amoblado y equipado")
+- **Mismatch de matching real**: capa 3 reporta `mismatch_real`. NO asumir que el matching está mal. Discriminar 3 casos:
+  1. **Variante del nombre faltante en alias_conocidos** (más común): la desc dice un alias que el `proyectos_master` no tiene. Acción: agregar el alias al proyecto master (NO cambiar `nombre_edificio` de la prop). Ej: prop dice "UPTOWN EQUIPETROL", BD asigna "Edificio Uptown Equipetrol", agregar "UPTOWN EQUIPETROL" a `alias_conocidos` del proyecto.
+  2. **Edificio realmente distinto**: la desc menciona un proyecto que NO existe en `proyectos_master` o existe con otro `id_proyecto_master`. Acción: verificar manualmente (puede ser matching errado real).
+  3. **Falso positivo del regex**: el regex agarró texto descriptivo (ej: "Amoblado y equipado con menaje"). Acción: ignorar.
+  
+  Para distinguir, leer la descripción completa + revisar `nombre_oficial` + `alias_conocidos` del proyecto asignado.
 - **Cambio de modelo comercial**: descripción cambió "incluye parqueo" ↔ "parqueo opcional" o similar
 - **Cambio de unidad**: descripción cambió "Piso X" → "Piso Y" (broker reusó el listing para otra unidad — caso #100)
 
