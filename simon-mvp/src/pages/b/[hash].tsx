@@ -18,10 +18,34 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import type { GetServerSideProps } from 'next'
 import { createClient } from '@supabase/supabase-js'
-import VentasPage, { getStaticProps as ventasGetStaticProps } from '../ventas'
+import VentasPage from '../ventas'
 import type { PublicShareData } from '../ventas'
-import AlquileresPage, { getStaticProps as alquileresGetStaticProps } from '../alquileres'
+import AlquileresPage from '../alquileres'
 import type { PublicShareDataAlquiler } from '../alquileres'
+
+// SEO mínimo para /b/[hash]: shortlist tiene noindex/nofollow + VentasHead/AlquileresHead
+// retornan null cuando publicShareHash existe (línea 3237 ventas, 3612 alquileres).
+// Por eso ningún campo se renderiza — solo necesitamos shape válida para satisfacer tipos.
+// Migración 241 perf: eliminamos las llamadas a ventasGetStaticProps/alquileresGetStaticProps
+// del SSR de /b/[hash] que recalculaban KPIs de mercado entero (~1.5-2.5s de TTFB).
+const STUB_VENTA_SEO = {
+  totalPropiedades: 0,
+  medianaPrecioM2: 0,
+  absorcionPct: 0,
+  fechaActualizacion: '',
+  generatedAt: '',
+  tipologias: [] as Array<{ dormitorios: number; unidades: number; precioMediano: number; precioP25: number; precioP75: number }>,
+  zonas: [] as Array<{ zonaDisplay: string; unidades: number; medianaPrecioM2: number }>,
+}
+const STUB_ALQUILER_SEO = {
+  totalUnidades: 0,
+  rentaMedianaBs: 0,
+  bsM2Promedio: 0,
+  fechaActualizacion: '',
+  generatedAt: '',
+  tipologias: [] as Array<{ dormitorios: number; unidades: number; rentaMedianaBs: number; rentaP25Bs: number; rentaP75Bs: number }>,
+  zonas: [] as Array<{ zonaDisplay: string; unidades: number; bsM2Promedio: number; rentaMedianaBs: number }>,
+}
 import { getBrokerBySlug } from '@/lib/simon-brokers'
 import {
   getShortlistByHashWithStatus,
@@ -454,8 +478,11 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     let priceSnapshots: Record<number, { bobSnapshot: number | null; bobActual: number | null }> = {}
 
     if (propIds.length > 0) {
+      // Migración 241: filtro `ids` restringe la RPC a las propiedades del
+      // shortlist (5-20) en lugar de traer 138 filas y filtrar en JS.
+      // TTFB del SSR baja ~50% al reducir transferencia Postgres → Vercel.
       const [rpcRes, bobRes] = await Promise.all([
-        supabase.rpc('buscar_unidades_alquiler', { p_filtros: { limite: 500, solo_con_fotos: false } }),
+        supabase.rpc('buscar_unidades_alquiler', { p_filtros: { ids: propIds, limite: propIds.length, solo_con_fotos: false } }),
         supabase.from('propiedades_v2').select('id, precio_mensual_bob').in('id', propIds),
       ])
 
@@ -497,14 +524,10 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
       }, {})
     }
 
-    // Reusamos el SEO base de /alquileres (meta tags + KPIs de mercado)
-    const alquileresResult = await alquileresGetStaticProps({} as Parameters<typeof alquileresGetStaticProps>[0])
-    const baseProps = 'props' in alquileresResult ? (alquileresResult.props as Record<string, unknown>) : {}
-
     return {
       props: {
         kind: 'alquiler',
-        seo: baseProps.seo as AlquilerPageProps['seo'],
+        seo: STUB_ALQUILER_SEO as AlquilerPageProps['seo'],
         initialProperties: properties,
         publicShare: {
           hash,
@@ -539,8 +562,11 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     //  - RPC buscar_unidades_simple → datos de display (incluye precio_usd normalizado actual)
     //  - propiedades_v2.precio_usd  → RAW actual (para detectar cambio del agente vs TC)
     //  - items ya tienen precio_usd_snapshot (raw) y precio_norm_snapshot (normalizado)
+    // Migración 241: filtro `ids` restringe la RPC a las propiedades del
+    // shortlist (5-20) en lugar de traer 323 filas y filtrar en JS.
+    // TTFB del SSR baja ~50% al reducir transferencia Postgres → Vercel.
     const [rpcRes, rawRes] = await Promise.all([
-      supabase.rpc('buscar_unidades_simple', { p_filtros: { limite: 500, solo_con_fotos: false } }),
+      supabase.rpc('buscar_unidades_simple', { p_filtros: { ids: propIds, limite: propIds.length, solo_con_fotos: false } }),
       supabase.from('propiedades_v2').select('id, precio_usd').in('id', propIds),
     ])
 
@@ -584,14 +610,10 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
     }, {})
   }
 
-  // Reusamos el SEO de /ventas (mismas defaults para meta tags base)
-  const ventasResult = await ventasGetStaticProps({} as Parameters<typeof ventasGetStaticProps>[0])
-  const baseProps = 'props' in ventasResult ? (ventasResult.props as Record<string, unknown>) : {}
-
   return {
     props: {
       kind: 'venta',
-      seo: baseProps.seo as VentaPageProps['seo'],
+      seo: STUB_VENTA_SEO as VentaPageProps['seo'],
       initialProperties: properties,
       publicShare: {
         hash,
