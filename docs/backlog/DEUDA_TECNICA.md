@@ -176,3 +176,53 @@ GROUP BY 1 ORDER BY 1;
 Agregar filtro por nombre de edificio/proyecto en `/ventas` y `/alquileres`. Hoy solo se filtra por zona, dormitorios y precio. Poder buscar "Atrium" o "Condado" y ver solo las unidades de ese proyecto. Útil para seguimiento de competidores y para compradores que ya saben qué edificio les interesa.
 
 **Prioridad: BAJA.** Nice to have, no bloquea nada.
+
+## Pipeline alquiler — descripción cruda no se persiste (9 May 2026)
+
+**Problema:** En el feed `/alquileres`, los usuarios ven la descripción `descripcion_limpia` (resumen estructurado del LLM) en lugar del texto literal del broker. Eso pierde matices comerciales como "PRECIO BAJADO!", "ÚLTIMA UNIDAD", urgencias y tono.
+
+**Causa:** Diseño "LLM-first" del pipeline de alquiler (decisión arquitectónica deliberada — `pipeline_alquiler_canonical.md` líneas 41-43). El nodo "Construir Prompt" del workflow `flujo_enrichment_llm_alquiler_v2.0.0.json` SÍ extrae la descripción cruda del HTML (Remax: `data-page.description_website`, C21: del markdown, BI: del HTML). La usa para alimentar al LLM **pero no la persiste**. Solo guarda el output del LLM en `datos_json_enrichment->'llm_output'`.
+
+Verificado: en `propiedades_v2` para alquiler (150 props), las keys disponibles en `datos_json_enrichment` son solo `metadata` y `llm_output`. No hay `descripcion`, `description`, ni `descripcion_completa`. La RPC `buscar_unidades_alquiler` cae al fallback `llm_output->>'descripcion_limpia'` por COALESCE.
+
+**Fix propuesto (3 cambios pequeños, ~2-3 hr total):**
+
+1. **Modificar nodo "Construir Prompt" (JS)** — exponer la cruda al output del nodo:
+   ```javascript
+   return [{
+     json: {
+       prop_id: prop.id,
+       prompt: prompt_text,
+       descripcion_cruda: descripcion,  // ← AGREGAR
+       agente_directo,
+       fotos_extraidas,
+       ...
+     }
+   }];
+   ```
+
+2. **Modificar nodo "Parsear y Validar" (JS)** — pasarla al SQL:
+   ```javascript
+   datos_llm.descripcion_cruda = $('Construir Prompt').first().json.descripcion_cruda;
+   ```
+
+3. **Modificar `registrar_enrichment_alquiler()`** — extraerla del JSONB y persistir en `datos_json_enrichment->'descripcion'` (top-level). El feed empieza a mostrarla automáticamente porque la RPC ya hace `COALESCE(enrichment.descripcion, llm_output.descripcion_limpia, ...)`.
+
+**Backfill de 150 props existentes:**
+
+Después de aplicar el fix, las nuevas props guardarán cruda. Para las 150 ya existentes hay 2 opciones:
+- **a) Script Node ad-hoc** — re-scrape Firecrawl + UPDATE JSONB (~5 min ejecución, $0.75 una vez)
+- **b) Workflow n8n nuevo "Backfill Descripción Alquiler"** — más visible, mismo costo
+
+**Beneficios:**
+- Feed muestra texto literal del broker (mejora UX, captura urgencia/tono)
+- Permite audit mensual textual de alquileres (idéntico al de venta) en lugar del audit "estructurado" más limitado
+- Coherencia con pipeline venta — mismo schema, menos casos especiales en código
+
+**Riesgos:**
+- Cambio en pipeline productivo (mitigado: cambios aditivos, no rompen lo existente)
+- Función SQL `registrar_enrichment_alquiler()` toca producción (mitigado: testear en branch antes)
+
+**Prioridad: MEDIA.** Funcionó 3 meses sin queja, pero agregar visibilidad para usuarios + habilitar audit textual son valor real.
+
+**Referencia:** Investigado en sesión 8-9 May 2026 — branch `audit/descripciones-drift`. Workflow afectado: `n8n/workflows/alquiler/flujo_enrichment_llm_alquiler_v2.0.0.json`. Función SQL: ver migración existente de `registrar_enrichment_alquiler`.
