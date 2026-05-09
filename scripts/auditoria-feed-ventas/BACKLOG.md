@@ -81,7 +81,7 @@ Ubicación del original: `n8n/workflows/modulo_1/flujo_c_verificador_v2.0.0.json
 
 ## 🟡 Media — automatización del audit
 
-### 3. ~~Workflow nightly~~ → **Skill `/audit-mensual`** ✅ implementada
+### 3. ~~Workflow nightly~~ → **Skill `/audit-feed-ventas-mensual`** ✅ implementada
 
 Decisión final: en vez de workflow n8n o routine remota, **slash command local** que el usuario invoca 1 vez al mes desde su Claude Code. Razones:
 - Cero infra adicional (sin n8n, sin routine remota, sin GitHub Action)
@@ -90,17 +90,17 @@ Decisión final: en vez de workflow n8n o routine remota, **slash command local*
 - Acceso directo al .env.local (Firecrawl + Supabase keys)
 
 **Componentes implementados** (commit en este branch):
-- `audit-mensual.mjs` — orquestador que corre 3 capas + persiste a Supabase
+- `audit-feed-ventas-mensual.mjs` — orquestador que corre 3 capas + persiste a Supabase
 - `audit-matching.mjs` — capa 3 (audit de matching usando alias_conocidos)
 - `lib/matching-checks.mjs` — lógica de check matching
 - `lib/internal-checks.mjs` — capa 2 afinada (de 118 → 18 issues, 6.5x menos ruido)
 - `lib/extractor.mjs` — agregada extracción de title del HTML
-- `audit-mensual.command.md` — instrucciones de la skill (copiar a `.claude/commands/audit-mensual.md`)
+- `audit-feed-ventas-mensual.command.md` — instrucciones de la skill (copiar a `.claude/commands/audit-feed-ventas-mensual.md`)
 - `sql/migrations/242_audit_descripciones.sql` — persistencia (tablas + RLS + view de tendencias)
 
 **Pendiente para activar**:
 - Aplicar migración `242` en Supabase (no aplicada todavía)
-- Copiar `audit-mensual.command.md` a `.claude/commands/audit-mensual.md`
+- Copiar `audit-feed-ventas-mensual.command.md` a `.claude/commands/audit-feed-ventas-mensual.md`
 - Primer audit real el próximo mes
 
 ---

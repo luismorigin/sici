@@ -18,15 +18,15 @@ Auditoría completa del feed cruzando 3 capas:
 
 ## Flujo de ejecución
 
-Cuando el usuario invoca `/audit-mensual` (con o sin args):
+Cuando el usuario invoca `/audit-feed-ventas-mensual` (con o sin args):
 
 ### 1. Ejecutar el orquestador
 
 Correr desde el worktree `sici-auditoria/` (donde vive el script):
 
 ```powershell
-cd "C:\Users\LUCHO\Desktop\Censo inmobiliario\sici-auditoria\scripts\auditoria-descripciones"
-node audit-mensual.mjs $ARGUMENTS
+cd "C:\Users\LUCHO\Desktop\Censo inmobiliario\sici-auditoria\scripts\auditoria-feed-ventas"
+node audit-feed-ventas-mensual.mjs $ARGUMENTS
 ```
 
 Si el usuario pasó argumentos (ej. `--use-cached 2026-05-08-...`), reemplazar `$ARGUMENTS` con esos. Si no, correr sin args (modo normal).

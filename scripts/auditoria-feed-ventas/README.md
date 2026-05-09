@@ -5,7 +5,7 @@ Re-scrapea propiedades vivas del feed con Firecrawl, extrae la descripción usan
 ## Setup
 
 ```powershell
-cd scripts/auditoria-descripciones
+cd scripts/auditoria-feed-ventas
 npm install
 ```
 
@@ -59,7 +59,7 @@ Firecrawl ~$0.005/URL × 50 props ≈ **$0.25 por corrida**.
 
 ---
 
-## Skill `/audit-mensual` (slash command)
+## Skill `/audit-feed-ventas-mensual` (slash command)
 
 Corrida mensual orquestada de las 3 capas (drift Firecrawl + inconsistencias internas SQL + audit matching). Reporte ejecutivo con análisis humano.
 
@@ -69,17 +69,17 @@ Copiar el archivo de skill a tu `.claude/commands/`:
 
 ```powershell
 # Desde el repo principal sici/
-copy "scripts\auditoria-descripciones\audit-mensual.command.md" ".claude\commands\audit-mensual.md"
+copy "scripts\auditoria-feed-ventas\audit-feed-ventas-mensual.command.md" ".claude\commands\audit-feed-ventas-mensual.md"
 ```
 
-(El archivo `.claude/commands/audit-mensual.md` está gitignored, por eso vive en `audit-mensual.command.md` dentro del repo.)
+(El archivo `.claude/commands/audit-feed-ventas-mensual.md` está gitignored, por eso vive en `audit-feed-ventas-mensual.command.md` dentro del repo.)
 
 ### Uso
 
 ```
-/audit-mensual                              ← corrida normal con Firecrawl ($1.75)
-/audit-mensual --use-cached <run-dir>       ← test sin gastar Firecrawl
-/audit-mensual --skip-insert                ← no escribe a Supabase (si migración no aplicada)
+/audit-feed-ventas-mensual                              ← corrida normal con Firecrawl ($1.75)
+/audit-feed-ventas-mensual --use-cached <run-dir>       ← test sin gastar Firecrawl
+/audit-feed-ventas-mensual --skip-insert                ← no escribe a Supabase (si migración no aplicada)
 ```
 
 ### Pre-requisitos
