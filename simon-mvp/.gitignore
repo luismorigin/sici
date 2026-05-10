@@ -32,3 +32,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env.production
+
+# screenshots temporales generados por scripts de test
+.tmp-screenshots/
