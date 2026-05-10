@@ -144,7 +144,17 @@ Solo accionable cuando el workflow nightly esté en producción.
 
 ### 7. Audit similar para feed `/alquileres`
 
-El audit actual cubre solo `/ventas` (`v_mercado_venta`). Sería trivial replicarlo para alquileres (cambiar query a `v_mercado_alquiler`, ajustar extractor para Bien Inmuebles).
+El audit actual cubre solo `/ventas` (`v_mercado_venta`).
+
+**Pre-requisitos cubiertos (9 May 2026):** la descripción cruda del agente ya se persiste en `datos_json_enrichment.descripcion` para alquiler — misma key que venta. Migración 243 + workflow `Enrichment LLM Alquiler v2.1.0` en producción.
+
+**Trabajo restante (chico):**
+- Clonar `lib/db.mjs` cambiando `v_mercado_venta` → `v_mercado_alquiler`.
+- Ajustar selectores de precio (`precio_norm` → `precio_mensual` o `precio_mensual_bob` según convenga).
+- El extractor por fuente (Remax data-page, C21 og:description, BI block-body) ya está implementado en el workflow productivo — el audit solo necesita re-scrapear y comparar contra `datos_json_enrichment.descripcion` igual que ventas.
+- Skill nuevo `/audit-feed-alquileres-mensual` análogo al de ventas.
+
+**Caveat:** el primer audit de alquileres tendrá un % alto de "sin descripción en BD" para las ~146 props pre-9-May (no se hizo backfill — opción A). A medida que esas props caigan del feed por antigüedad o se re-procesen, la cobertura sube.
 
 ---
 
