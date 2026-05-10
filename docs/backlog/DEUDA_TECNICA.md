@@ -177,7 +177,15 @@ Agregar filtro por nombre de edificio/proyecto en `/ventas` y `/alquileres`. Hoy
 
 **Prioridad: BAJA.** Nice to have, no bloquea nada.
 
-## Pipeline alquiler — descripción cruda no se persiste (9 May 2026)
+## ✓ Pipeline alquiler — descripción cruda persistida (RESUELTO 9 May 2026)
+
+**Estado:** Resuelto. Migración 243 + workflow `Enrichment LLM Alquiler v2.1.0` en producción desde 9 May 2026 ~22:30. La key `datos_json_enrichment.descripcion` se popula automáticamente en cada enrichment nocturno (Remax/C21/BI). RPC `buscar_unidades_alquiler` ya tenía la rama 1 del COALESCE preparada — feed muestra cruda automáticamente. **No se hizo backfill** de las 146 props pre-existentes (decisión: opción A = esperar al pipeline). Verificado E2E con 3 props (1385 BI, 1812 Remax, 1821 C21).
+
+**Pendiente menor (no urgente):** sincronizar `audit-feed-alquileres` clonando `audit-feed-ventas` con cambios de fuente (`v_mercado_alquiler`, extractor por fuente, selectores de precio mensual). Pre-requisitos cubiertos.
+
+---
+
+### Contexto histórico (problema original)
 
 **Problema:** En el feed `/alquileres`, los usuarios ven la descripción `descripcion_limpia` (resumen estructurado del LLM) en lugar del texto literal del broker. Eso pierde matices comerciales como "PRECIO BAJADO!", "ÚLTIMA UNIDAD", urgencias y tono.
 

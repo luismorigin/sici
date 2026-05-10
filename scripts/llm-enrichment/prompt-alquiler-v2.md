@@ -104,6 +104,18 @@ Devuelve SOLO este JSON (sin explicaciones, sin markdown):
 
 ## Changelog
 
+### v2.1.1 (2026-05-09) — Persistencia de descripcion cruda
+
+- **Workflow sólo (prompt sin cambios)**: el LLM input/output queda idéntico a v2.1.
+- **Nuevo en pipeline**: el nodo "Construir Prompt" extrae la descripción cruda del agente por fuente y la propaga al output del nodo (camino paralelo, no entra al prompt LLM).
+  - Remax: `data-page.props.listing.description_website`
+  - C21: regex sobre `<meta property="og:description">` del rawHtml
+  - BI: regex sobre `<div class="block-body">` después del header `property_block_title">Descripción</h4>`
+- **Persistencia**: el nodo "Registrar Enrichment" pasa la cruda como nuevo argumento `p_descripcion_cruda` a `registrar_enrichment_alquiler` (migración 243), y la función la guarda en `datos_json_enrichment->'descripcion'` (root level).
+- **Consistencia**: misma key que pipeline venta + audit-feed-ventas. Habilita audit-feed-alquileres como clon directo del de ventas.
+- **Costo LLM**: sin cambio. La cruda no entra al prompt — el `${contenido}` del prompt sigue siendo el `markdown.substring(0, 3000)` de siempre.
+- **Backwards compat**: la función SQL acepta `p_descripcion_cruda DEFAULT NULL`. Llamadas viejas (5-6 args) siguen funcionando.
+
 ### v2.1 (2026-04-13) — Amoblado default "no"
 
 - **Instrucción AMOBLADO explícita**: si la descripción no menciona amoblado → "no" (antes: null)
