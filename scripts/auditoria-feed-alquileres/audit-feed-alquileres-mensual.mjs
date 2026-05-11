@@ -1,15 +1,17 @@
+// Orquestador audit mensual feed /alquileres.
+// 3 capas: drift fetcher (curl) + inconsistencias internas + audit matching.
+// Persiste a Supabase (audit_descripciones_runs/items con tipo_operacion='alquiler').
+
 import { config as loadEnv } from 'dotenv';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { spawn } from 'node:child_process';
 
 import { getSupabaseClient, getPropsViejasFromFeed } from './lib/db.mjs';
-import { scrapeBatch } from './lib/firecrawl.mjs';
+import { fetchBatch } from './lib/fetcher.mjs';
 import { extraerDescripcion, extraerTitle } from './lib/extractor.mjs';
 import { compararDescripciones } from './lib/similarity.mjs';
-import { generarReporte } from './lib/reporter.mjs';
 import { runChecks as runInternalChecks } from './lib/internal-checks.mjs';
 import { checkMatching } from './lib/matching-checks.mjs';
 
@@ -24,7 +26,7 @@ if (ENV_PATH) loadEnv({ path: ENV_PATH });
 
 const args = parseArgs(process.argv.slice(2));
 const USE_CACHED = args['use-cached'];
-const CONCURRENCY = args.concurrency ? parseInt(args.concurrency, 10) : 5;
+const CONCURRENCY = args.concurrency ? parseInt(args.concurrency, 10) : 6;
 const SKIP_INSERT = !!args['skip-insert'];
 
 async function main() {
@@ -36,18 +38,14 @@ async function main() {
   );
   await mkdir(runDir, { recursive: true });
 
-  console.log('▶ Audit mensual — orquestador');
-  console.log(`  Modo: ${USE_CACHED ? 'CACHED (--use-cached ' + USE_CACHED + ')' : 'NORMAL (Firecrawl)'}`);
+  console.log('▶ Audit mensual ALQUILER — orquestador');
+  console.log(`  Modo: ${USE_CACHED ? 'CACHED (--use-cached ' + USE_CACHED + ')' : 'NORMAL (curl directo)'}`);
   console.log(`  Run dir: ${runDir}`);
 
   const supabase = getSupabaseClient();
-  if (!USE_CACHED && !process.env.FIRECRAWL_API_KEY) {
-    console.error('✖ FIRECRAWL_API_KEY no encontrada. Necesaria en modo normal.');
-    process.exit(1);
-  }
 
-  // === FASE 1: Drift Firecrawl (capa 1) ===
-  console.log('\n▶ Capa 1: Drift Firecrawl');
+  // === FASE 1: Drift fetcher (capa 1) ===
+  console.log('\n▶ Capa 1: Drift fetcher (curl)');
   const capa1Items = USE_CACHED
     ? await loadCapa1FromCached(USE_CACHED)
     : await runCapa1Fresh(supabase);
@@ -73,9 +71,9 @@ async function main() {
   console.log('\n=== Stats globales ===');
   Object.entries(stats).forEach(([k, v]) => console.log(`  ${k}: ${v}`));
 
-  const costoFirecrawl = USE_CACHED ? 0 : Math.round(scrapeOk * 0.005 * 100) / 100;
+  const costoFirecrawl = 0; // curl directo, sin Firecrawl
 
-  // === Persistir a Supabase (si la migración 242 está aplicada) ===
+  // === Persistir a Supabase ===
   let runId = null;
   if (!SKIP_INSERT) {
     runId = await persistRunAndItems(supabase, {
@@ -90,7 +88,7 @@ async function main() {
     });
   }
 
-  // === Generar reportes locales ===
+  // === Reportes locales ===
   await writeFile(join(runDir, 'combined.json'), JSON.stringify(combined, null, 2), 'utf8');
   await writeFile(
     join(runDir, 'meta.json'),
@@ -111,22 +109,21 @@ async function main() {
 
 async function runCapa1Fresh(supabase) {
   const props = await getPropsViejasFromFeed(supabase, 1000, 0, [], []);
-  console.log(`  ${props.length} props desde v_mercado_venta`);
+  console.log(`  ${props.length} props desde v_mercado_alquiler`);
 
   let lastPct = -1;
-  const scraped = await scrapeBatch(props, {
-    apiKey: process.env.FIRECRAWL_API_KEY,
+  const fetched = await fetchBatch(props, {
     concurrency: CONCURRENCY,
     onProgress: (done, total) => {
       const pct = Math.floor((done / total) * 100);
       if (pct !== lastPct && pct % 10 === 0) {
-        console.log(`  scraping ${done}/${total} (${pct}%)`);
+        console.log(`  fetching ${done}/${total} (${pct}%)`);
         lastPct = pct;
       }
     },
   });
 
-  return scraped.map((s) => {
+  return fetched.map((s) => {
     if (!s.ok) {
       const descBd = s.descripcion_bd || '';
       return {
@@ -199,23 +196,31 @@ function emptyCmp() {
 // ============================================================
 
 async function runCapa2(supabase) {
-  const { data, error } = await supabase
-    .from('propiedades_v2')
-    .select('id, precio_usd, tipo_cambio_detectado, nombre_edificio, datos_json, datos_json_enrichment')
-    .eq('status', 'completado')
-    .eq('tipo_operacion', 'venta');
-  if (error) throw error;
+  const { data: vista, error: eV } = await supabase
+    .from('v_mercado_alquiler')
+    .select('id, precio_mensual_bob');
+  if (eV) throw eV;
+  const precioById = new Map(vista.map((v) => [v.id, parseFloat(v.precio_mensual_bob) || 0]));
+  const ids = vista.map((v) => v.id);
+  if (ids.length === 0) return new Map();
 
   const issuesByProp = new Map();
-  for (const p of data) {
-    const issues = runInternalChecks({
-      precio_usd: parseFloat(p.precio_usd) || 0,
-      tipo_cambio_detectado: p.tipo_cambio_detectado,
-      nombre_edificio: p.nombre_edificio,
-      contenido_desc: p.datos_json?.contenido?.descripcion || '',
-      enrichment_desc: p.datos_json_enrichment?.descripcion || '',
-    });
-    if (issues.length > 0) issuesByProp.set(p.id, issues);
+  const chunkSize = 100;
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
+    const { data, error } = await supabase
+      .from('propiedades_v2')
+      .select('id, nombre_edificio, datos_json_enrichment')
+      .in('id', chunk);
+    if (error) throw error;
+    for (const p of data) {
+      const issues = runInternalChecks({
+        precio_mensual_bob: precioById.get(p.id) || 0,
+        nombre_edificio: p.nombre_edificio,
+        descripcion_cruda: p.datos_json_enrichment?.descripcion || '',
+      });
+      if (issues.length > 0) issuesByProp.set(p.id, issues);
+    }
   }
   return issuesByProp;
 }
@@ -225,12 +230,24 @@ async function runCapa2(supabase) {
 // ============================================================
 
 async function runCapa3(supabase, capa1Items) {
-  const { data: props, error } = await supabase
-    .from('propiedades_v2')
-    .select('id, fuente, url, nombre_edificio, id_proyecto_master, status, datos_json')
-    .eq('status', 'completado')
-    .eq('tipo_operacion', 'venta');
-  if (error) throw error;
+  const { data: vista, error: eV } = await supabase
+    .from('v_mercado_alquiler')
+    .select('id');
+  if (eV) throw eV;
+  const ids = vista.map((v) => v.id);
+  if (ids.length === 0) return new Map();
+
+  const props = [];
+  const chunkSize = 100;
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
+    const { data, error } = await supabase
+      .from('propiedades_v2')
+      .select('id, fuente, url, nombre_edificio, id_proyecto_master, datos_json_enrichment')
+      .in('id', chunk);
+    if (error) throw error;
+    props.push(...data);
+  }
 
   const proyectoIds = [...new Set(props.map((p) => p.id_proyecto_master).filter(Boolean))];
   const proyectosById = new Map();
@@ -257,7 +274,7 @@ async function runCapa3(supabase, capa1Items) {
       url: p.url,
       nombre_edificio: p.nombre_edificio,
       aliases,
-      contenido_desc: p.datos_json?.contenido?.descripcion || '',
+      descripcion_cruda: p.datos_json_enrichment?.descripcion || '',
     };
     const scraped = { title_scraped: titlesByPropId.get(p.id) || '' };
     const result = checkMatching(enriched, scraped);
@@ -340,6 +357,7 @@ function computeStats(combined) {
     cambio_relevante: 0,
     reescritas: 0,
     listings_muertos: 0,
+    sin_cruda_bd: 0,
     con_flag_semantico: 0,
     con_inconsistencia_interna: 0,
     con_mismatch_matching: 0,
@@ -350,6 +368,7 @@ function computeStats(combined) {
   };
   for (const r of combined) {
     if (r.capa1.scrape_status !== 'ok') stats.scrape_failed++;
+    if (r.capa1.len_bd === 0) stats.sin_cruda_bd++;
     const b = r.capa1.bucket;
     if (b === 'identicas') stats.identicas++;
     else if (b === 'cambio_menor') stats.cambio_menor++;
@@ -379,7 +398,7 @@ async function persistRunAndItems(supabase, payload) {
     const { data: runRow, error: e1 } = await supabase
       .from('audit_descripciones_runs')
       .insert({
-        tipo_operacion: 'venta',
+        tipo_operacion: 'alquiler',
         modo: payload.modo,
         cached_run_dir: payload.cached_run_dir,
         total_props: payload.total_props,
@@ -395,7 +414,7 @@ async function persistRunAndItems(supabase, payload) {
     const runId = runRow.id;
     const itemsForInsert = payload.items.map((r) => ({
       run_id: runId,
-      tipo_operacion: 'venta',
+      tipo_operacion: 'alquiler',
       prop_id: r.id,
       fuente: r.fuente,
       url: r.url,
@@ -424,7 +443,7 @@ async function persistRunAndItems(supabase, payload) {
     return runId;
   } catch (err) {
     console.warn(`⚠ No se pudo persistir a Supabase: ${err.message}`);
-    console.warn(`  (¿migración 242 aplicada? — el script siguió con el reporte local)`);
+    console.warn(`  (¿migración 244 aplicada? — el script siguió con el reporte local)`);
     return null;
   }
 }
@@ -435,7 +454,7 @@ async function persistRunAndItems(supabase, payload) {
 
 function renderSummary(combined, stats, runId, modo) {
   const lines = [];
-  lines.push(`# Audit mensual — ${new Date().toISOString().slice(0, 10)}`);
+  lines.push(`# Audit mensual alquiler — ${new Date().toISOString().slice(0, 10)}`);
   lines.push('');
   if (runId) lines.push(`**DB run_id:** \`${runId}\``);
   if (modo) lines.push(`**Modo:** cached (${modo})`);
@@ -450,6 +469,7 @@ function renderSummary(combined, stats, runId, modo) {
   lines.push(`| Cambio relevante | ${stats.cambio_relevante} |`);
   lines.push(`| Reescritas | ${stats.reescritas} |`);
   lines.push(`| **Listings muertos** | ${stats.listings_muertos} |`);
+  lines.push(`| Sin cruda en BD | ${stats.sin_cruda_bd} |`);
   lines.push(`| Con flag semántico | ${stats.con_flag_semantico} |`);
   lines.push(`| **Con inconsistencia interna** | ${stats.con_inconsistencia_interna} |`);
   lines.push(`| **Con mismatch matching** | ${stats.con_mismatch_matching} |`);

@@ -15,15 +15,20 @@
 {
   "postgres-sici": {
     "command": "npx",
-    "args": ["-y", "@henkey/postgres-mcp-server"],
-    "env": {
-      "POSTGRES_CONNECTION_STRING": "postgresql://claude_readonly:***@aws-1-sa-east-1.pooler.supabase.com:6543/postgres"
-    }
+    "args": [
+      "-y",
+      "@modelcontextprotocol/server-postgres",
+      "postgresql://claude_readonly:***@aws-1-sa-east-1.pooler.supabase.com:6543/postgres"
+    ]
   }
 }
 ```
 
-Usuario `claude_readonly` tiene permisos SELECT en todas las tablas.
+Server oficial Anthropic, **readonly por diseño** (solo expone tool `query` para SELECT). Usuario `claude_readonly` también tiene permisos SELECT en todas las tablas (defense in depth).
+
+**Mutations (UPDATE/INSERT/DELETE)** no son ejecutables desde el MCP. El patrón canónico es: Claude genera el SQL, el humano lo aplica desde Supabase UI o psql.
+
+Anterior config con `@henkey/postgres-mcp-server` removida 2026-05-11 (causaba conflicto con scope project del oficial — ver `/doctor`).
 
 ## n8n Environment Variables
 
@@ -60,7 +65,10 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
     - `broker_shortlists` (228) + `broker_shortlist_items` (228) + `broker_shortlist_hearts` (234) + **`broker_shortlist_views` (235)** — sistema completo de shortlists. Migración 235 sumó protección v1: `max_views/current_views/expires_at/status/first_viewed_at` en `broker_shortlists` (cap 20 vistas / 30 días Plan Inicial), `broker_shortlist_views` para tracking de visitas únicas con fingerprint cookie+IP+UA hash. Lever de monetización Plan Pro futuro. **Migración 239** agregó `is_destacada BOOLEAN` a `broker_shortlist_items` (máx 1 destacada por shortlist, validación frontend + API; render `/b/[hash]` con chip ⭐ + invierte tema en venta o borde negro en alquiler). Comentario por item ya existía desde 228 (`comentario_broker`) pero se renderiza al cliente desde 239 (bloque arena con borde-izq salvia). Lib server-side `lib/broker-shortlists-server.ts`. Ver `docs/broker/SHORTLIST_PROTECTION_V1_PLAN.md`.
     - `broker_prospection` (237+238) — tabla interna del founder para outreach a captadores. Sistema de demo público (`/broker/demo`, `/b/demo`) y panel `/admin/prospection`. Ver `docs/broker/PROSPECCION_Y_DEMO.md`.
     - Ninguna FK entre ellas. Datos completamente separados.
-15. **Skill `/audit-feed-ventas-mensual` — costo + confirmación**: ejecuta drift Firecrawl + 2 capas SQL sobre el feed de ventas. Costo ~$1.75 por corrida (Firecrawl) + persiste en `audit_descripciones_runs/items` (migración 242). **NUNCA invocarla sin OK explícito del user en el momento.** Source en `scripts/auditoria-feed-ventas/audit-feed-ventas-mensual.command.md`, instalada en `.claude/commands/` (gitignored).
+15. **Skills `/audit-feed-ventas-mensual` y `/audit-feed-alquileres-mensual` — costo + confirmación**:
+    - **Ventas**: drift Firecrawl + 2 capas SQL sobre feed `/ventas`. Costo ~$1.75 por corrida (Firecrawl). **NUNCA invocarla sin OK explícito del user en el momento.** Source en `scripts/auditoria-feed-ventas/audit-feed-ventas-mensual.command.md`.
+    - **Alquileres** (migración 244): drift fetcher curl-only + 2 capas SQL sobre `/alquileres`. **Costo $0** (los 3 portales sirven HTML estático suficiente para alquiler). Source en `scripts/auditoria-feed-alquileres/audit-feed-alquileres-mensual.command.md`. Pre-requisito: correr `npm run backfill` 1 vez para llenar la cruda de las ~138 props enriquecidas pre-9-may-2026.
+    - Ambas persisten en `audit_descripciones_runs/items` con `tipo_operacion` (migración 244 agregó la columna). Las skills viven gitignored en `.claude/commands/` (copiar desde el `.command.md` del repo).
 
 ## Zonas Canonicas (6 zonas)
 

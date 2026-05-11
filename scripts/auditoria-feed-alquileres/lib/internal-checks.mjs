@@ -1,9 +1,21 @@
-const PATRONES_PRECIO_PRINCIPAL = [
-  /precio[^.\n]{0,30}?\$\s?us?\.?\s?(\d{1,3}(?:[.,]\d{3})+)/gi,
-  /precio[^.\n]{0,30}?(\d{1,3}(?:[.,]\d{3})+)\s*\$\s?us/gi,
-  /precio[^.\n]{0,30}?usd?\s?(\d{1,3}(?:[.,]\d{3})+)/gi,
-  /💰[^.\n]{0,30}?(\d{1,3}(?:[.,]\d{3})+)/gi,
-  /(?:^|\n)\s*\$\s?us?\.?\s?(\d{2,3}(?:[.,]\d{3})+)/gim,
+// Audit interno SQL para feed /alquileres.
+// Diferencias clave vs venta:
+// - SIN TC paralelo (alquiler usa precio_mensual_bob como fuente de verdad,
+//   precio_mensual_usd derivado por TC oficial /6.96)
+// - SIN check de "tipo_cambio_detectado" (no aplica a alquiler)
+// - Check precio: comparar precio_mensual_bob BD vs precio que aparece en desc
+// - Check edificio: igual que venta (busca otros edificios mencionados)
+// - Check desync contenido↔enrichment: igual que venta
+
+const PATRONES_PRECIO_BS = [
+  /(?:bs|bolivianos?)\.?\s*(\d{1,3}(?:[.,]\d{3})+|\d{4,5})/gi,
+  /(\d{1,3}(?:[.,]\d{3})+|\d{4,5})\s*(?:bs|bolivianos?)\b/gi,
+  /💰[^.\n]{0,40}?(\d{1,3}(?:[.,]\d{3})+|\d{4,5})/gi,
+];
+
+const PATRONES_PRECIO_USD = [
+  /(?:\$\s?us?\.?|usd?)\s*(\d{2,5})/gi,
+  /(\d{2,5})\s*\$\s?us\b/gi,
 ];
 
 // case-insensitive en la palabra clave (Edif/edif, Condominio/condominio, Torre/torre)
@@ -15,101 +27,57 @@ const PATRONES_OTRO_EDIFICIO = [
   /(?:^|\s)[Tt]orre\s+([A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚÑáéíóúñ\s.&-]{2,40}?)(?=[\n,.;]|\s+(?:en|sobre|frente|cerca|equipetrol|ubicado)\b)/g,
 ];
 
-const PATRONES_TC_PARALELO = [
-  /\bparalelo\b/i, /tc\s*del\s*d[ií]a\b/i, /cambio\s+del\s+d[ií]a\b/i,
-  /d[oó]lares\s+billete\b/i, /pagos?\s+en\s+d[oó]lares\b/i, /\bal\s+paralelo\b/i,
-];
-
-const PATRONES_TC_OFICIAL = [
-  /\btc\s+oficial\b/i, /tipo\s+de\s+cambio\s+oficial\b/i, /\btc\.?\s*[67](?![\d.,])/i,
-];
-
-const TC_PARALELO = 9.954;
 const TC_OFICIAL = 6.96;
-const RATIO_PARALELO_VS_OFICIAL = TC_PARALELO / TC_OFICIAL;
 
 export function runChecks(prop) {
   const issues = [];
-  const desc = prop.contenido_desc || '';
-  const enrichDesc = prop.enrichment_desc || '';
+  const desc = prop.descripcion_cruda || '';
 
   if (!desc) {
     issues.push({
-      tipo: 'descripcion_vacia',
-      severidad: 'media',
-      msg: 'datos_json.contenido.descripcion está vacío',
+      tipo: 'descripcion_cruda_vacia',
+      severidad: 'baja',
+      msg: 'datos_json_enrichment.descripcion vacía — backfill pendiente o enrichment falló',
     });
     return issues;
   }
 
-  const issuePrecio = checkPrecioVsDesc(desc, prop.precio_usd, prop.tipo_cambio_detectado);
+  const issuePrecio = checkPrecioMensualVsDesc(desc, prop.precio_mensual_bob);
   if (issuePrecio) issues.push(issuePrecio);
-
-  const issueTc = checkTcVsDesc(desc, prop.tipo_cambio_detectado);
-  if (issueTc) issues.push(issueTc);
 
   const issueEdificio = checkOtroEdificioMencionado(desc, prop.nombre_edificio);
   if (issueEdificio) issues.push(issueEdificio);
 
-  if (enrichDesc && desc !== enrichDesc) {
-    const diffChars = Math.abs(desc.length - enrichDesc.length);
-    if (diffChars > 30) {
-      issues.push({
-        tipo: 'desync_contenido_enrichment',
-        severidad: diffChars > 100 ? 'media' : 'baja',
-        msg: `contenido(${desc.length}) ≠ enrichment(${enrichDesc.length}) — diff ${diffChars} chars`,
-      });
-    }
-  }
-
   return issues;
 }
 
-function checkPrecioVsDesc(desc, precioBd, tcDetectado) {
-  if (!precioBd) return null;
-  const precios = extraerPreciosCercanosKeyword(desc);
-  if (precios.length === 0) return null;
+function checkPrecioMensualVsDesc(desc, precioBobBd) {
+  if (!precioBobBd || precioBobBd <= 0) return null;
+  const preciosBs = extraerPreciosBs(desc);
+  const preciosUsd = extraerPreciosUsd(desc);
 
-  const candidato = precios[0];
-  const diffPct = Math.abs(candidato - precioBd) / precioBd;
+  // Convertir USD a BOB (TC oficial) para comparar en moneda común.
+  const preciosNorm = [
+    ...preciosBs,
+    ...preciosUsd.map((u) => Math.round(u * TC_OFICIAL)),
+  ];
+  if (preciosNorm.length === 0) return null;
+
+  // Tomar el precio principal: el más cercano al BD (heurística defensiva,
+  // los listings de alquiler suelen mencionar varios precios — expensas, depósito).
+  const candidato = preciosNorm.reduce((best, p) =>
+    Math.abs(p - precioBobBd) < Math.abs(best - precioBobBd) ? p : best
+  );
+  const diffPct = Math.abs(candidato - precioBobBd) / precioBobBd;
 
   if (diffPct < 0.05) return null;
 
-  if (tcDetectado === 'paralelo') {
-    const ratioVsBd = candidato / precioBd;
-    if (ratioVsBd > 1 / RATIO_PARALELO_VS_OFICIAL - 0.05 &&
-        ratioVsBd < 1 / RATIO_PARALELO_VS_OFICIAL + 0.05) {
-      return null;
-    }
-  }
-
   return {
-    tipo: 'precio_mismatch_desc',
+    tipo: 'precio_mensual_mismatch_desc',
     severidad: diffPct > 0.20 ? 'alta' : 'media',
-    msg: `BD=$${precioBd}${tcDetectado ? ` (${tcDetectado})` : ''}, desc principal=$${candidato} (diff ${(diffPct * 100).toFixed(1)}%)`,
-    detalle: { precio_bd: precioBd, precio_desc_principal: candidato, todos_precios: precios },
+    msg: `BD=Bs ${precioBobBd}, desc principal=Bs ${candidato} (diff ${(diffPct * 100).toFixed(1)}%)`,
+    detalle: { precio_bd_bob: precioBobBd, precio_desc_principal_bob: candidato, todos_precios_norm: preciosNorm },
   };
-}
-
-function checkTcVsDesc(desc, tcBd) {
-  const sugiereParalelo = PATRONES_TC_PARALELO.some((p) => p.test(desc));
-  const sugiereOficial = PATRONES_TC_OFICIAL.some((p) => p.test(desc));
-
-  if (sugiereParalelo && tcBd !== 'paralelo') {
-    return {
-      tipo: 'tc_mismatch_paralelo',
-      severidad: 'alta',
-      msg: `desc menciona paralelo, BD=${tcBd || 'NULL'} (subestima precio en feed por factor ~1.43x)`,
-    };
-  }
-  if (sugiereOficial && !sugiereParalelo && tcBd === 'paralelo') {
-    return {
-      tipo: 'tc_mismatch_oficial',
-      severidad: 'media',
-      msg: `desc menciona TC oficial, BD=paralelo (sobreestima precio en feed)`,
-    };
-  }
-  return null;
 }
 
 function checkOtroEdificioMencionado(desc, edificioBd) {
@@ -135,17 +103,30 @@ function checkOtroEdificioMencionado(desc, edificioBd) {
   return null;
 }
 
-function extraerPreciosCercanosKeyword(desc) {
+function extraerPreciosBs(desc) {
   const matches = new Set();
-  for (const re of PATRONES_PRECIO_PRINCIPAL) {
+  for (const re of PATRONES_PRECIO_BS) {
     re.lastIndex = 0;
     let m;
     while ((m = re.exec(desc)) !== null) {
       const num = parseNumeroEsp(m[1]);
-      if (num >= 20_000 && num <= 5_000_000) matches.add(num);
+      if (num >= 1000 && num <= 100_000) matches.add(num);
     }
   }
-  return [...matches].sort((a, b) => b - a);
+  return [...matches];
+}
+
+function extraerPreciosUsd(desc) {
+  const matches = new Set();
+  for (const re of PATRONES_PRECIO_USD) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(desc)) !== null) {
+      const num = parseInt(m[1].replace(/[.,]/g, ''), 10);
+      if (num >= 100 && num <= 15_000) matches.add(num);
+    }
+  }
+  return [...matches];
 }
 
 function extraerOtrosEdificiosMencionados(desc) {

@@ -1,0 +1,21 @@
+{
+  "name": "auditoria-feed-alquileres",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Re-scrapea props vivas del feed /alquileres y compara descripciones contra BD para detectar drift no detectado por el pipeline nocturno. Curl-only (sin Firecrawl).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "audit": "node run.mjs",
+    "audit:smoke": "node run.mjs --limit 5",
+    "audit:50": "node run.mjs --limit 50",
+    "backfill:dry": "node backfill-descripciones.mjs --dry-run",
+    "backfill": "node backfill-descripciones.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5"
+  }
+}
