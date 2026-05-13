@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="es-BO">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Equipetrol — Resumen Mayo 2026</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f8f6f3;
+    color: #1a1a1a;
+    line-height: 1.5;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  /* HEADER */
+  .header { border-bottom: 1px solid #d8d3c8; padding-bottom: 20px; margin-bottom: 28px; }
+  .header .eyebrow {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #888;
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: -0.3px;
+    line-height: 1.15;
+    margin-bottom: 6px;
+  }
+  .header .sub {
+    font-size: 13px;
+    color: #666;
+  }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #888;
+    margin: 36px 0 14px;
+    font-weight: 500;
+  }
+
+  /* KPIs */
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: #d8d3c8;
+    border: 1px solid #d8d3c8;
+  }
+  .kpi {
+    background: #fff;
+    padding: 16px 18px;
+  }
+  .kpi .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    margin-bottom: 6px;
+  }
+  .kpi .val {
+    font-size: 26px;
+    font-weight: 500;
+    color: #1a1a1a;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .kpi .delta {
+    font-size: 12px;
+    color: #555;
+    margin-top: 6px;
+  }
+  .delta.up { color: #3A6A48; }
+  .delta.down { color: #8a4f2c; }
+  .delta.flat { color: #888; }
+
+  /* TABLA ZONAS */
+  table.zonas {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    font-size: 14px;
+  }
+  table.zonas th, table.zonas td {
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid #ede8dc;
+  }
+  table.zonas th {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    font-weight: 500;
+    background: #faf8f4;
+  }
+  table.zonas td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.zonas tr:last-child td { border-bottom: none; }
+  table.zonas .zona-name { font-weight: 500; }
+  table.zonas .perfil { color: #666; font-size: 13px; }
+
+  /* CAMBIOS */
+  ul.cambios {
+    list-style: none;
+    background: #fff;
+    padding: 4px 0;
+  }
+  ul.cambios li {
+    padding: 14px 18px;
+    border-bottom: 1px solid #ede8dc;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  ul.cambios li:last-child { border-bottom: none; }
+  ul.cambios li strong { font-weight: 500; color: #1a1a1a; }
+
+  /* CAVEATS */
+  .caveats {
+    margin-top: 36px;
+    padding: 16px 18px;
+    background: transparent;
+    border-top: 1px solid #d8d3c8;
+    font-size: 12px;
+    color: #888;
+    line-height: 1.55;
+  }
+  .caveats p { margin-bottom: 6px; }
+  .caveats p:last-child { margin-bottom: 0; }
+
+  /* HIGHLIGHT INLINE */
+  .arrow-up::before { content: "↑ "; color: #3A6A48; }
+  .arrow-down::before { content: "↓ "; color: #8a4f2c; }
+  .arrow-flat::before { content: "→ "; color: #888; }
+
+  /* PENDIENTE marker */
+  .pendiente {
+    font-size: 11px;
+    color: #b08040;
+    background: #fdf6ec;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    font-weight: 500;
+  }
+
+  /* HIPÓTESIS A VIGILAR */
+  ul.hipotesis {
+    list-style: none;
+    background: #fff;
+    padding: 4px 0;
+  }
+  ul.hipotesis li {
+    padding: 16px 18px;
+    border-bottom: 1px solid #ede8dc;
+    font-size: 14px;
+    line-height: 1.6;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  ul.hipotesis li:last-child { border-bottom: none; }
+  ul.hipotesis .badge {
+    flex-shrink: 0;
+    background: #3A6A48;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    margin-top: 1px;
+  }
+  ul.hipotesis .watchout {
+    display: block;
+    margin-top: 6px;
+    color: #666;
+    font-size: 13px;
+  }
+  ul.hipotesis .watchout strong { color: #444; }
+
+  /* LO QUE NO PUEDO DECIR */
+  .humildad {
+    background: #faf8f4;
+    border: 1px solid #ede8dc;
+    padding: 16px 18px;
+    margin-bottom: 8px;
+  }
+  .humildad ul { list-style: none; padding: 0; }
+  .humildad li {
+    font-size: 13px;
+    line-height: 1.55;
+    color: #555;
+    padding: 8px 0;
+    border-bottom: 1px dashed #ede8dc;
+  }
+  .humildad li:last-child { border-bottom: none; }
+  .humildad li strong { color: #1a1a1a; font-weight: 500; }
+
+  /* ANÁLISIS DEL MES */
+  .analisis {
+    background: #fff;
+    border-left: 3px solid #3A6A48;
+    padding: 22px 24px 20px;
+    margin-bottom: 8px;
+  }
+  .analisis p {
+    font-size: 15px;
+    line-height: 1.65;
+    color: #1a1a1a;
+    margin-bottom: 0;
+  }
+  .analisis p strong { font-weight: 600; }
+  .analisis .bottom-line {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #ede8dc;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #444;
+    font-style: italic;
+  }
+  .analisis .bottom-line strong {
+    color: #1a1a1a;
+    font-style: normal;
+    font-weight: 600;
+  }
+
+  @media (max-width: 600px) {
+    .wrap { padding: 24px 16px 60px; }
+    .header h1 { font-size: 24px; }
+    table.zonas th, table.zonas td { padding: 10px 10px; font-size: 13px; }
+    table.zonas .perfil { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="eyebrow">Resumen mensual interno · Lucho</div>
+    <h1>Equipetrol — Mayo 2026</h1>
+    <div class="sub">Datos al 13 de mayo de 2026 · Comparativa vs Abril 2026</div>
+  </header>
+
+  <!-- ANÁLISIS DEL MES -->
+  <div class="section-title">Análisis del mes</div>
+  <div class="analisis">
+    <p>
+      <strong>Foto estable del mercado observable.</strong> El stock activo en venta es de <strong>350 unidades</strong> y <strong>157 en alquiler</strong>, con precio mediano de <strong>$2,078/m²</strong> y ticket mediano de <strong>$125K</strong> — sin movimiento significativo de precios vs hace 30 días. Concentración de oferta alta: <strong>21 desarrolladores</strong> tienen 2+ proyectos, Sky Properties domina con 16 proyectos y 52 unidades (15% del stock venta). El pipeline registró movimiento alto este mes (157 entradas / 106 salidas en venta), pero ese número incluye también re-publicaciones, mercado secundario y consolidaciones — no solo lanzamientos primarios nuevos.
+    </p>
+    <p style="margin-top:14px;">
+      <strong>Contexto trimestral — hallazgo clave.</strong> Verificando caso a caso los top proyectos de los últimos 90 días (marzo, abril, mayo): <strong>el único lanzamiento primario grande fue Rhodium</strong> (Elite Desarrollos, Sirari, 17 unidades, primera aparición en portal en marzo 2026). Marzo y mayo no tuvieron lanzamientos primarios significativos — todo lo demás eran proyectos preexistentes cargando inventario tarde, habilitaciones o mercado secundario. <em>El ritmo real de novedades primarias en Equipetrol es de aproximadamente 1 lanzamiento grande cada 3 meses</em>, no el flujo continuo que sugieren las "entradas del pipeline" del listado mensual.
+    </p>
+    <div class="bottom-line">
+      <strong>Indicadores accionables:</strong> mercado con oferta amplia, precios estables, alta concentración por dev, <strong>y ritmo bajo de lanzamientos primarios nuevos</strong>. Para comprador: buena posición negociadora, no se está perdiendo "lo que viene" — por ahora no hay. Para dev evaluando entrar: el mercado primario está estructuralmente abierto (1 lanzamiento competitivo cada 3 meses, no congestionado). Para asesoría zonal: Eq. Centro y Sirari concentran el stock principal; V. Brígida ofrece entry-level por debajo de $2,000/m²; Eq. Norte tiene inventario chico con $/m² más alto.
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="section-title">Stock actual</div>
+  <div class="kpis">
+    <div class="kpi">
+      <div class="label">Departamentos en venta</div>
+      <div class="val">350</div>
+      <div class="delta up arrow-up">dedup + filtro proyectos activos</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Departamentos en alquiler</div>
+      <div class="val">157</div>
+      <div class="delta up arrow-up">+28 vs hace 30d (+22%)</div>
+    </div>
+    <div class="kpi">
+      <div class="label">$/m² venta mediana global</div>
+      <div class="val">$2,078</div>
+      <div class="delta flat arrow-flat">P25–P75: $1,849–$2,450 · n=350 dedup + activos</div>
+    </div>
+    <div class="kpi">
+      <div class="label">TC paralelo (Binance P2P)</div>
+      <div class="val">Bs 10.00</div>
+      <div class="delta flat arrow-flat">spread +43.7% vs oficial Bs 6.96</div>
+    </div>
+  </div>
+
+  <!-- ACTIVIDAD DEL PIPELINE -->
+  <div class="section-title">Actividad del pipeline (rolling 30d)</div>
+  <div class="kpis">
+    <div class="kpi">
+      <div class="label">Venta · entradas al pipeline</div>
+      <div class="val">157</div>
+      <div class="delta flat arrow-flat">115 → 157 vs período anterior</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Venta · salidas del pipeline</div>
+      <div class="val">106</div>
+      <div class="delta flat arrow-flat">126 → 106 vs período anterior</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Alquiler · entradas al pipeline</div>
+      <div class="val">125</div>
+      <div class="delta flat arrow-flat">95 → 125 vs período anterior</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Alquiler · salidas del pipeline</div>
+      <div class="val">80</div>
+      <div class="delta flat arrow-flat">100 → 80 vs período anterior</div>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888; margin-top:10px; margin-bottom:0;">
+    <strong>Importante:</strong> estos números miden actividad de captura SICI, NO movimiento del mercado real. "Entradas" mezcla lanzamientos primarios, mercado secundario, re-publicaciones y re-discoveries — el sistema no distingue. "Salidas" mezcla ventas cerradas, retiros, expiraciones y consolidación de duplicados latentes.
+    <br><br>
+    <strong>Lo que sí permite inferir:</strong> dirección general del flujo (entradas &gt; salidas → pipeline ganando volumen) y comparación contra período anterior. Salidas venta por estado: 83 props en entrega, 23 en preventa. Pending: 14 venta, 22 alquiler.
+  </p>
+
+  <!-- COMPOSICIÓN DEL STOCK -->
+  <div class="section-title">Composición del stock venta · por dormitorios</div>
+  <table class="zonas">
+    <thead>
+      <tr>
+        <th>Tipología</th>
+        <th class="num">Stock</th>
+        <th class="num">% del total</th>
+        <th class="num">Entró</th>
+        <th class="num">Salió</th>
+        <th class="num">Δ</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="zona-name">1 dormitorio</td>
+        <td class="num">172</td>
+        <td class="num">47.6%</td>
+        <td class="num">90</td>
+        <td class="num">64</td>
+        <td class="num">+26</td>
+      </tr>
+      <tr>
+        <td class="zona-name">2 dormitorios</td>
+        <td class="num">115</td>
+        <td class="num">31.9%</td>
+        <td class="num">38</td>
+        <td class="num">20</td>
+        <td class="num">+18</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Monoambiente</td>
+        <td class="num">49</td>
+        <td class="num">13.6%</td>
+        <td class="num">17</td>
+        <td class="num">13</td>
+        <td class="num">+4</td>
+      </tr>
+      <tr>
+        <td class="zona-name">3 dormitorios</td>
+        <td class="num">25</td>
+        <td class="num">6.9%</td>
+        <td class="num">12</td>
+        <td class="num">9</td>
+        <td class="num">+3</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888; margin-top:8px; margin-bottom:0;">
+    1D + 2D concentran <strong>79.5% del mercado</strong>. 1D solo es casi la mitad del stock. Ticket mediano global: <strong>$128K</strong>.
+  </p>
+
+  <!-- VENTA POR ZONA -->
+  <div class="section-title">Venta · por submercado (con movimiento del mes)</div>
+  <table class="zonas">
+    <thead>
+      <tr>
+        <th>Zona</th>
+        <th class="num">Stock</th>
+        <th class="num">Entró</th>
+        <th class="num">Salió</th>
+        <th class="num">Δ</th>
+        <th class="num">$/m²</th>
+        <th>Perfil</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="zona-name">Equipetrol Centro</td>
+        <td class="num">163</td>
+        <td class="num">72</td>
+        <td class="num">40</td>
+        <td class="num">+32</td>
+        <td class="num">$2,139</td>
+        <td class="perfil">Core, mayor rotación absoluta</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Sirari</td>
+        <td class="num">86</td>
+        <td class="num">30</td>
+        <td class="num">14</td>
+        <td class="num">+16</td>
+        <td class="num">$2,174</td>
+        <td class="perfil">Premium, preventa cayó &gt;52→41%</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Villa Brígida</td>
+        <td class="num">42</td>
+        <td class="num">27</td>
+        <td class="num">28</td>
+        <td class="num">−1</td>
+        <td class="num">$1,920</td>
+        <td class="perfil">Única zona vaciándose levemente</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Equipetrol Oeste</td>
+        <td class="num">34</td>
+        <td class="num">9</td>
+        <td class="num">10</td>
+        <td class="num">−1</td>
+        <td class="num">$1,972</td>
+        <td class="perfil">Bajo movimiento, salidas &gt; entradas</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Equipetrol Norte</td>
+        <td class="num">31</td>
+        <td class="num">18</td>
+        <td class="num">12</td>
+        <td class="num">+6</td>
+        <td class="num">$2,458</td>
+        <td class="perfil">Inventario chico, 97% del stock se renovó</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888; margin-top:8px; margin-bottom:0;">
+    Δ = entradas − salidas del rolling 30d (movimiento del pipeline de captura).
+    <br><strong style="color:#444;">Cambio de stock vs hace 30 días por zona:</strong>
+    Eq. Centro 114→163 (<span style="color:#3A6A48;">+49</span>) ·
+    Sirari 77→86 (<span style="color:#3A6A48;">+9</span>) ·
+    V. Brígida 51→42 (<span style="color:#8a4f2c;">−9</span>) ·
+    Eq. Oeste 49→34 (<span style="color:#8a4f2c;">−15</span>) ·
+    Eq. Norte 26→31 (<span style="color:#3A6A48;">+5</span>).
+    <br><em>Lectura:</em> usar stock total y precios como referencia confiable. Los deltas zonales son indicador direccional, no medida exacta de mercado — no distinguen lanzamientos nuevos de re-publicaciones, mercado secundario o habilitaciones de proyectos existentes.
+  </p>
+
+  <!-- ALQUILER POR ZONA -->
+  <div class="section-title">Alquiler · por submercado</div>
+  <table class="zonas">
+    <thead>
+      <tr>
+        <th>Zona</th>
+        <th class="num">Inventario</th>
+        <th class="num">Renta med.</th>
+        <th class="num">Renta prom.</th>
+        <th>Nota</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="zona-name">Equipetrol Centro</td>
+        <td class="num">53</td>
+        <td class="num">$589</td>
+        <td class="num">$745</td>
+        <td class="perfil">Mayor stock; renta más baja del set</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Equipetrol Norte</td>
+        <td class="num">36</td>
+        <td class="num">$647</td>
+        <td class="num">$838</td>
+        <td class="perfil">Renta promedio más alta</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Sirari</td>
+        <td class="num">30</td>
+        <td class="num">$754</td>
+        <td class="num">$795</td>
+        <td class="perfil">Renta mediana más alta</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Villa Brígida</td>
+        <td class="num">15*</td>
+        <td class="num">$603</td>
+        <td class="num">$667</td>
+        <td class="perfil">n &lt; 20, muestra marginal</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Equipetrol Oeste</td>
+        <td class="num">15*</td>
+        <td class="num">$760</td>
+        <td class="num">$792</td>
+        <td class="perfil">n &lt; 20, muestra marginal</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888; margin-top:8px; margin-bottom:0;">\* n &lt; 20 = muestra estadísticamente marginal. Mix amoblado del corpus: 59% amoblado · 36% no amoblado · 4% semi · 1% no declara — mezcla en mediana global es ruidosa.</p>
+
+  <!-- YIELD BRUTO APROXIMADO -->
+  <div class="section-title">Yield bruto aproximado · venta vs alquiler</div>
+  <table class="zonas">
+    <thead>
+      <tr>
+        <th>Zona</th>
+        <th class="num">Renta × 12</th>
+        <th class="num">Ticket med.</th>
+        <th class="num">Yield bruto</th>
+        <th>Nota</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="zona-name">Equipetrol Centro</td>
+        <td class="num">$7,068</td>
+        <td class="num">$132K</td>
+        <td class="num">5.4%</td>
+        <td class="perfil">Mayor muestra; lectura más robusta</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Sirari</td>
+        <td class="num">$9,048</td>
+        <td class="num">$137K</td>
+        <td class="num">6.6%</td>
+        <td class="perfil">Premium, yield medio-alto</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Equipetrol Norte</td>
+        <td class="num">$7,764</td>
+        <td class="num">$129K</td>
+        <td class="num">6.0%</td>
+        <td class="perfil">Financiero, inventario chico</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Villa Brígida</td>
+        <td class="num">$7,236</td>
+        <td class="num">$116K</td>
+        <td class="num">6.3%</td>
+        <td class="perfil">Entry-level; muestra alquiler chica</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Equipetrol Oeste</td>
+        <td class="num">$9,120</td>
+        <td class="num">$110K</td>
+        <td class="num">8.3%</td>
+        <td class="perfil">Outlier — n=15 en alquiler, dato a confirmar</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888; margin-top:8px; margin-bottom:0;">Yield bruto = (renta mediana publicada × 12) ÷ ticket mediano publicado. Es referencia comparativa entre zonas, no rentabilidad real: ignora vacancia, gastos, comisión, brecha publicación→cierre (5-15% venta, 10-20% alquiler), y mezcla amoblado/no amoblado del lado renta. Para análisis de inversión usar el genérico por proyecto.</p>
+
+  <!-- CONCENTRACIÓN POR DESARROLLADORA -->
+  <div class="section-title">Concentración por desarrolladora (top 7 con ≥2 proyectos)</div>
+  <table class="zonas">
+    <thead>
+      <tr>
+        <th>Desarrollador</th>
+        <th class="num">Proyectos</th>
+        <th class="num">Unidades</th>
+        <th class="num">% mercado</th>
+        <th>Proyectos destacados</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="zona-name">Sky Properties</td>
+        <td class="num">16</td>
+        <td class="num">52</td>
+        <td class="num">14.4%</td>
+        <td class="perfil">Líder absoluto del set. Sky Collection, SKY Plaza, Sky Eclipse, Sky Onix, otros 12</td>
+      </tr>
+      <tr>
+        <td class="zona-name">HH Desarrollos</td>
+        <td class="num">3</td>
+        <td class="num">27</td>
+        <td class="num">7.5%</td>
+        <td class="perfil">HH Chuubi, HH Once Equipetrol, Lofty Island</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Elite Desarrollos</td>
+        <td class="num">6</td>
+        <td class="num">26</td>
+        <td class="num">7.2%</td>
+        <td class="perfil">Elite Sirari, Element by Elite, Onix Art, Rhodium, otros</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Sommet SRL</td>
+        <td class="num">4</td>
+        <td class="num">25</td>
+        <td class="num">6.9%</td>
+        <td class="perfil">Atrium, Las Dalias, Ariaa, Sommet Quartier Plaza Italia</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Grupo Providence</td>
+        <td class="num">3</td>
+        <td class="num">18</td>
+        <td class="num">5.0%</td>
+        <td class="perfil">Uptown Equipetrol, Uptown Drei, Uptown NUU</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Stone Desarrollos</td>
+        <td class="num">3</td>
+        <td class="num">14</td>
+        <td class="num">3.9%</td>
+        <td class="perfil">Stone 3, Stone 4, Stone 5</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Constructora Alessia Spazios</td>
+        <td class="num">2</td>
+        <td class="num">13</td>
+        <td class="num">3.6%</td>
+        <td class="perfil">Edificio Spazios, Spazios Edén</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888; margin-top:8px; margin-bottom:0;">
+    <strong>21 desarrolladores</strong> tienen 2+ proyectos en el set (lista completa: Sky Properties, HH Desarrollos, Elite, Sommet, Providence, Stone, Alessia, Eurodesign, Smart Studio, Luxe, HPC, Alborada, Mediterráneo, Plat, Port-Delux, <strong>Constructora Condado</strong>, Macororó, Boutique Living, INARQ, Malibu, Omnia). Los top 7 concentran <strong>~48% del mercado venta</strong>. Constructora Condado tiene 2 proyectos (Condado Park V, Condado VI Plaza Italia) con 5 uds activas.
+  </p>
+
+  <!-- TOP PROYECTOS POR ACTIVIDAD EN PIPELINE -->
+  <div class="section-title">Proyectos con más entradas al pipeline este mes</div>
+  <p style="font-size:13px; color:#666; margin-top:-6px; margin-bottom:14px;">
+    Unidades únicas capturadas por proyecto en los últimos 30 días.
+  </p>
+  <table class="zonas">
+    <thead>
+      <tr>
+        <th>Proyecto</th>
+        <th>Desarrollador</th>
+        <th>Zona</th>
+        <th class="num">Uds dedup</th>
+        <th>Tipo probable</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="zona-name">Condominio MARE</td>
+        <td class="perfil">Mariscal Construcciones</td>
+        <td class="perfil">Sirari</td>
+        <td class="num">8</td>
+        <td class="perfil">Proyecto viejo (pub. feb 2024) — habilitación o re-discovery</td>
+      </tr>
+      <tr>
+        <td class="zona-name">EURODESIGN TOWER</td>
+        <td class="perfil">Eurodesign</td>
+        <td class="perfil">Equipetrol Centro</td>
+        <td class="num">8</td>
+        <td class="perfil">Pub. nov 2025 — carga progresiva de inventario</td>
+      </tr>
+      <tr>
+        <td class="zona-name">TRIVENTO IV</td>
+        <td class="perfil">Invesco S.R.L.</td>
+        <td class="perfil">Equipetrol Norte</td>
+        <td class="num">7</td>
+        <td class="perfil">Pub. mar 2026, preventa — bordeline lanzamiento reciente</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Edificio Uptown Equipetrol</td>
+        <td class="perfil">Grupo Providence</td>
+        <td class="perfil">Equipetrol Oeste</td>
+        <td class="num">6</td>
+        <td class="perfil">Pub. oct 2025 — habilitación (mix entrega+preventa)</td>
+      </tr>
+      <tr>
+        <td class="zona-name">TERRAZO</td>
+        <td class="perfil">Levent Construcciones</td>
+        <td class="perfil">Equipetrol Centro</td>
+        <td class="num">5</td>
+        <td class="perfil">Pub. jun 2025 — re-publicación o expansión</td>
+      </tr>
+      <tr>
+        <td class="zona-name">SÖLO Industrial Apartments</td>
+        <td class="perfil">Betso Desarrolladores</td>
+        <td class="perfil">Equipetrol Centro</td>
+        <td class="num">4</td>
+        <td class="perfil">Proyecto en preventa hace tiempo — se activaron unidades adicionales este mes (carga progresiva, no lanzamiento)</td>
+      </tr>
+      <tr>
+        <td class="zona-name">HH Chuubi</td>
+        <td class="perfil">HH Desarrollos</td>
+        <td class="perfil">Equipetrol Centro</td>
+        <td class="num">4</td>
+        <td class="perfil">Pub. mar 2026 — reciente</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Sky Eclipse</td>
+        <td class="perfil">Sky Properties</td>
+        <td class="perfil">Equipetrol Oeste</td>
+        <td class="num">4</td>
+        <td class="perfil">Proyecto grande viejo (29 props pre-mes), pub. oct 2025</td>
+      </tr>
+      <tr style="opacity:0.7;">
+        <td class="zona-name">SANTORINI VENTURA</td>
+        <td class="perfil">Constructora Santorini Suites</td>
+        <td class="perfil">Villa Brígida</td>
+        <td class="num">4</td>
+        <td class="perfil">Pub. oct 2025 — proyecto preexistente, broker republicó la misma unidad varias veces</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888; margin-top:8px; margin-bottom:0;">
+    <strong>Caveat estructural:</strong> esta tabla NO mide lanzamientos primarios. Mide proyectos donde SICI capturó más unidades únicas este mes — mezcla habilitaciones, re-publicaciones, mercado secundario y carga progresiva. SICI no puede distinguir entre "edificio físicamente nuevo" y "edificio existente cuya unidad recién apareció en portal". <strong>Verificado caso a caso: ninguno de los 8 proyectos del top corresponde a un lanzamiento primario genuino del mes</strong> — todos eran proyectos que ya estaban en el mercado antes y simplemente cargaron más unidades, cambiaron de estado o tuvieron problemas de detección. Para decisiones sobre lanzamientos reales: validar manualmente con notas de prensa o conocimiento del mercado.
+    <br><br>
+    <strong>Contraste con abril:</strong> en abril el top estaba dominado por <strong>Rhodium</strong> (Elite Desarrollos, Sirari, 17 unidades) — un lanzamiento primario claro. En mayo no hay equivalente. La diferencia confirma que mayo fue un mes apagado en mercado primario nuevo.
+  </p>
+
+  <!-- LANZAMIENTOS VERIFICADOS 90D -->
+  <div class="section-title">Lanzamientos primarios verificados — últimos 90 días</div>
+  <p style="font-size:13px; color:#666; margin-top:-6px; margin-bottom:14px;">
+    Verificación manual sobre los top proyectos del pipeline en marzo, abril y mayo. Solo cuentan proyectos físicamente nuevos en el mercado, no habilitaciones de existentes, mercado secundario ni carga progresiva.
+  </p>
+  <table class="zonas">
+    <thead>
+      <tr>
+        <th>Mes</th>
+        <th>Proyecto</th>
+        <th>Desarrollador</th>
+        <th>Zona</th>
+        <th class="num">Uds</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="zona-name">Marzo</td>
+        <td colspan="3" class="perfil" style="font-style:italic; color:#888;">Ningún lanzamiento primario grande verificado (todos los del top eran proyectos preexistentes)</td>
+        <td class="num">—</td>
+      </tr>
+      <tr>
+        <td class="zona-name">Abril</td>
+        <td class="zona-name">Rhodium</td>
+        <td class="perfil">Elite Desarrollos</td>
+        <td class="perfil">Sirari</td>
+        <td class="num"><strong>17</strong></td>
+      </tr>
+      <tr>
+        <td class="zona-name">Mayo</td>
+        <td colspan="3" class="perfil" style="font-style:italic; color:#888;">Ningún lanzamiento primario grande verificado</td>
+        <td class="num">—</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888; margin-top:8px; margin-bottom:0;">
+    <strong>Lectura:</strong> en 90 días observables, solo 1 lanzamiento primario grande de Equipetrol. Ritmo real: ~1 lanzamiento cada 3 meses. Esto es información operativa para asesoría — el mercado primario es esporádico, no continuo. Los devs evaluando entrar tienen "ventana" porque no se está saturando con nuevas competencias mensualmente.
+    <br><br>
+    <em>Nota de método:</em> verificación caso a caso sobre los proyectos top del mes. Lanzamientos menores (≤5 unidades) pueden no entrar al top y requieren revisión específica si hay interés en un nicho concreto.
+  </p>
+
+  <!-- INDICADORES ACCIONABLES -->
+  <div class="section-title">Indicadores accionables del mes</div>
+  <ul class="cambios">
+    <li>
+      <strong>Concentración estructural: Sky Properties domina.</strong> 16 proyectos y 52 unidades activas = 14% del stock venta de Equipetrol. Cualquier análisis competitivo o asesoría a dev tiene que considerar el tamaño relativo de Sky. Los 21 desarrolladores con 2+ proyectos concentran ~85% del inventario — mercado fragmentado pero con jugadores estructurales claros.
+    </li>
+    <li>
+      <strong>Equipetrol Centro es el core del mercado.</strong> 163 props (46% del set venta), $2,139/m² mediano, ticket $132K. Para asesoría a comprador: ahí está el mayor poder de filtro (más opciones, más comparables). Para asesoría a vendedor: ahí está la mayor competencia directa.
+    </li>
+    <li>
+      <strong>Equipetrol Norte premium con poca oferta.</strong> 31 unidades, $/m² $2,458 (el más alto del set), ticket $129K. Si comprador busca ahí: oferta limitada, urgencia recomendable. Para devs: zona de ticket alto pero inventario estructuralmente chico.
+    </li>
+    <li>
+      <strong>Villa Brígida entry-level real.</strong> $1,920/m² mediano (el más bajo del set), ticket $116K. Puerta de entrada de precio a Equipetrol. <em>Caveat:</em> ~17 props de SANTORINI VENTURA pueden ser duplicados latentes — el stock real probablemente es ~25 unidades, no 42.
+    </li>
+    <li>
+      <strong>78% de las salidas del pipeline son props ya en entrega.</strong> 83 de 106 absorbidas estaban en entrega inmediata, solo 23 en preventa. Lo que se "consume" del portal es mayormente stock terminado. <em>Implicación:</em> si comprador busca preventa, esa parte del mercado se mueve más lento. Si busca terminado, hay rotación. <em>Caveat:</em> "salida del portal" no equivale a "venta cerrada".
+    </li>
+    <li>
+      <strong>Anomalía monoambiente amoblado vs no amoblado.</strong> Renta mediana $503 amoblado = $503 no amoblado. Prima real del mobiliario apenas ~8.5% en renta/m². <em>Decisión operativa:</em> amueblar monoambiente no sube renta significativamente — la ganancia viene por reducción de vacancia, no por ticket. Si inversor evalúa: comprar para amoblar tiene retorno marginal bajo en esta tipología.
+    </li>
+    <li>
+      <strong>TC paralelo +43.7% spread vs oficial.</strong> Factor macro dominante. Cualquier listado en USD puede estar al oficial, al paralelo o al "billete" — la diferencia real entre precios publicados puede ser hasta 30% según base cambiaria. <em>Para asesoría:</em> siempre verificar base cambiaria del listing antes de comparar precios.
+    </li>
+    <li>
+      <strong>Pipeline ganando volumen en ambos mercados.</strong> Venta: 157 entradas / 106 salidas. Alquiler: 125 / 80. El stock crece. <em>No se puede traducir a</em> "acumulación de oferta real" sin distinguir lanzamientos genuinos de re-publicaciones. Puede ser: (a) más oferta real entrando, (b) mayor cobertura SICI captando lo mismo, o (c) más mercado secundario apareciendo en portales. Vigilar próximo mes — si el ratio se mantiene 1.5+ entradas/salidas, vale ahondar.
+    </li>
+  </ul>
+
+  <!-- HIPÓTESIS A VIGILAR -->
+  <div class="section-title">Indicadores a vigilar el próximo mes</div>
+  <ul class="hipotesis">
+    <li>
+      <span class="badge">V1</span>
+      <div>
+        <strong>¿El pipeline sigue ganando volumen?</strong> Hoy entradas/salidas venta = 1.48 (157/106), alquiler = 1.56 (125/80). Si junio mantiene ratio &gt;1.5 en ambos, hay tendencia real (sea oferta nueva o mayor cobertura SICI). Si baja a ~1.0, equilibrio.
+        <span class="watchout"><strong>Watchout:</strong> bloque "Actividad del pipeline" en próximo resumen.</span>
+      </div>
+    </li>
+    <li>
+      <span class="badge">V2</span>
+      <div>
+        <strong>¿Cambia composición del stock por estado de construcción?</strong> Hoy salidas son 78% entrega vs 22% preventa. Si junio cambia significativamente (ej. preventa &gt;30% de salidas), señala desplazamiento — mercado primario reactivándose o cancelaciones de preventa.
+        <span class="watchout"><strong>Watchout:</strong> ratio salidas_entrega vs salidas_preventa del snapshot global.</span>
+      </div>
+    </li>
+    <li>
+      <span class="badge">V3</span>
+      <div>
+        <strong>¿Aparece algún proyecto genuinamente nuevo con varias unidades?</strong> Este mes los "lanzamientos genuinos" fueron 14 proyectos de 1 unidad cada uno — mercado primario chico. Si en junio aparece un proyecto sin props pre-mes Y con 5+ unidades dedupadas, sería el primer lanzamiento primario importante observable.
+        <span class="watchout"><strong>Watchout:</strong> filtrar tabla "proyectos con entradas" por aquellos donde props_pre_mes=0 y uds_dedup&gt;3.</span>
+      </div>
+    </li>
+    <li>
+      <span class="badge">V4</span>
+      <div>
+        <strong>¿Sky Properties mantiene su 14% del stock?</strong> Si Sky crece a 18-20% o cae a &lt;10%, es señal estructural (entrada de nuevos competidores fuerte, o desplome de su pipeline). Hoy 16 proyectos / 52 uds.
+        <span class="watchout"><strong>Watchout:</strong> tabla "Concentración por desarrollador" — comparar share del #1.</span>
+      </div>
+    </li>
+  </ul>
+
+  <!-- LO QUE SICI NO PUEDE MEDIR -->
+  <div class="section-title">Lo que SICI no puede medir (límites estructurales)</div>
+  <div class="humildad">
+    <ul>
+      <li>
+        <strong>Lanzamientos primarios genuinos.</strong> Los listados publicados no distinguen entre edificio físicamente nuevo, mercado secundario (reventa de unidad usada), re-publicación de anuncio viejo, o edificio existente cuya unidad recién apareció en portal. Todo entra como "prop nueva". Para evaluar lanzamientos reales hace falta validación manual por proyecto.
+      </li>
+      <li>
+        <strong>Velocidad de venta real.</strong> SICI ve cuándo una prop entra y sale del portal — no cuándo se vende. "Salir del portal" puede ser: venta cerrada, retiro voluntario, expiración del anuncio, o consolidación de duplicados. Brecha típica publicación → cierre: 5–15% en venta, 10–20% en alquiler.
+      </li>
+      <li>
+        <strong>Aceleración o acumulación del mercado.</strong> El ratio entradas/salidas del pipeline da dirección general pero no se puede traducir a "el mercado se aceleró" o "se acumula vidriera". El movimiento del pipeline mezcla actividad de captura SICI con actividad real del mercado.
+      </li>
+      <li>
+        <strong>Movimiento de precio mes a mes.</strong> Las medianas $/m² se calculan sobre props publicadas, no transacciones cerradas. Para hablar de "subió" o "bajó", habría que comparar mismas tipologías en mismas zonas — y aún así sería movimiento de listing, no de cierre.
+      </li>
+      <li>
+        <strong>Estacionalidad vs tendencia.</strong> Solo tenemos 1 mes de comparación robusta (14 abr → 13 may). Para tendencia hace falta 3 cortes mínimo. Re-mirar 13 jun y 13 jul antes de comprometer hipótesis.
+      </li>
+      <li>
+        <strong>Impacto cuantitativo del TC paralelo (+43.7%).</strong> Contexto macro que afecta todo. No se puede aislar cuánto del comportamiento del pipeline responde a esto vs otros factores. Requeriría análisis dedicado con data macroeconómica externa.
+      </li>
+    </ul>
+  </div>
+
+
+  <!-- CAVEATS -->
+  <div class="caveats">
+    <p><strong>Caveats canónicos.</strong> Estos números describen <em>listings publicados</em> en Century 21, Remax y Bien Inmuebles — no ventas cerradas. "Inventario que sale del portal" no equivale a "vendida". Brecha típica publicación→cierre: 5–15% en venta, 10–20% en alquiler.</p>
+    <p>Filtros aplicados: sin duplicados, área ≥ 20m², excluye parqueo / baulera / garaje, antigüedad máxima del listado 300d (entrega inmediata) / 730d (preventa) / 150d (alquiler). Precios normalizados a USD oficial.</p>
+    <p>Absorción de mercado: serie v3 limpia desde 14 abr 2026. Estable a partir de ~14 jul (necesita ≥90 días). Hasta entonces, no se reporta como "meses de inventario".</p>
+  </div>
+
+</div>
+</body>
+</html>
