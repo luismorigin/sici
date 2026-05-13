@@ -25,7 +25,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "-- =====================================================\n-- FLUJO MERGE v1.0.0 - Query Propiedades Pendientes\n-- Solo status='actualizado' (listas para merge)\n-- =====================================================\nSELECT \n    id,\n    codigo_propiedad,\n    url,\n    fuente,\n    status,\n    fecha_enrichment,\n    EXTRACT(EPOCH FROM (NOW() - fecha_enrichment))/3600 as horas_desde_enrichment\nFROM propiedades_v2\nWHERE status = 'actualizado'::estado_propiedad\n  AND es_activa = TRUE\nORDER BY fecha_enrichment ASC\nLIMIT 200;",
+        "query": "-- =====================================================\n-- FLUJO MERGE v1.0.0 - Query Propiedades Pendientes\n-- Solo status='actualizado' + tipo_operacion='venta'\n-- (Las alquiler las procesa el workflow merge_alquiler aparte)\n-- =====================================================\nSELECT \n    id,\n    codigo_propiedad,\n    url,\n    fuente,\n    status,\n    fecha_enrichment,\n    EXTRACT(EPOCH FROM (NOW() - fecha_enrichment))/3600 as horas_desde_enrichment\nFROM propiedades_v2\nWHERE status = 'actualizado'::estado_propiedad\n  AND es_activa = TRUE\n  AND tipo_operacion = 'venta'\nORDER BY fecha_enrichment ASC\nLIMIT 200;",
         "options": {}
       },
       "id": "00a3f424-7f28-40b7-8fc9-8734efc7833f",
