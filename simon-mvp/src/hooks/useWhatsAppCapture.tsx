@@ -12,6 +12,7 @@ import WhatsAppCaptureModal from '@/components/capture/WhatsAppCaptureModal'
 export interface CaptureProperty {
   id: number
   agente_whatsapp: string | null
+  agente_nombre?: string | null
   nombre_edificio: string | null
   nombre_proyecto: string | null
   zona: string
@@ -174,7 +175,7 @@ function buildPayload(
     zona: p.zona || '',
     precio: p.precio_mensual_bob,
     dorms: p.dormitorios ?? 0,
-    broker_nombre: '',
+    broker_nombre: p.agente_nombre || '',
     fuente,
     preguntas: preguntas && preguntas.length > 0 ? preguntas : undefined,
     debug: typeof window !== 'undefined' && localStorage.getItem('simon_debug') === '1' ? '1' : undefined,
