@@ -234,3 +234,18 @@ Después de aplicar el fix, las nuevas props guardarán cruda. Para las 150 ya e
 **Prioridad: MEDIA.** Funcionó 3 meses sin queja, pero agregar visibilidad para usuarios + habilitar audit textual son valor real.
 
 **Referencia:** Investigado en sesión 8-9 May 2026 — branch `audit/descripciones-drift`. Workflow afectado: `n8n/workflows/alquiler/flujo_enrichment_llm_alquiler_v2.0.0.json`. Función SQL: ver migración existente de `registrar_enrichment_alquiler`.
+
+## Migración Sonnet 4 → 4.6 — RESUELTO (15 May 2026)
+
+**Contexto:** Anthropic comunicó retiro de `claude-sonnet-4` (nativo, ID `claude-sonnet-4-20250514`) el **15-Jun-2026 9AM PT**. Recomendación oficial: upgrade a Sonnet 4.6 (mismo precio, más inteligente, drop-in) o a Opus 4.7.
+
+**Cambios aplicados (2 endpoints legacy):**
+- `simon-mvp/src/pages/api/razon-fiduciaria.ts:150` → `claude-sonnet-4-6`
+- `simon-mvp/src/pages/api/generar-guia.ts:151` → `claude-sonnet-4-6`
+
+Ambos pertenecen al **funnel premium legacy** (`/filtros-v2 → /formulario-v2 → /resultados-v2`), no al flujo productivo principal (`/` → `/ventas`).
+
+**Por qué los workflows n8n NO se tocaron:**
+Los workflows de enrichment (`modulo_1/`, `alquiler/`, `casas_terrenos/`) usan **`claude-haiku-4-5-20251001`**, que **no está en lista de retiro**. Tampoco aplica para `api/chat-alquileres.ts` (también Haiku 4.5). El retiro de Sonnet 4 solo afecta a los 2 endpoints listados arriba — los pipelines nocturnos siguen intactos.
+
+**Nota residual:** `scripts/llm-enrichment/enrich-ventas-llm.js:56` declara `sonnet: 'claude-sonnet-4-6'` como opción de modelo en herramienta de testing — ya estaba en 4.6, no requiere acción.
