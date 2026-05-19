@@ -95,6 +95,7 @@ const COCINA_IMAGES = [
 ]
 
 const SALON_IMAGES = [
+  { src: '/condado-vi-v2/salon-render-1.jpg', alt: 'Render referencial: ambiente integrado salón cocina comedor balcón', render: true },
   { src: '/condado-vi-v2/salon-1.jpg', alt: 'Salón con sofá blanco y sillón cuero' },
   { src: '/condado-vi-v2/salon-2.jpg', alt: 'Salón vista con espejo arco' },
   { src: '/condado-vi-v2/salon-3.jpg', alt: 'Ambiente cocina con pendant lights' },
@@ -125,7 +126,7 @@ const GALLERY_IMAGES = [
   { src: '/condado-vi-v2/vista-balcon.jpg', alt: 'Entrada Condado VI con cartel' },
   { src: '/condado-vi-v2/vista-lobby.jpg', alt: 'Lobby Condado VI de noche' },
   ...COCINA_IMAGES,
-  ...SALON_IMAGES,
+  ...SALON_IMAGES.map(s => ({ src: s.src, alt: s.alt })),
   { src: '/condado-vi-v2/plaza-jardin.jpg', alt: 'Vista del parque y la zona' },
   { src: '/condado-vi-v2/pet-friendly.webp', alt: 'Bienvenidos los cuatro patas' },
   { src: '/condado-vi-v2/ubicacion.jpg', alt: 'Vista aérea del edificio' },
@@ -210,7 +211,7 @@ function Lightbox({ images, startIndex, onClose }: { images: typeof GALLERY_IMAG
 
 // ─── Carrusel intra-slot (cocina, salón, fachada) ─────────
 function Carousel({ images, aspectClass, onOpenLightbox, className = '', autoplayMs = 4500 }: {
-  images: { src: string; alt: string }[]
+  images: { src: string; alt: string; render?: boolean }[]
   aspectClass: string
   onOpenLightbox: (src: string) => void
   className?: string
@@ -270,6 +271,13 @@ function Carousel({ images, aspectClass, onOpenLightbox, className = '', autopla
           />
         </button>
       ))}
+
+      {/* Chip "Render referencial" si la imagen actual es IA */}
+      {images[index]?.render && (
+        <div className="absolute top-3 right-3 z-20 bg-condado-ebano/70 backdrop-blur-sm text-condado-marfil font-dm text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full pointer-events-none">
+          Render referencial
+        </div>
+      )}
 
       {/* Prev */}
       <button
