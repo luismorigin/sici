@@ -467,17 +467,12 @@ export default function CondadoVIv2() {
         className={`${playfair.variable} ${dmSans.variable} antialiased bg-condado-marfil text-condado-carbon`}
         style={{ fontFamily: 'var(--font-dm), system-ui, sans-serif' }}
       >
-        {/* Banner v2 */}
-        <div className="fixed top-0 left-0 right-0 z-[60] bg-condado-ebano text-condado-marfil text-center py-2 text-xs tracking-wider">
-          PREVIEW v2 — staging · <a href="/condado-vi" className="underline">ver original</a>
-        </div>
-
         <StickyNav visible={showNav} />
         <FloatingWA visible={showWA} />
         {lightbox !== null && <Lightbox images={GALLERY_IMAGES} startIndex={lightbox} onClose={closeLightbox} />}
 
         {/* ═══ 1. HERO ═══ */}
-        <div ref={heroRef} className="relative h-screen min-h-[600px] flex flex-col justify-end overflow-hidden pt-8">
+        <div ref={heroRef} className="relative h-screen min-h-[600px] flex flex-col justify-end overflow-hidden">
           <div className="absolute inset-0 bg-condado-ebano">
             <Image src="/condado-vi-v2/hero.jpg" alt="Condado VI Plaza Italia — vista aérea Equipetrol" fill className="object-cover" priority sizes="100vw" />
             <div className="absolute inset-0 bg-gradient-to-b from-condado-ebano/30 via-transparent to-condado-ebano/80" />
