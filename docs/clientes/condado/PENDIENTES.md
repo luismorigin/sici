@@ -1,6 +1,6 @@
 # Pendientes — Condado / Proinco
 
-> Última actualización: 21 Abr 2026
+> Última actualización: 19 May 2026
 
 ## Estado del acuerdo original
 
@@ -25,14 +25,24 @@
 
 **Envío:** Martes/miércoles AM. Follow-up 48h si no responde.
 
-### 2. Landing web Condado VI
+### 2. Landing web Condado VI — v2 deployada para revisión
 
-**Estado:** Contratada USD 500. Adelanto Bs 1,750 recibido (18 Mar 2026). **Bloqueada por falta de material del cliente.**
+**Estado:** v2 lista en staging, mensaje WSP enviado a Adolfo el 19 May. Esperando feedback.
+
+URL review: **https://simonbo.com/condado-vi-v2** (noindex)
+
+**Detalles completos:** ver `LANDING_V2.md`
 
 **Pendiente del cliente:**
-- Planos de planta por tipología
-- Fotos reales (dptos + áreas comunes)
-- Revisión del texto propuesto
+- Adolfo revisa la URL en compu + celular y manda observaciones de textos/fotos
+- Confirmar si el material entregado corresponde a un mismo depto modelo o varios
+
+**Pendiente nuestro (después del feedback):**
+- Aplicar cambios solicitados (queda 1 ronda de revisión incluida en las 2 pactadas)
+- Pasada de optimización Lighthouse (comprimir hero, lazy-load, touch targets) — ver `LANDING_V2.md` sección Lighthouse
+- Decidir si reemplazar `/condado-vi` canónica o mantener separadas con redirect
+- Sacar `noindex` al publicar definitivo
+- Cobrar saldo Bs 1,750 (USD 250) al publicar
 
 ## Pausados
 
