@@ -114,7 +114,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 
 ### Referencia completa
 
-- Documento autoritativo: `docs/architecture/TIPO_CAMBIO_SICI.md` — flujo completo portal→extractor→merge→dashboard→query, bugs históricos, TC Binance.
+- Documento autoritativo: `docs/arquitectura/TIPO_CAMBIO_SICI.md` — flujo completo portal→extractor→merge→dashboard→query, bugs históricos, TC Binance.
 - Deuda técnica resuelta: `obtenerMicrozonas()` y `buscarSiguienteRango()` ya normalizan (migración 177).
 
 ## Documentacion Principal
@@ -136,7 +136,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Learnings Baseline Equipetrol** | `docs/baseline/LEARNINGS_EQUIPETROL_BASELINE.md` — decisiones editoriales, metodológicas y de posicionamiento del reporte público trimestral (público dev/inversor, sesgos declarados, pendientes) |
 | **Fichas tecnicas proyectos** | `docs/fichas/` — data de desarrollador (inventario, precios, equipamiento) no disponible en portales |
 | **Estudios mercado SaaS** | `docs/backlog/ESTUDIOS_MERCADO_SAAS.md` — roadmap producto recurrente. Framework: `scripts/estudio-mercado/` (8 tools + HTML generator, 1 cliente activo) |
-| **Sistema TC y precios** | `docs/architecture/TIPO_CAMBIO_SICI.md` |
+| **Sistema TC y precios** | `docs/arquitectura/TIPO_CAMBIO_SICI.md` |
 | Schema BD | `sql/schema/propiedades_v2_schema.md` |
 | Merge canonical | `docs/canonical/merge_canonical.md` |
 | **Brand Guidelines** | Repo externo `simon-brand` — ver sección "Simon Brand (repo externo)" abajo |
