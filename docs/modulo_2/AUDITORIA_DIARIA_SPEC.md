@@ -1,8 +1,10 @@
 # Auditoria Diaria SICI - Especificacion
 
+> **⚠️ Spec del núcleo v2.5 (auditoría de venta).** El workflow productivo actual es **v3.1** (`n8n/workflows/modulo_2/auditoria_diaria_sici_v3.0.json`). El esqueleto descrito acá sigue alineado (secciones, 9 AM, Slack, snapshot, `workflow_executions`), pero v3.0/v3.1 **agregó superficies no documentadas en este spec**: alquiler, casas/terrenos, LLM/enrichment (nodo "Stats Enriquecimiento") y snapshot de absorción. Para el alcance completo, ver el workflow.
+>
 > **Version:** 2.5
 > **Fecha:** 3 Enero 2026
-> **Workflow:** `n8n/workflows/modulo_2/auditoria_diaria_sici.json`
+> **Workflow:** `n8n/workflows/modulo_2/auditoria_diaria_sici_v3.0.json`
 
 ---
 
