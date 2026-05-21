@@ -251,13 +251,14 @@ https://c21.com.bo/v/resultados/tipo_departamento-o-penthouse/operacion_venta/la
    - ❌ `dormitorios` NO existe → Usar `recamaras`
    - ✅ `fechaAlta` NO `fecha_publicacion`
 
-3. **Cobertura de datos variable:**
+3. **Cobertura de datos variable** (varios campos llegan null del portal; consultar % actual):
+   ```sql
+   SELECT ROUND(100.0*COUNT(datos_json_discovery->>'recamaras')/COUNT(*))        AS pct_recamaras,
+          ROUND(100.0*COUNT(datos_json_discovery->>'banos')/COUNT(*))            AS pct_banos,
+          ROUND(100.0*COUNT(datos_json_discovery->>'estacionamientos')/COUNT(*)) AS pct_estac
+   FROM propiedades_v2 WHERE fuente='century21';
    ```
-   m2C:            100% poblado
-   recamaras:      ~55% poblado (muchos null)
-   banos:          ~68% poblado (algunos null)
-   estacionamientos: ~13% poblado (muy raro)
-   ```
+   `m2C` viene 100%; `recamaras` y `banos` parcial; `estacionamientos` raro.
 
 4. **Parsing defensivo necesario:** El JSON puede venir en 3 estructuras diferentes:
    ```javascript

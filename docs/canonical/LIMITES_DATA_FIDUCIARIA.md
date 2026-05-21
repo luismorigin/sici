@@ -96,13 +96,18 @@ Datos que Simón NO puede presentar como hechos. Mencionarlos solo como contexto
 
 ### 3.1 Amoblado vs. no amoblado (alquiler)
 
-**Estado actual (Mar 2026):**
-- 64% de listings de alquiler declaran "amoblado"
-- 26% no declaran nada
-- 4% declaran "no amoblado"
-- 6% "semi-amoblado"
+**Distribución actual** (consultar — la clasificación mejoró mucho, hoy <2% sin declarar):
+```sql
+SELECT amoblado, COUNT(*),
+  ROUND(100.0*COUNT(*)/SUM(COUNT(*)) OVER ()) AS pct
+FROM v_mercado_alquiler GROUP BY amoblado ORDER BY 2 DESC;
+```
 
-**Impacto medido:** En Eq. Centro 2 dorms, la diferencia entre amoblado ($1,289 avg) y no amoblado ($805 avg) es ~60%. Mezclarlos en un promedio produce un número que no representa a ninguno de los dos.
+**Impacto medido:** en un mismo segmento, los amoblados se cotizan por encima de los no amoblados (verificado may-2026 en Eq. Centro 2 dorms). Mezclarlos en un promedio produce un número que no representa a ninguno de los dos. Para el dato del segmento:
+```sql
+SELECT amoblado, COUNT(*), ROUND(AVG(precio_mensual)) AS avg_usd
+FROM v_mercado_alquiler WHERE zona='Equipetrol Centro' AND dormitorios=2 GROUP BY amoblado;
+```
 
 **Causa:** Los anunciantes no declaran consistentemente si el departamento está amoblado. No es un problema de enrichment — el dato no existe en el aviso original en muchos casos.
 
@@ -113,7 +118,7 @@ Datos que Simón NO puede presentar como hechos. Mencionarlos solo como contexto
 
 ### 3.2 Dormitorios = 0 (monoambientes/estudios)
 
-**Estado actual:** ~81 propiedades de venta clasificadas como 0 dormitorios. Son monoambientes legítimos (30-46 m², edificios conocidos). La auditoría de clasificación dorm=0 vs dorm=1 ya se realizó y el bug de misclassificación fue corregido (migración 198, ~21 Mar 2026).
+**Estado actual:** monoambientes/estudios legítimos de venta (30-46 m², edificios conocidos). Conteo actual: `SELECT COUNT(*) FROM v_mercado_venta WHERE dormitorios=0;`. La auditoría de clasificación dorm=0 vs dorm=1 ya se realizó y el bug de misclassificación fue corregido (migración 198, ~21 Mar 2026).
 
 **Regla para análisis:**
 - Categoría válida — son estudios/monoambientes reales
@@ -244,7 +249,7 @@ Datos que Simón NO puede presentar como hechos. Mencionarlos solo como contexto
 
 | Mejora | Qué resuelve | Esfuerzo |
 |--------|-------------|----------|
-| **Inferencia de amoblado por LLM** (desde fotos o descripción) | Mejorar tasa de clasificación del 74% actual | Alto — requiere prompt engineering + validación |
+| ~~**Inferencia de amoblado por LLM**~~ | **YA RESUELTO** (may-2026): la clasificación de amoblado pasó de ~74% a ~99% (hoy <2% sin declarar). Ver query de §3.1 | — |
 | **Snapshot de alquiler con flag amoblado** | Separar series amoblado / no amoblado / sin dato | Bajo (una vez que amoblado mejore) |
 | ~~**Vacancia observable por edificio**~~ | **DESCARTADO.** Listada ≠ vacía, no listada ≠ ocupada, solo 3 portales, n muy chico por edificio. El proxy sería engañoso — mejor seguir declarando "sin datos medidos de vacancia" | — |
 

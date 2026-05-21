@@ -205,7 +205,7 @@ Existe (url + fuente + tipo_operacion='alquiler')?
 #### LLM: Modelo y Costos
 
 - **Modelo:** Claude Haiku 4.5 (via Anthropic API)
-- **Costo:** ~$0.0044/propiedad ($0.22/mes para 50 props)
+- **Costo:** estimado ~$0.004/propiedad (Haiku 4.5 — recalcular si cambia el pricing de Anthropic; no es un dato de BD)
 - **Prompt:** Ver `docs/alquiler/LLM_ENRICHMENT_PROMPT.md`
 - **Validacion post-LLM en n8n:**
   - Precio no nulo

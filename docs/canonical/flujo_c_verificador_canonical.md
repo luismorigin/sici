@@ -241,17 +241,18 @@ Cada ejecución registra en `workflow_executions`:
 
 ---
 
-## PRODUCCIÓN (28 Feb 2026)
+## PRODUCCIÓN (conteos en vivo)
 
-| Tipo | inactivo_pending | inactivo_confirmed | Total |
-|------|-----------------|-------------------|-------|
-| Venta C21 | 62 | 129 | 191 |
-| Venta Remax | 32 | 22 | 54 |
-| Alquiler C21 | 0 | 79 | 79 |
-| Alquiler Remax | 10 | 37 | 47 |
-| Alquiler BI | 0 | 2 | 2 |
+```sql
+SELECT fuente, tipo_operacion,
+  COUNT(*) FILTER (WHERE status='inactivo_pending')   AS pending,
+  COUNT(*) FILTER (WHERE status='inactivo_confirmed') AS confirmed
+FROM propiedades_v2
+WHERE fuente IN ('century21','remax','bien_inmuebles')
+GROUP BY fuente, tipo_operacion ORDER BY 1,2;
+```
 
-**Nota:** C21 venta tiene 62 pending porque Flujo C no las procesa. Alquiler C21 tiene 0 pending porque el verificador alquiler procesa todas las fuentes.
+**Nota:** el verificador venta **v2.0 procesa todas las fuentes** (incluido C21 venta — esto cambió desde v1.1, que no las procesaba). El `pending` residual es bajo y rota normal: refleja props en ventana de gracia (2 días) antes de confirmarse inactivas, no fuentes sin procesar.
 
 ---
 
