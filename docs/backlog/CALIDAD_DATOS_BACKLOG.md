@@ -40,6 +40,17 @@ ORDER BY fuente, area_total_m2;
 
 **Caveat:** "monoambiente" en URL/JSON es señal fuerte, NO prueba 100% (área <40m² afina; las de área ≥40 con dorms=1 podrían ser legítimas — 1 dorm en edificio "monoambiente").
 
+## Coherencia texto↔dato — otros candidatos (backlog, 21 May 2026)
+
+El bug de monoambientes es un caso del patrón "el campo estructurado del portal contradice el texto". Otros atributos con calidad propia (dimensionado sobre `v_mercado_venta`, 364 props venta):
+
+- **TC paralelo** (`tipo_cambio_detectado`): **117/364 (32%) `no_especificado`**. **El de mayor impacto en el valor** (define `precio_normalizado`). NO es el mismo bug (el TC rara vez está explícito en el texto). Ya tiene tratamiento parcial (badge "TC sospechoso" a 30% bajo mediana, upgrade LLM). Dominio propio → análisis aparte.
+- **Preventa/inmediata** (`estado_construccion`): **25/364 (7%) `no_especificado`**. **Mismo patrón que monoambiente** (detectable por texto: "preventa", "en construcción", "en pozo", "entrega inmediata", "a estrenar"). Impacto alto (preventa ~39% más barata). Candidato a guardrail determinístico **reutilizando el approach de monoambiente**.
+- **Penthouse/dúplex mal tipados**: ~4 penthouse + ~11 dúplex con la palabra en texto pero `tipo='departamento'`. Afecta clasificación de tipo. Volumen chico → corrección manual o guardrail propio.
+- **Baños**: sano (4 sospechosas de 364, ya hubo corrección histórica). No prioritario.
+
+> Cuidado: NO generalizar el guardrail a cualquier palabra. Señales ruidosas verificadas: `oficina` (1269 falsos: "cerca de oficinas", "home office"), `loft`/`estudio` (ambiguos). Solo "monoambiente" y los términos de preventa/inmediata son señales limpias.
+
 ## Baños Corregidos (14 props) - 21 Ene 2026
 
 Auditoría manual con IA completada. 14 propiedades corregidas con `campos_bloqueados`:

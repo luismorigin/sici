@@ -39,6 +39,18 @@
 
 **Caveat:** el fix mejora la captura futura pero NO reactiva las ya congeladas (venta sí reactiva al recapturar; alquiler es terminal). Cambio en workflow n8n (producción — validar en n8n UI, el repo puede diferir). Verificación de vida correcta: slug exacto + operación en API, no HTTP 200 (`RESEARCH_REMAX_API §23`).
 
+## Discovery pisa correcciones del LLM (bug de persistencia) — DETECTADO 21 May 2026
+
+**Problema:** cuando el merge aplica un override del LLM sobre un campo físico (ej: LLM corrige dorms 1→0 en un monoambiente, confianza alta), el discovery nocturno posterior puede pisar la columna con el dato crudo del portal vía `COALESCE(p_dormitorios, dormitorios)`. La corrección queda en `datos_json` (`fuente=llm`) pero la **columna real** vuelve al valor del portal.
+
+**Evidencia:** 58 de 258 props con `fuente_dormitorios='llm'` tienen la columna ≠ lo que el merge decidió (**22% de overrides LLM revertidos**). Ej: prop 1733 (merge dijo 0, columna=1, `fecha_discovery > fecha_merge`).
+
+**Por qué pasa:** `registrar_discovery` respeta candados pero NO la decisión del merge. La regla "Discovery > Enrichment para campos físicos" hace que discovery gane; el merge v2.6.0 introdujo la excepción "LLM alta gana" que el discovery desconoce.
+
+**Mitigación parcial (monoambiente):** el guardrail determinístico en el merge se re-aplica cada noche (el merge re-procesa `status='actualizado'`), así que para dorms-monoambiente la corrección persiste sin candado. **Pero el bug general (otros campos LLM-override sin guardrail) sigue.**
+
+**Fix general (a evaluar):** candar automáticamente el campo cuando el merge aplica override LLM de alta confianza (`registrar_discovery` ya respeta candados). Trade-off: congela el campo. NO tocar `registrar_discovery` (función core, alto riesgo). Ver postmortem monoambientes.
+
 ## Funciones SQL con filtros de mercado — REVISADO (23 Mar 2026)
 
 **Contexto:** Migración 193 creó vistas canónicas `v_mercado_venta` y `v_mercado_alquiler`. Auditoría de 60 funciones encontró 3 con filtros incompletos. Re-investigado 23 Mar 2026.
