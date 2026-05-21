@@ -4,38 +4,41 @@
 
 ## Monoambientes catalogados como "1 dormitorio" — DETECTADO (21 May 2026)
 
-**Problema:** error sistemático de extracción: props que el portal publica como **"monoambiente"** están cargadas con `dormitorios = 1` (y `tipo_propiedad_original = 'departamento'`). Detectado desde un consumidor externo de SICI comparando contra la **fuente** (título en la URL).
+**Problema:** error sistemático de extracción en **los 3 portales**: props que la fuente publica como **"monoambiente"** están cargadas con `dormitorios = 1`. Detectado desde un consumidor externo de SICI comparando contra la fuente.
 
-**Por qué no lo atrapa un cruce interno:** `dormitorios=1` y `tipo='departamento'` están mal de forma **consistente entre sí** → cruzar campos internos (área vs dorms) no lo detecta. Solo se ve comparando contra la fuente (`url ILIKE '%monoambiente%'`).
+**Por qué no lo atrapa un cruce interno:** `dormitorios=1` y `tipo='departamento'` están mal de forma **consistente entre sí** → cruzar campos internos (área vs dorms) no lo detecta. Solo se ve comparando contra la fuente.
 
-**Alcance (verificado 21 May, `propiedades_v2` sin filtros, `duplicado_de IS NULL`)** — props con "monoambiente" en URL pero `dormitorios=1`:
+**La señal de "monoambiente" difiere por portal** (verificado 21 May, `propiedades_v2`, `duplicado_de IS NULL`):
 
-| Operación | Total dorms=1 | Sospechosas fuertes (área <40m²) | Dudosas (área ≥40m²) |
-|---|---|---|---|
-| Venta | 68 | 47 | 21 |
-| Alquiler | 23 | 10 | 13 |
-| Anticrético | 1 | 1 | 0 |
+| Portal | Dónde aparece "monoambiente" | Mal catalogadas (dorms=1) |
+|---|---|---|
+| **C21** | en la **URL** (`url ILIKE '%monoambiente%'`, 320 props) | 68 (47 con área <40m²) |
+| **Remax** | **solo en el JSON crudo** — NO en URL, NO en subtype (todo es "Departamento" en su taxonomía) | 3 |
+| **Bien Inmuebles** | **solo en el JSON crudo** | 2 |
 
-→ **~58 altamente sospechosas** (dorms=1 + "monoambiente" URL + área <40m²).
+→ C21 es el grueso (~58 altamente sospechosas con área <40m²); Remax (3) y BI (2) son pocos pero **confirman que el bug es multi-portal**, no solo C21.
 
 ```sql
--- Sospechosas fuertes (revisar/corregir)
-SELECT id, tipo_operacion, nombre_edificio, dormitorios, area_total_m2, url
+-- Señal UNIVERSAL (cubre los 3 portales): "monoambiente" en el JSON crudo o la URL
+SELECT id, fuente, tipo_operacion, dormitorios, area_total_m2, url
 FROM propiedades_v2
-WHERE url ILIKE '%monoambiente%' AND dormitorios = 1 AND area_total_m2 < 40
+WHERE dormitorios = 1
+  AND (datos_json_discovery::text ILIKE '%monoambiente%' OR url ILIKE '%monoambiente%')
   AND duplicado_de IS NULL
-ORDER BY tipo_operacion, area_total_m2;
+ORDER BY fuente, area_total_m2;
 ```
 
 **Impacto:** búsquedas por dormitorios sesgadas (quien pide "1 dorm" recibe monoambientes; quien pide monoambiente/0d se pierde estas). Afecta a todos los consumidores de `propiedades_v2`/`v_mercado_*`.
 
-**Causa probable:** `dormitorios` es campo de DISCOVERY (regla "Discovery > Enrichment"). El extractor C21 posiblemente asigna `1` por default cuando el portal no expone dormitorios para monoambientes, o mapea mal el tipo.
+**Causa probable** (`dormitorios` es campo de DISCOVERY — regla "Discovery > Enrichment"):
+- **C21:** el portal expone "monoambiente" en el título/URL pero el extractor lo carga como `dormitorios=1` (default o mapeo erróneo).
+- **Remax/BI:** el portal NO tiene tipo "monoambiente" estructurado (Remax = todo "Departamento"); el dato está solo en el texto, que el extractor no lee para inferir 0 dorms.
 
 **Fix sugerido:**
-- **Corto plazo:** corregir las confirmadas (`dormitorios=0`, `tipo='monoambiente'`) **respetando `campos_bloqueados`** (regla "Manual > Automatic"). Validar abriendo algunos avisos antes de UPDATE masivo.
-- **Largo plazo:** ajustar extractor/enrichment C21 para no asignar 1 dorm a monoambientes. Revisar caso inverso (departamentos como monoambiente) y otros portales (Remax, BI).
+- **Corto plazo:** corregir las confirmadas (`dormitorios=0`) **respetando `campos_bloqueados`** (regla "Manual > Automatic"). Validar abriendo algunos avisos antes de UPDATE masivo.
+- **Largo plazo:** que el enrichment LLM (que sí lee el texto) detecte monoambiente y setee 0 dorms — más robusto que el extractor por portal. Revisar caso inverso (departamentos como monoambiente).
 
-**Caveat:** "monoambiente en URL" es señal fuerte, NO prueba 100% (área <40m² afina; las de área ≥40 con dorms=1 podrían ser legítimas — 1 dorm en edificio "monoambiente").
+**Caveat:** "monoambiente" en URL/JSON es señal fuerte, NO prueba 100% (área <40m² afina; las de área ≥40 con dorms=1 podrían ser legítimas — 1 dorm en edificio "monoambiente").
 
 ## Baños Corregidos (14 props) - 21 Ene 2026
 
