@@ -45,3 +45,9 @@ simon-mvp/test-results/
 /package-lock.json
 skills-lock.json
 scripts/*/package-lock.json
+
+# Análisis personales (fuera del scope de SICI)
+scripts/personal-doble-via/
+
+# Output generado de PoCs (no versionar)
+scripts/poc-zona-norte/resultados.json
