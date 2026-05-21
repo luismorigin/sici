@@ -185,7 +185,7 @@ Leer por path absoluto, no copiar. Si hay divergencia con sici, **simon-brand ga
 1:00 AM  Discovery C21 + Remax → propiedades_v2
 2:00 AM  Enrichment regex → datos_json_enrichment
 2:15 AM  Enrichment LLM (Haiku 4.5, prompt v4.1) → llm_output en datos_json_enrichment
-3:00 AM  Merge v2.6.0 → campos consolidados + TC paralelo + LLM (dormitorios, estado_construccion, nombre_edificio híbrido, solo_tc_paralelo, es_multiproyecto, tipo_cambio_detectado)
+3:00 AM  Merge v2.6.0 → campos consolidados + TC paralelo + LLM (dormitorios, estado_construccion, nombre_edificio híbrido, solo_tc_paralelo, es_multiproyecto, tipo_cambio_detectado) + guardrail monoambiente (mig 246: dorms→0 si URL/crudo dice "monoambiente")
 4:00 AM  Matching → id_proyecto_master + nombre_edificio (migración 170)
 6:00 AM  Verificador venta v2.0 (pending 2d + audit HTTP: C21 404, Remax 302, 150/noche)
 9:00 AM  Auditoria + Snapshots absorcion
@@ -195,7 +195,7 @@ Leer por path absoluto, no copiar. Si hay divergencia con sici, **simon-brand ga
 ```
 1:30 AM  Discovery C21 + Remax
 2:30 AM  Discovery Bien Inmuebles + Enrichment LLM (Haiku 4.5, prompt v2.0 + PROYECTOS CONOCIDOS)
-3:30 AM  Merge alquiler (enrichment-first, sin TC paralelo)
+3:30 AM  Merge alquiler v1.4.0 (enrichment-first, sin TC paralelo) + guardrail monoambiente (mig 214 + 247: señal en descripcion/URL/crudo discovery)
 7:00 AM  Verificador alquiler v2.0 (pending 2d + audit HTTP: C21 404, Remax 302, 60/noche)
 ```
 
