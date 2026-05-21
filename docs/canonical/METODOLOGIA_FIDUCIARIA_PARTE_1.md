@@ -6,6 +6,8 @@
 **Fecha:** 6 Enero 2026  
 **Estado:** Cerrado
 
+> **Nota:** esta metodología es la **filosofía rectora** de Simón y sigue 100% vigente. Donde el texto asume un "momento de riesgo decisional" alimentado por un quiz/guía, eso es el funnel premium dormido (`/formulario-v2` → `/resultados-v2`). La implementación actual en producción es el feed `/ventas` y `/alquileres`, que responde a esta misma filosofía sin el flujo de ficha formal. Ver `MOAT_SCORING_EXPLICACION.md` (legacy) para el ranking del funnel premium.
+
 ---
 
 ## ÍNDICE PARTE 1

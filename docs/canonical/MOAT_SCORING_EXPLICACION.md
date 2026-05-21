@@ -1,5 +1,7 @@
-# MOAT SCORING: Cómo Funciona el Ranking
+# MOAT SCORING: Cómo Funciona el Ranking `[LEGACY]`
 
+> **⚠️ LEGACY (funnel premium dormido):** este algoritmo de ranking (175 pts, innegociables/deseables/trade-offs) corre **solo en `/resultados-v2`** — el funnel premium accesible por URL directa, hoy fuera del flujo principal. El feed de producción (`/ventas`, `/alquileres`) **NO usa este scoring**: ordena por fecha/zona y muestra un mini estudio de mercado inline (mediana + % vs mediana). El producto podría retomar este funnel; mientras tanto, esto documenta cómo funcionaría, no el flujo actual. La **filosofía** detrás vive en `MOAT_FIDUCIARIO_INTERPRETACION.md`.
+>
 > **Versión:** 1.0
 > **Fecha:** 14 Enero 2026
 > **Propósito:** Explicación didáctica del algoritmo de scoring MOAT

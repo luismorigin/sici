@@ -1,5 +1,7 @@
 # MOAT FIDUCIARIO: Interpretación vs Información
 
+> **⚠️ Filosofía vigente, implementación parcialmente legacy.** El **patrón fiduciario** (dato → interpretación → acción, honestidad radical) es el core de Simón y sigue 100% vigente. Pero las secciones "Implementación Actual (MVP Ene 2026)", "Razón fiduciaria" y "Premium Report ($29.99)" describen el **funnel premium dormido** (`/resultados-v2`, TOP 3, `/api/razon-fiduciaria`). En producción hoy, la interpretación vive **inline en el feed** `/ventas` y `/alquileres` (mini estudio de mercado: mediana + % vs mediana), no en tarjetas premium. El funnel podría retomarse; mientras tanto, leé esas secciones como diseño legacy.
+>
 > **Versión:** 2.0
 > **Última actualización:** 12 Enero 2026
 > **Propósito:** Documento canónico que define el patrón fiduciario de Simón

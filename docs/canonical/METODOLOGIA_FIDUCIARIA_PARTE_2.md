@@ -6,6 +6,8 @@
 **Fecha:** 6 Enero 2026  
 **Estado:** Cerrado
 
+> **⚠️ Filosofía vigente, implementación parcialmente legacy.** Los **principios** (pasos 10-12: acompañamiento, aprendizaje, cierre sin presión) siguen rigiendo. Pero la **implementación técnica** de los pasos 8-9 describe el funnel premium dormido: el **MBF (Mapa de Búsqueda Fiduciaria)** y la tabla **`sesiones_fiduciarias` nunca se implementaron** (no existen en el schema), y la "Presentación TOP 3 / Alternativas" corre solo en `/resultados-v2`. El feed de producción (`/ventas`, `/alquileres`) usa filtros inline + mini estudio de mercado, sin MBF formal. Leé los pasos 8-9 como diseño del funnel premium (que podría retomarse), no como el flujo actual.
+
 ---
 
 ## ÍNDICE PARTE 2
