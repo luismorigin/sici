@@ -170,7 +170,7 @@ Existe (url + fuente + tipo_operacion='alquiler')?
 |-----------|------|-------------|-------------|
 | `p_id` | INTEGER | Si | ID en propiedades_v2 |
 | `p_datos_llm` | JSONB | Si | JSON completo del output LLM |
-| `p_modelo_usado` | TEXT | No | `'claude-haiku-4.0'` (default) |
+| `p_modelo_usado` | TEXT | No | `'claude-haiku-4.5'` (default) |
 | `p_tokens_usados` | INTEGER | No | Tokens consumidos |
 | `p_requiere_revision` | BOOLEAN | No | Flag si fallo validacion |
 | `p_errores_validacion` | TEXT[] | No | Lista de errores detectados |
@@ -204,7 +204,7 @@ Existe (url + fuente + tipo_operacion='alquiler')?
 
 #### LLM: Modelo y Costos
 
-- **Modelo:** Claude Haiku 4.0 (via Anthropic API)
+- **Modelo:** Claude Haiku 4.5 (via Anthropic API)
 - **Costo:** ~$0.0044/propiedad ($0.22/mes para 50 props)
 - **Prompt:** Ver `docs/alquiler/LLM_ENRICHMENT_PROMPT.md`
 - **Validacion post-LLM en n8n:**
@@ -222,11 +222,11 @@ Existe (url + fuente + tipo_operacion='alquiler')?
 
 ### Workflow n8n Enrichment
 
-- **Archivo:** `n8n/workflows/alquiler/flujo_enrichment_llm_alquiler_v1.0.0.json`
+- **Archivo:** `n8n/workflows/alquiler/flujo_enrichment_llm_alquiler_v2.1.0.json`
 - **Cron:** 2:30 AM (junto con Discovery Bien Inmuebles)
 - **Query:** Props con `status IN ('nueva', 'actualizado')` y `tipo_operacion = 'alquiler'`
 - **Batch:** 10 props, 5s entre batches
-- **Modelo:** `claude-haiku-4-20250514`
+- **Modelo:** `claude-haiku-4-5-20251001`
 - **Rate limit:** 50 props/noche maximo
 - **Notificaciones:** Slack si hay props con `requiere_revision`
 
