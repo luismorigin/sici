@@ -130,6 +130,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Pipeline Alquiler Canonical** | `docs/canonical/pipeline_alquiler_canonical.md` |
 | **Filtros Calidad Mercado** | `docs/reports/FILTROS_CALIDAD_MERCADO.md` |
 | **Zonas Equipetrol** | `docs/canonical/ZONAS_EQUIPETROL.md` — descripción geográfica, perfiles, nombres BD |
+| **Proyecto Zona Norte** | `docs/proyectos/zona-norte/` — primera expansión geográfica más allá de Equipetrol (MVP discovery venta+alquiler). Investigación completa: discovery escalable por GPS (3 portales devuelven lat/lon), PoC capturó 595 props. Estrategia dark launch en prod real. **Empezar por el README**; decisiones en DECISIONES.md (8 ADRs). Próximo: blindar matching-por-nombre + snapshot global antes de meter datos |
 | **Learnings Alquiler** | `docs/alquiler/LEARNINGS_PIPELINE_ALQUILER.md` |
 | **Alquileres queries** | `docs/canonical/ALQUILERES_QUERIES.md` |
 | **Learnings Baseline Equipetrol** | `docs/baseline/LEARNINGS_EQUIPETROL_BASELINE.md` — decisiones editoriales, metodológicas y de posicionamiento del reporte público trimestral (público dev/inversor, sesgos declarados, pendientes) |
@@ -244,6 +245,7 @@ sici/
 │   ├── analysis/        → auditorias LLM, precios, comparativas
 │   ├── fichas/          → data de desarrollador (inventario, precios, equipamiento)
 │   ├── clientes/        → documentos por cliente (Condado, Proinco)
+│   ├── proyectos/       → proyectos grandes multi-fase (zona-norte/: expansión geográfica)
 │   ├── informes/        → correos, cotizaciones, templates
 │   └── archive/         → planning, reports, snapshots, specs (archivados en S1)
 └── simon-mvp/           → Frontend Next.js (simonbo.com)
