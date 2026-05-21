@@ -221,7 +221,7 @@ sici/
 │   ├── merge/           → merge_discovery_enrichment v2.6.0
 │   ├── matching/        → matching v3.1 + matchear_alquiler
 │   ├── alquiler/        → discovery/enrichment/merge alquiler
-│   ├── query_layer/     → buscar_unidades_reales/alquiler/simple, razon fiduciaria, posicion mercado
+│   ├── query_layer/     → buscar_unidades_reales/alquiler/simple, posicion mercado, razon fiduciaria (legacy: funnel premium)
 │   ├── snapshots/       → snapshot_absorcion_mercado (global + por zona, con pending)
 │   ├── tc_dinamico/     → TC Binance P2P
 │   ├── hitl/            → procesar_decision_sin_match, accion excluida, validacion auto-aprobado
@@ -336,9 +336,9 @@ Las paginas editores siguen el patron: **tipos → constantes → hook → compo
 |------|-----------|
 | `/` | **Landing Premium** (re-exporta `landing-v2` desde index.tsx) |
 | `/landing-v2` | Landing premium directa (negro/crema/oro, minimalista) |
-| `/filtros-v2` | **Filtros premium** (fondo negro, controles elegantes) |
-| `/formulario-v2` | **Formulario Nivel 2** (innegociables, deseables, trade-offs) |
-| `/resultados-v2` | **Resultados premium** (fondo crema, cards blancos) |
+| `/filtros-v2` | **Filtros premium** `[legacy]` (funnel premium dormido) |
+| `/formulario-v2` | **Formulario Nivel 2** `[legacy]` (innegociables, deseables, trade-offs — funnel premium dormido) |
+| `/resultados-v2` | **Resultados premium** `[legacy]` (scoring MOAT + razón fiduciaria — funnel premium dormido) |
 | `/ventas` | **Feed ventas** — cards neutrales, filtros inline, mapa, TikTok mobile (Bloques 1-7) |
 | `/alquileres` | **Feed alquileres** |
 | `/mercado/equipetrol` | **Mercado hub** — índice ventas + alquileres (Schema.org CollectionPage) |
@@ -360,7 +360,7 @@ Flujo produccion: `simonbo.com (/) → /ventas` (feed simple). Funnel premium le
 
 **Broker:** `/broker/login`, `/broker/dashboard`, `/broker/nueva-propiedad`, `/broker/editar/[id]`, `/broker/fotos/[id]`, `/broker/leads`, `/broker/perfil`
 
-**API publicas:** `/api/ventas`, `/api/alquileres`, `/api/razon-fiduciaria`, `/api/generar-guia`, `/api/informe` (usa lib/informe/), `/api/contactar-broker`, `/api/abrir-whatsapp`, `/api/lead-alquiler`, `/api/lead-gate` (gate "Ver anuncio original" → `leads_gate`), `/api/crear-lead-feedback`, `/api/notify-slack`
+**API publicas:** `/api/ventas`, `/api/alquileres`, `/api/razon-fiduciaria` `[legacy: funnel premium]`, `/api/generar-guia`, `/api/informe` (usa lib/informe/), `/api/contactar-broker`, `/api/abrir-whatsapp`, `/api/lead-alquiler`, `/api/lead-gate` (gate "Ver anuncio original" → `leads_gate`), `/api/crear-lead-feedback`, `/api/notify-slack`
 
 **API broker:** `/api/broker/*` — CRUD propiedades, fotos, PDF, CMA, perfil
 
