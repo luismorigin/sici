@@ -624,6 +624,31 @@ Verificar diariamente:
 
 ---
 
+## 23. Verificación de props vivas — NO usar HTTP 200 (caveat)
+
+> **Lección (21 May 2026):** validar si una propiedad de Remax sigue activa **NO** se hace con el código HTTP de su página. Remax es una **SPA**: el shell responde **200 siempre**, incluso para props eliminadas (el JS recién después muestra "no encontrado"). Un check HTTP 200 da **falsos positivos**.
+
+**Método correcto** — confirmar el **slug exacto** en la API de búsqueda activa:
+
+1. El `codigo_propiedad` de SICI tiene formato `{MLSID}-{sufijo}` (ej. `1250016143-30`). El **MLSID base se comparte** entre unidades de un mismo proyecto y entre operaciones (venta/alquiler).
+2. Traer la API de la zona (`/api/search/.../{slug}?page=N`) y buscar el **slug completo** de la prop, no solo el MLSID base.
+3. Distinguir **tipo de operación**: un mismo MLSID base puede tener una venta muerta y un alquiler vivo (o viceversa).
+
+**Por qué importa** (caso real): auditando 6 props Remax marcadas `inactivo_confirmed`, el HTTP 200 sugería 4 falsos positivos. Pero al verificar el slug exacto + operación, **solo 1 era falso positivo real** (`125001310-352` venta, viva en API). Las otras 3 daban 200 (shell SPA) pero su slug exacto no estaba: eran otras unidades (`-20`) u otra operación (`120034044-241` = alquiler vivo, pero la venta `-225` muerta) del mismo MLSID base.
+
+```bash
+# MAL — da 200 aunque la prop no exista (shell SPA)
+curl -s -o /dev/null -w "%{http_code}" "https://remax.bo/propiedad/<slug>"
+
+# BIEN — slug exacto + operación en la API de búsqueda activa
+curl -s "https://remax.bo/api/search/departamento/santa-cruz-de-la-sierra/<zona-slug>?page=N" \
+  | grep -o '"slug":"venta-...-<MLSID>-<sufijo>"'
+```
+
+Relevante para el verificador de ausencias (Flujo C) — ver `docs/canonical/flujo_c_verificador_canonical.md`.
+
+---
+
 ## 22. Change Log
 
 | Fecha | Cambio | Responsable |
@@ -631,6 +656,7 @@ Verificar diariamente:
 | Dic 2025 | Documento inicial creado | Luis |
 | Dic 2025 | Validación completa con n8n | Luis |
 | Dic 2025 | Secciones 14-22 agregadas | Luis + Claude |
+| 21 May 2026 | Sección 23: caveat HTTP 200 / verificación por slug exacto (tras auditoría de falsos positivos) | Luis + Claude |
 
 ---
 

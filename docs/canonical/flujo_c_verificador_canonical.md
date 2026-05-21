@@ -35,7 +35,12 @@ Confirmar las ausencias marcadas por Discovery. Existen **dos workflows separado
 
 Tanto C21 como Remax devuelven HTTP 200 con página genérica para propiedades removidas. Remax es una SPA que sirve el mismo shell HTML para cualquier URL. No hay señal HTTP confiable para distinguir "existe" de "fue removida" en ningún portal boliviano.
 
-**Discovery es la fuente de verdad:** si una propiedad reaparece en el API de Remax, `registrar_discovery()` la reactiva automáticamente vía `determinar_status_post_discovery(inactivo_pending → actualizado)`. Incluso `inactivo_confirmed` se reactiva si Discovery la encuentra.
+**Discovery es la fuente de verdad** (con comportamiento **distinto en venta y alquiler** — regla 6, alquiler aislado):
+
+- **Venta** (`registrar_discovery`): si la prop reaparece, la reactiva vía `determinar_status_post_discovery`. **Incluso `inactivo_confirmed` se reactiva** (`→ actualizado`, `es_activa=true`, limpia `razon_inactiva`/`primera_ausencia_at`).
+- **Alquiler** (`registrar_discovery_alquiler`): `inactivo_confirmed` es **terminal** — el PASO 3 hace `skip` explícito y NO reactiva (by-design, evita loops y contaminación de absorción; los brokers pausan/republican seguido). Reactivación de alquiler `inactivo_confirmed` = **manual**.
+
+> **Caveat de captura (venta):** la reactivación solo ocurre si el discovery **encuentra** la prop. El discovery Remax usa paginación fija (`TOTAL_PAGES=8`); si una prop viva sale del top-160 y nunca vuelve, queda congelada en `inactivo_confirmed` aunque siga publicada (falso positivo). Verificación correcta de vida = slug exacto + operación en la API, NO HTTP 200 (ver `docs/extractores/RESEARCH_REMAX_API.md` §23). Detectado 21-may con la prop id=1310.
 
 ### Query de entrada (venta)
 
