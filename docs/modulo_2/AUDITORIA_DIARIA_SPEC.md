@@ -1,16 +1,14 @@
 # Auditoria Diaria SICI - Especificacion
 
-> **⚠️ Spec del núcleo v2.5 (auditoría de venta).** El workflow productivo actual es **v3.1** (`n8n/workflows/modulo_2/auditoria_diaria_sici_v3.0.json`). El esqueleto descrito acá sigue alineado (secciones, 9 AM, Slack, snapshot, `workflow_executions`), pero v3.0/v3.1 **agregó superficies no documentadas en este spec**: alquiler, casas/terrenos, LLM/enrichment (nodo "Stats Enriquecimiento") y snapshot de absorción. Para el alcance completo, ver el workflow.
->
-> **Version:** 2.5
-> **Fecha:** 3 Enero 2026
-> **Workflow:** `n8n/workflows/modulo_2/auditoria_diaria_sici_v3.0.json`
+> **Version:** 3.1 (multi-vertical)
+> **Fecha:** 21 May 2026 (actualizado a v3.1; el núcleo de venta es de la v2.4-2.5, ene-2026)
+> **Workflow:** `n8n/workflows/modulo_2/auditoria_diaria_sici_v3.0.json` (nombre interno "v3.0", footer Slack "v3.1")
 
 ---
 
 ## Objetivo
 
-Generar un reporte diario consolidado del estado completo del sistema SICI con 8 secciones.
+Generar un reporte diario consolidado del estado completo del sistema SICI, enviado a Slack a las 9 AM. Desde **v3.0/v3.1** es **multi-vertical**: además del núcleo de venta (8 secciones originales), cubre **alquiler**, **casas/terrenos**, **LLM enrichment**, **enriquecimiento de proyectos master** y **snapshot de absorción**. ~15 secciones, 8 nodos SQL, 13 workflows bajo health check.
 
 ## Ejecucion
 
@@ -20,7 +18,9 @@ Generar un reporte diario consolidado del estado completo del sistema SICI con 8
 | Frecuencia | Diario (incluyendo fines de semana) |
 | Notificacion | Slack (webhook `$env.SLACK_WEBHOOK_SICI`) |
 
-## Arquitectura v2.4
+## Arquitectura
+
+> Diagrama del núcleo de venta (v2.4). **v3.0/v3.1 agregó** 2 nodos SQL — `PG: Stats Enriquecimiento` (`detectar_proyectos_sin_desarrollador()`) y `PG: Snapshot Absorción Mercado` (`snapshot_absorcion_mercado()`, en paralelo tras Consolidar) — y amplió `PG: Stats Workflows` y `PG: Stats Propiedades` para cubrir alquiler, casas/terrenos y LLM. Ver "Secciones multi-vertical" abajo.
 
 ```
 Schedule 9:00 AM
@@ -167,6 +167,66 @@ Schedule 9:00 AM
 
 ---
 
+## Secciones multi-vertical (agregadas en v3.0/v3.1)
+
+> v3.0 transformó la auditoría de solo-venta a multi-vertical. Estas secciones se suman a las 8 anteriores en el reporte de Slack. Fuente: nodo `PG: Stats Propiedades` (desglosa por `tipo_operacion`) + 2 nodos nuevos (`PG: Stats Enriquecimiento`, `PG: Snapshot Absorción Mercado`).
+
+### 9. ALQUILER (v3.0)
+
+`propiedades_v2 WHERE tipo_operacion = 'alquiler'`:
+
+| Metrica | Query |
+|---------|-------|
+| Completadas | `status = 'completado'` |
+| Matcheadas (%) | `id_proyecto_master IS NOT NULL` |
+| Creadas 24h | `fecha_creacion >= NOW() - 24h` |
+| LLM enriched | enriquecidas por LLM |
+
+### 10. CASAS/TERRENOS (v3.1)
+
+`tipo_propiedad_original IN ('casa','terreno','lote')`:
+
+| Metrica | Query |
+|---------|-------|
+| Completadas | `status = 'completado'` |
+| Creadas 24h | `fecha_creacion >= NOW() - 24h` |
+| Excluida zona | `status = 'excluida_zona'` (zona fuera de Equipetrol) |
+
+### 11. LLM ENRICHMENT VENTA (v3.0)
+
+`datos_json_enrichment->'llm_output'` sobre venta:
+
+| Metrica | Query |
+|---------|-------|
+| Enriquecidas venta | venta completadas con `llm_output` |
+| Pendientes venta | venta sin `llm_output` y con descripción >= 30 chars |
+
+### 12. ENRIQUECIMIENTO PM (v3.0)
+
+Nodo `PG: Stats Enriquecimiento` → `detectar_proyectos_sin_desarrollador()`:
+
+| Metrica | Significado |
+|---------|-------------|
+| Nuevos agregados | proyectos nuevos sin desarrollador |
+| Total pendientes | proyectos sin dev en total |
+| Alta prioridad | sin dev con actividad reciente |
+
+### 13. SNAPSHOT ABSORCIÓN (v3.0)
+
+Nodo `PG: Snapshot Absorción Mercado` → `snapshot_absorcion_mercado()`, en paralelo tras `Code: Consolidar`. Captura el estado de absorción del mercado en `market_absorption_snapshots` (ver `docs/canonical/ABSORCION_LIMITACIONES.md`).
+
+### Health Check por vertical (v3.0/v3.1)
+
+La sección 7 (Health) se amplió a **13 workflows** monitoreados vía `workflow_executions`:
+
+| Vertical | Workflows |
+|----------|-----------|
+| Venta | discovery, enrichment, **enrichment_llm_venta**, merge, matching, tc_dinamico |
+| Alquiler | discovery_c21_alquiler, discovery_remax_alquiler, enrichment_alquiler, merge_alquiler, verificador_alquiler |
+| Casas/Terrenos | discovery_casas_terrenos_c21, discovery_casas_terrenos_remax, enrichment_casas_terrenos |
+
+---
+
 ## Sistema de Alertas
 
 | Condicion | Mensaje |
@@ -177,6 +237,15 @@ Schedule 9:00 AM
 | `discovery_ok = false` | "Discovery no corrio en 26h" |
 | `pct_match < 90` | "Cobertura matching <90%" |
 | `pct_bajo > 5` | "X% calidad baja" |
+| `sin_precio > 10` | "X props sin precio" |
+| `pct_sin_desarrollador > 10` | "X% proyectos sin dev" |
+| `!enrichment_llm_ok` | "LLM venta no corrio" (v3.0) |
+| `llm_pendientes_venta > 50` | "X props venta sin LLM" (v3.0) |
+| `!discovery_alquiler_ok` | "Discovery alquiler no corrio" (v3.0) |
+| `!enrichment_alquiler_ok` | "Enrichment alquiler no corrio" (v3.0) |
+| `!merge_alquiler_ok` | "Merge alquiler no corrio" (v3.0) |
+| `!discovery_casas_terrenos_ok` | "Discovery casas/terrenos no corrio" (v3.1) |
+| `!enrichment_casas_terrenos_ok` | "Enrichment casas/terrenos no corrio" (v3.1) |
 
 ---
 
