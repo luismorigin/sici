@@ -2,6 +2,41 @@
 
 > Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 9 Mar 2026.
 
+## Monoambientes catalogados como "1 dormitorio" — DETECTADO (21 May 2026)
+
+**Problema:** error sistemático de extracción: props que el portal publica como **"monoambiente"** están cargadas con `dormitorios = 1` (y `tipo_propiedad_original = 'departamento'`). Detectado desde un consumidor externo de SICI comparando contra la **fuente** (título en la URL).
+
+**Por qué no lo atrapa un cruce interno:** `dormitorios=1` y `tipo='departamento'` están mal de forma **consistente entre sí** → cruzar campos internos (área vs dorms) no lo detecta. Solo se ve comparando contra la fuente (`url ILIKE '%monoambiente%'`).
+
+**Alcance (verificado 21 May, `propiedades_v2` sin filtros, `duplicado_de IS NULL`)** — props con "monoambiente" en URL pero `dormitorios=1`:
+
+| Operación | Total dorms=1 | Sospechosas fuertes (área <40m²) | Dudosas (área ≥40m²) |
+|---|---|---|---|
+| Venta | 68 | 47 | 21 |
+| Alquiler | 23 | 10 | 13 |
+| Anticrético | 1 | 1 | 0 |
+
+→ **~58 altamente sospechosas** (dorms=1 + "monoambiente" URL + área <40m²).
+
+```sql
+-- Sospechosas fuertes (revisar/corregir)
+SELECT id, tipo_operacion, nombre_edificio, dormitorios, area_total_m2, url
+FROM propiedades_v2
+WHERE url ILIKE '%monoambiente%' AND dormitorios = 1 AND area_total_m2 < 40
+  AND duplicado_de IS NULL
+ORDER BY tipo_operacion, area_total_m2;
+```
+
+**Impacto:** búsquedas por dormitorios sesgadas (quien pide "1 dorm" recibe monoambientes; quien pide monoambiente/0d se pierde estas). Afecta a todos los consumidores de `propiedades_v2`/`v_mercado_*`.
+
+**Causa probable:** `dormitorios` es campo de DISCOVERY (regla "Discovery > Enrichment"). El extractor C21 posiblemente asigna `1` por default cuando el portal no expone dormitorios para monoambientes, o mapea mal el tipo.
+
+**Fix sugerido:**
+- **Corto plazo:** corregir las confirmadas (`dormitorios=0`, `tipo='monoambiente'`) **respetando `campos_bloqueados`** (regla "Manual > Automatic"). Validar abriendo algunos avisos antes de UPDATE masivo.
+- **Largo plazo:** ajustar extractor/enrichment C21 para no asignar 1 dorm a monoambientes. Revisar caso inverso (departamentos como monoambiente) y otros portales (Remax, BI).
+
+**Caveat:** "monoambiente en URL" es señal fuerte, NO prueba 100% (área <40m² afina; las de área ≥40 con dorms=1 podrían ser legítimas — 1 dorm en edificio "monoambiente").
+
 ## Baños Corregidos (14 props) - 21 Ene 2026
 
 Auditoría manual con IA completada. 14 propiedades corregidas con `campos_bloqueados`:

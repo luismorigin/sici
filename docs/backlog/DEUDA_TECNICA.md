@@ -29,6 +29,16 @@
 
 **Estado:** Valores actualizados manualmente (9 Mar 2026). Funcional pero requiere actualización manual cuando cambian promedios de zona.
 
+## Discovery Remax — paginación fija pierde props (DETECTADO 21 May 2026)
+
+**Problema:** el discovery Remax (`flujo_a_discovery_remax`) usa `TOTAL_PAGES = 8` fijo, pero la zona `equipetrolnoroeste` creció a **9 páginas** (`last_page=9`, 180 props, 143 de venta). La página 9 (~17 props de venta) **nunca se captura**. Como el orden de la API varía cada noche, props vivas distintas caen rotativamente en página 9 → el verificador las marca ausentes → `inactivo_confirmed` → quedan congeladas vivas (falsos positivos). Caso confirmado: id=1310 (viva en API, marcada inactiva; reactivada manual 21-may).
+
+**Evidencia:** API `last_page=9` vs discovery `TOTAL_PAGES=8`. SICI tiene 187 `inactivo_confirmed` de venta Remax (vs 103 activas) — una fracción son falsos positivos por esta causa.
+
+**Fix:** paginación dinámica — leer `last_page` de `page=1` e iterar `1..last_page` (con fallback a mínimo seguro). Verificado que `last_page` es confiable y `page>last_page` devuelve `[]` limpio — NO hay bug de last_page; se había descartado solo por simplicidad/performance (ver `docs/extractores/RESEARCH_REMAX_API.md §4.1`). Parche alternativo: subir `TOTAL_PAGES` a 12. Alinea con la arquitectura "fetch amplio + filtro polígono GPS" del proyecto Zona Norte (`docs/proyectos/zona-norte/`).
+
+**Caveat:** el fix mejora la captura futura pero NO reactiva las ya congeladas (venta sí reactiva al recapturar; alquiler es terminal). Cambio en workflow n8n (producción — validar en n8n UI, el repo puede diferir). Verificación de vida correcta: slug exacto + operación en API, no HTTP 200 (`RESEARCH_REMAX_API §23`).
+
 ## Funciones SQL con filtros de mercado — REVISADO (23 Mar 2026)
 
 **Contexto:** Migración 193 creó vistas canónicas `v_mercado_venta` y `v_mercado_alquiler`. Auditoría de 60 funciones encontró 3 con filtros incompletos. Re-investigado 23 Mar 2026.
