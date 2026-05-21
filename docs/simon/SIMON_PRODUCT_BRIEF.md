@@ -56,7 +56,7 @@ Cada noche el sistema:
 | `/mercado/equipetrol/ventas` | Datos de mercado ventas: precios/m2, distribución por zona, tipologías | Live |
 | `/mercado/equipetrol/alquileres` | Datos de mercado alquileres: rentas, zonas, yield estimado | Live |
 | `/condado-vi` | Landing dedicada para un cliente (proyecto Condado VI) | Live |
-| `/filtros-v2` → `/formulario-v2` → `/resultados-v2` | Funnel premium: filtros avanzados → cuestionario personalizado → resultados con análisis fiduciario | Live (accesible por URL) |
+| `/filtros-v2` → `/formulario-v2` → `/resultados-v2` | Funnel premium: filtros avanzados → cuestionario personalizado → resultados con análisis fiduciario | **Legacy / dormido** (accesible por URL directa, fuera del flujo principal) |
 
 ### 3.2 Servicios internos del sitio
 

@@ -121,7 +121,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 
 | Proposito | Archivo |
 |-----------|---------|
-| **Product Brief Simón** | `docs/producto/SIMON_PRODUCT_BRIEF.md` — superficies, estado producción vs construido, capacidades, limitaciones |
+| **Product Brief Simón** | `docs/simon/SIMON_PRODUCT_BRIEF.md` — superficies, estado producción vs construido, capacidades, limitaciones |
 | **Simon Broker** | `docs/broker/` — MVP venta + Fase 2 alquileres + v1 protección shortlists en producción (merges `05bc1eb` + `65ccc4b` + `037584b`). Migraciones 228-235. Admin UI `/admin/simon-brokers` + `/admin/simon-brokers/[slug]` (gestión shortlists con suspender/reactivar). Estado, features entregados y pendientes: ver `docs/broker/README.md` |
 | **Demo público + Prospección** | Migraciones 236-238. `/broker/demo` + `/b/demo` (canal de prospección sin demo en vivo) y `/admin/prospection` (panel founder con 177 brokers, 3 mensajes WA + 12 respuestas pre-armadas). Ver `docs/broker/PROSPECCION_Y_DEMO.md`. |
 | **Arquitectura SICI** | `docs/arquitectura/SICI_ARQUITECTURA_MAESTRA.md` |
