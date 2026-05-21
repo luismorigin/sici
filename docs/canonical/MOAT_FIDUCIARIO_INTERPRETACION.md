@@ -43,18 +43,22 @@ La diferencia entre un portal y un asesor fiduciario es que el portal muestra, e
 >
 > **Acción:** El precio probablemente está firme todavía."
 
-### Datos reales de mercado (Equipetrol):
-- **Promedio:** 104 días
-- **Mediana:** 74 días
+### Datos reales de mercado (consultar en vivo — no hardcodear):
 
-### Interpretación cualitativa:
+```sql
+SELECT ROUND(AVG(dias_en_mercado))                                          AS promedio,
+       ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY dias_en_mercado))  AS mediana
+FROM v_mercado_venta;
+```
+
+### Interpretación cualitativa (relativa a la mediana/promedio actuales):
 
 | Días en mercado | Interpretación | Acción sugerida |
 |-----------------|----------------|-----------------|
 | < 30 días | Recién publicado | Precio firme probable |
-| 30-74 días | Tiempo normal | Tiempo normal en el mercado |
-| > 74 días | Más que la mediana | Hay margen de negociación |
-| > 104 días | Más que el promedio | Consultá si aceptan ofertas |
+| Hasta la mediana | Tiempo normal | Tiempo normal en el mercado |
+| Entre mediana y promedio | Por encima de lo típico | Hay margen de negociación |
+| > promedio | Inventario lento | Consultá si aceptan ofertas |
 
 **Nota importante:** No tenemos datos para cuantificar el % de descuento esperable. Solo podemos afirmar que mayor tiempo = mayor poder de negociación en términos cualitativos.
 
@@ -93,21 +97,11 @@ La diferencia entre un portal y un asesor fiduciario es que el portal muestra, e
 >
 > **Acción:** Verificá qué incluye - a veces expensas altas = mejor mantenimiento, a veces = mala administración."
 
-### Datos de Mercado Verificados (Equipetrol Jul 2025 - Ene 2026)
+### Estimados de expensas
 
-**Fuente:** InfoCasas, UltraCasas, RE/MAX, Century21, BienesOnline, El Deber
-**Muestra:** 17+ edificios nuevos en Equipetrol
+> **Fuente de verdad:** `simon-mvp/src/config/estimados-mercado.ts` (`EXPENSAS` + `getExpensasEstimadas()`). Son estimados de investigación de mercado (Equipetrol, jul-2025 → ene-2026), **no datos de la BD** — `monto_expensas_bob` está casi vacío. El `.ts` tiene su propia metadata de fuentes/período/versión. **No dupliques los rangos acá**; si cambian, se actualizan en el `.ts`.
 
-#### Expensas por tipo de departamento:
-
-| Dormitorios | Edificio Estándar | Edificio Premium | Impacto anual (estándar) |
-|-------------|-------------------|------------------|--------------------------|
-| Monoambiente | $43-65/mes | $70-100/mes | $516-780/año |
-| 1 dormitorio | $55-80/mes | $80-115/mes | $660-960/año |
-| 2 dormitorios | $70-120/mes | $115-150/mes | $840-1,440/año |
-| 3 dormitorios | $86-143/mes | $143-243/mes | $1,032-1,716/año |
-
-**Qué incluyen típicamente:**
+**Qué incluyen típicamente** (cualitativo, estable):
 - ✅ Seguridad 24h, mantenimiento áreas comunes, ascensores
 - ✅ Uso de piscina, churrasqueras, gimnasio
 - ✅ Agua potable (~50% de edificios nuevos)
@@ -119,25 +113,11 @@ La diferencia entre un portal y un asesor fiduciario es que el portal muestra, e
 
 ## 5. ESTACIONAMIENTO
 
-### Datos de Mercado Verificados (Equipetrol Jul 2025 - Ene 2026)
+### Estimados de estacionamiento
 
-**Tendencia principal:** La mayoría de edificios nuevos **vende parqueo por separado**, especialmente en monoambientes y 1 dormitorio.
+> **Fuente de verdad:** `config/estimados-mercado.ts` (`ESTACIONAMIENTO` + `getEstacionamientoEstimado()`). Estimado de investigación, no BD (`parqueo_precio_adicional` poblado en ~8 de 363 props).
 
-#### Precios de estacionamiento:
-
-| Concepto | Rango verificado | Promedio |
-|----------|------------------|----------|
-| Compra (adicional) | $10,000-15,000 | ~$12,500 |
-| Alquiler mensual | $25-57/mes | ~$40/mes |
-
-#### Probabilidad de inclusión según dormitorios:
-
-| Dormitorios | ¿Viene incluido? |
-|-------------|------------------|
-| Monoambiente | Rara vez |
-| 1 dormitorio | A veces |
-| 2 dormitorios | Variable (50/50) |
-| 3 dormitorios | Frecuentemente |
+**Tendencia principal:** La mayoría de edificios nuevos **vende parqueo por separado**, especialmente en monoambientes y 1 dormitorio. Precios de compra/alquiler y probabilidad de inclusión por dormitorios → ver el `.ts` (no duplicar acá).
 
 ### Si INCLUYE:
 > "Incluye estacionamiento. En Equipetrol, un parqueo separado cuesta $10,000-15,000.
@@ -155,23 +135,9 @@ La diferencia entre un portal y un asesor fiduciario es que el portal muestra, e
 
 ## 6. BAULERA
 
-### Datos de Mercado Verificados (Equipetrol Jul 2025 - Ene 2026)
+### Estimados de baulera
 
-#### Precios de baulera:
-
-| Concepto | Rango verificado |
-|----------|------------------|
-| Compra (adicional) | $2,000-4,000 |
-| Tamaño típico | 1.5-8 m² |
-
-#### Probabilidad de inclusión según dormitorios:
-
-| Dormitorios | ¿Viene incluida? |
-|-------------|------------------|
-| Monoambiente | No incluida |
-| 1 dormitorio | Rara vez |
-| 2 dormitorios | A veces (50/50) |
-| 3+ dormitorios | Frecuentemente |
+> **Fuente de verdad:** `config/estimados-mercado.ts` (`BAULERA` + `getBauleraEstimada()`). Estimado de investigación, no BD (`baulera_precio_adicional` poblado en ~1 de 363 props). Precios de compra, tamaño y probabilidad de inclusión por dormitorios → ver el `.ts`.
 
 ### Si NO sabemos:
 > "Baulera: Probablemente NO incluida (según tipo de depto).
@@ -195,14 +161,8 @@ La diferencia entre un portal y un asesor fiduciario es que el portal muestra, e
 > **Comparación:** Otros departamentos en tu búsqueda NO incluyen esto - tendrías costo oculto."
 
 ### Valor del equipamiento:
-| Item | Costo si no incluye |
-|------|---------------------|
-| Aire acondicionado (por ambiente) | $800-1,500 |
-| Cocina equipada completa | $2,000-3,500 |
-| Calefón/termotanque | $300-600 |
-| Microondas | $150-300 |
-| Campana extractora | $200-400 |
-| **Total potencial** | **$3,500-6,300** |
+
+> **Fuente de verdad:** `simon-mvp/src/config/estimados-equipamiento.ts`. Costos de reposición por item (A/C, cocina, calefón, etc.) — estimado de investigación, no BD. No duplicar los valores acá.
 
 ### Restricción Fiduciaria Implementada:
 
@@ -233,14 +193,8 @@ La diferencia entre un portal y un asesor fiduciario es que el portal muestra, e
 | Baja | ? Por confirmar | No detectado, preguntar |
 
 ### Amenidades y su impacto en valor:
-| Amenidad | % propiedades que tienen | Impacto en precio |
-|----------|--------------------------|-------------------|
-| Piscina | ~60% | +5-10% valor |
-| Gimnasio | ~35% | +3-5% valor |
-| Seguridad 24/7 | ~45% | +5-8% valor |
-| Salón de eventos | ~40% | +2-3% valor |
-| Área de parrilla | ~50% | +2-4% valor |
-| Coworking | ~15% | +3-5% valor (tendencia) |
+
+> **Fuente de verdad:** `config/amenidades-mercado.ts`. % de propiedades con cada amenidad e impacto estimado en precio → ver el `.ts` (no duplicar acá).
 
 ### Amenidades Estándar (No mostrar %)
 
@@ -280,15 +234,17 @@ En Equipetrol, estas amenidades son estándar y los brokers no siempre las menci
 
 ## TABLA RESUMEN: Impacto Económico Total
 
-| Factor | Rango de impacto | Cómo lo detectamos |
-|--------|------------------|-------------------|
-| Precio vs mercado | ±10-20% del precio | comparacion_media_zona |
-| Tiempo en mercado | Mayor tiempo = mayor poder negociación | fecha_publicacion |
-| Expensas | $516-2,916/año | estimado zona (no scrapeamos) |
-| Estacionamiento | $10,000-15,000 | estimado zona |
-| Baulera | $2,000-4,000 | estimado zona |
-| Equipamiento | $3,500-6,300 | equipamiento array |
-| Amenidades premium | +10-20% valor | amenidades array |
+> Rangos referenciales. Fuente de verdad de los estimados: `config/estimados-mercado.ts` (expensas, parqueo, baulera) y `config/estimados-equipamiento.ts`. No son datos de la BD.
+
+| Factor | Tipo de impacto | Fuente |
+|--------|------------------|--------|
+| Precio vs mercado | ±% del precio | `v_mercado_venta` (`precio_norm`, `precio_m2`) |
+| Tiempo en mercado | Mayor tiempo = mayor poder negociación | `v_mercado_venta.dias_en_mercado` |
+| Expensas | costo mensual | `config/estimados-mercado.ts` (`EXPENSAS`) |
+| Estacionamiento | costo de compra adicional | `config/estimados-mercado.ts` (`ESTACIONAMIENTO`) |
+| Baulera | costo de compra adicional | `config/estimados-mercado.ts` (`BAULERA`) |
+| Equipamiento | costo de reposición | `config/estimados-equipamiento.ts` |
+| Amenidades premium | +% valor | `config/amenidades-mercado.ts` |
 
 ---
 
