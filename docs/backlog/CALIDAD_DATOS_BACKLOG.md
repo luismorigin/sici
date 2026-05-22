@@ -2,9 +2,11 @@
 
 > Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 9 Mar 2026.
 
-## Monoambientes catalogados como "1 dormitorio" — DETECTADO (21 May 2026)
+## Monoambientes catalogados como "1 dormitorio" — RESUELTO (22 May 2026)
 
-**Problema:** error sistemático de extracción en **los 3 portales**: props que la fuente publica como **"monoambiente"** están cargadas con `dormitorios = 1`. Detectado desde un consumidor externo de SICI comparando contra la fuente.
+**Cierre (22 May 2026):** verificado contra prod. La corrección retroactiva ya estaba aplicada (302 props con señal monoambiente en `dorms=0`, 124 con candado manual + resto sostenido por el guardrail del merge). Quedaban 2 residuales activas en `v_mercado_*` (1926 venta `dorms=1`; 1943 alquiler `dorms=NULL`) — corregidas a `dorms=0` + candado (`motivo=correccion_monoambiente_retroactivo`). Barrido final: **cero props completadas con `dorms=1`/`NULL` + señal monoambiente**; las 27 con `dorms=NULL` restantes son `inactivo_confirmed`/`excluida_zona` (fuera de feed). Bug cerrado por ambos lados: retroactivo + guardrail merge (mig 246/247) para nuevas.
+
+**Problema (histórico, contexto del porqué):** error sistemático de extracción en **los 3 portales**: props que la fuente publica como **"monoambiente"** están cargadas con `dormitorios = 1`. Detectado desde un consumidor externo de SICI comparando contra la fuente.
 
 **Por qué no lo atrapa un cruce interno:** `dormitorios=1` y `tipo='departamento'` están mal de forma **consistente entre sí** → cruzar campos internos (área vs dorms) no lo detecta. Solo se ve comparando contra la fuente.
 
@@ -44,12 +46,12 @@ ORDER BY fuente, area_total_m2;
 
 El bug de monoambientes es un caso del patrón "el campo estructurado del portal contradice el texto". Otros atributos con calidad propia (dimensionado sobre `v_mercado_venta`, 364 props venta):
 
-- **TC paralelo** (`tipo_cambio_detectado`): **117/364 (32%) `no_especificado`**. **El de mayor impacto en el valor** (define `precio_normalizado`). NO es el mismo bug (el TC rara vez está explícito en el texto). Ya tiene tratamiento parcial (badge "TC sospechoso" a 30% bajo mediana, upgrade LLM). Dominio propio → análisis aparte.
-- **Preventa/inmediata** (`estado_construccion`): **25/364 (7%) `no_especificado`**. **Mismo patrón que monoambiente** (detectable por texto: "preventa", "en construcción", "en pozo", "entrega inmediata", "a estrenar"). Impacto alto (preventa ~39% más barata). Candidato a guardrail determinístico **reutilizando el approach de monoambiente**.
-- **Penthouse/dúplex mal tipados**: ~4 penthouse + ~11 dúplex con la palabra en texto pero `tipo='departamento'`. Afecta clasificación de tipo. Volumen chico → corrección manual o guardrail propio.
-- **Baños**: sano (4 sospechosas de 364, ya hubo corrección histórica). No prioritario.
+- **TC paralelo** (`tipo_cambio_detectado`): **el de mayor impacto en el valor** (define `precio_normalizado`). NO es el mismo bug que monoambiente. El grueso de las divergencias ya está **blindado con candados manuales** del founder (+ badge "TC sospechoso", mig 227). Señales de lectura confirmadas (22 May 2026): "sólo dólares"/"billete" → `paralelo`; precio publicado en **Bs** → `oficial`. **Cuidado:** marcar `paralelo` sobre un `precio_usd` que ya fue convertido desde BOB al oficial **infla por doble conteo** (`× tc_paralelo/6.96`). Caso por caso, NO automatizar. (Caso resuelto: Spazios 1233 — billete en USD mal convertido desde BOB; corregido a `precio_usd` billete + paralelo + candado.)
+- **Preventa/inmediata** (`estado_construccion`): **NO es candidato a guardrail tipo monoambiente** (revisado 22 May 2026 — la conclusión anterior era errónea). Contraintuitivo: el aviso "preventa" suele estar **viejo** — el edificio ya se entregó y el founder corrige a `entrega_inmediata` por conocimiento de terreno. El LLM lee el aviso original y "miente". La protección `existing_protected` del merge (no degrada `inmediata`→`preventa`) **es by-design**, el guardián de esa corrección. El `enrichment` regex (`registrar_enrichment`) puede revertir si la prop NO tiene candado → fix correcto: **blindar con candado** las confirmadas como entregadas, NO un guardrail automático. Ver memoria `estado_construccion_aviso_viejo`.
+- **Penthouse/dúplex mal tipados**: ~4 con la palabra en texto pero `tipo='departamento'`. Solo ~1 bug real (`penthouse` existe como tipo; `duplex` no existe → "departamento" no es falso, solo menos granular). Volumen chico → corrección manual.
+- **Baños**: sano. No prioritario.
 
-> Cuidado: NO generalizar el guardrail a cualquier palabra. Señales ruidosas verificadas: `oficina` (1269 falsos: "cerca de oficinas", "home office"), `loft`/`estudio` (ambiguos). Solo "monoambiente" y los términos de preventa/inmediata son señales limpias.
+> Cuidado: NO generalizar el guardrail determinístico (texto pisa dato) a cualquier campo. Solo **"monoambiente"** es señal limpia, porque el aviso no envejece (un monoambiente es siempre 0 dorms). `estado_construccion` NO sirve (el aviso envejece: preventa→entregado) y `tipo_cambio` tampoco (la señal vive en interpretación: Bs vs dólares billete). Señales ruidosas ya descartadas: `oficina` (falsos: "cerca de oficinas", "home office"), `loft`/`estudio`.
 
 ## Baños Corregidos (14 props) - 21 Ene 2026
 
@@ -95,7 +97,7 @@ Las 5 activas (156, 309, 385, 158, 452) tienen valores plausibles — no requier
 ## Audits — Próximos pasos (13 May 2026)
 
 - [x] **Skill `/audit-feed-ventas-semanal` v1.1** creada — `scripts/auditoria-feed-ventas/audit-feed-ventas-semanal.command.md`. Capas 2+3+4 sin Firecrawl, ventana configurable, race-condition guard 30 min. Test inicial sobre rango 14d-7d reveló 12 falsos positivos → recalibrada en v1.1.
-- [ ] **Pendiente: `/audit-feed-alquileres-semanal`** — clonar de la skill ventas semanal adaptando: precio_mensual_bob (no precio_usd), sin TC paralelo, filtro ≤150d, 3 fuentes (C21+Remax+BI), vista `v_mercado_alquiler`, métricas yield mensual/m².
+- [x] **`/audit-feed-alquileres-semanal` v1.2** creada — `scripts/auditoria-feed-alquileres/audit-feed-alquileres-semanal.command.md`. Equivalente a ventas semanal adaptado: precio_mensual_bob (no precio_usd), sin TC paralelo, filtro ≤150d, 3 fuentes (C21+Remax+BI), vista `v_mercado_alquiler`. 7 checks capa 2 + 4 capa 3 + 3 capa 4; 8 calibraciones tras retest sobre 37 props (FP 85%→25%). Costo $0.
 - [ ] **Validación GPS en matcher** — atrapa caso A1 del audit (LLM confunde proyectos con prefijo común). Hoy el matcher prioriza `nombre_exacto` sobre GPS — si nombre matchea pero GPS está fuera de `radio_metros`, debería downgrade a `pending` (HITL). Backlog post-skill semanal alquileres.
 - [ ] **Aliases para proyectos sin aliases** — auditoría reveló que la mayoría de proyectos Eurodesign + Mirage no tenían aliases. Sería útil un audit one-shot que detecte pm con `alias_conocidos = NULL` y sugiera variantes desde props históricas.
 
