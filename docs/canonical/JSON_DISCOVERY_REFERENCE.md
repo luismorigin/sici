@@ -92,10 +92,9 @@ https://remax.bo/api/search/departamento/santa-cruz-de-la-sierra/equipetrolnoroe
   "broker_info": {},                 // Info del agente
   "virtual_tour_url": "string",      // Tour virtual
   "property_status": "active",       // Estado
-  "land_area_m": 100,                // Área terreno
-  "year_built": 2020,                // Año construcción
-  "maintenance_fee": 200             // Expensas
+  "land_m2": 100                     // Área terreno — en listing_information (NO "land_area_m")
 }
+// Nota: year_built y maintenance_fee NO vienen en el JSON Remax actual (0/468). No asumir disponibles.
 ```
 
 ### **Notas Técnicas Remax**
@@ -215,7 +214,7 @@ https://c21.com.bo/v/resultados/tipo_departamento-o-penthouse/operacion_venta/la
 | `precio_usd_original` | `precio` | String → NUMERIC |
 | `moneda_original` | `moneda` | "BOB" o "USD" |
 | `area_total_m2` | `m2C` | ⚠️ NO "superficie" |
-| `dormitorios` | `recamaras` | ⚠️ NO "dormitorios" |
+| `dormitorios` | `recamaras` | ⚠️ NO "dormitorios" · monoambientes vienen con `recamaras=1` (ver nota 3) |
 | `banos` | `banos` | A veces null |
 | `estacionamientos` | `estacionamientos` | A veces null |
 | `tipo_propiedad_original` | `tipoPropiedad` | |
@@ -251,7 +250,9 @@ https://c21.com.bo/v/resultados/tipo_departamento-o-penthouse/operacion_venta/la
    - ❌ `dormitorios` NO existe → Usar `recamaras`
    - ✅ `fechaAlta` NO `fecha_publicacion`
 
-3. **Cobertura de datos variable** (varios campos llegan null del portal; consultar % actual):
+3. **⚠️ `recamaras` NO es confiable en monoambientes:** C21 publica monoambientes con `recamaras=1` (debería ser 0). El merge lo corrige con un guardrail (`dormitorios`→0 si la URL o el crudo dicen "monoambiente"; mig 246). NO usar `recamaras` crudo para clasificar/contar dorms de monoambientes. Misma trampa en Remax/BI (señal solo en el texto). Ver `docs/backlog/CALIDAD_DATOS_BACKLOG.md`.
+
+4. **Cobertura de datos variable** (varios campos llegan null del portal; consultar % actual):
    ```sql
    SELECT ROUND(100.0*COUNT(datos_json_discovery->>'recamaras')/COUNT(*))        AS pct_recamaras,
           ROUND(100.0*COUNT(datos_json_discovery->>'banos')/COUNT(*))            AS pct_banos,
@@ -260,7 +261,7 @@ https://c21.com.bo/v/resultados/tipo_departamento-o-penthouse/operacion_venta/la
    ```
    `m2C` viene 100%; `recamaras` y `banos` parcial; `estacionamientos` raro.
 
-4. **Parsing defensivo necesario:** El JSON puede venir en 3 estructuras diferentes:
+5. **Parsing defensivo necesario:** El JSON puede venir en 3 estructuras diferentes:
    ```javascript
    // Estructura 1: Array directo
    [{ id: "123", ... }]
@@ -272,7 +273,7 @@ https://c21.com.bo/v/resultados/tipo_departamento-o-penthouse/operacion_venta/la
    { datas: { results: [{ id: "123", ... }] } }
    ```
 
-5. **Moneda default:** Si `moneda` es null → Asumir "USD"
+6. **Moneda default:** Si `moneda` es null → Asumir "USD"
 
 ---
 
@@ -289,7 +290,7 @@ https://c21.com.bo/v/resultados/tipo_departamento-o-penthouse/operacion_venta/la
 | Precio USD | `price.price_in_dollars` | NO existe |
 | Moneda | `price.currency_id` (1/2) | `moneda` (BOB/USD) |
 | Área construida | `listing_information.construction_area_m` | `m2C` |
-| Área terreno | `listing_information.land_area_m` | `m2T` |
+| Área terreno | `listing_information.land_m2` | `m2T` |
 | Dormitorios | `listing_information.number_bedrooms` | `recamaras` |
 | Baños | `listing_information.number_bathrooms` | `banos` |
 | Estacionamientos | `listing_information.number_parking` | `estacionamientos` |
@@ -302,8 +303,7 @@ https://c21.com.bo/v/resultados/tipo_departamento-o-penthouse/operacion_venta/la
 - `description` - Descripción larga
 - `amenities[]` - Lista de amenidades
 - `virtual_tour_url` - Link tour virtual
-- `year_built` - Año construcción
-- `maintenance_fee` - Expensas
+- `listing_information.land_m2` - Área terreno (numérico, 100% poblado)
 
 **Solo Century21:**
 - `encabezado` - Título promocional
@@ -374,7 +374,7 @@ LIMIT 1;
 ### **Módulo 2 - Enrichment**
 
 Campos útiles para enriquecimiento:
-- **Remax:** `description`, `amenities`, `year_built`
+- **Remax:** `description`, `amenities`
 - **Century21:** `encabezado`, `calle`, `asesorNombre`
 
 ### **Módulo 3 - Matching**

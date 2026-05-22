@@ -199,7 +199,10 @@ CREATE OR REPLACE FUNCTION registrar_discovery(
     p_metodo_discovery VARCHAR DEFAULT 'api_rest',
     
     -- JSON completo discovery
-    p_datos_json_discovery JSONB DEFAULT NULL
+    p_datos_json_discovery JSONB DEFAULT NULL,
+
+    -- Casas/terrenos (pipeline independiente, mig 221+)
+    p_area_terreno_m2 NUMERIC DEFAULT NULL
 )
 RETURNS TABLE(
     id INTEGER,
@@ -396,6 +399,9 @@ SELECT * FROM registrar_discovery(
 
 -- Resultado en BD:
 -- INSERT INTO propiedades_v2 con status='nueva'
+-- Excepción: si p_tipo_operacion NO es 'venta', se inserta con
+-- status='excluido_operacion' (alquiler/anticrético capturados en el feed
+-- de venta no entran al pipeline venta). Ver migración 015.
 ```
 
 ### Caso 2: Propiedad existente sin cambios

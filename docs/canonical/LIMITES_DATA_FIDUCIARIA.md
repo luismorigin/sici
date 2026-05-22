@@ -4,7 +4,7 @@
 
 **Documento Canónico**
 **Versión:** 1.1
-**Fecha:** 23 Marzo 2026 (actualizado post-migraciones 199-200)
+**Fecha:** 23 Marzo 2026 · revisado 22 May 2026 (v3 absorción canónica, cobertura amoblado)
 **Estado:** Vivo — actualizar cuando cambie el estado de la data
 
 ---
@@ -96,7 +96,7 @@ Datos que Simón NO puede presentar como hechos. Mencionarlos solo como contexto
 
 ### 3.1 Amoblado vs. no amoblado (alquiler)
 
-**Distribución actual** (consultar — la clasificación mejoró mucho, hoy <2% sin declarar):
+**Distribución actual** (consultar — incluye categoría `semi`; una porción queda sin declarar/NULL, no asumir cobertura total):
 ```sql
 SELECT amoblado, COUNT(*),
   ROUND(100.0*COUNT(*)/SUM(COUNT(*)) OVER ()) AS pct
@@ -141,12 +141,13 @@ FROM v_mercado_alquiler WHERE zona='Equipetrol Centro' AND dormitorios=2 GROUP B
 | Fecha | Evento | Impacto en series |
 |-------|--------|-------------------|
 | 12 Feb 2026 | Primer snapshot | Inicio de la serie |
-| 12 Mar 2026 | Migración 194 — snapshot v2 con filtros de calidad | Inventario bajó ~8.5% de un día. **Series v1 y v2 no son comparables.** Usar `filter_version = 2` para serie limpia |
+| 12 Mar 2026 | Migración 194 — snapshot v2 con filtros de calidad | Inventario bajó ~8.5% de un día. **Series v1 y v2 no son comparables.** |
 | 13-22 Mar 2026 | Verificador no corrió → absorción = 0 | **CORREGIDO** por backfill (migración 199). Datos recalculados |
 | 22 Mar 2026 | Verificador arreglado (v5.1): eliminado filtro `fuente = 'remax'`, ahora procesa C21 + Remax | Serie de absorción confiable en adelante |
 | 23 Mar 2026 | Backfill migración 199: recalculada absorción para las 40 fechas históricas con C21 incluido | Serie completa corregida retroactivamente. Absorción 2 dorms: 0-12% → 20-31% |
+| 14 Abr 2026 | snapshot v3 — serie limpia canónica | **v3 es la serie vigente** (`filter_version = 3`). v2 quedó con inventario filtro-300d |
 
-**Regla:** Serie comparable de inventario/precios comienza el 12 Mar 2026 (v2). Serie de absorción corregida retroactivamente desde el 12 Feb 2026 (migración 199). La discontinuidad v1/v2 persiste para inventario pero NO para absorción (recalculada uniformemente).
+**Regla:** La serie canónica vigente para inventario/absorción es **v3** (`filter_version = 3`, desde 14 Abr 2026). v1 está rota y v2 es histórica (inventario con filtro 300d). Detalle de cortes y semáforo verde/amarillo/rojo: `ABSORCION_LIMITACIONES.md` (CLAUDE.md regla 12).
 
 ---
 
@@ -174,7 +175,7 @@ FROM v_mercado_alquiler WHERE zona='Equipetrol Centro' AND dormitorios=2 GROUP B
 
 ### Qué falta en el snapshot
 
-- **Segmentación amoblado/no amoblado** (alquiler) — hoy mezcla todo
+- **Cobertura de amoblado** (alquiler) — el snapshot ya expone `roi_amoblado`/`roi_no_amoblado`; lo que falta es mejorar la *declaración* en origen (hay NULL + categoría `semi` sin separar)
 - ~~Segmentación por zona~~ — **RESUELTO** migración 200
 - ~~`inactivo_pending` como absorción probable~~ — **RESUELTO** migración 200
 
@@ -249,7 +250,7 @@ FROM v_mercado_alquiler WHERE zona='Equipetrol Centro' AND dormitorios=2 GROUP B
 
 | Mejora | Qué resuelve | Esfuerzo |
 |--------|-------------|----------|
-| ~~**Inferencia de amoblado por LLM**~~ | **YA RESUELTO** (may-2026): la clasificación de amoblado pasó de ~74% a ~99% (hoy <2% sin declarar). Ver query de §3.1 | — |
+| ~~**Inferencia de amoblado por LLM**~~ | **PARCIAL** (may-2026): mejoró la clasificación, pero persiste una porción NULL sin declarar + categoría `semi`. Consultar cobertura real con query de §3.1 | — |
 | **Snapshot de alquiler con flag amoblado** | Separar series amoblado / no amoblado / sin dato | Bajo (una vez que amoblado mejore) |
 | ~~**Vacancia observable por edificio**~~ | **DESCARTADO.** Listada ≠ vacía, no listada ≠ ocupada, solo 3 portales, n muy chico por edificio. El proxy sería engañoso — mejor seguir declarando "sin datos medidos de vacancia" | — |
 
