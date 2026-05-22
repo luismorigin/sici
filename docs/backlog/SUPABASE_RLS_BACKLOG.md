@@ -29,14 +29,14 @@ Iniciado 22 abril 2026 tras correo de Supabase flagueando issues críticos.
 
 ---
 
-## 🟡 Pendiente — DROP definitivo el 29 abril 2026
+## ✅ DROP aplicado — migración 248 (22 may 2026, verificación post = 0 tablas)
 
-Si entre 22-29 abr **no aparecieron errores** tipo `relation "_trash_..." does not exist` en:
-- Logs Vercel (API routes, admin pages)
-- Logs n8n (workflows nocturnos)
-- Dashboard `/admin/salud`
+Verificación pre-DROP (22 may, 23 días después de lo programado, sin incidentes en el ínterin):
+- **pg_depend:** 0 dependencias en las 9 tablas.
+- **pg_stat_user_tables:** último `seq_scan` de todas = 11 abr 2026 (scan masivo automático, ANTERIOR al rename del 22 abr) → ~1 mes sin ningún acceso.
+- **grep código vivo** (`simon-mvp/src`, `scripts/`, `n8n/workflows`): cero referencias (solo docs + migraciones que las crearon: 016/059/060/095/225).
 
-Entonces ejecutar:
+SQL en `sql/migrations/248_drop_trash_tables.sql`. **Aplicado 22 may 2026** — verificación post-DROP confirmó 0 tablas `_trash_*` restantes. Cierra 9 warnings `rls_disabled_in_public`.
 
 ```sql
 DROP TABLE public._trash_backup_multiproyecto_060;
@@ -52,7 +52,7 @@ DROP TABLE public._trash_fix_tc_paralelo_audit_20260114;
 
 Cierra 9 warnings `rls_disabled_in_public`.
 
-**Rollback (si algún logs rotos):** renombrar la tabla específica al nombre original.
+**Rollback:** ya no aplica (tablas dropeadas). Recuperación solo desde backups automáticos de Supabase si fuera necesario.
 
 ---
 
@@ -158,7 +158,7 @@ Tablas de lookup sin PII, lectura abierta.
 
 | Prioridad | Acción | Esfuerzo | Riesgo | Warnings cerrados |
 |---|---|---|---|---|
-| 1 | DROP `_trash_*` (29 abr) | 5 min | Nulo | 9 |
+| 1 | ~~DROP `_trash_*`~~ ✅ (mig 248, 22 may) | 5 min | Nulo | 9 |
 | 2 | Tier 2c — lookups | 20 min | Nulo | 7-8 |
 | 3 | Tier 2b — producto data | 30 min | Bajo | 5 |
 | 4 | Tier 2 — operacionales | 1 h | Bajo | 13 |
