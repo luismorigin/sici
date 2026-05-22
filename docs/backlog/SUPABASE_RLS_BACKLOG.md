@@ -86,7 +86,15 @@ n8n conecta vía **Postgres directo** (123 nodos `n8n-nodes-base.postgres`, 0 no
 - **Fase B** — 7 🔴 lectura: RLS + `FOR SELECT USING (true)`. Testear landings + `/admin/salud`.
 - **Fase C** — 🔴🔴 escritura: migrar editor admin a service_role → recién después RLS.
 
-**Estado (22 may): gap n8n CERRADO ✅.** Fase A (16 tablas 🟢) lista para ejecutar — pendientes menores: (1) verificar `scripts/` no use anon en esas tablas, (2) OK del user. RLS es reversible (`ALTER TABLE x DISABLE ROW LEVEL SECURITY`). Fases B y C siguen requiriendo más trabajo (B: testear landings; C: migrar editor admin a service_role).
+**Estado (22 may): falla de escritura `anon` cerrada en 19 tablas vía REVOKE (migración 249) ✅.**
+
+Enfoque senior: atacar el **GRANT**, no RLS. `anon` (llave pública del bundle) tenía `INSERT/UPDATE/DELETE/TRUNCATE` **directo** sobre todas las tablas. Se revocó la escritura (preservando `SELECT`) en las 19 verificadas como seguras — donde solo escribe el pipeline (`postgres`, que tiene `bypassrls` y grant propio, no afectado). Verificado: anon lee=19/19, escribe=0/19. n8n y scripts (service_role/claude_readonly) no afectados.
+
+**Pendiente — arreglo de 2 pasos (otra sesión)** para las 7 tablas que el admin escribe con anon (incl. `propiedades_v2`/`proyectos_master`, las más críticas):
+- **Paso 1:** cambiar las RPC `SECURITY INVOKER` que el admin llama a `SECURITY DEFINER` (`aplicar_matches_revisados`, `procesar_accion_excluida`, `procesar_decision_sin_match`, `crear_desarrollador`, `crear_lead_con_feedback`, `registrar_contacto_broker`) **+** migrar el editor (`usePropertyEditor`/`useProjectEditor`/`admin/alquileres`) a API routes con `service_role`.
+- **Paso 2:** recién entonces revocar/RLS esas 7 tablas sin romper el admin.
+
+Las Fases B/C de RLS de abajo quedan supeditadas a ese arreglo. RLS sigue siendo opción a futuro (defensa en profundidad), pero el REVOKE ya cubre el riesgo de escritura. **Recordatorio:** si se hace RLS, usar `ENABLE` nunca `FORCE` (n8n=postgres es owner).
 
 ---
 
