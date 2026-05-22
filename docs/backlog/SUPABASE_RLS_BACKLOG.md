@@ -56,7 +56,37 @@ Cierra 9 warnings `rls_disabled_in_public`.
 
 ---
 
-## 🔴 Tier 2 — RLS en tablas operacionales sin PII (~1h, bajo riesgo)
+## ⚠️ Hallazgo 22 may 2026 — el plan Tier 2/2b/2c de abajo SUBESTIMA el riesgo
+
+Investigación de acceso real (frontend `simon-mvp/src`) reveló que **el plan original es incorrecto**: asumía que admin/backend usan `service_role`, pero **casi todo el frontend —incluido el admin— usa la anon key** (`lib/supabase.ts` exporta el cliente con `NEXT_PUBLIC_SUPABASE_ANON_KEY`). Habilitar RLS "como dice abajo" rompería el editor de propiedades/proyectos y las landings públicas.
+
+### Mapa de acceso real (26 tablas)
+
+| Grupo | Tablas | Acción segura |
+|---|---|---|
+| 🟢 **Sin acceso anon** (16) | auditoria_tipo_cambio, codigos_unicos, advisor_property_snapshot, sin_match_exportados, proyectos_pendientes_enriquecimiento, proyectos_pendientes_google, propiedades_excluidas_export, unidades_reales (vacía), unidades_virtuales (vacía), propiedades (legacy), zonas_geograficas, zonas_mapeo, tipo_propiedad_mapeo, mapeo_subtipos_remax, tipo_transaccion_mapeo, zonas_barrido_equipetrol | RLS + policy `claude_readonly` — cero impacto en app |
+| 🔴 **Lectura anon** (7) | config_global, market_absorption_snapshots, auditoria_snapshots, tc_binance_historial, precios_historial, workflow_executions, matching_sugerencias | RLS + `FOR SELECT USING (true)`. Se leen en getStaticProps de landings públicas + `/admin/salud` con anon key |
+| 🔴🔴 **Escritura anon** (3 + editor) | propiedades_v2, proyectos_master, propiedades_v2_historial (+ todo el editor admin: `usePropertyEditor`, `useProjectEditor`, `admin/alquileres`, `supervisor/matching`) | **NO tocar** sin migrar escrituras a `service_role` primero (trabajo de app, no SQL) |
+
+### Agujero de seguridad de fondo (más serio que el warning del linter)
+Hoy, sin RLS, la **anon key pública** (está en el bundle del browser) tiene permiso de **INSERT/UPDATE/DELETE** sobre `propiedades_v2`/`proyectos_master` vía PostgREST. Cerrarlo bien exige migrar el editor admin a API routes con `service_role` **antes** de RLS.
+
+### ⛔ Gap sin cerrar — n8n (BLOQUEANTE para avanzar)
+Esta investigación cubrió SOLO el frontend. **NO está verificado cómo conectan los workflows n8n a la BD**: si es Postgres directo con rol admin → bypassa RLS (sin problema); si es vía Supabase API con alguna key → afectado. **Antes de habilitar RLS en cualquier tabla del pipeline** (config_global, workflow_executions, auditoria_snapshots, matching_sugerencias, propiedades_v2, proyectos_master, etc.) hay que confirmar esto, o RLS puede romper el pipeline nocturno de forma invisible. (Recordar: los workflows en n8n se editan en vivo, el repo no siempre los refleja.)
+
+### Pre-requisito técnico
+`api/tc-actual.ts:13` y `api/broker/buscar-proyectos.ts:15` usan `SUPABASE_SERVICE_ROLE_KEY || NEXT_PUBLIC_SUPABASE_ANON_KEY` (fallback a anon). Confirmar que `SUPABASE_SERVICE_ROLE_KEY` está seteada en Vercel, o esos accesos corren como anon silenciosamente.
+
+### Plan revisado por fases (cuando se retome, con calma)
+- **Fase A** — 16 🟢: RLS + policy `claude_readonly`. Cero riesgo de app (igual confirmar n8n antes).
+- **Fase B** — 7 🔴 lectura: RLS + `FOR SELECT USING (true)`. Testear landings + `/admin/salud`.
+- **Fase C** — 🔴🔴 escritura: migrar editor admin a service_role → recién después RLS.
+
+**Estado: PAUSADO (22 may)** por decisión de no arriesgar producción sin el panorama de n8n. RLS es reversible (`ALTER TABLE x DISABLE ROW LEVEL SECURITY`), pero no se ejecuta nada hasta cerrar el gap n8n. **Próximo paso = investigación pura: confirmar el rol de conexión de n8n.**
+
+---
+
+## 🔴 Tier 2 — RLS en tablas operacionales sin PII ~~(~1h, bajo riesgo)~~ ⚠️ ver hallazgo 22 may arriba
 
 **Patrón**: `ENABLE RLS` + policy `TO claude_readonly USING (true)`. `service_role` bypassea automáticamente. anon sin acceso.
 
