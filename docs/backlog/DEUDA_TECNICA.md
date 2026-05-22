@@ -51,6 +51,8 @@
 
 **Fix general (a evaluar):** candar automáticamente el campo cuando el merge aplica override LLM de alta confianza (`registrar_discovery` ya respeta candados). Trade-off: congela el campo. NO tocar `registrar_discovery` (función core, alto riesgo). Ver postmortem monoambientes.
 
+**⚠ Matiz crítico (22 May 2026): "el LLM tiene razón" NO es universal.** El fix de auto-candar overrides LLM solo aplica a campos donde el LLM realmente gana (dorms/área — el dato físico no cambia). Para `estado_construccion` y `tipo_cambio_detectado`, el LLM suele leer el **aviso viejo** (ej: edificio ya entregado pero el anuncio aún dice "preventa", o "sólo dólares" mal interpretado) → ahí la **columna del founder es la verdad** y la protección `existing_protected` del merge es **by-design, no un bug**. Auto-candar el override LLM en esos campos congelaría el dato viejo. Antes de generalizar el fix, distinguir por campo. Ver `CALIDAD_DATOS_BACKLOG.md` (sección "Coherencia texto↔dato — otros candidatos").
+
 ## Funciones SQL con filtros de mercado — REVISADO (23 Mar 2026)
 
 **Contexto:** Migración 193 creó vistas canónicas `v_mercado_venta` y `v_mercado_alquiler`. Auditoría de 60 funciones encontró 3 con filtros incompletos. Re-investigado 23 Mar 2026.
