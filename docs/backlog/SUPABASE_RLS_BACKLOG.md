@@ -71,8 +71,12 @@ Investigación de acceso real (frontend `simon-mvp/src`) reveló que **el plan o
 ### Agujero de seguridad de fondo (más serio que el warning del linter)
 Hoy, sin RLS, la **anon key pública** (está en el bundle del browser) tiene permiso de **INSERT/UPDATE/DELETE** sobre `propiedades_v2`/`proyectos_master` vía PostgREST. Cerrarlo bien exige migrar el editor admin a API routes con `service_role` **antes** de RLS.
 
-### ⛔ Gap sin cerrar — n8n (BLOQUEANTE para avanzar)
-Esta investigación cubrió SOLO el frontend. **NO está verificado cómo conectan los workflows n8n a la BD**: si es Postgres directo con rol admin → bypassa RLS (sin problema); si es vía Supabase API con alguna key → afectado. **Antes de habilitar RLS en cualquier tabla del pipeline** (config_global, workflow_executions, auditoria_snapshots, matching_sugerencias, propiedades_v2, proyectos_master, etc.) hay que confirmar esto, o RLS puede romper el pipeline nocturno de forma invisible. (Recordar: los workflows en n8n se editan en vivo, el repo no siempre los refleja.)
+### ✅ Gap n8n CERRADO (22 may 2026)
+n8n conecta vía **Postgres directo** (123 nodos `n8n-nodes-base.postgres`, 0 nodos Supabase API) con la credencial "Supabase - Censo Inmobiliario" → user `postgres.chaosoiyoeyjuwtwckix` (= rol `postgres` vía pooler `aws-1-sa-east-1.pooler.supabase.com:6543`; el sufijo es el project-ref del pooler). El rol `postgres` es **owner de todas las tablas** y tiene **`rolbypassrls = true`**. Con RLS en modo `ENABLE` (NO `FORCE`), owner + bypassrls pasan de largo → **n8n es inmune a RLS**. El pipeline nocturno NO se ve afectado.
+
+> 🔑 **CRÍTICO al escribir el SQL:** usar `ENABLE ROW LEVEL SECURITY`, **NUNCA `FORCE`**. Con `ENABLE`, postgres (n8n) y service_role bypassan; solo se filtra `anon`. Con `FORCE`, hasta el owner queda sujeto a las policies → rompería n8n.
+
+> ⚠️ Pendiente menor antes de ejecutar: confirmar que los scripts Node de `scripts/` tampoco accedan a estas tablas con anon key (esta investigación cubrió `simon-mvp/src` + n8n, no `scripts/`).
 
 ### Pre-requisito técnico
 `api/tc-actual.ts:13` y `api/broker/buscar-proyectos.ts:15` usan `SUPABASE_SERVICE_ROLE_KEY || NEXT_PUBLIC_SUPABASE_ANON_KEY` (fallback a anon). Confirmar que `SUPABASE_SERVICE_ROLE_KEY` está seteada en Vercel, o esos accesos corren como anon silenciosamente.
@@ -82,7 +86,7 @@ Esta investigación cubrió SOLO el frontend. **NO está verificado cómo conect
 - **Fase B** — 7 🔴 lectura: RLS + `FOR SELECT USING (true)`. Testear landings + `/admin/salud`.
 - **Fase C** — 🔴🔴 escritura: migrar editor admin a service_role → recién después RLS.
 
-**Estado: PAUSADO (22 may)** por decisión de no arriesgar producción sin el panorama de n8n. RLS es reversible (`ALTER TABLE x DISABLE ROW LEVEL SECURITY`), pero no se ejecuta nada hasta cerrar el gap n8n. **Próximo paso = investigación pura: confirmar el rol de conexión de n8n.**
+**Estado (22 may): gap n8n CERRADO ✅.** Fase A (16 tablas 🟢) lista para ejecutar — pendientes menores: (1) verificar `scripts/` no use anon en esas tablas, (2) OK del user. RLS es reversible (`ALTER TABLE x DISABLE ROW LEVEL SECURITY`). Fases B y C siguen requiriendo más trabajo (B: testear landings; C: migrar editor admin a service_role).
 
 ---
 
