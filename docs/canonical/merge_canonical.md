@@ -1,7 +1,8 @@
 # MERGE - DOCUMENTO CANONICO
 
-**Version:** 3.0.0
-**Fecha:** 28 Febrero 2026
+**Version doc:** 3.1.0
+**Funcion en produccion:** `merge_discovery_enrichment()` **v2.6.0** (verificar con `pg_get_functiondef`)
+**Fecha:** 22 Mayo 2026
 **Estado:** IMPLEMENTADO Y VALIDADO
 **Archivo:** `docs/canonical/merge_canonical.md`
 
@@ -72,14 +73,39 @@ Propiedad status='nueva' o 'actualizado'
 | Campo | Prioridad | Razon |
 |-------|-----------|-------|
 | `area_total_m2` | **Discovery > Enrichment** | API estructurada mas confiable |
-| `dormitorios` | **Discovery > Enrichment** | API estructurada mas confiable |
+| `dormitorios` | **Candado → LLM(alta, ≠disc) → Discovery → LLM → Enrichment** | v2.4.0: capa LLM + guardrail monoambiente (ver §2.1) |
 | `banos` | **Discovery > Enrichment** | API estructurada mas confiable |
 | `estacionamientos` | **Discovery > Enrichment** | API estructurada mas confiable |
 | `latitud`, `longitud` | **Discovery > Enrichment** | GPS de API mas preciso |
-| `nombre_edificio` | **Discovery > Enrichment** | v2.1.0 - Para Modulo 2 Matching |
+| `nombre_edificio` | **Hibrido LLM** (LLM alta gana si disc/regex es basura o no matchea PM) | v2.6.0 (ver §2.1) |
+| `estado_construccion` | **LLM** (con proteccion inmediata→preventa) | v2.4.0 (ver §2.1) |
 | `zona` | **Discovery > Enrichment** | v2.1.0 - Para Modulo 2 Matching |
-| `precio_usd` | **Condicional** | Ver regla especial |
+| `tipo_cambio_detectado` | **Enrichment + upgrade LLM** | v2.5.0: LLM alta sube `no_especificado`→especifico |
+| `precio_usd` | **Condicional** | Ver regla especial (§3) |
 | Resto (amenities, agente, etc.) | Enrichment > Discovery | HTML mas detallado |
+
+### 2.1 Capa LLM (Fase C, v2.4.0+)
+
+El enrichment LLM (Haiku 4.5) corre tras el enrichment regex y escribe `llm_output` en `datos_json_enrichment`. El merge lo consume con jerarquias propias por campo. Principio: **el LLM lee el texto, el discovery trae datos estructurados del portal**; el LLM gana solo con confianza `alta` y donde el dato estructurado es poco confiable.
+
+**Dormitorios** (orden de resolucion):
+1. Candado → `blocked`
+2. LLM `alta` Y distinto de discovery → `llm`
+3. Discovery → `discovery`
+4. LLM (sin `alta`) → `llm`
+5. Enrichment regex → `enrichment`
+6. Valor existente → `existing`
+
+> **Guardrail monoambiente** (mig 246): tras resolver dormitorios, si NO esta candado, quedo `>=1` y la URL o `datos_json_discovery` contienen `'monoambiente'`, se fuerza a `0` con `fuente_dormitorios='monoambiente_guardrail'`. Causa: el LLM suele devolver `dormitorios=null` para monoambientes y discovery (`recamaras=1`) gana. Espejo del guardrail de alquiler (mig 214). Detalle: `docs/backlog/CALIDAD_DATOS_BACKLOG.md`.
+
+**Nombre edificio** (hibrido, v2.6.0): si esta candado → `blocked`. Si no, se calcula el mejor nombre NO-LLM (`COALESCE(discovery, enrichment regex)`):
+- El LLM `alta` **gana** si el mejor nombre no-LLM (a) es basura detectada por `_is_nombre_edificio_sospechoso()` **o** (b) no matchea ningun proyecto via `_nombre_existe_en_proyectos()`.
+- Si el nombre no-LLM es valido y matchea un PM → se respeta (`discovery`/`enrichment`, safe path).
+- Si discovery/regex estan vacios → LLM como fallback.
+
+**Estado construccion** (v2.4.0): si no esta candado y el LLM trae valor, se usa el LLM — **excepto** si el valor actual es `entrega_inmediata` y el LLM dice `preventa` (no se degrada: fuente `existing_protected`).
+
+**Tipo de cambio** (v2.5.0): el merge solo hace **upgrade** con LLM `alta` confianza, subiendo `no_especificado` → `oficial`/`paralelo`. Nunca pisa un TC ya especifico.
 
 ---
 
@@ -185,8 +211,8 @@ scoreFiduciario = scoreCalidadDato - penalizaciones;
 
 ```javascript
 {
-  "version_merge": "3.0.0",
-  "timestamp_merge": "2026-02-28T...",
+  "version_merge": "2.6.0",
+  "timestamp_merge": "2026-...",
   "fuente": "century21|remax",
 
   "financiero": {
@@ -205,6 +231,7 @@ scoreFiduciario = scoreCalidadDato - penalizaciones;
     "fuente_area": "discovery",
     "dormitorios": 1,
     "fuente_dormitorios": "discovery",
+    "es_monoambiente": false,
     "banos": 1,
     "fuente_banos": "discovery",
     "es_multiproyecto": false
@@ -221,6 +248,9 @@ scoreFiduciario = scoreCalidadDato - penalizaciones;
   "proyecto": {
     "nombre_edificio": "Torre Platinum",
     "fuente_nombre_edificio": "enrichment",
+    "nombre_edificio_nivel_confianza": 0.9,
+    "estado_construccion": "entrega_inmediata",
+    "fuente_estado_construccion": "llm",
     ...
   },
   "amenities": { ... },
@@ -246,8 +276,8 @@ scoreFiduciario = scoreCalidadDato - penalizaciones;
   },
 
   "trazabilidad": {
-    "merge_version": "3.0.0",
-    "fecha_merge": "2026-02-28T..."
+    "merge_version": "2.6.0",
+    "fecha_merge": "2026-..."
   }
 }
 ```
@@ -278,7 +308,7 @@ merge_discovery_enrichment(p_identificador TEXT) RETURNS JSONB
 
 ### Problema
 
-Muchos listings en Bolivia publican precios en USD pero al tipo de cambio paralelo (~7.30-7.80 Bs/USD) en lugar del oficial (6.96 Bs/USD). Esto infla los precios USD entre 5-12%, contaminando estudios de mercado y comparativas.
+Muchos listings en Bolivia publican precios en USD pero al tipo de cambio paralelo (dinamico, siempre > 6.96 oficial; ver `config_global.tipo_cambio_paralelo`) en lugar del oficial (6.96 Bs/USD). Esto infla los precios USD, contaminando estudios de mercado y comparativas.
 
 ### Solucion: `precio_normalizado()`
 
@@ -391,11 +421,13 @@ PERSISTENCIA:
 
 | Archivo | Version | Ubicacion |
 |---------|---------|-----------|
-| `merge_discovery_enrichment.sql` | v2.3.0 | `sql/functions/merge/` |
+| `merge_discovery_enrichment.sql` | v2.6.0 | `sql/functions/merge/` |
 | `funciones_helper_merge.sql` | v2.0.0 | `sql/functions/merge/` |
 | `funciones_auxiliares_merge.sql` | v2.0.0 | `sql/functions/merge/` |
 | `CHANGELOG_MERGE.md` | - | `sql/functions/merge/` |
-| Migraciones relevantes | 132-168 | `sql/migrations/` |
+| Migraciones relevantes | 132-168 (base) + LLM/hibrido + 246 (guardrail) | `sql/migrations/` |
+
+> Para la version exacta en produccion: `SELECT pg_get_functiondef('merge_discovery_enrichment(text)'::regprocedure)`. La fuente de verdad es la funcion, no este doc.
 
 ---
 
@@ -403,8 +435,12 @@ PERSISTENCIA:
 
 | Version | Fecha | Cambios |
 |---------|-------|---------|
-| 3.0.0 | 28 Feb 2026 | Documento canonico actualizado. Documenta precio_normalizado(), candados dual-format, TC columns fix |
-| 2.3.0 | 29 Ene 2026 | Fix candados formato dual (`_is_campo_bloqueado()` helper). Fix banos < 100 validacion (previene overflow NUMERIC(3,1)) |
+| doc 3.1.0 | 22 May 2026 | Alinea doc con funcion v2.6.0: capa LLM (§2.1), nombre hibrido, estado_construccion via LLM, TC upgrade LLM, guardrail monoambiente (mig 246) |
+| fn 2.6.0 + mig 246 | May 2026 | `nombre_edificio` hibrido (LLM alta gana si disc/regex es basura o no matchea PM). Mig 246 (sin bump): guardrail monoambiente — `dormitorios`→0 si URL/crudo dice "monoambiente" |
+| fn 2.5.0 | Abr 2026 | Upgrade `tipo_cambio_detectado` con LLM alta confianza (solo `no_especificado`→especifico, nunca pisa TC ya especifico) |
+| fn 2.4.0 | Mar 2026 | Capa LLM (Fase C): jerarquia `dormitorios` candado→LLM alta→discovery→LLM→enrichment; `estado_construccion` via LLM con proteccion inmediata→preventa |
+| doc 3.0.0 | 28 Feb 2026 | Documento canonico actualizado. Documenta precio_normalizado(), candados dual-format, TC columns fix |
+| fn 2.3.0 | 29 Ene 2026 | Fix candados formato dual (`_is_campo_bloqueado()` helper). Fix banos < 100 validacion (previene overflow NUMERIC(3,1)) |
 | 2.2.0 | 14 Ene 2026 | Fix columnas TC: `tipo_cambio_detectado`, `tipo_cambio_usado` ahora escritas a propiedades_v2 (antes solo en JSON). Fix calculo `depende_de_tc`. Postmortem: 477 propiedades tenian NULL en columnas TC |
 | 2.1.0 | 25 Dic 2025 | Soporte columnas `nombre_edificio` y `zona` para Modulo 2 |
 | 2.0.1 | 24 Dic 2025 | Fix area=0 fallback a enrichment |

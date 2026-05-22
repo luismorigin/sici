@@ -1,6 +1,6 @@
 # TC Sospechoso — Criterios y documentación
 
-> Migración 219 · Commit `7388376` · 16 Abr 2026
+> Creado en migración 219 (16 Abr 2026) · **umbral vigente: 28% desde migración 227**
 
 ## Qué es
 
@@ -13,7 +13,7 @@ Se muestra como badge amber **"Confirmar tipo de cambio"** en las cards de `/ven
 Una propiedad se marca como `tc_sospechoso = true` cuando cumple **todas** estas condiciones:
 
 1. **`tipo_cambio_detectado = 'no_especificado'`** — el pipeline no pudo determinar si el precio está en USD oficial o USD paralelo (billete)
-2. **Precio/m² > 30% por debajo de la mediana** de su grupo de referencia
+2. **Precio/m² > 28% por debajo de la mediana** de su grupo de referencia (factor `0.72` en SQL)
 3. **Grupo de referencia con ≥ 3 propiedades** con TC conocido (`paralelo` u `oficial`)
 
 ### Grupo de referencia
@@ -32,7 +32,7 @@ Esto evita comparar preventas con entrega inmediata (las preventas son naturalme
 
 ## Implementación
 
-### SQL (migración 219)
+### SQL (CTE en migración 219, umbral en migración 227)
 
 La función `buscar_unidades_simple()` incluye:
 
@@ -55,7 +55,7 @@ El flag se calcula como:
 CASE
   WHEN p.tipo_cambio_detectado = 'no_especificado'
        AND m.mediana_m2 IS NOT NULL
-       AND (precio_normalizado(...) / NULLIF(p.area_total_m2, 0)) < m.mediana_m2 * 0.70
+       AND (precio_normalizado(...) / NULLIF(p.area_total_m2, 0)) < m.mediana_m2 * 0.72
   THEN true
   ELSE false
 END
@@ -73,29 +73,27 @@ END
 
 | Cambio | Dónde |
 |--------|-------|
-| Cambiar umbral (ej: 25% en vez de 30%) | CTE `medianas_tc` en `buscar_unidades_simple()` — cambiar `0.70` por `0.75` |
+| Cambiar umbral (ej: 25% en vez de 28%) | Flag en `buscar_unidades_simple()` — cambiar el factor `0.72` (ej: `0.75` = 25%) |
 | Cambiar grupo mínimo (ej: 5 en vez de 3) | CTE `medianas_tc` — cambiar `HAVING COUNT(*) >= 3` |
 | Agregar/quitar dimensiones del grupo | CTE `medianas_tc` GROUP BY + JOIN conditions |
 | Cambiar estilo del badge | Clases CSS en `ventas.tsx` estilos inline |
 | Desactivar el badge | Quitar los 3 condicionales `p.tc_sospechoso &&` en `ventas.tsx` |
 
-## Propiedades afectadas al deploy (16 Abr 2026)
+## Propiedades afectadas
 
-8 propiedades (~2.5% del feed):
+El flag se calcula en vivo dentro de `buscar_unidades_simple()` (no es columna persistida). Para ver las marcadas hoy:
 
-| ID | Edificio | Zona | Dorms | $/m² | Mediana | Diff |
-|----|----------|------|-------|------|---------|------|
-| 916 | Alto Busch | Eq. Oeste | 1 | $1,086 | $2,171 | -50% |
-| 911 | Sky Level | Eq. Centro | 1 | $1,500 | $2,700 | -44% |
-| 1283 | T-VEINTICINCO | Eq. Centro | 1 | $1,400 | $2,345 | -40% |
-| 1374 | HH Once | Eq. Centro | 1 | $1,534 | $2,345 | -35% |
-| 1042 | Cond. Mirage | Sirari | 2 | $1,498 | $2,292 | -35% |
-| 522 | Omnia Lux | Eq. Centro | 2 | $1,321 | $2,013 | -34% |
-| 1145 | Siria II | V. Brigida | 1 | $1,444 | $2,159 | -33% |
-| 557 | Domus Tower | Eq. Centro | 1 | $1,880 | $2,700 | -30% |
+```sql
+SELECT id, nombre_oficial, zona, dormitorios, tc_sospechoso
+FROM buscar_unidades_simple('{}'::jsonb)
+WHERE tc_sospechoso = true
+ORDER BY zona, dormitorios;
+```
+
+> Referencia histórica: al deploy de mig 219 (umbral 30%) eran ~8 props (~2.5% del feed). Con el umbral 28% (mig 227) el set es algo mayor. El conteo vive en la función, no en este doc.
 
 ## Contexto
 
 - El pipeline detecta TC por regex en la descripción del listing + LLM (prompt v4.1)
-- ~44% de props tienen `tipo_cambio_detectado = 'no_especificado'` — la mayoría son correctas (precio real en USD oficial), solo las que están significativamente debajo de la mediana son sospechosas
-- Aún normalizando como paralelo (×7.80/6.96), estas 8 props siguen entre -22% y -44% debajo — el TC paralelo explica parte pero no toda la diferencia
+- Una porción relevante de props queda en `tipo_cambio_detectado = 'no_especificado'` (conteo actual: `SELECT tipo_cambio_detectado, COUNT(*) FROM v_mercado_venta GROUP BY 1`) — la mayoría son correctas (precio real en USD oficial); solo las significativamente debajo de la mediana del grupo son sospechosas
+- Aún normalizando como paralelo (×TC paralelo/6.96), las props marcadas siguen sustancialmente debajo de la mediana — el TC paralelo explica parte pero no toda la diferencia
