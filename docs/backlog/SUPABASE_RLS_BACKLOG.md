@@ -14,7 +14,7 @@ Iniciado 22 abril 2026 tras correo de Supabase flagueando issues críticos.
 
 ### Migración 225 — Rename 9 backups a `_trash_*` (22 abr 2026)
 - Hallazgo: `rls_disabled_in_public` en 9 tablas backup huérfanas
-- Estrategia: rename reversible a prefijo `_trash_*`, DROP definitivo el **29 abr 2026**
+- Estrategia: rename reversible a prefijo `_trash_*`, DROP definitivo programado para 29 abr 2026 (**ejecutado el 22 may en migración 248** — ver sección abajo)
 - Evidencia: grep código limpio + `pg_stat_user_tables` sin lecturas 11+ días + `pg_depend` sin deps
 - Tablas afectadas:
   - `_trash_backup_multiproyecto_060`
