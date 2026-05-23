@@ -215,7 +215,7 @@ Leer por path absoluto, no copiar. Si hay divergencia con sici, **simon-brand ga
 
 ```
 sici/
-├── sql/functions/       → Funciones SQL canonicas (43 archivos, 13 subdirectorios)
+├── sql/functions/       → Funciones SQL canonicas (13 subdirectorios)
 │   ├── discovery/       → registrar_discovery
 │   ├── enrichment/      → registrar_enrichment
 │   ├── merge/           → merge_discovery_enrichment v2.6.0
@@ -279,7 +279,7 @@ simon-mvp/src/
 │   └── PropiedadesVinculadasTable.tsx → Stats + filtros + tabla propiedades (proyectos/[id])
 ├── components/venta/
 │   └── VentaMap.tsx                 → Mapa Leaflet con pins de precio (feed /ventas)
-├── lib/
+├── lib/                          → principales abajo (+ broker/demo/phone/property-reports/whatsapp/analytics — ver carpeta)
 │   ├── supabase.ts                → Cliente Supabase + RPC mappers tipados (db-responses.ts)
 │   ├── zonas.ts                   → Constantes zonas, mapeo slug→display, filtros admin/alquiler
 │   ├── precio-utils.ts            → normalizarPrecio, TC paralelo
