@@ -163,7 +163,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | Prueba LLM vs Regex ventas | `docs/analysis/PRUEBA_LLM_VS_REGEX_VENTAS.md` |
 | **LLM Enrichment Ventas** | `docs/analysis/RESUMEN_EJECUTIVO_LLM_VENTAS.md` |
 | Comparativa LLM alq vs venta | `docs/analysis/COMPARATIVA_ALQUILERES_VS_VENTAS_LLM.md` |
-| Prompt LLM ventas (activo) | `scripts/llm-enrichment/prompt-ventas-v2.md` |
+| Prompt LLM ventas (activo) | `scripts/llm-enrichment/prompt-ventas.md` (v4.1 interno) |
 | **Prompt LLM alquiler (activo)** | `scripts/llm-enrichment/prompt-alquiler-v2.md` — v2.0 con PROYECTOS CONOCIDOS + confianza |
 | **Plan matching alquiler** | `docs/backlog/MATCHING_ALQUILER_PLAN.md` — 3 fases, target 95%+ |
 | **GA4 eventos** | `docs/meta/GA4_EVENTOS.md` — 32 eventos por página, verificación |

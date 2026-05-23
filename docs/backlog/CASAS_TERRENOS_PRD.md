@@ -291,7 +291,7 @@ n8n/workflows/
     └── enrichment_llm_terrenos_v1.0.0.json
 
 scripts/llm-enrichment/
-├── prompt-ventas-v2.md             → Deptos (sin cambios)
+├── prompt-ventas.md                → Deptos (sin cambios)
 ├── prompt-ventas-casas-v1.md       → NUEVO
 └── prompt-ventas-terrenos-v1.md    → NUEVO
 

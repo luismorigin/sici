@@ -6,7 +6,7 @@ Enrichment LLM para el pipeline de ventas de SICI. El LLM actúa como **supervis
 
 | Paso | Descripción | Estado | Archivos |
 |------|-------------|--------|----------|
-| 1 | Prompt v4.1 | Completado | `prompt-ventas-v2.md` |
+| 1 | Prompt v4.1 | Completado | `prompt-ventas.md` |
 | 2 | Script de test | Completado — N=30 Haiku+Sonnet, Haiku elegido | `enrich-ventas-llm.js` |
 | 3 | Título/ubicación en extractores | **Pendiente** (no bloqueante) | `n8n/workflows/modulo_1/flujo_b_processing_v3.0.json` |
 | 4 | Función SQL v2.0 (modo observación) | Completado — deployada 2026-03-17 | `sql/functions/enrichment/registrar_enrichment_venta_llm.sql` |
@@ -27,7 +27,7 @@ Enrichment LLM para el pipeline de ventas de SICI. El LLM actúa como **supervis
 scripts/llm-enrichment/
 ├── README.md                  ← este archivo
 ├── prompt-ventas-v1.md        ← prompt v1.0-v3.2 (histórico)
-├── prompt-ventas-v2.md        ← prompt v4.0 (activo)
+├── prompt-ventas.md           ← prompt v4.1 (activo, versión interna)
 ├── enrich-ventas-llm.js       ← script de test + backfill
 ├── analyze-v1.js              ← análisis de resultados v1 (histórico)
 ├── output/                    ← resultados JSON de cada corrida
