@@ -1,6 +1,6 @@
 # Pendientes — Condado / Proinco
 
-> Última actualización: 19 May 2026
+> Última actualización: 24 May 2026
 
 ## Estado del acuerdo original
 
@@ -27,7 +27,9 @@
 
 ### 2. Landing web Condado VI — v2 deployada para revisión
 
-**Estado:** v2 lista en staging, mensaje WSP enviado a Adolfo el 19 May. Esperando feedback.
+**Estado:** v2 lista en staging, mensaje WSP enviado a Adolfo el 19 May. El 24 May se sumaron fotos reales de los edificios entregados (Condado I–IV) dentro del timeline y se reenvió para revisión. Esperando feedback.
+
+> **Deploy:** fotos de edificios pusheadas a `main` el 24 May (commit `1afcbaa`) → desplegado en Vercel, visibles en staging.
 
 URL review: **https://simonbo.com/condado-vi-v2** (noindex)
 
@@ -36,6 +38,7 @@ URL review: **https://simonbo.com/condado-vi-v2** (noindex)
 **Pendiente del cliente:**
 - Adolfo revisa la URL en compu + celular y manda observaciones de textos/fotos
 - Confirmar si el material entregado corresponde a un mismo depto modelo o varios
+- Falta foto de **Condado Park V** para completar el timeline
 
 **Pendiente nuestro (después del feedback):**
 - Aplicar cambios solicitados (queda 1 ronda de revisión incluida en las 2 pactadas)

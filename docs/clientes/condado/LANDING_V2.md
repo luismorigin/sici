@@ -1,6 +1,6 @@
 # Landing Condado VI — versión v2
 
-> Última actualización: 19 May 2026
+> Última actualización: 24 May 2026
 
 ## Estado actual
 
@@ -10,12 +10,15 @@
 - `noindex,nofollow` → no aparece en buscadores
 - Original `/condado-vi` intacta en la URL canónica (sin cambios)
 - Mensaje WhatsApp enviado a Adolfo el 19 May pidiendo revisión de textos y fotos en compu + celular
+- **24 May:** sumadas fotos reales de los edificios entregados (Condado I–IV) como thumbnails clickeables dentro de la línea de tiempo "5 edificios... Todos entregados". Reenviado a Adolfo para revisión.
+  - **Deploy:** commit `1afcbaa` pusheado a `main` el 24 May → desplegado en Vercel. Las fotos ya están visibles en la URL de staging.
 
 ## Commits clave
 
 - `4dec2b2` — creación inicial v2 (44 archivos)
 - `ee22494` — render IA con chip "RENDER REFERENCIAL"
 - `eea1f37` — saco banner preview para envío a cliente
+- `1afcbaa` — fotos de edificios entregados (Condado I–IV) en thumbnails dentro del timeline + lightbox 3 fotos c/u (24 May). Originales en alta en `fotos-edificios/` (gitignored)
 
 ## Cambios vs landing original
 
@@ -31,6 +34,7 @@
 | **Vida cotidiana** | 3 bloques | 4 bloques (+ pet-friendly "Bienvenidos los cuatro patas") |
 | **FAQ** | 7 preguntas | 8 preguntas (+ "¿Se aceptan mascotas?") |
 | **Galería detalles** | — | 8 fotos cuadradas bajo equipamiento |
+| **Timeline edificios** (Constructora) | solo texto (lista I–VI) | + thumbnail real por edificio (I–IV) clickeable → lightbox 3 fotos c/u. Park V pendiente de foto |
 | **Tipologías mobile** | scroll sin indicador | dots indicadores (sin autoplay — son cards de decisión) |
 | **Lightbox** | ~10 fotos | ~38 fotos navegables |
 
@@ -94,8 +98,9 @@ Cuando Adolfo apruebe contenido → 1 sesión de optimización (1-2 hs) y apunta
 
 ## Pendiente del cliente
 
-- [ ] Adolfo revisa la URL en compu + celular y manda observaciones de textos/fotos
+- [ ] Adolfo revisa la URL en compu + celular y manda observaciones de textos/fotos (reenviado 24 May con fotos de edificios sumadas)
 - [ ] Confirmar si todo el material entregado es de un mismo depto modelo o de varios (impacta narrativa visual del carrusel salón)
+- [ ] **Falta foto de Condado Park V** — pedírsela a Adolfo para completar el timeline
 
 ## Próximos pasos
 
