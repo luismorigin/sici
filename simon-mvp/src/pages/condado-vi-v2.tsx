@@ -53,11 +53,29 @@ const AMENIDAD_PHOTOS: Record<string, string> = {
   'Terraza con vista': '/condado-vi-v2/terraza.jpg',
 }
 
+// Foto thumbnail (portada) + galería por edificio en la línea de tiempo.
+// Condado Park V aún sin foto; Condado VI tiene su carrusel de fachada destacado abajo.
 const TIMELINE = [
-  { nombre: 'Condado I', estado: 'Entregado' },
-  { nombre: 'Condado II', estado: 'Entregado' },
-  { nombre: 'Condado III', estado: 'Entregado' },
-  { nombre: 'Condado IV', estado: 'Entregado' },
+  { nombre: 'Condado I', estado: 'Entregado', fotos: [
+    { src: '/condado-vi-v2/condado-1-1.jpg', alt: 'Condado I — fachada en Equipetrol' },
+    { src: '/condado-vi-v2/condado-1-2.jpg', alt: 'Condado I — vista de la fachada' },
+    { src: '/condado-vi-v2/condado-1-3.jpg', alt: 'Condado I — detalle del edificio' },
+  ] },
+  { nombre: 'Condado II', estado: 'Entregado', fotos: [
+    { src: '/condado-vi-v2/condado-2-1.jpg', alt: 'Condado II — fachada e ingreso' },
+    { src: '/condado-vi-v2/condado-2-2.jpg', alt: 'Condado II — vista de la fachada' },
+    { src: '/condado-vi-v2/condado-2-3.jpg', alt: 'Condado II — detalle del edificio' },
+  ] },
+  { nombre: 'Condado III', estado: 'Entregado', fotos: [
+    { src: '/condado-vi-v2/condado-3-1.jpg', alt: 'Condado III — torre en Equipetrol' },
+    { src: '/condado-vi-v2/condado-3-2.jpg', alt: 'Condado III — vista de la fachada' },
+    { src: '/condado-vi-v2/condado-3-3.jpg', alt: 'Condado III — detalle del edificio' },
+  ] },
+  { nombre: 'Condado IV', estado: 'Entregado', fotos: [
+    { src: '/condado-vi-v2/condado-4-1.jpg', alt: 'Condado IV — torre e ingreso' },
+    { src: '/condado-vi-v2/condado-4-2.jpg', alt: 'Condado IV — vista de la fachada' },
+    { src: '/condado-vi-v2/condado-4-3.jpg', alt: 'Condado IV — detalle del edificio' },
+  ] },
   { nombre: 'Condado Park V', estado: 'Entregado' },
   { nombre: 'Condado VI Plaza Italia', estado: 'Entrega inmediata', active: true },
 ]
@@ -138,6 +156,7 @@ const GALLERY_IMAGES = [
   { src: '/condado-vi-v2/cowork.jpg', alt: 'Cowork del edificio' },
   { src: '/condado-vi-v2/terraza.jpg', alt: 'Terraza con vista panorámica' },
   ...FACHADA_IMAGES,
+  ...TIMELINE.flatMap(t => t.fotos?.map(f => ({ src: f.src, alt: f.alt })) ?? []),
   ...DETALLES_IMAGES,
   { src: '/condado-vi-v2/extra-1.jpg', alt: 'Baño master con espejo orgánico' },
   { src: '/condado-vi-v2/extra-2.jpg', alt: 'Bar y bodeguero de vino' },
@@ -780,23 +799,35 @@ export default function CondadoVIv2() {
               5 edificios en Equipetrol.<br />Todos entregados.
             </h2>
 
-            <div className="relative pl-8 max-w-md">
+            <div className="relative pl-8 max-w-lg">
               <div className="absolute left-[11px] top-2 bottom-2 w-px bg-condado-arena" />
               {TIMELINE.map((item) => (
-                <div key={item.nombre} className="relative mb-8 last:mb-0">
+                <div key={item.nombre} className="relative mb-6 last:mb-0 flex items-center gap-4">
                   <div
-                    className={`absolute -left-8 top-1 rounded-full border-2 ${item.active ? 'w-5 h-5 bg-condado-caramelo border-condado-caramelo' : 'w-3 h-3 bg-condado-arena border-condado-arena'}`}
-                    style={item.active ? { boxShadow: '0 0 12px rgba(184,144,111,0.4)', marginLeft: '-4px', marginTop: '-4px' } : {}}
+                    className={`absolute -left-8 top-1/2 -translate-y-1/2 rounded-full border-2 ${item.active ? 'w-5 h-5 bg-condado-caramelo border-condado-caramelo' : 'w-3 h-3 bg-condado-arena border-condado-arena'}`}
+                    style={item.active ? { boxShadow: '0 0 12px rgba(184,144,111,0.4)', marginLeft: '-4px' } : {}}
                   />
+                  {item.fotos && (
+                    <button
+                      onClick={() => openLightbox(galleryIdx(item.fotos![0].src))}
+                      className="relative w-20 h-24 md:w-24 md:h-28 rounded-lg overflow-hidden flex-shrink-0 cursor-zoom-in group bg-condado-ebano"
+                      aria-label={`Ver fotos de ${item.nombre}`}
+                    >
+                      <Image src={item.fotos[0].src} alt={item.fotos[0].alt} fill className="object-cover transition-transform duration-300 group-hover:scale-105" sizes="96px" />
+                      <div className="absolute bottom-1.5 right-1.5 bg-condado-ebano/55 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                      </div>
+                    </button>
+                  )}
                   <div>
-                    <span className={`font-dm block ${item.active ? 'font-medium text-condado-carbon text-lg' : 'text-condado-piedra text-base'}`}>{item.nombre}</span>
+                    <span className={`font-dm block ${item.active ? 'font-medium text-condado-carbon text-lg' : 'text-condado-carbon text-base'}`}>{item.nombre}</span>
                     <span className={`font-dm ${item.active ? 'text-sm text-condado-caramelo font-medium uppercase tracking-wider' : 'text-sm text-condado-piedra'}`}>{item.estado}</span>
                   </div>
                 </div>
               ))}
             </div>
 
-            <Carousel images={FACHADA_IMAGES} aspectClass="4/3" onOpenLightbox={openBySrc} className="mt-10 max-w-md" />
+            <Carousel images={FACHADA_IMAGES} aspectClass="4/3" onOpenLightbox={openBySrc} className="mt-12 md:mt-16 max-w-md" />
 
             <p className="font-dm text-[17px] text-condado-piedra mt-6 max-w-lg leading-relaxed">
               Cada edificio entregado a tiempo y como se prometió. Tu compra está respaldada por una trayectoria real.
