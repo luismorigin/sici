@@ -29,9 +29,11 @@
 
 **Estado:** Valores actualizados manualmente (9 Mar 2026). Funcional pero requiere actualización manual cuando cambian promedios de zona.
 
-## Discovery Remax — paginación fija pierde props (DETECTADO 21 May 2026)
+## Discovery Remax — paginación fija (parche 8→9 aplicado 24 May 2026; DINÁMICA PENDIENTE)
 
-**Problema:** el discovery Remax (`flujo_a_discovery_remax`) usa `TOTAL_PAGES = 8` fijo, pero la zona `equipetrolnoroeste` creció a **9 páginas** (`last_page=9`, 180 props, 143 de venta). La página 9 (~17 props de venta) **nunca se captura**. Como el orden de la API varía cada noche, props vivas distintas caen rotativamente en página 9 → el verificador las marca ausentes → `inactivo_confirmed` → quedan congeladas vivas (falsos positivos). Caso confirmado: id=1310 (viva en API, marcada inactiva; reactivada manual 21-may).
+**Estado:** parche aplicado — `TOTAL_PAGES` subido de 8 a 9 en el nodo "Generar URLs Remax" (n8n prod + repo). La página 9 ya se captura. **El fix de fondo sigue abierto:** 9 es otro número fijo; si la zona vuelve a crecer (10+ páginas) reaparece el mismo problema. La solución real es paginación dinámica (abajo). Riesgo de no hacerlo: bajo mientras la zona no crezca; volver a subir el número es un parche de 1 línea.
+
+**Problema (original):** el discovery Remax (`flujo_a_discovery_remax`) usaba `TOTAL_PAGES = 8` fijo cuando la zona `equipetrolnoroeste` ya tenía **9 páginas** (`last_page=9`). La página no capturada hacía caer props vivas rotativamente cada noche → el verificador las marca ausentes → `inactivo_confirmed` → congeladas vivas (falsos positivos). Caso confirmado: id=1310 (reactivada manual 21-may).
 
 **Evidencia:** API `last_page=9` vs discovery `TOTAL_PAGES=8`. SICI tiene 187 `inactivo_confirmed` de venta Remax (vs 103 activas) — una fracción son falsos positivos por esta causa.
 
