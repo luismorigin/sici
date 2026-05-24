@@ -1,5 +1,5 @@
 ---
-description: Audit semanal del feed /alquileres sin scraping — capas 2+3+4 sobre props nuevas/rango. Costo $0, solo SQL. Reporte ejecutivo con SQL listo. Sin persistencia. v1.2 con 8 calibraciones (6 v1.1 + 2 v1.2) tras re-test 13 may 2026.
+description: Audit semanal del feed /alquileres sin scraping — capas 2+3+4 sobre props nuevas/rango. Costo $0, solo SQL. Reporte ejecutivo con SQL listo. Sin persistencia. v1.3: + check dormitorios↔cruda (8 calibraciones previas).
 ---
 
 # Audit semanal — feed /alquileres
@@ -8,7 +8,11 @@ Variante liviana del audit mensual. Cubre props nuevas en una ventana temporal u
 
 Cuándo usarlo: lunes a la mañana (o cualquier día) para limpiar la deuda de props nuevas mientras están frescas. Complementa al `/audit-feed-alquileres-mensual` que cubre todo el feed + drift fetcher curl.
 
-## Versión actual: v1.2 — post-retest 13 may 2026
+## Versión actual: v1.3 — 24-may-2026
+
+v1.3 agrega el check 2.8 (dormitorios=0 que contradice la cruda) — alineado con la skill de ventas. Resto sin cambios respecto a v1.2.
+
+## v1.2 — post-retest 13 may 2026
 
 Calibraciones acumuladas tras 2 tests sobre las mismas 37 props del 6-13 may (ver "Lecciones de calibración" al final):
 
@@ -96,7 +100,7 @@ ORDER BY 1 DESC, 2;
 
 Volumen esperado: ~22-30 props/semana (C21 ~16, Remax ~6, BI ~0-1).
 
-### 3. Capa 2 — Inconsistencias internas (7 checks)
+### 3. Capa 2 — Inconsistencias internas (8 checks)
 
 #### 2.1 Cambio explícito de precio en desc 🔴
 
@@ -261,6 +265,26 @@ WHERE <filtro args>
 ```
 
 **Acción**: agruparlos en una sola línea informativa. NO accionar individualmente. El flag está mal calibrado para alquiler (usa umbral $500/m² de venta). Backlog: separar el flag de venta vs alquiler en merge.
+
+#### 2.8 Dormitorios=0 contradice la cruda 🔴 (NUEVO v1.3)
+
+Detección: `dormitorios = 0` (catalogada monoambiente) pero la cruda NO dice "monoambiente" y SÍ menciona "N dormitorio(s)". El portal o el LLM pueden haber bajado a 0 un depto real de 1+ dorm.
+
+```sql
+SELECT v.id, v.fuente, v.dormitorios AS col_d, v.area_total_m2 AS area,
+       LEFT(regexp_replace(p.datos_json_enrichment->>'descripcion', E'[\r\n]+',' ','g'), 160) AS desc_inicio
+FROM v_mercado_alquiler v
+JOIN propiedades_v2 p ON p.id = v.id
+WHERE <filtro args>
+  AND v.dormitorios = 0
+  AND NOT (p.campos_bloqueados ? 'dormitorios')
+  AND p.datos_json_enrichment->>'descripcion' IS NOT NULL
+  AND p.datos_json_enrichment->>'descripcion' !~* 'mono ?-?ambiente'
+  AND p.datos_json_enrichment->>'descripcion' ~* '([0-9]+|un|dos|tres) ?dormitorio'
+ORDER BY v.area_total_m2 DESC;
+```
+
+Análisis humano por caso: leer la cruda. Si dice claramente "N dormitorio(s)" para **la unidad** (no el rango del proyecto) → corregir `dormitorios = N` + candar (`por='audit_dormitorios'`). Si es rango de proyecto → dejar, no concluyente. **Solo esta dirección** (el caso directo "cruda dice monoambiente + dorms≥1" lo cubre el guardrail mono del merge alquiler, mig 214/247). Ver memoria `audit_overrides_llm_dorms.md`.
 
 ### 4. Capa 3 — Matching audit (4 checks)
 
@@ -548,6 +572,9 @@ Discriminar: GPS pm errado / GPS listing errado / matching realmente mal
 ### Área absurda (N props)
 | ID | Edificio | área BD | área en desc |
 
+### Dormitorios=0 vs cruda (N props)
+| ID | Edificio | área | cruda dice | acción |
+
 ## 🟡 ATENCIÓN (Z props para revisar manualmente)
 
 - Mascotas mismatch: [tabla]
@@ -610,6 +637,10 @@ Después del reporte:
 | Persistencia | `audit_descripciones_runs` con `tipo_operacion='alquiler'` | ❌ No persiste |
 
 ## Lecciones de calibración (changelog)
+
+### v1.3 — 2026-05-24
+
+Agregado check 2.8 (dormitorios=0 vs cruda), alineado con `/audit-feed-ventas-semanal` v1.2. Surge de la auditoría del bug "discovery pisa overrides LLM" (memoria `audit_overrides_llm_dorms.md`). Solo se chequea la dirección inversa (1-dorm real catalogado como 0); el caso directo lo cubre el guardrail mono del merge alquiler (mig 214/247). El barrido de cierre del 24 may dio 0 monoambientes mal catalogados en alquiler.
 
 ### v1.2 — 2026-05-13 (post-retest sobre las mismas 37 props con v1.1 aplicado)
 

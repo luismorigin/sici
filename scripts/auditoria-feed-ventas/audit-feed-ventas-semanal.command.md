@@ -1,5 +1,5 @@
 ---
-description: Audit semanal del feed /ventas sin Firecrawl — capas 2+3+4 sobre props nuevas/rango. Costo $0. Reporte ejecutivo con SQL listo. Sin persistencia. v1.1 con 4 calibraciones post-test.
+description: Audit semanal del feed /ventas sin Firecrawl — capas 2+3+4 sobre props nuevas/rango. Costo $0. Reporte ejecutivo con SQL listo. Sin persistencia. v1.2: + check dormitorios↔cruda.
 ---
 
 # Audit semanal — feed /ventas
@@ -8,7 +8,11 @@ Variante liviana del audit mensual. Cubre props nuevas en una ventana temporal u
 
 Cuándo usarlo: lunes a la mañana (o cualquier día) para limpiar la deuda de props nuevas mientras están frescas. Complementa al `/audit-feed-ventas-mensual` que cubre todo el feed + drift Firecrawl.
 
-## Versión actual: v1.1 — post-test 12-may-2026
+## Versión actual: v1.2 — 24-may-2026
+
+v1.2 agrega el check 2.8 (dormitorios=0 que contradice la cruda) — único hueco que el merge no cubre solo. Resto sin cambios respecto a v1.1.
+
+## v1.1 — post-test 12-may-2026
 
 Calibraciones aplicadas tras el primer test (ver sección "Lecciones de calibración" al final):
 1. **TC se evalúa con `tipo_precio` calculado** (moneda_original + tipo_cambio_detectado), no solo tc
@@ -63,7 +67,7 @@ GROUP BY 1,2
 ORDER BY 1 DESC, 2;
 ```
 
-### 3. Capa 2 — Inconsistencias internas (7 checks recalibrados)
+### 3. Capa 2 — Inconsistencias internas (8 checks)
 
 #### IMPORTANTE: Calcular `tipo_precio_display` antes de cualquier check de TC
 
@@ -194,6 +198,28 @@ Para cada uno verificar:
 - `parqueo_incluido = true` pero desc dice "Parqueo: $X" o "Parqueo aparte" o "Parqueo opcional"
 - `baulera_incluido = true` pero desc dice "Baulera: $X"
 - `plan_pagos_desarrollador = true` pero desc dice "solo contado", "al contado", "exclusivo contado"
+
+#### 2.8 Dormitorios=0 contradice la cruda 🔴 (NUEVO v1.2)
+
+Detección: `dormitorios = 0` (catalogada monoambiente) pero la cruda NO dice "monoambiente" y SÍ menciona "N dormitorio(s)". El portal o el LLM pueden haber bajado a 0 un depto real de 1+ dorm (alucinación por "studio"/"smart studio", o number_bedrooms=0 del portal). Caso real detectado: #1537 (Cond Hamburgo 65m², cruda "1 DORMITORIO", estaba en 0).
+
+```sql
+SELECT v.id, v.fuente, v.dormitorios AS col_d, v.area_total_m2 AS area,
+       LEFT(regexp_replace(p.datos_json_enrichment->>'descripcion', E'[\r\n]+',' ','g'), 160) AS desc_inicio
+FROM v_mercado_venta v
+JOIN propiedades_v2 p ON p.id = v.id
+WHERE <filtro args>
+  AND v.dormitorios = 0
+  AND NOT (p.campos_bloqueados ? 'dormitorios')
+  AND p.datos_json_enrichment->>'descripcion' IS NOT NULL
+  AND p.datos_json_enrichment->>'descripcion' !~* 'mono ?-?ambiente'
+  AND p.datos_json_enrichment->>'descripcion' ~* '([0-9]+|un|dos|tres) ?dormitorio'
+ORDER BY v.area_total_m2 DESC;
+```
+
+Análisis humano por caso: leer la cruda. Si dice claramente "N dormitorio(s)" para **la unidad** (no el rango del proyecto, ej "departamentos de 1 y 2 dormitorios") → corregir `dormitorios = N` + candar (`por='audit_dormitorios'`). Si es rango de proyecto sin especificar la unidad → dejar, no concluyente.
+
+**Por qué solo esta dirección**: el caso inverso (cruda dice "monoambiente" pero dorms≥1) NO se chequea — el "LLM-gana sobre discovery" del merge ya lo resuelve y genera falsos positivos de proyectos multi-tipología (Rhodium, Lofty Island). Ver memoria `audit_overrides_llm_dorms.md`.
 
 ### 4. Capa 3 — Matching audit (4 checks recalibrados)
 
@@ -446,6 +472,9 @@ Discriminar: GPS pm errado / GPS listing errado / matching realmente mal
 ### Área absurda (N props)
 | ID | Edificio | área BD | área en desc |
 
+### Dormitorios=0 vs cruda (N props)
+| ID | Edificio | área | cruda dice | acción |
+
 ## 🟡 ATENCIÓN (Z props para revisar manualmente)
 
 - TC `no_especificado` con BOB que probablemente es oficial: [tabla]
@@ -509,6 +538,10 @@ Después del reporte:
 | Detección de listings muertos | ✅ Sí | ❌ Requiere Firecrawl |
 
 ## Lecciones de calibración (changelog)
+
+### v1.2 — 2026-05-24
+
+Agregado check 2.8 (dormitorios=0 vs cruda). Surge de la auditoría del bug "discovery pisa overrides LLM" (memoria `audit_overrides_llm_dorms.md`): el merge ya resuelve los monoambientes nuevos vía "LLM-gana sobre discovery", pero el caso inverso (un 1-dorm real catalogado como 0 por el portal o por alucinación del LLM) no tiene cobertura estructural. Solo se chequea esta dirección; el caso directo (cruda dice monoambiente + dorms≥1) se descartó por generar falsos positivos de proyectos multi-tipología.
 
 ### v1.1 — 2026-05-13 (post-test 14d-7d sobre 26 props)
 

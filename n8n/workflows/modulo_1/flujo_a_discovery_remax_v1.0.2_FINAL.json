@@ -24,7 +24,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// === GENERADOR DE URLs REMAX ===\n// Genera URLs para todas las páginas de la API\n\nconst TOTAL_PAGES = 8; // Equipetrol - validado dic 2025\nconst BASE_URL = 'https://remax.bo/api/search/departamento/santa-cruz-de-la-sierra/equipetrolnoroeste';\n\nconst urls = [];\n\nfor (let page = 1; page <= TOTAL_PAGES; page++) {\n  urls.push({\n    json: {\n      page_url: `${BASE_URL}?page=${page}`,\n      page_number: page,\n      fuente: 'remax'\n    }\n  });\n}\n\nreturn urls;"
+        "jsCode": "// === GENERADOR DE URLs REMAX ===\n// Genera URLs para todas las páginas de la API\n\nconst TOTAL_PAGES = 9; // Equipetrol - validado May 2026\nconst BASE_URL = 'https://remax.bo/api/search/departamento/santa-cruz-de-la-sierra/equipetrolnoroeste';\n\nconst urls = [];\n\nfor (let page = 1; page <= TOTAL_PAGES; page++) {\n  urls.push({\n    json: {\n      page_url: `${BASE_URL}?page=${page}`,\n      page_number: page,\n      fuente: 'remax'\n    }\n  });\n}\n\nreturn urls;"
       },
       "id": "495c9541-c560-4236-91a3-d98e7ae32715",
       "name": "Generar URLs Remax",

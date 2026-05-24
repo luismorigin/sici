@@ -39,19 +39,20 @@
 
 **Caveat:** el fix mejora la captura futura pero NO reactiva las ya congeladas (venta sí reactiva al recapturar; alquiler es terminal). Cambio en workflow n8n (producción — validar en n8n UI, el repo puede diferir). Verificación de vida correcta: slug exacto + operación en API, no HTTP 200 (`RESEARCH_REMAX_API §23`).
 
-## Discovery pisa correcciones del LLM (bug de persistencia) — DETECTADO 21 May 2026
+## Discovery pisa correcciones del LLM (dormitorios) — AUDITADO Y CERRADO (24 May 2026)
 
-**Problema:** cuando el merge aplica un override del LLM sobre un campo físico (ej: LLM corrige dorms 1→0 en un monoambiente, confianza alta), el discovery nocturno posterior puede pisar la columna con el dato crudo del portal vía `COALESCE(p_dormitorios, dormitorios)`. La corrección queda en `datos_json` (`fuente=llm`) pero la **columna real** vuelve al valor del portal.
+**Estado:** auditoría completa verificando contra la **descripción cruda del aviso** (`datos_json_enrichment->>'descripcion'`, disponible en venta para los 3 portales — no solo alquiler). Las props detectadas se corrigieron y blindaron con candado; barrido global de cierre dio gap ≈ 1 prop (ya corregida). **No se justifica tocar el merge core.** Detalle: memoria `audit_overrides_llm_dorms.md`.
 
-**Evidencia:** 58 de 258 props con `fuente_dormitorios='llm'` tienen la columna ≠ lo que el merge decidió (**22% de overrides LLM revertidos**). Ej: prop 1733 (merge dijo 0, columna=1, `fecha_discovery > fecha_merge`).
+**Cómo funciona el flujo realmente (lo que la auditoría aclaró):**
+- `registrar_discovery` pisa `dormitorios` con `COALESCE(portal, actual)` solo si NO hay candado, y dispara re-merge solo si detecta cambio. Las props `completado` sin cambio NO se re-mergean → su valor refleja la lógica del merge de su última fecha de merge (puede ser vieja). Por eso un cambio en el merge NO es retroactivo.
+- El merge ya resuelve los monoambientes nuevos vía "LLM-gana sobre discovery" (v2.4.0) → quedan `fuente_dormitorios=llm`. El guardrail mono (mig 246) es backup y mira `url`+`datos_json_discovery`, NO la cruda — importa poco porque el LLM gana antes.
+- El **candado** es la única protección total (discovery y merge lo respetan). Es el mecanismo correcto para los casos detectados.
 
-**Por qué pasa:** `registrar_discovery` respeta candados pero NO la decisión del merge. La regla "Discovery > Enrichment para campos físicos" hace que discovery gane; el merge v2.6.0 introdujo la excepción "LLM alta gana" que el discovery desconoce.
+**Por qué NO se toca el merge core:** el gap es ~0 y modificar `merge_discovery_enrichment`/`registrar_discovery` (core) es alto riesgo (regla 7). El "LLM-gana" cubre los nuevos; los viejos quedaron candados.
 
-**Mitigación parcial (monoambiente):** el guardrail determinístico en el merge se re-aplica cada noche (el merge re-procesa `status='actualizado'`), así que para dorms-monoambiente la corrección persiste sin candado. **Pero el bug general (otros campos LLM-override sin guardrail) sigue.**
+**⚠ "El LLM tiene razón" NO es universal.** Para dorms el LLM→0 es mixto: a veces monoambiente real (acierta), a veces 1-dorm que alucina por "studio"/"smart studio". La **cruda es el único árbitro**. Para `estado_construccion`/`tipo_cambio_detectado` el LLM suele leer el aviso viejo → la columna del founder es la verdad y `existing_protected` es by-design. Distinguir por campo. Ver `CALIDAD_DATOS_BACKLOG.md` ("Coherencia texto↔dato").
 
-**Fix general (a evaluar):** candar automáticamente el campo cuando el merge aplica override LLM de alta confianza (`registrar_discovery` ya respeta candados). Trade-off: congela el campo. NO tocar `registrar_discovery` (función core, alto riesgo). Ver postmortem monoambientes.
-
-**⚠ Matiz crítico (22 May 2026): "el LLM tiene razón" NO es universal.** El fix de auto-candar overrides LLM solo aplica a campos donde el LLM realmente gana (dorms/área — el dato físico no cambia). Para `estado_construccion` y `tipo_cambio_detectado`, el LLM suele leer el **aviso viejo** (ej: edificio ya entregado pero el anuncio aún dice "preventa", o "sólo dólares" mal interpretado) → ahí la **columna del founder es la verdad** y la protección `existing_protected` del merge es **by-design, no un bug**. Auto-candar el override LLM en esos campos congelaría el dato viejo. Antes de generalizar el fix, distinguir por campo. Ver `CALIDAD_DATOS_BACKLOG.md` (sección "Coherencia texto↔dato — otros candidatos").
+**Pendiente menor (opcional):** detección continua vía `/audit-feed-ventas-semanal` (+ alquileres) — check read-only de divergencias cruda↔columna, sin tocar producción.
 
 ## Funciones SQL con filtros de mercado — REVISADO (23 Mar 2026)
 

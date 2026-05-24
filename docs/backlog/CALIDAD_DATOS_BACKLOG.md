@@ -6,6 +6,8 @@
 
 **Cierre (22 May 2026):** verificado contra prod. La corrección retroactiva ya estaba aplicada (302 props con señal monoambiente en `dorms=0`, 124 con candado manual + resto sostenido por el guardrail del merge). Quedaban 2 residuales activas en `v_mercado_*` (1926 venta `dorms=1`; 1943 alquiler `dorms=NULL`) — corregidas a `dorms=0` + candado (`motivo=correccion_monoambiente_retroactivo`). Barrido final: **cero props completadas con `dorms=1`/`NULL` + señal monoambiente**; las 27 con `dorms=NULL` restantes son `inactivo_confirmed`/`excluida_zona` (fuera de feed). Bug cerrado por ambos lados: retroactivo + guardrail merge (mig 246/247) para nuevas.
 
+**Reconfirmado (24 May 2026):** barrido contra la **descripción cruda** (`datos_json_enrichment->>'descripcion'`, existe en venta para los 3 portales). 0 monoambientes mal catalogados vivos en venta y alquiler; el caso inverso (col=0 siendo 1-dorm real) dio 1 prop, ya corregida + candada. El "LLM-gana sobre discovery" captura los nuevos; el candado blinda los detectados. Ver memoria `audit_overrides_llm_dorms.md`.
+
 **Problema (histórico, contexto del porqué):** error sistemático de extracción en **los 3 portales**: props que la fuente publica como **"monoambiente"** están cargadas con `dormitorios = 1`. Detectado desde un consumidor externo de SICI comparando contra la fuente.
 
 **Por qué no lo atrapa un cruce interno:** `dormitorios=1` y `tipo='departamento'` están mal de forma **consistente entre sí** → cruzar campos internos (área vs dorms) no lo detecta. Solo se ve comparando contra la fuente.
@@ -105,9 +107,11 @@ Las 5 activas (156, 309, 385, 158, 452) tienen valores plausibles — no requier
 
 Detectados al cruzar `propiedades_v2` con `proyectos_master` para armar lectura mensual de mercado. Ambos contaminan métricas de movimiento, concentración y "lanzamientos del mes".
 
-### 1. Duplicados latentes en SANTORINI VENTURA
+### 1. Duplicados latentes en SANTORINI VENTURA — RESUELTO (24 May 2026)
 
-**Síntoma:** 14+ propiedades activas con signatura idéntica (precio $70,402 + 56m² + 1D + estado entrega) sin marcar como duplicados. Cada una con URL distinta en Remax. El broker subió la misma unidad múltiples veces; el algoritmo de detección no las consolidó.
+**Cierre (24 May 2026):** verificado contra prod. El cluster ya no infla el feed: 1 prop canónica activa (id 1754) + 15 marcadas `duplicado_de` (ids 1740-1757, quedan fuera de `v_mercado_venta`); el resto de la signatura $70.402/56m²/1D está `inactivo_confirmed`. Lo único que queda son parqueos/bauleras de área chica (3m², 12,5m²) que el filtro `area >= 20` ya excluye del mercado — no es el bug reportado. Consolidado por curación manual del founder.
+
+**Síntoma (histórico):** 14+ propiedades activas con signatura idéntica (precio $70,402 + 56m² + 1D + estado entrega) sin marcar como duplicados. Cada una con URL distinta en Remax. El broker subió la misma unidad múltiples veces; el algoritmo de detección no las consolidó.
 
 **Impacto:**
 - Stock zonal de Villa Brígida inflado (~17 props que probablemente son la misma)
