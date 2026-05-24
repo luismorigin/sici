@@ -54,6 +54,30 @@
 
 **Pendiente menor (opcional):** detección continua vía `/audit-feed-ventas-semanal` (+ alquileres) — check read-only de divergencias cruda↔columna, sin tocar producción.
 
+## Extractor Remax no captura el `title` del aviso — FIX DE RIESGO BAJO, SIN IMPLEMENTAR (decisión 24 May 2026: dejar anotado)
+
+**Decisión:** documentado pero NO aplicado. El gap es chico (~1 prop) y el founder prefiere no tocar los extractores (archivos largos, frágiles) sin necesidad real. Queda listo para aplicar si algún día conviene.
+
+**Síntoma:** props cuyo **título** del aviso trae la tipología pero la **descripción** no. Caso testigo: prop 1778 (SÖLO Industrial Apartments, 33,57 m²). El título del portal dice "DEPARTAMENTO EN VENTA EQUIPETROL (Monoambiente)" pero la descripción es marketing genérico del proyecto, sin la palabra. Resultado: monoambiente catalogado como 1 dorm.
+
+**Por qué se escapa a todo:** Remax no tiene tipo "monoambiente" en su taxonomía → el API de búsqueda da `number_bedrooms=1` (→ columna=1); el LLM recibe solo la descripción (sin la palabra) → alucina 1 con confianza alta; el guardrail mono del merge mira `url`+`datos_json_discovery`, no el título. La única fuente con la verdad es el `title` del data-page, y **el extractor lo descarta**. (No es punto ciego inevitable: el dato está en la fuente.)
+
+**El fix (1 línea por extractor, aditivo):** en `flujo_b_processing_v3.0`, nodo "Extractor Remax v1.9", dentro de `mapearRemax`, junto a `data.descripcion = descripcion;` agregar:
+```js
+data.titulo_anuncio = listing.title || "";
+```
+El LLM ya está cableado para usarlo: `Build Prompt v4.0` (flujo_enrichment_llm_venta) ya lee `enrichment.titulo_anuncio` e inserta "TÍTULO DEL ANUNCIO" en el prompt (hoy sale "(no disponible)"). Con el título poblado, el LLM detecta "(Monoambiente)" → dorms=0 confianza alta → el merge ("LLM-gana sobre discovery") lo aplica sobre el 1 del portal. Análogo en "Extractor Century21 v16.5" con el `encabezado` (menos urgente: en C21 la descripción cruda ya suele empezar con el encabezado).
+
+**Por qué es riesgo bajo (verificado, no asumido):**
+- **Aditivo:** agrega una key nueva, lee `listing.title` (ya usado en `extraerNombreEdificio`), no toca ninguna variable ni flujo existente.
+- **No colisiona:** `titulo_anuncio`/`data.title`/`.titulo` no aparecen en ningún nodo del workflow → no pisa nada.
+- **Mismo riel que un campo que ya funciona:** el nodo "Registrar Enrichment" pasa `JSON.stringify($json)` (el objeto entero, sin mapeo ni whitelist) y `registrar_enrichment` hace `datos_json_enrichment = p_data` (guarda todo). `titulo_anuncio` viaja igual que `descripcion`, que ya llega a la BD.
+- **Validado empíricamente:** test A/B/C con Haiku 4.5 (temp 0, prompt real, 3/3 determinista) — sin título→1 (bug), con título "(Monoambiente)"→0 (fix), título neutro→1 (control: no sobre-corrige). Script: `scripts/llm-enrichment/test-titulo-fix.js`.
+
+**Cómo aplicarlo con red de seguridad (si se decide):** duplicar el workflow en n8n → hacer el cambio en la copia → ejecutar el nodo Extractor aislado con input pinneado y confirmar que el output es idéntico salvo el campo nuevo → recién entonces aplicar al workflow real → sincronizar el JSON del repo. Rollback = borrar la línea (cero migración). **No retroactivo:** solo corrige props futuras; las ya `completado` (hermanas de SÖLO, etc.) requieren re-enrichment forzado o corrección manual + candado.
+
+**Referencia:** memoria `audit_overrides_llm_dorms.md`.
+
 ## Funciones SQL con filtros de mercado — REVISADO (23 Mar 2026)
 
 **Contexto:** Migración 193 creó vistas canónicas `v_mercado_venta` y `v_mercado_alquiler`. Auditoría de 60 funciones encontró 3 con filtros incompletos. Re-investigado 23 Mar 2026.
