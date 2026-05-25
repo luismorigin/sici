@@ -1,5 +1,5 @@
 ---
-description: Audit semanal del feed /alquileres sin scraping — capas 2+3+4 sobre props nuevas/rango. Costo $0, solo SQL. Reporte ejecutivo con SQL listo. Sin persistencia. v1.3: + check dormitorios↔cruda (8 calibraciones previas).
+description: Audit semanal del feed /alquileres sin scraping — capas 2+3+4 sobre props nuevas/rango. Costo $0, solo SQL. Reporte ejecutivo con SQL listo. Sin persistencia. v1.4: + precio/área cruda↔BD por LECTURA (no regex) + anexo cola barata.
 ---
 
 # Audit semanal — feed /alquileres
@@ -8,9 +8,20 @@ Variante liviana del audit mensual. Cubre props nuevas en una ventana temporal u
 
 Cuándo usarlo: lunes a la mañana (o cualquier día) para limpiar la deuda de props nuevas mientras están frescas. Complementa al `/audit-feed-alquileres-mensual` que cubre todo el feed + drift fetcher curl.
 
-## Versión actual: v1.3 — 24-may-2026
+## Principio clave (v1.4): lectura > regex
 
-v1.3 agrega el check 2.8 (dormitorios=0 que contradice la cruda) — alineado con la skill de ventas. Resto sin cambios respecto a v1.2.
+Los checks nuevos de v1.4 (2.9 precio, 4.4 área, anexo cola barata) **NO usan regex para decidir**. La query SQL solo **trae** el dato de BD + la cruda completa; el **agente lee la cruda y compara con juicio**. Esto es lo que mata los falsos positivos que hundieron al viejo check 2.1 (un regex ciego que marcaba toda mención de "Bs"). El agente distingue por contexto "alquiler 3.100 Bs" de "garantía 3.150 Bs" de "expensas 463 Bs" — algo que un regex no puede. **"Solo SQL" significa que la query es SQL puro; NO significa que la detección deba ser SQL.** La inteligencia vive en la lectura, no en el patrón.
+
+Regla de oro anti-FP: si no podés identificar con confianza el dato en la cruda, **no marques error** — dejá la prop fuera del reporte o como 🟢. El silencio es mejor que un falso positivo. La ambigüedad real (varios precios, USD sin TC claro) se reporta como 🟡 "revisar" mostrando el fragmento, nunca como 🔴.
+
+## Versión actual: v1.4 — 25-may-2026
+
+v1.4 cierra el hueco de precio mal extraído que el semanal no veía:
+- **Check 2.9** (NUEVO): precio cruda↔BD por lectura del agente (reemplaza conceptualmente al viejo 2.1 eliminado, sin sus FP).
+- **Check 4.4** (NUEVO): área cruda↔BD por lectura del agente.
+- **Anexo A** (NUEVO): barrido de la cola barata de TODO el feed (fuera de ventana), donde se concentran los bugs de conversión de moneda. Excluye props con precio ya candado → la lista se agota en vez de repetirse.
+
+v1.3 agregó el check 2.8 (dormitorios=0 que contradice la cruda) — alineado con la skill de ventas. v1.1/v1.2 ver "Lecciones de calibración".
 
 ## v1.2 — post-retest 13 may 2026
 
@@ -57,6 +68,7 @@ Si `con_cruda / total < 0.70`, abortar y sugerir `cd scripts/auditoria-feed-alqu
 | `--ids=N,M,...` | (todos del rango) | `--ids=1834,1850` |
 | `--solo-criticos` | false | filtra capa 4 (anomalías menores) |
 | `--incluir-recientes` | false | NO excluye props editadas en últimos 30 min |
+| `--cola=N` | 15 | top-N baratas en Anexo A; `--cola=0` lo desactiva |
 
 **Reglas de combinación**:
 - `--desde` + `--hasta` ganan sobre `--dias`
@@ -285,6 +297,48 @@ ORDER BY v.area_total_m2 DESC;
 ```
 
 Análisis humano por caso: leer la cruda. Si dice claramente "N dormitorio(s)" para **la unidad** (no el rango del proyecto) → corregir `dormitorios = N` + candar (`por='audit_dormitorios'`). Si es rango de proyecto → dejar, no concluyente. **Solo esta dirección** (el caso directo "cruda dice monoambiente + dorms≥1" lo cubre el guardrail mono del merge alquiler, mig 214/247). Ver memoria `audit_overrides_llm_dorms.md`.
+
+#### 2.9 Precio cruda ↔ BD por LECTURA 🔴 (NUEVO v1.4 — reemplaza al viejo 2.1)
+
+**Por qué este check es distinto al 2.1 eliminado.** El 2.1 viejo era un regex SQL que solo verificaba la *presencia* de "Bs" → 100% FP. Este check **no usa regex para decidir**: la query trae el precio de BD + la cruda completa, y **el agente lee y compara con juicio** (ver "Principio clave"). Cierra el hueco real: precios mal extraídos cuyo Bs/m² queda *plausible* y por eso el check 2.2 no los ve (ej. #1835 el 25-may: 2.158 Bs en BD vs 3.100 Bs en la cruda, ratio 56.8 = "normal").
+
+Query (solo trae datos, NO decide):
+
+```sql
+SELECT v.id, v.fuente, v.nombre_edificio, v.zona,
+       v.precio_mensual_bob AS bob_bd, v.area_total_m2 AS area_bd,
+       p.datos_json_enrichment->>'descripcion' AS desc_full
+FROM v_mercado_alquiler v
+JOIN propiedades_v2 p ON p.id = v.id
+WHERE <filtro args>
+  AND v.precio_mensual_bob > 0
+  AND NOT (p.campos_bloqueados ? 'precio_mensual_bob')
+  AND p.datos_json_enrichment->>'descripcion' IS NOT NULL
+  AND LENGTH(p.datos_json_enrichment->>'descripcion') > 0
+ORDER BY v.id;
+```
+
+**Cómo leer cada prop** (criterio, no regex):
+1. Identificar en la cruda el monto del **alquiler mensual** — NO garantía, comisión, expensas, depósito ni "mes adelantado". Señales: "precio de alquiler", "canon mensual", "alquiler:", "💰", "Bs X (incluye expensas)".
+2. Si la cruda cotiza en **USD** ("316 $us", "$us 400"): es ambiguo en alquiler (oficial vs paralelo). Como referencia, USD×6.96 = Bs oficial. Si `bob_bd` ≈ USD×6.96 → OK. Si `bob_bd` ≈ USD×~9.5 → posible TC paralelo aplicado → 🟡 revisar (NO 🔴). El alquiler usa `precio_mensual_bob` como fuente de verdad; un USD-paralelo guardado en Bs no es necesariamente un error.
+3. Comparar el monto de alquiler de la cruda vs `bob_bd`:
+   - diff ≤5% → OK, no reportar.
+   - diff >5% **y** el monto de la cruda es **inequívoco** (un solo precio claro de alquiler) → 🔴 con SQL de corrección + candado.
+   - cruda **ambigua** (varios montos posibles, USD sin TC claro, "nuevo precio" contradictorio) → 🟡 revisar.
+4. **Siempre** mostrar en el reporte: `bob_bd`, el monto leído de la cruda, y **el fragmento textual exacto** de donde lo sacaste (para que el humano verifique tu lectura). Nunca pidas confianza ciega.
+
+**Regla anti-FP**: si no podés identificar con confianza el precio de alquiler en la cruda, NO marques error — omití la prop o márcala 🟢 "cruda sin precio claro".
+
+SQL de corrección (plantilla):
+```sql
+UPDATE propiedades_v2
+SET precio_mensual_bob = <correcto>,
+    campos_bloqueados = campos_bloqueados || jsonb_build_object(
+      'precio_mensual_bob', jsonb_build_object(
+        'por','audit_semanal','fecha', now()::text, 'bloqueado', true,
+        'valor_original', <bob_bd>, 'razon','<motivo>'))
+WHERE id = <id>;
+```
 
 ### 4. Capa 3 — Matching audit (4 checks)
 
@@ -533,6 +587,52 @@ ORDER BY veces_drift DESC;
 
 **Notas de schema**: `audit_descripciones_runs.run_at` (timestamp with time zone), NO `created_at`.
 
+#### 4.4 Área cruda ↔ BD por LECTURA 🟡 (NUEVO v1.4)
+
+Mismo principio de lectura que el 2.9, pero para superficie. **Reusar los datos que ya trajo el 2.9** (`area_bd` + `desc_full` ya están en esa query — no hace falta otra). El agente lee la cruda y busca el área en m². Cierra el hueco donde el extractor toma un m² distinto al de la cruda (ej. #1808 el 25-may: 37 m² en BD vs 42 m² en la cruda) — ni el semanal ni el mensual lo veían (solo detectan área *absurda*, no *discrepante*).
+
+**Cómo leer**:
+1. Buscar en la cruda "superficie", "m²", "metros", "X m2" referido a **la unidad**.
+2. Si la cruda da un área clara y difiere de `area_bd` >10% → 🟡 (el área cambia precio/m² y comparables).
+3. Cuidado con ambigüedad: algunas crudas dan área de terreno + construida, o de varias tipologías. Si no es claro cuál es la unidad → 🟡 revisar, no 🔴.
+4. **Siempre** mostrar `area_bd` vs área leída + el fragmento textual.
+
+**Anti-FP**: redondeos (38 vs 37.92) NO se reportan. Solo diferencias >10% con área inequívoca en la cruda.
+
+### 5.5 Anexo A — Barrido cola barata (fuera de ventana) 🔴 (NUEVO v1.4)
+
+Saltar si `--cola=0`. **No respeta el filtro temporal** de la ventana — ese es su propósito. Sí respeta el race-condition guard (excluir editadas <30min) salvo `--incluir-recientes`.
+
+**Por qué.** Los bugs de precio (USD metido en el campo BOB, conversión de moneda mal) producen **siempre** números bajos. La cola barata del feed es un imán de ese bug. Este anexo mira las props más baratas de **todo el feed** (no solo la ventana), porque ahí el error se concentra. Validado el 25-may-2026: los 3 errores de precio reales del día (#1835, #1898, #1240) eran **todos** de la cola barata, y 2 eran props viejas que la ventana nunca habría tocado.
+
+**Mecánica anti-repetición.** Excluye props con `precio_mensual_bob` ya candado. Así: las que revisás y candás —corregidas O confirmadas-OK— salen de la lista, y la próxima corrida muestra las siguientes baratas sin verificar. La lista **se agota** en vez de repetirse semana a semana.
+
+Query (top-N baratas sin candar, con cruda):
+
+```sql
+SELECT v.id, v.fuente, v.nombre_edificio, v.zona, v.dormitorios AS dorm,
+       v.area_total_m2 AS area_bd, v.amoblado,
+       v.precio_mensual_bob AS bob_bd,
+       ROUND(v.precio_mensual_bob / NULLIF(v.area_total_m2,0),1) AS bs_m2,
+       p.datos_json_enrichment->>'descripcion' AS desc_full
+FROM v_mercado_alquiler v
+JOIN propiedades_v2 p ON p.id = v.id
+WHERE NOT (p.campos_bloqueados ? 'precio_mensual_bob')
+  AND v.precio_mensual_bob > 0
+  AND (p.fecha_actualizacion IS NULL OR p.fecha_actualizacion < NOW() - INTERVAL '30 minutes')
+ORDER BY v.precio_mensual_bob ASC
+LIMIT 15;  -- o --cola=N
+```
+
+**Análisis**: aplicar a cada una la lógica de lectura de los checks **2.9** (precio) y **4.4** (área). Son ≤15 props → leelas todas. En el reporte:
+- Las que tienen mismatch de precio → 🔴 (SQL de corrección + candado).
+- Las que tienen mismatch de área o ambigüedad → 🟡.
+- Las que coinciden → agruparlas en 1 línea "N baratas verificadas OK".
+
+**Dedup**: si una prop ya apareció en el check 2.9 (cae dentro de la ventana), no la repitas — reportala una sola vez.
+
+**Cierre sugerido**: para las baratas verificadas correctas, ofrecé candar el precio (`por='audit_cola_barata'`) para que salgan del barrido futuro. Para las corregidas, el SQL de corrección ya las canda.
+
 ### 6. Aplicar reglas de filtrado de ruido
 
 Antes de armar el reporte:
@@ -555,6 +655,9 @@ Antes de armar el reporte:
 ### Cambio de precio explícito (N props)
 | ID | Edificio | Bs BD | Bs desc | diff % |
 
+### Precio cruda ↔ BD por lectura (N props)  ← check 2.9 (v1.4)
+| ID | Edificio | Bs BD | Bs leído cruda | diff % | fragmento textual |
+
 ### Precio absurdo (N props)
 | ID | Edificio | zona | Bs/mes | área | Bs/m²/mes |
 
@@ -575,15 +678,26 @@ Discriminar: GPS pm errado / GPS listing errado / matching realmente mal
 ### Dormitorios=0 vs cruda (N props)
 | ID | Edificio | área | cruda dice | acción |
 
+### Precio cruda↔BD ambiguo / USD-paralelo (N props)  ← check 2.9 (v1.4)
+| ID | Edificio | Bs BD | cruda dice | por qué ambiguo |
+
 ## 🟡 ATENCIÓN (Z props para revisar manualmente)
 
 - Mascotas mismatch: [tabla]
 - Expensas mismatch: [tabla]
+- Área cruda ↔ BD >10% (check 4.4, v1.4): [tabla con área BD | área cruda | fragmento]
 - nombre_edificio sospechoso: [tabla]
 - GPS exceso 30-100m: [tabla]
 - nombre coincide con alias de otro pm: [tabla]
 - Descripciones muy cortas: [tabla]
 - Drift recurrente histórico (≥2 cambios 60d): [tabla]
+
+## 🔵 ANEXO A — Cola barata (fuera de ventana, v1.4)
+
+- Baratas auditadas (top-N sin candar): <N>
+- 🔴 Precio mal extraído: [tabla con SQL]
+- 🟡 Área/ambiguo: [tabla]
+- ✅ Verificadas OK (candables para que salgan del barrido futuro): <N> [IDs]
 
 ## 🟢 INFORMATIVO
 
@@ -621,22 +735,41 @@ Después del reporte:
 
 ## Diferencias con `/audit-feed-alquileres-mensual`
 
-| Aspecto | Mensual | Semanal v1.1 |
+| Aspecto | Mensual | Semanal v1.4 |
 |---|---|---|
 | Frecuencia | 1 vez/mes | 1 vez/semana o ad-hoc |
 | Costo | $0 (curl) | $0 (solo SQL) |
-| Tiempo | ~30-60s para 141 props | <10s para 25 props |
+| Tiempo | ~30-60s para 141 props | <30s (lectura de crudas suma algo) |
 | Capa 1 (drift portal) | ✅ Sí (curl) | ❌ No |
 | Listings muertos (HTTP/HTML) | ✅ Sí | ❌ No |
-| Comparación precio desc vs BD | ✅ Sí (flag `precio_aparecio`) | ❌ Eliminado en v1.1 (sin extracción JS daba 100% FP) |
-| Capa 2 (internas) | 🟡 4 flags semánticos | ✅ 7 checks BD vs BD |
+| Comparación precio cruda vs BD | ✅ Sí (regex JS, todo el feed) | ✅ Sí (lectura del agente, ventana + cola barata) — check 2.9 v1.4 |
+| Comparación área cruda vs BD | ❌ No (hueco compartido) | ✅ Sí (lectura del agente) — check 4.4 v1.4 |
+| Cola barata (fuera de ventana) | (cubre todo el feed) | ✅ Anexo A v1.4 (top-N sin candar) |
+| Capa 2 (internas) | 🟡 4 flags semánticos | ✅ 9 checks |
 | Capa 3 (matching) | ✅ 1 check | ✅ 4 checks (con tokenización + bandas GPS) |
-| Capa 4 (anomalías) | ❌ No directamente | ✅ 3 checks |
+| Capa 4 (anomalías) | ❌ No directamente | ✅ 4 checks |
 | Race condition guard | ❌ No | ✅ Sí (30 min) |
 | Drift recurrente histórico | (genera la data) | ✅ Usa los runs anteriores |
 | Persistencia | `audit_descripciones_runs` con `tipo_operacion='alquiler'` | ❌ No persiste |
 
 ## Lecciones de calibración (changelog)
+
+### v1.4 — 2026-05-25 (cerrar hueco de precio mal extraído)
+
+Surge de una sesión donde el user encontró a mano precios mal extraídos que el semanal no marcaba (#1835: 2.158 Bs en BD vs 3.100 Bs en la cruda). Diagnóstico de los dos huecos:
+
+1. **Ventana temporal**: el semanal solo mira props nuevas → no ve inventario viejo. 8/10 de las props más baratas con error eran viejas.
+2. **Sin comparación de precio-número**: el único check de precio era el 2.2 (Bs/m² absurdo). Un precio mal pero con ratio plausible (#1835 = 56.8 Bs/m²) se escapa.
+
+**El error de diseño que se corrige**: se había interpretado "solo SQL" como "la detección debe ser SQL", y por eso el viejo 2.1 se eliminó sin reemplazo (el regex SQL daba 100% FP). La corrección: **el SQL solo trae los datos; el agente lee la cruda y compara con juicio**. Eso da la robustez del regex JS del mensual sin sus límites, y 0 FP en el test del 25-may (las 10 baratas).
+
+Cambios:
+- **Check 2.9** (precio cruda↔BD por lectura) — reemplaza conceptualmente al 2.1.
+- **Check 4.4** (área cruda↔BD por lectura) — cierra hueco compartido con el mensual.
+- **Anexo A** (cola barata fuera de ventana, excluye candadas → se agota).
+- Arg `--cola=N` (default 15).
+
+Casos del 25-may que estos checks ahora cazan: #1835 (precio, lo cazaría 2.9 y Anexo A), #1808 (área 37 vs 42, lo caza 4.4), #1240 (USD-paralelo → 🟡 revisar, no FP).
 
 ### v1.3 — 2026-05-24
 

@@ -198,9 +198,10 @@ function emptyCmp() {
 async function runCapa2(supabase) {
   const { data: vista, error: eV } = await supabase
     .from('v_mercado_alquiler')
-    .select('id, precio_mensual_bob');
+    .select('id, precio_mensual_bob, area_total_m2');
   if (eV) throw eV;
   const precioById = new Map(vista.map((v) => [v.id, parseFloat(v.precio_mensual_bob) || 0]));
+  const areaById = new Map(vista.map((v) => [v.id, parseFloat(v.area_total_m2) || 0]));
   const ids = vista.map((v) => v.id);
   if (ids.length === 0) return new Map();
 
@@ -216,6 +217,7 @@ async function runCapa2(supabase) {
     for (const p of data) {
       const issues = runInternalChecks({
         precio_mensual_bob: precioById.get(p.id) || 0,
+        area_total_m2: areaById.get(p.id) || 0,
         nombre_edificio: p.nombre_edificio,
         descripcion_cruda: p.datos_json_enrichment?.descripcion || '',
       });

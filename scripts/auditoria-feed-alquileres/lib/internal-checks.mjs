@@ -4,6 +4,8 @@
 //   precio_mensual_usd derivado por TC oficial /6.96)
 // - SIN check de "tipo_cambio_detectado" (no aplica a alquiler)
 // - Check precio: comparar precio_mensual_bob BD vs precio que aparece en desc
+// - Check área (v1.4): comparar area_total_m2 BD vs área que aparece en desc
+//   (cierra hueco compartido con el semanal: extractor toma m² distinto al de la cruda)
 // - Check edificio: igual que venta (busca otros edificios mencionados)
 // - Check desync contenido↔enrichment: igual que venta
 
@@ -16,6 +18,15 @@ const PATRONES_PRECIO_BS = [
 const PATRONES_PRECIO_USD = [
   /(?:\$\s?us?\.?|usd?)\s*(\d{2,5})/gi,
   /(\d{2,5})\s*\$\s?us\b/gi,
+];
+
+// Área: exigir "m2"/"m²" o "superficie ... m" para evitar capturar distancias
+// ("a 200 metros del anillo") o pisos. Rango válido depto: 15-800 m².
+// NOTA: sin \b tras el (2|²) — "²" no es carácter de palabra, así que \b fallaba
+// justo con el superíndice "m²" (el formato más común en las crudas).
+const PATRONES_AREA = [
+  /(\d{2,4}(?:[.,]\d{1,2})?)\s*m\s?(?:2|²)/gi,
+  /(?:superficie|área|area)\s*:?\s*(?:de\s+)?(\d{2,4}(?:[.,]\d{1,2})?)\s*m/gi,
 ];
 
 // case-insensitive en la palabra clave (Edif/edif, Condominio/condominio, Torre/torre)
@@ -44,6 +55,9 @@ export function runChecks(prop) {
 
   const issuePrecio = checkPrecioMensualVsDesc(desc, prop.precio_mensual_bob);
   if (issuePrecio) issues.push(issuePrecio);
+
+  const issueArea = checkAreaVsDesc(desc, prop.area_total_m2);
+  if (issueArea) issues.push(issueArea);
 
   const issueEdificio = checkOtroEdificioMencionado(desc, prop.nombre_edificio);
   if (issueEdificio) issues.push(issueEdificio);
@@ -78,6 +92,43 @@ function checkPrecioMensualVsDesc(desc, precioBobBd) {
     msg: `BD=Bs ${precioBobBd}, desc principal=Bs ${candidato} (diff ${(diffPct * 100).toFixed(1)}%)`,
     detalle: { precio_bd_bob: precioBobBd, precio_desc_principal_bob: candidato, todos_precios_norm: preciosNorm },
   };
+}
+
+function checkAreaVsDesc(desc, areaBd) {
+  const area = parseFloat(areaBd) || 0;
+  if (area <= 0) return null;
+  const areas = extraerAreas(desc);
+  if (areas.length === 0) return null;
+
+  // Heurística defensiva (igual que precio): tomar el área más cercana al BD.
+  // Las crudas a veces mencionan varias (balcón, terraza, total) — el más cercano
+  // evita FP. Solo flagea si AUN el más cercano difiere del BD.
+  const candidato = areas.reduce((best, a) =>
+    Math.abs(a - area) < Math.abs(best - area) ? a : best
+  );
+  const diffPct = Math.abs(candidato - area) / area;
+
+  if (diffPct < 0.10) return null; // tolera redondeos (38 vs 37.92)
+
+  return {
+    tipo: 'area_mismatch_desc',
+    severidad: diffPct > 0.25 ? 'media' : 'baja',
+    msg: `BD=${area}m², desc principal=${candidato}m² (diff ${(diffPct * 100).toFixed(1)}%)`,
+    detalle: { area_bd: area, area_desc_principal: candidato, todas_areas: areas },
+  };
+}
+
+function extraerAreas(desc) {
+  const matches = new Set();
+  for (const re of PATRONES_AREA) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(desc)) !== null) {
+      const num = parseNumeroEsp(m[1]);
+      if (num >= 15 && num <= 800) matches.add(num);
+    }
+  }
+  return [...matches];
 }
 
 function checkOtroEdificioMencionado(desc, edificioBd) {

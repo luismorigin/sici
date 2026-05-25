@@ -7,13 +7,13 @@ description: Audit mensual del feed /alquileres — drift fetcher (curl) + incon
 Auditoría completa del feed cruzando 3 capas:
 
 1. **Capa 1 — Drift fetcher (curl directo)**: re-scrapea las props vivas y compara descripción guardada (`datos_json_enrichment.descripcion`) vs portal actual.
-2. **Capa 2 — Inconsistencias internas**: detecta desincronizaciones entre `precio_mensual_bob`, `nombre_edificio` y la descripción cruda.
+2. **Capa 2 — Inconsistencias internas**: detecta desincronizaciones entre `precio_mensual_bob`, `area_total_m2` (v1.4), `nombre_edificio` y la descripción cruda.
 3. **Capa 3 — Audit matching**: verifica que `nombre_edificio` BD aparece en slug/title/desc del listing, usando `proyectos_master.alias_conocidos`.
 
 **Diferencias vs `/audit-feed-ventas-mensual`:**
 - **Costo $0** (curl directo, sin Firecrawl). Los 3 portales sirven HTML estático suficiente para alquiler.
 - **Sin TC paralelo** (alquiler usa precio_mensual_bob como fuente de verdad).
-- **4 flags semánticos** Tier A: amoblado, expensas, mascotas, precio.
+- **Capa 2 (v1.4)**: precio cruda↔BD + **área cruda↔BD** (NUEVO) + otro edificio mencionado, todos con verificación por lectura del agente (capa anti-FP sobre el regex).
 
 ## Argumentos
 
@@ -60,8 +60,9 @@ Leer los 3.
 
 #### Patrones críticos (siempre reportar)
 
-- **Cambio de precio mensual real**: `precio_mensual_bob` BD ≠ precio en desc, diff >5%. SQL listo:
+- **Cambio de precio mensual real**: `precio_mensual_bob` BD ≠ precio en desc, diff >5% (issue `precio_mensual_mismatch_desc`). SQL listo:
   - `UPDATE propiedades_v2 SET precio_mensual_bob = X, fecha_actualizacion = NOW() WHERE id = Y;`
+- **Área mal extraída** (v1.4): `area_total_m2` BD ≠ área en desc, diff >10% (issue `area_mismatch_desc`). El área cambia precio/m² y comparables. SQL: `UPDATE propiedades_v2 SET area_total_m2 = X, fecha_actualizacion = NOW() WHERE id = Y;`
 - **Listings muertos**: `bucket='reescrita'` con `len_scraped=0` (HTTP 200 pero HTML sin descripción).
   - SQL: `UPDATE propiedades_v2 SET status='inactivo_pending', fecha_actualizacion=NOW() WHERE id IN (...);`
 - **Cambio de amoblado/sin amoblar**: flag `amoblado_aparecio` o `amoblado_desaparecio`. Impacto comercial directo (cambia el público objetivo).
@@ -71,6 +72,17 @@ Leer los 3.
   1. Variante del nombre faltante en `alias_conocidos`
   2. Edificio realmente distinto
   3. Falso positivo del regex
+
+#### Verificación por lectura (v1.4 — capa anti-FP sobre el regex)
+
+El script extrae precio/área con regex + heurística "monto más cercano al BD" (defensiva contra FP). Pero el regex es una **red automática**, no la palabra final. Para cada prop que el script flagea con `precio_mensual_mismatch_desc` o `area_mismatch_desc`:
+
+1. **Leé la cruda** (`combined.json` trae el `detalle`, o consultá `datos_json_enrichment->>'descripcion'` por id) y confirmá que el monto/área que el regex tomó es realmente el del **alquiler/la unidad** — no garantía, comisión, expensas, terreno, ni el área de otra tipología.
+2. **Mostrá el fragmento textual exacto** en el reporte, junto al valor BD y al valor leído. El humano verifica tu lectura de un vistazo.
+3. Si la cruda es **ambigua** (varios montos, USD sin TC claro como el caso paralelo, áreas múltiples) → reportá 🟡 "revisar", NO 🔴. El silencio/duda es mejor que un FP.
+4. Casos USD-paralelo en alquiler: el script convierte USD×6.96. Si el `precio_mensual_bob` ≈ USD×~9.5, es TC paralelo aplicado (no necesariamente error) → 🟡.
+
+Esto le da al mensual la misma robustez de juicio que el semanal v1.4: el regex filtra las 141, vos verificás los pocos candidatos leyendo.
 
 #### CAVEAT IMPORTANTE — primer audit con baseline reciente
 
@@ -84,7 +96,10 @@ Si el backfill se corrió hace <30 días, el primer audit comparará "scraped HO
 ## 🔴 CRÍTICO (X props con acción inmediata sugerida)
 
 ### Cambios de precio mensual reales (M props)
-[tabla: ID | Edificio | Bs BD | Bs desc | diff % | acción]
+[tabla: ID | Edificio | Bs BD | Bs desc | diff % | fragmento cruda | acción]
+
+### Área mal extraída (v1.4) (M props)
+[tabla: ID | Edificio | m² BD | m² desc | diff % | fragmento cruda | acción]
 
 ### Listings muertos (P props)
 [tabla + SQL para inactivo_pending]
