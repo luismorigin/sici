@@ -1296,17 +1296,11 @@ export default function AlquileresPage({
             {!(publicShareMode && !isDesktop) && !brokerMode && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: publicShareMode ? 12 : 20, paddingBottom: publicShareMode ? 0 : 16, borderBottom: publicShareMode ? 'none' : '1px solid rgba(216,208,188,0.3)', flexShrink: 0, position: publicShareMode ? 'static' : 'sticky', top: 0, background: 'transparent', zIndex: 10, paddingTop: publicShareMode ? 0 : 8 }}>
               <div style={{ fontSize: 13, color: '#7A7060', display: 'flex', alignItems: 'center', gap: 12 }}>
-                {/* Comparar es feature del público, no tiene sentido en brokerMode
-                    (el broker está armando shortlist — comparar sus propias
-                    selecciones no ayuda a decidir). */}
-                {!brokerMode && favorites.size >= 2 && (
-                  <button onClick={() => openCompare()} style={{ padding: '6px 16px', background: '#141414', color: '#EDE8DC', border: 'none', borderRadius: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: 'pointer', letterSpacing: 0.5 }}>
-                    Comparar {favorites.size} favoritos
-                  </button>
-                )}
-                {!brokerMode && favorites.size === 1 && (
-                  <span style={{ fontSize: 12, color: '#7A7060' }}>1 favorito — elegí otro para comparar</span>
-                )}
+                {/* "Comparar" se unificó en la píldora flotante inferior (paridad con
+                    ventas, mobile + desktop). Antes había acá un botón "Comparar" + un
+                    cartel "1 favorito…" que solo aparecían en desktop — se quitaron para
+                    no tener dos affordances de comparar. Este div queda vacío a propósito:
+                    con justify-content:space-between mantiene el toggle Grid/Mapa a la derecha. */}
               </div>
               <div style={{ display: 'flex', gap: 2, background: '#EDE8DC', borderRadius: 10, padding: 3, boxShadow: '0 1px 3px rgba(20,20,20,0.08)' }}>
                 <button
@@ -1869,10 +1863,13 @@ export default function AlquileresPage({
         </button>
       )}
 
-      {/* Banner inferior Comparar (2+ favoritos) — solo mobile, fuera del condicional layout
-          para que aparezca en publicShareMode mobile (cliente final ve la shortlist en grid).
-          En desktop hay otro botón Comparar dentro del toggle bar del desktop-main. */}
-      {!brokerMode && !isDesktop && favorites.size >= 1 && (
+      {/* Banner inferior Comparar — píldora flotante en mobile Y desktop, fuera del
+          condicional layout para que aparezca en publicShareMode (cliente final ve la
+          shortlist en grid). Paridad con ventas.tsx: ventas siempre usó esta píldora
+          como único affordance de comparar (desktop + mobile). Antes alquiler la ocultaba
+          en desktop (`!isDesktop`) y mostraba un botón duplicado en el toggle bar — eso
+          se unificó acá para que venta y alquiler se vean igual en todas las superficies. */}
+      {!brokerMode && favorites.size >= 1 && (
         <div className="alq-compare-banner-wrap">
           <button className="alq-compare-banner" onClick={() => favorites.size >= 2 ? openCompare() : showToast('Elegí al menos 2 para comparar')} style={{ flex: 1 }}>
             <span className="alq-compare-banner-text">{favorites.size} favorito{favorites.size > 1 ? 's' : ''}{favorites.size >= 2 ? ' · Comparar' : ''}</span>
