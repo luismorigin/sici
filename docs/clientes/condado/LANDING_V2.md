@@ -1,6 +1,6 @@
 # Landing Condado VI — versión v2
 
-> Última actualización: 24 May 2026
+> Última actualización: 25 May 2026
 
 ## Estado actual
 
@@ -98,9 +98,10 @@ Cuando Adolfo apruebe contenido → 1 sesión de optimización (1-2 hs) y apunta
 
 ## Pendiente del cliente
 
-- [ ] Adolfo revisa la URL en compu + celular y manda observaciones de textos/fotos (reenviado 24 May con fotos de edificios sumadas)
+- [~] Adolfo revisó (reenvío 24 May con fotos de edificios). **Respondió pidiendo ~1 día (esperado ~26 May)** para enviar: (a) una foto de balcón que quieren agregar, (b) observaciones. → esperando devolución
 - [ ] Confirmar si todo el material entregado es de un mismo depto modelo o de varios (impacta narrativa visual del carrusel salón)
 - [ ] **Falta foto de Condado Park V** — pedírsela a Adolfo para completar el timeline
+- [ ] **Foto de balcón a agregar** — Adolfo la va a sacar y enviar (ubicación en la página por definir según el material)
 
 ## Próximos pasos
 
