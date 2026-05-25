@@ -1,5 +1,5 @@
 ---
-description: Audit semanal del feed /ventas sin Firecrawl — capas 2+3+4 sobre props nuevas/rango. Costo $0. Reporte ejecutivo con SQL listo. Sin persistencia. v1.2: + check dormitorios↔cruda.
+description: Audit semanal del feed /ventas sin Firecrawl — capas 2+3+4 sobre props nuevas/rango. Costo $0. Reporte ejecutivo con SQL listo. Sin persistencia. v1.3: detector TC reescrito (solo doble normalización paralelo, no más falsos positivos en no_especificado).
 ---
 
 # Audit semanal — feed /ventas
@@ -8,7 +8,11 @@ Variante liviana del audit mensual. Cubre props nuevas en una ventana temporal u
 
 Cuándo usarlo: lunes a la mañana (o cualquier día) para limpiar la deuda de props nuevas mientras están frescas. Complementa al `/audit-feed-ventas-mensual` que cubre todo el feed + drift Firecrawl.
 
-## Versión actual: v1.2 — 24-may-2026
+## Versión actual: v1.3 — 25-may-2026
+
+v1.3 **reescribe el detector de TC** tras un falso positivo grave: los viejos checks 2.1 (TC paralelo no mapeado) y 2.2 (no_especificado→oficial) hacían comparar `precio_usd` contra el USD de la desc y flaguear el gap ~1.43× como "inflación" — pero ese gap es **correcto** en `no_especificado` (es oficial vs billete). Se marcaron Condado/Sky Tower/terreno como inflados cuando estaban bien. Ahora hay **un solo check de TC** (2.1) que detecta exclusivamente la **doble normalización** real (`tc=paralelo` + `precio_usd`=oficial en vez de billete, ratio 1.2–1.6), con el modelo TC escrito arriba como reglas de oro. El 2.2 se eliminó (cosmético + ruidoso). Ver `MODELO TC` en Capa 2 y memoria `precio_paralelo_vs_oficial_billete.md`.
+
+## Versión previa: v1.2 — 24-may-2026
 
 v1.2 agrega el check 2.8 (dormitorios=0 que contradice la cruda) — único hueco que el merge no cubre solo. Resto sin cambios respecto a v1.1.
 
@@ -67,60 +71,66 @@ GROUP BY 1,2
 ORDER BY 1 DESC, 2;
 ```
 
-### 3. Capa 2 — Inconsistencias internas (8 checks)
+### 3. Capa 2 — Inconsistencias internas (7 checks)
 
-#### IMPORTANTE: Calcular `tipo_precio_display` antes de cualquier check de TC
+#### ⚠️ MODELO TC — leer antes de cualquier check de precio (evita el falso positivo del 25-may-2026)
 
-El admin muestra una clasificación combinada que NO está en una columna directa de BD. La fórmula:
+En Bolivia conviven dos "dólares": **oficial** (TC 6.96) y **paralelo/billete** (~10.2, lo que se paga en dólares físicos). Una propiedad tiene UN precio en Bs, expresado en dos monedas-dólar. El sistema almacena así (verificado en `precio_normalizado()` + viewdef de `v_mercado_venta`):
 
-```sql
--- tipo_precio_display = lo que se ve en admin
-CASE 
-  WHEN moneda_original = 'BOB' THEN 'Bolivianos'
-  WHEN moneda_original = 'USD' AND tipo_cambio_detectado = 'paralelo' THEN 'USD Paralelo'
-  WHEN moneda_original = 'USD' AND (tipo_cambio_detectado IN ('oficial','no_especificado') OR tipo_cambio_detectado IS NULL) THEN 'USD Oficial'
-  ELSE 'Otro'
-END AS tipo_precio_display
-```
+| `tipo_cambio_detectado` | qué guarda `precio_usd` | qué hace `precio_normalizado()` |
+|---|---|---|
+| `paralelo` | el **billete** (el USD escrito en la desc) | `precio_usd × tc_paralelo / 6.96` → lo sube al comparable oficial |
+| `oficial` / `no_especificado` / NULL | el **valor oficial** ya (Bs/6.96) | devuelve `precio_usd` directo (ya es el comparable) |
 
-**Solo flaguear cuando el `tipo_precio_display` calculado NO coincide con lo que dice la descripción**. NO flaguear `tipo_cambio_detectado = NULL` por sí solo si `moneda_original = USD` (porque el admin lo muestra como "USD Oficial" automáticamente).
+**REGLAS DE ORO de la auditoría (no romperlas):**
+1. **El gap ~1.43× entre `precio_usd` y el USD de la descripción es ESPERADO y CORRECTO en `no_especificado`/`oficial`** (es oficial vs billete, no inflación). **NUNCA flaguearlo.** Esto rompió el audit del 25-may: se marcó Condado/Sky Tower/terreno como "inflados 43%" cuando estaban bien, y la "corrección" los habría roto.
+2. El feed muestra el **comparable** (`precio_norm`), no el billete. Que muestre $342K cuando la desc dice $238K billete es correcto en `no_especificado`.
+3. El **único** bug precio-TC que se audita es la **doble normalización** (check 2.1). Nada más se flaguea por TC.
 
-#### 2.1 TC paralelo no mapeado 🔴
+#### 2.1 Doble normalización TC paralelo (`precio_usd` = oficial en vez de billete) 🔴
 
-Detección: `tipo_precio_display = 'USD Oficial'` pero la descripción menciona **explícitamente** "TC paralelo", "al paralelo", "dólares paralelo", "tc del día", "blue", "USDT".
+**Único check de TC.** Solo aplica a `tc=paralelo`. Firma confiable: `ratio = precio_usd / (USD escrito en la desc)`. Correcto → ratio ≈ 1.0. Bug → ratio ≈ 1.2–1.6 (`precio_usd` quedó en oficial; la función lo vuelve a multiplicar → feed inflado ~30-46%). El SQL **clasifica solo** — sin paso de "análisis humano difuso" que invite a sobre-flaguear:
 
 ```sql
-SELECT v.id, v.fuente, v.nombre_edificio, v.precio_usd, v.tipo_cambio_detectado, v.moneda_original,
-       p.datos_json_enrichment->>'descripcion' AS desc
-FROM v_mercado_venta v
-JOIN propiedades_v2 p ON p.id = v.id
-WHERE <filtro args>
-  AND (
-    (v.moneda_original = 'BOB')
-    OR (v.moneda_original = 'USD' AND (v.tipo_cambio_detectado IN ('oficial','no_especificado') OR v.tipo_cambio_detectado IS NULL))
-  )
-  AND p.datos_json_enrichment->>'descripcion' ~* '(tc paralelo|al paralelo|d[oó]lares paralelo|tc del d[ií]a|usdt|al blue|d[oó]lar blue)'
-ORDER BY v.id;
+WITH par AS (
+  SELECT v.id, v.fuente, v.nombre_edificio, v.precio_usd, v.area_total_m2,
+         p.datos_json_enrichment->>'descripcion' AS d
+  FROM v_mercado_venta v JOIN propiedades_v2 p ON p.id = v.id
+  WHERE <filtro args>
+    AND v.tipo_cambio_detectado = 'paralelo'
+    AND NOT (p.campos_bloqueados ? 'precio_usd')
+),
+ext AS (
+  SELECT *, COALESCE(
+      (regexp_match(d, '(?:\$us|usd|\$)\s*([0-9][0-9.,]{4,})', 'i'))[1],
+      (regexp_match(d, '([0-9][0-9.,]{4,})\s*(?:\$us|usd|d[oó]lares|\$)', 'i'))[1],
+      (regexp_match(d, 'precio[^0-9]{0,14}([0-9][0-9.,]{4,})', 'i'))[1]
+    ) AS desc_raw
+  FROM par
+), calc AS (
+  SELECT id, fuente, nombre_edificio, precio_usd, area_total_m2, desc_raw,
+    NULLIF(regexp_replace(desc_raw,'[.,]','','g'),'')::numeric AS billete_desc
+  FROM ext
+)
+SELECT id, fuente, nombre_edificio, precio_usd, billete_desc,
+  ROUND(precio_usd / NULLIF(billete_desc,0), 3) AS ratio,
+  CASE
+    WHEN billete_desc IS NULL THEN 'sin USD en desc — no verificable (skip)'
+    WHEN precio_usd/billete_desc BETWEEN 0.90 AND 1.10 THEN 'OK (precio_usd = billete)'
+    WHEN precio_usd/billete_desc BETWEEN 1.15 AND 1.60 THEN '🔴 BUG doble norm — corregir precio_usd = billete_desc + candar'
+    WHEN precio_usd/billete_desc < 0.5 THEN 'revisar con check 2.4 (posible parse magnitud) o regex agarró un BOB'
+    ELSE 'ratio raro — regex agarró mal número (skip, NO flaguear)'
+  END AS diagnostico
+FROM calc
+WHERE billete_desc IS NOT NULL
+ORDER BY ratio DESC NULLS LAST;
 ```
 
-Para cada candidato: leer la desc + comparar precio mencionado. Si la desc dice paralelo Y precio_usd × 6.96 NO concuerda con un precio en Bs declarado, es **paralelo mal mapeado** 🔴.
+Flaguear 🔴 **solo** las filas `diagnostico = '🔴 BUG...'`. Fix: `precio_usd = billete_desc` + candar `precio_usd`. **No tocar las `OK` ni las `skip`.** Validar 1-2 leyendo la desc antes de aplicar (el regex puede agarrar un $/m² o un BOB → esos quedan en `skip`/`ratio raro`).
 
-#### 2.2 TC `no_especificado` que debería ser `oficial` 🟡 (NUEVO)
+#### 2.2 (ELIMINADO) — `no_especificado` → `oficial` NO se audita
 
-Detección: `moneda_original = 'BOB'` Y `tipo_cambio_detectado = 'no_especificado'` Y la desc menciona un precio en Bs cuyo ratio con `precio_usd × 6.96` es ≈ 1.0.
-
-```sql
-SELECT v.id, v.fuente, v.nombre_edificio, v.precio_usd, v.tipo_cambio_detectado, v.moneda_original,
-       p.datos_json_enrichment->>'descripcion' AS desc
-FROM v_mercado_venta v
-JOIN propiedades_v2 p ON p.id = v.id
-WHERE <filtro args>
-  AND v.moneda_original = 'BOB'
-  AND v.tipo_cambio_detectado = 'no_especificado'
-ORDER BY v.id;
-```
-
-Análisis humano: si el listing es claramente en Bs con TC oficial (sin mención de paralelo), proponer cambio a `'oficial'`. Severidad 🟡 (no afecta display porque `'no_especificado'` también resuelve a "USD Oficial" en admin, pero deja el dato más limpio para audits futuros).
+Era cosmético (ambos resuelven a "USD Oficial" con el mismo `precio_norm`) y generaba ruido masivo + el falso positivo del 25-may. **No flaguear props `no_especificado`/`oficial` por TC.** Si alguna vez se quiere limpiar el label, es un backfill aparte, fuera del audit.
 
 #### 2.3 Cambio de precio explícito en desc 🔴
 
@@ -451,9 +461,9 @@ Antes de armar el reporte, marcar como **ruido conocido**:
 
 ## 🔴 CRÍTICO (X props con acción inmediata sugerida)
 
-### TC paralelo no mapeado (N props)
-Impacto en feed: subestimación total ~$Y miles
-| ID | Edificio | precio BD | desc dice | ratio | impacto |
+### Doble normalización TC paralelo (N props)
+Solo `tc=paralelo` con ratio `precio_usd/billete_desc` ≈ 1.2–1.6 (precio_usd quedó en oficial). NO incluir no_especificado.
+| ID | Edificio | precio_usd (oficial) | billete desc | ratio | corregir a |
 
 ### Cambio de precio explícito (N props)
 | ID | Edificio | precio BD | desc dice | diff% |
@@ -508,11 +518,10 @@ Después del reporte:
 
 ## Datos útiles para el análisis
 
-- **TC paralelo actual**: ~9.954 (oficial 6.96, ratio 1.43)
-- **Total feed actual**: ~342 props vivas en `v_mercado_venta`
-- **Volumen semanal típico**: 25-45 props nuevas
+- **TC paralelo**: leer vivo de `config_global` (`SELECT valor FROM config_global WHERE clave='tipo_cambio_paralelo'`). Ratio bug ≈ paralelo/6.96 (~1.43-1.46, varía con el TC del día).
+- **Total feed / volumen semanal**: ver conteo base del paso 2 (no hardcodear).
 - **Casos canónicos**:
-  - **TC paralelo no mapeado**: #317 La Riviera, #428 Las Palmeras, #1817 SKY LUXIA, #1820 terreno
+  - **Doble normalización paralelo (check 2.1)**: #1948 IFE (precio_usd 229.885 = oficial, billete desc $160K), #1949 Element (76.698 vs $53.650). Corregidos 25-may. Correctas de contraste (ratio 1.0, NO tocar): #317 La Riviera ($350K billete), #1573 Sirari ($1.5M billete). **#1939 You Smart (precio_usd=223) NO es este bug — es parse de magnitud (223 vs 223.000), lo agarra check 2.4.**
   - **Cambio de precio explícito**: #1702 Nano Smart ($66K→$55K)
   - **GPS del listing mal cargado por broker** (no requiere acción): #1713 Cond Mirage (broker C21 puso GPS errado, pm tenía el correcto), #1733 Santorini Suites (broker puso GPS mal en 1 de 18 listings)
   - **GPS del pm errado** (requiere actualizar pm): caso teórico no detectado aún en práctica
@@ -538,6 +547,20 @@ Después del reporte:
 | Detección de listings muertos | ✅ Sí | ❌ Requiere Firecrawl |
 
 ## Lecciones de calibración (changelog)
+
+### v1.3 — 2026-05-25 (post-falso-positivo TC)
+
+**El falso positivo más caro hasta ahora.** Corriendo el audit del 25-may, los checks 2.1/2.2 marcaron ~6 props `no_especificado` (Condado VI #1896/#1897, Sky Tower #1908, terreno #1914, Grigia #1923, Spazios #1950) como "precio_usd inflado 43%" y propusieron bajarlas al USD de la desc. **Eso era incorrecto y las habría roto:** en `no_especificado`/`oficial`, `precio_usd` guarda el valor oficial (Bs/6.96) que ES el comparable, y la desc cita el billete (~1.43× menos) — el gap es esperado, no inflación.
+
+**Causa del FP:** los checks 2.1 (red ancha: toda BOB que menciona "paralelo") y 2.2 (toda no_especificado) terminaban en un paso de "análisis humano" que invitaba a comparar `precio_usd` vs el USD de la desc y concluir "inflado", sin distinguir oficial-vs-billete.
+
+**Fix v1.3:**
+1. Borrados los viejos 2.1 y 2.2.
+2. Nuevo **2.1 único**: detecta solo la **doble normalización** real (`tc=paralelo` + `precio_usd`=oficial en vez de billete, ratio `precio_usd/billete_desc` ≈ 1.2–1.6). SQL autoclasificante (sin paso humano difuso). Bug real confirmado: #1948/#1949.
+3. Agregado bloque **MODELO TC + REGLAS DE ORO** al inicio de Capa 2: el gap oficial↔billete NUNCA se flaguea en no_especificado.
+4. Capa 2 pasa de 8 a 7 checks.
+
+Memoria relacionada: `precio_paralelo_vs_oficial_billete.md`. Causa raíz del bug (extractor guarda Bs/6.96 + LLM taggea paralelo) documentada en `TIPO_CAMBIO_SICI.md` §7.3 (fix de fuente pendiente).
 
 ### v1.2 — 2026-05-24
 
