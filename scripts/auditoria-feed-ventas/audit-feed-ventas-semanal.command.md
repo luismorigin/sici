@@ -8,7 +8,11 @@ Variante liviana del audit mensual. Cubre props nuevas en una ventana temporal u
 
 Cuándo usarlo: lunes a la mañana (o cualquier día) para limpiar la deuda de props nuevas mientras están frescas. Complementa al `/audit-feed-ventas-mensual` que cubre todo el feed + drift Firecrawl.
 
-## Versión actual: v1.3 — 25-may-2026
+## Versión actual: v1.4 — 25-may-2026
+
+v1.4 agrega un guard contra falso positivo: "0 props nuevas de una fuente" en el conteo base **NO** significa "discovery caído" (el conteo solo mira props nuevas que entran al feed). Para saber si el discovery corrió, mirar `fecha_discovery`, no este conteo. Ver nota en el paso 2.
+
+## v1.3 — 25-may-2026
 
 v1.3 **reescribe el detector de TC** tras un falso positivo grave: los viejos checks 2.1 (TC paralelo no mapeado) y 2.2 (no_especificado→oficial) hacían comparar `precio_usd` contra el USD de la desc y flaguear el gap ~1.43× como "inflación" — pero ese gap es **correcto** en `no_especificado` (es oficial vs billete). Se marcaron Condado/Sky Tower/terreno como inflados cuando estaban bien. Ahora hay **un solo check de TC** (2.1) que detecta exclusivamente la **doble normalización** real (`tc=paralelo` + `precio_usd`=oficial en vez de billete, ratio 1.2–1.6), con el modelo TC escrito arriba como reglas de oro. El 2.2 se eliminó (cosmético + ruidoso). Ver `MODELO TC` en Capa 2 y memoria `precio_paralelo_vs_oficial_billete.md`.
 
@@ -70,6 +74,14 @@ WHERE <filtro args>
 GROUP BY 1,2
 ORDER BY 1 DESC, 2;
 ```
+
+> **⚠️ NO confundir "0 props nuevas de una fuente" con "discovery caído"** (falso positivo del 25-may-2026). Este conteo solo cuenta props **nuevas que entran al feed** (`JOIN v_mercado_venta` + `fecha_creacion` en ventana). Una fuente puede haber corrido perfecto y dar 0 acá: discovery casi siempre **re-encuentra** props existentes (no crea filas) y las nuevas pueden quedar filtradas (sin zona, excluidas, duplicadas, <20m²). Remax venta es bajo volumen y normalmente aporta pocas o cero nuevas/semana. **Para saber si el discovery corrió, mirar `fecha_discovery` (regla 11: se pisa con NOW() cada noche), NO este conteo:**
+> ```sql
+> SELECT fuente, COUNT(*) FILTER (WHERE fecha_discovery::date >= CURRENT_DATE - 7) AS tocadas_7d,
+>        MAX(fecha_discovery) AS ultima
+> FROM propiedades_v2 WHERE tipo_operacion='venta' GROUP BY fuente;
+> ```
+> Si `ultima` es de hoy/ayer → corrió. Solo alarmar si una fuente NO tiene discovery reciente.
 
 ### 3. Capa 2 — Inconsistencias internas (7 checks)
 
