@@ -248,9 +248,13 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
         precioPublicado = data.precio_usd?.toString() || ''
       }
 
-      // Microzona
+      // Microzona — match por id, valor BD (MICROZONA_ID_TO_DB) o label.
+      // El valor BD es la fuente de verdad: villa_brigida y equipetrol_oeste tienen label != BD.
       const microzonaExistente = MICROZONAS.find(m =>
-        m.id === data.microzona || m.label === data.microzona || m.label === data.zona
+        m.id === data.microzona ||
+        MICROZONA_ID_TO_DB[m.id] === data.microzona ||
+        MICROZONA_ID_TO_DB[m.id] === data.zona ||
+        m.label === data.microzona || m.label === data.zona
       )
       const microzonaValue = microzonaExistente?.id || 'equipetrol_centro'
       if (data.microzona && !microzonaExistente) setShowMicrozonaCustom(true)
@@ -339,7 +343,10 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
         p_lat: proyecto.latitud, p_lon: proyecto.longitud,
       })
       if (data && data.length > 0 && data[0].zona) {
-        const microzona = MICROZONAS.find(m => m.label === (data[0].zona as string))
+        const zonaGps = data[0].zona as string
+        const microzona = MICROZONAS.find(m =>
+          MICROZONA_ID_TO_DB[m.id] === zonaGps || m.label === zonaGps
+        )
         if (microzona) {
           updateField('microzona', microzona.id)
           setShowMicrozonaCustom(false)
@@ -511,9 +518,9 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
       cambios.push({ campo: 'id_proyecto_master', anterior: originalData.id_proyecto_master, nuevo: selectedProyectoId })
     }
 
-    const microzonaLabel = MICROZONAS.find(m => m.id === formData.microzona)?.label || formData.microzona
-    if (originalData.zona !== microzonaLabel) {
-      cambios.push({ campo: 'zona', anterior: originalData.zona, nuevo: microzonaLabel })
+    const microzonaDbDiff = MICROZONA_ID_TO_DB[formData.microzona] || formData.microzona
+    if (originalData.zona !== microzonaDbDiff) {
+      cambios.push({ campo: 'zona', anterior: originalData.zona, nuevo: microzonaDbDiff })
     }
     if (originalData.dormitorios !== parseInt(formData.dormitorios)) {
       cambios.push({ campo: 'dormitorios', anterior: originalData.dormitorios, nuevo: parseInt(formData.dormitorios) })
@@ -763,7 +770,7 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
         expensas_usd: formData.expensas_usd ? parseFloat(formData.expensas_usd) : null,
       }
 
-      const microzonaLabel = MICROZONAS.find(m => m.id === formData.microzona)?.label || formData.microzona
+      const microzonaDb = MICROZONA_ID_TO_DB[formData.microzona] || formData.microzona
       const precioPublicado = parseFloat(formData.precio_publicado) || 0
       const precioNormalizado = calcularPrecioNormalizado()
       const tcOficial = 6.96
@@ -773,8 +780,8 @@ export function usePropertyEditor(id: string | undefined, enabled: boolean) {
         tipo_operacion: formData.tipo_operacion || null,
         nombre_edificio: formData.proyecto_nombre || null,
         id_proyecto_master: selectedProyectoId,
-        zona: microzonaLabel,
-        microzona: MICROZONA_ID_TO_DB[formData.microzona] || formData.microzona,
+        zona: microzonaDb,
+        microzona: microzonaDb,
         ...(formData.tipo_operacion === 'alquiler'
           ? { precio_mensual_bob: precioNormalizado, precio_mensual_usd: Math.round(precioNormalizado / 6.96 * 100) / 100 }
           : { precio_usd: precioNormalizado, precio_usd_actualizado: null }),
