@@ -30,6 +30,58 @@
 - **b)** Cargar `Torre Moderna` en `proyectos_master` ZN → matching la corrige.
 - **c)** Backfill por URL pattern: si URL contiene `torre-moderna` → `nombre_edificio='Torre Moderna'`.
 
+**Investigación 27-may-2026 (sub-sesión 3) — Hallazgo más profundo:**
+
+Auditoría sobre 824 props con LLM:
+- 643 (78%) con confianza='alta'.
+- 166 (20%) con confianza=null (LLM no respondió).
+- 15 (2%) con confianza='media'.
+- **0 (0%) con confianza='baja'.**
+
+→ El LLM es **binario en la práctica**: o "alta" o "null". No usa "media" ni "baja".
+
+**Causa raíz descubierta:** el prompt `prompt-ventas.md` **define los valores válidos del campo `nombre_edificio_confianza` ("alta"/"media"/"baja"/null) en el schema JSON, pero NUNCA explica al LLM cuándo usar cada nivel.** Sin criterio, el LLM lo interpreta como flag binario.
+
+**Caso "Moderna" (Torre Moderna):**
+- Nombre está SOLO en URL/slug (`torre-moderna`), no en descripción libre.
+- Sin criterio en prompt, el LLM no sabe qué confianza usar → devuelve null.
+- Merge solo acepta confianza='alta' → cae al regex → "Moderna" se cuela.
+
+**Fix correcto multi-capa (no son parches):**
+
+1. **Mejorar prompt LLM** con criterio explícito:
+   - `alta`: nombre explícito en descripción libre.
+   - `media`: nombre solo en título/URL/slug.
+   - `baja`: inferido por modelo/código interno.
+   - `null`: no hay forma de extraerlo.
+
+2. **Modificar merge** para aceptar también `media` (no solo `alta`) como confiable. La rama híbrida v2.6.0 actualmente filtra `confianza='alta'` — bajar el umbral.
+
+3. **Re-procesar las 166 props con LLM=null** post-fix del prompt para ver si algunas extraen vía título/URL.
+
+**Impacto Equipetrol del cambio del prompt:**
+- Probable detección adicional de nombres que ahora quedan null (mejora).
+- Re-clasificación de confianzas existentes (algunos "alta" pueden bajar a "media" cuando solo es título).
+- Riesgo MEDIO: re-procesamiento de Equipetrol cambia comportamiento de algunas props ya bien etiquetadas.
+
+**Recomendación:** abordar como ticket separado próxima sesión. Hoy queda como aprendizaje documentado. ZN ya tiene los nombres limpios via backfill manual.
+
+---
+
+### #1.1 — Mejorar criterios de confianza del prompt LLM v4.0 (separado del #1)
+
+**Acción:**
+1. Agregar a `scripts/llm-enrichment/prompt-ventas.md` un bloque que defina cuándo usar cada nivel de confianza para `nombre_edificio_confianza`, `dormitorios_confianza`, `estado_construccion_confianza`, `tipo_cambio_confianza`.
+2. Versión bump a v4.1.
+3. Re-procesar muestra de 100 props en sandbox para validar que el LLM usa gradientes.
+4. Si OK, aplicar a producción + re-procesar las 166 con LLM=null.
+
+**Modificar merge** (paso 2 del fix):
+- En `merge_discovery_enrichment`, la rama LLM híbrida filtra `v_llm_nombre_edificio_confianza = 'alta'`.
+- Cambiar a `IN ('alta', 'media')` para aceptar también confianza media.
+
+**Estimación:** 2-3 horas + testing + re-procesamiento ($ adicional Haiku).
+
 **Decisión pendiente — 2 opciones:**
 
 **Opción A — Backfill recurrente acotado a ZN** (cero código):

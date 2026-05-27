@@ -208,3 +208,39 @@ Auditoría sobre 568 props Equipetrol completadas:
 > "Props Zona Norte sin match exponen el bug del regex porque no hay pm.nombre_oficial que las salve. Soluciones: backfill recurrente (cero código) o modificar merge para preferir LLM cuando id_proyecto_master IS NULL."
 
 **No se aplicó ningún fix en esta sub-sesión.** Solo investigación. Tickets actualizados en BACKLOG.md.
+
+---
+
+## 27 May 2026 (continuación 3) — La deuda real: prompt LLM sin criterio de confianza
+
+**Trigger:** investigación más profunda del ticket #1 reveló que el merge v2.6.0 YA tiene lógica híbrida (LLM > regex cuando regex sospechoso). El "bug" raíz NO era ninguna de las hipótesis anteriores.
+
+**Auditoría sobre 824 props con LLM aplicado:**
+- 643 (78%) con `nombre_edificio_confianza='alta'`.
+- 166 (20%) con confianza=null.
+- 15 (2%) con confianza='media'.
+- **0 (0%) con confianza='baja'.**
+
+→ El LLM es **binario en la práctica**: "alta" o "null".
+
+**Causa raíz definitiva:** el prompt `prompt-ventas.md` define los valores válidos del campo `nombre_edificio_confianza` en el schema JSON, pero **NUNCA explica al LLM cuándo usar cada nivel.** Sin criterio, el LLM lo interpreta binario.
+
+**Cómo explica el caso "Moderna" (Torre Moderna):**
+- El nombre del edificio aparece SOLO en la URL/slug (`torre-moderna`), no en la descripción libre.
+- El LLM ve la descripción y no encuentra "Torre Moderna" mencionada explícitamente.
+- Sin criterio en el prompt sobre cuándo usar "media", el LLM devuelve null.
+- Merge solo confía en confianza='alta' → cae al regex que extrae "Moderna" (sin Torre).
+
+**Por qué los parches no servían:**
+- Agregar "moderna" a la blacklist del merge: parche cosmético, no escalable.
+- Cargar "Torre Moderna" como pm: ayuda 1 caso, no resuelve la categoría.
+- Re-fixear el flujo B regex: el regex SIEMPRE va a tener casos borde.
+
+**El fix correcto (3 capas):**
+1. **Prompt LLM**: enseñar gradientes de confianza (alta=descripción, media=título/URL, baja=inferido).
+2. **Merge**: aceptar también `confianza='media'` además de `'alta'`.
+3. **Re-procesar** las 166 props con LLM=null (algunas probablemente ahora detectan vía título/URL).
+
+**Decisión:** ticket separado para próxima sesión (#1.1 en BACKLOG). Impacto en Equipetrol requiere análisis cuidadoso (algunas props pueden cambiar etiqueta). Hoy queda solo como aprendizaje.
+
+**Estado actual ZN funcional:** las 31 props con nombres genéricos ya fueron limpiadas via backfill manual del nombre_edificio con llm_output (donde el LLM tenía algo). Las que el LLM tampoco tenía nombre quedan con regex pero NO contaminan métricas (sin match en proyectos_master, no afectan absorción).
