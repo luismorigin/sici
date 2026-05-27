@@ -98,3 +98,50 @@ Formato ADR (Architecture Decision Record): contexto → opciones → decisión 
 - **Camino B** — jerarquía real: `zona='Zona Norte'` estable + `microzona` para el detalle. Requiere tocar el trigger para usar `zona_general`.
 
 **Consecuencias / cuidados al subdividir:** (1) las props ya cargadas no se re-asignan solas — hay que correr un re-cálculo una vez (limpiar zona/microzona y re-disparar, o backfill con `get_zona_by_gps()`); (2) los polígonos hijos NO deben solaparse (el trigger toma `LIMIT 1` sin orden).
+
+---
+
+## ADR-009 — Arquitectura multi-macrozona via strangler pattern (no tocar Equipetrol producción)
+
+**Contexto:** Tras validar Fase 3+4 surgió la visión de evolucionar de "Simón Equipetrol" a "Simón Santa Cruz" multi-macrozona, donde Equipetrol y Zona Norte sean las primeras 2 macrozonas tratadas como pares (cada una con sus microzonas), y futuras (Urubó, Polanco, etc.) entren con el mismo patrón.
+
+**Preocupación central de Lucho:** "No quiero tocar Equipetrol producción". El feed `/ventas` actual funciona bien y cualquier refactor implica riesgo de regresión en un producto consolidado.
+
+**Decisión:** **Strangler pattern** — construir la arquitectura multi-macrozona EN PARALELO al sistema Equipetrol actual, sin tocar lo viejo.
+
+**Qué se mantiene intacto:**
+- `pages/ventas.tsx` — feed Equipetrol, sin cambios.
+- `pages/mercado/equipetrol/*` — rutas existentes, sin cambios.
+- `flujo_a_discovery_century21_v1.0.3_FINAL.json` (Equipetrol) — workflow viejo, sin cambios.
+- `flujo_a_discovery_remax_v1.0.2_FINAL.json` (Equipetrol) — idem.
+- Branding actual ("Simón Equipetrol") en landing, heroes, copy — sin cambios.
+- `ZONAS_CANONICAS` del público — sigue con las 6 microzonas Equipetrol solamente.
+
+**Qué se construye nuevo (gradual):**
+- `pages/mercado/zona-norte/*` — rutas nuevas, feed nuevo, código nuevo.
+- Componente `<FeedMacrozona zona="...">` reusable — pero solo lo consume ZN al principio.
+- `flujo_a_discovery_century21_zonanorte_v1.0.0` (ya creado) — **es de hecho el "workflow universal multi-macrozona"**. Su query lee polígonos activos de `zonas_geograficas` con array configurable. Para agregar Urubó: cambiar `ARRAY['Zona Norte']` a `ARRAY['Zona Norte', 'Urubó']` — cero workflow nuevo.
+- Idem para `flujo_a_discovery_remax_zonanorte_v1.0.0`.
+
+**Roles de los workflows en la arquitectura final:**
+- **Workflow Equipetrol exclusivo** (vieja escuela, hardcoded): solo procesa Equipetrol. Intacto.
+- **Workflow multi-macrozona** (zona-agnóstico, lee BD): procesa todas las macrozonas activas EXCEPTO Equipetrol. Crece con cada zona nueva editando el array.
+
+**Coexistencia indefinida:** ambos sistemas pueden coexistir. Eventualmente (post-validación de ZN, 3-6 meses), se evaluará si migrar Equipetrol al patrón multi-macrozona. **NO es decisión para hoy.**
+
+**Cuándo se vuelve problema mantener 2 implementaciones:**
+- Si el feed evoluciona mucho mientras coexisten (ej. 5 features nuevos a duplicar).
+- En ese momento, se migra Equipetrol. No antes.
+
+**Beneficios:**
+- Cero riesgo a Equipetrol producción.
+- ZN es laboratorio del patrón multi-macrozona en condiciones reales.
+- Futuras macrozonas (Urubó, Polanco) entran con cero refactor del viejo.
+- Sin Big Bang.
+
+**Consecuencias para el resto del backlog:**
+- "Refactor `ventas.tsx`" pasa a OPCIONAL (no requerido salvo decisión futura).
+- "Cargar pm ZN" (#1.5) sigue valiendo igual.
+- "Microzonas ZN" pasa a más importante (cada macrozona debería tener sus microzonas).
+- "Exposición pública ZN" se vuelve "construir `/mercado/zona-norte`" como prototipo del patrón.
+- Branding global ("Simón Santa Cruz" vs "Simón Equipetrol") queda como decisión futura, NO bloqueante.

@@ -244,3 +244,39 @@ Auditoría sobre 568 props Equipetrol completadas:
 **Decisión:** ticket separado para próxima sesión (#1.1 en BACKLOG). Impacto en Equipetrol requiere análisis cuidadoso (algunas props pueden cambiar etiqueta). Hoy queda solo como aprendizaje.
 
 **Estado actual ZN funcional:** las 31 props con nombres genéricos ya fueron limpiadas via backfill manual del nombre_edificio con llm_output (donde el LLM tenía algo). Las que el LLM tampoco tenía nombre quedan con regex pero NO contaminan métricas (sin match en proyectos_master, no afectan absorción).
+
+---
+
+## 27 May 2026 (continuación 4) — Visión multi-macrozona y ADR-009
+
+**Trigger:** Lucho planteó que en el futuro "Simón Equipetrol" se transforma en "Simón Santa Cruz" multi-macrozona — Equipetrol y Zona Norte como las primeras 2 macrozonas tratadas como pares, con microzonas dentro de cada una, y escalable a futuras macrozonas (Urubó, Polanco, etc.).
+
+**Cambio de mentalidad:**
+- **Antes:** "Equipetrol producción + Zona Norte piloto agregado"
+- **Después:** "Equipetrol y ZN como macrozonas de primera clase del producto Simón Santa Cruz"
+
+**Preocupación crítica:** Lucho marca que NO quiere tocar producción Equipetrol (feed consolidado funciona bien, riesgo innecesario). Eso dispara el approach correcto.
+
+**Approach decidido (ADR-009): strangler pattern.** Construir la arquitectura multi-macrozona EN PARALELO al sistema Equipetrol actual:
+- `pages/ventas.tsx` (Equipetrol): INTACTO.
+- `pages/mercado/equipetrol/*`: INTACTO.
+- Workflows Equipetrol: INTACTOS.
+- Branding actual ("Simón Equipetrol"): SIN CAMBIOS.
+- `pages/mercado/zona-norte/*`: NUEVO (rutas, componente `<FeedMacrozona>`).
+- Workflows ZN: son **los workflows universales multi-macrozona** (lectura zona-agnóstica de BD).
+
+**Workflows aclarados:** los `flujo_a_discovery_*_zonanorte_v1.0.0.json` que armamos hoy NO son "workflows de Zona Norte específica" — son **workflows multi-macrozona** que casualmente arrancan procesando solo ZN. Para agregar Urubó/Polanco mañana: cambiar `ARRAY['Zona Norte']` a `ARRAY['Zona Norte', 'Urubó']` en el array de la query SQL. Cero workflow nuevo.
+
+**Microzonas ZN promovidas en prioridad:** la visión multi-macrozona requiere que cada macrozona tenga sus microzonas (consistencia con Equipetrol que tiene 6). Backlog #8 reformulado: "Definir microzonas de Zona Norte" (Hamacas, Banzer 3er-4to, Radial 26, Norte 4to-5to anillo, etc.). Decisión pendiente: Camino A (hermanas como Equipetrol) o Camino B (jerarquía macro+micro).
+
+**Ticket #6 reformulado:** "Página preview privada" → "Construir `/mercado/zona-norte` (prototipo del patrón multi-macrozona)" con 3 fases (privado por token → beta soft → producción completa).
+
+**Documentos creados/actualizados:**
+- `DECISIONES.md` ADR-009 (NUEVO): arquitectura multi-macrozona via strangler.
+- `BACKLOG.md`: sección "Visión del proyecto" agregada arriba + ticket #6 reformulado + #8 promovido.
+- `BITACORA.md`: esta entrada.
+
+**Decisiones pendientes (no para hoy):**
+- Branding global: "Simón Santa Cruz" vs mantener "Simón Equipetrol" vs "Simón" paraguas.
+- Cuándo migrar Equipetrol al patrón multi-macrozona (3-6 meses post-validación, o nunca).
+- Camino A vs B para jerarquía zona/microzona.

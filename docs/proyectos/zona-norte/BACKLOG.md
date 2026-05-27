@@ -2,7 +2,24 @@
 
 > Tickets pendientes que surgieron de la validación Fase 3+4. Organizados por prioridad y por scope.
 
-**Última actualización:** 27 May 2026 (sub-sesión 3 — reorganización post-investigación profunda).
+**Última actualización:** 27 May 2026 (sub-sesión 4 — visión multi-macrozona consolidada).
+
+---
+
+## Visión del proyecto (post-ADR-009)
+
+**El proyecto Zona Norte deja de ser "piloto aislado" y pasa a ser "prototipo de la arquitectura multi-macrozona de Simón Santa Cruz".**
+
+**Estrategia:** strangler pattern. **Equipetrol producción NO se toca.** Se construye lo nuevo en paralelo:
+
+- `pages/ventas.tsx` (Equipetrol) intacto.
+- `pages/mercado/zona-norte/*` se construye nuevo con patrón multi-macrozona.
+- Workflows ZN (`*_zonanorte_v1.0.0`) son **los workflows universales multi-macrozona** — leen polígonos activos de BD; agregar Urubó/Polanco = editar 1 array.
+- Workflows Equipetrol intactos (siguen procesando solo Equipetrol).
+
+**Coexistencia indefinida.** Migrar Equipetrol al patrón nuevo = decisión futura (3-6 meses), no hoy.
+
+Ver `DECISIONES.md` ADR-009 para detalle completo.
 
 ---
 
@@ -200,15 +217,57 @@ Sin esto: matching automático no los toca (blindajes filtran zona estricta).
 
 ---
 
-### #6 — Página preview privada con feed-look idéntico al de Equipetrol
+### #6 — Construir `/mercado/zona-norte` (prototipo del patrón multi-macrozona)
 
-**Contexto:** intento 27-may-2026 falló (hydration mismatch en `ventas.tsx` + bucle de re-fetch). Approach actual: usar `/admin/propiedades` para validación visual.
+**Reformulado tras ADR-009:** ya no es "preview privada" — es **el primer prototipo del patrón `/mercado/[macrozona]` que escalará a Urubó/Polanco/etc.**
 
-**Solución correcta:** refactor previo de `pages/ventas.tsx` para extraer el componente principal a un archivo separado y exponer una prop `forceZonas`. Después crear `/preview/[token].tsx` que lo importa con override.
+**Decisión clave:** NO requiere tocar `pages/ventas.tsx` (intacto, Equipetrol sigue ahí). Se construye página y componente **nuevos** en paralelo.
 
-**Estimación:** 2-3 horas + testing.
+**Arquitectura propuesta:**
+```
+pages/
+├── ventas.tsx                            ← Equipetrol, INTACTO
+├── mercado/
+│   ├── equipetrol/                       ← rutas existentes, INTACTAS
+│   │   ├── index.tsx
+│   │   ├── ventas.tsx
+│   │   └── alquileres.tsx
+│   └── zona-norte/                       ← NUEVO
+│       ├── index.tsx                     ← hub (similar a equipetrol/index)
+│       └── ventas.tsx                    ← feed específico ZN
+components/
+└── mercado/
+    └── FeedMacrozona.tsx                 ← NUEVO componente reusable
+                                            (lo consume mercado/zona-norte/ventas)
+```
 
-**Prioridad:** baja (admin panel cubre la necesidad de validación visual).
+**Fases:**
+1. **Fase A — Privado por token** (mientras se valida calidad):
+   - URL: `/mercado/zona-norte/ventas?token=zn-piloto`.
+   - SSR valida token, si no hay → 404.
+   - `noindex` + sin links desde landing.
+2. **Fase B — Beta soft** (post-validación piloto):
+   - URL pública sin token.
+   - `noindex` removido.
+   - Sin promoción activa todavía.
+3. **Fase C — Producción completa**:
+   - Link desde landing.
+   - SEO ad-hoc.
+   - Branding global "Simón Santa Cruz" (decisión separada).
+
+**Componente `<FeedMacrozona>` requisitos:**
+- Acepta prop `macrozona`.
+- Aplica filtros por microzona dentro de esa macrozona.
+- Mapa con bounds dinámicos según macrozona.
+- Cards idénticas (estilo, formato, comportamiento) al feed Equipetrol actual.
+- Reusable: cuando llegue Urubó, `/mercado/urubo/ventas` lo consume con `macrozona="Urubó"`.
+
+**Estimación:**
+- Fase A (privado token): 3-4 horas.
+- Fase B (publicar): 30 min (remover noindex, agregar a sitemap).
+- Fase C (branding global): scope mayor, separado.
+
+**Prioridad:** ALTA en cuanto se quiera mostrar ZN visualmente a alguien. Hoy podés usar `/admin/propiedades` como sustituto temporal.
 
 ---
 
@@ -225,18 +284,31 @@ Sin esto: matching automático no los toca (blindajes filtran zona estricta).
 
 ---
 
-### #8 — Mover el polígono "rápido" a uno definitivo
+### #8 — Definir microzonas de Zona Norte (subdivisión + refinar polígono macro)
 
-**Contexto:** el polígono actual (`docs/proyectos/zona-norte/poligono-prueba.geojson`) fue dibujado rápido para validar. ADR-008 dice que subdividir después es seguro porque `get_zona_by_gps()` permite re-asignar.
+**Promovido en prioridad post-ADR-009:** con la visión multi-macrozona, **cada macrozona debe tener sus microzonas** para que el patrón sea consistente con Equipetrol (que tiene 6 microzonas).
 
-**Acción cuando aplique:**
-1. Refinar polígono con bordes más precisos.
-2. (Opcional) crear microzonas hijas (Hamacas, Radial 26, Norte Banzer 3er-4to, etc.).
-3. `UPDATE propiedades_v2 SET zona = get_zona_by_gps(latitud, longitud) WHERE zona = 'Zona Norte'` para re-distribuir.
+**Contexto:**
+- ZN hoy: 1 polígono macro único (`docs/proyectos/zona-norte/poligono-prueba.geojson`), dibujado rápido para validar.
+- ADR-008: subdividir después es seguro porque `get_zona_by_gps()` permite re-asignar.
+- Microzonas ya identificadas por taxonomía de portales: Hamacas, Banzer 3er al 5to anillo, Radial 26, Norte (genérico), Norte 4to-5to anillo.
 
-**Cuándo:** post-piloto + necesidad real (ej. estudios de mercado por microzona).
+**Acción:**
+1. **Refinar polígono macro** con bordes más precisos (revisar el "polígono rápido" actual).
+2. **Definir microzonas hijas** dentro de Zona Norte:
+   - Hamacas
+   - Banzer 3er al 5to anillo
+   - Radial 26
+   - Norte 4to-5to anillo (o como se nombre).
+3. Cargar polígonos hijos en `zonas_geograficas` con `zona_general='Zona Norte'`.
+4. Re-correr `get_zona_by_gps()` sobre props ZN existentes para re-distribuir en microzonas.
+5. Decidir entre ADR-008 Camino A (microzonas hermanas, como Equipetrol) o Camino B (jerarquía real con zona macro + microzona).
 
-**Estimación:** medio día.
+**Recomendación Camino:** el **Camino A** (hermanas) es consistente con Equipetrol actual. El **Camino B** (jerarquía) sería un refactor del trigger pero más limpio a largo plazo. Decidir en el ADR-009 cuál se adopta para todas las macrozonas.
+
+**Cuándo:** antes de la exposición pública de ZN. Cuando empiece a haber demanda de filtros por microzona.
+
+**Estimación:** medio día + decisión de Camino.
 
 ---
 
