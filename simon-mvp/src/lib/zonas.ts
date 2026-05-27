@@ -83,10 +83,13 @@ export const ZONAS_ADMIN = ZONAS_CANONICAS.map(z => ({
   label: z.label,
 }))
 
-/** Admin venta filter dropdown (with "Todas las zonas" option) */
+/** Admin venta filter dropdown (with "Todas las zonas" option).
+ *  Incluye 'Zona Norte (piloto)' SOLO para admin — no aparece en filtros públicos.
+ *  Cuando Zona Norte salga de piloto, mover al ZONAS_CANONICAS principal. */
 export const ZONAS_ADMIN_FILTER = [
   { id: '', label: 'Todas las zonas' },
   ...ZONAS_ADMIN,
+  { id: 'Zona Norte', label: 'Zona Norte (piloto)' },
 ]
 
 /** Proyecto editor dropdown (6 zonas reales de zonas_geograficas + Sin zona) */
