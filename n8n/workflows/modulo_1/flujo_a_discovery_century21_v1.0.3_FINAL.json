@@ -147,7 +147,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": " SELECT id, url, status\n  FROM propiedades_v2\n  WHERE fuente = 'century21'\n    AND status NOT IN ('inactivo_confirmed')\n    AND tipo_operacion = 'venta'",
+        "query": " SELECT id, url, status\n  FROM propiedades_v2\n  WHERE fuente = 'century21'\n    AND status NOT IN ('inactivo_confirmed')\n    AND tipo_operacion = 'venta'\n    AND zona IN ('Equipetrol Centro','Equipetrol Norte','Sirari','Villa Brigida','Equipetrol Oeste','Eq. 3er Anillo')",
         "options": {}
       },
       "id": "fcac8a31-58a0-4008-a305-c4c974bfafc5",

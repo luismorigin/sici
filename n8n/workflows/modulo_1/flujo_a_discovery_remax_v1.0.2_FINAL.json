@@ -103,7 +103,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, url, status FROM propiedades_v2 WHERE fuente = 'remax' AND status NOT IN ('inactivo_confirmed')",
+        "query": "SELECT id, url, status FROM propiedades_v2 WHERE fuente = 'remax' AND status NOT IN ('inactivo_confirmed') AND tipo_operacion = 'venta' AND zona IN ('Equipetrol Centro','Equipetrol Norte','Sirari','Villa Brigida','Equipetrol Oeste','Eq. 3er Anillo')",
         "options": {}
       },
       "id": "ce6e3db6-5a70-4262-af5d-d6001790bce7",
