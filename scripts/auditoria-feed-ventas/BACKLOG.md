@@ -98,10 +98,11 @@ Decisión final: en vez de workflow n8n o routine remota, **slash command local*
 - `audit-feed-ventas-mensual.command.md` — instrucciones de la skill (copiar a `.claude/commands/audit-feed-ventas-mensual.md`)
 - `sql/migrations/242_audit_descripciones.sql` — persistencia (tablas + RLS + view de tendencias)
 
-**Pendiente para activar**:
-- Aplicar migración `242` en Supabase (no aplicada todavía)
-- Copiar `audit-feed-ventas-mensual.command.md` a `.claude/commands/audit-feed-ventas-mensual.md`
-- Primer audit real el próximo mes
+**Activación — ✅ COMPLETADA (verificado 2026-05-25)**:
+- ✅ Migración `242` aplicada en Supabase (existen `audit_descripciones_runs`, `audit_descripciones_items`, `audit_descripciones_tendencias`)
+- ✅ Migración `244` aplicada (columna `tipo_operacion` en runs/items)
+- ✅ Las 4 skills instaladas en `.claude/commands/`: `audit-feed-ventas-mensual`, `audit-feed-ventas-semanal`, `audit-feed-alquileres-mensual`, `audit-feed-alquileres-semanal`
+- ✅ Audits **en uso recurrente** (NO es pendiente): mensual corrido el 8-may con correcciones reales aplicadas al feed (ver `reports/AUDIT_LOG.md`) + reportes mensuales 11-may + skills semanales iteradas hasta **v1.4 (25-may)**. La tabla `audit_descripciones_runs` muestra pocas filas porque las corridas semanales NO persisten por diseño.
 
 ---
 
