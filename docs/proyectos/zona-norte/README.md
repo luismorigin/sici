@@ -4,9 +4,9 @@
 
 ---
 
-## Estado actual — 21 May 2026
+## Estado actual — 26 May 2026
 
-**Fase:** Investigación COMPLETADA ✅ → Próximo: diseño de implementación (los 2 blindajes + dark launch).
+**Fase:** Fases 1+2 aplicadas en prod ✅ → Próximo: Fase 3 (adaptar workflows discovery).
 
 | Hito | Estado |
 |---|---|
@@ -15,12 +15,31 @@
 | Spike de escalabilidad: discovery por GPS en los 3 portales | ✅ |
 | PoC de discovery: 595 props reales capturadas (sin tocar BD) | ✅ |
 | Análisis del enjambre completo (qué contamina, qué no) | ✅ |
-| Blindar matching por nombre (`AND p.zona = pm.zona`) | ⬜ pendiente |
-| Blindar snapshot de absorción global | ⬜ pendiente |
-| Dark launch de venta en prod real | ⬜ pendiente |
-| Validar calidad de datos del pipeline con data real | ⬜ pendiente |
-| Alquiler (después de venta) | ⬜ pendiente |
+| Blindar matching por nombre (`AND p.zona = pm.zona`) | ✅ (mig 251) |
+| Blindar snapshot de absorción global (hardcoded 6 zonas Equipetrol) | ✅ (mig 251) |
+| Cargar polígono Zona Norte + ampliar CHECK constraint | ✅ (mig 250) |
+| Backfill props/proyectos legacy con `get_zona_by_gps()` | ✅ (mig 250) |
+| Dark launch de venta en prod real (workflows discovery) | ⬜ pendiente — Fase 3 |
+| Validar calidad de datos del pipeline con data real | ⬜ pendiente — Fase 4 |
+| Alquiler (después de venta) | ⬜ pendiente — Fase 5 |
 | Decisión de posicionamiento/integración pública | ⬜ post-piloto |
+
+---
+
+## ⚠️ Caveat sobre la serie `market_absorption_snapshots` de Zona Norte
+
+La serie `zona='Zona Norte'` arranca el **26-may-2026** con un baseline ruidoso por el backfill histórico:
+- **Inventario activo:** 2 props "completado" (legacy mal etiquetadas que cayeron dentro al re-asignar).
+- **Absorbidas últimos 30 días:** 22 venta + 4 alquiler con `primera_ausencia_at` reciente.
+- **Tasa de absorción aparente:** ~92% — **es falsa** (no hay mercado activo medido, son props que existieron en algún momento y se dieron de baja con zona legacy mal etiquetada).
+
+**No usar como métrica de mercado hasta:**
+1. Discovery propio activo (Fase 3).
+2. ≥90 días de captura continua desde Fase 3.
+
+Antes de eso, presentar como *"rotación observada con baseline parcial"* con caveats, igual que cualquier serie `filter_version=3` joven (ver regla 12 de CLAUDE.md y `docs/canonical/ABSORCION_LIMITACIONES.md`).
+
+**Sobre el snapshot global Equipetrol:** desde el 27-may-2026 mostrará -2 props activas y -22 absorbidas 30d vs los días previos. **No es pérdida, es limpieza:** esas props nunca fueron Equipetrol geográficamente, estaban con etiquetas legacy pre-migración 184 que inflaban las métricas.
 
 ---
 
