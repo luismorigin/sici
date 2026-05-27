@@ -95,17 +95,39 @@ Identificados en el dark launch de hoy (con conteo de props):
 - Elimina la dependencia del bug del regex para esas props.
 - Habilita estudios de mercado por edificio.
 
-**Acción:**
+**Precaución crítica detectada 27-may-2026:** **los GPS de las props NO son siempre confiables.** Los agentes a veces cargan GPS falsos. Análisis de cluster reveló:
 
-1. Auditar nombres únicos en `propiedades_v2.nombre_edificio` para ZN (tras backfill).
-2. Buscar GPS centroides de cada edificio (promedio de las props que matchean).
-3. INSERT en `proyectos_master` con `zona='Zona Norte'`, `nombre_oficial`, `latitud`, `longitud`, `activo=true`.
-4. Re-correr matching → matches GPS + matching nombre → asignación masiva.
-5. Las sugerencias caerán a `pendiente_zn` (HITL separado) para validación humana.
+- ~15 edificios con **dispersión GPS <50m** (confiables): Mangales Blue 2, Vilareal Duo, HH HOME, Blue Garden, Domus Luxury, BLESS TOWER, Torres Evolution, Sky Icon, KERONI, Essenzia, K1, ZIRI ZWEI, Macororo, Galil Parque III, ONE.
+- 4-5 edificios con **dispersión >100m** (dudosos): Community Alto Norte (270-696m), STONE 4 (930-1015m), Curupaú Isuto (492-1588m), Cantabria (501m).
 
-**Riesgo:** **BAJO.** Es trabajo de catalogación, no toca código de prod.
+**Causa de dispersión:** condominio multi-torre, GPS falso de agente, o mismo nombre en edificios distintos.
 
-**Estimación:** 2-4 horas (búsqueda nombres canónicos + GPS + INSERT + validación HITL).
+**Acción refinada — metodología 3 pasos:**
+
+**1. Auto-cargar solo los confiables (cluster <50m):**
+- Calcular centroide GPS (promedio).
+- INSERT en `proyectos_master` con `zona='Zona Norte'`, `nombre_oficial`, `latitud=centroide_lat`, `longitud=centroide_lon`, `activo=true`, `gps_verificado_google=false`.
+- ~15 pm cargados → cobertura ~25% inventario ZN.
+
+**2. Verificación con Google Places (post-INSERT):**
+- El sistema YA tiene infraestructura: `gps_google_lat`, `gps_google_lng`, `gps_discrepancia_metros`, `gps_verificado_google`.
+- Correr el verificador (función o workflow existente) sobre los nuevos pm.
+- Si Google confirma GPS → flag `gps_verificado_google=true`.
+- Si Google dice GPS muy distinto (>200m) → marcar para revisión admin.
+
+**3. Dudosos (dispersión >100m): NO cargar automático**:
+- Listar en `docs/proyectos/zona-norte/pm-pendientes-revision.md`.
+- Admin revisa caso por caso (puede ser 1 condominio multi-torre que merece 2-3 pm distintos, o GPS falso a descartar).
+
+**4. Re-correr matching:**
+- Las props con GPS dentro de 250m del pm matchean automáticamente (matching GPS).
+- Las sugerencias caen a `pendiente_zn` (HITL separado por mig 253) para validación humana opcional.
+
+**Riesgo:** **BAJO** si se respeta el filtro de cluster <50m. **MEDIO** si se cargan dispersos sin revisión.
+
+**Estimación:**
+- Solo confiables (15 pm): 1-2 horas (query + INSERT + verificación Google + matching).
+- Con dispersos revisados manual: +2-3 horas.
 
 **Recomendación:** ejecutar **ANTES** del #1. Beneficio más rápido y concreto. Si #1.5 cubre el 25% del inventario, el #1 ataca el 7-15% restante (cola larga de edificios únicos).
 
