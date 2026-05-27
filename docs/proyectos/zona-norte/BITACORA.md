@@ -128,3 +128,38 @@ Log cronológico append-only. Cada entrada: qué se hizo, qué se decidió, qué
 **Workflows ZN activos:** `flujo_a_discovery_century21_zonanorte_v1.0.0` (cron 1:15 AM), `flujo_a_discovery_remax_zonanorte_v1.0.0` (cron 1:45 AM). Mañana 1:15-9:00 AM el ciclo completo corre sin intervención.
 
 **Próximo paso:** validar primera corrida nocturna 100% automática 28-may-2026. Tasks pendientes: documentar kill-switch (#10) cuando se considere necesario.
+
+---
+
+## 27 May 2026 (continuación) — Bug K1 inflado + descubrimiento de problemas LLM/merge
+
+**Trigger:** lectura visual de Zona Norte tras Fase 3+4 reveló que "EDIFICIO K1" tenía 54-55 props matcheadas, número absurdamente alto para un solo edificio. Investigación reveló múltiples bugs interconectados:
+
+**Bug 1 — Prompt LLM v4.0 extrae palabras genéricas como nombre_edificio:**
+- 16 props con `nombre_edificio='Preventa'` (palabra genérica de la descripción).
+- 9 con `'Moderna'` (adjetivo).
+- 6 con `'Venta'` (palabra genérica).
+- No es bug específico de Zona Norte — también afecta Equipetrol (no investigado el alcance).
+
+**Bug 2 — Merge ignora `llm_output.nombre_edificio`:**
+- El COALESCE del merge prioriza: columna nombre_edificio > regex (datos_json_enrichment) > json viejo.
+- El LLM v4.0 extrae nombres MUCHO mejores que el regex pero está en `llm_output.nombre_edificio` — el sistema lo ignora.
+- Mismas funciones afectadas: `generar_matches_por_nombre`, `generar_matches_trigram`, `generar_matches_fuzzy`.
+
+**Bug 3 — Loop self-reinforcing K1:**
+- Match GPS inicial captura props cerca del K1 (radio 250m sobre Av. Banzer).
+- Merge pisa `propiedades_v2.nombre_edificio` con `pm.nombre_oficial='EDIFICIO K1'`.
+- Próximo matching fuzzy ve "EDIFICIO K1" en columna → 100% similitud contra pm K1 → re-confirma.
+- Self-reinforcing: el match crea el campo que después lo valida.
+
+**Hallazgo positivo:** el LLM SÍ extrajo bien los nombres reales (Mangales Blue 2, HH HOME, Essenzia, Raizant Blend, Ergo Experience, Vilareal Duo, Ziri Zwei, etc.). Solo el sistema downstream los ignora.
+
+**Acciones aplicadas (acotadas a Zona Norte, NO tocan Equipetrol):**
+1. **UPDATE revertir matches falsos K1:** `id_proyecto_master=NULL` para 52 props ZN matcheadas contra K1 cuyo `llm_output` decía otro nombre. Quedan 3 K1 reales legítimos.
+2. **UPDATE backfill nombre_edificio:** poblar columna con `llm_output.nombre_edificio` para todas las props ZN del workflow `zonanorte_%`. Resultado: nombres reales emergen (Mangales Blue 2, Domus Luxury, etc.).
+
+**Estado final post-limpieza:** 27 matches legítimos en ZN (vs 88 con falsos), 361 sin match (esperado ADR-003).
+
+**Aplicaciones de UI:** agregado "Zona Norte (piloto)" al filtro admin (`/admin/propiedades`, `/admin/proyectos`) vía `ZONAS_ADMIN_FILTER`. Solo admin lo ve; público sigue sin Zona Norte (dark launch intacto). Commit `115b1e5`.
+
+**Pendientes documentados en BACKLOG.md.** Ver ese archivo para tickets de próxima sesión (mejora prompt LLM, refactor merge/matching para usar llm_output).

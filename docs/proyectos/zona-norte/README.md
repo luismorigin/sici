@@ -95,7 +95,9 @@ Cuando llegue el momento de incorporar Zona Norte al flujo HITL formal (post-val
 |---|---|
 | [DECISIONES.md](./DECISIONES.md) | Las decisiones de arquitectura clave con su **porqué** (formato ADR). Empezá acá si querés entender *por qué* hacemos las cosas así. |
 | [BITACORA.md](./BITACORA.md) | Cronología append-only de cómo llegamos acá. El "cómo se gestó". |
+| [BACKLOG.md](./BACKLOG.md) | Tickets pendientes por prioridad (críticos / medianos / producto / investigación). Surgió de la validación Fase 3+4. |
 | [PRD.md](./PRD.md) | Qué se construye: fases, migraciones, riesgos, rollback. |
+| [operacion.md](./operacion.md) | Cómo operar día a día y kill-switch en 4 niveles si algo sale mal. |
 | [investigacion/mapa-impacto.md](./investigacion/mapa-impacto.md) | El enjambre completo, etapa por etapa: qué toca Zona Norte. |
 | [investigacion/spike-portales.md](./investigacion/spike-portales.md) | Discovery geográfico: cómo filtra cada portal, GPS al 100%. |
 | [investigacion/poc-resultados.md](./investigacion/poc-resultados.md) | Resultados del PoC: 595 props, calidad, muestra con links. |
