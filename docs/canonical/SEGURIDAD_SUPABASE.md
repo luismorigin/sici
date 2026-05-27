@@ -10,6 +10,7 @@ Capturado tras remediación del linter (22 abr 2026). Leer antes de tocar schema
 4. **Antes de `DROP TABLE`**: rename a `_trash_*` primero, 7 días de espera
 5. **Nuevas views**: `SECURITY INVOKER` (default), NO `SECURITY DEFINER`
 6. **Nuevas funciones RPC**: `SECURITY INVOKER` + `GRANT EXECUTE` explícito
+7. **Nuevas tablas en `public`**: `GRANT` explícito a roles que la consumen (obligatorio desde **30-oct-2026** — ver Regla 6)
 
 ---
 
@@ -200,11 +201,77 @@ Esto ayuda a futuras sesiones que apliquen RLS.
 
 ---
 
+## Regla 6 — Nuevas tablas en `public` (cambio Supabase oct-2026)
+
+### Qué cambia
+
+Anuncio Supabase (mayo 2026): a partir del **30-oct-2026**, en proyectos existentes (incluido el de SICI), **las tablas nuevas en `public` ya NO quedan expuestas automáticamente a la Data API** (PostgREST, GraphQL, supabase-js).
+
+- Para proyectos creados desde **30-may-2026**: ya rige el nuevo default.
+- Para nuestro proyecto SICI (existente): rige desde el **30-oct-2026**.
+- Tablas existentes ANTES de esa fecha mantienen sus grants — no se rompe nada retroactivamente.
+
+### Qué hay que hacer en cada migración nueva que `CREATE TABLE` en `public`
+
+Agregar grants explícitos al final del bloque de creación de la tabla. Patrón canónico:
+
+```sql
+CREATE TABLE public.mi_tabla (
+  id BIGSERIAL PRIMARY KEY,
+  ...
+);
+
+-- 🔑 Grants explícitos a la Data API (obligatorio desde 30-oct-2026)
+-- Ajustar según qué roles consumen la tabla:
+GRANT SELECT                         ON public.mi_tabla TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.mi_tabla TO authenticated;
+GRANT ALL                            ON public.mi_tabla TO service_role;
+GRANT SELECT                         ON public.mi_tabla TO claude_readonly;
+
+-- Si va a estar bajo RLS (recomendado para tablas con PII / escrituras de usuario):
+ALTER TABLE public.mi_tabla ENABLE ROW LEVEL SECURITY;
+CREATE POLICY mi_tabla_select_anon ON public.mi_tabla
+  FOR SELECT TO anon USING (true);
+-- ... policies adicionales según el patrón de la tabla (ver Regla 2)
+```
+
+### Matriz de grants por tipo de tabla
+
+Usar como punto de partida — ajustar caso a caso:
+
+| Tipo de tabla | anon | authenticated | service_role | claude_readonly |
+|---|---|---|---|---|
+| Data pública (`propiedades_v2`, `proyectos_master`, vistas mercado) | SELECT | SELECT | ALL | SELECT |
+| Lookup / catálogo (`zonas_mapeo`, `tipo_propiedad_mapeo`) | SELECT | SELECT | ALL | SELECT |
+| PII / leads (`leads_mvp`, `leads_alquiler`, `leads_gate`) | INSERT (solo) | — | ALL | SELECT |
+| Operacional interna (`workflow_executions`, snapshots) | — | — | ALL | SELECT |
+| Broker / auth (`simon_brokers`, `broker_shortlists`) | SELECT (públicas vía hash) | SELECT/UPDATE filtrado por RLS | ALL | SELECT |
+| Tabla escrita SOLO por pipeline (n8n/postgres owner) | — | — | — | SELECT |
+
+**Coherencia con migración 249:** la 249 ya revocó escritura de `anon` en 19 tablas. Para tablas nuevas que entren en esa categoría, NO hay que dar INSERT/UPDATE/DELETE a anon de entrada — el patrón es: SELECT a anon, escritura solo a service_role.
+
+### Funciones RPC también necesitan EXECUTE explícito
+
+Esto ya estaba en la Regla 5, pero conviene reforzarlo: **el cambio de oct-2026 no se aplica a funciones automáticamente, pero la Regla 5 ya pide `GRANT EXECUTE` explícito**. Si seguís el patrón canónico de RPC, estás cubierto.
+
+### Cómo auditar antes del 30-oct-2026
+
+En Supabase dashboard → **Database → Security Advisor** → revisar qué tablas están expuestas hoy a la Data API. Sirve como baseline. Si una tabla actual NO debería estar expuesta, este es buen momento para revocar grants y endurecer.
+
+### Referencia
+
+- Changelog Supabase: "Tables in public schema no longer exposed to Data API by default"
+- Fecha activación SICI: **30 octubre 2026**
+- Plantilla de migración: `sql/migrations/_template.sql`
+
+---
+
 ## Checklist de review (antes de commitear cambios que toquen Supabase)
 
 - [ ] ¿API routes usan `SUPABASE_SERVICE_ROLE_KEY` (no anon)?
 - [ ] ¿Ninguna env var tiene `NEXT_PUBLIC_` delante de algo sensible?
 - [ ] Si creo tabla nueva: ¿va a tener PII? → Plan de RLS desde el día 1
+- [ ] Si creo tabla nueva: ¿agregué `GRANT` explícitos por rol según la matriz de Regla 6?
 - [ ] Si habilito RLS: ¿verifiqué grep + pg_stat + pg_depend?
 - [ ] Si creo policies: ¿cubrí `anon`, `authenticated`, `claude_readonly`, `service_role` según corresponda?
 - [ ] Si creo view: ¿es `SECURITY INVOKER` (default)?
@@ -220,3 +287,5 @@ Esto ayuda a futuras sesiones que apliquen RLS.
 - Migraciones de referencia del patrón correcto:
   - `224_leads_alquiler_rls.sql` — RLS con policy específica a claude_readonly
   - `226_buscar_acm.sql` — función RPC con GRANT EXECUTE y SECURITY INVOKER default
+  - `249_revoke_anon_escritura_19_tablas.sql` — endurecimiento de anon (lectura intacta, escritura revocada)
+- Plantilla obligatoria para tablas/RPC/views nuevas: `sql/migrations/_template.sql`
