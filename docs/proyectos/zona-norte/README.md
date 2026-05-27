@@ -43,6 +43,43 @@ Antes de eso, presentar como *"rotación observada con baseline parcial"* con ca
 
 ---
 
+## ⚠️ HITL — Sugerencias de Zona Norte NO aparecen en `/admin/supervisor/matching`
+
+**Desde mig 253 (27-may-2026):** las sugerencias del matching automático para props con `zona='Zona Norte'` se marcan con `estado='pendiente_zn'` en lugar de `'pendiente'`. El HITL Equipetrol (`/admin/supervisor/matching`) filtra por `estado='pendiente'` y por lo tanto NO las ve.
+
+**Por qué:** ADR-003 ya decía que Zona Norte arrancaría sin proyectos master y sin matching automático. La separación de estado evita que cientos de sugerencias ZN ensucien el flujo HITL de Equipetrol durante el piloto.
+
+**Implementación:** trigger `trg_separar_hitl_zona_norte` BEFORE INSERT en `matching_sugerencias`. Permanente, cero mantenimiento. Reversible con DROP TRIGGER.
+
+**Nada se pierde.** Las sugerencias ZN quedan completas en la tabla (propiedad_id, proyecto_master_sugerido, score, método, razón). Para verlas:
+
+```sql
+SELECT ms.*, p.url, p.nombre_edificio, pm.nombre_oficial
+FROM matching_sugerencias ms
+JOIN propiedades_v2 p ON ms.propiedad_id = p.id
+JOIN proyectos_master pm ON ms.proyecto_master_sugerido = pm.id_proyecto_master
+WHERE ms.estado = 'pendiente_zn'
+ORDER BY ms.score_confianza DESC;
+```
+
+### 🛠️ Cambio futuro de UI cuando se decida revisar matches ZN
+
+Cuando llegue el momento de incorporar Zona Norte al flujo HITL formal (post-validación del piloto, decisión documentada en ADR futuro):
+
+**Opciones de implementación:**
+
+1. **UI separada nueva** — crear `/admin/supervisor/matching-zona-norte` que filtra por `estado='pendiente_zn'`. Las funciones backend (`aplicar_matches_aprobados`, etc.) ya funcionan con cualquier estado, solo cambia el filtro de display. Recomendado si Zona Norte sigue siendo un piloto separado.
+
+2. **Toggle/dropdown en UI existente** — agregar selector de zona en `/admin/supervisor/matching` para alternar entre "Equipetrol" y "Zona Norte" (o "Todas"). Recomendado si ZN deja de ser piloto y se integra al flujo normal.
+
+3. **Migración total a HITL único** — `UPDATE matching_sugerencias SET estado='pendiente' WHERE estado='pendiente_zn'` + `DROP TRIGGER trg_separar_hitl_zona_norte`. Las sugerencias ZN aparecen en el HITL Equipetrol normal. Recomendado cuando Zona Norte tenga proyectos master propios suficientes y se quiera tratar igual.
+
+**Ubicación del código relevante:**
+- Trigger: `sql/migrations/253_hitl_zona_norte_separado.sql`
+- Páginas admin: `simon-mvp/src/pages/admin/supervisor/matching.tsx` (referencia para crear copia ZN)
+
+---
+
 ## TL;DR técnico
 
 1. **El discovery escala por GPS.** Los 3 portales (C21, Remax, Bien Inmuebles) devuelven lat/lon en cada listing → estrategia "fetch amplio + filtrar por polígono GPS". Agregar una zona nueva = dibujar un polígono. Cero trabajo manual por portal.
