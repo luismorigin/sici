@@ -1,0 +1,383 @@
+{
+  "name": "flujo_a_discovery_remax_zonanorte_v1.0.0",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "45 1 * * *"
+            }
+          ]
+        }
+      },
+      "id": "trigger-zn-rmx",
+      "name": "Trigger 1:45 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-1488, 288],
+      "notes": "1:45 AM (offset al Remax Equipetrol 1:00 AM y al C21 Zona Norte 1:15 AM)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  nombre,\n  ST_AsGeoJSON(geom) AS geom_geojson,\n  ST_XMin(geom) AS lon_oeste,\n  ST_YMin(geom) AS lat_sur,\n  ST_XMax(geom) AS lon_este,\n  ST_YMax(geom) AS lat_norte\nFROM zonas_geograficas\nWHERE activo = true\n  AND nombre = ANY(ARRAY['Zona Norte']::text[]);",
+        "options": {}
+      },
+      "id": "pg-leer-poligonos-zn-rmx",
+      "name": "PG: Leer Polígonos Activos",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-1280, 288],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "Lee polígonos activos. Cambiar el array para incluir más zonas."
+    },
+    {
+      "parameters": {
+        "jsCode": "// === BBOX UNIÓN + ARRAY DE POLÍGONOS ===\nconst items = $input.all();\n\nif (items.length === 0) {\n  throw new Error('No hay polígonos activos. Verificar zonas_geograficas o array de zonas en query SQL.');\n}\n\nlet minLat = Infinity, maxLat = -Infinity;\nlet minLon = Infinity, maxLon = -Infinity;\nconst polygons = [];\n\nfor (const item of items) {\n  const data = item.json;\n  minLat = Math.min(minLat, parseFloat(data.lat_sur));\n  maxLat = Math.max(maxLat, parseFloat(data.lat_norte));\n  minLon = Math.min(minLon, parseFloat(data.lon_oeste));\n  maxLon = Math.max(maxLon, parseFloat(data.lon_este));\n\n  const geo = JSON.parse(data.geom_geojson);\n  polygons.push({\n    nombre: data.nombre,\n    coordinates: geo.coordinates[0]\n  });\n}\n\nconsole.log(`BBox: lat ${minLat} → ${maxLat}, lon ${minLon} → ${maxLon}`);\nconsole.log(`Polígonos: ${polygons.map(p => p.nombre).join(', ')}`);\n\nreturn [{\n  json: {\n    bbox: { lat_sur: minLat, lat_norte: maxLat, lon_oeste: minLon, lon_este: maxLon },\n    polygons,\n    zonas_incluidas: items.map(i => i.json.nombre)\n  }\n}];"
+      },
+      "id": "calc-bbox-zn-rmx",
+      "name": "Calcular BBox + Polígonos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1072, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === GENERADOR DE URLs REMAX (endpoint base SC sin slug) ===\n// Trae TODO Santa Cruz paginado. El filtro por polígono se aplica post-fetch.\n// Cobertura validada en PoC 20-may-2026: ~517 props en 30 páginas. Margen: 30 páginas fijas.\n\nconst TOTAL_PAGES = 30;\nconst BASE_URL = 'https://remax.bo/api/search/departamento/santa-cruz-de-la-sierra';\n\nconst urls = [];\nfor (let page = 1; page <= TOTAL_PAGES; page++) {\n  urls.push({\n    json: {\n      page_url: `${BASE_URL}?page=${page}`,\n      page_number: page,\n      fuente: 'remax'\n    }\n  });\n}\n\nconsole.log(`URLs generadas: ${urls.length} páginas para todo SC. Filtro por polígono post-fetch.`);\nreturn urls;"
+      },
+      "id": "gen-urls-zn-rmx",
+      "name": "Generar URLs Remax",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-864, 288],
+      "notes": "Endpoint base SC sin slug. Trae todo. El filtro de polígono se aplica después."
+    },
+    {
+      "parameters": { "options": {} },
+      "id": "split-zn-rmx",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [-656, 288]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.page_url }}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "http-zn-rmx",
+      "name": "HTTP Request API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-432, 432],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": { "amount": 2 },
+      "id": "wait-zn-rmx",
+      "name": "Wait 2s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [-224, 432],
+      "webhookId": "wait-zn-rmx-c21"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === EXTRAER PROPIEDADES REMAX ===\nconst response = $input.first().json;\nconst propiedades = response.data || [];\n\nif (propiedades.length === 0) {\n  return [];\n}\n\nreturn propiedades.map(prop => ({\n  json: {\n    url: `https://remax.bo/propiedad/${prop.slug}`,\n    fuente: 'remax',\n    codigo_propiedad: prop.MLSID,\n    tipo_operacion: prop.transaction_type?.name?.toLowerCase() || null,\n    latitud: parseFloat(prop.location?.latitude) || null,\n    longitud: parseFloat(prop.location?.longitude) || null,\n    precio_usd: prop.price?.price_in_dollars || null,\n    precio_amount: prop.price?.amount || null,\n    moneda_original: prop.price?.currency_id === 1 ? 'BOB' : 'USD',\n    area_total_m2: prop.listing_information?.construction_area_m || null,\n    dormitorios: prop.listing_information?.number_bedrooms || null,\n    banos: prop.listing_information?.number_bathrooms || null,\n    estacionamientos: prop.listing_information?.number_parking || null,\n    tipo_propiedad_original: prop.listing_information?.subtype_property?.name || null,\n    fecha_publicacion: prop.date_of_listing || null,\n    datos_json_discovery: prop,\n    metodo_discovery: 'zonanorte_remax'\n  }\n}));"
+      },
+      "id": "extraer-zn-rmx",
+      "name": "Extraer Propiedades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-16, 432],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notes": "metodo_discovery='zonanorte_remax' para auditoría."
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "propiedades",
+        "include": "allFieldsExceptDefault",
+        "options": {}
+      },
+      "id": "aggregate-zn-rmx",
+      "name": "Aggregate Snapshot",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [-432, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === FILTRO POINT-IN-POLYGON ===\nfunction pointInPolygon(lon, lat, ring) {\n  let inside = false;\n  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {\n    const xi = ring[i][0], yi = ring[i][1];\n    const xj = ring[j][0], yj = ring[j][1];\n    const intersect = ((yi > lat) !== (yj > lat)) &&\n      (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi);\n    if (intersect) inside = !inside;\n  }\n  return inside;\n}\n\nconst polygons = $('Calcular BBox + Polígonos').first().json.polygons || [];\nif (polygons.length === 0) {\n  console.warn('Sin polígonos activos — devuelvo vacío (FAIL CLOSED)');\n  return [{ json: { propiedades: [], stats: { total: 0, dentro: 0, fuera: 0 } } }];\n}\n\nconst input = $input.first().json;\nconst propiedades = input.propiedades || [];\n\nconst dentro = propiedades.filter(p => {\n  const lat = parseFloat(p.latitud);\n  const lon = parseFloat(p.longitud);\n  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;\n  return polygons.some(poly => pointInPolygon(lon, lat, poly.coordinates));\n});\n\nconsole.log(`Filtro polígono: ${dentro.length}/${propiedades.length} dentro de [${polygons.map(p => p.nombre).join(', ')}]`);\n\nreturn [{\n  json: {\n    propiedades: dentro,\n    stats: { total: propiedades.length, dentro: dentro.length, fuera: propiedades.length - dentro.length }\n  }\n}];"
+      },
+      "id": "filtro-poligono-zn-rmx",
+      "name": "Filtrar por Polígonos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-224, 288]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, url, status\n  FROM propiedades_v2\n  WHERE fuente = 'remax'\n    AND status NOT IN ('inactivo_confirmed')\n    AND zona = ANY(ARRAY['Zona Norte']::text[])",
+        "options": {}
+      },
+      "id": "obtener-bd-zn-rmx",
+      "name": "Obtener URLs Activas BD",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-16, 288],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "Solo props de zonas activas — no marca Equipetrol como ausentes."
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PREPARAR COMPARACIÓN ===\nconst snapshot = $('Filtrar por Polígonos').first().json.propiedades || [];\nconst propiedadesBD = $('Obtener URLs Activas BD').all().map(item => item.json);\n\nconst snapshotDedup = new Map();\nfor (const prop of snapshot) {\n  snapshotDedup.set(prop.url, prop);\n}\n\nconst urlsSnapshot = new Set(snapshotDedup.keys());\nconst urlsBD = new Map(propiedadesBD.map(p => [p.url, { id: p.id, status: p.status }]));\n\nconst nuevas = [];\nconst existentes = [];\nconst ausentes = [];\n\nfor (const [url, prop] of snapshotDedup) {\n  if (!urlsBD.has(url)) {\n    nuevas.push(prop);\n  } else {\n    existentes.push({\n      ...prop,\n      _id_bd: urlsBD.get(url).id,\n      _status_bd: urlsBD.get(url).status\n    });\n  }\n}\n\nfor (const [url, info] of urlsBD) {\n  if (!urlsSnapshot.has(url)) {\n    if (!['inactivo_pending', 'inactivo_confirmed'].includes(info.status)) {\n      ausentes.push({\n        id: info.id,\n        url: url,\n        status_actual: info.status\n      });\n    }\n  }\n}\n\nreturn [{\n  json: {\n    nuevas,\n    existentes,\n    ausentes,\n    stats: {\n      total_snapshot: snapshotDedup.size,\n      total_bd: urlsBD.size,\n      nuevas: nuevas.length,\n      existentes: existentes.length,\n      ausentes: ausentes.length\n    }\n  }\n}];"
+      },
+      "id": "preparar-comp-zn-rmx",
+      "name": "Preparar Comparación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [192, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === LOG STATS ===\nconst stats = $input.first().json.stats;\n\nconsole.log(`\n=== DISCOVERY REMAX ZONA NORTE ===\nSnapshot (deduplicado): ${stats.total_snapshot}\nBD activas (zonas activas): ${stats.total_bd}\n---\nNuevas: ${stats.nuevas}\nExistentes: ${stats.existentes}\nAusentes: ${stats.ausentes}\n=================================\n`);\n\nreturn $input.all();"
+      },
+      "id": "log-stats-zn-rmx",
+      "name": "Log Stats",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === UNIFICAR PROPIEDADES PARA DISCOVERY ===\nconst data = $input.first().json;\nconst nuevas = data.nuevas || [];\nconst existentes = data.existentes || [];\nconst todas = [...nuevas, ...existentes];\n\nif (todas.length === 0) {\n  return [{ json: { skip: true, message: 'No hay propiedades para procesar' } }];\n}\n\nfunction quitarAcentos(texto) {\n  if (!texto) return null;\n  return texto.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n}\n\nreturn todas.map(prop => ({\n  json: {\n    p_url: prop.url,\n    p_fuente: prop.fuente,\n    p_codigo_propiedad: prop.codigo_propiedad,\n    p_tipo_operacion: quitarAcentos(prop.tipo_operacion),\n    p_tipo_propiedad_original: prop.tipo_propiedad_original,\n    p_precio_usd: prop.precio_usd,\n    p_precio_usd_original: prop.precio_amount,\n    p_moneda_original: prop.moneda_original,\n    p_area_total_m2: prop.area_total_m2,\n    p_dormitorios: prop.dormitorios,\n    p_banos: prop.banos,\n    p_estacionamientos: prop.estacionamientos,\n    p_latitud: prop.latitud,\n    p_longitud: prop.longitud,\n    p_fecha_publicacion: prop.fecha_publicacion,\n    p_metodo_discovery: prop.metodo_discovery,\n    p_datos_json_discovery: JSON.stringify(prop.datos_json_discovery)\n  }\n}));"
+      },
+      "id": "procesar-props-zn-rmx",
+      "name": "Procesar Propiedades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [608, 176]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.p_url }}",
+              "rightValue": true,
+              "operator": { "type": "string", "operation": "notEmpty", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-props-zn-rmx",
+      "name": "IF Propiedades",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [816, 176]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM registrar_discovery(\n  p_url := $1,\n  p_fuente := $2,\n  p_codigo_propiedad := $3,\n  p_tipo_operacion := $4,\n  p_tipo_propiedad_original := $5,\n  p_precio_usd := $6,\n  p_precio_usd_original := $7,\n  p_moneda_original := $8,\n  p_area_total_m2 := $9,\n  p_dormitorios := $10,\n  p_banos := $11,\n  p_estacionamientos := $12,\n  p_latitud := $13,\n  p_longitud := $14,\n  p_fecha_publicacion := $15,\n  p_metodo_discovery := $16,\n  p_datos_json_discovery := $17::jsonb\n)",
+        "options": {
+          "queryReplacement": "={{ [$json.p_url, $json.p_fuente, $json.p_codigo_propiedad, $json.p_tipo_operacion, $json.p_tipo_propiedad_original, $json.p_precio_usd, $json.p_precio_usd_original, $json.p_moneda_original, $json.p_area_total_m2, $json.p_dormitorios, $json.p_banos, $json.p_estacionamientos, $json.p_latitud, $json.p_longitud, $json.p_fecha_publicacion, $json.p_metodo_discovery, $json.p_datos_json_discovery] }}"
+        }
+      },
+      "id": "registrar-discovery-zn-rmx",
+      "name": "Registrar Discovery",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1024, 176],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PROCESAR AUSENTES ===\nconst ausentes = $input.first().json.ausentes;\n\nif (ausentes.length === 0) {\n  return [{ json: { skip: true, message: 'No hay propiedades ausentes' } }];\n}\n\nreturn ausentes.map(prop => ({\n  json: {\n    id: prop.id,\n    url: prop.url,\n    status_actual: prop.status_actual\n  }\n}));"
+      },
+      "id": "procesar-ausentes-zn-rmx",
+      "name": "Procesar Ausentes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [608, 480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "notEquals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-ausentes-zn-rmx",
+      "name": "IF Ausentes",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [816, 480]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE propiedades_v2\n  SET status = 'inactivo_pending',\n      fecha_discovery = NOW(),\n      primera_ausencia_at = COALESCE(primera_ausencia_at, NOW())\n  WHERE id = $1 AND tipo_operacion = 'venta'\n    AND status NOT IN ('inactivo_pending', 'inactivo_confirmed')",
+        "options": {
+          "queryReplacement": "={{ [$json.id] }}"
+        }
+      },
+      "id": "marcar-ausentes-zn-rmx",
+      "name": "Marcar Ausentes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1024, 480],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// === RESUMEN FINAL ===\nconst stats = $('Log Stats').first().json.stats;\nconst zonas = $('Calcular BBox + Polígonos').first().json.zonas_incluidas;\n\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  fuente: 'remax',\n  workflow: 'Flujo A - Discovery Zona Norte',\n  version: '1.0.0',\n  zonas_activas: zonas,\n  resultados: {\n    snapshot_total: stats.total_snapshot,\n    bd_activas: stats.total_bd,\n    nuevas_insertadas: stats.nuevas,\n    existentes_actualizadas: stats.existentes,\n    ausentes_marcadas: stats.ausentes\n  },\n  status: 'completado'\n};\n\nconsole.log('=== DISCOVERY REMAX ZONA NORTE COMPLETADO ===');\nconsole.log(JSON.stringify(resumen, null, 2));\n\nreturn [{ json: resumen }];"
+      },
+      "id": "resumen-zn-rmx",
+      "name": "Resumen Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1248, 288],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT registrar_ejecucion_workflow(\n  'discovery_remax_zonanorte',\n  'success',\n  {{ $json.resultados.snapshot_total || 0 }},\n  {{ $json.resultados.nuevas_insertadas || 0 }},\n  0,\n  NULL,\n  '{{ JSON.stringify({ existentes: $json.resultados.existentes_actualizadas || 0, ausentes: $json.resultados.ausentes_marcadas || 0, zonas: $json.zonas_activas }) }}'::jsonb\n);",
+        "options": {}
+      },
+      "id": "registrar-ejec-zn-rmx",
+      "name": "registrar_ejecucion_workflow",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1472, 288],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger 1:45 AM": {
+      "main": [[{ "node": "PG: Leer Polígonos Activos", "type": "main", "index": 0 }]]
+    },
+    "PG: Leer Polígonos Activos": {
+      "main": [[{ "node": "Calcular BBox + Polígonos", "type": "main", "index": 0 }]]
+    },
+    "Calcular BBox + Polígonos": {
+      "main": [[{ "node": "Generar URLs Remax", "type": "main", "index": 0 }]]
+    },
+    "Generar URLs Remax": {
+      "main": [[{ "node": "Split In Batches", "type": "main", "index": 0 }]]
+    },
+    "Split In Batches": {
+      "main": [
+        [{ "node": "Aggregate Snapshot", "type": "main", "index": 0 }],
+        [{ "node": "HTTP Request API", "type": "main", "index": 0 }]
+      ]
+    },
+    "HTTP Request API": {
+      "main": [[{ "node": "Wait 2s", "type": "main", "index": 0 }]]
+    },
+    "Wait 2s": {
+      "main": [[{ "node": "Extraer Propiedades", "type": "main", "index": 0 }]]
+    },
+    "Extraer Propiedades": {
+      "main": [[{ "node": "Split In Batches", "type": "main", "index": 0 }]]
+    },
+    "Aggregate Snapshot": {
+      "main": [[{ "node": "Filtrar por Polígonos", "type": "main", "index": 0 }]]
+    },
+    "Filtrar por Polígonos": {
+      "main": [[{ "node": "Obtener URLs Activas BD", "type": "main", "index": 0 }]]
+    },
+    "Obtener URLs Activas BD": {
+      "main": [[{ "node": "Preparar Comparación", "type": "main", "index": 0 }]]
+    },
+    "Preparar Comparación": {
+      "main": [[{ "node": "Log Stats", "type": "main", "index": 0 }]]
+    },
+    "Log Stats": {
+      "main": [[
+        { "node": "Procesar Propiedades", "type": "main", "index": 0 },
+        { "node": "Procesar Ausentes", "type": "main", "index": 0 }
+      ]]
+    },
+    "Procesar Propiedades": {
+      "main": [[{ "node": "IF Propiedades", "type": "main", "index": 0 }]]
+    },
+    "IF Propiedades": {
+      "main": [[{ "node": "Registrar Discovery", "type": "main", "index": 0 }]]
+    },
+    "Registrar Discovery": {
+      "main": [[{ "node": "Resumen Final", "type": "main", "index": 0 }]]
+    },
+    "Procesar Ausentes": {
+      "main": [[{ "node": "IF Ausentes", "type": "main", "index": 0 }]]
+    },
+    "IF Ausentes": {
+      "main": [[{ "node": "Marcar Ausentes", "type": "main", "index": 0 }]]
+    },
+    "Marcar Ausentes": {
+      "main": [[{ "node": "Resumen Final", "type": "main", "index": 0 }]]
+    },
+    "Resumen Final": {
+      "main": [[{ "node": "registrar_ejecucion_workflow", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "America/La_Paz",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
