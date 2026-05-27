@@ -89,3 +89,42 @@ Log cronológico append-only. Cada entrada: qué se hizo, qué se decidió, qué
 **Caveat documentado en README.md:** la serie `market_absorption_snapshots` de Zona Norte arranca con baseline ruidoso (tasa absorción aparente ~92% es falsa). Aplica regla 12 de CLAUDE.md: no usar como métrica hasta ≥90 días post-Fase 3.
 
 **Próximo paso:** Fase 3 — adaptar los 3 workflows de discovery al patrón "fetch amplio + filtro polígono GPS".
+
+---
+
+## 27 May 2026 — Fase 3+4 ejecutadas, bugs raíz descubiertos y resueltos
+
+**Mañana:** validación tras primera corrida nocturna. 408 props ZN aparecieron como `inactivo_pending` (causa: discovery Equipetrol comparaba todo `propiedades_v2` sin filtro de zona, marcaba ZN como ausentes). Fix aplicado en C21+Remax Equipetrol: agregar `AND zona IN (6 zonas Equipetrol)` al "Obtener URLs Activas BD". Commit `fb78d23`. También limpieza de 140 props legacy backfilleadas con status confirmed/excluida que no debían contar para absorción ZN.
+
+**Tarde:** pipeline manual completo para acelerar dark launch (no esperar otro ciclo nocturno):
+
+1. **Flujo B regex** (con LIMIT subido a 500 → restaurado a 100): 374/416 props con enrichment regex aplicado.
+2. **Enrichment LLM** (~$3 total con Haiku 4.5): 343 props con `llm_output` poblado. Detección clara de edificios reconocidos (STONE 4, MIRO TOWER, MACORORO 15), TC paralelo, estado_construccion. **Bug pillado:** LIMIT estaba mal cambiado a `LENGTH(descripcion) >= 500` cuando debía ser `>= 30`. Fixeado.
+3. **Merge** (2 corridas con LIMIT 200): 373 props ZN venta a `status='completado'`. **Hallazgo:** props pasaban directo de `actualizado` a `completado` sin pasar por merge formal — workaround: cambiar manual a `actualizado` para forzar merge. nombre_edificio + tipo_cambio_detectado consolidados al 100%.
+4. **Matching nocturno:** 88 matches generados. **Detectados 15 cross-zona ZN→Equipetrol** (Domus Luxury, Sky Icon, Baruc II, TRIVENTO IV, Condominio La Madre).
+
+**Investigación cross-zona:** análisis función por función reveló que solo `generar_matches_trigram` no tenía blindaje de zona (las otras 6 sí). `Condominio La Madre` además estaba **mal catalogada** en `proyectos_master` (zona='Equipetrol Norte' pero GPS cae en Zona Norte) — re-asignada a ZN.
+
+**Migración 252 aplicada:** `generar_matches_trigram` con `AND psm.zona = pm.zona` (replicando estilo del blindaje fuzzy existente).
+
+**Bug pillado en `aplicar_matches_aprobados`:** la función NO respeta reverts manuales de `id_proyecto_master`. Si el admin revierte un match pero la sugerencia sigue en estado='aprobado', el próximo matching la re-aplica. Solución: archivar las 26 sugerencias cross-zona aprobadas que involucran ZN como `obsoleto_cross_zona` (filtro acotado, NO toca cross-microzona Equipetrol históricas).
+
+**Migración 253 aplicada:** trigger BEFORE INSERT en `matching_sugerencias` separa el HITL de Zona Norte (estado `pendiente_zn`) del HITL Equipetrol (`pendiente`). Permanente, cero mantenimiento. UI futura documentada en README (3 opciones: UI separada nueva / toggle / migración total). Sin pérdida de datos — sugerencias ZN quedan completas, queryables por estado.
+
+**Resultado final del día:**
+- 373 props ZN venta en `completado`, 76 matches legítimos same-zone, 0 cross-zona, 297 sin match (esperado ADR-003).
+- HITL Equipetrol limpio: 18 `pendiente`, 0 ZN.
+- HITL ZN separado: 39 `pendiente_zn`.
+- 65 `obsoleto_cross_zona` archivadas con trazabilidad.
+
+**Snapshot del día (auditoria_diaria_sici_v3.0 manual):**
+- Zona Norte tiene su PRIMERA serie por-zona con 4 filas (dorms 0-3): 372 props activas, mediana $59k-$157k según dorms, USD/m² $1304-$1700.
+- Global Equipetrol sin contaminación ZN (blindaje 2 funcionando): 389 props activas.
+- ZN ~30-50% más barata que Equipetrol global (esperable: zona menos premium).
+- ZN absorbidas 30d = 0 (correcto post-limpieza, baseline ruidoso eliminado).
+
+**Commits del día:** `fb78d23` (fix discovery filtro zona), `8f4e3ea` (mig 252+253+README HITL).
+
+**Workflows ZN activos:** `flujo_a_discovery_century21_zonanorte_v1.0.0` (cron 1:15 AM), `flujo_a_discovery_remax_zonanorte_v1.0.0` (cron 1:45 AM). Mañana 1:15-9:00 AM el ciclo completo corre sin intervención.
+
+**Próximo paso:** validar primera corrida nocturna 100% automática 28-may-2026. Tasks pendientes: documentar kill-switch (#10) cuando se considere necesario.
