@@ -2,75 +2,17 @@
 
 > Tickets pendientes que surgieron de la validación Fase 3+4. Organizados por prioridad y por scope.
 
-**Última actualización:** 27 May 2026.
+**Última actualización:** 27 May 2026 (sub-sesión 3 — reorganización post-investigación profunda).
 
 ---
 
 ## 🔴 Tickets críticos (próxima sesión)
 
-### #1 — Decidir manejo de `nombre_edificio` para props ZN sin match
+### #1 — Mejorar criterios de confianza del prompt LLM v4.0 + merge acepta 'media'
 
-**Investigación 27-may-2026 (sub-sesión 2):** el ticket originalmente decía "mejorar prompt LLM v4.0". Tras investigar caso real resultó que **el LLM funciona bien** (devuelve `null` cuando no hay nombre claro). El bug está en el extractor REGEX del `flujo_b_processing_v3.0` que extrae "Preventa", "Venta", "Moderna" como nombre.
+> **Reformulado tras 3 iteraciones de investigación 27-may-2026.** El ticket original ("Mejorar prompt LLM" / "Decidir A o B") era erróneo — el merge v2.6.0 YA tiene lógica híbrida correcta. La causa raíz real es que el **prompt nunca define criterios** sobre cuándo usar cada nivel de confianza → el LLM lo interpreta binario (alta/null).
 
-**Mecanismo real descubierto:**
-- Cuando una prop matchea con `proyecto_master` → el merge pisa `nombre_edificio` con `pm.nombre_oficial`.
-- Equipetrol: 97% de props matcheadas → 83% de columnas dominadas por pm.nombre_oficial (que coincide con LLM en 88% de los casos).
-- Zona Norte (ADR-003: sin proyectos master): 93% de props SIN match → caen al COALESCE del regex → "Preventa"/"Moderna" emergen.
-
-**El bug existe globalmente pero solo es visible en zonas sin pm cargados.**
-
-**Datos actuales 27-may-2026:**
-- 16 props ZN con `nombre_edificio='Preventa'` — palabra genérica (NO es edificio).
-- 6 con `'Venta'` — palabra genérica (NO es edificio).
-- 9 con `'Moderna'` — **SÍ es edificio real ("Torre Moderna")** pero el regex perdió "Torre" y el LLM no lo detectó (bug doble).
-- Equipetrol: solo 2 props con genéricos (enmascarado por matching).
-
-**Matiz crítico ("Moderna"):** el bug no es solo del regex. El LLM también falló para "Torre Moderna" — devolvió `null` cuando la descripción/URL sí mencionaban el nombre. Opción B sola NO arregla este caso; requiere ALGUNA de estas acciones adicionales:
-- **a)** Mejorar prompt LLM para detectar "Torre X" como nombre válido.
-- **b)** Cargar `Torre Moderna` en `proyectos_master` ZN → matching la corrige.
-- **c)** Backfill por URL pattern: si URL contiene `torre-moderna` → `nombre_edificio='Torre Moderna'`.
-
-**Investigación 27-may-2026 (sub-sesión 3) — Hallazgo más profundo:**
-
-Auditoría sobre 824 props con LLM:
-- 643 (78%) con confianza='alta'.
-- 166 (20%) con confianza=null (LLM no respondió).
-- 15 (2%) con confianza='media'.
-- **0 (0%) con confianza='baja'.**
-
-→ El LLM es **binario en la práctica**: o "alta" o "null". No usa "media" ni "baja".
-
-**Causa raíz descubierta:** el prompt `prompt-ventas.md` **define los valores válidos del campo `nombre_edificio_confianza` ("alta"/"media"/"baja"/null) en el schema JSON, pero NUNCA explica al LLM cuándo usar cada nivel.** Sin criterio, el LLM lo interpreta como flag binario.
-
-**Caso "Moderna" (Torre Moderna):**
-- Nombre está SOLO en URL/slug (`torre-moderna`), no en descripción libre.
-- Sin criterio en prompt, el LLM no sabe qué confianza usar → devuelve null.
-- Merge solo acepta confianza='alta' → cae al regex → "Moderna" se cuela.
-
-**Fix correcto multi-capa (no son parches):**
-
-1. **Mejorar prompt LLM** con criterio explícito:
-   - `alta`: nombre explícito en descripción libre.
-   - `media`: nombre solo en título/URL/slug.
-   - `baja`: inferido por modelo/código interno.
-   - `null`: no hay forma de extraerlo.
-
-2. **Modificar merge** para aceptar también `media` (no solo `alta`) como confiable. La rama híbrida v2.6.0 actualmente filtra `confianza='alta'` — bajar el umbral.
-
-3. **Re-procesar las 166 props con LLM=null** post-fix del prompt para ver si algunas extraen vía título/URL.
-
-**Impacto Equipetrol del cambio del prompt:**
-- Probable detección adicional de nombres que ahora quedan null (mejora).
-- Re-clasificación de confianzas existentes (algunos "alta" pueden bajar a "media" cuando solo es título).
-- Riesgo MEDIO: re-procesamiento de Equipetrol cambia comportamiento de algunas props ya bien etiquetadas.
-
-**Recomendación:** abordar como ticket separado próxima sesión. Hoy queda como aprendizaje documentado. ZN ya tiene los nombres limpios via backfill manual.
-
----
-
-### #1.1 — Mejorar criterios de confianza del prompt LLM v4.0 (separado del #1)
-
-**Contexto histórico (revisado git):** El sistema ya tuvo auditoría profunda sobre LLM (commits `dc4e4d7` 24-may, `5d86301` 22-may, `d00129b` 22-may). Decisiones documentadas en `docs/backlog/DEUDA_TECNICA.md` "Discovery pisa correcciones del LLM" (AUDITADO Y CERRADO 24-may-2026) y `docs/canonical/merge_canonical.md`:
+**Contexto histórico (revisado git):** El sistema ya tuvo auditoría profunda sobre LLM (commits `dc4e4d7` 24-may, `5d86301` 22-may, `d00129b` 22-may). Decisiones en `docs/backlog/DEUDA_TECNICA.md` "Discovery pisa correcciones del LLM" (AUDITADO Y CERRADO 24-may-2026):
 
 > "⚠ 'El LLM tiene razón' NO es universal. Distinguir por campo:"
 > - **dormitorios**: LLM gana (cruda es árbitro)
@@ -79,90 +21,99 @@ Auditoría sobre 824 props con LLM:
 
 → La asimetría LLM-por-campo es **decisión consciente**, no bug. Cualquier cambio al prompt debe respetar esto.
 
-**Acción propuesta (refinada con contexto):**
+**Datos medidos (27-may-2026):**
 
-1. **Agregar bloque al prompt** sobre cuándo usar cada nivel de confianza para `nombre_edificio_confianza` ESPECÍFICAMENTE:
+Auditoría sobre 824 props con LLM:
+- 643 (78%) con confianza='alta'.
+- 166 (20%) con confianza=null.
+- 15 (2%) con confianza='media'.
+- **0 (0%) con confianza='baja'.**
+
+→ El LLM es **binario en la práctica**.
+
+**Impacto real Zona Norte:**
+- **135 props ZN con LLM=null** (32% del inventario).
+- 22 tienen pattern `edificio-X` / `torre-X` / `condominio-X` en URL.
+- 13 contienen nombre de edificio conocido en URL/slug.
+- **~30-50 props ZN recuperables** post-fix del prompt.
+
+**Impacto Equipetrol:** 42 props con LLM=null. Mayoría enmascaradas por matching que pisa con `pm.nombre_oficial`. Cambio probable: 0-3 props con cambios visibles.
+
+**Acción (3 capas):**
+
+1. **Agregar bloque al prompt** sobre cuándo usar cada nivel para `nombre_edificio_confianza` ESPECÍFICAMENTE:
    - `alta`: nombre explícito en descripción libre (texto del avisador).
    - `media`: nombre solo en título/URL/slug (señal indirecta pero verificable).
    - `baja`: inferido por modelo/código interno (ej. "modelo MA-8" → "Edificio Mangales").
    - `null`: no hay forma de extraerlo.
 
-2. **NO cambiar criterios para estado_construccion, tipo_cambio_detectado.** Mantener existing_protected by-design.
+2. **NO cambiar criterios para `estado_construccion`, `tipo_cambio_detectado`.** Mantener existing_protected by-design (lecciones de los commits 22/24-may).
 
-3. **Modificar merge** SOLO para `nombre_edificio`: aceptar `confianza IN ('alta', 'media')` en la rama LLM híbrida.
+3. **Modificar merge** SOLO para `nombre_edificio`: cambiar `v_llm_nombre_edificio_confianza = 'alta'` a `IN ('alta', 'media')` en la rama LLM híbrida.
 
-4. **Re-procesar las 166 props con LLM=null** post-fix del prompt. Algunas probablemente extraerán vía título/URL.
+4. **Re-procesar las 166 props con LLM=null** post-fix del prompt. Algunas extraerán vía título/URL.
 
-**Riesgos identificados (del contexto histórico):**
-- El LLM siendo más permisivo con "media" puede generar falsos positivos.
-- Mitigación: definir "media" muy estricto en el prompt (sólo cuando el nombre está exactamente en URL/título, no inferencia).
-- Equipetrol: las 643 props con `confianza=alta` no cambian; algunas con LLM=null podrían reclasificar a "media" en el re-procesamiento — comparar antes/después.
+**Riesgos:**
+- LLM más permisivo con "media" → falsos positivos. Mitigación: definir "media" muy estricto en el prompt (solo URL/título exacto, no inferencia).
+- Equipetrol: las 643 con confianza=alta no cambian; algunas con LLM=null podrían reclasificar a "media" en re-procesamiento.
 
-**Impacto real (medido 27-may-2026):**
-- **135 props Zona Norte con LLM=null** (32% del inventario ZN).
-- Mínimo 22 tienen pattern claro de edificio en URL (`edificio-X`, `torre-X`, `condominio-X`).
-- 13 contienen nombre de edificio conocido en URL/slug.
-- **~30-50 props ZN podrían recuperar nombre real** post-fix del prompt (no solo 9 Torre Moderna).
+**Prioridad: MEDIA.** ZN ya tiene 388/388 props con nombre (regex backfill manual). El bug afecta calidad, no funcionalidad. Pero la deuda **crece cada noche** con props nuevas.
 
-**Impacto Equipetrol:** 42 props con LLM=null en 5 zonas. La mayoría enmascaradas por matching que pisa con pm.nombre_oficial. Cambio probable: 0-3 props con cambios visibles.
-
-**Re-evaluación de prioridad: MEDIA** (subido de BAJA tras medir impacto real).
-
-**Por qué MEDIA y no ALTA:**
-- ZN ya tiene 388/388 props con nombre (regex backfill manual). El bug afecta calidad (Preventa/Moderna), no funcionalidad.
-- Para discovery futuro de ZN nuevas, el bug se va a repetir hasta que se aplique el fix.
-- No es urgente pero la deuda crece con el tiempo.
-
-**Bloqueador:** decisión costo/beneficio. Re-procesamiento Haiku ~$3 + 2-3h testing + posible regresión Equipetrol (chica).
-
-**Estimación:** 2-3 horas + testing + re-procesamiento.
-
-**Decisión pendiente — 2 opciones:**
-
-**Opción A — Backfill recurrente acotado a ZN** (cero código):
-- Cada semana corre `UPDATE nombre_edificio = llm_output WHERE zona='Zona Norte' AND nombre_edificio IN ('Preventa','Moderna','Venta','Departamento','Nuevo')`.
-- Tiempo: 30 segundos/semana.
-- Costo: cero.
-- Pros: cero riesgo Equipetrol.
-- Contras: deuda recurrente.
-
-**Opción B — Modificar merge para preferir LLM cuando no hay match**:
-- Cambio quirúrgico en `merge_discovery_enrichment`: si `id_proyecto_master IS NULL`, usar `llm_output.nombre_edificio` antes que el regex.
-- Equipetrol: no afecta (sus 559 matcheadas siguen usando pm.nombre_oficial — preserva comportamiento).
-- ZN: las 361 sin match toman el LLM (mejor calidad) en vez del regex (basura).
-- Tiempo: 30 min + validación.
-- Costo: cero.
-- Pros: fix sistémico, cero deuda futura, no rompe Equipetrol.
-- Contras: cambio sistémico requiere testing cuidadoso.
-
-**Recomendación: Opción B** — fix sistémico, acotado a 1 función SQL, no afecta el path Equipetrol que ya funciona.
-
-**Estimación:** 30 min + validación.
+**Estimación:** 2-3 horas + testing + re-procesamiento (~$3 Haiku).
 
 ---
 
-### #2 — Fixear bug del regex en `flujo_b_processing_v3.0` (BLACKLIST_CRITICA)
+### #1.5 — Cargar proyectos master para edificios reconocibles de Zona Norte
 
-**Contexto:** el flujo B tiene una `BLACKLIST_CRITICA` que SUPONE filtrar "preventa", "venta", "moderna", etc., pero no funciona. El regex extrae estas palabras como `nombre_edificio` y las mete en `datos_json_enrichment`.
+> **Ataque alternativo/complementario al #1.** Beneficio inmediato y visible.
 
-**Investigación pendiente:**
-- ¿Es case sensitivity? La blacklist tiene "preventa" en lowercase pero el extractor genera "Preventa" con mayúscula.
-- ¿Es orden de aplicación? La blacklist se aplica DESPUÉS de la extracción, y solo a algunos paths.
-- ¿Es regex pre-blacklist? Hay regex que escapa al filtro de blacklist.
+**Contexto:** ADR-003 decidió arrancar ZN sin proyectos master. Pero el dark launch reveló que **muchos edificios ZN son recurrentes** y reconocibles. Cargarlos como `pm` elimina el problema "sin match" de raíz para esas props.
 
-**Riesgo:** ALTO. El flujo_b corre para todas las props (Equipetrol + ZN + casas + terrenos). Cambiar el regex en producción es riesgoso.
+**Cuando hay match → matching pisa `nombre_edificio` con `pm.nombre_oficial` → no importa qué haya extraído el regex.** Es el mecanismo que protege Equipetrol del bug del regex.
 
-**Bloqueador:** si se aplica el #1 Opción B (merge prefiere LLM cuando no hay match), este ticket pasa a ser MENOR — el LLM ya cubriría el caso.
+**Edificios candidatos (visible en el inventario ZN actual):**
 
-**Recomendación:** **NO priorizar** salvo que después de aplicar #1 todavía aparezcan casos problemáticos. El #1 ataca el síntoma de forma más sistémica.
+Identificados en el dark launch de hoy (con conteo de props):
+- EDIFICIO K1 (3 props reales — el resto fue cleanup)
+- Mangales Blue 2 (9+)
+- HH HOME (14)
+- Essenzia (6+)
+- Vilareal Duo (8)
+- Torre Moderna (9)
+- Community Alto Norte (12)
+- Blue Garden (6)
+- STONE 4 (5)
+- BLESS TOWER (5)
+- Torres Evolution (5)
+- Raizant Blend / Botanic (5)
+- Ergo Experience (6)
+- Sky Icon (4 — el real, no el cross-zona Equipetrol)
 
-**Estimación:** 2-3 horas + testing en sandbox de n8n.
+**Beneficio si se carga (~14 pm):**
+- 100+ props ZN matchean automáticamente → `nombre_edificio` correcto vía `pm.nombre_oficial`.
+- Cobertura de ~25% del inventario ZN.
+- Elimina la dependencia del bug del regex para esas props.
+- Habilita estudios de mercado por edificio.
+
+**Acción:**
+
+1. Auditar nombres únicos en `propiedades_v2.nombre_edificio` para ZN (tras backfill).
+2. Buscar GPS centroides de cada edificio (promedio de las props que matchean).
+3. INSERT en `proyectos_master` con `zona='Zona Norte'`, `nombre_oficial`, `latitud`, `longitud`, `activo=true`.
+4. Re-correr matching → matches GPS + matching nombre → asignación masiva.
+5. Las sugerencias caerán a `pendiente_zn` (HITL separado) para validación humana.
+
+**Riesgo:** **BAJO.** Es trabajo de catalogación, no toca código de prod.
+
+**Estimación:** 2-4 horas (búsqueda nombres canónicos + GPS + INSERT + validación HITL).
+
+**Recomendación:** ejecutar **ANTES** del #1. Beneficio más rápido y concreto. Si #1.5 cubre el 25% del inventario, el #1 ataca el 7-15% restante (cola larga de edificios únicos).
 
 ---
 
 ## 🟡 Tickets medianos (post-validación piloto)
 
-### #3 — Catalogar los 22 proyectos satélite "Sin zona"
+### #2 — Catalogar los 22 proyectos satélite "Sin zona"
 
 **Contexto:** del backfill quedaron 22 proyectos master con `zona='Sin zona'` (edificios físicamente fuera del polígono Equipetrol pero cerca). Ejemplos: Brickell 7, Riviera 155, Portofino, Swissôtel, Sirari, etc.
 
@@ -177,7 +128,7 @@ Sin esto: matching automático no los toca (blindajes filtran zona estricta).
 
 ---
 
-### #4 — Subir verificador throttle (Fase 6 PRD)
+### #3 — Subir verificador throttle (Fase 6 PRD)
 
 **Contexto:** verificador venta tiene `LIMIT 150/noche`. Equipetrol normal procesa ~3-5 pending. Zona Norte agregará 30-50 nuevas pending/día.
 
@@ -191,7 +142,7 @@ Sin esto: matching automático no los toca (blindajes filtran zona estricta).
 
 ## 🟢 Tickets de producto (post-piloto)
 
-### #5 — Crear UI para HITL Zona Norte
+### #4 — Crear UI para HITL Zona Norte
 
 **Contexto:** desde mig 253, las sugerencias ZN están en `estado='pendiente_zn'`, NO en el HITL Equipetrol (`/admin/supervisor/matching`).
 
@@ -201,15 +152,15 @@ Sin esto: matching automático no los toca (blindajes filtran zona estricta).
 2. **Toggle/dropdown** en UI actual de matching: alternar Equipetrol / ZN.
 3. **Migración total:** `UPDATE estado='pendiente' WHERE estado='pendiente_zn'` + DROP trigger.
 
-**Cuándo:** cuando las pendientes ZN crezcan a >200 o cuando se quiera revisar matches.
+**Cuándo:** cuando las pendientes ZN crezcan a >200 o post-ejecución de #1.5 (donde van a crecer mucho).
 
 **Estimación:** 1-2 horas según opción elegida.
 
 ---
 
-### #6 — Exposición pública de Zona Norte
+### #5 — Exposición pública de Zona Norte
 
-**Contexto:** hoy ZN es dark launch. Frontend `/ventas` filtra solo Equipetrol. Admin tiene "Zona Norte (piloto)" via `ZONAS_ADMIN_FILTER` (mig commit `115b1e5`).
+**Contexto:** hoy ZN es dark launch. Frontend `/ventas` filtra solo Equipetrol. Admin tiene "Zona Norte (piloto)" via `ZONAS_ADMIN_FILTER` (commit `115b1e5`).
 
 **Niveles de exposición:**
 
@@ -227,7 +178,7 @@ Sin esto: matching automático no los toca (blindajes filtran zona estricta).
 
 ---
 
-### #7 — Página preview privada con feed-look idéntico al de Equipetrol
+### #6 — Página preview privada con feed-look idéntico al de Equipetrol
 
 **Contexto:** intento 27-may-2026 falló (hydration mismatch en `ventas.tsx` + bucle de re-fetch). Approach actual: usar `/admin/propiedades` para validación visual.
 
@@ -239,7 +190,7 @@ Sin esto: matching automático no los toca (blindajes filtran zona estricta).
 
 ---
 
-### #8 — Fase 5 PRD: Alquiler Zona Norte
+### #7 — Fase 5 PRD: Alquiler Zona Norte
 
 **Contexto:** Fase 3+4 cubrió venta. Falta replicar para alquiler:
 - Workflows: `flujo_discovery_c21_alquiler_zonanorte.json`, `flujo_discovery_remax_alquiler_zonanorte.json`, `flujo_discovery_bien_inmuebles_alquiler_zonanorte.json`.
@@ -252,7 +203,7 @@ Sin esto: matching automático no los toca (blindajes filtran zona estricta).
 
 ---
 
-### #9 — Mover el polígono "rápido" a uno definitivo
+### #8 — Mover el polígono "rápido" a uno definitivo
 
 **Contexto:** el polígono actual (`docs/proyectos/zona-norte/poligono-prueba.geojson`) fue dibujado rápido para validar. ADR-008 dice que subdividir después es seguro porque `get_zona_by_gps()` permite re-asignar.
 
@@ -267,15 +218,32 @@ Sin esto: matching automático no los toca (blindajes filtran zona estricta).
 
 ---
 
-## ⚪ Investigación (no urgente)
+## ⚪ Investigación / no priorizar
 
-### #10 — Cuál es la causa raíz del re-fetch bucle al usar query param + ventas.tsx
+### #9 — Causa raíz del re-fetch bucle al usar query param + ventas.tsx
 
 **Contexto:** intento 27-may de hacer `/preview/zn-piloto-mayo2026 → /ventas?_zn_preview=1` causó bucle de re-render. Posible hydration mismatch + `fetchProperties` con dependencias circulares.
 
-**Investigación:** entender la causa exacta para hacer un refactor robusto cuando se implemente #7.
+**Investigación:** entender la causa exacta para hacer un refactor robusto cuando se implemente #6.
 
 **Estimación:** 1-2 horas debug.
+
+---
+
+### #10 — Fix bug del regex en `flujo_b_processing_v3.0` (BLACKLIST_CRITICA) — NO PRIORIZAR
+
+> **Ticket movido de crítico → no priorizar tras investigación 27-may.**
+
+**Contexto:** el flujo B tiene una `BLACKLIST_CRITICA` que SUPONE filtrar "preventa", "venta", "moderna", etc., pero no funciona. El regex extrae estas palabras como `nombre_edificio` y las mete en `datos_json_enrichment`.
+
+**Por qué NO priorizarlo:**
+- Perseguir cada palabra mala del regex es **jugar al topo** (parche infinito).
+- El #1 (mejorar prompt LLM) y #1.5 (cargar pm ZN) **atacan el síntoma de forma estructural**.
+- Tocar el flujo B en producción es RIESGO ALTO (workflow crítico que procesa todas las zonas).
+
+**Cuándo reconsiderar:** si después de aplicar #1 y #1.5 todavía aparecen casos problemáticos visibles. Por ahora, dejar como deuda conocida.
+
+**Estimación:** 2-3 horas + testing en sandbox de n8n (si alguna vez se hace).
 
 ---
 
@@ -290,3 +258,19 @@ Sin esto: matching automático no los toca (blindajes filtran zona estricta).
 - ✅ Backfill `nombre_edificio` con `llm_output` (acotado a ZN)
 - ✅ Agregado "Zona Norte (piloto)" a `ZONAS_ADMIN_FILTER` (commit `115b1e5`)
 - ✅ Doc `operacion.md` con kill-switch + monitoreo diario
+- ✅ Investigación profunda del prompt LLM + criterios de confianza (documentado en #1, no aplicado fix)
+
+---
+
+## Aprendizajes meta del proyecto
+
+**Sobre diagnóstico:** la sesión del 27-may tuvo 3 iteraciones de hipótesis incorrectas antes de llegar a la causa raíz:
+
+1. ❌ "Mejorar prompt LLM para no extraer genéricos" → el LLM ya devolvía null correctamente.
+2. ❌ "Modificar merge para preferir LLM" → el merge YA tiene esa lógica (v2.6.0).
+3. ❌ "Fixear blacklist del regex" → parche infinito, no escalable.
+4. ✅ "Prompt nunca define criterios de confianza" → causa raíz real.
+
+**Lección:** antes de proponer fix, **leer las decisiones históricas en git** (commits + docs canónicos). El sistema ya tuvo auditoría profunda sobre LLM en 22-24 may; ignorarla llevó a hipótesis incorrectas.
+
+**Sobre estimaciones:** la estimación inicial del impacto fue de "9 props" (Torre Moderna). Medición real: **135 props ZN con LLM=null** (32% del inventario). Lección: **medir antes de estimar**.
