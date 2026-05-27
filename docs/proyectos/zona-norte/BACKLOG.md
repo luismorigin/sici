@@ -20,10 +20,15 @@
 **El bug existe globalmente pero solo es visible en zonas sin pm cargados.**
 
 **Datos actuales 27-may-2026:**
-- 16 props ZN con `nombre_edificio='Preventa'`.
-- 9 con `'Moderna'`.
-- 6 con `'Venta'`.
+- 16 props ZN con `nombre_edificio='Preventa'` — palabra genérica (NO es edificio).
+- 6 con `'Venta'` — palabra genérica (NO es edificio).
+- 9 con `'Moderna'` — **SÍ es edificio real ("Torre Moderna")** pero el regex perdió "Torre" y el LLM no lo detectó (bug doble).
 - Equipetrol: solo 2 props con genéricos (enmascarado por matching).
+
+**Matiz crítico ("Moderna"):** el bug no es solo del regex. El LLM también falló para "Torre Moderna" — devolvió `null` cuando la descripción/URL sí mencionaban el nombre. Opción B sola NO arregla este caso; requiere ALGUNA de estas acciones adicionales:
+- **a)** Mejorar prompt LLM para detectar "Torre X" como nombre válido.
+- **b)** Cargar `Torre Moderna` en `proyectos_master` ZN → matching la corrige.
+- **c)** Backfill por URL pattern: si URL contiene `torre-moderna` → `nombre_edificio='Torre Moderna'`.
 
 **Decisión pendiente — 2 opciones:**
 
