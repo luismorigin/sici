@@ -98,7 +98,22 @@ Auditoría sobre 824 props con LLM:
 - Mitigación: definir "media" muy estricto en el prompt (sólo cuando el nombre está exactamente en URL/título, no inferencia).
 - Equipetrol: las 643 props con `confianza=alta` no cambian; algunas con LLM=null podrían reclasificar a "media" en el re-procesamiento — comparar antes/después.
 
-**Bloqueador:** decidir si el costo (re-procesamiento Haiku ~$3 + tiempo testing) justifica los ~9 casos como Torre Moderna. **Recomendación de prioridad: BAJA** — la deuda existe pero el impacto en producción es chico.
+**Impacto real (medido 27-may-2026):**
+- **135 props Zona Norte con LLM=null** (32% del inventario ZN).
+- Mínimo 22 tienen pattern claro de edificio en URL (`edificio-X`, `torre-X`, `condominio-X`).
+- 13 contienen nombre de edificio conocido en URL/slug.
+- **~30-50 props ZN podrían recuperar nombre real** post-fix del prompt (no solo 9 Torre Moderna).
+
+**Impacto Equipetrol:** 42 props con LLM=null en 5 zonas. La mayoría enmascaradas por matching que pisa con pm.nombre_oficial. Cambio probable: 0-3 props con cambios visibles.
+
+**Re-evaluación de prioridad: MEDIA** (subido de BAJA tras medir impacto real).
+
+**Por qué MEDIA y no ALTA:**
+- ZN ya tiene 388/388 props con nombre (regex backfill manual). El bug afecta calidad (Preventa/Moderna), no funcionalidad.
+- Para discovery futuro de ZN nuevas, el bug se va a repetir hasta que se aplique el fix.
+- No es urgente pero la deuda crece con el tiempo.
+
+**Bloqueador:** decisión costo/beneficio. Re-procesamiento Haiku ~$3 + 2-3h testing + posible regresión Equipetrol (chica).
 
 **Estimación:** 2-3 horas + testing + re-procesamiento.
 
