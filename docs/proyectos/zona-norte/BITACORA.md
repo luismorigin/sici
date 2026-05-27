@@ -163,3 +163,48 @@ Log cronológico append-only. Cada entrada: qué se hizo, qué se decidió, qué
 **Aplicaciones de UI:** agregado "Zona Norte (piloto)" al filtro admin (`/admin/propiedades`, `/admin/proyectos`) vía `ZONAS_ADMIN_FILTER`. Solo admin lo ve; público sigue sin Zona Norte (dark launch intacto). Commit `115b1e5`.
 
 **Pendientes documentados en BACKLOG.md.** Ver ese archivo para tickets de próxima sesión (mejora prompt LLM, refactor merge/matching para usar llm_output).
+
+---
+
+## 27 May 2026 (continuación 2) — Re-investigación del ticket #1: NO era el LLM
+
+**Trigger:** intento de fixear el ticket "mejorar prompt LLM v4.0" reveló que el diagnóstico inicial estaba equivocado.
+
+**Hallazgos al investigar caso real (Remax prop con `nombre_edificio='Preventa'`):**
+
+| Fuente | Valor |
+|---|---|
+| `llm_output.nombre_edificio` | **null** ✅ (LLM correctamente identifica que no hay nombre claro) |
+| `datos_json_enrichment.nombre_edificio` (regex) | `"Preventa"` ❌ (regex toma palabra del título) |
+| Columna final | `"Preventa"` (merge usa regex cuando LLM no estaba siendo considerado) |
+
+**Conclusión:** el LLM funciona bien. El bug está en el extractor REGEX del `flujo_b_processing_v3.0`. Tiene una `BLACKLIST_CRITICA` con "preventa, pre venta, venta, etc." pero NO se aplica (probable case sensitivity o orden de filtrado).
+
+**Análisis del alcance real del bug:**
+
+Auditoría sobre 568 props Equipetrol completadas:
+- 472 (83%) `nombre_edificio = llm_output.nombre_edificio` — el LLM ya domina la columna.
+- 559 (97%) tienen `id_proyecto_master` (matcheadas con proyecto master).
+- 490 (88%) `nombre_edificio = pm.nombre_oficial` — el merge pisa con el nombre del proyecto cuando hay match.
+
+→ **El mecanismo real**: cuando una prop matchea con `proyecto_master`, el merge pisa `nombre_edificio` con `pm.nombre_oficial`. Eso enmascara el bug del regex en Equipetrol (todo matchea).
+
+**¿Por qué el bug emerge en Zona Norte?**
+
+- ADR-003: ZN arranca SIN proyectos master propios (decisión).
+- 361 de 388 props ZN están **sin match** (93%).
+- Sin match → merge usa COALESCE → cae al regex → "Preventa"/"Moderna"/"Venta" emergen.
+
+**Comparativa:**
+
+| Caso | Equipetrol | Zona Norte |
+|---|---|---|
+| Props matcheadas (pm pisa nombre) | 559 (97%) | 27 (7%) |
+| Props sin match (regex gana) | ~9 (1.6%) | **361 (93%)** |
+| Props con nombre genérico | 2 (Venta) | 31 (Preventa/Moderna/Venta) |
+
+**Re-categorización del ticket original:** "Mejorar prompt LLM" estaba mal nombrado. El issue real es:
+
+> "Props Zona Norte sin match exponen el bug del regex porque no hay pm.nombre_oficial que las salve. Soluciones: backfill recurrente (cero código) o modificar merge para preferir LLM cuando id_proyecto_master IS NULL."
+
+**No se aplicó ningún fix en esta sub-sesión.** Solo investigación. Tickets actualizados en BACKLOG.md.

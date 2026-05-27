@@ -8,60 +8,63 @@
 
 ## 🔴 Tickets críticos (próxima sesión)
 
-### #1 — Mejorar prompt LLM v4.0 para no extraer palabras genéricas como nombre_edificio
+### #1 — Decidir manejo de `nombre_edificio` para props ZN sin match
 
-**Problema detectado 27-may-2026:** el prompt LLM `scripts/llm-enrichment/prompt-ventas.md` extrae palabras genéricas como `nombre_edificio`:
+**Investigación 27-may-2026 (sub-sesión 2):** el ticket originalmente decía "mejorar prompt LLM v4.0". Tras investigar caso real resultó que **el LLM funciona bien** (devuelve `null` cuando no hay nombre claro). El bug está en el extractor REGEX del `flujo_b_processing_v3.0` que extrae "Preventa", "Venta", "Moderna" como nombre.
+
+**Mecanismo real descubierto:**
+- Cuando una prop matchea con `proyecto_master` → el merge pisa `nombre_edificio` con `pm.nombre_oficial`.
+- Equipetrol: 97% de props matcheadas → 83% de columnas dominadas por pm.nombre_oficial (que coincide con LLM en 88% de los casos).
+- Zona Norte (ADR-003: sin proyectos master): 93% de props SIN match → caen al COALESCE del regex → "Preventa"/"Moderna" emergen.
+
+**El bug existe globalmente pero solo es visible en zonas sin pm cargados.**
+
+**Datos actuales 27-may-2026:**
 - 16 props ZN con `nombre_edificio='Preventa'`.
-- 9 props con `'Moderna'`.
-- 6 props con `'Venta'`.
+- 9 con `'Moderna'`.
+- 6 con `'Venta'`.
+- Equipetrol: solo 2 props con genéricos (enmascarado por matching).
 
-**Scope:** afecta también Equipetrol — verificar alcance.
+**Decisión pendiente — 2 opciones:**
 
-**Acción:**
-1. Auditar las extracciones de nombre del LLM en `propiedades_v2.datos_json_enrichment->'llm_output'->>'nombre_edificio'`.
-2. Lista negra de palabras genéricas: "Preventa", "Venta", "Moderna", "Nuevo", "Departamento", etc.
-3. Re-tunear prompt para que distinga "nombre propio del edificio" vs descripción.
-4. Re-procesar props afectadas tras fix.
+**Opción A — Backfill recurrente acotado a ZN** (cero código):
+- Cada semana corre `UPDATE nombre_edificio = llm_output WHERE zona='Zona Norte' AND nombre_edificio IN ('Preventa','Moderna','Venta','Departamento','Nuevo')`.
+- Tiempo: 30 segundos/semana.
+- Costo: cero.
+- Pros: cero riesgo Equipetrol.
+- Contras: deuda recurrente.
 
-**Estimación:** 1-2 horas + re-processing.
+**Opción B — Modificar merge para preferir LLM cuando no hay match**:
+- Cambio quirúrgico en `merge_discovery_enrichment`: si `id_proyecto_master IS NULL`, usar `llm_output.nombre_edificio` antes que el regex.
+- Equipetrol: no afecta (sus 559 matcheadas siguen usando pm.nombre_oficial — preserva comportamiento).
+- ZN: las 361 sin match toman el LLM (mejor calidad) en vez del regex (basura).
+- Tiempo: 30 min + validación.
+- Costo: cero.
+- Pros: fix sistémico, cero deuda futura, no rompe Equipetrol.
+- Contras: cambio sistémico requiere testing cuidadoso.
+
+**Recomendación: Opción B** — fix sistémico, acotado a 1 función SQL, no afecta el path Equipetrol que ya funciona.
+
+**Estimación:** 30 min + validación.
 
 ---
 
-### #2 — Refactor merge + matching para priorizar `llm_output.nombre_edificio`
+### #2 — Fixear bug del regex en `flujo_b_processing_v3.0` (BLACKLIST_CRITICA)
 
-**Problema detectado 27-may-2026:** el COALESCE en 4 funciones SQL ignora el `llm_output`:
-- `merge_discovery_enrichment` (consolidación a columna `nombre_edificio`).
-- `generar_matches_por_nombre` (matching exacto).
-- `generar_matches_trigram` (matching fuzzy con trigramas).
-- `generar_matches_fuzzy` (matching fuzzy por palabras).
+**Contexto:** el flujo B tiene una `BLACKLIST_CRITICA` que SUPONE filtrar "preventa", "venta", "moderna", etc., pero no funciona. El regex extrae estas palabras como `nombre_edificio` y las mete en `datos_json_enrichment`.
 
-Todas usan:
-```sql
-COALESCE(
-  NULLIF(TRIM(p.nombre_edificio), ''),
-  TRIM(p.datos_json_enrichment->>'nombre_edificio'),
-  TRIM(p.datos_json->'proyecto'->>'nombre_edificio')
-)
-```
+**Investigación pendiente:**
+- ¿Es case sensitivity? La blacklist tiene "preventa" en lowercase pero el extractor genera "Preventa" con mayúscula.
+- ¿Es orden de aplicación? La blacklist se aplica DESPUÉS de la extracción, y solo a algunos paths.
+- ¿Es regex pre-blacklist? Hay regex que escapa al filtro de blacklist.
 
-→ Ignoran `datos_json_enrichment->'llm_output'->>'nombre_edificio'` (el más confiable).
+**Riesgo:** ALTO. El flujo_b corre para todas las props (Equipetrol + ZN + casas + terrenos). Cambiar el regex en producción es riesgoso.
 
-**Riesgo:** **CAMBIO SISTÉMICO** que afecta Equipetrol. Hacer con cuidado:
-1. Bajar muestra de 50 props Equipetrol con regex vs LLM divergente → ver qué cambiaría.
-2. Modificar COALESCE en las 4 funciones para incluir llm_output al inicio:
-   ```sql
-   COALESCE(
-     TRIM(p.datos_json_enrichment->'llm_output'->>'nombre_edificio'),  -- NUEVO
-     NULLIF(TRIM(p.nombre_edificio), ''),
-     TRIM(p.datos_json_enrichment->>'nombre_edificio'),
-     ...
-   )
-   ```
-3. Aplicar uno a la vez, monitorear matches generados antes de aprobar.
+**Bloqueador:** si se aplica el #1 Opción B (merge prefiere LLM cuando no hay match), este ticket pasa a ser MENOR — el LLM ya cubriría el caso.
 
-**Estimación:** 2-3 horas + validación cuidadosa.
+**Recomendación:** **NO priorizar** salvo que después de aplicar #1 todavía aparezcan casos problemáticos. El #1 ataca el síntoma de forma más sistémica.
 
-**Bloqueado por #1:** el LLM aún tiene bug de palabras genéricas. Hasta que se fixee, NO conviene priorizarlo en el COALESCE.
+**Estimación:** 2-3 horas + testing en sandbox de n8n.
 
 ---
 
