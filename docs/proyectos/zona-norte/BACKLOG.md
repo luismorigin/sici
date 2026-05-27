@@ -70,17 +70,37 @@ Auditoría sobre 824 props con LLM:
 
 ### #1.1 — Mejorar criterios de confianza del prompt LLM v4.0 (separado del #1)
 
-**Acción:**
-1. Agregar a `scripts/llm-enrichment/prompt-ventas.md` un bloque que defina cuándo usar cada nivel de confianza para `nombre_edificio_confianza`, `dormitorios_confianza`, `estado_construccion_confianza`, `tipo_cambio_confianza`.
-2. Versión bump a v4.1.
-3. Re-procesar muestra de 100 props en sandbox para validar que el LLM usa gradientes.
-4. Si OK, aplicar a producción + re-procesar las 166 con LLM=null.
+**Contexto histórico (revisado git):** El sistema ya tuvo auditoría profunda sobre LLM (commits `dc4e4d7` 24-may, `5d86301` 22-may, `d00129b` 22-may). Decisiones documentadas en `docs/backlog/DEUDA_TECNICA.md` "Discovery pisa correcciones del LLM" (AUDITADO Y CERRADO 24-may-2026) y `docs/canonical/merge_canonical.md`:
 
-**Modificar merge** (paso 2 del fix):
-- En `merge_discovery_enrichment`, la rama LLM híbrida filtra `v_llm_nombre_edificio_confianza = 'alta'`.
-- Cambiar a `IN ('alta', 'media')` para aceptar también confianza media.
+> "⚠ 'El LLM tiene razón' NO es universal. Distinguir por campo:"
+> - **dormitorios**: LLM gana (cruda es árbitro)
+> - **nombre_edificio**: LLM gana solo si regex sospechoso o no matchea pm (v2.6.0)
+> - **estado_construccion, tipo_cambio_detectado**: existing_protected by-design (LLM puede leer aviso viejo)
 
-**Estimación:** 2-3 horas + testing + re-procesamiento ($ adicional Haiku).
+→ La asimetría LLM-por-campo es **decisión consciente**, no bug. Cualquier cambio al prompt debe respetar esto.
+
+**Acción propuesta (refinada con contexto):**
+
+1. **Agregar bloque al prompt** sobre cuándo usar cada nivel de confianza para `nombre_edificio_confianza` ESPECÍFICAMENTE:
+   - `alta`: nombre explícito en descripción libre (texto del avisador).
+   - `media`: nombre solo en título/URL/slug (señal indirecta pero verificable).
+   - `baja`: inferido por modelo/código interno (ej. "modelo MA-8" → "Edificio Mangales").
+   - `null`: no hay forma de extraerlo.
+
+2. **NO cambiar criterios para estado_construccion, tipo_cambio_detectado.** Mantener existing_protected by-design.
+
+3. **Modificar merge** SOLO para `nombre_edificio`: aceptar `confianza IN ('alta', 'media')` en la rama LLM híbrida.
+
+4. **Re-procesar las 166 props con LLM=null** post-fix del prompt. Algunas probablemente extraerán vía título/URL.
+
+**Riesgos identificados (del contexto histórico):**
+- El LLM siendo más permisivo con "media" puede generar falsos positivos.
+- Mitigación: definir "media" muy estricto en el prompt (sólo cuando el nombre está exactamente en URL/título, no inferencia).
+- Equipetrol: las 643 props con `confianza=alta` no cambian; algunas con LLM=null podrían reclasificar a "media" en el re-procesamiento — comparar antes/después.
+
+**Bloqueador:** decidir si el costo (re-procesamiento Haiku ~$3 + tiempo testing) justifica los ~9 casos como Torre Moderna. **Recomendación de prioridad: BAJA** — la deuda existe pero el impacto en producción es chico.
+
+**Estimación:** 2-3 horas + testing + re-procesamiento.
 
 **Decisión pendiente — 2 opciones:**
 
