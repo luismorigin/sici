@@ -243,7 +243,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
@@ -550,15 +551,35 @@
   "active": true,
   "settings": {
     "executionOrder": "v1",
+    "binaryMode": "separate",
     "timeSavedMode": "fixed",
     "timezone": "America/La_Paz",
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "35c1fe88-b517-4e53-a655-00059cbf5204",
+  "versionId": "63b2e116-9864-4b3f-9e17-347f53d8a501",
   "meta": {
     "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
   },
   "id": "Ug81Zh77u69VJkcK",
-  "tags": []
+  "tags": [
+    {
+      "updatedAt": "2025-12-16T20:48:24.167Z",
+      "createdAt": "2025-12-16T20:48:24.167Z",
+      "id": "eAk79pUvDmxJn6Ou",
+      "name": "remax"
+    },
+    {
+      "updatedAt": "2025-12-16T20:48:24.176Z",
+      "createdAt": "2025-12-16T20:48:24.176Z",
+      "id": "ySGGvM6jytEV55AQ",
+      "name": "discovery"
+    },
+    {
+      "updatedAt": "2025-12-16T20:48:24.188Z",
+      "createdAt": "2025-12-16T20:48:24.188Z",
+      "id": "KO74kUVyAuzu3wWq",
+      "name": "flujo-a"
+    }
+  ]
 }

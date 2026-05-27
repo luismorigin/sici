@@ -147,7 +147,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, url, status FROM propiedades_v2 WHERE fuente = 'century21' AND status NOT IN ('inactivo_confirmed') AND tipo_operacion = 'venta'",
+        "query": " SELECT id, url, status\n  FROM propiedades_v2\n  WHERE fuente = 'century21'\n    AND status NOT IN ('inactivo_confirmed')\n    AND tipo_operacion = 'venta'",
         "options": {}
       },
       "id": "fcac8a31-58a0-4008-a305-c4c974bfafc5",
@@ -215,7 +215,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
@@ -285,7 +286,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
@@ -314,7 +316,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE propiedades_v2 SET status = 'inactivo_pending', fecha_discovery = NOW(), primera_ausencia_at = COALESCE(primera_ausencia_at, NOW()) WHERE id = $1 AND tipo_operacion = 'venta' AND status NOT IN ('inactivo_pending', 'inactivo_confirmed')",
+        "query": "UPDATE propiedades_v2\n  SET status = 'inactivo_pending',\n      fecha_discovery = NOW(),\n      primera_ausencia_at = COALESCE(primera_ausencia_at, NOW())\n  WHERE id = $1 AND tipo_operacion = 'venta'\n    AND status NOT IN ('inactivo_pending', 'inactivo_confirmed')",
         "options": {
           "queryReplacement": "={{ [$json.id] }}"
         }
@@ -352,25 +354,24 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=SELECT registrar_ejecucion_workflow(\n  'discovery',\n  'success',\n  {{ $json.resultados.snapshot_total || 0 }},\n  {{ $json.resultados.nuevas_insertadas || 0 }},\n  0,\n  NULL,\n  '{{ JSON.stringify({ existentes: $json.resultados.existentes_actualizadas || 0, ausentes: $json.resultados.ausentes_marcadas || 0 }) }}'::jsonb\n);",
+        "query": "=SELECT registrar_ejecucion_workflow(\n  'discovery_century21',\n  'success',\n  {{ $json.resultados.snapshot_total || 0 }},\n  {{ $json.resultados.nuevas_insertadas || 0 }},\n  0,\n  NULL,\n  '{{ JSON.stringify({ existentes: $json.resultados.existentes_actualizadas || 0, ausentes: $json.resultados.ausentes_marcadas || 0 }) }}'::jsonb\n);",
         "options": {}
       },
-      "id": "reg-exec-discovery-001",
-      "name": "PG: Registrar Ejecución",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
+      "typeVersion": 2.6,
       "position": [
-        2352,
+        2336,
         448
       ],
+      "id": "83fa3163-7d08-4f33-b48f-ef50fdf8cf11",
+      "name": "registrar_ejecucion_workflow",
+      "executeOnce": true,
       "credentials": {
         "postgres": {
           "id": "zd5IroT7BxnpW5U6",
           "name": "Supabase - Censo Inmobiliario"
         }
-      },
-      "executeOnce": true,
-      "notes": "Registrar ejecución del workflow"
+      }
     }
   ],
   "pinData": {},
@@ -567,7 +568,7 @@
       "main": [
         [
           {
-            "node": "PG: Registrar Ejecución",
+            "node": "registrar_ejecucion_workflow",
             "type": "main",
             "index": 0
           }
@@ -578,13 +579,15 @@
   "active": true,
   "settings": {
     "executionOrder": "v1",
+    "binaryMode": "separate",
     "timeSavedMode": "fixed",
     "timezone": "America/La_Paz",
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": true
   },
-  "versionId": "49a3b8dd-7ffb-45b1-85cb-a40cf1c59526",
+  "versionId": "8fd1ed3e-a8d9-420d-bbc1-015d98932543",
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
   },
   "id": "iDGgkRD2yJMwKn2W",
