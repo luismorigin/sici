@@ -396,23 +396,41 @@ Sesión larga de audit + cleanup + carga de pm + verificación visual con herram
 - ✅ **pm 369** → `Condominio Berchatti Norte 1` (con `alias_conocidos = ['Condominio Berchatti Norte']`).
 - ✅ **pm 370 Sky Epic** + **pm 371 Torre Vento** — GPS ajustado con coords del usuario.
 
-### Resultado final 28-may-2026
+### Auditoría 6 pares pm <100m (Opción B, 28-may-2026 tarde)
+
+Revisión de 6 pares de pm con GPS muy cercanos entre sí, para detectar duplicados / multi-torres / matching cruzado.
+
+- ✅ **5 pares confirmados como edificios distintos legítimos** (vecinos en la misma manzana/complejo): DOMUS LUXURY↔BRISAS by Omnia (46m), BRICKELL 5↔BRISAS by Omnia (66m), SAN NICOLAS III↔PORTOBELLO ISUTO (69m), Brickell 4↔BRISAS by Omnia (71m), LEBLON↔SMART STUDIO ISUTO (86m). URLs y nombres distintos.
+
+- 🔴 **1 par con bug real (Brickell 4 ↔ DOMUS LUXURY, 36m)** — las 4 props matched a Brickell 4 (pm 122) eran en realidad DOMUS, no Brickell 4. Patrón identificado: Brickell 4 fue cargado como legacy cuando era el único pm cercano, y absorbió por GPS props de edificios vecinos que aún no existían como pm. Resultado:
+  - **2 props (2060, 2066) reasignadas a DOMUS LUXURY (356)** — URLs/LLM dicen "domus luxury", distancia <25m del pm 356.
+  - **2 props (2059, 2291) reasignadas a un pm nuevo DOMUS MADERO** — el LLM ya extraía "DOMUS MADERO"/"Condominio DOMUS MADERO" pero no había pm. Distancia <4m del nuevo pm.
+  - **GPS de DOMUS LUXURY (356) refinado** (~12m) con coords verificadas en Maps por el usuario.
+  - **GPS de Brickell 4 (122) afinado** (~1m) con coords del usuario.
+  - **Brickell 4 (122) quedó con 0 props matched** — el edificio existe físicamente pero no hay listings activos. OK.
+
+### Lección meta para futuras macrozonas
+
+**Cargar pm nuevo en zona densa requiere re-auditar props matched a pm vecinos viejos.** El matching `gps_verificado` tiene radio de tolerancia (~250m) que en zonas con edificios a <50m entre sí puede mezclar. Posible mejora futura: cuando se inserta un pm nuevo, re-correr matching por nombre sobre props ya matched por GPS a pm vecinos — si LLM/regex de la prop coincide mejor con el pm nuevo, reasignar automáticamente. Por ahora se detecta manual (este audit).
+
+### Resultado final 28-may-2026 (post-Opción B)
 
 | Métrica | Valor |
 |---|---|
-| pm ZN activos | 38 (37 confirmed + 1 sospechoso) |
+| pm ZN activos | **39** (37 confirmed visual + 1 sospechoso + 1 nuevo DOMUS MADERO) |
 | Props ZN venta matched | 112 (28.6%) |
 | Props ZN venta sin match | ~279 (cola larga del ticket #1) |
 | Cross-zona aplicados | 0 |
-| K1/STONE/CURUPAU falsos positivos | 0 |
+| K1/STONE/CURUPAU/Brickell4 falsos positivos | 0 |
 | Nombres basura | 0 |
-| pm con `gps_verificado_visual` | 38/38 (100%) |
+| pm con `gps_verificado_visual` | 39/39 (100%) |
+| Edificios nuevos descubiertos en audit | 1 (DOMUS MADERO) |
 
 **Sigue pendiente:**
 - Ticket #1 (mejorar prompt LLM) — ataca los 279 sin match.
 - 7 props ZN Essenzia desmatcheadas — el próximo merge nocturno las re-popula desde LLM; eventualmente surgirán pm para "Condominio Essenzia" + el edificio del cluster A.
 - 2 props desmatcheadas STONE 7 — ídem, posible nuevo pm "STONE 7" cuando emerja.
-- Revisar 6 pares de pm con GPS <100m entre sí (multi-torre vs duplicados).
+- Refrescar `gps_verificado_osm` corriendo `scripts/verify-pm-gps/` sobre los 39 pm (incluye DOMUS MADERO recién creado).
 
 ### Hallazgos meta del 28-may
 
