@@ -1,0 +1,7 @@
+# Outputs generados por verify-pm-gps.mjs — se regeneran corriendo el script
+osm-results.json
+update.sql
+verify-pm-gps.html
+
+# Inputs específicos de sesión (snapshot de pm a verificar)
+pm-input.json

@@ -354,6 +354,73 @@ components/
 - ✅ Doc `operacion.md` con kill-switch + monitoreo diario
 - ✅ Investigación profunda del prompt LLM + criterios de confianza (documentado en #1, no aplicado fix)
 
+## Tickets resueltos 28-may-2026 — auditoría completa GPS
+
+Sesión larga de audit + cleanup + carga de pm + verificación visual con herramienta nueva.
+
+### Cleanup adicional matching legacy (post-blindaje 251/252)
+
+- ✅ **K1 (pm 272) — 54 falsos positivos restantes** desmatcheados (el cleanup del 27-may fue parcial). Quedaron 8 props reales con GPS coherente <100m del pm.
+- ✅ **STONE 4 (pm 268) — 3 falsos** desmatcheados (2 eran STONE 7, 1 URL genérica). Quedan 8 reales.
+- ✅ **CURUPAU ISUTO (pm 271) — 2 falsos** desmatcheados (URLs genéricas). Quedan 8 reales.
+- ✅ **Cross-zona restantes** — 5 props matched a pm de Equipetrol limpiadas (deuda pre-blindaje).
+- ✅ **Nombres basura en `nombre_edificio`** — 32 props con "Preventa"/"Moderna"/"Venta"/"Con" nuleadas o backfilleadas (las 9 "Moderna" eran "Torre Moderna" recuperables vía URL).
+- ✅ **Re-merge masivo de 147 props ZN** con `nombre_edificio = NULL` para que el LLM re-popule el nombre (recuperó +73 nombres reales).
+
+### Ticket #1.5 ejecutado — 20 pm cargados
+
+- ✅ INSERT de 20 pm con cluster GPS <100m de dispersión (centroides de props matched).
+- ✅ Matching automático same-zone (`generar_matches_por_nombre`) re-corrido: +47 props matched a los pm nuevos (de 77 a 124).
+- ✅ Aliases configurados para HH HOME (`'HH HOME'`), Essenzia (`'Essenzia'`).
+
+### Verificación GPS automática + visual (38 pm ZN)
+
+- ✅ **Nueva herramienta `scripts/verify-pm-gps/`** — verificación gratuita de GPS de pm vía Overpass API + Nominatim (OpenStreetMap). $0, sin API key. Reutilizable para Urubó/Polanco cuando se agreguen.
+- ✅ **Nuevas columnas** `gps_verificado_osm`, `osm_buildings_around_30m`, `osm_nominatim_address`, `osm_verified_at` en `proyectos_master`.
+- ✅ Verificación OSM aplicada a los 38 pm ZN: 13 con edificio OSM a 30m, 25 sin (OSM tiene cobertura parcial en SC).
+- ✅ **HTML interactivo `verify-sospechosos.html`** con mini-mapa Leaflet (tile satelital Esri) y botones a Google Maps/Street View por prop individual. Permite comparación visual sin abrir 10 tabs.
+- ✅ **Verificación visual de los 38 pm** por el usuario: 30 confirmed, 8 sospechosos iniciales.
+- ✅ **Re-verificación de los 8 sospechosos con mini-mapa**: 6 confirmed por evidencia interna (cluster de props con GPS coherente) + 1 sospechoso mantenido (Vertical Isuto, aviso terminado) + 1 dividido (Essenzia).
+- ✅ **Nuevas columnas** `gps_verificado_visual`, `gps_verificacion_notas`, `gps_verificado_visual_at` en `proyectos_master`.
+
+### Mudanzas de GPS (4 pm donde el usuario detectó coords incorrectas visualmente)
+
+- ✅ **pm 274 Vertical Isuto** — GPS movido a -17.76238, -63.18972. Aviso terminado: prop 407 marcada `inactivo_confirmed`.
+- ✅ **pm 353 Vilareal Duo** — GPS movido a -17.71965, -63.17575 (~127m del cluster de listings — los agentes tenían GPS desplazado).
+- ✅ **pm 355 Blue Garden** — GPS movido a -17.76768, -63.17851 (~1167m del cluster de listings — desplazamiento sistémico grave del agente).
+- ✅ **pm 366 Edificio Essenzia** — GPS movido a -17.74696, -63.16970. 7 props desmatcheadas (cluster A "edificio-essenzia-zona-norte" + cluster C "condominio-essenzia" son otros 2 edificios distintos). Quedan 3 props reales (cluster B).
+
+### Renombres por nota del usuario
+
+- ✅ **pm 361** → `Edificio Macororo 15` (con `alias_conocidos = ['Edificio Macororo','Macororo']`).
+- ✅ **pm 369** → `Condominio Berchatti Norte 1` (con `alias_conocidos = ['Condominio Berchatti Norte']`).
+- ✅ **pm 370 Sky Epic** + **pm 371 Torre Vento** — GPS ajustado con coords del usuario.
+
+### Resultado final 28-may-2026
+
+| Métrica | Valor |
+|---|---|
+| pm ZN activos | 38 (37 confirmed + 1 sospechoso) |
+| Props ZN venta matched | 112 (28.6%) |
+| Props ZN venta sin match | ~279 (cola larga del ticket #1) |
+| Cross-zona aplicados | 0 |
+| K1/STONE/CURUPAU falsos positivos | 0 |
+| Nombres basura | 0 |
+| pm con `gps_verificado_visual` | 38/38 (100%) |
+
+**Sigue pendiente:**
+- Ticket #1 (mejorar prompt LLM) — ataca los 279 sin match.
+- 7 props ZN Essenzia desmatcheadas — el próximo merge nocturno las re-popula desde LLM; eventualmente surgirán pm para "Condominio Essenzia" + el edificio del cluster A.
+- 2 props desmatcheadas STONE 7 — ídem, posible nuevo pm "STONE 7" cuando emerja.
+- Revisar 6 pares de pm con GPS <100m entre sí (multi-torre vs duplicados).
+
+### Hallazgos meta del 28-may
+
+1. **El cluster GPS interno > Google Maps para verificar pm en Bolivia.** OSM/Google no rotulan todos los edificios. La convergencia de N listings independientes con el mismo nombre + GPS coherente es evidencia más fuerte que la inspección visual.
+2. **Agentes ponen GPS sistemáticamente desplazado.** Vilareal Duo, Blue Garden, Essenzia tenían 6-10 listings con GPS-de-agente apilado, pero el edificio físico estaba en otro punto (verificado visualmente). El GPS del pm debe ser el del edificio real, no el promedio de los listings.
+3. **Edificios con nombre parecido (Essenzia + Condominio Essenzia) son comunes.** El matching debe poder dividirlos vía cluster GPS, no sólo por nombre. Insight relevante para futuras macrozonas.
+4. **Patrón K1 (cleanup pre-blindaje parcial) afectaba a 3 pm**: K1, STONE 4, CURUPAU ISUTO. El blindaje 251/252 protege contra nuevos casos pero la deuda residual hay que limpiarla case-by-case.
+
 ---
 
 ## Aprendizajes meta del proyecto
