@@ -197,6 +197,50 @@ WHERE p.id = s.id;
 
 ---
 
+### #1 — REPLANTEO 28-may-2026 sesión 2 (RESUELTO POR OTRO CAMINO)
+
+> **El ticket #1 no fue ejecutado. El problema se resolvió por una solución completamente distinta tras medir los datos REALES.**
+
+Pregunta del usuario clave: *"¿Estamos complicando las decisiones del LLM?"* — Sí, estábamos.
+
+#### Lo que medimos (que cambió el camino)
+
+Antes de tocar el prompt, query directa sobre las 279 props ZN sin match reveló:
+- **70% (195/279) TIENEN nombre extraído** (por LLM o regex) **pero no existe pm para ese edificio**.
+- **30% (84/279) sin nombre** — de los cuales 59 con LLM=null (probable correcto), 14 LLM no corrió, 11 limbo.
+
+**El LLM no era el cuello de botella.** El 70% de las props sin match tenían el nombre bien pero faltaba cargar el pm.
+
+#### Solución aplicada (sin tocar prompt ni merge)
+
+| Acción | Resultado |
+|---|---|
+| Aliases por nombre exacto (MACORORO 15 → pm 361, Vila Real DUO → pm 353) | +4 props matched |
+| Limpiar `Venta` basura del regex (6 props) | ruido limpiado |
+| Mover pm 276 Sky Icon de Equipetrol Centro → Zona Norte (estaba en zona errada, cluster de 4 props ZN era el GPS real) | +4 props matched, 1 prop EQ con aviso terminado marcada `inactivo_confirmed` |
+| INSERT 11 pm nuevos compactos (Edificio Raizant Botanic con alias RAIZANT BOTANIC, Jazmines del parque - Torre 3, ORANGE RESIDENCE, Gaudí Tower, CONDOMINIO DISART, Condominio Torres Gemelas, Condominio La Sierra, Cond. Ecosostenible Lusitano, Condominio Gran Grigotá, CONDOMINIO TRIBU URBANA, Condominio RISE Uno) con `gps_verificado_visual=NULL` (pendientes verificación visual) | +29 props matched |
+| Verificación visual de los 12 pm pendientes (HTML `verify-pm-nuevos-zn.html`) | 12/12 confirmed, 3 GPS corregidos con coords Maps usuario (pm 375, 377, 380) |
+
+**Resultado total:** match rate 28.6% → **38.1%** (+9.5 pp) en 30 min, sin tocar prompt LLM ni merge, sin riesgo en Equipetrol.
+
+#### Por qué el ticket #1 (plan original) ya NO se necesita
+
+- El target principal del ticket #1 era recuperar nombres en las props con LLM=null. Pero al medir, vimos que casi todas las que el LLM clasificó null era porque NO TENÍAN edificio (casas, terrenos, listings genéricos). El LLM hizo bien su trabajo.
+- El 70% del problema era falta de pm, no calidad del LLM. Se resuelve con `INSERT` + aliases, mucho más simple y barato.
+- Modificar el prompt LLM + merge con criterios "media" suffix-aware introducía riesgo en Equipetrol (22% error medido en muestra) por un beneficio marginal (~10-20 props recuperadas vs +37 con el camino simple).
+
+#### Estado final del ticket #1
+
+**Estado: ARCHIVADO COMO INNECESARIO POR AHORA.** No se ejecutó porque el problema raíz era otro. Si en el futuro emerge un patrón donde nombres reales solo aparezcan en URL/título (y se pueda extraer con confianza media sin riesgo), reabrir.
+
+#### Lección meta principal
+
+**Medir antes de optimizar.** Habíamos pasado horas diseñando un plan staged de 6 fases (A→F) con wording suffix-aware "Opción 1D" para mitigar 20+ pares de pm parecidos en Equipetrol, plan de rollback con snapshot table, y dry-run focal. Todo eso era resolver un problema que NO era el cuello de botella real. Una sola query con `GROUP BY CASE WHEN nombre_edificio IS NULL THEN ... ELSE ...` lo demostró.
+
+La intuición correcta del usuario fue: *"explicame el problema que estamos tratando de resolver"* — al reformular y medir, se vio que era otro problema.
+
+---
+
 ### #1.5 — Cargar proyectos master para edificios reconocibles de Zona Norte
 
 > **Ataque alternativo/complementario al #1.** Beneficio inmediato y visible.
@@ -530,24 +574,24 @@ Revisión de 6 pares de pm con GPS muy cercanos entre sí, para detectar duplica
 
 **Cargar pm nuevo en zona densa requiere re-auditar props matched a pm vecinos viejos.** El matching `gps_verificado` tiene radio de tolerancia (~250m) que en zonas con edificios a <50m entre sí puede mezclar. Posible mejora futura: cuando se inserta un pm nuevo, re-correr matching por nombre sobre props ya matched por GPS a pm vecinos — si LLM/regex de la prop coincide mejor con el pm nuevo, reasignar automáticamente. Por ahora se detecta manual (este audit).
 
-### Resultado final 28-may-2026 (post-Opción B)
+### Resultado final 28-may-2026 (sesión 2 cerrada — post-replanteo ticket #1)
 
-| Métrica | Valor |
-|---|---|
-| pm ZN activos | **39** (37 confirmed visual + 1 sospechoso + 1 nuevo DOMUS MADERO) |
-| Props ZN venta matched | 112 (28.6%) |
-| Props ZN venta sin match | ~279 (cola larga del ticket #1) |
-| Cross-zona aplicados | 0 |
-| K1/STONE/CURUPAU/Brickell4 falsos positivos | 0 |
-| Nombres basura | 0 |
-| pm con `gps_verificado_visual` | 39/39 (100%) |
-| Edificios nuevos descubiertos en audit | 1 (DOMUS MADERO) |
+| Métrica | Inicio del día | Cierre del día |
+|---|---|---|
+| pm ZN activos | 18 | **51** (50 confirmed visual + 1 sospechoso) |
+| Props ZN venta matched | 77 (19.7%) | **149 (38.1%)** |
+| Props ZN venta sin match | 313 | 242 |
+| Cross-zona aplicados | 5 | 0 |
+| K1/STONE/CURUPAU/Brickell4 falsos positivos | 63 | 0 |
+| Nombres basura | 32 | 0 |
+| pm con `gps_verificado_visual` | 0 | **51/51 (100%)** |
+| Edificios "nuevos" descubiertos | — | 2 (DOMUS MADERO en sesión 1, Sky Icon re-zonificado en sesión 2) |
 
 **Sigue pendiente:**
-- Ticket #1 (mejorar prompt LLM) — ataca los 279 sin match.
 - 7 props ZN Essenzia desmatcheadas — el próximo merge nocturno las re-popula desde LLM; eventualmente surgirán pm para "Condominio Essenzia" + el edificio del cluster A.
 - 2 props desmatcheadas STONE 7 — ídem, posible nuevo pm "STONE 7" cuando emerja.
-- Refrescar `gps_verificado_osm` corriendo `scripts/verify-pm-gps/` sobre los 39 pm (incluye DOMUS MADERO recién creado).
+- Refrescar `gps_verificado_osm` corriendo `scripts/verify-pm-gps/` sobre los 51 pm (12 nuevos sin verificación OSM todavía).
+- 242 props sin match son la cola larga real: edificios únicos sin pm cargado. A revisar caso por caso en futuras sesiones con HTML similar a verify-pm-nuevos-zn.
 
 ### Hallazgos meta del 28-may
 

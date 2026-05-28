@@ -377,8 +377,9 @@ const html = `<!doctype html>
     const lat = pm.latitud, lon = pm.longitud;
     const nombreEnc = encodeURIComponent(pm.nombre_oficial + ', Santa Cruz, Bolivia');
 
-    const gmapsUrl = \`https://www.google.com/maps/@\${lat},\${lon},19z\`;
-    const gmapsPinUrl = \`https://www.google.com/maps/place/\${lat},\${lon}\`;
+    // /place/LAT,LON pone PIN rojo. Sin /place el mapa solo se centra (sin pin visible).
+    const gmapsUrl = \`https://www.google.com/maps/place/\${lat},\${lon}/@\${lat},\${lon},19z/data=!3m1!1e3\`;
+    const gmapsPinUrl = \`https://www.google.com/maps/place/\${lat},\${lon}/@\${lat},\${lon},19z\`;
     const streetViewUrl = \`https://www.google.com/maps?q=&layer=c&cbll=\${lat},\${lon}\`;
     const searchUrl = \`https://www.google.com/maps/search/\${nombreEnc}\`;
     const osmUrl = \`https://www.openstreetmap.org/?mlat=\${lat}&mlon=\${lon}&zoom=19\`;

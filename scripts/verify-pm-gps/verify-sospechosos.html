@@ -248,8 +248,11 @@ let decisions = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
 
 function saveDecisions() { localStorage.setItem(STORAGE_KEY, JSON.stringify(decisions)); }
 
-function gmapsUrl(lat, lon) { return `https://www.google.com/maps/@${lat},${lon},19z`; }
-function gmapsSatUrl(lat, lon) { return `https://www.google.com/maps/@${lat},${lon},19z/data=!3m1!1e3`; }
+function gmapsUrl(lat, lon) { return `https://www.google.com/maps/place/${lat},${lon}/@${lat},${lon},19z`; }
+function gmapsSatUrl(lat, lon) {
+  // /place/LAT,LON pone PIN rojo + /@LAT,LON,19z/data=!3m1!1e3 fuerza satelital + zoom
+  return `https://www.google.com/maps/place/${lat},${lon}/@${lat},${lon},19z/data=!3m1!1e3`;
+}
 function streetUrl(lat, lon) { return `https://www.google.com/maps?q=&layer=c&cbll=${lat},${lon}`; }
 function searchUrl(nombre) { return `https://www.google.com/maps/search/${encodeURIComponent(nombre + ", Santa Cruz, Bolivia")}`; }
 function osmUrl(lat, lon) { return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=19`; }

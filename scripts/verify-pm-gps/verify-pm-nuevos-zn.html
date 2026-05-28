@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Verificación visual pm nuevos Zona Norte (sesión 2)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f7; color: #222; }
+  header { background: #fff; border-bottom: 1px solid #ddd; padding: 14px 24px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+  header h1 { margin: 0 0 4px; font-size: 18px; }
+  #stats { font-size: 13px; color: #555; }
+  main { padding: 20px; max-width: 1200px; margin: 0 auto; }
+  .pm-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 18px; overflow: hidden; }
+  .pm-card.confirmed { border-left: 4px solid #28a745; }
+  .pm-card.sospechoso { border-left: 4px solid #dc3545; }
+  .pm-card.dividir { border-left: 4px solid #ff8c00; }
+  .pm-card.mover { border-left: 4px solid #4285f4; }
+  .pm-card.pending { border-left: 4px solid #6c757d; }
+  .pm-header { padding: 14px 18px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; }
+  .pm-header:hover { background: #fafafa; }
+  .pm-title { font-weight: 600; font-size: 15px; }
+  .pm-summary { font-size: 12px; color: #666; margin-top: 4px; }
+  .pm-veredicto-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; background: #6c757d; color: #fff; }
+  .pm-card.confirmed .pm-veredicto-badge { background: #28a745; }
+  .pm-card.sospechoso .pm-veredicto-badge { background: #dc3545; }
+  .pm-card.dividir .pm-veredicto-badge { background: #ff8c00; }
+  .pm-card.mover .pm-veredicto-badge { background: #4285f4; }
+  .pm-body { padding: 18px; border-top: 1px solid #eee; display: none; }
+  .pm-card.expanded .pm-body { display: block; }
+  .pm-recomendacion { background: #fff8e1; padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 14px; border-left: 3px solid #ffc107; }
+  .pm-recomendacion.ok { background: #e8f5e9; border-left-color: #28a745; }
+  .pm-recomendacion.bad { background: #ffebee; border-left-color: #dc3545; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; font-size: 13px; }
+  .info-grid div { padding: 8px 12px; background: #f9f9f9; border-radius: 4px; }
+  .info-grid b { color: #333; }
+  .btn-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .btn { display: inline-block; padding: 6px 12px; border-radius: 4px; font-size: 12px; text-decoration: none; cursor: pointer; border: 1px solid #ccc; background: #fff; color: #222; }
+  .btn:hover { background: #f0f0f0; }
+  .btn-primary { background: #4285f4; color: #fff; border-color: #4285f4; }
+  .btn-primary:hover { background: #357ae8; }
+  .props-section { margin-top: 14px; }
+  .props-section h4 { margin: 14px 0 8px; font-size: 13px; color: #555; }
+  .cluster-label { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-right: 8px; }
+  .cluster-a { background: #d4edda; color: #155724; }
+  .cluster-b { background: #fff3cd; color: #856404; }
+  .cluster-c { background: #f8d7da; color: #721c24; }
+  .prop-row { padding: 10px 12px; background: #fafafa; border-radius: 4px; margin-bottom: 6px; font-size: 12px; }
+  .prop-row .url { color: #4285f4; text-decoration: none; word-break: break-all; }
+  .prop-row .url:hover { text-decoration: underline; }
+  .prop-meta { color: #666; margin-top: 4px; }
+  .prop-btns { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .prop-btns .btn { font-size: 10px; padding: 3px 8px; }
+  .verdict-row { display: flex; gap: 6px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed #ddd; }
+  .verdict-btn { flex: 1; padding: 10px; border: 2px solid transparent; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; transition: all 0.15s; }
+  .verdict-btn.confirmed { background: #d4edda; color: #155724; }
+  .verdict-btn.confirmed.active { background: #28a745; color: #fff; border-color: #155724; }
+  .verdict-btn.sospechoso { background: #f8d7da; color: #721c24; }
+  .verdict-btn.sospechoso.active { background: #dc3545; color: #fff; border-color: #721c24; }
+  .verdict-btn.dividir { background: #ffe0b2; color: #e65100; }
+  .verdict-btn.dividir.active { background: #ff8c00; color: #fff; border-color: #e65100; }
+  .verdict-btn.mover { background: #cfe2ff; color: #084298; }
+  .verdict-btn.mover.active { background: #4285f4; color: #fff; border-color: #084298; }
+  textarea { width: 100%; min-height: 60px; margin-top: 10px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; font-family: inherit; }
+  .mini-map { height: 380px; border-radius: 6px; margin: 14px 0; border: 1px solid #ddd; background: #eee; }
+  .map-legend { background: rgba(255,255,255,0.92); padding: 6px 10px; border-radius: 4px; font-size: 11px; line-height: 1.5; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+  .map-legend .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+  #export-bar { background: #fff; border-top: 1px solid #ddd; padding: 14px 24px; position: sticky; bottom: 0; box-shadow: 0 -2px 6px rgba(0,0,0,0.05); text-align: center; }
+  #export-btn { padding: 12px 30px; background: #28a745; color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; }
+  #export-btn:hover { background: #218838; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Verificación visual pm nuevos Zona Norte (sesión 2)</h1>
+  <div id="stats">Cargando…</div>
+</header>
+<main id="cards"></main>
+<div id="export-bar">
+  <button id="export-btn">📋 Descargar update-pm-nuevos-zn.sql con mis decisiones</button>
+</div>
+<script>
+const DATA = [
+  {
+    pm_id: 276, nombre: "Sky Icon",
+    pm_lat: -17.7634720, pm_lon: -63.1763970,
+    n_props: 5, disp_cluster_m: 2414, dist_pm_cluster_m: 0,
+    nota_anterior: "Movido de Equipetrol Centro 28-may. Cluster ZN identificó GPS real.",
+    diagnostico: "🟡 4 props ZN compactas (<15m del pm) + 1 prop (322) con GPS desplazado a 2414m. URL idéntica al cluster ('av Beni esq Los Cusis') confirma mismo edificio. Cluster ZN ganó.",
+    recomendacion: "warn",
+    recomendacion_texto: "Verificar visualmente que Sky Icon real está en cluster ZN. La prop 322 tiene GPS de agente equivocado.",
+    props: [
+      { id: 1983, lat: -17.76350685, lon: -63.17641235, dist: 4, fuente: "century21", url: "https://c21.com.bo/propiedad/103111_penthouse-en-venta-sky-icon-av-beni-esq-los-cusis-amoblado", cluster: "A" },
+      { id: 1987, lat: -17.76344710, lon: -63.17645820, dist: 7, fuente: "century21", url: "https://c21.com.bo/propiedad/100063_hermoso-dpto-2-dormitorios-en-venta-sky-icon", cluster: "A" },
+      { id: 1975, lat: -17.76344710, lon: -63.17645820, dist: 7, fuente: "century21", url: "https://c21.com.bo/propiedad/109422_dpto-venta-sky-icon-2-dormitorios-sobre-av-beni-esquina-los-cusis", cluster: "A" },
+      { id: 1988, lat: -17.76348541, lon: -63.17625972, dist: 15, fuente: "century21", url: "https://c21.com.bo/propiedad/96885_departamento-en-venta-sky-icon", cluster: "A" },
+      { id: 322,  lat: -17.75695620, lon: -63.19811760, dist: 2414, fuente: "century21", url: "https://c21.com.bo/propiedad/86197_dpto-venta-sky-icon-2-dormitorios-sobre-av-beni-esquina-los-cusis", cluster: "B" }
+    ]
+  },
+  {
+    pm_id: 374, nombre: "Edificio Raizant Botanic",
+    pm_lat: -17.7562770, pm_lon: -63.1699030,
+    n_props: 5, disp_cluster_m: 16, dist_pm_cluster_m: 0,
+    nota_anterior: "Alias 'RAIZANT BOTANIC'. NO confundir con pm 360 'Raizant Blend' (edificio distinto).",
+    diagnostico: "🟢 5 props compactas (<16m del pm). URLs consistentes mencionan 'raizant-botanic'.",
+    recomendacion: "ok",
+    recomendacion_texto: "Cluster compacto + URLs consistentes → confirma. Verificar visualmente.",
+    props: [
+      { id: 2041, lat: -17.75631413, lon: -63.16996368, dist: 8, fuente: "century21", url: "https://c21.com.bo/propiedad/102893_departamento-en-venta-edificio-raizant-botanic-zona-norte", cluster: "A" },
+      { id: 2040, lat: -17.75624068, lon: -63.16984158, dist: 8, fuente: "century21", url: "https://c21.com.bo/propiedad/103884_departamento-en-venta-edificio-raizant-botanic-zona-norte", cluster: "A" },
+      { id: 2045, lat: -17.75632498, lon: -63.16980269, dist: 12, fuente: "century21", url: "https://c21.com.bo/propiedad/98486_monoambiente-con-balcon-ed-raizant-botanic-beni-entre-er-y-4to-anillo", cluster: "A" },
+      { id: 2042, lat: -17.75620480, lon: -63.16980870, dist: 13, fuente: "century21", url: "https://c21.com.bo/propiedad/102063_departamento-en-venta", cluster: "A" },
+      { id: 2033, lat: -17.75615134, lon: -63.16982889, dist: 16, fuente: "century21", url: "https://c21.com.bo/propiedad/108201_departamento-en-venta-1-dormitorio-raizant-botanic", cluster: "A" }
+    ]
+  },
+  {
+    pm_id: 375, nombre: "Jazmines del parque - Torre 3",
+    pm_lat: -17.7386370, pm_lon: -63.1639890,
+    n_props: 2, disp_cluster_m: 0, dist_pm_cluster_m: 0,
+    nota_anterior: "",
+    diagnostico: "🟢 2 props Remax con GPS idéntico al pm.",
+    recomendacion: "warn",
+    recomendacion_texto: "Solo 2 props (mismo agente Remax). Verificar visualmente que el edificio existe.",
+    props: [
+      { id: 2326, lat: -17.73863680, lon: -63.16398929, dist: 0, fuente: "remax", url: "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-norte-125001007-1613", cluster: "A" },
+      { id: 2325, lat: -17.73863680, lon: -63.16398929, dist: 0, fuente: "remax", url: "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-norte-125001007-1612", cluster: "A" }
+    ]
+  },
+  {
+    pm_id: 376, nombre: "ORANGE RESIDENCE",
+    pm_lat: -17.7626650, pm_lon: -63.1747060,
+    n_props: 3, disp_cluster_m: 4, dist_pm_cluster_m: 0,
+    nota_anterior: "",
+    diagnostico: "🟢 3 props C21 con GPS muy cercano (dispersión 4m).",
+    recomendacion: "ok",
+    recomendacion_texto: "Cluster compacto → confirma. Verificar visualmente.",
+    props: [
+      { id: 1997, lat: -17.76266326, lon: -63.17468744, dist: 2, fuente: "century21", url: "https://c21.com.bo/propiedad/105889_monoambiente-semiamoblado-en-venta", cluster: "A" },
+      { id: 1993, lat: -17.76266760, lon: -63.17472440, dist: 2, fuente: "century21", url: "https://c21.com.bo/propiedad/107248_monoambiente-en-venta-totalmente-amoblado-y-equipado-de-35-m2", cluster: "A" },
+      { id: 1991, lat: -17.76264947, lon: -63.17466908, dist: 4, fuente: "century21", url: "https://c21.com.bo/propiedad/108178_dpto-totalmente-equipado-y-amoblado", cluster: "A" }
+    ]
+  },
+  {
+    pm_id: 377, nombre: "Gaudí Tower",
+    pm_lat: -17.7498450, pm_lon: -63.1692540,
+    n_props: 2, disp_cluster_m: 4, dist_pm_cluster_m: 0,
+    nota_anterior: "",
+    diagnostico: "🟡 2 props C21 con GPS muy cercano (4m). URLs genéricas (no mencionan Gaudí Tower).",
+    recomendacion: "warn",
+    recomendacion_texto: "URLs no mencionan el nombre. Verificar visualmente que el edificio es Gaudí Tower.",
+    props: [
+      { id: 2087, lat: -17.74984726, lon: -63.16922102, dist: 4, fuente: "century21", url: "https://c21.com.bo/propiedad/101363_departamento-en-venta-de-2-dormitorios", cluster: "A" },
+      { id: 2088, lat: -17.74984318, lon: -63.16928700, dist: 4, fuente: "century21", url: "https://c21.com.bo/propiedad/101446_departamento-en-venta-de-3-dormitorios", cluster: "A" }
+    ]
+  },
+  {
+    pm_id: 378, nombre: "CONDOMINIO DISART",
+    pm_lat: -17.7641850, pm_lon: -63.1746280,
+    n_props: 3, disp_cluster_m: 4, dist_pm_cluster_m: 0,
+    nota_anterior: "GPS muy cerca de pm 362 ZIRI ZWEI (49m) — son edificios contiguos distintos.",
+    diagnostico: "🟢 3 props compactas (<4m). URLs genéricas no mencionan DISART directamente.",
+    recomendacion: "warn",
+    recomendacion_texto: "Cluster confirma GPS. Verificar que el edificio se llama 'CONDOMINIO DISART' visualmente (algunas URLs dicen 'los-cusis' sin mencionar el nombre).",
+    props: [
+      { id: 2320, lat: -17.76419717, lon: -63.17460540, dist: 3, fuente: "remax", url: "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-norte-120016052-160", cluster: "A" },
+      { id: 2000, lat: -17.76417290, lon: -63.17465120, dist: 3, fuente: "century21", url: "https://c21.com.bo/propiedad/103196_amplio-departamento-amoblado-en-venta-en-los-cusis", cluster: "A" },
+      { id: 1994, lat: -17.76416500, lon: -63.17459445, dist: 4, fuente: "century21", url: "https://c21.com.bo/propiedad/106995_depto-duplex-de-2-dormitorios-en-suite", cluster: "A" }
+    ]
+  },
+  {
+    pm_id: 379, nombre: "Condominio Torres Gemelas",
+    pm_lat: -17.7642490, pm_lon: -63.1811490,
+    n_props: 2, disp_cluster_m: 6, dist_pm_cluster_m: 0,
+    nota_anterior: "GPS cercano a pm 363 BLESS TOWER (95m) — edificios distintos vecinos.",
+    diagnostico: "🟢 2 props (C21 + Remax independientes) con GPS coherente. URL C21 menciona 'condominio-torres-gemelas'.",
+    recomendacion: "ok",
+    recomendacion_texto: "URL C21 confirma el nombre + 2 fuentes independientes. Verificar visualmente.",
+    props: [
+      { id: 1977, lat: -17.76426010, lon: -63.18109359, dist: 6, fuente: "century21", url: "https://c21.com.bo/propiedad/109007_departamento-en-venta-de-3-dormitorios-en-condominio-torres-gemelas", cluster: "A" },
+      { id: 2284, lat: -17.76423804, lon: -63.18120377, dist: 6, fuente: "remax", url: "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-norte-125001005-1501", cluster: "A" }
+    ]
+  },
+  {
+    pm_id: 380, nombre: "Condominio La Sierra",
+    pm_lat: -17.7298990, pm_lon: -63.1504370,
+    n_props: 2, disp_cluster_m: 16, dist_pm_cluster_m: 0,
+    nota_anterior: "",
+    diagnostico: "🟡 2 props (C21 + Remax) con GPS coherente. URLs genéricas no mencionan 'La Sierra'.",
+    recomendacion: "warn",
+    recomendacion_texto: "URLs no mencionan el nombre. El nombre vino del LLM. Verificar visualmente.",
+    props: [
+      { id: 2196, lat: -17.72981130, lon: -63.15032287, dist: 16, fuente: "century21", url: "https://c21.com.bo/propiedad/101408_imponente-penthouse-en-zona-norte-en-venta", cluster: "A" },
+      { id: 2306, lat: -17.72998642, lon: -63.15055132, dist: 16, fuente: "remax", url: "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-norte-120064001-70", cluster: "A" }
+    ]
+  },
+  {
+    pm_id: 381, nombre: "Cond. Ecosostenible Lusitano",
+    pm_lat: -17.7326610, pm_lon: -63.1556870,
+    n_props: 2, disp_cluster_m: 0, dist_pm_cluster_m: 0,
+    nota_anterior: "",
+    diagnostico: "🟡 2 props C21 con GPS idéntico. URLs genéricas.",
+    recomendacion: "warn",
+    recomendacion_texto: "URLs no mencionan 'Lusitano'. Verificar visualmente.",
+    props: [
+      { id: 2151, lat: -17.73266119, lon: -63.15568698, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/107866_dpto-a-estrenar-de-1-dormitorio-en-venta", cluster: "A" },
+      { id: 2152, lat: -17.73266119, lon: -63.15568698, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/107862_monoambiente-a-estrenar-en-zona-norte", cluster: "A" }
+    ]
+  },
+  {
+    pm_id: 382, nombre: "Condominio Gran Grigotá",
+    pm_lat: -17.7698620, pm_lon: -63.1845070,
+    n_props: 2, disp_cluster_m: 0, dist_pm_cluster_m: 0,
+    nota_anterior: "",
+    diagnostico: "🟡 2 props C21 con GPS idéntico. URLs genéricas no mencionan 'Gran Grigotá'.",
+    recomendacion: "warn",
+    recomendacion_texto: "URLs no mencionan el nombre. Verificar visualmente.",
+    props: [
+      { id: 1973, lat: -17.76986210, lon: -63.18450650, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/109586_departamento-en-venta-de-1-dormitorio-parqueo", cluster: "A" },
+      { id: 2409, lat: -17.76986210, lon: -63.18450650, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/110960_en-venta-departamento-de-1-dormitorio", cluster: "A" }
+    ]
+  },
+  {
+    pm_id: 383, nombre: "CONDOMINIO TRIBU URBANA",
+    pm_lat: -17.7520100, pm_lon: -63.1807090,
+    n_props: 2, disp_cluster_m: 0, dist_pm_cluster_m: 0,
+    nota_anterior: "",
+    diagnostico: "🟢 2 props C21 con GPS idéntico. URLs mencionan 'tribu-urbana'.",
+    recomendacion: "ok",
+    recomendacion_texto: "URLs confirman el nombre. Verificar visualmente.",
+    props: [
+      { id: 2020, lat: -17.75201003, lon: -63.18070886, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/102998_tribu-urbana-dptos-monoambientes-y-de-1-dormitorios-en-venta", cluster: "A" },
+      { id: 2021, lat: -17.75201003, lon: -63.18070886, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/103001_tribu-urbana-dptos-monoambientes-y-de-1-dormitorios-en-venta", cluster: "A" }
+    ]
+  },
+  {
+    pm_id: 384, nombre: "Condominio RISE Uno",
+    pm_lat: -17.7306800, pm_lon: -63.1558600,
+    n_props: 2, disp_cluster_m: 41, dist_pm_cluster_m: 0,
+    nota_anterior: "",
+    diagnostico: "🟡 2 props C21 con dispersión 41m. URL de una confirma 'condominio-rise-uno'.",
+    recomendacion: "warn",
+    recomendacion_texto: "URL parcial confirma el nombre. Verificar visualmente.",
+    props: [
+      { id: 2193, lat: -17.73073793, lon: -63.15547433, dist: 41, fuente: "century21", url: "https://c21.com.bo/propiedad/91777_oferta-exclusiva-en-zona-norte", cluster: "A" },
+      { id: 2194, lat: -17.73062240, lon: -63.15624568, dist: 41, fuente: "century21", url: "https://c21.com.bo/propiedad/92048_oferta-exclusiva-en-zona-norte-monoambiente-a-estrenar-condominio-rise-uno", cluster: "A" }
+    ]
+  }
+];
+
+const STORAGE_KEY = "verify-pm-nuevos-zn-v1";
+let decisions = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+function saveDecisions() { localStorage.setItem(STORAGE_KEY, JSON.stringify(decisions)); }
+
+function gmapsSatUrl(lat, lon) {
+  // /place/LAT,LON pone PIN rojo + /@LAT,LON,19z/data=!3m1!1e3 fuerza satelital y zoom
+  return `https://www.google.com/maps/place/${lat},${lon}/@${lat},${lon},19z/data=!3m1!1e3`;
+}
+function streetUrl(lat, lon) { return `https://www.google.com/maps?q=&layer=c&cbll=${lat},${lon}`; }
+function searchUrl(nombre) { return `https://www.google.com/maps/search/${encodeURIComponent(nombre + ", Santa Cruz, Bolivia")}`; }
+function osmUrl(lat, lon) { return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=19`; }
+
+const initializedMaps = new Set();
+
+function initMiniMap(pm) {
+  if (initializedMaps.has(pm.pm_id)) return;
+  const containerId = `map-${pm.pm_id}`;
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const map = L.map(containerId, { scrollWheelZoom: false });
+  const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri/ArcGIS', maxZoom: 19 });
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 });
+  sat.addTo(map);
+  L.control.layers({ 'Satélite': sat, 'OpenStreetMap': osm }).addTo(map);
+
+  L.circleMarker([pm.pm_lat, pm.pm_lon], { radius: 12, color: '#d63384', fillColor: '#d63384', fillOpacity: 0.6, weight: 3 })
+    .addTo(map)
+    .bindPopup(`<b>📌 pm: ${pm.nombre}</b><br/>ID: ${pm.pm_id}<br/>GPS: ${pm.pm_lat.toFixed(6)}, ${pm.pm_lon.toFixed(6)}<br/><a href="${gmapsSatUrl(pm.pm_lat, pm.pm_lon)}" target="_blank">🛰️ Maps</a> · <a href="${streetUrl(pm.pm_lat, pm.pm_lon)}" target="_blank">📷 SV</a>`);
+
+  const clusterColors = { A: '#28a745', B: '#ffc107', C: '#dc3545' };
+  const bounds = [[pm.pm_lat, pm.pm_lon]];
+  pm.props.forEach(p => {
+    const color = clusterColors[p.cluster] || '#6c757d';
+    L.circleMarker([p.lat, p.lon], { radius: 7, color: color, fillColor: color, fillOpacity: 0.7, weight: 2 })
+      .addTo(map)
+      .bindPopup(`<b>Prop ${p.id}</b> (cluster ${p.cluster})<br/>${p.fuente} · ${p.dist}m del pm<br/><a href="${p.url}" target="_blank">Ver anuncio</a><br/><a href="${gmapsSatUrl(p.lat, p.lon)}" target="_blank">🛰️ Maps</a> · <a href="${streetUrl(p.lat, p.lon)}" target="_blank">📷 SV</a>`);
+    bounds.push([p.lat, p.lon]);
+  });
+  map.fitBounds(bounds, { padding: [30, 30], maxZoom: 19 });
+
+  const legend = L.control({ position: 'topright' });
+  legend.onAdd = function() {
+    const div = L.DomUtil.create('div', 'map-legend');
+    let html = '<div><span class="dot" style="background:#d63384"></span><b>pm</b></div>';
+    const clusters = [...new Set(pm.props.map(p => p.cluster))].sort();
+    clusters.forEach(c => { html += `<div><span class="dot" style="background:${clusterColors[c]}"></span>Cluster ${c}</div>`; });
+    div.innerHTML = html;
+    return div;
+  };
+  legend.addTo(map);
+  initializedMaps.add(pm.pm_id);
+}
+
+function renderCard(pm) {
+  const d = decisions[pm.pm_id] || {};
+  const verdict = d.verdict || "pending";
+  const clusters = {};
+  pm.props.forEach(p => { if (!clusters[p.cluster]) clusters[p.cluster] = []; clusters[p.cluster].push(p); });
+  const propsHtml = Object.keys(clusters).sort().map(letter => {
+    const ps = clusters[letter];
+    const clusterHeader = pm.props.length > 1 || Object.keys(clusters).length > 1
+      ? `<h4><span class="cluster-label cluster-${letter.toLowerCase()}">Sub-cluster ${letter}</span> ${ps.length} props (~${Math.round(ps.reduce((a,p)=>a+p.dist,0)/ps.length)}m del pm)</h4>` : '';
+    const rows = ps.map(p => `
+      <div class="prop-row">
+        <a href="${p.url}" target="_blank" class="url">${p.url}</a>
+        <div class="prop-meta">ID ${p.id} · ${p.fuente} · GPS ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)} · <b>${p.dist}m del pm</b></div>
+        <div class="prop-btns">
+          <a href="${gmapsSatUrl(p.lat, p.lon)}" target="_blank" class="btn btn-primary">🛰️ Sat</a>
+          <a href="${streetUrl(p.lat, p.lon)}" target="_blank" class="btn">📷 SV</a>
+          <a href="${osmUrl(p.lat, p.lon)}" target="_blank" class="btn">🌐 OSM</a>
+        </div>
+      </div>`).join('');
+    return clusterHeader + rows;
+  }).join('');
+
+  const recClass = pm.recomendacion === 'ok' ? 'ok' : pm.recomendacion === 'bad' ? 'bad' : '';
+  const expanded = d._expanded ? ' expanded' : '';
+  return `
+    <div class="pm-card ${verdict}${expanded}" data-pmid="${pm.pm_id}">
+      <div class="pm-header" onclick="toggleCard(${pm.pm_id})">
+        <div>
+          <div class="pm-title">${pm.nombre} <small style="color:#999">(ID ${pm.pm_id})</small></div>
+          <div class="pm-summary">${pm.n_props} props · dispersión cluster: ${pm.disp_cluster_m}m · pm vs cluster: ${pm.dist_pm_cluster_m}m${pm.nota_anterior ? ' · 📝 ' + pm.nota_anterior : ''}</div>
+        </div>
+        <span class="pm-veredicto-badge">${verdict.toUpperCase()}</span>
+      </div>
+      <div class="pm-body">
+        <div class="pm-recomendacion ${recClass}"><b>Diagnóstico automático:</b> ${pm.diagnostico}<br/><b>Recomendación:</b> ${pm.recomendacion_texto}</div>
+        <div class="info-grid"><div><b>GPS del pm:</b><br/>${pm.pm_lat.toFixed(6)}, ${pm.pm_lon.toFixed(6)}</div><div><b>Cantidad props:</b><br/>${pm.n_props}</div></div>
+        <div class="btn-row">
+          <a href="${gmapsSatUrl(pm.pm_lat, pm.pm_lon)}" target="_blank" class="btn btn-primary">🛰️ Maps satelital (GPS del pm)</a>
+          <a href="${streetUrl(pm.pm_lat, pm.pm_lon)}" target="_blank" class="btn">📷 Street View</a>
+          <a href="${searchUrl(pm.nombre)}" target="_blank" class="btn">🔍 Buscar "${pm.nombre}" en Maps</a>
+          <a href="${osmUrl(pm.pm_lat, pm.pm_lon)}" target="_blank" class="btn">🌐 OSM</a>
+        </div>
+        <div class="mini-map" id="map-${pm.pm_id}"></div>
+        <div class="props-section">
+          <h4 style="margin-top:0">📍 Props matched al pm (con sus propios GPS y URLs)</h4>
+          ${propsHtml}
+        </div>
+        <div class="verdict-row">
+          <button class="verdict-btn confirmed ${verdict==='confirmed'?'active':''}" onclick="setVerdict(${pm.pm_id}, 'confirmed', event)">✅ Confirmed</button>
+          <button class="verdict-btn sospechoso ${verdict==='sospechoso'?'active':''}" onclick="setVerdict(${pm.pm_id}, 'sospechoso', event)">⚠️ Sospechoso</button>
+          <button class="verdict-btn dividir ${verdict==='dividir'?'active':''}" onclick="setVerdict(${pm.pm_id}, 'dividir', event)">✂️ Dividir pm</button>
+          <button class="verdict-btn mover ${verdict==='mover'?'active':''}" onclick="setVerdict(${pm.pm_id}, 'mover', event)">📍 Mover GPS</button>
+        </div>
+        <textarea placeholder="Notas (ej: GPS correcto, nombre real, edificios a separar...)" onblur="setNotes(${pm.pm_id}, this.value)">${d.notes || ''}</textarea>
+      </div>
+    </div>`;
+}
+
+function renderAll() {
+  initializedMaps.clear();
+  document.getElementById("cards").innerHTML = DATA.map(renderCard).join('');
+  updateStats();
+  DATA.forEach(pm => { if (decisions[pm.pm_id]?._expanded) setTimeout(() => initMiniMap(pm), 50); });
+}
+
+function updateStats() {
+  const total = DATA.length;
+  const c = { confirmed: 0, sospechoso: 0, dividir: 0, mover: 0, pending: 0 };
+  DATA.forEach(pm => { c[decisions[pm.pm_id]?.verdict || 'pending']++; });
+  document.getElementById("stats").innerHTML = `Total: ${total} · ✅ ${c.confirmed} · ⚠️ ${c.sospechoso} · ✂️ ${c.dividir} · 📍 ${c.mover} · ⏳ Sin revisar: ${c.pending}`;
+}
+
+function toggleCard(pmId) {
+  if (!decisions[pmId]) decisions[pmId] = {};
+  decisions[pmId]._expanded = !decisions[pmId]._expanded;
+  saveDecisions();
+  const card = document.querySelector(`[data-pmid="${pmId}"]`);
+  card.classList.toggle('expanded');
+  if (card.classList.contains('expanded')) {
+    const pm = DATA.find(p => p.pm_id === pmId);
+    setTimeout(() => initMiniMap(pm), 50);
+  }
+}
+
+function setVerdict(pmId, verdict, ev) {
+  ev?.stopPropagation();
+  if (!decisions[pmId]) decisions[pmId] = { _expanded: true };
+  if (decisions[pmId].verdict === verdict) delete decisions[pmId].verdict;
+  else decisions[pmId].verdict = verdict;
+  saveDecisions();
+  renderAll();
+}
+
+function setNotes(pmId, notes) {
+  if (!decisions[pmId]) decisions[pmId] = {};
+  decisions[pmId].notes = notes;
+  saveDecisions();
+}
+
+document.getElementById("export-btn").addEventListener("click", () => {
+  const lines = [
+    "-- Verificacion visual pm nuevos Zona Norte (sesion 2)",
+    "-- Generado desde verify-pm-nuevos-zn.html · " + new Date().toISOString(),
+    "",
+    "BEGIN;",
+    ""
+  ];
+  let n = 0;
+  for (const pm of DATA) {
+    const d = decisions[pm.pm_id];
+    if (!d?.verdict) continue;
+    const notes = (d.notes || '').replace(/'/g, "''");
+    lines.push(`-- pm ${pm.pm_id} ${pm.nombre} → ${d.verdict}`);
+    lines.push(`UPDATE proyectos_master SET gps_verificado_visual = '${d.verdict}', gps_verificacion_notas = '${notes || 'verificacion visual sesion 2 ' + d.verdict}', gps_verificado_visual_at = NOW() WHERE id_proyecto_master = ${pm.pm_id};`);
+    lines.push("");
+    n++;
+  }
+  lines.push(`-- Total decisiones: ${n}`);
+  lines.push("");
+  lines.push("-- Resumen post-UPDATE:");
+  lines.push("SELECT gps_verificado_visual, COUNT(*) FROM proyectos_master WHERE zona='Zona Norte' GROUP BY 1;");
+  lines.push("");
+  lines.push("COMMIT;");
+  const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "update-pm-nuevos-zn.sql";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+renderAll();
+</script>
+</body>
+</html>
