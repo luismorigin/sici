@@ -241,6 +241,43 @@ La intuición correcta del usuario fue: *"explicame el problema que estamos trat
 
 ---
 
+### #1.7 — Detector automático de clusters emergentes (infraestructura para no cargar pm manual)
+
+> **Pregunta del usuario que motivó este ticket (28-may-2026 sesión 2):** *"el trabajo de match se tiene que hacer, pero ¿hay una manera más eficiente o solo con Places?"*
+
+**Contexto:** las 2 sesiones de hoy mostraron que cargar pm uno a uno funciona pero **no escala**. Sesión 1: 20 pm. Sesión 2: 12 pm + aliases. Match rate subió de 19.7% a 40.7%. Cada noche llegan props con nombres nuevos que requieren carga manual. Necesitamos que el sistema **detecte solo cuándo emerge un cluster** y nos avise.
+
+**Qué construir:**
+
+1. **Función SQL** `detectar_clusters_emergentes(p_zona text)` que devuelve nombres de edificio con:
+   - `COUNT(*) >= 3` props en BD con ese nombre + sin pm + same zone
+   - Dispersión GPS interna `< 30m` (cluster real, no GPS falsos)
+   - `MIN dist a pm más cercano > 100m` (no son alias de pm existente)
+
+2. **Workflow n8n semanal** (lunes 8 AM Bolivia):
+   - Llama `detectar_clusters_emergentes('Zona Norte')` y `('Urubó')`, etc.
+   - Para cada candidato: `INSERT INTO proyectos_master` con `gps_verificado_visual=NULL`, GPS centroide, `gps_verificacion_notas='Detector automatico — pendiente verificacion visual'`.
+   - Manda mail/Slack al user con link a HTML.
+
+3. **HTML genérico `verify-pm-pendientes.html`** que lee de BD los pm con `gps_verificado_visual IS NULL` (sin data hardcoded como los actuales). Endpoint API simple `/api/admin/pm-pendientes` que devuelve JSON.
+
+**Beneficios:**
+- Escalable a Urubó, Polanco, futuras macrozonas (sólo cambia la zona en el cron).
+- Vos solo dedicás ~15 min/semana a verificar los nuevos en HTML.
+- Reduce ~80% del trabajo manual de las sesiones tipo hoy.
+
+**Riesgos:**
+- Si el detector mete pm falsos (cluster compacto de un nombre genérico), tu verificación visual los frena. La columna `gps_verificado_visual=NULL` los aísla del flujo confiable hasta que vos los apruebes.
+- Necesita testing inicial para calibrar umbrales (3 props? 5? dispersión <30m? <50m?).
+
+**Costo:** $0. Todo SQL + cron n8n + HTML existente extendido.
+
+**Estimación:** 2-3 horas de construcción + 1 semana de observación calibrando umbrales.
+
+**Prioridad: MEDIA-ALTA, pero NO bloquea #8 microzonas ni #6 frontend.** Puede ir en paralelo. Recomendado construirlo después de #8 para tenerlo listo cuando llegue Urubó/Polanco y la carga manual se vuelva ineficiente.
+
+---
+
 ### #1.5 — Cargar proyectos master para edificios reconocibles de Zona Norte
 
 > **Ataque alternativo/complementario al #1.** Beneficio inmediato y visible.
