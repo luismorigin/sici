@@ -4,25 +4,25 @@
 
 ---
 
-## Estado actual — 26 May 2026
+## Estado actual — 28 May 2026
 
-**Fase:** Fases 1+2 aplicadas en prod ✅ → Próximo: Fase 3 (adaptar workflows discovery).
+**Fases 1-4 completas + audit de datos profundo.** Próximo: #8 microzonas → #6 frontend.
 
 | Hito | Estado |
 |---|---|
-| Alineación de scope (MVP discovery venta+alquiler) | ✅ |
-| Mapa de impacto del sistema completo | ✅ |
-| Spike de escalabilidad: discovery por GPS en los 3 portales | ✅ |
-| PoC de discovery: 595 props reales capturadas (sin tocar BD) | ✅ |
-| Análisis del enjambre completo (qué contamina, qué no) | ✅ |
-| Blindar matching por nombre (`AND p.zona = pm.zona`) | ✅ (mig 251) |
-| Blindar snapshot de absorción global (hardcoded 6 zonas Equipetrol) | ✅ (mig 251) |
-| Cargar polígono Zona Norte + ampliar CHECK constraint | ✅ (mig 250) |
-| Backfill props/proyectos legacy con `get_zona_by_gps()` | ✅ (mig 250) |
-| Dark launch de venta en prod real (workflows discovery) | ⬜ pendiente — Fase 3 |
-| Validar calidad de datos del pipeline con data real | ⬜ pendiente — Fase 4 |
-| Alquiler (después de venta) | ⬜ pendiente — Fase 5 |
-| Decisión de posicionamiento/integración pública | ⬜ post-piloto |
+| Fases 1-2 (blindajes mig 250-253) | ✅ |
+| Fase 3: dark launch venta en prod (workflows discovery) | ✅ (26-may) |
+| Fase 4: validar calidad pipeline con data real | ✅ (audit 28-may) |
+| Audit GPS + cleanup historico K1/STONE/CURUPAU/Brickell (63 falsos) | ✅ (28-may) |
+| Cargar pm Zona Norte (#1.5 + capas 2-3) | ✅ **70 pm activos con 100% verificación visual** |
+| Match rate ZN venta | ✅ **54.2%** (212/391 props matched) — desde 19.7% |
+| Fase 5: alquiler (replicar patrón) | ⬜ pendiente |
+| #8 Microzonas (Hamacas, Banzer 3-5to, Radial 26) | ⬜ pendiente — bloquea #6 |
+| #6 Frontend `/mercado/zona-norte` | ⬜ pendiente — prototipo multi-macrozona |
+| #1.7 Detector automático de clusters emergentes | ⬜ pendiente — infraestructura escalable |
+| #5 Exposición pública | ⬜ post-validación 90 días |
+
+**Detalle de cada hito + decisiones:** ver `BACKLOG.md`. **Cronología y lecciones aprendidas:** ver `BITACORA.md`. **Operación día a día + kill-switch:** ver `operacion.md`.
 
 ---
 
