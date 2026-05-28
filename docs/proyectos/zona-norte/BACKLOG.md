@@ -611,24 +611,32 @@ Revisión de 6 pares de pm con GPS muy cercanos entre sí, para detectar duplica
 
 **Cargar pm nuevo en zona densa requiere re-auditar props matched a pm vecinos viejos.** El matching `gps_verificado` tiene radio de tolerancia (~250m) que en zonas con edificios a <50m entre sí puede mezclar. Posible mejora futura: cuando se inserta un pm nuevo, re-correr matching por nombre sobre props ya matched por GPS a pm vecinos — si LLM/regex de la prop coincide mejor con el pm nuevo, reasignar automáticamente. Por ahora se detecta manual (este audit).
 
-### Resultado final 28-may-2026 (sesión 2 cerrada — post-replanteo ticket #1)
+### Resultado final 28-may-2026 (sesión 2 cerrada — post-aliases capa 2 + dispersos)
 
 | Métrica | Inicio del día | Cierre del día |
 |---|---|---|
-| pm ZN activos | 18 | **51** (50 confirmed visual + 1 sospechoso) |
-| Props ZN venta matched | 77 (19.7%) | **149 (38.1%)** |
-| Props ZN venta sin match | 313 | 242 |
+| pm ZN activos | 18 | **55** (54 confirmed visual + 1 sospechoso) |
+| Props ZN venta matched | 77 (19.7%) | **190 (48.6%)** |
+| Props ZN venta sin match | 313 | 201 |
 | Cross-zona aplicados | 5 | 0 |
 | K1/STONE/CURUPAU/Brickell4 falsos positivos | 63 | 0 |
 | Nombres basura | 32 | 0 |
-| pm con `gps_verificado_visual` | 0 | **51/51 (100%)** |
-| Edificios "nuevos" descubiertos | — | 2 (DOMUS MADERO en sesión 1, Sky Icon re-zonificado en sesión 2) |
+| pm con `gps_verificado_visual` | 0 | **55/55 (100%)** |
+| Edificios "nuevos" descubiertos | — | 2 (DOMUS MADERO + Sky Icon re-zonificado) |
+
+**Sesiones del día y aportes:**
+1. **Sesión 1**: cleanup K1+STONE+CURUPAU+Brickell + 20 pm cargados + 6 pares <100m auditados (+DOMUS MADERO) → 19.7%→28.6%
+2. **Sesión 2 capa 1**: 12 pm nuevos compactos + Sky Icon re-zonificado + verificación visual 12/12 confirmed → 28.6%→38.1%
+3. **Sesión 2 capa 2 (aliases)**: 5 aliases adicionales (Vilareal, Berchatti Torre, Orange, Disart, Lusitano) → 38.1%→40.7%
+4. **Sesión 2 dispersos**: 4 pm nuevos para nombres con clusters separados pero GPS de agente errados (Bless One, Community Alto Norte, Cantabria, Torre Moderna) → 40.7%→**48.6%**
+
+**Patrón aprendido en dispersos:** cuando hay N props con mismo `nombre_edificio` divididas en sub-clusters GPS distantes, **frecuentemente es UN solo edificio con GPS de agente desplazados**, no edificios distintos. La verificación visual confirma cuál es el GPS real. Las props matchean al pm via nombre (independiente del GPS individual).
 
 **Sigue pendiente:**
 - 7 props ZN Essenzia desmatcheadas — el próximo merge nocturno las re-popula desde LLM; eventualmente surgirán pm para "Condominio Essenzia" + el edificio del cluster A.
 - 2 props desmatcheadas STONE 7 — ídem, posible nuevo pm "STONE 7" cuando emerja.
-- Refrescar `gps_verificado_osm` corriendo `scripts/verify-pm-gps/` sobre los 51 pm (12 nuevos sin verificación OSM todavía).
-- 242 props sin match son la cola larga real: edificios únicos sin pm cargado. A revisar caso por caso en futuras sesiones con HTML similar a verify-pm-nuevos-zn.
+- Refrescar `gps_verificado_osm` corriendo `scripts/verify-pm-gps/` sobre los 55 pm (16 sin verificación OSM todavía).
+- 201 props sin match son la cola larga real: principalmente edificios únicos N=1 sin pm cargado. **Mejor camino futuro: ticket #1.7 detector automático** (no más sesiones manuales).
 
 ### Hallazgos meta del 28-may
 
