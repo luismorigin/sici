@@ -611,18 +611,18 @@ Revisión de 6 pares de pm con GPS muy cercanos entre sí, para detectar duplica
 
 **Cargar pm nuevo en zona densa requiere re-auditar props matched a pm vecinos viejos.** El matching `gps_verificado` tiene radio de tolerancia (~250m) que en zonas con edificios a <50m entre sí puede mezclar. Posible mejora futura: cuando se inserta un pm nuevo, re-correr matching por nombre sobre props ya matched por GPS a pm vecinos — si LLM/regex de la prop coincide mejor con el pm nuevo, reasignar automáticamente. Por ahora se detecta manual (este audit).
 
-### Resultado final 28-may-2026 (sesión 2 cerrada — post-aliases capa 2 + dispersos)
+### Resultado final 28-may-2026 (sesión 2 + capa 3 cerrada)
 
 | Métrica | Inicio del día | Cierre del día |
 |---|---|---|
-| pm ZN activos | 18 | **55** (54 confirmed visual + 1 sospechoso) |
-| Props ZN venta matched | 77 (19.7%) | **190 (48.6%)** |
-| Props ZN venta sin match | 313 | 201 |
+| pm ZN activos | 18 | **70** (67 confirmed visual + 3 sospechoso) |
+| Props ZN venta matched | 77 (19.7%) | **212 (54.2%)** |
+| Props ZN venta sin match | 313 | 179 |
 | Cross-zona aplicados | 5 | 0 |
 | K1/STONE/CURUPAU/Brickell4 falsos positivos | 63 | 0 |
 | Nombres basura | 32 | 0 |
-| pm con `gps_verificado_visual` | 0 | **55/55 (100%)** |
-| Edificios "nuevos" descubiertos | — | 2 (DOMUS MADERO + Sky Icon re-zonificado) |
+| pm con `gps_verificado_visual` | 0 | **70/70 (100%)** |
+| Edificios "nuevos" descubiertos | — | 3 (DOMUS MADERO + Sky Icon re-zonificado + Torre Baruc Norte distinguida de 4 Baruc EQ) |
 
 **Sesiones del día y aportes:**
 1. **Sesión 1**: cleanup K1+STONE+CURUPAU+Brickell + 20 pm cargados + 6 pares <100m auditados (+DOMUS MADERO) → 19.7%→28.6%

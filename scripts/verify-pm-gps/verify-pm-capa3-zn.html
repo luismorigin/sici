@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Verificación visual pm capa 3 Zona Norte</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f7; color: #222; }
+  header { background: #fff; border-bottom: 1px solid #ddd; padding: 14px 24px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+  header h1 { margin: 0 0 4px; font-size: 18px; }
+  #stats { font-size: 13px; color: #555; }
+  main { padding: 20px; max-width: 1200px; margin: 0 auto; }
+  .pm-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 18px; overflow: hidden; }
+  .pm-card.confirmed { border-left: 4px solid #28a745; }
+  .pm-card.sospechoso { border-left: 4px solid #dc3545; }
+  .pm-card.dividir { border-left: 4px solid #ff8c00; }
+  .pm-card.mover { border-left: 4px solid #4285f4; }
+  .pm-card.pending { border-left: 4px solid #6c757d; }
+  .pm-header { padding: 14px 18px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+  .pm-header:hover { background: #fafafa; }
+  .pm-title { font-weight: 600; font-size: 15px; }
+  .pm-summary { font-size: 12px; color: #666; margin-top: 4px; }
+  .pm-veredicto-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; background: #6c757d; color: #fff; }
+  .pm-card.confirmed .pm-veredicto-badge { background: #28a745; }
+  .pm-card.sospechoso .pm-veredicto-badge { background: #dc3545; }
+  .pm-card.dividir .pm-veredicto-badge { background: #ff8c00; }
+  .pm-card.mover .pm-veredicto-badge { background: #4285f4; }
+  .pm-body { padding: 18px; border-top: 1px solid #eee; display: none; }
+  .pm-card.expanded .pm-body { display: block; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; font-size: 13px; }
+  .info-grid div { padding: 8px 12px; background: #f9f9f9; border-radius: 4px; }
+  .btn-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .btn { display: inline-block; padding: 6px 12px; border-radius: 4px; font-size: 12px; text-decoration: none; cursor: pointer; border: 1px solid #ccc; background: #fff; color: #222; }
+  .btn-primary { background: #4285f4; color: #fff; border-color: #4285f4; }
+  .prop-row { padding: 10px 12px; background: #fafafa; border-radius: 4px; margin-bottom: 6px; font-size: 12px; }
+  .prop-row .url { color: #4285f4; text-decoration: none; word-break: break-all; }
+  .prop-meta { color: #666; margin-top: 4px; }
+  .prop-btns { margin-top: 6px; display: flex; gap: 6px; }
+  .prop-btns .btn { font-size: 10px; padding: 3px 8px; }
+  .verdict-row { display: flex; gap: 6px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed #ddd; flex-wrap: wrap; }
+  .verdict-btn { flex: 1; min-width: 130px; padding: 10px; border: 2px solid transparent; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; }
+  .verdict-btn.confirmed { background: #d4edda; color: #155724; }
+  .verdict-btn.confirmed.active { background: #28a745; color: #fff; }
+  .verdict-btn.sospechoso { background: #f8d7da; color: #721c24; }
+  .verdict-btn.sospechoso.active { background: #dc3545; color: #fff; }
+  .verdict-btn.dividir { background: #ffe0b2; color: #e65100; }
+  .verdict-btn.dividir.active { background: #ff8c00; color: #fff; }
+  .verdict-btn.mover { background: #cfe2ff; color: #084298; }
+  .verdict-btn.mover.active { background: #4285f4; color: #fff; }
+  textarea { width: 100%; min-height: 60px; margin-top: 10px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; font-family: inherit; }
+  .mini-map { height: 380px; border-radius: 6px; margin: 14px 0; border: 1px solid #ddd; }
+  .map-legend { background: rgba(255,255,255,0.92); padding: 6px 10px; border-radius: 4px; font-size: 11px; line-height: 1.5; }
+  .map-legend .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+  #export-bar { background: #fff; border-top: 1px solid #ddd; padding: 14px 24px; position: sticky; bottom: 0; text-align: center; }
+  #export-btn { padding: 12px 30px; background: #28a745; color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Verificación visual pm capa 3 Zona Norte (15 nuevos)</h1>
+  <div id="stats">Cargando…</div>
+</header>
+<main id="cards"></main>
+<div id="export-bar">
+  <button id="export-btn">📋 Descargar update-pm-capa3-zn.sql</button>
+</div>
+<script>
+const DATA = [
+  { pm_id: 403, nombre: "Edificio Macororo 16/17", pm_lat: -17.767688, pm_lon: -63.177410, n_props: 2,
+    nota: "URLs confirman 'macororo-16-17'. NO confundir con Macororo 12/7/15 existentes.",
+    props: [
+      { id: 1974, lat: -17.76822760, lon: -63.17752080, dist: 61, fuente: "century21", url: "https://c21.com.bo/propiedad/109812_departamento-en-venta-en-edificio-macororo-16-17" },
+      { id: 1971, lat: -17.76852794, lon: -63.17775588, dist: 100, fuente: "century21", url: "https://c21.com.bo/propiedad/110782_departamento-en-venta-macororo-16-17" }
+    ]},
+  { pm_id: 404, nombre: "Ares By Elite", pm_lat: -17.746698, pm_lon: -63.177824, n_props: 2,
+    nota: "URLs c21 con dispersión <70m. Edificio del grupo Elite.",
+    props: [
+      { id: 2053, lat: -17.74666191, lon: -63.17841561, dist: 63, fuente: "century21", url: "https://c21.com.bo/propiedad/109751_1-dormitorio" },
+      { id: 2054, lat: -17.74669147, lon: -63.17845771, dist: 67, fuente: "century21", url: "https://c21.com.bo/propiedad/109734_1-dormitorio-vista-en-fachada-ares-by-elite" }
+    ]},
+  { pm_id: 405, nombre: "Condominio Hera Tower", pm_lat: -17.751143, pm_lon: -63.181181, n_props: 2,
+    nota: "URLs C21 confirman 'condominio-hera-tower'. GPS idéntico al pm.",
+    props: [
+      { id: 2063, lat: -17.75114280, lon: -63.18118050, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/98377_venta-condominio-hera-tower-1-dormitorio" },
+      { id: 2062, lat: -17.75114280, lon: -63.18118050, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/100195_departamento-en-venta-en-condominio-hera-tower" }
+    ]},
+  { pm_id: 406, nombre: "EDIFICIO LIMCO II", pm_lat: -17.750814, pm_lon: -63.166415, n_props: 2,
+    nota: "URLs confirman 'limco-2' y 'limco-ii'.",
+    props: [
+      { id: 2073, lat: -17.75083448, lon: -63.16632431, dist: 10, fuente: "century21", url: "https://c21.com.bo/propiedad/105401_departamento-de-3-dormitorios-condominio-limco-2" },
+      { id: 2071, lat: -17.75079450, lon: -63.16650640, dist: 10, fuente: "century21", url: "https://c21.com.bo/propiedad/107261_departamento-en-venta-en-edificio-limco-ii" }
+    ]},
+  { pm_id: 407, nombre: "Condominio Soul Parc", pm_lat: -17.756202, pm_lon: -63.170393, n_props: 1,
+    nota: "URL menciona 'soulparc-hamacas'. Verificar si el nombre real es Soul Parc o Soulparc Hamacas.",
+    props: [
+      { id: 2038, lat: -17.75627389, lon: -63.17006554, dist: 36, fuente: "century21", url: "https://c21.com.bo/propiedad/104454_monoambiente-en-venta-edificio-soulparc-hamacas" }
+    ]},
+  { pm_id: 408, nombre: "Condominio TRIII", pm_lat: -17.715333, pm_lon: -63.176011, n_props: 2,
+    nota: "URLs confirman 'condominio-triii'. GPS idéntico.",
+    props: [
+      { id: 2203, lat: -17.71533270, lon: -63.17601120, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/103326_departamento-de-3-dormitorios-en-venta-condominio-triii" },
+      { id: 2217, lat: -17.71533270, lon: -63.17601120, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/99494_departamento-en-venta-condominio-triii" }
+    ]},
+  { pm_id: 409, nombre: "Torre Baruc Norte", pm_lat: -17.734622, pm_lon: -63.167499, n_props: 1,
+    nota: "URL menciona 'torre-baruc'. NO confundir con BARUC IV, Baruc Uno, Baruc II, Baruc 3 (todos en Equipetrol).",
+    props: [
+      { id: 2128, lat: -17.73462170, lon: -63.16749890, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/108366_oportunidad-unica-monoambiente-en-venta-en-torre-baruc" }
+    ]},
+  { pm_id: 410, nombre: "Condominio Zero", pm_lat: -17.76254882, pm_lon: -63.18458583, n_props: 2,
+    nota: "URLs confirman 'condominio-zero'. C21 + Remax independientes.",
+    props: [
+      { id: 1985, lat: -17.76251480, lon: -63.18454930, dist: 5, fuente: "century21", url: "https://c21.com.bo/propiedad/100702_monoambiente-amoblado-en-venta-condominio-zero" },
+      { id: 2345, lat: -17.76258283, lon: -63.18462236, dist: 5, fuente: "remax", url: "https://remax.bo/propiedad/venta-departamento-santa-cruz-de-la-sierra-norte-120045036-107" }
+    ]},
+  { pm_id: 411, nombre: "ATLANTIS TOWERS", pm_lat: -17.733875, pm_lon: -63.161976, n_props: 1,
+    nota: "URL menciona 'edificio-atlantis'. La prop tenía nombre 'ATLANTIS TOWERS'.",
+    props: [
+      { id: 2156, lat: -17.73387520, lon: -63.16197600, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/104240_departamento-de-2-dormitorios-en-venta-edificio-atlantis" }
+    ]},
+  { pm_id: 412, nombre: "Edificio Camila II", pm_lat: -17.749187, pm_lon: -63.165495, n_props: 1,
+    nota: "URL confirma 'edificio-camila-ii'.",
+    props: [
+      { id: 2086, lat: -17.74918706, lon: -63.16549541, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/100374_edificio-camila-ii-departamento-en-venta-de-3-dormitorios" }
+    ]},
+  { pm_id: 413, nombre: "Cozumel", pm_lat: -17.743412, pm_lon: -63.172976, n_props: 1,
+    nota: "URL menciona 'condominio-cozumel'.",
+    props: [
+      { id: 2070, lat: -17.74341185, lon: -63.17297574, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/110266_departamento-de-3-dormitorios-en-venta-condominio-cozumel" }
+    ]},
+  { pm_id: 414, nombre: "EDIFICIO RAFAELA II", pm_lat: -17.744519, pm_lon: -63.184086, n_props: 1,
+    nota: "URL confirma 'edificio-rafaela-ii'.",
+    props: [
+      { id: 2064, lat: -17.74451875, lon: -63.18408581, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/97823_departamento-de-1-dormitorio-en-venta-edificio-rafaela-ii" }
+    ]},
+  { pm_id: 415, nombre: "EDIFICIO SANTA FE", pm_lat: -17.757161, pm_lon: -63.183980, n_props: 1,
+    nota: "URL confirma 'edificio-santa-fe'.",
+    props: [
+      { id: 2009, lat: -17.75716085, lon: -63.18397994, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/109105_departamento-en-venta-edificio-santa-fe" }
+    ]},
+  { pm_id: 416, nombre: "Tamisa III", pm_lat: -17.731786, pm_lon: -63.168406, n_props: 2,
+    nota: "1 prop con GPS exacto + 1 a 100m con URL genérica. La segunda podría ser otro edificio.",
+    props: [
+      { id: 2144, lat: -17.73178633, lon: -63.16840649, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/98657_departamentos-en-anticretico-de-2-dormitorios-en-condominio-tamisa-iii" },
+      { id: 2188, lat: -17.73092700, lon: -63.16812360, dist: 100, fuente: "century21", url: "https://c21.com.bo/propiedad/108840_departamento-amoblado-de-1-dormitorio-en-venta" }
+    ]},
+  { pm_id: 417, nombre: "Westgate", pm_lat: -17.763025, pm_lon: -63.179601, n_props: 1,
+    nota: "URL confirma 'edificio-westgate'.",
+    props: [
+      { id: 1976, lat: -17.76302508, lon: -63.17960088, dist: 0, fuente: "century21", url: "https://c21.com.bo/propiedad/109075_departamento-en-preventa-edificio-westgate" }
+    ]}
+];
+
+const STORAGE_KEY = "verify-pm-capa3-zn-v1";
+let decisions = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+function saveDecisions() { localStorage.setItem(STORAGE_KEY, JSON.stringify(decisions)); }
+function gmapsSatUrl(lat, lon) { return `https://www.google.com/maps/place/${lat},${lon}/@${lat},${lon},19z/data=!3m1!1e3`; }
+function streetUrl(lat, lon) { return `https://www.google.com/maps?q=&layer=c&cbll=${lat},${lon}`; }
+function searchUrl(nombre) { return `https://www.google.com/maps/search/${encodeURIComponent(nombre + ", Santa Cruz, Bolivia")}`; }
+function osmUrl(lat, lon) { return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=19`; }
+
+const initializedMaps = new Set();
+function initMiniMap(pm) {
+  if (initializedMaps.has(pm.pm_id)) return;
+  const container = document.getElementById(`map-${pm.pm_id}`);
+  if (!container) return;
+  const map = L.map(`map-${pm.pm_id}`, { scrollWheelZoom: false });
+  const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri/ArcGIS', maxZoom: 19 });
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19 });
+  sat.addTo(map);
+  L.control.layers({ 'Satélite': sat, 'OSM': osm }).addTo(map);
+  L.circleMarker([pm.pm_lat, pm.pm_lon], { radius: 12, color: '#d63384', fillColor: '#d63384', fillOpacity: 0.6, weight: 3 })
+    .addTo(map).bindPopup(`<b>📌 ${pm.nombre}</b><br/>GPS: ${pm.pm_lat.toFixed(6)}, ${pm.pm_lon.toFixed(6)}`);
+  const bounds = [[pm.pm_lat, pm.pm_lon]];
+  pm.props.forEach(p => {
+    L.circleMarker([p.lat, p.lon], { radius: 7, color: '#28a745', fillColor: '#28a745', fillOpacity: 0.7, weight: 2 })
+      .addTo(map).bindPopup(`<b>Prop ${p.id}</b><br/>${p.fuente} · ${p.dist}m del pm<br/><a href="${p.url}" target="_blank">Ver anuncio</a>`);
+    bounds.push([p.lat, p.lon]);
+  });
+  map.fitBounds(bounds, { padding: [30, 30], maxZoom: 19 });
+  initializedMaps.add(pm.pm_id);
+}
+
+function renderCard(pm) {
+  const d = decisions[pm.pm_id] || {};
+  const verdict = d.verdict || "pending";
+  const expanded = d._expanded ? ' expanded' : '';
+  const propsHtml = pm.props.map(p => `
+    <div class="prop-row">
+      <a href="${p.url}" target="_blank" class="url">${p.url}</a>
+      <div class="prop-meta">ID ${p.id} · ${p.fuente} · GPS ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)} · <b>${p.dist}m del pm</b></div>
+      <div class="prop-btns">
+        <a href="${gmapsSatUrl(p.lat, p.lon)}" target="_blank" class="btn btn-primary">🛰️ Sat</a>
+        <a href="${streetUrl(p.lat, p.lon)}" target="_blank" class="btn">📷 SV</a>
+      </div>
+    </div>`).join('');
+  return `
+    <div class="pm-card ${verdict}${expanded}" data-pmid="${pm.pm_id}">
+      <div class="pm-header" onclick="toggleCard(${pm.pm_id})">
+        <div>
+          <div class="pm-title">${pm.nombre} <small style="color:#999">(ID ${pm.pm_id})</small></div>
+          <div class="pm-summary">${pm.n_props} props · ${pm.nota}</div>
+        </div>
+        <span class="pm-veredicto-badge">${verdict.toUpperCase()}</span>
+      </div>
+      <div class="pm-body">
+        <div class="info-grid"><div><b>GPS:</b> ${pm.pm_lat.toFixed(6)}, ${pm.pm_lon.toFixed(6)}</div><div><b>Props:</b> ${pm.n_props}</div></div>
+        <div class="btn-row">
+          <a href="${gmapsSatUrl(pm.pm_lat, pm.pm_lon)}" target="_blank" class="btn btn-primary">🛰️ Maps satelital (PM)</a>
+          <a href="${streetUrl(pm.pm_lat, pm.pm_lon)}" target="_blank" class="btn">📷 Street View</a>
+          <a href="${searchUrl(pm.nombre)}" target="_blank" class="btn">🔍 Buscar "${pm.nombre}" en Maps</a>
+        </div>
+        <div class="mini-map" id="map-${pm.pm_id}"></div>
+        <div>${propsHtml}</div>
+        <div class="verdict-row">
+          <button class="verdict-btn confirmed ${verdict==='confirmed'?'active':''}" onclick="setVerdict(${pm.pm_id}, 'confirmed', event)">✅ Confirmed</button>
+          <button class="verdict-btn sospechoso ${verdict==='sospechoso'?'active':''}" onclick="setVerdict(${pm.pm_id}, 'sospechoso', event)">⚠️ Sospechoso</button>
+          <button class="verdict-btn dividir ${verdict==='dividir'?'active':''}" onclick="setVerdict(${pm.pm_id}, 'dividir', event)">✂️ Dividir</button>
+          <button class="verdict-btn mover ${verdict==='mover'?'active':''}" onclick="setVerdict(${pm.pm_id}, 'mover', event)">📍 Mover GPS</button>
+        </div>
+        <textarea placeholder="Notas (GPS correcto, nombre real, etc.)" onblur="setNotes(${pm.pm_id}, this.value)">${d.notes || ''}</textarea>
+      </div>
+    </div>`;
+}
+
+function renderAll() {
+  initializedMaps.clear();
+  document.getElementById("cards").innerHTML = DATA.map(renderCard).join('');
+  const c = { confirmed: 0, sospechoso: 0, dividir: 0, mover: 0, pending: 0 };
+  DATA.forEach(pm => { c[decisions[pm.pm_id]?.verdict || 'pending']++; });
+  document.getElementById("stats").innerHTML = `Total: ${DATA.length} · ✅ ${c.confirmed} · ⚠️ ${c.sospechoso} · ✂️ ${c.dividir} · 📍 ${c.mover} · ⏳ ${c.pending}`;
+  DATA.forEach(pm => { if (decisions[pm.pm_id]?._expanded) setTimeout(() => initMiniMap(pm), 50); });
+}
+
+function toggleCard(pmId) {
+  if (!decisions[pmId]) decisions[pmId] = {};
+  decisions[pmId]._expanded = !decisions[pmId]._expanded;
+  saveDecisions();
+  const card = document.querySelector(`[data-pmid="${pmId}"]`);
+  card.classList.toggle('expanded');
+  if (card.classList.contains('expanded')) {
+    const pm = DATA.find(p => p.pm_id === pmId);
+    setTimeout(() => initMiniMap(pm), 50);
+  }
+}
+
+function setVerdict(pmId, verdict, ev) {
+  ev?.stopPropagation();
+  if (!decisions[pmId]) decisions[pmId] = { _expanded: true };
+  if (decisions[pmId].verdict === verdict) delete decisions[pmId].verdict;
+  else decisions[pmId].verdict = verdict;
+  saveDecisions();
+  renderAll();
+}
+
+function setNotes(pmId, notes) {
+  if (!decisions[pmId]) decisions[pmId] = {};
+  decisions[pmId].notes = notes;
+  saveDecisions();
+}
+
+document.getElementById("export-btn").addEventListener("click", () => {
+  const lines = ["-- Verificacion visual pm capa 3 ZN", "-- " + new Date().toISOString(), "", "BEGIN;", ""];
+  let n = 0;
+  for (const pm of DATA) {
+    const d = decisions[pm.pm_id];
+    if (!d?.verdict) continue;
+    const notes = (d.notes || '').replace(/'/g, "''");
+    lines.push(`-- pm ${pm.pm_id} ${pm.nombre} → ${d.verdict}`);
+    lines.push(`UPDATE proyectos_master SET gps_verificado_visual = '${d.verdict}', gps_verificacion_notas = '${notes || 'verificacion capa 3 ' + d.verdict}', gps_verificado_visual_at = NOW() WHERE id_proyecto_master = ${pm.pm_id};`);
+    lines.push("");
+    n++;
+  }
+  lines.push(`-- Total: ${n}`);
+  lines.push("SELECT gps_verificado_visual, COUNT(*) FROM proyectos_master WHERE zona='Zona Norte' GROUP BY 1;");
+  lines.push("COMMIT;");
+  const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "update-pm-capa3-zn.sql";
+  a.click();
+});
+
+renderAll();
+</script>
+</body>
+</html>
