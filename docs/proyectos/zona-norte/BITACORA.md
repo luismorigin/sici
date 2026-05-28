@@ -280,3 +280,109 @@ Auditoría sobre 568 props Equipetrol completadas:
 - Branding global: "Simón Santa Cruz" vs mantener "Simón Equipetrol" vs "Simón" paraguas.
 - Cuándo migrar Equipetrol al patrón multi-macrozona (3-6 meses post-validación, o nunca).
 - Camino A vs B para jerarquía zona/microzona.
+
+---
+
+## 28 May 2026 — Sesión maratón de matching (19.7% → 54.2% match rate, +52 pm cargados)
+
+**Trigger:** Lucho pidió auditoría de Zona Norte para entender qué pasa con los flujos y la calidad de la data.
+
+**Resultado:** sesión más larga del proyecto (~8h en 2 tandas), match rate ZN venta pasa de **19.7% a 54.2%** (+34.5 pp), pm activos de 18 a **70**, verificación visual **100%** (70/70).
+
+### Hitos cronológicos
+
+1. **Audit inicial detectó 3 problemas críticos en producción ZN:**
+   - K1 (pm 272) con 54 props matched falsos pre-blindaje mig 251/252
+   - STONE 4 (pm 268) con 3 falsos (2 eran STONE 7) + CURUPAU ISUTO (pm 271) con 2 falsos
+   - Brickell 4 (pm 122) con 4 props que eran DOMUS LUXURY/MADERO (descubrimiento)
+   - 32 props con nombres basura del regex ("Preventa", "Moderna", "Venta")
+   - 5 props cross-zona aplicadas (deuda pre-blindaje)
+
+2. **Cleanup masivo aplicado:** 63 falsos desmatcheados + nombres basura → NULL + cross-zona limpiado. Re-merge de 147 props recuperó 73 nombres reales via LLM.
+
+3. **#1.5 ejecutado: carga inicial de 20 pm** con cluster GPS <100m (Mangales Blue 2, HH HOME, Vilareal Duo, Blue Garden, etc.) + matching automático same-zone (+47 props matched).
+
+4. **Herramienta nueva `scripts/verify-pm-gps/`:** verificación gratuita de GPS de pm vía Overpass + Nominatim (OSM) + HTML interactivo Leaflet con tile satelital Esri. **Reutilizable para Urubó/Polanco.** Costo $0. Sin API key.
+
+5. **Patrón "verify-*.html" emergente:** 4 HTMLs interactivos generados (verify-pm-gps.html, verify-sospechosos.html, verify-pm-nuevos-zn.html, verify-dispersos-zn.html, verify-pm-capa3-zn.html). Cada uno con mini-mapa Leaflet por pm + pins de props matched + botones Maps/Street View + veredictos persistentes en localStorage + export SQL. Vos clickeás cada URL del listing, mirás Maps satelital, decidís. ~10-15 min por batch de 12-15 pm.
+
+6. **Nuevas columnas en `proyectos_master`:**
+   - `gps_verificado_visual TEXT` ('confirmed' / 'sospechoso' / 'dividir' / 'mover')
+   - `gps_verificacion_notas TEXT` (notas del usuario, incluyendo GPS corregidos)
+   - `gps_verificado_visual_at TIMESTAMPTZ`
+   - `gps_verificado_osm BOOLEAN` (auto-verificado via Overpass)
+   - `osm_buildings_around_30m INTEGER`
+   - `osm_nominatim_address TEXT`
+   - `osm_verified_at TIMESTAMPTZ`
+
+7. **6 pares pm <100m auditados:** 5 confirmados vecinos legítimos + 1 bug (Brickell 4 absorbía DOMUS LUXURY y DOMUS MADERO — edificio nuevo descubierto).
+
+8. **Re-análisis ticket #1 (mejorar prompt LLM):** habíamos diseñado plan staged de 6 fases A→F con wording "Opción 1D" suffix-aware para mitigar 20+ pares pm parecidos en Equipetrol. **Una sola query reveló que el problema era otro:** 70% de las props sin match TENÍAN nombre extraído, faltaba pm. **Ticket #1 ARCHIVADO COMO INNECESARIO.** El LLM hizo su trabajo bien.
+
+9. **Ticket #1.7 nuevo:** detector automático de clusters emergentes (función SQL + cron semanal n8n). Para escalar sin más sesiones manuales. NO bloquea #8 ni #6.
+
+10. **Carga incremental (capas 2, dispersos, 3):**
+    - Capa 2 (12 pm + Sky Icon movido de EQ a ZN + aliases): +37 props matched
+    - Aliases capa 2 (Vilareal, Berchatti, Orange, Disart, Lusitano): +10 props
+    - Dispersos (Bless One, Community Alto Norte, Cantabria, Torre Moderna — los 4 con GPS de agente desplazados): +31 props
+    - Capa 3 (15 pm extraídos de URLs: Macororo 16/17, Ares By Elite, Hera Tower, LIMCO II, Soul Parc, TRIII, Torre Baruc Norte, Zero, Atlantis, Camila II, Cozumel, Rafaela II, Santa Fe, Tamisa III, Westgate): +22 props
+
+11. **Verificación visual 100%:** los 70 pm activos al cierre tienen `gps_verificado_visual` ≠ NULL. 67 confirmed + 3 sospechoso (Vertical Isuto con aviso terminado + SANTA FE + Westgate).
+
+### Lecciones meta del 28-may (las MÁS importantes para futuras sesiones)
+
+1. **El cluster GPS interno de N listings con el mismo nombre > Google Maps en Bolivia.** OSM/Google no rotulan todos los edificios. Cuando varios listings independientes convergen en GPS y nombre, esa convergencia es la verdad.
+
+2. **Agentes ponen GPS sistemáticamente desplazados, pero las URLs SÍ son confiables.** Bless One, Vilareal Duo, Blue Garden, Essenzia, ATLANTIS TOWERS — todos tenían listings con GPS desplazado hasta 1.7km del edificio real. Pero las URLs/slugs mencionaban el nombre correcto. La verificación visual del usuario corrigió los GPS, los nombres sirvieron para matchear.
+
+3. **pm legacy absorbe props vecinas en zonas densas.** Brickell 4 absorbió por GPS props de DOMUS LUXURY (36m) y DOMUS MADERO (50m) que aún no existían como pm. **Patrón a vigilar:** al cargar pm nuevo en zona densa, re-auditar matched por GPS a pm vecinos viejos.
+
+4. **Medir antes de optimizar.** Habíamos pasado horas diseñando plan staged de 6 fases para mitigar 22% error LLM en EQ. Una sola query midió: el problema era otro. La pregunta del usuario *"explicame el problema que estamos tratando de resolver"* destrabó todo.
+
+5. **No persigás métricas vacías.** "Subir match rate a 50%" no es objetivo, es vanity. El objetivo real era: ¿qué requiere el roadmap (#6 frontend)? No requiere 100% match rate — requiere base de pm verificada para construir el feed. Eso ya está.
+
+6. **HTML + verificación humana batch escala mejor que automatización ciega.** El patrón verify-*.html con pin Maps + Street View + veredictos localStorage es reutilizable. Lo que toma 6h una sesión manual lo va a hacer el #1.7 en 15 min/semana cuando se construya.
+
+7. **URLs son la fuente más confiable de nombre.** El 70% de las props sin match al inicio del día tenían el nombre del edificio extraíble del slug Remax/C21. El LLM ya las identificó bien. Solo faltaba pm.
+
+### Estado al cierre
+
+| Métrica | Inicio del día | Cierre |
+|---|---|---|
+| pm ZN activos | 18 | **70** |
+| Match rate ZN venta | 19.7% | **54.2%** |
+| Props matched | 77 | 212 |
+| Props sin match | 313 | 179 (90 sin nombre + 2 con N≥2 + 87 con N=1) |
+| pm con verificación visual | 0 | **70/70 (100%)** |
+| Falsos K1+STONE+CURUPAU+Brickell | 63 | 0 |
+| Cross-zona | 5 | 0 |
+| Nombres basura | 32 | 0 |
+| GPS corregidos manualmente | 0 | 11 |
+| Edificios "nuevos" descubiertos | — | 3 (DOMUS MADERO + Sky Icon re-zonificado + Torre Baruc Norte) |
+
+### Commits del día (7)
+
+```
+ead8b51 — Sesión 1: Audit GPS + cleanup + tool verify-pm-gps
+ca438cd — Sesión 1: 6 pares pm + descubrimiento DOMUS MADERO
+ead0be9 — Re-análisis ticket #1 con datos EQ (plan staged)
+e105aa4 — Sesión 2 capa 1: cierre audit + ticket #1 archivado
+47f8793 — Ticket #1.7 detector automático
+3a2b178 — Capa 2 + dispersos
+71cee8a — Capa 3 cierre día (15 pm extraídos de URLs)
+```
+
+### Roadmap para próximas sesiones
+
+```
+[Mañana 29-may, 5 min]
+- Verificar merge nocturno (7 Essenzia + 2 STONE 7 desmatcheadas)
+
+[Próxima sesión grande, ~medio día]
+- #8 microzonas ZN (Hamacas, Banzer 3-5to, Radial 26, Norte 4-5to)
+   bloquea #6 frontend
+
+[Después de #8]
+- #6 frontend /mercado/zona-norte (privado por token)
+- #1.7 detector automático (en paralelo)
+```
