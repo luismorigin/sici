@@ -80,6 +80,123 @@ Auditoría sobre 824 props con LLM:
 
 ---
 
+### #1 — RE-ANÁLISIS 28-may-2026 (post-sesión audit GPS)
+
+> **El plan original sigue siendo válido en dirección pero subestimaba el riesgo en Equipetrol.** Re-medición con queries específicas EQ cambió 3 cosas clave del análisis. Plan revisado: staged en 6 fases (A→F) + wording "Opción 1D" estricto + suffix-aware.
+
+#### Lo que cambió respecto al análisis del 27-may
+
+**1. Las 42 props EQ con LLM=null NO son recuperables en su mayoría.**
+
+Auditoría sobre URLs/regex revela: son **casas y terrenos sin edificio**, no departamentos. URLs tipo `casa-en-venta-zona-equipetrol`, `terreno-premium-en-venta`, `casa-comercial-con-locales`, coords como `calle-los-gomeros`. El LLM=null es la respuesta CORRECTA. La estimación "0-3 props con cambios visibles en EQ" era acertada en magnitud, pero por razón distinta a la documentada (no "matching enmascara" sino "no hay edificio que extraer").
+
+**2. Equipetrol tiene 20+ pares de pm con nombres muy parecidos → riesgo de falsos `media` ALTO.**
+
+Pares riesgosos detectados (similarity > 0.45):
+
+| pm A | pm B | Similitud |
+|---|---|---|
+| Edificio Condado II | Edificio Condado III | 0.95 |
+| Smart studio Equipe 3.0 | SMART STUDIO EQUIPE 1.0 | 0.84 |
+| Euro Design Le Blanc | Eurodesign Le Blanc | 0.78 (parece duplicado) |
+| Edificio Macororó 11 | Edificio Macororó 9 (+ Macororó 5) | 0.70-0.78 |
+| Condominio Portofino 1/2/Delux | (3 variantes) | 0.72 |
+| Condominio Avanti vs Avanti Deluxe | | 0.72 |
+| Omnia Lux vs Omnia Eco Lux | | 0.71 |
+| Condominio Sky (5+ variantes: Blue/Luxia/Equinox/Lumiere/Magnolia) | | 0.63-0.75 |
+| Edificio ITAIPU vs ITAJU | | 0.63 |
+
+**Implicación:** el blindaje cross-zona NO protege contra confusión cross-pm dentro de la misma zona EQ. Si el LLM con `media` extrae "Condado" sin sufijo, el matching `nombre_exacto` no falla (porque no matchea ninguno literal), pero el matching `fuzzy_nombre` puede generar falsos. Y aunque el matching no aplique, el `nombre_edificio` queda ambiguo en BD.
+
+**3. Las 9 props EQ con `confianza='media'` actuales ya muestran 22% de error LLM.**
+
+Inspección de las 9 props EQ con `media` hoy en BD:
+- 7/9 correctas (variantes notacionales: "Sky Luxury" / "Sky Lux", "Stone VI" / "Stone 6", "SOLO" / "SÖLO Industrial Apartments")
+- **2/9 EQUIVOCADAS**: prop 1825 con LLM="Edificio San Martin" para edificio real "Torre Real"; prop 1841 con LLM="Equipetrol Day Apartaments & Suites" para "EURODESIGN SUITES".
+
+**Tasa de error en media actual: 22%**. El merge actual ignora `media` → estos errores son invisibles hoy. Si Fase D activa `media` en merge, **el 22% se vuelve visible como falsos positivos**.
+
+#### Plan revisado: 6 fases staged (A→F)
+
+| Fase | Acción | Riesgo | Tiempo |
+|---|---|---|---|
+| **A — Solo prompt** | Agregar bloque `nombre_edificio_confianza` al prompt (Opción 1D — estricto + suffix-aware). NO modificar merge, NO reprocesar. Activa solo en cron nocturno para props nuevas. | 🟢 Cero (no toca BD) | 30 min |
+| **B — Observar 1 noche** | Medir distribución real de `media/alta/null` en props nuevas del día siguiente. | 🟢 Cero | 0 |
+| **C — Dry-run focal EQ** | Tomar 10 props EQ con LLM=null actual. Re-correr enrichment LLM con prompt nuevo manualmente (sin pisar BD). Comparar nombres. Si <2 falsos sospechosos → seguir. Si más → ajustar prompt. | 🟢 Bajo | 30 min + ~$0.10 |
+| **D — Snapshot + modificar merge** | Crear backup table `_pre_ticket1_snapshot` con (id, nombre_edificio, datos_json_enrichment) de las props a tocar. Modificar `merge_discovery_enrichment` para aceptar `'media'` en rama LLM híbrida de `nombre_edificio` SOLO. | 🟡 Medio | 30 min |
+| **E — Reproceso staged** | Reprocesar primero las 135 ZN (zona piloto, menor riesgo). Verificar deltas. Si OK → procesar las 42 EQ. | 🟡 Medio | 1-2h + $3 |
+| **F — Plan de rollback** | SQL que restaure desde la backup table si hace falta. Documentado antes de cualquier mudanza. | 🟢 Cero | 15 min |
+
+#### Wording aprobado del prompt (Opción 1D — estricto + suffix-aware)
+
+```
+NOMBRE_EDIFICIO_CONFIANZA:
+- "alta": nombre EXPLÍCITO en el cuerpo de la DESCRIPCIÓN libre del avisador,
+  INCLUYENDO sufijo/número si aplica.
+  Ej: "Departamento en Edificio Condado III" con "III" explícito.
+- "media": nombre presente SOLO en TÍTULO o URL/slug, NO en descripción,
+  PERO incluye sufijo/número que permite identificar el edificio específico.
+  Ej: URL `edificio-macororo-11` o título "Venta en Macororó 11".
+  Si el nombre tiene número/sufijo y no podés confirmar ese sufijo
+  (II vs III, 1 vs 2, Delux vs sin Delux, Lux vs Eco Lux), preferir null.
+- "baja": nombre INFERIDO desde código interno, modelo o referencia indirecta
+  sin nombre literal en ningún lado. Ej: "monoambiente modelo MA-8".
+- null: no hay forma de extraer el nombre completo con sufijo
+  desde texto/título/URL/código.
+- REGLA ESTRICTA DE SUFIJO: si la zona tiene edificios con nombre similar
+  diferenciados por número/sufijo (Condado II vs III, Macororó 5 vs 9 vs 11,
+  Portofino 1 vs 2 vs Delux, Smart Studio 1.0 vs 3.0, Avanti vs Avanti Deluxe,
+  Omnia Lux vs Omnia Eco Lux, Sky vs Sky Blue/Luxia/Equinox/Lumiere),
+  DEBE confirmarse el sufijo literal. Si dudás → null.
+- En caso de duda entre niveles → preferir el nivel MÁS bajo
+  (alta→media, media→null, null se queda null).
+```
+
+**Por qué Opción 1D y no 1A (estricto simple):** EQ tiene mucha más densidad de pm con sufijos discriminantes que ZN. Sin "suffix-aware" se abre la puerta a falsos del tipo Condado II → III (similitud 0.95).
+
+**Por qué no Opción 1C (no introducir media):** ZN se beneficia del `media` para recuperar las ~30-60 props donde el nombre aparece solo en título/URL. Renunciar a `media` reduce el beneficio del ticket a cero.
+
+#### Asimetría EQ vs ZN — costo/beneficio actualizado
+
+| Aspecto | Zona Norte | Equipetrol |
+|---|---|---|
+| Props target (LLM=null) | 135 | 42 (mayoría casas/terrenos) |
+| Recuperaciones esperadas | 30-60 | 0-3 |
+| Densidad pm/zona | Baja (39 pm) | Alta (290+ pm) |
+| Pares pm riesgosos | 0 detectados | 20+ detectados |
+| Sensibilidad a falsos `media` | Baja | Alta (22% error en muestra actual) |
+| **Beneficio neto del ticket** | 🟢 Alto | 🟡 Marginal o negativo si wording no es estricto |
+
+**Implicación de prioridad:** el ticket #1 tiene **prioridad ALTA para ZN** (target real, riesgo bajo) y **prioridad BAJA para EQ** (sin target real, riesgo alto si wording flojo). Wording Opción 1D busca proteger EQ mientras habilita ZN.
+
+#### Plan de rollback documentado (Fase F)
+
+Antes de Fase D:
+```sql
+CREATE TABLE _pre_ticket1_snapshot AS
+SELECT id, nombre_edificio, datos_json_enrichment, NOW() AS snapshot_at
+FROM propiedades_v2
+WHERE datos_json_enrichment->'llm_output'->>'nombre_edificio_confianza' IS NULL
+   OR datos_json_enrichment->'llm_output'->>'nombre_edificio_confianza' = 'media';
+```
+
+Si algo sale mal post-reproceso:
+```sql
+UPDATE propiedades_v2 p
+SET nombre_edificio = s.nombre_edificio,
+    datos_json_enrichment = s.datos_json_enrichment
+FROM _pre_ticket1_snapshot s
+WHERE p.id = s.id;
+-- Si también hay que revertir el merge, dropear cambios en sql/functions/merge/
+```
+
+#### Estado actual del ticket
+
+- **Fase A**: pendiente — aprobado wording Opción 1D, falta editar `scripts/llm-enrichment/prompt-ventas.md` y verificar propagación a n8n.
+- **Fases B-F**: pendientes.
+
+---
+
 ### #1.5 — Cargar proyectos master para edificios reconocibles de Zona Norte
 
 > **Ataque alternativo/complementario al #1.** Beneficio inmediato y visible.
