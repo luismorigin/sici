@@ -2,7 +2,9 @@
 
 > Tickets pendientes que surgieron de la validación Fase 3+4. Organizados por prioridad y por scope.
 
-**Última actualización:** 27 May 2026 (sub-sesión 4 — visión multi-macrozona consolidada).
+**Última actualización:** 29 May 2026 (sesión de diseño completo del ticket #8 cerrada).
+
+**🎯 Próxima sesión:** aplicar **Ticket #8** según `PLAN_IMPLEMENTACION_MICROZONAS.md`. Branch: `zn/microzonas-grid-borrador`. Estimación: ~7h + 14 días paralelización snapshot.
 
 ---
 
@@ -23,9 +25,17 @@ Ver `DECISIONES.md` ADR-009 para detalle completo.
 
 ---
 
-## 🔴 Tickets críticos (próxima sesión)
+## 🟡 Tickets de calidad de matching (paralelos a #8, no bloquean)
 
-### #1 — Mejorar criterios de confianza del prompt LLM v4.0 + merge acepta 'media'
+> Esta sección era "🔴 Críticos próxima sesión" hasta el 28-may-2026. El #1 fue archivado por otro camino, el #1.5 se completó. El #1.7 sigue vigente como ticket no urgente.
+
+### ✅ #1 — Mejorar criterios de confianza del prompt LLM v4.0 + merge acepta 'media' — **ARCHIVADO 28-may-2026**
+
+> Ver detalle del archivado en sección "#1 — REPLANTEO 28-may-2026 sesión 2 (RESUELTO POR OTRO CAMINO)" más abajo. El problema raíz era otro y se resolvió cargando pm ZN (#1.5).
+
+**Contenido histórico mantenido abajo para trazabilidad de las 3 iteraciones de análisis.**
+
+### #1 — Mejorar criterios de confianza del prompt LLM v4.0 + merge acepta 'media' (versión original)
 
 > **Reformulado tras 3 iteraciones de investigación 27-may-2026.** El ticket original ("Mejorar prompt LLM" / "Decidir A o B") era erróneo — el merge v2.6.0 YA tiene lógica híbrida correcta. La causa raíz real es que el **prompt nunca define criterios** sobre cuándo usar cada nivel de confianza → el LLM lo interpreta binario (alta/null).
 
@@ -278,7 +288,13 @@ La intuición correcta del usuario fue: *"explicame el problema que estamos trat
 
 ---
 
-### #1.5 — Cargar proyectos master para edificios reconocibles de Zona Norte
+### ✅ #1.5 — Cargar proyectos master para edificios reconocibles de Zona Norte — **COMPLETADO 28-29 may-2026**
+
+> **73 pm verificados al 100% visualmente.** Match rate ZN venta subió de 19.7% a 60.6%. Ver BITACORA entradas 28-may y 29-may. Las 3 micro-cargas finales del 29-may (STONE 7, Sky Line, Mangales Blue) cierran el ticket.
+
+**Contexto histórico mantenido abajo para trazabilidad metodológica.**
+
+### #1.5 — Cargar proyectos master para edificios reconocibles de Zona Norte (versión histórica)
 
 > **Ataque alternativo/complementario al #1.** Beneficio inmediato y visible.
 

@@ -556,3 +556,25 @@ Cambios fueron 3 DO blocks aplicados desde Supabase UI + docs (este append + REA
 [Cuando llegue Urubó/próxima macrozona]
 - Empezar ticket #11 (refactor zonas dinámico)
 ```
+
+---
+
+### Auditoría del backlog al cierre del 29-may (mini-housekeeping)
+
+Antes de cerrar la sesión para preparar la implementación en sesión nueva, auditoría rápida del estado del backlog. Detectado:
+
+1. **#1 (mejorar prompt LLM)** seguía marcado como "🔴 Crítico próxima sesión" aunque estaba ARCHIVADO desde el 28-may. Marcado como ✅ ARCHIVADO en el título + nota explicativa. Contenido histórico mantenido para trazabilidad de las 3 iteraciones de análisis.
+
+2. **#1.5 (cargar pm ZN)** seguía marcado como pendiente aunque los 73 pm ZN estaban verificados al 100% al 29-may. Marcado como ✅ COMPLETADO en el título + nota.
+
+3. **Sección "🔴 Tickets críticos (próxima sesión)"** renombrada a "🟡 Tickets de calidad de matching (paralelos a #8, no bloquean)" porque el #1 está archivado, el #1.5 está hecho, y el #1.7 (detector automático de clusters) no bloquea la próxima sesión que es aplicar #8.
+
+4. **Header del BACKLOG** actualizado a 29-may + agregada línea "🎯 Próxima sesión: aplicar Ticket #8 según PLAN_IMPLEMENTACION_MICROZONAS.md".
+
+**Por qué importa este detalle**: el prompt para la sesión nueva indica leer el BACKLOG antes de tocar nada. Si el #1 hubiera seguido marcado como "Crítico próxima sesión", el modelo nuevo podría haberse confundido sobre cuál es el ticket activo.
+
+**Reglas que quedan claras para futuros tickets**:
+- Cuando un ticket cierra, marcar el título con ✅ + breve nota de cómo se resolvió.
+- Cuando un ticket se archiva sin ejecutar, marcar título con ✅ ARCHIVADO + razón.
+- Mantener contenido histórico abajo del título marcado para trazabilidad.
+- Reservar etiqueta 🔴 solo para tickets que SÍ son urgentes ahora.
