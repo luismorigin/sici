@@ -22,7 +22,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT\n  nombre,\n  ST_AsGeoJSON(geom) AS geom_geojson,\n  ST_XMin(geom) AS lon_oeste,\n  ST_YMin(geom) AS lat_sur,\n  ST_XMax(geom) AS lon_este,\n  ST_YMax(geom) AS lat_norte\nFROM zonas_geograficas\nWHERE activo = true\n  AND nombre = ANY(ARRAY['Zona Norte']::text[]);",
+        "query": "SELECT\n  nombre,\n  ST_AsGeoJSON(geom) AS geom_geojson,\n  ST_XMin(geom) AS lon_oeste,\n  ST_YMin(geom) AS lat_sur,\n  ST_XMax(geom) AS lon_este,\n  ST_YMax(geom) AS lat_norte\nFROM zonas_geograficas\nWHERE activo = true\n  AND zona_general = ANY(ARRAY['Zona Norte']::text[]);",
         "options": {}
       },
       "id": "pg-leer-poligonos-zn",
@@ -142,7 +142,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, url, status\n  FROM propiedades_v2\n  WHERE fuente = 'century21'\n    AND status NOT IN ('inactivo_confirmed')\n    AND tipo_operacion = 'venta'\n    AND zona = ANY(ARRAY['Zona Norte']::text[])",
+        "query": "SELECT id, url, status\n  FROM propiedades_v2\n  WHERE fuente = 'century21'\n    AND status NOT IN ('inactivo_confirmed')\n    AND tipo_operacion = 'venta'\n    AND zona IN (SELECT nombre FROM zonas_geograficas WHERE zona_general = ANY(ARRAY['Zona Norte']::text[]) AND activo = true)",
         "options": {}
       },
       "id": "obtener-bd-zn",

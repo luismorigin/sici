@@ -601,6 +601,34 @@ Detectado el 29-may al validar el snapshot. `zona_general='Equipetrol'` tiene 7 
 
 ---
 
+### #13 — Blindaje matching a nivel `zona_general` en vez de microzona
+
+**Contexto:** El matching está blindado con `p.zona = pm.zona` (ADR-006, migs 251/252) — diseñado cuando ZN era **un solo polígono**, para evitar contaminación **cross-macrozona** (un edificio ZN con nombre igual a uno de EQ). La **mig 254** subdividió ZN en 14 microzonas; ahora `p.zona = pm.zona` exige igualdad de **microzona**, lo que bloquea matches **intra-ZN legítimos** cuando la prop y su pm caen en microzonas vecinas distintas (los GPS de los pm se corrigieron a mano al edificio real, distinto del GPS de los listings).
+
+**Datos medidos (29-may, post-mig 254):**
+- **69 de 255 props ZN matched** tienen `p.zona ≠ pm.zona`. **NO corren peligro**: el PASO 8 de `matching_completo_automatizado()` auto-rechaza sugerencias de props ya matched (el matching solo asigna, nunca desmatchea). El `id_proyecto_master` persiste.
+- **Riesgo futuro acotado:** de 112 props ZN sin match con pm cercano (<250m), 109 matchean igual (misma microzona) y **solo 3 se pierden** por el blindaje a nivel microzona.
+
+**Funciones con el blindaje `p.zona = pm.zona`:** `generar_matches_gps`, `generar_matches_por_nombre`, `generar_matches_fuzzy`, `generar_matches_trigram` (verificar cada una).
+
+**Fix propuesto:** cambiar el blindaje de `p.zona = pm.zona` a **misma macrozona** vía `zona_general`:
+```sql
+-- En vez de:  AND p.zona = pm.zona
+-- Usar:       AND EXISTS (SELECT 1 FROM zonas_geograficas zp JOIN zonas_geograficas zm
+--               ON zp.zona_general = zm.zona_general
+--               WHERE zp.nombre = p.zona AND zm.nombre = pm.zona)
+-- (o cachear zona_general en propiedades_v2/proyectos_master para no joinear 2x)
+```
+Esto restaura el matching intra-ZN sin reabrir la contaminación cross-macrozona (EQ↔ZN siguen separados por `zona_general`).
+
+**⚠️ Riesgo del fix:** estas funciones **también procesan Equipetrol**. Pasar a `zona_general` permitiría matchear, dentro de EQ, una prop de `Equipetrol Centro` con un pm de `Sirari` (ambos `zona_general='Equipetrol'`) si están a <250m — hoy NO matchean cross-zona EQ. Puede ser deseable (edificios en borde de zona) o introducir falsos. **Analizar impacto en EQ antes de aplicar** (medir cuántos matches nuevos cross-zona EQ aparecerían y si son correctos).
+
+**Prioridad: BAJA.** 3 props afectadas hoy. Reconsiderar si el match rate ZN futuro se estanca o el problema crece con más microzonas/macrozonas. Encaja naturalmente dentro del refactor del **ticket #11** (sistema de zonas dinámico).
+
+**Estimación:** 2-3h (fix + medición de impacto EQ + testing) si se hace aislado; o dentro de #11.
+
+---
+
 ## ⚪ Investigación / no priorizar
 
 ### #9 — Causa raíz del re-fetch bucle al usar query param + ventas.tsx
