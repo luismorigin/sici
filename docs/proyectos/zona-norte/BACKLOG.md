@@ -629,27 +629,25 @@ Esto restaura el matching intra-ZN sin reabrir la contaminación cross-macrozona
 
 ---
 
-### #14 — Paginación dinámica en discovery Remax (evitar truncamiento → falsos pending)
+### #14 — Investigar gap snapshot↔BD en discovery Remax (solo si el verificador genera falsos)
 
-**Contexto:** El workflow `flujo_a_discovery_remax_zonanorte` (nodo "Generar URLs Remax") trae **TODO Santa Cruz paginado con un número FIJO de páginas** (`TOTAL_PAGES`, originalmente 30) y filtra por polígono después. Si SC tiene más departamentos de los que caben en ese tope, las props de las páginas siguientes no entran al snapshot. Peor: Remax **no garantiza orden estable** entre requests, así que una misma prop puede aparecer en página 25 en una corrida y página 35 en otra → **entra y sale del snapshot** → se marca `inactivo_pending` por error.
+> **Reformulado 29-may tras medición.** La hipótesis inicial era "truncamiento por `TOTAL_PAGES=30` fijo". **Descartada:** correr con 30 y con 60 páginas dio el **mismo `snapshot_total=166`** → Remax tiene ~166 deptos en ZN y 30 páginas ya los traían todos (las páginas extra devuelven `[]`). El tope de páginas NO era el problema.
 
-**Evidencia (29-may):** primera corrida post-mig 254 con `TOTAL_PAGES=30`: las props 2440-2443 (códigos remax 1552-1555, reales) fueron **creadas hoy y marcadas ausentes el mismo día** — imposible si el snapshot estuviera completo. `snapshot_total=166` ZN, `ausentes=6`.
+**Situación real:** cada corrida Remax ZN marca ~4-6 props `inactivo_pending` (13 acumuladas al 29-may, varias de los días que los workflows estuvieron apagados). Son props que están en BD pero **no en el snapshot actual de Remax** — lo más probable: **caídas reales** (vendidas/despublicadas) o **cambio de slug** (la URL en BD ya no matchea la del portal → se ve como ausente + nueva).
 
-**Red de seguridad existente:** el verificador HTTP reactiva en 2 días los falsos pending cuya URL siga viva → no es daño permanente, pero es ruido recurrente y ensucia la serie de absorción.
+**Red de seguridad (ya existe y es suficiente por ahora):** el **verificador HTTP** chequea cada URL pending 2 días después → reactiva las vivas, confirma las caídas. Es el árbitro correcto. Marcar `inactivo_pending` es solo un estado intermedio reversible.
 
-**Parche aplicado (29-may):** `TOTAL_PAGES` 30 → **60** (reduce probabilidad, no resuelve el orden inestable).
+**Cuándo activar este ticket:** solo si se observa que el verificador **reactiva recurrentemente** las mismas props (señal de que el discovery las marca mal, ej. por slug-change no detectado). Diagnóstico a correr en ese caso:
+- ¿Las props pending tienen URL que responde 200/302 en Remax? (entonces es slug-change o inestabilidad, no caída real)
+- ¿El `MLSID`/`codigo_propiedad` sigue en el feed con otro slug? → matchear por `codigo_propiedad` en vez de (o además de) URL en el nodo "Preparar Comparación".
 
-**Fix de fondo (este ticket):**
-- Leer el primer response de Remax y extraer `meta.last_page` / `meta.total` (verificar el nombre del campo en el JSON del HTTP node).
-- Generar las URLs de página 1..last_page dinámicamente (en vez de tope fijo).
-- Si Remax soporta `?sort=` por id/fecha, ordenar para estabilizar el paginado (evita que props salten de página).
-- Opcional: cap de seguridad (ej. last_page pero máx 200) para no colgar si el portal devuelve un total absurdo.
+**Parche aplicado (29-may):** `TOTAL_PAGES` 30 → 60 como **margen futuro barato** (si SC crece y supera 30 páginas). Inofensivo: páginas extra devuelven `[]`. No "arregló" nada porque no había nada roto.
 
-**Nota:** C21 NO tiene este problema (usa grid bbox, cuadrantes que cubren la zona sistemáticamente, no paginación de "todo SC").
+**Nota:** C21 usa grid bbox (no paginación) — sin este tema.
 
-**Prioridad: MEDIA.** Genera falsos pending recurrentes en Remax. El parche a 60 lo mitiga; el fix dinámico lo cierra. Hacer antes de exponer datos de absorción ZN.
+**Prioridad: BAJA.** Hoy el verificador cubre el caso. No bloquea exposición de ZN. Reabrir solo con evidencia de falsos recurrentes.
 
-**Estimación:** 1-2h (modificar "Generar URLs Remax" + nodo previo que lea last_page + testing).
+**Estimación:** 1-2h de investigación si se reabre (matching por `codigo_propiedad`, no por URL).
 
 ---
 
