@@ -482,31 +482,73 @@ components/
 
 ---
 
-### #8 — Definir microzonas de Zona Norte (subdivisión + refinar polígono macro)
+### #8 — Definir microzonas de Zona Norte (subdivisión + refinar polígono macro) — **PLAN LISTO, ESPERA APLICACIÓN**
 
-**Promovido en prioridad post-ADR-009:** con la visión multi-macrozona, **cada macrozona debe tener sus microzonas** para que el patrón sea consistente con Equipetrol (que tiene 6 microzonas).
+**Estado al 29-may-2026:** ✅ Diseño y plan de implementación cerrados. **Esperando ventana para aplicar**.
 
-**Contexto:**
-- ZN hoy: 1 polígono macro único (`docs/proyectos/zona-norte/poligono-prueba.geojson`), dibujado rápido para validar.
-- ADR-008: subdividir después es seguro porque `get_zona_by_gps()` permite re-asignar.
-- Microzonas ya identificadas por taxonomía de portales: Hamacas, Banzer 3er al 5to anillo, Radial 26, Norte (genérico), Norte 4to-5to anillo.
+- **Documento maestro de implementación:** `docs/proyectos/zona-norte/PLAN_IMPLEMENTACION_MICROZONAS.md`
+- **Migración SQL preparada:** `sql/migrations/254_microzonas_zona_norte.sql`
+- **Rollback preparado:** `sql/migrations/254_microzonas_zona_norte_rollback.sql`
+- **Refactor snapshot paralelo:** `sql/migrations/255_snapshot_absorcion_v4_dinamico.sql`
+- **Canonical zonas ZN:** `docs/canonical/ZONAS_ZONA_NORTE.md`
+- **ADR-010** ("EQ y ZN son macrozonas hermanas operativamente") en `DECISIONES.md`
 
-**Acción:**
-1. **Refinar polígono macro** con bordes más precisos (revisar el "polígono rápido" actual).
-2. **Definir microzonas hijas** dentro de Zona Norte:
-   - Hamacas
-   - Banzer 3er al 5to anillo
-   - Radial 26
-   - Norte 4to-5to anillo (o como se nombre).
-3. Cargar polígonos hijos en `zonas_geograficas` con `zona_general='Zona Norte'`.
-4. Re-correr `get_zona_by_gps()` sobre props ZN existentes para re-distribuir en microzonas.
-5. Decidir entre ADR-008 Camino A (microzonas hermanas, como Equipetrol) o Camino B (jerarquía real con zona macro + microzona).
+**Resultado del diseño (14 microzonas, no 4 como inicialmente):**
+- Grilla 4×3 + 2 (anillos viales × avenidas longitudinales).
+- Recortadas con `ST_Difference` para no solapar con EQ (overlap residual 4 m²).
+- 73 pm y 393 props venta activas distribuidos sin pérdida.
+- 5 microzonas hoy vacías (lado Mutualista + 8vo anillo extremo) — captarán oferta cuando discovery se expanda.
 
-**Recomendación Camino:** el **Camino A** (hermanas) es consistente con Equipetrol actual. El **Camino B** (jerarquía) sería un refactor del trigger pero más limpio a largo plazo. Decidir en el ADR-009 cuál se adopta para todas las macrozonas.
+**Decisiones tomadas:**
+- Camino **A simple** (zonas hermanas, no jerárquico). ADR-010.
+- Camino **B refactor snapshot** con paralelización filter_version=4 (escalable a futuras macrozonas).
+- Camino **W** (3 mejoras chicas + ticket #11 para refactor escalable completo).
 
-**Cuándo:** antes de la exposición pública de ZN. Cuando empiece a haber demanda de filtros por microzona.
+**Estimación de aplicación:** ~7h en sesión 1 + 14 días paralelización pasiva + 30 min switch final.
 
-**Estimación:** medio día + decisión de Camino.
+**Hallazgos durante el diseño** que generaron tickets nuevos:
+- #11 nuevo: refactor zonas dinámico (sistema escalable).
+- Bug latente en `insertar_proyectos_aprobados()` (zona='Equipetrol' sin sufijo, no existe en CHECK).
+- Bug latente en `resumen_mercado()` y `buscar_propiedades()` (falta 'Eq. 3er Anillo' en `zonas_canon`).
+
+---
+
+### #11 — Refactor de zonas a sistema dinámico (escalabilidad multi-macrozona)
+
+**Motivación:** Hoy agregar una macrozona o microzona requiere tocar **7 lugares diferentes**: CHECK constraint, lib/zonas.ts, workflows n8n, snapshot, HITL trigger, operacion.md, scripts. No escala a partir de 3-4 macrozonas.
+
+**Trigger para activar este ticket:** cuando se confirme la siguiente macrozona (Urubó/Polanco/otras). Antes de eso, este ticket es OPCIONAL — el modelo plano actual aguanta 1-2 macrozonas más con esfuerzo aceptable.
+
+**Scope** (~1 semana, dividido en sesiones):
+
+**Fase 1 SQL (~5h, alto valor):**
+- Refactor `snapshot_absorcion_mercado_v4()` → switch desde v3 deprecated (cuando paridad confirmada 14 días).
+- CHECK `zona_valida` → FK contra `zonas_geograficas.nombre` (eliminar lista hardcoded).
+- Agregar campos `incluir_en_discovery BOOLEAN`, `incluir_en_global BOOLEAN`, `prioridad INT` a `zonas_geograficas`.
+- Backfill esos campos para zonas existentes.
+- Refactor `resumen_mercado()` y `buscar_propiedades()` para que `zonas_canon` sea dinámico por `zona_general` (arregla bug latente de falta 'Eq. 3er Anillo').
+- Investigar y arreglar `insertar_proyectos_aprobados()` que asigna `zona='Equipetrol'` sin sufijo.
+
+**Fase 2 Workflows n8n (~6h):**
+- Workflow discovery único que lee de BD `WHERE incluir_en_discovery=TRUE`.
+- Deprecar workflows separados por macrozona (Equipetrol exclusivo + ZN exclusivo → uno solo dinámico).
+
+**Fase 3 Frontend (~1-2 días):**
+- Endpoint `/api/zonas` (cacheable, paginado si necesario).
+- Hook `useZonas()` con React Query.
+- Reemplazar hardcoded en `lib/zonas.ts` por consumo dinámico.
+- Reemplazar `ZONAS_ZONA_NORTE` static export por fetch.
+
+**Beneficio:** agregar nueva macrozona pasa a ser **1 sola operación**:
+```sql
+INSERT INTO zonas_geograficas (nombre, zona_general, geom, activo, incluir_en_discovery, incluir_en_global)
+VALUES ('Urubó Sur', 'Urubó', ST_GeomFromGeoJSON(...), TRUE, TRUE, TRUE);
+```
+El workflow, snapshot, HITL, frontend y filtros se actualizan automáticamente.
+
+**Riesgo de NO hacerlo:** deuda técnica acumulativa. Cada macrozona nueva toma 3-4x más esfuerzo del necesario. Ver inventario completo en `PLAN_IMPLEMENTACION_MICROZONAS.md` sección "Inventario del hardcoding actual".
+
+**Estimación:** ~1 semana repartida en 3 sesiones.
 
 ---
 

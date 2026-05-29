@@ -145,3 +145,35 @@ Formato ADR (Architecture Decision Record): contexto → opciones → decisión 
 - "Microzonas ZN" pasa a más importante (cada macrozona debería tener sus microzonas).
 - "Exposición pública ZN" se vuelve "construir `/mercado/zona-norte`" como prototipo del patrón.
 - Branding global ("Simón Santa Cruz" vs "Simón Equipetrol") queda como decisión futura, NO bloqueante.
+
+
+---
+
+## ADR-010 — Equipetrol y Zona Norte son macrozonas hermanas operativamente
+
+**Fecha:** 29-may-2026 (parte del cierre del ticket #8).
+
+**Contexto:** Al discutir las 14 microzonas Zona Norte, surgió la pregunta de si EQ pasa a ser "subzona de Zona Norte" (porque geográficamente lo es). El director aclaró que en la práctica cotidiana, EQ y ZN son entidades separadas en el habla del mercado, aunque geográficamente una contenga a la otra.
+
+**Decisión:** EQ y ZN son **macrozonas hermanas operativamente**.
+- A nivel UI: filtros y URLs separados (`/mercado/equipetrol` y `/mercado/zona-norte`).
+- A nivel BD: ambas son grupos planos de microzonas. `zonas_geograficas.zona_general` agrupa (`Equipetrol` y `Zona Norte`) pero NO se usa para asignar `propiedades_v2.zona` (queda latente).
+- A nivel discovery, snapshot y matching: cada macrozona tiene su flujo separado, alimentado por el array de sus microzonas.
+
+**Implementación (mig 254):**
+- `propiedades_v2.zona` = nombre de microzona específica (modelo PLANO, no jerárquico).
+- `microzona` es redundante con `zona` (legado del trigger).
+- `zona_general` se usa en el trigger HITL nuevo (`separar_hitl_por_macrozona`) para soportar múltiples macrozonas en piloto sin código condicional.
+- Refactor jerárquico real (zona=macrozona + microzona=microzona) queda como deuda técnica futura (ticket #11), NO bloqueante.
+
+**Consecuencias:**
+- Cero impacto en EQ producción al cargar las 14 microzonas ZN.
+- El día que llegue Urubó, mismo patrón: agregar polígonos con `zona_general='Urubó'`, modificar el trigger HITL para incluir 'Urubó' en piloto (o eliminar el filtro y separar todo no-EQ automáticamente).
+- El refactor jerárquico real, si se decide hacer, es un proyecto separado que toca EQ producción y requiere backfill masivo.
+
+**Alternativas descartadas:**
+- **Modelo jerárquico real** (EQ.zona='Equipetrol' + microzona='Equipetrol Centro'): tocaría EQ producción, requiere backfill de ~5000 props, modificación de triggers. Excede el scope del ticket #8.
+- **Modelo asimétrico** (ZN jerárquico, EQ plano): codebase termina con 2 modelos coexistiendo, deuda permanente.
+
+**Vinculado a:** ADR-008 (Camino A: zonas hermanas), ADR-009 (visión multi-macrozona).
+

@@ -470,3 +470,89 @@ Cambios fueron 3 DO blocks aplicados desde Supabase UI + docs (este append + REA
 - #6 frontend /mercado/zona-norte (privado por token)
 - #1.7 detector automático (en paralelo) — sumar al scope: enriquecer alias automáticamente al crear pm
 ```
+
+---
+
+## 29 May 2026 (continuación) — Diseño completo del ticket #8 + revisión senior
+
+**Origen:** después de la sesión técnica de la mañana (verificación nocturna + 3 pm nuevos), la pregunta del director: "cuál es el siguiente paso en Zona Norte?" llevó al diseño completo del ticket #8 microzonas.
+
+### Cronología del diseño
+
+1. **Discusión criterio de microzonas**: arrancamos con mi propuesta de 4 rectángulos por bandas latitudinales (Hamacas, Banzer Norte, Banzer Sur, Frontera EQ). Descartada — el director propuso criterio más granular siguiendo patrón Equipetrol (anillos × calles).
+
+2. **Iteración en geojson.io**: 3 archivos progresivos del director:
+   - Borrador 1: 3 polígonos del 2do-3er anillo.
+   - Borrador 2: 17 polígonos con duplicados + nombres cruzados + 1 polígono con coords del macro.
+   - Borrador 3: 14 polígonos limpios (la grilla final).
+
+3. **Recorte automático contra EQ**: identifiqué 2 overlaps reales con EQ (184m y 142m) en el lado oeste (La Salle-Banzer). Aplicado `ST_Difference` vs EQ activo: 574 m² + 165 m² recortados. Overlap residual final: 4 m² (irrelevante).
+
+4. **Verificación de gaps**: la unión de las 14 cubre el bbox del macro original con **1.56% sin cubrir** (43 hectáreas en 3 gaps + 2 slivers). **0 props/pm caen en gaps hoy**. Query de monitoreo agregada a `operacion.md`.
+
+5. **Discusión modelo conceptual**: el director explicó que EQ y ZN son macrozonas hermanas operativamente (no jerárquicas) en el habla del mercado, aunque ZN geográficamente contenga EQ. → ADR-010.
+
+6. **Revisión senior de plan A SEGURA**: el plan inicial tenía 3 pasos. La revisión exhaustiva detectó 5 bloqueantes:
+   - CHECK constraint `zona_valida` rechaza las 14 microzonas.
+   - Trigger HITL mig 253 hardcodea `zona='Zona Norte'` (CONTAMINA EQ HITL post-migración).
+   - Matching mig 251 requiere actualizar los 73 pm a microzona específica.
+   - `get_zona_by_gps()` sin filtro `activo=TRUE`.
+   - Filtro admin "Zona Norte (piloto)" en `lib/zonas.ts:92` queda obsoleto.
+
+7. **Discusión escalabilidad**: el director preguntó "es escalable? cada microzona nueva voy a tener que tocar el discovery?". Respuesta honesta: NO, no es escalable. Identifiqué 7 puntos de hardcoding. Diseñamos:
+   - **Camino W** (low regret): 3 mejoras chicas + ticket #11 nuevo para refactor escalable completo.
+   - **Camino B refactor snapshot**: paralelización con `filter_version=4` para refactorizar `snapshot_absorcion_mercado()` a dinámico vía `zona_general` sin riesgo a EQ.
+
+8. **Producción de documentación final**: el director pidió "hace un doble check al plan como lo haría un senior de clase mundial revisando todo, arquitectura posible bugs y todo lo que no veo porque no soy desarrollador para que la implementación fluya sola". Resultado: 4 documentos nuevos + 2 docs actualizados + 14 microzonas listas para aplicar.
+
+### Hallazgos críticos del doble-check senior
+
+1. **`/admin/market.tsx` filtra por `zona='global'`** (líneas 1020, 1033, 1057). El refactor v4 preserva ese nombre para EQ por backward compat.
+2. **`snapshot_absorcion_mercado()` LOOP 2 ya itera por DISTINCT zona** — Zona Norte automáticamente tiene serie por microzona post-migración.
+3. **`resumen_mercado()` y `buscar_propiedades()` hardcodean 5 zonas EQ** (falta 'Eq. 3er Anillo' — bug latente preexistente). Documentado para ticket #11.
+4. **`insertar_proyectos_aprobados()` asigna `zona='Equipetrol'` sin sufijo** — no existe en CHECK constraint, probablemente bug latente. Investigar en ticket #11.
+5. **`populate_broker_prospection()` solo trae brokers EQ** — si se quiere prospección ZN, hay que agregar microzonas o usar `zona_general`. Documentado.
+
+### Artefactos producidos al cierre del día
+
+| Archivo | Estado |
+|---|---|
+| `docs/proyectos/zona-norte/PLAN_IMPLEMENTACION_MICROZONAS.md` | NUEVO — master document, 7 fases + rollback + monitoreo |
+| `sql/migrations/254_microzonas_zona_norte.sql` | NUEVO — migración principal lista para aplicar |
+| `sql/migrations/254_microzonas_zona_norte_rollback.sql` | NUEVO — rollback completo |
+| `sql/migrations/255_snapshot_absorcion_v4_dinamico.sql` | NUEVO — refactor snapshot con paralelización (LOOP 2 con placeholder a completar) |
+| `docs/canonical/ZONAS_ZONA_NORTE.md` | NUEVO — canonical paralelo a ZONAS_EQUIPETROL.md |
+| `docs/proyectos/zona-norte/DECISIONES.md` | ACTUALIZADO — ADR-010 agregado |
+| `docs/proyectos/zona-norte/BACKLOG.md` | ACTUALIZADO — ticket #8 marcado "plan listo", ticket #11 nuevo agregado |
+| `docs/proyectos/zona-norte/microzonas-propuesta/microzonas-zn-final-recortado.geojson` | NUEVO (commit anterior) — fuente de verdad |
+
+### Estimación de aplicación final
+
+| Fase | Tiempo |
+|---|---|
+| Sesión 1: migración SQL + frontend + workflows + docs | ~7h |
+| Observación pasiva paralelización snapshot | 14 días |
+| Sesión 2: switch v3→v4 (futura) | 30 min |
+
+### Lecciones meta del día
+
+1. **El usuario que NO es desarrollador tiene razón al preguntar "es escalable?"**. Mi plan inicial pasaba sobre eso y me marcó la deuda. Reaccioné con Camino W + ticket #11.
+2. **Las revisiones senior detectan cosas que el plan optimista oculta**. 5 bloqueantes salieron solo al leer código real (no docs). El trigger HITL hubiera contaminado EQ silenciosamente.
+3. **Fui demasiado conservador en mi estimación de complejidad del refactor snapshot**. Al re-analizar con paralelización filter_version=4, el riesgo bajó de "medio-alto" a "bajo". Aprender a separar riesgo inherente vs riesgo manejable con red de seguridad.
+4. **El patrón "paralelización por versión"** (filter_version) que ya existía en `market_absorption_snapshots` fue clave para reducir riesgo. Aprovechar features ya construidas antes de inventar.
+5. **Documentación pre-implementación valiosa**: el director pidió "que la implementación fluya sola" — el `PLAN_IMPLEMENTACION_MICROZONAS.md` con orden de pasos, checkpoints de validación, rollback documentado y smoke tests permite que cualquier ingeniero (incluso él mismo) aplique sin contexto adicional.
+
+### Roadmap
+
+```
+[Sesión siguiente]
+- Aplicar mig 254 + mig 255 con paralelización
+- Update lib/zonas.ts + workflows n8n
+- Smoke tests frontend
+
+[14 días después]
+- Switch snapshot v3→v4
+
+[Cuando llegue Urubó/próxima macrozona]
+- Empezar ticket #11 (refactor zonas dinámico)
+```
