@@ -1,8 +1,10 @@
 /**
  * Canonical zone definitions for SICI / Simón
  *
- * 5 zonas canónicas in Equipetrol, Santa Cruz.
- * Source of truth: microzona column (PostGIS) → mapped here for UI.
+ * Macrozona Equipetrol: 5 zonas canónicas (+ Eq. 3er Anillo por caso especial).
+ * Macrozona Zona Norte: 14 microzonas (grilla anillos × avenidas, mig 254).
+ * Source of truth: tabla zonas_geograficas (PostGIS) → mapeado acá para UI.
+ * Ver docs/canonical/ZONAS_ZONA_NORTE.md para las 14 microzonas ZN.
  */
 
 export interface ZonaCanonica {
@@ -45,10 +47,38 @@ export const ZONAS_CANONICAS: ZonaCanonica[] = [
   },
 ]
 
-// Build lookup map once
+/**
+ * 14 microzonas de la macrozona Zona Norte (mig 254, modelo PLANO).
+ * `db` = nombre exacto en zonas_geograficas / propiedades_v2.zona.
+ * TODO(ticket #11): reemplazar por fetch dinámico desde /api/zonas cuando
+ * se haga el refactor escalable multi-macrozona.
+ */
+export const ZONAS_ZONA_NORTE: ZonaCanonica[] = [
+  { slug: 'zn_2_3_la_salle_banzer',    db: '2do-3er anillo La Salle-Banzer',    label: '2do-3er anillo La Salle/Banzer',    labelCorto: 'ZN 2-3 LS/Bz' },
+  { slug: 'zn_2_3_banzer_alemana',     db: '2do-3er anillo Banzer-Alemana',     label: '2do-3er anillo Banzer/Alemana',     labelCorto: 'ZN 2-3 Bz/Al' },
+  { slug: 'zn_2_3_alemana_mutualista', db: '2do-3er anillo Alemana-Mutualista', label: '2do-3er anillo Alemana/Mutualista', labelCorto: 'ZN 2-3 Al/Mu' },
+  { slug: 'zn_3_4_la_salle_banzer',    db: '3er-4to anillo La Salle-Banzer',    label: '3er-4to anillo La Salle/Banzer',    labelCorto: 'ZN 3-4 LS/Bz' },
+  { slug: 'zn_3_4_banzer_alemana',     db: '3er-4to anillo Banzer-Alemana',     label: '3er-4to anillo Banzer/Alemana',     labelCorto: 'ZN 3-4 Bz/Al' },
+  { slug: 'zn_3_4_alemana_mutualista', db: '3er-4to anillo Alemana-Mutualista', label: '3er-4to anillo Alemana/Mutualista', labelCorto: 'ZN 3-4 Al/Mu' },
+  { slug: 'zn_4_6_radial_26_banzer',   db: '4to-6to anillo Radial 26-Banzer',   label: '4to-6to anillo Radial 26/Banzer',   labelCorto: 'ZN 4-6 R26/Bz' },
+  { slug: 'zn_4_6_banzer_alemana',     db: '4to-6to anillo Banzer-Alemana',     label: '4to-6to anillo Banzer/Alemana',     labelCorto: 'ZN 4-6 Bz/Al' },
+  { slug: 'zn_4_6_alemana_mutualista', db: '4to-6to anillo Alemana-Mutualista', label: '4to-6to anillo Alemana/Mutualista', labelCorto: 'ZN 4-6 Al/Mu' },
+  { slug: 'zn_6_8_radial_26_banzer',   db: '6to-8vo anillo Radial 26-Banzer',   label: '6to-8vo anillo Radial 26/Banzer',   labelCorto: 'ZN 6-8 R26/Bz' },
+  { slug: 'zn_6_8_banzer_alemana',     db: '6to-8vo anillo Banzer-Alemana',     label: '6to-8vo anillo Banzer/Alemana',     labelCorto: 'ZN 6-8 Bz/Al' },
+  { slug: 'zn_6_8_alemana_mutualista', db: '6to-8vo anillo Alemana-Mutualista', label: '6to-8vo anillo Alemana/Mutualista', labelCorto: 'ZN 6-8 Al/Mu' },
+  { slug: 'zn_8_paraiso_radial_26_banzer', db: '8vo anillo Paraiso - Radial 26-Banzer', label: '8vo anillo Paraíso - Radial 26/Banzer', labelCorto: 'ZN 8 Paraíso' },
+  { slug: 'zn_8_viru_viru_banzer_g77',     db: '8vo anillo Viru Viru - Banzer-G77',     label: '8vo anillo Viru Viru - Banzer/G77',    labelCorto: 'ZN 8 Viru Viru' },
+]
+
+// Build lookup map once (EQ + ZN microzonas, para displayZona/getZonaLabel)
 const dbToZona = new Map<string, ZonaCanonica>()
-for (const z of ZONAS_CANONICAS) {
+for (const z of [...ZONAS_CANONICAS, ...ZONAS_ZONA_NORTE]) {
   dbToZona.set(z.db, z)
+}
+
+/** Nombres BD de las 14 microzonas ZN (para filtros tipo zona IN (...)). */
+export function getMicrozonasZN(): string[] {
+  return ZONAS_ZONA_NORTE.map(z => z.db)
 }
 
 /**
@@ -84,12 +114,15 @@ export const ZONAS_ADMIN = ZONAS_CANONICAS.map(z => ({
 }))
 
 /** Admin venta filter dropdown (with "Todas las zonas" option).
- *  Incluye 'Zona Norte (piloto)' SOLO para admin — no aparece en filtros públicos.
- *  Cuando Zona Norte salga de piloto, mover al ZONAS_CANONICAS principal. */
+ *  Incluye las 14 microzonas Zona Norte SOLO para admin — no aparecen en
+ *  filtros públicos. El filtro admin es multi-select, así que se pueden tocar
+ *  varias microzonas ZN a la vez. (Antes de mig 254 había una sola entrada
+ *  literal 'Zona Norte (piloto)'; ahora las props ZN viven por microzona.)
+ *  Cuando Zona Norte salga de piloto, mover a ZONAS_CANONICAS principal. */
 export const ZONAS_ADMIN_FILTER = [
   { id: '', label: 'Todas las zonas' },
   ...ZONAS_ADMIN,
-  { id: 'Zona Norte', label: 'Zona Norte (piloto)' },
+  ...ZONAS_ZONA_NORTE.map(z => ({ id: z.db, label: z.labelCorto })),
 ]
 
 /** Proyecto editor dropdown (6 zonas reales de zonas_geograficas + Sin zona) */
