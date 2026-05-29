@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Propuesta microzonas Zona Norte — 29-may-2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root {
+    --bg: #141414;
+    --arena: #EDE8DC;
+    --salvia: #3A6A48;
+    --hamacas: #d65b5b;
+    --banzer-norte: #2d9c4f;
+    --banzer-sur: #e8a93a;
+    --frontera: #6b73d6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--arena); }
+  #app { display: flex; height: 100vh; }
+  #map { flex: 1; }
+  #sidebar { width: 360px; background: var(--bg); border-left: 1px solid #333; overflow-y: auto; padding: 16px; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  h2 { font-size: 13px; margin: 16px 0 6px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+  .meta { font-size: 11px; color: #777; margin-bottom: 16px; }
+  .stat-row { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 4px; margin-bottom: 4px; font-size: 13px; }
+  .stat-row .swatch { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+  .stat-row .name { flex: 1; }
+  .stat-row .nums { font-size: 11px; color: #aaa; font-variant-numeric: tabular-nums; }
+  .legend { font-size: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .legend-item .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--arena); border: 1px solid #555; }
+  button { background: var(--salvia); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%; margin-top: 8px; }
+  button:hover { background: #4a7a58; }
+  .leaflet-popup-content-wrapper { background: var(--bg); color: var(--arena); border-radius: 4px; }
+  .leaflet-popup-tip { background: var(--bg); }
+  .popup-pm { font-size: 12px; min-width: 200px; }
+  .popup-pm h3 { margin: 0 0 6px; font-size: 13px; color: var(--arena); }
+  .popup-pm .row { display: flex; justify-content: space-between; padding: 2px 0; }
+  .popup-pm .row .k { color: #888; }
+  .open-maps { display: inline-block; margin-top: 6px; color: var(--salvia); text-decoration: none; font-size: 11px; }
+  details { margin-bottom: 10px; }
+  summary { cursor: pointer; font-size: 12px; color: #aaa; padding: 4px 0; }
+  .pm-list { font-size: 11px; max-height: 200px; overflow-y: auto; }
+  .pm-list .item { padding: 3px 6px; border-bottom: 1px solid #2a2a2a; display: flex; justify-content: space-between; gap: 6px; }
+  .pm-list .item .name { color: var(--arena); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pm-list .item .props { color: #888; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .caveat { font-size: 11px; padding: 8px; background: #2a2412; border-left: 3px solid #d6a23a; border-radius: 2px; margin-bottom: 12px; color: #d6c89a; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map"></div>
+  <div id="sidebar">
+    <h1>Propuesta microzonas — Zona Norte</h1>
+    <div class="meta">29-may-2026 · 73 pm verificados · 393 props venta · criterio híbrido EQ-like</div>
+
+    <div class="caveat">
+      <b>Polígonos rectangulares</b> por banda latitudinal. No respetan los bordes irregulares del macro actual. Refinar manualmente en geojson.io / QGIS antes de aplicar a <code>zonas_geograficas</code>.
+    </div>
+
+    <h2>Microzonas propuestas</h2>
+    <div id="stats"></div>
+
+    <h2>Leyenda</h2>
+    <div class="legend">
+      <div class="legend-item"><span class="dot" style="background:#3A6A48"></span>pm con ≥10 props matched</div>
+      <div class="legend-item"><span class="dot" style="background:#3A6A48; opacity: 0.6"></span>pm con 5-9 props</div>
+      <div class="legend-item"><span class="dot" style="background:#3A6A48; opacity: 0.35"></span>pm con 1-4 props</div>
+      <div class="legend-item"><span class="dot" style="background:#888"></span>pm sin props matched</div>
+      <div class="legend-item"><span class="dot" style="background:#d65b5b; border-color: #d65b5b"></span>pm con GPS sospechoso</div>
+    </div>
+
+    <h2>Capas</h2>
+    <div id="layers-control"></div>
+
+    <details>
+      <summary>Listado completo de pm (73)</summary>
+      <div class="pm-list" id="pm-list"></div>
+    </details>
+
+    <button onclick="exportGeoJSON()">⬇ Descargar GeoJSON propuesta</button>
+    <button onclick="window.print()" style="background:#444; margin-top: 4px;">🖨 Imprimir mapa</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ============================================================
+// DATOS — generados desde BD el 29-may-2026
+// ============================================================
+
+const PM = [
+  {id:387,n:"Condominio Cantabria",lat:-17.714786,lon:-63.1746901,gps:"confirmed",pv:3},
+  {id:408,n:"Condominio TRIII",lat:-17.715333,lon:-63.176011,gps:"confirmed",pv:2},
+  {id:353,n:"Condominio Vilareal Duo",lat:-17.7196535,lon:-63.1757565,gps:"confirmed",pv:14},
+  {id:369,n:"Condominio Berchatti Norte 1",lat:-17.720187,lon:-63.178379,gps:"confirmed",pv:5},
+  {id:360,n:"Edificio Raizant Blend",lat:-17.723815,lon:-63.175756,gps:"confirmed",pv:0},
+  {id:411,n:"ATLANTIS TOWERS",lat:-17.7262315,lon:-63.1662933,gps:"confirmed",pv:1},
+  {id:380,n:"Condominio La Sierra",lat:-17.7298587,lon:-63.1502982,gps:"confirmed",pv:2},
+  {id:384,n:"Condominio RISE Uno",lat:-17.73068,lon:-63.15586,gps:"confirmed",pv:2},
+  {id:416,n:"Tamisa III",lat:-17.7309146,lon:-63.1681218,gps:"confirmed",pv:2},
+  {id:381,n:"Cond. Ecosostenible Lusitano",lat:-17.732661,lon:-63.155687,gps:"confirmed",pv:4},
+  {id:409,n:"Torre Baruc Norte",lat:-17.734622,lon:-63.167499,gps:"confirmed",pv:1},
+  {id:385,n:"Bless One",lat:-17.7358935,lon:-63.1592304,gps:"confirmed",pv:4},
+  {id:354,n:"EDIFICIO HH HOME",lat:-17.73614,lon:-63.159265,gps:"confirmed",pv:6},
+  {id:388,n:"Torre Moderna",lat:-17.736425,lon:-63.1682667,gps:"confirmed",pv:10},
+  {id:375,n:"Jazmines del parque - Torre 3",lat:-17.7378412,lon:-63.1636835,gps:"confirmed",pv:2},
+  {id:386,n:"Community Alto Norte",lat:-17.7403095,lon:-63.17898,gps:"confirmed",pv:14},
+  {id:413,n:"Cozumel",lat:-17.743412,lon:-63.172976,gps:"confirmed",pv:1},
+  {id:414,n:"EDIFICIO RAFAELA II",lat:-17.7445846,lon:-63.1838782,gps:"confirmed",pv:0},
+  {id:404,n:"Ares By Elite",lat:-17.7465851,lon:-63.1784796,gps:"confirmed",pv:2},
+  {id:366,n:"Edificio Essenzia",lat:-17.7469631,lon:-63.1697065,gps:"confirmed",pv:9},
+  {id:420,n:"Edificio Mangales Blue",lat:-17.7479083,lon:-63.169376,gps:"confirmed",pv:1},
+  {id:419,n:"Edificio Sky Line",lat:-17.7479265,lon:-63.1718508,gps:"confirmed",pv:1},
+  {id:418,n:"STONE 7",lat:-17.7479265,lon:-63.1718508,gps:"confirmed",pv:2},
+  {id:357,n:"BRISAS by Omnia",lat:-17.747929,lon:-63.179092,gps:"confirmed",pv:3},
+  {id:124,n:"BRICKELL 5 CONDOMINIO",lat:-17.7479832,lon:-63.1797123,gps:"confirmed",pv:1},
+  {id:352,n:"Edificio Mangales Blue 2",lat:-17.747997,lon:-63.168971,gps:"confirmed",pv:1},
+  {id:122,n:"Brickell 4 (cuatro)",lat:-17.7480452,lon:-63.1784308,gps:"confirmed",pv:4},
+  {id:356,n:"DOMUS LUXURY",lat:-17.7482409,lon:-63.1788459,gps:"confirmed",pv:4},
+  {id:372,n:"DOMUS MADERO",lat:-17.7484223,lon:-63.1781607,gps:"confirmed",pv:0},
+  {id:412,n:"Edificio Camila II",lat:-17.749187,lon:-63.165495,gps:"confirmed",pv:0},
+  {id:273,n:'CONDOMINIO BARCELONA 04.05 "MIRO TOWER"',lat:-17.7493053,lon:-63.1868884,gps:"confirmed",pv:0},
+  {id:377,n:"Gaudí Tower",lat:-17.7500261,lon:-63.1693697,gps:"confirmed",pv:2},
+  {id:406,n:"EDIFICIO LIMCO II",lat:-17.750814,lon:-63.166415,gps:"confirmed",pv:1},
+  {id:405,n:"Condominio Hera Tower",lat:-17.751143,lon:-63.181181,gps:"confirmed",pv:2},
+  {id:271,n:"CONDOMINIO CURUPAU ISUTO",lat:-17.7512018,lon:-63.1912644,gps:"confirmed",pv:2},
+  {id:383,n:"CONDOMINIO TRIBU URBANA",lat:-17.75201,lon:-63.180709,gps:"confirmed",pv:2},
+  {id:272,n:"EDIFICIO K1",lat:-17.7520801,lon:-63.190069,gps:"confirmed",pv:53},
+  {id:359,n:"CONDOMINIO ONE",lat:-17.752475,lon:-63.182174,gps:"confirmed",pv:3},
+  {id:364,n:"KERONI",lat:-17.753949,lon:-63.174429,gps:"confirmed",pv:4},
+  {id:407,n:"Condominio Soul Parc",lat:-17.756202,lon:-63.170393,gps:"confirmed",pv:1},
+  {id:374,n:"Edificio Raizant Botanic",lat:-17.756277,lon:-63.169903,gps:"confirmed",pv:3},
+  {id:270,n:"CONDOMINIO PORTOFINO 4",lat:-17.7567038,lon:-63.1865663,gps:"confirmed",pv:2},
+  {id:415,n:"EDIFICIO SANTA FE",lat:-17.757161,lon:-63.18398,gps:"sospechoso",pv:0},
+  {id:268,n:"STONE 4",lat:-17.7572957,lon:-63.1894418,gps:"confirmed",pv:2},
+  {id:358,n:"CONDOMINIO GALIL PARQUE III",lat:-17.757963,lon:-63.183794,gps:"confirmed",pv:3},
+  {id:367,n:"Torres Evolution",lat:-17.759684,lon:-63.176016,gps:"confirmed",pv:5},
+  {id:370,n:"Sky Epic",lat:-17.7605519,lon:-63.1754249,gps:"confirmed",pv:3},
+  {id:160,n:"Condominio Portofino Beni",lat:-17.7611872,lon:-63.173457,gps:"confirmed",pv:1},
+  {id:274,n:"EDIFICIO VERTICAL ISUTO",lat:-17.7623848,lon:-63.1897201,gps:"sospechoso",pv:0},
+  {id:410,n:"Condominio Zero",lat:-17.7625488,lon:-63.1845858,gps:"confirmed",pv:2},
+  {id:368,n:"Edificio Ergo Experience",lat:-17.762631,lon:-63.185917,gps:"confirmed",pv:0},
+  {id:376,n:"ORANGE RESIDENCE",lat:-17.762665,lon:-63.174706,gps:"confirmed",pv:4},
+  {id:269,n:"CONDOMINIO PORTOBELLO ISUTO",lat:-17.7627912,lon:-63.1902592,gps:"confirmed",pv:2},
+  {id:417,n:"Westgate",lat:-17.763025,lon:-63.179601,gps:"sospechoso",pv:1},
+  {id:56,n:"Condominio SAN NICOLAS III",lat:-17.7633509,lon:-63.1905486,gps:"confirmed",pv:0},
+  {id:315,n:"Condominio La Madre",lat:-17.7633887,lon:-63.1887787,gps:"confirmed",pv:1},
+  {id:276,n:"Sky Icon",lat:-17.763472,lon:-63.176397,gps:"confirmed",pv:4},
+  {id:363,n:"BLESS TOWER",lat:-17.763753,lon:-63.180413,gps:"confirmed",pv:5},
+  {id:361,n:"Edificio Macororo 15",lat:-17.763776,lon:-63.1782,gps:"confirmed",pv:8},
+  {id:378,n:"CONDOMINIO DISART",lat:-17.764185,lon:-63.174628,gps:"confirmed",pv:4},
+  {id:379,n:"Condominio Torres Gemelas",lat:-17.764249,lon:-63.181149,gps:"confirmed",pv:2},
+  {id:155,n:"Condominio Portofino Ovidio",lat:-17.7644934,lon:-63.1878498,gps:"confirmed",pv:1},
+  {id:362,n:"EDIFICIO ZIRI ZWEI",lat:-17.764609,lon:-63.174503,gps:"confirmed",pv:0},
+  {id:263,n:"CONDOMINIO PORTOFINO NOVO",lat:-17.765291,lon:-63.1889429,gps:"confirmed",pv:0},
+  {id:267,n:"EDIFICIO ANKAY",lat:-17.7670972,lon:-63.1865422,gps:"confirmed",pv:0},
+  {id:264,n:"TORRE LA SALLE",lat:-17.7674184,lon:-63.1877342,gps:"confirmed",pv:0},
+  {id:261,n:"SMART STUDIO ISUTO",lat:-17.7675309,lon:-63.1896946,gps:"confirmed",pv:1},
+  {id:371,n:"Torre Vento",lat:-17.7675812,lon:-63.1698556,gps:"confirmed",pv:3},
+  {id:355,n:"Blue Garden",lat:-17.7676863,lon:-63.178508,gps:"confirmed",pv:6},
+  {id:403,n:"Edificio Macororo 16/17",lat:-17.767688,lon:-63.17741,gps:"confirmed",pv:1},
+  {id:277,n:"Sky Aqualina Residence",lat:-17.7679295,lon:-63.1771671,gps:"confirmed",pv:1},
+  {id:83,n:"LEBLON",lat:-17.7681999,lon:-63.1892914,gps:"confirmed",pv:0},
+  {id:382,n:"Condominio Gran Grigotá",lat:-17.769862,lon:-63.184507,gps:"confirmed",pv:2}
+];
+
+// Las 4 microzonas propuestas (rectángulos bbox)
+const MICROZONAS = [
+  { nombre: "ZN Hamacas",            color: "#d65b5b", latN: -17.7076, latS: -17.7400, pm: 15, props: 152, match: 51.3 },
+  { nombre: "ZN Banzer Norte",       color: "#2d9c4f", latN: -17.7400, latS: -17.7525, pm: 23, props: 101, match: 69.3 },
+  { nombre: "ZN Banzer Sur",         color: "#e8a93a", latN: -17.7525, latS: -17.7625, pm: 11, props: 57,  match: 66.7 },
+  { nombre: "ZN Frontera Equipetrol", color: "#6b73d6", latN: -17.7625, latS: -17.7711, pm: 24, props: 83,  match: 62.7 },
+];
+const LON_W = -63.1949, LON_E = -63.1363;
+
+// Polígono macro actual (referencia)
+const POLY_MACRO = [
+  [-17.7711402, -63.1887442], [-17.7638931, -63.1911289], [-17.7577448, -63.1908541],
+  [-17.7544743, -63.1905794], [-17.7523812, -63.191953],  [-17.7455447, -63.1949975],
+  [-17.7279512, -63.1919555], [-17.717083,  -63.1871634], [-17.711866,  -63.1868211],
+  [-17.7095835, -63.19013],   [-17.707627,  -63.1902441], [-17.7196051, -63.1530088],
+  [-17.7282961, -63.1362621], [-17.7635772, -63.1596001], [-17.7716212, -63.1682074],
+  [-17.7702516, -63.1710839], [-17.7703494, -63.1712893], [-17.7711402, -63.1887442]
+];
+
+// ============================================================
+// MAPA
+// ============================================================
+
+const map = L.map('map').setView([-17.745, -63.175], 14);
+
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Tiles &copy; Esri', maxZoom: 19
+}).addTo(map);
+
+// --- Capa polígono macro (referencia, contorno solo) ---
+const layerMacro = L.polygon(POLY_MACRO, {
+  color: '#EDE8DC', weight: 2, dashArray: '6,6', fill: false, opacity: 0.7
+});
+
+// --- Capas de microzonas propuestas ---
+const layerMicrozonas = L.layerGroup();
+MICROZONAS.forEach(mz => {
+  const poly = L.polygon([
+    [mz.latN, LON_W], [mz.latN, LON_E], [mz.latS, LON_E], [mz.latS, LON_W]
+  ], {
+    color: mz.color, weight: 2, fillColor: mz.color, fillOpacity: 0.18
+  });
+  poly.bindTooltip(`<b>${mz.nombre}</b><br>${mz.pm} pm · ${mz.props} props · ${mz.match}% match`,
+                   { permanent: false, direction: 'center' });
+  layerMicrozonas.addLayer(poly);
+});
+
+// --- Capa pm ---
+const layerPM = L.layerGroup();
+PM.forEach(p => {
+  const size = p.pv >= 10 ? 12 : (p.pv >= 5 ? 9 : (p.pv >= 1 ? 6 : 4));
+  const fill = p.gps === 'sospechoso' ? '#d65b5b' : '#3A6A48';
+  const opacity = p.pv >= 10 ? 1 : (p.pv >= 5 ? 0.85 : (p.pv >= 1 ? 0.6 : 0.4));
+  const marker = L.circleMarker([p.lat, p.lon], {
+    radius: size, fillColor: fill, color: '#fff', weight: 1.5, fillOpacity: opacity
+  });
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}`;
+  const svUrl   = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${p.lat},${p.lon}`;
+  marker.bindPopup(`
+    <div class="popup-pm">
+      <h3>${p.n}</h3>
+      <div class="row"><span class="k">id pm</span><span>${p.id}</span></div>
+      <div class="row"><span class="k">GPS</span><span>${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</span></div>
+      <div class="row"><span class="k">verif. visual</span><span>${p.gps}</span></div>
+      <div class="row"><span class="k">props matched</span><span>${p.pv}</span></div>
+      <a class="open-maps" href="${mapsUrl}" target="_blank">📍 Maps</a> ·
+      <a class="open-maps" href="${svUrl}" target="_blank">👁 Street View</a>
+    </div>`);
+  layerPM.addLayer(marker);
+});
+
+layerMicrozonas.addTo(map);
+layerPM.addTo(map);
+layerMacro.addTo(map);
+
+// ============================================================
+// SIDEBAR
+// ============================================================
+
+const stats = document.getElementById('stats');
+MICROZONAS.forEach(mz => {
+  stats.innerHTML += `
+    <div class="stat-row" style="background: ${mz.color}22; border-left: 3px solid ${mz.color}">
+      <div class="swatch" style="background: ${mz.color}"></div>
+      <div class="name">${mz.nombre}</div>
+      <div class="nums">${mz.pm} pm · ${mz.props} props · ${mz.match}%</div>
+    </div>`;
+});
+stats.innerHTML += `
+  <div class="stat-row" style="background: #2a2a2a">
+    <div class="swatch" style="background: #EDE8DC"></div>
+    <div class="name"><b>TOTAL ZN</b></div>
+    <div class="nums">73 pm · 393 props · 60.6%</div>
+  </div>`;
+
+const layersControl = document.getElementById('layers-control');
+const layers = [
+  { name: 'Microzonas propuestas', layer: layerMicrozonas, on: true },
+  { name: 'pm activos (73)',       layer: layerPM,         on: true },
+  { name: 'Macro actual (border)', layer: layerMacro,      on: true },
+];
+layers.forEach((L_, i) => {
+  const id = `lyr-${i}`;
+  layersControl.innerHTML += `
+    <div class="legend-item">
+      <input type="checkbox" id="${id}" ${L_.on ? 'checked' : ''}>
+      <label for="${id}">${L_.name}</label>
+    </div>`;
+});
+layers.forEach((L_, i) => {
+  document.getElementById(`lyr-${i}`).addEventListener('change', e => {
+    if (e.target.checked) L_.layer.addTo(map);
+    else map.removeLayer(L_.layer);
+  });
+});
+
+const pmList = document.getElementById('pm-list');
+PM.slice().sort((a,b)=>b.pv-a.pv).forEach(p => {
+  pmList.innerHTML += `
+    <div class="item">
+      <span class="name">${p.n}</span>
+      <span class="props">${p.pv}p</span>
+    </div>`;
+});
+
+// ============================================================
+// EXPORT
+// ============================================================
+
+function exportGeoJSON() {
+  const features = MICROZONAS.map((mz, i) => ({
+    type: "Feature",
+    properties: {
+      nombre: mz.nombre, zona_general: "Zona Norte", orden: i+1,
+      pm_propuestos: mz.pm, props_venta_total: mz.props, match_rate_actual: mz.match
+    },
+    geometry: {
+      type: "Polygon",
+      coordinates: [[
+        [LON_W, mz.latN], [LON_E, mz.latN], [LON_E, mz.latS], [LON_W, mz.latS], [LON_W, mz.latN]
+      ]]
+    }
+  }));
+  const blob = new Blob([JSON.stringify({type:"FeatureCollection",features}, null, 2)],
+                       {type: 'application/geo+json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'microzonas-zn-propuesta.geojson';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

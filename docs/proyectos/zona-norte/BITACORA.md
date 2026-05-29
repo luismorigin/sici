@@ -375,8 +375,8 @@ e105aa4 — Sesión 2 capa 1: cierre audit + ticket #1 archivado
 ### Roadmap para próximas sesiones
 
 ```
-[Mañana 29-may, 5 min]
-- Verificar merge nocturno (7 Essenzia + 2 STONE 7 desmatcheadas)
+[29-may]
+- ✅ Verificar merge nocturno → ejecutado, ver sección "29 May 2026" abajo
 
 [Próxima sesión grande, ~medio día]
 - #8 microzonas ZN (Hamacas, Banzer 3-5to, Radial 26, Norte 4-5to)
@@ -385,4 +385,88 @@ e105aa4 — Sesión 2 capa 1: cierre audit + ticket #1 archivado
 [Después de #8]
 - #6 frontend /mercado/zona-norte (privado por token)
 - #1.7 detector automático (en paralelo)
+```
+
+---
+
+## 29 May 2026 — Verificación nocturna + 3 pm nuevos + cleanup falsos STONE 4/K1
+
+**Origen:** TODO de cierre del 28-may pedía verificar merge nocturno sobre 7 Essenzia + 2 STONE 7 desmatcheadas. La revisión arrancó como check de 5 min y derivó en cleanup de 10 props con 3 pm nuevos creados.
+
+### Health del pipeline nocturno (28→29-may)
+
+- `enrichment_llm_venta` 02:15 → success, 0 errores. Único workflow trackeado en `workflow_executions` (discovery / merge / matching / verificador no escriben ahí — deuda de observability conocida).
+- 486 props ZN con `fecha_discovery=29-may` (re-discovery diario esperado, regla 11 CLAUDE.md).
+- 149 sugerencias `pendiente_zn` en cola HITL. Las 27 `pendiente` (sin sufijo) son **todas Equipetrol** → trigger `trg_separar_hitl_zona_norte` (mig 253) funciona perfecto.
+- 30 props alquiler ZN ya con `status='completado'` (entrando por GPS sin necesidad de Fase 5 formal).
+
+### Hallazgos de auditoría sobre las desmatcheadas
+
+| Caso | Diagnóstico |
+|---|---|
+| 2 STONE 7 (2083, 2084) | El cleanup del 28-may las dejó NULL pero el matching nocturno las re-asignó a STONE 4 (pm 268) porque `nombre_edificio` quedó pegado en "STONE 4". URLs c21 `stone-7-...` confirman edificio distinto. |
+| 3 "Condominio Essenzia" (2102, 2103, 2104) | pm 366 "Edificio Essenzia" no tenía alias `Condominio Essenzia` → 3 props legítimas sin match por bug de aliasing. |
+| 3 Essenzia ya matched (2082, 2085, 2269) | Bien matched, sin acción. |
+| 2268 (Remax sin nombre, 10m de Essenzia) | Listing sin nombre extraíble → asignable por GPS al pm 366. |
+| 2101 (`nombre="Con"` truncado, 22m) | Mismo patrón GPS. |
+| 2097 (sin nombre, GPS desplazado 277m) | URL `97817_condominio-essenzia` confirma edificio. Patrón "agente publicó GPS aproximado" documentado en bitácora 28-may. URL manda. |
+| **2287 (matched a EDIFICIO K1)** ⚠️ | **Match falso no detectado el 28-may.** Estaba a 110m del GPS Essenzia y a **2249m** del K1 real. Director confirmó: es Edificio Mangales Blue (GPS -17.7479083, -63.16937597), torre distinta de pm 352 "Mangales Blue 2". |
+| **2436 ("Sky Line", 4m del GPS STONE 7)** | Director confirmó: Edificio Sky Line es vecino pared con pared de STONE 7. Edificio distinto, mismo GPS centroidal. |
+
+### Acciones aplicadas (3 bloques DO PL/pgSQL desde Supabase UI)
+
+**Bloque 1 — STONE 7 + Sky Line:**
+- Creado pm **#418 "STONE 7"** (Zona Norte, GPS verificado director, aliases `STONE 7/Stone 7/STONE7/stone 7/stone-7`).
+- Creado pm **#419 "Edificio Sky Line"** (Zona Norte, GPS idéntico a STONE 7, aliases `Sky Line/Skyline/SKY LINE/sky-line/sky line`).
+- Reasignados 2083, 2084 → STONE 7; 2436 → Sky Line. Todos con `campos_bloqueados.nombre_edificio` para que el matching nocturno no los vuelva a robar.
+
+**Bloque 2 — Essenzia:**
+- Aliases `Condominio Essenzia/CONDOMINIO ESSENZIA/condominio essenzia/Essenzia/ESSENZIA` agregados al pm 366.
+- Reasignadas 2102, 2103, 2104 vía `metodo_match='alias_manual_29may'`.
+- Reasignadas 2268, 2101, 2097 vía `gps_manual_29may` / `url_manual_29may` + `campos_bloqueados.nombre_edificio` con `nombre_edificio='Edificio Essenzia'`.
+
+**Bloque 3 — Mangales Blue:**
+- Creado pm **#420 "Edificio Mangales Blue"** (Zona Norte, GPS verificado director, aliases `Mangales Blue/MANGALES BLUE/mangales-blue`). Es torre 1, distinta del pm 352 "Mangales Blue 2" a 44m de distancia.
+- Reasignada 2287 (estaba mal matched a K1, con metodo_match anterior). Ahora `metodo_match='manual_gps_29may'` + nombre bloqueado.
+
+### Patrón nuevo confirmado
+
+**Edificios pared con pared / torres gemelas** del mismo desarrollo aparecen como pm separados con GPS idéntico (Sky Line + STONE 7) o casi idéntico (Mangales Blue 1 a 44m de Mangales Blue 2). El matcher `gps_verificado` va a generar sugerencias HITL **dobles** para props ≤80m del cluster, pero no asigna automático — las distingue la URL/nombre en revisión humana. No es bug, es comportamiento esperado para zonas densas con desarrolladoras de torres múltiples. Misma situación probable en Equipetrol (DOMUS LUXURY + DOMUS MADERO descubiertos 28-may a 36-50m de Brickell 4).
+
+### Estado al cierre
+
+| Métrica | Cierre 28-may | Cierre 29-may | Δ |
+|---|---|---|---|
+| pm ZN activos | 70 | **73** | +3 (STONE 7, Sky Line, Mangales Blue) |
+| Match rate ZN venta | 54.2% | **60.6%** | +6.4 pp |
+| Props matched | 212 | 238 | +26 (incluye delta de la corrida nocturna +19) |
+| Props sin match | 179 | ~155 | -24 |
+| pm con verificación visual | 70/70 | **73/73 (100%)** | mantiene |
+| Falsos matches detectados y limpiados | 63 (K1+STONE+CURUPAU+Brickell) | +3 (2 STONE 7, 1 K1) | acumulado: 66 |
+| `campos_bloqueados.nombre_edificio` aplicados | — | **10 props** | nuevo |
+
+### Lecciones meta del 29-may
+
+1. **Los falsos matches reaparecen si el `nombre_edificio` quedó pegado.** El cleanup del 28-may seteó `id_proyecto_master=NULL` pero el matching nocturno los re-asignó al mismo falso porque `nombre_edificio='STONE 4'` seguía persistido. **Bloqueo de `nombre_edificio` con `campos_bloqueados` debe ser parte del cleanup desde el inicio**, no opcional.
+
+2. **El audit del 28-may fue exhaustivo pero no detectó el match falso 2287→K1** (estaba a 2.2km del K1 real). El cleanup de K1 (54 falsos pre-blindaje) se enfocó en GPS cercanos al pm K1; 2287 no salió ahí porque su GPS está lejos de K1. **Patrón: matches viejos donde tanto el nombre como el GPS son falsos pueden pasar inadvertidos en audits geográficos.** El cleanup del 29-may los encontró porque empezó por nombre + GPS objetivo del director.
+
+3. **El bug de alias chico (`Condominio Essenzia` vs pm `Edificio Essenzia`) costó 3 props sin match durante 2 días.** Vale la pena enriquecer alias proactivamente: cualquier pm nuevo debería arrancar con ≥3 variantes (Edificio X, Condominio X, X). Candidato para tooling automático en #1.7.
+
+4. **GPS idéntico entre pm vecinos pared con pared es manejable** vía HITL `pendiente_zn`. No forzar separación artificial — la URL/nombre va a distinguir en revisión.
+
+### Commits del día (0)
+
+Cambios fueron 3 DO blocks aplicados desde Supabase UI + docs (este append + README contadores). Sin migraciones nuevas. Sin código.
+
+### Roadmap (sigue igual)
+
+```
+[Próxima sesión grande, ~medio día]
+- #8 microzonas ZN (Hamacas, Banzer 3-5to, Radial 26, Norte 4-5to)
+   bloquea #6 frontend
+
+[Después de #8]
+- #6 frontend /mercado/zona-norte (privado por token)
+- #1.7 detector automático (en paralelo) — sumar al scope: enriquecer alias automáticamente al crear pm
 ```

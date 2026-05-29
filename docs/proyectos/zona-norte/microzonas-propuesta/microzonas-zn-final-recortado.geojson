@@ -1,0 +1,920 @@
+﻿{
+    "type":  "FeatureCollection",
+    "name":  "microzonas-zn-final-recortado",
+    "metadata":  {
+                     "fecha":  "2026-05-29",
+                     "autor":  "director + recorte automatico PostGIS",
+                     "estado":  "FINAL — 14 microzonas con recorte ST_Difference vs EQ aplicado + Paraiso sin tilde",
+                     "cambios_aplicados":  [
+                                               "Polígono \u00272do-3er anillo La Salle-Banzer\u0027 recortado para no invadir Equipetrol Centro (574 m2 removidos)",
+                                               "Polígono \u00273er-4to anillo La Salle-Banzer\u0027 recortado para no invadir Villa Brigida (165 m2 removidos)",
+                                               "Nombre \u0027Paraíso\u0027 normalizado a \u0027Paraiso\u0027 (sin tilde en BD; display puede mantener la tilde via lib/zonas.ts)"
+                                           ]
+                 },
+    "features":  [
+                     {
+                         "properties":  {
+                                            "nombre":  "2do-3er anillo La Salle-Banzer",
+                                            "zona_general":  "Zona Norte",
+                                            "orden":  1,
+                                            "fill":  "#d65b5b",
+                                            "fill-opacity":  0.2,
+                                            "stroke":  "#d65b5b",
+                                            "stroke-width":  2,
+                                            "recorte_aplicado":  "ST_Difference vs EQ (29-may-2026)"
+                                        },
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "coordinates":  [
+                                                              [
+                                                                  [
+                                                                      -63.191008,
+                                                                      -17.765681
+                                                                  ],
+                                                                  [
+                                                                      -63.191082,
+                                                                      -17.762212
+                                                                  ],
+                                                                  [
+                                                                      -63.187253,
+                                                                      -17.76083
+                                                                  ],
+                                                                  [
+                                                                      -63.182815,
+                                                                      -17.759935
+                                                                  ],
+                                                                  [
+                                                                      -63.179036,
+                                                                      -17.759563
+                                                                  ],
+                                                                  [
+                                                                      -63.181929,
+                                                                      -17.766685
+                                                                  ],
+                                                                  [
+                                                                      -63.18245,
+                                                                      -17.768471
+                                                                  ],
+                                                                  [
+                                                                      -63.182554,
+                                                                      -17.770258
+                                                                  ],
+                                                                  [
+                                                                      -63.182606,
+                                                                      -17.770283
+                                                                  ],
+                                                                  [
+                                                                      -63.188461,
+                                                                      -17.771792
+                                                                  ],
+                                                                  [
+                                                                      -63.189858,
+                                                                      -17.769539
+                                                                  ],
+                                                                  [
+                                                                      -63.190468,
+                                                                      -17.768379
+                                                                  ],
+                                                                  [
+                                                                      -63.191008,
+                                                                      -17.765681
+                                                                  ]
+                                                              ]
+                                                          ],
+                                          "type":  "Polygon"
+                                      }
+                     },
+                     {
+                         "properties":  {
+                                            "nombre":  "2do-3er anillo Banzer-Alemana",
+                                            "zona_general":  "Zona Norte",
+                                            "orden":  2,
+                                            "fill":  "#2d9c4f",
+                                            "fill-opacity":  0.2,
+                                            "stroke":  "#2d9c4f",
+                                            "stroke-width":  2
+                                        },
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "type":  "Polygon",
+                                          "coordinates":  [
+                                                              [
+                                                                  [
+                                                                      -63.182366,
+                                                                      -17.770301
+                                                                  ],
+                                                                  [
+                                                                      -63.171265,
+                                                                      -17.770183
+                                                                  ],
+                                                                  [
+                                                                      -63.170553,
+                                                                      -17.768752
+                                                                  ],
+                                                                  [
+                                                                      -63.167589,
+                                                                      -17.760812
+                                                                  ],
+                                                                  [
+                                                                      -63.16871,
+                                                                      -17.760512
+                                                                  ],
+                                                                  [
+                                                                      -63.172242,
+                                                                      -17.7598
+                                                                  ],
+                                                                  [
+                                                                      -63.174794,
+                                                                      -17.759488
+                                                                  ],
+                                                                  [
+                                                                      -63.178919,
+                                                                      -17.759565
+                                                                  ],
+                                                                  [
+                                                                      -63.181857,
+                                                                      -17.766867
+                                                                  ],
+                                                                  [
+                                                                      -63.182296,
+                                                                      -17.768384
+                                                                  ],
+                                                                  [
+                                                                      -63.182366,
+                                                                      -17.770301
+                                                                  ]
+                                                              ]
+                                                          ]
+                                      }
+                     },
+                     {
+                         "properties":  {
+                                            "nombre":  "2do-3er anillo Alemana-Mutualista",
+                                            "zona_general":  "Zona Norte",
+                                            "orden":  3,
+                                            "fill":  "#e8a93a",
+                                            "fill-opacity":  0.2,
+                                            "stroke":  "#e8a93a",
+                                            "stroke-width":  2
+                                        },
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "type":  "Polygon",
+                                          "coordinates":  [
+                                                              [
+                                                                  [
+                                                                      -63.171097,
+                                                                      -17.770218
+                                                                  ],
+                                                                  [
+                                                                      -63.168132,
+                                                                      -17.771527
+                                                                  ],
+                                                                  [
+                                                                      -63.168092,
+                                                                      -17.77152
+                                                                  ],
+                                                                  [
+                                                                      -63.164211,
+                                                                      -17.768253
+                                                                  ],
+                                                                  [
+                                                                      -63.162834,
+                                                                      -17.766882
+                                                                  ],
+                                                                  [
+                                                                      -63.160803,
+                                                                      -17.764638
+                                                                  ],
+                                                                  [
+                                                                      -63.161601,
+                                                                      -17.76404
+                                                                  ],
+                                                                  [
+                                                                      -63.163548,
+                                                                      -17.762652
+                                                                  ],
+                                                                  [
+                                                                      -63.165509,
+                                                                      -17.761634
+                                                                  ],
+                                                                  [
+                                                                      -63.167524,
+                                                                      -17.760853
+                                                                  ],
+                                                                  [
+                                                                      -63.170195,
+                                                                      -17.768025
+                                                                  ],
+                                                                  [
+                                                                      -63.171097,
+                                                                      -17.770218
+                                                                  ]
+                                                              ]
+                                                          ]
+                                      }
+                     },
+                     {
+                         "properties":  {
+                                            "nombre":  "3er-4to anillo La Salle-Banzer",
+                                            "zona_general":  "Zona Norte",
+                                            "orden":  4,
+                                            "fill":  "#6b73d6",
+                                            "fill-opacity":  0.2,
+                                            "stroke":  "#6b73d6",
+                                            "stroke-width":  2,
+                                            "recorte_aplicado":  "ST_Difference vs EQ (29-may-2026)"
+                                        },
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "coordinates":  [
+                                                              [
+                                                                  [
+                                                                      -63.192049,
+                                                                      -17.751954
+                                                                  ],
+                                                                  [
+                                                                      -63.186806,
+                                                                      -17.75036
+                                                                  ],
+                                                                  [
+                                                                      -63.180773,
+                                                                      -17.749608
+                                                                  ],
+                                                                  [
+                                                                      -63.175214,
+                                                                      -17.750059
+                                                                  ],
+                                                                  [
+                                                                      -63.179015,
+                                                                      -17.759482
+                                                                  ],
+                                                                  [
+                                                                      -63.182621,
+                                                                      -17.759855
+                                                                  ],
+                                                                  [
+                                                                      -63.187164,
+                                                                      -17.76076
+                                                                  ],
+                                                                  [
+                                                                      -63.191089,
+                                                                      -17.762096
+                                                                  ],
+                                                                  [
+                                                                      -63.190516,
+                                                                      -17.754504
+                                                                  ],
+                                                                  [
+                                                                      -63.19107,
+                                                                      -17.753582
+                                                                  ],
+                                                                  [
+                                                                      -63.191347,
+                                                                      -17.753049
+                                                                  ],
+                                                                  [
+                                                                      -63.191457,
+                                                                      -17.752939
+                                                                  ],
+                                                                  [
+                                                                      -63.192049,
+                                                                      -17.751954
+                                                                  ]
+                                                              ]
+                                                          ],
+                                          "type":  "Polygon"
+                                      }
+                     },
+                     {
+                         "properties":  {
+                                            "nombre":  "3er-4to anillo Banzer-Alemana",
+                                            "zona_general":  "Zona Norte",
+                                            "orden":  5,
+                                            "fill":  "#d6a23a",
+                                            "fill-opacity":  0.2,
+                                            "stroke":  "#d6a23a",
+                                            "stroke-width":  2
+                                        },
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "type":  "Polygon",
+                                          "coordinates":  [
+                                                              [
+                                                                  [
+                                                                      -63.178913,
+                                                                      -17.759491
+                                                                  ],
+                                                                  [
+                                                                      -63.174756,
+                                                                      -17.75942
+                                                                  ],
+                                                                  [
+                                                                      -63.172079,
+                                                                      -17.759794
+                                                                  ],
+                                                                  [
+                                                                      -63.170213,
+                                                                      -17.760103
+                                                                  ],
+                                                                  [
+                                                                      -63.167481,
+                                                                      -17.760798
+                                                                  ],
+                                                                  [
+                                                                      -63.163941,
+                                                                      -17.751723
+                                                                  ],
+                                                                  [
+                                                                      -63.169198,
+                                                                      -17.750775
+                                                                  ],
+                                                                  [
+                                                                      -63.175215,
+                                                                      -17.750106
+                                                                  ],
+                                                                  [
+                                                                      -63.178913,
+                                                                      -17.759491
+                                                                  ]
+                                                              ]
+                                                          ]
+                                      }
+                     },
+                     {
+                         "properties":  {
+                                            "nombre":  "3er-4to anillo Alemana-Mutualista",
+                                            "zona_general":  "Zona Norte",
+                                            "orden":  6,
+                                            "fill":  "#a23ad6",
+                                            "fill-opacity":  0.2,
+                                            "stroke":  "#a23ad6",
+                                            "stroke-width":  2
+                                        },
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "type":  "Polygon",
+                                          "coordinates":  [
+                                                              [
+                                                                  [
+                                                                      -63.167424,
+                                                                      -17.760815
+                                                                  ],
+                                                                  [
+                                                                      -63.165205,
+                                                                      -17.761721
+                                                                  ],
+                                                                  [
+                                                                      -63.163395,
+                                                                      -17.762698
+                                                                  ],
+                                                                  [
+                                                                      -63.160821,
+                                                                      -17.764558
+                                                                  ],
+                                                                  [
+                                                                      -63.159845,
+                                                                      -17.763613
+                                                                  ],
+                                                                  [
+                                                                      -63.159106,
+                                                                      -17.762568
+                                                                  ],
+                                                                  [
+                                                                      -63.154973,
+                                                                      -17.756571
+                                                                  ],
+                                                                  [
+                                                                      -63.158768,
+                                                                      -17.753879
+                                                                  ],
+                                                                  [
+                                                                      -63.161119,
+                                                                      -17.752705
+                                                                  ],
+                                                                  [
+                                                                      -63.163901,
+                                                                      -17.751756
+                                                                  ],
+                                                                  [
+                                                                      -63.167424,
+                                                                      -17.760815
+                                                                  ]
+                                                              ]
+                                                          ]
+                                      }
+                     },
+                     {
+                         "properties":  {
+                                            "nombre":  "4to-6to anillo Radial 26-Banzer",
+                                            "zona_general":  "Zona Norte",
+                                            "orden":  7,
+                                            "fill":  "#3ad6d6",
+                                            "fill-opacity":  0.2,
+                                            "stroke":  "#3ad6d6",
+                                            "stroke-width":  2
+                                        },
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "type":  "Polygon",
+                                          "coordinates":  [
+                                                              [
+                                                                  [
+                                                                      -63.192361,
+                                                                      -17.751563
+                                                                  ],
+                                                                  [
+                                                                      -63.192309,
+                                                                      -17.751649
+                                                                  ],
+                                                                  [
+                                                                      -63.192234,
+                                                                      -17.751827
+                                                                  ],
+                                                                  [
+                                                                      -63.186942,
+                                                                      -17.7503
+                                                                  ],
+                                                                  [
+                                                                      -63.180648,
+                                                                      -17.749472
+                                                                  ],
+                                                                  [
+                                                                      -63.175266,
+                                                                      -17.74997
+                                                                  ],
+                                                                  [
+                                                                      -63.168296,
+                                                                      -17.73216
+                                                                  ],
+                                                                  [
+                                                                      -63.190427,
+                                                                      -17.724942
+                                                                  ],
+                                                                  [
+                                                                      -63.191804,
+                                                                      -17.728412
+                                                                  ],
+                                                                  [
+                                                                      -63.19485,
+                                                                      -17.74551
+                                                                  ],
+                                                                  [
+                                                                      -63.192361,
+                                                                      -17.751563
+                                                                  ]
+                                                              ]
+                                                          ]
+                                      }
+                     },
+                     {
+                         "properties":  {
+                                            "nombre":  "4to-6to anillo Banzer-Alemana",
+                                            "zona_general":  "Zona Norte",
+                                            "orden":  8,
+                                            "fill":  "#d63a8a",
+                                            "fill-opacity":  0.2,
+                                            "stroke":  "#d63a8a",
+                                            "stroke-width":  2
+                                        },
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "type":  "Polygon",
+                                          "coordinates":  [
+                                                              [
+                                                                  [
+                                                                      -63.175243,
+                                                                      -17.749823
+                                                                  ],
+                                                                  [
+                                                                      -63.163918,
+                                                                      -17.751576
+                                                                  ],
+                                                                  [
+                                                                      -63.16387,
+                                                                      -17.751599
+                                                                  ],
+                                                                  [
+                                                                      -63.161018,
+                                                                      -17.744326
+                                                                  ],
+                                                                  [
+                                                                      -63.159654,
+                                                                      -17.742767
+                                                                  ],
+                                                                  [
+                                                                      -63.154325,
+                                                                      -17.737248
+                                                                  ],
+                                                                  [
+                                                                      -63.160266,
+                                                                      -17.73489
+                                                                  ],
+                                                                  [
+                                                                      -63.168218,
+                                                                      -17.732215
+                                                                  ],
+                                                                  [
+                                                                      -63.171508,
+                                                                      -17.740552
+                                                                  ],
+                                                                  [
+                                                                      -63.175243,
+                                                                      -17.749823
+                                                                  ]
+                                                              ]
+                                                          ]
+                                      }
+                     },
+                     {
+                         "properties":  {
+                                            "nombre":  "4to-6to anillo Alemana-Mutualista",
+                                            "zona_general":  "Zona Norte",
+                                            "orden":  9,
+                                            "fill":  "#8ad63a",
+                                            "fill-opacity":  0.2,
+                                            "stroke":  "#8ad63a",
+                                            "stroke-width":  2
+                                        },
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "type":  "Polygon",
+                                          "coordinates":  [
+                                                              [
+                                                                  [
+                                                                      -63.163767,
+                                                                      -17.75163
+                                                                  ],
+                                                                  [
+                                                                      -63.161036,
+                                                                      -17.75262
+                                                                  ],
+                                                                  [
+                                                                      -63.158871,
+                                                                      -17.753702
+                                                                  ],
+                                                                  [
+                                                                      -63.157393,
+                                                                      -17.754728
+                                                                  ],
+                                                                  [
+                                                                      -63.155177,
+                                                                      -17.756477
+                                                                  ],
+                                                                  [
+                                                                      -63.145658,
+                                                                      -17.742307
+                                                                  ],
+                                                                  [
+                                                                      -63.154272,
+                                                                      -17.737299
+                                                                  ],
+                                                                  [
+                                                                      -63.160986,
+                                                                      -17.744382
+                                                                  ],
+                                                                  [
+                                                                      -63.163767,
+                                                                      -17.75163
+                                                                  ]
+                                                              ]
+                                                          ]
+                                      }
+                     },
+                     {
+                         "properties":  {
+                                            "nombre":  "6to-8vo anillo Radial 26-Banzer",
+                                            "zona_general":  "Zona Norte",
+                                            "orden":  10,
+                                            "fill":  "#3a8ad6",
+                                            "fill-opacity":  0.2,
+                                            "stroke":  "#3a8ad6",
+                                            "stroke-width":  2
+                                        },
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "type":  "Polygon",
+                                          "coordinates":  [
+                                                              [
+                                                                  [
+                                                                      -63.19044,
+                                                                      -17.724862
+                                                                  ],
+                                                                  [
+                                                                      -63.168238,
+                                                                      -17.732075
+                                                                  ],
+                                                                  [
+                                                                      -63.168238,
+                                                                      -17.732089
+                                                                  ],
+                                                                  [
+                                                                      -63.168224,
+                                                                      -17.732102
+                                                                  ],
+                                                                  [
+                                                                      -63.162128,
+                                                                      -17.7164
+                                                                  ],
+                                                                  [
+                                                                      -63.190183,
+                                                                      -17.707782
+                                                                  ],
+                                                                  [
+                                                                      -63.189935,
+                                                                      -17.709484
+                                                                  ],
+                                                                  [
+                                                                      -63.186663,
+                                                                      -17.712036
+                                                                  ],
+                                                                  [
+                                                                      -63.187073,
+                                                                      -17.717234
+                                                                  ],
+                                                                  [
+                                                                      -63.19044,
+                                                                      -17.724862
+                                                                  ]
+                                                              ]
+                                                          ]
+                                      }
+                     },
+                     {
+                         "properties":  {
+                                            "nombre":  "6to-8vo anillo Banzer-Alemana",
+                                            "zona_general":  "Zona Norte",
+                                            "orden":  11,
+                                            "fill":  "#d65b8a",
+                                            "fill-opacity":  0.2,
+                                            "stroke":  "#d65b8a",
+                                            "stroke-width":  2
+                                        },
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "type":  "Polygon",
+                                          "coordinates":  [
+                                                              [
+                                                                  [
+                                                                      -63.168145,
+                                                                      -17.732184
+                                                                  ],
+                                                                  [
+                                                                      -63.154239,
+                                                                      -17.737142
+                                                                  ],
+                                                                  [
+                                                                      -63.154239,
+                                                                      -17.737142
+                                                                  ],
+                                                                  [
+                                                                      -63.144822,
+                                                                      -17.722907
+                                                                  ],
+                                                                  [
+                                                                      -63.152744,
+                                                                      -17.719802
+                                                                  ],
+                                                                  [
+                                                                      -63.154675,
+                                                                      -17.71894
+                                                                  ],
+                                                                  [
+                                                                      -63.156764,
+                                                                      -17.718327
+                                                                  ],
+                                                                  [
+                                                                      -63.162026,
+                                                                      -17.716411
+                                                                  ],
+                                                                  [
+                                                                      -63.168145,
+                                                                      -17.732184
+                                                                  ]
+                                                              ]
+                                                          ]
+                                      }
+                     },
+                     {
+                         "properties":  {
+                                            "nombre":  "6to-8vo anillo Alemana-Mutualista",
+                                            "zona_general":  "Zona Norte",
+                                            "orden":  12,
+                                            "fill":  "#8ad6a8",
+                                            "fill-opacity":  0.2,
+                                            "stroke":  "#8ad6a8",
+                                            "stroke-width":  2
+                                        },
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "type":  "Polygon",
+                                          "coordinates":  [
+                                                              [
+                                                                  [
+                                                                      -63.154106,
+                                                                      -17.737243
+                                                                  ],
+                                                                  [
+                                                                      -63.145534,
+                                                                      -17.742276
+                                                                  ],
+                                                                  [
+                                                                      -63.145508,
+                                                                      -17.742314
+                                                                  ],
+                                                                  [
+                                                                      -63.13621,
+                                                                      -17.728208
+                                                                  ],
+                                                                  [
+                                                                      -63.144775,
+                                                                      -17.723047
+                                                                  ],
+                                                                  [
+                                                                      -63.154106,
+                                                                      -17.737243
+                                                                  ]
+                                                              ]
+                                                          ]
+                                      }
+                     },
+                     {
+                         "properties":  {
+                                            "nombre":  "8vo anillo Paraiso - Radial 26-Banzer",
+                                            "zona_general":  "Zona Norte",
+                                            "orden":  13,
+                                            "fill":  "#a8d63a",
+                                            "fill-opacity":  0.2,
+                                            "stroke":  "#a8d63a",
+                                            "stroke-width":  2
+                                        },
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "type":  "Polygon",
+                                          "coordinates":  [
+                                                              [
+                                                                  [
+                                                                      -63.190246,
+                                                                      -17.707519
+                                                                  ],
+                                                                  [
+                                                                      -63.162221,
+                                                                      -17.716554
+                                                                  ],
+                                                                  [
+                                                                      -63.162192,
+                                                                      -17.716568
+                                                                  ],
+                                                                  [
+                                                                      -63.161164,
+                                                                      -17.714045
+                                                                  ],
+                                                                  [
+                                                                      -63.160413,
+                                                                      -17.71154
+                                                                  ],
+                                                                  [
+                                                                      -63.160093,
+                                                                      -17.709215
+                                                                  ],
+                                                                  [
+                                                                      -63.159929,
+                                                                      -17.70579
+                                                                  ],
+                                                                  [
+                                                                      -63.15969,
+                                                                      -17.696944
+                                                                  ],
+                                                                  [
+                                                                      -63.159565,
+                                                                      -17.693751
+                                                                  ],
+                                                                  [
+                                                                      -63.169433,
+                                                                      -17.688989
+                                                                  ],
+                                                                  [
+                                                                      -63.175137,
+                                                                      -17.684715
+                                                                  ],
+                                                                  [
+                                                                      -63.180455,
+                                                                      -17.683494
+                                                                  ],
+                                                                  [
+                                                                      -63.188721,
+                                                                      -17.693323
+                                                                  ],
+                                                                  [
+                                                                      -63.18827,
+                                                                      -17.696527
+                                                                  ],
+                                                                  [
+                                                                      -63.192825,
+                                                                      -17.697963
+                                                                  ],
+                                                                  [
+                                                                      -63.192607,
+                                                                      -17.703171
+                                                                  ],
+                                                                  [
+                                                                      -63.190491,
+                                                                      -17.702752
+                                                                  ],
+                                                                  [
+                                                                      -63.189154,
+                                                                      -17.702944
+                                                                  ],
+                                                                  [
+                                                                      -63.188668,
+                                                                      -17.703119
+                                                                  ],
+                                                                  [
+                                                                      -63.188111,
+                                                                      -17.703731
+                                                                  ],
+                                                                  [
+                                                                      -63.188812,
+                                                                      -17.704613
+                                                                  ],
+                                                                  [
+                                                                      -63.18967,
+                                                                      -17.706206
+                                                                  ],
+                                                                  [
+                                                                      -63.190246,
+                                                                      -17.707519
+                                                                  ]
+                                                              ]
+                                                          ]
+                                      }
+                     },
+                     {
+                         "properties":  {
+                                            "nombre":  "8vo anillo Viru Viru - Banzer-G77",
+                                            "zona_general":  "Zona Norte",
+                                            "orden":  14,
+                                            "fill":  "#3a5bd6",
+                                            "fill-opacity":  0.2,
+                                            "stroke":  "#3a5bd6",
+                                            "stroke-width":  2
+                                        },
+                         "type":  "Feature",
+                         "geometry":  {
+                                          "type":  "Polygon",
+                                          "coordinates":  [
+                                                              [
+                                                                  [
+                                                                      -63.162025,
+                                                                      -17.716415
+                                                                  ],
+                                                                  [
+                                                                      -63.154571,
+                                                                      -17.718953
+                                                                  ],
+                                                                  [
+                                                                      -63.144794,
+                                                                      -17.722856
+                                                                  ],
+                                                                  [
+                                                                      -63.136294,
+                                                                      -17.727994
+                                                                  ],
+                                                                  [
+                                                                      -63.111311,
+                                                                      -17.693177
+                                                                  ],
+                                                                  [
+                                                                      -63.133612,
+                                                                      -17.664008
+                                                                  ],
+                                                                  [
+                                                                      -63.158541,
+                                                                      -17.674444
+                                                                  ],
+                                                                  [
+                                                                      -63.159402,
+                                                                      -17.693775
+                                                                  ],
+                                                                  [
+                                                                      -63.160181,
+                                                                      -17.710697
+                                                                  ],
+                                                                  [
+                                                                      -63.160501,
+                                                                      -17.712057
+                                                                  ],
+                                                                  [
+                                                                      -63.161047,
+                                                                      -17.713857
+                                                                  ],
+                                                                  [
+                                                                      -63.162025,
+                                                                      -17.716415
+                                                                  ]
+                                                              ]
+                                                          ]
+                                      }
+                     }
+                 ]
+}

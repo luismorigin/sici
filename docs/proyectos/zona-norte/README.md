@@ -4,9 +4,9 @@
 
 ---
 
-## Estado actual — 28 May 2026
+## Estado actual — 29 May 2026
 
-**Fases 1-4 completas + audit de datos profundo.** Próximo: #8 microzonas → #6 frontend.
+**Fases 1-4 completas + audit de datos profundo + verificación nocturna 29-may.** Próximo: #8 microzonas → #6 frontend.
 
 | Hito | Estado |
 |---|---|
@@ -14,8 +14,8 @@
 | Fase 3: dark launch venta en prod (workflows discovery) | ✅ (26-may) |
 | Fase 4: validar calidad pipeline con data real | ✅ (audit 28-may) |
 | Audit GPS + cleanup historico K1/STONE/CURUPAU/Brickell (63 falsos) | ✅ (28-may) |
-| Cargar pm Zona Norte (#1.5 + capas 2-3) | ✅ **70 pm activos con 100% verificación visual** |
-| Match rate ZN venta | ✅ **54.2%** (212/391 props matched) — desde 19.7% |
+| Cargar pm Zona Norte (#1.5 + capas 2-3 + cleanup nocturno 29-may) | ✅ **73 pm activos con 100% verificación visual** |
+| Match rate ZN venta | ✅ **60.6%** (238/393 props matched) — desde 19.7% |
 | Fase 5: alquiler (replicar patrón) | ⬜ pendiente |
 | #8 Microzonas (Hamacas, Banzer 3-5to, Radial 26) | ⬜ pendiente — bloquea #6 |
 | #6 Frontend `/mercado/zona-norte` | ⬜ pendiente — prototipo multi-macrozona |
