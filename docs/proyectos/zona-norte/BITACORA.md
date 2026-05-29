@@ -578,3 +578,44 @@ Antes de cerrar la sesión para preparar la implementación en sesión nueva, au
 - Cuando un ticket se archiva sin ejecutar, marcar título con ✅ ARCHIVADO + razón.
 - Mantener contenido histórico abajo del título marcado para trazabilidad.
 - Reservar etiqueta 🔴 solo para tickets que SÍ son urgentes ahora.
+
+---
+
+## 29 May 2026 — Aplicación FASE 1 (mig 254) + descarte de v4 snapshot
+
+Sesión de **ejecución** del ticket #8 (el diseño se cerró antes, mismo día). Branch de trabajo `feat/zn-microzonas-aplicacion` desde `f1a86d8`.
+
+### FASE 1 — mig 254 aplicada ✅ (8/8 CHECKs, EQ intacto)
+
+- **Pre-requisitos:** baseline guardado (`pre-migracion-baseline.txt`), backup dirigido (`backup_dirigido_pre_mig254_2026-05-29.sql`), workflows discovery ZN + auditoría diaria (snapshot) desactivados en n8n.
+- **Bug encontrado al aplicar (PASO 5/6):** `UPDATE ... FROM LATERAL` referenciaba la tabla target (`p`) — PostgreSQL no lo permite. La mig falló atómicamente (BD intacta). **Fix:** envolver el `LATERAL` sobre una instancia separada (`p2`/`pm2`) + JOIN por PK. Re-aplicada OK.
+- **Resultado:** 14 microzonas activas, macro desactivado, 520 props + 73 pm redistribuidos (0 en gaps), trigger HITL → `pendiente_zona_norte` (149 migrados), **CHECK 5 EQ diff=0 (sin bandera roja)**.
+- **Hallazgo de datos:** 3 props anómalas (843/1018 `microzona='Sin zona'`, 1942 `NULL`) que el rollback estándar dejaría mal → **parcheado el rollback (PASO 2b)** + cubierto por el backup dirigido.
+- **Pre-test que de-riesgó CHECK 3:** las 520 props testeadas contra los 14 WKT antes de aplicar → 0 en gaps confirmado.
+- **Commit:** `3a8309f` (local).
+
+### FASE 2-4 — v4 snapshot DESCARTADO (no era necesario)
+
+Al preparar la mig 255 (snapshot v4 paralelo), **dos hallazgos** llevaron a descartar el enfoque:
+
+1. **Bug de duplicación (LOOP 1):** el `INNER JOIN zonas_geograficas` de v4 duplicaba props de `Equipetrol Norte` (**2 polígonos, mismo nombre** en `zonas_geograficas`) → conteos inflados (+6/+18/+13/+3 por dorm). Fix conocido: `IN`-subquery.
+
+2. **🔴 Bloqueante de diseño:** la unique constraint `(fecha, dorm, zona)` **no incluye `filter_version`**. v3 (fv=3) y v4 (fv=4) no pueden coexistir en `zona='global'` — el `ON CONFLICT` de v4 pisaría la serie de producción que consumen `/admin/market` **y el feed público** `/mercado/equipetrol/ventas`. La "paralelización" del Camino B era inviable sin tocar tabla + función nocturna v3 + 2 frontends (uno público).
+
+**Decisión (con el director):** descartar v4 y la paralelización. Razones:
+- La paralelización de 14 días existía para **ganar confianza** en el enfoque dinámico. Esa confianza se obtuvo en minutos vía **validación compute-only** (query readonly, cero escritura): **paridad EQ exacta diff=0** en activas/absorbidas/pending/nuevas × 4 dorms. El `IN`-subquery también quedó validado.
+- La función **v3 actual, sin cambios, ya genera las series por-microzona ZN** (su LOOP 2 itera `DISTINCT zona`). Verificado: **12 microzonas ZN con venta `completado`** → 12 series al reactivar el cron. La serie ZN tendría 379 activas (48/180/106/45 por dorm).
+- ⇒ Snapshot de Zona Norte **cubierto sin escribir una línea de SQL nuevo**. Solo falta reactivar el workflow de auditoría.
+
+**Lo único que v3 no hace:** un agregado `'global_zona_norte'`. Eso pasa a **ticket #12** (no bloqueante; se resuelve con cambio mínimo y aislado cuando lo pida el frontend ZN #6).
+
+- **mig 255:** marcada `⚠️ NO APLICAR — DESCARTADA` en su header (se conserva como registro del intento + el fix del JOIN).
+- **Deuda menor anotada:** `Equipetrol Norte` tiene 2 polígonos en `zonas_geograficas` — inofensivo hoy (nadie hace JOIN-por-nombre en prod; todo es `ST_Contains`/`LIMIT 1`), pero conviene revisar si deberían fusionarse.
+
+### Lección meta del día
+
+**Validar contra la BD real antes de aplicar revela lo que el plan optimista oculta.** Dos defectos (LATERAL sobre target, y constraint sin filter_version) estaban en migraciones "cerradas tras revisión senior" que **nunca se ejecutaron**. La condición del director ("solo si no daña producción") fue la que forzó verificar la constraint **antes** de correr v4 — sin eso, se habría pisado el feed público. Y la validación compute-only mostró que toda la maquinaria de paralelización (14 días) sobraba para el riesgo real.
+
+### Próximo paso
+
+FASE 5-7 (no dependen del snapshot): `lib/zonas.ts` (14 microzonas en filtro admin) → workflows n8n ZN (array de microzonas) → docs. **Reactivar el workflow `auditoria_diaria_sici_v3.0`** en n8n (se desactivó para la ventana de migración).

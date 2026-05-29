@@ -1,8 +1,41 @@
 -- =============================================================================
+-- ⚠️⚠️⚠️  NO APLICAR — MIGRACION DESCARTADA (29-may-2026)  ⚠️⚠️⚠️
+-- =============================================================================
+-- Esta migracion NO se aplica. Se descarto el enfoque de "paralelizacion v4"
+-- por un defecto de diseno detectado al validar contra la BD real:
+--
+--   La unique constraint de market_absorption_snapshots es (fecha, dorm, zona)
+--   — NO incluye filter_version. Por lo tanto v3 (fv=3) y v4 (fv=4) NO pueden
+--   coexistir escribiendo ambas zona='global' para la misma fecha+dorm: el
+--   INSERT ... ON CONFLICT (fecha,dorm,zona) de v4 PISA la fila de v3, que es
+--   la que consumen /admin/market Y el feed PUBLICO /mercado/equipetrol/ventas.
+--
+-- Ademas, el LOOP 1 de v4 tenia un bug de duplicacion: el INNER JOIN con
+-- zonas_geograficas duplicaba props de 'Equipetrol Norte' (2 poligonos, mismo
+-- nombre) — inflaba los conteos (+6/+18/+13/+3 por dorm).
+--
+-- DECISION (ver BITACORA 29-may "Aplicacion FASE 1 + descarte v4"):
+--   La paralelizacion existia para GANAR CONFIANZA en el enfoque dinamico antes
+--   del switch. Esa confianza ya se obtuvo via validacion COMPUTE-ONLY (query
+--   readonly, cero escritura): paridad EQ exacta diff=0 en activas/absorbidas/
+--   pending/nuevas x 4 dorms. Y la funcion v3 actual, SIN cambios, ya genera
+--   las series por-microzona ZN en su LOOP 2 (12 microzonas con venta).
+--   => No se necesita v4 ni paralelizacion. Snapshot ZN cubierto por v3.
+--
+-- PENDIENTE (ticket #12 BACKLOG): si en el futuro el frontend ZN necesita un
+-- AGREGADO 'global_zona_norte', se resuelve con un cambio minimo y aislado
+-- (paridad ya probada), NO con esta migracion.
+--
+-- Este archivo se conserva SOLO como registro del intento + el bug del JOIN
+-- (fix conocido: INNER JOIN -> "p.zona IN (SELECT nombre FROM zonas_geograficas
+-- WHERE zona_general=v_macrozona AND activo=TRUE)").
+-- =============================================================================
+--
+-- =============================================================================
 -- MIGRACION: 255_snapshot_absorcion_v4_dinamico.sql
 -- DESCRIPCION: Refactor snapshot_absorcion_mercado a v4 con paralelizacion
--- VERSION: 1.0.0
--- FECHA: 29-may-2026 (preparado, no aplicado todavia)
+-- VERSION: 1.0.0 (DESCARTADA)
+-- FECHA: 29-may-2026 (preparado, NO aplicado — ver aviso de arriba)
 -- PROYECTO: docs/proyectos/zona-norte/ (Camino B - escalabilidad)
 -- =============================================================================
 -- CONTEXTO:
@@ -366,14 +399,162 @@ BEGIN
       AND zona != ''
   LOOP
     FOR v_dorm IN 0..3 LOOP
-      -- (Misma logica que v3 LOOP 2, copiar el bloque entero de mig 251
-      -- linea 387-551 reemplazando solo filter_version=3 por filter_version=4)
-      -- Por brevedad de este archivo, ver mig 251 LOOP 2 como referencia
-      -- exacta. La unica diferencia es filter_version=4 en INSERT y UPDATE.
+      -- === VENTA: Inventario activo por zona (SIN filtro 300d) ===
+      -- (Copiado literal de mig 251 LOOP 2, unica diferencia: filter_version=4)
+      SELECT
+        COUNT(*),
+        ROUND(AVG(precio_normalizado(precio_usd, tipo_cambio_detectado)))::INTEGER,
+        ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY precio_normalizado(precio_usd, tipo_cambio_detectado)))::INTEGER,
+        ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY precio_normalizado(precio_usd, tipo_cambio_detectado)))::INTEGER,
+        ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY precio_normalizado(precio_usd, tipo_cambio_detectado)))::INTEGER,
+        ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY precio_normalizado(precio_usd, tipo_cambio_detectado) / NULLIF(area_total_m2, 0)))::INTEGER,
+        ROUND(AVG(area_total_m2))::INTEGER
+      INTO v_venta_activas, v_ticket_prom, v_ticket_med, v_ticket_p25, v_ticket_p75, v_usd_m2, v_area_prom
+      FROM propiedades_v2
+      WHERE tipo_operacion = 'venta'
+        AND status = 'completado'
+        AND fuente IN ('century21', 'remax')
+        AND precio_usd > 0
+        AND area_total_m2 >= 20
+        AND propiedades_v2.dormitorios = v_dorm
+        AND propiedades_v2.zona = v_zona
+        AND duplicado_de IS NULL
+        AND (es_multiproyecto = false OR es_multiproyecto IS NULL)
+        AND COALESCE(tipo_propiedad_original, '') NOT IN ('baulera','parqueo','garaje','deposito');
 
-      -- NOTA: copiar literal el bloque de v3 antes de aplicar esta migracion.
-      -- TODO: este placeholder se llena con el codigo exacto de v3 LOOP 2.
-      NULL;
+      IF v_venta_activas = 0 OR v_venta_activas IS NULL THEN
+        CONTINUE;
+      END IF;
+
+      SELECT
+        COUNT(*),
+        ROUND(AVG(precio_normalizado(precio_usd, tipo_cambio_detectado)))::INTEGER,
+        ROUND(AVG(precio_normalizado(precio_usd, tipo_cambio_detectado) / NULLIF(area_total_m2, 0)))::INTEGER
+      INTO v_venta_absorbidas, v_abs_ticket, v_abs_usd_m2
+      FROM propiedades_v2
+      WHERE tipo_operacion = 'venta'
+        AND status = 'inactivo_confirmed'
+        AND fuente IN ('century21', 'remax')
+        AND precio_usd > 0
+        AND area_total_m2 >= 20
+        AND propiedades_v2.dormitorios = v_dorm
+        AND propiedades_v2.zona = v_zona
+        AND duplicado_de IS NULL
+        AND (es_multiproyecto = false OR es_multiproyecto IS NULL)
+        AND COALESCE(tipo_propiedad_original, '') NOT IN ('baulera','parqueo','garaje','deposito')
+        AND primera_ausencia_at IS NOT NULL
+        AND primera_ausencia_at >= CURRENT_DATE - INTERVAL '30 days';
+
+      SELECT
+        COUNT(*) FILTER (WHERE COALESCE(estado_construccion::text, '') NOT IN ('preventa', 'en_construccion', 'en_pozo')),
+        COUNT(*) FILTER (WHERE COALESCE(estado_construccion::text, '') IN ('preventa', 'en_construccion', 'en_pozo'))
+      INTO v_abs_entrega, v_abs_preventa
+      FROM propiedades_v2
+      WHERE tipo_operacion = 'venta'
+        AND status = 'inactivo_confirmed'
+        AND fuente IN ('century21', 'remax')
+        AND precio_usd > 0
+        AND area_total_m2 >= 20
+        AND propiedades_v2.dormitorios = v_dorm
+        AND propiedades_v2.zona = v_zona
+        AND duplicado_de IS NULL
+        AND (es_multiproyecto = false OR es_multiproyecto IS NULL)
+        AND COALESCE(tipo_propiedad_original, '') NOT IN ('baulera','parqueo','garaje','deposito')
+        AND primera_ausencia_at IS NOT NULL
+        AND primera_ausencia_at >= CURRENT_DATE - INTERVAL '30 days';
+
+      SELECT COUNT(*)
+      INTO v_venta_pending
+      FROM propiedades_v2
+      WHERE tipo_operacion = 'venta'
+        AND status = 'inactivo_pending'
+        AND fuente IN ('century21', 'remax')
+        AND precio_usd > 0
+        AND area_total_m2 >= 20
+        AND propiedades_v2.dormitorios = v_dorm
+        AND propiedades_v2.zona = v_zona
+        AND duplicado_de IS NULL
+        AND (es_multiproyecto = false OR es_multiproyecto IS NULL)
+        AND COALESCE(tipo_propiedad_original, '') NOT IN ('baulera','parqueo','garaje','deposito')
+        AND primera_ausencia_at IS NOT NULL
+        AND primera_ausencia_at >= CURRENT_DATE - INTERVAL '30 days';
+
+      SELECT COUNT(*)
+      INTO v_venta_nuevas
+      FROM propiedades_v2
+      WHERE tipo_operacion = 'venta'
+        AND fuente IN ('century21', 'remax')
+        AND precio_usd > 0
+        AND area_total_m2 >= 20
+        AND propiedades_v2.dormitorios = v_dorm
+        AND propiedades_v2.zona = v_zona
+        AND fecha_creacion >= CURRENT_DATE - INTERVAL '30 days'
+        AND status NOT IN ('excluido_operacion')
+        AND duplicado_de IS NULL
+        AND (es_multiproyecto = false OR es_multiproyecto IS NULL)
+        AND COALESCE(tipo_propiedad_original, '') NOT IN ('baulera','parqueo','garaje','deposito');
+
+      IF (v_venta_activas + v_venta_absorbidas) > 0 THEN
+        v_tasa := ROUND(100.0 * v_venta_absorbidas / (v_venta_activas + v_venta_absorbidas), 2);
+      ELSE
+        v_tasa := 0;
+      END IF;
+
+      IF v_venta_absorbidas > 0 THEN
+        v_meses := ROUND(v_venta_activas::NUMERIC / v_venta_absorbidas, 1);
+      ELSE
+        v_meses := NULL;
+      END IF;
+
+      INSERT INTO market_absorption_snapshots (
+        fecha, dormitorios, zona, filter_version,
+        venta_activas, venta_absorbidas_30d, venta_nuevas_30d, venta_pending_30d,
+        venta_tasa_absorcion, venta_meses_inventario,
+        venta_ticket_promedio, venta_ticket_mediana, venta_ticket_p25, venta_ticket_p75,
+        venta_usd_m2, venta_area_promedio,
+        absorbidas_ticket_promedio, absorbidas_usd_m2,
+        venta_absorbidas_entrega, venta_absorbidas_preventa,
+        alquiler_activas, alquiler_mensual_promedio, alquiler_mensual_mediana,
+        alquiler_mensual_p25, alquiler_mensual_p75,
+        roi_bruto_anual, anos_retorno,
+        roi_amoblado, roi_no_amoblado, anos_retorno_amoblado, anos_retorno_no_amoblado
+      ) VALUES (
+        v_fecha, v_dorm, v_zona, 4,
+        v_venta_activas, v_venta_absorbidas, v_venta_nuevas, v_venta_pending,
+        v_tasa, v_meses,
+        v_ticket_prom, v_ticket_med, v_ticket_p25, v_ticket_p75,
+        v_usd_m2, v_area_prom,
+        v_abs_ticket, v_abs_usd_m2,
+        v_abs_entrega, v_abs_preventa,
+        NULL, NULL, NULL,
+        NULL, NULL,
+        NULL, NULL,
+        NULL, NULL, NULL, NULL
+      )
+      ON CONFLICT (fecha, dormitorios, zona) DO UPDATE SET
+        filter_version = 4,
+        venta_activas = EXCLUDED.venta_activas,
+        venta_absorbidas_30d = EXCLUDED.venta_absorbidas_30d,
+        venta_nuevas_30d = EXCLUDED.venta_nuevas_30d,
+        venta_pending_30d = EXCLUDED.venta_pending_30d,
+        venta_tasa_absorcion = EXCLUDED.venta_tasa_absorcion,
+        venta_meses_inventario = EXCLUDED.venta_meses_inventario,
+        venta_ticket_promedio = EXCLUDED.venta_ticket_promedio,
+        venta_ticket_mediana = EXCLUDED.venta_ticket_mediana,
+        venta_ticket_p25 = EXCLUDED.venta_ticket_p25,
+        venta_ticket_p75 = EXCLUDED.venta_ticket_p75,
+        venta_usd_m2 = EXCLUDED.venta_usd_m2,
+        venta_area_promedio = EXCLUDED.venta_area_promedio,
+        absorbidas_ticket_promedio = EXCLUDED.absorbidas_ticket_promedio,
+        absorbidas_usd_m2 = EXCLUDED.absorbidas_usd_m2,
+        venta_absorbidas_entrega = EXCLUDED.venta_absorbidas_entrega,
+        venta_absorbidas_preventa = EXCLUDED.venta_absorbidas_preventa,
+        created_at = NOW();
+
+      dormitorios_out := v_dorm;
+      zona_out := v_zona;
+      insertado := TRUE;
+      RETURN NEXT;
     END LOOP;
   END LOOP;
 END;

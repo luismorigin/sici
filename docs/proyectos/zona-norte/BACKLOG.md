@@ -2,9 +2,9 @@
 
 > Tickets pendientes que surgieron de la validación Fase 3+4. Organizados por prioridad y por scope.
 
-**Última actualización:** 29 May 2026 (sesión de diseño completo del ticket #8 cerrada).
+**Última actualización:** 29 May 2026 (FASE 1 del #8 aplicada en producción; v4 snapshot descartado).
 
-**🎯 Próxima sesión:** aplicar **Ticket #8** según `PLAN_IMPLEMENTACION_MICROZONAS.md`. Branch: `zn/microzonas-grid-borrador`. Estimación: ~7h + 14 días paralelización snapshot.
+**🎯 Próxima sesión:** **FASE 5-7 del Ticket #8** — `lib/zonas.ts` (14 microzonas en filtro admin) → workflows n8n ZN → docs. Branch: `feat/zn-microzonas-aplicacion`. NO dependen del snapshot. **Recordar reactivar el workflow `auditoria_diaria_sici_v3.0` en n8n** (se desactivó para la ventana de mig).
 
 ---
 
@@ -498,9 +498,14 @@ components/
 
 ---
 
-### #8 — Definir microzonas de Zona Norte (subdivisión + refinar polígono macro) — **PLAN LISTO, ESPERA APLICACIÓN**
+### #8 — Definir microzonas de Zona Norte (subdivisión + refinar polígono macro) — **FASE 1 APLICADA ✅ · FASES 2-4 DESCARTADAS · FASES 5-7 PENDIENTES**
 
-**Estado al 29-may-2026:** ✅ Diseño y plan de implementación cerrados. **Esperando ventana para aplicar**.
+**Estado al 29-may-2026 (aplicación):**
+- ✅ **FASE 1 (mig 254) aplicada en producción.** 8/8 CHECKs, EQ intacto (CHECK 5 diff=0), 520 props + 73 pm redistribuidos en 14 microzonas (0 en gaps), trigger HITL `pendiente_zona_norte`. Commit `3a8309f`. Se fixeó un bug `LATERAL`-sobre-target al aplicar (ver BITACORA).
+- 🗑️ **FASES 2-4 (snapshot v4 + paralelización) DESCARTADAS.** La constraint `(fecha,dorm,zona)` impide coexistir v3/v4 en `zona='global'` sin pisar el feed público; y el `INNER JOIN` de v4 duplicaba `Equipetrol Norte` (2 polígonos). La paridad del enfoque dinámico se validó **compute-only** (diff=0) y **v3 sin cambios ya genera las series por-microzona ZN** (12 microzonas con venta). No se necesita v4. mig 255 marcada `NO APLICAR`. El agregado `global_zona_norte` → ticket #12.
+- ⬜ **FASES 5-7 pendientes:** frontend `lib/zonas.ts`, workflows n8n ZN, docs.
+
+**Estado histórico del diseño (mantenido para trazabilidad):** ✅ Diseño y plan de implementación cerrados.
 
 - **Documento maestro de implementación:** `docs/proyectos/zona-norte/PLAN_IMPLEMENTACION_MICROZONAS.md`
 - **Migración SQL preparada:** `sql/migrations/254_microzonas_zona_norte.sql`
@@ -565,6 +570,34 @@ El workflow, snapshot, HITL, frontend y filtros se actualizan automáticamente.
 **Riesgo de NO hacerlo:** deuda técnica acumulativa. Cada macrozona nueva toma 3-4x más esfuerzo del necesario. Ver inventario completo en `PLAN_IMPLEMENTACION_MICROZONAS.md` sección "Inventario del hardcoding actual".
 
 **Estimación:** ~1 semana repartida en 3 sesiones.
+
+---
+
+### #12 — Agregado snapshot `global_zona_norte` (reemplaza la "paralelización v4" descartada)
+
+**Contexto:** el 29-may se descartó la mig 255 (snapshot v4 paralelo). Motivo: la unique constraint de `market_absorption_snapshots` es `(fecha, dorm, zona)` (sin `filter_version`), así que v3 y v4 no pueden coexistir en `zona='global'` sin que v4 pise la serie de producción que consumen `/admin/market` **y el feed público** `/mercado/equipetrol/ventas`. Y el `INNER JOIN` de v4 duplicaba `Equipetrol Norte` (2 polígonos, mismo nombre).
+
+**Lo que YA está cubierto sin hacer nada:** la función v3 actual genera las series **por-microzona ZN** automáticamente (su LOOP 2 itera `DISTINCT zona`). 12 microzonas ZN con venta `completado` → 12 series al correr el cron.
+
+**Lo que falta (este ticket):** un **agregado por macrozona** `zona='global_zona_norte'` (las 14 microzonas sumadas), análogo a `'global'` para EQ. Solo hace falta cuando se construya el frontend ZN (#6).
+
+**Opciones de implementación (decidir cuando se active):**
+- **Opción simple (recomendada):** agregar al LOOP 1 de v3 un bloque que, además de `'global'` (EQ), compute y escriba `'global_zona_norte'` usando el filtro dinámico `p.zona IN (SELECT nombre FROM zonas_geograficas WHERE zona_general='Zona Norte' AND activo=TRUE)`. Es additive (fila nueva, no pisa `'global'`). **La paridad del enfoque dinámico ya se validó (diff=0 compute-only).** Cuidado: `'global_zona_norte'` aparecería en `zonaRows` de `/admin/market` (filtra `zona!=='global'`) — decidir si se filtra o se acepta.
+- **Opción escalable:** parte del ticket #11 (snapshot dinámico por `zona_general` + agregar `filter_version` a la constraint + filtrar versión en los 2 consumidores). Más caro, hacerlo cuando llegue Urubó.
+
+**NO hacer:** revivir la mig 255 tal cual (tiene el bug del JOIN y el choque de constraint).
+
+**Validación previa hecha (29-may):** paridad EQ dinámico vs v3 = diff=0 en activas/absorbidas/pending/nuevas × 4 dorms. Serie ZN tendría 379 activas (48/180/106/45).
+
+**Prioridad:** BAJA. No bloquea nada. Se activa con #6 (frontend ZN).
+
+**Estimación:** Opción simple ~1h + verificar dashboard. Opción escalable: dentro de #11.
+
+---
+
+### Deuda menor — `Equipetrol Norte` tiene 2 polígonos en `zonas_geograficas`
+
+Detectado el 29-may al validar el snapshot. `zona_general='Equipetrol'` tiene 7 polígonos / 6 nombres únicos — `Equipetrol Norte` está duplicado. **Inofensivo hoy** (producción usa `ST_Contains`/`LIMIT 1` o `IN`, no JOIN-por-nombre que cuente). Solo mordería a quien escriba un `JOIN zonas_geograficas ON nombre` + agregación (fue el bug de la mig 255 v4). Revisar si los 2 polígonos deberían fusionarse o si son intencionales (cobertura geográfica partida).
 
 ---
 
