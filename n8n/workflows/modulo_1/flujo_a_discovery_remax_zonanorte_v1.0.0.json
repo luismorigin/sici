@@ -50,7 +50,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// === GENERADOR DE URLs REMAX (endpoint base SC sin slug) ===\n// Trae TODO Santa Cruz paginado. El filtro por polígono se aplica post-fetch.\n// Cobertura validada en PoC 20-may-2026: ~517 props en 30 páginas. Margen: 30 páginas fijas.\n\nconst TOTAL_PAGES = 30;\nconst BASE_URL = 'https://remax.bo/api/search/departamento/santa-cruz-de-la-sierra';\n\nconst urls = [];\nfor (let page = 1; page <= TOTAL_PAGES; page++) {\n  urls.push({\n    json: {\n      page_url: `${BASE_URL}?page=${page}`,\n      page_number: page,\n      fuente: 'remax'\n    }\n  });\n}\n\nconsole.log(`URLs generadas: ${urls.length} páginas para todo SC. Filtro por polígono post-fetch.`);\nreturn urls;"
+        "jsCode": "// === GENERADOR DE URLs REMAX (endpoint base SC sin slug) ===\n// Trae TODO Santa Cruz paginado. El filtro por polígono se aplica post-fetch.\n// Cobertura validada en PoC 20-may-2026: ~517 props en 30 páginas.\n// PARCHE 29-may: subido a 60 para reducir truncamiento (SC creció). Fix de fondo:\n// ticket #14 (paginacion dinamica leyendo meta.last_page).\n\nconst TOTAL_PAGES = 60;\nconst BASE_URL = 'https://remax.bo/api/search/departamento/santa-cruz-de-la-sierra';\n\nconst urls = [];\nfor (let page = 1; page <= TOTAL_PAGES; page++) {\n  urls.push({\n    json: {\n      page_url: `${BASE_URL}?page=${page}`,\n      page_number: page,\n      fuente: 'remax'\n    }\n  });\n}\n\nconsole.log(`URLs generadas: ${urls.length} páginas para todo SC. Filtro por polígono post-fetch.`);\nreturn urls;"
       },
       "id": "gen-urls-zn-rmx",
       "name": "Generar URLs Remax",

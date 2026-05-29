@@ -629,6 +629,30 @@ Esto restaura el matching intra-ZN sin reabrir la contaminación cross-macrozona
 
 ---
 
+### #14 — Paginación dinámica en discovery Remax (evitar truncamiento → falsos pending)
+
+**Contexto:** El workflow `flujo_a_discovery_remax_zonanorte` (nodo "Generar URLs Remax") trae **TODO Santa Cruz paginado con un número FIJO de páginas** (`TOTAL_PAGES`, originalmente 30) y filtra por polígono después. Si SC tiene más departamentos de los que caben en ese tope, las props de las páginas siguientes no entran al snapshot. Peor: Remax **no garantiza orden estable** entre requests, así que una misma prop puede aparecer en página 25 en una corrida y página 35 en otra → **entra y sale del snapshot** → se marca `inactivo_pending` por error.
+
+**Evidencia (29-may):** primera corrida post-mig 254 con `TOTAL_PAGES=30`: las props 2440-2443 (códigos remax 1552-1555, reales) fueron **creadas hoy y marcadas ausentes el mismo día** — imposible si el snapshot estuviera completo. `snapshot_total=166` ZN, `ausentes=6`.
+
+**Red de seguridad existente:** el verificador HTTP reactiva en 2 días los falsos pending cuya URL siga viva → no es daño permanente, pero es ruido recurrente y ensucia la serie de absorción.
+
+**Parche aplicado (29-may):** `TOTAL_PAGES` 30 → **60** (reduce probabilidad, no resuelve el orden inestable).
+
+**Fix de fondo (este ticket):**
+- Leer el primer response de Remax y extraer `meta.last_page` / `meta.total` (verificar el nombre del campo en el JSON del HTTP node).
+- Generar las URLs de página 1..last_page dinámicamente (en vez de tope fijo).
+- Si Remax soporta `?sort=` por id/fecha, ordenar para estabilizar el paginado (evita que props salten de página).
+- Opcional: cap de seguridad (ej. last_page pero máx 200) para no colgar si el portal devuelve un total absurdo.
+
+**Nota:** C21 NO tiene este problema (usa grid bbox, cuadrantes que cubren la zona sistemáticamente, no paginación de "todo SC").
+
+**Prioridad: MEDIA.** Genera falsos pending recurrentes en Remax. El parche a 60 lo mitiga; el fix dinámico lo cierra. Hacer antes de exponer datos de absorción ZN.
+
+**Estimación:** 1-2h (modificar "Generar URLs Remax" + nodo previo que lea last_page + testing).
+
+---
+
 ## ⚪ Investigación / no priorizar
 
 ### #9 — Causa raíz del re-fetch bucle al usar query param + ventas.tsx
