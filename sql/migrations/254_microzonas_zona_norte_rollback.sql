@@ -72,6 +72,13 @@ WHERE zona IN (
   '8vo anillo Viru Viru - Banzer-G77'
 );
 
+-- PASO 2b: corregir las 3 props ANOMALAS cuya microzona original NO era
+-- 'Zona Norte' (estado pre-mig 254 capturado en backup_dirigido). Sin esto,
+-- el UPDATE de arriba las dejaria en microzona='Zona Norte' (perdida de dato).
+--   843, 1018 -> microzona='Sin zona'   |   1942 -> microzona=NULL
+UPDATE propiedades_v2 SET microzona = 'Sin zona' WHERE id IN (843, 1018);
+UPDATE propiedades_v2 SET microzona = NULL       WHERE id = 1942;
+
 -- ============================================================================
 -- PASO 3: Restaurar zona='Zona Norte' en proyectos_master
 -- ============================================================================

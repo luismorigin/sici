@@ -1,0 +1,163 @@
+================================================================================
+BASELINE PRE-MIGRACIÓN 254 — Microzonas Zona Norte
+================================================================================
+Fecha captura : 2026-05-29
+Branch        : feat/zn-microzonas-aplicacion (desde f1a86d8, incluye 186d228)
+Capturado por : Claude (vía MCP postgres-sici, readonly)
+Propósito     : comparar contra validación POST-FASE 1 (los 8 CHECKs).
+                CHECK 5 (EQ intacto) usa Baseline 1. Si EQ cambia → ROLLBACK.
+================================================================================
+
+--------------------------------------------------------------------------------
+BASELINE 1 — Conteo de props por zona (propiedades_v2)
+--------------------------------------------------------------------------------
+zona                | total | completado | venta | alquiler
+--------------------+-------+------------+-------+---------
+Equipetrol Centro   |  668  |    245     |  426  |   235
+Zona Norte          |  520  |    423     |  459  |    61
+Sirari              |  325  |    129     |  201  |   124
+Villa Brigida       |  258  |     92     |  203  |    51
+Equipetrol Norte    |  232  |     82     |   97  |   134
+Equipetrol Oeste    |  163  |     62     |  114  |    49
+(null)              |  153  |      0     |  129  |    19
+Eq. 3er Anillo      |    9  |      4     |    6  |     3
+Sin zona            |    2  |      0     |    0  |     2
+
+>> CHECK 5 (EQ producción intacto) — estas 6 filas EQ deben quedar IDÉNTICAS
+   post-FASE 1. Cualquier cambio en conteos EQ = BANDERA ROJA = ROLLBACK.
+   EQ: Equipetrol Centro=668, Equipetrol Norte=232, Equipetrol Oeste=163,
+       Sirari=325, Villa Brigida=258, Eq. 3er Anillo=9.
+   'Zona Norte'=520 → se redistribuye en 14 microzonas (debe quedar 0 post).
+   (null)=153 y 'Sin zona'=2 → no son ZN ni EQ, quedan igual.
+
+--------------------------------------------------------------------------------
+BASELINE 2 — Conteo pm por zona (proyectos_master)
+--------------------------------------------------------------------------------
+zona                | count
+--------------------+------
+Equipetrol Centro   |  94
+Zona Norte          |  73
+Sirari              |  36
+Equipetrol Norte    |  34
+Villa Brigida       |  31
+Equipetrol Oeste    |  22
+Sin zona            |  21
+Eq. 3er Anillo      |   1
+
+>> 'Zona Norte'=73 pm → se redistribuyen en 14 microzonas (CHECK 4: debe quedar 0).
+
+--------------------------------------------------------------------------------
+BASELINE 3 — Snapshot global EQ hoy (market_absorption_snapshots, zona='global')
+--------------------------------------------------------------------------------
+fecha=2026-05-29  (filter_version=3, zona='global')
+dorm | venta_activas | venta_absorbidas_30d | venta_tasa_absorcion
+-----+---------------+----------------------+---------------------
+  0  |      86       |         35           |       28.93
+  1  |     149       |         49           |       24.75
+  2  |     124       |         17           |       12.06
+  3  |      34       |          3           |        8.11
+
+>> FASE 2 paridad: v4 (filter_version=4, zona='global') debe dar diff=0
+   contra estos valores v3 para venta_activas y venta_absorbidas_30d.
+
+--------------------------------------------------------------------------------
+BASELINE 4 — HITL por estado (matching_sugerencias)
+--------------------------------------------------------------------------------
+estado                 | count
+-----------------------+------
+aprobado               | 1516
+rechazado              |  286
+pendiente_zn           |  149   <- mig 254 los renombra a 'pendiente_zona_norte'
+obsoleto_cross_zona    |   65
+pendiente              |   25   <- HITL EQ legítimo, NO debe contaminarse con ZN
+
+>> CHECK 7 (DRY RUN): el trigger nuevo debe generar 'pendiente_zona_norte'
+   (NO 'pendiente_zn' como dice el doc del plan — quedó desactualizado).
+>> Post-FASE 1 esperado: pendiente_zn=0, pendiente_zona_norte=149 (+ las del DRY
+   RUN se hacen ROLLBACK), pendiente=25 sin cambios.
+
+--------------------------------------------------------------------------------
+DIAGNÓSTICO EXTRA — Cobertura GPS de lo que se redistribuye
+--------------------------------------------------------------------------------
+props_zn_total    : 520
+props_zn_sin_gps  :   0   <- todas tienen GPS → todas candidatas a redistribuir
+pm_zn_total       :  73
+pm_zn_sin_gps     :   0   <- idem
+
+>> Si CHECK 3/4 muestran 'Zona Norte'=0, todo el GPS cayó dentro de las 14
+   microzonas (el plan validó 0 props en gaps).
+
+--------------------------------------------------------------------------------
+ESTADO ACTUAL — Polígono macro + constraint
+--------------------------------------------------------------------------------
+macro 'Zona Norte' activo            : true
+zonas_geograficas zona_general='Zona Norte' count : 1  (solo el macro, sin microzonas)
+
+constraint zona_valida (pre-mig):
+CHECK (((zona IS NULL) OR ((zona)::text = ANY ((ARRAY[
+  'Equipetrol Centro','Equipetrol Norte','Equipetrol Oeste',
+  'Sirari','Villa Brigida','Eq. 3er Anillo',
+  'Sin zona','Zona Norte']::character varying[])::text[]))))
+
+>> Post-mig: count debe ser 14 (microzonas activas) + macro inactivo;
+   constraint debe incluir las 14 microzonas (CHECK 1, CHECK 2, monitoreo #4).
+
+--------------------------------------------------------------------------------
+PRE-TEST CHECK 3 — Distribución simulada de las 520 props (WKT mig 254, sin aplicar)
+--------------------------------------------------------------------------------
+Corrido con los 14 WKT literales de la mig 254 vía ST_Contains. Resultado:
+  4to-6to anillo Banzer-Alemana       112
+  4to-6to anillo Radial 26-Banzer      87  (incluye anómalos 843, 1018)
+  2do-3er anillo Banzer-Alemana        85
+  2do-3er anillo La Salle-Banzer       60
+  3er-4to anillo La Salle-Banzer       56  (incluye anómalo 1942)
+  6to-8vo anillo Radial 26-Banzer      55
+  3er-4to anillo Banzer-Alemana        25
+  6to-8vo anillo Banzer-Alemana        23
+  4to-6to anillo Alemana-Mutualista     7
+  2do-3er anillo Alemana-Mutualista     5
+  6to-8vo anillo Alemana-Mutualista     4
+  3er-4to anillo Alemana-Mutualista     1
+  GAP (sin microzona)                   0   <<< CERO
+  -----------------------------------------
+  TOTAL                               520
+
+>> Las 520 caen en microzona. CHECK 3 dará 'Zona Norte'=0 post-mig. DE-RIESGADO.
+>> (5 microzonas quedan en 0 props: el lado Mutualista/8vo extremo, coherente
+    con la tabla de ZONAS_ZONA_NORTE.md.)
+
+--------------------------------------------------------------------------------
+HALLAZGO — Gap en el rollback estándar (no bloqueante)
+--------------------------------------------------------------------------------
+3 props anómalas tienen microzona != 'Zona Norte' (843/1018='Sin zona', 1942=NULL).
+El PASO 2 de 254_..._rollback.sql las dejaría en microzona='Zona Norte' (pérdida).
+COBERTURA: backup_dirigido_pre_mig254_2026-05-29.sql las restaura exacto (Paso B).
+RECOMENDACIÓN: parchear el rollback con esas 3 líneas (decisión de Lucho).
+
+================================================================================
+PENDIENTE OPERACIONAL ANTES DE APLICAR MIG 254:
+  [x] Backup dirigido generado (backup_dirigido_pre_mig254_2026-05-29.sql)
+  [x] Workflow auditoria_diaria_sici_v3.0 (snapshot) DESACTIVADO en n8n
+  [x] Workflows discovery ZN desactivados
+  NOTA: el snapshot NO estaba en pg_cron (solo TC dinamico mig 078 + advisor
+        mig 220). Se dispara desde el workflow n8n auditoria_diaria_sici_v3.0.
+================================================================================
+
+================================================================================
+RESULTADO POST-FASE 1 (mig 254 aplicada 29-may-2026) — 8/8 CHECKs OK
+================================================================================
+  Bug encontrado al aplicar: PASO 5/6 usaban LATERAL sobre la tabla target del
+  UPDATE (no permitido en PostgreSQL). Fix: LATERAL sobre instancia separada
+  (p2/pm2) + union por PK. La mig fallo atomicamente (BD intacta), se corrigio
+  y se reaplico OK.
+
+  CHECK 1 microzonas activas .......... 14   (=14)        OK
+  CHECK 2 macro desactivado ........... false (=false)    OK
+  CHECK 3 props en 'Zona Norte' ....... 0    (=0)         OK  (520 redistribuidas)
+  CHECK 4 pm en 'Zona Norte' .......... 0    (=0)         OK  (73 redistribuidos)
+  CHECK 5 EQ intacto .................. diff=0 (6 zonas)  OK  *** SIN BANDERA ROJA
+  CHECK 6 matching ZN ................. 2 disponibles     OK  (>0, blindado x zona)
+  CHECK 7 trigger HITL ................ pendiente_zona_norte; 149 migrados;
+                                        EQ pendiente=25 sin contaminar          OK
+  CHECK 8 get_zona_by_gps ............. 4to-6to Radial 26-Banzer (microzona)    OK
+================================================================================

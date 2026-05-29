@@ -153,17 +153,26 @@ $function$;
 -- inactivas, pending) caen todas dentro de alguna microzona (verificado:
 -- 0 props caen en gaps).
 
+-- NOTA (fix 29-may): PostgreSQL no permite que un LATERAL en el FROM
+-- referencie la tabla target del UPDATE (p). Se envuelve el LATERAL sobre una
+-- instancia separada (p2) en una subconsulta y se une por PK. Semanticamente
+-- identico: mismo get_zona_by_gps() con su LIMIT 1 interno y mismos filtros.
 UPDATE propiedades_v2 p
 SET
-  zona = z.zona,
-  microzona = z.zona
-FROM LATERAL (
-  SELECT zona FROM get_zona_by_gps(p.latitud, p.longitud)
-) z
-WHERE p.zona = 'Zona Norte'
-  AND p.latitud IS NOT NULL
-  AND p.longitud IS NOT NULL
-  AND z.zona IS NOT NULL;
+  zona = sub.nueva_zona,
+  microzona = sub.nueva_zona
+FROM (
+  SELECT p2.id, z.zona AS nueva_zona
+  FROM propiedades_v2 p2
+  CROSS JOIN LATERAL (
+    SELECT zona FROM get_zona_by_gps(p2.latitud, p2.longitud)
+  ) z
+  WHERE p2.zona = 'Zona Norte'
+    AND p2.latitud IS NOT NULL
+    AND p2.longitud IS NOT NULL
+    AND z.zona IS NOT NULL
+) sub
+WHERE p.id = sub.id;
 
 -- NOTA: si alguna prop queda sin actualizar (zona aun = 'Zona Norte'),
 -- es porque su GPS no cayo en ninguna microzona ni el macro (que ya esta
@@ -174,15 +183,22 @@ WHERE p.zona = 'Zona Norte'
 -- PASO 6: Redistribuir los 73 pm ZN en las 14 microzonas
 -- ============================================================================
 
+-- NOTA (fix 29-may): mismo patron que PASO 5 (LATERAL sobre instancia separada
+-- pm2, union por PK id_proyecto_master).
 UPDATE proyectos_master pm
-SET zona = z.zona
-FROM LATERAL (
-  SELECT zona FROM get_zona_by_gps(pm.latitud, pm.longitud)
-) z
-WHERE pm.zona = 'Zona Norte'
-  AND pm.latitud IS NOT NULL
-  AND pm.longitud IS NOT NULL
-  AND z.zona IS NOT NULL;
+SET zona = sub.nueva_zona
+FROM (
+  SELECT pm2.id_proyecto_master AS id, z.zona AS nueva_zona
+  FROM proyectos_master pm2
+  CROSS JOIN LATERAL (
+    SELECT zona FROM get_zona_by_gps(pm2.latitud, pm2.longitud)
+  ) z
+  WHERE pm2.zona = 'Zona Norte'
+    AND pm2.latitud IS NOT NULL
+    AND pm2.longitud IS NOT NULL
+    AND z.zona IS NOT NULL
+) sub
+WHERE pm.id_proyecto_master = sub.id;
 
 -- ============================================================================
 -- PASO 7: Refactor trigger HITL para usar zona_general
