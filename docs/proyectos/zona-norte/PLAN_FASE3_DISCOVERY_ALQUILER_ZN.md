@@ -59,6 +59,16 @@ Se CAEN estas conclusiones:
 - Enrichment/merge/verificador zone-agnostic (no dependen del portal ni la zona).
 - Remax ya trae ZN de colado (su patch sigue siendo chico) — pero eso NO implica que Remax sea la fuente principal de ZN; el spike lo dirá.
 
+### 0.2 — Consideración arquitectónica: clonar la generación MULTI-MACROZONA (no la EQ vieja)
+
+Hay **2 generaciones** de discovery en el repo, y hay que clonar la correcta:
+- **Vieja (Equipetrol-hardcoded):** `flujo_discovery_*_alquiler_v1.0.0` (alquiler) y `flujo_a_discovery_*` EQ (venta). Asumen/filtran Equipetrol.
+- **Nueva (multi-macrozona universal):** los `_zonanorte` de **venta**. NO son "de Zona Norte" — leen un array de macrozonas activas: `zona_general = ANY(ARRAY['Zona Norte']::text[])`. Hoy `['Zona Norte']`; mañana `['Zona Norte','Urubó']` = **cero workflow nuevo** (ADR-009).
+
+**Regla para #7.1:** los discovery de alquiler ZN se clonan desde la **generación nueva (venta ZN)**, NO desde la vieja EQ. Así heredan **gratis** la capacidad multi-macrozona — un solo set de discovery de alquiler que sirve ZN hoy y cualquier macrozona futura cambiando el array. Alquiler queda **a la par de venta** (cada uno con su generación escalable, separados entre sí por Regla 6).
+- **Hacer:** mantener el patrón `ARRAY[...]` de macrozonas extensible. NO hardcodear `'Zona Norte'` como string suelto en filtros/queries del workflow.
+- **NO hacer (≠ #11):** el sistema de zonas 100% dinámico (FK a `zonas_geograficas`, `/api/zonas`, etc.) es el ticket **#11**, para cuando llegue Urubó. Acá solo se hereda el patrón del array que venta ZN **ya** tiene — no se construye infraestructura nueva.
+
 ---
 
 ## Contexto (por qué hace falta)
