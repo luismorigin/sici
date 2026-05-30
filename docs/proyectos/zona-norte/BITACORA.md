@@ -807,3 +807,25 @@ Tanto mi plan como el revisor priorizaron portales por el **volumen de alquiler 
 ### Lección meta
 
 **Sesgo de extrapolación zona-a-zona.** Usé Equipetrol como proxy de Zona Norte para dimensionar portales — inválido, y el dato disponible ya lo contradecía. Tercer catch del dueño en la sesión (tras "¿es escalable?" del #8 y "¿por qué venta sí y alquiler no?"): las preguntas de negocio del director exponen fallas de método que ni yo ni un revisor adversarial agarramos cuando ambos compartimos el mismo dato sesgado. **Antes de dimensionar/priorizar por zona, medir esa zona — no otra.**
+
+---
+
+## 30 May 2026 (continuación 6) — Spike Fase 0a ejecutado: el dato real reescribe la prioridad
+
+**`scripts/poc-zona-norte/spike-alquiler-zn.mjs`** (nuevo, clon del PoC de venta para alquiler; fetch directo a los 3 portales sobre el polígono ZN de 14 microzonas; costo $0, no toca BD). Resultado del inventario alquiler ZN por portal:
+
+| Portal | Tiene en ZN | Capturamos (BD) | Gap |
+|---|---|---|---|
+| **C21** | **89** | 1 | **88** |
+| Remax | 31 | 30 | ~1 |
+| BI | 2 | 0 | 2 |
+| Total | ~122 | ~31 (25%) | ~91 |
+
+**Lo que el spike destapó (que ni EQ ni la BD mostraban):**
+- **C21 es la fuente #1 de alquiler en ZN (89), y la perdemos casi entera** (su grid fijo EQ no llega a ZN → capturamos 1 de 89). El gap total de alquiler ZN es ~91 props, y el **97% es C21**.
+- La BD decía "Remax dominante" (30 vs 1) — **sesgo de captura**, no realidad del mercado. Remax domina lo *capturado* solo porque es el único con discovery que llega a ZN.
+- Calidad: Remax 31/31 completo; C21 89/89 con precio/área pero 37 sin dorms (enrichment los completa); BI 2 sin área.
+
+**Prioridad del plan #7.1 reescrita con dato de ZN:** (1) C21 ZN grid = prioridad 1 (el gap real), (2) Remax patch = robustez no cobertura (ya tenemos 30/31), (3) BI descartado (2 props). El spike también confirma el **total de mercado de alquiler ZN (~122)** vs EQ — dato de producto, no solo de pipeline.
+
+**Meta:** el método del director (medir ZN, no extrapolar) no solo evitó un error de priorización — cuantificó que estábamos capturando 1 de cada 4 alquileres de ZN, con el grueso del agujero en un portal (C21) que la BD hacía ver como irrelevante. **Pendiente:** Fase 0b (drift n8n, UI en vivo) + implementación. Sin aplicar nada en esta sesión.

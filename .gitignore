@@ -51,6 +51,7 @@ scripts/personal-doble-via/
 
 # Output generado de PoCs (no versionar)
 scripts/poc-zona-norte/resultados.json
+scripts/poc-zona-norte/resultados-alquiler-zn.json
 
 # Fotos originales en alta de clientes (archivo local, no versionar — pesan ~80MB)
 docs/clientes/condado/fotos-edificios/
