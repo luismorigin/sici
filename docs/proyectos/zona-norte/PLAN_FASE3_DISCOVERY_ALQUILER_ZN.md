@@ -57,16 +57,20 @@ Se CAEN estas conclusiones:
 
 **El dato de la BD estaba sesgado** (mostraba Remax dominante porque es el único con discovery efectivo en ZN). El portal real: **C21 es la fuente #1 (89), y la perdemos casi entera** (su grid fijo EQ no llega a ZN). Capturamos solo el 25% del inventario alquiler ZN; el 97% del gap es C21.
 
-### Plan mínimo viable (prioridad confirmada por el spike)
-1. ✅ **Fase 0a — Spike** (hecho, arriba).
-2. **Fase 0b — Verificar drift n8n** (versión real de cada workflow; si el slug de Remax filtra). ~30 min. *(pendiente — requiere n8n UI en vivo)*.
-3. **C21 ZN — PRIORIDAD 1.** Clonar el grid de venta ZN → alquiler. Es el 88 del gap (la fuente dominante que hoy perdemos). ~2-3h.
-4. **Remax ZN — patch de robustez (no de cobertura).** Ya capturamos 30/31; el patch (base SC + polígono) solo nos saca de depender del slug roto. Menor urgencia. ~1h.
-5. **Blindar "marcar ausentes"** (`zona IN (6 EQ) OR zona IS NULL`) en C21 (el que tumba ZN). Junto con el paso 3.
-6. **BI — descartado** (2 props en ZN, confirmado con dato real). No hacer.
-7. **Condicional (no tarea):** subir LIMITs si el volumen lo pide.
+### Plan: los 3 portales (decisión del director — no se descarta ninguno)
 
-**Nota de método:** la priorización C21-first coincide con lo que el doble-check intuyó desde EQ — pero ahora está fundada en el dato de ZN (89), no en la extrapolación. Y el spike reveló la magnitud real del gap (C21: 1 de 89) que ni EQ ni la BD mostraban.
+El spike NO es para priorizar/descartar (el director clona los 3). Sirvió para: **dimensionar** (~122 alquiler ZN), **validar captura** (C21/Remax/BI dan GPS 100% → el discovery por polígono funciona para los 3), y **cuantificar el gap** (88 de C21 que hoy perdemos).
+
+1. ✅ **Fase 0a — Spike** (hecho). Validó que los 3 portales se capturan bien por GPS. Diagnóstico BI: `diag-bi-alquiler.mjs` confirmó que BI da 233 venta vs 16 alquiler → el 2 en ZN es REAL (BI venta-pesado), no error de captura.
+2. **Fase 0b — Verificar drift n8n** (versión real de cada workflow; si el slug de Remax filtra). ~30 min. *(pendiente — requiere n8n UI en vivo)*.
+3. **Clonar los 3 discovery alquiler ZN** (generación multi-macrozona, §0.2):
+   - **C21 ZN** (grid) — el gap más grande (88), buen lugar para empezar por impacto. ~2-3h.
+   - **Remax ZN** (patch base SC + polígono) — ya capturamos 30/31; cierra la fragilidad del slug roto. ~1h.
+   - **BI ZN** — hoy 2 props, pero se hace igual (cobertura completa, puede crecer). BI ya filtra por barrio → adaptar a polígono ZN. ~1h.
+4. **Blindar "marcar ausentes"** (`zona IN (6 EQ) OR zona IS NULL`) en los discovery EQ cuyo scrape no contenga ZN (confirmar con 0b; seguro C21).
+5. **Condicional (no tarea):** subir LIMITs si el volumen lo pide.
+
+**Nota de método:** el spike corrigió la priorización pero el dato que MANDA es "el director hace los 3". Su valor real fue dimensionar el mercado ZN y descubrir que capturábamos solo el 25% (88 de C21 perdidas) — no decidir a quién incluir.
 
 ### Lo que SÍ se sostiene (no depende del mix por zona)
 - El bug "marcar ausentes sin filtro de zona" y su fix (`zona IN (6 EQ) OR zona IS NULL`) — es lógica de zona, no de volumen.

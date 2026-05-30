@@ -829,3 +829,15 @@ Tanto mi plan como el revisor priorizaron portales por el **volumen de alquiler 
 **Prioridad del plan #7.1 reescrita con dato de ZN:** (1) C21 ZN grid = prioridad 1 (el gap real), (2) Remax patch = robustez no cobertura (ya tenemos 30/31), (3) BI descartado (2 props). El spike también confirma el **total de mercado de alquiler ZN (~122)** vs EQ — dato de producto, no solo de pipeline.
 
 **Meta:** el método del director (medir ZN, no extrapolar) no solo evitó un error de priorización — cuantificó que estábamos capturando 1 de cada 4 alquileres de ZN, con el grueso del agujero en un portal (C21) que la BD hacía ver como irrelevante. **Pendiente:** Fase 0b (drift n8n, UI en vivo) + implementación. Sin aplicar nada en esta sesión.
+
+---
+
+## 30 May 2026 (continuación 7) — Verificación BI + corrección "los 3 portales"
+
+**Dos catches más del director:**
+
+1. **"Te pusiste bizco priorizando — voy a hacer los 3 portales igual."** Tenía razón: estuve rankeando/descartando (C21 sí, BI no) cuando su decisión ya era clonar los 3. El spike **no es para descartar** — sirve para dimensionar el mercado ZN (~122) y validar captura. Corregido en plan + backlog: **se clonan los 3** (C21/Remax/BI), el ranking es solo color.
+
+2. **"Creo que hay un error en validar BI, no se capta bien la cantidad."** Sospecha válida — verificada con `scripts/poc-zona-norte/diag-bi-alquiler.mjs`. **NO hay error de captura:** las 16 BI alquiler tienen GPS 100% (mi hipótesis de "GPS faltante" quedó refutada), y el endpoint anda perfecto (**BI da 233 venta vs 16 alquiler** — si fuera bug del script, venta también daría poco). **BI es venta-pesado**: casi no lista alquileres (16 en todo SC, ~2 en ZN). El 2 es real. La duda valió la pena chequearla aunque la conclusión sea "no hay error".
+
+**Meta (4to/5to catch de la sesión):** tiendo a optimizar/priorizar/descartar cuando la decisión del dueño ya es "hacer todo" — sobre-ingeniería de la decisión, no solo del código. Y una corazonada de error (GPS BI) hay que verificarla con dato (233 vs 16 lo cerró), no asumirla para complacer la sospecha. El dato manda en ambas direcciones: validó "medir ZN" y refutó "error en BI".
