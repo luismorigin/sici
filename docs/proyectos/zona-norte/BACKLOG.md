@@ -2,9 +2,9 @@
 
 > Tickets pendientes que surgieron de la validación Fase 3+4. Organizados por prioridad y por scope.
 
-**Última actualización:** 29 May 2026 (FASE 1 del #8 aplicada en producción; v4 snapshot descartado).
+**Última actualización:** 30 May 2026 (Ticket #8 cerrado end-to-end: FASES 5-7 aplicadas + mergeado a `main` PR #1; corrida nocturna validó snapshot v3 generando las 14 series ZN).
 
-**🎯 Próxima sesión:** **FASE 5-7 del Ticket #8** — `lib/zonas.ts` (14 microzonas en filtro admin) → workflows n8n ZN → docs. Branch: `feat/zn-microzonas-aplicacion`. NO dependen del snapshot. **Recordar reactivar el workflow `auditoria_diaria_sici_v3.0` en n8n** (se desactivó para la ventana de mig).
+**🎯 Próxima sesión:** **#6 frontend `/mercado/zona-norte`** (prototipo multi-macrozona) y/o **#7 alquiler ZN** (replicar patrón venta). #1.7 (detector de clusters) en paralelo. Los 3 de seguimiento (#12/#13/#14) no bloquean. Ver "Estado de tickets" abajo.
 
 ---
 
@@ -485,25 +485,45 @@ components/
 
 ---
 
-### #7 — Fase 5 PRD: Alquiler Zona Norte
+### #7 — Alquiler Zona Norte — **EN CURSO** (procesamiento listo; FALTA la base de discovery alquiler ZN)
 
-**Contexto:** Fase 3+4 cubrió venta. Falta replicar para alquiler:
-- Workflows: `flujo_discovery_c21_alquiler_zonanorte.json`, `flujo_discovery_remax_alquiler_zonanorte.json`, `flujo_discovery_bien_inmuebles_alquiler_zonanorte.json`.
-- Endpoint base SC + filtro polígono GPS.
-- Adaptar prompt LLM alquiler v2.0 con PROYECTOS CONOCIDOS de ZN.
+> **Corrección 30-may (catch del director):** NO está cerrado. Lo que se cerró es el *procesamiento* (snapshot FIX A + matching + cleanup FIX B2). La *captura* de alquiler ZN es **parcial y accidental**: solo Remax entra (de colado, porque su slug `equipetrolnoroeste` no filtra de verdad y devuelve todo SC → trigger GPS la etiqueta ZN). C21 (grid fijo EQ) y BI (filtra `barrio=equipetrol`) NO traen ZN. **Falta el equivalente a la Fase 3 de venta** (ver #7.1).
 
-**Bloqueador:** validar venta primero (Fase 4 confirma calidad de data).
+> **Diagnóstico completo:** `docs/proyectos/zona-norte/AUDITORIA_Y_FIX_ALQUILER_ZN.md`. NO es "replicar el pipeline de venta" — el motor de alquiler **ya procesa ZN solo** (Remax trae todo SC, triggers GPS/HITL ya soportan ZN). 31 props ZN alquiler en `completado`, solo 2 pending. Enrichment/merge/verificador/prompt LLM son zone-agnostic. El trabajo real es otro y más chico.
 
-**Estimación:** 2-3 horas (es replicar el patrón de venta).
+**Lo que la auditoría destapó (verificado en prod, no replica de venta):**
+
+- ✅ **FIX A — Snapshot alquiler (mig 256, aplicado y validado 30-may).** A1 blindó el alquiler global a las 6 zonas EQ (72/50/40/9 → 61/41/36/6, saca ~29 props ZN); A2 (LOOP 3 separado) generó la serie de alquiler por-zona con ROI (10 celdas ZN pobladas, antes NULL). Venta intacta. In-place v3, sin v4. **Corrección del doble-check:** el "feed público contaminado" era falso (nadie consume las columnas alquiler del snapshot → era higiene, no urgencia). Ver `AUDITORIA_Y_FIX_ALQUILER_ZN.md` §0 + BITACORA 30-may cont. 3.
+- ✅ **FIX B2 — Cleanup falsos (30-may).** prop 2307 (y familia Portobello) mal matcheadas por el agujero del Tier 1. Resuelto: 3 pm nuevos (Portobello 6, Stone By Portobello, Praga) + 7 props reasignadas + candados. Ver BITACORA 30-may cont. 2.
+- ⬜ **#7.1 — Fase 3 alquiler ZN: discovery dedicado (LO QUE FALTA PARA PRODUCCIÓN).** Replicar lo que venta hizo en su Fase 3, para los 3 portales:
+  - Crear `flujo_discovery_remax_alquiler_zonanorte`, `flujo_discovery_c21_alquiler_zonanorte`, `flujo_discovery_bien_inmuebles_alquiler_zonanorte` (fetch amplio SC + filtro polígono ZN), análogos a los `_zonanorte` de venta.
+  - 🔴 **Arreglar el "marcar ausentes" sin filtro de zona** en los 3 discovery de alquiler (Remax `:295`, C21 `:148`, BI `:72` del repo — verificar prod por drift n8n). Hoy comparan todo `tipo_operacion='alquiler'` sin filtrar zona → es el **bug #1 que venta resolvió en `fb78d23` pero alquiler NO**. Ya visible: 1 C21 ZN + 1 Remax ZN en `inactivo_pending`. Sin esto, al meter discovery ZN dedicado, los portales se tumbarían props entre sí por zona.
+  - **Sin esta fase, alquiler ZN depende de que el slug roto de Remax siga devolviendo todo SC** (frágil: si Remax "arregla" el slug, ZN deja de entrar).
+  - **Resto del enjambre (analizado 30-may con 3 subagentes) = zone-agnostic, sin más hardcodes EQ.** Solo ajustes menores de throughput + verificaciones de drift prod:
+    - **Enrichment** (`flujo_enrichment_llm_alquiler_v2.1.0`): query de selección no filtra zona ✓; inyecta `proyectos_master WHERE zona=p.zona` al prompt → funciona para ZN (pm ZN tienen zona=microzona igual que props), pero solo ofrece pm de la **misma microzona** (matiz). **Subir `LIMIT 20`/noche** si ZN escala. Verificar en prod que corre v2.1.0 (no v1.0.0 sin inyección de proyectos).
+    - **Merge** (`merge_alquiler`, mig 247): zone-agnostic total, guardrails monoambiente sin filtro de zona. **Nada que tocar.** (Re-exportar def de prod con `pg_get_functiondef` antes de cualquier cambio — Regla 7.)
+    - **Verificador** (`flujo_c_verificador_alquiler_v2.0.0`): pending + audit sin filtro de zona ✓. **Subir `LIMIT 60`→~120** en audit para el volumen ZN. Verificar en prod: (a) que v2.0.0 reactiva las props que vuelven a HTTP 200 (la v1.0.0 lo hacía explícito; confirmar que v2.0.0 no lo perdió), (b) el fix del 13-may (memoria `n8n_drift_repo_vs_prod`).
+  - **Conclusión:** #7.1 ≈ discovery dedicado (core) + 2-3 verificaciones de prod. El core del enjambre no necesita reescritura.
+  - **📋 Plan de implementación LISTO (pasó doble-check senior):** `docs/proyectos/zona-norte/PLAN_FASE3_DISCOVERY_ALQUILER_ZN.md` §0. **MVP corregido:** Fase 0 (verificar drift n8n + slug Remax) → patch Remax existente (base SC + polígono, no workflow nuevo) → clon C21 ZN (grid; C21 es la fuente #1 de alquiler con 121 EQ vs 22 Remax → core, no diferible) → blindar marcar-ausentes **solo en C21** (`zona IN (6 EQ) OR zona IS NULL`). **NO hacer:** BI ZN (0 props) ni subir LIMITs (31 props no saturan). Toca 1 workflow EQ (C21) + 1 patch Remax + 1 clon, en vez de 3 EQ + 2 nuevos.
+- ⏸️ **FIX B1 (guard GPS en matching) — dentro del paquete #7.1, más adelante.** Decisión del director (30-may): B1 no corresponde a esta fase; su urgencia depende del volumen de edificios mal asignados, que recién crece cuando #7.1 amplía la cobertura. Ahí se mide la distribución de distancias EQ y se diseña el carve-out por nombre con datos reales. Diseño en `AUDITORIA_Y_FIX_ALQUILER_ZN.md` §0 (C3) + §5.
+
+**Verificación pendiente:** `verify-portobello.html` (HTML visual) para resolver el falso match antes de cualquier UPDATE (no corregir a ciegas — lección 24-may).
+
+**Plan implementable (7 pasos, §7 del doc):** pasos 1-3 (FIX A + validar) son **net-positivos para Equipetrol** (limpian contaminación), bajo riesgo. Paso 6 (FIX B1) es el único que toca comportamiento EQ → medición previa.
+
+**Bloqueador:** ninguno para FIX A. FIX B1 requiere medir distribución de distancias en matches EQ.
+
+**Estimación:** FIX A ~2h + validación 1 corrida. FIX B ~2-3h + medición. Verificación Portobello ~15 min (HTML).
 
 ---
 
-### #8 — Definir microzonas de Zona Norte (subdivisión + refinar polígono macro) — **FASE 1 APLICADA ✅ · FASES 2-4 DESCARTADAS · FASES 5-7 PENDIENTES**
+### ✅ #8 — Definir microzonas de Zona Norte (subdivisión + refinar polígono macro) — **CERRADO END-TO-END 30-may-2026**
 
-**Estado al 29-may-2026 (aplicación):**
+**Estado al 30-may-2026 (cierre):**
 - ✅ **FASE 1 (mig 254) aplicada en producción.** 8/8 CHECKs, EQ intacto (CHECK 5 diff=0), 520 props + 73 pm redistribuidos en 14 microzonas (0 en gaps), trigger HITL `pendiente_zona_norte`. Commit `3a8309f`. Se fixeó un bug `LATERAL`-sobre-target al aplicar (ver BITACORA).
-- 🗑️ **FASES 2-4 (snapshot v4 + paralelización) DESCARTADAS.** La constraint `(fecha,dorm,zona)` impide coexistir v3/v4 en `zona='global'` sin pisar el feed público; y el `INNER JOIN` de v4 duplicaba `Equipetrol Norte` (2 polígonos). La paridad del enfoque dinámico se validó **compute-only** (diff=0) y **v3 sin cambios ya genera las series por-microzona ZN** (12 microzonas con venta). No se necesita v4. mig 255 marcada `NO APLICAR`. El agregado `global_zona_norte` → ticket #12.
-- ⬜ **FASES 5-7 pendientes:** frontend `lib/zonas.ts`, workflows n8n ZN, docs.
+- 🗑️ **FASES 2-4 (snapshot v4 + paralelización) DESCARTADAS.** La constraint `(fecha,dorm,zona)` impide coexistir v3/v4 en `zona='global'` sin pisar el feed público; y el `INNER JOIN` de v4 duplicaba `Equipetrol Norte` (2 polígonos). La paridad del enfoque dinámico se validó **compute-only** (diff=0) y **v3 sin cambios ya genera las series por-microzona ZN**. No se necesita v4. mig 255 marcada `NO APLICAR`. El agregado `global_zona_norte` → ticket #12.
+- ✅ **FASES 5-7 aplicadas y mergeadas a `main`** (PR #1, merge `ad22b24`): `lib/zonas.ts` con 14 microzonas, workflows n8n discovery ZN con array de microzonas, docs. Workflow `auditoria_diaria_sici_v3.0` reactivado.
+- ✅ **Validado en producción (30-may):** corrida nocturna completa sin errores, snapshot v3 generó las 14 series por-microzona ZN, EQ sin contaminación. Ver BITACORA entrada 30-may.
 
 **Estado histórico del diseño (mantenido para trazabilidad):** ✅ Diseño y plan de implementación cerrados.
 

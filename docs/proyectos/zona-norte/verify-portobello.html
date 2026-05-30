@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Verify Portobello — Zona Norte / Equipetrol</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{ --arena:#EDE8DC; --negro:#141414; --salvia:#3A6A48; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--negro);background:var(--arena)}
+  header{padding:12px 16px;background:var(--negro);color:var(--arena)}
+  header h1{margin:0;font-size:16px}
+  header p{margin:4px 0 0;font-size:12px;opacity:.8}
+  #wrap{display:flex;height:calc(100vh - 64px)}
+  #map{flex:1}
+  #side{width:360px;overflow:auto;padding:12px;background:#fff;border-left:1px solid #ccc}
+  .pmcard{border:1px solid #ddd;border-radius:8px;padding:8px 10px;margin-bottom:10px}
+  .pmcard h3{margin:0 0 4px;font-size:13px}
+  .row{font-size:12px;padding:3px 0;border-top:1px dashed #eee;display:flex;justify-content:space-between;gap:6px}
+  .row a{color:var(--salvia);text-decoration:none;font-weight:600}
+  .badge{display:inline-block;padding:1px 6px;border-radius:10px;font-size:10px;color:#fff}
+  .far{background:#c0392b}
+  .near{background:#2e7d32}
+  .legend{font-size:11px;line-height:1.6}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  .note{font-size:11px;color:#555;background:#faf7ef;border:1px solid #e7e0cf;border-radius:8px;padding:8px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Verify Portobello — ¿cuántos edificios reales hay?</h1>
+  <p>pm 269 "CONDOMINIO PORTOBELLO ISUTO" está absorbiendo props a 3–4 km. Mirá el satélite y decidí. Click en cada pin → Google Maps / Street View.</p>
+</header>
+<div id="wrap">
+  <div id="map"></div>
+  <div id="side">
+    <div class="note">
+      <b>Qué resolver:</b><br>
+      • ¿2307 (alquiler), 2107 y 2108 (venta) pertenecen al mismo edificio que el pm 269, o son otro "Portobello Isuto"?<br>
+      • Si son otro edificio → crear pm nuevo + reasignar + candar <code>nombre_edificio</code>.<br>
+      • Si es el mismo con GPS de agente desplazado → mover GPS del pm / reasignar con candado.
+    </div>
+    <div class="legend" id="legend"></div>
+    <div id="cards"></div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// pm centroides
+const PMS = [
+  {pm:248, nombre:"PORTOBELLO 5", zona:"Villa Brigida", lat:-17.7539545, lon:-63.1923600, color:"#2e7d32"},
+  {pm:269, nombre:"CONDOMINIO PORTOBELLO ISUTO", zona:"2do-3er La Salle-Banzer", lat:-17.7627912, lon:-63.1902592, color:"#c0392b"},
+  {pm:326, nombre:"Portobello Green", zona:"Equipetrol Centro", lat:-17.7643968, lon:-63.1916956, color:"#1565c0"},
+];
+// props (nombre, op, status, gps, pm asignado)
+const PROPS = [
+  {id:1066, op:"venta", st:"excluida_zona", nombre:"CONDOMINIO PORTOBELLO ISUTO", lat:-17.76290587, lon:-63.19043966, pm:269},
+  {id:1067, op:"venta", st:"excluida_zona", nombre:"CONDOMINIO PORTOBELLO ISUTO", lat:-17.76292630, lon:-63.19041820, pm:269},
+  {id:363,  op:"venta", st:"inactivo_confirmed", nombre:"CONDOMINIO PORTOBELLO ISUTO", lat:-17.76277225, lon:-63.19051470, pm:269},
+  {id:364,  op:"venta", st:"inactivo_confirmed", nombre:"CONDOMINIO PORTOBELLO ISUTO", lat:-17.76301747, lon:-63.19047179, pm:269},
+  {id:2107, op:"venta", st:"completado", nombre:"CONDOMINIO PORTOBELLO ISUTO", lat:-17.74801776, lon:-63.15613951, pm:269},
+  {id:2108, op:"venta", st:"completado", nombre:"CONDOMINIO PORTOBELLO ISUTO", lat:-17.74818125, lon:-63.15605368, pm:269},
+  {id:2307, op:"ALQUILER", st:"completado", nombre:"CONDOMINIO PORTOBELLO ISUTO", lat:-17.74265221, lon:-63.16970191, pm:269},
+  {id:1068, op:"venta", st:"completado", nombre:"Portobello Green", lat:-17.76449977, lon:-63.19194170, pm:326},
+  {id:1206, op:"venta", st:"inactivo_confirmed", nombre:"Portobello Green", lat:-17.76438312, lon:-63.19168512, pm:326},
+  {id:1211, op:"ALQUILER", st:"inactivo_confirmed", nombre:"Edificio Portobello Green", lat:-17.76437290, lon:-63.19168512, pm:326},
+  {id:1666, op:"ALQUILER", st:"completado", nombre:"Portobello Green", lat:-17.76446634, lon:-63.19168151, pm:326},
+  {id:1072, op:"venta", st:"inactivo_confirmed", nombre:"Portobello Green", lat:-17.76423351, lon:-63.19077598, pm:null},
+  {id:1069, op:"venta", st:"completado", nombre:"PORTOBELLO 5", lat:-17.75403698, lon:-63.19241377, pm:248},
+  {id:1070, op:"venta", st:"completado", nombre:"PORTOBELLO 5", lat:-17.75391436, lon:-63.19241377, pm:248},
+  {id:1071, op:"venta", st:"completado", nombre:"PORTOBELLO 5", lat:-17.75413915, lon:-63.19247814, pm:248},
+  {id:2388, op:"venta", st:"completado", nombre:"PORTOBELLO 5", lat:-17.75365489, lon:-63.19317532, pm:248},
+  {id:432,  op:"venta", st:"completado", nombre:"PORTOBELLO 5", lat:-17.75411466, lon:-63.19235703, pm:248},
+  {id:2228, op:"ALQUILER", st:"completado", nombre:"Stone Portobello", lat:-17.73724193, lon:-63.17365587, pm:null},
+];
+
+function dist(a,b){ // metros aprox
+  const dLat=a.lat-b.lat, dLon=(a.lon-b.lon)*Math.cos(a.lat*Math.PI/180);
+  return Math.round(111000*Math.sqrt(dLat*dLat+dLon*dLon));
+}
+const pmById = Object.fromEntries(PMS.map(p=>[p.pm,p]));
+
+const map = L.map('map').setView([-17.752,-63.178], 14);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {attribution:'Esri World Imagery', maxZoom:19}).addTo(map);
+
+// pm como estrella grande
+PMS.forEach(p=>{
+  L.circleMarker([p.lat,p.lon],{radius:11,color:'#fff',weight:2,fillColor:p.color,fillOpacity:1})
+    .addTo(map)
+    .bindPopup(`<b>★ pm ${p.pm}</b><br>${p.nombre}<br><small>${p.zona}</small>`);
+});
+
+// Portobello 7 — ubicación marcada por el director (30-may), sin pm aún
+L.circleMarker([-17.766412554250316,-63.19174637856233],
+  {radius:13,color:'#fff',weight:3,fillColor:'#8e24aa',fillOpacity:1})
+  .addTo(map)
+  .bindPopup('<b>📍 PORTOBELLO 7</b><br>Ubicación marcada por el director<br>(sin pm ni listings aún)<br>'+
+    '<a href="https://www.google.com/maps?q=-17.766412554250316,-63.19174637856233" target="_blank">Maps</a> · '+
+    '<a href="https://www.google.com/maps?q=&layer=c&cbll=-17.766412554250316,-63.19174637856233" target="_blank">Street View</a>');
+// props como puntos
+PROPS.forEach(pr=>{
+  const c = pr.pm? (pmById[pr.pm]?.color||'#888') : '#888';
+  const d = pr.pm? dist(pr, pmById[pr.pm]) : null;
+  const opEmoji = pr.op==='ALQUILER'?'🔑':'$';
+  const m = L.circleMarker([pr.lat,pr.lon],{radius:6,color:'#000',weight:1,fillColor:c,fillOpacity:.9}).addTo(map);
+  const g = `https://www.google.com/maps?q=${pr.lat},${pr.lon}`;
+  const sv = `https://www.google.com/maps?q=&layer=c&cbll=${pr.lat},${pr.lon}`;
+  m.bindPopup(`<b>${opEmoji} #${pr.id}</b> ${pr.op}<br>${pr.nombre}<br>`+
+    `pm ${pr.pm??'—'} · ${pr.st}<br>`+
+    (d!=null?`<b>${d} m del pm</b><br>`:'')+
+    `<a href="${g}" target="_blank">Maps</a> · <a href="${sv}" target="_blank">Street View</a>`);
+});
+
+// leyenda
+document.getElementById('legend').innerHTML = PMS.map(p=>
+  `<div><span class="dot" style="background:${p.color}"></span>pm ${p.pm} — ${p.nombre}</div>`).join('')+
+  `<div><span class="dot" style="background:#888"></span>sin pm</div>`;
+
+// cards por pm con distancias
+const cards = document.getElementById('cards');
+PMS.forEach(p=>{
+  const props = PROPS.filter(x=>x.pm===p.pm).map(x=>({...x,d:dist(x,p)})).sort((a,b)=>b.d-a.d);
+  const html = props.map(x=>{
+    const far = x.d>800;
+    return `<div class="row"><span>${x.op==='ALQUILER'?'🔑':'$'} #${x.id} <span class="badge ${far?'far':'near'}">${x.d} m</span></span>`+
+      `<a href="https://www.google.com/maps?q=${x.lat},${x.lon}" target="_blank">Maps</a></div>`;
+  }).join('');
+  cards.innerHTML += `<div class="pmcard"><h3 style="color:${p.color}">pm ${p.pm} — ${p.nombre}</h3>`+
+    `<div style="font-size:11px;color:#777">${p.zona}</div>${html}</div>`;
+});
+const huerf = PROPS.filter(x=>x.pm===null);
+if(huerf.length){
+  cards.innerHTML += `<div class="pmcard"><h3 style="color:#888">Sin pm</h3>`+
+    huerf.map(x=>`<div class="row"><span>${x.op==='ALQUILER'?'🔑':'$'} #${x.id} ${x.nombre}</span>`+
+    `<a href="https://www.google.com/maps?q=${x.lat},${x.lon}" target="_blank">Maps</a></div>`).join('')+`</div>`;
+}
+</script>
+</body>
+</html>
