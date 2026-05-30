@@ -4,9 +4,9 @@
 
 ---
 
-## Estado actual — 28 May 2026
+## Estado actual — 29 May 2026
 
-**Fases 1-4 completas + audit de datos profundo.** Próximo: #8 microzonas → #6 frontend.
+**Fases 1-4 + #8 microzonas aplicadas (29-may):** 14 microzonas en BD (mig 254), frontend (`lib/zonas.ts`) y workflows discovery ZN. Próximo: #6 frontend `/mercado/zona-norte` → #7 alquiler.
 
 | Hito | Estado |
 |---|---|
@@ -14,13 +14,15 @@
 | Fase 3: dark launch venta en prod (workflows discovery) | ✅ (26-may) |
 | Fase 4: validar calidad pipeline con data real | ✅ (audit 28-may) |
 | Audit GPS + cleanup historico K1/STONE/CURUPAU/Brickell (63 falsos) | ✅ (28-may) |
-| Cargar pm Zona Norte (#1.5 + capas 2-3) | ✅ **70 pm activos con 100% verificación visual** |
-| Match rate ZN venta | ✅ **54.2%** (212/391 props matched) — desde 19.7% |
-| Fase 5: alquiler (replicar patrón) | ⬜ pendiente |
-| #8 Microzonas (Hamacas, Banzer 3-5to, Radial 26) | ⬜ pendiente — bloquea #6 |
+| Cargar pm Zona Norte (#1.5 + capas 2-3 + cleanup nocturno 29-may) | ✅ **73 pm activos con 100% verificación visual** |
+| Match rate ZN venta | ✅ ~60% (ver `SELECT ... FROM v_mercado_venta`) — desde 19.7% |
+| **#8 Microzonas (14 — grilla anillos×avenidas)** | ✅ **aplicado 29-may** (mig 254 + `lib/zonas.ts` + workflows discovery). Snapshot v4 descartado → ver #12 |
+| Fase 5 / #7: alquiler (replicar patrón) | ⬜ pendiente |
 | #6 Frontend `/mercado/zona-norte` | ⬜ pendiente — prototipo multi-macrozona |
 | #1.7 Detector automático de clusters emergentes | ⬜ pendiente — infraestructura escalable |
 | #5 Exposición pública | ⬜ post-validación 90 días |
+
+> Tickets nuevos del 29-may (ver `BACKLOG.md`): **#12** agregado snapshot `global_zona_norte`, **#13** blindaje matching a `zona_general`, **#14** gap snapshot Remax (baja prioridad).
 
 **Detalle de cada hito + decisiones:** ver `BACKLOG.md`. **Cronología y lecciones aprendidas:** ver `BITACORA.md`. **Operación día a día + kill-switch:** ver `operacion.md`.
 
@@ -45,11 +47,11 @@ Antes de eso, presentar como *"rotación observada con baseline parcial"* con ca
 
 ## ⚠️ HITL — Sugerencias de Zona Norte NO aparecen en `/admin/supervisor/matching`
 
-**Desde mig 253 (27-may-2026):** las sugerencias del matching automático para props con `zona='Zona Norte'` se marcan con `estado='pendiente_zn'` en lugar de `'pendiente'`. El HITL Equipetrol (`/admin/supervisor/matching`) filtra por `estado='pendiente'` y por lo tanto NO las ve.
+**Desde mig 253 (27-may), refactorizado en mig 254 (29-may):** las sugerencias del matching automático para props de macrozonas en piloto (no-Equipetrol) se marcan con `estado='pendiente_<macrozona>'` (para ZN: **`pendiente_zona_norte`**) en lugar de `'pendiente'`. El HITL Equipetrol (`/admin/supervisor/matching`) filtra por `estado='pendiente'` y por lo tanto NO las ve.
 
 **Por qué:** ADR-003 ya decía que Zona Norte arrancaría sin proyectos master y sin matching automático. La separación de estado evita que cientos de sugerencias ZN ensucien el flujo HITL de Equipetrol durante el piloto.
 
-**Implementación:** trigger `trg_separar_hitl_zona_norte` BEFORE INSERT en `matching_sugerencias`. Permanente, cero mantenimiento. Reversible con DROP TRIGGER.
+**Implementación:** trigger `trg_separar_hitl_por_macrozona` BEFORE INSERT en `matching_sugerencias` (mig 254 — reemplazó a `trg_separar_hitl_zona_norte` de mig 253). Usa `zona_general` dinámicamente → soporta múltiples macrozonas en piloto sin tocar código (Urubó, etc.). Genera `pendiente_<macrozona>` (ej `pendiente_zona_norte`). Permanente, cero mantenimiento. Reversible con el rollback de mig 254.
 
 **Nada se pierde.** Las sugerencias ZN quedan completas en la tabla (propiedad_id, proyecto_master_sugerido, score, método, razón). Para verlas:
 
@@ -58,7 +60,7 @@ SELECT ms.*, p.url, p.nombre_edificio, pm.nombre_oficial
 FROM matching_sugerencias ms
 JOIN propiedades_v2 p ON ms.propiedad_id = p.id
 JOIN proyectos_master pm ON ms.proyecto_master_sugerido = pm.id_proyecto_master
-WHERE ms.estado = 'pendiente_zn'
+WHERE ms.estado = 'pendiente_zona_norte'
 ORDER BY ms.score_confianza DESC;
 ```
 
@@ -68,14 +70,14 @@ Cuando llegue el momento de incorporar Zona Norte al flujo HITL formal (post-val
 
 **Opciones de implementación:**
 
-1. **UI separada nueva** — crear `/admin/supervisor/matching-zona-norte` que filtra por `estado='pendiente_zn'`. Las funciones backend (`aplicar_matches_aprobados`, etc.) ya funcionan con cualquier estado, solo cambia el filtro de display. Recomendado si Zona Norte sigue siendo un piloto separado.
+1. **UI separada nueva** — crear `/admin/supervisor/matching-zona-norte` que filtra por `estado='pendiente_zona_norte'`. Las funciones backend (`aplicar_matches_aprobados`, etc.) ya funcionan con cualquier estado, solo cambia el filtro de display. Recomendado si Zona Norte sigue siendo un piloto separado.
 
 2. **Toggle/dropdown en UI existente** — agregar selector de zona en `/admin/supervisor/matching` para alternar entre "Equipetrol" y "Zona Norte" (o "Todas"). Recomendado si ZN deja de ser piloto y se integra al flujo normal.
 
-3. **Migración total a HITL único** — `UPDATE matching_sugerencias SET estado='pendiente' WHERE estado='pendiente_zn'` + `DROP TRIGGER trg_separar_hitl_zona_norte`. Las sugerencias ZN aparecen en el HITL Equipetrol normal. Recomendado cuando Zona Norte tenga proyectos master propios suficientes y se quiera tratar igual.
+3. **Migración total a HITL único** — `UPDATE matching_sugerencias SET estado='pendiente' WHERE estado='pendiente_zona_norte'` + `DROP TRIGGER trg_separar_hitl_por_macrozona`. Las sugerencias ZN aparecen en el HITL Equipetrol normal. Recomendado cuando Zona Norte tenga proyectos master propios suficientes y se quiera tratar igual.
 
 **Ubicación del código relevante:**
-- Trigger: `sql/migrations/253_hitl_zona_norte_separado.sql`
+- Trigger: `sql/migrations/254_microzonas_zona_norte.sql` (función `separar_hitl_por_macrozona`, reemplazó la `separar_hitl_zona_norte` de mig 253)
 - Páginas admin: `simon-mvp/src/pages/admin/supervisor/matching.tsx` (referencia para crear copia ZN)
 
 ---

@@ -2,7 +2,9 @@
 
 > Tickets pendientes que surgieron de la validación Fase 3+4. Organizados por prioridad y por scope.
 
-**Última actualización:** 27 May 2026 (sub-sesión 4 — visión multi-macrozona consolidada).
+**Última actualización:** 29 May 2026 (FASE 1 del #8 aplicada en producción; v4 snapshot descartado).
+
+**🎯 Próxima sesión:** **FASE 5-7 del Ticket #8** — `lib/zonas.ts` (14 microzonas en filtro admin) → workflows n8n ZN → docs. Branch: `feat/zn-microzonas-aplicacion`. NO dependen del snapshot. **Recordar reactivar el workflow `auditoria_diaria_sici_v3.0` en n8n** (se desactivó para la ventana de mig).
 
 ---
 
@@ -23,9 +25,17 @@ Ver `DECISIONES.md` ADR-009 para detalle completo.
 
 ---
 
-## 🔴 Tickets críticos (próxima sesión)
+## 🟡 Tickets de calidad de matching (paralelos a #8, no bloquean)
 
-### #1 — Mejorar criterios de confianza del prompt LLM v4.0 + merge acepta 'media'
+> Esta sección era "🔴 Críticos próxima sesión" hasta el 28-may-2026. El #1 fue archivado por otro camino, el #1.5 se completó. El #1.7 sigue vigente como ticket no urgente.
+
+### ✅ #1 — Mejorar criterios de confianza del prompt LLM v4.0 + merge acepta 'media' — **ARCHIVADO 28-may-2026**
+
+> Ver detalle del archivado en sección "#1 — REPLANTEO 28-may-2026 sesión 2 (RESUELTO POR OTRO CAMINO)" más abajo. El problema raíz era otro y se resolvió cargando pm ZN (#1.5).
+
+**Contenido histórico mantenido abajo para trazabilidad de las 3 iteraciones de análisis.**
+
+### #1 — Mejorar criterios de confianza del prompt LLM v4.0 + merge acepta 'media' (versión original)
 
 > **Reformulado tras 3 iteraciones de investigación 27-may-2026.** El ticket original ("Mejorar prompt LLM" / "Decidir A o B") era erróneo — el merge v2.6.0 YA tiene lógica híbrida correcta. La causa raíz real es que el **prompt nunca define criterios** sobre cuándo usar cada nivel de confianza → el LLM lo interpreta binario (alta/null).
 
@@ -278,7 +288,13 @@ La intuición correcta del usuario fue: *"explicame el problema que estamos trat
 
 ---
 
-### #1.5 — Cargar proyectos master para edificios reconocibles de Zona Norte
+### ✅ #1.5 — Cargar proyectos master para edificios reconocibles de Zona Norte — **COMPLETADO 28-29 may-2026**
+
+> **73 pm verificados al 100% visualmente.** Match rate ZN venta subió de 19.7% a 60.6%. Ver BITACORA entradas 28-may y 29-may. Las 3 micro-cargas finales del 29-may (STONE 7, Sky Line, Mangales Blue) cierran el ticket.
+
+**Contexto histórico mantenido abajo para trazabilidad metodológica.**
+
+### #1.5 — Cargar proyectos master para edificios reconocibles de Zona Norte (versión histórica)
 
 > **Ataque alternativo/complementario al #1.** Beneficio inmediato y visible.
 
@@ -482,31 +498,156 @@ components/
 
 ---
 
-### #8 — Definir microzonas de Zona Norte (subdivisión + refinar polígono macro)
+### #8 — Definir microzonas de Zona Norte (subdivisión + refinar polígono macro) — **FASE 1 APLICADA ✅ · FASES 2-4 DESCARTADAS · FASES 5-7 PENDIENTES**
 
-**Promovido en prioridad post-ADR-009:** con la visión multi-macrozona, **cada macrozona debe tener sus microzonas** para que el patrón sea consistente con Equipetrol (que tiene 6 microzonas).
+**Estado al 29-may-2026 (aplicación):**
+- ✅ **FASE 1 (mig 254) aplicada en producción.** 8/8 CHECKs, EQ intacto (CHECK 5 diff=0), 520 props + 73 pm redistribuidos en 14 microzonas (0 en gaps), trigger HITL `pendiente_zona_norte`. Commit `3a8309f`. Se fixeó un bug `LATERAL`-sobre-target al aplicar (ver BITACORA).
+- 🗑️ **FASES 2-4 (snapshot v4 + paralelización) DESCARTADAS.** La constraint `(fecha,dorm,zona)` impide coexistir v3/v4 en `zona='global'` sin pisar el feed público; y el `INNER JOIN` de v4 duplicaba `Equipetrol Norte` (2 polígonos). La paridad del enfoque dinámico se validó **compute-only** (diff=0) y **v3 sin cambios ya genera las series por-microzona ZN** (12 microzonas con venta). No se necesita v4. mig 255 marcada `NO APLICAR`. El agregado `global_zona_norte` → ticket #12.
+- ⬜ **FASES 5-7 pendientes:** frontend `lib/zonas.ts`, workflows n8n ZN, docs.
 
-**Contexto:**
-- ZN hoy: 1 polígono macro único (`docs/proyectos/zona-norte/poligono-prueba.geojson`), dibujado rápido para validar.
-- ADR-008: subdividir después es seguro porque `get_zona_by_gps()` permite re-asignar.
-- Microzonas ya identificadas por taxonomía de portales: Hamacas, Banzer 3er al 5to anillo, Radial 26, Norte (genérico), Norte 4to-5to anillo.
+**Estado histórico del diseño (mantenido para trazabilidad):** ✅ Diseño y plan de implementación cerrados.
 
-**Acción:**
-1. **Refinar polígono macro** con bordes más precisos (revisar el "polígono rápido" actual).
-2. **Definir microzonas hijas** dentro de Zona Norte:
-   - Hamacas
-   - Banzer 3er al 5to anillo
-   - Radial 26
-   - Norte 4to-5to anillo (o como se nombre).
-3. Cargar polígonos hijos en `zonas_geograficas` con `zona_general='Zona Norte'`.
-4. Re-correr `get_zona_by_gps()` sobre props ZN existentes para re-distribuir en microzonas.
-5. Decidir entre ADR-008 Camino A (microzonas hermanas, como Equipetrol) o Camino B (jerarquía real con zona macro + microzona).
+- **Documento maestro de implementación:** `docs/proyectos/zona-norte/PLAN_IMPLEMENTACION_MICROZONAS.md`
+- **Migración SQL preparada:** `sql/migrations/254_microzonas_zona_norte.sql`
+- **Rollback preparado:** `sql/migrations/254_microzonas_zona_norte_rollback.sql`
+- **Refactor snapshot paralelo:** `sql/migrations/255_snapshot_absorcion_v4_dinamico.sql`
+- **Canonical zonas ZN:** `docs/canonical/ZONAS_ZONA_NORTE.md`
+- **ADR-010** ("EQ y ZN son macrozonas hermanas operativamente") en `DECISIONES.md`
 
-**Recomendación Camino:** el **Camino A** (hermanas) es consistente con Equipetrol actual. El **Camino B** (jerarquía) sería un refactor del trigger pero más limpio a largo plazo. Decidir en el ADR-009 cuál se adopta para todas las macrozonas.
+**Resultado del diseño (14 microzonas, no 4 como inicialmente):**
+- Grilla 4×3 + 2 (anillos viales × avenidas longitudinales).
+- Recortadas con `ST_Difference` para no solapar con EQ (overlap residual 4 m²).
+- 73 pm y 393 props venta activas distribuidos sin pérdida.
+- 5 microzonas hoy vacías (lado Mutualista + 8vo anillo extremo) — captarán oferta cuando discovery se expanda.
 
-**Cuándo:** antes de la exposición pública de ZN. Cuando empiece a haber demanda de filtros por microzona.
+**Decisiones tomadas:**
+- Camino **A simple** (zonas hermanas, no jerárquico). ADR-010.
+- Camino **B refactor snapshot** con paralelización filter_version=4 (escalable a futuras macrozonas).
+- Camino **W** (3 mejoras chicas + ticket #11 para refactor escalable completo).
 
-**Estimación:** medio día + decisión de Camino.
+**Estimación de aplicación:** ~7h en sesión 1 + 14 días paralelización pasiva + 30 min switch final.
+
+**Hallazgos durante el diseño** que generaron tickets nuevos:
+- #11 nuevo: refactor zonas dinámico (sistema escalable).
+- Bug latente en `insertar_proyectos_aprobados()` (zona='Equipetrol' sin sufijo, no existe en CHECK).
+- Bug latente en `resumen_mercado()` y `buscar_propiedades()` (falta 'Eq. 3er Anillo' en `zonas_canon`).
+
+---
+
+### #11 — Refactor de zonas a sistema dinámico (escalabilidad multi-macrozona)
+
+**Motivación:** Hoy agregar una macrozona o microzona requiere tocar **7 lugares diferentes**: CHECK constraint, lib/zonas.ts, workflows n8n, snapshot, HITL trigger, operacion.md, scripts. No escala a partir de 3-4 macrozonas.
+
+**Trigger para activar este ticket:** cuando se confirme la siguiente macrozona (Urubó/Polanco/otras). Antes de eso, este ticket es OPCIONAL — el modelo plano actual aguanta 1-2 macrozonas más con esfuerzo aceptable.
+
+**Scope** (~1 semana, dividido en sesiones):
+
+**Fase 1 SQL (~5h, alto valor):**
+- Refactor `snapshot_absorcion_mercado_v4()` → switch desde v3 deprecated (cuando paridad confirmada 14 días).
+- CHECK `zona_valida` → FK contra `zonas_geograficas.nombre` (eliminar lista hardcoded).
+- Agregar campos `incluir_en_discovery BOOLEAN`, `incluir_en_global BOOLEAN`, `prioridad INT` a `zonas_geograficas`.
+- Backfill esos campos para zonas existentes.
+- Refactor `resumen_mercado()` y `buscar_propiedades()` para que `zonas_canon` sea dinámico por `zona_general` (arregla bug latente de falta 'Eq. 3er Anillo').
+- Investigar y arreglar `insertar_proyectos_aprobados()` que asigna `zona='Equipetrol'` sin sufijo.
+
+**Fase 2 Workflows n8n (~6h):**
+- Workflow discovery único que lee de BD `WHERE incluir_en_discovery=TRUE`.
+- Deprecar workflows separados por macrozona (Equipetrol exclusivo + ZN exclusivo → uno solo dinámico).
+
+**Fase 3 Frontend (~1-2 días):**
+- Endpoint `/api/zonas` (cacheable, paginado si necesario).
+- Hook `useZonas()` con React Query.
+- Reemplazar hardcoded en `lib/zonas.ts` por consumo dinámico.
+- Reemplazar `ZONAS_ZONA_NORTE` static export por fetch.
+
+**Beneficio:** agregar nueva macrozona pasa a ser **1 sola operación**:
+```sql
+INSERT INTO zonas_geograficas (nombre, zona_general, geom, activo, incluir_en_discovery, incluir_en_global)
+VALUES ('Urubó Sur', 'Urubó', ST_GeomFromGeoJSON(...), TRUE, TRUE, TRUE);
+```
+El workflow, snapshot, HITL, frontend y filtros se actualizan automáticamente.
+
+**Riesgo de NO hacerlo:** deuda técnica acumulativa. Cada macrozona nueva toma 3-4x más esfuerzo del necesario. Ver inventario completo en `PLAN_IMPLEMENTACION_MICROZONAS.md` sección "Inventario del hardcoding actual".
+
+**Estimación:** ~1 semana repartida en 3 sesiones.
+
+---
+
+### #12 — Agregado snapshot `global_zona_norte` (reemplaza la "paralelización v4" descartada)
+
+**Contexto:** el 29-may se descartó la mig 255 (snapshot v4 paralelo). Motivo: la unique constraint de `market_absorption_snapshots` es `(fecha, dorm, zona)` (sin `filter_version`), así que v3 y v4 no pueden coexistir en `zona='global'` sin que v4 pise la serie de producción que consumen `/admin/market` **y el feed público** `/mercado/equipetrol/ventas`. Y el `INNER JOIN` de v4 duplicaba `Equipetrol Norte` (2 polígonos, mismo nombre).
+
+**Lo que YA está cubierto sin hacer nada:** la función v3 actual genera las series **por-microzona ZN** automáticamente (su LOOP 2 itera `DISTINCT zona`). 12 microzonas ZN con venta `completado` → 12 series al correr el cron.
+
+**Lo que falta (este ticket):** un **agregado por macrozona** `zona='global_zona_norte'` (las 14 microzonas sumadas), análogo a `'global'` para EQ. Solo hace falta cuando se construya el frontend ZN (#6).
+
+**Opciones de implementación (decidir cuando se active):**
+- **Opción simple (recomendada):** agregar al LOOP 1 de v3 un bloque que, además de `'global'` (EQ), compute y escriba `'global_zona_norte'` usando el filtro dinámico `p.zona IN (SELECT nombre FROM zonas_geograficas WHERE zona_general='Zona Norte' AND activo=TRUE)`. Es additive (fila nueva, no pisa `'global'`). **La paridad del enfoque dinámico ya se validó (diff=0 compute-only).** Cuidado: `'global_zona_norte'` aparecería en `zonaRows` de `/admin/market` (filtra `zona!=='global'`) — decidir si se filtra o se acepta.
+- **Opción escalable:** parte del ticket #11 (snapshot dinámico por `zona_general` + agregar `filter_version` a la constraint + filtrar versión en los 2 consumidores). Más caro, hacerlo cuando llegue Urubó.
+
+**NO hacer:** revivir la mig 255 tal cual (tiene el bug del JOIN y el choque de constraint).
+
+**Validación previa hecha (29-may):** paridad EQ dinámico vs v3 = diff=0 en activas/absorbidas/pending/nuevas × 4 dorms. Serie ZN tendría 379 activas (48/180/106/45).
+
+**Prioridad:** BAJA. No bloquea nada. Se activa con #6 (frontend ZN).
+
+**Estimación:** Opción simple ~1h + verificar dashboard. Opción escalable: dentro de #11.
+
+---
+
+### Deuda menor — `Equipetrol Norte` tiene 2 polígonos en `zonas_geograficas`
+
+Detectado el 29-may al validar el snapshot. `zona_general='Equipetrol'` tiene 7 polígonos / 6 nombres únicos — `Equipetrol Norte` está duplicado. **Inofensivo hoy** (producción usa `ST_Contains`/`LIMIT 1` o `IN`, no JOIN-por-nombre que cuente). Solo mordería a quien escriba un `JOIN zonas_geograficas ON nombre` + agregación (fue el bug de la mig 255 v4). Revisar si los 2 polígonos deberían fusionarse o si son intencionales (cobertura geográfica partida).
+
+---
+
+### #13 — Blindaje matching a nivel `zona_general` en vez de microzona
+
+**Contexto:** El matching está blindado con `p.zona = pm.zona` (ADR-006, migs 251/252) — diseñado cuando ZN era **un solo polígono**, para evitar contaminación **cross-macrozona** (un edificio ZN con nombre igual a uno de EQ). La **mig 254** subdividió ZN en 14 microzonas; ahora `p.zona = pm.zona` exige igualdad de **microzona**, lo que bloquea matches **intra-ZN legítimos** cuando la prop y su pm caen en microzonas vecinas distintas (los GPS de los pm se corrigieron a mano al edificio real, distinto del GPS de los listings).
+
+**Datos medidos (29-may, post-mig 254):**
+- **69 de 255 props ZN matched** tienen `p.zona ≠ pm.zona`. **NO corren peligro**: el PASO 8 de `matching_completo_automatizado()` auto-rechaza sugerencias de props ya matched (el matching solo asigna, nunca desmatchea). El `id_proyecto_master` persiste.
+- **Riesgo futuro acotado:** de 112 props ZN sin match con pm cercano (<250m), 109 matchean igual (misma microzona) y **solo 3 se pierden** por el blindaje a nivel microzona.
+
+**Funciones con el blindaje `p.zona = pm.zona`:** `generar_matches_gps`, `generar_matches_por_nombre`, `generar_matches_fuzzy`, `generar_matches_trigram` (verificar cada una).
+
+**Fix propuesto:** cambiar el blindaje de `p.zona = pm.zona` a **misma macrozona** vía `zona_general`:
+```sql
+-- En vez de:  AND p.zona = pm.zona
+-- Usar:       AND EXISTS (SELECT 1 FROM zonas_geograficas zp JOIN zonas_geograficas zm
+--               ON zp.zona_general = zm.zona_general
+--               WHERE zp.nombre = p.zona AND zm.nombre = pm.zona)
+-- (o cachear zona_general en propiedades_v2/proyectos_master para no joinear 2x)
+```
+Esto restaura el matching intra-ZN sin reabrir la contaminación cross-macrozona (EQ↔ZN siguen separados por `zona_general`).
+
+**⚠️ Riesgo del fix:** estas funciones **también procesan Equipetrol**. Pasar a `zona_general` permitiría matchear, dentro de EQ, una prop de `Equipetrol Centro` con un pm de `Sirari` (ambos `zona_general='Equipetrol'`) si están a <250m — hoy NO matchean cross-zona EQ. Puede ser deseable (edificios en borde de zona) o introducir falsos. **Analizar impacto en EQ antes de aplicar** (medir cuántos matches nuevos cross-zona EQ aparecerían y si son correctos).
+
+**Prioridad: BAJA.** 3 props afectadas hoy. Reconsiderar si el match rate ZN futuro se estanca o el problema crece con más microzonas/macrozonas. Encaja naturalmente dentro del refactor del **ticket #11** (sistema de zonas dinámico).
+
+**Estimación:** 2-3h (fix + medición de impacto EQ + testing) si se hace aislado; o dentro de #11.
+
+---
+
+### #14 — Investigar gap snapshot↔BD en discovery Remax (solo si el verificador genera falsos)
+
+> **Reformulado 29-may tras medición.** La hipótesis inicial era "truncamiento por `TOTAL_PAGES=30` fijo". **Descartada:** correr con 30 y con 60 páginas dio el **mismo `snapshot_total=166`** → Remax tiene ~166 deptos en ZN y 30 páginas ya los traían todos (las páginas extra devuelven `[]`). El tope de páginas NO era el problema.
+
+**Situación real:** cada corrida Remax ZN marca ~4-6 props `inactivo_pending` (13 acumuladas al 29-may, varias de los días que los workflows estuvieron apagados). Son props que están en BD pero **no en el snapshot actual de Remax** — lo más probable: **caídas reales** (vendidas/despublicadas) o **cambio de slug** (la URL en BD ya no matchea la del portal → se ve como ausente + nueva).
+
+**Red de seguridad (ya existe y es suficiente por ahora):** el **verificador HTTP** chequea cada URL pending 2 días después → reactiva las vivas, confirma las caídas. Es el árbitro correcto. Marcar `inactivo_pending` es solo un estado intermedio reversible.
+
+**Cuándo activar este ticket:** solo si se observa que el verificador **reactiva recurrentemente** las mismas props (señal de que el discovery las marca mal, ej. por slug-change no detectado). Diagnóstico a correr en ese caso:
+- ¿Las props pending tienen URL que responde 200/302 en Remax? (entonces es slug-change o inestabilidad, no caída real)
+- ¿El `MLSID`/`codigo_propiedad` sigue en el feed con otro slug? → matchear por `codigo_propiedad` en vez de (o además de) URL en el nodo "Preparar Comparación".
+
+**Parche aplicado (29-may):** `TOTAL_PAGES` 30 → 60 como **margen futuro barato** (si SC crece y supera 30 páginas). Inofensivo: páginas extra devuelven `[]`. No "arregló" nada porque no había nada roto.
+
+**Nota:** C21 usa grid bbox (no paginación) — sin este tema.
+
+**Prioridad: BAJA.** Hoy el verificador cubre el caso. No bloquea exposición de ZN. Reabrir solo con evidencia de falsos recurrentes.
+
+**Estimación:** 1-2h de investigación si se reabre (matching por `codigo_propiedad`, no por URL).
 
 ---
 

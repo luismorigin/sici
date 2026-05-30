@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Editor microzonas Zona Norte</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<style>
+  :root { --bg:#141414; --arena:#EDE8DC; --salvia:#3A6A48; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--arena); }
+  #app { display: flex; height: 100vh; }
+  #map { flex: 1; }
+  #sidebar { width: 380px; background: var(--bg); border-left: 1px solid #333; overflow-y: auto; padding: 14px; font-size: 13px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  h2 { font-size: 11px; margin: 14px 0 6px; color: #aaa; text-transform: uppercase; letter-spacing: 0.6px; }
+  .meta { font-size: 11px; color: #777; margin-bottom: 12px; }
+  .help { font-size: 11px; padding: 8px; background: #1a2412; border-left: 3px solid var(--salvia); border-radius: 2px; margin-bottom: 10px; color: #b8c8a8; line-height: 1.4; }
+  .mz-card { background: #1f1f1f; border-left: 4px solid var(--salvia); padding: 8px 10px; border-radius: 4px; margin-bottom: 8px; }
+  .mz-card input { background: #0f0f0f; color: var(--arena); border: 1px solid #444; padding: 4px 6px; border-radius: 3px; font-size: 12px; width: 100%; margin-bottom: 4px; }
+  .mz-card input:focus { outline: none; border-color: var(--salvia); }
+  .mz-card .row { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 11px; color: #aaa; }
+  .mz-card .nums { font-variant-numeric: tabular-nums; }
+  .mz-card button { background: transparent; color: #d65b5b; border: 1px solid #d65b5b; padding: 2px 6px; border-radius: 3px; font-size: 10px; cursor: pointer; }
+  .mz-card button:hover { background: #d65b5b22; }
+  button.primary { background: var(--salvia); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%; margin-top: 6px; }
+  button.primary:hover { background: #4a7a58; }
+  button.secondary { background: #333; color: var(--arena); border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; width: 100%; margin-top: 4px; }
+  .empty { font-size: 11px; color: #666; font-style: italic; padding: 12px; text-align: center; }
+  .status { font-size: 10px; color: #888; text-align: center; padding: 4px; }
+  .leaflet-draw-toolbar a { background-color: var(--salvia) !important; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map"></div>
+  <div id="sidebar">
+    <h1>Editor microzonas — Zona Norte</h1>
+    <div class="meta">Editor local · auto-guardado en navegador · sin pasar por geojson.io</div>
+
+    <div class="help">
+      <b>Cómo dibujar:</b><br>
+      1. Click el ícono polígono ▱ arriba a la izquierda del mapa.<br>
+      2. Click vértice por vértice. <b>Para cerrar</b>: click sobre el primer vértice O doble click.<br>
+      3. La microzona aparece acá abajo con un campo de nombre — escribilo y queda guardada.<br>
+      4. Cada polígono tiene su nombre propio. <b>No se mezclan.</b><br>
+      5. Auto-guardado en localStorage del navegador. Si recargás no perdés nada.
+    </div>
+
+    <h2>Microzonas dibujadas (<span id="count">0</span>)</h2>
+    <div id="mz-list"><div class="empty">Aún no dibujaste ninguna.</div></div>
+
+    <button class="primary" onclick="exportGeoJSON()">⬇ Descargar GeoJSON limpio</button>
+    <button class="secondary" onclick="importGeoJSON()">📂 Importar GeoJSON existente</button>
+    <button class="secondary" onclick="clearAll()" style="color: #d65b5b">🗑 Borrar todo</button>
+    <input type="file" id="import-file" accept=".geojson,.json" style="display:none">
+
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script>
+
+// ============================================================
+// DATOS (73 pm + macro)
+// ============================================================
+const PM = [
+  {id:387,n:"Condominio Cantabria",lat:-17.714786,lon:-63.1746901,pv:3},
+  {id:408,n:"Condominio TRIII",lat:-17.715333,lon:-63.176011,pv:2},
+  {id:353,n:"Condominio Vilareal Duo",lat:-17.7196535,lon:-63.1757565,pv:14},
+  {id:369,n:"Condominio Berchatti Norte 1",lat:-17.720187,lon:-63.178379,pv:5},
+  {id:360,n:"Edificio Raizant Blend",lat:-17.723815,lon:-63.175756,pv:0},
+  {id:411,n:"ATLANTIS TOWERS",lat:-17.7262315,lon:-63.1662933,pv:1},
+  {id:380,n:"Condominio La Sierra",lat:-17.7298587,lon:-63.1502982,pv:2},
+  {id:384,n:"Condominio RISE Uno",lat:-17.73068,lon:-63.15586,pv:2},
+  {id:416,n:"Tamisa III",lat:-17.7309146,lon:-63.1681218,pv:2},
+  {id:381,n:"Cond. Ecosostenible Lusitano",lat:-17.732661,lon:-63.155687,pv:4},
+  {id:409,n:"Torre Baruc Norte",lat:-17.734622,lon:-63.167499,pv:1},
+  {id:385,n:"Bless One",lat:-17.7358935,lon:-63.1592304,pv:4},
+  {id:354,n:"EDIFICIO HH HOME",lat:-17.73614,lon:-63.159265,pv:6},
+  {id:388,n:"Torre Moderna",lat:-17.736425,lon:-63.1682667,pv:10},
+  {id:375,n:"Jazmines del parque - Torre 3",lat:-17.7378412,lon:-63.1636835,pv:2},
+  {id:386,n:"Community Alto Norte",lat:-17.7403095,lon:-63.17898,pv:14},
+  {id:413,n:"Cozumel",lat:-17.743412,lon:-63.172976,pv:1},
+  {id:414,n:"EDIFICIO RAFAELA II",lat:-17.7445846,lon:-63.1838782,pv:0},
+  {id:404,n:"Ares By Elite",lat:-17.7465851,lon:-63.1784796,pv:2},
+  {id:366,n:"Edificio Essenzia",lat:-17.7469631,lon:-63.1697065,pv:9},
+  {id:420,n:"Edificio Mangales Blue",lat:-17.7479083,lon:-63.169376,pv:1},
+  {id:419,n:"Edificio Sky Line",lat:-17.7479265,lon:-63.1718508,pv:1},
+  {id:418,n:"STONE 7",lat:-17.7479265,lon:-63.1718508,pv:2},
+  {id:357,n:"BRISAS by Omnia",lat:-17.747929,lon:-63.179092,pv:3},
+  {id:124,n:"BRICKELL 5 CONDOMINIO",lat:-17.7479832,lon:-63.1797123,pv:1},
+  {id:352,n:"Edificio Mangales Blue 2",lat:-17.747997,lon:-63.168971,pv:1},
+  {id:122,n:"Brickell 4 (cuatro)",lat:-17.7480452,lon:-63.1784308,pv:4},
+  {id:356,n:"DOMUS LUXURY",lat:-17.7482409,lon:-63.1788459,pv:4},
+  {id:372,n:"DOMUS MADERO",lat:-17.7484223,lon:-63.1781607,pv:0},
+  {id:412,n:"Edificio Camila II",lat:-17.749187,lon:-63.165495,pv:0},
+  {id:273,n:"BARCELONA MIRO TOWER",lat:-17.7493053,lon:-63.1868884,pv:0},
+  {id:377,n:"Gaudí Tower",lat:-17.7500261,lon:-63.1693697,pv:2},
+  {id:406,n:"LIMCO II",lat:-17.750814,lon:-63.166415,pv:1},
+  {id:405,n:"Hera Tower",lat:-17.751143,lon:-63.181181,pv:2},
+  {id:271,n:"CURUPAU ISUTO",lat:-17.7512018,lon:-63.1912644,pv:2},
+  {id:383,n:"TRIBU URBANA",lat:-17.75201,lon:-63.180709,pv:2},
+  {id:272,n:"EDIFICIO K1",lat:-17.7520801,lon:-63.190069,pv:53},
+  {id:359,n:"CONDOMINIO ONE",lat:-17.752475,lon:-63.182174,pv:3},
+  {id:364,n:"KERONI",lat:-17.753949,lon:-63.174429,pv:4},
+  {id:407,n:"Soul Parc",lat:-17.756202,lon:-63.170393,pv:1},
+  {id:374,n:"Raizant Botanic",lat:-17.756277,lon:-63.169903,pv:3},
+  {id:270,n:"PORTOFINO 4",lat:-17.7567038,lon:-63.1865663,pv:2},
+  {id:415,n:"SANTA FE",lat:-17.757161,lon:-63.18398,pv:0},
+  {id:268,n:"STONE 4",lat:-17.7572957,lon:-63.1894418,pv:2},
+  {id:358,n:"GALIL PARQUE III",lat:-17.757963,lon:-63.183794,pv:3},
+  {id:367,n:"Torres Evolution",lat:-17.759684,lon:-63.176016,pv:5},
+  {id:370,n:"Sky Epic",lat:-17.7605519,lon:-63.1754249,pv:3},
+  {id:160,n:"Portofino Beni",lat:-17.7611872,lon:-63.173457,pv:1},
+  {id:274,n:"VERTICAL ISUTO",lat:-17.7623848,lon:-63.1897201,pv:0},
+  {id:410,n:"Zero",lat:-17.7625488,lon:-63.1845858,pv:2},
+  {id:368,n:"Ergo Experience",lat:-17.762631,lon:-63.185917,pv:0},
+  {id:376,n:"ORANGE RESIDENCE",lat:-17.762665,lon:-63.174706,pv:4},
+  {id:269,n:"PORTOBELLO ISUTO",lat:-17.7627912,lon:-63.1902592,pv:2},
+  {id:417,n:"Westgate",lat:-17.763025,lon:-63.179601,pv:1},
+  {id:56,n:"SAN NICOLAS III",lat:-17.7633509,lon:-63.1905486,pv:0},
+  {id:315,n:"La Madre",lat:-17.7633887,lon:-63.1887787,pv:1},
+  {id:276,n:"Sky Icon",lat:-17.763472,lon:-63.176397,pv:4},
+  {id:363,n:"BLESS TOWER",lat:-17.763753,lon:-63.180413,pv:5},
+  {id:361,n:"Macororo 15",lat:-17.763776,lon:-63.1782,pv:8},
+  {id:378,n:"DISART",lat:-17.764185,lon:-63.174628,pv:4},
+  {id:379,n:"Torres Gemelas",lat:-17.764249,lon:-63.181149,pv:2},
+  {id:155,n:"Portofino Ovidio",lat:-17.7644934,lon:-63.1878498,pv:1},
+  {id:362,n:"ZIRI ZWEI",lat:-17.764609,lon:-63.174503,pv:0},
+  {id:263,n:"PORTOFINO NOVO",lat:-17.765291,lon:-63.1889429,pv:0},
+  {id:267,n:"ANKAY",lat:-17.7670972,lon:-63.1865422,pv:0},
+  {id:264,n:"TORRE LA SALLE",lat:-17.7674184,lon:-63.1877342,pv:0},
+  {id:261,n:"SMART STUDIO ISUTO",lat:-17.7675309,lon:-63.1896946,pv:1},
+  {id:371,n:"Torre Vento",lat:-17.7675812,lon:-63.1698556,pv:3},
+  {id:355,n:"Blue Garden",lat:-17.7676863,lon:-63.178508,pv:6},
+  {id:403,n:"Macororo 16/17",lat:-17.767688,lon:-63.17741,pv:1},
+  {id:277,n:"Sky Aqualina",lat:-17.7679295,lon:-63.1771671,pv:1},
+  {id:83,n:"LEBLON",lat:-17.7681999,lon:-63.1892914,pv:0},
+  {id:382,n:"Gran Grigotá",lat:-17.769862,lon:-63.184507,pv:2}
+];
+
+const POLY_MACRO = [
+  [-17.7711402,-63.1887442],[-17.7638931,-63.1911289],[-17.7577448,-63.1908541],
+  [-17.7544743,-63.1905794],[-17.7523812,-63.191953],[-17.7455447,-63.1949975],
+  [-17.7279512,-63.1919555],[-17.717083,-63.1871634],[-17.711866,-63.1868211],
+  [-17.7095835,-63.19013],[-17.707627,-63.1902441],[-17.7196051,-63.1530088],
+  [-17.7282961,-63.1362621],[-17.7635772,-63.1596001],[-17.7716212,-63.1682074],
+  [-17.7702516,-63.1710839],[-17.7703494,-63.1712893],[-17.7711402,-63.1887442]
+];
+
+// Las 3 ya dibujadas por el director (29-may-2026) — pre-cargadas
+const PRECARGADAS = [
+  {
+    nombre: "2do-3er anillo Alemana-Mutualista",
+    coords: [
+      [-17.771792,-63.188461],[-17.770283,-63.182606],[-17.770258,-63.182554],
+      [-17.768471,-63.18245],[-17.766685,-63.181929],[-17.759563,-63.179036],
+      [-17.759935,-63.182815],[-17.76083,-63.187253],[-17.762212,-63.191082],
+      [-17.765681,-63.191008],[-17.768638,-63.190416],[-17.771792,-63.188461]
+    ],
+    color: "#d65b5b"
+  },
+  {
+    nombre: "2do-3er anillo Banzer-Alemana",
+    coords: [
+      [-17.770301,-63.182366],[-17.770183,-63.171265],[-17.768752,-63.170553],
+      [-17.760812,-63.167589],[-17.760512,-63.16871],[-17.7598,-63.172242],
+      [-17.759488,-63.174794],[-17.759565,-63.178919],[-17.766867,-63.181857],
+      [-17.768384,-63.182296],[-17.770301,-63.182366]
+    ],
+    color: "#2d9c4f"
+  },
+  {
+    nombre: "2do-3er anillo La Salle-Banzer",
+    coords: [
+      [-17.770218,-63.171097],[-17.771527,-63.168132],[-17.77152,-63.168092],
+      [-17.768253,-63.164211],[-17.766882,-63.162834],[-17.764638,-63.160803],
+      [-17.76404,-63.161601],[-17.762652,-63.163548],[-17.761634,-63.165509],
+      [-17.760853,-63.167524],[-17.768025,-63.170195],[-17.770218,-63.171097]
+    ],
+    color: "#e8a93a"
+  }
+];
+
+const COLORS = ["#d65b5b","#2d9c4f","#e8a93a","#6b73d6","#d6a23a","#a23ad6","#3ad6d6","#d63a8a","#8ad63a","#3a8ad6"];
+
+// ============================================================
+// MAPA
+// ============================================================
+const map = L.map('map').setView([-17.748, -63.175], 14);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  { attribution:'Tiles &copy; Esri', maxZoom: 19 }).addTo(map);
+
+L.polygon(POLY_MACRO, { color:'#EDE8DC', weight:2, dashArray:'6,6', fill:false, opacity:0.6 }).addTo(map);
+
+PM.forEach(p => {
+  const r = p.pv >= 10 ? 8 : (p.pv >= 5 ? 6 : (p.pv >= 1 ? 4 : 3));
+  const c = p.pv >= 1 ? '#3A6A48' : '#888';
+  L.circleMarker([p.lat, p.lon], { radius:r, fillColor:c, color:'#fff', weight:1, fillOpacity:0.7 })
+    .bindTooltip(`<b>${p.n}</b><br>${p.pv} props`, {direction:'top'})
+    .addTo(map);
+});
+
+// ============================================================
+// MICROZONAS (estado + Leaflet.Draw)
+// ============================================================
+const drawnItems = new L.FeatureGroup().addTo(map);
+const drawControl = new L.Control.Draw({
+  position: 'topleft',
+  draw: { polygon: { allowIntersection:false, showArea:true, shapeOptions:{color:'#3A6A48',weight:2} },
+          polyline:false, rectangle:false, circle:false, marker:false, circlemarker:false },
+  edit: { featureGroup: drawnItems }
+});
+map.addControl(drawControl);
+
+let microzonas = []; // [{id, nombre, layer, color}]
+let colorIdx = 0;
+
+function nuevaMicrozona(layer, nombre = "") {
+  const color = COLORS[colorIdx % COLORS.length]; colorIdx++;
+  layer.setStyle({ color, fillColor: color, fillOpacity: 0.2, weight: 2 });
+  const mz = { id: Date.now() + Math.random(), nombre, layer, color };
+  microzonas.push(mz);
+  drawnItems.addLayer(layer);
+  render();
+  save();
+  return mz;
+}
+
+map.on(L.Draw.Event.CREATED, e => {
+  const layer = e.layer;
+  nuevaMicrozona(layer);
+});
+map.on(L.Draw.Event.EDITED, () => { render(); save(); });
+map.on(L.Draw.Event.DELETED, e => {
+  const removed = new Set();
+  e.layers.eachLayer(l => removed.add(l._leaflet_id));
+  microzonas = microzonas.filter(m => !removed.has(m.layer._leaflet_id));
+  render(); save();
+});
+
+// ============================================================
+// POINT-IN-POLYGON (ray casting)
+// ============================================================
+function pointInPolygon(lat, lon, latlngs) {
+  // latlngs: array de [lat, lon]
+  let inside = false;
+  for (let i = 0, j = latlngs.length - 1; i < latlngs.length; j = i++) {
+    const xi = latlngs[i][0], yi = latlngs[i][1];
+    const xj = latlngs[j][0], yj = latlngs[j][1];
+    const intersect = ((yi > lon) !== (yj > lon)) && (lat < (xj - xi) * (lon - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function pmDentro(layer) {
+  const ll = layer.getLatLngs()[0].map(p => [p.lat, p.lng]);
+  return PM.filter(p => pointInPolygon(p.lat, p.lon, ll));
+}
+
+// ============================================================
+// SIDEBAR
+// ============================================================
+function render() {
+  const list = document.getElementById('mz-list');
+  document.getElementById('count').textContent = microzonas.length;
+  if (microzonas.length === 0) {
+    list.innerHTML = '<div class="empty">Aún no dibujaste ninguna.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  microzonas.forEach((mz, idx) => {
+    const dentro = pmDentro(mz.layer);
+    const props = dentro.reduce((s, p) => s + p.pv, 0);
+    const card = document.createElement('div');
+    card.className = 'mz-card';
+    card.style.borderLeftColor = mz.color;
+    card.innerHTML = `
+      <input type="text" placeholder="Nombre de microzona #${idx+1}" value="${mz.nombre.replace(/"/g,'&quot;')}" data-id="${mz.id}">
+      <div class="row">
+        <span class="nums">${dentro.length} pm · ${props} props</span>
+        <button onclick="zoomTo('${mz.id}')">Ver</button>
+        <button onclick="del('${mz.id}')">✕ Borrar</button>
+      </div>`;
+    list.appendChild(card);
+  });
+  list.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const mz = microzonas.find(m => String(m.id) === e.target.dataset.id);
+      if (mz) { mz.nombre = e.target.value; save(); }
+    });
+  });
+}
+
+function zoomTo(id) {
+  const mz = microzonas.find(m => String(m.id) === String(id));
+  if (mz) map.fitBounds(mz.layer.getBounds(), {padding:[40,40]});
+}
+function del(id) {
+  const idx = microzonas.findIndex(m => String(m.id) === String(id));
+  if (idx >= 0) { drawnItems.removeLayer(microzonas[idx].layer); microzonas.splice(idx,1); render(); save(); }
+}
+function clearAll() {
+  if (!confirm("Borrar todas las microzonas? Esto NO se puede deshacer.")) return;
+  microzonas.forEach(mz => drawnItems.removeLayer(mz.layer));
+  microzonas = []; render(); save();
+}
+
+// ============================================================
+// PERSISTENCIA + EXPORT/IMPORT
+// ============================================================
+function save() {
+  const data = microzonas.map(m => ({
+    nombre: m.nombre, color: m.color,
+    coords: m.layer.getLatLngs()[0].map(p => [p.lat, p.lng])
+  }));
+  localStorage.setItem('microzonas-zn-editor', JSON.stringify(data));
+  const s = document.getElementById('status');
+  s.textContent = '✓ Guardado ' + new Date().toLocaleTimeString();
+  setTimeout(() => { s.textContent = ''; }, 2000);
+}
+
+function load() {
+  // Prioridad: localStorage > pre-cargadas
+  const saved = localStorage.getItem('microzonas-zn-editor');
+  let initial = saved ? JSON.parse(saved) : PRECARGADAS;
+  initial.forEach(m => {
+    const layer = L.polygon(m.coords, { color: m.color, fillColor: m.color, fillOpacity: 0.2, weight: 2 });
+    const mz = { id: Date.now()+Math.random(), nombre: m.nombre, layer, color: m.color };
+    microzonas.push(mz);
+    drawnItems.addLayer(layer);
+  });
+  colorIdx = microzonas.length;
+  render();
+}
+
+function exportGeoJSON() {
+  if (microzonas.length === 0) { alert("No hay microzonas para exportar."); return; }
+  const sinNombre = microzonas.filter(m => !m.nombre.trim());
+  if (sinNombre.length > 0) {
+    if (!confirm(`${sinNombre.length} microzona(s) sin nombre. ¿Exportar igual? (mejor ponerles nombre antes)`)) return;
+  }
+  const features = microzonas.map((m, idx) => ({
+    type: "Feature",
+    properties: {
+      nombre: m.nombre || `(sin nombre ${idx+1})`,
+      zona_general: "Zona Norte",
+      orden: idx + 1,
+      pm_dentro: pmDentro(m.layer).length,
+      props_dentro: pmDentro(m.layer).reduce((s,p) => s+p.pv, 0),
+      fill: m.color, "fill-opacity": 0.18, stroke: m.color, "stroke-width": 2
+    },
+    geometry: {
+      type: "Polygon",
+      coordinates: [m.layer.getLatLngs()[0].map(p => [p.lng, p.lat]).concat([[m.layer.getLatLngs()[0][0].lng, m.layer.getLatLngs()[0][0].lat]])]
+    }
+  }));
+  const gj = { type: "FeatureCollection", name: "microzonas-zn", features };
+  const blob = new Blob([JSON.stringify(gj, null, 2)], {type: 'application/geo+json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'microzonas-zn.geojson';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importGeoJSON() {
+  document.getElementById('import-file').click();
+}
+document.getElementById('import-file').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const gj = JSON.parse(ev.target.result);
+      const polys = (gj.features || []).filter(f =>
+        f.geometry && f.geometry.type === 'Polygon' &&
+        f.properties && f.properties.nombre &&
+        f.properties.tipo !== 'macro_referencia' &&
+        !/Zona Norte( \(macro|$)/i.test(f.properties.nombre || '')
+      );
+      if (polys.length === 0) { alert("No se encontraron microzonas válidas en el archivo."); return; }
+      if (!confirm(`Importar ${polys.length} microzonas? (las actuales se reemplazan)`)) return;
+      microzonas.forEach(m => drawnItems.removeLayer(m.layer));
+      microzonas = []; colorIdx = 0;
+      polys.forEach(f => {
+        const coords = f.geometry.coordinates[0].map(c => [c[1], c[0]]);
+        const color = f.properties.fill || COLORS[colorIdx % COLORS.length]; colorIdx++;
+        const layer = L.polygon(coords, { color, fillColor: color, fillOpacity: 0.2, weight: 2 });
+        microzonas.push({ id: Date.now()+Math.random(), nombre: f.properties.nombre, layer, color });
+        drawnItems.addLayer(layer);
+      });
+      render(); save();
+    } catch (err) { alert("Error leyendo archivo: " + err.message); }
+  };
+  reader.readAsText(f);
+  e.target.value = '';
+});
+
+// ============================================================
+load();
+</script>
+</body>
+</html>

@@ -22,7 +22,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT\n  nombre,\n  ST_AsGeoJSON(geom) AS geom_geojson,\n  ST_XMin(geom) AS lon_oeste,\n  ST_YMin(geom) AS lat_sur,\n  ST_XMax(geom) AS lon_este,\n  ST_YMax(geom) AS lat_norte\nFROM zonas_geograficas\nWHERE activo = true\n  AND nombre = ANY(ARRAY['Zona Norte']::text[]);",
+        "query": "SELECT\n  nombre,\n  ST_AsGeoJSON(geom) AS geom_geojson,\n  ST_XMin(geom) AS lon_oeste,\n  ST_YMin(geom) AS lat_sur,\n  ST_XMax(geom) AS lon_este,\n  ST_YMax(geom) AS lat_norte\nFROM zonas_geograficas\nWHERE activo = true\n  AND zona_general = ANY(ARRAY['Zona Norte']::text[]);",
         "options": {}
       },
       "id": "pg-leer-poligonos-zn-rmx",
@@ -50,7 +50,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// === GENERADOR DE URLs REMAX (endpoint base SC sin slug) ===\n// Trae TODO Santa Cruz paginado. El filtro por polígono se aplica post-fetch.\n// Cobertura validada en PoC 20-may-2026: ~517 props en 30 páginas. Margen: 30 páginas fijas.\n\nconst TOTAL_PAGES = 30;\nconst BASE_URL = 'https://remax.bo/api/search/departamento/santa-cruz-de-la-sierra';\n\nconst urls = [];\nfor (let page = 1; page <= TOTAL_PAGES; page++) {\n  urls.push({\n    json: {\n      page_url: `${BASE_URL}?page=${page}`,\n      page_number: page,\n      fuente: 'remax'\n    }\n  });\n}\n\nconsole.log(`URLs generadas: ${urls.length} páginas para todo SC. Filtro por polígono post-fetch.`);\nreturn urls;"
+        "jsCode": "// === GENERADOR DE URLs REMAX (endpoint base SC sin slug) ===\n// Trae TODO Santa Cruz paginado. El filtro por polígono se aplica post-fetch.\n// Cobertura validada en PoC 20-may-2026: ~517 props en 30 páginas.\n// 29-may: subido a 60 como margen futuro. NO era truncamiento: 30 y 60 dan el\n// MISMO snapshot (Remax tiene ~166 deptos en ZN; las paginas extra devuelven []).\n// Las props ausentes del snapshot son caidas reales del portal -> las juzga el\n// verificador HTTP. Ver ticket #14.\n\nconst TOTAL_PAGES = 60;\nconst BASE_URL = 'https://remax.bo/api/search/departamento/santa-cruz-de-la-sierra';\n\nconst urls = [];\nfor (let page = 1; page <= TOTAL_PAGES; page++) {\n  urls.push({\n    json: {\n      page_url: `${BASE_URL}?page=${page}`,\n      page_number: page,\n      fuente: 'remax'\n    }\n  });\n}\n\nconsole.log(`URLs generadas: ${urls.length} páginas para todo SC. Filtro por polígono post-fetch.`);\nreturn urls;"
       },
       "id": "gen-urls-zn-rmx",
       "name": "Generar URLs Remax",
@@ -131,7 +131,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, url, status\n  FROM propiedades_v2\n  WHERE fuente = 'remax'\n    AND status NOT IN ('inactivo_confirmed')\n    AND zona = ANY(ARRAY['Zona Norte']::text[])",
+        "query": "SELECT id, url, status\n  FROM propiedades_v2\n  WHERE fuente = 'remax'\n    AND status NOT IN ('inactivo_confirmed')\n    AND zona IN (SELECT nombre FROM zonas_geograficas WHERE zona_general = ANY(ARRAY['Zona Norte']::text[]) AND activo = true)",
         "options": {}
       },
       "id": "obtener-bd-zn-rmx",

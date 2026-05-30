@@ -375,8 +375,8 @@ e105aa4 — Sesión 2 capa 1: cierre audit + ticket #1 archivado
 ### Roadmap para próximas sesiones
 
 ```
-[Mañana 29-may, 5 min]
-- Verificar merge nocturno (7 Essenzia + 2 STONE 7 desmatcheadas)
+[29-may]
+- ✅ Verificar merge nocturno → ejecutado, ver sección "29 May 2026" abajo
 
 [Próxima sesión grande, ~medio día]
 - #8 microzonas ZN (Hamacas, Banzer 3-5to, Radial 26, Norte 4-5to)
@@ -386,3 +386,236 @@ e105aa4 — Sesión 2 capa 1: cierre audit + ticket #1 archivado
 - #6 frontend /mercado/zona-norte (privado por token)
 - #1.7 detector automático (en paralelo)
 ```
+
+---
+
+## 29 May 2026 — Verificación nocturna + 3 pm nuevos + cleanup falsos STONE 4/K1
+
+**Origen:** TODO de cierre del 28-may pedía verificar merge nocturno sobre 7 Essenzia + 2 STONE 7 desmatcheadas. La revisión arrancó como check de 5 min y derivó en cleanup de 10 props con 3 pm nuevos creados.
+
+### Health del pipeline nocturno (28→29-may)
+
+- `enrichment_llm_venta` 02:15 → success, 0 errores. Único workflow trackeado en `workflow_executions` (discovery / merge / matching / verificador no escriben ahí — deuda de observability conocida).
+- 486 props ZN con `fecha_discovery=29-may` (re-discovery diario esperado, regla 11 CLAUDE.md).
+- 149 sugerencias `pendiente_zn` en cola HITL. Las 27 `pendiente` (sin sufijo) son **todas Equipetrol** → trigger `trg_separar_hitl_zona_norte` (mig 253) funciona perfecto.
+- 30 props alquiler ZN ya con `status='completado'` (entrando por GPS sin necesidad de Fase 5 formal).
+
+### Hallazgos de auditoría sobre las desmatcheadas
+
+| Caso | Diagnóstico |
+|---|---|
+| 2 STONE 7 (2083, 2084) | El cleanup del 28-may las dejó NULL pero el matching nocturno las re-asignó a STONE 4 (pm 268) porque `nombre_edificio` quedó pegado en "STONE 4". URLs c21 `stone-7-...` confirman edificio distinto. |
+| 3 "Condominio Essenzia" (2102, 2103, 2104) | pm 366 "Edificio Essenzia" no tenía alias `Condominio Essenzia` → 3 props legítimas sin match por bug de aliasing. |
+| 3 Essenzia ya matched (2082, 2085, 2269) | Bien matched, sin acción. |
+| 2268 (Remax sin nombre, 10m de Essenzia) | Listing sin nombre extraíble → asignable por GPS al pm 366. |
+| 2101 (`nombre="Con"` truncado, 22m) | Mismo patrón GPS. |
+| 2097 (sin nombre, GPS desplazado 277m) | URL `97817_condominio-essenzia` confirma edificio. Patrón "agente publicó GPS aproximado" documentado en bitácora 28-may. URL manda. |
+| **2287 (matched a EDIFICIO K1)** ⚠️ | **Match falso no detectado el 28-may.** Estaba a 110m del GPS Essenzia y a **2249m** del K1 real. Director confirmó: es Edificio Mangales Blue (GPS -17.7479083, -63.16937597), torre distinta de pm 352 "Mangales Blue 2". |
+| **2436 ("Sky Line", 4m del GPS STONE 7)** | Director confirmó: Edificio Sky Line es vecino pared con pared de STONE 7. Edificio distinto, mismo GPS centroidal. |
+
+### Acciones aplicadas (3 bloques DO PL/pgSQL desde Supabase UI)
+
+**Bloque 1 — STONE 7 + Sky Line:**
+- Creado pm **#418 "STONE 7"** (Zona Norte, GPS verificado director, aliases `STONE 7/Stone 7/STONE7/stone 7/stone-7`).
+- Creado pm **#419 "Edificio Sky Line"** (Zona Norte, GPS idéntico a STONE 7, aliases `Sky Line/Skyline/SKY LINE/sky-line/sky line`).
+- Reasignados 2083, 2084 → STONE 7; 2436 → Sky Line. Todos con `campos_bloqueados.nombre_edificio` para que el matching nocturno no los vuelva a robar.
+
+**Bloque 2 — Essenzia:**
+- Aliases `Condominio Essenzia/CONDOMINIO ESSENZIA/condominio essenzia/Essenzia/ESSENZIA` agregados al pm 366.
+- Reasignadas 2102, 2103, 2104 vía `metodo_match='alias_manual_29may'`.
+- Reasignadas 2268, 2101, 2097 vía `gps_manual_29may` / `url_manual_29may` + `campos_bloqueados.nombre_edificio` con `nombre_edificio='Edificio Essenzia'`.
+
+**Bloque 3 — Mangales Blue:**
+- Creado pm **#420 "Edificio Mangales Blue"** (Zona Norte, GPS verificado director, aliases `Mangales Blue/MANGALES BLUE/mangales-blue`). Es torre 1, distinta del pm 352 "Mangales Blue 2" a 44m de distancia.
+- Reasignada 2287 (estaba mal matched a K1, con metodo_match anterior). Ahora `metodo_match='manual_gps_29may'` + nombre bloqueado.
+
+### Patrón nuevo confirmado
+
+**Edificios pared con pared / torres gemelas** del mismo desarrollo aparecen como pm separados con GPS idéntico (Sky Line + STONE 7) o casi idéntico (Mangales Blue 1 a 44m de Mangales Blue 2). El matcher `gps_verificado` va a generar sugerencias HITL **dobles** para props ≤80m del cluster, pero no asigna automático — las distingue la URL/nombre en revisión humana. No es bug, es comportamiento esperado para zonas densas con desarrolladoras de torres múltiples. Misma situación probable en Equipetrol (DOMUS LUXURY + DOMUS MADERO descubiertos 28-may a 36-50m de Brickell 4).
+
+### Estado al cierre
+
+| Métrica | Cierre 28-may | Cierre 29-may | Δ |
+|---|---|---|---|
+| pm ZN activos | 70 | **73** | +3 (STONE 7, Sky Line, Mangales Blue) |
+| Match rate ZN venta | 54.2% | **60.6%** | +6.4 pp |
+| Props matched | 212 | 238 | +26 (incluye delta de la corrida nocturna +19) |
+| Props sin match | 179 | ~155 | -24 |
+| pm con verificación visual | 70/70 | **73/73 (100%)** | mantiene |
+| Falsos matches detectados y limpiados | 63 (K1+STONE+CURUPAU+Brickell) | +3 (2 STONE 7, 1 K1) | acumulado: 66 |
+| `campos_bloqueados.nombre_edificio` aplicados | — | **10 props** | nuevo |
+
+### Lecciones meta del 29-may
+
+1. **Los falsos matches reaparecen si el `nombre_edificio` quedó pegado.** El cleanup del 28-may seteó `id_proyecto_master=NULL` pero el matching nocturno los re-asignó al mismo falso porque `nombre_edificio='STONE 4'` seguía persistido. **Bloqueo de `nombre_edificio` con `campos_bloqueados` debe ser parte del cleanup desde el inicio**, no opcional.
+
+2. **El audit del 28-may fue exhaustivo pero no detectó el match falso 2287→K1** (estaba a 2.2km del K1 real). El cleanup de K1 (54 falsos pre-blindaje) se enfocó en GPS cercanos al pm K1; 2287 no salió ahí porque su GPS está lejos de K1. **Patrón: matches viejos donde tanto el nombre como el GPS son falsos pueden pasar inadvertidos en audits geográficos.** El cleanup del 29-may los encontró porque empezó por nombre + GPS objetivo del director.
+
+3. **El bug de alias chico (`Condominio Essenzia` vs pm `Edificio Essenzia`) costó 3 props sin match durante 2 días.** Vale la pena enriquecer alias proactivamente: cualquier pm nuevo debería arrancar con ≥3 variantes (Edificio X, Condominio X, X). Candidato para tooling automático en #1.7.
+
+4. **GPS idéntico entre pm vecinos pared con pared es manejable** vía HITL `pendiente_zn`. No forzar separación artificial — la URL/nombre va a distinguir en revisión.
+
+### Commits del día (0)
+
+Cambios fueron 3 DO blocks aplicados desde Supabase UI + docs (este append + README contadores). Sin migraciones nuevas. Sin código.
+
+### Roadmap (sigue igual)
+
+```
+[Próxima sesión grande, ~medio día]
+- #8 microzonas ZN (Hamacas, Banzer 3-5to, Radial 26, Norte 4-5to)
+   bloquea #6 frontend
+
+[Después de #8]
+- #6 frontend /mercado/zona-norte (privado por token)
+- #1.7 detector automático (en paralelo) — sumar al scope: enriquecer alias automáticamente al crear pm
+```
+
+---
+
+## 29 May 2026 (continuación) — Diseño completo del ticket #8 + revisión senior
+
+**Origen:** después de la sesión técnica de la mañana (verificación nocturna + 3 pm nuevos), la pregunta del director: "cuál es el siguiente paso en Zona Norte?" llevó al diseño completo del ticket #8 microzonas.
+
+### Cronología del diseño
+
+1. **Discusión criterio de microzonas**: arrancamos con mi propuesta de 4 rectángulos por bandas latitudinales (Hamacas, Banzer Norte, Banzer Sur, Frontera EQ). Descartada — el director propuso criterio más granular siguiendo patrón Equipetrol (anillos × calles).
+
+2. **Iteración en geojson.io**: 3 archivos progresivos del director:
+   - Borrador 1: 3 polígonos del 2do-3er anillo.
+   - Borrador 2: 17 polígonos con duplicados + nombres cruzados + 1 polígono con coords del macro.
+   - Borrador 3: 14 polígonos limpios (la grilla final).
+
+3. **Recorte automático contra EQ**: identifiqué 2 overlaps reales con EQ (184m y 142m) en el lado oeste (La Salle-Banzer). Aplicado `ST_Difference` vs EQ activo: 574 m² + 165 m² recortados. Overlap residual final: 4 m² (irrelevante).
+
+4. **Verificación de gaps**: la unión de las 14 cubre el bbox del macro original con **1.56% sin cubrir** (43 hectáreas en 3 gaps + 2 slivers). **0 props/pm caen en gaps hoy**. Query de monitoreo agregada a `operacion.md`.
+
+5. **Discusión modelo conceptual**: el director explicó que EQ y ZN son macrozonas hermanas operativamente (no jerárquicas) en el habla del mercado, aunque ZN geográficamente contenga EQ. → ADR-010.
+
+6. **Revisión senior de plan A SEGURA**: el plan inicial tenía 3 pasos. La revisión exhaustiva detectó 5 bloqueantes:
+   - CHECK constraint `zona_valida` rechaza las 14 microzonas.
+   - Trigger HITL mig 253 hardcodea `zona='Zona Norte'` (CONTAMINA EQ HITL post-migración).
+   - Matching mig 251 requiere actualizar los 73 pm a microzona específica.
+   - `get_zona_by_gps()` sin filtro `activo=TRUE`.
+   - Filtro admin "Zona Norte (piloto)" en `lib/zonas.ts:92` queda obsoleto.
+
+7. **Discusión escalabilidad**: el director preguntó "es escalable? cada microzona nueva voy a tener que tocar el discovery?". Respuesta honesta: NO, no es escalable. Identifiqué 7 puntos de hardcoding. Diseñamos:
+   - **Camino W** (low regret): 3 mejoras chicas + ticket #11 nuevo para refactor escalable completo.
+   - **Camino B refactor snapshot**: paralelización con `filter_version=4` para refactorizar `snapshot_absorcion_mercado()` a dinámico vía `zona_general` sin riesgo a EQ.
+
+8. **Producción de documentación final**: el director pidió "hace un doble check al plan como lo haría un senior de clase mundial revisando todo, arquitectura posible bugs y todo lo que no veo porque no soy desarrollador para que la implementación fluya sola". Resultado: 4 documentos nuevos + 2 docs actualizados + 14 microzonas listas para aplicar.
+
+### Hallazgos críticos del doble-check senior
+
+1. **`/admin/market.tsx` filtra por `zona='global'`** (líneas 1020, 1033, 1057). El refactor v4 preserva ese nombre para EQ por backward compat.
+2. **`snapshot_absorcion_mercado()` LOOP 2 ya itera por DISTINCT zona** — Zona Norte automáticamente tiene serie por microzona post-migración.
+3. **`resumen_mercado()` y `buscar_propiedades()` hardcodean 5 zonas EQ** (falta 'Eq. 3er Anillo' — bug latente preexistente). Documentado para ticket #11.
+4. **`insertar_proyectos_aprobados()` asigna `zona='Equipetrol'` sin sufijo** — no existe en CHECK constraint, probablemente bug latente. Investigar en ticket #11.
+5. **`populate_broker_prospection()` solo trae brokers EQ** — si se quiere prospección ZN, hay que agregar microzonas o usar `zona_general`. Documentado.
+
+### Artefactos producidos al cierre del día
+
+| Archivo | Estado |
+|---|---|
+| `docs/proyectos/zona-norte/PLAN_IMPLEMENTACION_MICROZONAS.md` | NUEVO — master document, 7 fases + rollback + monitoreo |
+| `sql/migrations/254_microzonas_zona_norte.sql` | NUEVO — migración principal lista para aplicar |
+| `sql/migrations/254_microzonas_zona_norte_rollback.sql` | NUEVO — rollback completo |
+| `sql/migrations/255_snapshot_absorcion_v4_dinamico.sql` | NUEVO — refactor snapshot con paralelización (LOOP 2 con placeholder a completar) |
+| `docs/canonical/ZONAS_ZONA_NORTE.md` | NUEVO — canonical paralelo a ZONAS_EQUIPETROL.md |
+| `docs/proyectos/zona-norte/DECISIONES.md` | ACTUALIZADO — ADR-010 agregado |
+| `docs/proyectos/zona-norte/BACKLOG.md` | ACTUALIZADO — ticket #8 marcado "plan listo", ticket #11 nuevo agregado |
+| `docs/proyectos/zona-norte/microzonas-propuesta/microzonas-zn-final-recortado.geojson` | NUEVO (commit anterior) — fuente de verdad |
+
+### Estimación de aplicación final
+
+| Fase | Tiempo |
+|---|---|
+| Sesión 1: migración SQL + frontend + workflows + docs | ~7h |
+| Observación pasiva paralelización snapshot | 14 días |
+| Sesión 2: switch v3→v4 (futura) | 30 min |
+
+### Lecciones meta del día
+
+1. **El usuario que NO es desarrollador tiene razón al preguntar "es escalable?"**. Mi plan inicial pasaba sobre eso y me marcó la deuda. Reaccioné con Camino W + ticket #11.
+2. **Las revisiones senior detectan cosas que el plan optimista oculta**. 5 bloqueantes salieron solo al leer código real (no docs). El trigger HITL hubiera contaminado EQ silenciosamente.
+3. **Fui demasiado conservador en mi estimación de complejidad del refactor snapshot**. Al re-analizar con paralelización filter_version=4, el riesgo bajó de "medio-alto" a "bajo". Aprender a separar riesgo inherente vs riesgo manejable con red de seguridad.
+4. **El patrón "paralelización por versión"** (filter_version) que ya existía en `market_absorption_snapshots` fue clave para reducir riesgo. Aprovechar features ya construidas antes de inventar.
+5. **Documentación pre-implementación valiosa**: el director pidió "que la implementación fluya sola" — el `PLAN_IMPLEMENTACION_MICROZONAS.md` con orden de pasos, checkpoints de validación, rollback documentado y smoke tests permite que cualquier ingeniero (incluso él mismo) aplique sin contexto adicional.
+
+### Roadmap
+
+```
+[Sesión siguiente]
+- Aplicar mig 254 + mig 255 con paralelización
+- Update lib/zonas.ts + workflows n8n
+- Smoke tests frontend
+
+[14 días después]
+- Switch snapshot v3→v4
+
+[Cuando llegue Urubó/próxima macrozona]
+- Empezar ticket #11 (refactor zonas dinámico)
+```
+
+---
+
+### Auditoría del backlog al cierre del 29-may (mini-housekeeping)
+
+Antes de cerrar la sesión para preparar la implementación en sesión nueva, auditoría rápida del estado del backlog. Detectado:
+
+1. **#1 (mejorar prompt LLM)** seguía marcado como "🔴 Crítico próxima sesión" aunque estaba ARCHIVADO desde el 28-may. Marcado como ✅ ARCHIVADO en el título + nota explicativa. Contenido histórico mantenido para trazabilidad de las 3 iteraciones de análisis.
+
+2. **#1.5 (cargar pm ZN)** seguía marcado como pendiente aunque los 73 pm ZN estaban verificados al 100% al 29-may. Marcado como ✅ COMPLETADO en el título + nota.
+
+3. **Sección "🔴 Tickets críticos (próxima sesión)"** renombrada a "🟡 Tickets de calidad de matching (paralelos a #8, no bloquean)" porque el #1 está archivado, el #1.5 está hecho, y el #1.7 (detector automático de clusters) no bloquea la próxima sesión que es aplicar #8.
+
+4. **Header del BACKLOG** actualizado a 29-may + agregada línea "🎯 Próxima sesión: aplicar Ticket #8 según PLAN_IMPLEMENTACION_MICROZONAS.md".
+
+**Por qué importa este detalle**: el prompt para la sesión nueva indica leer el BACKLOG antes de tocar nada. Si el #1 hubiera seguido marcado como "Crítico próxima sesión", el modelo nuevo podría haberse confundido sobre cuál es el ticket activo.
+
+**Reglas que quedan claras para futuros tickets**:
+- Cuando un ticket cierra, marcar el título con ✅ + breve nota de cómo se resolvió.
+- Cuando un ticket se archiva sin ejecutar, marcar título con ✅ ARCHIVADO + razón.
+- Mantener contenido histórico abajo del título marcado para trazabilidad.
+- Reservar etiqueta 🔴 solo para tickets que SÍ son urgentes ahora.
+
+---
+
+## 29 May 2026 — Aplicación FASE 1 (mig 254) + descarte de v4 snapshot
+
+Sesión de **ejecución** del ticket #8 (el diseño se cerró antes, mismo día). Branch de trabajo `feat/zn-microzonas-aplicacion` desde `f1a86d8`.
+
+### FASE 1 — mig 254 aplicada ✅ (8/8 CHECKs, EQ intacto)
+
+- **Pre-requisitos:** baseline guardado (`pre-migracion-baseline.txt`), backup dirigido (`backup_dirigido_pre_mig254_2026-05-29.sql`), workflows discovery ZN + auditoría diaria (snapshot) desactivados en n8n.
+- **Bug encontrado al aplicar (PASO 5/6):** `UPDATE ... FROM LATERAL` referenciaba la tabla target (`p`) — PostgreSQL no lo permite. La mig falló atómicamente (BD intacta). **Fix:** envolver el `LATERAL` sobre una instancia separada (`p2`/`pm2`) + JOIN por PK. Re-aplicada OK.
+- **Resultado:** 14 microzonas activas, macro desactivado, 520 props + 73 pm redistribuidos (0 en gaps), trigger HITL → `pendiente_zona_norte` (149 migrados), **CHECK 5 EQ diff=0 (sin bandera roja)**.
+- **Hallazgo de datos:** 3 props anómalas (843/1018 `microzona='Sin zona'`, 1942 `NULL`) que el rollback estándar dejaría mal → **parcheado el rollback (PASO 2b)** + cubierto por el backup dirigido.
+- **Pre-test que de-riesgó CHECK 3:** las 520 props testeadas contra los 14 WKT antes de aplicar → 0 en gaps confirmado.
+- **Commit:** `3a8309f` (local).
+
+### FASE 2-4 — v4 snapshot DESCARTADO (no era necesario)
+
+Al preparar la mig 255 (snapshot v4 paralelo), **dos hallazgos** llevaron a descartar el enfoque:
+
+1. **Bug de duplicación (LOOP 1):** el `INNER JOIN zonas_geograficas` de v4 duplicaba props de `Equipetrol Norte` (**2 polígonos, mismo nombre** en `zonas_geograficas`) → conteos inflados (+6/+18/+13/+3 por dorm). Fix conocido: `IN`-subquery.
+
+2. **🔴 Bloqueante de diseño:** la unique constraint `(fecha, dorm, zona)` **no incluye `filter_version`**. v3 (fv=3) y v4 (fv=4) no pueden coexistir en `zona='global'` — el `ON CONFLICT` de v4 pisaría la serie de producción que consumen `/admin/market` **y el feed público** `/mercado/equipetrol/ventas`. La "paralelización" del Camino B era inviable sin tocar tabla + función nocturna v3 + 2 frontends (uno público).
+
+**Decisión (con el director):** descartar v4 y la paralelización. Razones:
+- La paralelización de 14 días existía para **ganar confianza** en el enfoque dinámico. Esa confianza se obtuvo en minutos vía **validación compute-only** (query readonly, cero escritura): **paridad EQ exacta diff=0** en activas/absorbidas/pending/nuevas × 4 dorms. El `IN`-subquery también quedó validado.
+- La función **v3 actual, sin cambios, ya genera las series por-microzona ZN** (su LOOP 2 itera `DISTINCT zona`). Verificado: **12 microzonas ZN con venta `completado`** → 12 series al reactivar el cron. La serie ZN tendría 379 activas (48/180/106/45 por dorm).
+- ⇒ Snapshot de Zona Norte **cubierto sin escribir una línea de SQL nuevo**. Solo falta reactivar el workflow de auditoría.
+
+**Lo único que v3 no hace:** un agregado `'global_zona_norte'`. Eso pasa a **ticket #12** (no bloqueante; se resuelve con cambio mínimo y aislado cuando lo pida el frontend ZN #6).
+
+- **mig 255:** marcada `⚠️ NO APLICAR — DESCARTADA` en su header (se conserva como registro del intento + el fix del JOIN).
+- **Deuda menor anotada:** `Equipetrol Norte` tiene 2 polígonos en `zonas_geograficas` — inofensivo hoy (nadie hace JOIN-por-nombre en prod; todo es `ST_Contains`/`LIMIT 1`), pero conviene revisar si deberían fusionarse.
+
+### Lección meta del día
+
+**Validar contra la BD real antes de aplicar revela lo que el plan optimista oculta.** Dos defectos (LATERAL sobre target, y constraint sin filter_version) estaban en migraciones "cerradas tras revisión senior" que **nunca se ejecutaron**. La condición del director ("solo si no daña producción") fue la que forzó verificar la constraint **antes** de correr v4 — sin eso, se habría pisado el feed público. Y la validación compute-only mostró que toda la maquinaria de paralelización (14 días) sobraba para el riesgo real.
+
+### Próximo paso
+
+FASE 5-7 (no dependen del snapshot): `lib/zonas.ts` (14 microzonas en filtro admin) → workflows n8n ZN (array de microzonas) → docs. **Reactivar el workflow `auditoria_diaria_sici_v3.0`** en n8n (se desactivó para la ventana de migración).

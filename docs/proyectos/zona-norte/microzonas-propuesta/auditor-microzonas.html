@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Auditor microzonas Zona Norte</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root { --bg:#141414; --arena:#EDE8DC; --salvia:#3A6A48; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--arena); }
+  #app { display: flex; height: 100vh; }
+  #map { flex: 1; }
+  #sidebar { width: 420px; background: var(--bg); border-left: 1px solid #333; overflow-y: auto; padding: 14px; font-size: 12px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  .meta { font-size: 11px; color: #777; margin-bottom: 10px; }
+  .help { font-size: 11px; padding: 8px; background: #1a2412; border-left: 3px solid var(--salvia); border-radius: 2px; margin-bottom: 10px; color: #b8c8a8; line-height: 1.4; }
+  .drop { border: 2px dashed #444; border-radius: 4px; padding: 18px; text-align: center; color: #888; cursor: pointer; margin-bottom: 10px; }
+  .drop:hover, .drop.over { border-color: var(--salvia); color: var(--arena); background: #1a2412; }
+  .mz-card { background: #1f1f1f; border-left: 4px solid var(--salvia); padding: 8px 10px; border-radius: 4px; margin-bottom: 6px; cursor: pointer; }
+  .mz-card:hover { background: #2a2a2a; }
+  .mz-card.error { border-left-color: #d65b5b; background: #2a1212; }
+  .mz-card.warn { border-left-color: #e8a93a; background: #2a2412; }
+  .mz-card .name { font-size: 12px; font-weight: 600; word-break: break-word; }
+  .mz-card .meta-row { font-size: 10px; color: #888; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .mz-card .issue { font-size: 11px; color: #d6a23a; margin-top: 3px; }
+  .mz-card.error .issue { color: #d65b5b; }
+  .mz-card input { background: #0f0f0f; color: var(--arena); border: 1px solid #444; padding: 3px 5px; border-radius: 3px; font-size: 11px; width: 100%; margin-top: 4px; }
+  .mz-card button { background: transparent; color: #d65b5b; border: 1px solid #d65b5b; padding: 2px 5px; border-radius: 3px; font-size: 10px; cursor: pointer; margin-right: 4px; }
+  button.primary { background: var(--salvia); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%; margin-top: 6px; }
+  button.primary:hover { background: #4a7a58; }
+  .empty { font-size: 11px; color: #666; font-style: italic; padding: 12px; text-align: center; }
+  .summary { background: #1a1a1a; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 11px; }
+  .summary .row { display: flex; justify-content: space-between; padding: 2px 0; }
+  .label-tooltip { background: rgba(20,20,20,0.85); color: #EDE8DC; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: 600; border: 1px solid #555; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map"></div>
+  <div id="sidebar">
+    <h1>Auditor microzonas — ZN</h1>
+    <div class="meta">Carga tu .geojson, ves los polígonos con sus nombres encima, los corregís y exportás limpio.</div>
+
+    <div class="help">
+      <b>Cómo usar:</b><br>
+      1. Arrastrá tu archivo `.geojson` acá ↓ (o click).<br>
+      2. Cada polígono aparece coloreado con su nombre pintado encima.<br>
+      3. <b>Rojo</b> = error grave (macro disfrazado, sin nombre).<br>
+      4. <b>Amarillo</b> = warning (duplicado, typo, nombre sospechoso).<br>
+      5. <b>Verde</b> = OK.<br>
+      6. Click en card → zoom al polígono. Editás el nombre ahí mismo.<br>
+      7. ⬇ Descargar GeoJSON limpio cuando termines.
+    </div>
+
+    <label class="drop" id="drop" for="file-input">
+      📂 Click o arrastrá `zona norte expandida.geojson`
+      <input type="file" id="file-input" accept=".geojson,.json" style="display:none">
+    </label>
+
+    <div id="summary" class="summary" style="display:none">
+      <div class="row"><span>Total polígonos:</span> <span id="s-total">—</span></div>
+      <div class="row"><span style="color:#7bca7b">✓ OK:</span> <span id="s-ok">—</span></div>
+      <div class="row"><span style="color:#e8a93a">⚠ Warnings:</span> <span id="s-warn">—</span></div>
+      <div class="row"><span style="color:#d65b5b">✗ Errores:</span> <span id="s-error">—</span></div>
+    </div>
+
+    <div id="mz-list"><div class="empty">Esperando archivo…</div></div>
+
+    <button class="primary" id="export-btn" onclick="exportClean()" style="display:none">⬇ Descargar GeoJSON limpio</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const COLORS = {ok:'#3A6A48', warn:'#e8a93a', error:'#d65b5b'};
+const PALETTE = ["#d65b5b","#2d9c4f","#e8a93a","#6b73d6","#d6a23a","#a23ad6","#3ad6d6","#d63a8a","#8ad63a","#3a8ad6","#d65b8a","#8ad6a8","#a8d63a","#3a5bd6","#d68a3a","#3ad68a","#8a3ad6"];
+
+const map = L.map('map').setView([-17.74, -63.175], 13);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {attribution:'Esri', maxZoom:19}).addTo(map);
+
+let polys = []; // {id, nombre, layer, label, status, issue, origCoords, origColor}
+
+// ============================================================
+// CARGA
+// ============================================================
+function onFile(f) {
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const gj = JSON.parse(e.target.result);
+      loadGeoJSON(gj);
+    } catch (err) { alert("Error parseando JSON: " + err.message); }
+  };
+  reader.readAsText(f);
+}
+
+document.getElementById('file-input').addEventListener('change', e => onFile(e.target.files[0]));
+const drop = document.getElementById('drop');
+['dragover','dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); onFile(e.dataTransfer.files[0]); });
+
+function loadGeoJSON(gj) {
+  // Limpio estado previo
+  polys.forEach(p => { map.removeLayer(p.layer); if (p.label) map.removeLayer(p.label); });
+  polys = [];
+
+  const features = (gj.features || []).filter(f => f.geometry && f.geometry.type === 'Polygon');
+
+  // Detecto el macro (el polígono con bbox más grande, probablemente)
+  let macroBbox = null;
+  features.forEach(f => {
+    const coords = f.geometry.coordinates[0];
+    const lats = coords.map(c => c[1]), lons = coords.map(c => c[0]);
+    const w = (Math.max(...lons) - Math.min(...lons)) * 111000 * Math.cos((-17.74)*Math.PI/180);
+    const h = (Math.max(...lats) - Math.min(...lats)) * 111000;
+    f._size = w*h;
+    f._w = w; f._h = h;
+    f._centroLat = (Math.max(...lats)+Math.min(...lats))/2;
+    f._centroLon = (Math.max(...lons)+Math.min(...lons))/2;
+  });
+  // El macro es el "Zona Norte" o el más grande
+  const macroF = features.find(f => /^Zona Norte/i.test((f.properties||{}).nombre||'')) ||
+                 features.reduce((a,b) => a._size > b._size ? a : b);
+  const macroSize = macroF ? macroF._size : 0;
+
+  // Hash de coords para detectar duplicados
+  const coordHashes = {};
+  features.forEach(f => {
+    const h = f.geometry.coordinates[0].slice(0,4).map(c => c.map(x => x.toFixed(4)).join(',')).join('|');
+    coordHashes[h] = (coordHashes[h] || []);
+    coordHashes[h].push(f);
+  });
+
+  let colorIdx = 0;
+  features.forEach((f, idx) => {
+    const nombre = (f.properties || {}).nombre || '(SIN NOMBRE)';
+    const isMacro = f === macroF || /^Zona Norte( \(macro|$)/i.test(nombre);
+
+    // Diagnóstico
+    let status = 'ok'; let issue = '';
+    if (isMacro) {
+      // El macro original lo dibujamos como referencia, no como microzona
+      status = 'ref';
+    } else if (Math.abs(f._size - macroSize) < macroSize * 0.05) {
+      status = 'error'; issue = '❌ Tiene dimensiones del macro entero ZN — no es microzona';
+    } else if (!f.properties || !f.properties.nombre || nombre === '(SIN NOMBRE)') {
+      status = 'error'; issue = '❌ Sin nombre';
+    } else {
+      // Typos
+      if (/\$to/.test(nombre)) { status = 'warn'; issue = '⚠ Typo `$to` → ¿`4to`?'; }
+      // Duplicados
+      const h = f.geometry.coordinates[0].slice(0,4).map(c => c.map(x => x.toFixed(4)).join(',')).join('|');
+      const dupes = coordHashes[h];
+      if (dupes && dupes.length > 1) {
+        const otros = dupes.filter(d => d !== f).map(d => (d.properties||{}).nombre || '?');
+        if (status === 'ok') status = 'warn';
+        issue = (issue ? issue + ' · ' : '') + '⚠ Coords idénticas a: ' + otros.join(', ');
+      }
+    }
+
+    // Layer
+    const latlngs = f.geometry.coordinates[0].map(c => [c[1], c[0]]);
+    let color;
+    if (status === 'ref') {
+      color = '#EDE8DC';
+      const layer = L.polygon(latlngs, {color, weight:2, dashArray:'6,6', fill:false, opacity:0.5}).addTo(map);
+      polys.push({id:idx, nombre, layer, status:'ref', issue:'macro referencia', origCoords: f.geometry.coordinates});
+      return;
+    }
+    color = status === 'error' ? COLORS.error : (status === 'warn' ? COLORS.warn : PALETTE[colorIdx % PALETTE.length]);
+    if (status === 'ok' || status === 'warn') colorIdx++;
+    const layer = L.polygon(latlngs, {color, fillColor:color, fillOpacity:0.18, weight:2}).addTo(map);
+
+    // Label (tooltip permanente)
+    const label = L.marker([f._centroLat, f._centroLon], {
+      icon: L.divIcon({
+        className:'label-tooltip',
+        html: '<span class="label-tooltip">' + nombre + '</span>',
+        iconSize: [200, 20], iconAnchor: [100, 10]
+      })
+    }).addTo(map);
+
+    polys.push({id:idx, nombre, layer, label, status, issue, origCoords: f.geometry.coordinates, origColor: color});
+  });
+
+  // Ajusto zoom
+  const all = polys.filter(p => p.status !== 'ref' && p.layer).map(p => p.layer);
+  if (all.length > 0) {
+    const group = L.featureGroup(all);
+    map.fitBounds(group.getBounds(), {padding:[20,20]});
+  }
+
+  renderSidebar();
+}
+
+// ============================================================
+// SIDEBAR
+// ============================================================
+function renderSidebar() {
+  const list = document.getElementById('mz-list');
+  const microzonas = polys.filter(p => p.status !== 'ref');
+  if (microzonas.length === 0) { list.innerHTML = '<div class="empty">No se encontraron polígonos.</div>'; return; }
+
+  document.getElementById('summary').style.display = 'block';
+  document.getElementById('s-total').textContent = microzonas.length;
+  document.getElementById('s-ok').textContent = microzonas.filter(p => p.status === 'ok').length;
+  document.getElementById('s-warn').textContent = microzonas.filter(p => p.status === 'warn').length;
+  document.getElementById('s-error').textContent = microzonas.filter(p => p.status === 'error').length;
+  document.getElementById('export-btn').style.display = 'block';
+
+  list.innerHTML = '';
+  microzonas.forEach((p, idx) => {
+    const card = document.createElement('div');
+    card.className = 'mz-card ' + (p.status === 'error' ? 'error' : (p.status === 'warn' ? 'warn' : ''));
+    card.style.borderLeftColor = p.origColor || COLORS[p.status] || COLORS.ok;
+    const c = p.layer.getBounds().getCenter();
+    card.innerHTML = `
+      <div class="name">#${idx+1} · ${escapeHtml(p.nombre)}</div>
+      <div class="meta-row">centro ${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}</div>
+      ${p.issue ? `<div class="issue">${escapeHtml(p.issue)}</div>` : ''}
+      <input type="text" value="${escapeHtml(p.nombre).replace(/"/g,'&quot;')}" data-idx="${idx}" placeholder="Nombre microzona">
+      <div style="margin-top:4px">
+        <button onclick="zoomTo(${idx})">🔍 Ver en mapa</button>
+        <button onclick="del(${idx})">✕ Borrar</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+  list.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = +e.target.dataset.idx;
+      const p = polys.filter(q => q.status !== 'ref')[idx];
+      if (p) {
+        p.nombre = e.target.value;
+        if (p.label) {
+          p.label.setIcon(L.divIcon({className:'label-tooltip', html: '<span class="label-tooltip">' + p.nombre + '</span>', iconSize:[200,20], iconAnchor:[100,10]}));
+        }
+      }
+    });
+  });
+}
+
+function zoomTo(idx) {
+  const p = polys.filter(q => q.status !== 'ref')[idx];
+  if (p) map.fitBounds(p.layer.getBounds(), {padding:[40,40]});
+}
+function del(idx) {
+  const p = polys.filter(q => q.status !== 'ref')[idx];
+  if (!p) return;
+  if (!confirm(`Borrar "${p.nombre}"?`)) return;
+  map.removeLayer(p.layer); if (p.label) map.removeLayer(p.label);
+  polys = polys.filter(q => q !== p);
+  renderSidebar();
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function exportClean() {
+  const microzonas = polys.filter(p => p.status !== 'ref');
+  const features = microzonas.map((p, idx) => ({
+    type: "Feature",
+    properties: {
+      nombre: p.nombre,
+      zona_general: "Zona Norte",
+      orden: idx + 1,
+      _issue_orig: p.issue || null,
+      fill: p.origColor || COLORS.ok, "fill-opacity": 0.18,
+      stroke: p.origColor || COLORS.ok, "stroke-width": 2
+    },
+    geometry: { type: "Polygon", coordinates: p.origCoords }
+  }));
+  const gj = { type: "FeatureCollection", name: "microzonas-zn-auditado", features };
+  const blob = new Blob([JSON.stringify(gj, null, 2)], {type: 'application/geo+json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'microzonas-zn-auditado.geojson';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
