@@ -785,3 +785,25 @@ Los 3 discovery de alquiler tienen el "marcar ausentes" **sin filtro de zona** �
 ### Lección meta
 
 **Cuidado con declarar "cerrado" lo que en realidad es "procesa lo poco que entra de colado".** El error fue clasificar la cobertura de discovery como "opcional 🟡" en vez de "la base de producción que falta". El director, que no es dev, lo detectó por sentido común del negocio ("¿por qué venta sí y alquiler no?"). Mismo valor que el "¿es escalable?" del #8: las preguntas ingenuas del dueño exponen deuda que el plan optimista esconde. Salvedad: repo puede diferir de prod (drift n8n) — el diagnóstico se sostiene igual porque los datos de la BD (30 Remax / 1 C21 / 0 BI + pendings) confirman el comportamiento real.
+
+---
+
+## 30 May 2026 (continuación 5) — Panorama del enjambre + plan #7.1 + catch de método (extrapolación EQ→ZN)
+
+**Panorama del enjambre alquiler (3 subagentes en paralelo):** enrichment, merge y verificador **zone-agnostic confirmado** — no hay más hardcodes EQ como el del discovery. Solo ajustes menores de throughput (LIMITs) + verificaciones de drift n8n. El único agujero estructural es el discovery.
+
+**Plan #7.1 redactado** (`PLAN_FASE3_DISCOVERY_ALQUILER_ZN.md`) + doble-check senior que podó over-engineering (no blindar 3 discovery EQ sino donde haga falta; Remax = patch no workflow nuevo; LIMITs condicionales).
+
+### 🔴 Catch de método del director (corrige a mí Y al doble-check)
+
+Tanto mi plan como el revisor priorizaron portales por el **volumen de alquiler en Equipetrol** (C21 121 > Remax 22 > BI 2) → "C21 core, BI descartable". **El director lo marcó: el mix de portales cambia por zona; no se infiere ZN desde EQ.** La evidencia ya lo gritaba: en ZN es Remax 30 vs C21 1 (opuesto a EQ). Y ese dato ZN está **sesgado** (solo Remax llega a ZN por el slug roto; el 1 de C21 / 0 de BI miden nuestra captura, no el inventario del portal).
+
+**Corrección aplicada al plan (§0.1):**
+- Se cae "C21 es la fuente #1 de ZN" y "BI descartable" — eran extrapolaciones de EQ.
+- Se agrega **Fase 0a: spike de inventario alquiler ZN por portal** (consultar los portales por el polígono ZN, como el PoC de venta del 20-may). Ese dato decide alcance.
+- **Por defecto: clonar los 3** (postura del director), sin descartar ninguno sin el spike.
+- Lo que SÍ se sostiene (no depende del mix por zona): el bug marcar-ausentes + su fix, el riesgo-EQ-nulo del filtro, el zone-agnostic del core.
+
+### Lección meta
+
+**Sesgo de extrapolación zona-a-zona.** Usé Equipetrol como proxy de Zona Norte para dimensionar portales — inválido, y el dato disponible ya lo contradecía. Tercer catch del dueño en la sesión (tras "¿es escalable?" del #8 y "¿por qué venta sí y alquiler no?"): las preguntas de negocio del director exponen fallas de método que ni yo ni un revisor adversarial agarramos cuando ambos compartimos el mismo dato sesgado. **Antes de dimensionar/priorizar por zona, medir esa zona — no otra.**

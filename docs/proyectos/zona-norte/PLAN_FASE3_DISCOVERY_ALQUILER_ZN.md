@@ -16,13 +16,15 @@ El único agujero estructural de alquiler ZN es el **discovery**. El resto del e
 
 ## 0. Plan corregido (tras doble-check senior, 30-may)
 
-Un revisor senior cuantificó el plan contra prod y podó over-engineering. **Datos que mandan:**
+Un revisor senior cuantificó el plan contra prod y podó over-engineering. Inventario medido (30-may):
 
-| Portal | Alquiler EQ activo (completado) | Alquiler ZN activo | ZN en pending |
+| Portal | Alquiler EQ activo (completado) | Alquiler ZN "activo" (SESGADO) | ZN en pending |
 |---|---|---|---|
-| **C21** | **121** (fuente #1) | 1 | 1 (← el bug lo tumba) |
-| **Remax** | 22 | **30** (trae todo SC) | 1 (caída real, no bug) |
+| **C21** | 121 | 1 | 1 (← el bug lo tumba) |
+| **Remax** | 22 | 30 (trae todo SC) | 1 (caída real, no bug) |
 | **BI** | 2 | 0 | 0 |
+
+> ⚠️ **Esta tabla NO sirve para priorizar portales en ZN** (ver §0.1). Las columnas EQ son de otra zona; las columnas ZN están sesgadas (solo Remax tiene discovery efectivo en ZN). Se dejan solo para el análisis del bug "marcar ausentes" y del riesgo a EQ.
 
 ### Podas aceptadas (del revisor)
 - **P1 — Blindar "marcar ausentes" SOLO en C21, no en los 3.** El bug solo tumba ZN cuando el scrape EQ no contiene la prop. Eso pasa únicamente en C21 (grid fijo EQ). Remax trae todo SC → no pierde sus 30 ZN. BI no toca ZN. Tocar 3 workflows EQ de prod para 2 pending es desproporcionado. Y va **junto con** la cobertura, no antes (antes no compra nada).
@@ -31,22 +33,31 @@ Un revisor senior cuantificó el plan contra prod y podó over-engineering. **Da
 - **P4 — BI: no hacer.** 0 ZN, 2 EQ. Nunca para ZN hoy.
 - **Riesgo EQ descartado con datos:** el filtro `zona IN (6 EQ)` no huérfana props EQ legítimas (las `zona IS NULL` del pool activo son todas `excluida_zona`). Usar **`zona IN (6 EQ) OR zona IS NULL`** en marcar-ausentes por cinturón-y-tiradores (costo cero).
 
-### Corrección al revisor (donde se pasó de tijera)
-- **C21 ZN SÍ es core, NO diferible.** El revisor lo difirió por "aporta 1 prop hoy" — pero ese 1 es porque el discovery C21 ZN no existe. **C21 es la fuente #1 de alquiler** (121 vs 22 de Remax en EQ). Con grid ZN propio traería el grueso del inventario ZN. Remax solo (30) es cobertura parcial de la fuente chica. Sin C21 ZN, "alquiler ZN con la misma base que venta" no se cumple.
+### 0.1 — 🔴 CORRECCIÓN DE MÉTODO (catch del director) — invalida la priorización por volumen EQ
+
+Tanto mi plan como el doble-check priorizaron portales por el **volumen de alquiler en Equipetrol** (C21 121 > Remax 22 > BI 2). **Error de método:** la cuota de cada portal cambia por zona, y la evidencia ZN ya lo contradice (Remax 30 vs C21 1, opuesto a EQ). No se infiere el inventario de ZN desde EQ.
+
+Se CAEN estas conclusiones:
+- ❌ "C21 es la fuente #1 → core / Remax es chico" — cierto en EQ, **no demostrado en ZN**.
+- ❌ "BI ínfimo → no hacer" — cierto en EQ, **no demostrado en ZN**.
+- ⚠️ El único dato ZN (Remax 30 / C21 1 / BI 0) está **sesgado**: solo Remax llega a ZN (slug roto). El 1 de C21 y el 0 de BI miden *nuestra captura*, NO el inventario del portal — sus discovery ni llegan a ZN.
+
+**Método correcto:** medir el inventario de alquiler ZN **por portal, yendo a los portales** (spike, como el PoC de venta del 20-may que contó props por portal dentro del polígono ZN). Ese dato decide orden y alcance — no los números de EQ.
 
 ### Plan mínimo viable corregido
-1. **Fase 0 — Verificar prod** (drift n8n + comportamiento real del slug Remax). Sin esto, ciego. ~30 min.
-2. **Remax ZN — patch del workflow existente:** base SC + TOTAL_PAGES + filtro polígono ZN. Cobertura inmediata (30/31 de lo que ya hay). ~1h.
-3. **C21 ZN — clonar el grid de venta ZN → alquiler** (`registrar_discovery_alquiler`, `operacion=alquiler`). Es donde está el inventario ZN real a futuro (fuente #1). ~2-3h.
-4. **Blindar marcar-ausentes SOLO en C21** con `zona IN (6 EQ) OR zona IS NULL`. Junto con el paso 3. ~30 min.
-5. **NO hacer:** BI ZN, subida de LIMITs (notas condicionales).
+1. **Fase 0a — Spike de inventario alquiler ZN por portal.** Consultar C21, Remax y BI por el polígono ZN y contar props de alquiler reales de cada uno. Es el PoC que venta tuvo y alquiler nunca hizo. Decide cuáles clonar y en qué orden. ~1-2h (Firecrawl/curl acotado).
+2. **Fase 0b — Verificar drift n8n** (versión real de cada discovery/enrichment/verificador; si el slug de Remax filtra o no). ~30 min.
+3. **Clonar discovery ZN de los portales que el spike muestre con inventario** — **por defecto los 3** (Remax patch + C21 grid + BI), sin descartar ninguno hasta que el spike lo justifique. Cada uno: fetch amplio + filtro polígono ZN + `registrar_discovery_alquiler`.
+4. **Blindar "marcar ausentes"** (`zona IN (6 EQ) OR zona IS NULL`) en los discovery EQ cuyo scrape NO contenga ZN (hoy seguro C21; los demás según spike + 0b).
+5. **Condicional (no tarea):** subir LIMITs si el volumen real lo pide.
 
-**Diferencia vs plan inicial:** toca **1 workflow EQ (C21) + 1 patch Remax + 1 clon C21 ZN**, en vez de 3 EQ + 2 nuevos + LIMITs. Resuelve la fragilidad (slug Remax) y la cobertura real (C21 grid) con mínima superficie sobre EQ producción.
+**Postura por defecto = la del director: clonar los 3.** Descartar BI o diferir cualquiera requiere el dato del spike, NO la extrapolación de Equipetrol.
 
-### Verificar en Fase 0 (antes de ejecutar)
-- ¿El slug `/equipetrolnoroeste` de Remax filtra o lo ignora la API? (las 30 ZN sugieren que NO filtra → el patch puede ser aún más chico).
-- Versión real en prod de cada discovery alquiler (drift; repo dice `TOTAL_PAGES=8`, prod puede diferir).
-- Confirmar que la Remax ZN pending (id 2344) es caída real del portal, no del bug.
+### Lo que SÍ se sostiene (no depende del mix por zona)
+- El bug "marcar ausentes sin filtro de zona" y su fix (`zona IN (6 EQ) OR zona IS NULL`) — es lógica de zona, no de volumen.
+- El riesgo a EQ del filtro = nulo (las `zona IS NULL` activas son todas `excluida_zona`).
+- Enrichment/merge/verificador zone-agnostic (no dependen del portal ni la zona).
+- Remax ya trae ZN de colado (su patch sigue siendo chico) — pero eso NO implica que Remax sea la fuente principal de ZN; el spike lo dirá.
 
 ---
 
