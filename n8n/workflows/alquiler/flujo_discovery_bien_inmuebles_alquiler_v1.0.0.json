@@ -69,7 +69,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, url, status FROM propiedades_v2 WHERE fuente = 'bien_inmuebles' AND tipo_operacion = 'alquiler' AND status NOT IN ('inactivo_confirmed')",
+        "query": "SELECT id, url, status FROM propiedades_v2 WHERE fuente = 'bien_inmuebles' AND tipo_operacion = 'alquiler' AND status NOT IN ('inactivo_confirmed') AND (zona IN (SELECT nombre FROM zonas_geograficas WHERE zona_general = 'Equipetrol' AND activo = true) OR zona IS NULL)",
         "options": {}
       },
       "id": "bi-bd-urls",
