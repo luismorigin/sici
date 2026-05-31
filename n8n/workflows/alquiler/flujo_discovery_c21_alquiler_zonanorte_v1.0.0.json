@@ -1,0 +1,668 @@
+{
+  "name": "Discovery C21 Alquiler Zona Norte v1.0.0",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "35 1 * * *"
+            }
+          ]
+        }
+      },
+      "id": "a1f0c001-3001-4001-9001-000000000001",
+      "name": "Trigger 1:35 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2208,
+        112
+      ],
+      "notes": "Ejecución diaria a las 1:35 AM (offset al workflow C21 Alquiler Equipetrol que corre 1:30 AM)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    nombre,\n    ST_AsGeoJSON(geom) AS geom_geojson,\n    ST_XMin(geom) AS lon_oeste,\n    ST_YMin(geom) AS lat_sur,\n    ST_XMax(geom) AS lon_este,\n    ST_YMax(geom) AS lat_norte\n  FROM zonas_geograficas\n  WHERE activo = true\n    AND zona_general = ANY(ARRAY['Zona Norte']::text[]);",
+        "options": {}
+      },
+      "id": "a1f0c002-3001-4001-9001-000000000002",
+      "name": "PG: Leer Polígonos Activos",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2000,
+        112
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "Lee polígonos activos. Cambiar el array para incluir más zonas."
+    },
+    {
+      "parameters": {
+        "jsCode": "// === BBOX UNIÓN + ARRAY DE POLÍGONOS ===\nconst items = $input.all();\n\nif (items.length === 0) {\n  throw new Error('No hay polígonos activos. Verificar zonas_geograficas o array de zonas en query SQL.');\n}\n\nlet minLat = Infinity, maxLat = -Infinity;\nlet minLon = Infinity, maxLon = -Infinity;\nconst polygons = [];\n\nfor (const item of items) {\n  const data = item.json;\n  minLat = Math.min(minLat, parseFloat(data.lat_sur));\n  maxLat = Math.max(maxLat, parseFloat(data.lat_norte));\n  minLon = Math.min(minLon, parseFloat(data.lon_oeste));\n  maxLon = Math.max(maxLon, parseFloat(data.lon_este));\n\n  const geo = JSON.parse(data.geom_geojson);\n  polygons.push({\n    nombre: data.nombre,\n    coordinates: geo.coordinates[0]\n  });\n}\n\nconsole.log(`BBox: lat ${minLat} → ${maxLat}, lon ${minLon} → ${maxLon}`);\nconsole.log(`Polígonos: ${polygons.map(p => p.nombre).join(', ')}`);\n\nreturn [{\n  json: {\n    bbox: { lat_sur: minLat, lat_norte: maxLat, lon_oeste: minLon, lon_este: maxLon },\n    polygons,\n    zonas_incluidas: items.map(i => i.json.nombre)\n  }\n}];"
+      },
+      "id": "a1f0c003-3001-4001-9001-000000000003",
+      "name": "Calcular BBox + Polígonos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1776,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === GENERADOR DE CUADRANTES C21 ZONA-AGNÓSTICO ===\nconst config = $input.first().json;\nconst { lat_sur, lat_norte, lon_oeste, lon_este } = config.bbox;\nconst STEP = 0.010;\n\nconst cookieId = 'sici_' + Math.random().toString(36).substring(2, 15);\nconst cookie = `PHPSESSID=${cookieId}`;\n\nconst cuadrantes = [];\nlet gridId = 1;\n\nfor (let lat = lat_sur; lat < lat_norte; lat += STEP) {\n  for (let lon = lon_oeste; lon < lon_este; lon += STEP) {\n    const south = lat;\n    const west = lon;\n    const north = lat + STEP;\n    const east = lon + STEP;\n    const coordString = `coordenadas_${north.toFixed(6)},${east.toFixed(6)},${south.toFixed(6)},${west.toFixed(6)}`;\n\n    cuadrantes.push({\n      json: {\n        grid_id: gridId++,\n        path_coordenadas: coordString,\n        cookie,\n        fuente: 'century21'\n      }\n    });\n  }\n}\n\nconsole.log(`Grid generado: ${cuadrantes.length} cuadrantes sobre [${config.zonas_incluidas.join(', ')}]`);\nreturn cuadrantes;"
+      },
+      "id": "a1f0c004-3001-4001-9001-000000000004",
+      "name": "Generar Cuadrantes Grid",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1552,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "a1f0c005-3001-4001-9001-000000000005",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1328,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://c21.com.bo/v/resultados/tipo_departamento-o-penthouse/operacion_renta/layout_mapa/{{ $json.path_coordenadas }},15?json=true",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json, text/plain, */*"
+            },
+            {
+              "name": "accept-language",
+              "value": "es-US,es-419;q=0.9,es;q=0.8,en;q=0.7"
+            },
+            {
+              "name": "sec-fetch-dest",
+              "value": "empty"
+            },
+            {
+              "name": "sec-fetch-mode",
+              "value": "cors"
+            },
+            {
+              "name": "sec-fetch-site",
+              "value": "same-origin"
+            },
+            {
+              "name": "cookie",
+              "value": "={{ $json.cookie }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "a1f0c006-3001-4001-9001-000000000006",
+      "name": "HTTP Request Grid",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1104,
+        288
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "a1f0c007-3001-4001-9001-000000000007",
+      "name": "Wait 2s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -880,
+        288
+      ],
+      "webhookId": "c21-alq-zn-wait-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === EXTRAER PROPIEDADES C21 ALQUILER ===\n  // C21 responde: [{ totalHits, results: [...props], aggregations }]\n  const response = $input.first().json;\n\n  let results = [];\n  if (Array.isArray(response)) {\n    // Response es [{results: [...]}] - tomar results del primer elemento\n    results = response[0]?.results || [];\n  } else if (response?.results) {\n    results = Array.isArray(response.results) ? response.results : [];\n  } else if (response?.datas?.results) {\n    results = Array.isArray(response.datas.results) ? response.datas.results : [];\n  }\n\n  if (results.length === 0) {\n    return []; // Cuadrante vacío\n  }\n\n  return results.map(prop => {\n    // Precio: C21 da precio string en BOB + precios.vista en USD\n    let precioBob = null;\n    let precioUsd = null;\n    let moneda = prop.moneda || 'BOB';\n\n    const precioNum = parseFloat(String(prop.precio || '0').replace(/[^0-9.]/g, ''));\n    if (precioNum > 0) {\n      if (moneda === 'USD') {\n        precioUsd = precioNum;\n        precioBob = Math.round(precioNum * 6.96 * 100) / 100;\n      } else {\n        precioBob = precioNum;\n        // Usar precio USD de C21 si disponible, sino calcular\n        precioUsd = prop.precios?.vista?.precio\n          ? Math.round(prop.precios.vista.precio * 100) / 100\n          : Math.round(precioNum / 6.96 * 100) / 100;\n      }\n    }\n\n    // URL: C21 usa urlCorrectaPropiedad (path relativo)\n    const rawUrl = prop.urlCorrectaPropiedad || prop.url || null;\n    const url = rawUrl\n      ? (rawUrl.startsWith('http') ? rawUrl : `https://c21.com.bo${rawUrl}`)\n      : null;\n\n    return {\n      json: {\n        url: url,\n        fuente: 'century21',\n        codigo_propiedad: prop.id?.toString() || prop.folio || null,\n        tipo_operacion: 'alquiler',\n        tipo_propiedad_original: prop.tipoPropiedad || 'departamento',\n        precio_bob: precioBob,\n        precio_usd: precioUsd,\n        moneda_original: moneda,\n        area_total_m2: prop.m2C || null,\n        dormitorios: prop.recamaras != null ? parseInt(prop.recamaras) : null,\n        banos: prop.banos != null ? parseFloat(prop.banos) : null,\n        estacionamientos: prop.estacionamientos != null ? parseInt(prop.estacionamientos) : null,\n        latitud: prop.lat ? parseFloat(prop.lat) : null,\n        longitud: prop.lon ? parseFloat(prop.lon) : null,\n        fecha_publicacion: prop.fechaAlta || null,\n        datos_json_discovery: prop,\n        metodo_discovery: 'zonanorte_c21_alquiler'\n      }\n    };\n  }).filter(p => p.json.url !== null);"
+      },
+      "id": "a1f0c008-3001-4001-9001-000000000008",
+      "name": "Extraer Propiedades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        288
+      ],
+      "alwaysOutputData": true,
+      "notes": "Defensivo: 3 formatos response + filtro URL null. metodo_discovery = zonanorte_c21_alquiler. Produce latitud/longitud para el filtro point-in-polygon."
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "propiedades",
+        "include": "allFieldsExceptDefault",
+        "options": {}
+      },
+      "id": "a1f0c009-3001-4001-9001-000000000009",
+      "name": "Aggregate Snapshot",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1104,
+        112
+      ],
+      "notes": "Fin de fase SNAPSHOT (todas las props del bbox)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === FILTRO POINT-IN-POLYGON (FUERA DEL LOOP) ===\n// Filtra el array completo de propiedades del Aggregate.\nfunction pointInPolygon(lon, lat, ring) {\n  let inside = false;\n  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {\n    const xi = ring[i][0], yi = ring[i][1];\n    const xj = ring[j][0], yj = ring[j][1];\n    const intersect = ((yi > lat) !== (yj > lat)) &&\n      (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi);\n    if (intersect) inside = !inside;\n  }\n  return inside;\n}\n\nconst polygons = $('Calcular BBox + Polígonos').first().json.polygons || [];\nif (polygons.length === 0) {\n  console.warn('Sin polígonos activos — devuelvo vacío (FAIL CLOSED)');\n  return [{ json: { propiedades: [], stats: { total: 0, dentro: 0, fuera: 0 } } }];\n}\n\nconst input = $input.first().json;\nconst propiedades = input.propiedades || [];\n\nconst dentro = propiedades.filter(p => {\n  const lat = parseFloat(p.latitud);\n  const lon = parseFloat(p.longitud);\n  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;\n  return polygons.some(poly => pointInPolygon(lon, lat, poly.coordinates));\n});\n\nconsole.log(`Filtro polígono: ${dentro.length}/${propiedades.length} dentro de [${polygons.map(p => p.nombre).join(', ')}]`);\n\nreturn [{\n  json: {\n    propiedades: dentro,\n    stats: {\n      total: propiedades.length,\n      dentro: dentro.length,\n      fuera: propiedades.length - dentro.length\n    }\n  }\n}];"
+      },
+      "id": "a1f0c00a-3001-4001-9001-00000000000a",
+      "name": "Filtrar por Polígonos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        112
+      ],
+      "notes": "Filtra el array agregado (fuera del loop). Recibe {propiedades: [...]}, devuelve {propiedades: [...] filtradas}."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, url, status\n    FROM propiedades_v2\n    WHERE fuente = 'century21'\n      AND status NOT IN ('inactivo_confirmed')\n      AND tipo_operacion = 'alquiler'\n      AND zona IN (SELECT nombre FROM zonas_geograficas WHERE zona_general = ANY(ARRAY['Zona Norte']::text[]) AND activo\n  = true)",
+        "options": {}
+      },
+      "id": "a1f0c00b-3001-4001-9001-00000000000b",
+      "name": "Obtener URLs Activas BD",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -656,
+        112
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      },
+      "notes": "Solo props de alquiler de zonas activas Zona Norte — no marca Equipetrol como ausentes."
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PREPARAR COMPARACIÓN ===\n// Lee las propiedades del nodo Filtrar (ya filtradas por polígono) y compara con BD.\nconst snapshot = $('Filtrar por Polígonos').first().json.propiedades || [];\nconst propiedadesBD = $('Obtener URLs Activas BD').all().map(item => item.json);\n\nconst snapshotDedup = new Map();\nfor (const prop of snapshot) {\n  snapshotDedup.set(prop.url, prop);\n}\n\nconst urlsSnapshot = new Set(snapshotDedup.keys());\nconst urlsBD = new Map(propiedadesBD.map(p => [p.url, { id: p.id, status: p.status }]));\n\nconst nuevas = [];\nconst existentes = [];\nconst ausentes = [];\n\nfor (const [url, prop] of snapshotDedup) {\n  if (!urlsBD.has(url)) {\n    nuevas.push(prop);\n  } else {\n    existentes.push({\n      ...prop,\n      _id_bd: urlsBD.get(url).id,\n      _status_bd: urlsBD.get(url).status\n    });\n  }\n}\n\nfor (const [url, info] of urlsBD) {\n  if (!urlsSnapshot.has(url)) {\n    if (!['inactivo_pending', 'inactivo_confirmed'].includes(info.status)) {\n      ausentes.push({\n        id: info.id,\n        url: url,\n        status_actual: info.status\n      });\n    }\n  }\n}\n\nreturn [{\n  json: {\n    nuevas,\n    existentes,\n    ausentes,\n    stats: {\n      total_snapshot: snapshotDedup.size,\n      total_bd: urlsBD.size,\n      nuevas: nuevas.length,\n      existentes: existentes.length,\n      ausentes: ausentes.length\n    }\n  }\n}];"
+      },
+      "id": "a1f0c00c-3001-4001-9001-00000000000c",
+      "name": "Preparar Comparación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === LOG STATS ===\nconst stats = $input.first().json.stats;\n\nconsole.log(`\n=== DISCOVERY C21 ALQUILER ZONA NORTE ===\nSnapshot (deduplicado): ${stats.total_snapshot}\nBD activas (zonas activas): ${stats.total_bd}\n---\nNuevas: ${stats.nuevas}\nExistentes: ${stats.existentes}\nAusentes: ${stats.ausentes}\n=========================================\n`);\n\nreturn $input.all();"
+      },
+      "id": "a1f0c00d-3001-4001-9001-00000000000d",
+      "name": "Log Stats",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PREPARAR PARA registrar_discovery_alquiler() ===\nconst data = $input.first().json;\nconst nuevas = data.nuevas || [];\nconst existentes = data.existentes || [];\nconst todas = [...nuevas, ...existentes];\n\nif (todas.length === 0) {\n  return [{ json: { skip: true, message: 'No hay alquileres C21 Zona Norte para procesar' } }];\n}\n\nreturn todas.map(prop => ({\n  json: {\n    p_url: prop.url,\n    p_fuente: prop.fuente,\n    p_codigo_propiedad: prop.codigo_propiedad,\n    p_precio_mensual_bob: prop.precio_bob,\n    p_precio_mensual_usd: prop.precio_usd,\n    p_moneda_original: prop.moneda_original || 'BOB',\n    p_area_total_m2: prop.area_total_m2,\n    p_dormitorios: prop.dormitorios,\n    p_banos: prop.banos,\n    p_estacionamientos: prop.estacionamientos,\n    p_tipo_propiedad_original: prop.tipo_propiedad_original,\n    p_latitud: prop.latitud,\n    p_longitud: prop.longitud,\n    p_fecha_publicacion: prop.fecha_publicacion,\n    p_metodo_discovery: prop.metodo_discovery,\n    p_zona: null,\n    p_datos_json_discovery: JSON.stringify(prop.datos_json_discovery)\n  }\n}));"
+      },
+      "id": "a1f0c00e-3001-4001-9001-00000000000e",
+      "name": "Procesar Propiedades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1f0c00f-3001-4001-9001-00000000000f",
+      "name": "IF Propiedades",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM registrar_discovery_alquiler(\n  p_url := $1,\n  p_fuente := $2,\n  p_codigo_propiedad := $3,\n  p_precio_mensual_bob := $4::NUMERIC,\n  p_precio_mensual_usd := $5::NUMERIC,\n  p_moneda_original := $6,\n  p_area_total_m2 := $7::NUMERIC,\n  p_dormitorios := $8::INTEGER,\n  p_banos := $9::NUMERIC,\n  p_estacionamientos := $10::INTEGER,\n  p_tipo_propiedad_original := $11,\n  p_latitud := $12::NUMERIC,\n  p_longitud := $13::NUMERIC,\n  p_fecha_publicacion := $14::DATE,\n  p_metodo_discovery := $15,\n  p_zona := $16,\n  p_datos_json_discovery := $17::jsonb\n)",
+        "options": {
+          "queryReplacement": "={{ [$json.p_url, $json.p_fuente, $json.p_codigo_propiedad, $json.p_precio_mensual_bob, $json.p_precio_mensual_usd, $json.p_moneda_original, $json.p_area_total_m2, $json.p_dormitorios, $json.p_banos, $json.p_estacionamientos, $json.p_tipo_propiedad_original, $json.p_latitud, $json.p_longitud, $json.p_fecha_publicacion, $json.p_metodo_discovery, $json.p_zona, $json.p_datos_json_discovery] }}"
+        }
+      },
+      "id": "a1f0c010-3001-4001-9001-000000000010",
+      "name": "Registrar Discovery",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        448,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// === PROCESAR AUSENTES ===\nconst ausentes = $input.first().json.ausentes;\n\nif (ausentes.length === 0) {\n  return [{ json: { skip: true, message: 'No hay propiedades ausentes' } }];\n}\n\nreturn ausentes.map(prop => ({\n  json: {\n    id: prop.id,\n    url: prop.url,\n    status_actual: prop.status_actual\n  }\n}));"
+      },
+      "id": "a1f0c011-3001-4001-9001-000000000011",
+      "name": "Procesar Ausentes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1f0c012-3001-4001-9001-000000000012",
+      "name": "IF Ausentes",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        224,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE propiedades_v2\n  SET status = 'inactivo_pending',\n      fecha_discovery = NOW(),\n      primera_ausencia_at = COALESCE(primera_ausencia_at, NOW())\n  WHERE id = $1 AND tipo_operacion = 'alquiler'\n    AND status NOT IN ('inactivo_pending', 'inactivo_confirmed')",
+        "options": {
+          "queryReplacement": "={{ [$json.id] }}"
+        }
+      },
+      "id": "a1f0c013-3001-4001-9001-000000000013",
+      "name": "Marcar Ausentes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        448,
+        304
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// === RESUMEN FINAL ===\nconst stats = $('Log Stats').first().json.stats;\nconst zonas = $('Calcular BBox + Polígonos').first().json.zonas_incluidas;\n\nconst resumen = {\n  timestamp: new Date().toISOString(),\n  fuente: 'century21',\n  workflow: 'Discovery C21 Alquiler Zona Norte',\n  version: '1.0.0',\n  zonas_activas: zonas,\n  resultados: {\n    snapshot_total: stats.total_snapshot,\n    bd_activas: stats.total_bd,\n    nuevas_insertadas: stats.nuevas,\n    existentes_actualizadas: stats.existentes,\n    ausentes_marcadas: stats.ausentes\n  },\n  status: 'completado'\n};\n\nconsole.log('=== DISCOVERY C21 ALQUILER ZONA NORTE COMPLETADO ===');\nconsole.log(JSON.stringify(resumen, null, 2));\n\nreturn [{ json: resumen }];"
+      },
+      "id": "a1f0c014-3001-4001-9001-000000000014",
+      "name": "Resumen Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        112
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT registrar_ejecucion_workflow(\n  'discovery_c21_alquiler_zonanorte',\n  'success',\n  {{ $json.resultados.snapshot_total || 0 }},\n  {{ $json.resultados.nuevas_insertadas || 0 }},\n  0,\n  NULL,\n  '{{ JSON.stringify({ existentes: $json.resultados.existentes_actualizadas || 0, ausentes: $json.resultados.ausentes_marcadas || 0, zonas: $json.zonas_activas }) }}'::jsonb\n);",
+        "options": {}
+      },
+      "id": "a1f0c015-3001-4001-9001-000000000015",
+      "name": "registrar_ejecucion_workflow",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        896,
+        112
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "zd5IroT7BxnpW5U6",
+          "name": "Supabase - Censo Inmobiliario"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger 1:35 AM": {
+      "main": [
+        [
+          {
+            "node": "PG: Leer Polígonos Activos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG: Leer Polígonos Activos": {
+      "main": [
+        [
+          {
+            "node": "Calcular BBox + Polígonos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular BBox + Polígonos": {
+      "main": [
+        [
+          {
+            "node": "Generar Cuadrantes Grid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Cuadrantes Grid": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request Grid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request Grid": {
+      "main": [
+        [
+          {
+            "node": "Wait 2s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2s": {
+      "main": [
+        [
+          {
+            "node": "Extraer Propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Propiedades": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Filtrar por Polígonos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar por Polígonos": {
+      "main": [
+        [
+          {
+            "node": "Obtener URLs Activas BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener URLs Activas BD": {
+      "main": [
+        [
+          {
+            "node": "Preparar Comparación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Comparación": {
+      "main": [
+        [
+          {
+            "node": "Log Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Stats": {
+      "main": [
+        [
+          {
+            "node": "Procesar Propiedades",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Procesar Ausentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Propiedades": {
+      "main": [
+        [
+          {
+            "node": "IF Propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Propiedades": {
+      "main": [
+        [
+          {
+            "node": "Registrar Discovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Discovery": {
+      "main": [
+        [
+          {
+            "node": "Resumen Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Ausentes": {
+      "main": [
+        [
+          {
+            "node": "IF Ausentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Ausentes": {
+      "main": [
+        [
+          {
+            "node": "Marcar Ausentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar Ausentes": {
+      "main": [
+        [
+          {
+            "node": "Resumen Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumen Final": {
+      "main": [
+        [
+          {
+            "node": "registrar_ejecucion_workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "America/La_Paz",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e",
+  "meta": {
+    "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
+  },
+  "id": "ZNc21AlqDisc0001",
+  "tags": []
+}

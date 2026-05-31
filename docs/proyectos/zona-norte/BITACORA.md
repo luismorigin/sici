@@ -841,3 +841,29 @@ Tanto mi plan como el revisor priorizaron portales por el **volumen de alquiler 
 2. **"Creo que hay un error en validar BI, no se capta bien la cantidad."** Sospecha válida — verificada con `scripts/poc-zona-norte/diag-bi-alquiler.mjs`. **NO hay error de captura:** las 16 BI alquiler tienen GPS 100% (mi hipótesis de "GPS faltante" quedó refutada), y el endpoint anda perfecto (**BI da 233 venta vs 16 alquiler** — si fuera bug del script, venta también daría poco). **BI es venta-pesado**: casi no lista alquileres (16 en todo SC, ~2 en ZN). El 2 es real. La duda valió la pena chequearla aunque la conclusión sea "no hay error".
 
 **Meta (4to/5to catch de la sesión):** tiendo a optimizar/priorizar/descartar cuando la decisión del dueño ya es "hacer todo" — sobre-ingeniería de la decisión, no solo del código. Y una corazonada de error (GPS BI) hay que verificarla con dato (233 vs 16 lo cerró), no asumirla para complacer la sospecha. El dato manda en ambas direcciones: validó "medir ZN" y refutó "error en BI".
+
+---
+
+## 31 May 2026 — Plan #7.1 implementado: discovery C21 alquiler ZN (Paso 1) end-to-end ✅
+
+**Contexto:** Lucho exportó los 8 workflows de alquiler de prod (`Flujos 31.05.26/`). 3 subagentes los analizaron sin gastar contexto (plantilla venta ZN / discovery alquiler EQ / core). Hallazgos que ajustaron el plan:
+- **Fase 0b (drift n8n) resuelta sin abrir la UI** — los exports SON prod. Confirmado: enrichment v2.1.0, verificador v2.0.0 (`followRedirects:false`), merge v1.0.0, los 3 **zone-agnostic** (no se tocan).
+- **Corrección de orden:** el blindaje EQ va **emparejado** con el clon, no después (si no, el EQ tumba las props ZN esa misma noche).
+- **Remax (para Paso 4):** el clon usa el endpoint todo-SC de la plantilla venta + nodo "Filtrar Solo Alquileres", NO el slug `equipetrolnoroeste`.
+
+**Tres preocupaciones del director, todas verificadas con datos (PostGIS + BD) antes de tocar nada:**
+1. **¿Remax todo-SC se cuela fuera de ZN?** No. Fetch amplio + filtro point-in-polygon (mismo mecanismo que venta ZN en prod). Lo que entra a la BD ya pasó el polígono. Fail-closed.
+2. **¿Esparcimiento/solape EQ↔ZN?** Las zonas **no se solapan en área** (overlap 0 km², solo comparten frontera). ZN es 60 km² vs 2.5 de EQ (24×). El grid de fetch hardcodeado del C21 EQ sí se mete 1.46 km² en ZN (3 microzonas) = **redundancia de fetch inofensiva** (UPSERT idempotente), neutralizada por el blindaje. NO se agrega filtro de polígono al EQ (viola strangler).
+3. **¿Las props EQ usan los nombres de microzona o "Equipetrol" genérico?** Todas usan nombres de microzona exactos (`Equipetrol Centro/Norte/Sirari/Oeste/Villa Brigida`). **Cero sin match.** El blindaje `zona IN (… zona_general='Equipetrol') OR zona IS NULL` matchea las 167 props EQ sin perder ninguna. Las únicas NULL activas son 6 `excluida_zona` (se comportan igual que hoy).
+
+**Implementado (Pasos 1-3 del plan #7.1):**
+- **Clon** `n8n/workflows/alquiler/flujo_discovery_c21_alquiler_zonanorte_v1.0.0.json` — esqueleto geográfico de venta ZN (grid dinámico desde polígonos, point-in-polygon, ARRAY['Zona Norte'] parametrizable) + extracción/registro de alquiler del C21 EQ (`precio_mensual_bob`, `registrar_discovery_alquiler`). Cron 1:35 AM. Verificados los 6 nodos que tocan la BD + el contrato de datos entre nodos.
+- **Blindaje** del C21 alquiler EQ (`flujo_discovery_c21_alquiler_v1.0.0.json`) — filtro de zona en "Obtener Alquileres Activos BD". Aplicado en prod por Lucho y reflejado en el repo.
+
+**Corrida de validación (manual, costo $0 — C21 no usa Firecrawl en discovery):**
+- Discovery clon: snapshot 88, **83 nuevas / 5 actualizadas / 0 ausentes marcadas**, las 14 microzonas. Pasamos de 1 a 88 props C21 alquiler ZN — el gap del 97% cerrado.
+- Calidad: 82 nuevas con precio/GPS/zona/área al 100%.
+- Enrichment (2 lotes, LIMIT subido temporal y revertido a 20): **79/83 enriquecidas**, dorms completados al 100% en las procesadas. 4 rebotaron en Firecrawl → re-intento automático nocturno.
+- **proyectos_master ZN: 76 disponibles** → enrichment con contexto "PROYECTOS CONOCIDOS" + matching habilitado (el caveat no aplica).
+
+**Pendiente:** activar cron del clon → validar 1ra nocturna conjunta (clon 1:35 + EQ blindado 1:30 + merge + matching; confirmar 0 props ZN tumbadas por el EQ + las 4 enrichment) → **Paso 4 (Remax ZN)** → Paso 5 (BI ZN). Merge/matching corren esta noche (zone-agnostic, ya verificados).
