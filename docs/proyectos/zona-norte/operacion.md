@@ -2,7 +2,7 @@
 
 > Cómo operar el sistema día a día y, si algo sale mal, cómo apagar/revertir cada componente.
 
-**Última actualización:** 29 May 2026 (post-aplicación #8 microzonas, mig 254).
+**Última actualización:** 31 May 2026 (discovery alquiler ZN — 3 portales clonados + blindaje EQ, plan #7.1).
 
 > ⚠️ **Cambio mig 254 (29-may):** las props ZN ya NO tienen `zona='Zona Norte'` — viven en **14 microzonas** (`zona_general='Zona Norte'`). El macro 'Zona Norte' quedó `activo=false`. Todas las queries de abajo usan el patrón `zona IN (SELECT nombre FROM zonas_geograficas WHERE zona_general='Zona Norte')` en vez del literal viejo.
 
@@ -11,8 +11,9 @@
 ## Estado operativo actual
 
 Zona Norte está en **dark launch** desde el 26-may-2026. Desde la **mig 254 (29-may)** las props ZN viven en **14 microzonas** (el macro 'Zona Norte' quedó inactivo):
-- Workflows discovery ZN activos (cron 1:15 AM C21, 1:45 AM Remax). Filtran por `zona_general='Zona Norte'` → toman las 14 microzonas automáticamente.
-- Pipeline interno (enrichment → merge → matching → snapshot) procesa ZN sin intervención. El snapshot lo genera la función v3 actual (su LOOP 2 itera por microzona) — el "v4 paralelo" se descartó (BACKLOG #12).
+- **Venta:** workflows discovery ZN activos (cron 1:15 AM C21, 1:45 AM Remax). Filtran por `zona_general='Zona Norte'` → toman las 14 microzonas automáticamente.
+- **Alquiler (desde 31-may, plan #7.1):** 3 workflows discovery ZN activos (C21 1:35 AM, Remax 1:50 AM, BI 2:40 AM) + los 3 discovery alquiler EQ blindados (filtran `zona_general='Equipetrol' OR zona IS NULL` en "obtener activas" → no tumban props ZN). 115 props alquiler ZN activas (83 C21 + 30 Remax + 2 BI).
+- Pipeline interno (enrichment → merge → matching → snapshot) procesa ZN venta+alquiler sin intervención. El snapshot lo genera la función v3 actual (su LOOP 2 itera por microzona) — el "v4 paralelo" se descartó (BACKLOG #12).
 - HITL Equipetrol limpio (sugerencias ZN separadas en `estado='pendiente_zona_norte'`).
 - Frontend público sigue mostrando solo Equipetrol — ZN NO expuesta al usuario final (el admin sí ve las 14 microzonas en filtros).
 
@@ -27,10 +28,10 @@ Aplicar en este orden si algo sale mal y necesitás revertir el dark launch:
 **Cuándo:** el discovery ZN está trayendo data sucia o saturando el verificador.
 
 **Cómo:** En n8n UI, abrir cada workflow y toggle **OFF**:
-- `flujo_a_discovery_century21_zonanorte_v1.0.0`
-- `flujo_a_discovery_remax_zonanorte_v1.0.0`
+- Venta: `flujo_a_discovery_century21_zonanorte_v1.0.0`, `flujo_a_discovery_remax_zonanorte_v1.0.0`
+- Alquiler: `flujo_discovery_c21_alquiler_zonanorte_v1.0.0`, `flujo_discovery_remax_alquiler_zonanorte_v1.0.0`, `flujo_discovery_bien_inmuebles_alquiler_zonanorte_v1.0.0`
 
-**Efecto:** mañana 1:15/1:45 AM NO corre nada nuevo. Las 373+ props ZN existentes siguen en BD y en el pipeline normal.
+**Efecto:** mañana NO corre discovery ZN nuevo. Las props ZN existentes (venta + 115 alquiler) siguen en BD y en el pipeline normal. **Nota:** los discovery EQ blindados quedan ON — no traen ZN pero tampoco la tumban (filtro de zona en "obtener activas"); revertir el blindaje solo si se abandona ZN del todo.
 
 **Reversible:** toggle ON cuando quieras retomar.
 
@@ -123,8 +124,8 @@ Si por algún motivo desactivaste los workflows discovery y querés volver a pre
 2. Verificar que la próxima corrida nocturna funciona.
 
 Cron schedules:
-- `flujo_a_discovery_century21_zonanorte`: `15 1 * * *` (1:15 AM hora Bolivia)
-- `flujo_a_discovery_remax_zonanorte`: `45 1 * * *` (1:45 AM hora Bolivia)
+- **Venta:** `flujo_a_discovery_century21_zonanorte`: `15 1 * * *` (1:15 AM) · `flujo_a_discovery_remax_zonanorte`: `45 1 * * *` (1:45 AM)
+- **Alquiler:** `flujo_discovery_c21_alquiler_zonanorte`: `35 1 * * *` (1:35 AM) · `flujo_discovery_remax_alquiler_zonanorte`: `50 1 * * *` (1:50 AM) · `flujo_discovery_bien_inmuebles_alquiler_zonanorte`: `40 2 * * *` (2:40 AM)
 
 ---
 
@@ -215,4 +216,5 @@ Si las sugerencias `pendiente_zona_norte` crecen a un volumen que vale la pena r
 - [BITACORA.md](./BITACORA.md) — cronología.
 - [PRD.md](./PRD.md) — fases y rollback por fase.
 - Migraciones: `250_*.sql`…`253_*.sql` (blindajes) + **`254_microzonas_zona_norte.sql`** (14 microzonas) + su `_rollback.sql`. (mig 255 snapshot v4 **DESCARTADA** — ver BACKLOG #12.)
-- Workflows: `n8n/workflows/modulo_1/flujo_a_discovery_*_zonanorte_v1.0.0.json`.
+- Workflows venta: `n8n/workflows/modulo_1/flujo_a_discovery_*_zonanorte_v1.0.0.json`.
+- Workflows alquiler (plan #7.1, 31-may): `n8n/workflows/alquiler/flujo_discovery_{c21,remax,bien_inmuebles}_alquiler_zonanorte_v1.0.0.json` + blindaje en los 3 `flujo_discovery_*_alquiler_v1.0.0.json` EQ.

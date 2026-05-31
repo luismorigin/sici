@@ -4,9 +4,11 @@
 
 ---
 
-## Estado actual — 30 May 2026
+## Estado actual — 31 May 2026
 
-**Fases 1-7 + #8 microzonas aplicadas y validadas en producción:** 14 microzonas en BD (mig 254), frontend (`lib/zonas.ts`) y workflows discovery ZN, **mergeado a `main`** (PR #1, merge `ad22b24`). La primera corrida nocturna completa post-migración (30-may) confirmó: pipeline sin errores, snapshot v3 generando las 14 series por-microzona ZN, EQ intacto. Próximo: #6 frontend `/mercado/zona-norte` → #7 alquiler.
+**Fases 1-7 + #8 microzonas aplicadas y validadas en producción:** 14 microzonas en BD (mig 254), frontend (`lib/zonas.ts`) y workflows discovery ZN venta, **mergeado a `main`** (PR #1, merge `ad22b24`). Corrida nocturna 30-may OK: snapshot v3 generando las 14 series, EQ intacto.
+
+**#7.1 Discovery ALQUILER ZN — 3 portales cerrados (31-may, branch `feat/zn-alquiler-auditoria-fixa`):** clonados los 3 discovery alquiler ZN (C21/Remax/BI) desde la generación multi-macrozona de venta + blindaje de los 3 discovery alquiler EQ. **115 props alquiler ZN activas** (83 C21 + 30 Remax + 2 BI). Corridas manuales OK. Próximo: validar 1ra nocturna conjunta → matching/pm alquiler (#1.7 + batch manual) → #6 frontend `/mercado/zona-norte`.
 
 | Hito | Estado |
 |---|---|
@@ -17,7 +19,7 @@
 | Cargar pm Zona Norte (#1.5 + capas 2-3 + cleanup nocturno 29-may) | ✅ **73 pm activos con 100% verificación visual** |
 | Match rate ZN venta | ✅ ~60% (ver `SELECT ... FROM v_mercado_venta`) — desde 19.7% |
 | **#8 Microzonas (14 — grilla anillos×avenidas)** | ✅ **aplicado y validado en prod** (mig 254 + `lib/zonas.ts` + workflows discovery, mergeado a `main`). Corrida nocturna 30-may OK: snapshot v3 genera las 14 series ZN. Snapshot v4 descartado → ver #12 |
-| Fase 5 / #7: alquiler (replicar patrón) | ⬜ pendiente |
+| #7.1 alquiler ZN — discovery 3 portales + blindaje EQ | ✅ **31-may (115 props: 83 C21 + 30 Remax + 2 BI)** — pendiente validar nocturna conjunta + matching/pm |
 | #6 Frontend `/mercado/zona-norte` | ⬜ pendiente — prototipo multi-macrozona |
 | #1.7 Detector automático de clusters emergentes | ⬜ pendiente — infraestructura escalable |
 | #5 Exposición pública | ⬜ post-validación 90 días |

@@ -2,9 +2,9 @@
 
 > Tickets pendientes que surgieron de la validación Fase 3+4. Organizados por prioridad y por scope.
 
-**Última actualización:** 30 May 2026 (Ticket #8 cerrado end-to-end: FASES 5-7 aplicadas + mergeado a `main` PR #1; corrida nocturna validó snapshot v3 generando las 14 series ZN).
+**Última actualización:** 31 May 2026 (#7.1 discovery alquiler ZN — 3 portales clonados + blindaje EQ, validado en corridas manuales; 115 props alquiler ZN).
 
-**🎯 Próxima sesión:** **#6 frontend `/mercado/zona-norte`** (prototipo multi-macrozona) y/o **#7 alquiler ZN** (replicar patrón venta). #1.7 (detector de clusters) en paralelo. Los 3 de seguimiento (#12/#13/#14) no bloquean. Ver "Estado de tickets" abajo.
+**🎯 Próxima sesión:** validar 1ra nocturna conjunta alquiler → **matching/pm alquiler ZN** (#1.7 detector de clusters + batch manual; el match rate quedó ralo ~23%) → **#6 frontend `/mercado/zona-norte`** (prototipo multi-macrozona). Los 3 de seguimiento (#12/#13/#14) no bloquean. Ver "Estado de tickets" abajo.
 
 ---
 
@@ -485,7 +485,7 @@ components/
 
 ---
 
-### #7 — Alquiler Zona Norte — **EN CURSO** (procesamiento listo; FALTA la base de discovery alquiler ZN)
+### #7 — Alquiler Zona Norte — **DISCOVERY COMPLETO** (3 portales 31-may; pendiente validar nocturna + matching/pm)
 
 > **Corrección 30-may (catch del director):** NO está cerrado. Lo que se cerró es el *procesamiento* (snapshot FIX A + matching + cleanup FIX B2). La *captura* de alquiler ZN es **parcial y accidental**: solo Remax entra (de colado, porque su slug `equipetrolnoroeste` no filtra de verdad y devuelve todo SC → trigger GPS la etiqueta ZN). C21 (grid fijo EQ) y BI (filtra `barrio=equipetrol`) NO traen ZN. **Falta el equivalente a la Fase 3 de venta** (ver #7.1).
 
@@ -499,7 +499,7 @@ components/
   - ✅ **C21 (31-may):** `flujo_discovery_c21_alquiler_zonanorte_v1.0.0.json` creado (clon esqueleto venta ZN + extracción/registro alquiler EQ) + blindaje "obtener activas" del C21 EQ (`zona_general='Equipetrol' OR zona IS NULL`). Corrida manual: 88 props, 83 nuevas, 0 ausentes erróneas, 14 microzonas; enrichment 79/83. Verificado con datos: zonas no se solapan (overlap 0), props EQ usan nombres de microzona (0 sin match), grid cubre las 14 microzonas (probado en venta). 76 pm ZN para matching. Pendiente: activar cron + validar 1ra nocturna conjunta. Ver BITACORA 31-may.
   - ✅ **Remax (31-may):** `flujo_discovery_remax_alquiler_zonanorte_v1.0.0.json` (endpoint todo-SC + "Filtrar Solo Alquileres" + polígono, **NO slug**; conversión moneda USD↔BOB; cron 1:50) + blindaje Remax EQ. Corrida manual: 536 API → 110 alquileres → 30 ZN; **0 nuevas / 30 existentes / 0 ausentes** (robustez: Remax ya traía ZN de colado vía slug roto; el clon no depende de él). Total alquiler ZN activo: **113** (83 C21 + 30 Remax). 2 props Remax sin precio (calidad menor del portal).
   - ✅ **BI (31-may):** `flujo_discovery_bien_inmuebles_alquiler_zonanorte_v1.0.0.json` (POST único; filtro `nomb_barri='equipetrol'` → point-in-polygon GPS + Leer Polígonos; cron 2:40) + blindaje BI EQ. Corrida: 16 catálogo SC → 2 ZN. **Sospecha "pocos alquileres BI" REFUTADA con dato:** endpoint probado con `id_fami=0`/`filas=500`/sin modalidad → siempre 16; BI es venta-pesado (232 venta vs 16 alquiler). Edge case prop 1385 (Ed. Europeo, GPS errado de BI → reclamada por el clon; daño nulo por coords bloqueadas; `registrar_discovery_alquiler` no resetea enrichment → sin costo; aceptado + documentado, ver BITACORA). **Total alquiler ZN: 115 (83 C21 + 30 Remax + 2 BI).**
-  - 🔴 **Arreglar el "marcar ausentes" sin filtro de zona** en los 3 discovery de alquiler (Remax `:295`, C21 `:148`, BI `:72` del repo — verificar prod por drift n8n). Hoy comparan todo `tipo_operacion='alquiler'` sin filtrar zona → es el **bug #1 que venta resolvió en `fb78d23` pero alquiler NO**. Ya visible: 1 C21 ZN + 1 Remax ZN en `inactivo_pending`. Sin esto, al meter discovery ZN dedicado, los portales se tumbarían props entre sí por zona.
+  - ✅ **"marcar ausentes" filtrado por zona — RESUELTO (31-may).** El blindaje se aplicó en "obtener activas" de los 3 discovery alquiler EQ (`zona IN (zona_general='Equipetrol') OR zona IS NULL`), no en marcar-ausentes (que opera por id ya filtrado) — mismo patrón que la plantilla venta ZN. Verificado contra datos: las 167 props EQ usan nombres de microzona (0 sin match), el filtro no huérfana ninguna. Así los EQ no tumban props ZN y los clones ZN son dueños de su zona.
   - **Sin esta fase, alquiler ZN depende de que el slug roto de Remax siga devolviendo todo SC** (frágil: si Remax "arregla" el slug, ZN deja de entrar).
   - **Resto del enjambre (analizado 30-may con 3 subagentes) = zone-agnostic, sin más hardcodes EQ.** Solo ajustes menores de throughput + verificaciones de drift prod:
     - **Enrichment** (`flujo_enrichment_llm_alquiler_v2.1.0`): query de selección no filtra zona ✓; inyecta `proyectos_master WHERE zona=p.zona` al prompt → funciona para ZN (pm ZN tienen zona=microzona igual que props), pero solo ofrece pm de la **misma microzona** (matiz). **Subir `LIMIT 20`/noche** si ZN escala. Verificar en prod que corre v2.1.0 (no v1.0.0 sin inyección de proyectos).
