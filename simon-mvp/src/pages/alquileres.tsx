@@ -5,7 +5,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import type { GetStaticProps } from 'next'
 import { type UnidadAlquiler, type FiltrosAlquiler, buscarUnidadesAlquiler } from '@/lib/supabase'
-import { ZONAS_ALQUILER_UI, displayZona } from '@/lib/zonas'
+import { ZONAS_ALQUILER_UI, ZONAS_EQUIPETROL_DB, displayZona } from '@/lib/zonas'
 import { dormLabel, formatPriceBob, firstName } from '@/lib/format-utils'
 import { fbqTrack } from '@/lib/meta-pixel'
 import { fetchMercadoAlquilerData, type MercadoAlquilerData } from '@/lib/mercado-alquiler-data'
@@ -3776,7 +3776,7 @@ function AlquileresHead({ seo, brokerSlug = null, publicShareHash = null }: {
 export const getStaticProps: GetStaticProps<{ seo: AlquileresSEO; initialProperties: UnidadAlquiler[] }> = async () => {
   const [data, initialProperties] = await Promise.all([
     fetchMercadoAlquilerData(),
-    buscarUnidadesAlquiler({ orden: 'recientes', limite: 8, solo_con_fotos: true }).catch(() => [] as UnidadAlquiler[]),
+    buscarUnidadesAlquiler({ orden: 'recientes', limite: 8, solo_con_fotos: true, zonas_permitidas: ZONAS_EQUIPETROL_DB }).catch(() => [] as UnidadAlquiler[]),
   ])
   return {
     props: {

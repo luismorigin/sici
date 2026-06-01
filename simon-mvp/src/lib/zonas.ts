@@ -70,6 +70,17 @@ export const ZONAS_ZONA_NORTE: ZonaCanonica[] = [
   { slug: 'zn_8_viru_viru_banzer_g77',     db: '8vo anillo Viru Viru - Banzer-G77',     label: '8vo anillo Viru Viru - Banzer/G77',    labelCorto: 'ZN 8 Viru Viru' },
 ]
 
+/**
+ * Nombres BD de las 6 zonas Equipetrol — default del feed público para NO
+ * exponer Zona Norte (dark launch). ZONAS_CANONICAS tiene 5 entradas; la 6ta
+ * ('Eq. 3er Anillo') es un caso especial sin entrada en ZONAS_CANONICAS, así
+ * que se agrega explícitamente para cubrir el polígono completo de Equipetrol.
+ */
+export const ZONAS_EQUIPETROL_DB: string[] = [
+  ...ZONAS_CANONICAS.map(z => z.db),
+  'Eq. 3er Anillo',
+]
+
 // Build lookup map once (EQ + ZN microzonas, para displayZona/getZonaLabel)
 const dbToZona = new Map<string, ZonaCanonica>()
 for (const z of [...ZONAS_CANONICAS, ...ZONAS_ZONA_NORTE]) {

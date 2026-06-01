@@ -8,6 +8,33 @@
 
 ---
 
+## 🔴 #15 — Aislamiento ZN: las superficies "Equipetrol" filtran por zona (CRÍTICO, descubierto 31-may)
+
+**Hallazgo:** al meter ZN en producción (dark launch venta + ahora alquiler), las vistas `v_mercado_venta`/`v_mercado_alquiler` y muchas queries dejaron de ser "solo Equipetrol" — ahora traen EQ+ZN mezclados (v_mercado_venta: 388 EQ + 401 ZN; v_mercado_alquiler: 144 EQ + 103 ZN). **El feed público YA exponía ZN** (probado: la carga inicial de `/ventas` traía 190 props ZN de 500). No es nuevo de hoy: venta ZN lo viene exponiendo desde su dark launch; el alquiler de hoy sumó. Lo detectó una pregunta del director ("¿no se contaminan mis audits de Equipetrol?").
+
+**Causa raíz (única):** el código asume **"lo que no es `Sin zona`/`Eq. 3er Anillo` ES Equipetrol"** (blacklist), o las RPC del feed **no filtran zona por defecto** (opt-in). Las 14 microzonas ZN tienen nombres propios + `activo=true` → pasan todos los filtros de exclusión. El discriminante correcto (`zonas_geograficas.zona_general='Equipetrol'`) ya existe pero no se usaba en estas superficies.
+
+**Principio del fix (CLAVE):** filtrar en los **CONSUMIDORES** que deben ser solo-EQ, NUNCA en las vistas ni en `snapshot_absorcion_mercado`. El snapshot de absorción usa `propiedades_v2` directo y DEBE seguir viendo EQ+ZN para generar las 14 series ZN (verificado 31-may). Tocar la vista mataría esas series.
+
+**Superficies (auditadas 31-may con 3 subagentes):**
+
+| Superficie | Fuente | Estado |
+|---|---|---|
+| Feed `/ventas` + `/alquileres` (público) | RPC sin zona por defecto | 🟢 **P0 RESUELTO 31-may** — default `ZONAS_EQUIPETROL_DB` en API routes + getStaticProps + spotlight |
+| Bot Simón (`/api/chat-alquileres`) | RPC sin zona | 🟢 **P0 RESUELTO 31-may** — default EQ en la RPC |
+| Estudio de mercado a CLIENTES (`scripts/estudio-mercado/src/db.ts`) | `propiedades_v2` blacklist | 🔴 **P1** — `panoramaMercado()` corre sin zona → mezcla. (las tools con `config.zona` se salvan). Vende a Condado/Proinco. |
+| 4 skills de audit (ventas/alq, mensual/semanal) | `v_mercado_*` / `propiedades_v2` | 🔴 **P1** — antes del próximo audit. ventas-mensual gasta Firecrawl sobre 401 props ZN (~$1.75→$3.5+); alq-semanal Anexo A "cola barata" se llena de ZN |
+| `admin/market.tsx` + `admin/market-alquileres.tsx` | `propiedades_v2`/`v_mercado_*` | 🔴 **P2** — KPIs/tipologías/yield mezclados (absorción global OK, usa `zona='global'`) |
+| `generate_advisor_snapshot` (mig 220) | `v_mercado_*` | 🔴 **P2** — agregados + serie histórica contaminados |
+| `analisis_alquileres_11q.js` (TikTok) | `v_mercado_alquiler` | 🔴 **P2** (+ tiene `service_role` hardcodeado, flaggear aparte) |
+| `/mercado/equipetrol/*`, baseline trimestral, prospección broker, shortlists, informe PDF, absorción global | allowlist / por-ID / snapshot blindado | 🟢 **Protegidos** (alguien ya los blindó con allowlist EQ) |
+
+**P0 resuelto (31-may):** `ZONAS_EQUIPETROL_DB` (6 zonas EQ) en `lib/zonas.ts`; default en `api/ventas`, `api/alquileres`, `ventas.tsx`/`alquileres.tsx` getStaticProps, `api/chat-alquileres`, + spotlight fallbacks. Aplica solo si el filtro no trae zonas (no pisa selección del usuario). Verificado: feed pasa de 190 ZN/500 a 0 ZN, 360 EQ. No toca vistas/snapshot/RPC SQL.
+
+**Pendiente:** P1 (estudio cliente `db.ts` + 4 skills audit) antes de correr audits/estudios. P2 (dashboards, advisor, analisis_11q). **Solución de fondo opcional:** vistas `v_mercado_*_eq` por macrozona (encaja con ADR-009 multi-macrozona) para no esparcir el filtro `zona_general` por N consumidores — replantear junto con #11.
+
+---
+
 ## Visión del proyecto (post-ADR-009)
 
 **El proyecto Zona Norte deja de ser "piloto aislado" y pasa a ser "prototipo de la arquitectura multi-macrozona de Simón Santa Cruz".**

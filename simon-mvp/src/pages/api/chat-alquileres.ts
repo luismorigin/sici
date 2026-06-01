@@ -11,6 +11,7 @@ import { SYSTEM_PROMPT_TEMPLATE, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW } from '@/com
 import { buildListingSummary, buildMarketStats } from '@/components/simon-chat/chat-utils'
 import type { UnidadAlquiler } from '@/lib/supabase'
 import type { ChatRequest, ChatApiResponse, ChatBotResponse } from '@/components/simon-chat/chat-types'
+import { ZONAS_EQUIPETROL_DB } from '@/lib/zonas'
 import mockResponse from '@/test/mockChatResponse.json'
 
 // ── Clients ──────────────────────────────────────────────────────────────────
@@ -133,7 +134,7 @@ async function getListings(): Promise<UnidadAlquiler[]> {
   if (!supabase) return []
 
   const { data, error } = await supabase.rpc('buscar_unidades_alquiler', {
-    p_filtros: { limite: 200, solo_con_fotos: true }
+    p_filtros: { limite: 200, solo_con_fotos: true, zonas_permitidas: ZONAS_EQUIPETROL_DB }
   })
 
   if (error || !data) {
