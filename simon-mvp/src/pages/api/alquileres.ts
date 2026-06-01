@@ -6,6 +6,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { ZONAS_EQUIPETROL_DB } from '@/lib/zonas'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -77,7 +78,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (filtros.acepta_mascotas) rpcFiltros.acepta_mascotas = true
     if (filtros.con_parqueo) rpcFiltros.con_parqueo = true
     if (filtros.orden) rpcFiltros.orden = filtros.orden
-    if (filtros.zonas_permitidas?.length) rpcFiltros.zonas_permitidas = filtros.zonas_permitidas
+    // Default a las 6 zonas Equipetrol cuando el usuario no eligió zona (no exponer Zona Norte)
+    rpcFiltros.zonas_permitidas = filtros.zonas_permitidas?.length ? filtros.zonas_permitidas : ZONAS_EQUIPETROL_DB
     if (filtros.proyecto?.trim()) rpcFiltros.proyecto = filtros.proyecto.trim()
 
     // Fetch data
@@ -108,7 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (spotlightId && typeof spotlightId === 'number' && !data.find((d: any) => d.id === spotlightId)) {
       try {
         const spotResult = await supabase.rpc('buscar_unidades_alquiler', {
-          p_filtros: { limite: 200, solo_con_fotos: false }
+          p_filtros: { limite: 200, solo_con_fotos: false, zonas_permitidas: ZONAS_EQUIPETROL_DB }
         })
         spotlight = spotResult.data?.find((d: any) => d.id === spotlightId) || null
       } catch { /* spotlight is best-effort, don't fail the main request */ }

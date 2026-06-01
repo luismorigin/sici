@@ -6,6 +6,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import type { RawUnidadSimpleRow } from '@/types/db-responses'
+import { ZONAS_EQUIPETROL_DB } from '@/lib/zonas'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -119,7 +120,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (filtros.dormitorios_lista?.length) rpcFiltros.dormitorios_lista = filtros.dormitorios_lista
     else if (filtros.dormitorios !== undefined) rpcFiltros.dormitorios = filtros.dormitorios
     if (filtros.orden) rpcFiltros.orden = filtros.orden
-    if (filtros.zonas_permitidas?.length) rpcFiltros.zonas_permitidas = filtros.zonas_permitidas
+    // Default a las 6 zonas Equipetrol cuando el usuario no eligió zona (no exponer Zona Norte)
+    rpcFiltros.zonas_permitidas = filtros.zonas_permitidas?.length ? filtros.zonas_permitidas : ZONAS_EQUIPETROL_DB
     if (filtros.estado_entrega) rpcFiltros.estado_entrega = filtros.estado_entrega
     if (filtros.proyecto?.trim()) rpcFiltros.proyecto = filtros.proyecto.trim()
 
@@ -137,7 +139,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (spotlightId && typeof spotlightId === 'number' && !data.find((d: any) => d.id === spotlightId)) {
       try {
         const spotResult = await supabase.rpc('buscar_unidades_simple', {
-          p_filtros: { limite: 500, solo_con_fotos: false }
+          p_filtros: { limite: 500, solo_con_fotos: false, zonas_permitidas: ZONAS_EQUIPETROL_DB }
         })
         const found = spotResult.data?.find((d: any) => d.id === spotlightId)
         spotlight = found ? mapRow(found) : null

@@ -5,7 +5,7 @@ import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
 import type { GetStaticProps } from 'next'
 import type { UnidadVenta, FiltrosVentaSimple } from '@/lib/supabase'
-import { ZONAS_CANONICAS, displayZona } from '@/lib/zonas'
+import { ZONAS_CANONICAS, ZONAS_EQUIPETROL_DB, displayZona } from '@/lib/zonas'
 import { trackEvent } from '@/lib/analytics'
 import { fetchMercadoData, type MercadoData } from '@/lib/mercado-data'
 import type { Broker } from '@/lib/simon-brokers'
@@ -3409,7 +3409,7 @@ export const getStaticProps: GetStaticProps<{ seo: VentasSEO; initialProperties:
   try {
     if (!supabase) throw new Error('Supabase not configured')
     const { data: rows } = await supabase.rpc('buscar_unidades_simple', {
-      p_filtros: { limite: 500, solo_con_fotos: true, orden: 'recientes' }
+      p_filtros: { limite: 500, solo_con_fotos: true, orden: 'recientes', zonas_permitidas: ZONAS_EQUIPETROL_DB }
     })
     if (rows) {
       initialProperties = rows.map((p: any) => ({
