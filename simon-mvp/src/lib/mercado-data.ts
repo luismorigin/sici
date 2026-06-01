@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { normalizarPrecio } from './precio-utils'
+import { ZONAS_EQUIPETROL_DB } from './zonas'
 
 // --- Types ---
 
@@ -57,14 +58,13 @@ function median(values: number[]): number {
   return percentile(sorted, 0.5)
 }
 
-const ZONAS_EQUIPETROL = ['Equipetrol Centro', 'Equipetrol Norte', 'Equipetrol Oeste', 'Sirari', 'Villa Brigida']
-
 const ZONA_DISPLAY: Record<string, string> = {
   'Equipetrol Centro': 'Eq. Centro',
   'Equipetrol Norte': 'Eq. Norte',
   'Equipetrol Oeste': 'Eq. Oeste',
   'Sirari': 'Sirari',
   'Villa Brigida': 'V. Brigida',
+  'Eq. 3er Anillo': 'Eq. 3er Anillo',
 }
 
 // --- Fallbacks (real data from Mar 2026) ---
@@ -113,7 +113,7 @@ function applyQualityFilters(props: RawProp[]): RawProp[] {
   const excludeTypes = ['baulera', 'parqueo', 'garaje', 'deposito']
 
   return props.filter(p => {
-    if (!p.zona || !ZONAS_EQUIPETROL.includes(p.zona)) return false
+    if (!p.zona || !ZONAS_EQUIPETROL_DB.includes(p.zona)) return false
     if (p.precio_usd <= 0 || p.area_total_m2 < 20) return false
     if (p.es_multiproyecto === true) return false
     if (p.tipo_propiedad_original && excludeTypes.includes(p.tipo_propiedad_original)) return false
@@ -148,7 +148,7 @@ export async function fetchMercadoData(): Promise<MercadoData> {
       .is('duplicado_de', null)
       .gte('area_total_m2', 20)
       .gt('precio_usd', 0)
-      .in('zona', ZONAS_EQUIPETROL)
+      .in('zona', ZONAS_EQUIPETROL_DB)
 
     if (!rawProps || rawProps.length === 0) throw new Error('No properties found')
 

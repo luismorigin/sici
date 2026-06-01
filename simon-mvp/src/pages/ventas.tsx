@@ -3295,7 +3295,7 @@ function VentasHead({ seo, brokerSlug = null, publicShareHash = null }: {
         '@type': 'Dataset',
         '@id': `${url}#dataset`,
         name: `Departamentos en venta en Equipetrol — ${mesAnio}`,
-        description: `${seo.totalPropiedades} departamentos en venta en Equipetrol. Precio mediano del m²: ${fmtSEO(seo.medianaPrecioM2)} USD. Cobertura: 5 zonas. Fuentes: Century 21, Remax, Bien Inmuebles.`,
+        description: `${seo.totalPropiedades} departamentos en venta en Equipetrol. Precio mediano del m²: ${fmtSEO(seo.medianaPrecioM2)} USD. Cobertura: 6 zonas. Fuentes: Century 21, Remax, Bien Inmuebles.`,
         url,
         license: 'https://creativecommons.org/licenses/by/4.0/',
         creator: { '@id': 'https://simonbo.com/#organization' },

@@ -1391,7 +1391,7 @@ export default function AlquileresPage({
                 {showZonaBanner && (
                   <div className="utm-zona-banner">
                     <div className="utm-zona-text">
-                      <span className="utm-zona-title">Equipetrol tiene 5 microzonas con precios distintos</span>
+                      <span className="utm-zona-title">Equipetrol tiene 6 microzonas con precios distintos</span>
                       <span className="utm-zona-sub">Filtrá por la tuya</span>
                     </div>
                     <div className="utm-zona-chips">
@@ -1540,7 +1540,7 @@ export default function AlquileresPage({
           {/* UTM contextual banner — mobile */}
           {showZonaBanner && (
             <div className="utm-zona-banner-mobile">
-              <div className="utm-zona-text-m">Equipetrol tiene <strong>5 microzonas</strong> con precios distintos</div>
+              <div className="utm-zona-text-m">Equipetrol tiene <strong>6 microzonas</strong> con precios distintos</div>
               <div className="utm-zona-chips-m">
                 {ZONAS_ALQUILER_UI.filter(z => z.id !== 'equipetrol_3er_anillo' && z.id !== 'sin_zona').map(z => (
                   <button key={z.id} className="utm-zona-chip-m" onClick={() => handleBannerZona(z.id)}>{z.label}</button>
@@ -3667,7 +3667,7 @@ function AlquileresHead({ seo, brokerSlug = null, publicShareHash = null }: {
         '@type': 'Dataset',
         '@id': `${url}#dataset`,
         name: `Alquileres de departamentos en Equipetrol — ${mesAnio}`,
-        description: `${seo.totalUnidades} departamentos en alquiler en Equipetrol. Renta mediana: ${fmtBsSEO(seo.rentaMedianaBs)}/mes. Cobertura: 5 zonas. Fuentes: Century 21, Remax, Bien Inmuebles.`,
+        description: `${seo.totalUnidades} departamentos en alquiler en Equipetrol. Renta mediana: ${fmtBsSEO(seo.rentaMedianaBs)}/mes. Cobertura: 6 zonas. Fuentes: Century 21, Remax, Bien Inmuebles.`,
         url,
         license: 'https://creativecommons.org/licenses/by/4.0/',
         creator: { '@id': 'https://simonbo.com/#organization' },

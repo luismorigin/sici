@@ -3,6 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { ZONAS_EQUIPETROL_DB } from '@/lib/zonas'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
@@ -110,6 +111,7 @@ export default function MarketAlquileresDashboard() {
       .eq('status', 'completado')
       .eq('tipo_operacion', 'alquiler')
       .is('duplicado_de', null)
+      .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
 
     if (error || !raw) { console.error('fetchRentalData error:', error); return }
 
@@ -154,6 +156,7 @@ export default function MarketAlquileresDashboard() {
       .gt('precio_usd', 0)
       .gte('area_total_m2', 20)
       .not('zona', 'is', null)
+      .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
     if (error) { console.error('fetchVentaData error:', error); return }

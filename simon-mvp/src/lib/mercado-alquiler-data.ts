@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { ZONAS_EQUIPETROL_DB } from './zonas'
 
 // --- Types ---
 
@@ -58,14 +59,13 @@ function median(values: number[]): number {
   return percentile(sorted, 0.5)
 }
 
-const ZONAS_EQUIPETROL = ['Equipetrol Centro', 'Equipetrol Norte', 'Equipetrol Oeste', 'Sirari', 'Villa Brigida']
-
 const ZONA_DISPLAY: Record<string, string> = {
   'Equipetrol Centro': 'Eq. Centro',
   'Equipetrol Norte': 'Eq. Norte',
   'Equipetrol Oeste': 'Eq. Oeste',
   'Sirari': 'Sirari',
   'Villa Brigida': 'V. Brigida',
+  'Eq. 3er Anillo': 'Eq. 3er Anillo',
 }
 
 // --- Fallback data (real data from Mar 2026) ---
@@ -125,7 +125,7 @@ export async function fetchMercadoAlquilerData(): Promise<MercadoAlquilerData> {
     // Filter: zona in Equipetrol, area >= 20, precio > 0
     const excludeTypes = ['baulera', 'parqueo', 'garaje', 'deposito']
     const props = (rawProps as RawAlquilerProp[]).filter(p => {
-      if (!p.zona || !ZONAS_EQUIPETROL.includes(p.zona)) return false
+      if (!p.zona || !ZONAS_EQUIPETROL_DB.includes(p.zona)) return false
       if (!p.precio_mensual_bob || p.precio_mensual_bob <= 0) return false
       if (!p.area_total_m2 || p.area_total_m2 < 20) return false
       if (p.es_multiproyecto === true) return false

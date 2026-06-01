@@ -1,7 +1,7 @@
 /**
  * Canonical zone definitions for SICI / Simón
  *
- * Macrozona Equipetrol: 5 zonas canónicas (+ Eq. 3er Anillo por caso especial).
+ * Macrozona Equipetrol: 6 zonas (5 residenciales canónicas + Eq. 3er Anillo).
  * Macrozona Zona Norte: 14 microzonas (grilla anillos × avenidas, mig 254).
  * Source of truth: tabla zonas_geograficas (PostGIS) → mapeado acá para UI.
  * Ver docs/canonical/ZONAS_ZONA_NORTE.md para las 14 microzonas ZN.

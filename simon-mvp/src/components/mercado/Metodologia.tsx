@@ -33,8 +33,8 @@ export function Metodologia() {
           <div>
             <h3 className="font-medium text-gray-800 mb-1">Cobertura geográfica</h3>
             <p>
-              Este informe cubre las 5 zonas principales de Equipetrol: Equipetrol Centro,
-              Equipetrol Norte, Equipetrol Oeste, Sirari y Villa Brígida. Las zonas se
+              Este informe cubre las 6 zonas de Equipetrol: Equipetrol Centro,
+              Equipetrol Norte, Equipetrol Oeste, Sirari, Villa Brígida y el 3er Anillo. Las zonas se
               definen mediante polígonos geográficos PostGIS y se asignan automáticamente
               por coordenadas GPS.
             </p>

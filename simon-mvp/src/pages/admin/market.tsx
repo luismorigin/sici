@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { normalizarPrecio } from '@/lib/precio-utils'
-import { displayZona } from '@/lib/zonas'
+import { displayZona, ZONAS_EQUIPETROL_DB } from '@/lib/zonas'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   LineChart, Line, AreaChart, Area, ScatterChart, Scatter, ZAxis,
@@ -229,6 +229,7 @@ export default function MarketPulseDashboard() {
       .gte('area_total_m2', 20)
       .is('duplicado_de', null)
       .not('zona', 'is', null)
+      .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
       .gte('fecha_publicacion', cutoffDate)
 
@@ -286,6 +287,7 @@ export default function MarketPulseDashboard() {
       .gte('area_total_m2', 20)
       .is('duplicado_de', null)
       .not('zona', 'is', null)
+      .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
       .gte('fecha_publicacion', cutoffDate)
 
@@ -350,6 +352,7 @@ export default function MarketPulseDashboard() {
       .not('id_proyecto_master', 'is', null)
       .is('duplicado_de', null)
       .not('zona', 'is', null)
+      .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
       .gte('fecha_publicacion', cutoffDate)
 
@@ -434,6 +437,7 @@ export default function MarketPulseDashboard() {
       .not('estado_construccion', 'is', null)
       .is('duplicado_de', null)
       .not('zona', 'is', null)
+      .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
       .gte('fecha_publicacion', cutoffDate)
 
@@ -527,6 +531,7 @@ export default function MarketPulseDashboard() {
       .not('id_proyecto_master', 'is', null)
       .is('duplicado_de', null)
       .not('zona', 'is', null)
+      .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
       .gte('fecha_publicacion', cutoffDate)
 
@@ -652,6 +657,7 @@ export default function MarketPulseDashboard() {
       .gte('area_total_m2', 20)
       .is('duplicado_de', null)
       .not('zona', 'is', null)
+      .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera","garaje","deposito")')
       .gte('fecha_publicacion', cutoffDate)
 
@@ -761,6 +767,7 @@ export default function MarketPulseDashboard() {
     const { data } = await supabase
       .from('v_mercado_venta')
       .select('id, zona, dormitorios, precio_norm, area_total_m2, estado_construccion, id_proyecto_master')
+      .eq('zona_general', 'Equipetrol') // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('zona', 'is', null)
 
     if (!data) return
@@ -967,6 +974,7 @@ export default function MarketPulseDashboard() {
       .gte('area_total_m2', 20)
       .is('duplicado_de', null)
       .not('zona', 'is', null)
+      .in('zona', ZONAS_EQUIPETROL_DB) // Aislamiento macrozona (mig 257): dashboard SOLO Equipetrol
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
 
     if (!data) return
