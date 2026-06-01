@@ -29,6 +29,10 @@
 
 **Estado:** Valores actualizados manualmente (9 Mar 2026). Funcional pero requiere actualización manual cuando cambian promedios de zona.
 
+## Bug doble normalización TC paralelo C21 — VIVO en el pipeline (descubierto 1-jun-2026)
+
+El extractor C21, cuando el precio viene en **Bs**, lo divide por **6.96 (oficial)** sin mirar el TC; si ese Bs estaba al **paralelo** y el LLM marca `tipo_cambio='paralelo'`, `precio_normalizado()` lo re-normaliza → **feed inflado ~43%**. Alcance 1-jun: ~17 props (10 EQ + 7 ZN), corregidas a mano + candadas. **Mecánica completa + fix de raíz (LLM extrae el billete del depto, requiere dry-run sobre ~81 props paralelo+BOB) en `docs/arquitectura/TIPO_CAMBIO_SICI.md` §4.5-4.6** (se corrigió ese doc, que erróneamente decía "RESUELTO" — el fix de marzo solo cubrió el dashboard, no el pipeline). Red de contención actual: `/audit-feed-ventas-{semanal,mensual}` check 2.1 lo detecta por ratio. **Es parte del "Refactor extractores n8n" de arriba** (extractor C21 hace cálculo de TC hardcodeado).
+
 ## Discovery Remax — paginación fija (parche 8→9 aplicado 24 May 2026; DINÁMICA PENDIENTE)
 
 **Estado:** parche aplicado — `TOTAL_PAGES` subido de 8 a 9 en el nodo "Generar URLs Remax" (n8n prod + repo). La página 9 ya se captura. **El fix de fondo sigue abierto:** 9 es otro número fijo; si la zona vuelve a crecer (10+ páginas) reaparece el mismo problema. La solución real es paginación dinámica (abajo). Riesgo de no hacerlo: bajo mientras la zona no crezca; volver a subir el número es un parche de 1 línea.

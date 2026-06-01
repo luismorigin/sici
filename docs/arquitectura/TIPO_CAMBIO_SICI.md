@@ -1,7 +1,7 @@
 # Tipo de Cambio en SICI — Documento Autoritativo
 
 **Fecha:** 10 de marzo de 2026
-**Ultima actualizacion:** 10 de marzo de 2026 (post-fix dashboard double-normalization)
+**Ultima actualizacion:** 1 de junio de 2026 (§4.5-4.6: bug de doble normalización SIGUE VIVO en pipeline C21 — corrige la afirmación errónea de "resuelto")
 **Status:** Documento de referencia para entender el sistema de TC y precios en SICI
 **Actualizar este documento** antes de modificar cualquier extractor, merge o funcion de precio.
 
@@ -230,8 +230,7 @@ END
 
 ## 4. Bug de doble normalizacion — causa raiz (CORREGIDO)
 
-> **Estado: RESUELTO** — Fix en commit `ffdd5ca` (10 Mar 2026) + commit `c1f07ac` (display).
-> Las 8 propiedades afectadas fueron corregidas manualmente desde el dashboard.
+> **Estado: PARCIALMENTE RESUELTO.** El bug de EDICIÓN MANUAL (dashboard) se corrigió en commit `ffdd5ca` (10 Mar 2026) + `c1f07ac` (display). **PERO el pipeline nocturno C21 SIGUE generándolo** cuando el precio viene en Bs — ver **§4.6** (descubierto 1-jun-2026: 17 props C21 corregidas, 10 EQ + 7 ZN). Actualizado 1-jun-2026.
 
 ### 4.1 El bug real: dashboard normalizaba al guardar
 
@@ -251,7 +250,7 @@ Esto escribia un valor ya normalizado en `precio_usd`. Luego, `precio_normalizad
 -- Inflacion: ~36%
 ```
 
-**El pipeline nocturno (extractores + merge) NO tiene este bug.** El problema era exclusivamente en la edicion manual desde el dashboard.
+**⚠️ Esta afirmación resultó FALSA (verificado 1-jun-2026).** El pipeline C21 SÍ genera el bug cuando el precio viene en Bs (ver §4.6). El fix de marzo solo cubrió la edición manual del dashboard.
 
 ### 4.2 El fix: guardar billete directo (commit ffdd5ca)
 
@@ -283,9 +282,27 @@ Existe un bug **separado** en el extractor Remax que afecta props que nunca fuer
 
 Este bug del extractor **no fue corregido** en esta sesion — la correccion fue solo del dashboard. Las 8 props afectadas se corrigieron manualmente re-guardando desde el dashboard con el comportamiento correcto.
 
-### 4.5 Por que C21 no tiene el bug del extractor
+### 4.5 C21 SÍ tiene el bug cuando el precio viene en Bs (corregido 1-jun-2026)
 
-El extractor C21 integra deteccion de TC en la normalizacion (seccion 3.2). Si detecta "paralelo", guarda `precio_usd = USD billete directo`, y `precio_normalizado()` aplica la conversion correctamente.
+> La versión original de esta sección decía "C21 no tiene el bug". **Es falso.** Solo es cierto para el CASO 2 de §3.2 (precio en USD billete). Cuando C21 publica el precio **en Bs** (CASO 1), `normalizarPrecioUSD()` hace `Bs / 6.96` **sin mirar el TC detectado** → si el Bs estaba calculado al paralelo, `precio_usd` queda en un valor oficial inflado y `precio_normalizado()` lo re-normaliza. **Las 17 props del 1-jun-2026 son TODAS C21 por esta vía.** Ver §4.6.
+
+### 4.6 Bug VIVO en el pipeline C21 — precio en Bs al paralelo (descubierto 1-jun-2026)
+
+**Mecánica (verificada con datos, ej. #1865 Condominio MARE):**
+1. C21 publica el precio **en Bs**, y ese Bs ya está calculado al **paralelo** (billete 130.000 × ~10 ≈ 1.300.000 Bs).
+2. El extractor (`normalizarPrecioUSD`, CASO precio en Bs) divide por **6.96 (oficial)** → `precio_usd = 186.782`. No mira el TC. Guarda `moneda_original='BOB'`.
+3. El LLM detecta "paralelo" / "t/c del día" en la desc → `tipo_cambio_detectado='paralelo'`.
+4. `precio_normalizado()` re-normaliza → `186.782 × 9.936/6.96 = 266.647` → **feed inflado ~43%** (el vendedor pedía 130.000$).
+
+**No hay discriminante automático simple:** el mismo `Bs/6.96` queda BIEN si el vendedor publicó el Bs al oficial, y MAL si lo publicó al paralelo. Solo se distingue **leyendo el billete USD de la desc**. En EQ+ZN, de las props paralelo+BOB conviven ~64 OK con ~17 rotas → `moneda='BOB'` NO las separa. Un fix ciego "corregir todas las paralelo+BOB" **rompería las 64 OK**.
+
+**Trampa multi-precio:** el billete correcto es el del **departamento solo**, NO el que incluye parqueo/garaje/baulera (caso #2142: "CON PARQUEO 105.000" / "SÓLO DPTO **95.000**").
+
+**Detección continua:** `/audit-feed-ventas-{semanal,mensual}` check 2.1 los detecta por ratio `precio_usd/billete_desc ∈ [1.15, 1.60]` + verificación por lectura obligatoria. Es la red de contención mientras no se arregle de raíz.
+
+**Alcance (1-jun-2026):** 17 props infladas (10 EQ + 7 ZN), todas C21 paralelo+BOB. Corregidas a mano (`precio_usd = billete del depto` + candado en `precio_usd`).
+
+**Fix de raíz pendiente (ticket, no urgente):** que el LLM extraiga el **billete USD del depto** y el merge lo use como `precio_usd` cuando `tipo_cambio='paralelo'`. Requiere dry-run sobre las ~81 props paralelo+BOB antes de aplicar. **Importante:** la etiqueta `'paralelo'` está BIEN; lo que está mal es el VALOR base que calcula el extractor.
 
 ---
 

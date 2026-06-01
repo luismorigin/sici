@@ -30,6 +30,22 @@
 
 ---
 
+## 📂 Dónde va cada pendiente — regla de oro (1-jun-2026)
+
+> Para que el backlog ZN no se "junte" con el del repo general. El disparador del problema fue el aislamiento por macrozona (#15): entró por ZN, pero es **infraestructura global** (vistas SQL, 4 skills de audit, estudio a clientes, dashboards, bot).
+
+**Pregunta única antes de anotar un pendiente: ¿esto desaparece cuando Zona Norte esté terminada?**
+
+| Respuesta | Va en | Ejemplos |
+|---|---|---|
+| **SÍ** (muere con ZN) | `docs/proyectos/zona-norte/BACKLOG.md` | discovery/matching/pm ZN, `/mercado/zona-norte`, microzonas, #6 exposición, #1.7 detector de clusters |
+| **NO** (infra multi-zona/global) | `docs/backlog/` | aislamiento por macrozona, unificación de data de mercado (`UNIFICACION_MERCADO_DATA.md`), deuda extractores/TC (`DEUDA_TECNICA.md`) |
+| Deuda de **una herramienta puntual** | `scripts/<tool>/BACKLOG.md` | híbrido curl/Firecrawl del audit (`scripts/auditoria-feed-ventas/BACKLOG.md` #8) |
+
+**Caso "global pero disparado por ZN"** (como #15): registrarlo donde se trabajó, **marcarlo `infra global`** y **cruzarlo** con su par del repo general (puntero bidireccional). Ejemplo vivo: `BACKLOG.md` #15 ↔ `docs/backlog/UNIFICACION_MERCADO_DATA.md` ↔ `PLAN_PARAMETRIZACION_MACROZONAS.md`.
+
+---
+
 ## ⚠️ Caveat sobre la serie `market_absorption_snapshots` de Zona Norte
 
 La serie `zona='Zona Norte'` arranca el **26-may-2026** con un baseline ruidoso por el backfill histórico:

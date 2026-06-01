@@ -4,6 +4,8 @@
 > **Fecha de apertura:** 21 abril 2026
 > **Prioridad:** Media. No bloquea publicaciones pero expone inconsistencias visibles al usuario.
 > **Contexto:** Identificado durante el refactor del reporte "Baseline de Equipetrol Abril 2026"
+>
+> **🔗 Cruce (1-jun-2026) — leer junto con `docs/proyectos/zona-norte/PLAN_PARAMETRIZACION_MACROZONAS.md`.** El aislamiento EQ↔ZN parcheó **estas MISMAS 4 superficies** agregando el filtro `zona_general='Equipetrol'` **consumidor por consumidor** (parche disperso, ya aplicado y funcionando). El "motor único" que propone este doc (Fase 2) es la **solución de fondo que además elimina esa dispersión**: un solo lugar filtraría la macrozona en vez de N consumidores. **Resolver ambos juntos** — cuando se ataque la unificación, incorporar el filtro de macrozona (`zona_general`) como parámetro del motor único, no como filtro repetido.
 
 ## Problema
 

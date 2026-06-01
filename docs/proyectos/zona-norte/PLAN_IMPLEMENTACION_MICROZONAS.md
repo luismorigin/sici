@@ -410,7 +410,7 @@ export function displayZona(zona: string | null | undefined): string {
 
 | # | Bug | Severidad | Acción |
 |---|---|---|---|
-| 1 | `resumen_mercado()` y `buscar_propiedades()` hardcodean lista de 5 zonas EQ (falta 'Eq. 3er Anillo') | Bajo — preexistente | Documentar en BACKLOG; arreglar como parte de ticket #11 |
+| 1 | `resumen_mercado()` y `buscar_propiedades()` hardcodean lista de 5 zonas EQ (falta 'Eq. 3er Anillo') | Bajo — preexistente | ✅ **RESUELTO 1-jun-2026 (mig 258)** — allowlist → `zona_general='Equipetrol'` (6 zonas) |
 | 2 | `populate_broker_prospection()` solo trae brokers EQ; no incluye ZN | Bajo — preexistente | Agregar como sub-ticket en BACKLOG si se quiere prospección ZN |
 | 3 | `insertar_proyectos_aprobados()` asigna `zona='Equipetrol'` sin sufijo (no existe en CHECK constraint) | Medio — bug latente | Investigar si la función está rota o usa otra ruta |
 | 4 | Gaps en grilla (43 ha sin cobertura, 0 impacto hoy) | Bajo | Query de monitoreo en `operacion.md` |

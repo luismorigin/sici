@@ -76,6 +76,14 @@ SLACK_WEBHOOK_SICI=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 
 Fuente de verdad: tabla `zonas_geograficas` (7 polígonos PostGIS, 6 nombres únicos). Trigger `trg_asignar_zona_venta` (migración 173) auto-asigna `p.zona` y `p.microzona` desde GPS. Función `get_zona_by_gps(lat, lon)` (migración 185) disponible para consultas ad-hoc.
 
+> **🌐 SSOT de MACROZONA (mig 257) — Equipetrol vs Zona Norte.** Hay 2 macrozonas en producción: **Equipetrol** (6 microzonas, incl. 'Eq. 3er Anillo') y **Zona Norte** (14 microzonas). La macrozona vive SOLO en `zonas_geograficas.zona_general`. `propiedades_v2.zona` es la **microzona**. **NUNCA hardcodear listas de zonas EQ** para "filtrar a Equipetrol" — derivá de la macrozona:
+> - **SQL sobre las vistas**: las vistas `v_mercado_venta`/`v_mercado_alquiler` exponen la columna `zona_general` → `WHERE zona_general = 'Equipetrol'`.
+> - **SQL sobre `propiedades_v2` directo**: usá la función `macrozona_de(zona)` o el subselect `zona IN (SELECT nombre FROM zonas_geograficas WHERE zona_general='Equipetrol' AND activo)`.
+> - **Frontend**: constante `ZONAS_EQUIPETROL_DB` (6 zonas) en `lib/zonas.ts`. NO crear arrays paralelos de 5 (bug histórico del 3er Anillo, resuelto al unificar).
+> - **Scripts Node/TS**: helper `getZonasDeMacrozona(macrozona)` que lee `zonas_geograficas`.
+> - ⚠️ Join por nombre: hay **2 polígonos 'Equipetrol Norte'** → usar `GROUP BY nombre`/`DISTINCT` para no duplicar.
+> - **Las superficies "solo-EQ" deben filtrar `zona_general='Equipetrol'` EXPLÍCITO** (default), nunca asumir "lo que hay es Equipetrol". El feed/estudios/audits/dashboards EQ ya lo aplican. Exponer ZN al público = ticket #6. `snapshot_absorcion_mercado` es la excepción: DEBE ver EQ+ZN (genera las 14 series ZN). Plan completo: `docs/proyectos/zona-norte/PLAN_PARAMETRIZACION_MACROZONAS.md`.
+
 Desde migración 184, los nombres en BD son los nombres display definitivos (ya no hay nombres crudos internos).
 
 | Zona | Valor en BD (`p.zona`, `pm.zona`) | Display corto (`zonas.ts`) |
