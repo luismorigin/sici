@@ -79,6 +79,10 @@ Si `con_cruda / total < 0.70`, abortar y sugerir `cd scripts/auditoria-feed-alqu
 
 Cuando el usuario invoca `/audit-feed-alquileres-semanal` (con o sin args):
 
+> **🔒 AISLAMIENTO MACROZONA (mig 257) — aplica a TODOS los checks.** Esta skill audita **SOLO Equipetrol**. Desde que entró Zona Norte, `v_mercado_alquiler` trae EQ+ZN mezclados. En cada check filtrá la macrozona:
+> - Si el check usa `v_mercado_alquiler v` → agregá `AND v.zona_general = 'Equipetrol'`.
+> - Si el check va contra `propiedades_v2 p` directo → agregá `AND macrozona_de(p.zona) = 'Equipetrol'`.
+
 ### 0. Cobertura cruda (gate)
 
 Correr query de cobertura del pre-requisito. Si <70%, abortar con mensaje. Si ≥70%, seguir.
@@ -88,6 +92,9 @@ Correr query de cobertura del pre-requisito. Si <70%, abortar con mensaje. Si �
 ```sql
 -- Filtro temporal base
 WHERE p.fecha_creacion BETWEEN '<desde>' AND '<hasta> 23:59:59'
+
+-- Aislamiento macrozona (mig 257): SOLO Equipetrol (ver nota arriba)
+AND v.zona_general = 'Equipetrol'
 
 -- Filtro de race condition (excluir editadas en últimos 30 min, salvo --incluir-recientes)
 AND (p.fecha_actualizacion IS NULL OR p.fecha_actualizacion < NOW() - INTERVAL '30 minutes')

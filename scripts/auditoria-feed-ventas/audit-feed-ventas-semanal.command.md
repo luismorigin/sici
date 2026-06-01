@@ -51,11 +51,20 @@ Calibraciones aplicadas tras el primer test (ver sección "Lecciones de calibrac
 
 Cuando el usuario invoca `/audit-feed-ventas-semanal` (con o sin args):
 
+> **🔒 AISLAMIENTO MACROZONA (mig 257) — aplica a TODOS los checks.** Esta skill audita **SOLO Equipetrol**. Desde que entró Zona Norte en producción, `v_mercado_venta` trae EQ+ZN mezclados. En cada check filtrá la macrozona:
+> - Si el check usa `v_mercado_venta v` → agregá `AND v.zona_general = 'Equipetrol'`.
+> - Si el check va contra `propiedades_v2 p` directo (sin la vista) → agregá `AND macrozona_de(p.zona) = 'Equipetrol'`.
+>
+> Sin esto, los checks flaguean ~399 props de Zona Norte que NO son del scope.
+
 ### 1. Parsear args y construir filtro WHERE base
 
 ```sql
 -- Filtro temporal base
 WHERE p.fecha_creacion BETWEEN '<desde>' AND '<hasta> 23:59:59'
+
+-- Aislamiento macrozona (mig 257): SOLO Equipetrol (ver nota arriba)
+AND v.zona_general = 'Equipetrol'
 
 -- Filtro de race condition (excluir editadas en últimos 30 min, salvo --incluir-recientes)
 AND (p.fecha_actualizacion IS NULL OR p.fecha_actualizacion < NOW() - INTERVAL '30 minutes')
@@ -138,7 +147,19 @@ WHERE billete_desc IS NOT NULL
 ORDER BY ratio DESC NULLS LAST;
 ```
 
-Flaguear 🔴 **solo** las filas `diagnostico = '🔴 BUG...'`. Fix: `precio_usd = billete_desc` + candar `precio_usd`. **No tocar las `OK` ni las `skip`.** Validar 1-2 leyendo la desc antes de aplicar (el regex puede agarrar un $/m² o un BOB → esos quedan en `skip`/`ratio raro`).
+Flaguear 🔴 **solo** las filas `diagnostico = '🔴 BUG...'`. Fix: `precio_usd = billete_correcto` + candar `precio_usd`. **No tocar las `OK` ni las `skip`.**
+
+##### ⚠️ VERIFICACIÓN POR LECTURA OBLIGATORIA (no "1-2" — TODAS las que vas a corregir)
+
+El `billete_desc` lo saca un **regex que toma el PRIMER monto USD de la desc**, y eso falla cuando el aviso tiene **varios precios**. Antes de proponer cualquier corrección, **leé la desc completa de CADA prop a tocar** (`SELECT datos_json_enrichment->>'descripcion'`) y confirmá que el monto es el del **departamento solo**, NO:
+- **Parqueo / garaje / cochera / baulera** con su propio precio (caso #2142: "CON PARQUEO 105.000" / "SÓLO DPTO **95.000**" → el correcto es 95.000, el regex tomó 105.000).
+- Garantía, comisión, expensas, IMT, o el precio de otra tipología/unidad del proyecto.
+
+**Regla multi-precio:** si la desc contiene `parqueo|garaje|cochera|baulera` con monto, o hay **2+ montos USD**, NO confíes en el `billete_desc` del regex:
+1. Tomá el monto rotulado como `precio departamento|sólo dpto|depto|departamento` (el del depto sin extras).
+2. Si no se puede desambiguar con seguridad → reportá 🟡 "múltiples precios — verificar a mano", NO des un número.
+
+Recién con la lectura confirmada armá el `UPDATE ... SET precio_usd = <billete del depto>` + candado. **Nunca dar valores en masa directo del regex.**
 
 #### 2.2 (ELIMINADO) — `no_especificado` → `oficial` NO se audita
 
@@ -550,9 +571,9 @@ Después del reporte:
 | Frecuencia | 1 vez/mes | 1 vez/semana o ad-hoc |
 | Costo | $1.75 (Firecrawl) | $0 |
 | Capa 1 (drift portal) | ✅ Sí | ❌ No |
-| Capa 2 (internas) | ✅ 4 checks | ✅ 7 checks recalibrados |
-| Capa 3 (matching) | ✅ 1 check | ✅ 4 checks |
-| Capa 4 (anomalías) | ⚠️ Parcial | ✅ 3 checks |
+| Capa 2 (internas) | ✅ 7 checks (importa los de la semanal, §3.5) | ✅ 7 checks recalibrados |
+| Capa 3 (matching) | ✅ 4 checks (importa los de la semanal) | ✅ 4 checks |
+| Capa 4 (anomalías) | ✅ 3 checks (importa los de la semanal) | ✅ 3 checks |
 | Race condition guard | ❌ No | ✅ Sí (30 min) |
 | Ventana | Todo el feed | Configurable |
 | Persistencia | `audit_descripciones_runs` | ❌ No persiste |

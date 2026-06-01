@@ -159,6 +159,25 @@ El audit actual cubre solo `/ventas` (`v_mercado_venta`).
 
 ---
 
+## 🟡 #8 — Híbrido curl/Firecrawl para el drift de ventas (reducir costo, crítico antes de expandir a más macrozonas)
+
+**Contexto (1-jun-2026):** el drift de la mensual de ventas (capa 1) usa **Firecrawl ($1.75/corrida)** porque **C21 venta es un SPA** (la página individual se arma con JS; curl trae HTML vacío). Alquileres hace el mismo drift con **curl ($0)** porque sus 3 portales sirven HTML estático.
+
+**Hallazgo verificado (1-jun):** el `datos_json_discovery` **NO trae la descripción de texto libre** (Remax: solo `listing_information` estructurado — dorms/baños/área; C21: solo `encabezado` + `metaTags` resumidos). Por eso el drift de descripción **requiere re-abrir la página individual** — no se puede derivar gratis del discovery nocturno. (Los cambios de **precio/área estructurados** sí los trae el discovery cada noche → el merge ya los captura; el audit no los necesita.)
+
+**Propuesta — fetcher híbrido por fuente:**
+- **Remax venta → curl** (probablemente sirve la página individual en estático, igual que en alquileres). $0.
+- **C21 venta → Firecrawl** (inevitable mientras sea SPA).
+- Ahorro estimado: ~$1.75 → ~$1.16 (-33%, al sacar las ~111 props Remax del Firecrawl). Clonar el `fetcher.mjs` de alquileres (curl) para Remax venta; dejar `firecrawl.mjs` solo para C21.
+
+**Pre-requisito de verificación:** confirmar con un curl de prueba que **Remax venta sirve la página individual en estático** (la descripción completa, no vacía). Si no la sirve, el híbrido no aplica para Remax.
+
+**⚠️ Motivación de escala (por qué NO postergar indefinidamente):** al expandir el audit a más macrozonas (Zona Norte, Urubó…) el volumen de props crece y **el costo Firecrawl escala linealmente**. Antes de correr audits mensuales sobre más zonas, conviene revisar **caso por caso qué peticiones a Firecrawl son realmente necesarias** (solo C21 SPA) vs cuáles pueden ser curl. Hacerlo ahora evita multiplicar un costo evitable.
+
+**Costo de investigar:** $0. **Prioridad:** media — sube a alta cuando se decida correr el mensual de ventas sobre Zona Norte.
+
+---
+
 ## Datos de referencia
 
 ### Props procesadas en esta sesión

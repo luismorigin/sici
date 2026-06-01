@@ -21,6 +21,8 @@ export async function getPropsViejasFromFeed(supabase, limit, offset = 0, exclud
   let q = supabase
     .from('v_mercado_alquiler')
     .select('id, fuente, url, dias_en_mercado, zona, precio_mensual_bob, precio_mensual')
+    // Aislamiento macrozona (mig 257): esta skill audita SOLO Equipetrol.
+    .eq('zona_general', 'Equipetrol')
     .order('dias_en_mercado', { ascending: false })
     .order('id', { ascending: true });
   if (onlyIds.length > 0) {
@@ -54,7 +56,9 @@ export async function getPropsViejasFromFeed(supabase, limit, offset = 0, exclud
 export async function getPropsAlquilerSinCruda(supabase) {
   const { data: vista, error: e1 } = await supabase
     .from('v_mercado_alquiler')
-    .select('id, fuente, url');
+    .select('id, fuente, url')
+    // Aislamiento macrozona (mig 257): backfill de cruda SOLO para Equipetrol.
+    .eq('zona_general', 'Equipetrol');
   if (e1) throw e1;
 
   const ids = vista.map((v) => v.id);

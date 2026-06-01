@@ -11,6 +11,19 @@ export function getSupabase(): SupabaseClient {
   return _client
 }
 
+// Devuelve los nombres de microzona de una macrozona, derivados de zonas_geograficas
+// (SSOT de macrozona, mig 257). Future-proof: agregar Urubó = cargar filas en esa tabla.
+export async function getZonasDeMacrozona(macrozona: string): Promise<string[]> {
+  const sb = getSupabase()
+  const { data, error } = await sb
+    .from('zonas_geograficas')
+    .select('nombre')
+    .eq('zona_general', macrozona)
+    .eq('activo', true)
+  if (error) throw new Error(`getZonasDeMacrozona: ${error.message}`)
+  return [...new Set((data ?? []).map((r: any) => r.nombre as string))]
+}
+
 export async function fetchTC(): Promise<{ paralelo: number; oficial: number }> {
   const sb = getSupabase()
   const { data } = await sb
@@ -99,7 +112,7 @@ function calcDiasEnMercado(fechaPub: string | null, fechaDisc: string | null): n
   return Math.round((Date.now() - new Date(fecha).getTime()) / 86400000)
 }
 
-export async function queryVenta(zona?: string, dorms?: number): Promise<VentaRow[]> {
+export async function queryVenta(zona?: string, dorms?: number, zonasIncluidas?: string[]): Promise<VentaRow[]> {
   const sb = getSupabase()
   let q = sb.from('propiedades_v2').select(VENTA_COLUMNS)
     .eq('tipo_operacion', 'venta')
@@ -109,6 +122,8 @@ export async function queryVenta(zona?: string, dorms?: number): Promise<VentaRo
     .gt('precio_usd', 0)
     .gte('area_total_m2', 20)
   if (zona) q = q.eq('zona', zona)
+  // Aislamiento macrozona (mig 257): acota a las microzonas de la macrozona del estudio.
+  if (zonasIncluidas && zonasIncluidas.length) q = q.in('zona', zonasIncluidas)
   if (dorms !== undefined) q = q.eq('dormitorios', dorms)
   const { data, error } = await q.limit(3000)
   if (error) throw new Error(`queryVenta: ${error.message}`)
@@ -137,7 +152,7 @@ export async function queryVenta(zona?: string, dorms?: number): Promise<VentaRo
     }) as VentaRow[]
 }
 
-export async function queryAlquiler(zona?: string, dorms?: number): Promise<AlquilerRow[]> {
+export async function queryAlquiler(zona?: string, dorms?: number, zonasIncluidas?: string[]): Promise<AlquilerRow[]> {
   const sb = getSupabase()
   let q = sb.from('propiedades_v2').select(ALQUILER_COLUMNS)
     .eq('tipo_operacion', 'alquiler')
@@ -147,6 +162,8 @@ export async function queryAlquiler(zona?: string, dorms?: number): Promise<Alqu
     .gt('precio_mensual_usd', 0)
     .gte('area_total_m2', 20)
   if (zona) q = q.eq('zona', zona)
+  // Aislamiento macrozona (mig 257): acota a las microzonas de la macrozona del estudio.
+  if (zonasIncluidas && zonasIncluidas.length) q = q.in('zona', zonasIncluidas)
   if (dorms !== undefined) q = q.eq('dormitorios', dorms)
   const { data, error } = await q.limit(2000)
   if (error) throw new Error(`queryAlquiler: ${error.message}`)

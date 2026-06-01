@@ -1,8 +1,10 @@
 import { queryVenta, median, type VentaRow } from '../db.js'
 import type { PanoramaMercadoResult, ZonaStat, DormStat } from '../types.js'
 
-export async function panoramaMercado(tc: { paralelo: number; oficial: number }): Promise<PanoramaMercadoResult> {
-  const rows = await queryVenta()
+export async function panoramaMercado(tc: { paralelo: number; oficial: number }, zonasIncluidas?: string[]): Promise<PanoramaMercadoResult> {
+  // Aislamiento macrozona (mig 257): el panorama (cara al cliente) se acota a las
+  // microzonas de la macrozona del estudio. Sin esto mezclaba EQ+ZN.
+  const rows = await queryVenta(undefined, undefined, zonasIncluidas)
 
   const medianaM2Global = median(rows.map(r => r.precio_m2))
   const medianaTicketGlobal = median(rows.map(r => r.precio_norm))

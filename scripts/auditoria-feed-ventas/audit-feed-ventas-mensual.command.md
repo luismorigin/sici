@@ -1,5 +1,5 @@
 ---
-description: Audit mensual del feed /ventas — drift Firecrawl + inconsistencias internas + matching audit. Genera reporte ejecutivo con análisis humano.
+description: Audit mensual del feed /ventas — drift Firecrawl + los 14 checks SQL afinados de la semanal (capa 2-4) + matching audit. Detector TC con verificación por lectura y regla multi-precio. Genera reporte ejecutivo con análisis humano.
 ---
 
 # Audit mensual — feed /ventas
@@ -22,12 +22,14 @@ Cuando el usuario invoca `/audit-feed-ventas-mensual` (con o sin args):
 
 ### 1. Ejecutar el orquestador
 
-Correr desde el worktree `sici-auditoria/` (donde vive el script):
+Correr desde `sici/scripts/auditoria-feed-ventas/` (el worktree `sici-auditoria/` fue eliminado; el fix de aislamiento `zona_general` vive en este `lib/db.mjs`):
 
 ```powershell
-cd "C:\Users\LUCHO\Desktop\Censo inmobiliario\sici-auditoria\scripts\auditoria-feed-ventas"
+cd "C:\Users\LUCHO\Desktop\Censo inmobiliario\sici\scripts\auditoria-feed-ventas"
 node audit-feed-ventas-mensual.mjs $ARGUMENTS
 ```
+
+> **Pre-requisito:** si es la primera corrida tras un clone, `npm install` en esta carpeta (el `.mjs` usa `@supabase/supabase-js`, `firecrawl`, `dotenv`). La semanal no lo necesita (SQL puro vía MCP), la mensual sí.
 
 Si el usuario pasó argumentos (ej. `--use-cached 2026-05-08-...`), reemplazar `$ARGUMENTS` con esos. Si no, correr sin args (modo normal).
 
@@ -55,11 +57,20 @@ Leer los 3 archivos.
 
 #### Patrones críticos (siempre reportar)
 
-- **TC paralelo NO mapeado**: prop con `tipo_cambio_detectado='no_especificado'` o NULL Y la diferencia de precio entre BD y desc es ~22-43% (ratio ~1.43 = paralelo/oficial). Calcular el impacto real en feed.
-  - SQL listo: `UPDATE propiedades_v2 SET tipo_cambio_detectado='paralelo', fecha_actualizacion=NOW() WHERE id=X;`
+- **Doble normalización TC paralelo** (el ÚNICO bug de TC que se audita — usar el MODELO TC y el check 2.1 de `audit-feed-ventas-semanal.command.md`): props `tipo_cambio_detectado='paralelo'` donde `precio_usd` quedó en valor OFICIAL en vez del billete (ratio `precio_usd / billete_desc` ≈ 1.15–1.60) → el feed las infla ~30-46%.
+  - ⚠️ **NO flaguear** el gap oficial↔billete en `no_especificado`/`oficial` (es esperado — fue el falso positivo del 25-may que marcó props correctas como infladas). El viejo check "no_especificado→paralelo" quedó **eliminado**.
+  - ⚠️ **VERIFICACIÓN POR LECTURA OBLIGATORIA + regla multi-precio**: leé la desc de CADA prop a corregir y tomá el precio del **departamento solo**, NO el de parqueo/garaje/baulera ni otra unidad (caso #2142: "CON PARQUEO 105.000" / "SÓLO DPTO 95.000" → correcto 95.000). Si hay 2+ montos y no se desambigua → 🟡 verificar a mano, no dar número.
+  - Fix: `UPDATE propiedades_v2 SET precio_usd = <billete del depto>, fecha_actualizacion=NOW() WHERE id=X;` + **candar `precio_usd`**.
 - **Cambio de precio explícito en desc**: descripción menciona "Nuevo Precio" o el precio bajó significativamente (>10%) y `precio_usd` BD no se actualizó
-- **Listings muertos**: `bucket='reescrita'` con `len_scraped=0` (HTML 200 OK pero sin contenido)
-  - SQL: `UPDATE propiedades_v2 SET status='inactivo_pending', fecha_actualizacion=NOW() WHERE id IN (...);`
+- **Listings muertos** (`bucket='reescrita'` con `len_scraped=0`): Firecrawl trajo HTML vacío.
+  - ⚠️ **VERIFICACIÓN HTTP OBLIGATORIA antes de marcar — el vacío puede ser FALLO DE RENDER (C21 es SPA), no muerte.** (1-jun-2026: de 8 candidatos, solo 3 eran 404 reales; 5 eran render fallido y estaban vivos.) Hacé `curl` del status code de cada candidato:
+    ```bash
+    curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0 Safari/537.36" -o /dev/null -w "%{http_code}" "<url>"
+    ```
+    - **404 / 302 → muerto real** → marcar `inactivo_pending`.
+    - **200 → VIVO** (fallo de render de Firecrawl) → **descartar, NO tocar.**
+  - ⚠️ El `og:title`/meta tags **NO** distinguen (C21 los devuelve incluso en 404). El **discovery tampoco** (su grid re-lista URLs cuyo detalle da 404). **Solo el status HTTP del fetch es confiable.**
+  - SQL (solo para los 404/302 confirmados): `UPDATE propiedades_v2 SET status='inactivo_pending', fecha_actualizacion=NOW(), primera_ausencia_at=COALESCE(primera_ausencia_at,NOW()) WHERE id IN (...) AND status='completado';`
 - **Mismatch de matching real**: capa 3 reporta `mismatch_real`. NO asumir que el matching está mal. Discriminar 3 casos:
   1. **Variante del nombre faltante en alias_conocidos** (más común): la desc dice un alias que el `proyectos_master` no tiene. Acción: agregar el alias al proyecto master (NO cambiar `nombre_edificio` de la prop). Ej: prop dice "UPTOWN EQUIPETROL", BD asigna "Edificio Uptown Equipetrol", agregar "UPTOWN EQUIPETROL" a `alias_conocidos` del proyecto.
   2. **Edificio realmente distinto**: la desc menciona un proyecto que NO existe en `proyectos_master` o existe con otro `id_proyecto_master`. Acción: verificar manualmente (puede ser matching errado real).
@@ -74,6 +85,16 @@ Leer los 3 archivos.
 - Cambio de fecha de entrega (dic 2025 → mar 2026)
 - Aparición de "SOLO CONTADO" como condición
 - Cambio de números pequeños (m², piso) sin afectar precio
+
+### 3.5 Capa 2-4 SQL afinada (importada de la semanal)
+
+Además del drift Firecrawl (capa 1) y la capa 2 del orquestador `.mjs`, **correr también los checks SQL afinados de `audit-feed-ventas-semanal.command.md`** — están más calibrados que `internal-checks.mjs` y reusan el mismo MCP `postgres-sici`. La mensual = drift portal (capa 1, exclusivo) **+** los 14 checks SQL de la semanal:
+
+- **Capa 2 (7 checks):** 2.1 doble normalización TC *(con verificación por lectura + regla multi-precio)*, 2.3 cambio de precio explícito, 2.4 precio absurdo, 2.5 nombre en casa/terreno, 2.6 nombre sospechoso, 2.7 booleanos vs desc, 2.8 dormitorios=0.
+- **Capa 3 (4 checks):** 3.1 matching errado, 3.2 GPS fuera de radio, 3.3 prefijo ambiguo, 3.4 nombre en alias de otro pm.
+- **Capa 4 (3 checks):** 4.1 área absurda, 4.2 desc corta, 4.3 TC NULL con BOB.
+
+**Diferencia de ventana:** la mensual cubre **TODO el feed**, no solo props nuevas. Al ejecutar los checks de la semanal, usar el filtro base **solo** con `AND v.zona_general = 'Equipetrol'` (aislamiento mig 257) y **sin** el `fecha_creacion >= CURRENT_DATE - N`. El resto de cada query es idéntico al de la semanal. No dupliques las queries acá: leé `audit-feed-ventas-semanal.command.md` y aplicá cada check quitando la ventana temporal.
 
 ### 4. Reporte ejecutivo final al usuario
 

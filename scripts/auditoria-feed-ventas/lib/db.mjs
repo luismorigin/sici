@@ -17,6 +17,9 @@ export async function getPropsViejasFromFeed(supabase, limit, offset = 0, exclud
   let q = supabase
     .from('v_mercado_venta')
     .select('id, fuente, url, dias_en_mercado, zona, precio_norm')
+    // Aislamiento macrozona (mig 257): esta skill audita SOLO Equipetrol.
+    // Sin este filtro scrapea ~399 props de Zona Norte de más (Firecrawl ~$2/corrida).
+    .eq('zona_general', 'Equipetrol')
     .order('dias_en_mercado', { ascending: false })
     .order('id', { ascending: true });
   if (onlyIds.length > 0) {

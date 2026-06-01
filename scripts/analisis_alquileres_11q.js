@@ -2,9 +2,28 @@
 // Ejecutar: node scripts/analisis_alquileres_11q.js
 
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
-const SUPABASE_URL = 'https://chaosoiyoeyjuwtwckix.supabase.co';
-const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoYW9zb2l5b2V5anV3dHdja2l4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1ODkxMzkxMiwiZXhwIjoyMDc0NDg5OTEyfQ.aPE0xYCfvUdzweK4Tse0L3z9EW-ivKmyRXAGcI7KjLk';
+// Seguridad (mig 257 cleanup): la service_role key NUNCA se hardcodea.
+// Se lee de process.env o de sici/simon-mvp/.env.local. Si rotás la key en
+// Supabase (Settings > API), solo actualizás el .env.local — no este archivo.
+function loadEnvKey(name) {
+  if (process.env[name]) return process.env[name];
+  try {
+    const content = fs.readFileSync(path.resolve(__dirname, '../simon-mvp/.env.local'), 'utf8');
+    const line = content.split(/\r?\n/).find((l) => l.startsWith(name + '='));
+    if (line) return line.slice(name.length + 1).trim().replace(/^["']|["']$/g, '');
+  } catch { /* sin .env.local: depende de process.env */ }
+  return undefined;
+}
+
+const SUPABASE_URL = loadEnvKey('NEXT_PUBLIC_SUPABASE_URL') || 'https://chaosoiyoeyjuwtwckix.supabase.co';
+const SERVICE_KEY = loadEnvKey('SUPABASE_SERVICE_ROLE_KEY');
+if (!SERVICE_KEY) {
+  console.error('ERROR: falta SUPABASE_SERVICE_ROLE_KEY. Seteala en el entorno o en sici/simon-mvp/.env.local');
+  process.exit(1);
+}
 
 function fetchSupabase(table, params = '') {
   return new Promise((resolve, reject) => {
@@ -60,11 +79,19 @@ async function main() {
 
   // Fetch data
   console.log('\nCargando datos...');
-  const activos = await fetchSupabase('v_mercado_alquiler', 'select=*&limit=1000');
-  const todos = await fetchSupabase('propiedades_v2', 'tipo_operacion=eq.alquiler&select=id,status,fuente,precio_mensual_bob,zona,nombre_edificio,fecha_creacion,fecha_publicacion,fecha_discovery,dormitorios,amoblado,acepta_mascotas,estacionamientos&limit=1000');
+  // Aislamiento macrozona (mig 257): este análisis es SOLO Equipetrol. Derivamos las
+  // microzonas EQ de zonas_geograficas (SSOT) en vez de hardcodear la lista.
+  const zonasEqRows = await fetchSupabase('zonas_geograficas', 'select=nombre&zona_general=eq.Equipetrol&activo=is.true');
+  const ZONAS_EQ = new Set(Array.isArray(zonasEqRows) ? zonasEqRows.map(z => z.nombre) : []);
+
+  // v_mercado_alquiler ya expone zona_general → filtro directo en el portal.
+  const activos = await fetchSupabase('v_mercado_alquiler', 'select=*&zona_general=eq.Equipetrol&limit=1000');
+  // propiedades_v2 (directo, todos los status) → filtro por lista de zonas EQ en JS.
+  const todosAll = await fetchSupabase('propiedades_v2', 'tipo_operacion=eq.alquiler&select=id,status,fuente,precio_mensual_bob,zona,nombre_edificio,fecha_creacion,fecha_publicacion,fecha_discovery,dormitorios,amoblado,acepta_mascotas,estacionamientos&limit=1000');
 
   if (!Array.isArray(activos)) { console.error('ERROR activos:', JSON.stringify(activos).substring(0,300)); return; }
-  if (!Array.isArray(todos)) { console.error('ERROR todos:', JSON.stringify(todos).substring(0,300)); return; }
+  if (!Array.isArray(todosAll)) { console.error('ERROR todos:', JSON.stringify(todosAll).substring(0,300)); return; }
+  const todos = ZONAS_EQ.size ? todosAll.filter(p => ZONAS_EQ.has(p.zona)) : todosAll;
 
   console.log(`Activos en v_mercado_alquiler: ${activos.length}`);
   console.log(`Total en propiedades_v2 (alquiler): ${todos.length}`);

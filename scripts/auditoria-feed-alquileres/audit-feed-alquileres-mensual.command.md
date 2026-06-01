@@ -63,8 +63,13 @@ Leer los 3.
 - **Cambio de precio mensual real**: `precio_mensual_bob` BD ≠ precio en desc, diff >5% (issue `precio_mensual_mismatch_desc`). SQL listo:
   - `UPDATE propiedades_v2 SET precio_mensual_bob = X, fecha_actualizacion = NOW() WHERE id = Y;`
 - **Área mal extraída** (v1.4): `area_total_m2` BD ≠ área en desc, diff >10% (issue `area_mismatch_desc`). El área cambia precio/m² y comparables. SQL: `UPDATE propiedades_v2 SET area_total_m2 = X, fecha_actualizacion = NOW() WHERE id = Y;`
-- **Listings muertos**: `bucket='reescrita'` con `len_scraped=0` (HTTP 200 pero HTML sin descripción).
-  - SQL: `UPDATE propiedades_v2 SET status='inactivo_pending', fecha_actualizacion=NOW() WHERE id IN (...);`
+- **Listings muertos** (`bucket='reescrita'` con `len_scraped=0`): el curl trajo HTML vacío.
+  - ⚠️ **VERIFICAR EL STATUS HTTP antes de marcar** (lección 1-jun, audit ventas: de 8 candidatos, 5 estaban VIVOS — vacío por fallo de fetch/render; solo 3 eran 404 reales). **Ventaja acá: el `fetcher.mjs` (curl) ya captura el `status` code** (`{status: res.status}`, distingue `404`/`302` de `200`+'HTML vacío'). Clasificar con ese status:
+    - **404 / 302 → muerto real** → `inactivo_pending`.
+    - **200 + HTML vacío → VERIFICAR, no marcar directo** (re-curl o mirar el portal). Puede ser timeout, bloqueo de UA o shell vacío. Solo marcar si un re-fetch confirma vacío/error y el discovery NO lo re-encontró.
+  - Re-verificación manual: `curl -s -L -A "Mozilla/5.0 (...) Chrome/124.0 Safari/537.36" -o /dev/null -w "%{http_code}" "<url>"` → marcar solo 404/302.
+  - ⚠️ El **status HTTP es el único discriminante confiable**; `len_scraped=0` por sí solo NO basta (vacío ≠ muerto). El discovery tampoco (su grid re-lista URLs que dan 404).
+  - SQL (solo 404/302 confirmados): `UPDATE propiedades_v2 SET status='inactivo_pending', fecha_actualizacion=NOW(), primera_ausencia_at=COALESCE(primera_ausencia_at,NOW()) WHERE id IN (...) AND status='completado';`
 - **Cambio de amoblado/sin amoblar**: flag `amoblado_aparecio` o `amoblado_desaparecio`. Impacto comercial directo (cambia el público objetivo).
 - **Cambio de mascotas**: flag `mascotas_aparecio` o `mascotas_desaparecio`. Decisivo para el inquilino.
 - **Cambio de expensas**: flag `expensas_aparecio` o `expensas_desaparecio`. Cambia el precio neto al inquilino.

@@ -3,7 +3,7 @@ import { writeFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
-import { fetchTC, setTC } from './db.js'
+import { fetchTC, setTC, getZonasDeMacrozona } from './db.js'
 import {
   panoramaMercado, posicionCompetitiva, competidores,
   demandaTipologia, simulacionPrecio, visibilidadPortales,
@@ -37,9 +37,14 @@ async function main() {
   console.log(`  TC oficial: Bs ${tc.oficial.toFixed(2)}\n`)
 
   // 3. Run all tools in parallel
+  // Aislamiento macrozona (mig 257): el panorama se acota a la macrozona del estudio
+  // (default Equipetrol). Las demás tools ya filtran por config.zona.
+  const macrozona = config.macrozona ?? 'Equipetrol'
+  const zonasMacro = await getZonasDeMacrozona(macrozona)
+  console.log(`  Macrozona: ${macrozona} (${zonasMacro.length} microzonas)`)
   console.log('  Ejecutando herramientas...')
   const [panorama, posicion, comp, demanda, simulacion, visibilidad, yieldData, rotacion] = await Promise.all([
-    panoramaMercado(tc),
+    panoramaMercado(tc, zonasMacro),
     posicionCompetitiva(config, tc),
     competidores(config.zona, 10),
     demandaTipologia(config.zona),

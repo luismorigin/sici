@@ -21,6 +21,7 @@ export interface ClientConfig {
   projectSubtitle?: string
   developerName: string
   zona: string
+  macrozona?: string // Macrozona del estudio (default 'Equipetrol'). Acota el panorama a sus microzonas. Future-proof multi-macrozona (mig 257).
   id_proyecto_master: number
   inventory: InventoryUnit[]
   precioM2Billete: number
