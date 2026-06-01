@@ -1,5 +1,6 @@
 import { supabase, obtenerSnapshot24h, obtenerMicrozonas, obtenerZonasAlquiler, type Snapshot24h, type MicrozonaData, type ZonaAlquilerData } from './supabase'
 import { normalizarPrecio } from './precio-utils'
+import { ZONAS_EQUIPETROL_DB } from './zonas'
 
 // Fallbacks con datos reales de Enero 2026 (se usan si Supabase falla en build)
 const FALLBACK_SNAPSHOT: Snapshot24h = {
@@ -43,6 +44,7 @@ export async function fetchLandingData(): Promise<LandingData> {
     if (!supabase) throw new Error('Supabase not initialized')
 
     // Query 1: Propiedades activas (filtros limpios, alineados con admin dashboard)
+    // Aislamiento macrozona (mig 257): el hero de la home cuenta SOLO Equipetrol.
     const { count: propertyCount } = await supabase
       .from('propiedades_v2')
       .select('*', { count: 'exact', head: true })
@@ -51,14 +53,16 @@ export async function fetchLandingData(): Promise<LandingData> {
       .gte('area_total_m2', 20)
       .is('duplicado_de', null)
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+      .in('zona', ZONAS_EQUIPETROL_DB)
 
-    // Query 2: Proyectos activos
+    // Query 2: Proyectos activos (SOLO Equipetrol)
     const { count: projectCount } = await supabase
       .from('proyectos_master')
       .select('*', { count: 'exact', head: true })
       .eq('activo', true)
+      .in('zona', ZONAS_EQUIPETROL_DB)
 
-    // Query 3: Precio promedio /m² (filtros limpios)
+    // Query 3: Precio promedio /m² (filtros limpios, SOLO Equipetrol)
     const { data: priceData } = await supabase
       .from('propiedades_v2')
       .select('precio_usd, area_total_m2, tipo_cambio_detectado')
@@ -68,6 +72,7 @@ export async function fetchLandingData(): Promise<LandingData> {
       .gte('precio_usd', 30000)
       .is('duplicado_de', null)
       .not('tipo_propiedad_original', 'in', '("parqueo","baulera")')
+      .in('zona', ZONAS_EQUIPETROL_DB)
 
     // Fetch TC paralelo for normalization
     const { data: tcData } = await supabase

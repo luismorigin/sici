@@ -51,7 +51,7 @@ export default function MercadoAlquileres({
   const url = 'https://simonbo.com/mercado/equipetrol/alquileres'
 
   const title = `Alquiler en Equipetrol: Bs ${kpis.rentaMedianaBs.toLocaleString('es-BO')}/mes mediana — ${mesAnio} | Simon`
-  const description = `Cuanto cuesta alquilar un departamento en Equipetrol, Santa Cruz, Bolivia? Renta mediana: Bs ${kpis.rentaMedianaBs.toLocaleString('es-BO')}/mes. ${kpis.totalUnidades} departamentos disponibles en 5 zonas. Bs ${kpis.bsM2Promedio}/m2 promedio. Datos actualizados ${fechaCorta}. Fuente: Simon Inteligencia Inmobiliaria.`
+  const description = `Cuanto cuesta alquilar un departamento en Equipetrol, Santa Cruz, Bolivia? Renta mediana: Bs ${kpis.rentaMedianaBs.toLocaleString('es-BO')}/mes. ${kpis.totalUnidades} departamentos disponibles en 6 zonas. Bs ${kpis.bsM2Promedio}/m2 promedio. Datos actualizados ${fechaCorta}. Fuente: Simon Inteligencia Inmobiliaria.`
 
   const schemaGraph = {
     '@context': 'https://schema.org',
@@ -139,7 +139,7 @@ export default function MercadoAlquileres({
             name: 'Cuanto cuesta alquilar un departamento en Equipetrol, Santa Cruz, Bolivia?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `El alquiler mediano de un departamento en Equipetrol es de Bs ${kpis.rentaMedianaBs.toLocaleString('es-BO')} por mes (${mesAnio}). El costo promedio por metro cuadrado es Bs ${kpis.bsM2Promedio}/m2. Hay ${kpis.totalUnidades} departamentos disponibles en 5 zonas. Fuente: Simon Inteligencia Inmobiliaria (simonbo.com/mercado/equipetrol/alquileres).`,
+              text: `El alquiler mediano de un departamento en Equipetrol es de Bs ${kpis.rentaMedianaBs.toLocaleString('es-BO')} por mes (${mesAnio}). El costo promedio por metro cuadrado es Bs ${kpis.bsM2Promedio}/m2. Hay ${kpis.totalUnidades} departamentos disponibles en 6 zonas. Fuente: Simon Inteligencia Inmobiliaria (simonbo.com/mercado/equipetrol/alquileres).`,
             },
           },
           {
@@ -233,8 +233,8 @@ export default function MercadoAlquileres({
               El alquiler mediano de un departamento en Equipetrol es{' '}
               <strong className="text-gray-700">{fmtBs(kpis.rentaMedianaBs)}/mes</strong>,
               equivalente a <strong className="text-gray-700">{fmtBs(Math.round(kpis.bsM2Promedio))}/m2</strong>.
-              Hay {kpis.totalUnidades} departamentos disponibles en 5 zonas: Equipetrol Centro,
-              Equipetrol Norte, Equipetrol Oeste, Sirari y Villa Brigida.
+              Hay {kpis.totalUnidades} departamentos disponibles en 6 zonas: Equipetrol Centro,
+              Equipetrol Norte, Equipetrol Oeste, Sirari, Villa Brígida y el 3er Anillo.
               Datos actualizados diariamente desde Century 21, Remax y Bien Inmuebles.
             </p>
           </header>
@@ -495,8 +495,8 @@ function MetodologiaAlquiler() {
           <div>
             <h3 className="font-medium text-gray-800 mb-1">Cobertura geografica</h3>
             <p>
-              Este informe cubre las 5 zonas principales de Equipetrol: Equipetrol Centro,
-              Equipetrol Norte, Equipetrol Oeste, Sirari y Villa Brigida. Las zonas se
+              Este informe cubre las 6 zonas de Equipetrol: Equipetrol Centro,
+              Equipetrol Norte, Equipetrol Oeste, Sirari, Villa Brígida y el 3er Anillo. Las zonas se
               asignan automaticamente por coordenadas GPS.
             </p>
           </div>

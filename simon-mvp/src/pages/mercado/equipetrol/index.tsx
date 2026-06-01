@@ -121,7 +121,7 @@ export default function MercadoEquipetrolHub({
             name: 'Cuanto cuesta alquilar en Equipetrol?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `El alquiler mediano en Equipetrol es de Bs ${alquilerKpis.rentaMedianaBs.toLocaleString('es-BO')} por mes (${mesAnio}), equivalente a Bs ${alquilerKpis.bsM2Promedio}/m2. Hay ${alquilerKpis.totalUnidades} departamentos disponibles en 5 zonas. Ver detalle completo en simonbo.com/mercado/equipetrol/alquileres.`,
+              text: `El alquiler mediano en Equipetrol es de Bs ${alquilerKpis.rentaMedianaBs.toLocaleString('es-BO')} por mes (${mesAnio}), equivalente a Bs ${alquilerKpis.bsM2Promedio}/m2. Hay ${alquilerKpis.totalUnidades} departamentos disponibles en 6 zonas. Ver detalle completo en simonbo.com/mercado/equipetrol/alquileres.`,
             },
           },
         ],
@@ -182,7 +182,7 @@ export default function MercadoEquipetrolHub({
               Inteligencia de mercado inmobiliario en Equipetrol con datos actualizados diariamente.
               Cobertura de <strong className="text-gray-700">{ventaKpis.totalPropiedades} departamentos en venta</strong> y{' '}
               <strong className="text-gray-700">{alquilerKpis.totalUnidades} en alquiler</strong> en
-              5 zonas: Equipetrol Centro, Equipetrol Norte, Equipetrol Oeste, Sirari y Villa Brigida.
+              6 zonas: Equipetrol Centro, Equipetrol Norte, Equipetrol Oeste, Sirari, Villa Brígida y el 3er Anillo.
               Fuentes: Century 21, Remax y Bien Inmuebles.
             </p>
           </header>

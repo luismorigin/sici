@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
 import { buscarUnidadesReales, UnidadReal, FiltrosBusqueda } from '@/lib/supabase'
+import { ZONAS_EQUIPETROL_DB } from '@/lib/zonas'
 import {
   PropertyCardPremium,
   ResultsHeaderPremium,
@@ -634,10 +635,10 @@ export default function ResultadosV2() {
         filtros.dormitorios = parseInt(dormitorios as string)
       }
 
+      // Aislamiento macrozona (mig 257): default a Equipetrol si la URL no trae zonas.
+      // Sin esto, buscarUnidadesReales corre sin filtro y trae EQ+ZN mezclados (leak).
       const zonasArray = zonas ? (zonas as string).split(',').filter(Boolean) : []
-      if (zonasArray.length > 0) {
-        filtros.zonas_permitidas = zonasArray
-      }
+      filtros.zonas_permitidas = zonasArray.length > 0 ? zonasArray : ZONAS_EQUIPETROL_DB
 
       const estadoEntregaValue = (estado_entrega as string) || 'no_importa'
       if (estadoEntregaValue !== 'no_importa') {

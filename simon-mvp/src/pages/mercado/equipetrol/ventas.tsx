@@ -54,7 +54,7 @@ export default function MercadoEquipetrol({
   const fechaCorta = formatFechaCorta(kpis.fechaActualizacion)
 
   const title = `Precio del m² en Equipetrol hoy: $${kpis.medianaPrecioM2.toLocaleString('en-US')} USD — ${mesAnio} | Simon`
-  const description = `Cuanto cuesta un departamento en Equipetrol, Santa Cruz, Bolivia? Precio mediano del m²: $${kpis.medianaPrecioM2.toLocaleString('en-US')} USD. ${kpis.totalPropiedades} propiedades activas en 5 zonas. Datos actualizados ${fechaCorta}. Fuente: Simon Inteligencia Inmobiliaria.`
+  const description = `Cuanto cuesta un departamento en Equipetrol, Santa Cruz, Bolivia? Precio mediano del m²: $${kpis.medianaPrecioM2.toLocaleString('en-US')} USD. ${kpis.totalPropiedades} propiedades activas en 6 zonas. Datos actualizados ${fechaCorta}. Fuente: Simon Inteligencia Inmobiliaria.`
   const url = 'https://simonbo.com/mercado/equipetrol/ventas'
 
   // --- Schema.org @graph: multiple types for maximum AI discoverability ---
@@ -160,7 +160,7 @@ export default function MercadoEquipetrol({
             name: 'Cuanto cuesta el metro cuadrado en Equipetrol, Santa Cruz, Bolivia?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `El precio mediano del metro cuadrado en Equipetrol es de $${kpis.medianaPrecioM2.toLocaleString('en-US')} USD (${mesAnio}). Este dato se calcula sobre ${kpis.totalPropiedades} departamentos activos en las 5 zonas de Equipetrol. Fuente: Simon Inteligencia Inmobiliaria (simonbo.com/mercado/equipetrol).`,
+              text: `El precio mediano del metro cuadrado en Equipetrol es de $${kpis.medianaPrecioM2.toLocaleString('en-US')} USD (${mesAnio}). Este dato se calcula sobre ${kpis.totalPropiedades} departamentos activos en las 6 zonas de Equipetrol. Fuente: Simon Inteligencia Inmobiliaria (simonbo.com/mercado/equipetrol).`,
             },
           },
           {
@@ -191,7 +191,7 @@ export default function MercadoEquipetrol({
             name: 'Cuantos departamentos hay en venta en Equipetrol?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `En ${mesAnio} hay ${kpis.totalPropiedades} departamentos activos en venta en las 5 zonas de Equipetrol, Santa Cruz de la Sierra, Bolivia. La tasa de actividad del mercado es del ${kpis.absorcionPct}% mensual. Los datos se actualizan diariamente desde Century 21, Remax y Bien Inmuebles. Fuente: simonbo.com/mercado/equipetrol.`,
+              text: `En ${mesAnio} hay ${kpis.totalPropiedades} departamentos activos en venta en las 6 zonas de Equipetrol, Santa Cruz de la Sierra, Bolivia. La tasa de actividad del mercado es del ${kpis.absorcionPct}% mensual. Los datos se actualizan diariamente desde Century 21, Remax y Bien Inmuebles. Fuente: simonbo.com/mercado/equipetrol.`,
             },
           },
         ],
@@ -260,8 +260,8 @@ export default function MercadoEquipetrol({
             <p className="text-gray-500 text-sm mt-3 leading-relaxed max-w-2xl">
               El precio mediano del metro cuadrado en Equipetrol es{' '}
               <strong className="text-gray-700">${kpis.medianaPrecioM2.toLocaleString('en-US')} USD/m²</strong>.
-              Hay {kpis.totalPropiedades} departamentos en venta en 5 zonas: Equipetrol Centro,
-              Equipetrol Norte, Equipetrol Oeste, Sirari y Villa Brigida.
+              Hay {kpis.totalPropiedades} departamentos en venta en 6 zonas: Equipetrol Centro,
+              Equipetrol Norte, Equipetrol Oeste, Sirari, Villa Brígida y el 3er Anillo.
               Datos actualizados diariamente desde Century 21, Remax y Bien Inmuebles.
             </p>
           </header>

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { innegociablesToAmenidades } from '@/config/amenidades-mercado'
 import { normalizarPrecio } from './precio-utils'
+import { ZONAS_EQUIPETROL_DB } from './zonas'
 import type { RawUnidadRealRow, RawUnidadAlquilerRow, RawPropiedadMercado, RawPropiedadRango, RawPropiedadMicrozona } from '@/types/db-responses'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -708,6 +709,8 @@ export async function obtenerMetricasMercado(): Promise<MetricasMercado | null> 
       .eq('tipo_operacion', 'venta')
       .is('duplicado_de', null)
       .gte('precio_usd', 30000)
+      // Aislamiento macrozona (mig 257): la home (Market Lens) muestra SOLO Equipetrol.
+      .in('zona', ZONAS_EQUIPETROL_DB)
 
     if (error || !data) return null
 
@@ -837,6 +840,8 @@ export async function obtenerSnapshot24h(): Promise<Snapshot24h | null> {
       .select('id')
       .eq('status', 'completado')
       .eq('tipo_cambio_detectado', 'paralelo')
+      // Aislamiento macrozona (mig 257): contador MOAT de la home, SOLO Equipetrol.
+      .in('zona', ZONAS_EQUIPETROL_DB)
 
     // 4. Días en mercado Equipetrol 2D (desde v_metricas_mercado)
     const { data: metricasEqui, error: errMetricas } = await supabase
@@ -851,6 +856,8 @@ export async function obtenerSnapshot24h(): Promise<Snapshot24h | null> {
       .from('proyectos_master')
       .select('id')
       .eq('activo', true)
+      // Aislamiento macrozona (mig 257): proyectos monitoreados de la home, SOLO Equipetrol.
+      .in('zona', ZONAS_EQUIPETROL_DB)
 
     // 6. Bajadas de precio (comparar últimas 2 fechas en precios_historial)
     let bajadasPrecio = 0
@@ -1793,6 +1800,8 @@ export async function obtenerZonasAlquiler(): Promise<ZonaAlquilerData[]> {
     const { data, error } = await supabase
       .from('v_mercado_alquiler')
       .select('zona, precio_mensual_bob')
+      // Aislamiento macrozona (mig 257): la home muestra SOLO Equipetrol.
+      .eq('zona_general', 'Equipetrol')
 
     if (error || !data || data.length === 0) {
       console.warn('Error obteniendo zonas alquiler:', error?.message)
