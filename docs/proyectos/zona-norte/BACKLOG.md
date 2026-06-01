@@ -4,7 +4,9 @@
 
 **Última actualización:** 31 May 2026 (#7.1 discovery alquiler ZN — 3 portales clonados + blindaje EQ, validado en corridas manuales; 115 props alquiler ZN).
 
-**🎯 Próxima sesión:** validar 1ra nocturna conjunta alquiler → **matching/pm alquiler ZN** (#1.7 detector de clusters + batch manual; el match rate quedó ralo ~23%) → **#6 frontend `/mercado/zona-norte`** (prototipo multi-macrozona). Los 3 de seguimiento (#12/#13/#14) no bloquean. Ver "Estado de tickets" abajo.
+**🎯 Próxima sesión — PRIORIDAD #1: #15 P1 (bloquea audits).** Arreglar las **4 skills de audit-feed** (ventas/alq, mensual/semanal) + el **estudio de mercado a clientes** (`scripts/estudio-mercado/src/db.ts`, `panoramaMercado`) para filtrar `zona_general='Equipetrol'` **ANTES de correr cualquier audit o estudio** — hoy se contaminan con las props ZN (y `audit-feed-ventas-mensual` gasta Firecrawl de más sobre 401 props ZN, ~$1.75→$3.5+). Patrón: mismo filtro EQ que ya se aplicó al feed (P0 resuelto, commit `a3726e0`). Ver ticket **#15** abajo.
+
+Luego: validar 1ra nocturna conjunta alquiler → **matching/pm alquiler ZN** (#1.7 detector de clusters GPS + batch manual; match rate ralo ~23%) → **#6 frontend `/mercado/zona-norte`**. P2 del #15 (dashboards admin, advisor snapshot, analisis_11q) y tickets #12/#13/#14 no bloquean.
 
 ---
 
