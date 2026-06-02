@@ -18,7 +18,7 @@
 | Fase 3: dark launch venta en prod (workflows discovery) | ✅ (26-may) |
 | Fase 4: validar calidad pipeline con data real | ✅ (audit 28-may) |
 | Audit GPS + cleanup historico K1/STONE/CURUPAU/Brickell (63 falsos) | ✅ (28-may) |
-| Cargar pm Zona Norte (#1.5 + capas 2-3 + #1.7 manual) | ✅ **92 pm activos con 100% verificación visual** (73 + 13 del 1-2 jun IDs 424-436 + 6 del 2-jun sesión 2 IDs 437-442) |
+| Cargar pm Zona Norte (#1.5 + capas 2-3 + #1.7 manual) | ✅ **95 pm activos** (76 base + 13 del 1-2 jun IDs 424-436 + 6 del 2-jun sesión 2 IDs 437-442; los 19 cargados manualmente con verificación visual confirmada) |
 | Match rate ZN | ✅ **venta 70.2% (290/413) · alquiler 58.0% (58/100)** al 2-jun sesión 2 — venta desde 19.7%, alquiler desde ~23% |
 | **#8 Microzonas (14 — grilla anillos×avenidas)** | ✅ **aplicado y validado en prod** (mig 254 + `lib/zonas.ts` + workflows discovery, mergeado a `main`). Corrida nocturna 30-may OK: snapshot v3 genera las 14 series ZN. Snapshot v4 descartado → ver #12 |
 | #7.1 alquiler ZN — discovery 3 portales + blindaje EQ | ✅ **31-may (115 props: 83 C21 + 30 Remax + 2 BI)** — pendiente validar nocturna conjunta + matching/pm |
