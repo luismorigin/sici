@@ -15,7 +15,7 @@
 - **2 Jun:** tres cambios pedidos por la arquitecta:
   - (a) **Foto de Condado Park V** sumada al timeline (completa los 5 edificios entregados).
   - (b) Nueva sección **"Así se vería tu espacio amoblado"** al final de "Diseñado para vivir": carrusel de 4 renders IA del depto equipado, cada uno con chip "Render referencial" + disclaimer visible ("imágenes generadas con IA… el edificio está terminado, coordiná tu visita"). Se quitó el render que estaba suelto en el carrusel del salón (ahora tiene sección propia, sin duplicar).
-  - (c) **Material de mesones corregido:** granito → "piedra sinterizada" (forma completa "tipo cuarzo cristal" en FAQ y bloque cocina). ⚠️ Confirmar con la arquitecta que efectivamente es sinterizada y no cuarzo aglomerado, para que la landing no afirme algo que no se sostiene.
+  - (c) **Material de mesones corregido:** granito → "piedra sinterizada" (forma completa "tipo cuarzo cristal" en FAQ y bloque cocina). **Validado con la arquitecta: es piedra sinterizada.**
   - **Deploy:** commit `b64691b` pusheado a `main` el 2 Jun → desplegado en Vercel.
   - **Mensaje enviado a Bea y Adolfo (2 Jun):** recordatorio de reunión + link de staging para que revisen los cambios y lleguen con observaciones puntuales.
   - **Reunión agendada: miércoles 3 Jun, 16:30** con Bea y Adolfo (revisión de la landing).
@@ -110,8 +110,8 @@ Cuando Adolfo apruebe contenido → 1 sesión de optimización (1-2 hs) y apunta
 - [~] Adolfo revisó (reenvío 24 May con fotos de edificios). **Respondió pidiendo ~1 día (esperado ~26 May)** para enviar: (a) una foto de balcón que quieren agregar, (b) observaciones. → esperando devolución
 - [ ] Confirmar si todo el material entregado es de un mismo depto modelo o de varios (impacta narrativa visual del carrusel salón)
 - [x] **Foto de Condado Park V** — recibida y sumada al timeline el 2 Jun
-- [ ] **Foto de balcón a agregar** — Adolfo la va a sacar y enviar (ubicación en la página por definir según el material)
-- [ ] **Confirmar material de mesones** — la arquitecta indicó "piedra sinterizada tipo cuarzo cristal"; validar que sea sinterizada real (no cuarzo aglomerado) antes de dejarlo como definitivo
+- [x] **Foto de balcón a agregar** — cubierta por los renders que envió la arquitecta (incluye el balcón nocturno en la sección "Así se vería tu espacio amoblado", 2 Jun)
+- [x] **Material de mesones** — validado con la arquitecta: es piedra sinterizada
 - [ ] **Revisión de renders IA en reunión 3 Jun** — Bea y Adolfo revisan la nueva sección "Así se vería tu espacio amoblado" y traen observaciones puntuales
 
 ## Próximos pasos
