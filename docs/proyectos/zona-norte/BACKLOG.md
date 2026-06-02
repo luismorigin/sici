@@ -14,6 +14,11 @@ Luego: validar 1ra nocturna conjunta alquiler → **matching/pm alquiler ZN** (#
 
 ## 🔴 #15 — Aislamiento ZN: las superficies "Equipetrol" filtran por zona (CRÍTICO, descubierto 31-may)
 
+> **🚨 INCIDENTE EN PROD (2-jun-2026) — el aislamiento estaba en la rama pero NO en `main`.** El director vio edificios de Zona Norte en `/ventas` en vivo. Diagnóstico: el código del aislamiento (P0 `a3726e0` 31-may + P1 frontend `313dc2d` 1-jun) vivía en `feat/zn-alquiler-auditoria-fixa` **sin mergear a `main`**, mientras el discovery ZN **sí** estaba activo en producción → el feed exponía **399 props ZN vs 383 EQ** (más de la mitad). Las migraciones 257-258 sí estaban aplicadas en la BD; faltaba solo desplegar el código.
+> - **Fix:** cherry-pick a `main` de `a3726e0` → **`1dafe16`** (feeds + bot) y `313dc2d` → **`9dff067`** (home/dashboards/`/mercado/equipetrol`). Type-check limpio en ambos.
+> - **Verificado en vivo (2-jun):** `/api/ventas` 356 props · 0 ZN · `/api/alquileres` 132 · 0 ZN · `/mercado/equipetrol/ventas` 378 props (≈EQ, no 782=EQ+ZN). Skills de audit aisladas por el director aparte.
+> - **🎯 LECCIÓN DE PROCESO:** cuando se enciende el discovery de una macrozona nueva en prod, el **aislamiento del frontend debe ir a `main` el MISMO día**. El P0 estuvo "resuelto" en la rama desde 31-may pero la fuga siguió en producción ~2 días por no desplegarse. "Resuelto en rama" ≠ "resuelto en prod".
+
 > **📋 Plan de implementación completo (1-jun-2026):** [`PLAN_PARAMETRIZACION_MACROZONAS.md`](./PLAN_PARAMETRIZACION_MACROZONAS.md) — fuente de verdad del ticket. Inventario exhaustivo de las 3 capas (BD/frontend/scripts), solución de 2 piezas, fases con checklist y archivos exactos, plan de verificación, dudas resueltas contra la BD. La tabla de superficies de abajo se mantiene como referencia histórica; el plan la amplía y afina (ej. el camino fiduciario/CMA salió del scope, el home Market Lens entró como público).
 >
 > **⚠️ Reclasificación de scope (1-jun-2026):** este ticket es **infraestructura GLOBAL del repo, NO específico de Zona Norte** — tocó vistas SQL, las 4 skills de audit, el estudio a clientes, dashboards admin y el bot. Vive en este backlog porque **ZN fue el disparador**, pero su **solución de fondo** (motor/vista único que filtre macrozona en un solo lugar, en vez del filtro disperso por consumidor) pertenece al repo general → **`docs/backlog/UNIFICACION_MERCADO_DATA.md`** (mismo problema, cruzados). Lo aplicado (F0-F5) ya está hecho; lo que queda de fondo no es ticket de ZN.
@@ -28,11 +33,11 @@ Luego: validar 1ra nocturna conjunta alquiler → **matching/pm alquiler ZN** (#
 
 | Superficie | Fuente | Estado |
 |---|---|---|
-| Feed `/ventas` + `/alquileres` (público) | RPC sin zona por defecto | 🟢 **P0 RESUELTO 31-may** — default `ZONAS_EQUIPETROL_DB` en API routes + getStaticProps + spotlight |
-| Bot Simón (`/api/chat-alquileres`) | RPC sin zona | 🟢 **P0 RESUELTO 31-may** — default EQ en la RPC |
+| Feed `/ventas` + `/alquileres` (público) | RPC sin zona por defecto | 🟢 **P0 RESUELTO 31-may · DESPLEGADO A MAIN 2-jun (`1dafe16`)** — default `ZONAS_EQUIPETROL_DB` en API routes + getStaticProps + spotlight. Verificado en vivo: 0 ZN |
+| Bot Simón (`/api/chat-alquileres`) | RPC sin zona | 🟢 **P0 RESUELTO 31-may · DESPLEGADO 2-jun (`1dafe16`)** — default EQ en la RPC |
 | Estudio de mercado a CLIENTES (`scripts/estudio-mercado/src/db.ts`) | `propiedades_v2` blacklist | 🔴 **P1** — `panoramaMercado()` corre sin zona → mezcla. (las tools con `config.zona` se salvan). Vende a Condado/Proinco. |
 | 4 skills de audit (ventas/alq, mensual/semanal) | `v_mercado_*` / `propiedades_v2` | 🔴 **P1** — antes del próximo audit. ventas-mensual gasta Firecrawl sobre 401 props ZN (~$1.75→$3.5+); alq-semanal Anexo A "cola barata" se llena de ZN |
-| `admin/market.tsx` + `admin/market-alquileres.tsx` | `propiedades_v2`/`v_mercado_*` | 🔴 **P2** — KPIs/tipologías/yield mezclados (absorción global OK, usa `zona='global'`) |
+| `admin/market.tsx` + `admin/market-alquileres.tsx` | `propiedades_v2`/`v_mercado_*` | 🟢 **RESUELTO + DESPLEGADO 2-jun** (`313dc2d`→`9dff067`) — KPIs/tipologías/yield ahora filtran EQ (absorción global ya estaba OK, usa `zona='global'`) |
 | `generate_advisor_snapshot` (mig 220) | `v_mercado_*` | 🔴 **P2** — agregados + serie histórica contaminados |
 | `analisis_alquileres_11q.js` (TikTok) | `v_mercado_alquiler` | 🔴 **P2** (+ tiene `service_role` hardcodeado, flaggear aparte) |
 | `/mercado/equipetrol/*`, baseline trimestral, prospección broker, shortlists, informe PDF, absorción global | allowlist / por-ID / snapshot blindado | 🟢 **Protegidos** (alguien ya los blindó con allowlist EQ) |
