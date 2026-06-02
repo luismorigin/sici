@@ -8,7 +8,7 @@
 
 **Fases 1-7 + #8 microzonas aplicadas y validadas en producción:** 14 microzonas en BD (mig 254), frontend (`lib/zonas.ts`) y workflows discovery ZN venta, **mergeado a `main`** (PR #1, merge `ad22b24`). Corrida nocturna 30-may OK: snapshot v3 generando las 14 series, EQ intacto.
 
-**Matching ZN mejorado (1-2 jun, #1.7 manual):** 13 pm nuevos cargados + verificados visualmente, **sin tocar el engine de producción** (carga de proyectos + asignación con candado, como el HITL). **Venta ZN 66.2% · alquiler ZN 53.2%** (+14pp alquiler). Ver entrada BITACORA 1-2 jun y `BACKLOG.md` #1.7.
+**Matching ZN mejorado (#1.7 manual):** carga de pm + asignación con candado, **sin tocar el engine de producción** (como el HITL). 1-2 jun: 13 pm nuevos. **2-jun sesión 2: +6 pm (437-442: Arista, Light, Living Costanera, Barak/II/III) + 5 asignaciones a pm existentes + Arista (17 props rescatadas por foto, nombre mal extraído "Preventa").** **Venta ZN 70.2% · alquiler ZN 58.0%.** Los 6 pm nuevos `gps_verificado_visual='confirmed'`. Ver entrada BITACORA 2-jun (sesión 2) y `BACKLOG.md` #1.7.
 
 **#7.1 Discovery ALQUILER ZN — 3 portales cerrados (31-may, branch `feat/zn-alquiler-auditoria-fixa`):** clonados los 3 discovery alquiler ZN (C21/Remax/BI) desde la generación multi-macrozona de venta + blindaje de los 3 discovery alquiler EQ. **115 props alquiler ZN activas** (83 C21 + 30 Remax + 2 BI). Corridas manuales OK. Próximo: validar 1ra nocturna conjunta → matching/pm alquiler (#1.7 + batch manual) → #6 frontend `/mercado/zona-norte`.
 
@@ -18,8 +18,8 @@
 | Fase 3: dark launch venta en prod (workflows discovery) | ✅ (26-may) |
 | Fase 4: validar calidad pipeline con data real | ✅ (audit 28-may) |
 | Audit GPS + cleanup historico K1/STONE/CURUPAU/Brickell (63 falsos) | ✅ (28-may) |
-| Cargar pm Zona Norte (#1.5 + capas 2-3 + #1.7 manual 1-2 jun) | ✅ **86 pm activos con 100% verificación visual** (73 + 13 nuevos del 1-2 jun, IDs 424-436) |
-| Match rate ZN | ✅ **venta 66.2% (264/399) · alquiler 53.2% (50/94)** al 2-jun — venta desde 19.7%, alquiler desde ~23% |
+| Cargar pm Zona Norte (#1.5 + capas 2-3 + #1.7 manual) | ✅ **92 pm activos con 100% verificación visual** (73 + 13 del 1-2 jun IDs 424-436 + 6 del 2-jun sesión 2 IDs 437-442) |
+| Match rate ZN | ✅ **venta 70.2% (290/413) · alquiler 58.0% (58/100)** al 2-jun sesión 2 — venta desde 19.7%, alquiler desde ~23% |
 | **#8 Microzonas (14 — grilla anillos×avenidas)** | ✅ **aplicado y validado en prod** (mig 254 + `lib/zonas.ts` + workflows discovery, mergeado a `main`). Corrida nocturna 30-may OK: snapshot v3 genera las 14 series ZN. Snapshot v4 descartado → ver #12 |
 | #7.1 alquiler ZN — discovery 3 portales + blindaje EQ | ✅ **31-may (115 props: 83 C21 + 30 Remax + 2 BI)** — pendiente validar nocturna conjunta + matching/pm |
 | #6 Frontend `/mercado/zona-norte` | ⬜ pendiente — prototipo multi-macrozona |

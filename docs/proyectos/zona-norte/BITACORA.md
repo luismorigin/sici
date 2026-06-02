@@ -908,3 +908,30 @@ Tanto mi plan como el revisor priorizaron portales por el **volumen de alquiler 
 **Pendiente:** alquiler aún ~44 props sin proyecto (3ª ronda posible). El director **NO quiere mergear** `feat/zn-alquiler-auditoria-fixa` hasta hacer una **prueba visual**. #1.7 sigue abierto como ticket (falta el **workflow n8n automático** + HTML genérico desde BD; el método manual ya está probado).
 
 **Validación de la nocturna conjunta (2-jun) — cierra parte del pendiente #7.1:** revisada la corrida. **Inventario ZN intacto:** alquiler **113 activas** (era 115 el 31-may, merma normal), venta **476**. **El discovery EQ blindado NO tumbó props ZN** — la preocupación central del #7.1 queda **validada**. `enrichment_llm_venta` OK (02:14). `workflow_executions` solo instrumenta el enrichment LLM venta (los clones de discovery ZN no escriben ahí → validar por datos). **Ojo de timing:** la nocturna corrió ANTES de cargar los 13 pm de hoy, así que esos matches fueron manuales; la **próxima nocturna (3-jun)** usará los pm nuevos vía la MV `mv_nombre_proyecto_lookup` refrescada y puede **sumar matches automáticos** — vale revisarla.
+
+---
+
+## 2 Jun 2026 (sesión 2) — Continuación matching ZN (#1.7 manual): +32 matches, venta cruza 70%
+
+> Contexto de la jornada: en la misma sesión se resolvió primero el **incidente de aislamiento en prod** (el feed `/ventas` exponía 399 props ZN porque el código de aislamiento estaba en la rama sin mergear a `main`). Cherry-pick a `main` de `a3726e0`+`313dc2d`, verificado en vivo 0 ZN. Detalle completo en **`BACKLOG.md` #15**.
+
+**Pedido:** seguir mejorando el matching ZN, mismo método #1.7 manual (sin tocar el engine).
+
+**Avance:** **Venta 63.9% (264) → 70.2% (290)** · **Alquiler 52.0% (52) → 58.0% (58)** · **+32 matches** (el total subió a 413 venta / 100 alquiler porque la nocturna 2-jun metió props nuevas, por eso el % de partida bajó respecto al 66.2% del 1-jun aunque el `matched` no cambió).
+
+**Lo cargado:**
+1. **5 asignaciones a pm existentes** que el matching no enganchó por variación de nombre (nombre + GPS ≤13m, sin ambigüedad): Baruc (2139, 2145→409), Bizet (2586, 2572→428), Barcelona (2485→427).
+2. **pm 437 Condominio Arista** — 17 props. Las **16 de Remax tenían `nombre_edificio='Preventa'`** (el enrichment confundió el estado "pre venta" con el nombre → por eso nunca matchearon). El director las **identificó por la FOTO del listing**. Sumada la 2164 ("Proyecto Arista", C21). GPS del listing caía sobre una concesionaria (TDLMotors) → **GPS real corregido a `-17.73557,-63.15935`** (verificación visual).
+3. **Lote 5 pm nuevos (438-442):** Light, Living Costanera, Barak II, Barak III, Barak. 10 props.
+
+**Hallazgos metodológicos (reusables):**
+- **GPS basura compartido `-17.73388,-63.16198`:** 5 edificios DISTINTOS apilados en el mismo pin (Living Costanera, Macororó III, Holiday Smart Studio, Mozart, Vertical) — pin placeholder de un portal. **El GPS no sirve para ubicar; agrupar por GPS los fusionaría.** Refuerza que el ancla es el **nombre real** (slug de la URL / foto), no el campo `nombre_edificio` crudo ni el GPS.
+- **Nombres mal extraídos** ("Preventa" en Arista) y **GPS de broker desviados** son la causa principal del gap restante, no falta de reglas de matching.
+- **verify-pm-gps** corrido sobre los 6 pm nuevos. Overpass público dio 504 (saturado) → se completó con mirror `overpass.private.coffee`. El director verificó GPS uno por uno: **Arista y Barak corregidos** (broker/portal desviados), Light/Living Costanera/Barak II/III confirmados. Los **6 pm → `gps_verificado_visual='confirmed'`**.
+- **Barak = complejo de 3 torres reales** (Barak, Barak II, Barak III), confirmadas por slug C21 (`condominio-barak-ii`) + descripción Remax ("CONDOMINIO BARAK III"). Se descartó fusionar 440↔442 (son torres pegadas, mismo predio, distinto nombre real). Prop **2534 dejada `sospechosa`** en la razón del candado (slug C21 genérico + GPS a 185m de las otras).
+
+**Pendiente (123 venta + 42 alquiler sin match), todo para verificación visual:**
+- El **GPS basura** `-17.73388` (Macororó III, Holiday Smart, Mozart, Vertical-2148) — cada uno necesita su GPS real.
+- El **trío Atlantis/Holiday/Panorama** (mismo GPS `-17.73763,-63.15718`: ¿complejo o basura?).
+- La **saga Macororó** (10, 19, genérico) — varios edificios numerados.
+- Los **`(s/n)` a ≤50m de un pm existente** (2526→Ares, 2308→Portobello, 2065→Hera, 2037/2032→Raizant, 2257→Macororó 13/14…) — asignaciones probables, verificación visual liviana.
