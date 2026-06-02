@@ -288,6 +288,13 @@ La intuición correcta del usuario fue: *"explicame el problema que estamos trat
 
 ### #1.7 — Detector automático de clusters emergentes (infraestructura para no cargar pm manual)
 
+> 🟡 **AVANCE 1-2 jun 2026 — el MÉTODO ya está probado manualmente; falta automatizarlo.** Se ejecutó el detector como **query SQL** (`≥2 props mismo nombre normalizado + dispersión <40-60m + lejos de pm existente >100m`) en 2 rondas y se cargaron **13 pm nuevos** (IDs 424-436) vía **mapa visual HTML** (`scripts/verify-pm-gps/verify-pm-zn-1jun.html` + `-r2.html`: cards Leaflet satélite, veredicto, export a SQL). Resultado: venta ZN 60.6%→66.2%, alquiler ~23%→53.2%, **sin tocar el matching de producción**. Lecciones que afinan este ticket:
+> - **El criterio "nombre + GPS≤50m" no basta solo** — el ancla es el **nombre** (campo o **slug de URL**); el GPS desempata vecinos. Las sugerencias del matching por nombre son FP masivos (13/13 en alquiler tenían GPS lejano).
+> - **Tras el `INSERT` de pm hay que `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_nombre_proyecto_lookup`** (su trigger solo refresca en UPDATE) o el matching no los ve.
+> - **`proyectos_master.zona` de ZN debe ser la MICROZONA** (`get_zona_by_gps`), no la macrozona — los pm ZN existentes usan microzona.
+>
+> **Lo que falta para CERRAR el ticket:** convertir la query en función `detectar_clusters_emergentes(p_zona)` + workflow n8n semanal + HTML genérico que lea de BD (los `-1jun.html` tienen data hardcodeada). Ver detalle abajo.
+
 > **Pregunta del usuario que motivó este ticket (28-may-2026 sesión 2):** *"el trabajo de match se tiene que hacer, pero ¿hay una manera más eficiente o solo con Places?"*
 
 **Contexto:** las 2 sesiones de hoy mostraron que cargar pm uno a uno funciona pero **no escala**. Sesión 1: 20 pm. Sesión 2: 12 pm + aliases. Match rate subió de 19.7% a 40.7%. Cada noche llegan props con nombres nuevos que requieren carga manual. Necesitamos que el sistema **detecte solo cuándo emerge un cluster** y nos avise.

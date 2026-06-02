@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Verificación visual — edificios nuevos + ambiguos Zona Norte (1-jun-2026)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f7; color: #222; }
+  header { background: #fff; border-bottom: 1px solid #ddd; padding: 14px 24px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+  header h1 { margin: 0 0 4px; font-size: 18px; }
+  #stats { font-size: 13px; color: #555; }
+  .intro { max-width: 1200px; margin: 14px auto 0; padding: 0 20px; font-size: 13px; color: #555; line-height: 1.55; }
+  .intro b { color: #333; }
+  main { padding: 20px; max-width: 1200px; margin: 0 auto; }
+  .pm-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 18px; overflow: hidden; border-left: 4px solid #6c757d; }
+  .pm-card.nuevo { border-left-color: #28a745; }
+  .pm-card.descartar { border-left-color: #dc3545; }
+  .pm-card[data-chosen^="asignar"] { border-left-color: #4285f4; }
+  .pm-header { padding: 14px 18px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; }
+  .pm-header:hover { background: #fafafa; }
+  .pm-title { font-weight: 600; font-size: 15px; }
+  .pm-summary { font-size: 12px; color: #666; margin-top: 4px; }
+  .pm-veredicto-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; background: #6c757d; color: #fff; white-space: nowrap; }
+  .pm-card.nuevo .pm-veredicto-badge { background: #28a745; }
+  .pm-card.descartar .pm-veredicto-badge { background: #dc3545; }
+  .pm-card[data-chosen^="asignar"] .pm-veredicto-badge { background: #4285f4; }
+  .pm-body { padding: 18px; border-top: 1px solid #eee; display: none; }
+  .pm-card.expanded .pm-body { display: block; }
+  .pm-recomendacion { background: #fff8e1; padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 14px; border-left: 3px solid #ffc107; line-height: 1.5; }
+  .pm-recomendacion.ok { background: #e8f5e9; border-left-color: #28a745; }
+  .pm-recomendacion.bad { background: #ffebee; border-left-color: #dc3545; }
+  .pm-recomendacion.info { background: #e7f1ff; border-left-color: #4285f4; }
+  .btn { display: inline-block; padding: 6px 12px; border-radius: 4px; font-size: 12px; text-decoration: none; cursor: pointer; border: 1px solid #ccc; background: #fff; color: #222; }
+  .btn:hover { background: #f0f0f0; }
+  .btn-primary { background: #4285f4; color: #fff; border-color: #4285f4; }
+  .btn-primary:hover { background: #357ae8; }
+  .mini-map { height: 400px; border-radius: 6px; margin: 14px 0; border: 1px solid #ddd; background: #eee; }
+  .map-legend { background: rgba(255,255,255,0.92); padding: 6px 10px; border-radius: 4px; font-size: 11px; line-height: 1.6; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+  .map-legend .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+  .props-section h4 { margin: 14px 0 8px; font-size: 13px; color: #555; }
+  .prop-row { padding: 10px 12px; background: #fafafa; border-radius: 4px; margin-bottom: 6px; font-size: 12px; }
+  .prop-row .url { color: #4285f4; text-decoration: none; word-break: break-all; }
+  .prop-row .url:hover { text-decoration: underline; }
+  .prop-meta { color: #666; margin-top: 4px; }
+  .prop-btns { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .prop-btns .btn { font-size: 10px; padding: 3px 8px; }
+  .verdict-row { display: flex; gap: 6px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed #ddd; flex-wrap: wrap; }
+  .verdict-btn { padding: 10px 14px; border: 2px solid transparent; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; transition: all 0.15s; flex: 1; min-width: 140px; }
+  .verdict-btn.nuevo { background: #d4edda; color: #155724; }
+  .verdict-btn.nuevo.active { background: #28a745; color: #fff; border-color: #155724; }
+  .verdict-btn.asignar { background: #cfe2ff; color: #084298; }
+  .verdict-btn.asignar.active { background: #4285f4; color: #fff; border-color: #084298; }
+  .verdict-btn.descartar { background: #f8d7da; color: #721c24; }
+  .verdict-btn.descartar.active { background: #dc3545; color: #fff; border-color: #721c24; }
+  textarea { width: 100%; min-height: 56px; margin-top: 10px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; font-family: inherit; }
+  #export-bar { background: #fff; border-top: 1px solid #ddd; padding: 14px 24px; position: sticky; bottom: 0; box-shadow: 0 -2px 6px rgba(0,0,0,0.05); text-align: center; }
+  #export-btn { padding: 12px 30px; background: #28a745; color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; }
+  #export-btn:hover { background: #218838; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Verificación visual — Zona Norte (1-jun-2026)</h1>
+  <div id="stats">Cargando…</div>
+</header>
+<div class="intro">
+  <b>Qué es esto:</b> el matching (en producción, no se toca) no engancha estas props porque <b>el edificio no tiene proyecto cargado</b> (7 edificios nuevos) o porque <b>solo hay GPS, sin nombre</b> (caso 2530). Tu trabajo: abrí cada card, mirá el mapa satelital — <b>¿las props (verde) caen juntas sobre un edificio real?</b> — y elegí el veredicto.
+  Los pines <b>rosados</b> son proyectos que YA existen cerca (para que veas que es OTRO edificio, no confundir). Al terminar, el botón de abajo te baja un <code>.sql</code> con tus decisiones (INSERT del pm nuevo + asignación de las props, todo candado). Las decisiones se guardan solas en el navegador.
+</div>
+<main id="cards"></main>
+<div id="export-bar">
+  <button id="export-btn">📋 Descargar carga-pm-zn-1jun.sql con mis decisiones</button>
+</div>
+<script>
+const DATA = [
+  {
+    key: 'villa-ada', nombre: 'Villa Ada', tipo_default: 'nuevo',
+    cen_lat: -17.7144889, cen_lon: -63.1665239, dispersion: 0,
+    diagnostico: '🟡 3 props C21 con GPS idéntico (Villa Ada, 8vo anillo aprox). El proyecto más cercano está a 867m (Cantabria) → es zona sin cobertura de pm. URLs genéricas ("zona-norte"), el nombre viene del LLM/crudo.',
+    rec_class: '', rec: 'Mirá si el punto cae sobre un edificio de departamentos real. Si sí → cargar como pm nuevo. El nombre "Villa Ada" no está confirmado por URL, validá que sea correcto.',
+    candidatos: [],
+    props: [
+      { id: 2470, lat: -17.7144889, lon: -63.1665239, fuente: 'century21', op: 'venta', url: 'https://c21.com.bo/propiedad/104593_departamento-en-venta-zona-norte' },
+      { id: 2569, lat: -17.7144889, lon: -63.1665239, fuente: 'century21', op: 'alquiler', url: 'https://c21.com.bo/propiedad/104451_departamento-en-alquiler' },
+      { id: 2570, lat: -17.7144889, lon: -63.1665239, fuente: 'century21', op: 'alquiler', url: 'https://c21.com.bo/propiedad/103015_departamento-independiente-en-alquiler-1er-piso' }
+    ]
+  },
+  {
+    key: 'torre-zen', nombre: 'Torre Zen', tipo_default: 'nuevo',
+    cen_lat: -17.7501989, cen_lon: -63.1705284, dispersion: 14,
+    diagnostico: '🟡 3 props Remax compactas (14m). El proyecto Gaudí Tower está a 124m (es OTRO edificio, pin rosado). URLs Remax genéricas (no mencionan "Torre Zen").',
+    rec_class: '', rec: 'Validá que el punto cae sobre un edificio y que NO es Gaudí Tower (124m al lado). Nombre sin confirmar por URL.',
+    candidatos: [ { pm_id: 377, nombre: 'Gaudí Tower', lat: -17.7500261, lon: -63.1693697, dist: 124 } ],
+    props: [
+      { id: 2240, lat: -17.7501581, lon: -63.1706572, fuente: 'remax', op: 'alquiler', url: 'https://remax.bo/propiedad/departamento-santa-cruz-de-la-sierra-norte-1200796319-144' },
+      { id: 2241, lat: -17.7502194, lon: -63.1704640, fuente: 'remax', op: 'alquiler', url: 'https://remax.bo/propiedad/departamento-santa-cruz-de-la-sierra-norte-1200796319-145' },
+      { id: 2274, lat: -17.7502194, lon: -63.1704640, fuente: 'remax', op: 'alquiler', url: 'https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-1200796319-165' }
+    ]
+  },
+  {
+    key: 'habita-beni', nombre: 'Habita Beni', tipo_default: 'nuevo',
+    cen_lat: -17.7370672, cen_lon: -63.1580639, dispersion: 0,
+    diagnostico: '🟢 2 props C21 con GPS idéntico. Ambas URLs CONFIRMAN el nombre ("en-habita-beni", "cond-habita-beni"). HH Home a 164m (otro edificio, pin rosado).',
+    rec_class: 'ok', rec: 'URLs confirman "Habita Beni" + GPS consistente. Fuerte candidato a cargar. Solo validá visualmente que el punto cae sobre el edificio.',
+    candidatos: [ { pm_id: 354, nombre: 'EDIFICIO HH HOME', lat: -17.7361400, lon: -63.1592650, dist: 164 } ],
+    props: [
+      { id: 2149, lat: -17.7370672, lon: -63.1580639, fuente: 'century21', op: 'venta', url: 'https://c21.com.bo/propiedad/109089_departamento-en-venta-en-habita-beni' },
+      { id: 2468, lat: -17.7370672, lon: -63.1580639, fuente: 'century21', op: 'venta', url: 'https://c21.com.bo/propiedad/111319_departamento-de-dos-dormitorios-en-venta-zona-norte-cond-habita-beni' }
+    ]
+  },
+  {
+    key: 'cond-barcelona', nombre: 'Condominio Barcelona', tipo_default: 'nuevo',
+    cen_lat: -17.6953371, cen_lon: -63.1557762, dispersion: 29,
+    diagnostico: '🟢 2 props (C21 + Remax independientes), dispersión 29m. URL C21 CONFIRMA "condominio-barcelona". Zona 7mo-9no anillo, sin pm cerca (Cantabria a 2.9km).',
+    rec_class: 'ok', rec: 'URL confirma el nombre + 2 fuentes. Candidato a cargar. Ojo: NO confundir con el pm 273 "CONDOMINIO BARCELONA 04.05 Miro Tower" de Equipetrol — este es otro, en Zona Norte.',
+    candidatos: [],
+    props: [
+      { id: 2445, lat: -17.6951508, lon: -63.1559691, fuente: 'remax', op: 'alquiler', url: 'https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-banzer-7mo-a-9no-anillo-120079007-228' },
+      { id: 2575, lat: -17.6955234, lon: -63.1555833, fuente: 'century21', op: 'alquiler', url: 'https://c21.com.bo/propiedad/103808_monoambiente-en-alquiler-en-condominio-barcelona-al-norte-zona-u-catolica' }
+    ]
+  },
+  {
+    key: 'bizet', nombre: 'Bizet', tipo_default: 'nuevo',
+    cen_lat: -17.7097901, cen_lon: -63.1753979, dispersion: 4,
+    diagnostico: '🟡 2 props C21 compactas (4m). URLs genéricas ("zona-el-remanso", "8vo-anillo") — no mencionan "Bizet". Nombre del LLM/crudo. Sin pm cerca (Cantabria 558m).',
+    rec_class: '', rec: 'Validá visualmente el edificio. Nombre "Bizet" sin confirmar por URL — verificá que sea correcto antes de cargar.',
+    candidatos: [],
+    props: [
+      { id: 2479, lat: -17.7098256, lon: -63.1754151, fuente: 'century21', op: 'venta', url: 'https://c21.com.bo/propiedad/111405_monoambiente-en-venta-o-anticretico-zona-norte-8vo-anillo' },
+      { id: 2480, lat: -17.7097546, lon: -63.1753806, fuente: 'century21', op: 'venta', url: 'https://c21.com.bo/propiedad/100194_departamento-en-venta-zona-el-remanso' }
+    ]
+  },
+  {
+    key: 'nature-residence', nombre: 'Nature Residence', tipo_default: 'nuevo',
+    cen_lat: -17.7307885, cen_lon: -63.1689533, dispersion: 0,
+    diagnostico: '🟡 2 props C21 con GPS idéntico. URLs genéricas ("zona-ucebol") — no mencionan "Nature". Tamisa III a 89m (pin rosado, otro edificio).',
+    rec_class: '', rec: 'Validá el edificio y que NO sea Tamisa III (89m). Nombre sin confirmar por URL.',
+    candidatos: [ { pm_id: 416, nombre: 'Tamisa III', lat: -17.7309146, lon: -63.1681218, dist: 89 } ],
+    props: [
+      { id: 2559, lat: -17.7307885, lon: -63.1689533, fuente: 'century21', op: 'alquiler', url: 'https://c21.com.bo/propiedad/104034_alquiler-de-monoambiente-a-estrenar-zona-ucebol' },
+      { id: 2560, lat: -17.7307885, lon: -63.1689533, fuente: 'century21', op: 'alquiler', url: 'https://c21.com.bo/propiedad/103983_monoambiente-en-alquiler-zona-ucebol' }
+    ]
+  },
+  {
+    key: 'jazmines', nombre: 'Condominio Los Jazmines del Parque', tipo_default: 'asignar:375',
+    cen_lat: -17.7375449, cen_lon: -63.1640917, dispersion: 5,
+    diagnostico: '🔵 CASO ESPECIAL. 2 props, URL confirma "jazmines-del-parque". PERO ya existe el pm 375 "Jazmines del parque - Torre 3" a SOLO 54m (pin rosado). Probablemente es el MISMO complejo → estas props son de Torre 3 (o una torre vecina del mismo condominio).',
+    rec_class: 'info', rec: 'Decisión: si es el mismo complejo → "Asignar a Torre 3" (default). Si visualmente ves que es una torre distinta del complejo con identidad propia → "Cargar como pm nuevo". Mirá el mapa: ¿el punto verde y el rosado son el mismo edificio o torres separadas?',
+    candidatos: [ { pm_id: 375, nombre: 'Jazmines del parque - Torre 3', lat: -17.7378412, lon: -63.1636835, dist: 54 } ],
+    props: [
+      { id: 2162, lat: -17.7375004, lon: -63.1640708, fuente: 'century21', op: 'venta', url: 'https://c21.com.bo/propiedad/91317_departamento-en-planta-baja-en-condominio-los-jazmines-del-parque' },
+      { id: 2259, lat: -17.7375894, lon: -63.1641127, fuente: 'remax', op: 'alquiler', url: 'https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-125001263-32' }
+    ]
+  },
+  {
+    key: 'prop-2530', nombre: 'Prop 2530 — sin nombre (ambiguo Grupo B)', tipo_default: '',
+    cen_lat: -17.7481538, cen_lon: -63.1782439, dispersion: 0,
+    diagnostico: '🔴 1 prop alquiler SIN nombre de edificio y URL genérica ("hermoso-departamento-en-zona-norte"). Dos proyectos casi empatados: Brickell 4 a 23m y Domus Madero a 31m. Hay 2 más alrededor (Domus Luxury 65m, Brisas 93m).',
+    rec_class: 'bad', rec: 'Acá NO hay nombre que ayude — solo el mapa decide. Mirá sobre cuál edificio cae exactamente el pin verde y elegí ese candidato. Si no se distingue, dejá "Descartar" (queda sin proyecto, sin riesgo).',
+    candidatos: [
+      { pm_id: 122, nombre: 'Brickell 4 (cuatro)', lat: -17.7480452, lon: -63.1784308, dist: 23 },
+      { pm_id: 372, nombre: 'DOMUS MADERO', lat: -17.7484223, lon: -63.1781607, dist: 31 },
+      { pm_id: 356, nombre: 'DOMUS LUXURY', lat: -17.7482409, lon: -63.1788459, dist: 65 },
+      { pm_id: 357, nombre: 'BRISAS by Omnia', lat: -17.747929, lon: -63.179092, dist: 93 }
+    ],
+    props: [
+      { id: 2530, lat: -17.7481538, lon: -63.1782439, fuente: 'century21', op: 'alquiler', url: 'https://c21.com.bo/propiedad/86600_en-alquiler-hermoso-departamento-en-zona-norte' }
+    ]
+  }
+];
+
+const STORAGE_KEY = "verify-pm-zn-1jun-v1";
+let decisions = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+function saveDecisions() { localStorage.setItem(STORAGE_KEY, JSON.stringify(decisions)); }
+
+function gmapsSatUrl(lat, lon) { return `https://www.google.com/maps/place/${lat},${lon}/@${lat},${lon},19z/data=!3m1!1e3`; }
+function streetUrl(lat, lon) { return `https://www.google.com/maps?q=&layer=c&cbll=${lat},${lon}`; }
+function searchUrl(nombre) { return `https://www.google.com/maps/search/${encodeURIComponent(nombre + ", Santa Cruz, Bolivia")}`; }
+function osmUrl(lat, lon) { return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=19`; }
+
+const initializedMaps = new Set();
+
+function initMiniMap(d) {
+  if (initializedMaps.has(d.key)) return;
+  const containerId = `map-${d.key}`;
+  if (!document.getElementById(containerId)) return;
+  const map = L.map(containerId, { scrollWheelZoom: false });
+  const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri/ArcGIS', maxZoom: 19 });
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 });
+  sat.addTo(map);
+  L.control.layers({ 'Satélite': sat, 'OpenStreetMap': osm }).addTo(map);
+
+  const bounds = [];
+  // Props (verde)
+  d.props.forEach(p => {
+    L.circleMarker([p.lat, p.lon], { radius: 8, color: '#28a745', fillColor: '#28a745', fillOpacity: 0.75, weight: 2 })
+      .addTo(map)
+      .bindPopup(`<b>Prop ${p.id}</b> · ${p.fuente} · ${p.op}<br/><a href="${p.url}" target="_blank">Ver anuncio</a><br/><a href="${gmapsSatUrl(p.lat, p.lon)}" target="_blank">🛰️ Maps</a> · <a href="${streetUrl(p.lat, p.lon)}" target="_blank">📷 SV</a>`);
+    bounds.push([p.lat, p.lon]);
+  });
+  // Centroide del cluster (verde grande hueco) si hay >1 prop dispersa
+  if (d.props.length > 1) {
+    L.circleMarker([d.cen_lat, d.cen_lon], { radius: 13, color: '#28a745', fill: false, weight: 2, dashArray: '4' })
+      .addTo(map).bindPopup(`<b>Centroide del cluster</b><br/>${d.cen_lat.toFixed(6)}, ${d.cen_lon.toFixed(6)}<br/>(GPS que se usaría para el pm nuevo)`);
+  }
+  // Candidatos / pm de referencia (rosado)
+  (d.candidatos || []).forEach(c => {
+    L.circleMarker([c.lat, c.lon], { radius: 11, color: '#d63384', fillColor: '#d63384', fillOpacity: 0.55, weight: 3 })
+      .addTo(map)
+      .bindPopup(`<b>📌 ${c.nombre}</b> (pm ${c.pm_id})<br/>YA existe · a ${c.dist}m de las props<br/><a href="${gmapsSatUrl(c.lat, c.lon)}" target="_blank">🛰️ Maps</a> · <a href="${streetUrl(c.lat, c.lon)}" target="_blank">📷 SV</a>`);
+    bounds.push([c.lat, c.lon]);
+  });
+  map.fitBounds(bounds.length ? bounds : [[d.cen_lat, d.cen_lon]], { padding: [40, 40], maxZoom: 19 });
+
+  const legend = L.control({ position: 'topright' });
+  legend.onAdd = function() {
+    const div = L.DomUtil.create('div', 'map-legend');
+    let html = '<div><span class="dot" style="background:#28a745"></span><b>Props (sin pm)</b></div>';
+    if ((d.candidatos || []).length) html += '<div><span class="dot" style="background:#d63384"></span>pm que ya existe</div>';
+    div.innerHTML = html;
+    return div;
+  };
+  legend.addTo(map);
+  initializedMaps.add(d.key);
+}
+
+function renderCard(d) {
+  const dec = decisions[d.key] || {};
+  const chosen = dec.verdict || '';
+  const cls = chosen === 'nuevo' ? 'nuevo' : chosen === 'descartar' ? 'descartar' : '';
+  const expanded = dec._expanded ? ' expanded' : '';
+  const badge = !chosen ? 'SIN REVISAR'
+    : chosen === 'nuevo' ? 'CARGAR NUEVO'
+    : chosen === 'descartar' ? 'DESCARTAR'
+    : 'ASIGNAR → ' + ((d.candidatos.find(c => 'asignar:' + c.pm_id === chosen) || {}).nombre || '');
+
+  const propsHtml = d.props.map(p => `
+    <div class="prop-row">
+      <a href="${p.url}" target="_blank" class="url">${p.url}</a>
+      <div class="prop-meta">ID ${p.id} · ${p.fuente} · ${p.op} · GPS ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}</div>
+      <div class="prop-btns">
+        <a href="${gmapsSatUrl(p.lat, p.lon)}" target="_blank" class="btn btn-primary">🛰️ Sat</a>
+        <a href="${streetUrl(p.lat, p.lon)}" target="_blank" class="btn">📷 Street View</a>
+        <a href="${osmUrl(p.lat, p.lon)}" target="_blank" class="btn">🌐 OSM</a>
+      </div>
+    </div>`).join('');
+
+  const asignarBtns = (d.candidatos || []).map(c =>
+    `<button class="verdict-btn asignar ${chosen === 'asignar:' + c.pm_id ? 'active' : ''}" onclick="setVerdict('${d.key}','asignar:${c.pm_id}',event)">🔗 Es ${c.nombre} (${c.dist}m)</button>`
+  ).join('');
+
+  return `
+    <div class="pm-card ${cls}${expanded}" data-key="${d.key}" data-chosen="${chosen}">
+      <div class="pm-header" onclick="toggleCard('${d.key}')">
+        <div>
+          <div class="pm-title">${d.nombre}</div>
+          <div class="pm-summary">${d.props.length} props · dispersión ${d.dispersion}m · centroide ${d.cen_lat.toFixed(5)}, ${d.cen_lon.toFixed(5)}</div>
+        </div>
+        <span class="pm-veredicto-badge">${badge}</span>
+      </div>
+      <div class="pm-body">
+        <div class="pm-recomendacion ${d.rec_class}"><b>Diagnóstico:</b> ${d.diagnostico}<br/><b>Qué decidir:</b> ${d.rec}</div>
+        <div style="margin-bottom:10px">
+          <a href="${searchUrl(d.nombre)}" target="_blank" class="btn">🔍 Buscar "${d.nombre}" en Maps</a>
+          <a href="${gmapsSatUrl(d.cen_lat, d.cen_lon)}" target="_blank" class="btn btn-primary">🛰️ Centroide satelital</a>
+        </div>
+        <div class="mini-map" id="map-${d.key}"></div>
+        <div class="props-section">
+          <h4 style="margin-top:0">📍 Propiedades sin proyecto</h4>
+          ${propsHtml}
+        </div>
+        <div class="verdict-row">
+          <button class="verdict-btn nuevo ${chosen === 'nuevo' ? 'active' : ''}" onclick="setVerdict('${d.key}','nuevo',event)">✅ Cargar como pm NUEVO</button>
+          ${asignarBtns}
+          <button class="verdict-btn descartar ${chosen === 'descartar' ? 'active' : ''}" onclick="setVerdict('${d.key}','descartar',event)">⚠️ Descartar / no tocar</button>
+        </div>
+        <textarea placeholder="Notas (ej: nombre real confirmado, calle, observaciones...)" onblur="setNotes('${d.key}', this.value)">${dec.notes || ''}</textarea>
+      </div>
+    </div>`;
+}
+
+function renderAll() {
+  initializedMaps.clear();
+  document.getElementById("cards").innerHTML = DATA.map(renderCard).join('');
+  updateStats();
+  DATA.forEach(d => { if (decisions[d.key]?._expanded) setTimeout(() => initMiniMap(d), 50); });
+}
+
+function updateStats() {
+  const total = DATA.length;
+  let nuevo = 0, asignar = 0, descartar = 0, pend = 0;
+  DATA.forEach(d => {
+    const v = decisions[d.key]?.verdict || '';
+    if (v === 'nuevo') nuevo++;
+    else if (v === 'descartar') descartar++;
+    else if (v.startsWith('asignar')) asignar++;
+    else pend++;
+  });
+  document.getElementById("stats").innerHTML = `Total: ${total} · ✅ Nuevos: ${nuevo} · 🔗 Asignar: ${asignar} · ⚠️ Descartar: ${descartar} · ⏳ Sin revisar: ${pend}`;
+}
+
+function toggleCard(key) {
+  if (!decisions[key]) decisions[key] = {};
+  decisions[key]._expanded = !decisions[key]._expanded;
+  saveDecisions();
+  const card = document.querySelector(`[data-key="${key}"]`);
+  card.classList.toggle('expanded');
+  if (card.classList.contains('expanded')) {
+    const d = DATA.find(x => x.key === key);
+    setTimeout(() => initMiniMap(d), 50);
+  }
+}
+
+function setVerdict(key, verdict, ev) {
+  ev?.stopPropagation();
+  if (!decisions[key]) decisions[key] = { _expanded: true };
+  if (decisions[key].verdict === verdict) delete decisions[key].verdict;
+  else decisions[key].verdict = verdict;
+  saveDecisions();
+  renderAll();
+}
+
+function setNotes(key, notes) {
+  if (!decisions[key]) decisions[key] = {};
+  decisions[key].notes = notes;
+  saveDecisions();
+}
+
+function candadoSql() {
+  return `jsonb_build_object('id_proyecto_master', jsonb_build_object('por','admin_manual','fecha',now()::text,'bloqueado',true,`;
+}
+
+document.getElementById("export-btn").addEventListener("click", () => {
+  const lines = [
+    "-- Carga de pm nuevos + asignaciones Zona Norte (verificacion visual #1.7)",
+    "-- Generado desde verify-pm-zn-1jun.html",
+    "-- IMPORTANTE: el matching en produccion NO se toca. Esto solo INSERTA proyectos faltantes",
+    "-- y asigna id_proyecto_master a las props (con candado), como haria el HITL a mano.",
+    "",
+    "BEGIN;",
+    ""
+  ];
+  let nNuevo = 0, nAsignar = 0;
+  for (const d of DATA) {
+    const dec = decisions[d.key];
+    if (!dec?.verdict) continue;
+    const notes = (dec.notes || '').replace(/'/g, "''");
+    const ids = d.props.map(p => p.id).join(',');
+
+    if (dec.verdict === 'nuevo') {
+      nNuevo++;
+      const nombre = d.nombre.replace(/'/g, "''");
+      const razon = ('Detector clusters #1.7 + verificacion visual 1-jun-2026. ' + notes).replace(/'/g, "''");
+      lines.push(`-- ${d.nombre}: cargar pm NUEVO + asignar props ${ids}`);
+      lines.push(`WITH nuevo_pm AS (`);
+      lines.push(`  INSERT INTO proyectos_master (nombre_oficial, latitud, longitud, zona, activo, gps_verificado_visual, gps_verificacion_notas)`);
+      lines.push(`  VALUES ('${nombre}', ${d.cen_lat}, ${d.cen_lon}, 'Zona Norte', true, 'confirmed', '${razon}')`);
+      lines.push(`  RETURNING id_proyecto_master`);
+      lines.push(`)`);
+      lines.push(`UPDATE propiedades_v2 p SET`);
+      lines.push(`  id_proyecto_master = (SELECT id_proyecto_master FROM nuevo_pm),`);
+      lines.push(`  metodo_match = 'manual_director_1jun_pm_nuevo',`);
+      lines.push(`  campos_bloqueados = COALESCE(p.campos_bloqueados,'{}'::jsonb) || jsonb_build_object(`);
+      lines.push(`    'id_proyecto_master', jsonb_build_object('por','admin_manual','fecha',now()::text,'bloqueado',true,`);
+      lines.push(`      'razon','pm nuevo verificado visual 1-jun-2026 (${d.nombre.replace(/'/g, "''")})'))`);
+      lines.push(`WHERE p.id IN (${ids});`);
+      lines.push("");
+    } else if (dec.verdict.startsWith('asignar:')) {
+      nAsignar++;
+      const pmId = dec.verdict.split(':')[1];
+      const cand = d.candidatos.find(c => String(c.pm_id) === pmId) || {};
+      lines.push(`-- ${d.nombre}: asignar props ${ids} al pm existente ${pmId} (${(cand.nombre||'').replace(/'/g,"''")})`);
+      lines.push(`UPDATE propiedades_v2 p SET`);
+      lines.push(`  id_proyecto_master = ${pmId},`);
+      lines.push(`  metodo_match = 'manual_director_1jun_visual',`);
+      lines.push(`  campos_bloqueados = COALESCE(p.campos_bloqueados,'{}'::jsonb) || jsonb_build_object(`);
+      lines.push(`    'id_proyecto_master', jsonb_build_object('por','admin_manual','fecha',now()::text,'bloqueado',true,`);
+      lines.push(`      'razon','Asignado por verificacion visual 1-jun-2026. ${notes || 'GPS confirmado en mapa.'}'))`);
+      lines.push(`WHERE p.id IN (${ids}) AND p.id_proyecto_master IS NULL;`);
+      lines.push("");
+    } else {
+      lines.push(`-- ${d.nombre}: DESCARTADO (queda sin proyecto). ${notes}`);
+      lines.push("");
+    }
+  }
+  lines.push(`-- Resumen: ${nNuevo} pm nuevos · ${nAsignar} asignaciones a pm existente`);
+  lines.push("-- Verificacion post-carga:");
+  lines.push("SELECT zona, COUNT(*) FILTER (WHERE id_proyecto_master IS NOT NULL) matched, COUNT(*) total");
+  lines.push("FROM v_mercado_venta WHERE zona_general='Zona Norte' GROUP BY zona;");
+  lines.push("");
+  lines.push("COMMIT;");
+  const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "carga-pm-zn-1jun.sql";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+renderAll();
+</script>
+</body>
+</html>

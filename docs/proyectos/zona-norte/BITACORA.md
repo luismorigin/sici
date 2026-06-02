@@ -879,3 +879,30 @@ Tanto mi plan como el revisor priorizaron portales por el **volumen de alquiler 
 **Edge case prop 1385 (Ed. Europeo):** BI manda GPS errado (3 km al norte → cae en polígono ZN), el clon la reclama por usar el GPS crudo del portal (no el corregido de la BD). Investigada `registrar_discovery_alquiler` (Regla 7, def de prod): `metodo_discovery` y `status` se pisan SIEMPRE (ignoran `campos_bloqueados`) → **NO existe candado por-campo que corte el re-reclamo** (la idea de candar `metodo_discovery` resultó inviable). PERO **daño NULO**: la función NO resetea `fecha_enrichment` (sin re-enrichment, sin costo), y `lat/lon/area/id_proyecto_master` están bloqueados + el clon manda `p_zona=null` → zona sigue `Equipetrol Norte` correcta, coords intactas. El re-reclamo es ruido de cero costo: `status` oscila `completado↔actualizado` + re-merge idempotente. **Decisión: aceptar + documentar** (no tocar la función ni hardcodear exclusión — desproporcionado para 1 prop de impacto cero). Si aparecen varias props con GPS errado de BI, reevaluar.
 
 **Total alquiler ZN: 115 props activas (83 C21 + 30 Remax + 2 BI). Los 3 portales con discovery dedicado multi-macrozona + blindaje EQ par.** Pendiente: validar nocturna conjunta (los 6 workflows: 3 clones ZN + 3 EQ blindados + merge + matching) + batch manual de pm.
+
+---
+
+## 1-2 Jun 2026 — Mejora del matching ZN (#1.7 ejecutado manual): 13 pm nuevos, SIN tocar el engine
+
+**Pedido del director:** mejorar el matching ZN ahora que hay más unidades, **procediendo con #1.7**. Corrección clave de scope durante la sesión: *"no puedo tocar matching como función porque está en producción"* — se descarta toda idea de modificar el engine (ej. "exigir GPS en la función"). Se trabaja **alrededor**: cargar `proyectos_master` faltantes + asignar `id_proyecto_master` con candado, como hace el HITL a mano. El matching nocturno (intacto) hace el resto.
+
+**Método validado (2 fases), reusable para futuras macrozonas (Urubó/Polanco):**
+1. **Asegurar lo seguro por SQL** — props con sugerencia en `matching_sugerencias` (estado `pendiente_zona_norte`) cuyo **nombre coincide + GPS ≤50m + vecino más cercano con OTRO nombre**. Hallazgo del director que afinó el criterio: *"¿el nombre + 30m lo asegura si hay edificios vecinos?"* → NO basta; el ancla es el **nombre** (campo `nombre_edificio` **o el slug de la URL del portal**), el GPS es respaldo. 21 props de venta asignadas así (Grupo A).
+2. **Verificación visual de lo dudoso** — HTML con mapa satelital (`scripts/verify-pm-gps/verify-pm-zn-1jun.html` + `-r2.html`, reutilizan el patrón de [verify-pm-nuevos-zn.html]). Cards con Leaflet (satélite ESRI + OSM), props (verde) vs pm que ya existe cerca (rosado), veredicto cargar/asignar/descartar → export a SQL `INSERT`+`UPDATE` candado. El director verificó GPS uno por uno (incluso corrigió coords: Nature Residence, Los Sauces, Los Tusequis — GPS de brokers errados).
+
+**Confirmación fuerte del problema de FP del matching por nombre:** las **13/13 sugerencias de alquiler ZN eran falsos positivos por GPS** (más cercana a 104m, el resto 130m-4.700m; ej. "Condominio Barak"→CONDOMINIO ONE a 2.1km, "Torres Zen"→Torres Isuto a 2.7km). El matching sugiere por nombre genérico sin mirar GPS. **Ninguna se asignó a ciegas.**
+
+**Detector de clusters emergentes (#1.7) ejecutado como query** (no como workflow n8n todavía): `≥2 props mismo nombre normalizado + dispersión <40-60m + lejos de pm existente >100m`. Encontró los edificios sin proyecto en 2 rondas.
+
+**Cargados: 13 pm nuevos (IDs 424-436), todos `gps_verificado_visual='confirmed'`:**
+- Ronda 1 (7): Villa Ada, Torre Zen, Habita Beni, Condominio Barcelona, Bizet, Nature Residence, Condominio Los Jazmines del Parque.
+- Ronda 2 (6): Macororó 13/14, Vilanova, Edificio Los Sauces, Eivissa (vecino de Cantabria, distinto), Condominio Los Tusequis, Floreza.
+- Descartado: prop 2530 (sin nombre, Brickell 4 a 23m vs Domus Madero a 31m — ambiguo real).
+
+**2 detalles técnicos que quedaron como regla:**
+- El matching usa la MV `mv_nombre_proyecto_lookup`; su trigger `trg_refresh_nombre_lookup` solo refresca en **UPDATE**, no en INSERT → **tras cargar pm nuevos hay que correr `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_nombre_proyecto_lookup;`** (sola, fuera de transacción) o el matching no los encuentra por nombre.
+- **Inconsistencia detectada y corregida (audit-docs):** los 13 pm nuevos se cargaron con `zona='Zona Norte'` (macrozona), pero los pm ZN existentes usan la **microzona** en ese campo. Corregido con `UPDATE … SET zona = get_zona_by_gps(latitud, longitud) WHERE id_proyecto_master BETWEEN 424 AND 436`. (El match rate no depende de `pm.zona` — las props ya traen microzona del trigger GPS — pero se corrige por consistencia.)
+
+**Resultado:** **Venta ZN 60.6% → 66.2%** (264/399). **Alquiler ZN ~23-38.9% → 53.2%** (50/94, +14pp). ~40 props enganchadas, 0 cambios al engine de producción.
+
+**Pendiente:** alquiler aún ~44 props sin proyecto (3ª ronda posible). El director **NO quiere mergear** `feat/zn-alquiler-auditoria-fixa` hasta hacer una **prueba visual**. #1.7 sigue abierto como ticket (falta el **workflow n8n automático** + HTML genérico desde BD; el método manual ya está probado).
