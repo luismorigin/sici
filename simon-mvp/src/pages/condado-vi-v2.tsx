@@ -36,7 +36,7 @@ const TIPOLOGIAS = [
 ]
 
 const EQUIPAMIENTO = {
-  Cocina: ['Mesones de granito', 'Horno empotrado', 'Microondas', 'Campana extractora', 'Heladera', 'Lavavajillas', 'Cava de vinos'],
+  Cocina: ['Mesones de piedra sinterizada', 'Horno empotrado', 'Microondas', 'Campana extractora', 'Heladera', 'Lavavajillas', 'Cava de vinos'],
   Lavandería: ['Lavadora', 'Secadora'],
   Confort: ['Aire acondicionado', 'Closets empotrados', 'Calefón', 'Box de baño en vidrio', 'Cerradura digital', 'Aislamiento acústico', 'Intercomunicador'],
 }
@@ -54,7 +54,7 @@ const AMENIDAD_PHOTOS: Record<string, string> = {
 }
 
 // Foto thumbnail (portada) + galería por edificio en la línea de tiempo.
-// Condado Park V aún sin foto; Condado VI tiene su carrusel de fachada destacado abajo.
+// Condado VI tiene su carrusel de fachada destacado abajo.
 const TIMELINE = [
   { nombre: 'Condado I', estado: 'Entregado', fotos: [
     { src: '/condado-vi-v2/condado-1-1.jpg', alt: 'Condado I — fachada en Equipetrol' },
@@ -76,12 +76,14 @@ const TIMELINE = [
     { src: '/condado-vi-v2/condado-4-2.jpg', alt: 'Condado IV — vista de la fachada' },
     { src: '/condado-vi-v2/condado-4-3.jpg', alt: 'Condado IV — detalle del edificio' },
   ] },
-  { nombre: 'Condado Park V', estado: 'Entregado' },
+  { nombre: 'Condado Park V', estado: 'Entregado', fotos: [
+    { src: '/condado-vi-v2/condado-5-1.jpg', alt: 'Condado Park V — fachada en Equipetrol' },
+  ] },
   { nombre: 'Condado VI Plaza Italia', estado: 'Entrega inmediata', active: true },
 ]
 
 const FAQS = [
-  { q: '¿Qué incluye el departamento?', a: '16 items: cocina completa (horno, microondas, heladera, lavavajillas, campana, mesones de granito), lavadora, secadora, aire acondicionado, closets, box de baño, cerradura digital, aislamiento acústico, calefón e intercomunicador.' },
+  { q: '¿Qué incluye el departamento?', a: '16 items: cocina completa (horno, microondas, heladera, lavavajillas, campana, mesones de piedra sinterizada tipo cuarzo cristal), lavadora, secadora, aire acondicionado, closets, box de baño, cerradura digital, aislamiento acústico, calefón e intercomunicador.' },
   { q: '¿Cuándo puedo mudarme?', a: 'Mañana, si querés. El edificio está terminado y tu departamento te espera.' },
   { q: '¿En qué moneda es el precio?', a: 'USD. Se recibe al tipo de cambio paralelo vigente. También aceptamos bolivianos.' },
   { q: '¿Puedo visitar el departamento?', a: 'Sí. El edificio está terminado. Coordiná tu visita por WhatsApp.' },
@@ -99,7 +101,7 @@ const DISTANCIAS = [
 ]
 
 const EQUIP_ICONS: Record<string, string> = {
-  'Mesones de granito': '◈', 'Horno empotrado': '♨', 'Microondas': '◉', 'Campana extractora': '▲',
+  'Mesones de piedra sinterizada': '◈', 'Horno empotrado': '♨', 'Microondas': '◉', 'Campana extractora': '▲',
   'Heladera': '❄', 'Lavavajillas': '◎', 'Cava de vinos': '✦', 'Lavadora': '◐', 'Secadora': '◑',
   'Aire acondicionado': '❅', 'Closets empotrados': '▣', 'Calefón': '♦', 'Box de baño en vidrio': '◻',
   'Cerradura digital': '⬡', 'Aislamiento acústico': '◈', 'Intercomunicador': '◉',
@@ -113,12 +115,19 @@ const COCINA_IMAGES = [
 ]
 
 const SALON_IMAGES = [
-  { src: '/condado-vi-v2/salon-render-1.jpg', alt: 'Render referencial: ambiente integrado salón cocina comedor balcón', render: true },
   { src: '/condado-vi-v2/salon-1.jpg', alt: 'Salón con sofá blanco y sillón cuero' },
   { src: '/condado-vi-v2/salon-2.jpg', alt: 'Salón vista con espejo arco' },
   { src: '/condado-vi-v2/salon-3.jpg', alt: 'Ambiente cocina con pendant lights' },
   { src: '/condado-vi-v2/salon-4.jpg', alt: 'Dormitorio amplio con walking closet' },
   { src: '/condado-vi-v2/salon-5.jpg', alt: 'Balcón privado conexión exterior' },
+]
+
+// Renders IA (virtual staging) — SIEMPRE etiquetados como referenciales.
+const RENDER_AMOBLADO_IMAGES = [
+  { src: '/condado-vi-v2/render-amoblado-1.jpg', alt: 'Render referencial: living-comedor amoblado', render: true },
+  { src: '/condado-vi-v2/render-amoblado-2.jpg', alt: 'Render referencial: ambiente integrado salón cocina comedor', render: true },
+  { src: '/condado-vi-v2/render-amoblado-3.jpg', alt: 'Render referencial: ambiente integrado de noche', render: true },
+  { src: '/condado-vi-v2/render-amoblado-4.jpg', alt: 'Render referencial: balcón con vista nocturna', render: true },
 ]
 
 const FACHADA_IMAGES = [
@@ -145,6 +154,7 @@ const GALLERY_IMAGES = [
   { src: '/condado-vi-v2/vista-lobby.jpg', alt: 'Lobby Condado VI de noche' },
   ...COCINA_IMAGES,
   ...SALON_IMAGES.map(s => ({ src: s.src, alt: s.alt })),
+  ...RENDER_AMOBLADO_IMAGES.map(s => ({ src: s.src, alt: s.alt })),
   { src: '/condado-vi-v2/plaza-jardin.jpg', alt: 'Vista del parque y la zona' },
   { src: '/condado-vi-v2/pet-friendly.webp', alt: 'Bienvenidos los cuatro patas' },
   { src: '/condado-vi-v2/ubicacion.jpg', alt: 'Vista aérea del edificio' },
@@ -562,7 +572,7 @@ export default function CondadoVIv2() {
                 <div>
                   <h3 className="font-dm font-medium text-xl text-condado-carbon mb-3">&ldquo;Llegás y está todo&rdquo;</h3>
                   <p className="font-dm text-[17px] text-condado-piedra leading-relaxed">
-                    Cocina completa con mesones de granito, horno, microondas, heladera, lavavajillas, lavadora y secadora. 16 items incluidos. Solo traé tu ropa.
+                    Cocina completa con mesones de piedra sinterizada tipo cuarzo cristal, horno, microondas, heladera, lavavajillas, lavadora y secadora. 16 items incluidos. Solo traé tu ropa.
                   </p>
                 </div>
               </div>
@@ -605,6 +615,24 @@ export default function CondadoVIv2() {
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Sub-bloque: Renders IA (virtual staging) — siempre etiquetados */}
+            <div className="mt-16 md:mt-20 border-t border-condado-arena pt-12 md:pt-16">
+              <span className="font-dm text-sm font-medium tracking-widest uppercase text-condado-caramelo mb-3 block">
+                Así se vería tu espacio amoblado
+              </span>
+              <h3 className="font-playfair text-2xl md:text-3xl text-condado-carbon mb-6 max-w-xl">
+                Imaginá tu vida adentro.
+              </h3>
+              <Carousel images={RENDER_AMOBLADO_IMAGES} aspectClass="16/9" onOpenLightbox={openBySrc} className="max-w-3xl" />
+              <p className="font-dm text-sm text-condado-piedra/80 mt-4 max-w-2xl leading-relaxed">
+                Imágenes referenciales generadas con IA para mostrar el potencial amoblado de los ambientes. El edificio está terminado y entregado —{' '}
+                <a href={WA_VISITA} target="_blank" rel="noopener noreferrer" className="text-condado-caramelo hover:text-condado-caramelo-dark border-b border-condado-caramelo">
+                  coordiná tu visita
+                </a>{' '}
+                para verlo en persona.
+              </p>
             </div>
 
             <div className="mt-12 text-center">
