@@ -1,6 +1,6 @@
 # Landing Condado VI — versión v2
 
-> Última actualización: 25 May 2026
+> Última actualización: 2 Jun 2026
 
 ## Estado actual
 
@@ -12,6 +12,13 @@
 - Mensaje WhatsApp enviado a Adolfo el 19 May pidiendo revisión de textos y fotos en compu + celular
 - **24 May:** sumadas fotos reales de los edificios entregados (Condado I–IV) como thumbnails clickeables dentro de la línea de tiempo "5 edificios... Todos entregados". Reenviado a Adolfo para revisión.
   - **Deploy:** commit `1afcbaa` pusheado a `main` el 24 May → desplegado en Vercel. Las fotos ya están visibles en la URL de staging.
+- **2 Jun:** tres cambios pedidos por la arquitecta:
+  - (a) **Foto de Condado Park V** sumada al timeline (completa los 5 edificios entregados).
+  - (b) Nueva sección **"Así se vería tu espacio amoblado"** al final de "Diseñado para vivir": carrusel de 4 renders IA del depto equipado, cada uno con chip "Render referencial" + disclaimer visible ("imágenes generadas con IA… el edificio está terminado, coordiná tu visita"). Se quitó el render que estaba suelto en el carrusel del salón (ahora tiene sección propia, sin duplicar).
+  - (c) **Material de mesones corregido:** granito → "piedra sinterizada" (forma completa "tipo cuarzo cristal" en FAQ y bloque cocina). ⚠️ Confirmar con la arquitecta que efectivamente es sinterizada y no cuarzo aglomerado, para que la landing no afirme algo que no se sostiene.
+  - **Deploy:** commit `b64691b` pusheado a `main` el 2 Jun → desplegado en Vercel.
+  - **Mensaje enviado a Bea y Adolfo (2 Jun):** recordatorio de reunión + link de staging para que revisen los cambios y lleguen con observaciones puntuales.
+  - **Reunión agendada: miércoles 3 Jun, 16:30** con Bea y Adolfo (revisión de la landing).
 
 ## Commits clave
 
@@ -19,6 +26,7 @@
 - `ee22494` — render IA con chip "RENDER REFERENCIAL"
 - `eea1f37` — saco banner preview para envío a cliente
 - `1afcbaa` — fotos de edificios entregados (Condado I–IV) en thumbnails dentro del timeline + lightbox 3 fotos c/u (24 May). Originales en alta en `fotos-edificios/` (gitignored)
+- `b64691b` — foto Condado Park V en timeline + sección "Así se vería tu espacio amoblado" (4 renders IA etiquetados + disclaimer) + saca render suelto del salón + fix material mesones a piedra sinterizada (2 Jun). Cherry-pick a `main` (el commit había caído por error en la rama de zona norte; rescatado y la rama limpiada)
 
 ## Cambios vs landing original
 
@@ -26,15 +34,16 @@
 |------|-------------|----|
 | **Hero** | `balcon-plaza-v2.png` (IA inventada) | drone panorámico Equipetrol (foto real) |
 | **Cocina** | 1 foto | carrusel 3 fotos autoplay 4.5s |
-| **Salón** | 1 foto | carrusel 6 fotos — primera IA con chip "RENDER REFERENCIAL" |
+| **Salón** | 1 foto | carrusel solo fotos reales (la IA se movió a su sección propia el 2 Jun) |
+| **Espacio amoblado (renders)** | — | sección propia "Así se vería tu espacio amoblado" con 4 renders IA etiquetados + disclaimer (2 Jun) |
 | **Fachada** (Constructora) | 1 foto | carrusel 3 fotos autoplay |
 | **Amenidades** | 7 (Seguridad + Ascensor) | 7 (sacó Seguridad/Ascensor, sumó Sala juegos + Cowork) |
 | **Terraza vista** | bug: usaba `salon-comedor.png` | foto correcta azotea, full-width 2:1 destacada |
-| **Equipamiento cocina** | 6 items | 7 items (+ Cava de vinos) |
+| **Equipamiento cocina** | 6 items | 7 items (+ Cava de vinos); mesones "piedra sinterizada" (corregido 2 Jun, era "granito") |
 | **Vida cotidiana** | 3 bloques | 4 bloques (+ pet-friendly "Bienvenidos los cuatro patas") |
 | **FAQ** | 7 preguntas | 8 preguntas (+ "¿Se aceptan mascotas?") |
 | **Galería detalles** | — | 8 fotos cuadradas bajo equipamiento |
-| **Timeline edificios** (Constructora) | solo texto (lista I–VI) | + thumbnail real por edificio (I–IV) clickeable → lightbox 3 fotos c/u. Park V pendiente de foto |
+| **Timeline edificios** (Constructora) | solo texto (lista I–VI) | + thumbnail real por edificio (I–V) clickeable → lightbox. Park V sumado el 2 Jun (1 foto); VI es el destacado |
 | **Tipologías mobile** | scroll sin indicador | dots indicadores (sin autoplay — son cards de decisión) |
 | **Lightbox** | ~10 fotos | ~38 fotos navegables |
 
@@ -100,8 +109,10 @@ Cuando Adolfo apruebe contenido → 1 sesión de optimización (1-2 hs) y apunta
 
 - [~] Adolfo revisó (reenvío 24 May con fotos de edificios). **Respondió pidiendo ~1 día (esperado ~26 May)** para enviar: (a) una foto de balcón que quieren agregar, (b) observaciones. → esperando devolución
 - [ ] Confirmar si todo el material entregado es de un mismo depto modelo o de varios (impacta narrativa visual del carrusel salón)
-- [ ] **Falta foto de Condado Park V** — pedírsela a Adolfo para completar el timeline
+- [x] **Foto de Condado Park V** — recibida y sumada al timeline el 2 Jun
 - [ ] **Foto de balcón a agregar** — Adolfo la va a sacar y enviar (ubicación en la página por definir según el material)
+- [ ] **Confirmar material de mesones** — la arquitecta indicó "piedra sinterizada tipo cuarzo cristal"; validar que sea sinterizada real (no cuarzo aglomerado) antes de dejarlo como definitivo
+- [ ] **Revisión de renders IA en reunión 3 Jun** — Bea y Adolfo revisan la nueva sección "Así se vería tu espacio amoblado" y traen observaciones puntuales
 
 ## Próximos pasos
 
