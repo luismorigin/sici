@@ -535,7 +535,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
           </div>
         )}
         {!useCarousel && !hasPhotos && <div className="vc-nofoto">Sin fotos</div>}
-        {p.tc_sospechoso && !publicShareMode && <div className="vc-tc-badge">Confirmar tipo de cambio</div>}
+        {p.tc_sospechoso && (!publicShareMode || contactoDirecto) && <div className="vc-tc-badge">Confirmar tipo de cambio</div>}
         {brokerMode && !publicShareMode && (() => { const fb = fuenteBadge(p.fuente); return fb ? <div className="vc-fuente-badge" style={{ background: fb.bg, color: fb.color }}>{fb.label}</div> : null })()}
         {photos.length > 1 && (<>
           {photoIdx > 0 && <button className="vc-nav vc-nav-prev" aria-label="Foto anterior" onClick={e => { e.stopPropagation(); useCarousel ? navTo(photoIdx - 1) : setPhotoIdx(photoIdx - 1) }}><ChevronLeft /></button>}
@@ -740,7 +740,7 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
 
       {/* Spotlight badge */}
       {isSpotlight && <div className="mc-spotlight">Te compartieron este depto</div>}
-      {p.tc_sospechoso && !publicShareMode && <div className="mc-tc-badge">Confirmar tipo de cambio</div>}
+      {p.tc_sospechoso && (!publicShareMode || contactoDirecto) && <div className="mc-tc-badge">Confirmar tipo de cambio</div>}
       {brokerMode && !publicShareMode && (() => { const fb = fuenteBadge(p.fuente); return fb ? <div className="mc-fuente-badge" style={{ background: fb.bg, color: fb.color }}>{fb.label}</div> : null })()}
 
       {/* Content zone (45%) */}
@@ -1211,7 +1211,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
           </div>
           <div className="bs-h-zona">{displayZona(p.zona)} · #{p.id}</div>
           <div className="bs-h-price-block">
-            <div className="bs-h-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span>{p.tc_sospechoso && !publicShareMode && <span className="bs-tc-badge">Confirmar tipo de cambio</span>}</div>
+            <div className="bs-h-price">$us {Math.round(p.precio_usd).toLocaleString('en-US')} <span className="bs-h-tc">(T.C. oficial)</span>{p.tc_sospechoso && (!publicShareMode || contactoDirecto) && <span className="bs-tc-badge">Confirmar tipo de cambio</span>}</div>
             <div className="bs-h-specs">{[
               p.dormitorios !== null ? (p.dormitorios === 0 ? 'Monoambiente' : `${p.dormitorios} dorm`) : null,
               p.area_m2 > 0 ? `${Math.round(p.area_m2)} m²` : null,
