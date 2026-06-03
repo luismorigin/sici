@@ -432,10 +432,13 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
 }
 
 // ===== Desktop VentaCard =====
-function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
+function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
   property: UnidadVenta; isFavorite: boolean; isFirst?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
   brokerMode?: boolean; onAddToShortlist?: () => void; publicShareMode?: boolean
+  // contacto_directo (B2C, migración 256): en publicShare del bot, el CTA va al
+  // captador (rama feed) en vez del broker dueño. Default false = B2B intacto.
+  contactoDirecto?: boolean
   brokerInfo?: { nombre: string; inmobiliaria?: string | null } | null
   publicShareBroker?: { nombre: string; telefono: string } | null
   priceSnapshot?: { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null } | null
@@ -622,7 +625,7 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
-          {publicShareMode && publicShareBroker && (
+          {publicShareMode && !contactoDirecto && publicShareBroker && (
             <a href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerMessage(p, publicShareBroker.nombre))}`}
               target="_blank" rel="noopener noreferrer" className="vc-act-btn vc-act-wsp"
               onClick={(e) => { e.preventDefault(); openWhatsApp(publicShareBroker.telefono, buildClientToBrokerMessage(p, publicShareBroker.nombre)) }}>
@@ -630,12 +633,12 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
               Consultar
             </a>
           )}
-          {!publicShareMode && p.agente_telefono && (
+          {(!publicShareMode || contactoDirecto) && p.agente_telefono && (
             <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(buildAgentWaMessage(p, brokerInfo))}`}
               target="_blank" rel="noopener noreferrer" className="vc-act-btn vc-act-wsp"
               onClick={(e) => {
                 e.preventDefault()
-                trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'card_desktop' })
+                trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: contactoDirecto ? 'public_share_directo' : 'card_desktop' })
                 openWhatsApp(p.agente_telefono!, buildAgentWaMessage(p, brokerInfo))
               }}>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="#1EA952"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -649,10 +652,12 @@ function VentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhoto
 }
 
 // ===== Mobile TikTok VentaCard (55% foto / 45% contenido) =====
-function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
+function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, onPhotoTap, onDetails, isSpotlight, isFirst, brokerMode, onAddToShortlist, publicShareMode = false, contactoDirecto = false, brokerInfo = null, publicShareBroker = null, priceSnapshot = null, brokerComment = null, isDestacada = false, onReport, isReported = false }: {
   property: UnidadVenta; isFavorite: boolean; isSpotlight?: boolean; isFirst?: boolean
   onToggleFavorite: () => void; onShare: () => void; onPhotoTap: (idx: number) => void; onDetails: () => void
   brokerMode?: boolean; onAddToShortlist?: () => void; publicShareMode?: boolean
+  // contacto_directo (B2C, migración 256): ver VentaCard. Default false = B2B intacto.
+  contactoDirecto?: boolean
   brokerInfo?: { nombre: string; inmobiliaria?: string | null } | null
   publicShareBroker?: { nombre: string; telefono: string } | null
   priceSnapshot?: { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null } | null
@@ -820,15 +825,15 @@ function MobileVentaCard({ property: p, isFavorite, onToggleFavorite, onShare, o
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
-          {((publicShareMode && publicShareBroker) || (!publicShareMode && p.agente_telefono)) && (
-            <a href={publicShareMode && publicShareBroker
+          {((publicShareMode && !contactoDirecto && publicShareBroker) || ((!publicShareMode || contactoDirecto) && p.agente_telefono)) && (
+            <a href={publicShareMode && !contactoDirecto && publicShareBroker
               ? `https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerMessage(p, publicShareBroker.nombre))}`
               : `https://wa.me/${p.agente_telefono!.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(buildAgentWaMessage(p, brokerInfo))}`}
               target="_blank" rel="noopener noreferrer" className="mc-btn mc-wsp-inline"
               onClick={(e) => {
                 e.preventDefault()
-                trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'card_mobile' })
-                if (publicShareMode && publicShareBroker) {
+                trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: contactoDirecto ? 'public_share_directo' : 'card_mobile' })
+                if (publicShareMode && !contactoDirecto && publicShareBroker) {
                   openWhatsApp(publicShareBroker.telefono, buildClientToBrokerMessage(p, publicShareBroker.nombre))
                 } else if (p.agente_telefono) {
                   openWhatsApp(p.agente_telefono, buildAgentWaMessage(p, brokerInfo))
@@ -1088,13 +1093,18 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 }
 
 // ===== Bottom Sheet =====
-function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty, brokerMode = false, onAddToShortlist, publicShareBroker = null, brokerInfo = null, brokerComment = null }: {
+function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onToggleFavorite, gateCompleted, onGate, isDesktop, properties, onSwapProperty, brokerMode = false, onAddToShortlist, publicShareBroker = null, contactoDirecto = false, brokerInfo = null, brokerComment = null }: {
   property: UnidadVenta | null; isOpen: boolean; onClose: () => void; onShare?: () => void
   isFavorite?: boolean; onToggleFavorite?: () => void
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; isDesktop: boolean
   properties?: UnidadVenta[]; onSwapProperty?: (p: UnidadVenta) => void
   brokerMode?: boolean; onAddToShortlist?: (p: UnidadVenta) => void
   publicShareBroker?: { nombre: string; telefono: string } | null
+  // contacto_directo (B2C, migración 256): publicShareMode se deriva localmente
+  // de publicShareBroker (L1109), así que este prop entra aparte. Cuando es true,
+  // el sheet vuelve al "modo feed" (agente, similares, preguntas, ver-original y
+  // CTA al captador). Default false = B2B intacto.
+  contactoDirecto?: boolean
   // Datos del broker activo (cuando brokerMode=true). Se usa para personalizar
   // el mensaje WA broker→broker (identificación + franquicia + link del anuncio).
   brokerInfo?: { nombre: string; inmobiliaria?: string | null } | null
@@ -1319,8 +1329,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Agente info — oculto en publicShareMode (cliente solo contacta al broker) */}
-          {!publicShareMode && p.agente_nombre && (
+          {/* Agente info — oculto en publicShareMode (cliente solo contacta al broker);
+              en contactoDirecto (B2C) se muestra: el cliente contacta a ese captador */}
+          {(!publicShareMode || contactoDirecto) && p.agente_nombre && (
             <div className="bs-section">
               <div className="bs-agent">
                 <span className="bs-agent-name">{p.agente_nombre}</span>
@@ -1329,8 +1340,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Propiedades similares — oculto en publicShareMode (cliente solo ve lo curado) */}
-          {!publicShareMode && similarProps.length > 0 && (
+          {/* Propiedades similares — oculto en publicShareMode (cliente solo ve lo curado);
+              en contactoDirecto (B2C) se muestran, igual que el feed (§6 dec.1) */}
+          {(!publicShareMode || contactoDirecto) && similarProps.length > 0 && (
             <div className="bs-section">
               <div className="bs-sl"><span className="bs-sl-dot" />También en {displayZona(p.zona)}</div>
               <div className="bs-sim-scroll">
@@ -1353,8 +1365,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Preguntas para el vendedor — oculto en modo broker (el broker es el que responde) */}
-          {!brokerMode && !publicShareMode && brokerQuestions.length > 0 && (
+          {/* Preguntas para el vendedor — oculto en modo broker (el broker es el que responde)
+              y en publicShare; en contactoDirecto (B2C) se muestran (van al captador) */}
+          {!brokerMode && (!publicShareMode || contactoDirecto) && brokerQuestions.length > 0 && (
             <div className="bs-section">
               <div className="bs-q-header">
                 <div className="bs-sl"><span className="bs-sl-dot" />Preguntas para el vendedor</div>
@@ -1405,8 +1418,9 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
             </div>
           )}
 
-          {/* Ver original (con gate) — oculto en modo broker y en publicShare (cliente confía en el broker) */}
-          {!brokerMode && !publicShareMode && p.url && (
+          {/* Ver original (con gate) — oculto en modo broker y en publicShare (cliente confía
+              en el broker); en contactoDirecto (B2C) se muestra como el feed (§6 dec.3) */}
+          {!brokerMode && (!publicShareMode || contactoDirecto) && p.url && (
             <div className="bs-section">
               {!showGate ? (
                 <button className="bs-ver-original" onClick={handleVerOriginal}>
@@ -1436,7 +1450,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
 
           {/* Sticky footer CTA */}
           <div className="bs-sticky-footer">
-            {publicShareMode && publicShareBroker ? (
+            {publicShareMode && !contactoDirecto && publicShareBroker ? (
               <a href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${firstName(publicShareBroker.nombre)}, me interesa: ${p.proyecto} (${p.dormitorios === 0 ? 'Mono' : p.dormitorios + ' dorm'}, ${Math.round(p.area_m2)}m², $us ${Math.round(p.precio_usd).toLocaleString('en-US')}).`)}`}
                 target="_blank" rel="noopener noreferrer" className="bs-wsp-cta"
                 onClick={(e) => {
@@ -1473,7 +1487,7 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
                 target="_blank" rel="noopener noreferrer" className="bs-wsp-cta"
                 onClick={(e) => {
                   e.preventDefault()
-                  trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: 'detail_sheet', questions_count: selectedQs.size })
+                  trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: p.proyecto, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: contactoDirecto ? 'public_share_directo' : 'detail_sheet', questions_count: selectedQs.size })
                   openWhatsApp(p.agente_telefono!, buildSheetMsg())
                 }}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -2277,6 +2291,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         brokerMode={brokerMode}
         onAddToShortlist={addToShortlist}
         publicShareBroker={publicShareBrokerProp}
+        contactoDirecto={contactoDirecto}
         brokerInfo={brokerInfoProp}
         brokerComment={sheetProperty && itemCommentsMap ? itemCommentsMap[sheetProperty.id] || null : null} />
 
@@ -2601,7 +2616,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 <VentaCard property={spotlightProperty} isFavorite={favorites.has(spotlightProperty.id)}
                   onToggleFavorite={() => toggleFavorite(spotlightProperty.id)} onShare={() => shareProperty(spotlightProperty)}
                   onPhotoTap={() => openSheet(spotlightProperty)} onDetails={() => openSheet(spotlightProperty)}
-                  brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(spotlightProperty)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[spotlightProperty.id] : null}
+                  brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(spotlightProperty)} publicShareMode={publicShareMode} contactoDirecto={contactoDirecto} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[spotlightProperty.id] : null}
                   brokerComment={itemCommentsMap ? itemCommentsMap[spotlightProperty.id] : null}
                   isDestacada={itemsDestacadaMap ? itemsDestacadaMap[spotlightProperty.id] === true : false}
                   onReport={brokerMode && !publicShareMode && brokerSlug ? () => openReportModal(spotlightProperty) : undefined}
@@ -2617,7 +2632,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                   <VentaCard key={p.id} property={p} isFavorite={favorites.has(p.id)} isFirst={idx === 0}
                     onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
                     onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)}
-                    brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null}
+                    brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} contactoDirecto={contactoDirecto} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null}
                     brokerComment={itemCommentsMap ? itemCommentsMap[p.id] : null}
                     isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false}
                     onReport={brokerMode && !publicShareMode && brokerSlug ? () => openReportModal(p) : undefined}
@@ -2720,7 +2735,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 isSpotlight={item.isSpotlight} isFirst={idx === 0}
                 onToggleFavorite={() => toggleFavorite(p.id)} onShare={() => shareProperty(p)}
                 onPhotoTap={() => openSheet(p)} onDetails={() => openSheet(p)}
-                brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null}
+                brokerMode={brokerMode} onAddToShortlist={() => addToShortlist(p)} publicShareMode={publicShareMode} contactoDirecto={contactoDirecto} brokerInfo={brokerInfoProp} publicShareBroker={publicShareBrokerProp} priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] : null}
                 brokerComment={itemCommentsMap ? itemCommentsMap[p.id] : null}
                 isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false}
                 onReport={brokerMode && !publicShareMode && brokerSlug ? () => openReportModal(p) : undefined}
