@@ -1628,7 +1628,9 @@ function fuenteBadge(fuente: string | null | undefined): { label: string; color:
 // (c) ocultar gate/preguntas/WA agente del sheet, (d) mostrar header con datos del broker.
 export interface PublicShareData {
   hash: string
-  broker: { slug: string; nombre: string; telefono: string; foto_url: string | null; inmobiliaria?: string | null }
+  // contacto_directo (migración 256): si true (solo simon-asistente), los CTA
+  // por propiedad contactan al captador como en el feed, no al broker dueño.
+  broker: { slug: string; nombre: string; telefono: string; foto_url: string | null; inmobiliaria?: string | null; contacto_directo?: boolean }
   items: UnidadVenta[]
   itemComments?: Record<number, string | null>
   // Items destacados por el broker (migración 239). Máx 1 por shortlist.
@@ -1653,6 +1655,11 @@ export interface PublicShareData {
 // ===== Page =====
 export default function VentasPage({ seo, initialProperties = [], brokerSlug: brokerSlugProp = null, broker: brokerProp = null, publicShare = null, brokerDemoMode = false }: { seo: VentasSEO; initialProperties: UnidadVenta[]; brokerSlug?: string | null; broker?: Broker | null; publicShare?: PublicShareData | null; brokerDemoMode?: boolean }) {
   const publicShareMode = publicShare !== null
+  // contacto_directo (migración 256): B2C del bot simon-asistente. Se lee de
+  // publicShare.broker (NO de publicShareBrokerProp, que está recortado y no lo
+  // lleva). Cuando es true, los CTA por propiedad contactan al captador como en
+  // el feed en vez del broker dueño. Default false ⇒ comportamiento B2B intacto.
+  const contactoDirecto = publicShare?.broker?.contacto_directo === true
   const publicShareBrokerProp: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null = publicShare ? publicShare.broker : null
   const priceSnapshotsMap: Record<number, { rawSnapshot: number | null; normSnapshot: number | null; rawActual: number | null }> | null = publicShare && publicShare.priceSnapshots ? publicShare.priceSnapshots : null
   const itemCommentsMap: Record<number, string | null> | null = publicShare && publicShare.itemComments ? publicShare.itemComments : null

@@ -233,7 +233,9 @@ function useIsDesktop() {
 //    y precio_mensual_bob_actual para detectar cambio del agente.
 export interface PublicShareDataAlquiler {
   hash: string
-  broker: { slug: string; nombre: string; telefono: string; foto_url: string | null; inmobiliaria?: string | null }
+  // contacto_directo (migración 256): si true (solo simon-asistente), los CTA
+  // por propiedad contactan al captador como en el feed, no al broker dueño.
+  broker: { slug: string; nombre: string; telefono: string; foto_url: string | null; inmobiliaria?: string | null; contacto_directo?: boolean }
   items: UnidadAlquiler[]
   itemComments?: Record<number, string | null>
   // Items destacados por el broker (migración 239). Máx 1 por shortlist.
@@ -270,6 +272,11 @@ export default function AlquileresPage({
 
   // Modo broker + publicShare (Fase 2 Simon Broker)
   const publicShareMode = publicShare !== null
+  // contacto_directo (migración 256): B2C del bot simon-asistente. Se lee de
+  // publicShare.broker (NO de publicShareBrokerProp, que está recortado y no lo
+  // lleva). Cuando es true, los CTA por propiedad contactan al captador como en
+  // el feed en vez del broker dueño. Default false ⇒ comportamiento B2B intacto.
+  const contactoDirecto = publicShare?.broker?.contacto_directo === true
   const publicShareBrokerProp: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null = publicShare ? publicShare.broker : null
   const priceSnapshotsMap: Record<number, { bobSnapshot: number | null; bobActual: number | null }> | null = publicShare && publicShare.priceSnapshots ? publicShare.priceSnapshots : null
   const itemCommentsMap: Record<number, string | null> | null = publicShare && publicShare.itemComments ? publicShare.itemComments : null
