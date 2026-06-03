@@ -2372,6 +2372,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
         properties={favoriteProperties}
         onClose={() => setCompareOpen(false)}
         publicShareBroker={publicShareBrokerProp}
+        contactoDirecto={contactoDirecto}
       />
 
       {/* Banner modo broker — visible arriba de todo cuando activo */}
