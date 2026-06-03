@@ -1151,6 +1151,7 @@ export default function AlquileresPage({
         properties={favoriteProperties}
         onClose={() => setCompareOpen(false)}
         publicShareBroker={publicShareBrokerProp}
+        contactoDirecto={contactoDirecto}
       />
 
       {/* Simon Chat Bot — deferred to avoid TBT during initial load.
