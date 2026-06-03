@@ -9,7 +9,7 @@ import { ZONAS_ALQUILER_UI, ZONAS_EQUIPETROL_DB, displayZona } from '@/lib/zonas
 import { dormLabel, formatPriceBob, firstName } from '@/lib/format-utils'
 import { fbqTrack } from '@/lib/meta-pixel'
 import { fetchMercadoAlquilerData, type MercadoAlquilerData } from '@/lib/mercado-alquiler-data'
-import { useWhatsAppCapture, triggerWhatsAppCapture, setDemoModeForCapture, setBrokerModeForCapture } from '@/hooks/useWhatsAppCapture'
+import { useWhatsAppCapture, triggerWhatsAppCapture, setDemoModeForCapture, setBrokerModeForCapture, setContactoDirectoForCapture } from '@/hooks/useWhatsAppCapture'
 import { buildAlquilerWaMessage } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
 import { useBrokerShortlists, DEMO_SHORTLIST_BLOCKED } from '@/hooks/useBrokerShortlists'
@@ -392,6 +392,14 @@ export default function AlquileresPage({
     setBrokerModeForCapture(brokerMode)
     return () => setBrokerModeForCapture(false)
   }, [brokerMode])
+  // Contacto directo B2C (bot simon-asistente, migración 256): saltar el modal de
+  // captura e ir directo al captador (el bot ya tiene los datos del cliente), sin
+  // insertar lead. Setear vía useEffect+cleanup (nunca derivar en render: el flag
+  // es module-level y quedaría pegado entre páginas). Ver §7 fila 9 / §9 del plan.
+  useEffect(() => {
+    setContactoDirectoForCapture(contactoDirecto)
+    return () => setContactoDirectoForCapture(false)
+  }, [contactoDirecto])
   const [activeCardIndex, setActiveCardIndex] = useState(0)
   const activeCardIdxRef = useRef(0)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -1192,6 +1200,7 @@ export default function AlquileresPage({
         onSwapProperty={(p) => setSheetProperty(p)}
         brokerMode={brokerMode}
         publicShareBroker={publicShareBrokerProp}
+        contactoDirecto={contactoDirecto}
         priceSnapshot={sheetProperty && priceSnapshotsMap ? priceSnapshotsMap[sheetProperty.id] || null : null}
         brokerComment={sheetProperty && itemCommentsMap ? itemCommentsMap[sheetProperty.id] || null : null}
       />
@@ -1374,6 +1383,7 @@ export default function AlquileresPage({
                           onAddToShortlist={brokerMode ? () => addToShortlist(spotlightProperty) : undefined}
                           publicShareMode={publicShareMode}
                           publicShareBroker={publicShareBrokerProp}
+                          contactoDirecto={contactoDirecto}
                           priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[spotlightProperty.id] || null : null}
                           brokerComment={itemCommentsMap ? itemCommentsMap[spotlightProperty.id] : null}
                           isDestacada={itemsDestacadaMap ? itemsDestacadaMap[spotlightProperty.id] === true : false}
@@ -1445,6 +1455,7 @@ export default function AlquileresPage({
                           onAddToShortlist={brokerMode ? () => addToShortlist(p) : undefined}
                           publicShareMode={publicShareMode}
                           publicShareBroker={publicShareBrokerProp}
+                          contactoDirecto={contactoDirecto}
                           priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[p.id] || null : null}
                           brokerComment={itemCommentsMap ? itemCommentsMap[p.id] : null}
                           isDestacada={itemsDestacadaMap ? itemsDestacadaMap[p.id] === true : false}
@@ -1479,6 +1490,7 @@ export default function AlquileresPage({
                       onToggleFavorite={() => toggleFavorite(sp.id)}
                       onOpenDetail={() => openDetail(sp)}
                       publicShareBroker={publicShareBrokerProp}
+                      contactoDirecto={contactoDirecto}
                     />
                   )
                 })()}
@@ -1629,6 +1641,7 @@ export default function AlquileresPage({
                     onAddToShortlist={brokerMode ? () => addToShortlist(item.data) : undefined}
                     publicShareMode={publicShareMode}
                     publicShareBroker={publicShareBrokerProp}
+                    contactoDirecto={contactoDirecto}
                     priceSnapshot={priceSnapshotsMap ? priceSnapshotsMap[item.data.id] || null : null}
                     brokerComment={itemCommentsMap ? itemCommentsMap[item.data.id] : null}
                     isDestacada={itemsDestacadaMap ? itemsDestacadaMap[item.data.id] === true : false}
@@ -1936,6 +1949,7 @@ export default function AlquileresPage({
                   onToggleFavorite={() => toggleFavorite(sp.id)}
                   onOpenDetail={() => { setMobileMapOpen(false); openDetail(sp) }}
                   publicShareBroker={publicShareBrokerProp}
+                  contactoDirecto={contactoDirecto}
                 />
               )
             })()}
@@ -2456,14 +2470,18 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
 }
 
 // ===== MAP FLOATING CARD (own state to avoid re-rendering the map) =====
-function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onOpenDetail, mobile, publicShareBroker = null }: {
+function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onOpenDetail, mobile, publicShareBroker = null, contactoDirecto = false }: {
   property: UnidadAlquiler; isFavorite: boolean; mobile?: boolean
   onClose: () => void; onToggleFavorite: () => void; onOpenDetail: () => void
   // publicShareMode: CTA WA redirige al broker (no al agente original).
   publicShareBroker?: { nombre: string; telefono: string } | null
+  // contacto_directo (B2C, migración 256): publicShareMode se deriva local de
+  // publicShareBroker, así que este prop entra aparte. Cuando es true, brokerHref
+  // queda null → ambos CTA caen a la rama feed (handleWhatsAppLead → captador).
+  contactoDirecto?: boolean
 }) {
   const publicShareMode = publicShareBroker !== null
-  const brokerHref = publicShareMode && publicShareBroker
+  const brokerHref = publicShareMode && !contactoDirecto && publicShareBroker
     ? `https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerAlquilerMessage(sp, publicShareBroker.nombre))}`
     : null
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -2570,7 +2588,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
 // ===== DESKTOP CARD =====
 const DesktopCard = memo(function DesktopCard({
   property: p, isFavorite, favoritesCount, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare, isFirst,
-  brokerMode = false, onAddToShortlist, publicShareMode = false, publicShareBroker = null, priceSnapshot = null,
+  brokerMode = false, onAddToShortlist, publicShareMode = false, publicShareBroker = null, contactoDirecto = false, priceSnapshot = null,
   brokerComment = null, isDestacada = false, onReport, isReported = false,
 }: {
   property: UnidadAlquiler; isFavorite: boolean; favoritesCount: number; petFilterActive?: boolean
@@ -2578,6 +2596,9 @@ const DesktopCard = memo(function DesktopCard({
   brokerMode?: boolean; onAddToShortlist?: () => void
   publicShareMode?: boolean
   publicShareBroker?: { nombre: string; telefono: string } | null
+  // contacto_directo (B2C, migración 256): cuando true, el CTA cae a la rama feed
+  // (handleWhatsAppLead → captador vía agente_whatsapp). Default false = B2B intacto.
+  contactoDirecto?: boolean
   priceSnapshot?: { bobSnapshot: number | null; bobActual: number | null } | null
   // Comentario del broker (migración 228, render desde 239).
   brokerComment?: string | null
@@ -2752,7 +2773,7 @@ const DesktopCard = memo(function DesktopCard({
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
-          {publicShareMode && publicShareBroker ? (
+          {publicShareMode && !contactoDirecto && publicShareBroker ? (
             <a
               href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))}`}
               target="_blank"
@@ -2798,7 +2819,7 @@ const DesktopCard = memo(function DesktopCard({
 // ===== MOBILE PROPERTY CARD (full-screen) =====
 const MobilePropertyCard = memo(function MobilePropertyCard({
   property: p, isFirst, showHint, isFavorite, favoritesCount, isSpotlight, petFilterActive, onToggleFavorite, onOpenInfo, onPhotoTap, onShare,
-  brokerMode = false, onAddToShortlist, publicShareMode = false, publicShareBroker = null, priceSnapshot = null,
+  brokerMode = false, onAddToShortlist, publicShareMode = false, publicShareBroker = null, contactoDirecto = false, priceSnapshot = null,
   brokerComment = null, isDestacada = false, onReport, isReported = false,
 }: {
   property: UnidadAlquiler; isFirst: boolean; showHint?: boolean; isFavorite: boolean; favoritesCount: number; isSpotlight: boolean; petFilterActive?: boolean
@@ -2806,6 +2827,8 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
   brokerMode?: boolean; onAddToShortlist?: () => void
   publicShareMode?: boolean
   publicShareBroker?: { nombre: string; telefono: string } | null
+  // contacto_directo (B2C, migración 256): ver DesktopCard. Default false = B2B intacto.
+  contactoDirecto?: boolean
   priceSnapshot?: { bobSnapshot: number | null; bobActual: number | null } | null
   brokerComment?: string | null
   isDestacada?: boolean
@@ -2953,7 +2976,7 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
               <polyline points="6 9 12 15 18 9"/>
             </svg> Ver mas
           </button>
-          {publicShareMode && publicShareBroker ? (
+          {publicShareMode && !contactoDirecto && publicShareBroker ? (
             <a
               href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))}`}
               target="_blank"
@@ -3154,7 +3177,7 @@ function BottomSheetGallery({ photos, propertyId }: { photos: string[]; property
 // ===== BOTTOM SHEET =====
 function BottomSheet({
   open, property, onClose, isDesktop, gateCompleted, onGate, petFilterActive, isFavorite, onToggleFavorite, onShare, properties, onSwapProperty,
-  brokerMode = false, publicShareBroker = null, priceSnapshot = null, brokerComment = null,
+  brokerMode = false, publicShareBroker = null, contactoDirecto = false, priceSnapshot = null, brokerComment = null,
 }: {
   open: boolean; property: UnidadAlquiler | null; onClose: () => void; isDesktop: boolean
   gateCompleted: boolean; onGate: (n: string, t: string, c: string, url: string) => void; petFilterActive?: boolean
@@ -3162,6 +3185,11 @@ function BottomSheet({
   properties?: UnidadAlquiler[]; onSwapProperty?: (p: UnidadAlquiler) => void
   brokerMode?: boolean
   publicShareBroker?: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null
+  // contacto_directo (B2C, migración 256): publicShareMode se deriva local de
+  // publicShareBroker (L3187), por eso este prop entra aparte. Cuando es true,
+  // preguntas/ver-original vuelven al modo feed y el CTA cae a la rama
+  // !brokerMode (handleWhatsAppLead → captador, sin modal). Default false = B2B.
+  contactoDirecto?: boolean
   priceSnapshot?: { bobSnapshot: number | null; bobActual: number | null } | null
   // Comentario del broker — se renderiza arriba del detalle, sin clamp (a diferencia
   // de la card en el feed que clampea a 2 líneas).
@@ -3463,8 +3491,8 @@ function BottomSheet({
           </div>
         </div>
       )}
-      {/* --- Preguntas para el broker --- Ocultas en brokerMode (el broker ya conoce) y publicShareMode (cliente habla directo con broker) */}
-      {!brokerMode && !publicShareMode && brokerQuestions.length > 0 && (
+      {/* --- Preguntas para el broker --- Ocultas en brokerMode (el broker ya conoce) y publicShareMode (cliente habla directo con broker); en contactoDirecto (B2C) se muestran (van al captador) */}
+      {!brokerMode && (!publicShareMode || contactoDirecto) && brokerQuestions.length > 0 && (
         <div className="bs-section">
           <div className="bs-q-header">
             <div className="bs-sl"><span className="bs-sl-dot" />Preguntas para el broker</div>
@@ -3489,8 +3517,8 @@ function BottomSheet({
           </div>
         </div>
       )}
-      {/* Gate "Ver anuncio original" — oculto en brokerMode y publicShareMode (confianza en el broker) */}
-      {!brokerMode && !publicShareMode && p.url && (
+      {/* Gate "Ver anuncio original" — oculto en brokerMode y publicShareMode (confianza en el broker); en contactoDirecto (B2C) se muestra como el feed (§6 dec.3) */}
+      {!brokerMode && (!publicShareMode || contactoDirecto) && p.url && (
         <div className="bs-section">
           {!showGate ? (
             <button className="bs-ver-anuncio" onClick={() => {
@@ -3530,7 +3558,7 @@ function BottomSheet({
       )}
       {/* Sticky footer: WSP + Compartir */}
       <div className="bs-sticky-footer">
-        {publicShareMode && publicShareBroker ? (
+        {publicShareMode && !contactoDirecto && publicShareBroker ? (
           <a
             href={`https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerAlquilerMessage(p, publicShareBroker.nombre))}`}
             target="_blank"

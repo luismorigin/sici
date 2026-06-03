@@ -46,6 +46,18 @@ export function setBrokerModeForCapture(enabled: boolean) {
   _brokerMode = enabled
 }
 
+// Flag global para contacto directo B2C (shortlists del bot simon-asistente,
+// migración 256). Cuando está activo, el contacto va DIRECTO al captador (como
+// el feed) pero: (a) SIN reabrir el modal de captura — el bot ya tiene los datos
+// del cliente (lab-kapso D28); (b) SIN insertar lead en leads_alquiler — solo se
+// trackea el click; (c) la `fuente` se sobrescribe a 'public_share_directo' para
+// no contaminar las métricas del feed orgánico. Setearlo vía useEffect+cleanup
+// (mismo patrón que _brokerMode) — nunca derivarlo en render. Ver §9 del plan.
+let _contactoDirecto = false
+export function setContactoDirectoForCapture(enabled: boolean) {
+  _contactoDirecto = enabled
+}
+
 export function triggerWhatsAppCapture(e: React.MouseEvent, p: CaptureProperty, msg: string, fuente: string, preguntas?: string[]) {
   if (_demoMode) {
     e.preventDefault()
@@ -53,6 +65,15 @@ export function triggerWhatsAppCapture(e: React.MouseEvent, p: CaptureProperty, 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('simon:demo-blocked', { detail: { context: 'contactar_captador' } }))
     }
+    return
+  }
+  // Contacto directo B2C: sin modal, sin lead en BD, solo trackeo del click + WA
+  // al captador. La fuente se fuerza a 'public_share_directo' (ignora la `fuente`
+  // del call-site, ej. 'bottom_sheet'/'map_card') para segmentar las métricas.
+  if (_contactoDirecto) {
+    e.preventDefault()
+    fireLegacyTracking(p, 'public_share_directo')
+    openWhatsApp(getFinalPhone(p), msg)
     return
   }
   // Broker logueado: NO mostrar modal de captura, ir directo a WA.
