@@ -4,6 +4,31 @@
 
 import { dormLabel, formatPriceBob } from './format-utils'
 
+// -----------------------------------------------------------------------------
+// "Pedir más alternativas" — línea machine-readable para el bot simon-asistente
+// -----------------------------------------------------------------------------
+// El botón "Pedir más opciones" del header de /b/[hash] (solo simon-asistente)
+// puede adjuntar al final del mensaje una línea parseable por el bot:
+//
+//   ref:v1 <hash> | fav:<id1,id2,...|none>
+//
+// donde <hash> es broker_shortlists.hash y los IDs son propiedades_v2.id de los
+// favoritos del cliente (estado en vivo de /b/[hash]). El bot lee ESTA línea
+// (no la prosa, que es editable) y consulta la BD por ID, validando que los IDs
+// pertenezcan al shortlist del hash. Ver contrato en project_plan_contacto_directo_b2c.
+//
+// FLAG DE LANZAMIENTO: arranca en false → el mensaje NO incluye la línea (los
+// clientes reales ven el mensaje actual sin ref). Activar a true (+ deploy)
+// recién cuando el bot esté listo para parsearla.
+export const REF_ALTERNATIVAS_ENABLED: boolean = true
+
+export function buildAlternativasRefLine(hash: string, favIds: number[]): string {
+  const fav = favIds.length > 0
+    ? favIds.slice().sort((a, b) => a - b).join(',')
+    : 'none'
+  return `ref:v1 ${hash} | fav:${fav}`
+}
+
 interface MessageProperty {
   id: number
   nombre_edificio: string | null
