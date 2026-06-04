@@ -10,7 +10,7 @@ import { dormLabel, formatPriceBob, firstName } from '@/lib/format-utils'
 import { fbqTrack } from '@/lib/meta-pixel'
 import { fetchMercadoAlquilerData, type MercadoAlquilerData } from '@/lib/mercado-alquiler-data'
 import { useWhatsAppCapture, triggerWhatsAppCapture, setDemoModeForCapture, setBrokerModeForCapture, setContactoDirectoForCapture } from '@/hooks/useWhatsAppCapture'
-import { buildAlquilerWaMessage } from '@/lib/wa-message'
+import { buildAlquilerWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
 import { useBrokerShortlists, DEMO_SHORTLIST_BLOCKED } from '@/hooks/useBrokerShortlists'
 import ShortlistSendModal from '@/components/broker/ShortlistSendModal'
@@ -1843,6 +1843,7 @@ export default function AlquileresPage({
           {(() => {
             const buildAlqShareMsg = (): string => {
               const hearted = properties.filter(p => favorites.has(p.id))
+              let msg: string
               if (hearted.length > 0) {
                 const lines = hearted.map(p => {
                   const name = p.nombre_edificio || p.nombre_proyecto || 'Depto'
@@ -1853,16 +1854,23 @@ export default function AlquileresPage({
                 // (el bot no coordina visitas; eso va por el captador). Los favoritos
                 // se mandan como señal de preferencia para que el bot afine la búsqueda.
                 if (contactoDirecto) {
-                  return `Hola ${firstName(publicShare.broker.nombre)}, de los que me pasaste me interesaron:\n\n${lines}\n\n¿Tenés otras parecidas?`
+                  msg = `Hola ${firstName(publicShare.broker.nombre)}, de los que me pasaste me interesaron:\n\n${lines}\n\n¿Tenés otras parecidas?`
+                } else {
+                  const plural = hearted.length === 1 ? 'este' : 'estos'
+                  const noun = hearted.length === 1 ? 'alquiler' : `${hearted.length} alquileres`
+                  msg = `Hola ${firstName(publicShare.broker.nombre)}, me interesa${hearted.length === 1 ? '' : 'n'} ${plural} ${noun}:\n\n${lines}\n\n¿Podemos coordinar?`
                 }
-                const plural = hearted.length === 1 ? 'este' : 'estos'
-                const noun = hearted.length === 1 ? 'alquiler' : `${hearted.length} alquileres`
-                return `Hola ${firstName(publicShare.broker.nombre)}, me interesa${hearted.length === 1 ? '' : 'n'} ${plural} ${noun}:\n\n${lines}\n\n¿Podemos coordinar?`
+              } else if (contactoDirecto) {
+                msg = `Hola ${firstName(publicShare.broker.nombre)}, vi la selección que me mandaste. ¿Me mostrás otras opciones?`
+              } else {
+                msg = `Hola ${firstName(publicShare.broker.nombre)}, vi los alquileres que me enviaste.`
               }
-              if (contactoDirecto) {
-                return `Hola ${firstName(publicShare.broker.nombre)}, vi la selección que me mandaste. ¿Me mostrás otras opciones?`
+              // Línea machine-readable para el bot (solo B2C + flag de lanzamiento
+              // activo). hash + propiedades_v2.id favoriteados. Ver wa-message.ts.
+              if (contactoDirecto && REF_ALTERNATIVAS_ENABLED) {
+                msg += `\n\n${buildAlternativasRefLine(publicShare.hash, hearted.map(p => p.id))}`
               }
-              return `Hola ${firstName(publicShare.broker.nombre)}, vi los alquileres que me enviaste.`
+              return msg
             }
             return (
           <a

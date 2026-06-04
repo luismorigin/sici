@@ -17,7 +17,7 @@ import BrokerDemoOverlay from '@/components/demo/BrokerDemoOverlay'
 import ReportPropertyModal from '@/components/broker/ReportPropertyModal'
 import DataReportsBanner from '@/components/broker/DataReportsBanner'
 import { firstName } from '@/lib/format-utils'
-import { buildAtribucionWaMessage } from '@/lib/wa-message'
+import { buildAtribucionWaMessage, REF_ALTERNATIVAS_ENABLED, buildAlternativasRefLine } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
 
 // --- SEO types ---
@@ -2541,6 +2541,7 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
           {(() => {
             const buildPubShareMsg = (): string => {
               const hearted = properties.filter(p => favorites.has(p.id))
+              let msg: string
               if (hearted.length > 0) {
                 const lines = hearted.map(p => {
                   const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
@@ -2550,16 +2551,23 @@ export default function VentasPage({ seo, initialProperties = [], brokerSlug: br
                 // (el bot no coordina visitas; eso va por el captador). Los favoritos
                 // se mandan como señal de preferencia para que el bot afine la búsqueda.
                 if (contactoDirecto) {
-                  return `Hola ${firstName(publicShare.broker.nombre)}, de las que me pasaste me interesaron:\n\n${lines}\n\n¿Tenés otras parecidas?`
+                  msg = `Hola ${firstName(publicShare.broker.nombre)}, de las que me pasaste me interesaron:\n\n${lines}\n\n¿Tenés otras parecidas?`
+                } else {
+                  const plural = hearted.length === 1 ? 'esta' : 'estas'
+                  const noun = hearted.length === 1 ? 'propiedad' : `${hearted.length} propiedades`
+                  msg = `Hola ${firstName(publicShare.broker.nombre)}, me interesa${hearted.length === 1 ? '' : 'n'} ${plural} ${noun}:\n\n${lines}\n\n¿Podemos coordinar?`
                 }
-                const plural = hearted.length === 1 ? 'esta' : 'estas'
-                const noun = hearted.length === 1 ? 'propiedad' : `${hearted.length} propiedades`
-                return `Hola ${firstName(publicShare.broker.nombre)}, me interesa${hearted.length === 1 ? '' : 'n'} ${plural} ${noun}:\n\n${lines}\n\n¿Podemos coordinar?`
+              } else if (contactoDirecto) {
+                msg = `Hola ${firstName(publicShare.broker.nombre)}, vi la selección que me mandaste. ¿Me mostrás otras opciones?`
+              } else {
+                msg = `Hola ${firstName(publicShare.broker.nombre)}, vi las propiedades que me enviaste.`
               }
-              if (contactoDirecto) {
-                return `Hola ${firstName(publicShare.broker.nombre)}, vi la selección que me mandaste. ¿Me mostrás otras opciones?`
+              // Línea machine-readable para el bot (solo B2C + flag de lanzamiento
+              // activo). hash + propiedades_v2.id favoriteados. Ver wa-message.ts.
+              if (contactoDirecto && REF_ALTERNATIVAS_ENABLED) {
+                msg += `\n\n${buildAlternativasRefLine(publicShare.hash, hearted.map(p => p.id))}`
               }
-              return `Hola ${firstName(publicShare.broker.nombre)}, vi las propiedades que me enviaste.`
+              return msg
             }
             return (
           <a
