@@ -416,8 +416,9 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
                 const name = p.nombre_edificio || p.nombre_proyecto || `Depto ${i + 1}`
                 const selectedTexts = Array.from(selectedQs).sort().map(idx => askQuestions[idx]?.text).filter(Boolean) as string[]
                 const msgText = buildAlquilerWaMessage(p, {
-                  intro: 'Hola, vi este alquiler en Simon (simonbo.com) — estoy comparando varias opciones:',
                   preguntas: selectedTexts,
+                  atribucion: true,
+                  comparando: true,
                 })
                 return (
                   <div key={p.id} className="cs-cta-row">

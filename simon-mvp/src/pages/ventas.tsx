@@ -17,6 +17,7 @@ import BrokerDemoOverlay from '@/components/demo/BrokerDemoOverlay'
 import ReportPropertyModal from '@/components/broker/ReportPropertyModal'
 import DataReportsBanner from '@/components/broker/DataReportsBanner'
 import { firstName } from '@/lib/format-utils'
+import { buildAtribucionWaMessage } from '@/lib/wa-message'
 import { openWhatsApp } from '@/lib/whatsapp'
 
 // --- SEO types ---
@@ -1476,11 +1477,14 @@ function BottomSheet({ property: p, isOpen, onClose, onShare, isFavorite, onTogg
                   msg += `\n\nSi tenés alternativas parecidas, también me interesan.`
                   return msg
                 }
-                const selectedTexts = Array.from(selectedQs).sort().map(idx => brokerQuestions[idx]).filter(Boolean)
-                let msg = `Hola, vi ${p.proyecto} en Simon y me gustaria mas informacion`
-                if (selectedTexts.length > 0) msg += `\n\nAntes, me gustaria saber:\n${selectedTexts.map(t => `— ${t}`).join('\n')}`
-                if (p.url) msg += '\n' + p.url
-                return msg
+                const selectedTexts = Array.from(selectedQs).sort().map(idx => brokerQuestions[idx]).filter(Boolean) as string[]
+                // Modo público (feed + B2C): formato unificado con atribución.
+                return buildAtribucionWaMessage({
+                  nombre: p.proyecto || 'este departamento',
+                  url: p.url,
+                  preguntas: selectedTexts,
+                  ref: `SIM-V${p.id}`,
+                })
               }
               return (
               <a href={`https://wa.me/${p.agente_telefono.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(buildSheetMsg())}`}
@@ -1619,8 +1623,12 @@ function buildAgentWaMessage(p: UnidadVenta, brokerInfo: { nombre: string; inmob
     msg += `\n\nSi tenés alternativas parecidas, también me interesan.`
     return msg
   }
-  // Modo público: copy original
-  return `Hola, vi ${p.proyecto} en Simon y me gustaría más información${p.url ? '\n' + p.url : ''}`
+  // Modo público (feed + B2C): formato unificado con atribución a Simón.
+  return buildAtribucionWaMessage({
+    nombre: p.proyecto || 'este departamento',
+    url: p.url,
+    ref: `SIM-V${p.id}`,
+  })
 }
 
 // Badge de la inmobiliaria de origen (solo visible al broker para identificar

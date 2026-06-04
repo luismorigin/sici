@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
-import { dormLabel, formatPriceUSD, firstName } from '@/lib/format-utils'
+import { dormLabel, firstName } from '@/lib/format-utils'
 import type { UnidadVenta } from '@/lib/supabase'
 import { displayZona } from '@/lib/zonas'
 import { openWhatsApp } from '@/lib/whatsapp'
 import { trackEvent } from '@/lib/analytics'
+import { buildAtribucionWaMessage } from '@/lib/wa-message'
 
 interface CompareSheetProps {
   open: boolean
@@ -241,22 +242,14 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
   }
 
   function buildWaMessage(p: UnidadVenta, selectedTexts: string[]): string {
-    const name = p.proyecto || 'este departamento'
-    const specs = [dormLabel(p.dormitorios), formatPriceUSD(p.precio_usd), displayZona(p.zona)].filter(Boolean).join(' · ')
-    const parts: string[] = [
-      'Hola, vi este departamento en Simon (simonbo.com) — estoy comparando varias opciones:',
-      '',
-      `${name} · ${specs}`,
-    ]
-    if (selectedTexts.length > 0) {
-      parts.push('')
-      parts.push('Me gustaria saber:')
-      selectedTexts.forEach(q => parts.push(`— ${q}`))
-    }
-    parts.push('')
-    parts.push(`Ver ficha en Simon: https://simonbo.com/ventas?id=${p.id}`)
-    parts.push(`Ref: SIM-V${p.id}`)
-    return parts.join('\n')
+    // Formato unificado con atribución (el Comparativo es siempre modo público).
+    return buildAtribucionWaMessage({
+      nombre: p.proyecto || 'este departamento',
+      url: p.url,
+      preguntas: selectedTexts,
+      ref: `SIM-V${p.id}`,
+      comparando: true,
+    })
   }
 
   return (
