@@ -20,7 +20,7 @@ import { dormLabel, formatPriceBob } from './format-utils'
 // FLAG DE LANZAMIENTO: arranca en false → el mensaje NO incluye la línea (los
 // clientes reales ven el mensaje actual sin ref). Activar a true (+ deploy)
 // recién cuando el bot esté listo para parsearla.
-export const REF_ALTERNATIVAS_ENABLED: boolean = false
+export const REF_ALTERNATIVAS_ENABLED: boolean = true
 
 export function buildAlternativasRefLine(hash: string, favIds: number[]): string {
   const fav = favIds.length > 0
