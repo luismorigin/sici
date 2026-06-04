@@ -1,6 +1,13 @@
 # Plan — Contacto directo al captador en shortlists B2C (canal bot Simón)
 
-**Estado:** plan aprobado en diseño (revisado por reviewer adversarial), sin implementar.
+> **✅ ESTADO (actualizado jun 2026): IMPLEMENTADO Y EN PRODUCCIÓN.** Mergeado a `main` en
+> PRs #2/#3/#4. Lo de abajo es el **registro de diseño original**; el plan se siguió y se
+> extendió (formato unificado de atribución al captador en el feed, línea `ref:v1` para el bot,
+> gates largos del bot, header re-enfocado a "Más opciones"). El texto en futuro/condicional
+> («el implementador debe…», «Gates = fase 2 separada» en §8) refleja el estado de diseño, **ya
+> superado**. Detalle del resultado en la memoria `project_plan_contacto_directo_b2c`.
+
+**Estado original:** plan aprobado en diseño (revisado por reviewer adversarial), sin implementar.
 **Fecha:** 2026-06-03.
 **Alcance de riesgo:** toca código compartido entre el feed `/ventas`–`/alquileres` y el
 shortlist público `/b/[hash]`. Garantía de no-regresión en §5. Revisión en §12.

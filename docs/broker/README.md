@@ -45,10 +45,17 @@ El broker que use Simon tiene que poder defender cualquier número del producto 
 - Header fijo con foto/nombre del broker + inmobiliaria + CTA WhatsApp pre-armado desde corazones marcados
 - FAB mapa mobile (publicShareMode oculta el top bar)
 - Sin gate/preguntas al broker/chat/filtros — contexto curado
-- CTAs WhatsApp siempre al broker (cards, BottomSheet, MapFloatCard, CompareSheet), nunca al agente original
+- CTAs WhatsApp al broker dueño (cards, BottomSheet, MapFloatCard, CompareSheet) en shortlists B2B de pago. **Excepción: el canal B2C del bot `simon-asistente` (flag `contacto_directo`) los manda al captador — ver "Canal B2C" abajo.**
 - Badge "↓ bajó" / "↑ antes Bs X" si el snapshot vs actual difiere >1% (tanto venta USD como alquiler BOB)
 - **Comentario broker por propiedad** (bloque arena con borde-izq salvia + autor) — visible en card de venta y alquiler
 - **"⭐ Recomendada por tu broker"** — máx 1 propiedad destacada por shortlist. Venta: card invierte tema (fondo arena sobre fondo negro). Alquiler: borde negro 2px sobre fondo crema. Comentario y destacada son independientes (4 combinaciones posibles)
+
+**Canal B2C — bot `simon-asistente` (contacto directo, en prod jun 2026):**
+- El bot de WhatsApp crea shortlists como un "broker" más en `simon_brokers`, pero con el flag **`contacto_directo=true`** (migración 256). Para ese broker, los CTA por propiedad en `/b/[hash]` van al **captador** (`agente_telefono`/`agente_whatsapp`), reusando el comportamiento del feed, no al broker dueño. **No afecta a los brokers B2B de pago** (flag false ⇒ comportamiento intacto).
+- **Atribución al captador:** el mensaje WA usa el formato unificado `buildAtribucionWaMessage` (también activo en el feed público): nombre + "en Simon (simonbo.com)" + anuncio del portal + "Este contacto llegó por Simón. Ref: SIM-V/SIM-P{id}".
+- **Header "Más opciones":** re-enfocado a pedirle al bot más alternativas; adjunta `ref:v1 <hash> | fav:<ids>` que el bot parsea (RPC `buscar_similares`).
+- **Gates:** shortlists nuevas del bot salen con expiración larga (365d) + sin cap, en vez del DEFAULT 20/30d.
+- Plan + decisiones: `docs/broker/CONTACTO_DIRECTO_B2C_PLAN.md` + memoria `project_plan_contacto_directo_b2c`.
 
 **Feedback cliente → broker:**
 - API pública `/api/public/shortlist-hearts` GET/POST/DELETE scoped por hash, sin auth
