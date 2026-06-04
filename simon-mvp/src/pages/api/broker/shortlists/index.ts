@@ -16,6 +16,15 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// Gates del canal del bot (simon-asistente): las shortlists del bot las recibe
+// el cliente final B2C, que reabre/comparte su link → el cap de 20 vistas / 30
+// días (DEFAULT de columna, para el Plan Inicial B2B) le rompe la UX. Decisión
+// founder (plan §8): expiración larga (NO exención total) + sin cap de vistas.
+// Los brokers de pago mantienen el DEFAULT (no se tocan acá).
+const SIMON_ASISTENTE_SLUG = 'simon-asistente'
+const BOT_MAX_VIEWS = 999999            // sin cap efectivo (mismo patrón que el demo, mig 236)
+const BOT_EXPIRES_DAYS = 365            // ~12 meses
+
 function generateHash(): string {
   // 8 bytes -> 11 chars base64url, recortamos a 10
   return randomBytes(8).toString('base64url').slice(0, 10)
@@ -110,15 +119,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const hash = await generateUniqueHash()
 
+      // Gates: el bot (simon-asistente) lleva expiración larga + sin cap; los
+      // demás brokers omiten estos campos y caen al DEFAULT de columna (20/30d).
+      const insertData: Record<string, unknown> = {
+        broker_slug: payload.broker_slug,
+        hash,
+        cliente_nombre: payload.cliente_nombre.trim(),
+        cliente_telefono: payload.cliente_telefono.trim(),
+        mensaje_whatsapp: payload.mensaje_whatsapp?.trim() || null,
+      }
+      if (payload.broker_slug === SIMON_ASISTENTE_SLUG) {
+        insertData.max_views = BOT_MAX_VIEWS
+        insertData.expires_at = new Date(Date.now() + BOT_EXPIRES_DAYS * 24 * 60 * 60 * 1000).toISOString()
+      }
+
       const { data: shortlist, error: errInsert } = await supabase
         .from('broker_shortlists')
-        .insert({
-          broker_slug: payload.broker_slug,
-          hash,
-          cliente_nombre: payload.cliente_nombre.trim(),
-          cliente_telefono: payload.cliente_telefono.trim(),
-          mensaje_whatsapp: payload.mensaje_whatsapp?.trim() || null,
-        })
+        .insert(insertData)
         .select('*')
         .single()
 
