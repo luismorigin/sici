@@ -558,6 +558,7 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => 
             telefono: broker.telefono,
             foto_url: broker.foto_url,
             inmobiliaria: broker.inmobiliaria,
+            contacto_directo: broker.contacto_directo === true,
           },
           items: properties,
           itemComments,

@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react'
-import { dormLabel, formatPriceUSD, firstName } from '@/lib/format-utils'
+import { dormLabel, firstName } from '@/lib/format-utils'
 import type { UnidadVenta } from '@/lib/supabase'
 import { displayZona } from '@/lib/zonas'
 import { openWhatsApp } from '@/lib/whatsapp'
+import { trackEvent } from '@/lib/analytics'
+import { buildAtribucionWaMessage } from '@/lib/wa-message'
 
 interface CompareSheetProps {
   open: boolean
@@ -12,6 +14,11 @@ interface CompareSheetProps {
   // → ocultar preguntas al broker, "durante la visita" y CTAs WA por propiedad.
   // Reemplaza por un único CTA "Consultar por WhatsApp" al broker que comparte.
   publicShareBroker?: { nombre: string; telefono: string } | null
+  // contacto_directo (B2C, migración 256): cuando true (solo simon-asistente),
+  // el comparativo vuelve al "modo feed" — muestra preguntas, durante-la-visita,
+  // días publicado, tc_sospechoso y CTAs WA al captador por propiedad, y suprime
+  // el CTA único al broker dueño. Default false = B2B intacto.
+  contactoDirecto?: boolean
 }
 
 function fmt(n: number) { return n.toLocaleString('en-US') }
@@ -26,7 +33,7 @@ function estadoLabel(estado: string | null | undefined): string {
   return 'Entrega inmediata'
 }
 
-export default function CompareSheet({ open, properties, onClose, publicShareBroker = null }: CompareSheetProps) {
+export default function CompareSheet({ open, properties, onClose, publicShareBroker = null, contactoDirecto = false }: CompareSheetProps) {
   const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
   const MAX_QS = 3
   const publicShareMode = publicShareBroker !== null
@@ -156,20 +163,20 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
     }
 
     // 4. TC sospechoso — alerta critica, va a tope de prioridad cuando aparece.
-    //    Solo visible al feed público / broker armando shortlist. En
-    //    publicShareMode (cliente final viendo /b/[hash]) este aviso es señal
-    //    interna y no debe filtrarse — el broker ya recibió un toast al
-    //    seleccionar la prop. Los insights de precio/m² igual se omiten
-    //    arriba (línea 72) por seguridad, pero sin explicar el motivo.
+    //    Visible al feed público / broker armando shortlist. En publicShareMode
+    //    B2B (cliente final viendo /b/[hash]) este aviso es señal interna y no
+    //    debe filtrarse — el broker ya recibió un toast al seleccionar la prop.
+    //    EXCEPCIÓN: en contactoDirecto (B2C, bot) SÍ se muestra al cliente, como
+    //    en el feed (decisión founder 2026-06-03: "mostrarlo como el feed").
     const sospechosasIdx: number[] = []
     props.forEach((p, i) => { if (p.tc_sospechoso === true) sospechosasIdx.push(i) })
-    if (sospechosasIdx.length > 0 && !publicShareMode) {
+    if (sospechosasIdx.length > 0 && (!publicShareMode || contactoDirecto)) {
       const names = sospechosasIdx.map(i => nameAt(i)).join(' y ')
       result.unshift(`${names} tiene${sospechosasIdx.length > 1 ? 'n' : ''} precio sospechoso — confirmar tipo de cambio con el broker antes de comparar.`)
     }
 
     return result.slice(0, 4)
-  }, [props, precioM2, minPrecioM2, publicShareMode])
+  }, [props, precioM2, minPrecioM2, publicShareMode, contactoDirecto])
 
   // Ocultar filas donde ninguna prop aporta data util (todo null/vacio).
   const showBanos = props.some(p => p.banos !== null && p.banos !== undefined)
@@ -235,22 +242,14 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
   }
 
   function buildWaMessage(p: UnidadVenta, selectedTexts: string[]): string {
-    const name = p.proyecto || 'este departamento'
-    const specs = [dormLabel(p.dormitorios), formatPriceUSD(p.precio_usd), displayZona(p.zona)].filter(Boolean).join(' · ')
-    const parts: string[] = [
-      'Hola, vi este departamento en Simon (simonbo.com) — estoy comparando varias opciones:',
-      '',
-      `${name} · ${specs}`,
-    ]
-    if (selectedTexts.length > 0) {
-      parts.push('')
-      parts.push('Me gustaria saber:')
-      selectedTexts.forEach(q => parts.push(`— ${q}`))
-    }
-    parts.push('')
-    parts.push(`Ver ficha en Simon: https://simonbo.com/ventas?id=${p.id}`)
-    parts.push(`Ref: SIM-V${p.id}`)
-    return parts.join('\n')
+    // Formato unificado con atribución (el Comparativo es siempre modo público).
+    return buildAtribucionWaMessage({
+      nombre: p.proyecto || 'este departamento',
+      url: p.url,
+      preguntas: selectedTexts,
+      ref: `SIM-V${p.id}`,
+      comparando: true,
+    })
   }
 
   return (
@@ -346,10 +345,11 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
                     {props.map(p => <td key={p.id} className="csv-td">{p.piso || '—'}</td>)}
                   </tr>
                 )}
-                {/* Días publicado — oculto en publicShareMode. El broker no
+                {/* Días publicado — oculto en publicShareMode B2B. El broker no
                     quiere que su cliente vea cuánto lleva una propiedad en
-                    mercado (señal de negociación que arruinaría la conversación). */}
-                {!publicShareMode && (
+                    mercado (señal de negociación que arruinaría la conversación).
+                    En contactoDirecto (B2C) se muestra, como el feed (§6 dec.3). */}
+                {(!publicShareMode || contactoDirecto) && (
                   <tr>
                     <td className="csv-td-label">Dias publicado</td>
                     {props.map(p => (
@@ -379,8 +379,8 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
           </div>
         )}
 
-        {/* Questions for broker — oculto en publicShareMode */}
-        {!publicShareMode && (
+        {/* Questions for broker — oculto en publicShareMode B2B; en contactoDirecto (B2C) se muestran */}
+        {(!publicShareMode || contactoDirecto) && (
         <div className="csv-section">
           <div className="csv-label-row">
             <span className="csv-label"><span className="csv-label-dot" />PREGUNTAS PARA EL BROKER</span>
@@ -404,8 +404,8 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
         </div>
         )}
 
-        {/* Durante la visita — oculto en publicShareMode */}
-        {!publicShareMode && (
+        {/* Durante la visita — oculto en publicShareMode B2B; en contactoDirecto (B2C) se muestra */}
+        {(!publicShareMode || contactoDirecto) && (
         <div className="csv-section">
           <div className="csv-label"><span className="csv-label-dot" />DURANTE LA VISITA, FIJATE EN</div>
           <div className="csv-questions">
@@ -419,8 +419,8 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
         </div>
         )}
 
-        {/* CTA único al broker que comparte (solo publicShareMode) — lista las propiedades comparadas */}
-        {publicShareMode && publicShareBroker && (() => {
+        {/* CTA único al broker que comparte (solo publicShareMode B2B; en contactoDirecto va al captador) */}
+        {publicShareMode && !contactoDirecto && publicShareBroker && (() => {
           const clienteLines = props.map(p => {
             const dorms = p.dormitorios === 0 ? 'Mono' : `${p.dormitorios} dorm`
             return `• ${p.proyecto} (${dorms} · ${Math.round(p.area_m2)}m² · $us ${Math.round(p.precio_usd).toLocaleString('en-US')})`
@@ -441,8 +441,8 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
           )
         })()}
 
-        {/* WhatsApp CTAs por propiedad — oculto en publicShareMode */}
-        {!publicShareMode && (
+        {/* WhatsApp CTAs por propiedad — oculto en publicShareMode B2B; en contactoDirecto (B2C) van al captador */}
+        {(!publicShareMode || contactoDirecto) && (
         <div className="csv-section">
           <div className="csv-label"><span className="csv-label-dot" />CONTACTAR</div>
           <div className="csv-ctas">
@@ -461,7 +461,13 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
                       target="_blank"
                       rel="noopener noreferrer"
                       className="csv-cta-btn"
-                      onClick={(e) => { e.preventDefault(); openWhatsApp(phone, msgText) }}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        // trackEvent mínimo (§9): cierra el gap histórico — esta CTA por
+                        // captador nunca trackeaba. source segmentado para no contaminar el feed.
+                        trackEvent('click_whatsapp_venta', { property_id: p.id, property_name: name, zona: displayZona(p.zona), precio_usd: Math.round(p.precio_usd), source: contactoDirecto ? 'public_share_directo' : 'compare_sheet' })
+                        openWhatsApp(phone, msgText)
+                      }}
                     >
                       <svg viewBox="0 0 24 24" fill="#1EA952" style={{ width: 16, height: 16 }}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
                       WhatsApp

@@ -37,6 +37,12 @@ interface CompareSheetProps {
   // original) y las "preguntas para el broker" se ocultan (el cliente habla
   // directo con el broker, no curamos preguntas).
   publicShareBroker?: { nombre: string; telefono: string; foto_url: string | null; slug: string } | null
+  // contacto_directo (B2C, migración 256): cuando true (solo simon-asistente),
+  // el comparativo vuelve al "modo feed" — muestra preguntas, durante-la-visita,
+  // días publicado y el insight de negociación, y los CTA por propiedad usan
+  // triggerWhatsAppCapture (el hook intercepta vía _contactoDirecto → captador
+  // directo, sin modal, fuente public_share_directo). Default false = B2B intacto.
+  contactoDirecto?: boolean
 }
 
 function fmt(n: number) { return n.toLocaleString('es-BO') }
@@ -51,7 +57,7 @@ function buildClientToBrokerCompareMessage(props: UnidadAlquiler[], brokerName: 
   return `Hola ${firstName(brokerName)}, estoy comparando estas opciones y me gustaría conversar:\n\n${lines}`
 }
 
-export default function CompareSheet({ open, properties, onClose, publicShareBroker = null }: CompareSheetProps) {
+export default function CompareSheet({ open, properties, onClose, publicShareBroker = null, contactoDirecto = false }: CompareSheetProps) {
   const publicShareMode = publicShareBroker !== null
   const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set())
   const MAX_QS = 3
@@ -82,10 +88,11 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
     }
 
     // Negotiation opportunity based on days on market.
-    // Oculto en publicShareMode: el broker no quiere que su cliente vea cuánto
+    // Oculto en publicShareMode B2B: el broker no quiere que su cliente vea cuánto
     // lleva una propiedad en mercado (señal que invita a negociar y arruina
-    // la posición del broker en la conversación).
-    if (!publicShareMode) {
+    // la posición del broker en la conversación). En contactoDirecto (B2C, sin
+    // broker dueño) se muestra, como el feed — empodera al cliente.
+    if (!publicShareMode || contactoDirecto) {
       props.forEach(p => {
         const name = p.nombre_edificio || p.nombre_proyecto || 'Un depto'
         if (p.dias_en_mercado && p.dias_en_mercado > 30) {
@@ -128,7 +135,7 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
     }
 
     return result.slice(0, 4) // Max 4 insights
-  }, [props, precioM2, minPrecioM2, publicShareMode])
+  }, [props, precioM2, minPrecioM2, publicShareMode, contactoDirecto])
 
   // Questions for broker based on missing data
   const questions = useMemo(() => {
@@ -263,10 +270,11 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
                   <td className="cs-td-label">Piso</td>
                   {props.map(p => <td key={p.id} className="cs-td">{p.piso !== null ? (p.piso === 0 ? 'PB' : `${p.piso}`) : '—'}</td>)}
                 </tr>
-                {/* Días publicado — oculto en publicShareMode. El broker no
+                {/* Días publicado — oculto en publicShareMode B2B. El broker no
                     quiere que su cliente vea cuánto lleva una propiedad en
-                    mercado (señal de negociación que arruinaría la conversación). */}
-                {!publicShareMode && (
+                    mercado (señal de negociación que arruinaría la conversación).
+                    En contactoDirecto (B2C) se muestra, como el feed. */}
+                {(!publicShareMode || contactoDirecto) && (
                   <tr>
                     <td className="cs-td-label">Dias publicado</td>
                     {props.map(p => (
@@ -338,9 +346,9 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
         )}
 
         {/* Questions for broker — selectable, max 3, included in WhatsApp.
-            Ocultas en publicShareMode (el cliente habla directo con su broker,
-            sin preguntas curadas). */}
-        {!publicShareMode && (
+            Ocultas en publicShareMode B2B (el cliente habla directo con su broker,
+            sin preguntas curadas). En contactoDirecto (B2C) se muestran (van al captador). */}
+        {(!publicShareMode || contactoDirecto) && (
           <div className="cs-section">
             <div className="cs-label-row">
               <span className="cs-label"><span className="cs-label-dot" />PREGUNTAS PARA EL BROKER</span>
@@ -364,9 +372,10 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
           </div>
         )}
 
-        {/* "Durante la visita, fíjate en" — oculto en publicShareMode
-            (el cliente ya coordinó con su broker, la guía es redundante). */}
-        {!publicShareMode && (
+        {/* "Durante la visita, fíjate en" — oculto en publicShareMode B2B
+            (el cliente ya coordinó con su broker, la guía es redundante).
+            En contactoDirecto (B2C) se muestra, como el feed. */}
+        {(!publicShareMode || contactoDirecto) && (
           <div className="cs-section">
             <div className="cs-label"><span className="cs-label-dot" />DURANTE LA VISITA, FIJATE EN</div>
             <div className="cs-questions">
@@ -383,8 +392,9 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
         {/* WhatsApp CTAs */}
         <div className="cs-section">
           <div className="cs-label"><span className="cs-label-dot" />CONTACTAR</div>
-          {publicShareMode && publicShareBroker ? (
-            // En publicShareMode: un solo CTA al broker mencionando las 3 opciones comparadas
+          {publicShareMode && !contactoDirecto && publicShareBroker ? (
+            // En publicShareMode B2B: un solo CTA al broker mencionando las 3 opciones comparadas
+            // (en contactoDirecto cae a la rama por-propiedad → captador vía el hook)
             <div className="cs-ctas">
               <div className="cs-cta-row cs-cta-row-broker">
                 <span className="cs-cta-name" style={{ flex: 1 }}>
@@ -406,8 +416,9 @@ export default function CompareSheet({ open, properties, onClose, publicShareBro
                 const name = p.nombre_edificio || p.nombre_proyecto || `Depto ${i + 1}`
                 const selectedTexts = Array.from(selectedQs).sort().map(idx => askQuestions[idx]?.text).filter(Boolean) as string[]
                 const msgText = buildAlquilerWaMessage(p, {
-                  intro: 'Hola, vi este alquiler en Simon (simonbo.com) — estoy comparando varias opciones:',
                   preguntas: selectedTexts,
+                  atribucion: true,
+                  comparando: true,
                 })
                 return (
                   <div key={p.id} className="cs-cta-row">

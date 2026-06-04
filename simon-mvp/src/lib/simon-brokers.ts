@@ -21,6 +21,13 @@ export interface Broker {
   telefono: string
   foto_url: string | null
   inmobiliaria?: string | null
+  /**
+   * B2C: si true, las shortlists de este broker en /b/[hash] contactan al
+   * captador de cada propiedad (agente_telefono venta / agente_whatsapp
+   * alquiler) en vez del broker dueño. Solo activo en simon-asistente (el bot).
+   * Default false en BD = comportamiento B2B intacto. Migración 256.
+   */
+  contacto_directo?: boolean
 }
 
 function getSupabaseAdmin() {
@@ -43,7 +50,7 @@ export async function getBrokerBySlug(slug: string | null | undefined): Promise<
   const supa = getSupabaseAdmin()
   const { data, error } = await supa
     .from('simon_brokers')
-    .select('slug, nombre, telefono, foto_url, inmobiliaria, status')
+    .select('slug, nombre, telefono, foto_url, inmobiliaria, contacto_directo, status')
     .eq('slug', slug)
     .eq('status', 'activo')
     .maybeSingle()
@@ -58,6 +65,7 @@ export async function getBrokerBySlug(slug: string | null | undefined): Promise<
     telefono: data.telefono,
     foto_url: data.foto_url ?? null,
     inmobiliaria: data.inmobiliaria ?? null,
+    contacto_directo: data.contacto_directo === true,
   }
 }
 
