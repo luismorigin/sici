@@ -1,4 +1,4 @@
-# CRM de Clientes B2C (leads del bot Simón) — BASE PARA ANÁLISIS (v2)
+# CRM de Clientes B2C (leads del bot Simón) — PLAN (v2, decisiones confirmadas)
 
 > ✅ **Estado: PLAN — decisiones confirmadas, SIN implementar.**
 > - v1 (4-jun-2026): primer borrador del modelo de datos.
