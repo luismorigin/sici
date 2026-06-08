@@ -1,5 +1,5 @@
 ---
-description: Audit semanal del feed /alquileres sin scraping — capas 2+3+4 sobre props nuevas/rango. Costo $0, solo SQL. Reporte ejecutivo con SQL listo. Sin persistencia. v1.4: + precio/área cruda↔BD por LECTURA (no regex) + anexo cola barata.
+description: Audit semanal del feed /alquileres sin scraping — capas 2+3+4 sobre props nuevas/rango. Costo $0, solo SQL. Reporte ejecutivo con SQL listo. Sin persistencia. v1.5: scope por macrozona (`--macrozona`, default equipetrol = feed público) + candado formato objeto; v1.4: precio/área cruda↔BD por LECTURA + anexo cola barata.
 ---
 
 # Audit semanal — feed /alquileres
@@ -14,7 +14,13 @@ Los checks nuevos de v1.4 (2.9 precio, 4.4 área, anexo cola barata) **NO usan r
 
 Regla de oro anti-FP: si no podés identificar con confianza el dato en la cruda, **no marques error** — dejá la prop fuera del reporte o como 🟢. El silencio es mejor que un falso positivo. La ambigüedad real (varios precios, USD sin TC claro) se reporta como 🟡 "revisar" mostrando el fragmento, nunca como 🔴.
 
-## Versión actual: v1.4 — 25-may-2026
+## Versión actual: v1.5 — 8-jun-2026
+
+v1.5 (paridad con el audit de ventas v1.6):
+- **Scope por macrozona** (arg `--macrozona`, default `equipetrol`): `v_mercado_alquiler` mezcla Equipetrol + Zona Norte, pero el feed público `/alquileres` filtra a Equipetrol. El audit ahora coincide. Filtro `v.zona_general`. (No lleva filtro de tipo: en alquiler no hay casas/terrenos en el feed.)
+- **Formato canónico del candado** (sección "aplicar correcciones"): el merge de alquiler (`merge_alquiler`, `registrar_*_alquiler`) usa el MISMO helper `_is_campo_bloqueado` que ventas → candar a mano con un string NO protege; usar `jsonb_build_object` + verificación post-fix. Verificado en las funciones de producción del pipeline alquiler.
+
+## v1.4 — 25-may-2026
 
 v1.4 cierra el hueco de precio mal extraído que el semanal no veía:
 - **Check 2.9** (NUEVO): precio cruda↔BD por lectura del agente (reemplaza conceptualmente al viejo 2.1 eliminado, sin sus FP).
@@ -69,11 +75,21 @@ Si `con_cruda / total < 0.70`, abortar y sugerir `cd scripts/auditoria-feed-alqu
 | `--solo-criticos` | false | filtra capa 4 (anomalías menores) |
 | `--incluir-recientes` | false | NO excluye props editadas en últimos 30 min |
 | `--cola=N` | 15 | top-N baratas en Anexo A; `--cola=0` lo desactiva |
+| `--macrozona=` | `equipetrol` | `--macrozona=zona-norte` · `--macrozona=todas` |
 
 **Reglas de combinación**:
 - `--desde` + `--hasta` ganan sobre `--dias`
 - `--ids` overrides todo (audit puntual de props específicas, ignora rango temporal)
 - Por default se excluyen props con `fecha_actualizacion >= NOW() - 30 min` (race condition guard contra admin panel)
+- **`--macrozona` mapea a `v.zona_general`** (default `equipetrol`, coincide con el feed público `/alquileres` que filtra `zonas_permitidas: ZONAS_EQUIPETROL_DB`):
+
+| `--macrozona=` | Filtro | Cubre |
+|---|---|---|
+| `equipetrol` (default) | `AND v.zona_general = 'Equipetrol'` | lo que muestra el feed público `/alquileres` |
+| `zona-norte` | `AND v.zona_general = 'Zona Norte'` | prototipo Zona Norte (dark launch) |
+| `todas` | (sin filtro de zona) | ambas — NO recomendado (mezcla scope) |
+
+> **⚠️ Por qué `equipetrol` por default:** `v_mercado_alquiler` mezcla ambas macrozonas (≈137 Equipetrol + ≈104 Zona Norte), pero el feed público `/alquileres` filtra a Equipetrol (`buscarUnidadesAlquiler({zonas_permitidas: ZONAS_EQUIPETROL_DB})` en `alquileres.tsx`). El audit debe coincidir con el feed. `zona_general` es columna de `v_mercado_alquiler` (mig 257). **NO aplica filtro de tipo** (a diferencia de ventas): en alquiler no hay casas/terrenos en el feed (`casa_terreno=0`, pipeline 221 es solo venta).
 
 ## Flujo de ejecución
 
@@ -92,9 +108,15 @@ WHERE p.fecha_creacion BETWEEN '<desde>' AND '<hasta> 23:59:59'
 -- Filtro de race condition (excluir editadas en últimos 30 min, salvo --incluir-recientes)
 AND (p.fecha_actualizacion IS NULL OR p.fecha_actualizacion < NOW() - INTERVAL '30 minutes')
 
+-- Filtro de MACROZONA (obligatorio salvo --macrozona=todas). Alinea con el feed público /alquileres.
+-- equipetrol (default) → 'Equipetrol' | zona-norte → 'Zona Norte' | todas → omitir esta línea
+AND v.zona_general = '<Equipetrol | Zona Norte>'
+
 -- Solo props vivas del feed
 -- (v_mercado_alquiler ya filtra status + ≤150 días + curaduría)
 ```
+
+> El `<filtro args>` (con la línea de `v.zona_general`) se inyecta en TODAS las queries de capas 2/3/4 y el conteo base (todas hacen `v_mercado_alquiler v JOIN propiedades_v2 p`). El **Anexo A (cola barata)**, que barre fuera de ventana, también debe llevar el filtro de macrozona.
 
 ### 2. Conteo base + distribución por día/fuente
 
@@ -719,6 +741,20 @@ Después del reporte:
 - ¿Aplicar SQL críticos? (precio absurdo, área absurda son seguros)
 - ¿Querés que abra alguna prop en navegador?
 - ¿Hay aliases que querés agregar a algún pm?
+
+#### ⚠️ FORMATO CANÓNICO DEL CANDADO (igual que ventas — verificado en el pipeline alquiler 8-jun-2026)
+
+El merge de alquiler (`merge_alquiler`) y los `registrar_*_alquiler` usan el helper **`_is_campo_bloqueado`** (compartido con ventas), que **solo reconoce el candado si el valor es un objeto** `{"bloqueado": true, ...}` o un boolean. Un **string** (ej. `{"precio_mensual_bob":"audit_cola_barata"}`) **NO protege**: el merge nocturno lo ignora y repisa el campo. Los *checks* de este audit usan `?` (existencia de key) que es más laxo → trampa: parece candado pero el pipeline no lo respeta.
+
+**Plantilla obligatoria** (objeto, replica el panel admin) — aplica a `precio_mensual_bob`, `dormitorios`, `area_total_m2`, etc.:
+```sql
+UPDATE propiedades_v2 SET <campo> = <valor>,
+  campos_bloqueados = COALESCE(campos_bloqueados,'{}'::jsonb) ||
+    jsonb_build_object('<campo>', jsonb_build_object(
+      'bloqueado', true, 'por', 'audit_<motivo>', 'fecha', '<YYYY-MM-DD>', 'valor_original', <viejo>))
+WHERE id = <id>;
+```
+Donde el flujo arriba dice candar (`por='audit_dormitorios'`, `por='audit_cola_barata'`), usar SIEMPRE este formato objeto, NUNCA un string. Verificación post-fix: `SELECT campo_esta_bloqueado(campos_bloqueados,'<campo>') FROM propiedades_v2 WHERE id IN (...)` debe dar `true`. **Alternativa más segura: corregir desde el panel admin** (escribe el objeto solo).
 
 ## Datos útiles para el análisis
 

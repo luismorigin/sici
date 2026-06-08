@@ -1,5 +1,5 @@
 ---
-description: Audit semanal del feed /ventas sin Firecrawl — capas 2+3+4 sobre props nuevas/rango. Costo $0. Reporte ejecutivo con SQL listo. Sin persistencia. v1.3: detector TC reescrito (solo doble normalización paralelo, no más falsos positivos en no_especificado).
+description: Audit semanal del feed /ventas sin Firecrawl — capas 2+3+4 sobre props nuevas/rango. Costo $0. Reporte ejecutivo con SQL listo. Sin persistencia. v1.6: scope por macrozona (`--macrozona`, default equipetrol = feed público); v1.3: detector TC reescrito (solo doble normalización paralelo).
 ---
 
 # Audit semanal — feed /ventas
@@ -8,7 +8,21 @@ Variante liviana del audit mensual. Cubre props nuevas en una ventana temporal u
 
 Cuándo usarlo: lunes a la mañana (o cualquier día) para limpiar la deuda de props nuevas mientras están frescas. Complementa al `/audit-feed-ventas-mensual` que cubre todo el feed + drift Firecrawl.
 
-## Versión actual: v1.4 — 25-may-2026
+## Versión actual: v1.6 — 8-jun-2026
+
+v1.6 **alinea el scope del audit con el feed público** (que solo muestra Equipetrol + solo departamentos). Dos filtros nuevos en el WHERE base:
+1. **Macrozona** (arg `--macrozona`, default `equipetrol`): antes corría sobre `v_mercado_venta` completa (Equipetrol + Zona Norte, ~763 props) y mezclaba edificios de ZN que NO están en el feed público (`zonas_permitidas: ZONAS_EQUIPETROL_DB`, dark launch de ZN). Ahora default = Equipetrol; ZN aparte con `--macrozona=zona-norte`. Filtro `v.zona_general` (mig 257).
+2. **Solo departamentos** (`tipo_propiedad_original = 'departamento'`): el feed público filtra terrenos/casas (tienen pipeline propio, mig 221). Sin esto se colaban terrenos a `v_mercado_venta` con $/m² absurdos (ej. #2435, terreno a $273/m²).
+
+Resultado: el audit audita **exactamente** lo que muestra el feed público de `/ventas`.
+
+## v1.5 — 8-jun-2026
+
+v1.5 cierra dos huecos descubiertos en la corrida del 8-jun:
+1. **FORMATO CANÓNICO DEL CANDADO** (paso 8): candar a mano con un string (`'{"campo":"texto"}'`) NO protege — el pipeline usa `campo_esta_bloqueado()`, que solo reconoce objeto `{"bloqueado":true}` o boolean. Plantilla obligatoria con `jsonb_build_object` + verificación post-fix.
+2. **Check 2.4 sub-caso `tipo_operacion` mal clasificado**: un $/m² absurdamente bajo casi siempre es un alquiler/anticrético colado al feed de venta (no un bug de precio). Revisar URL/desc antes de tocar el precio; reclasificar en vez de corregir el monto.
+
+## v1.4 — 25-may-2026
 
 v1.4 agrega un guard contra falso positivo: "0 props nuevas de una fuente" en el conteo base **NO** significa "discovery caído" (el conteo solo mira props nuevas que entran al feed). Para saber si el discovery corrió, mirar `fecha_discovery`, no este conteo. Ver nota en el paso 2.
 
@@ -41,11 +55,21 @@ Calibraciones aplicadas tras el primer test (ver sección "Lecciones de calibrac
 | `--ids=N,M,...` | (todos del rango) | `--ids=1791,1820` |
 | `--solo-criticos` | false | filtra capa 4 (anomalías menores) |
 | `--incluir-recientes` | false | NO excluye props editadas en últimos 30 min |
+| `--macrozona=` | `equipetrol` | `--macrozona=zona-norte` · `--macrozona=todas` |
 
 **Reglas de combinación**:
 - `--desde` + `--hasta` ganan sobre `--dias`
 - `--ids` overrides todo (audit puntual de props específicas, ignora rango temporal)
 - Por default se excluyen props con `fecha_actualizacion >= NOW() - 30 min` (race condition guard)
+- **`--macrozona` mapea a la columna `v.zona_general`** (default `equipetrol`, que coincide con el filtro del feed público — ver abajo):
+
+| `--macrozona=` | Filtro aplicado | Cubre |
+|---|---|---|
+| `equipetrol` (default) | `AND v.zona_general = 'Equipetrol'` | lo que muestra el feed público `/ventas` (6 zonas Equipetrol) |
+| `zona-norte` | `AND v.zona_general = 'Zona Norte'` | el prototipo Zona Norte (dark launch, no visible en el feed público) |
+| `todas` | (sin filtro de zona) | ambas macrozonas juntas — **NO recomendado** salvo diagnóstico, mezcla scope |
+
+> **⚠️ Por qué el default es `equipetrol` (lección 8-jun-2026):** el feed público `/ventas` filtra a Equipetrol (`zonas_permitidas: ZONAS_EQUIPETROL_DB` en `ventas.tsx`, dark launch de Zona Norte). Este audit dice auditar "el feed /ventas", así que su default DEBE coincidir: solo Equipetrol. Antes de este flag el audit corría sobre `v_mercado_venta` completa (las 2 macrozonas, ~763 props vs ~369 reales del feed) y mezclaba edificios de Zona Norte (Mangales Blue 2, Ziri Zwei, K1…) que NO están en el feed público. `zona_general` es columna directa de `v_mercado_venta` (mig 257) — valores exactos: `'Equipetrol'` y `'Zona Norte'`.
 
 ## Flujo de ejecución
 
@@ -59,7 +83,18 @@ WHERE p.fecha_creacion BETWEEN '<desde>' AND '<hasta> 23:59:59'
 
 -- Filtro de race condition (excluir editadas en últimos 30 min, salvo --incluir-recientes)
 AND (p.fecha_actualizacion IS NULL OR p.fecha_actualizacion < NOW() - INTERVAL '30 minutes')
+
+-- Filtro de MACROZONA (obligatorio salvo --macrozona=todas). zona_general vive en v_mercado_venta.
+-- equipetrol (default) → 'Equipetrol' | zona-norte → 'Zona Norte' | todas → omitir esta línea
+AND v.zona_general = '<Equipetrol | Zona Norte>'
+
+-- Filtro de TIPO: el feed público solo muestra DEPARTAMENTOS (buscar_unidades_simple los filtra).
+-- terreno/casa tienen pipeline propio (mig 221) y NO van al feed de ventas → el audit debe excluirlos.
+-- (Sin este filtro se cuelan terrenos a v_mercado_venta con $/m² absurdos, ej. #2435 terreno a $273/m².)
+AND v.tipo_propiedad_original = 'departamento'
 ```
+
+> Este `<filtro args>` se inyecta en TODAS las queries de capas 2/3/4 y en el conteo base (todas hacen `v_mercado_venta v JOIN propiedades_v2 p`, así que `v.zona_general` siempre está disponible). **Excepción:** el guard de discovery del paso 2 (la query de `fecha_discovery` sobre `propiedades_v2` directo) NO lleva el filtro de zona — el discovery corre global, se evalúa global.
 
 ### 2. Conteo base + distribución por día/fuente
 
@@ -177,6 +212,14 @@ ORDER BY precio_m2;
 
 **Nota**: el admin ya muestra alerta "$/m² alto" cuando >$3,000. Esta capa **complementa** marcando casos bug del extractor (típicamente <$500/m² o >$10,000/m²).
 
+**⚠️ Sub-caso frecuente: NO es bug de precio, es `tipo_operacion` mal clasificado** (descubierto 8-jun-2026). Un $/m² absurdamente bajo (ej. $9, $17, $343/m²) casi siempre significa que un **alquiler o anticrético** entró al feed de venta: el `precio_usd` = canon mensual o monto de anticrético ÷ 6.96, perfectamente calculado, pero `tipo_operacion='venta'` está mal. **Antes de tocar el precio, revisar la URL y la desc**: si la URL trae `...en-alquiler...`/`...anticretico...` o la desc dice "Alquiler: X Bs", "Canon mensual", "EN ANTICRETICO" → el bug es la clasificación, no el precio. Acción: reclasificar `tipo_operacion` a `alquiler`/`anticretico` + candar (formato objeto, ver paso 8). Para alquiler además setear `precio_mensual_bob` (canon de la desc) y `precio_mensual_usd = ROUND(bob/6.96,2)`. Esto saca la prop del feed `/ventas` (la vista filtra `tipo_operacion='venta'`). Causa de fondo: clasificador de `tipo_operacion` del discovery C21 — anotar en `docs/backlog/CALIDAD_DATOS_BACKLOG.md` si recurre. Query de detección directa:
+```sql
+SELECT v.id, v.precio_usd, ROUND(v.precio_usd/v.area_total_m2,0) AS precio_m2, p.url
+FROM v_mercado_venta v JOIN propiedades_v2 p ON p.id=v.id
+WHERE <filtro args> AND (p.url ~* 'alquiler|anticretico'
+   OR p.datos_json_enrichment->>'descripcion' ~* 'canon mensual|alquiler:|en anticr[eé]tico');
+```
+
 #### 2.5 nombre_edificio en casa/terreno 🟡
 
 ```sql
@@ -239,7 +282,7 @@ WHERE <filtro args>
 ORDER BY v.area_total_m2 DESC;
 ```
 
-Análisis humano por caso: leer la cruda. Si dice claramente "N dormitorio(s)" para **la unidad** (no el rango del proyecto, ej "departamentos de 1 y 2 dormitorios") → corregir `dormitorios = N` + candar (`por='audit_dormitorios'`). Si es rango de proyecto sin especificar la unidad → dejar, no concluyente.
+Análisis humano por caso: leer la cruda. Si dice claramente "N dormitorio(s)" para **la unidad** (no el rango del proyecto, ej "departamentos de 1 y 2 dormitorios") → corregir `dormitorios = N` + candar con el **formato objeto** (`'bloqueado', true, 'por', 'audit_dormitorios'` — ver "FORMATO CANÓNICO DEL CANDADO" en paso 8, NUNCA candar con string). Si es rango de proyecto sin especificar la unidad → dejar, no concluyente.
 
 **Por qué solo esta dirección**: el caso inverso (cruda dice "monoambiente" pero dorms≥1) NO se chequea — el "LLM-gana sobre discovery" del merge ya lo resuelve y genera falsos positivos de proyectos multi-tipología (Rhodium, Lofty Island). Ver memoria `audit_overrides_llm_dorms.md`.
 
@@ -469,6 +512,7 @@ Antes de armar el reporte, marcar como **ruido conocido**:
 
 ```
 # Audit Semanal — feed /ventas — YYYY-MM-DD
+# Macrozona: <Equipetrol | Zona Norte | TODAS>  (--macrozona)
 # Ventana: <desde> → <hasta> (N días, M props auditadas, K excluidas por race condition)
 
 ## 🔴 CRÍTICO (X props con acción inmediata sugerida)
@@ -528,6 +572,38 @@ Después del reporte:
 - ¿Querés que abra alguna prop en navegador?
 - ¿Hay aliases que querés agregar a algún pm?
 
+#### ⚠️ FORMATO CANÓNICO DEL CANDADO (leer antes de generar cualquier UPDATE que candee) — falso positivo 8-jun-2026
+
+**El candado se evalúa con `campo_esta_bloqueado(campos_bloqueados, '<campo>')`, NO con el operador `?`.** Esta función (la que usa el merge/discovery del pipeline) solo reconoce el campo como bloqueado si su valor es:
+- un **objeto** `{"bloqueado": true, ...}` (formato que escribe el panel admin), o
+- un **boolean** `true` (formato viejo).
+
+Un **string** (ej. `{"precio_usd":"audit_tc_2026-06-08"}`) **NO protege**: la función intenta castearlo a boolean, falla y devuelve `FALSE` → el merge nocturno **repisa el campo**. Trampa: los *checks* de este audit usan `campos_bloqueados ? 'campo'` (solo existencia de key), así que un string "parece" candado pero el pipeline lo ignora. Son dos criterios distintos de "¿bloqueado?".
+
+**Plantilla obligatoria para candar a mano** (objeto, replica el panel admin):
+```sql
+UPDATE propiedades_v2 SET <campo> = <valor_corregido>,
+  campos_bloqueados = COALESCE(campos_bloqueados,'{}'::jsonb) ||
+    jsonb_build_object('<campo>', jsonb_build_object(
+      'bloqueado', true, 'por', 'audit_<motivo>', 'fecha', '<YYYY-MM-DD>',
+      'valor_original', <valor_viejo>))
+WHERE id = <id>;
+```
+El `||` reemplaza la key si ya existía con formato string. **NUNCA** escribir el candado como `'{"campo":"texto"}'::jsonb`.
+
+**Alternativa más segura:** corregir el campo desde el **panel admin** (`/admin/propiedades/[id]`) — escribe el formato objeto correcto automáticamente. Reservar el SQL crudo solo para correcciones masivas.
+
+#### Verificación post-fix (obligatoria si se aplicó algún candado)
+
+Después de aplicar UPDATEs, confirmar que el pipeline ve los candados con la MISMA función que usa en producción:
+```sql
+SELECT id, <campo>,
+  jsonb_typeof(campos_bloqueados->'<campo>') AS tipo_lock,  -- debe ser 'object'
+  campo_esta_bloqueado(campos_bloqueados,'<campo>') AS protegido  -- debe ser true
+FROM propiedades_v2 WHERE id IN (<ids tocados>);
+```
+Si `protegido = false`, el candado quedó en formato string → re-aplicar con la plantilla objeto. Esto hubiera atrapado el FP del 8-jun en el acto.
+
 ## Datos útiles para el análisis
 
 - **TC paralelo**: leer vivo de `config_global` (`SELECT valor FROM config_global WHERE clave='tipo_cambio_paralelo'`). Ratio bug ≈ paralelo/6.96 (~1.43-1.46, varía con el TC del día).
@@ -540,6 +616,8 @@ Después del reporte:
   - **Matching errado por GPS — pm realmente distinto**: 7 Eurodesign Tower asignadas a Residences (A1)
   - **Área absurda**: #1788 Aguaí (237,960 m² real 237.96)
   - **Precio absurdo**: #1827 Eurodesign Le Blanc ($18,678 real $130K)
+  - **Alquiler/anticrético clasificado como venta** (8-jun-2026, check 2.4 sub-caso): #2597 Sky Elite (alquiler Bs 4.200 → $603, $17/m²), #2641 Ziri Zwei (alquiler Bs 6.000 → $862, $9/m²), #2613/#2614/#2615 (anticrético Radial 26, $343-366/m²). Detectados por $/m² absurdo pero el bug era `tipo_operacion`, no el precio. Reclasificados + candados.
+  - **Candado en formato string NO protege** (8-jun-2026): candar con `'{"precio_usd":"audit_..."}'::jsonb` (string) pasa el check `?` pero `campo_esta_bloqueado()` lo lee como FALSE → el merge repisa. Usar SIEMPRE formato objeto `{"bloqueado":true,...}` (ver paso 8). #2596/#2579 quedaron bien porque se corrigieron desde el panel admin (escribe objeto).
   - **nombre_edificio basura**: #1824 "Solo\npiso", #1820 "De Edificio Habitacional", #1819 "PLANTA BAJA", #1688 "Venta", #1700 "Sky Blue Calle"
   - **Sky Plaza Italia matching dudoso**: #874 era Eurodesign Soho asignado mal
 
