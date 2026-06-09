@@ -55,6 +55,32 @@ El bug de monoambientes es un caso del patrón "el campo estructurado del portal
 
 > Cuidado: NO generalizar el guardrail determinístico (texto pisa dato) a cualquier campo. Solo **"monoambiente"** es señal limpia, porque el aviso no envejece (un monoambiente es siempre 0 dorms). `estado_construccion` NO sirve (el aviso envejece: preventa→entregado) y `tipo_cambio` tampoco (la señal vive en interpretación: Bs vs dólares billete). Señales ruidosas ya descartadas: `oficina` (falsos: "cerca de oficinas", "home office"), `loft`/`estudio`.
 
+## `tipo_operacion` mal cargado en origen por C21 — NO automatizar mientras el volumen sea bajo (8 Jun 2026)
+
+**Problema:** corredores de Century21 cargan listings de **alquiler/anticrético** con el campo estructurado `tipoOperacion="venta"` en el origen. SICI copia ese campo y la prop entra al feed `/ventas` con precio basura (el canon mensual o el monto de anticrético en Bs ÷ 6.96 → ej. $603, $9/m²). Detectado en el audit semanal del 8-jun: 7 props (#2597, #2641 alquiler; #2613, #2614, #2615, #2599, #2616 anticrético). Todas reclasificadas + candadas (`tipo_operacion`, formato objeto).
+
+**Causa raíz — NO es bug de SICI:** el dato entra **envenenado desde C21**. El monto lo delata (4.200 Bs ≈ $603 es imposible para una venta — es canon mensual). El scraper de venta le pide a C21 "sección venta", y C21 devuelve estos listings *dentro* de esa sección porque el corredor los indexó como venta.
+
+**Por qué el mecanismo existente NO lo agarra:** `registrar_discovery` ya marca `excluido_operacion` a todo lo que llega con operación ≠ venta — pero estos llegan con `tipoOperacion=venta`, así que pasan. (Confirmado: 0 props C21 en `excluido_operacion`; el scraper de venta nunca recibe no-venta… salvo estos mal etiquetados.)
+
+**❌ NO arreglar en el merge:** el `merge` ni siquiera setea `tipo_operacion` (solo lo lee para el score). Quien lo asigna es `registrar_discovery` ← scraper n8n. Meter un guardrail en el merge sería tocar la función más crítica de venta (regla 7) para nada.
+
+**Riesgo de automatizar (por qué se decide NO hacerlo hoy):** falso positivo de **listings duales** — caso real #1370 *"departamento en alquiler **o** venta de lujo"* (1.47M Bs, venta legítima de $211K). Un guardrail que excluya por ver "alquiler" en URL/título **borra ventas reales del feed en silencio**, sobre ~598 listings C21 cada noche. `anticretico` es señal limpia; **`alquiler` es traicionera** (duales comunes).
+
+**Decisión (8-jun-2026): NO se implementa guardrail mientras el volumen siga bajo (~7/semana).** La mitigación vigente es el **audit semanal de ventas** (`/audit-feed-ventas-semanal`, check 2.4 sub-caso URL/desc), costo $0, con criterio humano que distingue el dual #1370 que un script rompería. Re-evaluar solo si el volumen crece de forma sostenida.
+
+**Si en el futuro se automatiza** (solo con volumen alto que lo justifique), el lugar correcto es el **scraper n8n** (no el merge, no el SQL), y **solo con la señal `anticretico`** (nunca `alquiler`, por los duales) → cae solo en `excluido_operacion`. Cubre ~60% del problema (los anticréticos) con riesgo casi nulo. Alternativa de riesgo ~cero sin tocar pipeline: filtro defensivo en la vista `v_mercado_venta` que excluya `url ~* 'anticretico'`.
+
+**Query de detección** (la usa el audit; sirve para re-dimensionar):
+```sql
+SELECT p.id, p.precio_usd, p.url
+FROM propiedades_v2 p
+WHERE p.tipo_operacion='venta' AND p.fuente='century21'
+  AND p.status IN ('completado','actualizado')
+  AND NOT campo_esta_bloqueado(campos_bloqueados,'tipo_operacion')
+  AND p.url ~* 'anticretico';  -- 'en-alquiler' añade FP de duales ("alquiler o venta"), filtrar a mano
+```
+
 ## Baños Corregidos (14 props) - 21 Ene 2026
 
 Auditoría manual con IA completada. 14 propiedades corregidas con `campos_bloqueados`:
