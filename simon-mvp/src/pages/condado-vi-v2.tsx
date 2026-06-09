@@ -22,26 +22,41 @@ const dmSans = DM_Sans({
 const WA_NUMBER = '59178440188'
 const waLink = (msg: string) =>
   `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`
-const WA_GENERAL = waLink('Hola, me interesa Condado VI Plaza Italia')
-const WA_VISITA = waLink('Hola, quiero agendar una visita a Condado VI Plaza Italia')
-const WA_1D = waLink('Hola, me interesa un 1 dormitorio en Condado VI Plaza Italia')
-const WA_2D = waLink('Hola, me interesa un 2 dormitorios en Condado VI Plaza Italia')
-const WA_3D = waLink('Hola, me interesa un 3 dormitorios en Condado VI Plaza Italia')
+const WA_GENERAL = waLink('Hola, vi esto en la web y me interesa Condado VI Plaza Italia')
+const WA_VISITA = waLink('Hola, vi esto en la web y quiero agendar una visita a Condado VI Plaza Italia')
+const WA_1D = waLink('Hola, vi esto en la web y me interesa un 1 dormitorio en Condado VI Plaza Italia')
+const WA_2D = waLink('Hola, vi esto en la web y me interesa un 2 dormitorios en Condado VI Plaza Italia')
+const WA_3D = waLink('Hola, vi esto en la web y me interesa un 3 dormitorios en Condado VI Plaza Italia')
 
 // ─── Data ────────────────────────────────────────────────
 const TIPOLOGIAS = [
-  { dorms: '1 Dormitorio', m2: '62 m²', precio: '$103,000', desc: 'Para profesionales y parejas que quieren espacio real.', wa: WA_1D, planta: '/condado-vi-v2/planta-1d.png' },
-  { dorms: '2 Dormitorios', m2: '87 m²', precio: '$143,000', desc: 'Doble orientación, luz natural todo el día.', wa: WA_2D, planta: '/condado-vi-v2/planta-2d.png' },
-  { dorms: '3 Dormitorios', m2: '144 m²', precio: '$238,000', desc: '3 dormitorios amplios sin salir de Equipetrol Centro.', wa: WA_3D, planta: '/condado-vi-v2/planta-3d.png' },
+  { dorms: '1 Dormitorio en suite', m2: '62 m²', precio: '$105,757', desc: 'Para profesionales y parejas que quieren espacio real.', wa: WA_1D, planta: '/condado-vi-v2/planta-1d.png' },
+  { dorms: '2 Dormitorios en suite', m2: '87 m²', precio: '$147,900', desc: 'Doble orientación, luz natural todo el día.', wa: WA_2D, planta: '/condado-vi-v2/planta-2d.png' },
+  { dorms: '3 Dormitorios en suite', m2: '144 m²', precio: '$244,800', desc: '3 dormitorios amplios sin salir de Equipetrol Centro.', wa: WA_3D, planta: '/condado-vi-v2/planta-3d.png' },
 ]
 
 const EQUIPAMIENTO = {
   Cocina: ['Mesones de piedra sinterizada', 'Horno empotrado', 'Microondas', 'Campana extractora', 'Heladera', 'Lavavajillas', 'Cava de vinos'],
-  Lavandería: ['Lavadora', 'Secadora'],
+  Lavandería: ['Lavadora', 'Secadora', 'Lavandería y tendedero en terraza'],
   Confort: ['Aire acondicionado', 'Closets empotrados', 'Calefón', 'Box de baño en vidrio', 'Cerradura digital', 'Aislamiento acústico', 'Intercomunicador'],
 }
 
-const AMENIDADES = ['Piscina', 'Salón de eventos', 'Churrasquera', 'Gimnasio', 'Sala de juegos', 'Cowork', 'Terraza con vista']
+const AMENIDADES = ['Piscina', 'Salón de eventos', 'Churrasquera', 'Gimnasio', 'Sala de juegos', 'Cowork', 'Área de meditación y lectura', 'Terraza con vista']
+
+// Amenidades sin foto → se renderizan como tile cuadrado con ícono (misma forma que las demás).
+const AMENIDADES_SIN_FOTO: Record<string, { icon: React.ReactNode }> = {
+  'Área de meditación y lectura': {
+    icon: (
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 4c1.5 1.7 2.1 3.6 1.6 5.6" />
+        <path d="M12 4c-1.5 1.7-2.1 3.6-1.6 5.6" />
+        <path d="M4.5 9c2.4-.6 4.6.1 6.2 2" />
+        <path d="M19.5 9c-2.4-.6-4.6.1-6.2 2" />
+        <path d="M12 12.6c-3.7 0-6.9-1.6-8-3.6 0 4.2 3.7 7.4 8 7.4s8-3.2 8-7.4c-1.1 2-4.3 3.6-8 3.6z" />
+      </svg>
+    ),
+  },
+}
 
 const AMENIDAD_PHOTOS: Record<string, string> = {
   'Piscina': '/condado-vi-v2/piscina.jpg',
@@ -83,14 +98,31 @@ const TIMELINE = [
 ]
 
 const FAQS = [
-  { q: '¿Qué incluye el departamento?', a: '16 items: cocina completa (horno, microondas, heladera, lavavajillas, campana, mesones de piedra sinterizada tipo cuarzo cristal), lavadora, secadora, aire acondicionado, closets, box de baño, cerradura digital, aislamiento acústico, calefón e intercomunicador.' },
+  { q: '¿Qué incluye el departamento?', a: '17 items: cocina completa (horno, microondas, heladera, lavavajillas, campana, cava de vinos, mesones de piedra sinterizada tipo cuarzo cristal), lavadora, secadora, lavandería y tendedero en terraza, aire acondicionado, closets, box de baño, cerradura digital, aislamiento acústico, calefón e intercomunicador.' },
   { q: '¿Cuándo puedo mudarme?', a: 'Mañana, si querés. El edificio está terminado y tu departamento te espera.' },
-  { q: '¿En qué moneda es el precio?', a: 'USD. Se recibe al tipo de cambio paralelo vigente. También aceptamos bolivianos.' },
+  { q: '¿En qué moneda es el precio?', a: 'USD. De acuerdo al tipo de cambio referencial del boletín del Banco Central de Bolivia. También aceptamos bolivianos.' },
   { q: '¿Puedo visitar el departamento?', a: 'Sí. El edificio está terminado. Coordiná tu visita por WhatsApp.' },
   { q: '¿Tienen financiamiento bancario?', a: 'Sí. Consultá condiciones con nuestro equipo.' },
   { q: '¿Se aceptan mascotas?', a: 'Sí, el edificio es pet-friendly. Perros y gatos. Con Plaza Italia enfrente, la zona es ideal para vivir con mascota.' },
-  { q: '¿Por qué 7 amenidades pensadas y no 12?', a: 'Porque cada amenidad que no se usa la pagás igual en expensas. Y las que sí se usan, mejor que no estén llenas de gente. Pocos vecinos, amenidades reales.' },
   { q: '¿Cuánto son las expensas?', a: 'Consultá el monto exacto por WhatsApp. Al tener amenidades pensadas para el uso real, las expensas se mantienen razonables.' },
+]
+
+const EXCLUSIVIDAD = [
+  {
+    titulo: 'Una comunidad que se conoce',
+    desc: 'Vas a saber el nombre de tus vecinos. Tus hijos van a crecer entre caras conocidas, no entre extraños.',
+    icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>,
+  },
+  {
+    titulo: 'Todo a tu ritmo',
+    desc: 'Sin filas en el ascensor ni pelear por la piscina. Con pocos vecinos, las amenidades siempre alcanzan.',
+    icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>,
+  },
+  {
+    titulo: 'Más tranquilo, más seguro',
+    desc: 'Menos gente entrando y saliendo. Un edificio que se siente tuyo, donde todos se cuidan.',
+    icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z" /><path d="M9 12l2 2 4-4" /></svg>,
+  },
 ]
 
 const DISTANCIAS = [
@@ -103,6 +135,7 @@ const DISTANCIAS = [
 const EQUIP_ICONS: Record<string, string> = {
   'Mesones de piedra sinterizada': '◈', 'Horno empotrado': '♨', 'Microondas': '◉', 'Campana extractora': '▲',
   'Heladera': '❄', 'Lavavajillas': '◎', 'Cava de vinos': '✦', 'Lavadora': '◐', 'Secadora': '◑',
+  'Lavandería y tendedero en terraza': '☼',
   'Aire acondicionado': '❅', 'Closets empotrados': '▣', 'Calefón': '♦', 'Box de baño en vidrio': '◻',
   'Cerradura digital': '⬡', 'Aislamiento acústico': '◈', 'Intercomunicador': '◉',
 }
@@ -120,6 +153,12 @@ const SALON_IMAGES = [
   { src: '/condado-vi-v2/salon-3.jpg', alt: 'Ambiente cocina con pendant lights' },
   { src: '/condado-vi-v2/salon-4.jpg', alt: 'Dormitorio amplio con walking closet' },
   { src: '/condado-vi-v2/salon-5.jpg', alt: 'Balcón privado conexión exterior' },
+]
+
+// Mascotas: foto horizontal + foto vertical de la estación pet-friendly (encuadre abajo para ver el perrito).
+const PET_IMAGES = [
+  { src: '/condado-vi-v2/pet-friendly.webp', alt: 'Bienvenidos los cuatro patas' },
+  { src: '/condado-vi-v2/pet-friendly-2.jpg', alt: 'Estación pet-friendly con dispensador de bolsas higiénicas y mascota', objectPosition: 'center bottom' },
 ]
 
 // Renders IA (virtual staging) — SIEMPRE etiquetados como referenciales.
@@ -151,12 +190,12 @@ const DETALLES_IMAGES = [
 const GALLERY_IMAGES = [
   { src: '/condado-vi-v2/vista-principal.jpg', alt: 'Vista aérea de Condado VI y Equipetrol' },
   { src: '/condado-vi-v2/vista-balcon.jpg', alt: 'Entrada Condado VI con cartel' },
-  { src: '/condado-vi-v2/vista-lobby.jpg', alt: 'Lobby Condado VI de noche' },
   ...COCINA_IMAGES,
   ...SALON_IMAGES.map(s => ({ src: s.src, alt: s.alt })),
   ...RENDER_AMOBLADO_IMAGES.map(s => ({ src: s.src, alt: s.alt })),
   { src: '/condado-vi-v2/plaza-jardin.jpg', alt: 'Vista del parque y la zona' },
   { src: '/condado-vi-v2/pet-friendly.webp', alt: 'Bienvenidos los cuatro patas' },
+  { src: '/condado-vi-v2/pet-friendly-2.jpg', alt: 'Estación pet-friendly con dispensador de bolsas higiénicas y mascota' },
   { src: '/condado-vi-v2/ubicacion.jpg', alt: 'Vista aérea del edificio' },
   { src: '/condado-vi-v2/piscina.jpg', alt: 'Piscina al atardecer' },
   { src: '/condado-vi-v2/gimnasio.jpg', alt: 'Gimnasio del edificio' },
@@ -240,7 +279,7 @@ function Lightbox({ images, startIndex, onClose }: { images: typeof GALLERY_IMAG
 
 // ─── Carrusel intra-slot (cocina, salón, fachada) ─────────
 function Carousel({ images, aspectClass, onOpenLightbox, className = '', autoplayMs = 4500 }: {
-  images: { src: string; alt: string; render?: boolean }[]
+  images: { src: string; alt: string; render?: boolean; objectPosition?: string }[]
   aspectClass: string
   onOpenLightbox: (src: string) => void
   className?: string
@@ -296,6 +335,7 @@ function Carousel({ images, aspectClass, onOpenLightbox, className = '', autopla
             alt={img.alt}
             fill
             className="object-cover"
+            style={img.objectPosition ? { objectPosition: img.objectPosition } : undefined}
             sizes="(max-width: 768px) 100vw, 576px"
           />
         </button>
@@ -486,7 +526,7 @@ export default function CondadoVIv2() {
     <>
       <Head>
         <title>Condado VI Plaza Italia — Tu vida frente a Plaza Italia (v2)</title>
-        <meta name="description" content="Departamentos completamente equipados frente a Plaza Italia, Equipetrol Centro. 1, 2 y 3 dormitorios. Entrega inmediata. 16 items incluidos." />
+        <meta name="description" content="Departamentos completamente equipados frente a Plaza Italia, Equipetrol Centro. 1, 2 y 3 dormitorios. Entrega inmediata. 17 items incluidos." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#1A1714" />
         <meta name="robots" content="noindex,nofollow" />
@@ -550,10 +590,7 @@ export default function CondadoVIv2() {
 
             <div className="space-y-2">
               <GalleryImage src="/condado-vi-v2/vista-principal.jpg" alt="Vista aérea" galleryIndex={galleryIdx('/condado-vi-v2/vista-principal.jpg')} onOpen={openLightbox} aspectClass="4/3" />
-              <div className="grid grid-cols-2 gap-2">
-                <GalleryImage src="/condado-vi-v2/vista-balcon.jpg" alt="Entrada Condado VI" galleryIndex={galleryIdx('/condado-vi-v2/vista-balcon.jpg')} onOpen={openLightbox} aspectClass="1/1" />
-                <GalleryImage src="/condado-vi-v2/vista-lobby.jpg" alt="Lobby Condado VI" galleryIndex={galleryIdx('/condado-vi-v2/vista-lobby.jpg')} onOpen={openLightbox} aspectClass="1/1" />
-              </div>
+              <GalleryImage src="/condado-vi-v2/vista-balcon.jpg" alt="Entrada Condado VI Plaza Italia" galleryIndex={galleryIdx('/condado-vi-v2/vista-balcon.jpg')} onOpen={openLightbox} aspectClass="16/9" />
             </div>
           </div>
         </section>
@@ -572,7 +609,7 @@ export default function CondadoVIv2() {
                 <div>
                   <h3 className="font-dm font-medium text-xl text-condado-carbon mb-3">&ldquo;Llegás y está todo&rdquo;</h3>
                   <p className="font-dm text-[17px] text-condado-piedra leading-relaxed">
-                    Cocina completa con mesones de piedra sinterizada tipo cuarzo cristal, horno, microondas, heladera, lavavajillas, lavadora y secadora. 16 items incluidos. Solo traé tu ropa.
+                    Cocina completa con mesones de piedra sinterizada tipo cuarzo cristal, horno, microondas, heladera, lavavajillas, cava de vinos, lavadora y secadora. 17 items incluidos. Solo traé tu ropa.
                   </p>
                 </div>
               </div>
@@ -607,7 +644,7 @@ export default function CondadoVIv2() {
 
               {/* Block 4: Pet-friendly */}
               <div className="md:grid md:grid-cols-2 md:gap-12 md:items-center">
-                <GalleryImage src="/condado-vi-v2/pet-friendly.webp" alt="Bienvenidos los cuatro patas" galleryIndex={galleryIdx('/condado-vi-v2/pet-friendly.webp')} onOpen={openLightbox} aspectClass="4/3" className="mb-6 md:mb-0 md:order-2" />
+                <Carousel images={PET_IMAGES} aspectClass="4/3" onOpenLightbox={openBySrc} className="mb-6 md:mb-0 md:order-2" />
                 <div className="md:order-1">
                   <h3 className="font-dm font-medium text-xl text-condado-carbon mb-3">&ldquo;Bienvenidos los cuatro patas&rdquo;</h3>
                   <p className="font-dm text-[17px] text-condado-piedra leading-relaxed">
@@ -669,6 +706,45 @@ export default function CondadoVIv2() {
           </div>
         </section>
 
+        {/* ═══ 4B. EXCLUSIVIDAD — SOLO 25 DEPARTAMENTOS ═══ */}
+        <section className="bg-condado-ebano">
+          <div className="max-w-6xl mx-auto px-5 md:px-10 py-20 md:py-28">
+            <div className="text-center max-w-3xl mx-auto">
+              <span className="font-dm text-sm font-medium tracking-widest uppercase text-condado-caramelo mb-6 block">
+                Exclusivo y familiar
+              </span>
+
+              <div className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1 mb-6">
+                <span className="font-playfair font-medium text-condado-marfil leading-none text-7xl md:text-9xl">25</span>
+                <span className="font-playfair text-condado-arena text-2xl md:text-4xl">departamentos. Nada más.</span>
+              </div>
+
+              <p className="font-dm text-lg md:text-xl text-condado-arena leading-relaxed max-w-2xl mx-auto">
+                Mientras las torres de la zona apilan 150 o 200 puertas, Condado VI es un edificio de{' '}
+                <span className="text-condado-marfil font-medium">solo 25 departamentos</span>. Pocas familias, que se conocen y se cuidan.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8 md:gap-10 mt-14 md:mt-20 max-w-4xl mx-auto">
+              {EXCLUSIVIDAD.map((item) => (
+                <div key={item.titulo} className="text-center md:text-left">
+                  <span className="text-condado-caramelo mb-4 inline-block">{item.icon}</span>
+                  <h3 className="font-dm font-medium text-lg text-condado-marfil mb-2">{item.titulo}</h3>
+                  <p className="font-dm text-[15px] text-condado-arena/75 leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-center mt-14 md:mt-16">
+              <a href={WA_GENERAL} target="_blank" rel="noopener noreferrer"
+                className="inline-block bg-condado-caramelo hover:bg-condado-caramelo-dark text-condado-marfil font-dm font-medium text-base rounded-full px-6 py-3.5 transition-colors"
+                style={{ boxShadow: '0 4px 20px rgba(184,144,111,0.3)' }}>
+                Quiero ser parte →
+              </a>
+            </div>
+          </div>
+        </section>
+
         {/* ═══ 5. TIPOLOGIAS + TESTIMONIO ═══ */}
         <section className="bg-condado-marfil">
           <div className="max-w-6xl mx-auto px-5 md:px-10 py-16 md:py-24">
@@ -691,7 +767,7 @@ export default function CondadoVIv2() {
                     <h3 className="font-dm font-medium text-xl text-condado-carbon mb-1">{t.dorms}</h3>
                     <p className="font-dm text-base text-condado-piedra mb-1">{t.m2}</p>
                     <p className="font-dm font-medium text-lg text-condado-carbon mb-2">
-                      Desde {t.precio} <span className="text-sm text-condado-piedra font-normal">USD (TC paralelo)</span>
+                      Desde {t.precio} <span className="text-sm text-condado-piedra font-normal">USD (TC referencial BCB)</span>
                     </p>
                     <p className="font-dm text-[15px] text-condado-piedra mb-5 flex-1">{t.desc}</p>
                     <a href={t.wa} target="_blank" rel="noopener noreferrer"
@@ -716,12 +792,12 @@ export default function CondadoVIv2() {
             </div>
 
             <p className="font-dm text-sm text-condado-piedra mt-4">
-              * Precios en USD. Se recibe al tipo de cambio paralelo vigente.
+              * Precios en USD. Según el tipo de cambio referencial del boletín del Banco Central de Bolivia.
             </p>
 
             <blockquote className="mt-12 md:mt-16 border-l-2 border-condado-caramelo pl-6 max-w-2xl mx-auto">
               <p className="font-playfair text-xl md:text-2xl text-condado-carbon italic leading-relaxed">
-                &ldquo;Llegamos con las maletas y no tuvimos que comprar nada. La cocina, la lavadora, todo estaba listo. Salimos a caminar a la plaza esa misma tarde.&rdquo;
+                &ldquo;Llegamos con las maletas y no tuvimos que comprar nada. La cocina, la lavadora, hasta la vinoteca y el lavavajillas, todo estaba listo. Salimos a caminar a la plaza esa misma tarde.&rdquo;
               </p>
               <footer className="mt-3 font-dm text-base text-condado-piedra">
                 — Residente Condado, Equipetrol
@@ -734,7 +810,7 @@ export default function CondadoVIv2() {
         <section className="bg-white">
           <div className="max-w-6xl mx-auto px-5 md:px-10 py-16 md:py-24">
             <h2 className="font-playfair text-3xl md:text-4xl text-condado-carbon mb-10">
-              Cada detalle pensado para<br />que no te falte nada.
+              Cada detalle pensado para<br />que no te falte nada,<br className="hidden md:block" /> hasta lavavajillas y cava de vinos.
             </h2>
 
             {Object.entries(EQUIPAMIENTO).map(([category, items]) => (
@@ -755,7 +831,7 @@ export default function CondadoVIv2() {
 
             <div className="bg-condado-ebano rounded-xl p-6 md:p-8 mt-8">
               <p className="font-dm text-condado-marfil text-lg md:text-xl leading-relaxed">
-                Lo que en otros edificios de la zona cuesta <span className="text-condado-caramelo font-medium">$3,000 a $5,000 USD</span> adicionales, acá ya está incluido.
+                Lo que en otros edificios de la zona cuesta <span className="text-condado-caramelo font-medium">$5,000 a $10,000 USD</span> <span className="text-condado-caramelo font-semibold uppercase tracking-wide">adicionales</span>, acá ya está incluido.
               </p>
             </div>
 
@@ -794,23 +870,27 @@ export default function CondadoVIv2() {
         <section className="bg-condado-marfil">
           <div className="max-w-6xl mx-auto px-5 md:px-10 py-16 md:py-24">
             <h2 className="font-playfair text-3xl md:text-4xl text-condado-carbon mb-3">
-              7 amenidades pensadas.<br />Pocos vecinos. Sin la multitud.
+              8 amenidades pensadas.<br />Pocos vecinos. Sin la multitud.
             </h2>
             <p className="font-dm text-[17px] text-condado-piedra mb-10 max-w-xl leading-relaxed">
               En torres grandes, las amenidades son para el brochure — la piscina llena, el gimnasio en fila, las expensas por las nubes. Acá cada espacio se usa, se cuida, y se paga lo justo.
             </p>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {AMENIDADES.map((amenidad, i) => {
+              {AMENIDADES.map((amenidad) => {
                 const photo = AMENIDAD_PHOTOS[amenidad]
-                const isLast = i === AMENIDADES.length - 1
+                const feature = AMENIDADES_SIN_FOTO[amenidad]
                 const gIdx = photo ? galleryIdx(photo) : -1
                 return (
-                  <div key={amenidad} className={isLast ? 'col-span-2 md:col-span-3' : ''}>
+                  <div key={amenidad}>
                     {photo ? (
-                      <GalleryImage src={photo} alt={amenidad} galleryIndex={gIdx} onOpen={openLightbox} aspectClass={isLast ? '2/1' : '1/1'} className="mb-2" />
+                      <GalleryImage src={photo} alt={amenidad} galleryIndex={gIdx} onOpen={openLightbox} aspectClass="1/1" className="mb-2" />
+                    ) : feature ? (
+                      <div className="bg-condado-arena/40 rounded-xl flex items-center justify-center mb-2 text-condado-caramelo" style={{ aspectRatio: '1/1' }}>
+                        {feature.icon}
+                      </div>
                     ) : (
-                      <PhotoPlaceholder aspect={isLast ? '2/1' : '1/1'} label={amenidad} className="mb-2" />
+                      <PhotoPlaceholder aspect="1/1" label={amenidad} className="mb-2" />
                     )}
                     <span className="font-dm text-base text-condado-carbon">{amenidad}</span>
                   </div>
@@ -901,7 +981,7 @@ export default function CondadoVIv2() {
                 +591 78440188
               </a>
               <p className="font-dm text-sm text-condado-piedra/60">
-                Precios en USD al tipo de cambio paralelo vigente
+                Precios en USD al tipo de cambio referencial del boletín del Banco Central de Bolivia
               </p>
             </div>
 
