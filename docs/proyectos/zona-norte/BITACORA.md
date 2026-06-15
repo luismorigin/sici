@@ -619,3 +619,39 @@ Al preparar la mig 255 (snapshot v4 paralelo), **dos hallazgos** llevaron a desc
 ### Próximo paso
 
 FASE 5-7 (no dependen del snapshot): `lib/zonas.ts` (14 microzonas en filtro admin) → workflows n8n ZN (array de microzonas) → docs. **Reactivar el workflow `auditoria_diaria_sici_v3.0`** en n8n (se desactivó para la ventana de migración).
+
+---
+
+## 12-15 Jun 2026 — Auditoría de matching ZN (rescate de alquileres por slug+descripción)
+
+**Origen:** Lucho pide revisar "si todo va bien" en Zona Norte y hacer matching inteligente con Claude como auditor.
+
+**Diagnóstico inicial (compute-only, MCP readonly):**
+- **K1 (pm 272) limpio:** 0 props activas, el agujero negro fue purgado y NO reincidió tras el cleanup del 9-jun. Revisados los 4 pm más gordos de ZN (Barcelona/Miró 273, Vilareal 353, Essenzia 366, Lusitano 381) → todos matches correctos, sin mezclas (los "nombres distintos" eran variantes de scraping del mismo edificio).
+- Match rate de arranque: **venta 70.0%** (231/330), **alquiler 61.0%** (72/118), anticrético 0/4.
+- ⚠️ La causa raíz del K1 (loop `aplicar_matches_aprobados` v3.1 ↔ `generar_matches_fuzzy`) sigue **sin patchear en BD**. El patch existe como archivo (`patch_generar_matches_fuzzy_antiloop_2026-06-09.sql`) pero no consta aplicado → puede recrear el agujero negro en una corrida futura del fuzzy.
+
+**Venta — 12 matches seguros recuperados** (`metodo_match='auditor_gps_nombre_12jun'`): props sin match cuyo nombre coincide con un pm activo **Y** GPS a <30m (ambas señales concuerdan). Essenzia (366), Ergo Experience (368), Sky Icon (276), Sky Aqualina (277), Orange (376), Disart (378), Stone by Portobello (422), Macororó 10 (457). → **venta 72.7%**.
+
+**Trampas GPS detectadas (refuerzan: NO auto-matchear por proximidad sola):**
+- "Macoloró 16-17" GPS la pega a pm 466 (Macororó 19) cuando corresponde a pm 403 (Macororó 16/17).
+- "Galil Parque III" GPS→pm 270 (Portofino 4) cuando existe pm 358 (Galil Parque III).
+- "Ibiza Deluxe" GPS→pm 403 (Macororó 16/17), nombre no concuerda.
+- Anticrético 2599 "detrás de las Brisas" cae a 26m de pm 357 BRISAS → es el **vecino**, no Brisas (lo dice la descripción).
+
+**Alquiler — método nuevo validado (clave del día):** las props de alquiler casi nunca traen `nombre_edificio` (NULL ~65%) y su **GPS del portal suele ser genérico** (pin de oficina/zona del agente). El matching automático por nombre/GPS no tiene materia prima → por eso alquiler queda estancado. Solución:
+1. Extraer el nombre del edificio del **slug de la URL + la descripción** (`datos_json->>'descripcion'`), no de `nombre_edificio`.
+2. El **founder geocodifica cada nombre en Google Maps** y pasa el GPS real.
+3. Validar SIEMPRE: `get_zona_by_gps(lat,lng)` ⇒ macrozona Zona Norte + chequear pm activos ≤80m (≤50m con nombre similar = duplicado; 60-69m con nombre distinto = vecino OK). Luego INSERT pm + UPDATE prop (id_proyecto_master + GPS corregido + zona).
+
+**pm nuevos creados (`fuente_verificacion='google_maps_founder'`, `metodo_match='pm_nuevo_founder_gps_15jun'`):**
+- 489 Edificio Majo Beni — ⚠️ NO era pm 471 "Majo Hamacas" (a 1377m, misma desarrolladora distinto edificio; el GPS founder evitó el mismatch).
+- 490 Edificio Calle Nazareth (s/nombre comercial, **7 props** del listing remax 125001284, "detrás del Mercado Belén").
+- 491 Ulupica · 492 Torre Rubí · 493 Valeria I · 494 Wilma II · 495 Nardini · 496 Asai Norte 1 · 497 Asai Norte 2 (catálogo, sin props) · 498 Torre Salto.
+- Bloque A: Torre Baruc (prop 2562 → pm 409 "Torre Baruc Norte", GPS founder a 0m confirmó).
+
+**Resultado:** +16 props de alquiler recuperadas → **alquiler ZN 61.0% → 73.9%** (85/115). 10 pm nuevos geolocalizados.
+
+**Pendiente ZN:** anticrético 0/4 (sin nombre útil); ~5 props con dirección sin nombre (2247/2552/2617, geocodificables); ~8 props alquiler con slug genérico + descripción NULL (no investigables); aplicar el patch antiloop del K1 (riesgo MEDIO, toca función compartida — Regla 7: `pg_get_functiondef` antes); refrescar MV `mv_nombre_proyecto_lookup` tras los INSERT.
+
+**Lección meta:** en alquiler el techo de matching no lo pone el engine sino los **datos de origen** (sin nombre, GPS genérico). El único camino confiable es slug+descripción → GPS real del founder; la proximidad GPS sola reproduce el riesgo K1. Método replicable a Urubó/Polanco.
