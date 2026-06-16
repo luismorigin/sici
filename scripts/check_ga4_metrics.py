@@ -116,19 +116,30 @@ def _run(client, dimensions, metrics, days, filters=None, order_bys=None, limit=
 
 
 def _run_comparison(client, dimensions, metrics, days, filters=None, limit=100):
-    """Run report with current period vs previous period of same length."""
-    request = RunReportRequest(
-        property=f"properties/{PROPERTY_ID}",
-        date_ranges=[
-            DateRange(start_date=f"{days}daysAgo", end_date="today"),
-            DateRange(start_date=f"{days * 2}daysAgo", end_date=f"{days + 1}daysAgo"),
-        ],
-        dimensions=dimensions,
-        metrics=metrics,
-        dimension_filter=filters,
-        limit=limit,
-    )
-    return client.run_report(request)
+    """Período actual vs anterior, en DOS requests separados.
+
+    GA4 con múltiples date_ranges agrega una dimensión implícita `dateRange` y devuelve
+    las filas SIN orden garantizado (date_range_0=actual y date_range_1=anterior pueden
+    venir invertidas). El código previo confiaba en el índice de fila (rows[0]=actual),
+    pero GA4 devolvía rows[0]=anterior → reportaba el período anterior como "actual"
+    (bug del +2343%). Dos requests separados eliminan la ambigüedad: el primero SIEMPRE
+    es el actual, el segundo SIEMPRE el anterior.
+    Retorna (current_response, previous_response).
+    """
+    def _one(start_date, end_date):
+        request = RunReportRequest(
+            property=f"properties/{PROPERTY_ID}",
+            date_ranges=[DateRange(start_date=start_date, end_date=end_date)],
+            dimensions=dimensions,
+            metrics=metrics,
+            dimension_filter=filters,
+            limit=limit,
+        )
+        return client.run_report(request)
+
+    current = _one(f"{days}daysAgo", "today")
+    previous = _one(f"{days * 2}daysAgo", f"{days + 1}daysAgo")
+    return current, previous
 
 
 # ======================== CAMPAIGN MODE ========================
@@ -1117,43 +1128,38 @@ def print_retention(data, days):
     print()
     print("RETURNING: ESTE PERIODO VS ANTERIOR")
     print("-" * 70)
-    comp = data["nr_comparison"]
-    if comp.rows and len(comp.rows) >= 2:
-        # _run_comparison returns 2 metrics per date range (sessions, users)
-        # With 2 date ranges: metric_values has 4 values [ses_current, usr_current, ses_previous, usr_previous]
-        comp_rows = []
-        for row in comp.rows:
+    # nr_comparison = (current_response, previous_response) — dos requests separados.
+    # Cada response trae 1 fila por newVsReturning con 2 métricas (sessions, users).
+    cur_resp, prev_resp = data["nr_comparison"]
+
+    def _by_type(resp):
+        out = {}
+        for row in resp.rows:
             t = row.dimension_values[0].value
-            if not t:
+            if not t or t in ("(not set)", ""):
                 continue
-            vals = [v.value for v in row.metric_values]
             try:
-                comp_rows.append({
-                    "type": t,
-                    "ses_current": int(vals[0]) if len(vals) > 0 else 0,
-                    "usr_current": int(vals[1]) if len(vals) > 1 else 0,
-                    "ses_previous": int(vals[2]) if len(vals) > 2 else 0,
-                    "usr_previous": int(vals[3]) if len(vals) > 3 else 0,
-                })
+                out[t] = {
+                    "ses": int(row.metric_values[0].value),
+                    "usr": int(row.metric_values[1].value),
+                }
             except (ValueError, IndexError):
                 pass
+        return out
 
-        # Deduplicate (GA4 may return dupes)
-        seen = set()
-        unique = []
-        for r in comp_rows:
-            if r["type"] not in seen:
-                seen.add(r["type"])
-                unique.append(r)
-        comp_rows = unique
+    cur = _by_type(cur_resp)
+    prev = _by_type(prev_resp)
 
+    if cur or prev:
         print(f"  {'Tipo':<15} {'Ses actual':>10} {'Ses anter':>10} {'Cambio':>10} {'Usr actual':>10} {'Usr anter':>10}")
         print(f"  {'-'*13:<15} {'-'*10:>10} {'-'*10:>10} {'-'*10:>10} {'-'*10:>10} {'-'*10:>10}")
-        for r in comp_rows:
-            sc = r["ses_current"]
-            sp = r["ses_previous"]
+        for t in sorted(set(list(cur.keys()) + list(prev.keys()))):
+            sc = cur.get(t, {}).get("ses", 0)
+            sp = prev.get(t, {}).get("ses", 0)
+            uc = cur.get(t, {}).get("usr", 0)
+            up = prev.get(t, {}).get("usr", 0)
             change = f"{(sc - sp) / sp * 100:+.0f}%" if sp > 0 else "n/a"
-            print(f"  {r['type']:<15} {sc:>10} {sp:>10} {change:>10} {r['usr_current']:>10} {r['usr_previous']:>10}")
+            print(f"  {t:<15} {sc:>10} {sp:>10} {change:>10} {uc:>10} {up:>10}")
     else:
         print("  Sin datos de comparacion.")
 
@@ -1182,56 +1188,48 @@ def print_overview(data, ux_data, days):
     print()
     print("COMPARACIÓN CON PERÍODO ANTERIOR")
     print("-" * 70)
-    comp = data["comparison"]
-    if comp.rows and len(comp.rows) >= 1:
-        metrics_names = ["sessions", "users", "views", "duration", "bounce"]
-        current = {}
-        previous = {}
-        for row in comp.rows:
-            for i, name in enumerate(metrics_names):
-                val = row.metric_values[i].value
-                try:
-                    v = int(val)
-                except ValueError:
-                    v = round(float(val), 2)
-                # GA4 returns metrics for each date range in order
-                # First row = current period values, but with comparison
-                # Actually, with no dimensions, we get one row per date range
-                pass
+    # comparison = (current_response, previous_response) — dos requests separados
+    cur_resp, prev_resp = data["comparison"]
+    metrics_names = ["sessions", "users", "views", "duration", "bounce"]
 
-        # With empty dimensions, each date range gets its own row
-        if len(comp.rows) >= 2:
-            for i, name in enumerate(metrics_names):
-                try:
-                    current[name] = int(comp.rows[0].metric_values[i].value)
-                except ValueError:
-                    current[name] = round(float(comp.rows[0].metric_values[i].value), 2)
-                try:
-                    previous[name] = int(comp.rows[1].metric_values[i].value)
-                except ValueError:
-                    previous[name] = round(float(comp.rows[1].metric_values[i].value), 2)
+    def _first_row_metrics(resp):
+        if not resp.rows:
+            return {}
+        row = resp.rows[0]
+        out = {}
+        for i, name in enumerate(metrics_names):
+            val = row.metric_values[i].value
+            try:
+                out[name] = int(val)
+            except ValueError:
+                out[name] = round(float(val), 2)
+        return out
 
-            print(f"  {'Métrica':<20} {'Actual':>10} {'Anterior':>10} {'Cambio':>10}")
-            print(f"  {'-'*18:<20} {'-'*10:>10} {'-'*10:>10} {'-'*10:>10}")
-            for name in metrics_names:
-                c = current.get(name, 0)
-                p = previous.get(name, 0)
-                if isinstance(c, float):
-                    if name == "bounce":
-                        change = f"{c - p:+.1f}pp" if p else "—"
-                        print(f"  {name:<20} {c:>9.1f}% {p:>9.1f}% {change:>10}")
-                    else:
-                        change = f"{c - p:+.1f}" if p else "—"
-                        print(f"  {name:<20} {c:>10.1f} {p:>10.1f} {change:>10}")
+    current = _first_row_metrics(cur_resp)
+    previous = _first_row_metrics(prev_resp)
+
+    if current:
+        print(f"  {'Métrica':<20} {'Actual':>10} {'Anterior':>10} {'Cambio':>10}")
+        print(f"  {'-'*18:<20} {'-'*10:>10} {'-'*10:>10} {'-'*10:>10}")
+        for name in metrics_names:
+            c = current.get(name, 0)
+            p = previous.get(name, 0)
+            if isinstance(c, float):
+                if name == "bounce":
+                    change = f"{c - p:+.1f}pp" if p else "—"
+                    print(f"  {name:<20} {c:>9.1f}% {p:>9.1f}% {change:>10}")
                 else:
-                    if p > 0:
-                        pct = (c - p) / p * 100
-                        change = f"{pct:+.0f}%"
-                    else:
-                        change = "—"
-                    print(f"  {name:<20} {c:>10} {p:>10} {change:>10}")
-        else:
-            print("  Sin datos de comparación disponibles.")
+                    change = f"{c - p:+.1f}" if p else "—"
+                    print(f"  {name:<20} {c:>10.1f} {p:>10.1f} {change:>10}")
+            else:
+                if p > 0:
+                    pct = (c - p) / p * 100
+                    change = f"{pct:+.0f}%"
+                else:
+                    change = "—"
+                print(f"  {name:<20} {c:>10} {p:>10} {change:>10}")
+    else:
+        print("  Sin datos de comparación disponibles.")
 
     # By source
     print()
