@@ -2,6 +2,36 @@
  * Format utilities for displaying property data
  */
 
+import { displayZona } from './zonas'
+
+// Palabras que delatan que el "nombre_edificio" es en realidad una frase del
+// aviso (basura del extractor), no el nombre real del edificio. Ej:
+// "EXCELENTE UBICACION", "Venta Av Beni", "Moderno Con Excelentes".
+const NOMBRE_EDIFICIO_BASURA = /\b(venta|alquiler|excelente|ubicaci|ubicad|amplio|hermoso|moderno|exclusivo|c[oó]modo|departamento|monoambiente|dormitorio|vecinos|amenidades|oportunidad|estrenar|ideal|avenida)\b/i
+
+/**
+ * Nombre a mostrar para una unidad de alquiler.
+ * 1) nombre_proyecto (proyecto matcheado — confiable)
+ * 2) nombre_edificio SOLO si parece nombre real (filtra basura del extractor)
+ * 3) genérico "Monoambiente · <microzona>" / "Depto N dorm · <microzona>"
+ */
+export function nombreAlquiler(p: {
+  nombre_proyecto?: string | null
+  nombre_edificio?: string | null
+  dormitorios?: number | null
+  zona?: string | null
+}): string {
+  if (p.nombre_proyecto?.trim()) return p.nombre_proyecto.trim()
+  const ne = p.nombre_edificio?.trim()
+  if (ne && ne.length > 3 && !NOMBRE_EDIFICIO_BASURA.test(ne)) return ne
+  const tipo =
+    p.dormitorios === 0 ? 'Monoambiente'
+    : (typeof p.dormitorios === 'number' && p.dormitorios > 0) ? `Depto ${p.dormitorios} dorm`
+    : 'Departamento'
+  const zona = displayZona(p.zona)
+  return zona && zona !== 'Otras' ? `${tipo} · ${zona}` : tipo
+}
+
 /**
  * Format dormitorios count for display
  * Converts 0 to "Mono"/"Monoambiente" instead of showing "0"
