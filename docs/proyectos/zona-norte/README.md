@@ -4,9 +4,9 @@
 
 ---
 
-## Estado actual — 29 May 2026
+## Estado actual — 16 Jun 2026
 
-**Fases 1-4 + #8 microzonas aplicadas (29-may):** 14 microzonas en BD (mig 254), frontend (`lib/zonas.ts`) y workflows discovery ZN. Próximo: #6 frontend `/mercado/zona-norte` → #7 alquiler.
+**Fases 1-4 + #8 microzonas aplicadas (29-may):** 14 microzonas en BD (mig 254), frontend (`lib/zonas.ts`) y workflows discovery ZN. **Matching depurado (16-jun): venta 85.8%, alquiler 83.3%** (ver BITACORA). Próximo: #6 frontend `/mercado/zona-norte` → #7 alquiler.
 
 | Hito | Estado |
 |---|---|
@@ -15,7 +15,8 @@
 | Fase 4: validar calidad pipeline con data real | ✅ (audit 28-may) |
 | Audit GPS + cleanup historico K1/STONE/CURUPAU/Brickell (63 falsos) | ✅ (28-may) |
 | Cargar pm Zona Norte (#1.5 + capas 2-3 + cleanup nocturno 29-may) | ✅ **73 pm activos con 100% verificación visual** |
-| Match rate ZN venta | ✅ ~60% (ver `SELECT ... FROM v_mercado_venta`) — desde 19.7% |
+| Match rate ZN venta | ✅ **85.8%** (16-jun, desde 19.7%) — aprobar sugerencias `pendiente_zona_norte` + 7 pm nuevos |
+| Match rate ZN alquiler | ✅ **83.3%** (16-jun) — mismo método; sin nombre → matchea por GPS, validación por URL de anuncio |
 | **#8 Microzonas (14 — grilla anillos×avenidas)** | ✅ **aplicado 29-may** (mig 254 + `lib/zonas.ts` + workflows discovery). Snapshot v4 descartado → ver #12 |
 | Fase 5 / #7: alquiler (replicar patrón) | ⬜ pendiente |
 | #6 Frontend `/mercado/zona-norte` | ⬜ pendiente — prototipo multi-macrozona |

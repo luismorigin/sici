@@ -619,3 +619,28 @@ Al preparar la mig 255 (snapshot v4 paralelo), **dos hallazgos** llevaron a desc
 ### Próximo paso
 
 FASE 5-7 (no dependen del snapshot): `lib/zonas.ts` (14 microzonas en filtro admin) → workflows n8n ZN (array de microzonas) → docs. **Reactivar el workflow `auditoria_diaria_sici_v3.0`** en n8n (se desactivó para la ventana de migración).
+
+## 16 Jun 2026 — Matching: aprobar sugerencias atascadas + 7 pm nuevos (venta 79.9%→85.8%, alquiler 79.6%→83.3%)
+
+**Punto de partida (medido en BD):** venta 79.9% (314/393), alquiler 79.6% (82/103).
+
+**Hallazgo central — el cuello de botella NO es cargar pm.** El matching automático ya genera sugerencias, pero quedan atascadas en `matching_sugerencias.estado='pendiente_zona_norte'` (ZN sin UI de aprobación HITL, por diseño — mig 254). Había **43 sugerencias en limbo** solo para las 37 props-con-nombre sin match. El trabajo es **revisar y aprobar**, no cargar edificios.
+
+**Diagnóstico:** (1) separar sin-match con nombre vs sin nombre; (2) pm más cercano por `ST_DistanceSphere` (LATERAL); (3) cruzar contra la cola `pendiente_zona_norte`. **Trampa confirmada:** el score más alto a veces apunta al pm equivocado (prop 1996 "Ziri" → el motor sugería "CONDOMINIO ONE" score 85, cuando el correcto era "ZIRI ZWEI" a 6 m, score 60). **El GPS desempata.**
+
+**Aplicado** (UPDATE directo con `metodo_match='auditor_zn_16jun'`, **nunca** `aplicar_matches_aprobados` por el bug del loop K1):
+- **Venta:** Tier 1 (8 props nombre+GPS≤80 m), Tier 2 (4 con alias Rise/Ares), recuperados del enrichment (2411 Ares, 1984 Macororó 16/17).
+- **Alquiler:** 5 matches (Lofty Green, Ares, Baruc, Tamisa III + pm nuevo).
+- **7 pm nuevos** (GPS verificados por el director en Maps, `gps_verificado_visual='si'`): 500 Edificio Baruc Norte, 501 Edificio Macororó 13/14, 507 Sono Los Cusis, 508 Ibiza Deluxe Residence, 509 Torre Soho, 510 Yas Dahi, 511 Trivento III.
+
+**Resultado:** venta **85.8%** (56 sin match), alquiler **83.3%** (17 sin match).
+
+**Hallazgos colaterales:**
+1. **Feed: INNER vs LEFT join.** `/ventas` (`buscar_unidades_simple`) usa **INNER JOIN** → las props sin match **no aparecen** (subir el match rate = inventario visible). `/alquileres` (`buscar_unidades_alquiler`) usa **LEFT JOIN** → sí aparecen, con `nombre_edificio || nombre_proyecto || 'Departamento'`.
+2. **"Gap enrichment→columna" investigado y DESCARTADO.** La columna `nombre_edificio` sí se llena (incluso con basura de baja confianza). Alcance del "fix" global = ~6 props; tocaría el merge único → Equipetrol prod. Riesgo >> beneficio. **No hacer.**
+3. **9 `nombre_oficial` feos limpiados** (mayúsculas/typo: Maré, Sky Luxia, Omnia Prime, Macororó 5, Elite Sirari, etc.) → mejora directa del feed de **ventas** (muestra `nombre_oficial`). Dejados como están las marcas legítimas en mayúsculas (INIZIO, SAOTA Park, T-VEINTICINCO). Lección: priorizar `nombre_oficial` en el feed expone la calidad de capitalización de `proyectos_master`.
+4. **GPS de portal a veces roto** (prop 2757 "Tamisa 3" a 729 m del edificio real) → matcheada por nombre; pendiente auditar otros casos.
+
+**Cambio de frontend asociado** (branch aparte `feat/nombre-generico-alquiler`): helper `nombreAlquiler()` → cards de alquiler sin nombre muestran "Monoambiente / Depto N dorm · microzona" en vez de "Departamento"/basura, y arregla el bug de orden (nombre del pm antes que `nombre_edificio` crudo). Impacto medido en Eq alquiler: 52/155 cards mejoran. Presentación pura, reversible.
+
+**Pendiente:** venta — dudosos (San Diego, Jerico, Camila, Nicolás) + Tier 4 (~50 sin nombre real); alquiler — 17 sin match (cluster sin nombre); auditoría de GPS rotos.
