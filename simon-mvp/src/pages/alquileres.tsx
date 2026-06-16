@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import type { GetStaticProps } from 'next'
 import { type UnidadAlquiler, type FiltrosAlquiler, buscarUnidadesAlquiler } from '@/lib/supabase'
 import { ZONAS_ALQUILER_UI, ZONAS_EQUIPETROL_DB, displayZona } from '@/lib/zonas'
-import { dormLabel, formatPriceBob, firstName } from '@/lib/format-utils'
+import { dormLabel, formatPriceBob, firstName, nombreAlquiler } from '@/lib/format-utils'
 import { fbqTrack } from '@/lib/meta-pixel'
 import { fetchMercadoAlquilerData, type MercadoAlquilerData } from '@/lib/mercado-alquiler-data'
 import { useWhatsAppCapture, triggerWhatsAppCapture, setDemoModeForCapture, setBrokerModeForCapture, setContactoDirectoForCapture } from '@/hooks/useWhatsAppCapture'
@@ -2508,7 +2508,7 @@ function MapFloatCard({ property: sp, isFavorite, onClose, onToggleFavorite, onO
     ? `https://wa.me/${publicShareBroker.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(buildClientToBrokerAlquilerMessage(sp, publicShareBroker.nombre))}`
     : null
   const [photoIdx, setPhotoIdx] = useState(0)
-  const spName = sp.nombre_edificio || sp.nombre_proyecto || 'Departamento'
+  const spName = nombreAlquiler(sp)
   const photos = sp.fotos_urls ?? []
   const spBadges: string[] = []
   if (sp.amoblado === 'si' || sp.amoblado === 'semi') spBadges.push(sp.amoblado === 'si' ? 'Amoblado' : 'Semi')
@@ -2650,7 +2650,7 @@ const DesktopCard = memo(function DesktopCard({
     obs.observe(el)
     return () => obs.disconnect()
   }, [isFirst])
-  const displayName = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
+  const displayName = nombreAlquiler(p)
 
   const badges: Array<{ text: string; color: string }> = []
   if (p.dias_en_mercado !== null && p.dias_en_mercado <= 7) badges.push({ text: 'Nuevo', color: 'green' })
@@ -2895,7 +2895,7 @@ const MobilePropertyCard = memo(function MobilePropertyCard({
   if (p.baulera) badges.push({ text: 'Baulera', color: '' })
   if (p.deposito_meses) badges.push({ text: `Deposito ${p.deposito_meses}m`, color: '' })
 
-  const displayName = p.nombre_edificio || p.nombre_proyecto || 'Departamento'
+  const displayName = nombreAlquiler(p)
 
   return (
     <div className={`alq-card${isFirst ? ' alq-card-first' : ''}${petFilterActive && p.acepta_mascotas === true ? ' pet-confirmed' : ''}${isDestacada ? ' alq-card-destacada' : ''}`} ref={cardRef}>
@@ -3356,7 +3356,7 @@ function BottomSheet({
   if (p.monto_expensas_bob) features.push({ icon: 'home', label: 'Expensas', value: `Bs ${p.monto_expensas_bob}`, highlight: true })
   if (p.contrato_minimo_meses) features.push({ icon: 'file', label: 'Contrato', value: `${p.contrato_minimo_meses} meses` })
 
-  const displayName = p.nombre_edificio || p.nombre_proyecto || 'Detalles'
+  const displayName = nombreAlquiler(p)
   const hasGPS = p.latitud && p.longitud
 
   return (
@@ -3494,7 +3494,7 @@ function BottomSheet({
           <div className="bs-sl"><span className="bs-sl-dot" />Tambien en {displayZona(p.zona)}</div>
           <div className="bs-sim-scroll">
             {similarProps.map(sp => {
-              const spName = sp.nombre_edificio || sp.nombre_proyecto || 'Departamento'
+              const spName = nombreAlquiler(sp)
               return (
                 <button key={sp.id} className="bs-sim-card" onClick={() => onSwapProperty?.(sp)}>
                   {sp.fotos_urls?.[0] ? (
