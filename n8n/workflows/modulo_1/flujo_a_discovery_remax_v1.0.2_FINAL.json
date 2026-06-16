@@ -103,7 +103,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, url, status FROM propiedades_v2 WHERE fuente = 'remax' AND status NOT IN ('inactivo_confirmed') AND tipo_operacion = 'venta' AND zona IN ('Equipetrol Centro','Equipetrol Norte','Sirari','Villa Brigida','Equipetrol Oeste','Eq. 3er Anillo')",
+        "query": "SELECT id, url, status\n    FROM propiedades_v2\n    WHERE fuente = 'remax'\n      AND status NOT IN ('inactivo_confirmed')\n      AND tipo_operacion = 'venta'\n      AND zona IN ('Equipetrol Centro','Equipetrol Norte','Sirari','Villa Brigida','Equipetrol Oeste','Eq. 3er Anillo')",
         "options": {}
       },
       "id": "ce6e3db6-5a70-4262-af5d-d6001790bce7",
@@ -326,7 +326,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT registrar_ejecucion_workflow('discovery_remax', 'success', 0, 0, 0, NULL, '{}'::jsonb);",
+        "query": "SELECT registrar_ejecucion_workflow(\n    'discovery_remax',\n    'success',\n    {{ $json.resultados.snapshot_total || 0 }},\n    {{ $json.resultados.nuevas_insertadas || 0 }},\n    0,\n    NULL,\n    '{{ JSON.stringify({ existentes: $json.resultados.existentes_actualizadas || 0, ausentes:\n  $json.resultados.ausentes_marcadas || 0 }) }}'::jsonb\n  );\n",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
@@ -557,7 +557,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "63b2e116-9864-4b3f-9e17-347f53d8a501",
+  "versionId": "8e7afb89-d5ad-4091-9a57-21416fd09a70",
   "meta": {
     "instanceId": "0cf95066756cd645aa773b1efb0bb40a009acb9e082a84e9d526127529829060"
   },
