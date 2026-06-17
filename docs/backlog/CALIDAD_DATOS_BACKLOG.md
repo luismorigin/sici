@@ -217,6 +217,33 @@ ORDER BY props_huerfanas DESC;
 
 **Bug colateral detectado:** la auditoría semanal de ventas v1.6 filtra `tipo_propiedad_original = 'departamento'` (igualdad exacta) → **se pierde las 322 "Departamento" con mayúscula**. Cambiar a `ILIKE 'departamento'`.
 
-**Fix:**
-1. Corto plazo: agregar a `v_mercado_venta` filtro `p.tipo_propiedad_original ILIKE 'departamento' OR p.tipo_propiedad_original ILIKE 'penthouse'` (el ILIKE resuelve la mayúscula de paso). Toca la vista que consume **todo** el sistema de queries de mercado → con test (`pg_get_viewdef` antes, medir qué props salen).
-2. Largo plazo: campo `tipo_propiedad` normalizado/canónico + extractor que escriba consistente; las queries usan el normalizado.
+**Fix — dos horizontes distintos (no confundir):**
+
+### A) PUENTE (ahora) — blacklist en `v_mercado_venta`
+Resuelve el problema inmediato (limpiar el feed de deptos). Cambio mínimo, 1 línea, consistente con la lógica que la vista YA usa (blacklist `<> ALL`):
+```sql
+-- en el WHERE de v_mercado_venta:
+-- ANTES: AND (COALESCE(tipo_propiedad_original,'') <> ALL (ARRAY['baulera','parqueo','garaje','deposito']))
+-- DESPUÉS:
+AND (lower(COALESCE(tipo_propiedad_original,'')) <> ALL (ARRAY['baulera','parqueo','garaje','deposito','casa','terreno','oficina']))
+```
+**Análisis de riesgo (medido 17-jun): BAJO.**
+- Saca **11 props** (5 casas + 6 terrenos), **todas sin match** → ya invisibles en el feed público (INNER JOIN de `buscar_unidades_simple` las tapa). **Cero impacto al feed.**
+- **Ninguna vista depende** de `v_mercado_venta` (`pg_depend` = vacío).
+- Consumidores (Market Pulse Dashboard, prospección, skills) **mejoran** (sacan el ruido: terrenos a $2.001/m² distorsionan medianas).
+- Único riesgo menor: **4 casas/terrenos en `broker_shortlist_items`** → mitigado porque `precio_norm` se guarda como **snapshot** en el item; las shortlists existentes no se rompen (solo un re-armado de esas 4 props puntuales perdería el precio_norm).
+- Aplicación: `CREATE OR REPLACE VIEW` (no DROP → reversible, no rompe deps) + test `BEGIN; … ; ROLLBACK` verificando que el total baja exactamente 11. Definición actual exportada con `pg_get_viewdef` el 17-jun.
+- **NO over-engineering aquí:** NO whitelist (`IN (...)` podría excluir un tipo legítimo futuro), NO campo nuevo, NO tocar extractor. Solo ampliar el blacklist + `lower()`.
+
+### B) INFRAESTRUCTURA (en Fase 3 del PRD Casas/Terrenos) — campo `tipo_propiedad` canónico
+**Cuándo:** cuando se construya el feed público de casas/terrenos (Fase 3, `docs/backlog/CASAS_TERRENOS_PRD.md`). Si el sistema escala a multi-tipo, el tipo pasa a ser dimensión de **primer orden** y el blacklist por vista NO escala (habría que parchear N vistas por cada tipo nuevo).
+
+**Decisión de diseño (founder, 17-jun):** sí vale el campo normalizado **en ese momento** — no antes (construir infra sin consumidor sería adelantarse), no como parche de skill.
+
+**Diseño mínimo (sin over-engineering):**
+- Columna `tipo_propiedad` en `propiedades_v2` — valores **canónicos planos**: `departamento`, `penthouse`, `casa`, `terreno`, `oficina` (los que ya existen; no inventar tipos).
+- **Derivada** de `tipo_propiedad_original` (que sigue siendo el crudo del portal, útil para debug) vía mapeo simple (lower + variantes). UPDATE one-shot para histórico + el merge/extractor la setea para nuevas.
+- Las vistas/feeds segmentan por el canónico: `v_mercado_venta` → `tipo_propiedad IN ('departamento','penthouse')`; `v_mercado_casas` → `'casa'`, etc. Agregar un tipo = un valor en el mapeo, no parchear vistas.
+- **Evitar:** jerarquía tipo/subtipo, enum rígido de Postgres (preferir `text` + CHECK o mapeo en código), migrar todo de golpe.
+
+**Orden:** A (puente) desbloquea hoy las skills/dashboard; B (campo) se hace dentro de Fase 3, justo cuando hay varios feeds que segmentar.
