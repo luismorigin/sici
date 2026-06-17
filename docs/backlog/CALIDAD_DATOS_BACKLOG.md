@@ -205,3 +205,18 @@ ORDER BY props_huerfanas DESC;
 - Campo `año_construccion` en `proyectos_master` (data manual desde notas de prensa / observación)
 - Tabla manual `lanzamientos_oficiales` alimentada editorialmente con fecha de lanzamiento real
 - Para B2B pagos: la clasificación se hace manual caso a caso, no se intenta automatizar
+
+## Tipo de propiedad sin normalizar + casas/terrenos colados en `v_mercado_venta` (17-jun-2026)
+
+**Hallazgo** (auditoría matching 17-jun, check 3.5 sobre sin-match de Equipetrol ventas): terrenos y casas mezclados en `v_mercado_venta`. Dos problemas:
+
+1. **`tipo_propiedad_original` sin normalizar.** Es el valor CRUDO del portal (de ahí "_original"). En toda la base (1.100+ `completado`): **"departamento" (778) + "Departamento" (322)**, "casa" (9) + "Casa" (1), "terreno" (5) + "Terreno" (2), penthouse (8), oficina (1). **No existe un campo de tipo canónico** → cada query maneja las variantes a mano (frágil, se olvida).
+2. **`v_mercado_venta` NO filtra por tipo.** Incluye **11 casas/terrenos** (todas sin match). El pipeline de casas/terrenos (mig 221) las marca `status='completado'` igual que deptos, y la vista —creada cuando solo había deptos— nunca se actualizó para excluirlas.
+
+**Por qué no molesta hoy:** el feed público (`buscar_unidades_simple`) usa **INNER JOIN** a `proyectos_master` → las casas/terrenos sin match quedan filtradas **por accidente** (no tienen pm). Solo se ven en queries directas a la vista (auditoría). ⚠️ **PERO si ventas pasa a LEFT JOIN** (para mostrar genéricos como alquiler), **aparecerían en el feed** → este fix es **prerrequisito** de ese cambio.
+
+**Bug colateral detectado:** la auditoría semanal de ventas v1.6 filtra `tipo_propiedad_original = 'departamento'` (igualdad exacta) → **se pierde las 322 "Departamento" con mayúscula**. Cambiar a `ILIKE 'departamento'`.
+
+**Fix:**
+1. Corto plazo: agregar a `v_mercado_venta` filtro `p.tipo_propiedad_original ILIKE 'departamento' OR p.tipo_propiedad_original ILIKE 'penthouse'` (el ILIKE resuelve la mayúscula de paso). Toca la vista que consume **todo** el sistema de queries de mercado → con test (`pg_get_viewdef` antes, medir qué props salen).
+2. Largo plazo: campo `tipo_propiedad` normalizado/canónico + extractor que escriba consistente; las queries usan el normalizado.
