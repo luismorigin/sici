@@ -235,6 +235,11 @@ AND (lower(COALESCE(tipo_propiedad_original,'')) <> ALL (ARRAY['baulera','parque
 - Aplicación: `CREATE OR REPLACE VIEW` (no DROP → reversible, no rompe deps) + test `BEGIN; … ; ROLLBACK` verificando que el total baja exactamente 11. Definición actual exportada con `pg_get_viewdef` el 17-jun.
 - **NO over-engineering aquí:** NO whitelist (`IN (...)` podría excluir un tipo legítimo futuro), NO campo nuevo, NO tocar extractor. Solo ampliar el blacklist + `lower()`.
 
+**✅ APLICADO 17-jun a AMBAS vistas (con `CREATE OR REPLACE`, def previas exportadas para revertir):**
+- **`v_mercado_venta`**: blacklist ampliado (ya excluía baulera/parqueo) + `lower()` + casa/terreno/oficina. Sacó **11 casas/terrenos**. Match rate venta Eq 94.9→**98.6%**, ZN 87.2→**87.8%** (salieron sin-match del denominador). Verificado con test antes/después: **solo 2 grupos de Sirari cambian** (3-dorm: mediana 2.594→2.752 = mejora real sin la casa; 0-dorm: cae <3 props y el grupo pierde su mini-estudio — su mediana estaba contaminada igual). Las 6 funciones de mercado se benefician.
+- **`v_mercado_alquiler`**: **AGREGADO** el filtro — ojo, esta vista **NO tenía NINGÚN filtro de tipo** (el "baulera" que un check superficial detecta es la *columna* `p.baulera`, no un filtro). Blacklist completo + `lower()`. Sacó **1 oficina** (2663). Penthouse (1) y deptos quedan. Total 261→260.
+- **⚠️ DIFERENCIA CLAVE alquiler (verificada, no asumir):** el feed (`buscar_unidades_alquiler`) usa **`propiedades_v2` DIRECTO**, NO la vista (a diferencia de venta, donde `buscar_unidades_simple` usa la vista para el mini-estudio). → El parche de la vista **limpia las stats/comparables** (las 5 funciones de mercado) **pero la oficina 2663 SIGUE VISIBLE en el feed** (matcheada a pm 6 La Riviera). Sacarla del feed requeriría tocar `buscar_unidades_alquiler` → no vale por 1 prop. **Esto es justo lo que el campo canónico (B) resuelve bien:** el feed de alquiler filtraría por `tipo_propiedad` en un solo lugar.
+
 ### B) INFRAESTRUCTURA (en Fase 3 del PRD Casas/Terrenos) — campo `tipo_propiedad` canónico
 **Cuándo:** cuando se construya el feed público de casas/terrenos (Fase 3, `docs/backlog/CASAS_TERRENOS_PRD.md`). Si el sistema escala a multi-tipo, el tipo pasa a ser dimensión de **primer orden** y el blacklist por vista NO escala (habría que parchear N vistas por cada tipo nuevo).
 
