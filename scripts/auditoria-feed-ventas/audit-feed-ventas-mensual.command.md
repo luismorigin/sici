@@ -60,12 +60,10 @@ Leer los 3 archivos.
 - **Cambio de precio explícito en desc**: descripción menciona "Nuevo Precio" o el precio bajó significativamente (>10%) y `precio_usd` BD no se actualizó
 - **Listings muertos**: `bucket='reescrita'` con `len_scraped=0` (HTML 200 OK pero sin contenido)
   - SQL: `UPDATE propiedades_v2 SET status='inactivo_pending', fecha_actualizacion=NOW() WHERE id IN (...);`
-- **Mismatch de matching real**: capa 3 reporta `mismatch_real`. NO asumir que el matching está mal. Discriminar 3 casos:
-  1. **Variante del nombre faltante en alias_conocidos** (más común): la desc dice un alias que el `proyectos_master` no tiene. Acción: agregar el alias al proyecto master (NO cambiar `nombre_edificio` de la prop). Ej: prop dice "UPTOWN EQUIPETROL", BD asigna "Edificio Uptown Equipetrol", agregar "UPTOWN EQUIPETROL" a `alias_conocidos` del proyecto.
-  2. **Edificio realmente distinto**: la desc menciona un proyecto que NO existe en `proyectos_master` o existe con otro `id_proyecto_master`. Acción: verificar manualmente (puede ser matching errado real).
-  3. **Falso positivo del regex**: el regex agarró texto descriptivo (ej: "Amoblado y equipado con menaje"). Acción: ignorar.
-  
-  Para distinguir, leer la descripción completa + revisar `nombre_oficial` + `alias_conocidos` del proyecto asignado.
+- **Mismatch de matching real**: capa 3 reporta `mismatch_real`. **NO discriminar a ojo** — en clusters numerados lleva a error. (Este mismo doc antes sugería agregar "UPTOWN EQUIPETROL" como alias; validado 17-jun, ese caso —prop 1229— era un **MISMATCH real**: "Uptown Equipetrol" ≠ "Uptown Drei", torres distintas del mismo cluster.) Escalar al **juez LLM** (idéntico al paso 3.1b de `audit-feed-ventas-semanal`): un agente lee `url` + `encabezado` + `descripcion` de cada `mismatch_real` y da veredicto con **número/torre exacto**:
+  1. **ALIAS_FALTANTE**: mismo edificio, variante de nombre → agregar a `alias_conocidos` (NO cambiar `nombre_edificio` de la prop).
+  2. **MISMATCH real**: el anuncio nombra OTRO edificio → corregir al pm correcto (buscar por `nombre_oficial ILIKE` + GPS≤300m). **Si es CLUSTER numerado** (Macororó/Tamisa/Brickell/Uptown/Sky N…), **candar** `id_proyecto_master` en el mismo UPDATE (formato objeto — ver paso 3.1c de la semanal).
+  3. **SIN_NOMBRE / falso positivo del regex**: ignorar.
 - **Cambio de modelo comercial**: descripción cambió "incluye parqueo" ↔ "parqueo opcional" o similar
 - **Cambio de unidad**: descripción cambió "Piso X" → "Piso Y" (broker reusó el listing para otra unidad — caso #100)
 
@@ -74,6 +72,35 @@ Leer los 3 archivos.
 - Cambio de fecha de entrega (dic 2025 → mar 2026)
 - Aparición de "SOLO CONTADO" como condición
 - Cambio de números pequeños (m², piso) sin afectar precio
+
+#### Detectores agregados — solo mensual (NUEVO, 17-jun) ⭐
+
+No son por-prop: corren una vez sobre todo el sistema y atacan el bug del **motor**, no síntomas sueltos.
+
+**1. Detector de ATRACTORES de nombre.** Un pm con distintivo ≤3 letras (tras quitar genéricos: ONE/ITO/SKY/ZEN/ARA) colapsa al prefijo "condominio/edificio/torre" en `fuzzy_nombre` y atrae cualquier "Condominio X" (caso CONDOMINIO ONE pm 359 = ~30 sugerencias falsas, el "K1" del matching por nombre):
+```sql
+SELECT pm.id_proyecto_master, pm.nombre_oficial,
+       COUNT(*) FILTER (WHERE ms.metodo_matching='fuzzy_nombre') AS sug_fuzzy
+FROM proyectos_master pm
+JOIN matching_sugerencias ms ON ms.proyecto_master_sugerido=pm.id_proyecto_master AND ms.estado LIKE 'pendiente%'
+WHERE NOT EXISTS (
+  SELECT 1 FROM regexp_split_to_table(lower(pm.nombre_oficial),'\s+') w
+  WHERE length(w)>=4 AND w NOT IN ('condominio','edificio','torre','residencia','residence','suites','studios','apartments','tower'))
+GROUP BY 1,2 HAVING COUNT(*) FILTER (WHERE ms.metodo_matching='fuzzy_nombre') >= 3
+ORDER BY sug_fuzzy DESC;
+```
+Acción: reportar los atractores 🔴. **Fix real** = en `generar_matches_fuzzy` (excluir stopwords + bajar umbral a ≥3 letras) — ticket de motor, ver `BACKLOG.md`.
+
+**2. Auditoría de AUTO-APROBADOS.** Equipetrol auto-aprueba matches de score ≥85 → entran al feed **sin que nadie lea el anuncio**. Ahí se cuelan los mismos falsos positivos de cluster (validado 17-jun: props 997 Macororo 7→8 y 1229 Uptown→Drei, ambas score alto, en el feed público). Tomar una **muestra** de auto-aprobados recientes y pasarla por el **juez LLM** (mismo agente del 3.1b):
+```sql
+-- ajustar el filtro de "auto-aprobado" al valor real de metodo_match / estado de la sugerencia auto-aprobada
+SELECT id FROM propiedades_v2
+WHERE id_proyecto_master IS NOT NULL
+  AND fecha_actualizacion > NOW() - INTERVAL '35 days'
+  AND NOT (campos_bloqueados ? 'id_proyecto_master')
+ORDER BY random() LIMIT 30;
+```
+Medir el **% de MISMATCH** en la muestra. Si es alto, justifica el fix del motor + revisar el umbral de auto-aprobación (score 95 ≠ match correcto, lección 17-jun).
 
 ### 4. Reporte ejecutivo final al usuario
 
