@@ -113,7 +113,7 @@ export default function SupervisorIndex() {
           </div>
 
           {/* Cards de secciones */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-5 gap-4">
             {/* Matching */}
             <Link
               href="/admin/supervisor/matching"
@@ -195,6 +195,22 @@ export default function SupervisorIndex() {
               </h3>
               <p className="text-gray-500 text-sm">
                 Validar matches automáticos de alta confianza
+              </p>
+            </Link>
+
+            {/* Matching Piloto (macrozonas fuera de Equipetrol) */}
+            <Link
+              href="/admin/supervisor/matching-piloto"
+              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow border-l-4 border-purple-500"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="text-4xl">&#128506;</div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                Matching Piloto
+              </h3>
+              <p className="text-gray-500 text-sm">
+                Aprobar matches de macrozonas en piloto (Zona Norte)
               </p>
             </Link>
           </div>
