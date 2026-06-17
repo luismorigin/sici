@@ -8,7 +8,11 @@ Variante liviana del audit mensual. Cubre props nuevas en una ventana temporal u
 
 Cuándo usarlo: lunes a la mañana (o cualquier día) para limpiar la deuda de props nuevas mientras están frescas. Complementa al `/audit-feed-ventas-mensual` que cubre todo el feed + drift Firecrawl.
 
-## Versión actual: v1.6 — 8-jun-2026
+## Versión actual: v1.7 — 17-jun-2026
+
+v1.7 **convierte el check 3.1 de regex-juez a regex-filtro + juez LLM** (nuevo paso 3.1b). El query SQL del 3.1 sigue filtrando gratis, pero los flaggeados ya NO se discriminan a ojo (generaba falsos positivos/negativos en clusters numerados) — se escalan a un agente que **lee el anuncio** y da veredicto con el número/torre exacto (OK / ALIAS_FALTANTE / MISMATCH / SIN_NOMBRE). Lección de la sesión 17-jun: auditando la cola de matching ZN, un agente-lector cazó ~58 falsos positivos del motor (score 90-95) que el token/GPS no veían (atractor "CONDOMINIO ONE", "Macororó 15"≠"19"). Costo: créditos solo en los flaggeados. Ver `BACKLOG.md` → "PLAN — Upgrade auditoría de matching" para los items B/C/D y las otras 3 skills. Memoria: `project_matching_zn_aprobacion_16jun2026`.
+
+## v1.6 — 8-jun-2026
 
 v1.6 **alinea el scope del audit con el feed público** (que solo muestra Equipetrol + solo departamentos). Dos filtros nuevos en el WHERE base:
 1. **Macrozona** (arg `--macrozona`, default `equipetrol`): antes corría sobre `v_mercado_venta` completa (Equipetrol + Zona Norte, ~763 props) y mezclaba edificios de ZN que NO están en el feed público (`zonas_permitidas: ZONAS_EQUIPETROL_DB`, dark launch de ZN). Ahora default = Equipetrol; ZN aparte con `--macrozona=zona-norte`. Filtro `v.zona_general` (mig 257).
@@ -331,10 +335,30 @@ WHERE NOT (
 ORDER BY id;
 ```
 
-Para cada hallazgo, discriminar entre:
-1. **Alias faltante** (más común): la desc usa una variante del nombre. Acción: agregar a `proyectos_master.alias_conocidos`.
-2. **Edificio realmente distinto**: la desc menciona otro proyecto. Acción: verificar manualmente.
-3. **Falso positivo**: revisar caracteres unicode raros que escaparon de la normalización.
+El query SQL es solo el **FILTRO barato**. NO discriminar a ojo los hallazgos (genera falsos positivos/negativos en clusters numerados — lección 17-jun: "Macororó 15" vs "19", el atractor "CONDOMINIO ONE"). El **juez** es la lectura del anuncio:
+
+##### 3.1b — Juez LLM (lectura del anuncio) ⭐ v1.7
+
+Si el query 3.1 devuelve >0 flaggeados, **lanzar UN agente `general-purpose`** que, para cada prop flaggeada, lea el texto real y dé veredicto. Pasarle esta query para traer los textos:
+
+```sql
+SELECT v.id AS prop, pm.nombre_oficial AS pm_bd, p.latitud, p.longitud,
+       left(lower(COALESCE(p.url,'')||' || '||COALESCE(p.datos_json_discovery->>'encabezado','')
+            ||' || '||COALESCE(p.datos_json_enrichment->>'descripcion','')), 700) AS texto
+FROM v_mercado_venta v JOIN propiedades_v2 p ON p.id=v.id
+JOIN proyectos_master pm ON pm.id_proyecto_master=v.id_proyecto_master
+WHERE v.id IN (<ids flaggeados por 3.1>);
+```
+
+El agente, por prop: identifica el edificio que NOMBRA el anuncio (nombre **+ número/torre exacto** — ojo clusters: Macororó 15≠19, Jazmines T2≠T3) y lo compara con `pm_bd`. Veredicto:
+- **OK** — el anuncio nombra ese edificio (mismo nombre Y número). No es error (el query lo flagueó por falta de alias o unicode).
+- **ALIAS_FALTANTE** 🟡 — es el mismo edificio, variante de nombre → acción: agregar a `proyectos_master.alias_conocidos`.
+- **MISMATCH** 🔴 — el anuncio nombra OTRO edificio → si existe como pm (buscar por `nombre_oficial ILIKE` + GPS≤300m), indicar el pm correcto; si no, marcar PM_NUEVO.
+- **SIN_NOMBRE** 🟢 — el anuncio no nombra edificio → informativo, no es acción.
+
+Salida del agente: tabla `prop | pm_bd | veredicto | edificio_del_anuncio | pm_correcto (si MISMATCH) | nota`. Solo **MISMATCH** es 🔴; ALIAS_FALTANTE es 🟡.
+
+**Costo:** créditos solo en los flaggeados (pocos por ventana semanal); el SQL filtra gratis el resto. Mantiene el espíritu $0 salvo el puñado de dudosos.
 
 #### 3.2 GPS fuera de radio del pm 🔴
 
