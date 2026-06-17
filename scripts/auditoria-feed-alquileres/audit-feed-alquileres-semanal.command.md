@@ -14,7 +14,15 @@ Los checks nuevos de v1.4 (2.9 precio, 4.4 área, anexo cola barata) **NO usan r
 
 Regla de oro anti-FP: si no podés identificar con confianza el dato en la cruda, **no marques error** — dejá la prop fuera del reporte o como 🟢. El silencio es mejor que un falso positivo. La ambigüedad real (varios precios, USD sin TC claro) se reporta como 🟡 "revisar" mostrando el fragmento, nunca como 🔴.
 
-## Versión actual: v1.5 — 8-jun-2026
+## Versión actual: v1.6 — 17-jun-2026
+
+v1.6 **extiende el principio "lectura > regex" (que ya regía en precio/área) al MATCHING** — paridad con ventas v1.7:
+- **Check 3.1b — Juez LLM**: los flaggeados por el query 3.1 dejan de discriminarse a ojo; se escalan a un agente que lee el anuncio y da veredicto con número/torre exacto (OK/ALIAS_FALTANTE/MISMATCH/SIN_NOMBRE). En alquiler es **más** decisivo que en ventas porque `nombre_edificio` suele ser NULL.
+- **Check 3.1c — Acción + candado automático de cluster** (Macororó/Tamisa/Brickell/Uptown/Sky N…): corregir Y candar `id_proyecto_master` (formato objeto) porque el matching se re-equivoca en clusters si la prop vuelve a sin-match.
+- **Check 3.5 — Genéricos sin match** (NUEVO): el feed de alquiler muestra props sin match con el genérico de `nombreAlquiler` ("Monoambiente · microzona"), que **esconde** matches perdidos. El agente lee esas props y recupera las que sí nombran un edificio.
+Lección sesión 17-jun (auditoría cola matching ZN): el agente-lector cazó ~58 falsos positivos del motor que token/GPS no veían. Ver `../auditoria-feed-ventas/BACKLOG.md` → "PLAN — Upgrade auditoría de matching". Memoria: `project_matching_zn_aprobacion_16jun2026`.
+
+## v1.5 — 8-jun-2026
 
 v1.5 (paridad con el audit de ventas v1.6):
 - **Scope por macrozona** (arg `--macrozona`, default `equipetrol`): `v_mercado_alquiler` mezcla Equipetrol + Zona Norte, pero el feed público `/alquileres` filtra a Equipetrol. El audit ahora coincide. Filtro `v.zona_general`. (No lleva filtro de tipo: en alquiler no hay casas/terrenos en el feed.)
@@ -177,7 +185,7 @@ SELECT v.id, v.fuente, v.zona, v.nombre_edificio, v.precio_mensual_bob, v.area_t
 FROM v_mercado_alquiler v
 JOIN propiedades_v2 p ON p.id = v.id
 WHERE <filtro args>
-  AND v.tipo_propiedad_original = 'departamento'
+  AND lower(v.tipo_propiedad_original) IN ('departamento','penthouse')
   AND v.area_total_m2 > 0
   AND v.precio_mensual_bob > 0
   AND NOT (p.campos_bloqueados ? 'precio_mensual_bob')
@@ -418,12 +426,57 @@ WHERE token_distintivo IS NOT NULL
 ORDER BY id;
 ```
 
-Para cada hallazgo, discriminar:
-1. **Alias faltante** (más común): la desc usa una variante. Acción: agregar a `proyectos_master.alias_conocidos`.
-2. **Edificio realmente distinto**: la desc menciona otro proyecto. Acción: verificar y reasignar.
-3. **Falso positivo residual**: marcar y revisar.
+El query es solo el **FILTRO barato**. NO discriminar a ojo (FP/FN en clusters numerados — lección 17-jun). En alquiler el regex tiene **menos señal aún** que en ventas (`nombre_edificio` suele ser NULL → el matching se apoya en GPS), así que el **juez LLM es todavía más decisivo**:
 
-**Particularidad alquiler**: el matching es históricamente más bajo que ventas (~70% vs ~85%). Esperá ver más props sin `id_proyecto_master` — esas no aparecen acá (este check filtra por `id_proyecto_master IS NOT NULL`).
+##### 3.1b — Juez LLM (lectura del anuncio) ⭐ v1.6
+
+Si el query 3.1 devuelve >0 flaggeados, **lanzar UN agente `general-purpose`** que lea el texto real de cada prop y dé veredicto. Query para traer los textos:
+
+```sql
+SELECT v.id AS prop, pm.nombre_oficial AS pm_bd, p.latitud, p.longitud,
+       left(lower(COALESCE(p.url,'')||' || '||COALESCE(p.datos_json_discovery->>'encabezado','')
+            ||' || '||COALESCE(p.datos_json_enrichment->>'descripcion','')), 700) AS texto
+FROM v_mercado_alquiler v JOIN propiedades_v2 p ON p.id=v.id
+JOIN proyectos_master pm ON pm.id_proyecto_master=v.id_proyecto_master
+WHERE v.id IN (<ids flaggeados por 3.1>);
+```
+
+El agente, por prop: identifica el edificio que NOMBRA el anuncio (nombre **+ número/torre exacto** — ojo clusters: Macororó 15≠19, Jazmines T2≠T3) y lo compara con `pm_bd`. Veredicto:
+- **OK** — el anuncio nombra ese edificio (mismo nombre Y número).
+- **ALIAS_FALTANTE** 🟡 — mismo edificio, variante de nombre → agregar a `alias_conocidos`.
+- **MISMATCH** 🔴 — otro edificio → si existe como pm (buscar `nombre_oficial ILIKE` + GPS≤300m), indicar el pm correcto; si no, PM_NUEVO.
+- **SIN_NOMBRE** 🟢 — el anuncio no nombra edificio → informativo.
+
+Salida: tabla `prop | pm_bd | veredicto | edificio_del_anuncio | pm_correcto (si MISMATCH) | nota`. **Costo:** créditos solo en los flaggeados.
+
+##### 3.1c — Acción + candado automático de cluster
+
+- **MISMATCH con `pm_correcto`** → corregir (`id_proyecto_master = pm_correcto`, `metodo_match = 'auditor_3.1b_<fecha>'`).
+- **⛓️ Candado AUTOMÁTICO si es CLUSTER numerado** (Macororó/Tamisa/Brickell/Portofino/Jazmines/Uptown/Sky/Stone N) — el matching se re-equivoca ahí si la prop vuelve a sin-match. Formato **objeto** canónico:
+  ```sql
+  UPDATE propiedades_v2 SET id_proyecto_master=<pm>, metodo_match='auditor_3.1b_<fecha>',
+    campos_bloqueados = COALESCE(campos_bloqueados,'{}'::jsonb) || jsonb_build_object(
+      'id_proyecto_master', jsonb_build_object('bloqueado',true,'por','auditor_3.1b','fecha','<fecha>',
+        'razon','cluster numerado mal matcheado','valor_original',id_proyecto_master))
+  WHERE id=<prop>;
+  ```
+- **MISMATCH no-cluster** → corregir sin candado. **MISMATCH "blando"** (pm placeholder) → revisión manual. **ALIAS_FALTANTE** → cargar alias + `REFRESH MATERIALIZED VIEW mv_nombre_proyecto_lookup`. **OK/SIN_NOMBRE** → sin acción.
+
+**Particularidad alquiler**: el matching es históricamente más bajo que ventas (~80% vs ~87%). Las props **sin** `id_proyecto_master` no aparecen acá (este check filtra `IS NOT NULL`) — esas se cubren en el **check 3.5 (genéricos)**.
+
+#### 3.5 Genéricos sin match — ¿se perdió un edificio? 🟡 (NUEVO v1.6)
+
+En alquiler el feed usa LEFT JOIN: las props sin match **igual se muestran**, con el genérico del helper `nombreAlquiler` ("Monoambiente / Depto N dorm · microzona"). Eso **esconde** dos casos: (a) el anuncio realmente no nombra edificio (genérico legítimo), o (b) el anuncio **sí** nombra uno pero se perdió el match (match perdido oculto). Check:
+
+```sql
+SELECT v.id AS prop, v.zona,
+       left(lower(COALESCE(p.url,'')||' || '||COALESCE(p.datos_json_discovery->>'encabezado','')
+            ||' || '||COALESCE(p.datos_json_enrichment->>'descripcion','')), 700) AS texto
+FROM v_mercado_alquiler v JOIN propiedades_v2 p ON p.id=v.id
+WHERE v.id_proyecto_master IS NULL AND <filtro args>;
+```
+
+Escalar al **mismo agente LLM**: por prop, ¿el anuncio nombra un edificio? → **PM_EXISTENTE** (existe en proyectos_master por nombre+GPS → matchear), **PM_NUEVO** (nombre claro, no existe → crear), **SIN_NOMBRE** (genérico legítimo → dejar). Recupera los matches que el genérico ocultaba.
 
 #### 3.2 GPS fuera de radio del pm — bandas de severidad (RECALIBRADO v1.1)
 
@@ -558,7 +611,7 @@ SELECT v.id, v.fuente, v.nombre_edificio, v.area_total_m2,
 FROM v_mercado_alquiler v
 JOIN propiedades_v2 p ON p.id = v.id
 WHERE <filtro args>
-  AND v.tipo_propiedad_original = 'departamento'
+  AND lower(v.tipo_propiedad_original) IN ('departamento','penthouse')
   AND (v.area_total_m2 > 800 OR v.area_total_m2 < 20)
   AND NOT (p.campos_bloqueados ? 'area_total_m2')
 ORDER BY v.area_total_m2 DESC;

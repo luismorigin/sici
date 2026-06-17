@@ -68,10 +68,11 @@ Leer los 3.
 - **Cambio de amoblado/sin amoblar**: flag `amoblado_aparecio` o `amoblado_desaparecio`. Impacto comercial directo (cambia el público objetivo).
 - **Cambio de mascotas**: flag `mascotas_aparecio` o `mascotas_desaparecio`. Decisivo para el inquilino.
 - **Cambio de expensas**: flag `expensas_aparecio` o `expensas_desaparecio`. Cambia el precio neto al inquilino.
-- **Mismatch de matching real**: capa 3 reporta `mismatch_real`. Discriminar 3 casos (ver guía completa en command de ventas):
-  1. Variante del nombre faltante en `alias_conocidos`
-  2. Edificio realmente distinto
-  3. Falso positivo del regex
+- **Mismatch de matching real**: capa 3 reporta `mismatch_real`. **NO discriminar a ojo** (en clusters numerados lleva a error — ej. "Macororó 15"≠"19"). Extendé al **matching** el mismo principio "lectura > regex" que ya usás para precio/área (sección abajo): escalá cada `mismatch_real` al **juez LLM** (idéntico al paso 3.1b de `audit-feed-alquileres-semanal`) — un agente lee `url` + `encabezado` + `descripcion` y da veredicto con número/torre exacto:
+  1. **ALIAS_FALTANTE** → agregar a `alias_conocidos` (no tocar `nombre_edificio` de la prop).
+  2. **MISMATCH real** → corregir al pm correcto (buscar por `nombre_oficial ILIKE` + GPS≤300m); si es **CLUSTER numerado** (Macororó/Tamisa/Brickell/Sky/Uptown N…), **candar** `id_proyecto_master` (formato objeto — ver paso 3.1c de la semanal).
+  3. **SIN_NOMBRE / falso positivo del regex** → ignorar.
+  En alquiler el juez es **más decisivo** (`nombre_edificio` suele NULL → el regex tiene poco con qué comparar). Además correr el **check 3.5 (genéricos sin match)** de la semanal sobre todo el feed: recupera matches que el genérico `nombreAlquiler` ("Monoambiente · microzona") esconde (validado 17-jun: Villa Magna, Santorini Suites).
 
 #### Verificación por lectura (v1.4 — capa anti-FP sobre el regex)
 
@@ -83,6 +84,22 @@ El script extrae precio/área con regex + heurística "monto más cercano al BD"
 4. Casos USD-paralelo en alquiler: el script convierte USD×6.96. Si el `precio_mensual_bob` ≈ USD×~9.5, es TC paralelo aplicado (no necesariamente error) → 🟡.
 
 Esto le da al mensual la misma robustez de juicio que el semanal v1.4: el regex filtra las 141, vos verificás los pocos candidatos leyendo.
+
+#### Detectores agregados — solo mensual (NUEVO, 17-jun) ⭐
+
+No son por-prop: corren una vez sobre el sistema, atacan el bug del **motor** (que es **compartido** venta/alquiler — `matching_sugerencias` no separa por tipo).
+
+**1. ATRACTORES de nombre** — pm con distintivo ≤3 letras que colapsa al prefijo genérico en `fuzzy_nombre` y atrae cualquier "Condominio X" (CONDOMINIO ONE pm 359, el "K1" del matching por nombre). **Misma query que la mensual de ventas** (`matching_sugerencias` es compartido → correrla una vez cubre ambos feeds). Reportar 🔴; fix real en `generar_matches_fuzzy` (stopwords + umbral ≥3) — ver `../auditoria-feed-ventas/BACKLOG.md`.
+
+**2. AUTO-APROBADOS de alquiler** — muestra de matches auto-aprobados recientes (score ≥85, entran al feed sin lectura) pasada por el **juez LLM** (mismo agente del 3.1b):
+```sql
+SELECT v.id FROM v_mercado_alquiler v JOIN propiedades_v2 p ON p.id=v.id
+WHERE v.id_proyecto_master IS NOT NULL
+  AND p.fecha_actualizacion > NOW() - INTERVAL '35 days'
+  AND NOT (p.campos_bloqueados ? 'id_proyecto_master')
+ORDER BY random() LIMIT 30;
+```
+Medir el **% de MISMATCH**. (En la muestra del 17-jun el matching de alquiler de Eq salió **limpio** —0 FP—, mejor que ventas; conviene re-medir periódicamente.)
 
 #### CAVEAT IMPORTANTE — primer audit con baseline reciente
 

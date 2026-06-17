@@ -205,3 +205,50 @@ ORDER BY props_huerfanas DESC;
 - Campo `año_construccion` en `proyectos_master` (data manual desde notas de prensa / observación)
 - Tabla manual `lanzamientos_oficiales` alimentada editorialmente con fecha de lanzamiento real
 - Para B2B pagos: la clasificación se hace manual caso a caso, no se intenta automatizar
+
+## Tipo de propiedad sin normalizar + casas/terrenos colados en `v_mercado_venta` (17-jun-2026)
+
+**Hallazgo** (auditoría matching 17-jun, check 3.5 sobre sin-match de Equipetrol ventas): terrenos y casas mezclados en `v_mercado_venta`. Dos problemas:
+
+1. **`tipo_propiedad_original` sin normalizar.** Es el valor CRUDO del portal (de ahí "_original"). En toda la base (1.100+ `completado`): **"departamento" (778) + "Departamento" (322)**, "casa" (9) + "Casa" (1), "terreno" (5) + "Terreno" (2), penthouse (8), oficina (1). **No existe un campo de tipo canónico** → cada query maneja las variantes a mano (frágil, se olvida).
+2. **`v_mercado_venta` NO filtra por tipo.** Incluye **11 casas/terrenos** (todas sin match). El pipeline de casas/terrenos (mig 221) las marca `status='completado'` igual que deptos, y la vista —creada cuando solo había deptos— nunca se actualizó para excluirlas.
+
+**Por qué no molesta hoy:** el feed público (`buscar_unidades_simple`) usa **INNER JOIN** a `proyectos_master` → las casas/terrenos sin match quedan filtradas **por accidente** (no tienen pm). Solo se ven en queries directas a la vista (auditoría). ⚠️ **PERO si ventas pasa a LEFT JOIN** (para mostrar genéricos como alquiler), **aparecerían en el feed** → este fix es **prerrequisito** de ese cambio.
+
+**Bug colateral detectado:** la auditoría semanal de ventas v1.6 filtra `tipo_propiedad_original = 'departamento'` (igualdad exacta) → **se pierde las 322 "Departamento" con mayúscula**. Cambiar a `ILIKE 'departamento'`.
+
+**Fix — dos horizontes distintos (no confundir):**
+
+### A) PUENTE (ahora) — blacklist en `v_mercado_venta`
+Resuelve el problema inmediato (limpiar el feed de deptos). Cambio mínimo, 1 línea, consistente con la lógica que la vista YA usa (blacklist `<> ALL`):
+```sql
+-- en el WHERE de v_mercado_venta:
+-- ANTES: AND (COALESCE(tipo_propiedad_original,'') <> ALL (ARRAY['baulera','parqueo','garaje','deposito']))
+-- DESPUÉS:
+AND (lower(COALESCE(tipo_propiedad_original,'')) <> ALL (ARRAY['baulera','parqueo','garaje','deposito','casa','terreno','oficina']))
+```
+**Análisis de riesgo (medido 17-jun): BAJO.**
+- Saca **11 props** (5 casas + 6 terrenos), **todas sin match** → ya invisibles en el feed público (INNER JOIN de `buscar_unidades_simple` las tapa). **Cero impacto al feed.**
+- **Ninguna vista depende** de `v_mercado_venta` (`pg_depend` = vacío).
+- Consumidores (Market Pulse Dashboard, prospección, skills) **mejoran** (sacan el ruido: terrenos a $2.001/m² distorsionan medianas).
+- Único riesgo menor: **4 casas/terrenos en `broker_shortlist_items`** → mitigado porque `precio_norm` se guarda como **snapshot** en el item; las shortlists existentes no se rompen (solo un re-armado de esas 4 props puntuales perdería el precio_norm).
+- Aplicación: `CREATE OR REPLACE VIEW` (no DROP → reversible, no rompe deps) + test `BEGIN; … ; ROLLBACK` verificando que el total baja exactamente 11. Definición actual exportada con `pg_get_viewdef` el 17-jun.
+- **NO over-engineering aquí:** NO whitelist (`IN (...)` podría excluir un tipo legítimo futuro), NO campo nuevo, NO tocar extractor. Solo ampliar el blacklist + `lower()`.
+
+**✅ APLICADO 17-jun a AMBAS vistas (con `CREATE OR REPLACE`, def previas exportadas para revertir):**
+- **`v_mercado_venta`**: blacklist ampliado (ya excluía baulera/parqueo) + `lower()` + casa/terreno/oficina. Sacó **11 casas/terrenos**. Match rate venta Eq 94.9→**98.6%**, ZN 87.2→**87.8%** (salieron sin-match del denominador). Verificado con test antes/después: **solo 2 grupos de Sirari cambian** (3-dorm: mediana 2.594→2.752 = mejora real sin la casa; 0-dorm: cae <3 props y el grupo pierde su mini-estudio — su mediana estaba contaminada igual). Las 6 funciones de mercado se benefician.
+- **`v_mercado_alquiler`**: **AGREGADO** el filtro — ojo, esta vista **NO tenía NINGÚN filtro de tipo** (el "baulera" que un check superficial detecta es la *columna* `p.baulera`, no un filtro). Blacklist completo + `lower()`. Sacó **1 oficina** (2663). Penthouse (1) y deptos quedan. Total 261→260.
+- **⚠️ DIFERENCIA CLAVE alquiler (verificada, no asumir):** el feed (`buscar_unidades_alquiler`) usa **`propiedades_v2` DIRECTO**, NO la vista (a diferencia de venta, donde `buscar_unidades_simple` usa la vista para el mini-estudio). → El parche de la vista **limpia las stats/comparables** (las 5 funciones de mercado) **pero la oficina 2663 SIGUE VISIBLE en el feed** (matcheada a pm 6 La Riviera). Sacarla del feed requeriría tocar `buscar_unidades_alquiler` → no vale por 1 prop. **Esto es justo lo que el campo canónico (B) resuelve bien:** el feed de alquiler filtraría por `tipo_propiedad` en un solo lugar.
+
+### B) INFRAESTRUCTURA (en Fase 3 del PRD Casas/Terrenos) — campo `tipo_propiedad` canónico
+**Cuándo:** cuando se construya el feed público de casas/terrenos (Fase 3, `docs/backlog/CASAS_TERRENOS_PRD.md`). Si el sistema escala a multi-tipo, el tipo pasa a ser dimensión de **primer orden** y el blacklist por vista NO escala (habría que parchear N vistas por cada tipo nuevo).
+
+**Decisión de diseño (founder, 17-jun):** sí vale el campo normalizado **en ese momento** — no antes (construir infra sin consumidor sería adelantarse), no como parche de skill.
+
+**Diseño mínimo (sin over-engineering):**
+- Columna `tipo_propiedad` en `propiedades_v2` — valores **canónicos planos**: `departamento`, `penthouse`, `casa`, `terreno`, `oficina` (los que ya existen; no inventar tipos).
+- **Derivada** de `tipo_propiedad_original` (que sigue siendo el crudo del portal, útil para debug) vía mapeo simple (lower + variantes). UPDATE one-shot para histórico + el merge/extractor la setea para nuevas.
+- Las vistas/feeds segmentan por el canónico: `v_mercado_venta` → `tipo_propiedad IN ('departamento','penthouse')`; `v_mercado_casas` → `'casa'`, etc. Agregar un tipo = un valor en el mapeo, no parchear vistas.
+- **Evitar:** jerarquía tipo/subtipo, enum rígido de Postgres (preferir `text` + CHECK o mapeo en código), migrar todo de golpe.
+
+**Orden:** A (puente) desbloquea hoy las skills/dashboard; B (campo) se hace dentro de Fase 3, justo cuando hay varios feeds que segmentar.

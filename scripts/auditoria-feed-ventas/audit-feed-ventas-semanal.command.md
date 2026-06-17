@@ -8,11 +8,15 @@ Variante liviana del audit mensual. Cubre props nuevas en una ventana temporal u
 
 Cuándo usarlo: lunes a la mañana (o cualquier día) para limpiar la deuda de props nuevas mientras están frescas. Complementa al `/audit-feed-ventas-mensual` que cubre todo el feed + drift Firecrawl.
 
-## Versión actual: v1.6 — 8-jun-2026
+## Versión actual: v1.7 — 17-jun-2026
+
+v1.7 **convierte el check 3.1 de regex-juez a regex-filtro + juez LLM** (nuevo paso 3.1b). El query SQL del 3.1 sigue filtrando gratis, pero los flaggeados ya NO se discriminan a ojo (generaba falsos positivos/negativos en clusters numerados) — se escalan a un agente que **lee el anuncio** y da veredicto con el número/torre exacto (OK / ALIAS_FALTANTE / MISMATCH / SIN_NOMBRE). Lección de la sesión 17-jun: auditando la cola de matching ZN, un agente-lector cazó ~58 falsos positivos del motor (score 90-95) que el token/GPS no veían (atractor "CONDOMINIO ONE", "Macororó 15"≠"19"). Costo: créditos solo en los flaggeados. Ver `BACKLOG.md` → "PLAN — Upgrade auditoría de matching" para los items B/C/D y las otras 3 skills. Memoria: `project_matching_zn_aprobacion_16jun2026`.
+
+## v1.6 — 8-jun-2026
 
 v1.6 **alinea el scope del audit con el feed público** (que solo muestra Equipetrol + solo departamentos). Dos filtros nuevos en el WHERE base:
 1. **Macrozona** (arg `--macrozona`, default `equipetrol`): antes corría sobre `v_mercado_venta` completa (Equipetrol + Zona Norte, ~763 props) y mezclaba edificios de ZN que NO están en el feed público (`zonas_permitidas: ZONAS_EQUIPETROL_DB`, dark launch de ZN). Ahora default = Equipetrol; ZN aparte con `--macrozona=zona-norte`. Filtro `v.zona_general` (mig 257).
-2. **Solo departamentos** (`tipo_propiedad_original = 'departamento'`): el feed público filtra terrenos/casas (tienen pipeline propio, mig 221). Sin esto se colaban terrenos a `v_mercado_venta` con $/m² absurdos (ej. #2435, terreno a $273/m²).
+2. **Solo departamentos** (`lower(tipo_propiedad_original) IN ('departamento','penthouse')`): el feed público filtra terrenos/casas (tienen pipeline propio, mig 221). Sin esto se colaban terrenos a `v_mercado_venta` con $/m² absurdos (ej. #2435, terreno a $273/m²). **v1.7.1 (17-jun): `lower()`+`IN`** porque el `= 'departamento'` exacto perdía las ~322 props **"Departamento"** (mayúscula del portal, ~30% del feed) y el penthouse. Ver `docs/backlog/CALIDAD_DATOS_BACKLOG.md`.
 
 Resultado: el audit audita **exactamente** lo que muestra el feed público de `/ventas`.
 
@@ -91,7 +95,7 @@ AND v.zona_general = '<Equipetrol | Zona Norte>'
 -- Filtro de TIPO: el feed público solo muestra DEPARTAMENTOS (buscar_unidades_simple los filtra).
 -- terreno/casa tienen pipeline propio (mig 221) y NO van al feed de ventas → el audit debe excluirlos.
 -- (Sin este filtro se cuelan terrenos a v_mercado_venta con $/m² absurdos, ej. #2435 terreno a $273/m².)
-AND v.tipo_propiedad_original = 'departamento'
+AND lower(v.tipo_propiedad_original) IN ('departamento','penthouse')
 ```
 
 > Este `<filtro args>` se inyecta en TODAS las queries de capas 2/3/4 y en el conteo base (todas hacen `v_mercado_venta v JOIN propiedades_v2 p`, así que `v.zona_general` siempre está disponible). **Excepción:** el guard de discovery del paso 2 (la query de `fecha_discovery` sobre `propiedades_v2` directo) NO lleva el filtro de zona — el discovery corre global, se evalúa global.
@@ -205,7 +209,7 @@ SELECT v.id, v.fuente, v.nombre_edificio, v.precio_usd, v.area_total_m2,
 FROM v_mercado_venta v
 JOIN propiedades_v2 p ON p.id = v.id
 WHERE <filtro args>
-  AND v.tipo_propiedad_original = 'departamento'
+  AND lower(v.tipo_propiedad_original) IN ('departamento','penthouse')
   AND (v.precio_usd / v.area_total_m2 < 500 OR v.precio_usd / v.area_total_m2 > 8000)
 ORDER BY precio_m2;
 ```
@@ -331,10 +335,55 @@ WHERE NOT (
 ORDER BY id;
 ```
 
-Para cada hallazgo, discriminar entre:
-1. **Alias faltante** (más común): la desc usa una variante del nombre. Acción: agregar a `proyectos_master.alias_conocidos`.
-2. **Edificio realmente distinto**: la desc menciona otro proyecto. Acción: verificar manualmente.
-3. **Falso positivo**: revisar caracteres unicode raros que escaparon de la normalización.
+El query SQL es solo el **FILTRO barato**. NO discriminar a ojo los hallazgos (genera falsos positivos/negativos en clusters numerados — lección 17-jun: "Macororó 15" vs "19", el atractor "CONDOMINIO ONE"). El **juez** es la lectura del anuncio:
+
+##### 3.1b — Juez LLM (lectura del anuncio) ⭐ v1.7
+
+Si el query 3.1 devuelve >0 flaggeados, **lanzar UN agente `general-purpose`** que, para cada prop flaggeada, lea el texto real y dé veredicto. Pasarle esta query para traer los textos:
+
+```sql
+SELECT v.id AS prop, pm.nombre_oficial AS pm_bd, p.latitud, p.longitud,
+       left(lower(COALESCE(p.url,'')||' || '||COALESCE(p.datos_json_discovery->>'encabezado','')
+            ||' || '||COALESCE(p.datos_json_enrichment->>'descripcion','')), 700) AS texto
+FROM v_mercado_venta v JOIN propiedades_v2 p ON p.id=v.id
+JOIN proyectos_master pm ON pm.id_proyecto_master=v.id_proyecto_master
+WHERE v.id IN (<ids flaggeados por 3.1>);
+```
+
+El agente, por prop: identifica el edificio que NOMBRA el anuncio (nombre **+ número/torre exacto** — ojo clusters: Macororó 15≠19, Jazmines T2≠T3) y lo compara con `pm_bd`. Veredicto:
+- **OK** — el anuncio nombra ese edificio (mismo nombre Y número). No es error (el query lo flagueó por falta de alias o unicode).
+- **ALIAS_FALTANTE** 🟡 — es el mismo edificio, variante de nombre → acción: agregar a `proyectos_master.alias_conocidos`.
+- **MISMATCH** 🔴 — el anuncio nombra OTRO edificio → si existe como pm (buscar por `nombre_oficial ILIKE` + GPS≤300m), indicar el pm correcto; si no, marcar PM_NUEVO.
+- **SIN_NOMBRE** 🟢 — el anuncio no nombra edificio → informativo, no es acción.
+
+Salida del agente: tabla `prop | pm_bd | veredicto | edificio_del_anuncio | pm_correcto (si MISMATCH) | nota`. Solo **MISMATCH** es 🔴; ALIAS_FALTANTE es 🟡.
+
+**Costo:** créditos solo en los flaggeados (pocos por ventana semanal); el SQL filtra gratis el resto. Mantiene el espíritu $0 salvo el puñado de dudosos.
+
+##### 3.1c — Acción sobre los veredictos
+
+**MISMATCH con `pm_correcto` identificado → corregir.** UPDATE directo (`id_proyecto_master = pm_correcto`, `metodo_match = 'auditor_3.1b_<fecha>'`).
+
+**⛓️ Candado AUTOMÁTICO si es CLUSTER numerado.** Si el `nombre_oficial` (del pm correcto O del equivocado) lleva número/torre — **Macororó / Tamisa / Brickell / Portofino / Jazmines / Uptown / Sky / Stone / Trivento N** —, candar `id_proyecto_master` en el MISMO UPDATE. Razón: el matching se re-equivoca en estos clusters si la prop vuelve a `sin-match` (re-discovery/reset). Formato canónico **OBJETO** (un string NO protege — ver paso 8):
+
+```sql
+UPDATE propiedades_v2
+SET id_proyecto_master = <pm_correcto>,
+    metodo_match = 'auditor_3.1b_<fecha>',
+    campos_bloqueados = COALESCE(campos_bloqueados,'{}'::jsonb) || jsonb_build_object(
+      'id_proyecto_master', jsonb_build_object(
+        'bloqueado', true, 'por', 'auditor_3.1b', 'fecha', '<fecha>',
+        'razon', 'cluster numerado mal matcheado',
+        'valor_original', id_proyecto_master))   -- guarda el pm equivocado (valores OLD de la fila)
+WHERE id = <prop>;
+```
+
+- **MISMATCH no-cluster** (edificio distinto, sin número en disputa) → corregir **sin candado** (UPDATE simple); el `id_proyecto_master` persiste igual y el matching no lo re-evalúa.
+- **MISMATCH "blando"** (el pm asignado es un placeholder/genérico cuyo GPS coincide, ej. "Edificio Equipetrol Norte - Calle H") → **NO reasignar automático**; marcar para revisión manual (probable que falte renombrar/aliasar el pm, no que el match esté mal).
+
+**ALIAS_FALTANTE → cargar el alias** detectado a `proyectos_master.alias_conocidos` del pm (mejora el matching y baja el ruido del 3.1 en corridas futuras). `REFRESH MATERIALIZED VIEW mv_nombre_proyecto_lookup` tras cargar alias.
+
+**OK / SIN_NOMBRE → ninguna acción.**
 
 #### 3.2 GPS fuera de radio del pm 🔴
 
@@ -461,7 +510,7 @@ SELECT v.id, v.fuente, v.nombre_edificio, v.area_total_m2,
 FROM v_mercado_venta v
 JOIN propiedades_v2 p ON p.id = v.id
 WHERE <filtro args>
-  AND v.tipo_propiedad_original = 'departamento'
+  AND lower(v.tipo_propiedad_original) IN ('departamento','penthouse')
   AND (v.area_total_m2 > 1000 OR v.area_total_m2 < 15)
   AND NOT (p.campos_bloqueados ? 'area_total_m2')
 ORDER BY v.area_total_m2 DESC;

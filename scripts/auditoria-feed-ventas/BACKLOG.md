@@ -2,6 +2,32 @@
 
 Pendientes detectados en la sesión del 2026-05-08. Ordenados por valor / urgencia.
 
+---
+
+## ⭐ PLAN — Upgrade auditoría de matching: del regex-juez al LLM-juez (hallazgos 17-jun-2026)
+
+**Contexto:** auditando la cola de matching de Zona Norte con un agente que **LEE los anuncios**, se encontraron **~58 falsos positivos del motor** (score 90-95) que el score/GPS/token NO detectaban. Ej: "CONDOMINIO ONE" (pm 359) atrae cualquier "Condominio X"; "Macororó 15" vs "19" (cluster numerado). Detalle: memoria `project_matching_zn_aprobacion_16jun2026`.
+
+**Principio del upgrade:** el regex/token deja de ser el **juez** y pasa a ser el **filtro**; el juez es la **lectura del anuncio (LLM)** en los dudosos. Costo marginal — el LLM solo toca los flaggeados (hoy ~165k tokens para 145 sugerencias). Las skills NO tocan datos (read-only) → riesgo a producción bajo; el riesgo es de calibración → hacerlo **INCREMENTAL** (una skill, una mejora, validar sobre ventana real, extender).
+
+### Transversal — las 4 skills (capa 3 / matching)
+- **(A) Juez LLM para dudosos** ⭐ EMPEZAR ACÁ (semanal ventas, check 3.1): cuando el regex marque `mismatch_real`/`no_disponible`/`prefijo_ambiguo`, escalar SOLO esos a un agente que lee el anuncio y decide con el número exacto.
+- **(B) Check de número en clusters**: `normalizeNombre` (matching-checks.mjs:128-129) borra romanos y es frágil con arábigos → "Macororó 15"≠"19". Check dedicado sin normalizar el número. (4 de 8 FP de hoy.)
+- **(C) Confianza compuesta**: cruzar nombre-en-anuncio + GPS≤80m + sin-vecino-ambiguo (hoy: ninguna señal sola alcanza).
+- **(D) Modo `--cola`**: auditar `matching_sugerencias` pendientes ANTES de aprobar, no solo el feed.
+
+### Específico por skill
+- **Mensual ventas**: detector de **ATRACTORES** (pm con N sugerencias `fuzzy_nombre` sin que su nombre aparezca en ninguna desc → CONDOMINIO ONE pm 359) + auditar muestra de **auto-aprobados** score≥85 con LLM (ahí se cuelan FP en Equipetrol, porque auto-aprueba directo al feed sin lectura).
+- **Alquileres semanal/mensual**: LLM **aún más necesario** (`nombre_edificio` suele NULL → el regex no tiene con qué comparar) + validar los genéricos "Monoambiente · microzona" del helper `nombreAlquiler` (¿el anuncio sí nombra un edificio que se perdió? = match perdido **escondido** por el genérico).
+- **Semanal ventas**: detector de **GPS corrupto** (props que comparten una misma coord errada, como las 5 de hoy: 2163/2242/2256/2260/2548).
+
+### Causa raíz a atacar en paralelo (reduce lo que la auditoría debe cazar)
+Bug en `generar_matches_fuzzy`: compara palabras ≥4 letras SIN excluir genéricos → pm con distintivo ≤3 letras (ONE/ITO/SKY/ZEN/ARA) colapsa a `[condominio]` y atrae todos. **Fix: stopwords + umbral ≥3.** Toca matching producción → ticket separado con test (afecta también Equipetrol).
+
+**Orden de ataque:** (A) en semanal ventas → validar → (B)(C) → extender a alquileres → mensual (atractores + auto-aprobados) → fix raíz fuzzy.
+
+---
+
 ## 🔥 Alta — bugs en sistema productivo
 
 ### 1. Verificador del pipeline tiene gap "HTTP 200 OK con HTML vacío"
