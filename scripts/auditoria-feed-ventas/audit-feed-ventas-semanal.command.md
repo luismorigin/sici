@@ -16,7 +16,7 @@ v1.7 **convierte el check 3.1 de regex-juez a regex-filtro + juez LLM** (nuevo p
 
 v1.6 **alinea el scope del audit con el feed público** (que solo muestra Equipetrol + solo departamentos). Dos filtros nuevos en el WHERE base:
 1. **Macrozona** (arg `--macrozona`, default `equipetrol`): antes corría sobre `v_mercado_venta` completa (Equipetrol + Zona Norte, ~763 props) y mezclaba edificios de ZN que NO están en el feed público (`zonas_permitidas: ZONAS_EQUIPETROL_DB`, dark launch de ZN). Ahora default = Equipetrol; ZN aparte con `--macrozona=zona-norte`. Filtro `v.zona_general` (mig 257).
-2. **Solo departamentos** (`tipo_propiedad_original = 'departamento'`): el feed público filtra terrenos/casas (tienen pipeline propio, mig 221). Sin esto se colaban terrenos a `v_mercado_venta` con $/m² absurdos (ej. #2435, terreno a $273/m²).
+2. **Solo departamentos** (`lower(tipo_propiedad_original) IN ('departamento','penthouse')`): el feed público filtra terrenos/casas (tienen pipeline propio, mig 221). Sin esto se colaban terrenos a `v_mercado_venta` con $/m² absurdos (ej. #2435, terreno a $273/m²). **v1.7.1 (17-jun): `lower()`+`IN`** porque el `= 'departamento'` exacto perdía las ~322 props **"Departamento"** (mayúscula del portal, ~30% del feed) y el penthouse. Ver `docs/backlog/CALIDAD_DATOS_BACKLOG.md`.
 
 Resultado: el audit audita **exactamente** lo que muestra el feed público de `/ventas`.
 
@@ -95,7 +95,7 @@ AND v.zona_general = '<Equipetrol | Zona Norte>'
 -- Filtro de TIPO: el feed público solo muestra DEPARTAMENTOS (buscar_unidades_simple los filtra).
 -- terreno/casa tienen pipeline propio (mig 221) y NO van al feed de ventas → el audit debe excluirlos.
 -- (Sin este filtro se cuelan terrenos a v_mercado_venta con $/m² absurdos, ej. #2435 terreno a $273/m².)
-AND v.tipo_propiedad_original = 'departamento'
+AND lower(v.tipo_propiedad_original) IN ('departamento','penthouse')
 ```
 
 > Este `<filtro args>` se inyecta en TODAS las queries de capas 2/3/4 y en el conteo base (todas hacen `v_mercado_venta v JOIN propiedades_v2 p`, así que `v.zona_general` siempre está disponible). **Excepción:** el guard de discovery del paso 2 (la query de `fecha_discovery` sobre `propiedades_v2` directo) NO lleva el filtro de zona — el discovery corre global, se evalúa global.
@@ -209,7 +209,7 @@ SELECT v.id, v.fuente, v.nombre_edificio, v.precio_usd, v.area_total_m2,
 FROM v_mercado_venta v
 JOIN propiedades_v2 p ON p.id = v.id
 WHERE <filtro args>
-  AND v.tipo_propiedad_original = 'departamento'
+  AND lower(v.tipo_propiedad_original) IN ('departamento','penthouse')
   AND (v.precio_usd / v.area_total_m2 < 500 OR v.precio_usd / v.area_total_m2 > 8000)
 ORDER BY precio_m2;
 ```
@@ -510,7 +510,7 @@ SELECT v.id, v.fuente, v.nombre_edificio, v.area_total_m2,
 FROM v_mercado_venta v
 JOIN propiedades_v2 p ON p.id = v.id
 WHERE <filtro args>
-  AND v.tipo_propiedad_original = 'departamento'
+  AND lower(v.tipo_propiedad_original) IN ('departamento','penthouse')
   AND (v.area_total_m2 > 1000 OR v.area_total_m2 < 15)
   AND NOT (p.campos_bloqueados ? 'area_total_m2')
 ORDER BY v.area_total_m2 DESC;
