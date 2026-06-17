@@ -185,7 +185,7 @@ SELECT v.id, v.fuente, v.zona, v.nombre_edificio, v.precio_mensual_bob, v.area_t
 FROM v_mercado_alquiler v
 JOIN propiedades_v2 p ON p.id = v.id
 WHERE <filtro args>
-  AND v.tipo_propiedad_original = 'departamento'
+  AND lower(v.tipo_propiedad_original) IN ('departamento','penthouse')
   AND v.area_total_m2 > 0
   AND v.precio_mensual_bob > 0
   AND NOT (p.campos_bloqueados ? 'precio_mensual_bob')
@@ -611,7 +611,7 @@ SELECT v.id, v.fuente, v.nombre_edificio, v.area_total_m2,
 FROM v_mercado_alquiler v
 JOIN propiedades_v2 p ON p.id = v.id
 WHERE <filtro args>
-  AND v.tipo_propiedad_original = 'departamento'
+  AND lower(v.tipo_propiedad_original) IN ('departamento','penthouse')
   AND (v.area_total_m2 > 800 OR v.area_total_m2 < 20)
   AND NOT (p.campos_bloqueados ? 'area_total_m2')
 ORDER BY v.area_total_m2 DESC;
