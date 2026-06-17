@@ -360,6 +360,31 @@ Salida del agente: tabla `prop | pm_bd | veredicto | edificio_del_anuncio | pm_c
 
 **Costo:** créditos solo en los flaggeados (pocos por ventana semanal); el SQL filtra gratis el resto. Mantiene el espíritu $0 salvo el puñado de dudosos.
 
+##### 3.1c — Acción sobre los veredictos
+
+**MISMATCH con `pm_correcto` identificado → corregir.** UPDATE directo (`id_proyecto_master = pm_correcto`, `metodo_match = 'auditor_3.1b_<fecha>'`).
+
+**⛓️ Candado AUTOMÁTICO si es CLUSTER numerado.** Si el `nombre_oficial` (del pm correcto O del equivocado) lleva número/torre — **Macororó / Tamisa / Brickell / Portofino / Jazmines / Uptown / Sky / Stone / Trivento N** —, candar `id_proyecto_master` en el MISMO UPDATE. Razón: el matching se re-equivoca en estos clusters si la prop vuelve a `sin-match` (re-discovery/reset). Formato canónico **OBJETO** (un string NO protege — ver paso 8):
+
+```sql
+UPDATE propiedades_v2
+SET id_proyecto_master = <pm_correcto>,
+    metodo_match = 'auditor_3.1b_<fecha>',
+    campos_bloqueados = COALESCE(campos_bloqueados,'{}'::jsonb) || jsonb_build_object(
+      'id_proyecto_master', jsonb_build_object(
+        'bloqueado', true, 'por', 'auditor_3.1b', 'fecha', '<fecha>',
+        'razon', 'cluster numerado mal matcheado',
+        'valor_original', id_proyecto_master))   -- guarda el pm equivocado (valores OLD de la fila)
+WHERE id = <prop>;
+```
+
+- **MISMATCH no-cluster** (edificio distinto, sin número en disputa) → corregir **sin candado** (UPDATE simple); el `id_proyecto_master` persiste igual y el matching no lo re-evalúa.
+- **MISMATCH "blando"** (el pm asignado es un placeholder/genérico cuyo GPS coincide, ej. "Edificio Equipetrol Norte - Calle H") → **NO reasignar automático**; marcar para revisión manual (probable que falte renombrar/aliasar el pm, no que el match esté mal).
+
+**ALIAS_FALTANTE → cargar el alias** detectado a `proyectos_master.alias_conocidos` del pm (mejora el matching y baja el ruido del 3.1 en corridas futuras). `REFRESH MATERIALIZED VIEW mv_nombre_proyecto_lookup` tras cargar alias.
+
+**OK / SIN_NOMBRE → ninguna acción.**
+
 #### 3.2 GPS fuera de radio del pm 🔴
 
 ```sql
