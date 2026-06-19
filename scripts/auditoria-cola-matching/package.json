@@ -1,0 +1,19 @@
+{
+  "name": "auditoria-cola-matching",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Audita la cola de matching (matching_sugerencias pendiente_<macrozona>) ANTES de aprobar. Fase mecánica (cola+fetch+pre-filtro) en .mjs; el veredicto de los dudosos lo dan subagentes-lectores (juez LLM). Read-only: genera SQL, no aplica. Multi-macrozona.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "cola": "node audit-cola-matching.mjs",
+    "cola:zn": "node audit-cola-matching.mjs --macrozona=zona-norte",
+    "cola:smoke": "node audit-cola-matching.mjs --macrozona=zona-norte --limit=5"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5"
+  }
+}

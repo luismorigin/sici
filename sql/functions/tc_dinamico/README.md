@@ -1,6 +1,8 @@
 # TC Dinámico - Sistema de Tipo de Cambio
 
-**Versión:** 1.1.1 🔒  
+> ⛔ **DEPRECADO (19-jun-2026).** Este módulo (cache `precio_usd_actualizado`) fue reemplazado por `precio_normalizado()` que normaliza EN VIVO en cada consulta del feed. El cron `recalcular-precios-diario` (corría 7:05 AM) fue **desagendado** y las funciones `recalcular_precios_batch_nocturno`/`recalcular_precio_propiedad` marcadas DEPRECADO. Ningún query del feed consume `precio_usd_actualizado` (verificado: ni RPCs, ni snapshots, ni absorción, ni estudio de mercado). Se deja la doc como referencia histórica. No revivir sin justificación. Ver memoria `project_bug_mig174_tc_paralelo_n8n_incompleta`.
+
+**Versión:** 1.1.1 (deprecado)
 **Archivo:** `modulo_tipo_cambio_dinamico.sql`
 
 ---
@@ -18,7 +20,7 @@ Gestión automática de tipos de cambio (oficial/paralelo) con recálculo de pre
 | Tabla | `auditoria_tipo_cambio` | Historial de cambios TC |
 | Función | `actualizar_tipo_cambio()` | Actualiza TC + marca propiedades |
 | Función | `recalcular_precio_propiedad()` | Recalcula precio individual |
-| Función | `recalcular_precios_batch_nocturno()` | Job batch (3 AM) |
+| Función | `recalcular_precios_batch_nocturno()` | Job batch (cron 7:05 AM, **DESAGENDADO 19-jun**) |
 | Función | `ver_historial_tc()` | Consulta auditoría |
 | Función | `obtener_propiedades_tc_pendiente()` | Lista pendientes |
 | Función | `obtener_tc_actuales()` | Retorna TCs + spread |
@@ -31,7 +33,9 @@ Gestión automática de tipos de cambio (oficial/paralelo) con recálculo de pre
 | Clave | Valor |
 |-------|-------|
 | `tipo_cambio_oficial` | 6.96 |
-| `tipo_cambio_paralelo` | 10.50 |
+| `tipo_cambio_paralelo` | (dato dinámico — consultar `config_global WHERE clave='tipo_cambio_paralelo' AND activo`; binance_p2p lo actualiza a diario. NO hardcodear) |
+
+> Nota: las claves MAYÚSCULAS fósiles (`TIPO_CAMBIO_OFICIAL`/`TIPO_CAMBIO_PARALELO`) fueron **borradas** de `config_global` el 19-jun-2026. Solo existen las minúsculas activas.
 
 ---
 
@@ -81,4 +85,4 @@ Solo recalcula si:
 
 ---
 
-⚠️ **NO MODIFICAR** - Módulo 1 Congelado
+⛔ **DEPRECADO 19-jun-2026** (ver nota al inicio). Antes era "Módulo 1 Congelado / no modificar"; ahora el cron está desagendado y nadie consume su salida.

@@ -502,17 +502,17 @@ detectarTipoCambio()             detectarTipoCambio()
 SELECT valor FROM config_global WHERE clave = 'tipo_cambio_paralelo'
 ```
 
-**Estado actual de config_global (10 Mar 2026):**
+**Estado de config_global (actualizado 19-jun-2026):** solo existen 2 claves de TC, ambas minúsculas y activas:
 
-| id | clave | valor | activo | actualizado_por | fecha_actualizacion |
-|----|-------|-------|--------|-----------------|---------------------|
-| 3 | `tipo_cambio_oficial` | 6.96 | true | seed_data | 2025-12-13 |
-| 4 | `tipo_cambio_paralelo` | **9.454** | true | binance_p2p | 2026-03-10 08:00 |
-| 7 | `umbral_discrepancia_tc` | 0.05 | true | seed_data | 2025-12-13 |
-| 1 | `TIPO_CAMBIO_OFICIAL` | 6.96 | **false** | — | 2025-11-21 |
-| 2 | `TIPO_CAMBIO_PARALELO` | 10.4 | **false** | — | 2025-11-24 |
+| id | clave | valor | activo | actualizado_por |
+|----|-------|-------|--------|-----------------|
+| 3 | `tipo_cambio_oficial` | 6.96 | true | seed_data |
+| 4 | `tipo_cambio_paralelo` | **dato dinámico — NO hardcodear; consultar la fila viva** | true | binance_p2p (diario) |
+| 7 | `umbral_discrepancia_tc` | 0.05 | true | seed_data |
 
-Las claves UPPERCASE (ids 1 y 2) estan desactivadas desde migracion 174 (7 Mar 2026). Las activas son lowercase.
+El `tipo_cambio_paralelo` lo actualiza `binance_p2p` a diario — para el valor vigente: `SELECT valor FROM config_global WHERE clave='tipo_cambio_paralelo' AND activo`. **Las claves MAYÚSCULAS fósiles (ids 1 y 2) — desactivadas por la migración 174 (7-mar) — fueron BORRADAS el 19-jun-2026.** Ya no existen.
+
+> **Paralelo en ALQUILER (19-jun-2026) — NO es la normalización de venta.** El merge de alquiler sigue **sin** TC paralelo y NO usa `precio_normalizado()` (esa función es solo de venta). Lo que cambió es la **vista** `v_mercado_alquiler`, que deriva `precio_mensual = ROUND(precio_mensual_bob / CASE WHEN solo_tc_paralelo THEN <tc_paralelo vivo> ELSE 6.96 END, 2)`: por defecto divide por el oficial (6.96), salvo los alquileres marcados `solo_tc_paralelo=true` (cotizados en USD billete al paralelo, ej. prop 1970) que dividen por el paralelo para que el USD del feed no se infle. Es un cálculo de display en la vista, no normalización canónica. El tag `solo_tc_paralelo` se setea manualmente por ahora (a futuro, el LLM de enrichment de alquiler podría detectarlo).
 
 ### 11.2 Workflow n8n: tc_dinamico_binance
 
@@ -624,13 +624,15 @@ precio_normalizado(100000, 'paralelo') = 100000 * 9.60 / 6.96 = $137,931
 
 Esto es **intencional**: los precios comparables deben reflejar el TC del momento para ser utiles en decisiones de mercado. Un departamento que cuesta "$100K billete" vale mas en USD oficial cuando el paralelo sube.
 
-**`precio_usd_actualizado`** es un campo interno que se recalcula via `recalcular_precio_propiedad()` cuando el TC cambia. Pero ningun query de mercado lo consume — solo `precio_normalizado()` es la funcion de consulta.
+**`precio_usd_actualizado`** es un campo interno que se recalculaba via `recalcular_precio_propiedad()` cuando el TC cambiaba. Pero ningun query de mercado lo consume — solo `precio_normalizado()` es la funcion de consulta.
 
-### 11.7 Recalculo batch nocturno
+> ⛔ **El módulo de recálculo (secciones 11.7–11.9) está DEPRECADO desde el 19-jun-2026.** El cron `recalcular-precios-diario` (corría 7:05 AM) fue **desagendado** y `recalcular_precios_batch_nocturno`/`recalcular_precio_propiedad` marcadas DEPRECADO. Era un cache (`precio_usd_actualizado`) superado por `precio_normalizado()` en vivo; nadie consume su salida (verificado: ni RPCs del feed, ni snapshots de absorción, ni `buscar_acm`, ni el estudio de mercado). Lo de abajo queda como referencia histórica. Ver `sql/functions/tc_dinamico/README.md` y memoria `project_bug_mig174_tc_paralelo_n8n_incompleta`.
+
+### 11.7 Recalculo batch nocturno (DEPRECADO 19-jun-2026)
 
 **Funcion:** `recalcular_precios_batch_nocturno(p_limite DEFAULT 1000)`
 
-Se ejecuta en un job separado (3:00 AM aprox) despues de que el merge termina. Procesa todas las propiedades marcadas con `requiere_actualizacion_precio = TRUE`:
+Se ejecutaba en un job separado (cron `recalcular-precios-diario`, 7:05 AM — desagendado 19-jun) despues de que el merge termina. Procesa todas las propiedades marcadas con `requiere_actualizacion_precio = TRUE`:
 
 1. Para cada propiedad marcada:
    - Lee el TC original usado (de `datos_json_enrichment.tipo_cambio_paralelo_usado`)

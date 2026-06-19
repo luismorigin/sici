@@ -177,3 +177,31 @@ Formato ADR (Architecture Decision Record): contexto → opciones → decisión 
 
 **Vinculado a:** ADR-008 (Camino A: zonas hermanas), ADR-009 (visión multi-macrozona).
 
+## ADR-011 — Auditar la cola de matching con un agente-lector, en skill separada
+
+**Fecha:** 19-jun-2026.
+
+**Contexto:** la cola HITL multi-macrozona (`matching_sugerencias.estado='pendiente_<macrozona>'`) acumulaba sugerencias del motor que el score/GPS/token NO bastan para aprobar. Auditando ZN se confirmó que aprobar por score (incluso 90-95) mete decenas de falsos positivos (atractores tipo "CONDOMINIO ONE", clusters numerados Macororó/Brickell). La única señal confiable es **leer el anuncio**.
+
+**Decisión:** construir `/audit-cola-matching` como **skill SEPARADA** (no un modo `--cola` dentro de las skills de feed), porque la cola y el feed son problemas opuestos (la cola busca el match correcto de props SIN match; el feed busca FP en props YA matcheadas). Comparten solo el lector (`lib/lector.mjs`) y el pre-filtro (`lib/atractores.mjs`).
+
+**Principio rector (clave):** el `.mjs` es FILTRO, no juez. Hace lo mecánico (trae la cola, fetchea C21 `?json=true`/Remax `data-page`, pre-clasifica por atractor/cluster/sin-nombre) y ORDENA. El **VEREDICTO lo dan subagentes-lectores (juez LLM)** que leen el anuncio — NUNCA el script. Si esto degradara a "el script clasifica y escupe SQL", vuelve el bug del score-como-juez que la skill existe para evitar.
+
+**Implementación:** `scripts/auditoria-cola-matching/` + instalada en `.claude/commands/`. Multi-macrozona (`--macrozona=zona-norte|equipetrol|urubo`; `equipetrol`→`estado='pendiente'`). Genera SQL (UPDATE directo + candado `IS NULL`, NUNCA `aplicar_matches_aprobados`), read-only. Validada en producción 19-jun: cola ZN 33→0, Equipetrol 17→10, 3 pm nuevos.
+
+**Consecuencias:** método replicable a Urubó/Polanco sin código nuevo. El lector (doble fetcher) y el detector de atractores quedan reutilizables por las skills `/audit-feed-*`. Lección transversal validada: el repo n8n ≠ producción, y verificar empíricamente contra la FUENTE correcta (API vs HTML) antes de "arreglar".
+
+**Vinculado a:** ADR-009 (multi-macrozona), ADR-010 (macrozonas hermanas).
+
+## ADR-012 — Paralelo en alquiler vía tag en la vista, NO normalización
+
+**Fecha:** 19-jun-2026.
+
+**Contexto:** algunos alquileres se cotizan en USD billete al paralelo (ej. "$500, pago en Bs al cambio paralelo"). El modelo de alquiler deriva `precio_mensual = bob/6.96` (oficial) fijo, lo que obligaba a elegir entre Bs-real o USD-correcto (no ambos).
+
+**Decisión:** marcar esos alquileres con el tag **`solo_tc_paralelo=true`** (campo booleano que ya existía, limpio en alquiler) y que **la vista** `v_mercado_alquiler` divida por el TC paralelo en ese caso: `precio_mensual = bob / CASE WHEN solo_tc_paralelo THEN <tc_paralelo vivo> ELSE 6.96 END`. **NO es la normalización de venta** (`precio_normalizado()` es solo de venta) ni se toca el merge de alquiler — el cálculo vive solo en la vista.
+
+**Por qué el tag y no `tipo_cambio_detectado`:** ese campo está contaminado en alquiler (241/266 con `'paralelo'` espurio heredado de migraciones de venta). `solo_tc_paralelo` estaba en 0 → backward-compatible (0 props cambian al desplegar la vista; testeado).
+
+**Consecuencias:** Bs real + USD correcto a la vez. Hoy ~1 prop marcada (1970); el tag se setea manual. A futuro el LLM de enrichment de alquiler podría detectarlo. Ver `docs/arquitectura/TIPO_CAMBIO_SICI.md` y memoria `project_bug_mig174_tc_paralelo_n8n_incompleta`.
+

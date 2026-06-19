@@ -8,6 +8,17 @@
 
 ---
 
+## ✅ Estado 19-jun-2026 — matching ZN + skill de cola
+
+- **Skill `/audit-cola-matching` construida y validada en producción** (ADR-011): audita la cola HITL con agente-lector. **Cola `pendiente_zona_norte` 33→0**, Equipetrol 17→10. 3 pm nuevos (518 Galil Parque I, 519 Brickell II, 520 Torre Sirari). Match rate venta ZN ~87%, alquiler ~83%.
+- **Pendientes que salieron:**
+  - 🟡 **Las 10 sin-nombre de Equipetrol** quedan en el HITL (`/admin/supervisor/matching`) para revisión GPS visual del director — ninguna tiene nombre en ninguna fuente; el GPS dominante solo prioriza, no aprueba (no auto-matchear por GPS solo).
+  - 🟡 **Fase 2 condominios** (otro frente): FK `id_condominio_master` en `propiedades_v2` + matcher (nombre+GPS) + vista `v_mercado_casas` + feed. La tabla `condominios_master` (mig 260, 36 condominios) ya existe, aislada.
+  - 🟢 **Extender la skill de cola a Urubó/Polanco** cuando se abran esas colas (`pendiente_urubo`, etc.) — sin código nuevo, solo `--macrozona`.
+  - 🟢 **Bug `land_m2` Remax casas/terrenos** corregido en n8n (19-jun) → listo para capturar terrenos al extender a Urubó. Ver `docs/backlog/DEUDA_TECNICA.md`.
+
+---
+
 ## 🔴 #15 — Aislamiento ZN: las superficies "Equipetrol" filtran por zona (CRÍTICO, descubierto 31-may)
 
 **Hallazgo:** al meter ZN en producción (dark launch venta + ahora alquiler), las vistas `v_mercado_venta`/`v_mercado_alquiler` y muchas queries dejaron de ser "solo Equipetrol" — ahora traen EQ+ZN mezclados (v_mercado_venta: 388 EQ + 401 ZN; v_mercado_alquiler: 144 EQ + 103 ZN). **El feed público YA exponía ZN** (probado: la carga inicial de `/ventas` traía 190 props ZN de 500). No es nuevo de hoy: venta ZN lo viene exponiendo desde su dark launch; el alquiler de hoy sumó. Lo detectó una pregunta del director ("¿no se contaminan mis audits de Equipetrol?").

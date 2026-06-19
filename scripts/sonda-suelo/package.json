@@ -1,0 +1,11 @@
+{
+  "name": "sonda-suelo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sonda standalone de mercado de suelo (casas/terrenos) por zona. Read-only respecto a producción.",
+  "scripts": {
+    "sonda": "node run.mjs"
+  },
+  "engines": { "node": ">=20" }
+}

@@ -1,0 +1,281 @@
+[
+  {
+    "nombre": "Bosques de la Colina",
+    "centroide": {
+      "lat": -17.700463,
+      "lon": -63.189682
+    },
+    "osm": null,
+    "dist_m": null,
+    "dir_osm": null,
+    "estado": "no en OSM"
+  },
+  {
+    "nombre": "La Pradera",
+    "centroide": {
+      "lat": -17.700587,
+      "lon": -63.178033
+    },
+    "osm": {
+      "lat": -17.7011631,
+      "lon": -63.1781916
+    },
+    "dist_m": 66,
+    "dir_osm": "Condominio La Pradera, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "✅ coincide (66m)"
+  },
+  {
+    "nombre": "La Fontana Riviera I",
+    "centroide": {
+      "lat": -17.694587,
+      "lon": -63.130077
+    },
+    "osm": {
+      "lat": -17.6943778,
+      "lon": -63.1303408
+    },
+    "dist_m": 36,
+    "dir_osm": "La Fontana Riviera I, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "✅ coincide (36m)"
+  },
+  {
+    "nombre": "La Fontana Family Club",
+    "centroide": {
+      "lat": -17.687905,
+      "lon": -63.139767
+    },
+    "osm": null,
+    "dist_m": null,
+    "dir_osm": null,
+    "estado": "no en OSM"
+  },
+  {
+    "nombre": "Paraiso Norte 1",
+    "centroide": {
+      "lat": -17.684315,
+      "lon": -63.178615
+    },
+    "osm": {
+      "lat": -17.7337116,
+      "lon": -63.1592042
+    },
+    "dist_m": 5865,
+    "dir_osm": "Calle Paraiso, Metalmec, Norte, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "⚠️ discrepa (5865m)"
+  },
+  {
+    "nombre": "Bavaria",
+    "centroide": {
+      "lat": -17.713225,
+      "lon": -63.16507
+    },
+    "osm": {
+      "lat": -17.7136138,
+      "lon": -63.1644625
+    },
+    "dist_m": 78,
+    "dir_osm": "Condominio Bavaria, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "✅ coincide (78m)"
+  },
+  {
+    "nombre": "Los Jardines",
+    "centroide": {
+      "lat": -17.710106,
+      "lon": -63.169028
+    },
+    "osm": {
+      "lat": -17.6800527,
+      "lon": -63.1501658
+    },
+    "dist_m": 3894,
+    "dir_osm": "Condominio Sevilla Los Jardines, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "⚠️ discrepa (3894m)"
+  },
+  {
+    "nombre": "Almería Sumuque",
+    "centroide": {
+      "lat": -17.698631,
+      "lon": -63.166987
+    },
+    "osm": {
+      "lat": -17.6978858,
+      "lon": -63.1664637
+    },
+    "dist_m": 100,
+    "dir_osm": "Condomio Almeria Sumuque, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "✅ coincide (100m)"
+  },
+  {
+    "nombre": "Hamburgo Norte",
+    "centroide": {
+      "lat": -17.713676,
+      "lon": -63.162933
+    },
+    "osm": {
+      "lat": -17.7131989,
+      "lon": -63.1630516
+    },
+    "dist_m": 55,
+    "dir_osm": "Condominio Hamburgo Norte, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "✅ coincide (55m)"
+  },
+  {
+    "nombre": "La Hacienda 2",
+    "centroide": {
+      "lat": -17.740103,
+      "lon": -63.162588
+    },
+    "osm": {
+      "lat": -17.7399197,
+      "lon": -63.1662924
+    },
+    "dist_m": 393,
+    "dir_osm": "Condominio La Hacienda, Norte, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "✅ coincide (393m)"
+  },
+  {
+    "nombre": "Portales del Norte",
+    "centroide": {
+      "lat": -17.684893,
+      "lon": -63.15333
+    },
+    "osm": null,
+    "dist_m": null,
+    "dir_osm": null,
+    "estado": "no en OSM"
+  },
+  {
+    "nombre": "Sevilla Norte II",
+    "centroide": {
+      "lat": -17.695871,
+      "lon": -63.15804
+    },
+    "osm": {
+      "lat": -17.6950062,
+      "lon": -63.1579472
+    },
+    "dist_m": 97,
+    "dir_osm": "Condominio Sevilla Norte II, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "✅ coincide (97m)"
+  },
+  {
+    "nombre": "Valle Norte II",
+    "centroide": {
+      "lat": -17.704191,
+      "lon": -63.168959
+    },
+    "osm": {
+      "lat": -17.7213037,
+      "lon": -63.1706531
+    },
+    "dist_m": 1911,
+    "dir_osm": "Condominio El Valle, Norte, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "⚠️ discrepa (1911m)"
+  },
+  {
+    "nombre": "Alameda Fontana",
+    "centroide": {
+      "lat": -17.685895,
+      "lon": -63.143643
+    },
+    "osm": null,
+    "dist_m": null,
+    "dir_osm": null,
+    "estado": "no en OSM"
+  },
+  {
+    "nombre": "Barcelona",
+    "centroide": {
+      "lat": -17.695585,
+      "lon": -63.155981
+    },
+    "osm": {
+      "lat": -17.6950882,
+      "lon": -63.155901
+    },
+    "dist_m": 56,
+    "dir_osm": "Condominio Barcelona, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "✅ coincide (56m)"
+  },
+  {
+    "nombre": "Campo Verde",
+    "centroide": {
+      "lat": -17.720973,
+      "lon": -63.172546
+    },
+    "osm": {
+      "lat": -17.7184161,
+      "lon": -63.1686386
+    },
+    "dist_m": 502,
+    "dir_osm": "Condominio Campo Verde, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "✅ coincide (502m)"
+  },
+  {
+    "nombre": "Palmeras II",
+    "centroide": {
+      "lat": -17.697466,
+      "lon": -63.176108
+    },
+    "osm": {
+      "lat": -17.6965614,
+      "lon": -63.1801654
+    },
+    "dist_m": 441,
+    "dir_osm": "Condominio Las Palmeras de Asaí 2, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "✅ coincide (441m)"
+  },
+  {
+    "nombre": "Florencia",
+    "centroide": {
+      "lat": -17.735229,
+      "lon": -63.164649
+    },
+    "osm": {
+      "lat": -17.7462676,
+      "lon": -63.1790985
+    },
+    "dist_m": 1962,
+    "dir_osm": "Pulpería Doña Florencia, Radial 27, ENDE, Norte Interno, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "⚠️ discrepa (1962m)"
+  },
+  {
+    "nombre": "Versalles",
+    "centroide": {
+      "lat": -17.697588,
+      "lon": -63.170357
+    },
+    "osm": {
+      "lat": -17.6985028,
+      "lon": -63.1707676
+    },
+    "dist_m": 111,
+    "dir_osm": "Condominio Versalles, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "✅ coincide (111m)"
+  },
+  {
+    "nombre": "Sevillas Las Terrazas II",
+    "centroide": {
+      "lat": -17.682951,
+      "lon": -63.14572
+    },
+    "osm": null,
+    "dist_m": null,
+    "dir_osm": null,
+    "estado": "no en OSM"
+  },
+  {
+    "nombre": "San Andrés del Norte",
+    "centroide": {
+      "lat": -17.723507,
+      "lon": -63.160486
+    },
+    "osm": {
+      "lat": -17.7213759,
+      "lon": -63.1566992
+    },
+    "dist_m": 466,
+    "dir_osm": "Condominio San Andrés Norte, 23 de Noviembre, Norte, Municipio Santa Cruz de la Sierra, Provincia Andrés Ibáñez, Santa Cruz, Bolivia",
+    "estado": "✅ coincide (466m)"
+  }
+]

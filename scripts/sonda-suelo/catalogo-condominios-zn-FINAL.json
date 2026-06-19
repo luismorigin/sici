@@ -1,0 +1,792 @@
+{
+  "generado": "2026-06-18T21:04:49.644Z",
+  "total": 36,
+  "con_gps_manual": 26,
+  "con_amenidades": 36,
+  "nuevos_sin_amenidades": 0,
+  "catalogo": [
+    {
+      "nombre": "Portales del Norte",
+      "gps": {
+        "lat": -17.685713887133215,
+        "lon": -63.15270765939941
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "sala de eventos",
+        "piscina comun",
+        "sauna",
+        "gimnasio",
+        "acceso controlado"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Alameda Fontana",
+      "gps": {
+        "lat": -17.686821190164352,
+        "lon": -63.14379393183785
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "cancha polifuncional",
+        "piscina comun",
+        "parque infantil",
+        "areas verdes",
+        "áreas sociales"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Sevilla Las Terrazas 2",
+      "gps": {
+        "lat": -17.680745807123348,
+        "lon": -63.146039670655455
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina comun",
+        "cancha de futbol",
+        "cancha de tenis",
+        "cancha polifuncional",
+        "club house",
+        "gimnasio",
+        "seguridad 24h",
+        "piscina",
+        "jacuzzi",
+        "sauna",
+        "canchas de tenis y fútbol",
+        "salón de té/eventos",
+        "supermercado interno",
+        "churrasquera",
+        "parque infantil",
+        "áreas verdes"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Sevilla Los Jardines",
+      "gps": {
+        "lat": -17.681427194968208,
+        "lon": -63.148823030277796
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina semiolimpica",
+        "piscina para niños",
+        "canchas de tenis",
+        "canchas de futbol",
+        "canchas polifuncionales",
+        "gimnasio",
+        "sauna",
+        "jacuzzi",
+        "salones de eventos",
+        "churrasqueras",
+        "parque infantil",
+        "areas verdes",
+        "supermercado",
+        "circuito de jogging",
+        "guardería",
+        "salon de juegos"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://bolivia.bienesonline.com/ficha-condominio-alquiler-santa-cruz-de-la-sierra-santa-cruz_COA6456.php"
+    },
+    {
+      "nombre": "Sevilla Pinatar",
+      "gps": {
+        "lat": -17.67924973659209,
+        "lon": -63.14443339863018
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina adultos",
+        "piscina para niños",
+        "canchas de tenis",
+        "canchas polifuncionales",
+        "canchas de futbol sintetico",
+        "gimnasio",
+        "sauna seco",
+        "sauna vapor",
+        "salón de eventos",
+        "churrasqueras",
+        "parque infantil",
+        "areas verdes",
+        "supermercado",
+        "guardería",
+        "club house",
+        "estacionamiento para visitas"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://www.ultracasas.com/inmueble/casa-en-alquiler-entre-8vo-y-9no-anillo-santa-cruz-de-la-sierra-578511"
+    },
+    {
+      "nombre": "Sevilla El Bosque",
+      "gps": {
+        "lat": -17.67798817751489,
+        "lon": -63.14301373017035
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina recreativa",
+        "piscina de competicion",
+        "piscina para niños con tobogan",
+        "canchas de tenis",
+        "canchas de futbol",
+        "canchas de basquetbol",
+        "canchas de voleibol",
+        "canchas sinteticas",
+        "gimnasio",
+        "sauna seco",
+        "sauna vapor",
+        "jacuzzi",
+        "churrasqueras",
+        "salón de eventos",
+        "parque infantil",
+        "areas verdes / bosque",
+        "supermercado",
+        "guardería",
+        "anfiteatro exterior",
+        "cajero automatico"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://c21.com.bo/en_us/propiedad/77757"
+    },
+    {
+      "nombre": "Sevilla Las Terrazas",
+      "gps": {
+        "lat": -17.682875610250026,
+        "lon": -63.15370371366094
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina adultos",
+        "piscina para niños",
+        "canchas de tenis",
+        "canchas de futbol",
+        "canchas de basquetbol",
+        "canchas de voleibol",
+        "gimnasio",
+        "sauna seco",
+        "sauna vapor",
+        "hidroterapia",
+        "churrasqueras cubiertas",
+        "salón de eventos",
+        "parque infantil",
+        "areas verdes",
+        "supermercado",
+        "guardería"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://c21.com.bo/propiedad/73275_casa-en-alquiler-en-condominio-sevilla-las-terrazas-1"
+    },
+    {
+      "nombre": "La Fontana Riviera 1",
+      "gps": {
+        "lat": -17.69619752465895,
+        "lon": -63.130760681646954
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina comun",
+        "gimnasio",
+        "sala de eventos",
+        "parque infantil",
+        "cancha polifuncional",
+        "seguridad 24h",
+        "piscinas",
+        "cancha de fútbol",
+        "cine",
+        "parques infantiles",
+        "salón de eventos"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "La Fontana Riviera 2",
+      "gps": {
+        "lat": -17.69663402374161,
+        "lon": -63.131254106210235
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina con juegos de agua",
+        "club house",
+        "canchas de futbol sintetico",
+        "canchas de futbol natural",
+        "canchas polifuncionales",
+        "canchas de tenis",
+        "sala de cine",
+        "calistenia",
+        "gimnasio",
+        "churrasqueras cubiertas",
+        "salones sociales",
+        "micromercado",
+        "parques infantiles",
+        "transporte privado"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://c21.com.bo/propiedad/80604_casa-en-venta-condominio-la-fontana-riviera-2"
+    },
+    {
+      "nombre": "Sevilla Real",
+      "gps": {
+        "lat": -17.69455162077953,
+        "lon": -63.14197431730065
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina semiolimpica",
+        "piscina para niños",
+        "solarium",
+        "jacuzzi cubierto",
+        "jacuzzi exterior",
+        "canchas de tenis",
+        "canchas de futbol",
+        "canchas de basquetbol",
+        "gimnasio de aparatos",
+        "gimnasio de aerobics",
+        "sauna seco",
+        "sauna vapor",
+        "churrasqueras cubiertas",
+        "salon multiusos",
+        "cocina gourmet",
+        "parque infantil",
+        "areas verdes",
+        "salon de juegos",
+        "supermercado",
+        "restaurante",
+        "guardería",
+        "circuito de jogging",
+        "anfiteatro"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://www.infocasas.com.bo/proyectos/sevilla-real-condominio-privado"
+    },
+    {
+      "nombre": "Sevilla Norte I",
+      "gps": {
+        "lat": -17.696061286071725,
+        "lon": -63.15442674446833
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina",
+        "canchas de tenis",
+        "canchas de futbol",
+        "canchas de basquetbol",
+        "canchas de voleibol",
+        "gimnasio",
+        "sauna seco",
+        "sauna vapor",
+        "churrasqueras",
+        "areas verdes"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://c21.com.bo/propiedad/55217_condominio-sevilla-norte-1-3-dormi-con-dependencia-completa"
+    },
+    {
+      "nombre": "Sevilla Norte II",
+      "gps": {
+        "lat": -17.695860504792204,
+        "lon": -63.15797944688464
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "cancha de tenis",
+        "cancha de futbol",
+        "piscina comun",
+        "sauna",
+        "gimnasio",
+        "sala de eventos",
+        "parque infantil",
+        "piscina adultos",
+        "piscina niños",
+        "tenis",
+        "cancha de fútbol",
+        "cancha polifuncional",
+        "jacuzzi",
+        "salón de eventos",
+        "minimarket",
+        "churrasquera",
+        "seguridad 24h"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Barcelona",
+      "gps": {
+        "lat": -17.69543742921835,
+        "lon": -63.15590201920053
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina comun",
+        "sauna",
+        "gimnasio",
+        "sala de eventos",
+        "parque infantil",
+        "cancha polifuncional",
+        "piscina",
+        "churrasquera",
+        "club house",
+        "seguridad 24h"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Barceló Residence Club",
+      "gps": {
+        "lat": -17.68961018948805,
+        "lon": -63.161363059987615
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscinas (2)",
+        "club house (2)",
+        "canchas polifuncionales",
+        "canchas de futbol",
+        "canchas de voleibol",
+        "gimnasio",
+        "churrasqueras",
+        "salón de eventos",
+        "parque infantil",
+        "areas verdes / jardines"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://mapcarta.com/W407714874"
+    },
+    {
+      "nombre": "Versalles",
+      "gps": {
+        "lat": -17.69923630718445,
+        "lon": -63.16895850256825
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina",
+        "canchas polifuncionales",
+        "sauna seco y vapor",
+        "gimnasio",
+        "churrasquera",
+        "parque infantil",
+        "plaza",
+        "seguridad 24h"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "La Pradera",
+      "gps": {
+        "lat": -17.701193451102245,
+        "lon": -63.17783225828186
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina comun",
+        "sauna",
+        "gimnasio",
+        "cancha de futbol",
+        "cancha polifuncional",
+        "parque infantil",
+        "sala de eventos",
+        "seguridad 24h",
+        "piscina",
+        "sauna seco",
+        "salón multiusos",
+        "churrasqueras",
+        "parques infantiles (2)",
+        "cancha de fútbol",
+        "sala de billar y metegol"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Brisas del Norte I",
+      "gps": {
+        "lat": -17.70259095268365,
+        "lon": -63.17850018601852
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina",
+        "gimnasio",
+        "sauna (vapor)",
+        "2 canchas polifuncionales",
+        "3 churrasqueras",
+        "salon de eventos",
+        "club house",
+        "parque infantil",
+        "seguridad 24h"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://www.infocasas.com.bo/casa-en-venta-en-condominio-brisas-del-norte-i/191911201"
+    },
+    {
+      "nombre": "Colonial Norte",
+      "gps": {
+        "lat": -17.702132040405235,
+        "lon": -63.17426253461941
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina (adultos y ninos)",
+        "gimnasio",
+        "cancha polifuncional",
+        "churrasquera",
+        "salon de eventos",
+        "parque infantil",
+        "seguridad 24h"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://c21.com.bo/v/resultados/tipo_casa-en-condominio/operacion_venta/en-pais_bolivia/en-municipio_santa-cruz-norte"
+    },
+    {
+      "nombre": "Valle Norte II",
+      "gps": {
+        "lat": -17.70367395247375,
+        "lon": -63.16878771148943
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina",
+        "club house",
+        "áreas verdes",
+        "parque infantil",
+        "acceso controlado"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Riviera II",
+      "gps": {
+        "lat": -17.705031918454665,
+        "lon": -63.186930516326996
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina (con juegos acuaticos para ninos)",
+        "club house",
+        "2 canchas de futbol (sintetica y cesped natural)",
+        "cancha de tenis",
+        "3 parques infantiles",
+        "2 salones de eventos (con parrilla y refrigerador)",
+        "4 churrasqueras techadas",
+        "sala de cine",
+        "gimnasio (calistenia al aire libre)",
+        "supermercado (Fidalga)",
+        "servicio de transporte privado",
+        "seguridad 24h"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://www.infocasas.com.bo/casa-en-alquiler-condominio-la-fontana-riviera-2/190364578"
+    },
+    {
+      "nombre": "Riviera del Remanso I",
+      "gps": {
+        "lat": -17.706414720186302,
+        "lon": -63.18487513497416
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina (adultos y ninos)",
+        "sauna (seco y vapor)",
+        "gimnasio",
+        "canchas deportivas (tenis, futbol, multicancha)",
+        "parque infantil",
+        "churrasquera",
+        "salon de eventos",
+        "areas verdes",
+        "seguridad 24h"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://www.rivieradelremanso.com/"
+    },
+    {
+      "nombre": "Jardines de la Riviera",
+      "gps": {
+        "lat": -17.707668042397987,
+        "lon": -63.18665071653461
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "areas verdes",
+        "seguridad 24h"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://www.facebook.com/jardinesdelarivierabolivia/"
+    },
+    {
+      "nombre": "Riviera del Remanso A",
+      "gps": {
+        "lat": -17.707696723566272,
+        "lon": -63.18467866553561
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "canchas deportivas",
+        "zona BBQ",
+        "jardin",
+        "estacionamiento de visitas",
+        "acceso controlado",
+        "seguridad 24h"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://www.buscocasita.com/casa-en-venta-riviera-del-remanso-2_229294.html"
+    },
+    {
+      "nombre": "Riviera del Remanso - Paraíso 1",
+      "gps": {
+        "lat": -17.70875782961096,
+        "lon": -63.18775086872514
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina",
+        "salon de eventos",
+        "bano de visitas (en area comun)",
+        "parque infantil",
+        "seguridad 24h"
+      ],
+      "nuevo": false,
+      "fuente_amenidades": "web",
+      "url": "https://casasenbolivia.com/propiedades-anunciadas/ultimas-2-casas-en-%F0%9D%90%82%F0%9D%90%A8%F0%9D%90%A7%F0%9D%90%9D%F0%9D%90%A8%F0%9D%90%A6%F0%9D%90%A2%F0%9D%90%A7%F0%9D%90%A2%F0%9D%90%A8-%F0%9D%90%91%F0%9D%90%A2%F0%9D%90%AF%F0%9D%90%A2%F0%9D%90%9E/"
+    },
+    {
+      "nombre": "Los Jardines",
+      "gps": {
+        "lat": -17.710370676485613,
+        "lon": -63.169240778000756
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina",
+        "parque infantil",
+        "areas verdes",
+        "seguridad 24h"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Florencia",
+      "gps": {
+        "lat": -17.734816541373334,
+        "lon": -63.16475919749163
+      },
+      "fuente_gps": "founder_gmaps",
+      "amenidades": [
+        "piscina comun",
+        "piscina",
+        "salón de eventos",
+        "sala de juegos",
+        "churrasquera",
+        "estacionamiento amplio",
+        "seguridad 24h",
+        "elevadores"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Bosques de la Colina",
+      "gps": {
+        "lat": -17.700463,
+        "lon": -63.189682
+      },
+      "fuente_gps": "centroide_confirmado_founder",
+      "amenidades": [
+        "club house",
+        "piscina comun",
+        "sauna",
+        "areas verdes",
+        "piscina",
+        "churrasquera",
+        "parque infantil",
+        "bicisendas (5 km)",
+        "áreas verdes"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Paraiso Norte 1",
+      "gps": {
+        "lat": -17.684315,
+        "lon": -63.178615
+      },
+      "fuente_gps": "centroide_confirmado_founder",
+      "amenidades": [
+        "piscina",
+        "churrasquera",
+        "parque infantil"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "La Fontana Family Club",
+      "gps": {
+        "lat": -17.687905,
+        "lon": -63.139767
+      },
+      "fuente_gps": "centroide_confirmado_founder",
+      "amenidades": [
+        "cancha polifuncional",
+        "piscina comun",
+        "gimnasio",
+        "sauna",
+        "sala de eventos",
+        "areas verdes",
+        "piscina semi-olímpica",
+        "parque acuático",
+        "cancha de tenis",
+        "cine (61 butacas)",
+        "churrasqueras",
+        "salones de eventos",
+        "patio gastronómico",
+        "supermercado",
+        "guardería",
+        "consultorio dental",
+        "bus privado"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Bavaria",
+      "gps": {
+        "lat": -17.713225,
+        "lon": -63.16507
+      },
+      "fuente_gps": "verificado_web_sin_revision_manual",
+      "amenidades": [
+        "piscina",
+        "cancha de futbol",
+        "parque infantil",
+        "sala de eventos",
+        "club house",
+        "churrasqueras",
+        "parques infantiles",
+        "cancha de fútbol",
+        "cancha de básquet"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Almería Sumuque",
+      "gps": {
+        "lat": -17.698631,
+        "lon": -63.166987
+      },
+      "fuente_gps": "verificado_web_sin_revision_manual",
+      "amenidades": [
+        "piscina comun",
+        "cancha polifuncional",
+        "parque infantil",
+        "club house",
+        "piscina",
+        "cancha de uso múltiple",
+        "salón de eventos",
+        "sala de reuniones",
+        "seguridad 24h"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Hamburgo Norte",
+      "gps": {
+        "lat": -17.713676,
+        "lon": -63.162933
+      },
+      "fuente_gps": "verificado_web_sin_revision_manual",
+      "amenidades": [
+        "piscina comun",
+        "parque infantil",
+        "seguridad 24h",
+        "acceso controlado"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "La Hacienda 2",
+      "gps": {
+        "lat": -17.740103,
+        "lon": -63.162588
+      },
+      "fuente_gps": "verificado_web_sin_revision_manual",
+      "amenidades": [
+        "piscina climatizada",
+        "piscina exterior",
+        "tenis",
+        "cancha de básquetbol",
+        "cancha de fútbol",
+        "salón de eventos",
+        "sauna",
+        "parque infantil",
+        "gimnasio",
+        "seguridad 24h"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Campo Verde",
+      "gps": {
+        "lat": -17.720973,
+        "lon": -63.172546
+      },
+      "fuente_gps": "verificado_web_sin_revision_manual",
+      "amenidades": [
+        "cancha polifuncional",
+        "parque infantil",
+        "piscina privada (por unidad)",
+        "churrasquera",
+        "áreas verdes"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "Palmeras II",
+      "gps": {
+        "lat": -17.697466,
+        "lon": -63.176108
+      },
+      "fuente_gps": "verificado_web_sin_revision_manual",
+      "amenidades": [
+        "piscina comun",
+        "sala de eventos",
+        "gimnasio",
+        "areas verdes",
+        "piscina (adultos y niños)",
+        "club house",
+        "churrasquera",
+        "parque infantil",
+        "zona de mascotas",
+        "senderos peatonales"
+      ],
+      "nuevo": false
+    },
+    {
+      "nombre": "San Andrés del Norte",
+      "gps": {
+        "lat": -17.723507,
+        "lon": -63.160486
+      },
+      "fuente_gps": "verificado_web_sin_revision_manual",
+      "amenidades": [
+        "churrasquera",
+        "seguridad"
+      ],
+      "nuevo": false
+    }
+  ]
+}

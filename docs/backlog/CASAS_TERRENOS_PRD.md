@@ -1,6 +1,62 @@
 # PRD: Casas y Terrenos en Equipetrol
 
 > Status: Fase 1 ✓ + Fase 2 ✓ completadas | Autor: Lucho + Claude | Fecha: 2026-04-17 (Fases 1-2)
+> Actualización 2026-06-18: sonda de expansión a Zona Norte + Urubó (ver sección 0).
+
+---
+
+## 0. Sonda de expansión ZN + Urubó (18 jun 2026)
+
+Antes de escalar el pipeline fuera de Equipetrol se corrió una **sonda standalone**
+(`scripts/sonda-suelo/`, read-only, no toca producción) para medir dos incógnitas: **volumen**
+real y **suciedad** de los datos del broker. Resultados:
+
+**Volumen (únicos, polígono real + dedup cross-portal):**
+
+| Zona | Terrenos | Casas | Carácter |
+|---|---:|---:|---|
+| Zona Norte | 153 | **264** | Consolidada — dominan casas (mayoría vivienda final, ~17% demolibles) |
+| Urubó | **179** | 44 | Expansión — dominan terrenos (suelo puro / loteamientos) |
+
+Contra ~38 en Equipetrol. El volumen justifica la expansión. Precio/m² terreno coherente entre
+fuentes: ZN ~$236-250, Urubó ~$157-180.
+
+**Suciedad:**
+- ✅ Base física limpia en la fuente: área 93-100%, precio presente 100%, GPS 100%.
+- 🔴 **Moneda C21 47% sucia**: el listado marca `BOB` con texto en USD (subvalúa ~7×). El precio
+  del listado NO es confiable solo. **Resoluble**: el detalle C21 (`{url}?json=true` → `entity.moneda`)
+  trae moneda propia al 100%.
+- 🟡 Atributos finos escasos (el broker no los carga): frente 12-39%, uso de suelo 0-33%, esquina 0-18%.
+
+**Dos segmentos, no uno (corrección de encuadre):** las casas no son solo suelo para
+desarrolladores. La mayoría de las 264 de ZN son **vivienda final** (familia compradora). Esto
+parte el producto en dos audiencias con campos distintos:
+- **Vivienda final** (casa habitable): dormitorios, baños, área construida, garage, estado,
+  amenidades, **$/m² construido**, barrio. Mayor volumen en ZN.
+- **Suelo** (terreno + casa demolible): frente, fondo, esquina, uso de suelo, **$/m² terreno**.
+  Urubó (terrenos) + ZN (casas demolibles).
+
+**Pasada de vivienda (18 jun, `vivienda.mjs`):** 308 casas únicas (ZN 264, Urubó 44), tipología
+familiar real (mediana 3 dorms, $/m² construido ~$934-954). Área construida 97-100%, dorms 63-100%,
+baños 59-98%. **EL HALLAZGO:** lo que más valora una familia NO está estructurado en ningún portal
+(vive en el texto) pero está presente en alta proporción → **condominio/barrio cerrado 25-75%**
+(Remax 60-75%, la 1ª pregunta de una familia en SC, nadie la ofrece como filtro), jardín 70-75%,
+quincho 30-75%, piscina 20-50%, dependencia 10-30%. **Fotos: 95-100% con ≥5, mediana 10-15**
+(vs terreno, pobre). → MOAT del feed de vivienda = extraer con LLM lo que el portal no estructura
+y permitir filtrar por ello. Recomendación: **feed de vivienda en ZN** = mayor valor inmediato,
+menor riesgo visual; suelo (Urubó) = herramienta de datos B2B, no feed de consumo.
+**2º bug de captura Remax:** `number_parking` no se lee (garage 0% en Remax), mismo patrón que `land_m2`.
+
+**Hallazgos técnicos reusables:**
+- Estrategia escalable (ya en ADR-004 zona-norte): traer todo SC + filtrar por GPS; no depender
+  de slugs Remax.
+- C21 detalle: `{url}?json=true` → `entity.{descripcion, metrosFrente, metrosFondo, tipoTerreno, moneda, precioFormat}`.
+- Remax detalle: parsear `data-page` (Inertia) → `props.listing.{description_website, marketing_description}`.
+
+**🐛 Bug de producción detectado (pendiente aplicar):** el discovery Remax casas/terrenos
+(`n8n/workflows/casas_terrenos/discovery_remax_casas_terrenos_v1.0.0.json`) parsea
+`listing_information.land_area_m`, campo que **no existe**. El real es **`land_m2`**. Por eso los
+terrenos de Remax llegan sin `area_terreno_m2` a `propiedades_v2`. Fix de una palabra.
 
 ---
 
@@ -267,6 +323,11 @@ WHERE lower(COALESCE(p.tipo_propiedad_original, '')) IN ('departamento', 'pentho
 ```
 
 Casas y terrenos quedan con `id_proyecto_master = NULL`. No es un problema — el feed no depende de tener proyecto asignado.
+
+> **Actualización 18-jun-2026 (supera este "skip"):** para CASAS-vivienda en ZN el matching SÍ
+> aplica, pero a `condominios_master` (barrios cerrados), no a `proyectos_master`, y con mecánica
+> AREAL (point-in-polígono), no fuzzy de edificio. Ver `docs/proyectos/zona-norte/DISENO_PIPELINE_CASAS_VIVIENDA.md` §5.
+> Terrenos y casas individuales en calle abierta sí quedan con NULL (estado válido).
 
 ### 5.5 Feed UI — Cards por tipo
 
