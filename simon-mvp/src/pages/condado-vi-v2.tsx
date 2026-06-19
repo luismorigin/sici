@@ -66,6 +66,7 @@ const AMENIDAD_PHOTOS: Record<string, string> = {
   'Sala de juegos': '/condado-vi-v2/sala-juegos.jpg',
   'Cowork': '/condado-vi-v2/cowork.jpg',
   'Terraza con vista': '/condado-vi-v2/terraza.jpg',
+  'Área de meditación y lectura': '/condado-vi-v2/area-zen.jpg',
 }
 
 // Foto thumbnail (portada) + galería por edificio en la línea de tiempo.
@@ -190,6 +191,7 @@ const DETALLES_IMAGES = [
 const GALLERY_IMAGES = [
   { src: '/condado-vi-v2/vista-principal.jpg', alt: 'Vista aérea de Condado VI y Equipetrol' },
   { src: '/condado-vi-v2/vista-balcon.jpg', alt: 'Entrada Condado VI con cartel' },
+  { src: '/condado-vi-v2/lobby-sofa.jpg', alt: 'Lobby de Condado VI con mural de hojas y luz natural' },
   ...COCINA_IMAGES,
   ...SALON_IMAGES.map(s => ({ src: s.src, alt: s.alt })),
   ...RENDER_AMOBLADO_IMAGES.map(s => ({ src: s.src, alt: s.alt })),
@@ -204,6 +206,7 @@ const GALLERY_IMAGES = [
   { src: '/condado-vi-v2/sala-juegos.jpg', alt: 'Sala de juegos' },
   { src: '/condado-vi-v2/cowork.jpg', alt: 'Cowork del edificio' },
   { src: '/condado-vi-v2/terraza.jpg', alt: 'Terraza con vista panorámica' },
+  { src: '/condado-vi-v2/area-zen.jpg', alt: 'Área de meditación y lectura al atardecer' },
   ...FACHADA_IMAGES,
   ...TIMELINE.flatMap(t => t.fotos?.map(f => ({ src: f.src, alt: f.alt })) ?? []),
   ...DETALLES_IMAGES,
@@ -591,6 +594,7 @@ export default function CondadoVIv2() {
             <div className="space-y-2">
               <GalleryImage src="/condado-vi-v2/vista-principal.jpg" alt="Vista aérea" galleryIndex={galleryIdx('/condado-vi-v2/vista-principal.jpg')} onOpen={openLightbox} aspectClass="4/3" />
               <GalleryImage src="/condado-vi-v2/vista-balcon.jpg" alt="Entrada Condado VI Plaza Italia" galleryIndex={galleryIdx('/condado-vi-v2/vista-balcon.jpg')} onOpen={openLightbox} aspectClass="16/9" />
+              <GalleryImage src="/condado-vi-v2/lobby-sofa.jpg" alt="Lobby de Condado VI con mural de hojas y luz natural" galleryIndex={galleryIdx('/condado-vi-v2/lobby-sofa.jpg')} onOpen={openLightbox} aspectClass="4/3" />
             </div>
           </div>
         </section>
