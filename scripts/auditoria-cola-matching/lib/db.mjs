@@ -63,7 +63,7 @@ export async function getColaPendiente(supabase, macrozona) {
     const enr = p.datos_json_enrichment || {};
     const disc = p.datos_json_discovery || {};
     return {
-      sug_id: s.id,
+      sug_id: s.id, // OJO: la PK real en matching_sugerencias es la columna "id" (NO "sug_id"). Al armar el UPDATE de la cola usar `WHERE id IN (...)`.
       prop_id: s.propiedad_id,
       pm_sugerido: s.proyecto_master_sugerido,
       pm_nombre: pm.nombre_oficial || null,

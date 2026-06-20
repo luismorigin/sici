@@ -6,7 +6,7 @@
 - Pipeline nocturno: Discovery → Enrichment → Merge → Matching (venta + alquiler)
 - Tabla principal: `propiedades_v2` — conteos actuales via `v_mercado_venta` y `v_mercado_alquiler`
 - Tabla proyectos: `proyectos_master` (99%+ con GPS)
-- Tabla condominios (casas ZN): `condominios_master` (mig 260 tabla + mig 261 FK/matcher; 39 condominios cerrados curados). Matcher areal `matchear_condominio(lat,lon,nombre)` (nombre-primario + GPS) + FK `id_condominio_master` en `propiedades_v2`. 23 casas ZN cargadas (`tipo='casa'`, marcador `metodo_match='carga_piloto_casas_19jun'`), aisladas del feed de deptos (0 en `v_mercado_venta`). Diseño: `docs/proyectos/zona-norte/DISENO_PIPELINE_CASAS_VIVIENDA.md`
+- Tabla condominios (casas ZN): `condominios_master` (mig 260 tabla + mig 261 FK/matcher; **45 condominios cerrados curados**). Matcher areal `matchear_condominio(lat,lon,nombre)` (nombre-primario + GPS) + FK `id_condominio_master` en `propiedades_v2`. **305 casas ZN activas cargadas** (`tipo_propiedad_original='casa'`, marcadores `metodo_match` en `carga_piloto_casas_19jun/20jun`, `carga_casas_escala_20jun`, `carga_casas_nuevas_20jun`), **todas con contacto del captador (WhatsApp) en `datos_json_enrichment`**, aisladas del feed de deptos (0 en `v_mercado_venta`, 0 con `id_proyecto_master`). Flujo de carga = **híbrido manual** (NO el n8n viejo, que es Equipetrol y no captura contacto): scripts en `scripts/sonda-suelo/` (discovery/dedup/fetch-contacto/merge) + agentes-lectores para el MOAT. Pendiente: vista `v_mercado_casas` + feed `/ventas/casas` + cron. Diseño: `docs/proyectos/zona-norte/DISENO_PIPELINE_CASAS_VIVIENDA.md`
 - Tracking: `workflow_executions` (health check)
 - Fuentes: Century21, Remax, Bien Inmuebles
 

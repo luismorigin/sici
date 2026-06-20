@@ -1,0 +1,110 @@
+[
+  {
+    "id": 2847,
+    "agente_nombre": "Jhazmín Alejandra Achocalla Ferrufino",
+    "agente_telefono": "+59169085104",
+    "url_whatsapp": "https://wa.me/59169085104",
+    "oficina_nombre": "Forza",
+    "contacto_visible": true,
+    "fetch_ok": true
+  },
+  {
+    "id": 2848,
+    "agente_nombre": "Maria Alejandra Calderon Claure",
+    "agente_telefono": "+59176761379",
+    "url_whatsapp": "https://wa.me/59176761379",
+    "oficina_nombre": "RE/MAX Express",
+    "contacto_visible": true,
+    "fetch_ok": true
+  },
+  {
+    "id": 2849,
+    "agente_nombre": "Scarleth Fatima Moscoso de Cortez",
+    "agente_telefono": "+59177682054",
+    "url_whatsapp": "https://wa.me/59177682054",
+    "oficina_nombre": "RE/MAX Plus",
+    "contacto_visible": true,
+    "fetch_ok": true
+  },
+  {
+    "id": 2850,
+    "agente_nombre": "Marcelo Saldaña Fernandez",
+    "agente_telefono": "+59178000670",
+    "url_whatsapp": "https://wa.me/59178000670",
+    "oficina_nombre": "RE/MAX Emporio",
+    "contacto_visible": true,
+    "fetch_ok": true
+  },
+  {
+    "id": 2851,
+    "agente_nombre": "Gabriela Alvarez Acosta",
+    "agente_telefono": "+59176004883",
+    "url_whatsapp": "https://wa.me/59176004883",
+    "oficina_nombre": "RE/MAX Plus",
+    "contacto_visible": true,
+    "fetch_ok": true
+  },
+  {
+    "id": 2852,
+    "agente_nombre": "Nicolas Ortiz Gutierrez",
+    "agente_telefono": "+59178000671",
+    "url_whatsapp": "https://wa.me/59178000671",
+    "oficina_nombre": "RE/MAX Emporio",
+    "contacto_visible": true,
+    "fetch_ok": true
+  },
+  {
+    "id": 2853,
+    "agente_nombre": "Jhonny Jhalil Rosas Valda",
+    "agente_telefono": "+59176660639",
+    "url_whatsapp": "https://wa.me/59176660639",
+    "oficina_nombre": "RE/MAX Impacto",
+    "contacto_visible": true,
+    "fetch_ok": true
+  },
+  {
+    "id": 2854,
+    "agente_nombre": "Ana Maria Laura Galdo Sandoval",
+    "agente_telefono": "+59178671160",
+    "url_whatsapp": "https://wa.me/59178671160",
+    "oficina_nombre": "RE/MAX Nova",
+    "contacto_visible": true,
+    "fetch_ok": true
+  },
+  {
+    "id": 2855,
+    "agente_nombre": "David Vargas Mendoza",
+    "agente_telefono": "+59179015193",
+    "url_whatsapp": "https://wa.me/59179015193",
+    "oficina_nombre": "RE/MAX Fortaleza",
+    "contacto_visible": true,
+    "fetch_ok": true
+  },
+  {
+    "id": 2856,
+    "agente_nombre": "Paola Andrea Ulunque Irusta",
+    "agente_telefono": "+59174474743",
+    "url_whatsapp": "https://wa.me/59174474743",
+    "oficina_nombre": "Deluxe",
+    "contacto_visible": true,
+    "fetch_ok": true
+  },
+  {
+    "id": 2857,
+    "agente_nombre": "Estiven Eyvar Claros Pinaya",
+    "agente_telefono": "+59172278774",
+    "url_whatsapp": "https://wa.me/59172278774",
+    "oficina_nombre": "RE/MAX Elite",
+    "contacto_visible": true,
+    "fetch_ok": true
+  },
+  {
+    "id": 2858,
+    "agente_nombre": "Vanesa Eguez Mendez",
+    "agente_telefono": "+59169185636",
+    "url_whatsapp": "https://wa.me/59169185636",
+    "oficina_nombre": "Home",
+    "contacto_visible": true,
+    "fetch_ok": true
+  }
+]

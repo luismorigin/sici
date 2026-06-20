@@ -87,7 +87,7 @@ Ensamblar UN bloque transaccional siguiendo estas reglas (todas obligatorias):
 - **Candado `AND id_proyecto_master IS NULL`** en cada UPDATE de match → no pisa matches ya correctos (en ZN, 5/25 ya estaban bien y el motor sugería el pm equivocado encima).
 - `metodo_match='auditor_cola_<fecha>'` (o `_pm_nuevo` / `_nombre`) → el matching nocturno respeta los `auditor_*`.
 - **Temp tables con VALUES multilínea** para listas de IDs (NO una línea larga — se trunca al copiar a Supabase).
-- Marcar la cola: sugerencias correctas → `estado='aprobado'`; equivocadas/sin-nombre/muertas → `estado='rechazado'` con motivo en `notas`.
+- Marcar la cola: sugerencias correctas → `estado='aprobado'`; equivocadas/sin-nombre/muertas → `estado='rechazado'` con motivo en `notas`. **⚠️ La PK de `matching_sugerencias` es la columna `id` — el JSON la expone renombrada como `sug_id` (`db.mjs`). Al filtrar usar SIEMPRE `WHERE id IN (<los sug_id del JSON>)`, NUNCA `WHERE sug_id IN (...)` (esa columna no existe → `ERROR: column "sug_id" does not exist`). Pasa en cualquier macrozona. Ej:** `UPDATE matching_sugerencias SET estado='aprobado' WHERE id IN (5081, 5082);`
 - pm nuevos: INSERT con CTE `RETURNING` + UPDATE de la prop; GPS verificado por el founder; `zona` = la macrozona (NO el default 'Equipetrol'). **Tras INSERT de pm: `REFRESH MATERIALIZED VIEW mv_nombre_proyecto_lookup`** (fuera de la transacción).
 - Cerrar con SELECT de verificación (matches aplicados + conteo de la cola) y dejar que el humano haga COMMIT/ROLLBACK.
 
