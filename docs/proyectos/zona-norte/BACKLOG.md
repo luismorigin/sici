@@ -2,18 +2,23 @@
 
 > Tickets pendientes que surgieron de la validación Fase 3+4. Organizados por prioridad y por scope.
 
-**Última actualización:** 29 May 2026 (FASE 1 del #8 aplicada en producción; v4 snapshot descartado).
+**Última actualización:** 19 Jun 2026 (matching de deptos ZN cerrado y verificado en BD; foco pasa a casas/vivienda).
 
-**🎯 Próxima sesión:** **FASE 5-7 del Ticket #8** — `lib/zonas.ts` (14 microzonas en filtro admin) → workflows n8n ZN → docs. Branch: `feat/zn-microzonas-aplicacion`. NO dependen del snapshot. **Recordar reactivar el workflow `auditoria_diaria_sici_v3.0` en n8n** (se desactivó para la ventana de mig).
+**🎯 Próxima sesión:** **Fase 2 — Pipeline Casas/Vivienda ZN** (mayor valor): FK `id_condominio_master` en `propiedades_v2` + matcher (nombre+GPS desempate) + vista `v_mercado_casas` + feed vivienda. La tabla `condominios_master` (mig 260, 36 condominios) ya existe aislada. Después: extender pipeline a Urubó (~179 terrenos, `land_m2` ya corregido). Ver `project_sonda_suelo_zn_urubo_jun2026` + `DISENO_PIPELINE_CASAS_VIVIENDA.md`. **Recordar reactivar el workflow `auditoria_diaria_sici_v3.0` en n8n** si sigue desactivado.
 
 ---
 
 ## ✅ Estado 19-jun-2026 — matching ZN + skill de cola
 
 - **Skill `/audit-cola-matching` construida y validada en producción** (ADR-011): audita la cola HITL con agente-lector. **Cola `pendiente_zona_norte` 33→0**, Equipetrol 17→10. 3 pm nuevos (518 Galil Parque I, 519 Brickell II, 520 Torre Sirari). Match rate venta ZN ~87%, alquiler ~83%.
+- **✅ Matching de deptos ZN CERRADO — verificado en BD 19-jun (no confundir con trabajo abierto):**
+  - Cola `pendiente_zona_norte` = **0** (solo 10 `pendiente` de Eq en HITL).
+  - **GPS "roto" 2757/2163/2242/2256/2260/2548: las 6 YA tienen match** (por nombre, pm 416/486/386/485/442/488). El GPS duplicado en 3 es cosmético, no bloquea matching.
+  - **Atractor pm 359 "Condominio One" LIMPIO:** solo 4 props, todas legítimamente "CONDOMINIO ONE" (los ~20 FP se purgaron en las auditorías 17-19jun).
+  - Sin match venta ZN = 50 (33 sin nombre + 6 basura + **solo 11 con nombre útil accionables**, no los ~62 que se temían). Alquiler 17 sin match (sin-nombre, se dejan por política). **Match rate hoy: venta 87.4%, alquiler 83.3%.**
 - **Pendientes que salieron:**
   - 🟡 **Las 10 sin-nombre de Equipetrol** quedan en el HITL (`/admin/supervisor/matching`) para revisión GPS visual del director — ninguna tiene nombre en ninguna fuente; el GPS dominante solo prioriza, no aprueba (no auto-matchear por GPS solo).
-  - 🟡 **Fase 2 condominios** (otro frente): FK `id_condominio_master` en `propiedades_v2` + matcher (nombre+GPS) + vista `v_mercado_casas` + feed. La tabla `condominios_master` (mig 260, 36 condominios) ya existe, aislada.
+  - 🟢 **Fase 2 condominios — núcleo APLICADO (mig 261, 19-jun):** FK `id_condominio_master` en `propiedades_v2` + `normalize_condominio()` (sufijo-aware, romano→arábigo) + `matchear_condominio(lat,lon,nombre)` areal nombre-primario. **Aplicada + smoke test OK contra prod**: distingue Sevilla Norte I/II por nombre, y sin-nombre en cluster contiguo → `gps_ambiguo` score 0.30 (HITL, no auto). Validación en seco: 18/36 condominios solapan radio 250m (por eso nombre-primario), `normalize_nombre` colapsaba Sevilla Norte I/II. **`alias_conocidos` poblado (13 condominios) y probado.** **CATÁLOGO CURADO 36→39** (19-jun): +San Rafael, +Roma, +Community Alemana; Palmeras II GPS corregido; 6 GPS web→founder verificados. Descartados con criterio: El Vallecito (abierto), Hamacas (=barrio), Oriental (otra zona). **CARGA END-TO-END VALIDADA: 23 casas reales en `propiedades_v2`** (`tipo='casa'`, `metodo_match='carga_piloto_casas_19jun'`, marcador rollback), en 18 condominios, 0 contaminan el feed de deptos (`v_mercado_venta`), zona auto-asignada por trigger. Método: discovery sonda → enrichment manual (Claude, sin API) → `matchear_condominio()` → INSERT. Scripts en `scripts/sonda-suelo/` (`detalle-casas-zn.mjs`, `enrich-casas-zn.mjs`, `carga-casas-lote{2,3}.sql`). **Pendiente Fase 2:** cargar casas individuales (`id_condominio_master` NULL = inventario válido) + condominios no catalogados (Los Sauces), `datos_json_enrichment` (es_cerrado/amenidades), vista `v_mercado_casas` + feed `/ventas/casas`. Detalle completo en memoria `project_sonda_suelo_zn_urubo_jun2026`.
   - 🟢 **Extender la skill de cola a Urubó/Polanco** cuando se abran esas colas (`pendiente_urubo`, etc.) — sin código nuevo, solo `--macrozona`.
   - 🟢 **Bug `land_m2` Remax casas/terrenos** corregido en n8n (19-jun) → listo para capturar terrenos al extender a Urubó. Ver `docs/backlog/DEUDA_TECNICA.md`.
 

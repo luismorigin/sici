@@ -45,7 +45,7 @@ quincho 30-75%, piscina 20-50%, dependencia 10-30%. **Fotos: 95-100% con ≥5, m
 (vs terreno, pobre). → MOAT del feed de vivienda = extraer con LLM lo que el portal no estructura
 y permitir filtrar por ello. Recomendación: **feed de vivienda en ZN** = mayor valor inmediato,
 menor riesgo visual; suelo (Urubó) = herramienta de datos B2B, no feed de consumo.
-**2º bug de captura Remax:** `number_parking` no se lee (garage 0% en Remax), mismo patrón que `land_m2`.
+**2º "bug" de captura Remax (resuelto 19-jun):** `number_parking` daba garage 0% — pero es **campo FANTASMA** (NO existe en la API `/api/search/casa/...`, verificado), no el mismo patrón que `land_m2`. Remax no expone parking estructurado → se fijó `estacionamientos: null` explícito en el discovery (extraerlo del texto en enrichment si se necesita).
 
 **Hallazgos técnicos reusables:**
 - Estrategia escalable (ya en ADR-004 zona-norte): traer todo SC + filtrar por GPS; no depender
@@ -53,10 +53,13 @@ menor riesgo visual; suelo (Urubó) = herramienta de datos B2B, no feed de consu
 - C21 detalle: `{url}?json=true` → `entity.{descripcion, metrosFrente, metrosFondo, tipoTerreno, moneda, precioFormat}`.
 - Remax detalle: parsear `data-page` (Inertia) → `props.listing.{description_website, marketing_description}`.
 
-**🐛 Bug de producción detectado (pendiente aplicar):** el discovery Remax casas/terrenos
-(`n8n/workflows/casas_terrenos/discovery_remax_casas_terrenos_v1.0.0.json`) parsea
-`listing_information.land_area_m`, campo que **no existe**. El real es **`land_m2`**. Por eso los
-terrenos de Remax llegan sin `area_terreno_m2` a `propiedades_v2`. Fix de una palabra.
+**✅ Bug `land_m2` CORREGIDO Y APLICADO EN PRODUCCIÓN (n8n, 19-jun):** el discovery Remax casas/terrenos
+(`n8n/workflows/casas_terrenos/discovery_remax_casas_terrenos_v1.0.0.json`, nodo "Extraer Propiedades") parseaba
+`listing_information.land_area_m`, campo que **no existe** (el real es **`land_m2`**, vive en la API de búsqueda
+`remax.bo/api/search/terreno/...`, NO en el `data-page` del detalle). Se aplicaron 3 fixes en el mismo nodo:
+`land_area_m`→`land_m2`, `+toLowerCase()` en `subtype_property.name`, y `number_parking`→`null` (campo fantasma).
+Corrió limpio. **Impacto 0 hoy** (Equipetrol no tiene terrenos Remax reales); **recién importa al extender a Urubó**
+(~179 terrenos Remax). Ver `docs/backlog/DEUDA_TECNICA.md` + memoria `project_sonda_suelo_zn_urubo_jun2026`.
 
 ---
 
