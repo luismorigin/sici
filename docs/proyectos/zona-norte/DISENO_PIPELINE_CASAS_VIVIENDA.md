@@ -109,9 +109,9 @@ Orden correcto: (1) matchear `nombre_condominio_mencionado` (LLM) contra `alias_
 desambigua "Riviera 1" de "2"; (2) GPS confirma/desempata y cubre casas sin nombre; (3) polígonos
 para los contiguos. El `radio_metros` NO alcanza solo para estas familias.
 
-**Migración en 2 fases:** Fase 1 = `CREATE TABLE condominios_master` + INSERT de los 36 curados +
-columna FK `id_condominio_master` en `propiedades_v2` (segura, no toca deptos). Fase 2 = función de
-matching (nombre+GPS, con polígonos para contiguos). Catálogo curado: `scripts/sonda-suelo/catalogo-condominios-zn-FINAL.json`.
+**Migración en 2 fases (✅ ambas aplicadas):** mig 260 = `CREATE TABLE condominios_master` + INSERT de los 36 curados.
+mig 261 = columna FK `id_condominio_master` en `propiedades_v2` (segura, no toca deptos) + `normalize_condominio()` +
+función `matchear_condominio()` (nombre+GPS; polígonos para contiguos = futuro). Catálogo curado: `scripts/sonda-suelo/catalogo-condominios-zn-FINAL.json`.
 
 **Triple valor de `condominios_master`:**
 1. Convierte el filtro "barrio cerrado" de keyword ruidoso (25-75%) a hecho (¿cayó en el polígono?).
@@ -279,16 +279,15 @@ cubre con logging + reporte que el script ya escribe + `try/catch`→Slack.
 **Fase 1 — ✅ HECHA (18-jun-2026):** catálogo de 36 condominios cargado en `condominios_master`
 (mig 260, aislada). Sonda, diseño, modelo LLM (Sonnet) y prompt v4 validados.
 
-**Fase 2 — orden de construcción (próxima/s sesión/es):**
+**Fase 2 — núcleo HECHO (19-jun-2026, mig 261):**
 
-| # | Paso | Riesgo | Nota |
-|---|------|--------|------|
-| 1 | **Matcher EN SECO** (offline: casas de la sonda × catálogo) | 🟢 nulo | Valida la pieza más incierta (solapamiento Sevilla/Riviera) sin tocar nada. **Empezar acá.** |
-| 2 | **Discovery producción** (la sonda escribe casas ZN a `propiedades_v2` tipo=casa, dedup, zona) | 🟡 toca `propiedades_v2` | Primer eslabón con datos reales en BD |
-| 3 | **Enrichment (Sonnet) + merge ligero** | 🟡 | Prompt v4 ya validado; falta correrlo en pipeline |
-| 4 | **Matcher en producción + columna FK** `id_condominio_master` | 🟡 ALTER a `propiedades_v2` | Solo después de que el matcher en seco (paso 1) funcione |
-| 5 | **Verificación + cron n8n** | 🟢 | Verificador HTTP ya existe; n8n solo dispara el script |
-| 6 | **Feed** `v_mercado_casas` + `/ventas/casas` | 🟢 | Vista aislada de deptos |
+| # | Paso | Estado |
+|---|------|--------|
+| 1 | **Matcher** `matchear_condominio()` (nombre-primario + GPS, read-only, score/metodo) | ✅ **HECHO** (mig 261). Validado en seco + contra casas reales: distingue Sevilla Norte I/II, se abstiene (`gps_ambiguo`) sin nombre en cluster contiguo. 18/36 condominios solapaban radio → por eso nombre-primario. |
+| 2 | **Discovery + enrichment** (carga inicial) | ✅ **HECHO sin overengineering**: discovery sonda + enrichment MANUAL (Claude lee anuncios, sin cablear API Sonnet — eso queda para el cron nocturno de casas nuevas). Extracción barata de nombre-candidato (slug+1ª línea) en `enrich-casas-zn.mjs`. |
+| 3 | **Catálogo curado + FK + carga** | ✅ **HECHO**: FK `id_condominio_master` (mig 261), `alias_conocidos` (13), catálogo 36→**39** (San Rafael/Roma/Community Alemana), **23 casas ZN** en `propiedades_v2` (`metodo_match='carga_piloto_casas_19jun'`), 0 contaminan feed deptos. |
+| 4 | **Cargar casas individuales** (`id_condominio_master` NULL) + condominios no catalogados (Los Sauces) | ⬜ pendiente |
+| 5 | **`datos_json_enrichment`** (es_cerrado, amenidades propias) + cron n8n (solo dispara) | ⬜ pendiente |
+| 6 | **Feed** `v_mercado_casas` + `/ventas/casas` | ⬜ pendiente (vista aislada de deptos) |
 
-Principio: cada paso valida antes de avanzar (como toda la sonda). El paso 1 es offline y de máximo
-aprendizaje/mínimo riesgo — reusa `scripts/sonda-suelo/` y el catálogo, sin tocar producción.
+Nota: el modelo de carga reusa `propiedades_v2` (mig 221 ya le dio `area_terreno_m2`/`frente_m`/`fondo_m`); campos ricos van en `datos_json_enrichment`; amenidades del condominio se HEREDAN de `condominios_master`. Detalle de la sesión en memoria `project_sonda_suelo_zn_urubo_jun2026`.

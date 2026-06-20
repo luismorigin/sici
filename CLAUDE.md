@@ -6,7 +6,7 @@
 - Pipeline nocturno: Discovery → Enrichment → Merge → Matching (venta + alquiler)
 - Tabla principal: `propiedades_v2` — conteos actuales via `v_mercado_venta` y `v_mercado_alquiler`
 - Tabla proyectos: `proyectos_master` (99%+ con GPS)
-- Tabla condominios (casas ZN, Fase 1): `condominios_master` (mig 260, 36 condominios cerrados curados — AISLADA: sin matcher ni FK aún, no toca deptos). Diseño: `docs/proyectos/zona-norte/DISENO_PIPELINE_CASAS_VIVIENDA.md`
+- Tabla condominios (casas ZN): `condominios_master` (mig 260 tabla + mig 261 FK/matcher; 39 condominios cerrados curados). Matcher areal `matchear_condominio(lat,lon,nombre)` (nombre-primario + GPS) + FK `id_condominio_master` en `propiedades_v2`. 23 casas ZN cargadas (`tipo='casa'`, marcador `metodo_match='carga_piloto_casas_19jun'`), aisladas del feed de deptos (0 en `v_mercado_venta`). Diseño: `docs/proyectos/zona-norte/DISENO_PIPELINE_CASAS_VIVIENDA.md`
 - Tracking: `workflow_executions` (health check)
 - Fuentes: Century21, Remax, Bien Inmuebles
 
