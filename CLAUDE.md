@@ -151,7 +151,7 @@ Conteos actuales: `SELECT zona, COUNT(*) FROM v_mercado_venta GROUP BY zona`
 | **Seguridad Supabase (reglas)** | `docs/canonical/SEGURIDAD_SUPABASE.md` — checklists antes de RLS, DROP, API routes, views, funciones RPC |
 | **Deuda tecnica** | `docs/backlog/DEUDA_TECNICA.md` |
 | **Retención usuarios** | `docs/backlog/RETENCION_USUARIOS.md` — Google OAuth, favoritos BD, alertas email (6 fases) |
-| **Casas y Terrenos PRD** | `docs/backlog/CASAS_TERRENOS_PRD.md` — Fases 1-2 completadas, pipeline independiente, feed público pendiente (Fase 3) |
+| **Casas y Terrenos PRD** | `docs/backlog/CASAS_TERRENOS_PRD.md` — Fases 1-2-4 completadas (incl. condominios mig 260+261, 45 condominios; 305 casas ZN cargadas con contacto vía flujo híbrido), feed público pendiente (Fase 3: `v_mercado_casas` + `/ventas/casas`) |
 | **Agente Desarrolladoras PRD** | `docs/backlog/AGENTE_DESARROLLADORAS_PRD.md` — Idea de skill/agente para análisis de mercado a desarrolladoras, cruzando SICI + normativas + costos construcción |
 | **Meta Pixel & eventos** | `docs/meta/META_PIXEL_EVENTOS.md` — Pixel ID, eventos Tier 1-2 implementados, Tier 3 backlog, CAPI futuro |
 | **Producto informe mercado** | `docs/backlog/PRODUCTO_INFORME_MERCADO.md` |
@@ -214,6 +214,7 @@ Leer por path absoluto, no copiar. Si hay divergencia con sici, **simon-brand ga
 ```
 **Volumen esperado:** ~20 props Equipetrol entre casas+terrenos. NO pasa por flujo_b ni merge ventas.
 **Workflows:** `n8n/workflows/casas_terrenos/`
+**⚠️ Este pipeline n8n es Equipetrol-only y NO captura el contacto del agente ni hace matching de condominios.** Las **305 casas de Zona Norte** (con WhatsApp del captador + condominios) se cargaron con un **flujo HÍBRIDO manual** (`scripts/sonda-suelo/`: discovery/dedup + fetch-contacto + agentes-lectores para el MOAT + matcher `matchear_condominio` + carga). Plan a futuro: unificar todo bajo el híbrido (ver `docs/proyectos/zona-norte/DISENO_PIPELINE_CASAS_VIVIENDA.md`). Regla TC: "7" = oficial (no paralelo).
 
 ## Estructura Clave
 

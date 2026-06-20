@@ -1,6 +1,6 @@
 # Diseño — Pipeline de Casas (vivienda final) en Zona Norte
 
-> Status: DISEÑO (no implementado) · Fecha: 2026-06-18 · Autor: Lucho + Claude
+> Status: Fase 1-2 núcleo IMPLEMENTADO (mig 260+261 aplicadas, matcher funcionando, 305 casas ZN cargadas) · Feed pendiente · Fecha: 2026-06-20 · Autor: Lucho + Claude
 > Basado en la sonda `scripts/sonda-suelo/` (ver memoria `project_sonda_suelo_zn_urubo_jun2026`)
 > y en el estudio del sistema TC (`docs/arquitectura/TIPO_CAMBIO_SICI.md`) y de matching/amenidades.
 
@@ -13,7 +13,7 @@ un flujo más corto y más correcto. Objetivo: **feed de vivienda en Zona Norte*
 ningún portal ofrece (barrio cerrado, piscina, quincho…), precio normalizado bien, sin dañar el
 pipeline de deptos (strangler).
 
-Volumen validado por la sonda: **ZN 264 casas únicas** (Urubó 44), tipología familiar (mediana 3
+Volumen validado por la sonda: **ZN 264 casas únicas** (universo de sonda 18-jun; el discovery 20-jun midió ~368 reales) (Urubó 44), tipología familiar (mediana 3
 dorms, $/m² constr ~$954), **fotos abundantes** (95-100% con ≥5). Atributos de valor que viven en
 el texto: condominio 25-75%, jardín 70-75%, quincho 30-75%, piscina 20-50%.
 
@@ -75,12 +75,15 @@ LLM sobre la descripción) y el LLM ya viene limpio (billete+TC en una pasada). 
 | Campo | Gana | Razón |
 |---|---|---|
 | Físicos: dorms, baños, área, GPS, fotos | **Metadata** | el portal los estructura bien |
-| **Precio / TC** | **Descripción (LLM)** | la moneda de la metadata miente (47% C21) |
+| **Precio / TC** | **Descripción (LLM)** | la moneda de la metadata miente (47% C21) — y `entity.precio` mismo puede venir CORRUPTO (no solo la moneda): usar el candidato entre {`precio`, `precioVenta`, `precioVenta`/6.96} con $/m² coherente (rango 400-2500), no `entity.precio` crudo |
 | Amenidades, condominio, estado, niveles | **Solo descripción** | no existen en metadata |
 | Campo con candado (`campos_bloqueados`) | **Manual** | regla 1 SICI |
 
 **El contraste ES la red de TC:** si metadata y texto discrepan en precio (ej. metadata `160920 BOB`
 vs texto `$us 160.000 tc 7` → gana texto = $160.000 USD), y la brecha es grande → `tc_sospechoso`.
+**Regla TC "7":** `tc 7` / "tipo de cambio 7" = `tipo_cambio_detectado='oficial'` (el oficial es 6.96≈7); solo
+marcar `'paralelo'` si el texto dice literalmente "paralelo"/"TCP". NUNCA "7"=paralelo (inflaría el precio
+normalizado ×1.42).
 Si el LLM no halla precio en el texto → fallback a metadata (Remax-USD confiable, C21-BOB sospechoso).
 
 ## 5. Matching de condominios — areal, no fuzzy de edificio
@@ -109,7 +112,7 @@ Orden correcto: (1) matchear `nombre_condominio_mencionado` (LLM) contra `alias_
 desambigua "Riviera 1" de "2"; (2) GPS confirma/desempata y cubre casas sin nombre; (3) polígonos
 para los contiguos. El `radio_metros` NO alcanza solo para estas familias.
 
-**Migración en 2 fases (✅ ambas aplicadas):** mig 260 = `CREATE TABLE condominios_master` + INSERT de los 36 curados.
+**Migración en 2 fases (✅ ambas aplicadas):** mig 260 = `CREATE TABLE condominios_master` + INSERT de los 45 condominios (mig 260 cargó 36; curado a 39 y luego 45).
 mig 261 = columna FK `id_condominio_master` en `propiedades_v2` (segura, no toca deptos) + `normalize_condominio()` +
 función `matchear_condominio()` (nombre+GPS; polígonos para contiguos = futuro). Catálogo curado: `scripts/sonda-suelo/catalogo-condominios-zn-FINAL.json`.
 
@@ -137,7 +140,7 @@ brokers lo ponen inconsistente: a veces el punto del condominio (spread ~17m ent
 disperso (~400m), a veces mal (Villa Fátima cayó en zona sur). El GPS de la casa es solo **insumo**
 (matchear + derivar el polígono); una vez asignado el condominio, la casa **hereda su ubicación**
 (igual que las amenidades). Para casa INDIVIDUAL, el GPS propio (verificado) sí es la ubicación.
-→ Beneficio: se verifica el GPS **una vez por condominio (~30) + individuales**, no por cada casa (264).
+→ Beneficio: se verifica el GPS **una vez por condominio (~30) + individuales**, no por cada casa (264, universo de sonda 18-jun; el discovery 20-jun midió ~368 reales).
 El centroide de varias casas del mismo condominio fue confirmado por OSM (12/16 a ≤600m); donde OSM
 discrepó eran **nombres genéricos** (homónimos), no GPS malo — el centroide ganó.
 
@@ -193,6 +196,10 @@ Entrada: descripción del anuncio + precio candidato del portal. Salida JSON for
 
 El feed filtra por las canónicas; la ficha muestra las tres. Prompt vigente:
 `scripts/llm-enrichment/prompt-casas-vivienda-v4.md`.
+
+**Regla TC "7" (en el prompt):** `tc 7` / "tipo de cambio 7" = `tipo_cambio_detectado='oficial'` (el oficial es
+6.96≈7); solo marcar `'paralelo'` si el texto dice literalmente "paralelo"/"TCP". NUNCA "7"=paralelo (inflaría el
+precio normalizado ×1.42).
 
 `es_condominio_cerrado` y `nombre_condominio_mencionado` alimentan el matching (Paso 4) y el cuadrante de la §6.
 
@@ -263,7 +270,7 @@ cubre con logging + reporte que el script ya escribe + `try/catch`→Slack.
     SÍ menciona (no determinista; prompt cargado le roba foco al precio).
   - **Sonnet** acertó **7/7** de lo que Haiku falló: todos los precios/TC del texto, los 3 condominios
     cerrados con nombre, sin perder nada. Estable.
-  - **Por qué se puede:** el volumen de casas es bajo (~264 + pocas/noche) → Sonnet cuesta centavos.
+  - **Por qué se puede:** el volumen de casas es bajo (~264 (universo de sonda 18-jun; el discovery 20-jun midió ~368 reales) + pocas/noche) → Sonnet cuesta centavos.
     A diferencia de deptos (miles), acá el modelo bueno es asumible. Haiku queda descartado para casas.
   - Igual mantener: **auditoría de coherencia** + **fallback a metadata** (merge §4b) como red.
 - **TC sucio** (47% C21): mitigado por extracción LLM en origen + auditoría de coherencia, pero
@@ -276,7 +283,7 @@ cubre con logging + reporte que el script ya escribe + `try/catch`→Slack.
 
 ## 12. Estado y orden de construcción
 
-**Fase 1 — ✅ HECHA (18-jun-2026):** catálogo de 36 condominios cargado en `condominios_master`
+**Fase 1 — ✅ HECHA (18-jun-2026):** catálogo de 45 condominios (mig 260 cargó 36; curado a 39 y luego 45) cargado en `condominios_master`
 (mig 260, aislada). Sonda, diseño, modelo LLM (Sonnet) y prompt v4 validados.
 
 **Fase 2 — núcleo HECHO (19-jun-2026, mig 261):**
@@ -285,9 +292,9 @@ cubre con logging + reporte que el script ya escribe + `try/catch`→Slack.
 |---|------|--------|
 | 1 | **Matcher** `matchear_condominio()` (nombre-primario + GPS, read-only, score/metodo) | ✅ **HECHO** (mig 261). Validado en seco + contra casas reales: distingue Sevilla Norte I/II, se abstiene (`gps_ambiguo`) sin nombre en cluster contiguo. 18/36 condominios solapaban radio → por eso nombre-primario. |
 | 2 | **Discovery + enrichment** (carga inicial) | ✅ **HECHO sin overengineering**: discovery sonda + enrichment MANUAL (Claude lee anuncios, sin cablear API Sonnet — eso queda para el cron nocturno de casas nuevas). Extracción barata de nombre-candidato (slug+1ª línea) en `enrich-casas-zn.mjs`. |
-| 3 | **Catálogo curado + FK + carga** | ✅ **HECHO**: FK `id_condominio_master` (mig 261), `alias_conocidos` (13), catálogo 36→**39** (San Rafael/Roma/Community Alemana), **23 casas ZN** en `propiedades_v2` (`metodo_match='carga_piloto_casas_19jun'`), 0 contaminan feed deptos. |
-| 4 | **Cargar casas individuales** (`id_condominio_master` NULL) + condominios no catalogados (Los Sauces) | ⬜ pendiente |
-| 5 | **`datos_json_enrichment`** (es_cerrado, amenidades propias) + cron n8n (solo dispara) | ⬜ pendiente |
+| 3 | **Catálogo curado + FK + carga** | ✅ **HECHO**: FK `id_condominio_master` (mig 261), `alias_conocidos` (13), catálogo **45** (mig 260 cargó 36; curado a 39 y luego 45), **305 casas ZN activas cargadas** en `propiedades_v2` (marcadores `metodo_match` en `carga_piloto_casas_19jun/20jun`, `carga_casas_escala_20jun`, `carga_casas_nuevas_20jun`), todas con contacto/WhatsApp del captador en `datos_json_enrichment`, 0 contaminan feed deptos. |
+| 4 | **Cargar casas individuales** (`id_condominio_master` NULL) + condominios no catalogados (Los Sauces) | ✅ **HECHO** (305 casas con contacto) |
+| 5 | **`datos_json_enrichment`** (es_cerrado, amenidades propias) con contacto/amenidades | ✅ **HECHO** (305 casas con contacto). Cron n8n (solo dispara) queda para el cron nocturno. |
 | 6 | **Feed** `v_mercado_casas` + `/ventas/casas` | ⬜ pendiente (vista aislada de deptos) |
 
 Nota: el modelo de carga reusa `propiedades_v2` (mig 221 ya le dio `area_terreno_m2`/`frente_m`/`fondo_m`); campos ricos van en `datos_json_enrichment`; amenidades del condominio se HEREDAN de `condominios_master`. Detalle de la sesión en memoria `project_sonda_suelo_zn_urubo_jun2026`.

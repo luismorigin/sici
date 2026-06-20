@@ -4,9 +4,11 @@
 
 ---
 
-## Estado actual — 16 Jun 2026
+## Estado actual — 20 Jun 2026
 
-**Fases 1-4 + #8 microzonas aplicadas (29-may):** 14 microzonas en BD (mig 254), frontend (`lib/zonas.ts`) y workflows discovery ZN. **Matching depurado (16-jun): venta 85.8%, alquiler 83.3%** (ver BITACORA). Próximo: #6 frontend `/mercado/zona-norte` → #7 alquiler.
+**Foco actual: pipeline de casas/vivienda ZN.** 305 casas ZN activas cargadas (con contacto del captador, 45 condominios en `condominios_master` mig 260+261); flujo híbrido manual (`scripts/sonda-suelo` + agentes-lectores, NO n8n). **Pendiente: vista `v_mercado_casas` + feed `/ventas/casas` + cron.**
+
+**Fases 1-4 + #8 microzonas aplicadas (29-may):** 14 microzonas en BD (mig 254), frontend (`lib/zonas.ts`) y workflows discovery ZN. **Matching de deptos depurado (16-19 jun): venta ~87%, alquiler 83.3%** (ver BITACORA). Próximo: feed casas → #6 frontend `/mercado/zona-norte` → #7 alquiler.
 
 | Hito | Estado |
 |---|---|
@@ -113,4 +115,6 @@ Cuando llegue el momento de incorporar Zona Norte al flujo HITL formal (post-val
 
 **SÍ (MVP):** discovery de departamentos venta + alquiler de Zona Norte; pasar esa data por el pipeline real (enrichment → merge → verificador); validar calidad.
 
-**NO (por ahora):** matching con `proyectos_master`, fichas técnicas, posicionamiento de marca, landing, rutas públicas `/mercado/zona-norte`, comunicación a clientes B2B, casas/terrenos. Todo eso se decide **después** de que el motor funcione.
+**NO (por ahora):** matching con `proyectos_master`, fichas técnicas, posicionamiento de marca, landing, rutas públicas `/mercado/zona-norte`, comunicación a clientes B2B. Todo eso se decide **después** de que el motor funcione.
+
+> **Nota (20-jun):** casas/vivienda ZN YA es frente activo (305 casas cargadas con contacto, 45 condominios en `condominios_master`); falta el feed público. Terrenos siguen fuera de scope por ahora.

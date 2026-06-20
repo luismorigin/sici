@@ -1,7 +1,8 @@
 # PRD: Casas y Terrenos en Equipetrol
 
-> Status: Fase 1 ✓ + Fase 2 ✓ completadas | Autor: Lucho + Claude | Fecha: 2026-04-17 (Fases 1-2)
+> Status: Fase 1 ✓ + Fase 2 ✓ + **Fase 4 ✓ (condominios)** completadas | Fase 3 (feed público) pendiente | Autor: Lucho + Claude | Fecha: 2026-04-17 (Fases 1-2)
 > Actualización 2026-06-18: sonda de expansión a Zona Norte + Urubó (ver sección 0).
+> Actualización 2026-06-20: **Fase 4 implementada** (tabla `condominios_master` mig 260+261, 45 condominios curados, matcher areal `matchear_condominio()`, FK `id_condominio_master`). **Zona Norte tiene 305 casas activas cargadas** (vía flujo híbrido manual). Solo resta Fase 3: vista `v_mercado_casas` + feed `/ventas/casas`.
 
 ---
 
@@ -163,7 +164,7 @@ Equipetrol tiene volumen bajo de casas (~15-40 listings) y terrenos (~10-30 list
 **Entregable:** Feed publico en simonbo.com.
 
 **Dependencias:**
-- Volumen suficiente (esperar 2-3 semanas de capturas nocturnas)
+- ✓ **Volumen suficiente — ALCANZADO** (al 20-jun-2026 hay **305 casas ZN activas cargadas**). Lo único que queda de Fase 3 es construir la vista `v_mercado_casas` + el feed `/ventas/casas` — eso SÍ sigue pendiente.
 - Evaluar si el card de casa necesita badges para ambientes adicionales (piscina, cuarto servicio, etc.)
 - Definir cómo mostrar TC en el feed (mostrar solo USD normalizado o también badge "TC paralelo"?)
 
@@ -179,9 +180,11 @@ Evidencia validada: al 18 Abr hay 5 casas en `inactivo_pending` (Remax) listas p
 **Snapshots de absorción:** ⏳ Backlog — esperar volumen.
 
 Razones para NO hacer ahora:
-- 19 props activas (13 casas + 6 terrenos dentro Equipetrol). Volumen insuficiente para métricas significativas.
+- 19 props activas (13 casas + 6 terrenos) **en Equipetrol**. Volumen insuficiente para métricas significativas en esa macrozona.
 - Umbral mínimo recomendado: ~50 props por tipo. Con 19, 1 prop = 5% de absorción → varianza enorme, conclusiones falsas.
 - El snapshot existente `market_absorption_snapshots` (mig 193) es para deptos venta.
+
+> **Actualización 20-jun-2026:** el conteo de 19 props era de **Equipetrol**. En **Zona Norte ya hay 305 casas** activas cargadas (umbral ≥50 superado holgadamente). Aun así, los snapshots de absorción para casas **siguen pendientes de implementar** — el volumen ya no es el bloqueante, falta la mecánica.
 
 Cuando extender a casas/terrenos:
 - [ ] Cuando haya ≥50 casas Y ≥30 terrenos activos (estimado 2-3 meses de captura nocturna)
@@ -227,12 +230,16 @@ Cuando extender a casas/terrenos:
 - [ ] Alerta específica: si >5 props en `status='nueva'` con >3 días → problema en enrichment
 - [ ] Alerta: si `zona_mencionada_en_texto` se dispara >3 veces por semana → revisar polígonos
 
-### Fase 4 — Matching y condominios (futuro)
+### Fase 4 — Matching y condominios ✅ IMPLEMENTADO
 **Objetivo:** Matching inteligente para casas en barrios cerrados.
 
-- [ ] Concepto `condominios_master`: tabla nueva o extension de `proyectos_master` con `tipo_proyecto`
-- [ ] Matching condicional: departamento → `proyectos_master`, casa en condominio → `condominios_master`, terreno/casa individual → sin matching
-- [ ] Absorcion de mercado por tipo
+- [x] Concepto `condominios_master`: **tabla nueva (mig 260 + mig 261)** con **45 condominios cerrados curados**
+- [x] Matcher areal `matchear_condominio(lat, lon, nombre)` (nombre-primario + GPS, point-in-polígono) funcionando
+- [x] FK `id_condominio_master` en `propiedades_v2`
+- [x] Matching condicional: departamento → `proyectos_master`, casa en condominio → `condominios_master`, terreno/casa individual → sin matching
+- [ ] Absorcion de mercado por tipo (pendiente — ver sección Snapshots de absorción)
+
+Ya NO es "futuro". Detalle del pipeline de casas-vivienda + matcher: `docs/proyectos/zona-norte/DISENO_PIPELINE_CASAS_VIVIENDA.md`.
 
 ### Fase 5 — Casas en alquiler y anticrético en Equipetrol (futuro)
 **Objetivo:** Extender el pipeline a operaciones distintas a venta para casas.
@@ -304,6 +311,8 @@ tipo_terreno/operacion_venta/layout_mapa/coordenadas_{N},{E},{S},{W},15?json=tru
 ```
 
 **Workflow n8n:** Un workflow de discovery por portal (2 total). Cada uno captura casas+terrenos en una corrida. El portal devuelve `tipo_propiedad_original` que los distingue en BD.
+
+> **Caveat n8n vs híbrido (20-jun-2026):** el pipeline n8n de casas/terrenos descrito acá es **Equipetrol-only** y **NO captura el contacto del agente ni hace matching de condominios**. La carga de las **305 casas de Zona Norte se hizo con un flujo HÍBRIDO manual** (scripts en `scripts/sonda-suelo/` — discovery/dedup/fetch-contacto/merge — + agentes-lectores para el MOAT), que SÍ captura el contacto del captador (WhatsApp en `datos_json_enrichment`) y SÍ hace matching a `condominios_master`. El plan a futuro es **unificar ambos bajo el flujo híbrido** (retirar el n8n viejo).
 
 ### 5.3 Enrichment LLM — Prompts separados
 
