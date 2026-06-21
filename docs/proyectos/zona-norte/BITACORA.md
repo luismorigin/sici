@@ -664,3 +664,26 @@ FASE 5-7 (no dependen del snapshot): `lib/zonas.ts` (14 microzonas en filtro adm
 **Resultado verificado en BD:** fotos 305/306, descripción 304/306, fecha_publicacion (columna) 305/306, código 306/306, estacionamientos 95/306 (solo C21, 31%), oficina_telefono 193/306 (solo C21, 63%). WhatsApp 306/306 + amenidades 283/306 **intactos**; 0 contaminan matching de deptos. Marcador `datos_json_enrichment->>'fuente_backfill'='backfill_campos_21jun'`. 1 sin fotos: **id 3246** (Remax Radial 26, listing sin multimedias en la fuente).
 
 **Pendiente:** vista `v_mercado_casas` + feed `/ventas/casas` (ya con todos los datos: fotos, descripción, fecha, ref propia, portal); cablear `extraerCampos()` al cron del flujo híbrido para que las casas nuevas nazcan con estos campos.
+
+---
+
+## 21 Jun 2026 (tarde) — Bug: el pipeline nocturno degradaba las casas ZN + feed v_mercado_casas
+
+**Origen:** al construir la vista del feed de casas (`v_mercado_casas`, migración 262), el SELECT devolvía **194 casas, no 305**. Diagnóstico: **113 casas remax ZN habían sido marcadas `inactivo_pending`** por el pipeline nocturno (marcas 20 y 21-jun 09:15), 1 ya en `es_activa=false`. Patrón idéntico al bug histórico de deptos ZN (esta misma bitácora, 19-may): un discovery comparaba props de la zona sin filtrar por tipo y marcaba ausente lo que su scraping no encontraba.
+
+**Causa raíz (dos depredadores sobre las casas remax ZN):**
+1. `discovery_remax_casas_terrenos` (Equipetrol-only): su "Obtener URLs Activas BD" trae TODAS las casas remax (`fuente='remax'`, **sin filtro de zona**) pero scrapea solo Equipetrol → no encuentra las ZN → las marca ausentes.
+2. `flujo_a_discovery_remax_zonanorte` (deptos ZN): trae todo lo remax de ZN **sin filtrar tipo** (deptos + casas) → su scraping de deptos no encuentra las casas → las marca ausentes.
+- Las casas **C21 se salvaron por casualidad de naming**: ambos discovery C21 buscan `fuente='century21'` y nuestras casas usan `fuente='c21'`.
+
+**Fix (separación por tipo — cada pipeline ignora lo que no es suyo):**
+- Discovery de **deptos ZN** (remax + century21): `+ AND lower(coalesce(tipo_propiedad_original,'')) NOT IN ('casa','terreno','lote')` en "Obtener URLs Activas BD" y "Marcar Ausentes". Aplicado por el founder en su instancia n8n (verificado contra sus exports reales). **Equipetrol NO se tocó** (no tiene casas del híbrido; git diff vacío — decisión de no tocar producción consolidada).
+- Discovery de **casas/terrenos** (los 3 workflows, Equipetrol-only de prueba): **desactivados** en n8n (los reemplaza el flujo híbrido). Fix de zona Equipetrol dejado en el repo como respaldo por si se reactivan.
+
+**Recuperación:** `scripts/auditoria-cola-matching/recuperar-casas-pending.mjs` (service_role) devolvió las 113 a `status='completado'`, `es_activa=true`, `primera_ausencia_at=NULL`. Verificado: 306 casas completado+activa, 0 pending. La vista `v_mercado_casas` ahora devuelve **298 casas** (189 C21 + 104 remax + 5 condominio; 297 con fotos) — las 8 que faltan para 306 tienen anuncio >300 días (filtro de antigüedad canónico, correcto).
+
+**Vista `v_mercado_casas` (migración 262, PENDIENTE de aplicar en Supabase):** espejo de `v_mercado_venta` invirtiendo el filtro a `tipo_propiedad_original='casa'` (la de deptos excluye 'casa' explícitamente) + `es_activa` + antigüedad 300/730d + LEFT JOIN a `condominios_master` (condominio heredado). GRANTs Preset A. Aislada, no toca el feed de deptos. Decisión: antigüedad 300d (igual deptos), ruta separada `/ventas/casas`.
+
+**Lección arquitectónica:** deptos (n8n) y casas (híbrido) comparten `propiedades_v2` → **cada pipeline debe filtrar por tipo para ignorar lo ajeno**. La frontera es por TIPO de propiedad, no por zona. El híbrido es multizona (genérico por polígono) pero solo para casas/terrenos; los deptos siguen en n8n.
+
+**Pendiente:** aplicar migración 262 en Supabase → construir feed `/ventas/casas` → piloto del cron del híbrido vía routine de Claude Code (MOAT sin costo de API, una sola routine corre todo el flujo lineal).
