@@ -3,6 +3,7 @@
 > Status: Fase 1 ✓ + Fase 2 ✓ + **Fase 4 ✓ (condominios)** completadas | Fase 3 (feed público) pendiente | Autor: Lucho + Claude | Fecha: 2026-04-17 (Fases 1-2)
 > Actualización 2026-06-18: sonda de expansión a Zona Norte + Urubó (ver sección 0).
 > Actualización 2026-06-20: **Fase 4 implementada** (tabla `condominios_master` mig 260+261, 45 condominios curados, matcher areal `matchear_condominio()`, FK `id_condominio_master`). **Zona Norte tiene 305 casas activas cargadas** (vía flujo híbrido manual). Solo resta Fase 3: vista `v_mercado_casas` + feed `/ventas/casas`.
+> Actualización 2026-06-21: **backfill de campos faltantes** — las casas ya tienen el contrato completo de deptos en `datos_json_enrichment`: `fotos_urls`+`cantidad_fotos`, `descripcion`, `fecha_publicacion` (columna), `codigo_propiedad`, `estacionamientos`/`oficina_telefono` (solo C21, Remax no los expone). Identificadores: `id` propio (ref `SIM-V<id>`) + `fuente` (Remax/C21) + `oficina_nombre` (franquicia). Cobertura: fotos 305/306, descripción 304/306, fecha 305/306, código 306/306. Script reusable `scripts/auditoria-cola-matching/backfill-campos-casas.mjs` (función `extraerCampos()` lista para el cron). **Fase 3 ya no depende de extraer fotos — todo el dato del feed está cargado.**
 
 ---
 
@@ -203,7 +204,7 @@ Cuando extender a casas/terrenos:
   - **Casa**: dormitorios, baños, niveles, garage, piscina, jardín, cuarto servicio, ambientes_adicionales (chips), amenities, equipamiento, estado_propiedad, plan_pagos
   - **Terreno**: area_terreno, frente, fondo, uso_suelo, tiene_construccion, servicios_disponibles (toggles), topografía, plan_pagos
 - [ ] Candados (`campos_bloqueados`) para campos tipo-específicos nuevos (area_terreno, frente, fondo, niveles, etc.)
-- [ ] Galería de fotos + lightbox (cuando Fase 2 extraiga fotos)
+- [ ] Galería de fotos + lightbox (✅ fotos ya extraídas para ZN: `datos_json_enrichment->fotos_urls`, backfill 21-jun)
 - [ ] Descripción original + descripción limpia LLM side-by-side para validar
 - [ ] Badge de `excluida_zona` si el LLM detectó otra zona — con CTA "confirmar exclusión" o "override y volver a completado"
 - [ ] Badge de TC detectado (oficial/paralelo/no_especificado) con link para corregir

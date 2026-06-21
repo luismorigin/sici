@@ -4,9 +4,9 @@
 
 ---
 
-## Estado actual — 20 Jun 2026
+## Estado actual — 21 Jun 2026
 
-**Foco actual: pipeline de casas/vivienda ZN.** 305 casas ZN activas cargadas (con contacto del captador, 45 condominios en `condominios_master` mig 260+261); flujo híbrido manual (`scripts/sonda-suelo` + agentes-lectores, NO n8n). **Pendiente: vista `v_mercado_casas` + feed `/ventas/casas` + cron.**
+**Foco actual: pipeline de casas/vivienda ZN.** 305 casas ZN activas cargadas (con contacto del captador, 45 condominios en `condominios_master` mig 260+261); flujo híbrido manual (`scripts/sonda-suelo` + agentes-lectores, NO n8n). **Backfill 21-jun: las casas ya tienen todos los campos del contrato de deptos** — `fotos_urls`+`cantidad_fotos`, `descripcion`, `fecha_publicacion`, `codigo_propiedad`, `estacionamientos`/`oficina_telefono` (solo C21), además del `id` propio (ref pública `SIM-V<id>`) y `fuente` (Remax/C21). Script reusable `scripts/auditoria-cola-matching/backfill-campos-casas.mjs`. **Pendiente: vista `v_mercado_casas` + feed `/ventas/casas` + cron.**
 
 **Fases 1-4 + #8 microzonas aplicadas (29-may):** 14 microzonas en BD (mig 254), frontend (`lib/zonas.ts`) y workflows discovery ZN. **Matching de deptos depurado (16-19 jun): venta ~87%, alquiler 83.3%** (ver BITACORA). Próximo: feed casas → #6 frontend `/mercado/zona-norte` → #7 alquiler.
 
@@ -118,3 +118,4 @@ Cuando llegue el momento de incorporar Zona Norte al flujo HITL formal (post-val
 **NO (por ahora):** matching con `proyectos_master`, fichas técnicas, posicionamiento de marca, landing, rutas públicas `/mercado/zona-norte`, comunicación a clientes B2B. Todo eso se decide **después** de que el motor funcione.
 
 > **Nota (20-jun):** casas/vivienda ZN YA es frente activo (305 casas cargadas con contacto, 45 condominios en `condominios_master`); falta el feed público. Terrenos siguen fuera de scope por ahora.
+> **Nota (21-jun):** backfill completado — las casas ya tienen fotos, descripción, fecha de publicación y código del portal (faltaban respecto al contrato de deptos). El feed público ya tiene todos los datos para renderizar cards completas; solo falta construirlo.
