@@ -2,7 +2,7 @@
 
 > Status: Fase 1 ✓ + Fase 2 ✓ + **Fase 4 ✓ (condominios)** completadas | Fase 3 (feed público) pendiente | Autor: Lucho + Claude | Fecha: 2026-04-17 (Fases 1-2)
 > Actualización 2026-06-18: sonda de expansión a Zona Norte + Urubó (ver sección 0).
-> Actualización 2026-06-20: **Fase 4 implementada** (tabla `condominios_master` mig 260+261, 45 condominios curados, matcher areal `matchear_condominio()`, FK `id_condominio_master`). **Zona Norte tiene 305 casas activas cargadas** (vía flujo híbrido manual). Solo resta Fase 3: vista `v_mercado_casas` + feed `/ventas/casas`.
+> Actualización 2026-06-20: **Fase 4 implementada** (tabla `condominios_master` mig 260+261, 45 condominios curados, matcher areal `matchear_condominio()`, FK `id_condominio_master`). **Zona Norte tiene 305 casas activas cargadas** (vía flujo híbrido manual). Solo resta Fase 3: el feed `/ventas/casas` (vista `v_mercado_casas` ✅ aplicada mig 262, 298 casas).
 > Actualización 2026-06-21: **backfill de campos faltantes** — las casas ya tienen el contrato completo de deptos en `datos_json_enrichment`: `fotos_urls`+`cantidad_fotos`, `descripcion`, `fecha_publicacion` (columna), `codigo_propiedad`, `estacionamientos`/`oficina_telefono` (solo C21, Remax no los expone). Identificadores: `id` propio (ref `SIM-V<id>`) + `fuente` (Remax/C21) + `oficina_nombre` (franquicia). Cobertura: fotos 305/306, descripción 304/306, fecha 305/306, código 306/306. Script reusable `scripts/auditoria-cola-matching/backfill-campos-casas.mjs` (función `extraerCampos()` lista para el cron). **Fase 3 ya no depende de extraer fotos — todo el dato del feed está cargado.**
 
 ---
