@@ -165,7 +165,7 @@ Equipetrol tiene volumen bajo de casas (~15-40 listings) y terrenos (~10-30 list
 **Entregable:** Feed publico en simonbo.com.
 
 **Dependencias:**
-- ✓ **Volumen suficiente — ALCANZADO** (al 20-jun-2026 hay **305 casas ZN activas cargadas**). Lo único que queda de Fase 3 es construir la vista `v_mercado_casas` + el feed `/ventas/casas` — eso SÍ sigue pendiente.
+- ✓ **Volumen suficiente — ALCANZADO** (al 20-jun-2026 hay **305 casas ZN activas cargadas**). La vista `v_mercado_casas` ✅ ya está aplicada (mig 262, 298 casas); lo único que queda de Fase 3 es el feed `/ventas/casas`.
 - Evaluar si el card de casa necesita badges para ambientes adicionales (piscina, cuarto servicio, etc.)
 - Definir cómo mostrar TC en el feed (mostrar solo USD normalizado o también badge "TC paralelo"?)
 
