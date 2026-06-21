@@ -251,7 +251,7 @@ Piezas genéricas ya existentes en `scripts/sonda-suelo/` y `scripts/auditoria-c
 - `backfill-campos-casas.mjs` → `extraerCampos()` (fotos/descripción/fecha/código), reusable ✅
 - `matchear_condominio()` (SQL) → adaptador de matching de **casas** ✅
 - `precio_normalizado()` (SQL) → adaptador de precio de **venta** ✅
-- `discovery-dedup.mjs`, `verificador-casas.mjs` → dedup + verificador ✅
+- `sonda-suelo/discovery-dedup.mjs` (dedup) + `auditoria-cola-matching/verificador-casas.mjs` (verificador) ✅
 
 Lo que falta es **organizarlas** detrás de una interfaz `pipeline({tipo, operación, zona})` y escribir
 los adaptadores que faltan (matching de edificios para deptos, normalización de alquiler/anticrético,
