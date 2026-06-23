@@ -1,0 +1,988 @@
+{
+  "c21": 83,
+  "remax": 34,
+  "unicos": 109,
+  "props": [
+    {
+      "fuente": "c21",
+      "id": "112376",
+      "lat": -17.765987821206433,
+      "lon": -63.19075993745049,
+      "precio": "5500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/112376_en-alquiler-departamento-totalmente-amoblado-y-equipado"
+    },
+    {
+      "fuente": "c21",
+      "id": "112842",
+      "lat": -17.762894281095065,
+      "lon": -63.17898356686401,
+      "precio": "3850",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/112842_reservado"
+    },
+    {
+      "fuente": "c21",
+      "id": "112638",
+      "lat": -17.7629012,
+      "lon": -63.1780292,
+      "precio": "3500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/112638_macororo-10-departamento-de-1-dormitorio-en-alquiler-zona-norte"
+    },
+    {
+      "fuente": "c21",
+      "id": "112099",
+      "lat": -17.765484008004268,
+      "lon": -63.17537885711672,
+      "precio": "4949",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/112099_departamento-amoblado-en-alquiler-macororo-13-14"
+    },
+    {
+      "fuente": "c21",
+      "id": "113203",
+      "lat": -17.7644934,
+      "lon": -63.1878498,
+      "precio": "2900",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/113203_departamento-en-alquiler-zona-norte-un-dormitorio"
+    },
+    {
+      "fuente": "c21",
+      "id": "112004",
+      "lat": -17.765413477353796,
+      "lon": -63.18849310317994,
+      "precio": "3300",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/112004_departamento-de-1-dormitorio"
+    },
+    {
+      "fuente": "c21",
+      "id": "111195",
+      "lat": -17.757949589321207,
+      "lon": -63.18339075677489,
+      "precio": "2900",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/111195_monoambiente-a-estrenar-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "111345",
+      "lat": -17.76826553529291,
+      "lon": -63.18924740475464,
+      "precio": "3400",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/111345_monoambiente-como-si-fuera-de-1-dormitorio-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "111248",
+      "lat": -17.7642265,
+      "lon": -63.1748984,
+      "precio": "3700",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/111248_departamento-en-alquiler-av-los-cusis"
+    },
+    {
+      "fuente": "c21",
+      "id": "110267",
+      "lat": -17.76015658691592,
+      "lon": -63.17613806359862,
+      "precio": "3700",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/110267_monoambiente-amoblado-y-equipado-en-alquiler-torres-evolution"
+    },
+    {
+      "fuente": "c21",
+      "id": "109294",
+      "lat": -17.77004938847996,
+      "lon": -63.18465766721191,
+      "precio": "4500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/109294_alquiler-departamento-2-dormitorios-amoblado"
+    },
+    {
+      "fuente": "c21",
+      "id": "109482",
+      "lat": -17.7621736,
+      "lon": -63.17885500000001,
+      "precio": "3800",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/109482_departamento-de-1-dormitorio-abmoblado-en-alquiler-en-zona-norte-macororo-1314"
+    },
+    {
+      "fuente": "c21",
+      "id": "107674",
+      "lat": -17.7625602,
+      "lon": -63.1897917,
+      "precio": "4500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/107674_hermoso-depto-amoblado-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "107948",
+      "lat": -17.7606878970852,
+      "lon": -63.17639555566405,
+      "precio": "3300",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/107948_departamento-de-1-dormitorio-a-estrenar-zona-zoologico"
+    },
+    {
+      "fuente": "c21",
+      "id": "107487",
+      "lat": -17.762411154466978,
+      "lon": -63.17893278406145,
+      "precio": "3500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/107487_departamento-en-alquiler-en-edificio-macororo-13-14"
+    },
+    {
+      "fuente": "c21",
+      "id": "106138",
+      "lat": -17.7625148,
+      "lon": -63.18454930000001,
+      "precio": "5900",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/106138_departamento-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "106458",
+      "lat": -17.76568928757412,
+      "lon": -63.175767918754566,
+      "precio": "3300",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/106458_monoambiente-totalmente-amoblado-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "105683",
+      "lat": -17.756779665202824,
+      "lon": -63.18623926274871,
+      "precio": "2600",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/105683_monoambiente-en-alquiler-zona-norte"
+    },
+    {
+      "fuente": "c21",
+      "id": "106661",
+      "lat": -17.759666145358988,
+      "lon": -63.17608710162734,
+      "precio": "4000",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/106661_departamento-en-alquiler-1-dormitorios-torres-evolution"
+    },
+    {
+      "fuente": "c21",
+      "id": "95254",
+      "lat": -17.7679295,
+      "lon": -63.17716710000001,
+      "precio": "5500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/95254_alquiler-de-departamento-de-lujo-en-sky-aqualina"
+    },
+    {
+      "fuente": "c21",
+      "id": "64233",
+      "lat": -17.7669695,
+      "lon": -63.1899902,
+      "precio": "2300",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/64233_monoambiente-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "112009",
+      "lat": -17.7562048,
+      "lon": -63.1698087,
+      "precio": "3000",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/112009_en-alquiler-monoambiente-a-estrenar-zona-norte"
+    },
+    {
+      "fuente": "c21",
+      "id": "111958",
+      "lat": -17.7676075,
+      "lon": -63.16983889999999,
+      "precio": "2800",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/111958_monoambiente-amoblado-en-alquiler-torre-vento-av-alemana"
+    },
+    {
+      "fuente": "c21",
+      "id": "111765",
+      "lat": -17.753882920602237,
+      "lon": -63.17464675538634,
+      "precio": "3300",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/111765_hermoso-dpto-de-1-dormitorio-en-alquiler-edificio-keroni"
+    },
+    {
+      "fuente": "c21",
+      "id": "110954",
+      "lat": -17.756303849884937,
+      "lon": -63.16990049725341,
+      "precio": "3800",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/110954_en-alquiler-departamento-a-estrenar-vista-al-parque"
+    },
+    {
+      "fuente": "c21",
+      "id": "110949",
+      "lat": -17.75622210795851,
+      "lon": -63.17002924328612,
+      "precio": "3800",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/110949_en-alquiler-departamento-a-estrenar"
+    },
+    {
+      "fuente": "c21",
+      "id": "111372",
+      "lat": -17.760973617252024,
+      "lon": -63.16316294551856,
+      "precio": "2200",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/111372_departamento-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "110810",
+      "lat": -17.7560583,
+      "lon": -63.1704637,
+      "precio": "3400",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/110810_ideal-para-ejecutivos-y-estudiantes-amoblada"
+    },
+    {
+      "fuente": "c21",
+      "id": "104773",
+      "lat": -17.7641729,
+      "lon": -63.17465120000001,
+      "precio": "4700",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/104773_amplio-departamento-amoblado-en-venta-en-los-cusis"
+    },
+    {
+      "fuente": "c21",
+      "id": "103158",
+      "lat": -17.760551547515014,
+      "lon": -63.174179931911844,
+      "precio": "4700",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/103158_hermoso-dpto-en-alquiler-ubicacion-excepcional"
+    },
+    {
+      "fuente": "c21",
+      "id": "112567",
+      "lat": -17.7512018,
+      "lon": -63.19126439999999,
+      "precio": "3900",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/112567_departamento-en-alquiler-en-curupau-isuto"
+    },
+    {
+      "fuente": "c21",
+      "id": "112667",
+      "lat": -17.75114450869252,
+      "lon": -63.191244264770496,
+      "precio": "16000",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/112667_departamento-amoblado-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "111701",
+      "lat": -17.748406054884107,
+      "lon": -63.17821945779418,
+      "precio": "3150",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/111701_monoambiente-amoblado-a-estrenar-con-domotica-en-alquiler-zona-norte"
+    },
+    {
+      "fuente": "c21",
+      "id": "110813",
+      "lat": -17.7333329,
+      "lon": -63.183333,
+      "precio": "3600",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/110813_hermoso-y-amplio-departamente-amoblado-de-1-dorm"
+    },
+    {
+      "fuente": "c21",
+      "id": "109503",
+      "lat": -17.746570603205924,
+      "lon": -63.17848097317313,
+      "precio": "2900",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/109503_monoambiente-amoblado-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "107162",
+      "lat": -17.7441931,
+      "lon": -63.1775814,
+      "precio": "3500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/107162_departamento-monoambiente-en-alquiler-condominio-ares-zona-norte"
+    },
+    {
+      "fuente": "c21",
+      "id": "106195",
+      "lat": -17.7482085,
+      "lon": -63.1785832,
+      "precio": "5000",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/106195_dpto-amoblado-en-alquiler-de-1-dormitorio"
+    },
+    {
+      "fuente": "c21",
+      "id": "111489",
+      "lat": -17.746697756387324,
+      "lon": -63.17850821534425,
+      "precio": "3300",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/111489_monoambiente-amoblado-en-alquiler-condominio-ares-by-elite"
+    },
+    {
+      "fuente": "c21",
+      "id": "105164",
+      "lat": -17.74925894180399,
+      "lon": -63.18677832380372,
+      "precio": "3500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/105164_departamento-de-1-dormitorio-en-alquiler-condominio-barcelona-04-05"
+    },
+    {
+      "fuente": "c21",
+      "id": "104907",
+      "lat": -17.7465266,
+      "lon": -63.17846530000001,
+      "precio": "3300",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/104907_departamento-en-alquiler-en-edificio-ares"
+    },
+    {
+      "fuente": "c21",
+      "id": "86600",
+      "lat": -17.748153774693353,
+      "lon": -63.17824394445802,
+      "precio": "3350",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/86600_en-alquiler-hermoso-departamento-en-zona-norte"
+    },
+    {
+      "fuente": "c21",
+      "id": "113065",
+      "lat": -17.737713574447266,
+      "lon": -63.16386810370484,
+      "precio": "6751.2",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/113065_amplio-y-elegante-departamento-en-alquiler-zona-norte"
+    },
+    {
+      "fuente": "c21",
+      "id": "112887",
+      "lat": -17.750907541021437,
+      "lon": -63.17043524854889,
+      "precio": "3800",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/112887_departamento-en-alquiler-sobre-avenida-cuarto-anillo"
+    },
+    {
+      "fuente": "c21",
+      "id": "112754",
+      "lat": -17.7338752,
+      "lon": -63.16197599999999,
+      "precio": "4000",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/112754_en-alquiler-departamento-amoblado-de-2-dormitorios-zona-av-banzer-6to-anillo"
+    },
+    {
+      "fuente": "c21",
+      "id": "112327",
+      "lat": -17.74481432528405,
+      "lon": -63.16864933602904,
+      "precio": "2800",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/112327_monoambiente-amoblado-con-parqueo-y-expensas"
+    },
+    {
+      "fuente": "c21",
+      "id": "111321",
+      "lat": -17.7447796,
+      "lon": -63.1686592,
+      "precio": "2100",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/111321_monoambiente-en-alquiler-cond-baruc-norte-av-beni-4to-y-5to-anillo"
+    },
+    {
+      "fuente": "c21",
+      "id": "110279",
+      "lat": -17.75042874991699,
+      "lon": -63.170587972226336,
+      "precio": "4500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/110279_departamento-completamente-amoblado-en-alquiler-torres-zen"
+    },
+    {
+      "fuente": "c21",
+      "id": "110566",
+      "lat": -17.7326779,
+      "lon": -63.1557012,
+      "precio": "3350",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/110566_apartamento-amoblado-con-hermosas-vistas-en-zona-norte"
+    },
+    {
+      "fuente": "c21",
+      "id": "110856",
+      "lat": -17.743685189143623,
+      "lon": -63.16918577783202,
+      "precio": "2200",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/110856_departamento-mono-ambiente-amoblado-en-alquiler-zona-norte"
+    },
+    {
+      "fuente": "c21",
+      "id": "109417",
+      "lat": -17.738558,
+      "lon": -63.17298520000001,
+      "precio": "2600",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/109417_dpto-en-alquiler-de-1-dormitorio-equipado"
+    },
+    {
+      "fuente": "c21",
+      "id": "94591",
+      "lat": -17.734576936243286,
+      "lon": -63.167310218660546,
+      "precio": "2500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/94591_monoambiente-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "107091",
+      "lat": -17.7345900284403,
+      "lon": -63.167461873463424,
+      "precio": "2500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/107091_monomambiente-en-alquiler-cond-baruc-av-banzer"
+    },
+    {
+      "fuente": "c21",
+      "id": "105381",
+      "lat": -17.73654234397739,
+      "lon": -63.163091798950184,
+      "precio": "4800",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/105381_promocion-departamento-de-2-dormitorios-amoblado"
+    },
+    {
+      "fuente": "c21",
+      "id": "104343",
+      "lat": -17.74205533754297,
+      "lon": -63.16980000369643,
+      "precio": "2500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/104343_departamento-de-1-dormitorio-en-alquiler-condominio-barak-ii"
+    },
+    {
+      "fuente": "c21",
+      "id": "110173",
+      "lat": -17.734178534715866,
+      "lon": -63.14706014877282,
+      "precio": "2000",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/110173_comodo-monoambiente-en-alquiler-ideal-para-universitarios-catolica-univalle"
+    },
+    {
+      "fuente": "c21",
+      "id": "109921",
+      "lat": -17.7203529,
+      "lon": -63.17822499999999,
+      "precio": "2500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/109921_monoambiente-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "57808",
+      "lat": -17.72014031282273,
+      "lon": -63.1791421376953,
+      "precio": "3430",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/57808_en-alquiler-berchatti-norte-2-dormitorios-con-parqueo"
+    },
+    {
+      "fuente": "c21",
+      "id": "57806",
+      "lat": -17.72018119202451,
+      "lon": -63.17897047631835,
+      "precio": "2730",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/57806_departamento-de-1-dormitorio-amoblado-en-alquiler-berchatti-norte"
+    },
+    {
+      "fuente": "c21",
+      "id": "112636",
+      "lat": -17.7258191,
+      "lon": -63.16946350000001,
+      "precio": "3700",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/112636_departamento-en-alquiler-de-3-dormitorios"
+    },
+    {
+      "fuente": "c21",
+      "id": "112392",
+      "lat": -17.724753160923825,
+      "lon": -63.159783147850405,
+      "precio": "2800",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/112392_departamento-semi-independiente-de-2-dormitorios-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "96321",
+      "lat": -17.7143392,
+      "lon": -63.16920719999999,
+      "precio": "3500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/96321_alquiler-de-departamento-en-el-boulevard-del-remanso"
+    },
+    {
+      "fuente": "c21",
+      "id": "109743",
+      "lat": -17.730359823148415,
+      "lon": -63.168584963012684,
+      "precio": "2600",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/109743_monoambiente-zona-ucebol"
+    },
+    {
+      "fuente": "c21",
+      "id": "108549",
+      "lat": -17.731334410156418,
+      "lon": -63.168395122753914,
+      "precio": "3500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/108549_departamento-en-alquiler-zona-norte"
+    },
+    {
+      "fuente": "c21",
+      "id": "108256",
+      "lat": -17.730658788718248,
+      "lon": -63.16809213322145,
+      "precio": "2800",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/108256_departamento-de-1-dormitorio-zona-norte-6to-anillo"
+    },
+    {
+      "fuente": "c21",
+      "id": "107861",
+      "lat": -17.7256646828888,
+      "lon": -63.1605405663513,
+      "precio": "2500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/107861_departamento-de-un-dormitorio-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "107705",
+      "lat": -17.7221644,
+      "lon": -63.1745923,
+      "precio": "2500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/107705_monoambiente-alquiler-amoblado-al-frente-de-la-univalle"
+    },
+    {
+      "fuente": "c21",
+      "id": "107868",
+      "lat": -17.728056026825982,
+      "lon": -63.16453169336546,
+      "precio": "3300",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/107868_monoambiente-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "107892",
+      "lat": -17.720169153689184,
+      "lon": -63.160426026306155,
+      "precio": "8500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/107892_departamento-de-3-niveles-con-piscina-en-alquiler-zona-norte"
+    },
+    {
+      "fuente": "c21",
+      "id": "105573",
+      "lat": -17.730773744587133,
+      "lon": -63.16894617333298,
+      "precio": "3000",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/105573_departamento-de-1-dormitorio-a-estrenar-en-alquiler-zona-ucebol"
+    },
+    {
+      "fuente": "c21",
+      "id": "104034",
+      "lat": -17.7307885,
+      "lon": -63.16895330000001,
+      "precio": "2700",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/104034_alquiler-de-monoambiente-a-estrenar-zona-ucebol"
+    },
+    {
+      "fuente": "c21",
+      "id": "103015",
+      "lat": -17.7144889,
+      "lon": -63.1665239,
+      "precio": "5500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/103015_departamento-independiente-en-alquiler-1er-piso"
+    },
+    {
+      "fuente": "c21",
+      "id": "112437",
+      "lat": -17.71993591667408,
+      "lon": -63.146612306762684,
+      "precio": "3000",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/112437_departamento-de-2-dormitorios-en-aquiler-condominio-community"
+    },
+    {
+      "fuente": "c21",
+      "id": "109744",
+      "lat": -17.72376299852936,
+      "lon": -63.136197369128425,
+      "precio": "1750",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/109744_monoambiente-en-alquiler"
+    },
+    {
+      "fuente": "c21",
+      "id": "107333",
+      "lat": -17.7098256,
+      "lon": -63.1754151,
+      "precio": "2800",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/107333_departamento-en-alquiler-zona-norte-el-remanso"
+    },
+    {
+      "fuente": "c21",
+      "id": "103808",
+      "lat": -17.695523405590162,
+      "lon": -63.1555833275421,
+      "precio": "2500",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/103808_monoambiente-en-alquiler-en-condominio-barcelona-al-norte-zona-u-catolica"
+    },
+    {
+      "fuente": "c21",
+      "id": "107915",
+      "lat": -17.69606198355715,
+      "lon": -63.15448090859833,
+      "precio": "4000",
+      "moneda": "BOB",
+      "url": "https://c21.com.bo/propiedad/107915_casa-en-alquiler-de-3-dormitorios-dentro-de-condominio-zona-norte"
+    },
+    {
+      "fuente": "remax",
+      "id": "1200796319-165",
+      "lat": -17.75021937,
+      "lon": -63.17046404,
+      "precio": 685,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-1200796319-165"
+    },
+    {
+      "fuente": "remax",
+      "id": "120079008-182",
+      "lat": -17.76352282,
+      "lon": -63.17827463,
+      "precio": 600,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-120079008-182"
+    },
+    {
+      "fuente": "remax",
+      "id": "1200796319-166",
+      "lat": -17.7504033,
+      "lon": -63.17022785,
+      "precio": 1215,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-1200796319-166"
+    },
+    {
+      "fuente": "remax",
+      "id": "1200336383-2",
+      "lat": -17.74884302,
+      "lon": -63.1690092,
+      "precio": 714,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-1200336383-2"
+    },
+    {
+      "fuente": "remax",
+      "id": "1200796312-114",
+      "lat": -17.73724193,
+      "lon": -63.17365587,
+      "precio": 400,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/departamento-santa-cruz-de-la-sierra-norte-1200796312-114"
+    },
+    {
+      "fuente": "remax",
+      "id": "1200796319-144",
+      "lat": -17.75015806,
+      "lon": -63.17065716,
+      "precio": 642.85714285714,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/departamento-santa-cruz-de-la-sierra-norte-1200796319-144"
+    },
+    {
+      "fuente": "remax",
+      "id": "125001263-32",
+      "lat": -17.73758937,
+      "lon": -63.16411266,
+      "precio": 2600,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-125001263-32"
+    },
+    {
+      "fuente": "remax",
+      "id": "125001241-292",
+      "lat": -17.73476896,
+      "lon": -63.18969011,
+      "precio": 360,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-125001241-292"
+    },
+    {
+      "fuente": "remax",
+      "id": "1200434362-9",
+      "lat": -17.76335935,
+      "lon": -63.18833806,
+      "precio": 850,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-1200434362-9"
+    },
+    {
+      "fuente": "remax",
+      "id": "120034042-75",
+      "lat": -17.76344619,
+      "lon": -63.17819417,
+      "precio": 500,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-120034042-75"
+    },
+    {
+      "fuente": "remax",
+      "id": "120079007-228",
+      "lat": -17.69515076,
+      "lon": -63.15596909,
+      "precio": 314.28,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-banzer-7mo-a-9no-anillo-120079007-228"
+    },
+    {
+      "fuente": "remax",
+      "id": "120034109-62",
+      "lat": -17.76250158,
+      "lon": -63.17867841,
+      "precio": 429,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-120034109-62"
+    },
+    {
+      "fuente": "remax",
+      "id": "120045036-122",
+      "lat": -17.76266457,
+      "lon": -63.18464694,
+      "precio": 600,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-pirai-120045036-122"
+    },
+    {
+      "fuente": "remax",
+      "id": "120034066-52",
+      "lat": -17.76768206,
+      "lon": -63.17692852,
+      "precio": 985.7,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-beni-120034066-52"
+    },
+    {
+      "fuente": "remax",
+      "id": "125001358-92",
+      "lat": -17.71304212,
+      "lon": -63.17498078,
+      "precio": 550,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-125001358-92"
+    },
+    {
+      "fuente": "remax",
+      "id": "120045022-129",
+      "lat": -17.7345793,
+      "lon": -63.17405283,
+      "precio": 373.5632183908046,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-120045022-129"
+    },
+    {
+      "fuente": "remax",
+      "id": "120088003-29",
+      "lat": -17.7376296,
+      "lon": -63.1571768,
+      "precio": 605,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-120088003-29"
+    },
+    {
+      "fuente": "remax",
+      "id": "1200796312-143",
+      "lat": -17.74265221,
+      "lon": -63.16970191,
+      "precio": 400,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-1200796312-143"
+    },
+    {
+      "fuente": "remax",
+      "id": "120040012-70",
+      "lat": -17.71757983,
+      "lon": -63.1675619,
+      "precio": 515,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-120040012-70"
+    },
+    {
+      "fuente": "remax",
+      "id": "120097001-11",
+      "lat": -17.76295065,
+      "lon": -63.17875743,
+      "precio": 600,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-120097001-11"
+    },
+    {
+      "fuente": "remax",
+      "id": "1200346181-12",
+      "lat": -17.73712317,
+      "lon": -63.17252433,
+      "precio": 330,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-1200346181-12"
+    },
+    {
+      "fuente": "remax",
+      "id": "1200454361-15",
+      "lat": -17.76799796,
+      "lon": -63.17913147,
+      "precio": 431.03,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-1200454361-15"
+    },
+    {
+      "fuente": "remax",
+      "id": "1200796325-77",
+      "lat": -17.73850906,
+      "lon": -63.17314706,
+      "precio": 371.42,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-norte-1200796325-77"
+    },
+    {
+      "fuente": "remax",
+      "id": "120042014-134",
+      "lat": -17.7578419,
+      "lon": -63.18215847,
+      "precio": 500,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-radial-26-120042014-134"
+    },
+    {
+      "fuente": "remax",
+      "id": "1200346199-6",
+      "lat": -17.75060766,
+      "lon": -63.16456025,
+      "precio": 431,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-alemana-1200346199-6"
+    },
+    {
+      "fuente": "remax",
+      "id": "125001284-207",
+      "lat": -17.75563492,
+      "lon": -63.18932543,
+      "precio": 375,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-radial-26-125001284-207"
+    },
+    {
+      "fuente": "remax",
+      "id": "125001284-209",
+      "lat": -17.75600273,
+      "lon": -63.18932558,
+      "precio": 375,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-radial-26-125001284-209"
+    },
+    {
+      "fuente": "remax",
+      "id": "125001284-210",
+      "lat": -17.75575747,
+      "lon": -63.18926094,
+      "precio": 375,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-radial-26-125001284-210"
+    },
+    {
+      "fuente": "remax",
+      "id": "125001284-211",
+      "lat": -17.75592097,
+      "lon": -63.18938973,
+      "precio": 375,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-radial-26-125001284-211"
+    },
+    {
+      "fuente": "remax",
+      "id": "125001284-212",
+      "lat": -17.75569617,
+      "lon": -63.18941118,
+      "precio": 375,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-radial-26-125001284-212"
+    },
+    {
+      "fuente": "remax",
+      "id": "125001284-213",
+      "lat": -17.75567575,
+      "lon": -63.18930388,
+      "precio": 530,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-radial-26-125001284-213"
+    },
+    {
+      "fuente": "remax",
+      "id": "125001284-214",
+      "lat": -17.75577792,
+      "lon": -63.18941115,
+      "precio": 530,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-radial-26-125001284-214"
+    },
+    {
+      "fuente": "remax",
+      "id": "1250013581-34",
+      "lat": -17.75481745,
+      "lon": -63.18928182,
+      "precio": 530,
+      "moneda": "USD",
+      "url": "https://remax.bo/propiedad/alquiler-departamento-santa-cruz-de-la-sierra-radial-26-1250013581-34"
+    }
+  ]
+}
