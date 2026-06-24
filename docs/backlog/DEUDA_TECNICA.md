@@ -1,6 +1,12 @@
 # Deuda Técnica — SICI
 
-> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 19 Jun 2026.
+> Extraído de CLAUDE.md el 27 Feb 2026. Actualizado 24 Jun 2026.
+
+## VentaMap se re-dibuja y resetea el zoom al seleccionar un pin (24 Jun 2026)
+
+**Qué pasa:** en `components/venta/VentaMap.tsx`, el `useEffect` que construye el mapa depende de `buildMap`, y este de `onSelectProperty`. Los feeds (`/ventas`, `/zona-norte/ventas`, `/ventas/casas`) pasan ese handler como arrow inline → nueva referencia en cada render → al clickear un pin (cambia `mapSelectedId` → re-render) el mapa se **reconstruye entero** y vuelve a hacer `fitBounds`, reseteando zoom/centro. Afecta a TODOS los feeds, NO es específico de casas.
+
+**Fix (no aplicado):** envolver el handler en `useCallback` en cada feed, o —mejor— separar en `VentaMap` el efecto de construcción del de actualización de marcadores para que `onSelectProperty` no dispare rebuild. Detectado armando el feed `/ventas/casas`. Prioridad **baja** (cosmético). Ver memoria/contexto del feed de casas ZN.
 
 ## Módulo TC dinámico — DEPRECADO (19 Jun 2026)
 
