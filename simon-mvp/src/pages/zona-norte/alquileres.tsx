@@ -1432,7 +1432,7 @@ export default function AlquileresPage({
                       <span className="utm-zona-sub">Filtrá por la tuya</span>
                     </div>
                     <div className="utm-zona-chips">
-                      {ZONAS_ALQUILER_UI.filter(z => z.id !== 'equipetrol_3er_anillo' && z.id !== 'sin_zona').map(z => (
+                      {ZONAS_ALQUILER_UI.map(z => (
                         <button key={z.id} className="utm-zona-chip" title={z.titulo} onClick={() => handleBannerZona(z.id)}>{z.label}</button>
                       ))}
                     </div>
@@ -1582,7 +1582,7 @@ export default function AlquileresPage({
             <div className="utm-zona-banner-mobile">
               <div className="utm-zona-text-m">Zona Norte tiene <strong>14 microzonas</strong> con precios distintos</div>
               <div className="utm-zona-chips-m">
-                {ZONAS_ALQUILER_UI.filter(z => z.id !== 'equipetrol_3er_anillo' && z.id !== 'sin_zona').map(z => (
+                {ZONAS_ALQUILER_UI.map(z => (
                   <button key={z.id} className="utm-zona-chip-m" title={z.titulo} onClick={() => handleBannerZona(z.id)}>{z.label}</button>
                 ))}
               </div>
@@ -2253,7 +2253,7 @@ function DesktopFilters({ currentFilters, isFiltered, onApply, onReset, proyecto
       <div className="df-group">
         <div className="df-label"><span className="df-dot" />MICROZONA</div>
         <div className="df-zona-btns">
-          {ZONAS_ALQUILER_UI.filter(z => z.id !== 'sin_zona').map(z => (
+          {ZONAS_ALQUILER_UI.map(z => (
             <button key={z.id} className={`df-zona-btn ${selectedZonas.has(z.id) ? 'active' : ''}`}
               title={z.titulo} onClick={() => toggleZona(z.id)}>{z.label}</button>
           ))}
@@ -2433,7 +2433,7 @@ function FilterOverlay({ isOpen, onClose, totalCount, filteredCount, isFiltered,
         </div>
         {/* Microzonas */}
         <div className="afo-group"><div className="afo-label"><span className="afo-dot" />MICROZONA</div>
-          <div className="afo-zonas">{ZONAS_ALQUILER_UI.filter(z => z.id !== 'sin_zona').map(z => (
+          <div className="afo-zonas">{ZONAS_ALQUILER_UI.map(z => (
             <button key={z.id} className={`afo-zona-btn ${selectedZonas.has(z.id) ? 'active' : ''}`} title={z.titulo} onClick={() => toggleZona(z.id)}>{z.label}</button>
           ))}</div>
         </div>
@@ -3727,8 +3727,8 @@ function AlquileresHead({ seo, brokerSlug = null, publicShareHash = null }: {
         inLanguage: 'es',
         about: {
           '@type': 'Place',
-          name: 'Equipetrol, Santa Cruz de la Sierra, Bolivia',
-          geo: { '@type': 'GeoCoordinates', latitude: -17.764, longitude: -63.197 },
+          name: 'Zona Norte, Santa Cruz de la Sierra, Bolivia',
+          geo: { '@type': 'GeoCoordinates', latitude: -17.718, longitude: -63.153 },
         },
         breadcrumb: { '@id': `${url}#breadcrumb` },
       },
@@ -3752,8 +3752,8 @@ function AlquileresHead({ seo, brokerSlug = null, publicShareHash = null }: {
         temporalCoverage: seo.fechaActualizacion,
         spatialCoverage: {
           '@type': 'Place',
-          name: 'Equipetrol, Santa Cruz de la Sierra, Bolivia',
-          geo: { '@type': 'GeoShape', box: '-17.78 -63.22 -17.75 -63.17' },
+          name: 'Zona Norte, Santa Cruz de la Sierra, Bolivia',
+          geo: { '@type': 'GeoShape', box: '-17.771 -63.194 -17.664 -63.111' },
         },
         variableMeasured: [
           { '@type': 'PropertyValue', name: 'Renta mediana mensual', value: seo.rentaMedianaBs, unitText: 'BOB/mes' },
