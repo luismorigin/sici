@@ -4,11 +4,11 @@
 
 ---
 
-## Estado actual — 23 Jun 2026
+## Estado actual — 24 Jun 2026
 
-**Foco actual: pipeline de casas/vivienda ZN.** 305 casas ZN activas cargadas (con contacto del captador, 45 condominios en `condominios_master` mig 260+261); flujo híbrido manual (`scripts/sonda-suelo` + agentes-lectores, NO n8n). **Backfill 21-jun: las casas ya tienen todos los campos del contrato de deptos** — `fotos_urls`+`cantidad_fotos`, `descripcion`, `fecha_publicacion`, `codigo_propiedad`, `estacionamientos`/`oficina_telefono` (solo C21), además del `id` propio (ref pública `SIM-V<id>`) y `fuente` (Remax/C21). Script reusable `scripts/auditoria-cola-matching/backfill-campos-casas.mjs`. **Pendiente: feed `/ventas/casas` + cron (vista `v_mercado_casas` ✅ aplicada mig 262, 298 casas).**
+**Foco actual: pipeline de casas/vivienda ZN.** 305 casas ZN activas cargadas (con contacto del captador, 45 condominios en `condominios_master` mig 260+261); flujo híbrido manual (`scripts/sonda-suelo` + agentes-lectores, NO n8n). **Backfill 21-jun: las casas ya tienen todos los campos del contrato de deptos** — `fotos_urls`+`cantidad_fotos`, `descripcion`, `fecha_publicacion`, `codigo_propiedad`, `estacionamientos`/`oficina_telefono` (solo C21), además del `id` propio (ref pública `SIM-V<id>`) y `fuente` (Remax/C21). Script reusable `scripts/auditoria-cola-matching/backfill-campos-casas.mjs`. **Feed `/ventas/casas` construido (dark launch/noindex, branch `feat/feed-casas-zn`, sin merge; vista `v_mercado_casas` ✅ mig 262). Pendiente: merge + cron + asset og:image.**
 
-**Fases 1-4 + #8 microzonas aplicadas (29-may):** 14 microzonas en BD (mig 254), frontend (`lib/zonas.ts`) y workflows discovery ZN. **Matching de deptos depurado (16-19 jun): venta 85.8%, alquiler 83.3%** (ver BITACORA). **Feeds públicos ZN construidos 23-jun (dark launch / noindex):** `/zona-norte/ventas` + `/zona-norte/alquileres` (ver memoria `project_feed_zona_norte_aislamiento`). Próximo: feed casas → #6 frontend `/mercado/zona-norte`.
+**Fases 1-4 + #8 microzonas aplicadas (29-may):** 14 microzonas en BD (mig 254), frontend (`lib/zonas.ts`) y workflows discovery ZN. **Matching de deptos depurado (16-19 jun): venta 85.8%, alquiler 83.3%** (ver BITACORA). **Feeds públicos ZN construidos 23-jun (dark launch / noindex):** `/zona-norte/ventas` + `/zona-norte/alquileres` (ver memoria `project_feed_zona_norte_aislamiento`). Feed casas construido (dark launch, sin merge). Próximo: #6 frontend `/mercado/zona-norte`.
 
 | Hito | Estado |
 |---|---|
